@@ -1,0 +1,23 @@
+# T6b. return: addN builds the node from the host's activation as it is at the return, and from
+# nothing the model does not name. n is changed before the return, k is a field the host
+# declares, u is a formal addN never names: the node carries n and k, not u.
+# makeAdder 1 9: n 2, k 4, add7: 1 is 7. makeAdder 32 9: n 33, k 66, add100: 1 is 100.
+# Mutants: the host's statements dropped (the build alone) -- not 7; the formal captured as the
+# machine argument (n 1) -- add7: 1 is 6. Entry 7, 0 is refusal.
+fn: makeAdder (int: n; int: u) fn: (int: x) int
+    n: n + 1
+    int: k (n * 2)
+    fn: addN (int: x) int
+        return: n + k + x
+    return: addN
+
+add7: makeAdder 1 9
+add100: makeAdder 32 9
+int: a (add7: 1)
+int: b (add100: 1)
+int: c (add7: 1)
+int: ok 0
+if: a = 7 && b = 100 && c = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

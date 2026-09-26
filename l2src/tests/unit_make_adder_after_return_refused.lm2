@@ -1,0 +1,12 @@
+# T6b. The parser hangs `return: addN` on the model's own frame; `n: 5` follows it in the text.
+# A statement after the return of a callable merge is refused, not run before the build.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+    n: 5
+
+add5: makeAdder 5
+int: a (add5: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

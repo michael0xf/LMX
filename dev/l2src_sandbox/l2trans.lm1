@@ -106,6 +106,15 @@ int: l2_walk_methods 0
 @: int l2_mad_host 0
 int: l2_mad_cap 0
 int: l2_mad_need_call 0
+# T6b: the values of its host's activation a nested model resolves -- a host formal, or a field the
+# host declares at method level -- one row per (model, name), in the order l2_scan_ident met them.
+# The node a `return: model` builds carries exactly these, slot 2 + k; nothing the model does not use.
+# l2_mcap_ty is the own storage code of each: 0 int, 2 size_t, 3 unsigned, 36 ulong.
+@: int l2_mcap_model 0
+@@: LmP0Text l2_mcap_name 0
+@: int l2_mcap_ty 0
+int: l2_mcap_n 0
+int: l2_mcap_room 0
 # T7: one merge into an already-declared callable type. Kind 1 is `return: merge`
 # of a host whose result is `fn:`. Kind 2 is that merge as a callable formal's actual.
 # Frames of the model are walked once with the binding in effect and shared by address.
@@ -1014,6 +1023,18 @@ prototype:
     fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
     fn: l2_mad_held (const: @(LmP0Text name)) int
     fn: l2_mad_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    fn: l2_mad_atom_field (@: LmP0Node node; const: @(LmP0Text name)) @: LmP0Field
+    fn: l2_mad_has_return (const: @(LmP0Node node)) int
+    fn: l2_mad_is_return (const: @(LmP0Node stmt); int: model) int
+    fn: l2_mad_tr_is (const: @(LmP0Structure tr); int: model) int
+    fn: l2_mad_names_nested (const: @(LmP0Node stmt); int: mi) int
+    fn: l2_mad_trailer_return (int: mi; int: model) int
+    fn: l2_mad_host_own (int: host; const: @(LmP0Text name)) int
+    fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty) int
+    fn: l2_mcap_ty_ok (int: ty) int
+    fn: l2_mad_slot_ty (int: mi; const: @(LmP0Text name)) int
+    fn: l2_mcap_new_helper (int: ty) @: char
+    fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
     fn: l2_mad_caps (int: mi) int
     fn: l2_mad_emit (int: mi; const: @(char ind)) int
@@ -1311,6 +1332,17 @@ fn: l2_release () int
     l2_mad_host: 0
     l2_mad_cap: 0
     l2_mad_need_call: 0
+    if: l2_mcap_model != 0
+        l2_xfree((cast: (@: void) l2_mcap_model))
+    if: l2_mcap_name != 0
+        l2_xfree((cast: (@: void) l2_mcap_name))
+    if: l2_mcap_ty != 0
+        l2_xfree((cast: (@: void) l2_mcap_ty))
+    l2_mcap_model: 0
+    l2_mcap_name: 0
+    l2_mcap_ty: 0
+    l2_mcap_n: 0
+    l2_mcap_room: 0
     l2_t7_n: 0
     l2_t7_walk: 0
     l2_t7_dyn_here: 0
@@ -5856,6 +5888,11 @@ fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
         if: i >= 0
             \out_ty: l2_ft(l2_mad_host_of(mi), i)
             return: 0
+        # T6b: a field the host declares at method level is its activation too.
+        i: l2_mad_host_own(l2_mad_host_of(mi), name)
+        if: i >= 0
+            \out_ty: l2_ft_of_own(l2_own_ty[i])
+            return: 0
         ---
     i: l2_dyn_find(mi, name)
     if: i >= 0 && l2_dt(mi, i) != 0
@@ -7415,7 +7452,20 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: l2_define_name(t) != 0
         return: 0
+    # T6b: a name of the host's activation -- a formal, or a field the host declares at method
+    # level -- is a capture of this model, recorded here, where it resolves, with its type.  Its
+    # value at the return becomes an own field of the node the return builds.  A numeric value
+    # is captured (l2_mcap_ty_ok); any other is left unrecorded, and the walk of the model
+    # refuses it, located.
     if: l2_mad_host_of(mi) >= 0 && l2_formal_find(l2_mad_host_of(mi), t) >= 0
+        ty: l2_own_ty_of_param(l2_ft(l2_mad_host_of(mi), l2_formal_find(l2_mad_host_of(mi), t)))
+        if: l2_mcap_ty_ok(ty) != 0
+            return: l2_mcap_add(mi, t, ty)
+        return: 0
+    if: l2_mad_host_of(mi) >= 0 && l2_mad_host_own(l2_mad_host_of(mi), t) >= 0
+        ty: l2_own_ty[l2_mad_host_own(l2_mad_host_of(mi), t)]
+        if: l2_mcap_ty_ok(ty) != 0
+            return: l2_mcap_add(mi, t, ty)
         return: 0
     if: l2_mad_host_of(mi) >= 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge binds a name that is not a formal")
@@ -11612,9 +11662,10 @@ fn: l2_emit_body_in (const: @(LmP0Structure body); int: mi; const: @(char ind)) 
         if: l2_m_ret[mi] != 8 && c.fprintf(l2_out, "%sreturn: 0\n", ind) < 0
             return: 1
         return: 0
-    # T6: the host builds the node; the nested model is walked, not compiled as C.
+    # T6: the host builds the node; the nested model is walked, not compiled as C.  T6b: the
+    # host's own statements run first (l2_mad_host_body).
     if: l2_mad_on(mi) != 0
-        return: l2_mad_emit(mi, ind)
+        return: l2_mad_host_body(body, mi, ind)
     if: l2_mad_host_of(mi) >= 0
         if: l2_m_ret[mi] != 8 && c.fprintf(l2_out, "%sreturn: 0\n", ind) < 0
             return: 1
@@ -14566,6 +14617,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: l2_define_name(node\as\atom) != 0
             return: 0
         if: l2_mad_host_of(mi) >= 0 && l2_formal_find(l2_mad_host_of(mi), node\as\atom) >= 0
+            return: 0
+        if: l2_mad_host_of(mi) >= 0 && l2_mad_host_own(l2_mad_host_of(mi), node\as\atom) >= 0
             return: 0
         return: l2_error(path, node, "unresolved name")
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && l2_mad_held(node\as\frame\head) >= 0
@@ -18683,7 +18736,7 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
             return: l2_own_ty[idx]
         return: l2_own_ty_of_param(l2_ft(l2_rw_mi, l2_formal_find(l2_rw_mi, t)))
     if: l2_mad_slot(l2_rw_mi, t) >= 0
-        return: 0
+        return: l2_mad_slot_ty(l2_rw_mi, t)
     ty: l2_rw_own_ty(t)
     if: ty >= 0
         return: ty
@@ -21888,6 +21941,8 @@ fn: l2_mad_sig (const: @(LmP0Node node)) int
         return: 0
 return: 1
 
+# node names name anywhere: an atom, a frame head (a call `name: 1` is a head), in fields and in
+# trailers.  T6b: a host statement that names a nested method is refused (l2_mad_names_nested).
 fn: l2_mad_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
     @: LmP0Field f
     if: node = 0 || name = 0
@@ -21900,7 +21955,17 @@ fn: l2_mad_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
             if: l2_mad_mentions(f\value, name) != 0
                 return: 1
             f: l2_next_active(f\next)
+        ---
+        if: node\as\structure\trailer != 0 && node\as\structure\trailer\body != 0
+            f: l2_next_active(node\as\structure\trailer\body\first_field)
+            while: f != 0
+                if: l2_mad_mentions(f\value, name) != 0
+                    return: 1
+                f: l2_next_active(f\next)
+            ---
         return: 0
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0 && l2_text_same(node\as\frame\head, name) != 0
+        return: 1
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
         if: node\as\frame\body != 0
             f: l2_next_active(node\as\frame\body\first_field)
@@ -21919,48 +21984,303 @@ fn: l2_mad_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
         ---
     return: 0
 
-# Slot of a host formal captured by model mi, or -1. Slot 0 is args, 1 is return, then captures.
-fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
-    int: host
-    int: j
+# T6b: the field of node whose value is the atom name -- the first met, in fields and trailers.
+# The host evaluates that atom at its return, so the capture is the host's value of the name there.
+fn: l2_mad_atom_field (@: LmP0Node node; const: @(LmP0Text name)) @: LmP0Field
+    @: LmP0Field f
+    @: LmP0Field hit
+    @: LmP0Structure st 0
+    @: LmP0Structure tb 0
+    if: node = 0 || name = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        st: node\as\structure
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as\frame != 0
+        st: node\as\frame\body
+        if: node\as\frame\trailer != 0
+            tb: node\as\frame\trailer\body
+        ---
+    if: st != 0
+        f: l2_next_active(st\first_field)
+        while: f != 0
+            if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_text_same(f\value\as\atom, name) != 0
+                return: f
+            hit: l2_mad_atom_field(f\value, name)
+            if: hit != 0
+                return: hit
+            f: l2_next_active(f\next)
+        ---
+        if: tb = 0 && st\trailer != 0
+            tb: st\trailer\body
+        ---
+    if: tb != 0
+        f: l2_next_active(tb\first_field)
+        while: f != 0
+            if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_text_same(f\value\as\atom, name) != 0
+                return: f
+            hit: l2_mad_atom_field(f\value, name)
+            if: hit != 0
+                return: hit
+            f: l2_next_active(f\next)
+        ---
+    return: 0
+
+# T6b: node returns -- a `return:` frame, or a `return` trailer of a frame or a structure, at any
+# depth.  A host's one exit is its `return: model`; any other return is refused before emission.
+fn: l2_mad_has_return (const: @(LmP0Node node)) int
+    @: LmP0Field f
+    @: LmP0Structure st 0
+    if: node = 0 || node\as = 0
+        return: 0
+    if: l2_frame_head(node, "return") != 0
+        return: 1
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as\frame != 0
+        if: l2_ret_tr(node\as\frame) != 0
+            return: 1
+        st: node\as\frame\body
+        ---
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        st: node\as\structure
+    if: st = 0
+        return: 0
+    if: st\trailer != 0 && st\trailer\spelling != 0 && l2_text_eq(st\trailer\spelling, "return") != 0
+        return: 1
+    f: l2_next_active(st\first_field)
+    while: f != 0
+        if: l2_mad_has_return(f\value) != 0
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
+# `return: model` as a statement of the host's body.
+fn: l2_mad_is_return (const: @(LmP0Node stmt); int: model) int
+    @: LmP0Field only
+    if: model < 0 || l2_frame_head(stmt, "return") = 0 || stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 1
+        return: 0
+    only: l2_next_active(stmt\as\frame\body\first_field)
+    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0
+        return: 0
+return: l2_find_method(only\value\as\atom) = model
+
+# stmt names a method nested in host mi -- the model or another.  A nested method is walked; its
+# native function returns 0, so the host cannot call it as C.
+fn: l2_mad_names_nested (const: @(LmP0Node stmt); int: mi) int
     int: k 0
-    int: slot 2
-    @: LmP0Text fnm
-    host: l2_mad_host_of(mi)
-    if: host < 0 || name = 0 || l2_m_body[mi] = 0
-        return: 0 - 1
-    j: l2_formal_find(host, name)
-    if: j < 0 || l2_ft(host, j) != 0
-        return: 0 - 1
-    # Capture is resolution, not a textual mention: a host formal the model
-    # already has as a formal or an own field is not a capture.
-    if: l2_formal_find(mi, name) >= 0 || l2_own_find(mi, name) >= 0
-        return: 0 - 1
-    while: k < j
-        fnm: l2_fn(host, k)
-        if: l2_ft(host, k) = 0 && fnm != 0 && l2_formal_find(mi, fnm) < 0 && l2_own_find(mi, fnm) < 0
-            slot: slot + 1
+    while: k < l2_m_n
+        if: l2_mad_host_of(k) = mi && l2_mad_mentions(stmt, l2_m_name[k]) != 0
+            return: 1
         k: k + 1
     ---
-return: slot
+return: 0
+
+# A trailer `return: model`.
+fn: l2_mad_tr_is (const: @(LmP0Structure tr); int: model) int
+    @: LmP0Field only
+    if: tr = 0 || model < 0 || l2_count_active(tr) != 1
+        return: 0
+    only: l2_next_active(tr\first_field)
+    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0
+        return: 0
+return: l2_find_method(only\value\as\atom) = model
+
+# `return: model` as the trailer of the host's method frame or of its signature's `fn:` frame: a
+# return after every statement of the body.
+fn: l2_mad_trailer_return (int: mi; int: model) int
+    @: LmP0Field f
+    if: l2_m_node[mi] = 0 || l2_m_node[mi]\as = 0 || l2_m_node[mi]\as\frame = 0
+        return: 0
+    if: l2_mad_tr_is(l2_ret_tr(l2_m_node[mi]\as\frame), model) != 0
+        return: 1
+    if: l2_m_node[mi]\as\frame\body = 0
+        return: 0
+    f: l2_next_active(l2_m_node[mi]\as\frame\body\first_field)
+    if: f != 0
+        f: l2_next_active(f\next)
+    if: f != 0
+        f: l2_next_active(f\next)
+    if: f = 0 || f\value = 0 || l2_frame_head(f\value, "fn") = 0
+        return: 0
+return: l2_mad_tr_is(l2_ret_tr(f\value\as\frame), model)
+
+# The field host declares at method level under name, the last such, or -1.  Not the lexical
+# chain: a unit field or a field of a nested body of the host is not the host's activation.
+fn: l2_mad_host_own (int: host; const: @(LmP0Text name)) int
+    int: i 0
+    int: hit 0 - 1
+    if: host < 0 || name = 0
+        return: 0 - 1
+    while: i < l2_own_n
+        if: l2_own_mi[i] = host && l2_own_host[i] = 0 && l2_text_same(l2_own_name[i], name) != 0
+            hit: i
+        i: i + 1
+    ---
+return: hit
+
+# A capture is a value cell the walk reads through AT: the numeric codes a cell is made and stored
+# for.  char and pointers are not captured yet; the walk of the model refuses them, located.
+fn: l2_mcap_ty_ok (int: ty) int
+    if: ty = 0 || ty = 2 || ty = 3 || ty = 36
+        return: 1
+return: 0
+
+fn: l2_mcap_new_helper (int: ty) @: char
+    if: ty = 2
+        return: "lmx_size_new_owned"
+    if: ty = 3
+        return: "lmx_unsigned_new_owned"
+    if: ty = 36
+        return: "lmx_ulong_new_owned"
+return: "lmx_int_new_owned"
+
+fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty) int
+    int: k 0
+    int: room
+    @: int nm
+    @: int nt
+    @@: LmP0Text nn
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = mi && l2_text_same(l2_mcap_name[k], name) != 0
+            return: 0
+        k: k + 1
+    ---
+    if: l2_mcap_n >= l2_mcap_room
+        room: l2_mcap_room * 2
+        if: room < 8
+            room: 8
+        nm: (cast: (@: int) calloc((cast: (size_t) room), c.sizeof(c.int)))
+        nt: (cast: (@: int) calloc((cast: (size_t) room), c.sizeof(c.int)))
+        nn: (cast: (@@: LmP0Text) calloc((cast: (size_t) room), c.sizeof(@: char)))
+        if: nm = 0 || nt = 0 || nn = 0
+            return: l2_error(l2_src, 0, "out of memory")
+        k: 0
+        while: k < l2_mcap_n
+            nm[k]: l2_mcap_model[k]
+            nt[k]: l2_mcap_ty[k]
+            nn[k]: l2_mcap_name[k]
+            k: k + 1
+        ---
+        if: l2_mcap_model != 0
+            l2_xfree((cast: (@: void) l2_mcap_model))
+        if: l2_mcap_ty != 0
+            l2_xfree((cast: (@: void) l2_mcap_ty))
+        if: l2_mcap_name != 0
+            l2_xfree((cast: (@: void) l2_mcap_name))
+        l2_mcap_model: nm
+        l2_mcap_ty: nt
+        l2_mcap_name: nn
+        l2_mcap_room: room
+        ---
+    l2_mcap_model[l2_mcap_n]: mi
+    l2_mcap_ty[l2_mcap_n]: ty
+    l2_mcap_name[l2_mcap_n]: (cast: (@: LmP0Text) name)
+    l2_mcap_n: l2_mcap_n + 1
+return: 0
+
+# Slot of host name t in model mi's node, or -1. Slot 0 is args, 1 is return, then the captures
+# in the order the scan recorded them (T6b: what the model resolves, not every host formal).
+fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
+    int: k 0
+    int: slot 2
+    if: l2_mad_host_of(mi) < 0 || name = 0 || l2_m_body[mi] = 0
+        return: 0 - 1
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = mi
+            if: l2_text_same(l2_mcap_name[k], name) != 0
+                return: slot
+            slot: slot + 1
+            ---
+        k: k + 1
+    ---
+return: 0 - 1
+
+# The storage code of capture name of model mi, or -1.
+fn: l2_mad_slot_ty (int: mi; const: @(LmP0Text name)) int
+    int: k 0
+    if: name = 0
+        return: 0 - 1
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = mi && l2_text_same(l2_mcap_name[k], name) != 0
+            return: l2_mcap_ty[k]
+        k: k + 1
+    ---
+return: 0 - 1
 
 fn: l2_mad_caps (int: host) int
     int: model
-    int: j 0
+    int: k 0
     int: n 0
-    @: LmP0Text fnm
     if: l2_mad_on(host) = 0
         return: 0
     model: l2_mad_model[host]
     if: model < 0 || l2_m_body[model] = 0
         return: 0
-    while: j < l2_m_arity[host]
-        fnm: l2_fn(host, j)
-        if: l2_ft(host, j) = 0 && fnm != 0 && l2_formal_find(model, fnm) < 0 && l2_own_find(model, fnm) < 0
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = model
             n: n + 1
-        j: j + 1
+        k: k + 1
     ---
 return: n
+
+# T6b (D-92): the host's statements run, in order, before its return builds the node.  The nested
+# `fn`s are the host's models, not statements; the return is the build.  Before this the body was
+# replaced whole by the build, and `n: n + 1` ahead of the return was never emitted.
+#
+# Where the return is: a `return: model` statement of the body; else the trailer of the method or
+# of its signature's `fn:` frame, after every statement; else the model's own `fn:` field -- the
+# parser hangs a `return: model` that follows the model's block on that frame, and
+# l2_mad_take_nested took it off there.  A statement after the return, one that names a nested
+# method (walked; its native function returns 0), or one that returns, is refused: the build is
+# the host's one exit.
+fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
+    @: LmP0Field f
+    @: LmP0Field seg
+    @: LmP0Node stmt
+    int: model
+    int: done 0
+    int: cut
+    int: at_fn 1
+    model: l2_mad_model[mi]
+    if: body = 0 || model < 0
+        return: l2_mad_emit(mi, ind)
+    f: l2_next_active(body\first_field)
+    while: f != 0
+        if: l2_mad_is_return(f\value, model) != 0
+            at_fn: 0
+        f: l2_next_active(f\next)
+    ---
+    if: at_fn != 0 && l2_mad_trailer_return(mi, model) != 0
+        at_fn: 0
+    seg: l2_next_active(body\first_field)
+    f: seg
+    while: f != 0
+        stmt: f\value
+        if: done != 0
+            return: l2_error(l2_src, stmt, "a statement after the return of a callable merge")
+        cut: 0
+        if: l2_frame_head(stmt, "fn") != 0
+            cut: 1
+            if: at_fn != 0 && stmt = l2_m_node[model]
+                cut: 2
+            ---
+        if: l2_mad_is_return(stmt, model) != 0
+            cut: 2
+        if: cut = 0 && l2_mad_names_nested(stmt, mi) != 0
+            return: l2_error(l2_src, stmt, "a callable merge host names a nested method outside the return")
+        if: cut = 0 && l2_mad_has_return(stmt) != 0
+            return: l2_error(l2_src, stmt, "a callable merge host returns outside its model")
+        if: cut != 0
+            if: l2_emit_stmts(body, seg, f, mi, ind) != 0
+                return: 1
+            seg: l2_next_active(f\next)
+            if: cut = 2
+                done: 1
+            ---
+        f: l2_next_active(f\next)
+    ---
+    if: done = 0 && l2_emit_stmts(body, seg, 0, mi, ind) != 0
+        return: 1
+return: l2_mad_emit(mi, ind)
 
 fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     @: LmP0Field field
@@ -22121,7 +22441,7 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     int: slot 2
     int: base
     int: site
-    @: LmP0Text fnm
+    @: LmP0Field af
     site: l2_t7_host_site(mi)
     if: site >= 0
         return: l2_t7_write(site, ind, 1)
@@ -22129,9 +22449,8 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge needs a walkable body")
     steps: l2_m_steps[model]
+    # T6b: a model that uses nothing of the activation is a node with no captured field.
     caps: l2_mad_caps(mi)
-    if: caps < 1
-        return: l2_error(l2_src, l2_m_node[mi], "a callable merge binds a name that is not a formal")
     arity: l2_mad_hdr_arity(mi)
     # A declared header of width 0 is that header. Do not borrow the model's width.
     if: arity < 1 && l2_m_ret[mi] != 16
@@ -22149,13 +22468,20 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
         j: j + 1
     if: c.fprintf(l2_out, "%sl2_mad_part: lmx_struct_new_owned(l2_mad, l2_program_arena)\n%sif: l2_mad_part = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part, 1U) != 0 || lmx_arena_ref_store(l2_mad, 1U, (cast: (@: void) l2_mad_part)) != 0\n%s    c.abort()\n%sl2_mad_cell: lmx_int_new_owned(l2_program_arena)\n%sif: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad_part, 0U, l2_mad_cell) != 0\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind) < 0
         return: 1
+    # T6b: each capture is the host's own value of the name here, at the return -- the ordinary
+    # evaluation of that atom in the host (a formal bound to a field reads the field) -- not the
+    # machine argument.
     j: 0
-    while: j < l2_m_arity[mi]
-        fnm: l2_fn(mi, j)
-        if: l2_mad_slot(model, fnm) >= 0
-            slot: l2_mad_slot(model, fnm)
-            if: c.fprintf(l2_out, "%sl2_mad_cell: lmx_int_new_owned(l2_program_arena)\n%sif: l2_mad_cell = 0 || lmx_int_store_known(l2_mad_cell, l2_p%d_%d) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, ind, mi, j, (cast: (unsigned) slot), ind) < 0
+    while: j < l2_mcap_n
+        if: l2_mcap_model[j] = model
+            af: l2_mad_atom_field(l2_m_node[model], l2_mcap_name[j])
+            if: af = 0
+                return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
+            if: l2_eval_fields(af, 1, mi, ind, l2_tok) != 0
                 return: 1
+            if: c.fprintf(l2_out, "%sl2_mad_cell: %s(l2_program_arena)\n%sif: l2_mad_cell = 0 || %s(l2_mad_cell, %s) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, l2_mcap_new_helper(l2_mcap_ty[j]), ind, l2_own_store_helper(l2_mcap_ty[j]), l2_tok, (cast: (unsigned) slot), ind) < 0
+                return: 1
+            slot: slot + 1
             ---
         j: j + 1
     if: c.fprintf(l2_out, "%sl2_mad_src: lmx_arena_ref_struct(node, %uU)\n%sif: l2_mad_src = 0\n%s    c.abort()\n%sl2_mad_k: 0\n%swhile: l2_mad_k < %d\n%s    if: lmx_arena_ref_store(l2_mad, %uU + (cast: (unsigned) l2_mad_k), lmx_arena_ref_value(l2_mad_src, %uU + (cast: (unsigned) l2_mad_k))) != 0\n%s        c.abort()\n%s    l2_mad_k: l2_mad_k + 1\n%sreturn: (cast: (@: void) l2_mad)\n", ind, (cast: (unsigned) (l2_unit_base + model)), ind, ind, ind, ind, steps, ind, (cast: (unsigned) (2 + caps)), (cast: (unsigned) base), ind, ind, ind) < 0

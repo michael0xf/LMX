@@ -967,6 +967,32 @@ $fixtures = @(
     # Mutant: one field n for both results — the second call is not 101. Entry 7, 0 is refusal.
     [pscustomobject]@{ Name = 'unit_make_adder.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
+    # T6b: the node is built from the host's activation at the return -- n changed before it, k a
+    # field the host declares -- and carries only what addN names, not u: 5 slots, args, return,
+    # n, k, one frame. add7(1)=7, add100(1)=100, add7(1)=7; the base translator refused k.
+    # Mutants: the host's statements dropped (D-92) -- exit 0; the formal as the machine argument
+    # -- add7(1)=6, exit 0. Every int formal carried is the 6U pin, not a behavior.
+    [pscustomobject]@{ Name = 'unit_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx_fresh('); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 5U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
+    # T6b: a model that names nothing of the activation: no captured slot (3 = args, return, one
+    # frame); the base translator carried the unused z. inc7(1)=7.
+    [pscustomobject]@{ Name = 'unit_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx_fresh('); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 3U)') },
+    # T6b: a capture keeps its type -- the size_t formal n is a size_t cell of the node; addBig
+    # (2^32) and addSmall (2^32 - 1) give 101 and 2. The base translator refused. Mutant: an int
+    # cell -- 2^32 is 0, exit 0.
+    [pscustomobject]@{ Name = 'unit_make_adder_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx_fresh('); Debt = @('lmx_size_new_owned(l2_program_arena)', 'lmx_size_store_known(l2_mad_cell, ') },
+    # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
+    # dropped the statements with the host's body; nested_call it refused with the old phrase.
+    [pscustomobject]@{ Name = 'unit_make_adder_after_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a statement after the return of a callable merge'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_model_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_nested_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_early_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a callable merge host returns outside its model'; Absent = @(); Debt = @() },
     # T7: return merge and a merge actual of a callable formal. wrap(5)(1)=6,
     # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.
     [pscustomobject]@{ Name = 'unit_t7_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

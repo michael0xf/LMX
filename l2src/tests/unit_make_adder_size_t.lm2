@@ -1,0 +1,20 @@
+# T6b. A capture keeps its type: n is a size_t formal of the host, and the node's field n is a
+# size_t cell. addBig carries 2^32, addSmall 2^32 - 1; addN tells them apart: 101 and 2.
+# The base translator refused ("a callable merge needs a walkable body"). Mutant: the capture
+# made an int cell -- 2^32 is 0 there, addBig: 1 is 2, exit 0. Entry 7.
+fn: makeAdder (size_t: n) fn: (int: x) int
+    fn: addN (int: x) int
+        if: n > 4294967295U
+            return: x + 100
+        return: x + 1
+    return: addN
+
+addBig: makeAdder 4294967296U
+addSmall: makeAdder 4294967295U
+int: a (addBig: 1)
+int: b (addSmall: 1)
+int: ok 0
+if: a = 101 && b = 2
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -19,8 +19,8 @@ line-specific conclusion. This document introduces no new language rules.
 
 L2 is LMX plus the machine operations required by the kernel. L3 is the
 hermetic graph-level language and a subset of L2: a named or anonymous
-Structure is always L3, L2 operations are available only inside method
-bodies, and `@` of any depth in L3 is a reference-declaration receiver only.
+Structure is always L3, L2 operations are absent from an interpreted body
+because the interpreter executes only L3, and `@` of any depth in L3 is a reference-declaration receiver only.
 L1 is a technical
 lowering intermediate, and C99 is its current machine target. The **present** build paths are:
 

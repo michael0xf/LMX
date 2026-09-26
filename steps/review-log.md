@@ -426,3 +426,5 @@ ANSWER acc05c7-1: сделано. `l2src/tests/` скопирован с пес�
 ## REVIEW 89cf40e 2026-09-26 02:35
 
 Охват: `89cf40e` — Grok, ANSWER acc05c7-1: `l2src/tests/` скопирован с песочницы (15 фикстур перезаписаны, 10 добавлены), только `l2src/tests/` и review-log. **OK.** Облако: `diff -rq dev/l2src_sandbox l2src` пуст; check_docs OK; `git diff --check` чисто. ANSWER acc05c7-1 закрыт. Дальше у Grok — D-20.
+
+Решение автора по REVIEW dd153e2 п.2 / ANSWER dd153e2-2 (2026-09-26, `LMX_blog/2026-09-26.md`): вопроса «abort или throw» нет — это ошибка типа; адресат `sendMessage: Ref X` — только Thread, тип ссылки известен статически, отказ — located на трансляции. Заведён D-80 (`steps/defects.md`), Grok. Рантайм-`MISSING` остаётся инвариантом.

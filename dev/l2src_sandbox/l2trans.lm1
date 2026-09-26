@@ -4719,6 +4719,9 @@ fn: l2_ret_type_word (const: @(LmP0Text word); int: depth; int: is_const; @: int
     if: depth = 0 && l2_text_eq(word, "int")
         \out_ty: 0
         return: 0
+    if: depth = 0 && l2_text_eq(word, "char")
+        \out_ty: 1
+        return: 0
     if: depth = 0 && l2_text_eq(word, "size_t")
         \out_ty: 2
         return: 0
@@ -16699,6 +16702,8 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         if: prsty >= 1000 && prsty < 2000
             prty: l2_ft_of_own(prsty)
         ---
+    if: prty = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n", ind, t) < 0
+        return: l2_prep_drop(acts, hides)
     if: prty = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
     if: prty = 30 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n", ind, t) < 0
@@ -16720,7 +16725,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         return: l2_prep_drop(acts, hides)
         return: l2_prep_drop(acts, hides)
         return: l2_prep_drop(acts, hides)
-    if: l2_ret_uns(idx) = 0 && prty != 3 && prty != 5 && prty != 8 && prty != 10 && prty != 13 && prty != 16 && prty != 32 && prty != 35 && prty < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
+    if: l2_ret_uns(idx) = 0 && prty != 1 && prty != 3 && prty != 5 && prty != 8 && prty != 10 && prty != 13 && prty != 16 && prty != 32 && prty != 35 && prty < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n", ind, t, ind, t) < 0
         return: l2_prep_drop(acts, hides)
@@ -17433,6 +17438,8 @@ fn: l2_emit_sig (int: mi) int
     # first and the throw payload last, and the control status is the return.
     # A callable that cannot throw keeps its direct return unchanged.
     if: l2_m_throws != 0 && l2_m_throws[mi] != 0
+        if: ret_ty = 1 && fputs("; @: char l2_out_result", l2_out) < 0
+            return: 1
         if: ret_ty = 2 && fputs("; @: size_t l2_out_result", l2_out) < 0
             return: 1
         if: ret_ty = 30 && fputs("; @: unsigned l2_out_result", l2_out) < 0
@@ -17451,12 +17458,14 @@ fn: l2_emit_sig (int: mi) int
             return: 1
         if: ret_ty >= 100 && fputs("; @@: Lmx l2_out_result", l2_out) < 0
             return: 1
-        if: l2_ret_uns(mi) = 0 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs("; @: int l2_out_result", l2_out) < 0
+        if: l2_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs("; @: int l2_out_result", l2_out) < 0
             return: 1
         if: fputs("; @@: Lmx l2_out_throw) int", l2_out) < 0
             return: 1
         return: 0
     ---
+    if: ret_ty = 1 && fputs(") char", l2_out) < 0
+        return: 1
     if: ret_ty = 2 && fputs(") size_t", l2_out) < 0
         return: 1
     if: ret_ty = 30 && fputs(") unsigned", l2_out) < 0
@@ -17477,7 +17486,7 @@ fn: l2_emit_sig (int: mi) int
         return: 1
     if: ret_ty = 8 && fputs(")", l2_out) < 0
         return: 1
-    if: l2_ret_uns(mi) = 0 && ret_ty != 3 && ret_ty != 5 && ret_ty != 8 && ret_ty != 10 && ret_ty != 13 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
+    if: l2_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 5 && ret_ty != 8 && ret_ty != 10 && ret_ty != 13 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
         return: 1
 return: 0
 
@@ -17663,7 +17672,9 @@ fn: l2_emit_trampoline (int: i; int: proto) int
     # The method that cannot throw: its value is the call's own result.
     if: thr = 0 && cls = 0 && (fputs("    ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n    \\out: 0\n", l2_out) < 0)
         return: 1
-    if: thr = 0 && cls >= 1 && cls <= 4 && (c.fprintf(l2_out, "    %s(dest, ", l2_tramp_store(cls)) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")\n    \\out: dest\n", l2_out) < 0)
+    if: thr = 0 && rt = 1 && (fputs("    if: lmx_char_rebind_known(dest, (cast: (int) ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")) = 0\n        return: 1\n    \\out: dest\n", l2_out) < 0)
+        return: 1
+    if: thr = 0 && rt != 1 && cls >= 1 && cls <= 4 && (c.fprintf(l2_out, "    %s(dest, ", l2_tramp_store(cls)) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")\n    \\out: dest\n", l2_out) < 0)
         return: 1
     if: thr = 0 && cls = 5 && (fputs("    \\out: (cast: (@: void) ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")\n", l2_out) < 0)
         return: 1
@@ -17672,7 +17683,9 @@ fn: l2_emit_trampoline (int: i; int: proto) int
     if: thr = 0 && cls = 6 && (l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n    \\out: dest\n", l2_out) < 0)
         return: 1
     # The declared-throw ABI: the result through its local, the status as the throw status.
-    if: thr != 0 && cls = 1 && fputs("    int: l2_tv 0\n", l2_out) < 0
+    if: thr != 0 && rt = 1 && fputs("    char: l2_tv 0\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && cls = 1 && rt != 1 && fputs("    int: l2_tv 0\n", l2_out) < 0
         return: 1
     if: thr != 0 && cls = 2 && fputs("    size_t: l2_tv 0U\n", l2_out) < 0
         return: 1
@@ -17696,7 +17709,9 @@ fn: l2_emit_trampoline (int: i; int: proto) int
         return: 1
     if: thr != 0 && cls = 0 && fputs("    \\out: 0\n", l2_out) < 0
         return: 1
-    if: thr != 0 && cls >= 1 && cls <= 4 && c.fprintf(l2_out, "    %s(dest, l2_tv)\n    \\out: dest\n", l2_tramp_store(cls)) < 0
+    if: thr != 0 && rt = 1 && fputs("    if: lmx_char_rebind_known(dest, (cast: (int) l2_tv)) = 0\n        return: 1\n    \\out: dest\n", l2_out) < 0
+        return: 1
+    if: thr != 0 && rt != 1 && cls >= 1 && cls <= 4 && c.fprintf(l2_out, "    %s(dest, l2_tv)\n    \\out: dest\n", l2_tramp_store(cls)) < 0
         return: 1
     if: thr != 0 && cls = 5 && fputs("    \\out: (cast: (@: void) l2_tv)\n", l2_out) < 0
         return: 1
@@ -24922,6 +24937,8 @@ fn: l2_ret_cell_ty (int: mi) int
     int: rt l2_sig_ret(mi)
     int: cls l2_tramp_class(mi)
     int: fi rt - 100
+    if: rt = 1
+        return: 1
     if: cls = 1
         return: 0
     if: cls = 2

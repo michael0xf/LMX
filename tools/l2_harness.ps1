@@ -2042,6 +2042,10 @@ $fixtures = @(
     # the reference; success is 7.
     # D-69: a char formal's cell in the method's `args` part is the program's interned char, so the
     # char table (process_chars) and lmx_chars_owned's predef come with it (main: gcc, both undeclared).
+    # D-77: char result uses the same word as a char formal. Mutant: drop the
+    # depth-0 char arm of l2_ret_type_word → this row refuses "unknown type".
+    [pscustomobject]@{ Name = 'unit_char_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @(); Debt = @(') char', 'lmx_char_rebind_known', 'lmx_char_cell_known(process_chars, 0)') },
     [pscustomobject]@{ Name = 'unit_char_formal_parts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @(); Debt = @('lmx_chars_owned.h.lm1', '@: char process_chars lmx_chars_new_owned(l2_program_arena)', 'l2_entry_slot[0]: lmx_char_cell_known(process_chars, 0)') },
     [pscustomobject]@{ Name = 'unit_ref_local_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');

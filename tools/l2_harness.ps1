@@ -805,7 +805,7 @@ $fixtures = @(
                    'l2_nsp[0]: lmx_node_new_owned(l2_program_arena)',
                    'not yet in R0''s retention array',
                    'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
                  'l2_nsp[0]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, l2_eprofile0)',
@@ -815,7 +815,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_eternal_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('2', 'size', '0', '0', '7', 'size', '1', '0', '9');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_program_qualified_roots[1U]: l2_nsp[1]',
                  'l2_eprofile1: lmx_node_new_profiled(l2_program_arena, l2_entry_unit)',
@@ -825,7 +825,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_eternal_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('70', 'size', '0', '0', '1', 'size', '35', '0', '36', 'size', '69', '0', '70');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [70]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 70',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_program_qualified_roots[69U]: l2_nsp[69]',
                  'l2_eprofile69: lmx_node_new_profiled(l2_program_arena, l2_entry_unit)',
@@ -835,7 +835,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'same', '0', '3', '0', 'same', '1', '0', '0', 'size', '1', '1', '17');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
                  'l2_nsp[1]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
@@ -843,7 +843,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('2', 'slot', '1', '0', '0', '0', 'size', '0', '1', '7', 'size', '1', '1', '23');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
                  'l2_nsp[1]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
@@ -851,21 +851,21 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_array_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [1]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 1',
                  'l2_profile_array: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('3');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [3]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 3',
                  'l2_program_qualified_roots[2U]: l2_nsp[2]',
                  '\fn: lmx_walk_merge_map',
                  'l2_entry_unit: graph') },
@@ -2180,7 +2180,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_eternal_physical_profiles.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('2', 'size', '0', '0', '7', 'size', '1', '0', '7');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_program_qualified_roots[1U]: l2_nsp[1]',
                  'l2_eprofile1: lmx_node_new_profiled(l2_program_arena, l2_entry_unit)',
@@ -2195,7 +2195,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_eternal_multi_profile_merge_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('c.array: [2]: @: Lmx l2_program_qualified_roots',
+        Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_program_qualified_roots[1U]: l2_nsp[1]',
                  '\fn: lmx_walk_merge_map',

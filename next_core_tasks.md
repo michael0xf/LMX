@@ -789,7 +789,7 @@ Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-c
 
 ### L1 `c.array` (separate, unproven — do not merge)
 
-- [ ] **HOLD / separately owned foreign-backend debt:** L1 `[]` и L1 `c.array` имеют разные emitters; `l2trans` ещё эмитит `c.array` в generated L1. **Замер 2026-09-26, `l1trans` пин `AC4A2210`:** `c.array: [N]: @: T name` понижается в `T *name[N]`; `[]:` и `[]: @(T) name N` понижаются в `T * name[N]` (пробел между `*` и именем). По значению это тот же Си, по байтам — нет. Живые `fprintf` на `218709f`: `l2_msr`, `l2_program_qualified_roots`, `l2_mops`, `l2_mprofiles`, `l2_mpv`, `l2_mpp`, `l2_nsp`. Закрытие GATE ждёт границу автора на этот пробел.
+- [x] **Ряд из N ячеек в порождённом L1 пишется `[]:` (автор, 2026-09-26).** `@: T name` — один указатель. `c.array:` в эмиссии снят: `[]: @(Lmx) l2_program_qualified_roots N`, `[]: @(void) l2_msrK N`, `[]: @(Lmx) l2_mops N`, `[]: @(Lmx) l2_mprofiles N`, `[]: LmxMergePair l2_mpv N`, `[]: @(LmxMergePair) l2_mpp N`, `[]: @(Lmx) l2_nsp N`. Собственные буферы `l2trans.lm1` — та же форма `[]:`. Указательный ряд в C получает пробел между `*` и именем (`T * name[N]`); для gcc это то же объявление.
 
 ## GATE. Чистое ядро перед самосборкой L2 (blocking)
 
@@ -808,7 +808,7 @@ Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-c
 - [ ] Source inventory: удалённые helpers имеют **ноль** ссылок; выполнен поиск остаточных special-case `c.puts` / `c.array` (translator, docs, fixtures, corpus).
 - [ ] Если L1 `c.array` ещё нельзя убрать — это явный отдельно owned blocker / foreign-backend debt, **не** L2-семантика; до author-approved границы **не** заявлять kernel-clean / self-build-ready.
 
-Измерено на `218709f` перед этим срезом: сканеры C-заголовков сняты (`3e2cefb`); `<stdio.h>`/`<stdlib.h>` — правило эмиссии (`4b1ada5`); мёртвых `fn:` в `l2trans.lm1` нет. L1 `c.array` в порождённом L1 остаётся: байты `[]:` не совпадают (пробел у `*`). §1 `VoidArray` не начат. D-83 открыт. Поэтому раздел GATE не закрыт, §8 не начинается.
+Измерено на `218709f`, затем автор велел писать ряд через `[]:`: сканеры C-заголовков сняты (`3e2cefb`); `<stdio.h>`/`<stdlib.h>` — правило эмиссии (`4b1ada5`); мёртвых `fn:` в `l2trans.lm1` нет. Порождённый `c.array:` снят. §1 `VoidArray` не начат. D-83 открыт. Поэтому раздел GATE не закрыт, §8 не начинается.
 
 Порядок: сделать raw-C door syntax-transparent + bounded cleanup (`c.puts` specials + L2 `c.array` + expression-statement/discard; §3 / §7a), inventory/remove obsolete scanners/dictionaries (coordinate DeepSeek ownership), закрыть этот GATE (**включая zero stale c.* machinery**) **до** любого шага §8. L1 `c.array` — отдельно owned measurement boundary и не смешивается с L2 cleanup.
 

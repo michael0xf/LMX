@@ -739,7 +739,7 @@ prototype:
     fn: l2_uses_walk_frame (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
     fn: l2_uses_walk_structure (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Structure body)) int
     fn: l2_uses_walk_node (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Node node)) int
-    fn: l2_admit_implements (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_fn_frame (int: mi) @: LmP0Frame
     fn: l2_ebr_find (const: @(LmP0Text t)) int
@@ -10183,13 +10183,14 @@ fn: l2_uses_walk_node (const: @(LmP0Text varb); @: char paths; @: size_t count; 
         return: l2_uses_walk_frame(varb, paths, count, node\as\frame)
 return: 0
 
-fn: l2_admit_implements (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     int: compatible 0
-    if: cand < 0 || req < 0
+    if: cand < 0 || req < 0 || cons < 0
         return: 0
-    # Identity still succeeds. The call is the admission point: equal indexes
-    # compare a descriptor with itself and stay compatible (steps/implements-s7.md).
-    if: l2_descriptor_implements(cand, req, req, @ compatible) != 0
+    # Identity still succeeds. cons is the Consumer: a used-path descriptor
+    # with no fields (empty uses) is l2_ns_n, and the call succeeds inside
+    # l2_descriptor_implements because cons_n is 0 (REVIEW ae4fcc4-1).
+    if: l2_descriptor_implements(cand, req, cons, @ compatible) != 0
         return: l2_error(path, at, "malformed implements descriptor")
     if: cand = req
         return: 0
@@ -10213,7 +10214,7 @@ fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP
     if: cand < 0
         return: 0
     if: consumer = 0
-        return: l2_admit_implements(cand, req, cand_name, path, at, context)
+        return: l2_admit_implements(cand, req, req, cand_name, path, at, context)
     paths: (cast: (@: char) l2_xmalloc(64U * 128U))
     if: paths = 0
         return: l2_error(path, at, "out of memory")
@@ -10223,8 +10224,8 @@ fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP
         return: 1
     l2_xfree((cast: (@: void) paths))
     if: path_count = 0U
-        return: 0
-return: l2_admit_implements(cand, req, cand_name, path, at, context)
+        return: l2_admit_implements(cand, req, l2_ns_n, cand_name, path, at, context)
+return: l2_admit_implements(cand, req, req, cand_name, path, at, context)
 
 # An otherwise unrecognized unit-level frame with a matching end is an ordinary
 # named Structure. Reserved heads are matched before this is ever reached, so a

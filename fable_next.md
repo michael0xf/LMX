@@ -8,7 +8,7 @@
 
 1. `READ.ME`, затем `steps/current.md`, затем `next_core_tasks.md` §0 (доктрина) и §3 «Пара исполнения code/data» — нормы модели; §4 — merge; §GATE.
 2. Записки: этот файл, `opus_next.md`, `sonnet_next.md`, `grok_next.md`. Планы по тикетам: `steps/merge-parts-193.md` (§1–§9), `steps/merge-kernel-194.md`, `steps/next-phase-195.md` (порядок следующей фазы), `steps/root-arrays-170.md`, `steps/gate-cleanup-197.md`, `steps/native-word-191.md`, `steps/code-data-split-188.md`, `steps/code-data-split-189.md`, `steps/defects.md`.
-3. Состояние git: `git fetch --all`, `git log --oneline -15 origin/main`, ветки `origin/opus/*`, `origin/sonnet/*`, `origin/fable/*`. Рабочее дерево на машине — у Grok CLI; из облака ничего локального не предполагать.
+3. Состояние git: `git fetch origin main`, `git log --oneline -15 origin/main`. С 2026-09-26 веток нет — всё в `main` (автор). Рабочее дерево на машине — у ведущего (Opus) и локального fable (§9); из облака ничего локального не предполагать.
 4. Память Claude Code (`memory/lmx-coordination-state.md`) — хронолог; она вторична к этому файлу и git.
 
 ## 1. Что сделано на этом этапе (24–26.09) — коротко, с SHA
@@ -107,3 +107,37 @@
 - **Q14 — ЗАКРЫТ автором (~20:20 UTC): дефект, D-79; тикет `steps/tickets/20260925-02-d79-declaration-only.md`; файл `LMX_blog/q/q30.md` (был q28, номер занят). Урок: сверять с `CORE.md` §3 и моделью §3, не с нативным кодом.** Прежняя формулировка: `keep(3) = 3` в `unit_walk_nested_own` — запись в уже связанный формал внутри `if` заводит поле этого тела, приращение наружу не выходит; в спеке L2 правила нет. Норма (абзац в спеку RU/EN) или дефект транслятора (D-79)? Пока строк на это поведение не добавлять.
 - Ловушка облака: l2trans из `l2trans.lm1` линковать с прототипом `FILE * l1_stderr(void)` (`-include`), иначе implicit int режет указатель и `setvbuf` падает — это мой шим, не код Grok'а.
 - Ловушка облака: `L1_PIN.txt` не проверяем (хэш Windows-исполняемого); эквивалентность B0 seed'а и pinned exe — по self-build fixed point, не по хэшу. `build/l2src_py/` — evidence, ignored.
+
+## 9. Локальный fable (`fable_pc`) на машине автора — инструкция (2026-09-26)
+
+Автор поднимает на своей машине вторую сессию fable (`fable.bat`: `claude --remote-control --model fable --effort xhigh --name fable_pc`, каталог `C:\Nyasha_Planet\LMX`). Это тот же fable, те же правила §4, тот же журнал; отличие одно — у него есть машина с гейтом. Раздел для него.
+
+**Вход.** `git fetch origin main && git pull --ff-only origin main`; `READ.ME`, `steps/current.md`, этот файл (§0, §4, этот раздел), `from_grok.md` целиком (§8 — мой), хвост `steps/review-log.md`, `steps/tickets/` (файл без `DONE`/`CLOSED` с начала строки — открыт), `steps/defects.md` (OPEN: D-81, D-83). `/peers`: кто на связи из `fable` (облако), `opus`, `sonnet`, `lmx_uds`.
+
+**Раздел труда с облачным fable (пока он не на паузе).**
+- Облачный fable ведёт 15-минутные раунды, записи `## REVIEW <sha>` и тикеты; он умеет только свидетельства (сборка l1trans B0, корпусный дифф 662 фикстур, мутанты по копии, witness-компиляция, check_docs). Числа настоящего гейта он не получает.
+- Локальный fable гоняет **машинный гейт** и вписывает числа туда, где их не хватает: строкой «Гейт (fable_pc, <время> UTC): build N/N, harness N/N, L3 N/N, check_docs OK» в конец уже существующей записи REVIEW облачного fable по тому же sha (или следующей за ней, если запись ещё не написана — тогда он же пишет REVIEW целиком по §4 и рутине из `from_grok.md` §8). Одну и ту же посадку двумя записями не ревьюим: перед записью — `git fetch` и чтение хвоста журнала.
+- Запросы `CHECK? <sha> <что>` от ведущего (строкой в сообщении коммита или прямым сообщением) — его; ответ — строкой в REVIEW/ANSWER, не в чате.
+- Мутанты ядра и транслятора на машине — его: копия под `build/` или `%TEMP%`, RED, откат, GREEN; в живых исходниках мутант не оставлять.
+- Если облачный fable в `/peers` не виден дольше двух раундов или автор сказал «пауза» — локальный ведёт ревью полностью сам, по тем же правилам, включая тикеты по получасу тишины и правку книги через `provenance/semantics-book.md` + `python tools\build_semantics.py` (после пересборки `git checkout -- provenance/semantics-inventory.json` не нужен: инвентарь пишет пути машины автора, это и есть эталон).
+
+**Гейт одной посадки (из `from_grok.md` §6, один тяжёлый `gcc` на машине за раз — согласовать с `opus` через `/peers` или строкой в чате автора):**
+
+```powershell
+Set-Location C:\Nyasha_Planet\LMX
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\build_l2src.ps1 -Run -OutDir C:\Nyasha_Planet\LMX\build\l2src\<имя>
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\l2_harness.ps1 -OutDir C:\Nyasha_Planet\LMX\build\l2_harness\<имя>
+python tools\run_l3_selftest.py
+python tools\check_docs.py
+git diff --check
+```
+
+`-OutDir` — абсолютный. Успех ядра — exit 0; успех eternal-runs — ненулевая буква Entry, не 0. `build_l2src.ps1` меняет cwd — вернуться в корень. Harness судит перевод по появлению L1-файла, код выхода — `$LASTEXITCODE`. База на 2026-09-26: build 282/282, harness 445/445, L3 11/11, имена 69/128; хуже базы без обоснования — замечание.
+
+**Что пишет и куда.** Только `main`, прямой коммит, без веток и без merge-коммитов (`git pull --rebase origin main` при отказе push). Файлы: `steps/review-log.md` (REVIEW/строка гейта), `steps/tickets/` (тикет по правилу README), `steps/defects.md` (новый дефект — строкой в таблицу, владелец — ведущий), книга/спеки (только fable), `LMX_blog/<дата>.md` — реплики автора о языке дословно (организационное — нет). Сообщение коммита — UTF-8 без BOM файлом в `%TEMP%`, `git commit -F`. `build/`, `%TEMP%`, `l2_driver_launch.err` не коммитить.
+
+**Чего не делает.** Не ждёт ведущего и не подменяет его (код и harness-строки — ведущий; замечание — в REVIEW, исправление — его посадкой). Не правит `l2trans.lm1` и ядро даже «мелко». Не запускает второй `gcc`, пока идёт `build_l2src.ps1 -Run` или harness у `opus`/`sonnet`. Не кладёт в блог организационное. Не отвечает за автора: вопрос о языке — автору, дословный ответ — в блог.
+
+**Прямой канал.** `/peers` → `SendMessage` короткой строкой: «fable_pc: гейт <sha> build N/N harness N/N L3 N/N» облачному `fable`; «CHECK? принял» ведущему. Всё, что имеет силу, — в git; сообщение только ускоряет.
+
+**Ловушки Windows** — `from_grok.md` §7 (PowerShell и обратные кавычки, `git rev-parse` по одной ревизии, cwd после `build_l2src.ps1`, `convert.lm2` рядом с источником, Entry 0 не доказательство).

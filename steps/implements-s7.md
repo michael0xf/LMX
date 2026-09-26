@@ -76,3 +76,11 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 Мутант: ветка кадра в `l2_actual_ns` возвращает 2. `unit_s7_arg_call_refused` переводится, exit 0. Откат — отказ `:20`, frame=take. Живой исходник мутантом не оставался.
 
 Primitive fast path `l2_colon_types_compatible` против `l2_primitive_leaf_implements` этой строкой не закрыт. Ядро внутрь `ARRAY_OF_DESC` не этот срез. Таблица преобразований не начата. Гейт: build 282/282 (`build/l2src/20260926_114055`), harness 433/433 (`build/l2_harness/s7fast`), L3 11/11, имена 69/128, check_docs OK.
+
+## Примитивный код — лист implements
+
+Именованный код значения (`int` 0, `char` 1, `size_t` 2, `unsigned` 34, `ulong` 36, `void` 8) в `l2_colon_types_compatible` больше не решается числовым списком. Пара имён идёт в `l2_primitive_leaf_implements`. Указательный код туда не отображается: иначе `@: int` и `@: char` стали бы одной парой листьев. Литерал `-10`, quoted `-11` и код, у которого нет такого имени, остаются прежним списком. Это не второй предикат примитивов и не таблица `primitive.convert`.
+
+Одинаковое имя — успех листа (`unit_s7_prim_same` Entry 7). Два keyed-листа — тоже успех листа, как `implements(int, u32)` (`unit_s7_prim_cross` Entry 7: `int` из `size_t`). Конвертер не вставляется. Ядро не менялось.
+
+Мутант: одинаковое имя в `l2_primitive_leaf_implements` пишет 0. `unit_s7_prim_same.lm2:9` — «assignment value has incompatible type», frame=a. `unit_s7_prim_cross` на этом мутанте отказывает позже, на `k: go()` (тоже пара `int`), не на `a: b`. Мутант: успех разных keyed-листьев пишет 0. `unit_s7_prim_cross.lm2:10` — та же фраза, frame=a. `unit_s7_prim_same` при этом переводится. Откат — оба переводятся. Живой исходник мутантом не оставался. Ядро внутрь `ARRAY_OF_DESC` не этот срез. Таблица преобразований не начата. Гейт: build 282/282 (`build/l2src/20260926_120249`), harness 435/435 (`build/l2_harness/s7leaf`), L3 11/11, имена 69/128, check_docs OK.

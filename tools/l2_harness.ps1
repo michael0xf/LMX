@@ -2273,6 +2273,14 @@ $fixtures = @(
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a Structure return must be a name'; Absent = @(); Debt = @() },
+    # Named primitive value codes call l2_primitive_leaf_implements.
+    # Mutant: same-name success stores 0 → unit_s7_prim_same refuses.
+    # Mutant: cross-leaf success stores 0 → unit_s7_prim_cross refuses
+    # and unit_s7_prim_same still translates.
+    [pscustomobject]@{ Name = 'unit_s7_prim_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

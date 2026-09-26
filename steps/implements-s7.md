@@ -63,9 +63,11 @@ STARTED grok/implements-s7, база main `fd074ca`. Тикета без `DONE` 
 
 Таблица преобразований. Книга §6: контекст Message, явные данные, без процессного реестра и без наследования ребёнком. `lingvamyxa_prev/lm2/convert.lm2` — `table:` с именем `` `primitive.convert` ``, колонки from, to, forbidden, kind, receiver, impl. Это данные, не спрятанный список в трансляторе.
 
-Вопрос автору (рекомендация в чате, очередь не ждёт): первый кодовый срез таблицы читает такую же `table:` из Structure файла — это данные корневого Message — и вставляет конвертер только при наличии строки. Нет строки — остаётся сегодняшний отказ «mixed numeric types (a conversion)». Тихого каста нет. `implements` конвертер не вызывает. Отбор не по литеральному имени `` `primitive.convert` ``: это name-special (§0). Приёмник — по объявлению (тип таблицы или merge-ключ, §2.2.4), не по имени. Форму таблицы вопрос не предрешает. Глобальный реестр не заводится. Код таблицы не начат.
+Автор (2026-09-26): таблицу и алгоритм `implements` брать из `lingvamyxa_prev`. Файл таблицы — `lm2/convert.lm2`, копия в `dev/l2src_sandbox/convert.lm2` и `l2src/convert.lm2`. Колонки from, to, forbidden, kind, receiver, impl. Это данные, не второй предикат `implements`.
 
-Пока форма таблицы не подтверждена, строки harness с «mixed numeric types» не переворачивать.
+Аналитический `implements` — тот, что в prev: `lm_trans_primitive_leaf_implements`, затем `lm_trans_descriptor_implements` (имя поля Consumer, которое есть у required, обязано быть у кандидата; пустой required или пустой Consumer — успех). В трансляторе это `l2_primitive_leaf_implements` и `l2_descriptor_implements`. Допуск по списку путей из `l2_uses_walk_frame` остаётся: Consumer — сами прочитанные пути. `implements` приёмник не вызывает.
+
+Ребро присваивания двух разных именованных примитивов вставляет receiver строки, если forbidden = 0 и receiver не None. `size_t` → `int` — `lm_stg_convert_size_t_int` (kind sign). Значение 2 входит, `unit_s7_prim_cross` остаётся Entry 7. Одинаковое имя — прямая запись, вызова нет (`unit_s7_prim_same`). Нет строки — отказ, тихой записи нет. Строки harness «mixed numeric types» на корне не переворачивались: индекс и корень по-прежнему требуют уже подходящий тип.
 
 ## Результат вызова и путь поля (тикет 20260926-04)
 
@@ -85,7 +87,7 @@ Primitive fast path `l2_colon_types_compatible` против `l2_primitive_leaf_
 
 Мутант: одинаковое имя в `l2_primitive_leaf_implements` пишет 0. `unit_s7_prim_same.lm2:9` — «assignment value has incompatible type», frame=a. `unit_s7_prim_cross` на этом мутанте отказывает позже, на `k: go()` (тоже пара `int`), не на `a: b`. Мутант: успех разных keyed-листьев пишет 0. `unit_s7_prim_cross.lm2:10` — та же фраза, frame=a. `unit_s7_prim_same` при этом переводится. Откат — оба переводятся. Живой исходник мутантом не оставался. Ядро внутрь `ARRAY_OF_DESC` не этот срез. Таблица преобразований не начата. Гейт: build 282/282 (`build/l2src/20260926_120249`), harness 435/435 (`build/l2_harness/s7leaf`), L3 11/11, имена 69/128, check_docs OK.
 
-REVIEW 61c2597-1: `unit_s7_prim_cross` измеряет успех листа, конвертер не вставляется. Форму строки (долг таблицы или отказ «mixed numeric types») выбирает автор. До этого выбора строка остаётся Entry 7.
+REVIEW 61c2597-1 закрыт автором: форма строки — строка `convert.lm2`. `unit_s7_prim_cross` остаётся Entry 7 и зовёт `lm_stg_convert_size_t_int`. Мутант: успех разных keyed-листьев пишет 0. `unit_s7_prim_cross.lm2:10` — «assignment value has incompatible type», frame=a. Гейт: build 282/282 (`build/l2src/s7conv`), harness 444/444 (`build/l2_harness/s7conv`), L3 11/11, имена 69/128, check_docs OK.
 
 ## Return — полный дескриптор
 

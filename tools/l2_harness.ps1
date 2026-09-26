@@ -2303,10 +2303,11 @@ $fixtures = @(
     # Mutant: same-name success stores 0 → unit_s7_prim_same refuses.
     # Mutant: cross-leaf success stores 0 → unit_s7_prim_cross refuses
     # and unit_s7_prim_same still translates.
+    # The cross row is convert.lm2 size_t → int, receiver lm_stg_convert_size_t_int.
     [pscustomobject]@{ Name = 'unit_s7_prim_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        Absent = @(); Debt = @('lm_stg_convert_size_t_int') },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

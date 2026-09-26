@@ -447,6 +447,8 @@ int: l2_rw_pn 0
 @@: size_t l2_it_hnl 0
 @@: int l2_it_hty 0
 c.array: [1024]: char l2_tok
+c.array: [2048]: char l2_ctok
+int: l2_convert_mask 0
 c.array: [1024]: char l2_addr_path
 @: char l2_ccall_into 0
 
@@ -641,6 +643,9 @@ prototype:
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_prim_code_name (int: ty) @: char
+    fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: char
+    fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr)) int
+    fn: l2_emit_convert_defs () int
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
@@ -5885,9 +5890,101 @@ fn: l2_prim_code_name (int: ty) @: char
         return: "void"
     return: 0
 
+# Rows of lingvamyxa_prev/lm2/convert.lm2 whose from and to are primitive
+# value codes this translator names. The file is the table. A hit is the
+# row's receiver. implements does not call it: the assignment edge does.
+# Identity rows (receiver None) are the same name and are not a call.
+fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: char
+    if: bit != 0
+        \bit: 0
+    if: from_n = 0 || to_n = 0
+        return: 0
+    if: c.strcmp(from_n, "size_t") = 0 && c.strcmp(to_n, "int") = 0
+        \bit: 1
+        return: "lm_stg_convert_size_t_int"
+    if: c.strcmp(from_n, "int") = 0 && c.strcmp(to_n, "size_t") = 0
+        \bit: 2
+        return: "lm_stg_convert_int_size_t"
+    if: c.strcmp(from_n, "char") = 0 && c.strcmp(to_n, "int") = 0
+        \bit: 4
+        return: "lm_stg_convert_char_int"
+    if: c.strcmp(from_n, "int") = 0 && c.strcmp(to_n, "char") = 0
+        \bit: 8
+        return: "lm_stg_convert_int_char"
+    if: c.strcmp(from_n, "int") = 0 && c.strcmp(to_n, "unsigned") = 0
+        \bit: 16
+        return: "lm_stg_convert_int_unsigned"
+    if: c.strcmp(from_n, "unsigned") = 0 && c.strcmp(to_n, "int") = 0
+        \bit: 32
+        return: "lm_stg_convert_unsigned_int"
+    if: c.strcmp(from_n, "unsigned") = 0 && c.strcmp(to_n, "ulong") = 0
+        \bit: 64
+        return: "lm_stg_convert_unsigned_ulong"
+    if: c.strcmp(from_n, "ulong") = 0 && c.strcmp(to_n, "unsigned") = 0
+        \bit: 128
+        return: "lm_stg_convert_ulong_unsigned"
+return: 0
+
+# The value token is already in l2_tok. A different keyed pair with a row
+# becomes receiver(token). No row is not a store.
+fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr)) int
+    int: from_ft 0
+    int: to_ft
+    int: n
+    int: bit 0
+    @: LmP0Field only
+    const: @(char from_n)
+    const: @(char to_n)
+    const: @(char recv)
+    if: oi < 0 || fr = 0 || fr\body = 0 || l2_count_active(fr\body) != 1
+        return: 0
+    only: l2_next_active(fr\body\first_field)
+    if: only = 0 || l2_colon_simple_ty(only\value, mi, @ from_ft) != 0
+        return: 0
+    to_ft: l2_ft_of_own(l2_own_ty[oi])
+    from_n: l2_prim_code_name(from_ft)
+    to_n: l2_prim_code_name(to_ft)
+    if: from_n = 0 || to_n = 0 || c.strcmp(from_n, to_n) = 0
+        return: 0
+    recv: l2_convert_hit(from_n, to_n, @ bit)
+    if: recv = 0
+        return: 2
+    n: c.snprintf(l2_ctok, 2048U, "%s(%s)", recv, l2_tok)
+    if: n < 0 || n >= 1024
+        return: 1
+    if: c.snprintf(l2_tok, 1024U, "%s", l2_ctok) < 0
+        return: 1
+    l2_convert_mask: l2_convert_mask | bit
+return: 0
+
+# Bodies for the rows this translator can emit. The hosted convert_impl.lm2
+# gives these names as the receivers. A narrowing or sign step that does not
+# fit returns 0, the same shape as lm_stg_convert_long_int. A widen is a cast.
+fn: l2_emit_convert_defs () int
+    if: l2_convert_mask = 0
+        return: 0
+    if: (l2_convert_mask & 1) != 0 && fputs("fn: lm_stg_convert_size_t_int (size_t: n) int\n    if: n > 2147483647U\n        return: 0\n    return: (cast: int n)\nend: lm_stg_convert_size_t_int\n\n", l2_out) < 0
+        return: 1
+    if: (l2_convert_mask & 2) != 0 && fputs("fn: lm_stg_convert_int_size_t (int: n) size_t\n    if: n < 0\n        return: 0U\n    return: (cast: size_t n)\nend: lm_stg_convert_int_size_t\n\n", l2_out) < 0
+        return: 1
+    if: (l2_convert_mask & 4) != 0 && fputs("fn: lm_stg_convert_char_int (int: n) int\n    return: n\nend: lm_stg_convert_char_int\n\n", l2_out) < 0
+        return: 1
+    if: (l2_convert_mask & 8) != 0 && fputs("fn: lm_stg_convert_int_char (int: n) int\n    if: n > 255 || n < 0\n        return: 0\n    return: n\nend: lm_stg_convert_int_char\n\n", l2_out) < 0
+        return: 1
+    if: (l2_convert_mask & 16) != 0 && fputs("fn: lm_stg_convert_int_unsigned (int: n) unsigned\n    if: n < 0\n        return: 0U\n    return: (cast: unsigned n)\nend: lm_stg_convert_int_unsigned\n\n", l2_out) < 0
+        return: 1
+    if: (l2_convert_mask & 32) != 0 && fputs("fn: lm_stg_convert_unsigned_int (unsigned: n) int\n    if: n > 2147483647U\n        return: 0\n    return: (cast: int n)\nend: lm_stg_convert_unsigned_int\n\n", l2_out) < 0
+        return: 1
+    if: (l2_convert_mask & 64) != 0 && fputs("fn: lm_stg_convert_unsigned_ulong (unsigned: n) ulong\n    return: (cast: ulong n)\nend: lm_stg_convert_unsigned_ulong\n\n", l2_out) < 0
+        return: 1
+    if: (l2_convert_mask & 128) != 0 && fputs("fn: lm_stg_convert_ulong_unsigned (ulong: n) unsigned\n    return: (cast: unsigned n)\nend: lm_stg_convert_ulong_unsigned\n\n", l2_out) < 0
+        return: 1
+return: 0
+
 # Named primitive value codes are l2_primitive_leaf_implements. The lists
 # below are the literal class (-10), a quoted pointer (-11), and a code that
 # is not one of those names. They are not a second primitive predicate.
+# Two different names are a store only when convert.lm2 has that row.
 fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     const: @(char cn)
     const: @(char rn)
@@ -5895,6 +5992,7 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     @: LmP0Text req 0
     int: result 0
     int: status 0
+    int: bit 0
     int: target_numeric 0
     int: value_numeric 0
     cn: l2_prim_code_name(value_ty)
@@ -5915,8 +6013,15 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
         status: l2_primitive_leaf_implements(cand, req, @ result)
         l2_xfree((cast: (@: void) cand))
         l2_xfree((cast: (@: void) req))
-        if: status = 0
+        if: status = 0 && c.strcmp(cn, rn) = 0
             return: result
+        if: status = 0 && result = 0
+            return: 0
+        if: status = 0 && l2_convert_hit(cn, rn, @ bit) = 0
+            return: 0
+        if: status = 0
+            l2_convert_mask: l2_convert_mask | bit
+            return: 1
         if: status = 1
             return: 0
         ---
@@ -15509,6 +15614,7 @@ return: 0
 
 fn: l2_parse_unit (const: @(char path)) int
     int: i 0
+    l2_convert_mask: 0
     # Merge result names are reserved here, before any statement is checked: a
     # field path rooted at a bound result is otherwise an unknown head at the
     # moment the unsupported-body guard runs. The scan is idempotent, and the
@@ -23829,6 +23935,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     @: LmP0Field last
     int: n
     int: k
+    int: cst 0
     int: oi
     int: si
     int: fi
@@ -24784,6 +24891,13 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             fi: l2_m_alias[l2_own_off(mi, oi)]
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
+        cst: 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
+            cst: l2_convert_on_store(mi, oi, fr)
+        if: cst = 1
+            return: 1
+        if: cst = 2
+            return: l2_error(l2_src, stmt, "mixed numeric types (a conversion)")
         # An untyped graph into a Structure-typed own field (S3): admitted at run time, then
         # bound like receiveMessage and `Model: fresh`: its slot takes it (l2_own_store).
         rbadmit: 0
@@ -25278,6 +25392,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         k: k + 1
     ---
+    # Receivers named by convert.lm2, for the assignment edges this unit uses.
+    if: l2_emit_convert_defs() != 0
+        fclose(l2_out)
+        return: 1
     # The root (E) is walked and has no prototype: a file whose only method is its root has an
     # empty prototype list, and L1 refuses an empty colon frame, so the block is then left out.
     k: l2_m_n + l2_rw_send_n

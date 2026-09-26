@@ -2463,6 +2463,11 @@ foreach ($fx in $fixtures) {
     $stem = [System.IO.Path]::GetFileNameWithoutExtension($fx.Name)
     $source = Join-Path $sandbox ('tests\' + $fx.Name)
     if (-not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
+    # The conversion table is the convert.lm2 beside the source, not the launch directory.
+    # Stage the fixture next to the copy made at the top of this script.
+    $stagedLm2 = Join-Path $src $fx.Name
+    Copy-Item -LiteralPath $source -Destination $stagedLm2 -Force
+    $source = $stagedLm2
     $genLm1 = Join-Path $gen ($stem + '.lm1')
     $label = 'fixture.' + $stem + '.l2trans'
     $profileArgs = @()
@@ -2543,7 +2548,9 @@ foreach ($fx in $fixtures) {
             $oLm1 = Join-Path $gen ($ostem + '.lm1')
             $oC = Join-Path $gen ($ostem + '.c')
             if (-not (Test-Path -LiteralPath $osource)) { $why = 'the partner fixture is missing: ' + $other; break }
-            if (-not (Step-Made ('fixture.' + $ostem + '.l2trans') $l2trans @('--library', $osource, $oLm1) $src $oLm1)) { $why = 'l2trans produced no L1 for the partner ' + $other; break }
+            $ostaged = Join-Path $src $other
+            Copy-Item -LiteralPath $osource -Destination $ostaged -Force
+            if (-not (Step-Made ('fixture.' + $ostem + '.l2trans') $l2trans @('--library', $ostaged, $oLm1) $src $oLm1)) { $why = 'l2trans produced no L1 for the partner ' + $other; break }
             if (-not (Step-Made ('fixture.' + $ostem + '.l1trans') $Translator @($oLm1, $oC) $src $oC)) { $why = 'l1trans produced no C for the partner ' + $other; break }
             $units += $ostem
         }

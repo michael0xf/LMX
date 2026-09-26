@@ -648,7 +648,7 @@ prototype:
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_prim_code_name (int: ty) @: char
-    fn: l2_convert_load () int
+    fn: l2_convert_load (const: @(char src)) int
     fn: l2_convert_hit (const: @(char from_n); const: @(char to_n); @: int bit) @: char
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_emit_convert_defs () int
@@ -3299,7 +3299,7 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     if: l2_path_is_lm2(in_path) = 0
         c.fprintf(l1_stderr(), "l2trans error: %s:1:1: expected a .lm2 source\n", in_path)
         return: 1
-    if: l2_convert_load() != 0
+    if: l2_convert_load(in_path) != 0
         return: 1
     l2_module_hash_a: 2166136261U
     l2_module_hash_b: 5381U
@@ -5948,24 +5948,53 @@ fn: l2_convert_walk (const: @(LmP0Node node)) int
         return: 0
 return: 0
 
-fn: l2_convert_load () int
+# The table sits beside the source file. The launch directory is not a second place to look.
+fn: l2_convert_beside (const: @(char src); @: char dst; size_t: cap) int
+    size_t: n 0U
+    size_t: cut 0U
+    size_t: i 0U
+    size_t: k 0U
+    const: @(char leaf)
+    leaf: "convert.lm2"
+    if: src = 0 || dst = 0 || cap < 16U
+        return: 1
+    while: src[n] != 0
+        if: src[n] = 47 || src[n] = 92
+            cut: n + 1U
+        n: n + 1U
+    if: cut + 12U >= cap
+        return: 1
+    while: i < cut
+        dst[i]: src[i]
+        i: i + 1U
+    while: leaf[k] != 0
+        dst[i]: leaf[k]
+        i: i + 1U
+        k: k + 1U
+    dst[i]: 0
+return: 0
+
+fn: l2_convert_load (const: @(char src)) int
     @: FILE raw 0
     @: LmP0Document document 0
     const: @: LmP0Node root
+    c.array: [1024]: char path
     if: l2_cv_ready != 0
         return: 0
     l2_cv_ready: 1
     l2_cv_cell_n: 0
-    raw: c.fopen("convert.lm2", "rb")
+    if: src = 0 || l2_convert_beside(src, path, 1024U) != 0
+        return: l2_error(src, 0, "cannot read the conversion table")
+    raw: c.fopen(path, "rb")
     if: raw = 0
-        return: 0
+        return: l2_error(src, 0, "cannot read the conversion table")
     fclose(raw)
-    if: lm_p0_parse_file("convert.lm2", @ document) != 0 || document = 0
-        return: l2_error("convert.lm2", 0, "cannot read the conversion table")
+    if: lm_p0_parse_file(path, @ document) != 0 || document = 0
+        return: l2_error(src, 0, "cannot read the conversion table")
     root: lm_p0_document_root(document)
     if: root = 0 || l2_convert_walk(root) != 0
         lm_p0_document_destroy(document)
-        return: l2_error("convert.lm2", 0, "cannot read the conversion table")
+        return: l2_error(src, 0, "cannot read the conversion table")
     if: l2_cv_cell_n = 0 || (l2_cv_cell_n % 6) != 0
         lm_p0_document_destroy(document)
         return: l2_error("convert.lm2", 0, "conversion table rows are not from, to, forbidden, kind, receiver, impl")

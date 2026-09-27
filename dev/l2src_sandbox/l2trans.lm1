@@ -6336,9 +6336,9 @@ fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
         if: status = 1
             return: 0
         ---
-    if: target_ty = 0 || target_ty = 1 || target_ty = 2 || target_ty = 10 || target_ty = 34 || target_ty = 36
+    if: target_ty = 0 || target_ty = 1 || target_ty = 2 || target_ty = 34 || target_ty = 36
         target_numeric: 1
-    if: value_ty = -10 || value_ty = 0 || value_ty = 1 || value_ty = 2 || value_ty = 10 || value_ty = 34 || value_ty = 36
+    if: value_ty = -10 || value_ty = 0 || value_ty = 1 || value_ty = 2 || value_ty = 34 || value_ty = 36
         value_numeric: 1
     if: target_numeric != 0 && value_numeric != 0
         return: 1
@@ -8301,13 +8301,13 @@ fn: l2_index_head (const: @(LmP0Text t); int: mi; @: int out_j) int
     ---
     k: 0
     while: k < l2_ml_n
-        if: l2_ml_nm[k] != 0 && l2_ml_nm[k]\length = n - lb - 2U && memcmp(l2_ml_nm[k]\data, t\data + lb + 1U, n - lb - 2U) = 0 && (l2_ml_ty[k] = 0 || l2_ml_ty[k] = 1 || l2_ml_ty[k] = 2 || l2_ml_ty[k] = 3 || l2_ml_ty[k] = 10 || l2_ml_ty[k] = 34)
+        if: l2_ml_nm[k] != 0 && l2_ml_nm[k]\length = n - lb - 2U && memcmp(l2_ml_nm[k]\data, t\data + lb + 1U, n - lb - 2U) = 0 && (l2_ml_ty[k] = 0 || l2_ml_ty[k] = 1 || l2_ml_ty[k] = 2 || l2_ml_ty[k] = 3 || l2_ml_ty[k] = 34)
             ok: 1
         k: k + 1
     ---
     k: 0
     while: k < l2_m_arity[mi]
-        if: l2_fn(mi, k) != 0 && l2_fn(mi, k)\length = n - lb - 2U && memcmp(l2_fn(mi, k)\data, t\data + lb + 1U, n - lb - 2U) = 0 && (l2_ft(mi, k) = 0 || l2_ft(mi, k) = 1 || l2_ft(mi, k) = 2 || l2_ft(mi, k) = 3 || l2_ft(mi, k) = 10 || l2_ft(mi, k) = 34 || l2_ft(mi, k) = 36)
+        if: l2_fn(mi, k) != 0 && l2_fn(mi, k)\length = n - lb - 2U && memcmp(l2_fn(mi, k)\data, t\data + lb + 1U, n - lb - 2U) = 0 && (l2_ft(mi, k) = 0 || l2_ft(mi, k) = 1 || l2_ft(mi, k) = 2 || l2_ft(mi, k) = 3 || l2_ft(mi, k) = 34 || l2_ft(mi, k) = 36)
             ok: 1
         if: l2_fn(mi, k) != 0 && l2_ft(mi, k) >= 100 && n - lb - 2U > l2_fn(mi, k)\length + 1U && memcmp(l2_fn(mi, k)\data, t\data + lb + 1U, l2_fn(mi, k)\length) = 0 && t\data[lb + 1U + l2_fn(mi, k)\length] = 92
             ok: 1
@@ -12820,7 +12820,7 @@ return: 0 - 1
 # -- an own field or formal literally named "node"/"for" (checked first,
 # unchanged) still wins, matching this dispatcher's existing precedence.
 # out_fi (Opus's D1, folded into -121): -1 unless out_ni came from a
-# TYPED FORMAL's own nsty (the formal-fallback branch below) -- l2_emit_path
+# TYPED FORMAL's own nsty (the typed-formal branch below, D-28) -- l2_emit_path
 # must then seed l2_pst from the formal's ACTUAL ARGUMENT value, never
 # from ni treated as an ordinary unit-level declaration (that read the
 # static declaration child, not the passed value: a formal root is a
@@ -15121,7 +15121,7 @@ fn: l2_elem_ptr_ty (int: oty) int
     return: 0 - 1
 
 fn: l2_ty_number (int: ty) int
-    if: ty = -10 || ty = 0 || ty = 1 || ty = 2 || ty = 10 || ty = 34 || ty = 36
+    if: ty = -10 || ty = 0 || ty = 1 || ty = 2 || ty = 34 || ty = 36
         return: 1
     return: 0
 
@@ -17183,7 +17183,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         return: l2_prep_drop(acts, hides)
         return: l2_prep_drop(acts, hides)
         return: l2_prep_drop(acts, hides)
-    if: l2_ret_uns(idx) = 0 && prty != 1 && prty != 3 && prty != 5 && prty != 8 && prty != 10 && prty != 13 && prty != 16 && prty != 32 && prty != 35 && prty < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
+    if: l2_ret_uns(idx) = 0 && prty != 1 && prty != 3 && prty != 5 && prty != 8 && prty != 13 && prty != 16 && prty != 32 && prty != 35 && prty < 100 && c.fprintf(l2_out, "%sint: l2_t%d\n", ind, t) < 0
         return: l2_prep_drop(acts, hides)
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sint: l2_ts%d 0\n%s@: Lmx l2_te%d 0\n", ind, t, ind, t) < 0
         return: l2_prep_drop(acts, hides)
@@ -17950,7 +17950,7 @@ fn: l2_emit_sig (int: mi) int
         return: 1
     if: ret_ty = 8 && fputs(")", l2_out) < 0
         return: 1
-    if: l2_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 5 && ret_ty != 8 && ret_ty != 10 && ret_ty != 13 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
+    if: l2_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 5 && ret_ty != 8 && ret_ty != 13 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs(") int", l2_out) < 0
         return: 1
 return: 0
 
@@ -18010,7 +18010,7 @@ fn: l2_tramp_class (int: mi) int
         return: 6
     if: rt >= 100
         return: 5
-    if: l2_ret_uns(mi) = 0 && rt != 3 && rt != 8 && rt != 16 && rt != 32 && rt != 35 && (thr != 0 || (rt != 5 && rt != 10 && rt != 13))
+    if: l2_ret_uns(mi) = 0 && rt != 3 && rt != 8 && rt != 16 && rt != 32 && rt != 35 && (thr != 0 || (rt != 5 && rt != 13))
         return: 1
 return: 0
 
@@ -23459,7 +23459,7 @@ fn: l2_emit_public_sig (int: mi) int
                 return: 1
             ---
         else:
-            if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 4 && ty != 5 && ty != 6 && ty != 7 && ty != 9 && ty != 10 && ty != 11 && ty != 12 && ty != 13 && ty != 14 && ty != 15 && ty != 16 && ty != 17 && ty != 18 && ty != 19 && ty != 20 && ty != 24 && ty != 25 && ty != 26 && ty != 27 && ty != 28 && ty != 29 && ty != 30 && ty != 31 && ty != 34 && ty != 36 && ty != 38 && ty != 39
+            if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 4 && ty != 5 && ty != 6 && ty != 7 && ty != 9 && ty != 11 && ty != 12 && ty != 13 && ty != 14 && ty != 15 && ty != 16 && ty != 17 && ty != 18 && ty != 19 && ty != 20 && ty != 24 && ty != 25 && ty != 26 && ty != 27 && ty != 28 && ty != 29 && ty != 30 && ty != 31 && ty != 34 && ty != 36 && ty != 38 && ty != 39
                 c.fprintf(l1_stderr(), "l2trans: a library signature cannot spell formal type %d\n", ty)
                 return: 1
             if: l2_write_text(l2_out, l2_fn(mi, j)) != 0
@@ -23489,7 +23489,7 @@ fn: l2_emit_public_sig (int: mi) int
         return: 1
     if: l2_m_ret[mi] = 8 && fputs(")", l2_out) < 0
         return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 3 && l2_m_ret[mi] != 5 && l2_m_ret[mi] != 8 && l2_m_ret[mi] != 10 && l2_m_ret[mi] != 13 && l2_m_ret[mi] != 16 && l2_m_ret[mi] != 32 && l2_m_ret[mi] != 35 && l2_m_ret[mi] < 100 && fputs(") int", l2_out) < 0
+    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 3 && l2_m_ret[mi] != 5 && l2_m_ret[mi] != 8 && l2_m_ret[mi] != 13 && l2_m_ret[mi] != 16 && l2_m_ret[mi] != 32 && l2_m_ret[mi] != 35 && l2_m_ret[mi] < 100 && fputs(") int", l2_out) < 0
         return: 1
 return: 0
 
@@ -26126,7 +26126,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: k > 0 && fputs("end: prototype\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# OwnUsed char/int/size_t/unsigned fields are children of the selected callable occurrence `self`; source-visible `node` is the fixed lexical space above the method for the whole activation. Char cache is typed char; graph data is all_chars cell. Numeric caches keep their declared C type; graph data uses a distinct owned LMX_TYPE_INT, LMX_TYPE_SIZE_T or LMX_TYPE_UNSIGNED cell mutated in place (no interned shared size_t, no int narrowing). Dirty-only checkpoint after actuals, immediately before the executed call, and before return. Explicit node\\name writes that fixed above-method graph, not the cache.\n# LmP0Text is the existing C ABI from l1src/p0.lm1.h (data, length), a limited migration adapter, not a general C header parser and not a silent layout for new L2 Structures. LmP0TrailerRole is that same header's typedef int (NONE/DASH_CUTTER/END/RETURN/UNTIL), not intern16. Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 call resolved against unit methods and parsed prototype: declarations. Body @: LmP0Text is an 11.2.1 address slot l2_s, not OwnUsed. Pointer results @: char / @: LmP0Text; sub: is void. return: slot is the pointer value, not @slot. @: size_t is a typed out-param; name[0]: stores through it (literal 0 only). L2 @ actuals are not emitted; a type-9 actual is the pointer value forwarded. Checkpoint even if OwnUsed is empty. Same-name char/size_t argument and own field share the parameter from the own-decl line; dirty-only publish is to this method's selected occurrence self, not to source node and not to the caller. An argument without that bind is never published. Executable if/else/while/for bodies are graph Structures; body own fields publish into their exact host without rebinding source node. L2ImmutQuery is a borrowed immutable-query adapter (not LmP0Text); fill is a temporary L1 helper behind the L2 make method. text_equals is the mutable fallback (strlen+memcmp). equals_query hashes current text bytes against a prepared query hash. &&/|| with calls use guarded if/temps; skipped RHS does not prep nested actuals. Pure &&/|| stay L1 C expressions.\n\n", l2_out) < 0
+    if: fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# OwnUsed char/int/size_t/unsigned fields are children of the selected callable occurrence `self`; source-visible `node` is the fixed lexical space above the method for the whole activation. Char cache is typed char; graph data is all_chars cell. Numeric caches keep their declared C type; graph data uses a distinct owned LMX_TYPE_INT, LMX_TYPE_SIZE_T or LMX_TYPE_UNSIGNED cell mutated in place (no interned shared size_t, no int narrowing). Dirty-only checkpoint after actuals, immediately before the executed call, and before return. Explicit node\\name writes that fixed above-method graph, not the cache.\n# LmP0Text is the existing C ABI from l1src/p0.lm1.h (data, length), a limited migration adapter, not a general C header parser and not a silent layout for new L2 Structures. Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 call resolved against unit methods and parsed prototype: declarations. Body @: LmP0Text is an 11.2.1 address slot l2_s, not OwnUsed. Pointer results @: char / @: LmP0Text; sub: is void. return: slot is the pointer value, not @slot. @: size_t is a typed out-param; name[0]: stores through it (literal 0 only). L2 @ actuals are not emitted; a type-9 actual is the pointer value forwarded. Checkpoint even if OwnUsed is empty. Same-name char/size_t argument and own field share the parameter from the own-decl line; dirty-only publish is to this method's selected occurrence self, not to source node and not to the caller. An argument without that bind is never published. Executable if/else/while/for bodies are graph Structures; body own fields publish into their exact host without rebinding source node. L2ImmutQuery is a borrowed immutable-query adapter (not LmP0Text); fill is a temporary L1 helper behind the L2 make method. text_equals is the mutable fallback (strlen+memcmp). equals_query hashes current text bytes against a prepared query hash. &&/|| with calls use guarded if/temps; skipped RHS does not prep nested actuals. Pure &&/|| stay L1 C expressions.\n\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     i: 0

@@ -1503,6 +1503,14 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_nested_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # REVIEW b193fbb (fable_pc's M35 and probe ns3_two_exec): two executed Structures, two code nodes --
+    # the root executes A, go executes B, each by its code node's rank: A\n = 5, B\m = 11.  Mutants: the
+    # rank dropped in the native execution -- the native row red, the walked one green; dropped in the
+    # walk's CALL -- the walked row red, the native one green.
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

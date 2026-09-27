@@ -97,6 +97,11 @@ int: l2_rw_mi 0 - 1
 # implements-port slice 13: the next l2_rw_call is the receiver call of a conversion edge.
 int: l2_rw_conv 0
 int: l2_rw_quiet 0
+# The first refusal met while a method's body is tried quietly (l2_error keeps it, where it stands):
+# what the note says when a callable-merge host stays native under --walk-methods (REVIEW c953b22).
+[]: char l2_rw_quiet_msg 192
+size_t: l2_rw_quiet_line 0U
+size_t: l2_rw_quiet_col 0U
 @: int l2_m_steps 0
 int: l2_walk_methods 0
 # T5 slice 1: model method of a callable-merge result, or -1. The result's native stays 0.
@@ -108,6 +113,8 @@ int: l2_walk_methods 0
 @: int l2_mad_host 0
 int: l2_mad_cap 0
 int: l2_mad_need_call 0
+# Item 739: the typed variants of l2_mad_call a held call needs, one bit each (l2_mad_call_bit).
+int: l2_mad_need_typed 0
 # T6b: the values of its host's activation a nested model resolves -- a host formal, or a field the
 # host declares at method level -- one row per (model, name), in the order l2_scan_ident met them.
 # The node a `return: model` builds carries exactly these, slot 2 + k; nothing the model does not use.
@@ -1052,6 +1059,10 @@ prototype:
     fn: l2_mad_caps (int: mi) int
     fn: l2_mad_emit (int: mi; const: @(char ind)) int
     fn: l2_mad_emit_into (int: mi; const: @(char ind); int: into) int
+    fn: l2_mad_call_name (int: rty) const: @: char
+    fn: l2_mad_call_bit (int: rty) int
+    fn: l2_ret_own (int: code) int
+    fn: l2_rw_may_why (int: mi) const: @: char
     fn: l2_mad_model_call (int: mi; int: idx) int
     fn: l2_mad_mentions_value (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
@@ -1224,7 +1235,14 @@ fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) 
     size_t: line 1U
     size_t: column 1U
     # A method's body tried for the walk (l2_rw_quiet, -193 T4a) is refused silently: it only gets
-    # no frames.
+    # no frames.  The first such refusal is kept for a note (l2_rw_methods_count).
+    if: l2_rw_quiet != 0 && l2_rw_quiet_msg[0] = 0
+        c.snprintf(l2_rw_quiet_msg, 192U, "%s", msg)
+        if: node != 0 && node\span != 0
+            l2_rw_quiet_line: node\span\line
+            l2_rw_quiet_col: node\span\column
+        ---
+    ---
     if: l2_rw_quiet != 0
         return: 1
     if: node != 0 && node\span != 0
@@ -1352,6 +1370,7 @@ fn: l2_release () int
     l2_mad_host: 0
     l2_mad_cap: 0
     l2_mad_need_call: 0
+    l2_mad_need_typed: 0
     if: l2_mcap_model != 0
         l2_xfree((cast: (@: void) l2_mcap_model))
     if: l2_mcap_name != 0
@@ -17482,17 +17501,29 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         # type and refs[k] is that local's address -- the trampoline reads it with
         # lmx_*_value_known, *(T*)cell, the transport l2_emit_msend already uses (no boxing).  A
         # formal of any other type is refused, located, until it has a witness.
+        # D-93 with item 739: the model's node is walked, and the walk reads an address it did not
+        # classify as an int -- so its arguments are cells of their types (below), made by the same
+        # helpers a capture's are; a char (a cell of the byte table, which is not in scope here)
+        # and a char result (handed back as a cell, not through dest) are refused.
+        if: mcall != 0 && l2_ret_own(l2_m_ret[idx]) = 1
+            l2_prep_drop(acts, hides)
+            return: l2_error(l2_src, node, "a call of the model with a char argument or result is not passed yet")
         ai: 0
         while: ai < nact
             if: l2_ft(idx, ai) = 8 || l2_prim_code_name(l2_ft(idx, ai)) = 0
                 l2_prep_drop(acts, hides)
                 return: l2_error(l2_src, node, "a callable formal's argument of this type is not passed yet")
+            if: mcall != 0 && l2_own_ty_of_param(l2_ft(idx, ai)) = 1
+                l2_prep_drop(acts, hides)
+                return: l2_error(l2_src, node, "a call of the model with a char argument or result is not passed yet")
             ai: ai + 1
         if: nact > 0 && c.fprintf(l2_out, "%s[]: @(void) l2_cfr%d %d\n", ind, t, nact) < 0
             return: l2_prep_drop(acts, hides)
         ai: 0
         while: ai < nact
-            if: c.fprintf(l2_out, "%s%s: l2_cfa%d_%d\n%sl2_cfa%d_%d: %s\n%sl2_cfr%d[%d]: @ l2_cfa%d_%d\n", ind, l2_prim_code_name(l2_ft(idx, ai)), t, ai, ind, t, ai, l2_act_at(acts, ai), ind, t, ai, t, ai) < 0
+            if: mcall = 0 && c.fprintf(l2_out, "%s%s: l2_cfa%d_%d\n%sl2_cfa%d_%d: %s\n%sl2_cfr%d[%d]: @ l2_cfa%d_%d\n", ind, l2_prim_code_name(l2_ft(idx, ai)), t, ai, ind, t, ai, l2_act_at(acts, ai), ind, t, ai, t, ai) < 0
+                return: l2_prep_drop(acts, hides)
+            if: mcall != 0 && c.fprintf(l2_out, "%s@: void l2_cfa%d_%d %s(l2_program_arena)\n%sif: l2_cfa%d_%d = 0 || %s(l2_cfa%d_%d, %s) != 0\n%s    c.abort()\n%sl2_cfr%d[%d]: l2_cfa%d_%d\n", ind, t, ai, l2_mcap_new_helper(l2_own_ty_of_param(l2_ft(idx, ai))), ind, t, ai, l2_own_store_helper(l2_own_ty_of_param(l2_ft(idx, ai))), t, ai, l2_act_at(acts, ai), ind, ind, t, ai, t, ai) < 0
                 return: l2_prep_drop(acts, hides)
             ai: ai + 1
         # A callable formal is called through the one dynamic call ABI, lmx_call_prim
@@ -18981,11 +19012,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
         if: l2_text_eq(node\as\frame\head, "length")
             return: 2
         # Item 739: a held callable's call is typed by its header's result (l2_mad_held_sig), not
-        # as int.  Today a header whose result is not int is refused in l2_rw_mad_call, so this
-        # changes no emitted text -- but it changes the work: typed int, a size_t place would see
-        # a conversion, the count pass would note an int -> size_t receiver (l2_rw_convert), and
-        # l2_emit_unit would have the unit translated a second time only to reach that same
-        # refusal.  Here: one translation, and the call's type is the header's (REVIEW e639eca-1).
+        # as int -- the result comes back as a cell of that type (l2_mad_call's typed variants), so
+        # the root never wraps the call in a conversion edge it does not need (REVIEW e639eca-1).
         if: l2_mad_held(node\as\frame\head) >= 0
             if: l2_mad_held_sig(l2_mad_held(node\as\frame\head), @ v, @ ty) = 0
                 return: ty
@@ -22255,6 +22283,35 @@ fn: l2_rw_may (int: mi) int
     ---
 return: 1
 
+# REVIEW c953b22: why l2_rw_may keeps method mi out of the walk -- its gates in order, in words, for
+# the note a callable-merge host gets when the knob does not walk it.
+fn: l2_rw_may_why (int: mi) const: @: char
+    int: j 0
+    int: oi 0
+    if: l2_m_native(mi) = 0
+        return: "it has no native body"
+    if: l2_m_dyn[mi] != 0
+        return: "it has dynamic inputs"
+    if: l2_m_throws != 0 && l2_m_throws[mi] != 0
+        return: "it can throw (a throwing method stays native)"
+    if: l2_mad_on(mi) != 0 && l2_mad_return_confirmed(mi, l2_mad_model[mi]) = 0
+        return: "its return is not confirmed as its one exit"
+    while: j < l2_m_arity[mi]
+        if: l2_cf_get(mi, j) >= 0
+            return: "a callable formal"
+        if: l2_nsty_get(mi, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0
+            return: "a formal that is not a number"
+        j: j + 1
+    ---
+    while: oi < l2_own_n
+        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0
+            return: "a field of a nested body that is not a number"
+        if: l2_own_mi[oi] = mi && l2_formal_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
+            return: "a field named like a formal that is not a number"
+        oi: oi + 1
+    ---
+return: "its walk was refused"
+
 # Whether l2_rw_may(mi) = 0 is specifically because of a callable result (code 16, T6's `fn:
 # (...) ...` header) or a callable formal (l2_cf_get): the PAP/merge-callable class named in
 # next_core_tasks.md's "Интерпретаторы: те же два примера или явное unsupported" (T6/T7,
@@ -23246,7 +23303,12 @@ fn: l2_mad_emit_into (int: mi; const: @(char ind); int: into) int
         j: j + 1
     if: c.fprintf(l2_out, "%sl2_mad_src%s: lmx_arena_ref_struct(node, %uU)\n%sif: l2_mad_src%s = 0\n%s    c.abort()\n%sl2_mad_k%s: 0\n%swhile: l2_mad_k%s < %d\n%s    if: lmx_arena_ref_store(l2_mad%s, %uU + (cast: (unsigned) l2_mad_k%s), lmx_arena_ref_value(l2_mad_src%s, %uU + (cast: (unsigned) l2_mad_k%s))) != 0\n%s        c.abort()\n%s    l2_mad_k%s: l2_mad_k%s + 1\n", ind, sx, (cast: (unsigned) (l2_unit_base + model)), ind, sx, ind, ind, sx, ind, sx, steps, ind, sx, (cast: (unsigned) (2 + caps)), sx, sx, (cast: (unsigned) base), sx, ind, ind, sx, sx) < 0
         return: 1
-    if: into < 0 && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_mad)\n", ind) < 0
+    # D-103: a host that can throw has the declared-throw ABI -- its return is the status and the
+    # node goes out through l2_out_result, as any throwing method's result does.  Returned as the
+    # status, the node's address met the caller as a throw number (an unknown walk status).
+    if: into < 0 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_mad)\n", ind) < 0
+        return: 1
+    if: into < 0 && l2_m_throws != 0 && l2_m_throws[mi] != 0 && c.fprintf(l2_out, "%sl2_out_result[0]: (cast: (@: void) l2_mad)\n%sreturn: 0\n", ind, ind) < 0
         return: 1
     if: into >= 0 && c.fprintf(l2_out, "%sl2_c%d: l2_mad%s\n", ind, into, sx) < 0
         return: 1
@@ -23262,7 +23324,63 @@ fn: l2_mad_model_call (int: mi; int: idx) int
         return: 0
 return: 1
 
+# Item 739: the variant of l2_mad_call for a held call whose header result is rty (own-type code):
+# int keeps l2_mad_call; each other number has its own, which hands back a cell of that type.
+fn: l2_mad_call_name (int: rty) const: @: char
+    if: rty = 1
+        return: "l2_mad_call_char"
+    if: rty = 2
+        return: "l2_mad_call_size_t"
+    if: rty = 3
+        return: "l2_mad_call_unsigned"
+    if: rty = 36
+        return: "l2_mad_call_ulong"
+return: "l2_mad_call"
+
+fn: l2_mad_call_bit (int: rty) int
+    if: rty = 1
+        return: 16
+    if: rty = 2
+        return: 2
+    if: rty = 3
+        return: 4
+    if: rty = 36
+        return: 8
+return: 0
+
+# The typed variants.  The walk hands a primitive a destination it did not classify, and reads such
+# a destination back as an int (lmx_walk_load_operand); a result of another type must come back in a
+# cell the arena classifies as that type.  So the variant makes that cell, has the node's walk store
+# its result there (lmx_walk_call_prim_dispatch: the value through dest, by the result's own type),
+# and hands the cell back.  A char result is a cell of the byte table already: the dispatch hands it
+# back as itself, with the variant's own spare as dest.
+fn: l2_emit_mad_call_typed (int: rty) int
+    const: @(char make) 0
+    if: rty = 2
+        make: "lmx_size_new_owned"
+    if: rty = 3
+        make: "lmx_unsigned_new_owned"
+    if: rty = 36
+        make: "lmx_ulong_new_owned"
+    if: c.fprintf(l2_out, "fn: %s (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    @: void l2_one 0\n    if: nargs != 2U || refs = 0 || refs[0] = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) refs[0])\n    l2_one: refs[1]\n", l2_mad_call_name(rty)) < 0
+        return: 1
+    if: make != 0 && c.fprintf(l2_out, "    @: void l2_res %s((cast: (@: LmxArena) owner))\n    if: l2_res = 0 || lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, @ l2_one, 1U, l2_res, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    \\out: l2_res\n", make) < 0
+        return: 1
+    if: make = 0 && fputs("    size_t: l2_spare 0U\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, @ l2_one, 1U, (cast: (@: void) (@ l2_spare)), out) != 0 || \\out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n", l2_out) < 0
+        return: 1
+    if: c.fprintf(l2_out, "    return: 0\nend: %s\n\n", l2_mad_call_name(rty)) < 0
+        return: 1
+return: 0
+
 fn: l2_emit_mad_call () int
+    if: (l2_mad_need_typed & 2) != 0 && l2_emit_mad_call_typed(2) != 0
+        return: 1
+    if: (l2_mad_need_typed & 4) != 0 && l2_emit_mad_call_typed(3) != 0
+        return: 1
+    if: (l2_mad_need_typed & 8) != 0 && l2_emit_mad_call_typed(36) != 0
+        return: 1
+    if: (l2_mad_need_typed & 16) != 0 && l2_emit_mad_call_typed(1) != 0
+        return: 1
     if: l2_mad_need_call = 0
         return: 0
     if: fputs("fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    @: void l2_one 0\n    if: nargs != 2U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) refs[0])\n    l2_one: refs[1]\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, @ l2_one, 1U, dest, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_out) < 0
@@ -23374,7 +23492,6 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     int: n
     int: arg
     int: at
-    l2_mad_need_call: 1
     if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
         return: l2_rw_refuse(node, "this call's inputs")
     int: aty 0
@@ -23384,17 +23501,24 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
         return: l2_rw_refuse(node, "this call's inputs")
     # Item 739: the argument cell has the header's formal type -- the callee's trampoline reads it
     # with that type (before, an int cell: a size_t formal read 8 bytes of it and the walk met
-    # INVALID).  l2_mad_call carries one input.  Its result reaches the walk as an int only: a
-    # header with another result is refused, located (the rest of item 739), and l2_rw_opty types
-    # the call by that result so the root never wraps it in a conversion instead.
+    # INVALID).  l2_mad_call carries one input.  The result has the header's result type too:
+    # the walk reads a destination it did not classify as an int (lmx_walk_load_operand), so a
+    # header with another number result is called through its typed variant, which hands back a
+    # cell of that type (l2_emit_mad_call).  l2_rw_opty types the call by that result, so the root
+    # never wraps it in a conversion instead.
     if: l2_mad_held_sig(oi, @ aty, @ rty) != 0
         return: l2_rw_refuse(node, "a held callable whose header is not one number to a number")
-    if: rty != 0
-        return: l2_rw_refuse(node, "a held callable whose result is not int")
+    # No header reaches this today (void and a Structure result are refused before), kept as the
+    # typed variants' guard.
+    if: l2_rw_num_ty(rty) = 0
+        return: l2_rw_refuse(node, "a held callable whose result is not a number")
+    if: rty = 0
+        l2_mad_need_call: 1
+    l2_mad_need_typed: l2_mad_need_typed | l2_mad_call_bit(rty)
     f: l2_next_active(node\as\frame\body\first_field)
     if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_mad_call\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, \out, \out, \out, \out) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, l2_mad_call_name(rty), \out, \out, \out, \out) < 0
         return: 1
     if: l2_rw_own(\out, oi, @ at) != 0 || l2_rw_put(\out, 3, at) != 0
         return: 1
@@ -23404,12 +23528,14 @@ return: 0
 
 # D-93, under the knob: the host's call of its capturing model is [prim l2_mad_call, rec, 0, node,
 # arg] -- the root's held call (l2_rw_mad_call) over the node the model's PRIM builds here
-# (l2_rw_mad_build), so one numeric input and an int result.  Any other such call is refused
-# quietly: the host stays native, where l2_emit_call builds and calls the node.
+# (l2_rw_mad_build), so one numeric input and a number result (item 739: through the variant of
+# its type, l2_mad_call_name).  Any other such call is refused quietly: the host stays native, where
+# l2_emit_call builds and calls the node, and says so in a note (l2_rw_methods_count).
 fn: l2_rw_mad_model_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
     @: LmP0Field a
     int: span
     int: aty
+    int: rty
     int: arg
     int: b
     if: l2_m_arity[idx] != 1 || l2_m_dyn[idx] != 0 || l2_cf_get(idx, 0) >= 0 || l2_nsty_get(idx, 0) >= 0
@@ -23417,18 +23543,21 @@ fn: l2_rw_mad_model_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; 
     aty: l2_own_ty_of_param(l2_input_ft(idx, 0))
     if: l2_rw_num_ty(aty) = 0
         return: l2_rw_refuse(node, "a call of the model with other than one number")
-    if: l2_tramp_class(idx) != 1
-        return: l2_rw_refuse(node, "a call of the model whose result is not int")
+    rty: l2_ret_own(l2_m_ret[idx])
+    if: l2_rw_num_ty(rty) = 0
+        return: l2_rw_refuse(node, "a call of the model whose result is not a number")
     a: l2_next_active(args)
     if: a = 0
         return: l2_rw_refuse(node, "this call's inputs")
     span: l2_expr_span(a)
     if: span < 1 || l2_skip_span(a, span) != 0
         return: l2_rw_refuse(node, "this call's inputs")
-    l2_mad_need_call: 1
+    if: rty = 0
+        l2_mad_need_call: 1
+    l2_mad_need_typed: l2_mad_need_typed | l2_mad_call_bit(rty)
     if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_mad_call\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, \out, \out, \out, \out) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, l2_mad_call_name(rty), \out, \out, \out, \out) < 0
         return: 1
     if: l2_rw_mad_build(l2_rw_mi, \out, @ b) != 0 || l2_rw_put(\out, 3, b) != 0
         return: 1
@@ -24188,6 +24317,9 @@ fn: l2_rw_methods_count () int
         return: l2_error(l2_src, 0, "out of memory")
     while: i < l2_m_n
         l2_m_steps[i]: 0 - 1
+        l2_rw_quiet_msg[0]: 0
+        l2_rw_quiet_line: 0U
+        l2_rw_quiet_col: 0U
         if: l2_library_mode = 0 && l2_pap_on(i) != 0
             if: l2_pap_steps(i) != 0
                 return: 1
@@ -24221,6 +24353,18 @@ fn: l2_rw_methods_count () int
         # knob off) is unaffected.
         if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_rw_callable_excluded(i) != 0
             return: l2_error(l2_src, l2_m_node[i], "a callable result or a callable formal is outside the walkable subset (--walk-methods)")
+        # REVIEW c953b22: a callable-merge host the knob does not walk stays native, where its
+        # return and its calls of the model are built -- said in a note, not only visible in the L1:
+        # located at the first refusal of its walk, or at the host when it was kept out before.
+        if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_mad_on(i) != 0 && l2_t7_host_site(i) < 0 && l2_m_steps[i] < 0
+            if: l2_rw_quiet_msg[0] = 0
+                c.snprintf(l2_rw_quiet_msg, 192U, "%s", l2_rw_may_why(i))
+                if: l2_m_node[i] != 0 && l2_m_node[i]\span != 0
+                    l2_rw_quiet_line: l2_m_node[i]\span\line
+                    l2_rw_quiet_col: l2_m_node[i]\span\column
+                ---
+            ---
+            c.fprintf(l1_stderr(), "l2trans note: %s:%zu:%zu: the callable merge host %.*s stays native under --walk-methods: %s\n", l2_src, l2_rw_quiet_line, l2_rw_quiet_col, (cast: (int) l2_m_name[i]\length), l2_m_name[i]\data, l2_rw_quiet_msg)
         ---
         i: i + 1
     ---

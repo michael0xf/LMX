@@ -1030,15 +1030,39 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_make_adder_char.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('l2_program_chars: process_chars') },
     # Item 739: at the root a held callable's argument is built with its model's header formal type
-    # (a size_t formal was read from an int cell: the walk failed, INVALID).  A header whose result is
-    # not int -- l2_mad_call hands the walk an int -- is refused, located (after slice 13 it was
-    # wrapped in a conversion edge and failed at run time), as is a header of two formals.  Mutants:
-    # the argument built as int -- the witness's size_t literal is refused (a U literal in a signed
-    # type), RED; no result check, no header check -- accepted, RED.
+    # (a size_t formal was read from an int cell: the walk failed, INVALID), and its result has the
+    # header's number type: the walk reads a destination it did not classify as an int, so a
+    # size_t, unsigned, ulong or char result comes back through l2_mad_call's typed variant, a cell
+    # of that type (a char: the byte table's, handed back as itself).  Before, such a header was
+    # refused, located; before that, the root wrapped the int-typed value in a conversion edge and
+    # failed at run time.  A header of two formals stays refused.  Mutants: the argument built as
+    # int -- the witness's size_t literal is refused (a U literal in a signed type), RED; no header
+    # check -- accepted, RED; the variant has the walk store into the caller's unclassified
+    # destination -- 0, exit 0; the char variant made like the numbers -- INVALID.
     [pscustomobject]@{ Name = 'unit_t6_root_held_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_t6_root_held_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a held callable whose result is not int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t6_root_held_result_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t6_root_held_results.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # D-93 with item 739: the host calls its size_t model before the return -- natively with the
+    # arguments as cells of their types (the walked node reads an unclassified address as an int),
+    # under the knob through l2_mad_call's size_t variant; the host is walked.  2^32 + 3.  Mutants:
+    # the native arguments as addresses of locals -- INVALID natively; the walked call through
+    # l2_mad_call (int) -- INVALID under the knob.
+    [pscustomobject]@{ Name = 'unit_make_adder_model_call_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_model_call_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_mad_call_size_t') },
+    # D-103: a callable-merge host that can throw returns its node through l2_out_result, its status
+    # as its return (it returned the node as the status: an unknown walk status, exit 3).  Mutant:
+    # the node as the status again -- unknown status, exit 3.  Under the knob the same host stays
+    # native and l2trans notes it (REVIEW c953b22), located; the row requires the note.  Mutant: no
+    # note -- the Notes line is missing.
+    [pscustomobject]@{ Name = 'unit_make_adder_throwing_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_native_note.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Notes = @('the callable merge host makeAdder stays native under --walk-methods: it can throw'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t6_root_held_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a held callable whose header is not one number to a number'; Absent = @(); Debt = @() },
     # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
@@ -2853,6 +2877,14 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ('refused as expected: ' + $fx.Needle); continue
     }
     if (-not $made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans produced no L1; see the log'; continue }
+    # Notes: lines l2trans must print while it translates (an `l2trans note:`), matched in its log
+    # as a refusal's Needle is -- line breaks removed (REVIEW c953b22: a callable-merge host the knob
+    # does not walk says so).
+    if ($fx.PSObject.Properties['Notes'] -and $fx.Notes) {
+        $noteLog = ((Log-Text $label) -replace "`r?`n", '')
+        $noteGone = @($fx.Notes | Where-Object { $noteLog -notmatch [regex]::Escape($_) })
+        if ($noteGone.Count -gt 0) { Add-Row 'FAIL' ('fixture:' + $stem) ('l2trans did not note "' + $noteGone[0] + '"'); continue }
+    }
     if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort') {
         $entryLine = [regex]::Match((Get-Content -LiteralPath $genLm1 -Raw), '(?m)^# entry statements: (\d+)\s*$')
         if (-not $entryLine.Success) { Add-Row 'FAIL' ('fixture:' + $stem) 'the generated L1 does not state `# entry statements: N`'; continue }

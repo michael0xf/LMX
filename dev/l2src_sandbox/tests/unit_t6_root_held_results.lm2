@@ -1,0 +1,42 @@
+# Item 739: a held callable's result has the header's number type at the root -- size_t, unsigned,
+# ulong through l2_mad_call's typed variants (a cell of that type), char through its own (the byte
+# table's cell, handed back as itself).  s(1) = 2^32 + 1, u(4000000000) = 4000000005, l(1) = 6;
+# c('a') = 200 (the captured byte, above 127) and c('b') = 'b'.  Mutants: every held call through
+# l2_mad_call (int) -- walk error: INVALID; the char variant made like the numbers (a size_t cell
+# the char result never reaches) -- not 200.  Entry 7.
+fn: makeS (size_t: n) fn: (size_t: x) size_t
+    fn: addS (size_t: x) size_t
+        return: x + n
+    return: addS
+
+fn: makeU (unsigned: n) fn: (unsigned: x) unsigned
+    fn: addU (unsigned: x) unsigned
+        return: x + n
+    return: addU
+
+fn: makeL (ulong: n) fn: (ulong: x) ulong
+    fn: addL (ulong: x) ulong
+        return: x + n
+    return: addL
+
+fn: makeC (char: n) fn: (char: x) char
+    fn: pickC (char: x) char
+        if: x = 'a'
+            return: n
+        return: x
+    return: pickC
+
+s5: makeS 4294967296U
+u5: makeU 5U
+l5: makeL 5U
+pc: makeC 200
+size_t: a (s5: 1U)
+unsigned: b (u5: 4000000000U)
+ulong: c (l5: 1U)
+char: d (pc: 'a')
+char: e (pc: 'b')
+int: ok 0
+if: a = 4294967297U && b = 4000000005U && c = 6U && d = 200 && e = 'b'
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

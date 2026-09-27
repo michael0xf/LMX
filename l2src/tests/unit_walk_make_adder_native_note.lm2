@@ -1,0 +1,19 @@
+# REVIEW c953b22: under --walk-methods a callable-merge host the knob does not walk stays native
+# (its return and its calls of the model are built there), and l2trans says so in a note, located:
+# here its declaration `size_t: big (n)` needs a conversion, whose receiver can throw, and a
+# throwing method stays native -- "l2trans note: ...: the callable merge host makeAdder stays
+# native under --walk-methods: it can throw".  The program runs natively: add5(1) = 6.  Mutant: no
+# note -- the row's Notes line is missing.  Entry 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    size_t: big (n)
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+add5: makeAdder 5
+int: a (add5: 1)
+int: ok 0
+if: a = 6
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

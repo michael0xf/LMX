@@ -1,0 +1,18 @@
+# Item 739, its result side: at the root a held callable whose header result is not int --
+# `fn: (size_t: x) size_t` here -- is called through l2_mad_call's size_t variant, which hands the
+# walk a size_t cell (the walk reads a destination it did not classify as an int).  Before, the
+# header was refused, located ("a held callable whose result is not int"); before that row, the
+# root wrapped the int-typed value in an int -> size_t edge and the walk failed at run time.
+# add5: 1 is 6.  Mutant: every held call through l2_mad_call (int) -- walk error: INVALID.
+fn: makeAdder (size_t: n) fn: (size_t: x) size_t
+    fn: addN (size_t: x) size_t
+        return: x + n
+    return: addN
+
+add5: makeAdder 5U
+size_t: a (add5: 1)
+int: ok 0
+if: a = 6U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

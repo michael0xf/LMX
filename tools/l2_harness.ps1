@@ -1007,12 +1007,15 @@ $fixtures = @(
         Absent = @('lmx_fresh('); Debt = @('lmx_size_new_owned(l2_program_arena)', 'lmx_size_store_known(l2_mad_cell, ') },
     # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
     # dropped the statements with the host's body; nested_call it refused with the old phrase.
-    # §6 (REVIEW d456aff-2): these four still refuse with the SAME phrase under --walk-methods --
-    # l2_check_body's own native-side validation runs unconditionally, before l2_rw_may/
-    # l2_mad_return_confirmed are ever consulted (the count/walk pass happens strictly after
-    # checking), so l2_mad_on's new walkable-subset bypass never gets a chance to change these.
-    # Measured directly (both with and without the knob, same text each time) before adding
-    # WalkMethods here; previously no row pinned the knob behaviour at all.
+    # §6 (REVIEW d456aff-2, fable_pc's own correction): these four give the SAME phrase with or
+    # without --walk-methods on the CURRENT translator -- not because a check pass preempts the
+    # count/walk pass, but because a6de5a9's own blanket "outside the walkable subset" exclusion
+    # (every code-16 host, no exceptions) is gone: before §6 it aborted the count pass first for
+    # ALL of these, under the knob, before native emission's own l2_mad_host_body validation ever
+    # ran; §6's l2_mad_on/l2_mad_return_confirmed bypass lets a malformed host past that coarse
+    # gate, so the SAME finer l2_mad_host_body check that always ran without the knob now also
+    # runs, and refuses, with the knob. Measured directly (both modes, old and current translator)
+    # before adding WalkMethods here; previously no row pinned the knob behaviour at all.
     [pscustomobject]@{ Name = 'unit_make_adder_after_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a statement after the return of a callable merge'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_make_adder_model_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

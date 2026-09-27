@@ -2012,6 +2012,16 @@ $fixtures = @(
     # Mutant (no range check): the size_t field stores 0 and the program runs on.
     [pscustomobject]@{ Name = 'unit_path_lit_overflow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'literal not representable as size_t'; Absent = @(); Debt = @() },
+    # D-97: a path off a formal, a slot or a method local of a primitive pointer type -- no
+    # Structure type, no c.* door -- is refused, located. Mutant (the translator before D-97):
+    # all three are accepted and emitted as C member accesses (`l2_p0_0\length`, `l2_s0_0\data`,
+    # `q\data`), which only gcc refuses.
+    [pscustomobject]@{ Name = 'unit_path_formal_primitive_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path root'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_slot_primitive_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path root'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_local_primitive_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path root'; Absent = @(); Debt = @() },
     # FABLE-SONNET-PREDEF-RESULT-TYPE-20260924-160 commit 2: the primary motivating case --
     # lm_own_copy_bytes's declared `@: char` return now matches copy's `@: char` target (was
     # refused under the old numeric-only -10 code, found during -155, recorded as D-35).

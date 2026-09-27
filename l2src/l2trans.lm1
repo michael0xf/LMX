@@ -15182,6 +15182,12 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         ---
     ---
     if: cpn != 0U && l2_path_root(cpbuf, cpn, @ cpni, @ cpres, @ cpoi, @ cproot, @ cpfi) = 0
+        # D-97: l2_path_root recognizes every formal as a root (D-28); a path continuing off a
+        # formal with no Structure type (cpni < 0) that the c.* door did not open (cpraw above) is
+        # the located refusal D-28 promises -- not an accepted run the expression pass then copies
+        # as C member access.
+        if: cpfi >= 0 && cpni < 0 && cpoi < 0
+            return: l2_error(path, at, "unknown field path root")
         return: 0
     f: l2_next_active(field)
     i: 0
@@ -15312,6 +15318,12 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
                 continue
             ---
         ---
+        # D-97: a path off a formal, a slot or a method local that neither the L2 path dispatcher
+        # (l2_field_path_check) nor the c.* door (l2_raw_path) opened is refused, located.  The
+        # expression pass would copy `\` and the member name verbatim: `p\length` of `@: size_t p`
+        # became `l2_p0_0\length`, and only gcc caught it.
+        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && f\value\kind = c.LM_P0_NODE_ATOM && (l2_formal_find(mi, f\value\as\atom) >= 0 || l2_slot_find(mi, f\value\as\atom) >= 0 || l2_ml_find(f\value\as\atom) >= 0)
+            return: l2_error(path, f\value, "unknown field path root")
         if: l2_addr_tail(f, @ p1, @ p2) = 0
             i: i + 2
             f: p2

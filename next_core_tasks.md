@@ -812,7 +812,7 @@ Clarifies / overrides overstatements in -19. Unhold from -18 stands (no global-c
 - [x] `sizeof:` — **implemented** language receiver-operator (123 part2); zero `c.sizeof`-specific L2 emit/check specials; raw `c.sizeof` through door.
 - [ ] Нет L2 special semantics и name-specific веток для `c.puts` / `c.array`; **zero** stale header scanners / C-name dictionaries / name whitelists / special `c.*` semantic classification (raw-C door only).
 - [ ] Нет дублирующих старых discard/call путей рядом с новым общим механизмом (`l2_eval_discard` и единый body dispatch).
-- [ ] Нет мёртвых helpers, unreachable compatibility shims, устаревших exclusions/comments и противоречивых docs/tests.
+- [ ] Нет мёртвых helpers, unreachable compatibility shims, устаревших exclusions/comments и противоречивых docs/tests. **Замер `steps/gate-measure-20260927.md`; G1 (мёртвое в `l2trans.lm1`) посажен, G2–G4 — в очереди.**
 - [ ] Нет скрытого fallback, сохраняющего удалённое поведение.
 - [ ] Tracked tree и ownership чисты (маркеры сняты после checkpoint; нет чужого WIP на owned paths).
 - [ ] Полный supported L2 runtime/generated harness, релевантный L3 runner, `python tools/check_docs.py` и `git diff --check` зелёные на **одном** точном pushed commit.

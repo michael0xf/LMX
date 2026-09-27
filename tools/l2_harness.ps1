@@ -1006,6 +1006,18 @@ $fixtures = @(
     # cell -- 2^32 is 0, exit 0.
     [pscustomobject]@{ Name = 'unit_make_adder_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('lmx_size_new_owned(l2_program_arena)', 'lmx_size_store_known(l2_mad_cell, ') },
+    # Item 739: at the root a held callable's argument is built with its model's header formal type
+    # (a size_t formal was read from an int cell: the walk failed, INVALID).  A header whose result is
+    # not int -- l2_mad_call hands the walk an int -- is refused, located (after slice 13 it was
+    # wrapped in a conversion edge and failed at run time), as is a header of two formals.  Mutants:
+    # the argument built as int -- the witness's size_t literal is refused (a U literal in a signed
+    # type), RED; no result check, no header check -- accepted, RED.
+    [pscustomobject]@{ Name = 'unit_t6_root_held_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t6_root_held_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a held callable whose result is not int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t6_root_held_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a held callable whose header is not one number to a number'; Absent = @(); Debt = @() },
     # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
     # dropped the statements with the host's body; nested_call it refused with the old phrase.
     # §6 (REVIEW d456aff-2, fable_pc's own correction): these four give the SAME phrase with or

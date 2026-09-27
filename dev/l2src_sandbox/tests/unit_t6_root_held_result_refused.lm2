@@ -1,0 +1,17 @@
+# Item 739, its result side: l2_mad_call hands the walk an int result only, so at the root a held
+# callable whose header result is not int -- `fn: (size_t: x) size_t` here -- is refused, located.
+# Before slice 13 of the implements port the int-typed result met this size_t place as a refused
+# conversion; after it, and before this row, the root wrapped the mistyped value in an int -> size_t
+# edge and the walk failed at run time.  Mutant: no result check -- l2trans accepts.
+fn: makeAdder (size_t: n) fn: (size_t: x) size_t
+    fn: addN (size_t: x) size_t
+        return: x + n
+    return: addN
+
+add5: makeAdder 5U
+size_t: a (add5: 1)
+int: ok 0
+if: a = 6U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

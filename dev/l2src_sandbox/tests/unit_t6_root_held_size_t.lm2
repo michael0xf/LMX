@@ -1,0 +1,23 @@
+# Item 739 (next_core_tasks.md, the nested callable's `return` remainder), its argument side: at
+# the root a held callable node's call builds its argument with the model's header formal type --
+# `fn: (size_t: x) int` here -- because the callee's trampoline reads the cell with that type
+# (l2_rw_mad_call, l2_mad_held_model).  Before, the argument was an int cell whatever the header
+# said: l2trans accepted this program and the walk failed at run time (INVALID).  4000000000U does
+# not fit int, so the value itself shows the formal's type reached the callee.
+# Mutant: the argument built as int again -- 4000000000U is refused as a U literal in a signed
+# type (a plain `1` alone would reach the walk as an int cell and fail there, INVALID).
+fn: makeAdder (size_t: n) fn: (size_t: x) int
+    fn: addN (size_t: x) int
+        if: x > n
+            return: 2
+        return: 1
+    return: addN
+
+add5: makeAdder 5U
+int: a (add5: 1)
+int: b (add5: 4000000000U)
+int: ok 0
+if: a = 1 && b = 2
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -553,6 +553,7 @@ prototype:
     fn: l2_m_native (int: i) int
     fn: l2_tramp_class (int: mi) int
     fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
+    fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: fresh; int: nargs) int
     fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
     fn: l2_emit_trampoline (int: i; int: proto) int
     fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
@@ -1050,6 +1051,11 @@ prototype:
     fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
     fn: l2_mad_caps (int: mi) int
     fn: l2_mad_emit (int: mi; const: @(char ind)) int
+    fn: l2_mad_emit_into (int: mi; const: @(char ind); int: into) int
+    fn: l2_mad_model_call (int: mi; int: idx) int
+    fn: l2_mad_mentions_value (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
+    fn: l2_rw_mad_model_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
     fn: l2_t7_bound_slot (const: @(LmP0Text name)) int
     fn: l2_t7_arg_of (const: @(LmP0Text name)) int
     fn: l2_t7_arg_ty (const: @(LmP0Text name)) int
@@ -15872,6 +15878,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_mad_on(mi) != 0 && l2_frame_head(stmt, "fn") != 0
             field: l2_next_active(field\next)
             continue
+        # D-93: the host's `return: model` standing as a statement of its body (after other
+        # statements, so not hung on the model's frame) is its build (l2_mad_host_body), not a call
+        # of the model -- checked as a call, it was refused ("incompatible entry signature").
+        if: l2_mad_on(mi) != 0 && l2_mad_is_return(stmt, l2_mad_model[mi]) != 0
+            field: l2_next_active(field\next)
+            continue
         if: l2_mad_store_stmt(stmt) != 0
             field: l2_next_active(field\next)
             continue
@@ -17314,6 +17326,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     int: prty
     int: prsty
     int: er
+    int: mcall 0
     # Capture the selected physical occurrence before evaluating actuals: a
     # nested call may reuse l2_pst, but `self` for this call must remain the
     # originally selected callable. Source `node` is self\parent; own storage
@@ -17324,6 +17337,15 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     # the callee over its own graph, (M, M), so `M\x` shows that activation.  A re-entry
     # (l2_reenters) runs over a fresh instance of M (lmx_fresh), frame-only, its parent M's: M may
     # be active.  A method with no data fields has nothing to lay out and keeps its occurrence.
+    # D-93: the host calls its capturing model before its return -- the node its return would build,
+    # built here with the host's values at the call (l2_mad_emit_into), then called as a merge a
+    # callable formal holds (sel 2): the node is code and data, native 0.
+    if: sel = 0 && l2_mad_model_call(mi, idx) != 0
+        mcall: 1
+        sel: 2
+        if: c.fprintf(l2_out, "%s@: Lmx l2_c%d 0\n", ind, self_t) < 0 || l2_mad_emit_into(mi, ind, self_t) != 0
+            return: 1
+        ---
     if: sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
     if: sel = 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
@@ -17333,7 +17355,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: 1
         ---
     ---
-    if: sel = 2 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, fi) < 0
+    if: sel = 2 && mcall = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, fi) < 0
         return: 1
     if: body != 0
         a0: l2_next_active(body\first_field)
@@ -17482,9 +17504,12 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         # on the fresh path, so their text does not change unless this formal
         # received a merge.
         l2_t7_dyn_here: 0
-        if: l2_t7_dyn_has(mi, fi) != 0
+        if: mcall = 0 && l2_t7_dyn_has(mi, fi) != 0
             l2_t7_dyn_here: 1
-        if: l2_emit_dyn_call(idx, t, self_t, ind, nact) != 0
+        # D-93: the node built above is the code and the data (native 0; no fresh instance).
+        if: mcall != 0 && (c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0 || l2_emit_dyn_tail(idx, t, self_t, ind, 0, nact) != 0)
+            return: l2_prep_drop(acts, hides)
+        if: mcall = 0 && l2_emit_dyn_call(idx, t, self_t, ind, nact) != 0
             l2_t7_dyn_here: 0
             return: l2_prep_drop(acts, hides)
         l2_t7_dyn_here: 0
@@ -20524,6 +20549,11 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     int: d 0
     int: conv l2_rw_conv
     l2_rw_conv: 0
+    # D-93: the host calls its capturing model before its return (l2_mad_model_call).
+    if: l2_rw_mi != l2_e && l2_mad_model_call(l2_rw_mi, idx) != 0
+        if: conv != 0
+            return: l2_rw_refuse(node, "a conversion of a call of the model")
+        return: l2_rw_mad_model_call(node, idx, args, parent, out)
     # A callee that can throw is called like any other (commit 3; -161 c3 D-37): its trampoline
     # returns the throw's number k, the walk carries it as LMX_WALK_THROWN + k and stops, and the
     # turn's channel holds k.  The root has no catch yet (no walker role), so a throw there is
@@ -22312,6 +22342,17 @@ return: 0
 # lookup finds the host's binding, not the model's). Model index/arity/steps/caps are
 # translation-time constants baked into the constructor's own generated body, never operands.
 fn: l2_rw_mad_ret (int: mi; int: into; @: int out) int
+    int: prim
+    if: l2_mad_model[mi] < 0
+        return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost its model")
+    if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0 || l2_rw_mad_build(mi, \out, @ prim) != 0
+        return: 1
+return: l2_rw_put(\out, 1, prim)
+
+# The PRIM that builds host mi's node under parent (the return's operand above; D-93: the node of a
+# call of the model before the return, l2_rw_mad_model_call).  The captures are evaluated where it
+# stands: the host's values there.
+fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
     int: model l2_mad_model[mi]
     int: caps l2_mad_caps(mi)
     int: prim
@@ -22322,7 +22363,7 @@ fn: l2_rw_mad_ret (int: mi; int: into; @: int out) int
     @: LmP0Field af
     if: model < 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost its model")
-    if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 4 + caps, @ prim) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 4 + caps, @ prim) != 0
         return: 1
     mref: l2_rw_t
     l2_rw_t: l2_rw_t + 1
@@ -22344,7 +22385,8 @@ fn: l2_rw_mad_ret (int: mi; int: into; @: int out) int
         j: j + 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_mad_construct_%d\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, mi, prim, prim, prim, prim) < 0
         return: 1
-return: l2_rw_put(\out, 1, prim)
+    \out: prim
+return: 0
 
 # T6. return: addN builds one node: the model, {n: the activation's value}, the declared header.
 # Frames are the model's, shared by address. native of the node stays 0.
@@ -22597,14 +22639,57 @@ return: l2_find_method(only\value\as\atom) = model
 
 # stmt names a method nested in host mi -- the model or another -- that captures host names (D-93:
 # its native function is the stub, returning 0, so the host cannot call it as C).  A nested method
-# that captures nothing has its own native body and is called like any other.
+# that captures nothing has its own native body and is called like any other; the capturing model
+# may be called (l2_mad_model_call: the call builds its node), but not named as a value.
 fn: l2_mad_names_nested (const: @(LmP0Node stmt); int: mi) int
     int: k 0
     while: k < l2_m_n
-        if: l2_mad_host_of(k) = mi && l2_mcap_count(k) > 0 && l2_mad_mentions(stmt, l2_m_name[k]) != 0
+        if: l2_mad_host_of(k) = mi && l2_mcap_count(k) > 0 && l2_mad_model_call(mi, k) = 0 && l2_mad_mentions(stmt, l2_m_name[k]) != 0
+            return: 1
+        if: l2_mad_host_of(k) = mi && l2_mcap_count(k) > 0 && l2_mad_model_call(mi, k) != 0 && l2_mad_mentions_value(stmt, l2_m_name[k]) != 0
             return: 1
         k: k + 1
     ---
+return: 0
+
+# D-93: node names name other than as a call's head (`name: 1`): an atom, in fields and trailers.
+fn: l2_mad_mentions_value (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    @: LmP0Field f
+    if: node = 0 || name = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_ATOM && node\as != 0 && l2_text_same(node\as\atom, name) != 0
+        return: 1
+    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
+        f: l2_next_active(node\as\structure\first_field)
+        while: f != 0
+            if: l2_mad_mentions_value(f\value, name) != 0
+                return: 1
+            f: l2_next_active(f\next)
+        ---
+        if: node\as\structure\trailer != 0 && node\as\structure\trailer\body != 0
+            f: l2_next_active(node\as\structure\trailer\body\first_field)
+            while: f != 0
+                if: l2_mad_mentions_value(f\value, name) != 0
+                    return: 1
+                f: l2_next_active(f\next)
+            ---
+        return: 0
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
+        if: node\as\frame\body != 0
+            f: l2_next_active(node\as\frame\body\first_field)
+            while: f != 0
+                if: l2_mad_mentions_value(f\value, name) != 0
+                    return: 1
+                f: l2_next_active(f\next)
+            ---
+        if: node\as\frame\trailer != 0 && node\as\frame\trailer\body != 0
+            f: l2_next_active(node\as\frame\trailer\body\first_field)
+            while: f != 0
+                if: l2_mad_mentions_value(f\value, name) != 0
+                    return: 1
+                f: l2_next_active(f\next)
+            ---
+        ---
 return: 0
 
 # A trailer `return: model`.
@@ -22832,8 +22917,9 @@ return: n
 # Where the return is: a `return: model` statement of the body; else the trailer of the method or
 # of its signature's `fn:` frame, after every statement; else the model's own `fn:` field -- the
 # parser hangs a `return: model` that follows the model's block on that frame, and
-# l2_mad_take_nested took it off there.  A statement after the return, one that names a nested
-# method (walked; its native function returns 0), or one that returns, is refused: the build is
+# l2_mad_take_nested took it off there.  A statement after the return, one that names a capturing
+# nested method other than as a call of the model (D-93: its native function returns 0; the call
+# builds the node), or one that returns, is refused: the build is
 # the host's one exit.  D-94: a statement after the return is dead -- checked, never emitted (natively
 # or in the walk, l2_mad_return_point); a return of a number is the result's type error.
 fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
@@ -23085,6 +23171,14 @@ fn: l2_mad_hdr_arity (int: mi) int
 return: l2_count_active(f\value\as\structure)
 
 fn: l2_mad_emit (int: mi; const: @(char ind)) int
+return: l2_mad_emit_into(mi, ind, 0 - 1)
+
+# The node host mi's return builds (into < 0: its `return:`), or -- D-93 -- the same node built at a
+# call of its capturing model before the return, into l2_c<into> (l2_emit_call): the model called
+# with the host's values at the call.  A capture is read-only in the model, so that node is exactly
+# what the host sees there.  A call's locals carry the suffix _c<into>, since the host may build
+# several (its calls and its return); the return's text is the one it always was.
+fn: l2_mad_emit_into (int: mi; const: @(char ind); int: into) int
     int: model
     int: steps 0
     int: caps
@@ -23095,9 +23189,16 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     int: base
     int: site
     @: LmP0Field af
+    []: char sx 24
+    []: char cv 1024
+    sx[0]: 0
+    if: into >= 0 && c.sprintf(sx, "_c%d", into) < 0
+        return: 1
     site: l2_t7_host_site(mi)
-    if: site >= 0
+    if: site >= 0 && into < 0
         return: l2_t7_write(site, ind, 1)
+    if: site >= 0
+        return: l2_error(l2_src, l2_m_node[mi], "a callable merge host names a nested method outside the return")
     model: l2_mad_model[mi]
     if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge needs a walkable body")
@@ -23110,41 +23211,56 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
         arity: l2_m_arity[model]
     width: 2 + caps + steps
     base: l2_m_kids(model)
-    if: c.fprintf(l2_out, "%s@: Lmx l2_mad 0\n%s@: Lmx l2_mad_part 0\n%s@: Lmx l2_mad_src 0\n%s@: void l2_mad_cell 0\n%sint: l2_mad_k 0\n%sl2_mad: lmx_struct_new_owned(node, l2_program_arena)\n%sif: l2_mad = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind, ind, (cast: (unsigned) width), ind, ind) < 0
+    if: c.fprintf(l2_out, "%s@: Lmx l2_mad%s 0\n%s@: Lmx l2_mad_part%s 0\n%s@: Lmx l2_mad_src%s 0\n%s@: void l2_mad_cell%s 0\n%sint: l2_mad_k%s 0\n%sl2_mad%s: lmx_struct_new_owned(node, l2_program_arena)\n%sif: l2_mad%s = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad%s, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, sx, ind, sx, ind, sx, ind, sx, ind, sx, ind, sx, ind, sx, sx, (cast: (unsigned) width), ind, ind) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_mad_part: lmx_struct_new_owned(l2_mad, l2_program_arena)\n%sif: l2_mad_part = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part, %uU) != 0 || lmx_arena_ref_store(l2_mad, 0U, (cast: (@: void) l2_mad_part)) != 0\n%s    c.abort()\n", ind, ind, (cast: (unsigned) arity), ind) < 0
+    if: c.fprintf(l2_out, "%sl2_mad_part%s: lmx_struct_new_owned(l2_mad%s, l2_program_arena)\n%sif: l2_mad_part%s = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part%s, %uU) != 0 || lmx_arena_ref_store(l2_mad%s, 0U, (cast: (@: void) l2_mad_part%s)) != 0\n%s    c.abort()\n", ind, sx, sx, ind, sx, sx, (cast: (unsigned) arity), sx, sx, ind) < 0
         return: 1
     j: 0
     while: j < arity
-        if: c.fprintf(l2_out, "%sl2_mad_cell: lmx_int_new_owned(l2_program_arena)\n%sif: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad_part, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, ind, (cast: (unsigned) j), ind) < 0
+        if: c.fprintf(l2_out, "%sl2_mad_cell%s: lmx_int_new_owned(l2_program_arena)\n%sif: l2_mad_cell%s = 0 || lmx_arena_ref_store(l2_mad_part%s, %uU, l2_mad_cell%s) != 0\n%s    c.abort()\n", ind, sx, ind, sx, sx, (cast: (unsigned) j), sx, ind) < 0
             return: 1
         j: j + 1
-    if: c.fprintf(l2_out, "%sl2_mad_part: lmx_struct_new_owned(l2_mad, l2_program_arena)\n%sif: l2_mad_part = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part, 1U) != 0 || lmx_arena_ref_store(l2_mad, 1U, (cast: (@: void) l2_mad_part)) != 0\n%s    c.abort()\n%sl2_mad_cell: lmx_int_new_owned(l2_program_arena)\n%sif: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad_part, 0U, l2_mad_cell) != 0\n%s    c.abort()\n", ind, ind, ind, ind, ind, ind) < 0
+    if: c.fprintf(l2_out, "%sl2_mad_part%s: lmx_struct_new_owned(l2_mad%s, l2_program_arena)\n%sif: l2_mad_part%s = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part%s, 1U) != 0 || lmx_arena_ref_store(l2_mad%s, 1U, (cast: (@: void) l2_mad_part%s)) != 0\n%s    c.abort()\n%sl2_mad_cell%s: lmx_int_new_owned(l2_program_arena)\n%sif: l2_mad_cell%s = 0 || lmx_arena_ref_store(l2_mad_part%s, 0U, l2_mad_cell%s) != 0\n%s    c.abort()\n", ind, sx, sx, ind, sx, sx, sx, sx, ind, ind, sx, ind, sx, sx, sx, ind) < 0
         return: 1
-    # T6b: each capture is the host's own value of the name here, at the return -- the ordinary
-    # evaluation of that atom in the host (a formal bound to a field reads the field) -- not the
-    # machine argument.
+    # T6b: each capture is the host's own value of the name here, at the return (or at the call,
+    # D-93) -- the ordinary evaluation of that atom in the host (a formal bound to a field reads the
+    # field) -- not the machine argument.  Into a local buffer: l2_tok may be a caller's
+    # destination at a call.
     j: 0
     while: j < l2_mcap_n
         if: l2_mcap_model[j] = model
             af: l2_mad_atom_field(l2_m_node[model], l2_mcap_name[j])
             if: af = 0
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
-            if: l2_eval_fields(af, 1, mi, ind, l2_tok) != 0
+            if: l2_eval_fields(af, 1, mi, ind, cv) != 0
                 return: 1
             # Item 738: a char capture is the byte table's cell of its value -- the value is a C
             # char here, signed on this host, so it is taken as its byte (& 255), as
             # lmx_char_value_known reads one.
-            if: l2_mcap_ty[j] = 1 && c.fprintf(l2_out, "%sl2_mad_cell: lmx_char_cell_known(l2_program_chars, ((cast: (int) (%s)) & 255))\n%sif: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, l2_tok, ind, (cast: (unsigned) slot), ind) < 0
+            if: l2_mcap_ty[j] = 1 && c.fprintf(l2_out, "%sl2_mad_cell%s: lmx_char_cell_known(l2_program_chars, ((cast: (int) (%s)) & 255))\n%sif: l2_mad_cell%s = 0 || lmx_arena_ref_store(l2_mad%s, %uU, l2_mad_cell%s) != 0\n%s    c.abort()\n", ind, sx, cv, ind, sx, sx, (cast: (unsigned) slot), sx, ind) < 0
                 return: 1
-            if: l2_mcap_ty[j] != 1 && c.fprintf(l2_out, "%sl2_mad_cell: %s(l2_program_arena)\n%sif: l2_mad_cell = 0 || %s(l2_mad_cell, %s) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, l2_mcap_new_helper(l2_mcap_ty[j]), ind, l2_own_store_helper(l2_mcap_ty[j]), l2_tok, (cast: (unsigned) slot), ind) < 0
+            if: l2_mcap_ty[j] != 1 && c.fprintf(l2_out, "%sl2_mad_cell%s: %s(l2_program_arena)\n%sif: l2_mad_cell%s = 0 || %s(l2_mad_cell%s, %s) != 0 || lmx_arena_ref_store(l2_mad%s, %uU, l2_mad_cell%s) != 0\n%s    c.abort()\n", ind, sx, l2_mcap_new_helper(l2_mcap_ty[j]), ind, sx, l2_own_store_helper(l2_mcap_ty[j]), sx, cv, sx, (cast: (unsigned) slot), sx, ind) < 0
                 return: 1
             slot: slot + 1
             ---
         j: j + 1
-    if: c.fprintf(l2_out, "%sl2_mad_src: lmx_arena_ref_struct(node, %uU)\n%sif: l2_mad_src = 0\n%s    c.abort()\n%sl2_mad_k: 0\n%swhile: l2_mad_k < %d\n%s    if: lmx_arena_ref_store(l2_mad, %uU + (cast: (unsigned) l2_mad_k), lmx_arena_ref_value(l2_mad_src, %uU + (cast: (unsigned) l2_mad_k))) != 0\n%s        c.abort()\n%s    l2_mad_k: l2_mad_k + 1\n%sreturn: (cast: (@: void) l2_mad)\n", ind, (cast: (unsigned) (l2_unit_base + model)), ind, ind, ind, ind, steps, ind, (cast: (unsigned) (2 + caps)), (cast: (unsigned) base), ind, ind, ind) < 0
+    if: c.fprintf(l2_out, "%sl2_mad_src%s: lmx_arena_ref_struct(node, %uU)\n%sif: l2_mad_src%s = 0\n%s    c.abort()\n%sl2_mad_k%s: 0\n%swhile: l2_mad_k%s < %d\n%s    if: lmx_arena_ref_store(l2_mad%s, %uU + (cast: (unsigned) l2_mad_k%s), lmx_arena_ref_value(l2_mad_src%s, %uU + (cast: (unsigned) l2_mad_k%s))) != 0\n%s        c.abort()\n%s    l2_mad_k%s: l2_mad_k%s + 1\n", ind, sx, (cast: (unsigned) (l2_unit_base + model)), ind, sx, ind, ind, sx, ind, sx, steps, ind, sx, (cast: (unsigned) (2 + caps)), sx, sx, (cast: (unsigned) base), sx, ind, ind, sx, sx) < 0
+        return: 1
+    if: into < 0 && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_mad)\n", ind) < 0
+        return: 1
+    if: into >= 0 && c.fprintf(l2_out, "%sl2_c%d: l2_mad%s\n", ind, into, sx) < 0
         return: 1
 return: 0
+
+# D-93: whether idx, called in host mi's body, is its capturing model -- the call builds the node
+# the return would build, with the host's values at the call, and calls it (l2_emit_call natively,
+# l2_rw_mad_model_call in the walk).  A PAP host's (T7) model is not called so.
+fn: l2_mad_model_call (int: mi; int: idx) int
+    if: l2_mad_on(mi) = 0 || idx < 0 || l2_mad_model[mi] != idx || l2_mcap_count(idx) <= 0
+        return: 0
+    if: l2_t7_host_site(mi) >= 0
+        return: 0
+return: 1
 
 fn: l2_emit_mad_call () int
     if: l2_mad_need_call = 0
@@ -23283,6 +23399,40 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     if: l2_rw_own(\out, oi, @ at) != 0 || l2_rw_put(\out, 3, at) != 0
         return: 1
     if: l2_rw_texpr(f, n, aty, \out, @ arg) != 0 || l2_rw_put(\out, 4, arg) != 0
+        return: 1
+return: 0
+
+# D-93, under the knob: the host's call of its capturing model is [prim l2_mad_call, rec, 0, node,
+# arg] -- the root's held call (l2_rw_mad_call) over the node the model's PRIM builds here
+# (l2_rw_mad_build), so one numeric input and an int result.  Any other such call is refused
+# quietly: the host stays native, where l2_emit_call builds and calls the node.
+fn: l2_rw_mad_model_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
+    @: LmP0Field a
+    int: span
+    int: aty
+    int: arg
+    int: b
+    if: l2_m_arity[idx] != 1 || l2_m_dyn[idx] != 0 || l2_cf_get(idx, 0) >= 0 || l2_nsty_get(idx, 0) >= 0
+        return: l2_rw_refuse(node, "a call of the model with other than one number")
+    aty: l2_own_ty_of_param(l2_input_ft(idx, 0))
+    if: l2_rw_num_ty(aty) = 0
+        return: l2_rw_refuse(node, "a call of the model with other than one number")
+    if: l2_tramp_class(idx) != 1
+        return: l2_rw_refuse(node, "a call of the model whose result is not int")
+    a: l2_next_active(args)
+    if: a = 0
+        return: l2_rw_refuse(node, "this call's inputs")
+    span: l2_expr_span(a)
+    if: span < 1 || l2_skip_span(a, span) != 0
+        return: l2_rw_refuse(node, "this call's inputs")
+    l2_mad_need_call: 1
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_mad_call\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, \out, \out, \out, \out) < 0
+        return: 1
+    if: l2_rw_mad_build(l2_rw_mi, \out, @ b) != 0 || l2_rw_put(\out, 3, b) != 0
+        return: 1
+    if: l2_rw_texpr(a, span, aty, \out, @ arg) != 0 || l2_rw_put(\out, 4, arg) != 0
         return: 1
 return: 0
 
@@ -26710,14 +26860,13 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_arena l2_u%08X%08X_arena\ndefine: l2_program_unit l2_u%08X%08X_program_unit\ndefine: l2_program_graph l2_u%08X%08X_program_graph\ndefine: l2_program_qualified_roots l2_u%08X%08X_qualified_roots\ndefine: l2_program_qualified_count l2_u%08X%08X_qualified_count\ndefine: l2_program_qualified_at l2_u%08X%08X_qualified_at\ndefine: l2_library_opened l2_u%08X%08X_opened\n", l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b) < 0
         fclose(l2_out)
         return: 1
-    # Item 738: a char capture is built inside a method, where the program's byte table is not in
-    # scope -- this module cell carries it there (per unit in a library, like the arena).
-    if: l2_mcap_has_char() != 0 && l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_chars l2_u%08X%08X_program_chars\n", l2_module_hash_a, l2_module_hash_b) < 0
-        fclose(l2_out)
-        return: 1
     if: fputs("@: LmxArena l2_program_arena 0\n@: Lmx l2_program_unit 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
+    # Item 738: a char capture is built inside a method, where the program's byte table is not in
+    # scope -- this module cell carries it there.  No library unit declares it: --library refuses
+    # every callable merge (its model is not walked, "a callable merge needs a walkable body";
+    # REVIEW 0acac58), so a library's per-unit rename of it would be code with no witness.
     if: l2_mcap_has_char() != 0 && fputs("@: char l2_program_chars 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1

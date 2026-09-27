@@ -529,8 +529,9 @@ $fixtures = @(
     # class as the five rows above. entry_puts_after_return refuses earlier, at its own `return: 0`
     # (root doesn't allow a value there at all, before the c.puts line is even reached).
     # entry_puts_triple_fence4 is a genuine P0 parse failure, not the semantic refusal the other
-    # triple-quote forms get -- a real parser gap in the four-quote-both-sides fence, not fixed
-    # here, just gated with what it is.
+    # triple-quote forms get: the source is spec-correct (docs/LMX_grammar.en.md :413,433-435,
+    # "four quotes produce three" -- measured to work MID-string; only the symmetric 4-open/
+    # 4-close case at end of input fails) -- pin of defect D-96, not of a norm, not fixed here.
     [pscustomobject]@{ Name = 'entry_puts_after_return.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'return with a value at the root'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_puts_bad_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_puts_extra_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },

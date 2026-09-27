@@ -553,12 +553,17 @@ fn: lmx_thread_dispatch_native (@: LmxThread t; LmxCallEntry: entry) int
                     # here -- model 31 / Message flags) on success. G2: a nonzero walk_run
                     # status (METHOD throw / walk failure) is in lmx_call_walk_fail_status
                     # and stops the Message like today's entry adapter (S1.1 numbering).
-                    # L3 bind installs a status walk: INTERP_* is the turn body status.
+                    # Q35 (author, 2026-09-27, LMX_blog/2026-09-27.md; D-90): the value the graph
+                    # returned is no status of the turn ("куда возвращаемый статус и зачем?") --
+                    # success is set by user code.  Under an L3 bind (a status walk) a graph with no
+                    # native word went to the walk hook, and what came back is the INTERPRETER's
+                    # verdict (LMX_INTERP_*; the graph's own value l3_thread_dispatch keeps aside): a
+                    # failed interpretation fails the turn.  A graph with a native word answered its
+                    # handler's value, which is not read in either mode (model 31); its throw comes by
+                    # the fail channel below.  (The old "2 -> OK" branch caught only a native 2:
+                    # nothing produces LMX_WALK_NO_GRAPH since k.4.)
                     st: lmx_call0(arena, graph)
-                    if: lmx_call_walk_returns_status() != 0
-                        if: st = c.LMX_CALL_NOT_CALLABLE
-                            return: c.LMX_TURN_BODY_OK
-                        ---
+                    if: lmx_call_walk_returns_status() != 0 && (lmx_call_ready(arena, graph) != c.LMX_CALL_OK || graph\native = 0)
                         return: st
                     ---
                     fail: lmx_call_walk_fail_status()

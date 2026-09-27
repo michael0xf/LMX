@@ -198,9 +198,15 @@ $flags = @('-std=c99', '-Wall', '-Wextra', '-Wpedantic', '-I', $root, '-I', (Joi
            '-I', $decNumberDir,
            '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
            '-Werror=implicit-function-declaration', '-Werror=implicit-int')
+# §0 item 2 (build memory): cc1's garbage collector does not run while its heap is under 128 MB
+# (gcc 13.1: ggc-min-heapsize 131072 KB, ggc-min-expand 100), so a large unit keeps every dead tree.
+# A 16 MB threshold with 20 % growth: l2trans.c 155 -> 86 MB, measured, +0.1-0.4 s a unit.  The same
+# pair is in tools\l2_harness.ps1.
+$flags += @('--param', 'ggc-min-heapsize=16384', '--param', 'ggc-min-expand=20')
 if ($Strict) { $flags += @('-Werror', '-O2') }
 
 $rows = @()
+$rowTabs = @()
 $failed = @()
 function Add-Row([string]$State, [string]$Label, [string]$Note) {
     # THE DISPLAY LINE MUST NOT TRAVEL THE SUCCESS STREAM (DEEPSEEK-GATE-ROW-ACCOUNTING-20260921-30).
@@ -226,6 +232,8 @@ function Add-Row([string]$State, [string]$Label, [string]$Note) {
     # naive in-process experiment misleads about capture.
     $row = ('{0,-4} {1,-34} {2}' -f $State, $Label, $Note)
     $script:rows += $row
+    # summary.txt's form of the same row: state, label, note, tab-separated, as the harness writes.
+    $script:rowTabs += ($State + "`t" + $Label + "`t" + $Note)
     Write-Host $row
     if ($State -eq 'FAIL') { $script:failed += $Label }
 }
@@ -601,7 +609,18 @@ foreach ($l in $peakLines) { Write-Output ('build_l2src: ' + $l) }
 # keeps everything, since its failure is read from them; -KeepAll keeps them always.
 $summaryPath = Join-Path $OutDir 'summary.txt'
 $verdictLine = ('verdict' + "`t" + $rows.Count + ' targets' + "`t" + $failed.Count + ' failed')
-[System.IO.File]::WriteAllText($summaryPath, ((@('translator' + "`t" + $Translator + "`t" + $translatorHash) + $rows + $peakLines + @($verdictLine) -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+# The staged sources' identity (REVIEW 6ca942f): the sha256 of the lines "<sha256 of a file>  <its
+# path under src/>", one per staged file, sorted by path in ordinal order, joined by LF with a final
+# LF -- recomputable from the stamp's src/ or from a checkout staged the same way.
+$srcRoot = Join-Path $OutDir 'src'
+$stagedFiles = @(Get-ChildItem -LiteralPath $srcRoot -File -Recurse | ForEach-Object { $_.FullName.Substring($srcRoot.Length + 1) -replace '\\', '/' })
+[Array]::Sort($stagedFiles, [StringComparer]::Ordinal)
+$stagedLines = @($stagedFiles | ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $srcRoot $_) -Algorithm SHA256).Hash.ToLower() + '  ' + $_ })
+$stagedSha = [System.Security.Cryptography.SHA256]::Create()
+$stagedDigest = -join ($stagedSha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes((($stagedLines -join "`n") + "`n"))) | ForEach-Object { $_.ToString('x2') })
+$stagedLine = ('staged' + "`t" + 'src' + "`t" + $stagedFiles.Count + ' files' + "`t" + $stagedDigest)
+$translatorLine = ('translator' + "`t" + $Translator + "`t" + $translatorHash)
+[System.IO.File]::WriteAllText($summaryPath, ((@($translatorLine, $stagedLine) + $rowTabs + $peakLines + @($verdictLine) -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 if ($failed.Count -eq 0 -and -not $KeepAll) {
     $pruned = 0
     foreach ($d in @($objDir, $binDir, $logDir)) {

@@ -348,6 +348,11 @@ Start-PeakSampler
 $cflags = @('-std=c99', '-Wall', '-Wextra', '-Wpedantic', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $sandbox,
             '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
             '-Werror=implicit-function-declaration', '-Werror=implicit-int')
+# §0 item 2 (build memory): cc1 collects no garbage under 128 MB of heap by default (gcc 13.1); a 16 MB
+# threshold with 20 % growth -- l2trans.c 155 -> 86 MB, measured.  The same pair is in build_l2src.ps1;
+# $kflags below carries it too.
+$ggc = @('--param', 'ggc-min-heapsize=16384', '--param', 'ggc-min-expand=20')
+$cflags += $ggc
 $l2transC = Join-Path $gen 'l2trans.c'
 $l2libcC = Join-Path $gen 'l2_libc.c'
 $l2libcO = Join-Path $gen 'l2_libc.o'
@@ -410,7 +415,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $headers 'l1src') | Out-Nul
 # -Werror=implicit-function-declaration (-159 commit 2b): a generated unit that calls a kernel act it
 # never declared (a missing predef) is refused here, not compiled with an implicit int return -- which
 # truncates a returned pointer to 32 bits.
-$kflags = @('-std=c99', '-Werror=implicit-function-declaration', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $src, '-I', $headers)
+$kflags = @('-std=c99', '-Werror=implicit-function-declaration', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $src, '-I', $headers) + $ggc
 $driverSource = Join-Path $sandbox 'harness\l2_eternal_driver.lm1'
 $driverC = Join-Path $gen 'l2_eternal_driver.c'
 $driverO = Join-Path $gen 'l2_eternal_driver.o'

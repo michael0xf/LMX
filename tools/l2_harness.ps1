@@ -1007,13 +1007,19 @@ $fixtures = @(
         Absent = @('lmx_fresh('); Debt = @('lmx_size_new_owned(l2_program_arena)', 'lmx_size_store_known(l2_mad_cell, ') },
     # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
     # dropped the statements with the host's body; nested_call it refused with the old phrase.
-    [pscustomobject]@{ Name = 'unit_make_adder_after_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    # §6 (REVIEW d456aff-2): these four still refuse with the SAME phrase under --walk-methods --
+    # l2_check_body's own native-side validation runs unconditionally, before l2_rw_may/
+    # l2_mad_return_confirmed are ever consulted (the count/walk pass happens strictly after
+    # checking), so l2_mad_on's new walkable-subset bypass never gets a chance to change these.
+    # Measured directly (both with and without the knob, same text each time) before adding
+    # WalkMethods here; previously no row pinned the knob behaviour at all.
+    [pscustomobject]@{ Name = 'unit_make_adder_after_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a statement after the return of a callable merge'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_make_adder_model_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    [pscustomobject]@{ Name = 'unit_make_adder_model_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_make_adder_nested_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    [pscustomobject]@{ Name = 'unit_make_adder_nested_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_make_adder_early_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    [pscustomobject]@{ Name = 'unit_make_adder_early_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable merge host returns outside its model'; Absent = @(); Debt = @() },
     # T7: return merge and a merge actual of a callable formal. wrap(5)(1)=6,
     # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.

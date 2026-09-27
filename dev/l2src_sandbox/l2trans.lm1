@@ -14600,7 +14600,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: call\body = 0
             return: l2_error(path, node, "incompatible entry signature")
         return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
-    if: idx < 0 && (l2_predef_has_function(call\head) != 0 || (l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40))
+    if: idx < 0 && l2_ml_find(call\head) >= 0 && l2_ml_ty[l2_ml_find(call\head)] = 40
         if: call\trailer != 0 || call\body = 0 || call\body\trailer != 0
             return: l2_error(path, node, "unsupported trailer")
         if: l2_next_active(call\body\first_field) = 0

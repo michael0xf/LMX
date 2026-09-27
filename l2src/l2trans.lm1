@@ -6603,6 +6603,35 @@ fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Nod
         return: 2
 return: l2_emit_value_convert_field(at, body\first_field, l2_count_active(body), l2_ret_ft(mi), mi, ind, dest)
 
+# B3, a declaration's initializer (steps/implements-port-plan.md): `size_t: s (x)` / `size_t: t y`
+# with an int x or y is the edge a store has -- the declaration's type is the place, read from its
+# type word (l2_own_decl_ty has a numbering of its own).  A parenthesised initializer is its fields:
+# the sole anonymous container is transparent at consumption.  An array declaration is no place.
+fn: l2_decl_ft (const: @(LmP0Node stmt)) int
+    int: code 0
+    if: stmt = 0 || l2_own_decl_ty(stmt) = 0 || l2_own_array_count(stmt) != 0 || stmt\as = 0 || stmt\as\frame = 0 || l2_ret_type_word(stmt\as\frame\head, 0, 0, @ code) != 0
+        return: 0 - 1
+    if: code = 33
+        return: 34
+return: code
+
+fn: l2_check_init_convert (const: @(LmP0Node stmt); @: LmP0Field last; int: mi; const: @(char path)) int
+    int: to_ft l2_decl_ft(stmt)
+    if: to_ft < 0 || last = 0 || last\value = 0
+        return: 0
+    if: last\value\kind = c.LM_P0_NODE_STRUCTURE && last\value\as != 0 && last\value\as\structure != 0
+        return: l2_check_value_convert_field(last\value\as\structure\first_field, l2_count_active(last\value\as\structure), to_ft, mi, path)
+return: l2_check_value_convert_field(last, 1, to_ft, mi, path)
+
+# Its emission: 0 emitted into dest, 1 error, 2 none.
+fn: l2_emit_init_convert (const: @(LmP0Node stmt); @: LmP0Field last; int: mi; const: @(char ind); @: char dest) int
+    int: to_ft l2_decl_ft(stmt)
+    if: to_ft < 0 || last = 0 || last\value = 0
+        return: 2
+    if: last\value\kind = c.LM_P0_NODE_STRUCTURE && last\value\as != 0 && last\value\as\structure != 0
+        return: l2_emit_value_convert_field(stmt, last\value\as\structure\first_field, l2_count_active(last\value\as\structure), to_ft, mi, ind, dest)
+return: l2_emit_value_convert_field(stmt, last, 1, to_ft, mi, ind, dest)
+
 # Named primitive value codes are l2_primitive_leaf_implements. The lists
 # below are the literal class (-10), a quoted pointer (-11), and a code that
 # is not one of those names. They are not a second primitive predicate.
@@ -16162,6 +16191,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             if: last = 0 || last\value = 0 || l2_check_expr(last\value, mi, path) != 0
                 return: 1
             if: last\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(last\value\as\atom, l2_lit_kind_from_own(l2_own_decl_ty(stmt)), path, stmt) != 0
+                return: 1
+            if: l2_check_init_convert(stmt, last, mi, path) != 0
                 return: 1
             ---
         ---
@@ -26073,9 +26104,15 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # (l2_own_excl above) -- "int: x (x + 2)" after "int: x 1" must read the first x.
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2
             l2_own_excl: oi
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_eval_fields(l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next), 1, mi, ind, l2_tok) != 0
-            l2_own_excl: -1
-            return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2
+            pret: l2_emit_init_convert(stmt, l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next), mi, ind, l2_tok)
+            if: pret = 1
+                l2_own_excl: -1
+                return: 1
+            if: pret = 2 && l2_eval_fields(l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next), 1, mi, ind, l2_tok) != 0
+                l2_own_excl: -1
+                return: 1
+            ---
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2
             l2_own_excl: -1
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && oi >= 0 && l2_count_active(stmt\as\frame\body) = 2 && l2_own_store(mi, oi, ind, l2_tok) != 0

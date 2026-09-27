@@ -2547,6 +2547,16 @@ $fixtures = @(
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_methods_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    # implements-port B3, a declaration's initializer: `size_t: s (x)` with an int x calls the row's
+    # receiver on the value as a store does (l2_check_init_convert, l2_emit_init_convert), bare, in
+    # parentheses or compound.  Mutants (copies under build/): the edge not emitted -- _range completes,
+    # RED by run; no initializer check -- _norow refused with another phrase, RED.
+    [pscustomobject]@{ Name = 'unit_b3_init_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_b3_init_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_b3_init_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     # implements-port slice 13 (B3, the root): at the walked root a value of one named type given to
     # a place of another -- an own, a call's formal, a message field; a single value or a compound
     # one -- calls the row's receiver on it (l2_rw_convert); every status the receiver leaves with is

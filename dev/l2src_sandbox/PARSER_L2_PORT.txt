@@ -371,6 +371,29 @@ extends from if he wants a fixture that closes one of these.
   ever does, this stays a capstone item -- a ported predicate no gate
   can turn red is not measured (e2, 2026-09-14).
 
+Status (2026-09-27 addendum, Sonnet, §GATE stale-ports cleanup)
+------------------------------------------------------------------
+The .lm2 units this ticket built no longer translate under the current
+translator: parser_dump_port.lm2, parser_field_parse_port.lm2, and
+parser_stack_stream_port.lm2 (Stages c/d/e below) are three of the 13
+files removed from the tracked tree in 01f56f3, each with a measured
+before/after diagnostic in steps/gate-measure-20260927.md's "16
+устаревших портов парсера" section (reviewed OK, steps/review-log.md,
+REVIEW 01f56f3) -- the shared cause for most of the 13 is
+l2_predef_file_has_function's own rule (ticket -155): a predef'd file's
+plain fn:/sub: body is not a declaration, only a prototype: block is
+(confirmed against docs/L1_spec_en.md:155 and l2trans.lm1's own comment
+at l2_predef_has_function, f086f3a), and this ticket's cross-unit calls
+went through such bodies directly, not through prototype: headers, back
+when the oracle's own LmP0*/LmOwn* names were still recognized bare
+(before a2cf69eb). Their now-consumerless prototype headers
+(parser_dump_port_l2.h.lm1, parser_field_parse_port_l2.h.lm1,
+parser_stack_stream_port_l2.h.lm1 -- 0 references outside each other's
+comments, steps/review-log.md:1090) are removed here, both twins. This
+document is left as the historical record of Stages c/d/e1-e2's own
+goldens and falsifier evidence against l1src/parser.lm1; it is not
+resumed or extended by this cleanup.
+
 Cumulative stages
 ------------------
 run_port_parser.ps1's $Stages table lists every unit and oracle name

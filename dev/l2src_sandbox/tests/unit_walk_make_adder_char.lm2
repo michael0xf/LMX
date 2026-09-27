@@ -1,0 +1,40 @@
+# Item 738: unit_make_adder_char.lm2 under --walk-methods.  The hosts are walked and their return
+# is the constructor (l2_mad_construct_<mi>), which takes a char capture's cell from the program's
+# byte table by the byte the walker hands it (lmx_char_value_known(refs[k])) -- 101, 201, 1, 251,
+# 67.  Mutant: the constructor's char capture not written -- the slot stays empty.  Entry 7.
+fn: makeTag (char: c) fn: (int: x) int
+    fn: tagOf (int: x) int
+        if: c = 'A'
+            return: x + 100
+        if: c = 200
+            return: x + 200
+        return: x
+    return: tagOf
+
+fn: makeHi (int: n) fn: (int: x) int
+    char: h 'B'
+    if: n > 0
+        h: 250
+    fn: hiOf (int: x) int
+        if: h = 250
+            return: x + 250
+        if: h = 'B'
+            return: x + 66
+        return: x
+    return: hiOf
+
+tagA: makeTag 'A'
+tagB: makeTag 200
+tagZ: makeTag 'Z'
+hi1: makeHi 1
+hi0: makeHi 0
+int: a (tagA: 1)
+int: b (tagB: 1)
+int: z (tagZ: 1)
+int: h1 (hi1: 1)
+int: h0 (hi0: 1)
+int: ok 0
+if: a = 101 && b = 201 && z = 1 && h1 = 251 && h0 = 67
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -111,7 +111,7 @@ int: l2_mad_need_call 0
 # T6b: the values of its host's activation a nested model resolves -- a host formal, or a field the
 # host declares at method level -- one row per (model, name), in the order l2_scan_ident met them.
 # The node a `return: model` builds carries exactly these, slot 2 + k; nothing the model does not use.
-# l2_mcap_ty is the own storage code of each: 0 int, 2 size_t, 3 unsigned, 36 ulong.
+# l2_mcap_ty is the own storage code of each: 0 int, 1 char, 2 size_t, 3 unsigned, 36 ulong.
 @: int l2_mcap_model 0
 @@: LmP0Text l2_mcap_name 0
 @: int l2_mcap_ty 0
@@ -1042,6 +1042,7 @@ prototype:
     fn: l2_mad_host_own (int: host; const: @(LmP0Text name)) int
     fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty) int
     fn: l2_mcap_ty_ok (int: ty) int
+    fn: l2_mcap_has_char () int
     fn: l2_mad_slot_ty (int: mi; const: @(LmP0Text name)) int
     fn: l2_mcap_new_helper (int: ty) @: char
     fn: l2_mcap_value_helper (int: ty) const: @: char
@@ -22679,10 +22680,23 @@ fn: l2_mad_host_own (int: host; const: @(LmP0Text name)) int
 return: hit
 
 # A capture is a value cell the walk reads through AT: the numeric codes a cell is made and stored
-# for.  char and pointers are not captured yet; the walk of the model refuses them, located.
+# for, and char (item 738), whose cell is not made but taken from the program's byte table
+# (l2_program_chars).  Pointers and Structures are not captured yet; the walk of the model refuses
+# them, located.
 fn: l2_mcap_ty_ok (int: ty) int
-    if: ty = 0 || ty = 2 || ty = 3 || ty = 36
+    if: ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36
         return: 1
+return: 0
+
+# Item 738: does some model capture a char?  Then the program's byte table is reachable from a
+# method through the module cell l2_program_chars (the table itself stays process_chars).
+fn: l2_mcap_has_char () int
+    int: k 0
+    while: k < l2_mcap_n
+        if: l2_mcap_ty[k] = 1
+            return: 1
+        k: k + 1
+    ---
 return: 0
 
 fn: l2_mcap_new_helper (int: ty) @: char
@@ -22698,6 +22712,8 @@ return: "lmx_int_new_owned"
 # never a native C expression) with the getter matching l2_mcap_new_helper/l2_own_store_helper's
 # same type.
 fn: l2_mcap_value_helper (int: ty) const: @: char
+    if: ty = 1
+        return: "lmx_char_value_known"
     if: ty = 2
         return: "lmx_size_value_known"
     if: ty = 3
@@ -23116,7 +23132,12 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
                 return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
             if: l2_eval_fields(af, 1, mi, ind, l2_tok) != 0
                 return: 1
-            if: c.fprintf(l2_out, "%sl2_mad_cell: %s(l2_program_arena)\n%sif: l2_mad_cell = 0 || %s(l2_mad_cell, %s) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, l2_mcap_new_helper(l2_mcap_ty[j]), ind, l2_own_store_helper(l2_mcap_ty[j]), l2_tok, (cast: (unsigned) slot), ind) < 0
+            # Item 738: a char capture is the byte table's cell of its value -- the value is a C
+            # char here, signed on this host, so it is taken as its byte (& 255), as
+            # lmx_char_value_known reads one.
+            if: l2_mcap_ty[j] = 1 && c.fprintf(l2_out, "%sl2_mad_cell: lmx_char_cell_known(l2_program_chars, ((cast: (int) (%s)) & 255))\n%sif: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, l2_tok, ind, (cast: (unsigned) slot), ind) < 0
+                return: 1
+            if: l2_mcap_ty[j] != 1 && c.fprintf(l2_out, "%sl2_mad_cell: %s(l2_program_arena)\n%sif: l2_mad_cell = 0 || %s(l2_mad_cell, %s) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n%s    c.abort()\n", ind, l2_mcap_new_helper(l2_mcap_ty[j]), ind, l2_own_store_helper(l2_mcap_ty[j]), l2_tok, (cast: (unsigned) slot), ind) < 0
                 return: 1
             slot: slot + 1
             ---
@@ -23177,7 +23198,9 @@ fn: l2_emit_mad_construct_one (int: mi) int
     ci: 0
     while: j < l2_mcap_n
         if: l2_mcap_model[j] = model
-            if: c.fprintf(l2_out, "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n        c.abort()\n", l2_mcap_new_helper(l2_mcap_ty[j]), l2_own_store_helper(l2_mcap_ty[j]), l2_mcap_value_helper(l2_mcap_ty[j]), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+            if: l2_mcap_ty[j] = 1 && c.fprintf(l2_out, "    l2_mad_cell: lmx_char_cell_known(l2_program_chars, %s(refs[%uU]))\n    if: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n        c.abort()\n", l2_mcap_value_helper(l2_mcap_ty[j]), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+                return: 1
+            if: l2_mcap_ty[j] != 1 && c.fprintf(l2_out, "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n        c.abort()\n", l2_mcap_new_helper(l2_mcap_ty[j]), l2_own_store_helper(l2_mcap_ty[j]), l2_mcap_value_helper(l2_mcap_ty[j]), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
                 return: 1
             slot: slot + 1
             ci: ci + 1
@@ -26687,7 +26710,15 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_arena l2_u%08X%08X_arena\ndefine: l2_program_unit l2_u%08X%08X_program_unit\ndefine: l2_program_graph l2_u%08X%08X_program_graph\ndefine: l2_program_qualified_roots l2_u%08X%08X_qualified_roots\ndefine: l2_program_qualified_count l2_u%08X%08X_qualified_count\ndefine: l2_program_qualified_at l2_u%08X%08X_qualified_at\ndefine: l2_library_opened l2_u%08X%08X_opened\n", l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b, l2_module_hash_a, l2_module_hash_b) < 0
         fclose(l2_out)
         return: 1
+    # Item 738: a char capture is built inside a method, where the program's byte table is not in
+    # scope -- this module cell carries it there (per unit in a library, like the arena).
+    if: l2_mcap_has_char() != 0 && l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_program_chars l2_u%08X%08X_program_chars\n", l2_module_hash_a, l2_module_hash_b) < 0
+        fclose(l2_out)
+        return: 1
     if: fputs("@: LmxArena l2_program_arena 0\n@: Lmx l2_program_unit 0\n", l2_out) < 0
+        fclose(l2_out)
+        return: 1
+    if: l2_mcap_has_char() != 0 && fputs("@: char l2_program_chars 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # E1: the program's value is the int the entry returns. The adapter stores
@@ -27079,7 +27110,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && fputs("        l2_program_arena: arena\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0 || l2_parts_have_char() != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
+    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0 || l2_parts_have_char() != 0 || l2_mcap_has_char() != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
+        fclose(l2_out)
+        return: 1
+    if: l2_mcap_has_char() != 0 && fputs("        l2_program_chars: process_chars\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     if: l2_library_mode = 0 && c.fprintf(l2_out, "        l2_entry_unit: graph\n        if: l2_program_arena = 0 || l2_entry_unit = 0 || l2_entry_unit\\array.size != %uU\n            return: 1\n", kids) < 0

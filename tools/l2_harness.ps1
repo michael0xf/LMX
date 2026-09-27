@@ -1022,6 +1022,13 @@ $fixtures = @(
     # cell -- 2^32 is 0, exit 0.
     [pscustomobject]@{ Name = 'unit_make_adder_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('lmx_size_new_owned(l2_program_arena)', 'lmx_size_store_known(l2_mad_cell, ') },
+    # Item 738: a char capture is the program's byte table's cell of its byte (the module cell
+    # l2_program_chars carries the table into the host): a char formal -- 200 is above 127, so the
+    # byte, not the host's signed C char -- and a char field the host declares and changes before
+    # the return.  101, 201, 1, 251, 67; the base translator refused.  Mutants: the capture not
+    # written -- the slot stays empty; the byte taken as the signed C char -- makeTag 200 aborts.
+    [pscustomobject]@{ Name = 'unit_make_adder_char.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx_fresh('); Debt = @('l2_program_chars: process_chars') },
     # Item 739: at the root a held callable's argument is built with its model's header formal type
     # (a size_t formal was read from an int cell: the walk failed, INVALID).  A header whose result is
     # not int -- l2_mad_call hands the walk an int -- is refused, located (after slice 13 it was
@@ -1106,6 +1113,11 @@ $fixtures = @(
     # the int pair -- addBig(2^32)=101, addSmall(2^32-1)=2 (an int cell would truncate 2^32 to 0).
     [pscustomobject]@{ Name = 'unit_walk_make_adder_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('lmx_size_value_known(refs[', 'lmx_size_store_known(') },
+    # Item 738, a char capture under the knob (unit_make_adder_char.lm2's exact shape): the
+    # constructor takes the byte table's cell by the byte the walker hands it
+    # (lmx_char_value_known(refs[k])).  Mutant: the constructor's char capture not written.
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_char.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_mad_construct_', 'l2_program_chars: process_chars') },
     # next_core_tasks.md §7 "Интерпретаторы": a callable formal (T7's take (bin: op) shape) is
     # still outside l2_rw_may's walkable subset -- l2_pap_on/T7 is a separate mechanism §6 does not
     # touch (steps/interpreters-callable-parity-t6t7.md's own scope note). Same shape as

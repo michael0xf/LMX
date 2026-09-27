@@ -73,7 +73,10 @@ def main():
 
 def check_eol():
     '''Every tracked text file is LF in the index (author, 2026-09-27: the whole project is LF, Windows adapts).
-    Paths marked -text in .gitattributes are verbatim imports and exempt; i/none is git's own binary verdict.'''
+    Only the explicit -text attribute of .gitattributes exempts a path -- verbatim imports and the binaries named
+    there by extension.  Git's own guess (i/-text) is not an exemption: a lone CR, a NUL or too many control bytes
+    make git read a text file as binary, and steps/review-log.md passed both checks that way with one eaten `\r`
+    (REVIEW 0b60c45).  i/none -- no line break at all -- has no ending to check.'''
     import subprocess
     out=subprocess.run(['git','-C',str(ROOT),'ls-files','--eol','-z'],capture_output=True,check=True).stdout
     NUL=bytes([0]);TAB=bytes([9]);bad=[];seen=0
@@ -83,10 +86,12 @@ def check_eol():
         head,path=rec.split(TAB,1)
         fields=head.split()
         index=fields[0].decode();attrs=b' '.join(fields[2:]).decode()
-        if '-text' in attrs or index in ('i/none','i/-text'):continue
+        if '-text' in attrs or index=='i/none':continue
+        if index=='i/-text':bad.append(index+' '+path.decode()+' (git reads it as binary: a lone CR, a NUL or control bytes? a real binary needs -text in .gitattributes)');continue
         if index!='i/lf':bad.append(index+' '+path.decode())
         work=fields[1].decode()
         if work in ('w/crlf','w/mixed'):bad.append(work+' '+path.decode()+' (a tool or editor wrote CRLF into the working tree)')
+        if work=='w/-text':bad.append(work+' '+path.decode()+' (git reads the working copy as binary: a lone CR, a NUL or control bytes?)')
     assert not bad,'CRLF or mixed line endings (LF everywhere; index and working tree): '+', '.join(bad[:12])+(' ... %d files'%len(bad) if len(bad)>12 else '')
     check_ctrl(out)
     return seen
@@ -96,8 +101,8 @@ def check_ctrl(listing):
     '''No control byte but TAB and LF in a tracked text file (CR is check_eol's).  A writer that put
     L1 text through a non-raw Python string turned `\\b`, `\\f`, `\\a`, `\\v` into bytes 8, 12, 7, 11
     (REVIEW b307a0f; 10 such bytes found 2026-09-27).  -text imports and git's binaries are exempt, as
-    in check_eol; dev/mixa_sandbox is not touched until the kernel is finished (author, q34), its one
-    byte is a debt in next_core_tasks.md §9.'''
+    in check_eol (only the explicit attribute, never git's guess); dev/mixa_sandbox is not touched until the
+    kernel is finished (author, q34), its one byte is a debt in next_core_tasks.md §9.'''
     NUL=bytes([0]);TAB=bytes([9]);bad=[]
     for rec in listing.split(NUL):
         if not rec:continue
@@ -105,7 +110,7 @@ def check_ctrl(listing):
         fields=head.split()
         index=fields[0].decode();attrs=b' '.join(fields[2:]).decode()
         name=path.decode()
-        if '-text' in attrs or index in ('i/none','i/-text') or name.startswith('dev/mixa_sandbox/'):continue
+        if '-text' in attrs or name.startswith('dev/mixa_sandbox/'):continue
         data=(ROOT/name).read_bytes()
         for n,line in enumerate(data.split(b'\n'),1):
             hit=[b for b in line if b<32 and b not in (9,13)]

@@ -2478,6 +2478,22 @@ $fixtures = @(
     # entry is absent).  The root receives the same status 3.
     [pscustomobject]@{ Name = 'unit_walk_methods_s3_arg_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)') },
+    # implements-port slice 4 (A3, return): one value of a named primitive type returned from a
+    # callable whose result is another calls the row's receiver on it (l2_check_ret_convert,
+    # l2_emit_ret_convert), in a body and in a trailer alike; the receiver's refusal is the
+    # callable's implicit throw `convert`, which its caller catches by that name.  Mutants (copies
+    # under build/): the edge not emitted -- _range and its WalkMethods twin complete and _catch
+    # skips its handler, RED by run; no return check -- _norow is not refused with its phrase.
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('fn: lm_stg_convert_'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_methods_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

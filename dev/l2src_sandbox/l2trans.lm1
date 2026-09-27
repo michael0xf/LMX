@@ -674,6 +674,8 @@ prototype:
     fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
     fn: l2_method_src (int: mi; const: @(char path)) const: @: char
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
+    fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
+    fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: char dest) int
     fn: l2_colon_types_compatible (int: target_ty; int: value_ty) int
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
@@ -2825,6 +2827,8 @@ fn: l2_check_ret_tr (int: mi; const: @(char path); const: @(LmP0Structure body);
         return: l2_error(path, at, "unsupported body")
     if: l2_check_return_literal(mi, body, path, at) != 0
         return: 1
+    if: l2_check_ret_convert(mi, body, path) != 0
+        return: 1
     # Callers are not in this body. The Consumer is the required descriptor.
     if: l2_nsty_get(mi, 0 - 1) >= 0 && n > 0
         return: l2_admit_return(mi, body\first_field, n, path, at)
@@ -2852,6 +2856,11 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
         return: 1
     if: l2_nsty_get(mi, 0 - 1) >= 0
         pret: l2_emit_return_path(mi, body\first_field, n, ind, body\first_field\value)
+        if: pret = 1
+            return: 1
+        ---
+    if: pret = 2
+        pret: l2_emit_ret_convert(mi, body, body\first_field\value, ind, l2_tok)
         if: pret = 1
             return: 1
         ---
@@ -6277,17 +6286,16 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP
         return: 1
 return: 3
 
-# implements-port slice 3 (A3, arguments; steps/implements-port-plan.md): one value of one named
-# primitive type given to a formal of another is the edge an assignment has
-# (l2_colon_check_assignment) -- the row's receiver is called on the value and its result is the
-# argument; with no row the call is refused, located at the argument.  A literal is typed by its
-# place (-10).  A compound actual (`n - 1`) has no translation-time type here and keeps C's own
-# conversion: the boundary of this slice.  0: nothing to do or the edge noted; 1: error.
-fn: l2_check_arg_convert (const: @(LmP0Node value); int: idx; int: k; int: mi; const: @(char path)) int
+# implements-port slices 3 and 4 (A3; steps/implements-port-plan.md): one value of one named
+# primitive type given to a place of another -- a formal (slice 3) or a callable's result
+# (slice 4) -- is the edge an assignment has (l2_colon_check_assignment): the row's receiver is
+# called on the value and its result takes the place; with no row it is refused, located at the
+# value.  to_ft is the place's formal code.  A literal is typed by its place (-10).  A compound
+# value (`n - 1`) has no translation-time type here and keeps C's own conversion: the boundary of
+# these slices.  0: nothing to do or the edge noted; 1: error.
+fn: l2_check_value_convert (const: @(LmP0Node value); int: to_ft; int: mi; const: @(char path)) int
     int: from_ft 0
-    int: to_ft
     int: cok
-    to_ft: l2_ft(idx, k)
     if: value = 0 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
         return: 0
     if: l2_colon_simple_ty(value, mi, @ from_ft) != 0 || from_ft = 8 || l2_prim_code_name(from_ft) = 0
@@ -6304,24 +6312,22 @@ fn: l2_check_arg_convert (const: @(LmP0Node value); int: idx; int: k; int: mi; c
     if: cok = 0 && l2_cv_gap = 1
         return: l2_error(path, value, "mixed numeric types (a conversion)")
     if: cok = 0
-        return: l2_error(path, value, "function argument has incompatible type")
+        return: l2_error(path, value, "value has incompatible type")
     if: l2_cv_used != 0 && l2_convert_edge(mi, path, value) != 0
         return: 1
 return: 0
 
-# The emission of l2_check_arg_convert's edge: the receiver is called on the one actual -- a
-# one-field Structure over a copy of its field, so l2_emit_call evaluates it once, in the caller --
-# and its result token is the argument; a refusal of the receiver is this method's implicit throw
+# The emission of l2_check_value_convert's edge: the receiver is called on the one value -- a
+# one-field Structure over a copy of its field, so l2_emit_call evaluates it once, in this method --
+# and its result token takes the place; a refusal of the receiver is this method's implicit throw
 # `convert` (edge 1), as at a store (l2_convert_on_store).  0: emitted into dest.  1: error.
 # 2: no conversion here.
-fn: l2_emit_arg_convert (const: @(LmP0Node node); @: LmP0Field a0; int: idx; int: k; int: mi; const: @(char ind); @: char dest) int
+fn: l2_emit_value_convert (const: @(LmP0Node node); @: LmP0Field a0; int: to_ft; int: mi; const: @(char ind); @: char dest) int
     int: from_ft 0
-    int: to_ft
     int: cidx
     int: rc
     @: LmP0Structure one 0
     @: LmP0Field f 0
-    to_ft: l2_ft(idx, k)
     if: a0 = 0 || a0\value = 0 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
         return: 2
     if: l2_colon_simple_ty(a0\value, mi, @ from_ft) != 0 || from_ft = 8 || l2_prim_code_name(from_ft) = 0
@@ -6351,6 +6357,30 @@ fn: l2_emit_arg_convert (const: @(LmP0Node node); @: LmP0Field a0; int: idx; int
     if: rc != 0
         return: 1
 return: 0
+
+# A callable's result code as the formal code of the same type (unsigned is 33 as a result, 34 as
+# a formal; the others coincide).
+fn: l2_ret_ft (int: mi) int
+    if: l2_m_ret[mi] = 33
+        return: 34
+return: l2_m_ret[mi]
+
+# Slice 4: `return: v` with one value, in a body or a trailer.  A Structure result is admitted
+# (l2_admit_return), never converted.
+fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
+    @: LmP0Field only
+    if: body = 0 || l2_m_ret[mi] = 8 || l2_count_active(body) != 1 || l2_nsty_get(mi, 0 - 1) >= 0
+        return: 0
+    only: l2_next_active(body\first_field)
+    if: only = 0
+        return: 0
+return: l2_check_value_convert(only\value, l2_ret_ft(mi), mi, path)
+
+# Its emission: 0 emitted into dest, 1 error, 2 none.
+fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: char dest) int
+    if: body = 0 || l2_m_ret[mi] = 8 || l2_count_active(body) != 1 || l2_nsty_get(mi, 0 - 1) >= 0
+        return: 2
+return: l2_emit_value_convert(at, l2_next_active(body\first_field), l2_ret_ft(mi), mi, ind, dest)
 
 # Named primitive value codes are l2_primitive_leaf_implements. The lists
 # below are the literal class (-10), a quoted pointer (-11), and a code that
@@ -15067,7 +15097,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
             ---
             if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
-            if: handled = 0 && req_mi < 0 && nst < 0 && actual_span = 1 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_arg_convert(a0\value, idx, actual_i, mi, path) != 0
+            if: handled = 0 && req_mi < 0 && nst < 0 && actual_span = 1 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert(a0\value, l2_ft(idx, actual_i), mi, path) != 0
                 return: 1
             if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
                 if: l2_admit_consumer_uses(a0\value\as\atom, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
@@ -15984,6 +16014,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_check_return_literal(mi, fr\body, path, stmt) != 0
+            return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_check_ret_convert(mi, fr\body, path) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_nsty_get(mi, 0 - 1) >= 0 && l2_count_active(fr\body) > 0
             if: l2_admit_return(mi, fr\body\first_field, l2_count_active(fr\body), path, stmt) != 0
@@ -17072,7 +17104,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0
             er: 2
             if: actual_span = 1 && l2_nsty_get(idx, t) < 0
-                er: l2_emit_arg_convert(node, a0, idx, t, mi, ind, l2_act_at(acts, t))
+                er: l2_emit_value_convert(node, a0, l2_ft(idx, t), mi, ind, l2_act_at(acts, t))
             if: actual_span >= 3 && l2_nsty_get(idx, t) >= 0
                 er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_act_at(acts, t))
             if: er = 1
@@ -25654,6 +25686,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         pret: 2
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_nsty_get(mi, 0 - 1) >= 0
             pret: l2_emit_return_path(mi, fr\body\first_field, l2_count_active(fr\body), ind, stmt)
+            if: pret = 1
+                return: 1
+            ---
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2
+            pret: l2_emit_ret_convert(mi, fr\body, stmt, ind, l2_tok)
             if: pret = 1
                 return: 1
             ---

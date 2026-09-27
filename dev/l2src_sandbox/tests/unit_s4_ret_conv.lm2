@@ -1,0 +1,47 @@
+# implements-port slice 4 (A3, return; steps/implements-port-plan.md): one value of one named
+# primitive type returned from a callable whose result is another is the conversion edge a store
+# has -- the row's receiver is called on the value and its result is returned (l2_check_ret_convert,
+# l2_emit_ret_convert).  Here: a size_t local returned from an int method, in a body and in a
+# trailer; a size_t call result returned from an int method; an int returned from a size_t method
+# (row int -> size_t); a char returned from an int method (row char -> int, which cannot refuse).
+# Every value fits, so the entry is 7.  The refusal is unit_s4_ret_conv_range / _catch.
+fn: body () int
+    size_t: b 5U
+    return: b
+end: body
+fn: trailer () int
+    size_t: b 6U
+return: b
+
+fn: bigFive () size_t
+    return: 5U
+end: bigFive
+fn: viaCall () int
+    return: bigFive()
+end: viaCall
+fn: widen () size_t
+    int: x 5
+    return: x
+end: widen
+fn: letter () int
+    char: ch 'a'
+    return: ch
+end: letter
+fn: go () int
+    int: r 0
+    int: a 0
+    int: t 0
+    int: v 0
+    size_t: w 0U
+    int: l 0
+    a: body()
+    t: trailer()
+    v: viaCall()
+    w: widen()
+    l: letter()
+    if: a = 5 && t = 6 && v = 5 && w = 5U && l = 97
+        r: 7
+    return: r
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

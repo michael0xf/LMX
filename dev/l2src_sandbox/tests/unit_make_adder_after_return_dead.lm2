@@ -1,5 +1,6 @@
 # T6b. The parser hangs `return: addN` on the model's own frame; `n: 5` follows it in the text.
-# A statement after the return of a callable merge is refused, not run before the build.
+# D-94: a statement after the return of a callable merge is dead, as after any method's return --
+# emitted after the build and never reached (before: refused).  n stays 5 for the build: add5(1) = 6.
 fn: makeAdder (int: n) fn: (int: x) int
     fn: addN (int: x) int
         return: n + x

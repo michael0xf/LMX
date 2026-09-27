@@ -22511,6 +22511,45 @@ fn: l2_mad_has_return (const: @(LmP0Node node)) int
     ---
 return: 0
 
+# D-94: whether node returns a number -- a `return:` frame, or a `return` trailer, whose one value is
+# a numeric literal or has a named numeric type.  A callable result cannot be a number: that return
+# is a type error of the result, said so, not a limit of the callable merge.
+fn: l2_mad_ret_body_number (const: @(LmP0Structure body); int: mi) int
+    @: LmP0Field only
+    int: ty 0
+    if: body = 0 || l2_count_active(body) != 1
+        return: 0
+    only: l2_next_active(body\first_field)
+    if: only = 0 || only\value = 0 || l2_colon_simple_ty(only\value, mi, @ ty) != 0
+        return: 0
+return: ty = 0 - 10 || (ty != 8 && l2_prim_code_name(ty) != 0)
+
+fn: l2_mad_returns_number (const: @(LmP0Node node); int: mi) int
+    @: LmP0Field f
+    @: LmP0Structure st 0
+    if: node = 0 || node\as = 0
+        return: 0
+    if: l2_frame_head(node, "return") != 0
+        return: l2_mad_ret_body_number(node\as\frame\body, mi)
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as\frame != 0
+        if: l2_mad_ret_body_number(l2_ret_tr(node\as\frame), mi) != 0
+            return: 1
+        st: node\as\frame\body
+        ---
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        st: node\as\structure
+    if: st = 0
+        return: 0
+    if: st\trailer != 0 && st\trailer\spelling != 0 && l2_text_eq(st\trailer\spelling, "return") != 0 && l2_mad_ret_body_number(st\trailer\body, mi) != 0
+        return: 1
+    f: l2_next_active(st\first_field)
+    while: f != 0
+        if: l2_mad_returns_number(f\value, mi) != 0
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
 # `return: model` as a statement of the host's body.
 fn: l2_mad_is_return (const: @(LmP0Node stmt); int: model) int
     @: LmP0Field only
@@ -22730,10 +22769,12 @@ return: n
 # parser hangs a `return: model` that follows the model's block on that frame, and
 # l2_mad_take_nested took it off there.  A statement after the return, one that names a nested
 # method (walked; its native function returns 0), or one that returns, is refused: the build is
-# the host's one exit.
+# the host's one exit.  D-94: a statement after the return is dead, as after any method's return --
+# emitted after the build and never reached; a return of a number is the result's type error.
 fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     @: LmP0Field f
     @: LmP0Field seg
+    @: LmP0Field dead 0
     @: LmP0Node stmt
     int: model
     int: done 0
@@ -22755,7 +22796,9 @@ fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind))
     while: f != 0
         stmt: f\value
         if: done != 0
-            return: l2_error(l2_src, stmt, "a statement after the return of a callable merge")
+            dead: f
+            f: 0
+            continue
         cut: 0
         if: l2_frame_head(stmt, "fn") != 0
             cut: 1
@@ -22766,6 +22809,8 @@ fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind))
             cut: 2
         if: cut = 0 && l2_mad_names_nested(stmt, mi) != 0
             return: l2_error(l2_src, stmt, "a callable merge host names a nested method outside the return")
+        if: cut = 0 && l2_mad_returns_number(stmt, mi) != 0
+            return: l2_error(l2_src, stmt, "a callable result returns a number")
         if: cut = 0 && l2_mad_has_return(stmt) != 0
             return: l2_error(l2_src, stmt, "a callable merge host returns outside its model")
         if: cut != 0
@@ -22779,7 +22824,11 @@ fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind))
     ---
     if: done = 0 && l2_emit_stmts(body, seg, 0, mi, ind) != 0
         return: 1
-return: l2_mad_emit(mi, ind)
+    if: l2_mad_emit(mi, ind) != 0
+        return: 1
+    if: dead != 0 && l2_emit_stmts(body, dead, 0, mi, ind) != 0
+        return: 1
+return: 0
 
 fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     @: LmP0Field field

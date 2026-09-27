@@ -1045,14 +1045,19 @@ $fixtures = @(
     # gate, so the SAME finer l2_mad_host_body check that always ran without the knob now also
     # runs, and refuses, with the knob. Measured directly (both modes, old and current translator)
     # before adding WalkMethods here; previously no row pinned the knob behaviour at all.
-    [pscustomobject]@{ Name = 'unit_make_adder_after_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'a statement after the return of a callable merge'; Absent = @(); Debt = @() },
+    # D-94: a statement after the host's return is dead, as after any method's return -- emitted after
+    # the build, never reached (it was refused).  Mutant: the old refusal -- l2trans refuses, RED.
+    [pscustomobject]@{ Name = 'unit_make_adder_after_return_dead.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_make_adder_model_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_make_adder_nested_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
+    # D-94: `return: 0` from a method whose result is a callable is the result's type error, said so
+    # (l2_mad_returns_number), not a limit of the callable merge.  Mutant: no number check -- the old
+    # boundary phrase, RED on the needle.
     [pscustomobject]@{ Name = 'unit_make_adder_early_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'a callable merge host returns outside its model'; Absent = @(); Debt = @() },
+        Needle = 'a callable result returns a number'; Absent = @(); Debt = @() },
     # T7: return merge and a merge actual of a callable formal. wrap(5)(1)=6,
     # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.
     [pscustomobject]@{ Name = 'unit_t7_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -3017,7 +3022,10 @@ foreach ($l in $peakLines) { Write-Output ('l2_harness: ' + $l) }
 $stagedTrans = Join-Path $src 'l2src\l2trans.lm1'
 $stagedBlob = ((git -C $root hash-object --path=dev/l2src_sandbox/l2trans.lm1 $stagedTrans) -join '').Trim()
 $summaryPath = Join-Path $OutDir 'summary.txt'
-[System.IO.File]::WriteAllText($summaryPath, ((@('staged' + "`t" + 'src/l2src/l2trans.lm1' + "`t" + $stagedBlob) + @($rows | ForEach-Object { $_.State + "`t" + $_.Label + "`t" + $_.Note }) + $peakLines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+# The last line is the verdict (REVIEW 00d6fba, fable_pc's mutant M23): a writer that dropped a row
+# would show fewer row lines than the verdict counts, so the file checks itself.
+$verdictLine = 'verdict' + "`t" + $rows.Count + ' targets' + "`t" + $red.Count + ' failed'
+[System.IO.File]::WriteAllText($summaryPath, ((@('staged' + "`t" + 'src/l2src/l2trans.lm1' + "`t" + $stagedBlob) + @($rows | ForEach-Object { $_.State + "`t" + $_.Label + "`t" + $_.Note }) + $peakLines + @($verdictLine) -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
 if (-not $KeepAll) {
     $keepStem = @{}
     foreach ($r in $rows) { if ($r.State -ne 'OK' -and $r.Label.StartsWith('fixture:')) { $keepStem[$r.Label.Substring(8)] = 1 } }

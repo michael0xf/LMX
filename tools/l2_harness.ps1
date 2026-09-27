@@ -1120,6 +1120,16 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_make_adder_helper_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # REVIEW ba92461 (fable_pc's probe and its M32): a helper of two formals -- its node's args part
+    # has the helper's own arity, 2U (l2_mad_node_arity), not the host header's 1.  h2(1, 2) = 8 = q,
+    # add(1) = 9.  The width is a text pin, not a behavior: the call's arguments come through refs,
+    # so M32 (the header's arity) runs green in both modes -- measured; the pin goes red on it.
+    # Under the knob the host stays native (a walked call carries one input) and l2trans notes it.
+    [pscustomobject]@{ Name = 'unit_make_adder_helper_arity2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part_c0, 2U)') },
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_helper_arity2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Notes = @('the callable merge host makeAdder stays native under --walk-methods: root operation not walkable yet: a call of the model with other than one number');
+        Absent = @(); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part_c0, 2U)') },
     # D-93: a nested method that captures nothing of its host has its own native body; the host calls
     # it before its return (it was refused).  A capturing one is called by building its node
     # (_model_call and _helper_call above).  Mutant:

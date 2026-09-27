@@ -1,0 +1,18 @@
+# D-93, the two-formal helper under --walk-methods: the walked call of a nested method carries one
+# input (l2_mad_call), so this host stays native and l2trans notes it, located at the call; the
+# native call builds the helper's node of its own arity.  add(1) = 9.  Entry 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: h2 (int: y; int: z) int
+        return: n + y + z
+    int: q (h2: 1 2)
+    fn: addN (int: x) int
+        return: q + x
+    return: addN
+
+add: makeAdder 5
+int: a (add: 1)
+int: ok 0
+if: a = 9
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

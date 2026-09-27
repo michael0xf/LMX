@@ -1,0 +1,19 @@
+# D-93 (REVIEW ba92461, fable_pc's probe): a capturing helper of two formals -- its node's args part
+# is its own arity (2), not the host's declared header (1) -- l2_mad_node_arity.  h2(1, 2) with n 5
+# = 8 = q; add(1) = 9.  Mutant (fable_pc's M32): the helper's node takes the header's arity -- see
+# the row: a text pin, measured behavior-equivalent (arguments come through refs).  Entry 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: h2 (int: y; int: z) int
+        return: n + y + z
+    int: q (h2: 1 2)
+    fn: addN (int: x) int
+        return: q + x
+    return: addN
+
+add: makeAdder 5
+int: a (add: 1)
+int: ok 0
+if: a = 9
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

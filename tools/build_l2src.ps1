@@ -460,6 +460,23 @@ function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {
 Write-Output "build_l2src: gcc $gcc"
 Write-Output "build_l2src: evidence $OutDir"
 
+# 0) next_core_tasks.md §1 (Q18): a capacity field only on a *DynamicArray type, and none of the
+# removed descriptor names -- tools\gate_dynarray_capacity.ps1 over the live kernel sources, one row
+# of this gate (it was run by hand only, so the rule it checks was not gated).  It runs in THIS host,
+# not as a child: a second PowerShell costs 65 MB before it reads a line (§0, build memory).  Its
+# output is captured into the log, never into this script's success stream.
+$capLog = Join-Path $logDir ((Get-SafeName 'gate:dynarray_capacity') + '.log')
+$capCode = 1
+try {
+    $capOut = @(& (Join-Path $PSScriptRoot 'gate_dynarray_capacity.ps1') -Root $root)
+    $capCode = $LASTEXITCODE
+} catch {
+    $capOut = @('gate_dynarray_capacity threw: ' + $_)
+}
+[System.IO.File]::WriteAllText($capLog, (($capOut -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+if ($capCode -eq 0) { Add-Row 'OK' 'gate:dynarray_capacity' '' }
+else { Add-Row 'FAIL' 'gate:dynarray_capacity' "exit $capCode; log $capLog" }
+
 # 1) predef headers of the units
 # $sourceDir was RESOLVED EARLIER (the staging block above chooses between the live sandbox and the
 # published root, and prints which).  This line used to assign it unconditionally, which silently

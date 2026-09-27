@@ -33,6 +33,9 @@ param(
     [string]$OutDir,
     [switch]$Run,
     [switch]$Strict,
+    # -KeepAll keeps a GREEN run's logs, objects and binaries (next_core_tasks.md §0, build memory,
+    # item 4): without it they are removed at the end, see below.
+    [switch]$KeepAll,
     # Required when -Translator names a non-default executable (same spelling as build_mixa).
     [string]$ExpectedTranslatorSha256
 )
@@ -589,7 +592,26 @@ foreach ($c in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*_selftest.c' -F
 }
 
 Write-Output ''
-foreach ($l in @(Format-PeakReport (Stop-PeakSampler) 10)) { Write-Output ('build_l2src: ' + $l) }
+$peakLines = @(Format-PeakReport (Stop-PeakSampler) 10)
+foreach ($l in $peakLines) { Write-Output ('build_l2src: ' + $l) }
+# §0 item 4 (build memory): the stamp keeps what is read after the run -- headers\l2src (build_mixa's
+# kernel evidence), the staged sources, and summary.txt: the translator's identity, EVERY row, the
+# peaks and the verdict line, so "N targets, 0 failed" and "103 selftests ran" stay provable from it.
+# A GREEN run's logs, objects and binaries (about 1 200 of its 1 500 files) are removed; a RED run
+# keeps everything, since its failure is read from them; -KeepAll keeps them always.
+$summaryPath = Join-Path $OutDir 'summary.txt'
+$verdictLine = ('verdict' + "`t" + $rows.Count + ' targets' + "`t" + $failed.Count + ' failed')
+[System.IO.File]::WriteAllText($summaryPath, ((@('translator' + "`t" + $Translator + "`t" + $translatorHash) + $rows + $peakLines + @($verdictLine) -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+if ($failed.Count -eq 0 -and -not $KeepAll) {
+    $pruned = 0
+    foreach ($d in @($objDir, $binDir, $logDir)) {
+        if (Test-Path -LiteralPath $d) {
+            $pruned += @(Get-ChildItem -LiteralPath $d -File -Recurse).Count
+            Remove-Item -LiteralPath $d -Recurse -Force
+        }
+    }
+    Write-Output ('build_l2src: ' + $pruned + ' files of a green run removed (logs, objects, binaries; -KeepAll keeps them); every row is in ' + $summaryPath)
+}
 if ($failed.Count -gt 0) {
     Write-Output ("build_l2src RED: {0} of {1} targets failed ({2}); evidence {3}" -f $failed.Count, $rows.Count, ($failed -join ', '), $OutDir)
     exit 1

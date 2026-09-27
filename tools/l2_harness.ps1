@@ -2662,6 +2662,15 @@ $fixtures = @(
     # ordinary method of the unit from convert_impl.lm2, pinned by its range test.
     [pscustomobject]@{ Name = 'unit_s7_prim_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # implements-port slice 11 (B2; q36): the conversion table is read by the names of its columns.
+    # A table with its columns reversed (impl ... from, every row with them) is the same table:
+    # unit_s7_prim_cross over it is still Entry 7.  A table without its receiver column is refused by
+    # name.  Mutant: rows read by position -- the reversed table matches no row; the refusal row is
+    # refused in other words.
+    [pscustomobject]@{ Name = 'unit_s7_conv_columns.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_columns_table.lm2';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_nocolumn.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_nocolumn_table.lm2';
+        Needle = 'conversion table has no column receiver'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2944,14 +2953,21 @@ foreach ($fx in $fixtures) {
     }
     if (-not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
     # The conversion table is the convert.lm2 beside the source, not the launch directory.
-    # Stage the fixture next to the copy made at the top of this script.  A row with Impl gets a
-    # directory of its own: the same table, and tests\<Impl> as its convert_impl.lm2.
+    # Stage the fixture next to the copy made at the top of this script.  A row with Impl or Table
+    # gets a directory of its own: tests\<Table> as its convert.lm2 (else the sandbox's table), and
+    # tests\<Impl> as its convert_impl.lm2 (else the sandbox's).
     $stagedLm2 = Join-Path $src $fx.Name
-    if ($fx.PSObject.Properties['Impl'] -and $fx.Impl) {
+    $hasImpl = ($fx.PSObject.Properties['Impl'] -and $fx.Impl)
+    $hasTable = ($fx.PSObject.Properties['Table'] -and $fx.Table)
+    if ($hasImpl -or $hasTable) {
         $own = Join-Path $src $stem
         New-Item -ItemType Directory -Force -Path $own | Out-Null
-        Copy-Item -LiteralPath (Join-Path $sandbox 'convert.lm2') -Destination (Join-Path $own 'convert.lm2') -Force
-        Copy-Item -LiteralPath (Join-Path $sandbox ('tests\' + $fx.Impl)) -Destination (Join-Path $own 'convert_impl.lm2') -Force
+        $tableSrc = Join-Path $sandbox 'convert.lm2'
+        if ($hasTable) { $tableSrc = Join-Path $sandbox ('tests\' + $fx.Table) }
+        $implSrc = Join-Path $sandbox 'convert_impl.lm2'
+        if ($hasImpl) { $implSrc = Join-Path $sandbox ('tests\' + $fx.Impl) }
+        Copy-Item -LiteralPath $tableSrc -Destination (Join-Path $own 'convert.lm2') -Force
+        Copy-Item -LiteralPath $implSrc -Destination (Join-Path $own 'convert_impl.lm2') -Force
         $stagedLm2 = Join-Path $own $fx.Name
     }
     Copy-Item -LiteralPath $source -Destination $stagedLm2 -Force

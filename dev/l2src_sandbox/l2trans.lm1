@@ -480,6 +480,13 @@ int: l2_rw_pn 0
 int: l2_cv_ready 0
 int: l2_cv_failed 0
 int: l2_cv_cell_n 0
+# implements-port slice 11 (B2): the conversion table's columns by name.  For the table's k-th column,
+# its place among from, to, forbidden, kind, receiver, impl (the order l2_cv_cell keeps a row in);
+# their number; the column the next row cell belongs to; the row being filled.
+[]: int l2_cv_colmap 32
+int: l2_cv_ncol 0
+int: l2_cv_col 0
+int: l2_cv_row 0
 int: l2_cv_gap 0
 int: l2_cv_used 0
 []: @(char) l2_cv_cell 960
@@ -1109,6 +1116,7 @@ prototype:
     fn: l2_rw_ns_at (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
     fn: l2_rw_ns_call (int: ni; int: into; @: int out) int
     fn: l2_rw_ns_var_call (int: ni; int: oi; int: into; @: int out) int
+    fn: l2_convert_columns (const: @(LmP0Node node)) int
     fn: l2_rw_ns_count () int
     fn: l2_rw_ns_emit () int
     fn: l2_nsx_rank (int: ni) int
@@ -6136,8 +6144,9 @@ fn: l2_prim_code_name (int: ty) @: char
     return: 0
 
 # The conversion rows are the `table:` in the translation input convert.lm2,
-# read by the same P0 parser as any other source. The table's own name is
-# not consulted. implements does not call a receiver: the assignment edge does.
+# read by the same P0 parser as any other source, by the names of its
+# `columns:` (slice 11, B2: from, to, forbidden, kind, receiver, impl, in any
+# order; l2_convert_columns). The table's own name is not consulted. implements does not call a receiver: the assignment edge does.
 # The table is read at the first pair of different names, so a source that
 # converts nothing needs none. l2_cv_gap 1: no usable row. 2: the row's
 # receiver has no fn: in its impl source. 3: the table cannot be read. 4: the
@@ -6146,7 +6155,22 @@ fn: l2_convert_keep (const: @(LmP0Text t)) int
     []: char buf 128
     @: char copy
     size_t: n
-    if: l2_cv_cell_n >= 960
+    int: slot
+    int: at
+    # A row cell goes to the place of its column's name (slice 11, B2): the order the table writes
+    # its columns in decides nothing.
+    if: l2_cv_ncol = 0
+        return: l2_error("convert.lm2", 0, "conversion table rows come before its columns")
+    slot: l2_cv_colmap[l2_cv_col]
+    at: l2_cv_row * 6 + slot
+    l2_cv_col: l2_cv_col + 1
+    if: l2_cv_col >= l2_cv_ncol
+        l2_cv_col: 0
+        l2_cv_row: l2_cv_row + 1
+    ---
+    if: slot < 0
+        return: 0
+    if: at >= 960
         return: l2_error("convert.lm2", 0, "conversion table is too large")
     if: l2_tok_text(t, buf, 128U) != 0
         return: 1
@@ -6155,8 +6179,87 @@ fn: l2_convert_keep (const: @(LmP0Text t)) int
     if: copy = 0
         return: 1
     memcpy(copy, buf, n)
-    l2_cv_cell[l2_cv_cell_n]: copy
-    l2_cv_cell_n: l2_cv_cell_n + 1
+    l2_cv_cell[at]: copy
+return: 0
+
+# The place of a column name among from, to, forbidden, kind, receiver, impl, or -1.
+fn: l2_convert_canon (const: @(LmP0Text name)) int
+    if: l2_text_eq(name, "from")
+        return: 0
+    if: l2_text_eq(name, "to")
+        return: 1
+    if: l2_text_eq(name, "forbidden")
+        return: 2
+    if: l2_text_eq(name, "kind")
+        return: 3
+    if: l2_text_eq(name, "receiver")
+        return: 4
+    if: l2_text_eq(name, "impl")
+        return: 5
+return: 0 - 1
+
+# `columns: (class: from) (class: to) ...` -- each column is one frame, its name the last atom of that
+# frame's body (`(@: char kind)` names kind); a bare atom is a name too.  Every one of the six names
+# once; a column of another name is kept in the row and not read.
+fn: l2_convert_columns (const: @(LmP0Node node)) int
+    @: LmP0Field f
+    @: LmP0Field g
+    @: LmP0Node v
+    @: LmP0Text name
+    []: int seen 6
+    int: k 0
+    []: char msg 160
+    while: k < 6
+        seen[k]: 0
+        k: k + 1
+    ---
+    l2_cv_ncol: 0
+    l2_cv_col: 0
+    f: l2_next_active(node\as\frame\body\first_field)
+    while: f != 0
+        v: f\value
+        if: v != 0 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0 && l2_count_active(v\as\structure) = 1
+            v: l2_next_active(v\as\structure\first_field)\value
+        name: 0
+        if: v != 0 && v\kind = c.LM_P0_NODE_ATOM && v\as != 0
+            name: (cast: (@: LmP0Text) v\as\atom)
+        if: v != 0 && v\kind = c.LM_P0_NODE_FRAME && v\as != 0 && v\as\frame != 0 && v\as\frame\body != 0
+            g: l2_next_active(v\as\frame\body\first_field)
+            while: g != 0
+                if: g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0
+                    name: (cast: (@: LmP0Text) g\value\as\atom)
+                g: l2_next_active(g\next)
+            ---
+        ---
+        if: name = 0 || l2_cv_ncol >= 32
+            return: l2_error("convert.lm2", v, "a conversion table column needs a name")
+        k: l2_convert_canon(name)
+        if: k >= 0 && seen[k] != 0
+            return: l2_error("convert.lm2", v, "a conversion table column is named twice")
+        if: k >= 0
+            seen[k]: 1
+        l2_cv_colmap[l2_cv_ncol]: k
+        l2_cv_ncol: l2_cv_ncol + 1
+        f: l2_next_active(f\next)
+    ---
+    k: 0
+    while: k < 6
+        if: seen[k] = 0
+            if: k = 0
+                c.snprintf(msg, 160U, "conversion table has no column from")
+            if: k = 1
+                c.snprintf(msg, 160U, "conversion table has no column to")
+            if: k = 2
+                c.snprintf(msg, 160U, "conversion table has no column forbidden")
+            if: k = 3
+                c.snprintf(msg, 160U, "conversion table has no column kind")
+            if: k = 4
+                c.snprintf(msg, 160U, "conversion table has no column receiver")
+            if: k = 5
+                c.snprintf(msg, 160U, "conversion table has no column impl")
+            return: l2_error("convert.lm2", node, msg)
+        k: k + 1
+    ---
 return: 0
 
 fn: l2_convert_walk (const: @(LmP0Node node)) int
@@ -6170,6 +6273,8 @@ fn: l2_convert_walk (const: @(LmP0Node node)) int
                 return: 1
             f: l2_next_active(f\next)
         return: 0
+    if: l2_frame_head(node, "columns") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
+        return: l2_convert_columns(node)
     if: l2_frame_head(node, "rows") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
         f: l2_next_active(node\as\frame\body\first_field)
         while: f != 0
@@ -6225,6 +6330,9 @@ fn: l2_convert_load (const: @(char src)) int
     l2_cv_ready: 1
     l2_cv_failed: 1
     l2_cv_cell_n: 0
+    l2_cv_ncol: 0
+    l2_cv_col: 0
+    l2_cv_row: 0
     if: src = 0 || l2_convert_beside(src, "convert.lm2", path, 1024U) != 0
         return: 1
     raw: c.fopen(path, "rb")
@@ -6237,9 +6345,10 @@ fn: l2_convert_load (const: @(char src)) int
     if: root = 0 || l2_convert_walk(root) != 0
         lm_p0_document_destroy(document)
         return: 1
-    if: l2_cv_cell_n = 0 || (l2_cv_cell_n % 6) != 0
+    if: l2_cv_row = 0 || l2_cv_col != 0
         lm_p0_document_destroy(document)
-        return: l2_error("convert.lm2", 0, "conversion table rows are not from, to, forbidden, kind, receiver, impl")
+        return: l2_error("convert.lm2", 0, "conversion table rows are not whole rows of its columns")
+    l2_cv_cell_n: l2_cv_row * 6
     lm_p0_document_destroy(document)
     l2_cv_failed: 0
 return: 0

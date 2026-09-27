@@ -1,0 +1,17 @@
+# steps/named-struct-exec.md, slice 1 (plan §3 :245 (a)): a named Structure closed by `end: Counter`
+# whose body holds statements besides its field -- an assignment to it and a bare `return` (Q19.2 = 2,
+# "the whole body, as a method's").  Construction computes the initializer (book :928) and runs no
+# statement: Counter\n reads 4, not 5.  Before, the body took field declarations only ("a Structure
+# reference field needs a name").  Entry 7.
+Counter:
+    size_t: n 4U
+    n: n + 1U
+    return
+end: Counter
+size_t: got 0U
+got: Counter\n
+int: ok 0
+if: got = 4U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

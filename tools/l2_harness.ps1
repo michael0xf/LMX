@@ -1442,13 +1442,25 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
         Absent = @(); Debt = @() },
-    # steps/named-struct-exec.md, slice 1 (plan §3 :245 (a)): today's refusals the slice flips -- a
-    # named Structure closed by a column-0 bare `return` (Q19.1) is read as a statement of the entry,
-    # and a named Structure body takes field declarations only (Q19.2 = 2 wants the whole body).
-    [pscustomobject]@{ Name = 'unit_named_struct_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    # steps/named-struct-exec.md, slice 1 (plan §3 :245 (a)): a column-0 bare `return` closes a named
+    # Structure as `end: Name` does (Q19.1), and its body takes statements besides its fields (Q19.2
+    # = 2); construction computes the initializer and runs no statement (book :928) -- Counter
+
+    # reads 4, not 5.  Both were refused (the frame read as a statement of the entry; a body of field
+    # declarations only).  Mutants: no return closing -- the first refused again; statements not set
+    # aside -- both refused again.  The guard: P0 hangs a column-0 `return` on any preceding block,
+    # so a named Structure is made only of a frame that could be one -- the two refusals keep their
+    # old phrases; without the declared-field check the first says "unknown nested Structure
+    # reference", without the first-item check the second says "a Structure reference field needs a
+    # name".
+    [pscustomobject]@{ Name = 'unit_named_struct_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_guard_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported trailer'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_guard_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_struct_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a Structure reference field needs a name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

@@ -809,6 +809,10 @@ prototype:
     fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner) int
     fn: l2_char_literal (const: @(LmP0Text t)) int
     fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
+    fn: l2_ns_ret_closed (const: @(LmP0Frame fr)) int
+    fn: l2_ns_decl_first (const: @(LmP0Node node)) int
+    fn: l2_unit_declares (const: @(LmP0Text name)) int
+    fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
     fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val) int
     fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
     fn: l2_mrs_take_result (int: res; int: k; int: src; const: @(LmP0Node at)) int
@@ -3143,6 +3147,73 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
         return: 0
     if: l2_end_text(fr, fr\head) != 0
         return: 5
+    # steps/named-struct-exec.md, slice 1: a column-0 bare `return` closes a named Structure as
+    # `end: Name` does (Q19.1: a return trailer closes any callable Structure, the named one
+    # included).
+    if: l2_ns_ret_closed(fr) != 0
+        return: 5
+return: 0
+
+# Whether frame fr is a named Structure closed by a bare `return` trailer: P0 hangs a column-0
+# `return` on the frame whose indented block precedes it, so the trailer alone does not tell a
+# named Structure from a control block that ends the unit -- its first item must declare a field
+# (l2_ns_decl_first), as a named Structure's does.  The trailer carries no value: "У именнованной
+# структуры может быть только "return" без аргументов" (the author, Q19.2).
+fn: l2_ns_ret_closed (const: @(LmP0Frame fr)) int
+    @: LmP0Field f
+    if: fr = 0 || fr\trailer = 0 || fr\trailer\spelling = 0 || l2_text_eq(fr\trailer\spelling, "return") = 0
+        return: 0
+    if: fr\trailer\body != 0 && l2_count_active(fr\trailer\body) != 0
+        return: 0
+    if: fr\body = 0 || l2_unit_declares(fr\head) != 0
+        return: 0
+    f: l2_next_active(fr\body\first_field)
+    if: f = 0
+        return: 0
+return: l2_ns_decl_first(f\value)
+
+# Whether node, the first item of a body, declares a named Structure field: a number or char field,
+# an array, an inline nested Structure, a callable field, a reference field, or `Name: field` (one
+# name after a Structure type) -- the shapes l2_take_ns_body takes.
+fn: l2_ns_decl_first (const: @(LmP0Node node)) int
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || node\as\frame\body = 0
+        return: 0
+    if: l2_frame_head(node, "size_t") || l2_frame_head(node, "int") || l2_frame_head(node, "unsigned") || l2_frame_head(node, "ulong") || l2_frame_head(node, "char")
+        return: 1
+    if: l2_frame_head(node, "[]") || l2_frame_head(node, "()") || l2_frame_head(node, "fn")
+        return: 1
+    if: l2_address_depth(node\as\frame\head) != 0
+        return: 1
+    if: l2_ident(node\as\frame\head) != 0 && l2_count_active(node\as\frame\body) = 1 && l2_next_active(node\as\frame\body\first_field)\value != 0 && l2_next_active(node\as\frame\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_ident(l2_next_active(node\as\frame\body\first_field)\value\as\atom) != 0
+        return: 1
+return: 0
+
+# Whether the unit declares a field named name -- a frame whose first item is the atom name after a
+# type word, an address, or a Structure type (`Model: name`).  A frame headed by such a name is an
+# assignment to it, never a new named Structure, whatever its body looks like: `r:` / `show: r` has
+# the P0 shape of `Model: left` (l2_ns_ret_closed).  It errs only toward "not a named Structure".
+fn: l2_unit_declares (const: @(LmP0Text name)) int
+    @: LmP0Field field
+    @: LmP0Node item
+    @: LmP0Field first
+    if: l2_cur_unit = 0 || name = 0
+        return: 0
+    field: l2_next_active(l2_cur_unit\first_field)
+    while: field != 0
+        item: field\value
+        if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && item\as\frame\body != 0 && item\as\frame\head != 0 && l2_text_same(item\as\frame\head, name) = 0
+            first: l2_next_active(item\as\frame\body\first_field)
+            # A declaration's shape, not any frame whose first atom is the name: P0 splits a path
+            # `got: Counter\n` into the atoms Counter, \, n.  A type word or an address takes the name
+            # first; `Model: name` has the name as its one field.
+            if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0 && l2_text_same(first\value\as\atom, name) != 0
+                if: l2_prim_type_word(item\as\frame\head) || l2_address_depth(item\as\frame\head) != 0 || l2_count_active(item\as\frame\body) = 1
+                    return: 1
+                ---
+            ---
+        ---
+        field: l2_next_active(field\next)
+    ---
 return: 0
 
 # Method row E: the unit statements collected by the lexical pass, in order,
@@ -12387,6 +12458,25 @@ return: 0
 # nested entry, then reads the fields in source order. Fields are size_t and
 # char literals, inline nested Structures built in place with this entry as
 # their node, and references to an EARLIER named Structure shared by pointer.
+# steps/named-struct-exec.md, slice 1: whether node, an item of named Structure me's body, is a
+# statement -- a bare `return`, or `x: value` where x names a field me declared above (a
+# declaration's head is a type; an assignment's is the field's own name).
+fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
+    int: j
+    if: node = 0 || me < 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_ATOM && node\as != 0 && l2_text_eq(node\as\atom, "return")
+        return: 1
+    if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || l2_ident(node\as\frame\head) = 0
+        return: 0
+    j: l2_ns_first[me]
+    while: j < l2_nsf_n
+        if: l2_nsf_owner[j] = me && l2_nsf_fname[j] != 0 && l2_text_same(l2_nsf_fname[j], node\as\frame\head) != 0
+            return: 1
+        j: j + 1
+    ---
+return: 0
+
 fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
     @: LmP0Field f
     int: aty 0
@@ -12419,6 +12509,13 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
         return: 0
     while: f != 0
         fld: f\value
+        # steps/named-struct-exec.md, slice 1: a statement of the body (Q19.2 = 2, "тело целиком, как у
+        # метода") -- an assignment to a field declared above, or a bare `return` -- is no field.
+        # Construction does not run it (book :928 computes the initializers only); slice 2 runs the
+        # whole body when the Structure is executed.
+        if: l2_ns_body_stmt(fld, me) != 0
+            f: l2_next_active(f\next)
+            continue
         if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0
             return: l2_error(path, at, "unsupported named Structure field")
         g: l2_next_active(fld\as\frame\body\first_field)

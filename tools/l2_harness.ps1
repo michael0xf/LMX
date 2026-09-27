@@ -1061,6 +1061,20 @@ $fixtures = @(
     # silently under the knob (l2trans ACCEPTS a fixture that must be refused), RED.
     [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
+    # implements-port slice 1 (steps/implements-port-plan.md, A1): a callable formal called with
+    # arguments -- int, int+size_t (order), char, unsigned+ulong -- each passed by the address of a
+    # local of its formal's type, refs and nargs to lmx_call_prim.  Mutants (copies under build/):
+    # nargs 0U -- the trampoline's signature invariant aborts; every refs index 0 -- refs[1] is never
+    # set and the values arrive in the wrong slots; both RED by run (the pins are text neither
+    # mutant touches).  A formal of another type is
+    # refused, located (mutant: no type check -- a `(null)` type reaches L1, l2trans accepts, RED).
+    # The walker refuses the same shape, located (checkpoint 2-6 row 234; REVIEW 9327b65).
+    [pscustomobject]@{ Name = 'unit_cf_call_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('size_t: l2_cfa1_1', 'lmx_size_value_known(refs[1])', 'lmx_ulong_value_known(refs[1])') },
+    [pscustomobject]@{ Name = 'unit_cf_call_pointer_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = "a callable formal's argument of this type is not passed yet"; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable merge needs one model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_none.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

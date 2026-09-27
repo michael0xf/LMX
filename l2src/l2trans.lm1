@@ -550,7 +550,7 @@ prototype:
     fn: l2_input_ft (int: mi; int: k) int
     fn: l2_m_native (int: i) int
     fn: l2_tramp_class (int: mi) int
-    fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
+    fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
     fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
     fn: l2_emit_trampoline (int: i; int: proto) int
     fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
@@ -17074,9 +17074,26 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     if: sel != 2 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: ", ind, t) < 0
         return: l2_prep_drop(acts, hides)
     if: sel = 2
-        if: nact != 0 || nhid != 0
+        if: nhid != 0
             l2_prep_drop(acts, hides)
             return: l2_error(l2_src, node, "incompatible entry signature")
+        # Its arguments (implements-port slice 1): each actual goes into a local of its formal's
+        # type and refs[k] is that local's address -- the trampoline reads it with
+        # lmx_*_value_known, *(T*)cell, the transport l2_emit_msend already uses (no boxing).  A
+        # formal of any other type is refused, located, until it has a witness.
+        ai: 0
+        while: ai < nact
+            if: l2_ft(idx, ai) = 8 || l2_prim_code_name(l2_ft(idx, ai)) = 0
+                l2_prep_drop(acts, hides)
+                return: l2_error(l2_src, node, "a callable formal's argument of this type is not passed yet")
+            ai: ai + 1
+        if: nact > 0 && c.fprintf(l2_out, "%s[]: @(void) l2_cfr%d %d\n", ind, t, nact) < 0
+            return: l2_prep_drop(acts, hides)
+        ai: 0
+        while: ai < nact
+            if: c.fprintf(l2_out, "%s%s: l2_cfa%d_%d\n%sl2_cfa%d_%d: %s\n%sl2_cfr%d[%d]: @ l2_cfa%d_%d\n", ind, l2_prim_code_name(l2_ft(idx, ai)), t, ai, ind, t, ai, l2_act_at(acts, ai), ind, t, ai, t, ai) < 0
+                return: l2_prep_drop(acts, hides)
+            ai: ai + 1
         # A callable formal is called through the one dynamic call ABI, lmx_call_prim
         # (lmx_call.h.lm1; its native callee is the method's trampoline, l2_emit_trampoline): the
         # status apart from the value.  A throwing callable's status is its throw status, carried
@@ -17088,7 +17105,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         l2_t7_dyn_here: 0
         if: l2_t7_dyn_has(mi, fi) != 0
             l2_t7_dyn_here: 1
-        if: l2_emit_dyn_call(idx, t, self_t, ind) != 0
+        if: l2_emit_dyn_call(idx, t, self_t, ind, nact) != 0
             l2_t7_dyn_here: 0
             return: l2_prep_drop(acts, hides)
         l2_t7_dyn_here: 0
@@ -17885,17 +17902,23 @@ fn: l2_tramp_store (int: cls) const: @: char
 return: "lmx_int_store_known"
 
 # fresh = 0 calls lmx_call_prim(code, code) with no lmx_fresh (native 0). fresh = 1 is today's path.
-fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: fresh) int
+fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: fresh; int: nargs) int
     int: cls l2_tramp_class(idx)
+    []: char args 64
+    # refs and nargs: l2_cfr<t> (l2_emit_call builds it) for a call with arguments.
+    if: nargs = 0 && c.sprintf(args, "0, 0U") < 0
+        return: 1
+    if: nargs != 0 && c.sprintf(args, "l2_cfr%d, %dU", t, nargs) < 0
+        return: 1
     if: fresh != 0 && (c.fprintf(l2_out, "%s@: Lmx l2_d%d lmx_fresh(l2_program_arena, l2_c%d)\n%sif: l2_d%d = 0\n", ind, t, self_t, ind, t) < 0 || l2_emit_invariant(ind, "a fresh instance could not be made") != 0)
         return: 1
-    if: fresh != 0 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, t, self_t, t) < 0
+    if: fresh != 0 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, %s, ", ind, t, self_t, t, args) < 0
         return: 1
-    if: fresh != 0 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, 0, 0U, ", ind, self_t, t) < 0
+    if: fresh != 0 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_d%d, %s, ", ind, self_t, t, args) < 0
         return: 1
-    if: fresh = 0 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, 0, 0U, ", ind, t, self_t, self_t) < 0
+    if: fresh = 0 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, %s, ", ind, t, self_t, self_t, args) < 0
         return: 1
-    if: fresh = 0 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, 0, 0U, ", ind, self_t, self_t) < 0
+    if: fresh = 0 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sif: lmx_call_prim(l2_program_arena, l2_c%d, l2_c%d, %s, ", ind, self_t, self_t, args) < 0
         return: 1
     if: (cls = 0 || cls = 5) && fputs("0", l2_out) < 0
         return: 1
@@ -17914,12 +17937,12 @@ fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: fr
 return: 0
 
 # The dynamic call of the callable formal occurrence l2_c<self_t> that carries the signature of
-# method idx (l2_emit_call, sel 2): nullary, through lmx_call_prim.  The value lands the way the
+# method idx (l2_emit_call, sel 2), through lmx_call_prim; nargs > 0 passes l2_cfr<t>.  The value lands the way the
 # method's trampoline delivers it (l2_tramp_class): a scalar or a foreign value in l2_t<t> through
 # dest; a pointer through out, then into l2_t<t>.  On a throw `out` is the thrown record.
 # When this formal received a merge, native 0 uses the node as code and data. Otherwise the
 # fresh path is the only text emitted.
-fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
+fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
     @: char deep 0
     if: c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0
         return: 1
@@ -17928,13 +17951,13 @@ fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
             return: 1
         if: l2_bump_ind(ind, @ deep) != 0
             return: 1
-        if: l2_emit_dyn_tail(idx, t, self_t, deep, 0) != 0
+        if: l2_emit_dyn_tail(idx, t, self_t, deep, 0, nargs) != 0
             return: 1
         if: c.fprintf(l2_out, "%s---\n", deep) < 0
             return: 1
         if: c.fprintf(l2_out, "%selse:\n", ind) < 0
             return: 1
-        if: l2_emit_dyn_tail(idx, t, self_t, deep, 1) != 0
+        if: l2_emit_dyn_tail(idx, t, self_t, deep, 1, nargs) != 0
             return: 1
         if: c.fprintf(l2_out, "%s---\n", deep) < 0
             return: 1
@@ -17942,7 +17965,7 @@ fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind)) int
     # -189 c3a (Q28): a call by reference runs over a fresh instance of the callee, made from its
     # code by the kernel (lmx_fresh): the caller does not know the callee's prototype.  The data
     # is lmx_call_prim's operand; the trampoline makes nothing.
-    return: l2_emit_dyn_tail(idx, t, self_t, ind, 1)
+    return: l2_emit_dyn_tail(idx, t, self_t, ind, 1, nargs)
 
 # The call of method i from its trampoline: node, self, the inputs, and for the declared-throw
 # ABI l2_msg 0, the result local and the thrown-record local.

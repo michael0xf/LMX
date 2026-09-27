@@ -1,0 +1,29 @@
+# D-101, second site (REVIEW 7b9c60c, fable_pc's remark): a method whose RESULT is a named
+# Structure, passed as a callable actual, is used as a value: its public prototype is written
+# (l2_m_value_used).  l2_emit_public_sig reads the result through l2_sig_ret (the same dt_of_own(
+# 1000+foreign)/l2_ft_of_own recovery l2_emit_formal already does for a formal, -137 part 2) --
+# raw l2_m_ret[mi] would hand l2_emit_foreign_return an index past its table, the same class of
+# failure D-101's formal half had. `applyBox` does not call `op` (a callable-result Structure
+# through a callable formal is not callable yet, same boundary as unit_d101_struct_formal_value);
+# this row is the prototype's.  Prototype recovers to `@: Lmx` (a graph handle), same shape
+# l2_emit_foreign_return gives any graph result.
+# Mutant: l2_sig_ret's own recovery reverted to a raw l2_m_ret[mi] read -- l2trans fails again,
+# with no located diagnostic (an index past l2_foreign_const's table).
+Box:
+    int: v 0
+end: Box
+fn: toBox (int: v) Box
+end: toBox
+fn: mk (int: v) Box
+    Box: b
+    b\v: v
+    return: b
+end: mk
+fn: applyBox (toBox: op; int: n) int
+    return: n
+end: applyBox
+fn: run () int
+    return: applyBox(mk, 7)
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

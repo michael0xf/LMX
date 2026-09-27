@@ -1082,6 +1082,11 @@ $fixtures = @(
     # the old condition -- gcc refuses the C.
     [pscustomobject]@{ Name = 'unit_d101_struct_formal_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('fn: peek (@: Lmx b) int') },
+    # D-101, second site (REVIEW 7b9c60c remark): the SAME recovery for a named-Structure RESULT,
+    # through l2_sig_ret (mk's public prototype: `fn: mk (int: v) @: Lmx`). Mutant: l2_sig_ret's own
+    # recovery reverted to a raw l2_m_ret[mi] read -- l2trans fails again, no located diagnostic.
+    [pscustomobject]@{ Name = 'unit_d101_struct_result_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('fn: mk (int: v) @: Lmx') },
     [pscustomobject]@{ Name = 'unit_d102_formal_path_no_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

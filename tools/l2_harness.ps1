@@ -1019,16 +1019,37 @@ $fixtures = @(
     # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.
     [pscustomobject]@{ Name = 'unit_t7_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
-    # next_core_tasks.md §7 "Интерпретаторы": a callable result (T6's makeAdder/addN shape) or a
-    # callable formal (T7's take (bin: op) shape) is outside l2_rw_may's walkable subset --
-    # --walk-methods now refuses it, located, instead of silently leaving it native
-    # (steps/interpreters-callable-parity-t6t7.md). Same two shapes as unit_make_adder.lm2/
-    # unit_t7_convert.lm2 above, minimised and re-staged under their own Name so this row can
-    # run WITH the knob while those two keep testing the native (non-knob) path. Mutant:
-    # l2_rw_callable_excluded hardcoded to `return: 0` -- both rows go back to translating
+    # §6 (steps/interpreters-callable-parity-t6t7.md): a T6/T6b callable-merge host (l2_mad_on)
+    # now walks under the knob when l2_mad_return_confirmed holds -- the body's own statements
+    # walk normally, the return builds a PRIM step (l2_rw_mad_ret) whose native record is a
+    # standalone per-host constructor (l2_emit_mad_construct_one), not a numeric [ret, V]. Same
+    # minimal shape unit_walk_methods_callable_result_refused.lm2 used to pin the refusal text
+    # with, re-staged as unit_walk_make_adder.lm2 now that it runs instead: add5(1)=6. Mutant
+    # (build/*, not committed): the constructor's own per-capture store call dropped -- add5(1)
+    # is not 6 (a different Entry, or a crash if the capture cell is left null).
+    [pscustomobject]@{ Name = 'unit_walk_make_adder.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6; WalkMethods = $true;
+        Absent = @(); Debt = @('lmx_arena_ref_struct(l2_entry_unit,', 'l2_mad_construct_') },
+    # T6b captures under the knob (unit_make_adder_activation.lm2's exact shape): host statements
+    # before the return (n: n+1, int: k(n*2)) walk via l2_rw_stmts unchanged; only the return's own
+    # emission differs from the native path. add7(1)=7, add100(1)=100, add7(1)=7.
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_mad_construct_') },
+    # T6b, zero captures under the knob (unit_make_adder_no_capture.lm2's exact shape): the
+    # constructor's own per-capture loop runs zero times, width 3 (args, return, one frame).
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_mad_construct_') },
+    # T6b, a size_t capture under the knob (unit_make_adder_size_t.lm2's exact shape): the
+    # constructor dispatches lmx_size_value_known/lmx_size_store_known by l2_mcap_ty, not always
+    # the int pair -- addBig(2^32)=101, addSmall(2^32-1)=2 (an int cell would truncate 2^32 to 0).
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('lmx_size_value_known(refs[', 'lmx_size_store_known(') },
+    # next_core_tasks.md §7 "Интерпретаторы": a callable formal (T7's take (bin: op) shape) is
+    # still outside l2_rw_may's walkable subset -- l2_pap_on/T7 is a separate mechanism §6 does not
+    # touch (steps/interpreters-callable-parity-t6t7.md's own scope note). Same shape as
+    # unit_t7_convert.lm2's take, minimised and re-staged under its own Name so this row can run
+    # WITH the knob while that one keeps testing the native (non-knob) path. Mutant:
+    # l2_rw_callable_excluded hardcoded to `return: 0` -- this row goes back to translating
     # silently under the knob (l2trans ACCEPTS a fixture that must be refused), RED.
-    [pscustomobject]@{ Name = 'unit_walk_methods_callable_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

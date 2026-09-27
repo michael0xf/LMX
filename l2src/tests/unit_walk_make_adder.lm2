@@ -1,0 +1,18 @@
+# §6: a method declared with a callable result (T6's `fn: (...) ...` header, code 16) used to be
+# outside the walkable subset (l2_rw_may) unconditionally -- a2f45f-era --walk-methods refused it,
+# located (a6de5a9). §6 (steps/interpreters-callable-parity-t6t7.md) lets a T6/T6b callable-merge
+# host through when its return is confirmed the host's one exit (l2_mad_return_confirmed): the
+# body's own statements walk normally, the return builds a PRIM step instead of a numeric one
+# (l2_rw_mad_ret/l2_emit_mad_construct_one). This is the minimal reproduction, now translating and
+# running under the knob too: add5(1)=6. Fuller T6b witnesses (captures, no-capture, size_t
+# capture type): unit_walk_make_adder_activation.lm2, unit_walk_make_adder_no_capture.lm2,
+# unit_walk_make_adder_size_t.lm2.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+add5: makeAdder 5
+int: a (add5: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

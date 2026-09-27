@@ -599,6 +599,8 @@ prototype:
     fn: l2_rw_arg (int: parent; int: j; @: int out) int
     fn: l2_rw_ret (@: LmP0Field first; int: n; int: into; @: int out) int
     fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
+    fn: l2_rw_mad_trailer (int: mi; int: into; int: slot; @: int made) int
+    fn: l2_rw_mad_ret (int: mi; int: into; @: int out) int
     fn: l2_rw_may (int: mi) int
     fn: l2_rw_methods_count () int
     fn: l2_rw_methods_emit () int
@@ -1028,11 +1030,13 @@ prototype:
     fn: l2_mad_tr_is (const: @(LmP0Structure tr); int: model) int
     fn: l2_mad_names_nested (const: @(LmP0Node stmt); int: mi) int
     fn: l2_mad_trailer_return (int: mi; int: model) int
+    fn: l2_mad_return_confirmed (int: mi; int: model) int
     fn: l2_mad_host_own (int: host; const: @(LmP0Text name)) int
     fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty) int
     fn: l2_mcap_ty_ok (int: ty) int
     fn: l2_mad_slot_ty (int: mi; const: @(LmP0Text name)) int
     fn: l2_mcap_new_helper (int: ty) @: char
+    fn: l2_mcap_value_helper (int: ty) const: @: char
     fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
     fn: l2_mad_caps (int: mi) int
@@ -1050,6 +1054,8 @@ prototype:
     fn: l2_t7_count () int
     fn: l2_t7_emit_frames () int
     fn: l2_emit_mad_call () int
+    fn: l2_emit_mad_construct_one (int: mi) int
+    fn: l2_emit_mad_constructs () int
     fn: l2_rw_mad_at (int: parent; int: slot; @: int out) int
     fn: l2_rw_mad_store (const: @(LmP0Node stmt); int: into; @: int out) int
     fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) int
@@ -21602,6 +21608,12 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: int made) int
     field: l2_next_active(first)
     while: field != 0
         pbase: l2_rw_pre_n
+        # T6/T6b: a nested fn: is the host's model, not a statement to walk (l2_check_body's
+        # own l2_mad_on(mi)/"fn" skip, l2trans.lm1:15469, mirrored here for the walk pass).
+        if: l2_mad_on(l2_rw_mi) != 0 && l2_frame_head(field\value, "fn") != 0
+            next: l2_next_active(field\next)
+            field: next
+            continue
         if: l2_rw_stmt(field, @ next, into, base + \made, @ one) != 0
             return: 1
         if: l2_rw_pre_n > pbase && l2_rw_pre_place(into, base + \made, one, pbase, l2_rw_pre_n - pbase) != 0
@@ -21661,7 +21673,14 @@ fn: l2_rw_may (int: mi) int
     if: l2_m_dyn[mi] != 0 || (l2_m_throws != 0 && l2_m_throws[mi] != 0)
         return: 0
     cls: l2_tramp_class(mi)
-    if: l2_m_ret[mi] != 8 && (cls < 1 || cls > 4)
+    # §6: a T6/T6b callable-merge host (l2_mad_on) has a callable result (code 16, cls 5) by
+    # its own declared header -- excluded here by the generic numeric-class gate like any other
+    # callable result, UNLESS its return is confirmed the host's one exit (l2_mad_return_confirmed,
+    # l2_mad_host_body's own three-way "where the return is" check): l2_rw_trailer's own l2_mad_on
+    # branch builds the PRIM-based return, never the numeric one this gate exists for, so the class
+    # check does not apply to it. A malformed host (no confirmed return: model) still falls through
+    # to this gate and stays excluded, diagnosed by l2_rw_callable_excluded as before.
+    if: (l2_mad_on(mi) = 0 || l2_mad_return_confirmed(mi, l2_mad_model[mi]) = 0) && l2_m_ret[mi] != 8 && (cls < 1 || cls > 4)
         return: 0
     while: j < l2_m_arity[mi]
         if: l2_cf_get(mi, j) >= 0
@@ -21714,6 +21733,11 @@ fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
     int: node
     int: pbase l2_rw_pre_n
     \made: 0
+    # §6: a T6/T6b host's `return: model` is not a numeric value -- l2_ret_tr on the method's own
+    # frame can even miss it (the parser may hang it on the model's own fn: frame instead,
+    # l2_mad_trailer_return checks both spots); l2_rw_may already confirmed one exists.
+    if: l2_mad_on(mi) != 0
+        return: l2_rw_mad_trailer(mi, into, slot, made)
     if: l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0
         tr: l2_ret_tr(l2_m_node[mi]\as\frame)
     if: tr = 0
@@ -21733,6 +21757,71 @@ fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
     \made: 1 + l2_rw_pre_n - pbase
     l2_rw_pre_n: pbase
 return: 0
+
+# §6: a T6/T6b host's trailer is the PRIM-built node, not a numeric [ret, V] -- l2_rw_ret/
+# l2_rw_texpr never run for it. l2_mad_trailer_return re-confirms the shape (l2_rw_may already
+# checked it, but a direct call keeps this function correct standalone, matching l2_rw_trailer's
+# own re-derivation of `tr` from scratch above).
+fn: l2_rw_mad_trailer (int: mi; int: into; int: slot; @: int made) int
+    []: char pn 32
+    int: node
+    \made: 0
+    if: l2_mad_return_confirmed(mi, l2_mad_model[mi]) = 0
+        return: l2_error(l2_src, l2_m_node[mi], "a callable merge needs its return as the host's own trailer")
+    l2_rw_name(into, pn)
+    if: l2_rw_mad_ret(mi, into, @ node) != 0
+        return: 1
+    \made: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+        return: 1
+return: 0
+
+# §6: [ret, [prim, rec, 0, model_ref, cap0, cap1, ...]] -- rec's native fn is a standalone
+# per-host constructor (l2_mad_construct_<mi>, emitted once by l2_emit_mad_constructs). Operand 0
+# is the model's own occurrence Structure -- fetched the same way l2_rw_methods_emit fetches any
+# method's occurrence (lmx_arena_ref_struct(l2_entry_unit, l2_unit_base+model)), a native
+# statement run once when the program's graph is built, then read like any other fixed Structure
+# operand (lmx_walk_eval's OP_NONE/STRUCT case, the same shape l2_rw_model already uses for
+# l2_nsp[ni]) -- not the host's own node, which no LmxPrimitiveEntry signature carries. Operands
+# 1..caps are the T6b captures, each the ordinary walkable evaluation of that name in mi's own
+# activation (the same l2_mad_atom_field indirection l2_mad_emit's native path already uses: the
+# model's own mention of the captured name, evaluated under mi so an ordinary formal/own-field
+# lookup finds the host's binding, not the model's). Model index/arity/steps/caps are
+# translation-time constants baked into the constructor's own generated body, never operands.
+fn: l2_rw_mad_ret (int: mi; int: into; @: int out) int
+    int: model l2_mad_model[mi]
+    int: caps l2_mad_caps(mi)
+    int: prim
+    int: mref
+    int: j 0
+    int: slot 4
+    int: v
+    @: LmP0Field af
+    if: model < 0
+        return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost its model")
+    if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_PRIM", 4 + caps, @ prim) != 0
+        return: 1
+    mref: l2_rw_t
+    l2_rw_t: l2_rw_t + 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_rw%d = 0\n            return: 1\n", mref, (cast: (unsigned) (l2_unit_base + model)), mref) < 0
+        return: 1
+    if: l2_rw_put(prim, 3, mref) != 0
+        return: 1
+    while: j < l2_mcap_n
+        if: l2_mcap_model[j] = model
+            af: l2_mad_atom_field(l2_m_node[model], l2_mcap_name[j])
+            if: af = 0
+                return: l2_error(l2_src, l2_m_node[model], "a callable merge lost a captured name")
+            if: l2_rw_texpr(af, 1, l2_mcap_ty[j], prim, @ v) != 0
+                return: 1
+            if: l2_rw_put(prim, slot, v) != 0
+                return: 1
+            slot: slot + 1
+            ---
+        j: j + 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: l2_mad_construct_%d\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, mi, prim, prim, prim, prim) < 0
+        return: 1
+return: l2_rw_put(\out, 1, prim)
 
 # T6. return: addN builds one node: the model, {n: the activation's value}, the declared header.
 # Frames are the model's, shared by address. native of the node stays 0.
@@ -21957,6 +22046,35 @@ fn: l2_mad_trailer_return (int: mi; int: model) int
         return: 0
 return: l2_mad_tr_is(l2_ret_tr(f\value\as\frame), model)
 
+# §6: the full "does mi have a confirmed return: model" check l2_mad_host_body's own native path
+# already uses (:22186 area, its own three-way "where the return is" comment) -- (1) an ordinary
+# `return: model` body FIELD (l2_mad_is_return); (2) the trailer-hung form (l2_mad_trailer_return,
+# T6b: statements before the nested fn:); (3) neither found (at_fn stays 1, l2_mad_host_body's own
+# :22214 `stmt = l2_m_node[model]`), so the model's own `fn:` field appearing as a body field is
+# itself the implicit exit -- T6's simplest shape (unit_make_adder.lm2: no leading statements, no
+# explicit return: model anywhere, the nested fn: is the body's only field). l2_mad_trailer_return
+# alone is not the whole answer, and neither is adding just case (1); this is, and is what
+# l2_rw_may/l2_rw_mad_trailer call.
+fn: l2_mad_return_confirmed (int: mi; int: model) int
+    @: LmP0Field f
+    if: l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure = 0
+        return: l2_mad_trailer_return(mi, model)
+    f: l2_next_active(l2_m_body[mi]\as\structure\first_field)
+    while: f != 0
+        if: l2_mad_is_return(f\value, model) != 0
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+    if: l2_mad_trailer_return(mi, model) != 0
+        return: 1
+    f: l2_next_active(l2_m_body[mi]\as\structure\first_field)
+    while: f != 0
+        if: f\value = l2_m_node[model]
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
 # The field host declares at method level under name, the last such, or -1.  Not the lexical
 # chain: a unit field or a field of a nested body of the host is not the host's activation.
 fn: l2_mad_host_own (int: host; const: @(LmP0Text name)) int
@@ -21986,6 +22104,18 @@ fn: l2_mcap_new_helper (int: ty) @: char
     if: ty = 36
         return: "lmx_ulong_new_owned"
 return: "lmx_int_new_owned"
+
+# §6: the walked constructor reads a capture's value out of refs[] (a walker-evaluated operand,
+# never a native C expression) with the getter matching l2_mcap_new_helper/l2_own_store_helper's
+# same type.
+fn: l2_mcap_value_helper (int: ty) const: @: char
+    if: ty = 2
+        return: "lmx_size_value_known"
+    if: ty = 3
+        return: "lmx_unsigned_value_known"
+    if: ty = 36
+        return: "lmx_ulong_value_known"
+return: "lmx_int_value_known"
 
 fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty) int
     int: k 0
@@ -22347,6 +22477,80 @@ fn: l2_emit_mad_call () int
         return: 0
     if: fputs("fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    @: void l2_one 0\n    if: nargs != 2U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) refs[0])\n    l2_one: refs[1]\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, @ l2_one, 1U, dest, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_out) < 0
         return: 1
+return: 0
+
+# §6: l2_mad_construct_<mi>'s body is l2_mad_emit's own Structure-building code (two sub-
+# Structures, one typed cell per T6b capture, the range copy from the model), moved from a
+# native trampoline's inline text to a standalone LmxPrimitiveEntry function: model/arity/steps/
+# caps/base are baked in here as literal constants (computed once, same helpers l2_mad_emit
+# itself calls), never read from refs[]. refs[0] is the model's own occurrence Structure
+# (l2_rw_mad_ret's operand 0); refs[1..caps] are the captured values, read by the same
+# l2_mcap_new_helper/l2_own_store_helper type dispatch l2_mad_emit uses natively, sourced from
+# l2_mcap_value_helper's getter instead of a native C expression. l2_mad_src doubles as both the
+# new Structure's parent (a real, arena-resident Lmx -- the model occurrence, not the host's own
+# node, which nothing here has access to) and the source of the range copy, exactly as l2_mad_src
+# does in l2_mad_emit.
+fn: l2_emit_mad_construct_one (int: mi) int
+    int: model l2_mad_model[mi]
+    int: steps 0
+    int: caps
+    int: arity
+    int: width
+    int: base
+    int: j 0
+    int: ci 0
+    int: slot 2
+    if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0
+        return: l2_error(l2_src, l2_m_node[mi], "a callable merge needs a walkable body")
+    steps: l2_m_steps[model]
+    caps: l2_mad_caps(mi)
+    arity: l2_mad_hdr_arity(mi)
+    if: arity < 1 && l2_m_ret[mi] != 16
+        arity: l2_m_arity[model]
+    width: 2 + caps + steps
+    base: l2_m_kids(model)
+    if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_part 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    int: l2_mad_k 0\n    \\out: 0\n    if: nargs != %uU || refs = 0 || refs[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge construct was called outside its header\\n\")\n        c.abort()\n    l2_mad_src: (cast: (@: Lmx) refs[0])\n    l2_mad: lmx_struct_new_owned(l2_mad_src, (cast: (@: LmxArena) owner))\n    if: l2_mad = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", mi, (cast: (unsigned) (1 + caps)), (cast: (unsigned) width)) < 0
+        return: 1
+    if: c.fprintf(l2_out, "    l2_mad_part: lmx_struct_new_owned(l2_mad, (cast: (@: LmxArena) owner))\n    if: l2_mad_part = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad_part, %uU) != 0 || lmx_arena_ref_store(l2_mad, 0U, (cast: (@: void) l2_mad_part)) != 0\n        c.abort()\n", (cast: (unsigned) arity)) < 0
+        return: 1
+    j: 0
+    while: j < arity
+        if: c.fprintf(l2_out, "    l2_mad_cell: lmx_int_new_owned((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad_part, %uU, l2_mad_cell) != 0\n        c.abort()\n", (cast: (unsigned) j)) < 0
+            return: 1
+        j: j + 1
+    if: c.fprintf(l2_out, "    l2_mad_part: lmx_struct_new_owned(l2_mad, (cast: (@: LmxArena) owner))\n    if: l2_mad_part = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad_part, 1U) != 0 || lmx_arena_ref_store(l2_mad, 1U, (cast: (@: void) l2_mad_part)) != 0\n        c.abort()\n    l2_mad_cell: lmx_int_new_owned((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || lmx_arena_ref_store(l2_mad_part, 0U, l2_mad_cell) != 0\n        c.abort()\n") < 0
+        return: 1
+    j: 0
+    ci: 0
+    while: j < l2_mcap_n
+        if: l2_mcap_model[j] = model
+            if: c.fprintf(l2_out, "    l2_mad_cell: %s((cast: (@: LmxArena) owner))\n    if: l2_mad_cell = 0 || %s(l2_mad_cell, %s(refs[%uU])) != 0 || lmx_arena_ref_store(l2_mad, %uU, l2_mad_cell) != 0\n        c.abort()\n", l2_mcap_new_helper(l2_mcap_ty[j]), l2_own_store_helper(l2_mcap_ty[j]), l2_mcap_value_helper(l2_mcap_ty[j]), (cast: (unsigned) (1 + ci)), (cast: (unsigned) slot)) < 0
+                return: 1
+            slot: slot + 1
+            ci: ci + 1
+            ---
+        j: j + 1
+    if: c.fprintf(l2_out, "    l2_mad_k: 0\n    while: l2_mad_k < %d\n        if: lmx_arena_ref_store(l2_mad, %uU + (cast: (unsigned) l2_mad_k), lmx_arena_ref_value(l2_mad_src, %uU + (cast: (unsigned) l2_mad_k))) != 0\n            c.abort()\n        l2_mad_k: l2_mad_k + 1\n    \\out: (cast: (@: void) l2_mad)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_mad_construct_%d\n\n", steps, (cast: (unsigned) (2 + caps)), (cast: (unsigned) base), mi) < 0
+        return: 1
+return: 0
+
+# Once per translation, after every method's own trampoline/body is emitted (l2_mad_call's own
+# emission point): every T6/T6b host that actually walked (l2_m_steps[i] > 0, set only when
+# l2_rw_may admitted it) gets its own constructor. A host l2_rw_may excluded (T7, or a malformed
+# mad shape) never reaches here -- l2_m_steps stays -1 for it. NOT conditioned on l2_walk_methods:
+# l2_rw_methods_count/l2_rw_methods_emit (:25860/:26703) build the op-tree unconditionally, the
+# same way a method's native trampoline is always emitted regardless of the knob -- the knob picks
+# which one an entry uses, not whether the walked one compiles. Gating this behind the knob while
+# l2_rw_mad_ret's own reference to l2_mad_construct_<mi> is not is exactly what left the reference
+# dangling (measured: gcc undeclared identifier on unit_make_adder.lm2 with no --walk-methods).
+fn: l2_emit_mad_constructs () int
+    int: i 0
+    while: i < l2_m_n
+        if: l2_library_mode = 0 && l2_mad_on(i) != 0 && l2_m_steps != 0 && l2_m_steps[i] > 0
+            if: l2_emit_mad_construct_one(i) != 0
+                return: 1
+            ---
+        i: i + 1
 return: 0
 
 fn: l2_rw_mad_at (int: parent; int: slot; @: int out) int
@@ -26133,6 +26337,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     if: l2_emit_mad_call() != 0
+        fclose(l2_out)
+        return: 1
+    if: l2_emit_mad_constructs() != 0
         fclose(l2_out)
         return: 1
     # A program's builder is R0's program (LmxRootProgram, lmx_root_launch): the host calls it right

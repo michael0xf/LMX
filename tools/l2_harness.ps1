@@ -2459,6 +2459,25 @@ $fixtures = @(
     # unit_s7_conv_badbody.lm2:6:9, a line of a different file.
     [pscustomobject]@{ Name = 'unit_s7_conv_badbody.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_badbody_impl.lm2';
         Needle = 'convert_impl.lm2:6:9: throw of an undeclared name'; Absent = @(); Debt = @() },
+    # implements-port slice 3 (A3, arguments; steps/implements-port-plan.md): a value of one named
+    # primitive type given to a formal of another calls the row's receiver on it, as a store does
+    # (l2_check_arg_convert, l2_emit_arg_convert) -- a direct call and a callable formal's call
+    # alike; the receiver's refusal is the caller's implicit throw `convert`.  Mutants (copies
+    # under build/): the edge not emitted -- _range completes with 7 and _catch skips its handler
+    # with 1, both RED by run; no argument check -- _norow is accepted.
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('fn: lm_stg_convert_'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    # The same edge under --walk-methods: `go` throws (its implicit `convert`) and a throwing method
+    # is outside l2_rw_may -- it stays native, as with a store's edge; `take` is walked (its native
+    # entry is absent).  The root receives the same status 3.
+    [pscustomobject]@{ Name = 'unit_walk_methods_s3_arg_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)') },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

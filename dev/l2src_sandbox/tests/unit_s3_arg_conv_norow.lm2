@@ -1,0 +1,12 @@
+# implements-port slice 3: size_t given to an unsigned formal -- convert.lm2 has no such row, so
+# the call is refused, located at the argument, with the phrase a store and the root already use
+# (unit_s7_conv_norow).  Mutant: no argument check -- C converts silently and l2trans accepts.
+fn: take (unsigned: n) int
+    return: 7
+end: take
+fn: go () int
+    size_t: b 2U
+    return: take(b)
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

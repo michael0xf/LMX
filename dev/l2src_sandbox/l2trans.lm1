@@ -6277,6 +6277,81 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP
         return: 1
 return: 3
 
+# implements-port slice 3 (A3, arguments; steps/implements-port-plan.md): one value of one named
+# primitive type given to a formal of another is the edge an assignment has
+# (l2_colon_check_assignment) -- the row's receiver is called on the value and its result is the
+# argument; with no row the call is refused, located at the argument.  A literal is typed by its
+# place (-10).  A compound actual (`n - 1`) has no translation-time type here and keeps C's own
+# conversion: the boundary of this slice.  0: nothing to do or the edge noted; 1: error.
+fn: l2_check_arg_convert (const: @(LmP0Node value); int: idx; int: k; int: mi; const: @(char path)) int
+    int: from_ft 0
+    int: to_ft
+    int: cok
+    to_ft: l2_ft(idx, k)
+    if: value = 0 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
+        return: 0
+    if: l2_colon_simple_ty(value, mi, @ from_ft) != 0 || from_ft = 8 || l2_prim_code_name(from_ft) = 0
+        return: 0
+    if: c.strcmp(l2_prim_code_name(from_ft), l2_prim_code_name(to_ft)) = 0
+        return: 0
+    cok: l2_colon_types_compatible(to_ft, from_ft)
+    if: cok = 0 && l2_cv_gap = 3
+        return: l2_error(path, value, "cannot read the conversion table")
+    if: cok = 0 && l2_cv_gap = 4
+        return: l2_error(path, value, "cannot read the converter source")
+    if: cok = 0 && l2_cv_gap = 2
+        return: l2_error(path, value, "no converter body ported")
+    if: cok = 0 && l2_cv_gap = 1
+        return: l2_error(path, value, "mixed numeric types (a conversion)")
+    if: cok = 0
+        return: l2_error(path, value, "function argument has incompatible type")
+    if: l2_cv_used != 0 && l2_convert_edge(mi, path, value) != 0
+        return: 1
+return: 0
+
+# The emission of l2_check_arg_convert's edge: the receiver is called on the one actual -- a
+# one-field Structure over a copy of its field, so l2_emit_call evaluates it once, in the caller --
+# and its result token is the argument; a refusal of the receiver is this method's implicit throw
+# `convert` (edge 1), as at a store (l2_convert_on_store).  0: emitted into dest.  1: error.
+# 2: no conversion here.
+fn: l2_emit_arg_convert (const: @(LmP0Node node); @: LmP0Field a0; int: idx; int: k; int: mi; const: @(char ind); @: char dest) int
+    int: from_ft 0
+    int: to_ft
+    int: cidx
+    int: rc
+    @: LmP0Structure one 0
+    @: LmP0Field f 0
+    to_ft: l2_ft(idx, k)
+    if: a0 = 0 || a0\value = 0 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
+        return: 2
+    if: l2_colon_simple_ty(a0\value, mi, @ from_ft) != 0 || from_ft = 8 || l2_prim_code_name(from_ft) = 0
+        return: 2
+    if: c.strcmp(l2_prim_code_name(from_ft), l2_prim_code_name(to_ft)) = 0
+        return: 2
+    if: l2_convert_hit(l2_prim_code_name(from_ft), l2_prim_code_name(to_ft)) = 0
+        return: l2_error(l2_src, a0\value, "internal: a conversion site was not checked")
+    cidx: l2_convert_method(l2_cv_body)
+    if: cidx < 0
+        return: l2_error(l2_src, a0\value, "internal: a conversion site was not checked")
+    one: (cast: (@: LmP0Structure) l2_xmalloc(c.sizeof(c.LmP0Structure)))
+    f: (cast: (@: LmP0Field) l2_xmalloc(c.sizeof(c.LmP0Field)))
+    if: one = 0 || f = 0
+        if: one != 0
+            l2_xfree((cast: (@: void) one))
+        if: f != 0
+            l2_xfree((cast: (@: void) f))
+        return: l2_error(l2_src, a0\value, "out of memory")
+    memset((cast: (@: void) one), 0, c.sizeof(c.LmP0Structure))
+    memcpy((cast: (@: void) f), (cast: (@: void) a0), c.sizeof(c.LmP0Field))
+    f\next: 0
+    one\first_field: f
+    rc: l2_emit_call(node, cidx, 0, 0 - 1, one, mi, ind, dest, 1)
+    l2_xfree((cast: (@: void) f))
+    l2_xfree((cast: (@: void) one))
+    if: rc != 0
+        return: 1
+return: 0
+
 # Named primitive value codes are l2_primitive_leaf_implements. The lists
 # below are the literal class (-10), a quoted pointer (-11), and a code that
 # is not one of those names. They are not a second primitive predicate.
@@ -14992,6 +15067,8 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
             ---
             if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
+            if: handled = 0 && req_mi < 0 && nst < 0 && actual_span = 1 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_arg_convert(a0\value, idx, actual_i, mi, path) != 0
+                return: 1
             if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
                 if: l2_admit_consumer_uses(a0\value\as\atom, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
                     return: 1
@@ -16994,6 +17071,8 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_prep_drop(acts, hides)
         if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0
             er: 2
+            if: actual_span = 1 && l2_nsty_get(idx, t) < 0
+                er: l2_emit_arg_convert(node, a0, idx, t, mi, ind, l2_act_at(acts, t))
             if: actual_span >= 3 && l2_nsty_get(idx, t) >= 0
                 er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_act_at(acts, t))
             if: er = 1

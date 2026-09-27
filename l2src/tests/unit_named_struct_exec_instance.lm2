@@ -1,0 +1,30 @@
+# steps/named-struct-exec.md §10-11, slice 4 (plan §4 :401; Q19.2: "`left` голым атомом -- тело
+# заново"): a bare field of the root declared `Model: fresh` executes Model's body over fresh's value --
+# CALL(Model's code node, the value).  fresh\v was written 7 and reads 2 after: the declaration ran
+# again, then the statement.  Model\v stays 1 and another instance, other, stays 5: the code ran over
+# fresh's data only.  Executed again from an anonymous block (l2_body_inert): 2 again.  Entry 7.
+Model:
+    size_t: v 1U
+    v: v + 1U
+return
+Model: fresh
+Model: other
+fresh\v: 7U
+other\v: 5U
+fresh
+size_t: a 9U
+a: fresh\v
+fresh\v: 7U
+---
+    fresh
+size_t: b 9U
+b: fresh\v
+size_t: m 9U
+m: Model\v
+size_t: o 9U
+o: other\v
+int: ok 0
+if: a = 2U && b = 2U && m = 1U && o = 5U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

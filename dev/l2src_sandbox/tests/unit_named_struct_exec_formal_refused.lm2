@@ -1,0 +1,14 @@
+# steps/named-struct-exec.md §11, slice 4: a Structure formal is not executed yet.  A native call
+# passes a value admitted by names whose same-typed fields may be permuted (D-105), and Model's steps
+# address Model's slots -- they would write the wrong fields.  Refused in its own words.
+Model:
+    size_t: v 1U
+    v: v + 1U
+return
+fn: bump (Model: m) int
+    m
+    return: 0
+Model: fresh
+int: r bump(fresh)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

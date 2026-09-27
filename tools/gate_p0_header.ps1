@@ -6,8 +6,9 @@ $ErrorActionPreference = 'Stop'
 # was no longer described by its header.  The rules: every c.LM_P0_* constant the sandbox's l1src and
 # l2trans spell is a `define:` of the sandbox's own l1src\p0.h.lm1; and each of those defines has the
 # same value in lm1\build\l1src\p0.lm1.h, the header the translator's C is compiled with -- so the
-# copy compiled against the seed's header is compiled against its own values.  Each file is read as
-# one text (build memory, next_core_tasks.md §0).
+# copy compiled against the seed's header is compiled against its own values.  A value compares as
+# text (REVIEW ee3ae73-1): `4` and `4U` differ -- spell a define as p0.lm1.h spells it.  Each file is
+# read as one text (build memory, next_core_tasks.md §0).
 $sandbox = Join-Path $Root 'dev\l2src_sandbox'
 $header = Join-Path $sandbox 'l1src\p0.h.lm1'
 $seedHeader = Join-Path $Root 'lm1\build\l1src\p0.lm1.h'

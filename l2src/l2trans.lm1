@@ -1108,6 +1108,7 @@ prototype:
     fn: l2_rw_ns_ty (const: @(LmP0Text t)) int
     fn: l2_rw_ns_at (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
     fn: l2_rw_ns_call (int: ni; int: into; @: int out) int
+    fn: l2_rw_ns_var_call (int: ni; int: oi; int: into; @: int out) int
     fn: l2_rw_ns_count () int
     fn: l2_rw_ns_emit () int
     fn: l2_nsx_rank (int: ni) int
@@ -15976,6 +15977,37 @@ fn: l2_ns_exec_named (const: @(LmP0Text t); int: mi) int
         return: 0 - 1
 return: ni
 
+# steps/named-struct-exec.md §10-11, slice 4: the root's own field a bare atom executes -- a slot
+# field of the unit declared `Model: v` (l2_own_is_slot) with Model an ordinary unit-level named
+# Structure -- or -1.  Its value is a merge copy of Model, laid out as Model: every other way into
+# such a field is refused today (another type, a call's result, a method's write -- §11).  A Structure
+# formal and a reference field `@: Model r` are not ones: each can take a value admitted by names
+# whose fields may be permuted (D-105), and Model's steps address slots.
+fn: l2_ns_exec_field (const: @(LmP0Text t); int: mi) int
+    int: oi
+    int: ni
+    if: t = 0 || l2_e < 0 || mi != l2_e || l2_library_mode != 0
+        return: 0 - 1
+    oi: l2_own_find_last(l2_e, t)
+    # Not its unit child: the check pass runs before the layout (l2_layout_owns); the walk asks.
+    if: oi < 0 || l2_own_mi[oi] != l2_e || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_is_slot(oi) = 0
+        return: 0 - 1
+    ni: l2_own_nsty_get(oi)
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
+        return: 0 - 1
+return: oi
+
+# The named Structure a bare atom executes, by its own name (l2_ns_exec_named) or as the type of the
+# root's field (l2_ns_exec_field), or -1.
+fn: l2_ns_exec_any (const: @(LmP0Text t); int: mi) int
+    int: oi
+    if: l2_ns_exec_named(t, mi) >= 0
+        return: l2_ns_exec_named(t, mi)
+    oi: l2_ns_exec_field(t, mi)
+    if: oi >= 0
+        return: l2_own_nsty_get(oi)
+return: 0 - 1
+
 # THE EXPRESSION STATEMENT (plan §3 "Expression statement и discard"; FABLE-OPUS-DISCARD-
 # 20260924-147).  Any expression in statement position is evaluated and its value discarded: a
 # bare atom, and a run of fields l2_expr_span groups into one expression -- P0 gives a statement
@@ -16001,10 +16033,15 @@ fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path
         # executes it -- at the root walked (l2_rw_ns_call), in a unit-level method natively
         # (l2_emit_ns_exec) or walked under the knob.  A Structure-typed field or local, a nested or
         # qualified Structure, and a nested method's bare Structure stay refused.
-        idx: l2_ns_exec_named(stmt\as\atom, mi)
+        idx: l2_ns_exec_any(stmt\as\atom, mi)
         if: idx >= 0
             l2_ns_exec[idx]: 1
             return: 0
+        # Slice 4 (§11): a Structure formal's value may be admitted by names with its fields permuted
+        # (D-105) -- Model's steps would write the wrong ones.  A reference field keeps the refusal
+        # below for the same reason.
+        if: mi >= 0 && l2_formal_find(mi, stmt\as\atom) >= 0 && l2_nsty_get(mi, l2_formal_find(mi, stmt\as\atom)) >= 0
+            return: l2_error(path, stmt, "executing a Structure formal is not supported yet")
         return: l2_error(path, stmt, "executing a named Structure is not supported yet")
 return: 0
 
@@ -21954,6 +21991,16 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, t) < 0
             return: 1
         return: 0
+    # Slice 4 (§11): a bare field of the root declared `Model: v` executes Model's code over its value.
+    if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_rw_ns < 0 && l2_ns_exec_field(stmt\as\atom, l2_rw_mi) >= 0 && l2_ns_exec[l2_own_nsty_get(l2_ns_exec_field(stmt\as\atom, l2_rw_mi))] != 0
+        \next: l2_skip_span(field, n)
+        k: l2_ns_exec_field(stmt\as\atom, l2_rw_mi)
+        if: l2_rw_ns_var_call(l2_own_nsty_get(k), k, into, @ t) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, t) < 0
+            return: 1
+        return: 0
     if: n > 0
         \next: l2_skip_span(field, n)
         if: l2_rw_expr(field, n, into, @ t) != 0
@@ -24692,6 +24739,22 @@ fn: l2_rw_ns_call (int: ni; int: into; @: int out) int
         return: 1
 return: 0
 
+# Slice 4 (§11): the root's execution of its slot field oi, declared `Model: v` with Model = ni:
+# [call, code, data, 0, 0] -- the code Model's code node, the data the field's value read when the
+# step runs: the slot's AT gives the Structure it holds, as a field path reads its root
+# (l2_rw_path_value).  A bare field above its declaration is refused before (unresolved name).
+fn: l2_rw_ns_var_call (int: ni; int: oi; int: into; @: int out) int
+    int: d
+    if: l2_own_uchild[oi] < 0
+        return: l2_rw_refuse(0, "a field declared in a nested body")
+    if: l2_rw_frame(into, "LMX_WALK_OP_CALL", 5, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_nsx_base + l2_nsx_rank(ni)))) < 0
+        return: 1
+    if: l2_rw_own(\out, oi, @ d) != 0
+        return: 1
+return: l2_rw_put(\out, 2, d)
+
 # The rank of named Structure ni's code node among the code nodes, and their number.
 fn: l2_nsx_rank (int: ni) int
     int: i 0
@@ -26077,7 +26140,7 @@ fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
             if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_atom_callee(e\as\atom, mi, @ fi) >= 0
                 return: 0
             # steps/named-struct-exec.md, slice 2: executing a named Structure runs its body.
-            if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_ns_exec_named(e\as\atom, mi) >= 0
+            if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_ns_exec_any(e\as\atom, mi) >= 0
                 return: 0
             if: l2_fields_has_call(f, n) != 0
                 return: 0

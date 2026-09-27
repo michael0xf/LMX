@@ -1511,8 +1511,16 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_struct_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # Slice 4 (steps/named-struct-exec.md §10-11; REVIEW 3e4c9a0): a bare slot field of the root declared
+    # `Model: fresh` executes Model's code over its value -- written 7, reads 2 after; Model\v stays 1,
+    # another instance stays 5; again from an anonymous block (was unit_bare_struct_field_refused).  A
+    # Structure formal is refused in its own words: its value may be admitted by names with permuted
+    # fields (D-105, q39).  Mutants: the field's execution run over Model's own node -- the instance row
+    # red; the anonymous block inert -- red; the formal's phrase gone -- the formal row red.
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_instance.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'executing a Structure formal is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
     # THE RECEIVER CONTRACT (plan §3 native gate (б)-(е); FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).

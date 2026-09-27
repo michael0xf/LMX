@@ -477,6 +477,21 @@ try {
 if ($capCode -eq 0) { Add-Row 'OK' 'gate:dynarray_capacity' '' }
 else { Add-Row 'FAIL' 'gate:dynarray_capacity' "exit $capCode; log $capLog" }
 
+# 0b) D-104: every P0 constant the sandbox's parser copy and l2trans spell is defined by the
+# sandbox's own l1src\p0.h.lm1 -- the translator's C takes the seed's generated header first, so a
+# missing one does not fail the build.  Same in-host shape as the row above.
+$p0Log = Join-Path $logDir ((Get-SafeName 'gate:p0_header') + '.log')
+$p0Code = 1
+try {
+    $p0Out = @(& (Join-Path $PSScriptRoot 'gate_p0_header.ps1') -Root $root)
+    $p0Code = $LASTEXITCODE
+} catch {
+    $p0Out = @('gate_p0_header threw: ' + $_)
+}
+[System.IO.File]::WriteAllText($p0Log, (($p0Out -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+if ($p0Code -eq 0) { Add-Row 'OK' 'gate:p0_header' '' }
+else { Add-Row 'FAIL' 'gate:p0_header' "exit $p0Code; log $p0Log" }
+
 # 1) predef headers of the units
 # $sourceDir was RESOLVED EARLIER (the staging block above chooses between the live sandbox and the
 # published root, and prints which).  This line used to assign it unconditionally, which silently

@@ -1,0 +1,26 @@
+# steps/named-struct-exec.md, slice 3, under --walk-methods: unit_named_struct_exec_method with bump
+# walked -- its bare `Counter` is the root's CALL(code node, Counter) in bump's frames.  bump executes
+# it twice and reads Counter\n: 1, the declaration ran again.  The root wrote 5 before the call and
+# reads 1 after it.  Entry 7.
+Counter:
+    size_t: n 0U
+    n: n + 1U
+return
+fn: bump () size_t
+    Counter
+    Counter
+    size_t: v 9U
+    v: Counter\n
+return: v
+size_t: before 9U
+before: Counter\n
+Counter\n: 5U
+size_t: got 9U
+got: bump()
+size_t: after 9U
+after: Counter\n
+int: ok 0
+if: before = 0U && got = 1U && after = 1U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

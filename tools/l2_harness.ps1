@@ -1467,7 +1467,7 @@ $fixtures = @(
     # `return` ends the plan and the root executes S from an anonymous block and an if body.
     # Refused: a name that is not S's number field (checked whether or not S is executed, and after
     # the return too), an executed S's array field, a `return` with a value (Q19.1, in its own
-    # words), and a bare S in a method body (slice 3).  Mutants: declarations not stored again, the
+    # words).  Mutants: declarations not stored again, the
     # root's CALL placed nowhere -- the three runs red; the anonymous block inert, the plan not
     # stopped at the return -- the return row red; the tail after the return or an unexecuted S not
     # checked, the return-value phrase or the array refusal gone -- their refusal rows red.
@@ -1485,7 +1485,23 @@ $fixtures = @(
         Needle = 'named Structure body not walkable yet: a field that is not a number'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_return_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = "a named Structure's return carries no value"; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_struct_exec_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    # Slice 3: a bare S in a unit-level method's body -- natively the same pair through lmx_call_prim,
+    # whose walk hook is the root's executor; under --walk-methods the root's CALL in the method's
+    # frames.  bump executes Counter twice and reads 1; the root, which wrote 5, reads 1 after (was
+    # unit_named_struct_exec_method_refused).  The code nodes follow the named Structures' unit
+    # children, known before a native body names them; an empty body's code node holds an empty
+    # plain Structure, which the root's walk passes.  A callable merge's nested method keeps the
+    # refusal.  Mutants: the native execution emitting nothing -- the native row red, the walked one
+    # green; the walked method's CALL placed nowhere -- the walked row red, the native one green; the
+    # early base off by one -- the native row red; the empty node a bare return again -- the empty row
+    # red; the nested guard gone -- the nested row red.
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_nested_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },

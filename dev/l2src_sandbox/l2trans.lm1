@@ -94,6 +94,8 @@ int: l2_rw_base 0
 # after the root's steps.
 int: l2_rw_ns 0 - 1
 int: l2_nsx_base 0
+# Slice 3: the number of the next native execution's out local (l2_emit_ns_exec).
+int: l2_nso_n 0
 # THE WALKED METHODS (-193 T4a): the method whose body l2_rw_* builds -- l2_e for the root --; 1
 # while a method's body is only tried (its count pass), when a refusal is not said: a method
 # outside the walkable subset gets no frames; per method its step count, or -1 for none; and the
@@ -15955,13 +15957,17 @@ fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
         return: l2_colon_is_graph_ty(ty)
 return: l2_ns_find(t) >= 0
 
-# steps/named-struct-exec.md, slice 2: the named Structure a bare atom of the root executes -- its
-# own name, not a field or a local bound to a Structure (l2_colon_bound_ty) -- or -1.  Only a
-# unit-level one that is no qualified branch: its node is a unit child (l2_ns_rank).
+# steps/named-struct-exec.md, slices 2 and 3: the named Structure a bare atom executes -- its own
+# name, not a field or a local bound to a Structure (l2_colon_bound_ty) -- or -1.  Only a unit-level
+# one that is no qualified branch: its node is a unit child (l2_ns_rank).  In the root, and in a
+# unit-level method, whose `node` is the unit (l2_unit_ref); a callable merge's nested method runs
+# only walked, as its host's constructor (l2_mad_host_of), and stays refused.
 fn: l2_ns_exec_named (const: @(LmP0Text t); int: mi) int
     int: ty 0
     int: ni
-    if: t = 0 || l2_e < 0 || mi != l2_e || l2_library_mode != 0
+    if: t = 0 || l2_e < 0 || mi < 0 || l2_library_mode != 0
+        return: 0 - 1
+    if: mi != l2_e && l2_mad_host_of(mi) >= 0
         return: 0 - 1
     if: l2_colon_bound_ty(mi, t, @ ty) = 0
         return: 0 - 1
@@ -15991,9 +15997,10 @@ fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path
     if: l2_check_primary(stmt, mi, path) != 0
         return: 1
     if: l2_bare_structure(stmt\as\atom, mi) != 0
-        # steps/named-struct-exec.md, slice 2: at the root, an ordinary named Structure's own name
-        # executes it, walked (l2_rw_ns_call).  A Structure-typed field or local, a nested or
-        # qualified Structure, and a bare Structure in a method body stay refused (slice 3).
+        # steps/named-struct-exec.md, slices 2 and 3: an ordinary named Structure's own name
+        # executes it -- at the root walked (l2_rw_ns_call), in a unit-level method natively
+        # (l2_emit_ns_exec) or walked under the knob.  A Structure-typed field or local, a nested or
+        # qualified Structure, and a nested method's bare Structure stay refused.
         idx: l2_ns_exec_named(stmt\as\atom, mi)
         if: idx >= 0
             l2_ns_exec[idx]: 1
@@ -24530,10 +24537,11 @@ return: 0
 # NAMED STRUCTURE EXECUTION (steps/named-struct-exec.md, slice 2; plan §3 :245 (а)).  Executing a
 # named Structure S runs its whole body, as a method's (Q19.2 = 2): each field's declaration stores
 # its initializer again, each statement runs, a bare `return` ends it -- construction ran none of it
-# (book :928).  The code is a node of its own, a unit child after the root's steps, so no earlier
-# child moves; the data is S itself (book :1028: the Structure in the head's position is the code,
+# (book :928).  The code is a node of its own, a unit child after the named Structures' (slice 3:
+# known before a native method body names it); the data is S itself (book :1028: the Structure in the head's position is the code,
 # the one passed to it the data).  The root's bare `S` is CALL(code, S): the walker's one
-# activation, as a method's.  A step names S's field by its slot and no holder, which the walker
+# activation, as a method's; a unit-level method's is the same pair through lmx_call_prim, whose
+# walk hook is that activation (slice 3), or the same CALL under the knob.  A step names S's field by its slot and no holder, which the walker
 # reads as this activation's data (lmx_walk_data_holder); S keeps its last state in its fields
 # (book :1094, :1122).  This slice walks number fields, literals and the operators: another name, a
 # call and a conversion are refused.  An ordinary named Structure whose body holds a statement is
@@ -24699,8 +24707,8 @@ fn: l2_nsx_count () int
 return: l2_nsx_rank(l2_ns_n)
 
 # The count pass of the named Structures' bodies: an executed one, and an ordinary one with a
-# statement (it is checked here, executed or not), gets l2_ns_steps -- an empty body is one bare
-# `return`, as the root's.  A statement in a nested or qualified named Structure is refused: its node
+# statement (it is checked here, executed or not), gets l2_ns_steps -- an empty body has one child,
+# an empty plain Structure (l2_rw_ns_emit).  A statement in a nested or qualified named Structure is refused: its node
 # is no unit child to execute (slice 2 executes a unit-level one).
 fn: l2_rw_ns_count () int
     int: i 0
@@ -24722,8 +24730,9 @@ fn: l2_rw_ns_count () int
     ---
 return: 0
 
-# The emission of every executed named Structure's code node -- a unit child, filled with the
-# steps the count pass made -- before the root's steps, which name it.
+# The emission of every executed named Structure's code node -- a unit child after the named
+# Structures', filled with the steps the count pass made -- before the root's steps and the methods'
+# frames, which name it.
 fn: l2_rw_ns_emit () int
     int: i 0
     int: t
@@ -24738,8 +24747,12 @@ fn: l2_rw_ns_emit () int
             if: l2_rw_ns_body(i, t, @ made) != 0
                 return: 1
             if: made = 0
-                if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 0U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0\n            return: 1\n", t) < 0
+                # An empty body's one child is an empty plain Structure, not a bare return: the root's
+                # walk passes every unit child, and one whose child 0 is a role record would read as
+                # that role's step (lmx_walk_head).  The activation skips it and falls off its end.
+                if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_plain(l2_program_arena, l2_rw%d, 0U)\n        if: l2_rw%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_rw%d, 0U, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", l2_rw_t, t, l2_rw_t, t, l2_rw_t) < 0
                     return: 1
+                l2_rw_t: l2_rw_t + 1
                 made: 1
             ---
             if: made != l2_ns_steps[i]
@@ -26005,6 +26018,18 @@ fn: l2_merge_scan (const: @(LmP0Structure body)) int
     ---
 return: 0
 
+# steps/named-struct-exec.md, slice 3: a unit-level method's native execution of named Structure ni --
+# the same pair (its code node, the Structure) through lmx_call_prim.  The code node has no native
+# word, so the call is the walker's activation (lmx_walk_call_prim_dispatch): one executor, the
+# root's.  Its body throws nothing; a status is the walker's own failure, an invariant here as at
+# every call that cannot throw (l2_emit_dyn_tail).
+fn: l2_emit_ns_exec (int: ni; const: @(char ind)) int
+    int: k l2_nso_n
+    l2_nso_n: l2_nso_n + 1
+    if: c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, lmx_arena_ref_struct(%s, %uU), lmx_arena_ref_struct(%s, %uU), 0, 0U, 0, @ l2_nso%d) != 0\n", ind, k, ind, l2_unit_ref, (cast: (unsigned) (l2_nsx_base + l2_nsx_rank(ni))), l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), k) < 0
+        return: 1
+return: (cast: (int) (c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: executing a named Structure reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0))
+
 # THE EXPRESSION STATEMENT, emitted (l2_check_discard; plan §3; FABLE-OPUS-DISCARD-20260924-147).
 # One consumer for every expression in statement position: a bare atom, a run of fields, and a
 # call Frame -- a callable head or a known external.  A callable atom is called with no arguments
@@ -26022,6 +26047,9 @@ fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind))
             return: l2_emit_call(e, idx, 2, fi, 0, mi, ind, l2_tok, 0)
         if: idx >= 0
             return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok, 0)
+        idx: l2_ns_exec_named(e\as\atom, mi)
+        if: idx >= 0 && l2_ns_exec[idx] != 0
+            return: l2_emit_ns_exec(idx, ind)
         return: 0
     # A c.* or predef C call whose value is dropped is emitted as a statement.  On the value
     # path (l2_prep) l2_emit_ccall writes the call into l2_tok for its consumer, and here there is
@@ -27355,6 +27383,8 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # resolving to child 0.
     l2_mres_base: l2_unit_base + l2_occ_n() + l2_ebr_n
     l2_ns_base: l2_mres_base + l2_mres_n
+    l2_nsx_base: l2_ns_base + l2_ns_top_count()
+    l2_nso_n: 0
     l2_pub_free()
     if: l2_pub_prepare(out_path) != 0
         return: l2_alloc_or(out_path, 0, "cannot prepare output path")
@@ -27780,6 +27810,11 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # One unit child per ordinary named Structure, in source order.
     l2_ns_base: l2_mres_base + l2_mres_n
     kids: kids + (cast: (unsigned) l2_ns_top_count())
+    # Then one code node per executed named Structure (steps/named-struct-exec.md, slices 2 and 3):
+    # known before any method body is written, as l2_ns_base is -- a native method's execution names
+    # it.  Nothing moves in a program that executes none.
+    l2_nsx_base: l2_ns_base + l2_ns_top_count()
+    kids: kids + (cast: (unsigned) l2_nsx_count())
     # The current Thread's already-created growable children Array is an ordinary
     # physical field of the generated unit at its private tail. Publishing the
     # unit as Message.graph therefore preserves the standard Thread graph shape
@@ -27797,10 +27832,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && l2_e >= 0
         kids: kids + (cast: (unsigned) l2_rw_steps)
     ---
-    # One code node per executed named Structure follows them (steps/named-struct-exec.md, slice 2):
-    # no earlier child moves.
-    l2_nsx_base: (cast: (int) kids)
-    kids: kids + (cast: (unsigned) l2_nsx_count())
     # Qualified immutable storage stays in this owner arena. Its pool profile is
     # the exact physical receiver-expression object, and sealing is its lifetime
     # policy; no second arena, root slot or numeric qualifier exists.

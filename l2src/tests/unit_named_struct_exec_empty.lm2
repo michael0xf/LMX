@@ -1,0 +1,14 @@
+# steps/named-struct-exec.md, slice 3: executing an empty Structure runs nothing.  Its code node is a
+# unit child before the root's steps, and the root's walk passes every unit child: the node's one
+# child is an empty plain Structure, not a bare return, which would read as the root's return and end
+# it before its steps.  Executed from the root and from a method.  Entry 7.
+E: ()
+end: E
+fn: touch () int
+    E
+return: 3
+E
+int: ok 0
+ok: touch() + 4
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -2671,6 +2671,19 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_nocolumn.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_nocolumn_table.lm2';
         Needle = 'conversion table has no column receiver'; Absent = @(); Debt = @() },
+    # REVIEW f2a1578 (fable_pc's M37: no row went red without the partial-row check; P37: without it a
+    # partial row fell out silently): the table's other refusals, each over its own broken table and
+    # pinned to its place -- a column named twice, rows written before the columns and a row short of
+    # a cell (both said at `rows:`, no longer at 1:1), a 33rd column (no longer "needs a name").
+    # Mutants: each check dropped, and `rows:` not kept -- exactly its rows red.
+    [pscustomobject]@{ Name = 'unit_s7_conv_twice.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_twice_table.lm2';
+        Needle = 'convert.lm2:6:101: a conversion table column is named twice'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_rowsfirst.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_rowsfirst_table.lm2';
+        Needle = 'convert.lm2:6:5: conversion table rows come before its columns'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_partial.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_partial_table.lm2';
+        Needle = 'convert.lm2:8:5: conversion table rows are not whole rows of its columns'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_wide.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_wide_table.lm2';
+        Needle = 'convert.lm2:6:549: conversion table has too many columns'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

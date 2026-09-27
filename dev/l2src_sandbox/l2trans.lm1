@@ -487,6 +487,8 @@ int: l2_cv_cell_n 0
 int: l2_cv_ncol 0
 int: l2_cv_col 0
 int: l2_cv_row 0
+# The table's `rows:` frame, where a refusal of its rows is said (REVIEW f2a1578).
+@: LmP0Node l2_cv_rows_at 0
 int: l2_cv_gap 0
 int: l2_cv_used 0
 []: @(char) l2_cv_cell 960
@@ -6160,7 +6162,7 @@ fn: l2_convert_keep (const: @(LmP0Text t)) int
     # A row cell goes to the place of its column's name (slice 11, B2): the order the table writes
     # its columns in decides nothing.
     if: l2_cv_ncol = 0
-        return: l2_error("convert.lm2", 0, "conversion table rows come before its columns")
+        return: l2_error("convert.lm2", l2_cv_rows_at, "conversion table rows come before its columns")
     slot: l2_cv_colmap[l2_cv_col]
     at: l2_cv_row * 6 + slot
     l2_cv_col: l2_cv_col + 1
@@ -6231,7 +6233,9 @@ fn: l2_convert_columns (const: @(LmP0Node node)) int
                 g: l2_next_active(g\next)
             ---
         ---
-        if: name = 0 || l2_cv_ncol >= 32
+        if: l2_cv_ncol >= 32
+            return: l2_error("convert.lm2", v, "conversion table has too many columns")
+        if: name = 0
             return: l2_error("convert.lm2", v, "a conversion table column needs a name")
         k: l2_convert_canon(name)
         if: k >= 0 && seen[k] != 0
@@ -6276,6 +6280,7 @@ fn: l2_convert_walk (const: @(LmP0Node node)) int
     if: l2_frame_head(node, "columns") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
         return: l2_convert_columns(node)
     if: l2_frame_head(node, "rows") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
+        l2_cv_rows_at: (cast: (@: LmP0Node) node)
         f: l2_next_active(node\as\frame\body\first_field)
         while: f != 0
             if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_convert_keep(f\value\as\atom) != 0
@@ -6333,6 +6338,7 @@ fn: l2_convert_load (const: @(char src)) int
     l2_cv_ncol: 0
     l2_cv_col: 0
     l2_cv_row: 0
+    l2_cv_rows_at: 0
     if: src = 0 || l2_convert_beside(src, "convert.lm2", path, 1024U) != 0
         return: 1
     raw: c.fopen(path, "rb")
@@ -6346,9 +6352,12 @@ fn: l2_convert_load (const: @(char src)) int
         lm_p0_document_destroy(document)
         return: 1
     if: l2_cv_row = 0 || l2_cv_col != 0
+        l2_error("convert.lm2", l2_cv_rows_at, "conversion table rows are not whole rows of its columns")
+        l2_cv_rows_at: 0
         lm_p0_document_destroy(document)
-        return: l2_error("convert.lm2", 0, "conversion table rows are not whole rows of its columns")
+        return: 1
     l2_cv_cell_n: l2_cv_row * 6
+    l2_cv_rows_at: 0
     lm_p0_document_destroy(document)
     l2_cv_failed: 0
 return: 0

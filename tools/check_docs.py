@@ -88,7 +88,29 @@ def check_eol():
         work=fields[1].decode()
         if work in ('w/crlf','w/mixed'):bad.append(work+' '+path.decode()+' (a tool or editor wrote CRLF into the working tree)')
     assert not bad,'CRLF or mixed line endings (LF everywhere; index and working tree): '+', '.join(bad[:12])+(' ... %d files'%len(bad) if len(bad)>12 else '')
+    check_ctrl(out)
     return seen
+
+
+def check_ctrl(listing):
+    '''No control byte but TAB and LF in a tracked text file (CR is check_eol's).  A writer that put
+    L1 text through a non-raw Python string turned `\\b`, `\\f`, `\\a`, `\\v` into bytes 8, 12, 7, 11
+    (REVIEW b307a0f; 10 such bytes found 2026-09-27).  -text imports and git's binaries are exempt, as
+    in check_eol; dev/mixa_sandbox is not touched until the kernel is finished (author, q34), its one
+    byte is a debt in next_core_tasks.md §9.'''
+    NUL=bytes([0]);TAB=bytes([9]);bad=[]
+    for rec in listing.split(NUL):
+        if not rec:continue
+        head,path=rec.split(TAB,1)
+        fields=head.split()
+        index=fields[0].decode();attrs=b' '.join(fields[2:]).decode()
+        name=path.decode()
+        if '-text' in attrs or index in ('i/none','i/-text') or name.startswith('dev/mixa_sandbox/'):continue
+        data=(ROOT/name).read_bytes()
+        for n,line in enumerate(data.split(b'\n'),1):
+            hit=[b for b in line if b<32 and b not in (9,13)]
+            if hit:bad.append('%s:%d byte %d'%(name,n,hit[0]))
+    assert not bad,'control bytes in tracked text (a non-raw string ate a backslash escape?): '+', '.join(bad[:12])+(' ... %d'%len(bad) if len(bad)>12 else '')
 
 
 if __name__=='__main__':main()

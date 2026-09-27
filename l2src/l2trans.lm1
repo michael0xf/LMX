@@ -18921,8 +18921,12 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
             return: 0
         if: l2_text_eq(node\as\frame\head, "length")
             return: 2
-        # Item 739: a held callable's call is typed by its model's result (the header's), not as
-        # int -- before, a size_t result met a size_t place as a conversion.
+        # Item 739: a held callable's call is typed by its header's result (l2_mad_held_sig), not
+        # as int.  Today a header whose result is not int is refused in l2_rw_mad_call, so this
+        # changes no emitted text -- but it changes the work: typed int, a size_t place would see
+        # a conversion, the count pass would note an int -> size_t receiver (l2_rw_convert), and
+        # l2_emit_unit would have the unit translated a second time only to reach that same
+        # refusal.  Here: one translation, and the call's type is the header's (REVIEW e639eca-1).
         if: l2_mad_held(node\as\frame\head) >= 0
             if: l2_mad_held_sig(l2_mad_held(node\as\frame\head), @ v, @ ty) = 0
                 return: ty

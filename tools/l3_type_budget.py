@@ -69,11 +69,15 @@ MAX_NAME = 64          # l1_hdr_type_add's buffer: one more maximal name must st
 # LmxManagerThread lives in that header, not in the lane body. Windows does not
 # predef the header.
 _POSIX_ABI = 0 if os.name == 'nt' else 9
+# The Windows twin (next_core_tasks.md §0, build memory): the four _win32 bodies predef
+# lmx_win32_api.h.lm1 instead of <windows.h> -- 1 name, fnptr LmxWin32ThreadStart (its defines and
+# prototypes are not type names).  POSIX does not predef it.
+_WIN32_ABI = 1 if os.name == 'nt' else 0
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 69 + _POSIX_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 69 + _POSIX_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 69 + _POSIX_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 69 + _POSIX_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

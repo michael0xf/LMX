@@ -62,6 +62,13 @@ const: @: char l2_call_node 0
 int: l2_call_sel 0
 int: l2_call_fi 0
 int: l2_last_cf_req 0 - 1
+# Implements port A2 (q37: `op(fn: (int: x) int)`): the anonymous `fn:` header of a callable formal,
+# left here by l2_typed_formal for l2_collect_method, which registers it as a descriptor-only method
+# -- the formal's contract, as `(test3: f)` names a bodiless `fn: test3` -- under the name it puts in
+# l2_collect_anon_name, `<method>(<formal>)`: a parenthesis is in no atom, so no name or path of the
+# source can reach that method.
+@: LmP0Node l2_last_cf_anon 0
+@: LmP0Text l2_collect_anon_name 0
 int: l2_cf_n 0
 int: l2_cf_cap 0
 @: int l2_cf_omi 0
@@ -516,6 +523,7 @@ int: l2_cv_inj_n 0
 
 prototype:
     fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
+    fn: l2_anon_cf_name (const: @(LmP0Text host); const: @(LmP0Text formal)) @: LmP0Text
     fn: l2_type_nodes_same (const: @(LmP0Node a); const: @(LmP0Node b)) int
     fn: l2_fn_defined (const: @(LmP0Node fn_node)) int
     fn: l2_params_types_same (const: @(LmP0Node a); const: @(LmP0Node b); const: @(char path); @: int out_same) int
@@ -14541,6 +14549,7 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     int: depth
     int: req_mi
     l2_last_cf_req: 0 - 1
+    l2_last_cf_anon: 0
     if: out_ty = 0 || out_name = 0
         return: l2_error(path, node, "incompatible entry signature")
     if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0 && l2_ns_find(node\as\frame\head) >= 0
@@ -14629,6 +14638,18 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     # Graph type is @: Lmx; required method identity is retained in l2_last_cf_req.
     if: l2_frame_head(node, "const") = 0 && depth = 0 && node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0 && node\as\frame\trailer = 0 && node\as\frame\body != 0 && node\as\frame\body\trailer = 0 && l2_count_active(node\as\frame\body) = 1
         f: l2_next_active(node\as\frame\body\first_field)
+        # Implements port A2 (q37): `op(fn: (int: x) int)` -- the head names the formal, its one field
+        # is the header of its contract, written in place (l2_collect_method registers it).
+        if: f != 0 && l2_frame_head(f\value, "fn") != 0
+            if: l2_ident(node\as\frame\head) = 0
+                return: l2_error(path, node, "incompatible entry signature")
+            \out_ty: l2_colon_graph_ty()
+            if: \out_ty < 100
+                return: l2_error(path, node, "out of memory")
+            \out_name: node\as\frame\head
+            l2_last_cf_anon: f\value
+            return: 0
+        ---
         if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_ident(f\value\as\atom) = 0
             return: l2_error(path, node, "incompatible entry signature")
         req_mi: l2_find_method(node\as\frame\head)
@@ -14866,6 +14887,35 @@ fn: l2_ref_formal_ns (const: @(LmP0Node decl)) int
         return: 0 - 1
 return: l2_ns_find(f\value\as\atom)
 
+# Implements port A2 (q37): `<host>(<formal>)`, the name of the descriptor-only method an anonymous
+# callable formal's header is registered as.  Null when there is no memory.
+fn: l2_anon_cf_name (const: @(LmP0Text host); const: @(LmP0Text formal)) @: LmP0Text
+    @: char bytes 0
+    @: LmP0Text t 0
+    size_t: n
+    if: host = 0 || formal = 0 || host\data = 0 || formal\data = 0
+        return: 0
+    n: host\length + formal\length + 2U
+    bytes: (cast: (@: char) l2_xmalloc(n + 1U))
+    t: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+    if: bytes = 0 || t = 0
+        if: bytes != 0
+            l2_xfree((cast: (@: void) bytes))
+        ---
+        if: t != 0
+            l2_xfree((cast: (@: void) t))
+        ---
+        return: 0
+    ---
+    memcpy(bytes, host\data, host\length)
+    bytes[host\length]: 40
+    memcpy(bytes + host\length + 1U, formal\data, formal\length)
+    bytes[n - 1U]: 41
+    bytes[n]: 0
+    t\data: bytes
+    t\length: n
+return: t
+
 fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     @: LmP0Field field
     const: @: LmP0Frame fr
@@ -14886,6 +14936,17 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     const: @: LmP0Node rty
     const: @: LmP0Node rbase
     const: @: LmP0Node ret_node
+    # Implements port A2: an anonymous callable formal's header, `fn: (inputs) result` with no name,
+    # comes with the name its method is given (l2_anon_cf_name); the formals of this method that are
+    # such headers are registered after it (cf_fn / cf_j).
+    @: LmP0Text anon 0
+    []: @(LmP0Node) cf_fn 8
+    []: int cf_j 8
+    int: cf_n 0
+    int: me 0
+    @: LmP0Text cf_nm 0
+    anon: l2_collect_anon_name
+    l2_collect_anon_name: 0
     if: fn_node = 0 || fn_node\as = 0 || fn_node\as\frame = 0
         return: l2_error(path, fn_node, "unsupported body")
     if: l2_m_n >= c.INT_MAX
@@ -14901,29 +14962,35 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     k: 0
     if: fr\body != 0
         k: l2_count_active(fr\body)
-    if: is_sub = 0 && k != 4 && k != 3
+    if: anon = 0 && is_sub = 0 && k != 4 && k != 3
+        return: l2_error(path, fn_node, "incompatible entry signature")
+    if: anon != 0 && (is_sub != 0 || k != 2)
         return: l2_error(path, fn_node, "incompatible entry signature")
     if: is_sub != 0 && k != 3 && k != 2
         return: l2_error(path, fn_node, "incompatible entry signature")
     if: fr\body\trailer != 0
         return: l2_error(path, fn_node, "unsupported trailer")
     field: l2_next_active(fr\body\first_field)
-    if: field\value = 0 || field\value\as = 0 || field\value\kind != c.LM_P0_NODE_ATOM
+    # An anonymous header has no name field: its first field is its inputs.
+    nm: anon
+    if: anon = 0 && (field\value = 0 || field\value\as = 0 || field\value\kind != c.LM_P0_NODE_ATOM)
         return: l2_error(path, fn_node, "incompatible entry signature")
-    if: l2_ident(field\value\as\atom) = 0
+    if: anon = 0 && l2_ident(field\value\as\atom) = 0
         return: l2_error(path, fn_node, "incompatible entry signature")
-    nm: field\value\as\atom
-    if: fr\trailer != 0 && l2_text_eq(fr\trailer\spelling, "end") = 0 && l2_text_eq(fr\trailer\spelling, "return") = 0
+    if: anon = 0
+        nm: field\value\as\atom
+    if: fr\trailer != 0 && (anon != 0 || (l2_text_eq(fr\trailer\spelling, "end") = 0 && l2_text_eq(fr\trailer\spelling, "return") = 0))
         return: l2_error(path, fn_node, "unsupported trailer")
-    if: is_sub = 0 && l2_fn_close(fr, nm, "fn") != 0
+    if: anon = 0 && is_sub = 0 && l2_fn_close(fr, nm, "fn") != 0
         return: l2_error(path, fn_node, "end target does not match close target")
-    if: is_sub != 0 && l2_fn_close(fr, nm, "sub") != 0
+    if: anon = 0 && is_sub != 0 && l2_fn_close(fr, nm, "sub") != 0
         return: l2_error(path, fn_node, "end target does not match close target")
     if: l2_find_method(nm) >= 0
         return: l2_error(path, fn_node, "duplicate definition")
     if: nm\length >= 63U
         return: l2_error(path, fn_node, "name too long")
-    field: l2_next_active(field\next)
+    if: anon = 0
+        field: l2_next_active(field\next)
     params: field\value
     if: params = 0 || params\kind != c.LM_P0_NODE_STRUCTURE || params\as = 0
         return: l2_error(path, fn_node, "incompatible entry signature")
@@ -14962,6 +15029,16 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
                 return: l2_error(path, fn_node, "out of memory")
             ---
             l2_last_cf_req: 0 - 1
+        ---
+        # A2: an anonymous header's method is registered after this one; its index is then known.
+        if: l2_last_cf_anon != 0
+            if: cf_n >= 8
+                l2_free_method(l2_m_n)
+                return: l2_error(path, p\value, "too many callable formals written in place")
+            cf_fn[cf_n]: l2_last_cf_anon
+            cf_j[cf_n]: j
+            cf_n: cf_n + 1
+            l2_last_cf_anon: 0
         ---
         if: p\value != 0 && p\value\kind = c.LM_P0_NODE_FRAME && p\value\as != 0 && p\value\as\frame != 0 && l2_ns_find(p\value\as\frame\head) >= 0
             if: l2_nsty_set(l2_m_n, j, l2_ns_find(p\value\as\frame\head)) != 0
@@ -15082,7 +15159,7 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     body: 0
     if: field != 0
         body: field\value
-    if: body = 0 && l2_ret_tr(fr) = 0
+    if: anon = 0 && body = 0 && l2_ret_tr(fr) = 0
         bound: 0
         if: l2_bind_same_unit_forward(fn_node, nm, is_sub, params, ret_node, path, @ bound) != 0
             l2_free_method(l2_m_n)
@@ -15107,11 +15184,27 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     if: body != 0 && l2_collect_decls(body\as\structure, l2_m_n, path, 0, @ sn) != 0
         return: 1
     l2_m_sn[l2_m_n]: sn
+    me: l2_m_n
     l2_m_n: l2_m_n + 1
     if: is_sub = 0 && ret_node != 0 && l2_frame_head(ret_node, "fn") != 0
         if: l2_mad_take_nested(l2_m_n - 1, (cast: (@: LmP0Node) body), path) != 0
             return: 1
         ---
+    # Implements port A2 (q37): each callable formal written in place, `op(fn: (int: x) int)`, is
+    # a descriptor-only method `<nm>(<formal>)` -- the formal's contract (l2_cf_set), exactly as a
+    # bodiless `fn:` named in `(test3: f)` is.
+    j: 0
+    while: j < cf_n
+        cf_nm: l2_anon_cf_name(nm, l2_fn(me, cf_j[j]))
+        if: cf_nm = 0
+            return: l2_error(path, fn_node, "out of memory")
+        l2_collect_anon_name: cf_nm
+        if: l2_collect_method(cf_fn[j], path) != 0
+            return: 1
+        if: l2_cf_set(me, cf_j[j], l2_m_n - 1) != 0
+            return: l2_error(path, fn_node, "out of memory")
+        j: j + 1
+    ---
 return: 0
 
 fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int

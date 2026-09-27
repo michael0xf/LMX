@@ -2046,6 +2046,20 @@ $fixtures = @(
         Needle = 'not callable'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_sig_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+    # Implements port slice 2 (A2; the author's q37: the formal as in his example, `op(fn: (int: x) int)`):
+    # a callable formal whose contract is its header written in place -- registered as the
+    # descriptor-only method `apply(op)`, as a bodiless `fn:` named in `(test3: f)` is.  `apply(inc 10)`
+    # = 11; `add` of two inputs refused at the call (13:5); `op` called with two inputs refused at that
+    # call (9:13) -- before A2 the same phrase was said at the header, so the needles pin the places.
+    # Mutants: the header not a contract -- all three red (refused at the header); the contract not
+    # made the formal's -- "unknown method", all three red; the header's inputs unread -- the witness
+    # and the arity row red.
+    [pscustomobject]@{ Name = 'unit_callable_anon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_anon_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:13:5: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_anon_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:9:13: incompatible entry signature'; Absent = @(); Debt = @() },
     # COMPACT-RAWFIELD-BATCHA-72: raw_fld=5 call without form-COMPACT. Debt pins emitted
     # raw-field ccall. Absent is unused (empty proves nothing; no genuine form-gate
     # leftover string appears in generated L1). `translates` catches

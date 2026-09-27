@@ -2549,12 +2549,29 @@ $fixtures = @(
     # carries the literal injected signature text. Mutant: restoring the injection (or a
     # strstr arm) makes this string reappear -- Absent fires, RED.
     [pscustomobject]@{ Name = 'unit_bad_sizeof.lm2'; Expect = 'translates'; Exit = 0;
-        Absent = @('fn: lm_own_new_zero (size_t: size) @: void'); Debt = @() }
+        Absent = @('fn: lm_own_new_zero (size_t: size) @: void'); Debt = @() },
+    # steps/gate-measure-20260927.md: three of dev\l2src_sandbox's own top-level L2 parser-port
+    # sources, migrated from the pre-a2cf69eb bare LmP0*/LmOwn* spelling to the door c.LmP0*/
+    # c.LmOwn* and gated here -- the other 13 measured ungated ports had a deeper cause after
+    # that same migration and were removed (measured reasons in that file), not gated.
+    [pscustomobject]@{ Name = 'parser_alloc_port.lm2'; Expect = 'translates'; Exit = 0; RootSource = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'parser_trailer_role.lm2'; Expect = 'translates'; Exit = 0; RootSource = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'parser_text_heap.lm2'; Expect = 'translates'; Exit = 0; RootSource = $true;
+        Absent = @(); Debt = @('predef: "l1src/own.h.lm1"') }
 )
 
 foreach ($fx in $fixtures) {
     $stem = [System.IO.Path]::GetFileNameWithoutExtension($fx.Name)
-    $source = Join-Path $sandbox ('tests\' + $fx.Name)
+    # RootSource: a handful of fixtures are dev\l2src_sandbox's own top-level L2 parser-port
+    # sources (steps/gate-measure-20260927.md), not tests\ fixtures -- same sandbox, different
+    # subdirectory of it.
+    if ($fx.PSObject.Properties['RootSource'] -and $fx.RootSource) {
+        $source = Join-Path $sandbox $fx.Name
+    } else {
+        $source = Join-Path $sandbox ('tests\' + $fx.Name)
+    }
     if (-not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
     # The conversion table is the convert.lm2 beside the source, not the launch directory.
     # Stage the fixture next to the copy made at the top of this script.  A row with Impl gets a

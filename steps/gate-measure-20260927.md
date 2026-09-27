@@ -90,3 +90,37 @@ Read-only. Охват: `dev/l2src_sandbox/l2trans.lm1` (26823 строки), `de
 ## G2c — к очереди (REVIEW dc15482-1)
 
 Код 29 у `sender` модели письма читается по числу в трёх местах (`1000 + 29` в проверке адресата D-80, `l2_pointer_decl_text`, `l2_pointer_depth`) — «число вместо ссылки». Правка: модель письма — обычная Structure транслятора со своим `nsty`, поле `sender` — ссылка на её описание, а не код. Вместе с таблицей членов `l2_raw_path` (перепись типов слота).
+
+## 16 устаревших портов парсера (Sonnet, 2026-09-27) — измерено, `l2trans.lm1` не трогал
+
+Задание Opus: для каждого из 16 непрогоняемых верхнеуровневых `.lm2`-портов измерить первую причину отказа (одна диагностика = нижняя граница, «только X» проверять пробой «снял X → перевёл снова»); голые `LmP0*`/`LmOwn*` — перевести на `c.LmP0*`/`c.LmOwn*` (как в `a2cf69eb`) и, если после этого переводится, поставить строкой `harness` (`Expect = 'translates'`); если причина глубже — отказ-строка с needle и `steps/defects.md`, или снять файл с измеренной причиной (форма `REVIEW dc15482-2`, `unit_msg_adapter.lm2`). Использован уже собранный `l2trans.exe` (`build/l2_harness/g4/bin`, коммит `6e8728e`, до G1/G2/G3 — эти срезы не касаются пространства LmP0*/LmOwn*/predef, только словаря типов ЯДРА и путей вызова, замер ими не задет).
+
+**3 файла — правка на месте, теперь переводятся, строки harness `translates`:**
+
+- **`parser_alloc_port.lm2`** — 15 голых `LmP0*` (`LmP0NodeKind`, `LmP0Node`, `LmP0Structure`, `LmP0Frame`, `LmP0Span`, `LmP0NodeAs`) → `c.LmP0*`; переводится начисто.
+- **`parser_trailer_role.lm2`** — 3 голых `LmP0TrailerRole`/`LmP0Node`/… → `c.*`; переводится начисто.
+- **`parser_text_heap.lm2`** — 4 голых `LmP0Text` → `c.LmP0Text` (перевод сам по себе не хватило: без `predef: "l1src/own.h.lm1"` — «unknown method» на `lm_own_new_zero`, тот же класс, что и `unit_bad_sizeof.lm2`); добавлена строка `predef:` (уже существующий, гейтованный прототип-заголовок, ничего нового не изобретено); переводится начисто после обеих правок.
+
+**13 файлов — сняты (оба близнеца), не referenced ни один (`grep` по всему дереву `.lm2`/`.lm1`, кроме собственных комментариев с историческими «Stage N» пометками — ни одного функционального `predef:`/вызова извне):**
+
+| Файл | До (голая причина) | Правка типов | После правки типов (если применялась) | Решение |
+| --- | --- | --- | --- | --- |
+| `parser_c_quote_diagnostics.lm2` | `unknown type` (`LmP0Document`, :6:27) | 2× → `c.*` | `assignment value has unknown type` (`end_index`, :12:5) — тот же класс, что D-84 | снят |
+| `parser_dump_port.lm2` | `unknown type` (`LmP0Dump`, :16:25) | 40× → `c.*` | `assignment value has unknown type` (`data`, :41:5) — D-84 | снят |
+| `parser_field_parse_port.lm2` | `unknown type` (`LmOwnPtrStack`, :24:97) | 22× → `c.*` | `a callable without a result has no value` (`p0_field_parse_loop_frame_delete_any`, :30:34) | снят |
+| `parser_indent_stack.lm2` | `unknown type` (`LmP0IndentStack`, :4:34) | 20× → `c.*` | `assignment target must be a declared typed mutable value` (`lm_own_delete`, :7:5) | снят |
+| `parser_matching_bracket.lm2` | `unknown type` (`LmP0Document`, :1:37) | 1× → `c.*` | `unknown method` (`lm_p0_is_line_break`, :17:17) — определена в 4 других файлах (`parser_c_quoted`, `parser_dash_fence`, `parser_physical_line`, `parser_text_predicates`), ни разу не за `prototype:`-заголовком — предеф `.lm2`-тела не читается (`l2_predef_file_has_function`, -155) | снят |
+| `parser_matching_paren.lm2` | `unknown type` (`LmP0Document`, :1:35) | 1× → `c.*` | `unknown method` (`lm_p0_is_line_break`, :15:17) — тот же случай | снят |
+| `parser_python_diagnostics.lm2` | `unknown type` (`LmP0Document`, :8:34) | 1× → `c.*` | `unknown method` (`lm_p0_find_python_string_end`, :4:9) — определена в `parser_python_string.lm2`, не за `prototype:` | снят |
+| `parser_quoted_diagnostics.lm2` | `unknown type` (`LmP0Document`, :2:27) | 2× → `c.*` | `unknown method` (`lm_p0_starts_python_string`, :11:9) — определена в `parser_text_starts_python.lm2`, не за `prototype:` | снят |
+| `parser_stack_stream_port.lm2` | `unknown type` (`LmP0Stack`, :27:24) | 99× → `c.*`, затем `uchar` → `c.uchar` (2 места) | `a callable without a result has no value` (`p0_stack_free_any`, :46:26) | снят |
+| `parser_text_views.lm2` | `unknown type` (`LmP0Text`, :1:33) | 4× → `c.*` | `unknown method` (`l2_immut_query_fill`, :21:13) — определена в `l2_text_hash.lm1`, включавшийся по имени типа `L2ImmutQuery`; это включение по имени СНЯТО в G2 («без включения по имени») — файл проверяет уже удалённый механизм, не оставшийся недоделанным | снят |
+| `parser_c_surface.lm2` | `unknown method` (`lm_p0_is_field_space`, :8:13) — 0 голых типов, правка типов неприменима | — | — (нет своего `predef:` вообще; функция — в `parser_text_predicates.lm2`, не за `prototype:`) | снят |
+| `parser_dash_fence.lm2` | `unresolved name` (`closed`, :123:22) — 0 голых типов | — | — | снят |
+| `parser_text_port.lm2` | `field path goes through a slot with no Structure` (`out_payload\data`, :24:5) — 0 голых типов | — | — | снят |
+
+**Общий вывод по 10 файлам «unknown method» после правки типов:** причина — не тип, а `l2_predef_file_has_function`'s собственное правило (-155): предеф читает объявления только из `prototype:`-блока или цепочки `predef:`, никогда из простого `fn:`/`sub:`-тела `.lm2`-файла. Ни у одной из недостающих функций (`lm_p0_is_line_break` и т. п.) нет отдельного `prototype:`-заголовка — создание пяти новых заголовков для пяти хелперов вышло за рамки «перевести голый тип» (задание явно разводит эти два случая); граница та же, что D-86 называет для L2-библиотек в принципе, только для предеф-объявлений, а не линковки. Не заводил новый D-номер — граница уже названа в -155/D-86, здесь просто ещё один симптом того же класса.
+
+**Осиротевшие после снятия, не трогал (вне заданных 16):** `parser_dump_port_l2.h.lm1`, `parser_field_parse_port_l2.h.lm1`, `parser_stack_stream_port_l2.h.lm1` — заголовки-прототипы единственных снятых потребителей; упоминаются только в комментариях друг друга («Stage N», «same shape as»), не в рабочем предефе. Не снимал — задание называло 16 `.lm2`, не заголовки; отдельный пункт для координатора.
+
+Корпус и гейт — см. коммит.

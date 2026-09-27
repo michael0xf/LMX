@@ -89,6 +89,11 @@ Write-Output ("build_l2src: translator path=" + $Translator)
 Write-Output ("build_l2src: translator sha256=" + $translatorHash + " (" + $pinChecked + ")")
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 if (-not $OutDir) { $OutDir = Join-Path $root "build\l2src\$stamp" }
+# D-98: the staging block below moves the CWD into the staged root (Set-Location $sourceBase), and
+# every path derived from a RELATIVE -OutDir would then resolve against that new CWD -- the header
+# check found no lmx.h.lm1 and refused a build whose staging had worked.  Fix the evidence root to
+# an absolute path here, against the directory the script was called from.
+$OutDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine((Get-Location).Path, $OutDir))
 $headers = Join-Path $OutDir 'headers'
 $objDir = Join-Path $OutDir 'obj'
 $binDir = Join-Path $OutDir 'bin'

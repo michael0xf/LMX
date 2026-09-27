@@ -507,6 +507,11 @@ int: l2_cv_row 0
 int: l2_cv_gap 0
 int: l2_cv_used 0
 []: @(char) l2_cv_cell 960
+# Q43 (the author, 2026-09-27): a cell is an argument of any kind -- an atom, a Structure, an array --
+# so the table keeps each cell's node (its document stays for the translation, as the impl sources'
+# do); l2_cv_cell holds a name only for a cell that is one atom, and 0 for any other.
+[]: @(LmP0Node) l2_cv_arg 960
+@: LmP0Document l2_cv_doc 0
 # Q33: the impl sources rows name, parsed once; the receivers the edges need.
 []: @(char) l2_cv_impl_path 8
 []: @(LmP0Document) l2_cv_impl_doc 8
@@ -6174,7 +6179,7 @@ fn: l2_prim_code_name (int: ty) @: char
 # converts nothing needs none. l2_cv_gap 1: no usable row. 2: the row's
 # receiver has no fn: in its impl source. 3: the table cannot be read. 4: the
 # impl source cannot be read.
-fn: l2_convert_keep (const: @(LmP0Text t)) int
+fn: l2_convert_keep (@: LmP0Field f) int
     []: char buf 128
     @: char copy
     size_t: n
@@ -6195,7 +6200,11 @@ fn: l2_convert_keep (const: @(LmP0Text t)) int
         return: 0
     if: at >= 960
         return: l2_error("convert.lm2", 0, "conversion table is too large")
-    if: l2_tok_text(t, buf, 128U) != 0
+    l2_cv_arg[at]: f\value
+    l2_cv_cell[at]: 0
+    if: l2_expr_span(f) != 1 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 0
+    if: l2_tok_text(f\value\as\atom, buf, 128U) != 0
         return: 1
     n: c.strlen(buf) + 1U
     copy: (cast: (@: char) l2_xmalloc(n))
@@ -6289,6 +6298,7 @@ return: 0
 
 fn: l2_convert_walk (const: @(LmP0Node node)) int
     @: LmP0Field f
+    int: n
     if: node = 0
         return: 0
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
@@ -6303,12 +6313,17 @@ fn: l2_convert_walk (const: @(LmP0Node node)) int
     if: l2_frame_head(node, "rows") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
         l2_cv_rows_at: (cast: (@: LmP0Node) node)
         f: l2_next_active(node\as\frame\body\first_field)
+        # Q43 (the author, 2026-09-27): `rows:` is a chain of ARGUMENTS -- an atom, a Structure, an
+        # array -- cut into rows by the number of columns, through the common gate of arguments: a cell
+        # is one actual, delimited as any actual list is (l2_expr_span), and kept whatever its kind.
+        # Nothing is implied and nothing refused here; a cell is never walked into, split or dropped.
         while: f != 0
-            if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_convert_keep(f\value\as\atom) != 0
+            n: l2_expr_span(f)
+            if: n < 1
+                return: l2_error("convert.lm2", f\value, "a conversion table cell is not an argument")
+            if: l2_convert_keep(f) != 0
                 return: 1
-            if: f\value != 0 && f\value\kind != c.LM_P0_NODE_ATOM && l2_convert_walk(f\value) != 0
-                return: 1
-            f: l2_next_active(f\next)
+            f: l2_skip_span(f, n)
         return: 0
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
         f: l2_next_active(node\as\frame\body\first_field)
@@ -6379,7 +6394,8 @@ fn: l2_convert_load (const: @(char src)) int
         return: 1
     l2_cv_cell_n: l2_cv_row * 6
     l2_cv_rows_at: 0
-    lm_p0_document_destroy(document)
+    # The cells are nodes of this tree (l2_cv_arg): it stays for the translation.
+    l2_cv_doc: document
     l2_cv_failed: 0
 return: 0
 
@@ -6456,6 +6472,7 @@ return: 0
 # The row for from_n -> to_n. Its receiver's fn: is left in l2_cv_body.
 fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
     int: i 0
+    int: k 0
     l2_cv_gap: 0
     l2_cv_body: 0
     if: from_n = 0 || to_n = 0
@@ -6464,7 +6481,20 @@ fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
         l2_cv_gap: 3
         return: 0
     while: i + 5 < l2_cv_cell_n
-        if: c.strcmp(l2_cv_cell[i], from_n) = 0 && c.strcmp(l2_cv_cell[i + 1], to_n) = 0
+        # A cell gives a name only when it is one atom (l2_cv_cell); another argument is no type name,
+        # so it matches no from or to.  The row chosen needs a flag and names from its other cells:
+        # where one of them is another argument, that is said at the cell -- evaluating a table
+        # argument is the `table` receiver's, not ported yet -- never read as a default.
+        if: l2_cv_cell[i] != 0 && l2_cv_cell[i + 1] != 0 && c.strcmp(l2_cv_cell[i], from_n) = 0 && c.strcmp(l2_cv_cell[i + 1], to_n) = 0
+            if: l2_cv_cell[i + 2] = 0 || l2_cv_cell[i + 4] = 0 || l2_cv_cell[i + 5] = 0
+                k: i + 5
+                if: l2_cv_cell[i + 4] = 0
+                    k: i + 4
+                if: l2_cv_cell[i + 2] = 0
+                    k: i + 2
+                l2_error("convert.lm2", l2_cv_arg[k], "a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)")
+                l2_cv_gap: 3
+                return: 0
             if: c.strcmp(l2_cv_cell[i + 2], "1") = 0 || c.strcmp(l2_cv_cell[i + 4], "None") = 0
                 l2_cv_gap: 1
                 return: 0

@@ -1,0 +1,18 @@
+# implements-port slice 11 (B2; Q43): unit_s7_prim_cross over its own convert.lm2 whose size_t -> int row has a
+# Structure for its receiver (tests/unit_s7_conv_cellneed_table.lm2).  The table is read (a Structure is one
+# cell); the conversion this program needs takes that row, and its receiver cell gives no name: said at the
+# cell, "a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)"
+# -- not read as a default, not a refusal of the table.
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

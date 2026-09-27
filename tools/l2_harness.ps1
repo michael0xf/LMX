@@ -2714,6 +2714,22 @@ $fixtures = @(
         Needle = 'convert.lm2:8:5: conversion table rows are not whole rows of its columns'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_wide.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_wide_table.lm2';
         Needle = 'convert.lm2:6:549: conversion table has too many columns'; Absent = @(); Debt = @() },
+    # Q43 (the author, 2026-09-27): a cell of `rows:` is an argument of any kind -- an atom, a Structure, an
+    # array -- through the common gate of actuals (l2_expr_span), no exceptions; refusing a cell that is
+    # not one atom is a bug.  A Structure cell and an expression cell are one cell each (the gated reading
+    # dropped the Structure and split the expression, and refused the rows as not whole); a chosen row
+    # whose receiver cell gives no name is said at that cell, when used; a seventh column of an unread
+    # name (REVIEW daee4f7, P40) is kept and not read.  Mutants: a cell one field, not one actual --
+    # cellexpr red; a non-atom not a cell -- cellstruct and cellneed red; no check at use -- cellneed
+    # segfaults.
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellstruct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_cellstruct_table.lm2';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellexpr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_cellexpr_table.lm2';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellneed.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_cellneed_table.lm2';
+        Needle = 'convert.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_extra.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_extra_table.lm2';
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

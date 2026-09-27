@@ -906,7 +906,6 @@ prototype:
     fn: l2_slot_decl_ty (const: @(LmP0Node stmt)) int
     fn: l2_slot_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_is_known (const: @(LmP0Text t)) int
-    fn: l2_c_door (const: @(LmP0Text t)) int
     fn: l2_c_stmt_door (const: @(LmP0Text t)) int
     fn: l2_prim_type_word (const: @(LmP0Text t)) int
     fn: l2_ccall_box_int (const: @(LmP0Node node); int: mi) int
@@ -5128,7 +5127,7 @@ fn: l2_resolve_type_atom (const: @(LmP0Text atom); int: depth; int: is_const; @:
         if: \out_ty >= 100
             return: 0
         return: 2
-    if: l2_c_door(atom) != 0
+    if: l2_c_stmt_door(atom) != 0
         \out_ty: l2_foreign_intern(l2_text_skip(atom, 2U), depth, is_const)
         if: \out_ty >= 100
             return: 0
@@ -5379,7 +5378,7 @@ fn: l2_ptr_type_word (const: @(LmP0Text word); int: depth; @: int out_ty) int
         if: \out_ty >= 100
             return: 0
         return: 2
-    if: l2_c_door(word) != 0
+    if: l2_c_stmt_door(word) != 0
         \out_ty: l2_foreign_intern(l2_text_skip(word, 2U), depth, 0)
         if: \out_ty >= 100
             return: 0
@@ -5478,7 +5477,7 @@ fn: l2_const_local_ty (const: @(LmP0Node stmt); @@: LmP0Text out_name; @: int ou
     \out_name: h\value\as\atom
     if: depth = 1 && l2_kernel_ptr_word(g\value\as\atom, out_ty) = 0
         return: 0
-    if: l2_c_door(g\value\as\atom) != 0
+    if: l2_c_stmt_door(g\value\as\atom) != 0
         \out_ty: l2_foreign_intern(l2_text_skip(g\value\as\atom, 2U), depth, 1)
         if: \out_ty >= 100
             return: 0
@@ -9852,11 +9851,6 @@ return: 0
 # A c.name the generic C call lowers inside an expression. The forms excluded
 # here have their own lowering: a type operand, an owned-text helper with a
 # fixed emitted name, or a byte/Message operation with materialised operands.
-fn: l2_c_door (const: @(LmP0Text t)) int
-    if: l2_c_stmt_door(t) = 0
-        return: 0
-return: 1
-
 # A c.name statement the generic C call lowers. c.* is a uniform raw door.
 fn: l2_c_stmt_door (const: @(LmP0Text t)) int
     if: t = 0 || t\data = 0 || t\length <= 2U || t\data[0] != 99 || t\data[1] != 46
@@ -16902,7 +16896,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             return: 1
         return: 0
     ---
-    if: idx < 0 && (l2_c_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (k = 0 && raw_fld = 5))
+    if: idx < 0 && (l2_c_stmt_door(call\head) != 0 || l2_predef_has_function(call\head) != 0 || (k = 0 && raw_fld = 5))
         l2_ccall_into: dest
         if: l2_emit_ccall(node, mi, ind) != 0
             l2_ccall_into: 0
@@ -24386,8 +24380,8 @@ return: 0
 # THE EXPRESSION STATEMENT, emitted (l2_check_discard; plan §3; FABLE-OPUS-DISCARD-20260924-147).
 # One consumer for every expression in statement position: a bare atom, a run of fields, and a
 # call Frame -- a callable head or a known external.  A callable atom is called with no arguments
-# on the call path of `m()` (a void one too); anything else is evaluated on the value path
-# (l2_prep, l2_eval_fields) and the value is dropped.  Its destination is the typed l2_tN the
+# on the call path of `m()` (a void one too); a c.* or predef C call is emitted as a statement;
+# anything else is evaluated on the value path (l2_prep, l2_eval_fields) and the value is dropped.  Its destination is the typed l2_tN the
 # calls in it already declared; a pure expression declares none and emits nothing.
 fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind)) int
     @: LmP0Node e
@@ -24401,6 +24395,11 @@ fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind))
         if: idx >= 0
             return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok, 0)
         return: 0
+    # A c.* or predef C call whose value is dropped is emitted as a statement.  On the value
+    # path (l2_prep) l2_emit_ccall writes the call into l2_tok for its consumer, and here there is
+    # no consumer: the call would be lost (§GATE G3, steps/gate-measure-20260927.md).
+    if: span = 1 && e\kind = c.LM_P0_NODE_FRAME && e\as != 0 && e\as\frame != 0 && l2_find_method(e\as\frame\head) < 0 && (l2_c_stmt_door(e\as\frame\head) != 0 || l2_predef_has_function(e\as\frame\head) != 0)
+        return: l2_emit_ccall(e, mi, ind)
     if: span = 1
         return: l2_prep(e, mi, ind, l2_tok)
 return: l2_eval_fields(field, span, mi, ind, l2_tok)
@@ -25310,11 +25309,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: stmt\as != 0 && stmt\as\frame != 0 && l2_c_stmt_door(stmt\as\frame\head) != 0
-            if: l2_emit_ccall(stmt, mi, ind) != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
         # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): l2_own_find (first match)
         # was safe here only because a repeated TYPED declaration was refused (pre-Q24) -- at
         # most one row ever existed per name reaching this branch. Q24 = A lifts that refusal,
@@ -25355,12 +25349,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
             fr: stmt\as\frame
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_find_method(fr\head) < 0 && (l2_predef_has_function(fr\head) != 0)
-            if: l2_emit_ccall(stmt, mi, ind) != 0
-                return: 1
-            ---
-            field: l2_next_active(field\next)
-            continue
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8 && l2_emit_poll(mi, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8 && (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn\n", ind) < 0

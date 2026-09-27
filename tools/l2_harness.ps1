@@ -1110,13 +1110,19 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_make_adder_model_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('l2_mad_construct_') },
-    # A capturing nested method that is not the model: no return builds its node, so its call stays
-    # refused, located.
-    [pscustomobject]@{ Name = 'unit_make_adder_helper_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
+    # D-93, the rest: a capturing nested method that is not the model is called like the model -- the
+    # call builds ITS node (two captured fields here, the model's one) and calls it; under the knob
+    # through its own constructor, l2_mad_construct_<host>_<helper>.  add(1) = 54; the base
+    # translator refused.  Mutants: natively the helper's call built as the model's node -- gcc
+    # refuses (q undeclared there); only the model called so -- refused; the walked helper's node
+    # built by the model's constructor -- "construct was called outside its header", exit 3.
+    [pscustomobject]@{ Name = 'unit_make_adder_helper_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_helper_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     # D-93: a nested method that captures nothing of its host has its own native body; the host calls
-    # it before its return (it was refused).  A capturing one is called only as the model (its call
-    # builds the node, _model_call above); any other stays refused (_helper_call_refused).  Mutant:
+    # it before its return (it was refused).  A capturing one is called by building its node
+    # (_model_call and _helper_call above).  Mutant:
     # every nested method the stub -- the native twin gives k = 0, RED by run (under the knob the
     # host and twice are walked, the stub never runs).
     [pscustomobject]@{ Name = 'unit_make_adder_nested_plain_call.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 7;

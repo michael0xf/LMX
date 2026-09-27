@@ -1,0 +1,20 @@
+# D-93, the rest, under --walk-methods: unit_make_adder_helper_call.lm2's text.  The host is walked;
+# its call of the capturing helper is l2_mad_call over the helper's own constructor
+# (l2_mad_construct_<host>_<helper>, l2_rw_mad_build): two captured fields, not the model's one.
+# add(1) = 54.  Mutant: the helper's node built by the model's constructor -- the shapes differ.
+# Entry 7.
+fn: makeAdder (int: n; int: m) fn: (int: x) int
+    fn: helper (int: y) int
+        return: n * 10 + m + y
+    int: q (helper: 1)
+    fn: addN (int: x) int
+        return: q + x
+    return: addN
+
+add: makeAdder 5 2
+int: a (add: 1)
+int: ok 0
+if: a = 54
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

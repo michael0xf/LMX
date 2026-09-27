@@ -1,0 +1,22 @@
+# D-93, the rest: a nested method that captures host names and is not the host's model is called
+# before the return like the model is -- the call builds its node (its captures, its own frames and
+# arity) with the host's values at the call, and calls it.  helper captures n and m, the model
+# captures q only, so the two nodes differ in shape.  makeAdder 5 2: helper(1) = 5*10 + 2 + 1 = 53
+# = q; add(1) = 54.  The base translator refused ("a callable merge host names a nested method
+# outside the return").  Mutants: natively the helper's call built as the model's node -- q is not
+# declared there yet (gcc refuses); only the model called so -- refused again.  Entry 7.
+fn: makeAdder (int: n; int: m) fn: (int: x) int
+    fn: helper (int: y) int
+        return: n * 10 + m + y
+    int: q (helper: 1)
+    fn: addN (int: x) int
+        return: q + x
+    return: addN
+
+add: makeAdder 5 2
+int: a (add: 1)
+int: ok 0
+if: a = 54
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

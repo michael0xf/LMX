@@ -94,6 +94,8 @@ int: l2_rw_base 0
 # outside the walkable subset gets no frames; per method its step count, or -1 for none; and the
 # test knob `--walk-methods`: a method with frames gets native 0, so a CALL of it walks them.
 int: l2_rw_mi 0 - 1
+# implements-port slice 13: the next l2_rw_call is the receiver call of a conversion edge.
+int: l2_rw_conv 0
 int: l2_rw_quiet 0
 @: int l2_m_steps 0
 int: l2_walk_methods 0
@@ -3418,21 +3420,24 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     # would start -- l2_release, and a new parse, because a translation writes
     # into its tree (l2_mad_take_nested). A receiver's own body needs none, so
     # this settles; the bound is the table.
-    while: l2_cv_need_n > l2_cv_inj_n
-        l2_cv_inj_n: l2_cv_need_n
-        l2_release()
-        if: spent != 0
-            lm_p0_document_destroy(spent)
-        spent: document
-        document: 0
-        unit: 0
-        if: lm_p0_parse_file(in_path, @ document) != 0 || document = 0 || l2_unit_from_root(lm_p0_document_root(document), in_path, @ unit) != 0 || l2_translate_unit(unit, in_path) != 0
-            lm_p0_document_destroy(spent)
-            if: document != 0
-                lm_p0_document_destroy(document)
-            return: 1
-        ---
-    status: l2_emit_unit(out_path)
+    status: 3
+    while: status = 3
+        while: l2_cv_need_n > l2_cv_inj_n
+            l2_cv_inj_n: l2_cv_need_n
+            l2_release()
+            if: spent != 0
+                lm_p0_document_destroy(spent)
+            spent: document
+            document: 0
+            unit: 0
+            if: lm_p0_parse_file(in_path, @ document) != 0 || document = 0 || l2_unit_from_root(lm_p0_document_root(document), in_path, @ unit) != 0 || l2_translate_unit(unit, in_path) != 0
+                lm_p0_document_destroy(spent)
+                if: document != 0
+                    lm_p0_document_destroy(document)
+                return: 1
+            ---
+        status: l2_emit_unit(out_path)
+    ---
     lm_p0_document_destroy(document)
     if: spent != 0
         lm_p0_document_destroy(spent)
@@ -20050,6 +20055,107 @@ fn: l2_rw_catch_call (int: node; int: callee) int
     ---
 return: 0
 
+# implements-port slice 13: a conversion edge's receiver call.  Whatever the receiver throws is
+# the caller's implicit throw `convert` (as edge 1 makes it natively, l2_emit_call): one row per
+# status the receiver can leave with -- caught by a `catch: convert ()` pad here, or renumbered to
+# the caller's own `convert` status (pad 0, lmx_walk_catch_scan).  The receiver's names are not
+# the caller's: a pad for its `range` does not catch it.
+fn: l2_rw_catch_edge (int: node; int: callee) int
+    @: LmP0Node cf
+    int: n 0
+    int: k 1
+    int: d
+    int: g
+    int: at 0
+    int: table
+    int: pad 0 - 1
+    int: kout
+    if: l2_rw_emit = 0 || callee < 0
+        return: 0
+    d: l2_throws_declared(callee)
+    n: d
+    g: 1
+    while: l2_implicit_name(g) != 0
+        if: l2_implicit_status(callee, l2_implicit_name(g)) > 0
+            n: n + 1
+        g: g + 1
+    ---
+    if: n = 0
+        return: 0
+    cf: l2_catch_find(l2_rw_mi, 0, "convert", 0, 0)
+    if: cf != 0
+        pad: l2_rw_pad_slot(cf)
+    kout: l2_implicit_status(l2_rw_mi, "convert")
+    if: pad < 0 && kout <= 0
+        return: l2_error(l2_src, 0, "internal: a conversion edge with no convert status")
+    if: l2_rw_plain(node, 3 * n, @ table) != 0 || l2_rw_put(node, 4, table) != 0
+        return: 1
+    k: 1
+    while: k <= n
+        if: pad >= 0 && l2_rw_catch_row(table, at, k, pad) != 0
+            return: 1
+        if: pad < 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", table, at, k, table, at + 2, kout) < 0
+            return: 1
+        at: at + 3
+        k: k + 1
+    ---
+return: 0
+
+# implements-port slice 13 (B3, the root; steps/implements-port-plan.md): at the root a value of
+# one named primitive type given to a place of another -- an own field, a call's formal, a
+# message field -- calls the conversion row's receiver on it, as a method's store, argument and
+# return do (Q33): an ordinary call node of the receiver over the value's own fields, its result
+# the place's value, its refusal the root's `convert` (l2_rw_catch_edge).  With no row the root
+# refuses as a method does.  A receiver the unit has not taken yet is noted here, in the count
+# pass, and l2_emit_unit has the unit translated again with it before anything is written.
+fn: l2_rw_convert (@: LmP0Field field; int: n; int: from; int: to; const: @(LmP0Node at); int: parent; @: int out) int
+    int: cidx
+    int: rc
+    int: i 0
+    @: LmP0Field f
+    @: LmP0Field copy 0
+    @: LmP0Field cur 0
+    @: LmP0Field prev 0
+    if: l2_rw_num_ty(from) = 0 || l2_rw_num_ty(to) = 0
+        return: l2_rw_refuse(at, "mixed numeric types (a conversion)")
+    if: l2_convert_hit(l2_own_ty_word(from), l2_own_ty_word(to)) = 0
+        if: l2_cv_gap = 2
+            return: l2_error(l2_src, at, "no converter body ported")
+        if: l2_cv_gap = 3
+            return: l2_error(l2_src, at, "cannot read the conversion table")
+        if: l2_cv_gap = 4
+            return: l2_error(l2_src, at, "cannot read the converter source")
+        return: l2_error(l2_src, at, "mixed numeric types (a conversion)")
+    cidx: l2_convert_method(l2_cv_body)
+    if: cidx < 0
+        if: l2_rw_emit != 0
+            return: l2_error(l2_src, at, "internal: a conversion site was not checked")
+        \out: 0
+        return: l2_convert_edge(l2_e, l2_src, at)
+    copy: (cast: (@: LmP0Field) l2_xmalloc((cast: (size_t) n) * c.sizeof(c.LmP0Field)))
+    if: copy = 0
+        return: l2_error(l2_src, at, "out of memory")
+    f: l2_next_active(field)
+    while: i < n && f != 0
+        cur: copy + i
+        memcpy((cast: (@: void) cur), (cast: (@: void) f), c.sizeof(c.LmP0Field))
+        cur\next: 0
+        if: prev != 0
+            prev\next: cur
+        ---
+        prev: cur
+        f: l2_next_active(f\next)
+        i: i + 1
+    ---
+    if: i != n
+        l2_xfree((cast: (@: void) copy))
+        return: l2_error(l2_src, at, "internal: a conversion value is shorter than its run")
+    l2_rw_conv: 1
+    rc: l2_rw_call(at, cidx, copy, parent, out)
+    l2_rw_conv: 0
+    l2_xfree((cast: (@: void) copy))
+return: rc
+
 # A primitive's own fixed throw code (merge 1, implements 2), caught here.
 fn: l2_rw_catch_fixed (int: node; int: k_in; const: @(char cname)) int
     @: LmP0Node cf
@@ -20145,6 +20251,8 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     int: j
     int: fr
     int: d 0
+    int: conv l2_rw_conv
+    l2_rw_conv: 0
     # A callee that can throw is called like any other (commit 3; -161 c3 D-37): its trampoline
     # returns the throw's number k, the walk carries it as LMX_WALK_THROWN + k and stops, and the
     # turn's channel holds k.  The root has no catch yet (no walker role), so a throw there is
@@ -20187,7 +20295,9 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     # types the call's destination by that cell's range; a `sub` has none (0).
     if: l2_rw_frame(parent, "LMX_WALK_OP_CALL", 5 + n + l2_m_dyn[idx], out) != 0
         return: 1
-    if: l2_rw_catch_call(\out, idx) != 0
+    if: conv = 0 && l2_rw_catch_call(\out, idx) != 0
+        return: 1
+    if: conv != 0 && l2_rw_catch_edge(\out, idx) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + idx))) < 0
         return: 1
@@ -20725,6 +20835,7 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
     []: @(LmP0Node) tok 64
     @: LmP0Field f
     int: m 0
+    int: nf n
     int: k 1
     int: ty
     if: n < 1 || n > 63
@@ -20757,6 +20868,8 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
     if: ty >= 1000 && ty != want
         return: l2_rw_refuse(tok[0], "a reference where a number is asked")
     if: want >= 0
+        if: ty >= 0 && ty != want && l2_rw_mi = l2_e && l2_rw_mi >= 0
+            return: l2_rw_convert(field, nf, ty, want, tok[0], parent, out)
         if: ty >= 0 && ty != want
             return: l2_rw_refuse(tok[0], "mixed numeric types (a conversion)")
         ty: want
@@ -26041,6 +26154,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # The methods' frames are counted too (-193 T4a), before the occurrences' widths are written.
     if: l2_rw_methods_count() != 0
         return: 1
+    # Slice 13: a root conversion edge noted a receiver the unit has not taken (l2_rw_convert):
+    # nothing is written yet; l2_translate translates the unit again with it and comes back.
+    if: l2_cv_need_n > l2_cv_inj_n
+        return: 3
     # The reserved unit-child bases must be known BEFORE any method body is
     # written: a field path inside a method addresses these same children
     # through the unit reference, and the entry is emitted last. They used to be

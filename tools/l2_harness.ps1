@@ -724,8 +724,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0');
         Absent = @(); Debt = @() },
     # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
-    # length() is size_t. exit_code is int, and there is no conversion yet (S7).
-    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)'; Args = @('0'); Argv = @('ok'); Entry = 2;
+    # length() is size_t and exit_code is int: the root's conversion edge (implements-port slice 13).
+    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 2;
         Absent = @(); Debt = @() },
     # length(m\mainArgs) is the outer array's size_t length (semantics §17: first dimension).
     # No extra argv: the letter holds argv[0] alone, so length is 1. Success is exit 7,
@@ -761,8 +761,8 @@ $fixtures = @(
         Absent = @('c.puts'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
-    # plus_one's formal is int; length() is size_t. No conversion yet (S7).
-    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)'; Args = @('0'); Entry = 2;
+    # plus_one's formal is int; length() is size_t: the root's conversion edge (slice 13).
+    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_parse_min.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('{source}');
         Absent = @(); Debt = @() },
@@ -943,9 +943,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_root_merge_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_mops', 'lmx_merge_owned(');
         Debt = @('\fn: lmx_walk_merge_map', 'c.LMX_WALK_OP_PRIM, 6U)', 'c.LMX_WALK_OP_PRIM, 7U)') },
-    # D-75: a call through a path at the walked root is typed by its method -- a located refusal of
-    # the int/size_t mix (main: walk error INVALID at run time), and its running twin.
-    [pscustomobject]@{ Name = 'unit_root_path_call_type.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
+    # D-75: a call through a path at the walked root is typed by its method; the int result stored into
+    # a size_t own takes the root's conversion edge (slice 13 -- before it, a located refusal of the mix;
+    # before D-75, walk error INVALID at run time), and its running twin.
+    [pscustomobject]@{ Name = 'unit_root_path_call_type.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_path_call_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
@@ -1161,7 +1162,7 @@ $fixtures = @(
                  'l2_out_throw[0]: 0',
                  'c.fprintf(c.stderr, "lmx: invariant: merge result check 71\n")',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
+    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
@@ -1797,7 +1798,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 5; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
+    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 5; Needle = '';
         Args = @('0');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_self_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 1; EmptyEntry = $true; Needle = '';
@@ -2161,7 +2162,7 @@ $fixtures = @(
     # its own witness function, so a broken address write would have
     # passed silently either way. Completed with a real call and assertion
     # rather than rewritten from scratch (the shapes were already correct).
-    [pscustomobject]@{ Name = 'unit_addr_arg.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
+    [pscustomobject]@{ Name = 'unit_addr_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0');
         Absent = @();
         Debt = @() },
@@ -2519,6 +2520,23 @@ $fixtures = @(
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_methods_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    # implements-port slice 13 (B3, the root): at the walked root a value of one named type given to
+    # a place of another -- an own, a call's formal, a message field; a single value or a compound
+    # one -- calls the row's receiver on it (l2_rw_convert); every status the receiver leaves with is
+    # the root's `convert` (l2_rw_catch_edge: renumbered, or caught by `catch: convert ()`).  A
+    # receiver only the walk names is taken by a second translation (l2_emit_unit returns 3).
+    # Mutants (copies under build/): the rows not written -- _range notes the receiver's 1, _catch
+    # goes uncaught; no second translation -- _compound refuses.
+    [pscustomobject]@{ Name = 'unit_s13_root_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s13_root_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s13_root_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s13_root_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s13_root_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown candidate descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_unknown_required.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

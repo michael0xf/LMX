@@ -23587,11 +23587,23 @@ return: n
 fn: l2_emit_public_sig (int: mi) int
     int: j 0
     int: ty
+    int: oty
+    int: rt l2_sig_ret(mi)
     const: @(char sep) ""
     if: fputs(" (", l2_out) < 0
         return: 1
     while: j < l2_m_arity[mi]
         ty: l2_ft(mi, j)
+        # D-101: a declared graph formal is stored dt_of_own(1000+foreign), recovered as
+        # l2_emit_formal recovers it; read raw, l2_emit_foreign_named got an index past its table
+        # and the translation failed with no located diagnostic.  The result goes through
+        # l2_sig_ret for the same reason (-137 part 2).
+        if: ty > 1
+            oty: l2_own_of_dt(ty)
+            if: oty >= 1000 && oty < 2000
+                ty: l2_ft_of_own(oty)
+            ---
+        ---
         if: j != 0
             sep: "; "
         if: ty = 0 && c.fprintf(l2_out, "%sint: ", sep) < 0
@@ -23645,25 +23657,25 @@ fn: l2_emit_public_sig (int: mi) int
         ---
         j: j + 1
     ---
-    if: l2_m_ret[mi] = 2 && fputs(") size_t", l2_out) < 0
+    if: rt = 2 && fputs(") size_t", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 33 && fputs(") unsigned", l2_out) < 0
+    if: rt = 33 && fputs(") unsigned", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 36 && fputs(") ulong", l2_out) < 0
+    if: rt = 36 && fputs(") ulong", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 3 && fputs(") @: char", l2_out) < 0
+    if: rt = 3 && fputs(") @: char", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 16 && fputs(") @: void", l2_out) < 0
+    if: rt = 16 && fputs(") @: void", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 35 && fputs(") const: @(char)", l2_out) < 0
+    if: rt = 35 && fputs(") const: @(char)", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] = 32 && fputs(") @@: char", l2_out) < 0
+    if: rt = 32 && fputs(") @@: char", l2_out) < 0
         return: 1
-    if: l2_m_ret[mi] >= 100 && l2_emit_foreign_return(l2_out, l2_m_ret[mi]) != 0
+    if: rt >= 100 && l2_emit_foreign_return(l2_out, rt) != 0
         return: 1
-    if: l2_m_ret[mi] = 8 && fputs(")", l2_out) < 0
+    if: rt = 8 && fputs(")", l2_out) < 0
         return: 1
-    if: l2_ret_uns(mi) = 0 && l2_m_ret[mi] != 3 && l2_m_ret[mi] != 8 && l2_m_ret[mi] != 16 && l2_m_ret[mi] != 32 && l2_m_ret[mi] != 35 && l2_m_ret[mi] < 100 && fputs(") int", l2_out) < 0
+    if: l2_ret_uns(mi) = 0 && rt != 3 && rt != 8 && rt != 16 && rt != 32 && rt != 35 && rt < 100 && fputs(") int", l2_out) < 0
         return: 1
 return: 0
 
@@ -26371,7 +26383,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
                 return: 1
             k: k + 1
         ---
-        if: (l2_own_n != 0 || l2_m_dyn[i] != 0 || l2_for_n != 0) && fputs("    @@: void l2_xp 0\n", l2_out) < 0
+        # D-102: a field path through a formal reads its cell into l2_xp (l2_xp: l2_pxp), so l2_xp is
+        # declared wherever the path temps below are -- a unit with no own field included.
+        if: (l2_own_n != 0 || l2_m_dyn[i] != 0 || l2_for_n != 0 || l2_ns_n != 0 || l2_mres_n != 0 || l2_uses_node_for_root != 0) && fputs("    @@: void l2_xp 0\n", l2_out) < 0
             fclose(l2_out)
             return: 1
         # The field-path temps. A unit with no declaration and no bound

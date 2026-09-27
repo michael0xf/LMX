@@ -1075,6 +1075,15 @@ $fixtures = @(
         Needle = "a callable formal's argument of this type is not passed yet"; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
+    # D-101: a method with a named-Structure formal used as a value (a callable actual) has its public
+    # prototype written; its formal type is recovered from dt_of_own(1000+foreign) as l2_emit_formal
+    # does.  Mutant: the raw type -- l2trans fails with no located diagnostic.  D-102: a field path
+    # through a formal in a unit with no own field -- l2_xp is declared with the path temps.  Mutant:
+    # the old condition -- gcc refuses the C.
+    [pscustomobject]@{ Name = 'unit_d101_struct_formal_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('fn: peek (@: Lmx b) int') },
+    [pscustomobject]@{ Name = 'unit_d102_formal_path_no_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable merge needs one model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_none.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

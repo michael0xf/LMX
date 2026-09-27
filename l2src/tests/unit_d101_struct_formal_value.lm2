@@ -1,0 +1,23 @@
+# D-101: a method whose formal is a named Structure, passed as a callable actual, is used as a
+# value: its public prototype is written (l2_m_value_used).  l2_emit_public_sig read the formal's
+# type raw -- a declared graph formal is stored dt_of_own(1000+foreign) -- so l2_emit_foreign_named
+# got an index past its table and the translation failed with no located diagnostic.  It now
+# recovers the type as l2_emit_formal does.  `applyBox` does not call `op` (a callable formal's
+# argument of a Structure type is not passed yet, slice 1); this row is the prototype's.
+# Mutant: the recovery removed -- l2trans fails again, with no located diagnostic.
+Box:
+    int: v 0
+end: Box
+fn: boxTo (Box: b) int
+end: boxTo
+fn: peek (Box: b) int
+    return: b\v
+end: peek
+fn: applyBox (boxTo: op; int: n) int
+    return: n
+end: applyBox
+fn: run () int
+    return: applyBox(peek, 7)
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -41,8 +41,8 @@ int: l1_imp_actn 0
 int: l1_imp_donen 0
 const: @: char l1_src 0
 size_t: l1_srcn 0
-c.array: []: char l1_th_names 2048
-c.array: []: int l1_th_ar 32
+[]: char l1_th_names 2048
+[]: int l1_th_ar 32
 int: l1_th_n 0
 int: l1_in_finally 0
 @: char l1_fn_names 0
@@ -51,9 +51,9 @@ int: l1_in_finally 0
 @: int l1_fn_ar 0
 int: l1_fnn 0
 int: l1_fn_cap 0
-c.array: []: char l1_ca_names 2048
-c.array: []: int l1_ca_ids 32
-c.array: []: int l1_ca_d 32
+[]: char l1_ca_names 2048
+[]: int l1_ca_ids 32
+[]: int l1_ca_d 32
 int: l1_ca_n 0
 int: l1_ca_next 0
 int: l1_blk_d 0
@@ -63,17 +63,17 @@ int: l1_has_fin 0
 int: l1_th_ch 0
 int: l1_cur_void 0
 int: l1_throw_ok 0
-c.array: []: int l1_cur_th 8
+[]: int l1_cur_th 8
 int: l1_cur_thn 0
 int: l1_allow_throws 0
-c.array: []: char l1_hdr_types 8192
+[]: char l1_hdr_types 8192
 int: l1_hdr_typen 0
-c.array: []: char l1_hdr_kinds 128
+[]: char l1_hdr_kinds 128
 const: @: char l1_unit_root 0
 int: l1_unit_root_set 0
-c.array: []: char l1_hdr_emitted 2048
+[]: char l1_hdr_emitted 2048
 int: l1_hdr_emittedn 0
-c.array: []: char l1_hdr_pending 2048
+[]: char l1_hdr_pending 2048
 int: l1_hdr_pendingn 0
 int: l1_hdr_emitting 0
 
@@ -398,7 +398,7 @@ fn: l1_throw_reset () void
 return
 
 fn: l1_throw_intern (const: @(LmP0Text text)) int
-    c.array: []: char buf 64
+    []: char buf 64
     int: i 0
     if: l1_ident_to_buf(buf, 64U, text) != 0
         return: 0
@@ -446,7 +446,7 @@ fn: l1_count_catch_params (const: @(LmP0Structure params)) int
 return: n
 
 fn: l1_fn_find (const: @(LmP0Text text)) int
-    c.array: []: char buf 64
+    []: char buf 64
     int: i 0
     if: l1_ident_to_buf(buf, 64U, text) != 0
         return: -1
@@ -493,7 +493,7 @@ fn: l1_fn_grow () int
 return: 0
 
 fn: l1_fn_ensure (const: @(LmP0Text text)) int
-    c.array: []: char buf 64
+    []: char buf 64
     int: i
     i: l1_fn_find(text)
     if: i >= 0
@@ -676,7 +676,7 @@ fn: l1_cur_has_throw (int: code) int
 return: 0
 
 fn: l1_catch_find (const: @(LmP0Text text); int: same_depth) int
-    c.array: []: char buf 64
+    []: char buf 64
     int: i
     if: l1_ident_to_buf(buf, 64U, text) != 0
         return: -1
@@ -693,7 +693,7 @@ fn: l1_catch_find (const: @(LmP0Text text); int: same_depth) int
 return: -1
 
 fn: l1_catch_push (const: @(LmP0Text text); int: id) int
-    c.array: []: char buf 64
+    []: char buf 64
     if: l1_ca_n >= 32
         return: 1
     if: l1_ident_to_buf(buf, 64U, text) != 0
@@ -974,7 +974,7 @@ fn: l1_c_atom_nested_receiver (const: @(LmP0Text text); size_t: start) int
     int: esc
     int: slot
     unsigned: ch
-    c.array: []: int qmark 64
+    []: int qmark 64
     if: text = 0 || text\data = 0
         return: 0
     k: 0U
@@ -1085,7 +1085,7 @@ return: 0
 fn: l1_emit_c99_string (@: FILE out; const: @(char data); size_t: n) int
     size_t: i 0U
     unsigned: b
-    c.array: []: char oct 5
+    []: char oct 5
     if: l1_write_cstr(out, "\"") != 0
         return: 1
     while: i < n
@@ -3084,7 +3084,7 @@ fn: l1_emit_throw_dispatch (@: FILE out; const: @(LmP0Text name); const: @(char 
 return: 0
 
 fn: l1_catch_find_code (int: code) int
-    c.array: []: char buf 64
+    []: char buf 64
     int: i
     if: code <= 0 || code > l1_th_n
         return: -1
@@ -5169,7 +5169,7 @@ fn: l1_hdr_mark_unit_emitted (const: @(LmP0Node root); const: @(char path)) int
     @: LmP0Field field
     const: @: LmP0Node node
     const: @: LmP0Text name
-    c.array: []: char nbuf 64
+    []: char nbuf 64
     if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE
         return: 0
     field: root\as\structure\first_field
@@ -5484,7 +5484,7 @@ fn: l1_hdr_type_reset () void
 return
 
 fn: l1_hdr_type_has (const: @(LmP0Text text)) int
-    c.array: []: char buf 64
+    []: char buf 64
     int: i 0
     size_t: off 0U
     if: text = 0 || text\data = 0 || text\length = 0U
@@ -5518,7 +5518,7 @@ fn: l1_hdr_kind_label (int: kind) @: char
 return: "struct"
 
 fn: l1_hdr_type_add (const: @(LmP0Text text); const: @(char path); const: @(LmP0Node node); int: kind) int
-    c.array: []: char buf 64
+    []: char buf 64
     size_t: used 0U
     size_t: n 0U
     int: i 0
@@ -5738,7 +5738,7 @@ return: 0
 fn: l1_write_guard_escape (@: FILE out; const: @(char unit_id)) int
     size_t: i 0U
     unsigned: b 0U
-    c.array: []: char hex 8
+    []: char hex 8
     if: unit_id = 0
         return: 1
     while: unit_id[i] != 0
@@ -6143,7 +6143,7 @@ return: 0
 
 fn: l1_hdr_field_node_deps_ready (const: @(LmP0Node node)) int
     @: LmP0Field field
-    c.array: []: char dep 64
+    []: char dep 64
     if: node = 0 || l1_node_ignored(node)
         return: 1
     if: node\kind != c.LM_P0_NODE_FRAME
@@ -6209,7 +6209,7 @@ fn: l1_hdr_fnptr_deps_ready (const: @(LmP0Frame frame); const: @(char path)) int
     @: LmP0Node params_node
     @: LmP0Node ret_node
     @: LmP0Field field
-    c.array: []: char dep 64
+    []: char dep 64
     if: l1_hdr_fnptr_parts(frame, @ name_node, @ params_node, @ ret_node) != 0
         return: 0
     if: params_node\kind = c.LM_P0_NODE_STRUCTURE
@@ -6253,9 +6253,9 @@ fn: l1_hdr_diagnose_cycle (const: @(LmP0Node root); const: @(char path)) int
     @: LmP0Node name_node
     @: LmP0Node params_node
     @: LmP0Node ret_node
-    c.array: []: char a 64
-    c.array: []: char msg 256
-    c.array: []: char dep 64
+    []: char a 64
+    []: char msg 256
+    []: char dep 64
     @: LmP0Structure fields
     if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE
         return: l1_error(path, root, "by-value cycle between structs; make one a pointer")
@@ -6536,7 +6536,7 @@ fn: l1_emit_header_unit (@: FILE out; const: @(LmP0Node root); const: @(char in_
     const: @: LmP0Node node
     const: @: LmP0Frame frame
     const: @: LmP0Text name
-    c.array: []: char nbuf 64
+    []: char nbuf 64
     int: progress 1
     int: remaining 0
     if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE

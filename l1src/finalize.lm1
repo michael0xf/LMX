@@ -94,7 +94,7 @@ fn: lm_finalize_join_path (@: char buffer; size_t: size; const: @(char base); co
 return: 0
 
 fn: lm_finalize_has_project_marker (const: @(char path)) int
-    c.array: []: char marker_path 2048
+    []: char marker_path 2048
     if: lm_finalize_join_path(marker_path, c.sizeof(marker_path), path, "l1src/buildCore.lm1") != 0
         return: 0
     if: lm_finalize_file_exists(marker_path)
@@ -119,9 +119,9 @@ fn: lm_finalize_trim_last_path_part (@: char path) int
 return: 0
 
 fn: lm_finalize_enter_project_root (const: @(char program_path)) int
-    c.array: []: char search_path 1024
-    c.array: []: char executable_path 1024
-    c.array: []: char cwd 1024
+    []: char search_path 1024
+    []: char executable_path 1024
+    []: char cwd 1024
     int: depth
     if: lm_finalize_platform_getcwd(cwd, c.sizeof(cwd)) = 0
         c.fprintf(c.stderr, "finalize.lm0: cannot read current directory\n")
@@ -166,7 +166,7 @@ sub: lm_finalize_log (const: @(char message))
     c.fclose(log_file)
 
 fn: lm_finalize_copy_once (const: @(char source_path); const: @(char output_path); int: quiet) int
-    c.array: []: char buffer 32768
+    []: char buffer 32768
     @: FILE source
     @: FILE output
     size_t: count
@@ -203,7 +203,7 @@ fn: lm_finalize_copy_once (const: @(char source_path); const: @(char output_path
 return: 0
 
 fn: lm_finalize_copy_with_retry (const: @(char source_path); const: @(char output_path)) int
-    c.array: []: char staging_path 280
+    []: char staging_path 280
     int: attempt 0
     if: c.strlen(output_path) + 5U >= c.sizeof(staging_path)
         c.fprintf(c.stderr, "finalize.lm0: path is too long\n")
@@ -241,8 +241,8 @@ sub: lm_finalize_next_artifact_path (@: char path; size_t: size; const: @(char a
     c.snprintf(path, size, "build%slm0%snext%s%s", lm_finalize_platform_path_sep(), lm_finalize_platform_path_sep(), lm_finalize_platform_path_sep(), artifact_name)
 
 fn: lm_finalize_install_next_tool (const: @(char tool_name)) int
-    c.array: []: char source_path 256
-    c.array: []: char output_path 256
+    []: char source_path 256
+    []: char output_path 256
     lm_finalize_next_tool_path(source_path, c.sizeof(source_path), tool_name)
     lm_finalize_live_tool_path(output_path, c.sizeof(output_path), tool_name)
     if: lm_finalize_copy_with_retry(source_path, output_path) != 0
@@ -252,8 +252,8 @@ fn: lm_finalize_install_next_tool (const: @(char tool_name)) int
 return: 0
 
 fn: lm_finalize_install_next_artifact (const: @(char artifact_name)) int
-    c.array: []: char source_path 256
-    c.array: []: char output_path 256
+    []: char source_path 256
+    []: char output_path 256
     lm_finalize_next_artifact_path(source_path, c.sizeof(source_path), artifact_name)
     lm_finalize_live_artifact_path(output_path, c.sizeof(output_path), artifact_name)
     if: lm_finalize_copy_with_retry(source_path, output_path) != 0
@@ -263,9 +263,9 @@ fn: lm_finalize_install_next_artifact (const: @(char artifact_name)) int
 return: 0
 
 fn: lm_finalize_defer () int
-    c.array: []: char root_path 1024
-    c.array: []: char finalize_path 1400
-    c.array: []: char command 4096
+    []: char root_path 1024
+    []: char finalize_path 1400
+    []: char command 4096
     int: status
     if: lm_finalize_platform_getcwd(root_path, c.sizeof(root_path)) = 0
         c.fprintf(c.stderr, "finalize.lm0: cannot get current directory\n")

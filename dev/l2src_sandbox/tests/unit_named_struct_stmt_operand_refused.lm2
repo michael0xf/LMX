@@ -1,0 +1,10 @@
+# steps/named-struct-exec.md, slice 2: a named Structure's statements are checked whether or not it is
+# executed -- here it is not, and `n: n + g` reads g, a field of the unit, not of Counter: this slice
+# walks the Structure's own number fields.  Before, the statement was set aside unchecked.
+size_t: g 2U
+Counter:
+    size_t: n 0U
+    n: n + g
+return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

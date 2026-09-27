@@ -89,6 +89,11 @@ int: l2_rw_emit 0
 int: l2_rw_t 0
 int: l2_rw_steps 0
 int: l2_rw_base 0
+# steps/named-struct-exec.md, slice 2: the named Structure whose body l2_rw_* builds, or -1 -- its
+# code node's steps address its data, the Structure itself, by slot -- and the first code node,
+# after the root's steps.
+int: l2_rw_ns 0 - 1
+int: l2_nsx_base 0
 # THE WALKED METHODS (-193 T4a): the method whose body l2_rw_* builds -- l2_e for the root --; 1
 # while a method's body is only tried (its count pass), when a refusal is not said: a method
 # outside the walkable subset gets no frames; per method its step count, or -1 for none; and the
@@ -271,6 +276,12 @@ int: l2_nsf_n 0
 # The unit item (or field) that declared each entry: its source position is
 # what backward visibility compares.
 @@: LmP0Node l2_ns_at 0
+# steps/named-struct-exec.md, slice 2: per entry, 1 when a bare atom of the root executes it (the
+# check pass, l2_check_discard), its code node's step count, and the first statement of its body
+# (l2_take_ns_body sets statements aside), or 0.
+@: int l2_ns_exec 0
+@: int l2_ns_steps 0
+@@: LmP0Node l2_ns_stmt 0
 @@: LmP0Text l2_nsf_name 0
 # The name the field itself was declared with, which is what a source field
 # path spells.
@@ -1092,6 +1103,13 @@ prototype:
     fn: l2_rw_mad_at (int: parent; int: slot; @: int out) int
     fn: l2_rw_mad_store (const: @(LmP0Node stmt); int: into; @: int out) int
     fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) int
+    fn: l2_rw_ns_ty (const: @(LmP0Text t)) int
+    fn: l2_rw_ns_at (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
+    fn: l2_rw_ns_call (int: ni; int: into; @: int out) int
+    fn: l2_rw_ns_count () int
+    fn: l2_rw_ns_emit () int
+    fn: l2_nsx_rank (int: ni) int
+    fn: l2_nsx_count () int
 end: prototype
 
 # A numeric field of a named Structure -- size_t, int, unsigned or ulong (l2_nsf_kind 0/7/8/9) --
@@ -11321,6 +11339,21 @@ fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     if: ga = 0
         return: 0 - 1
     l2_ns_at: ga
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_ns_exec), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_ns_exec: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_ns_steps), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_ns_steps: gi
+    ga: (cast: (@@: LmP0Node) realloc((cast: (@: void) l2_ns_stmt), want * c.sizeof(@: void)))
+    if: ga = 0
+        return: 0 - 1
+    l2_ns_stmt: ga
+    l2_ns_exec[l2_ns_n]: 0
+    l2_ns_steps[l2_ns_n]: 0
+    l2_ns_stmt[l2_ns_n]: 0
     l2_ns_at[l2_ns_n]: (cast: (@: LmP0Node) at)
     l2_ns_name[l2_ns_n]: (cast: (@: LmP0Text) name)
     l2_ns_first[l2_ns_n]: 0
@@ -12513,7 +12546,13 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
         # метода") -- an assignment to a field declared above, or a bare `return` -- is no field.
         # Construction does not run it (book :928 computes the initializers only); slice 2 runs the
         # whole body when the Structure is executed.
+        # Q19.1: a named Structure's `return` is bare ("может быть только "return" без аргументов";
+        # REVIEW 0c601ea: it was refused by a phrase of another rule).
+        if: l2_frame_head(fld, "return")
+            return: l2_error(path, fld, "a named Structure's return carries no value")
         if: l2_ns_body_stmt(fld, me) != 0
+            if: l2_ns_stmt[me] = 0
+                l2_ns_stmt[me]: fld
             f: l2_next_active(f\next)
             continue
         if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0
@@ -15916,6 +15955,21 @@ fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
         return: l2_colon_is_graph_ty(ty)
 return: l2_ns_find(t) >= 0
 
+# steps/named-struct-exec.md, slice 2: the named Structure a bare atom of the root executes -- its
+# own name, not a field or a local bound to a Structure (l2_colon_bound_ty) -- or -1.  Only a
+# unit-level one that is no qualified branch: its node is a unit child (l2_ns_rank).
+fn: l2_ns_exec_named (const: @(LmP0Text t); int: mi) int
+    int: ty 0
+    int: ni
+    if: t = 0 || l2_e < 0 || mi != l2_e || l2_library_mode != 0
+        return: 0 - 1
+    if: l2_colon_bound_ty(mi, t, @ ty) = 0
+        return: 0 - 1
+    ni: l2_ns_find(t)
+    if: ni < 0 || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
+        return: 0 - 1
+return: ni
+
 # THE EXPRESSION STATEMENT (plan §3 "Expression statement и discard"; FABLE-OPUS-DISCARD-
 # 20260924-147).  Any expression in statement position is evaluated and its value discarded: a
 # bare atom, and a run of fields l2_expr_span groups into one expression -- P0 gives a statement
@@ -15937,6 +15991,13 @@ fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path
     if: l2_check_primary(stmt, mi, path) != 0
         return: 1
     if: l2_bare_structure(stmt\as\atom, mi) != 0
+        # steps/named-struct-exec.md, slice 2: at the root, an ordinary named Structure's own name
+        # executes it, walked (l2_rw_ns_call).  A Structure-typed field or local, a nested or
+        # qualified Structure, and a bare Structure in a method body stay refused (slice 3).
+        idx: l2_ns_exec_named(stmt\as\atom, mi)
+        if: idx >= 0
+            l2_ns_exec[idx]: 1
+            return: 0
         return: l2_error(path, stmt, "executing a named Structure is not supported yet")
 return: 0
 
@@ -18633,6 +18694,9 @@ return: 0
 # A root statement or operand this translator does not build as walker nodes yet.
 fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
     []: char msg 192
+    if: l2_rw_ns >= 0
+        c.snprintf(msg, 192U, "named Structure body not walkable yet: %s", what)
+        return: l2_error(l2_src, node, msg)
     c.snprintf(msg, 192U, "root operation not walkable yet: %s", what)
 return: l2_error(l2_src, node, msg)
 
@@ -19099,6 +19163,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
         return: l2_rw_fields_ty(node\as\structure\first_field, l2_count_active(node\as\structure))
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
+        if: l2_rw_ns >= 0
+            return: 0 - 1
         idx: l2_find_method(node\as\frame\head)
         if: idx >= 0 && idx != l2_e
             return: l2_rw_call_ty(idx)
@@ -19130,6 +19196,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     ---
     if: l2_rw_char_lit(t, @ v) != 0
         return: 1
+    if: l2_rw_ns >= 0
+        return: l2_rw_ns_ty(t)
     if: l2_rw_has_slash(t) != 0 && t\data[0] != 92
         eix: 0U
         while: eix < t\length && t\data[eix] != 91
@@ -20900,6 +20968,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_texpr(node\as\structure\first_field, l2_count_active(node\as\structure), ty, parent, out)
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
         t: node\as\frame\head
+        if: l2_rw_ns >= 0
+            return: l2_rw_refuse(node, "a call")
         if: t != 0 && t\length > 2U && t\data[0] = 99 && t\data[1] = 46
             return: l2_rw_l2(node)
         if: l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || (t != 0 && t\length > 0U && (t\data[0] = 64 || t\data[0] = 92))
@@ -20951,6 +21021,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_l2(node)
     if: t != 0 && t\length > 2U && t\data[0] = 99 && t\data[1] = 46
         return: l2_rw_l2(node)
+    if: l2_rw_ns >= 0
+        return: l2_rw_ns_at(node, t, parent, out)
     if: l2_rw_has_slash(t) != 0
         # An element index is `[` after a name. `\[N]` is an occurrence, not an index.
         oi: 0
@@ -21298,7 +21370,7 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
     if: ty >= 1000 && ty != want
         return: l2_rw_refuse(tok[0], "a reference where a number is asked")
     if: want >= 0
-        if: ty >= 0 && ty != want && l2_rw_mi = l2_e && l2_rw_mi >= 0
+        if: ty >= 0 && ty != want && l2_rw_mi = l2_e && l2_rw_mi >= 0 && l2_rw_ns < 0
             return: l2_rw_convert(field, nf, ty, want, tok[0], parent, out)
         if: ty >= 0 && ty != want
             return: l2_rw_refuse(tok[0], "mixed numeric types (a conversion)")
@@ -21864,6 +21936,16 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # (FABLE-OPUS-ROOT-CLASSES-20260926-196).
     n: l2_discard_run(field)
     if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_quoted(stmt\as\atom) != 0
+        return: 0
+    # steps/named-struct-exec.md, slice 2: a bare atom naming a named Structure the check pass marked
+    # (l2_ns_exec) executes it -- the pair (its code node, the Structure), walked.
+    if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_rw_ns < 0 && l2_ns_exec_named(stmt\as\atom, l2_rw_mi) >= 0 && l2_ns_exec[l2_ns_exec_named(stmt\as\atom, l2_rw_mi)] != 0
+        \next: l2_skip_span(field, n)
+        if: l2_rw_ns_call(l2_ns_exec_named(stmt\as\atom, l2_rw_mi), into, @ t) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, t) < 0
+            return: 1
         return: 0
     if: n > 0
         \next: l2_skip_span(field, n)
@@ -24445,6 +24527,228 @@ fn: l2_pap_steps (int: mi) int
     l2_m_steps[mi]: made + one
 return: 0
 
+# NAMED STRUCTURE EXECUTION (steps/named-struct-exec.md, slice 2; plan §3 :245 (а)).  Executing a
+# named Structure S runs its whole body, as a method's (Q19.2 = 2): each field's declaration stores
+# its initializer again, each statement runs, a bare `return` ends it -- construction ran none of it
+# (book :928).  The code is a node of its own, a unit child after the root's steps, so no earlier
+# child moves; the data is S itself (book :1028: the Structure in the head's position is the code,
+# the one passed to it the data).  The root's bare `S` is CALL(code, S): the walker's one
+# activation, as a method's.  A step names S's field by its slot and no holder, which the walker
+# reads as this activation's data (lmx_walk_data_holder); S keeps its last state in its fields
+# (book :1094, :1122).  This slice walks number fields, literals and the operators: another name, a
+# call and a conversion are refused.  An ordinary named Structure whose body holds a statement is
+# walked by the count pass whether or not it is executed: its statements are checked there.
+
+# The number type of a named Structure field's kind (l2_rw_path's mapping), or -1.
+fn: l2_ns_kind_ty (int: kind) int
+    if: kind = 0
+        return: 2
+    if: kind = 1
+        return: 1
+    if: kind = 7
+        return: 0
+    if: kind = 8
+        return: 3
+    if: kind = 9
+        return: 36
+return: 0 - 1
+
+# The type of name t in the body being walked (l2_rw_ns): its field's number type, or -1 (the
+# operand refuses it).
+fn: l2_rw_ns_ty (const: @(LmP0Text t)) int
+    int: kind 0 - 1
+    int: ent 0
+    if: t = 0 || t\data = 0 || l2_ns_slot_named(l2_rw_ns, t\data, 0U, t\length, @ kind, @ ent) < 0
+        return: 0 - 1
+return: l2_ns_kind_ty(kind)
+
+# A read of name t in the body being walked: AT(no holder, its slot), the data's field.
+fn: l2_rw_ns_at (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
+    int: kind 0 - 1
+    int: ent 0
+    int: slot 0 - 1
+    if: t != 0 && t\data != 0
+        slot: l2_ns_slot_named(l2_rw_ns, t\data, 0U, t\length, @ kind, @ ent)
+    if: slot < 0
+        return: l2_rw_refuse(node, "a name that is not a field of this Structure")
+    if: l2_ns_kind_ty(kind) < 0
+        return: l2_rw_refuse(node, "a field that is not a number")
+return: l2_rw_mad_at(parent, slot, out)
+
+# One item of the body being walked, a step at slot `slot` of `into`: the declaration of a number
+# field stores its initializer, an assignment to a field (l2_ns_body_stmt) its value -- [put, 0,
+# slot, V].  A bare `return` makes no step (l2_rw_ns_body ends the plan there).  The declaration of
+# any other field makes no step while the body is only checked, and is refused when S is executed.
+fn: l2_rw_ns_item (@: LmP0Field field; int: into; int: slot; @: int made) int
+    @: LmP0Node item
+    @: LmP0Field f
+    @: LmP0Text name 0
+    []: char pn 32
+    int: kind 0 - 1
+    int: ent 0
+    int: fslot 0 - 1
+    int: n 0
+    int: node
+    int: value
+    \made: 0
+    item: field\value
+    l2_rw_name(into, pn)
+    if: item != 0 && item\kind = c.LM_P0_NODE_ATOM && item\as != 0 && l2_text_eq(item\as\atom, "return")
+        return: 0
+    if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && item\as\frame\body != 0
+        f: l2_next_active(item\as\frame\body\first_field)
+        if: l2_ns_body_stmt(item, l2_rw_ns) != 0
+            name: (cast: (@: LmP0Text) item\as\frame\head)
+            n: l2_count_active(item\as\frame\body)
+        else:
+            if: (l2_text_eq(item\as\frame\head, "size_t") || l2_text_eq(item\as\frame\head, "char") || l2_text_eq(item\as\frame\head, "int") || l2_text_eq(item\as\frame\head, "unsigned") || l2_text_eq(item\as\frame\head, "ulong")) && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0
+                name: (cast: (@: LmP0Text) f\value\as\atom)
+                f: l2_next_active(f\next)
+                n: l2_count_active(item\as\frame\body) - 1
+            ---
+        ---
+    ---
+    if: name = 0
+        if: l2_ns_exec[l2_rw_ns] = 0
+            return: 0
+        return: l2_rw_refuse(item, "a field that is not a number")
+    fslot: l2_ns_slot_named(l2_rw_ns, name\data, 0U, name\length, @ kind, @ ent)
+    if: fslot < 0 || f = 0 || n < 1
+        return: l2_rw_refuse(item, "this item")
+    if: l2_ns_kind_ty(kind) < 0
+        return: l2_rw_refuse(item, "a field that is not a number")
+    if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, @ node) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, (cast: (unsigned) fslot)) < 0
+        return: 1
+    if: l2_rw_texpr(f, n, l2_ns_kind_ty(kind), node, @ value) != 0 || l2_rw_put(node, 3, value) != 0
+        return: 1
+    \made: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+        return: 1
+return: 0
+
+# The steps of named Structure ni's body, in source order, into `into` from slot 0 (-2 counts);
+# `made` counts them.  A statement's flag steps (`&&`, `||`: l2_rw_sc) run before it, as the
+# root's do (l2_rw_stmts).  A bare `return` ends the plan (REVIEW 0c601ea, the lesson of e8b8a8d:
+# nothing after the return point is built) -- the body falls off its end there; what follows it
+# is only checked.
+fn: l2_rw_ns_body (int: ni; int: into; @: int made) int
+    @: LmP0Field field
+    int: one
+    int: pbase
+    int: st 0
+    int: dead 0
+    int: save
+    int: save_mi l2_rw_mi
+    \made: 0
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0 || l2_ns_at[ni] = 0 || l2_ns_at[ni]\kind != c.LM_P0_NODE_FRAME || l2_ns_at[ni]\as = 0 || l2_ns_at[ni]\as\frame = 0 || l2_ns_at[ni]\as\frame\body = 0
+        return: l2_error(l2_src, 0, "internal: a named Structure with no body to walk")
+    # An empty Structure (`E: ()`) has nothing to run.
+    if: l2_ns_count[ni] = 0
+        return: 0
+    l2_rw_ns: ni
+    l2_rw_mi: l2_e
+    field: l2_next_active(l2_ns_at[ni]\as\frame\body\first_field)
+    while: field != 0 && st = 0
+        pbase: l2_rw_pre_n
+        one: 0
+        if: field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && field\value\as != 0 && l2_text_eq(field\value\as\atom, "return")
+            dead: 1
+        if: dead != 0
+            save: l2_rw_emit
+            l2_rw_emit: 0
+            if: l2_rw_ns_item(field, 0 - 2, 0, @ one) != 0
+                st: 1
+            l2_rw_emit: save
+        else:
+            if: l2_rw_ns_item(field, into, \made, @ one) != 0
+                st: 1
+            if: st = 0 && l2_rw_pre_n > pbase && l2_rw_pre_place(into, \made, one, pbase, l2_rw_pre_n - pbase) != 0
+                st: 1
+            \made: \made + one + l2_rw_pre_n - pbase
+        ---
+        l2_rw_pre_n: pbase
+        field: l2_next_active(field\next)
+    ---
+    l2_rw_ns: 0 - 1
+    l2_rw_mi: save_mi
+return: st
+
+# The root's execution of named Structure ni: [call, code, data, 0, 0] -- the code its code node,
+# the data the Structure; no result type (nothing is returned), no catch (its body throws nothing).
+fn: l2_rw_ns_call (int: ni; int: into; @: int out) int
+    if: l2_rw_frame(into, "LMX_WALK_OP_CALL", 5, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0 || lmx_arena_ref_store(l2_rw%d, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_nsx_base + l2_nsx_rank(ni))), \out, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
+        return: 1
+return: 0
+
+# The rank of named Structure ni's code node among the code nodes, and their number.
+fn: l2_nsx_rank (int: ni) int
+    int: i 0
+    int: r 0
+    while: i < ni
+        if: l2_ns_exec[i] != 0
+            r: r + 1
+        i: i + 1
+    ---
+return: r
+
+fn: l2_nsx_count () int
+return: l2_nsx_rank(l2_ns_n)
+
+# The count pass of the named Structures' bodies: an executed one, and an ordinary one with a
+# statement (it is checked here, executed or not), gets l2_ns_steps -- an empty body is one bare
+# `return`, as the root's.  A statement in a nested or qualified named Structure is refused: its node
+# is no unit child to execute (slice 2 executes a unit-level one).
+fn: l2_rw_ns_count () int
+    int: i 0
+    int: made
+    while: i < l2_ns_n
+        l2_ns_steps[i]: 0
+        if: l2_ns_stmt[i] != 0 && (l2_ns_parent[i] >= 0 || l2_ns_eternal[i] >= 0)
+            return: l2_error(l2_src, l2_ns_stmt[i], "a statement in a nested or qualified named Structure is not supported yet")
+        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && (l2_ns_exec[i] != 0 || l2_ns_stmt[i] != 0)
+            made: 0
+            l2_rw_emit: 0
+            if: l2_rw_ns_body(i, 0 - 2, @ made) != 0
+                return: 1
+            if: made = 0
+                made: 1
+            l2_ns_steps[i]: made
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# The emission of every executed named Structure's code node -- a unit child, filled with the
+# steps the count pass made -- before the root's steps, which name it.
+fn: l2_rw_ns_emit () int
+    int: i 0
+    int: t
+    int: made
+    while: i < l2_ns_n
+        if: l2_ns_exec[i] != 0
+            t: l2_rw_t
+            l2_rw_t: l2_rw_t + 1
+            if: c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_walk_plain(l2_program_arena, l2_entry_unit, %dU)\n        if: l2_rw%d = 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", t, l2_ns_steps[i], t, (cast: (unsigned) (l2_nsx_base + l2_nsx_rank(i))), t) < 0
+                return: 1
+            made: 0
+            if: l2_rw_ns_body(i, t, @ made) != 0
+                return: 1
+            if: made = 0
+                if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 0U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0\n            return: 1\n", t) < 0
+                    return: 1
+                made: 1
+            ---
+            if: made != l2_ns_steps[i]
+                return: l2_error(l2_src, l2_ns_at[i], "internal: a named Structure's steps changed between the passes")
+        ---
+        i: i + 1
+    ---
+return: 0
+
 # The count pass of every method (before the occurrences' widths are written): l2_m_steps[i], its
 # steps, or -1 -- outside the walkable subset, or the library profile, whose root is not walked.
 fn: l2_rw_methods_count () int
@@ -25744,6 +26048,9 @@ fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
         if: n > 0
             if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_atom_callee(e\as\atom, mi, @ fi) >= 0
                 return: 0
+            # steps/named-struct-exec.md, slice 2: executing a named Structure runs its body.
+            if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_ns_exec_named(e\as\atom, mi) >= 0
+                return: 0
             if: l2_fields_has_call(f, n) != 0
                 return: 0
             f: l2_skip_span(f, n)
@@ -27034,6 +27341,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # The methods' frames are counted too (-193 T4a), before the occurrences' widths are written.
     if: l2_rw_methods_count() != 0
         return: 1
+    # And the named Structures' bodies (steps/named-struct-exec.md, slice 2).
+    if: l2_rw_ns_count() != 0
+        return: 1
     # Slice 13: a root conversion edge noted a receiver the unit has not taken (l2_rw_convert):
     # nothing is written yet; l2_translate translates the unit again with it and comes back.
     if: l2_cv_need_n > l2_cv_inj_n
@@ -27487,6 +27797,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && l2_e >= 0
         kids: kids + (cast: (unsigned) l2_rw_steps)
     ---
+    # One code node per executed named Structure follows them (steps/named-struct-exec.md, slice 2):
+    # no earlier child moves.
+    l2_nsx_base: (cast: (int) kids)
+    kids: kids + (cast: (unsigned) l2_nsx_count())
     # Qualified immutable storage stays in this owner arena. Its pool profile is
     # the exact physical receiver-expression object, and sealing is its lifetime
     # policy; no second arena, root slot or numeric qualifier exists.
@@ -27874,6 +28188,11 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_rw_t: 0
     l2_rw_pn: 0
     l2_rw_send_i: 0
+    l2_rw_mi: l2_e
+    if: l2_library_mode = 0 && l2_rw_ns_emit() != 0
+        l2_rw_emit: 0
+        fclose(l2_out)
+        return: 1
     l2_rw_mi: l2_e
     k: 0
     if: l2_library_mode = 0 && l2_e_n > 0 && l2_rw_stmts(l2_e_fields, 0 - 1, l2_rw_base, @ k) != 0

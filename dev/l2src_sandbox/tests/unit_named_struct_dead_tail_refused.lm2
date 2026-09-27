@@ -1,0 +1,11 @@
+# steps/named-struct-exec.md, slice 2: nothing after a bare `return` of the body is built, but it is
+# checked -- `n: n + g` after the return reads g, no field of Counter, and is refused as it would be
+# before the return.
+Counter:
+    size_t: n 0U
+    return
+    n: n + g
+return
+Counter
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

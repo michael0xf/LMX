@@ -1444,8 +1444,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     # steps/named-struct-exec.md, slice 1 (plan §3 :245 (a)): a column-0 bare `return` closes a named
     # Structure as `end: Name` does (Q19.1), and its body takes statements besides its fields (Q19.2
-    # = 2); construction computes the initializer and runs no statement (book :928) -- Counter
-
+    # = 2); construction computes the initializer and runs no statement (book :928) -- Counter\n
     # reads 4, not 5.  Both were refused (the frame read as a statement of the entry; a body of field
     # declarations only).  Mutants: no return closing -- the first refused again; statements not set
     # aside -- both refused again.  The guard: P0 hangs a column-0 `return` on any preceding block,
@@ -1461,7 +1460,32 @@ $fixtures = @(
         Needle = 'unsupported trailer'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_guard_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    # steps/named-struct-exec.md, slice 2: a bare `S` at the root executes the named Structure -- its
+    # whole body (Q19.2 = 2), the pair (a code node, S as data) walked by the root's CALL.  The author's
+    # example reads Counter\n 0 before, 1 after one execution and 1 after two (was
+    # unit_bare_struct_refused); a Structure only of fields goes back to its initializers; a bare
+    # `return` ends the plan and the root executes S from an anonymous block and an if body.
+    # Refused: a name that is not S's number field (checked whether or not S is executed, and after
+    # the return too), an executed S's array field, a `return` with a value (Q19.1, in its own
+    # words), and a bare S in a method body (slice 3).  Mutants: declarations not stored again, the
+    # root's CALL placed nowhere -- the three runs red; the anonymous block inert, the plan not
+    # stopped at the return -- the return row red; the tail after the return or an unexecuted S not
+    # checked, the return-value phrase or the array refusal gone -- their refusal rows red.
+    [pscustomobject]@{ Name = 'unit_named_struct_exec.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_stmt_operand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named Structure body not walkable yet: a name that is not a field of this Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named Structure body not walkable yet: a name that is not a field of this Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'named Structure body not walkable yet: a field that is not a number'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_return_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = "a named Structure's return carries no value"; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },

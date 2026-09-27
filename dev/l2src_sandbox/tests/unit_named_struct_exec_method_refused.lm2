@@ -1,0 +1,11 @@
+# steps/named-struct-exec.md: slice 2 executes a named Structure from the root; a bare `Counter` in a
+# method body stays refused until slice 3 (natively through lmx_call_prim, and under the knob).
+Counter:
+    size_t: n 0U
+    n: n + 1U
+return
+fn: bump () int
+    Counter
+return: 0
+sendMessage: exit(exit_code: bump(); stdout: ""; stderr: "")
+return

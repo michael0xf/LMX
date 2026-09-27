@@ -681,6 +681,7 @@ prototype:
     fn: l2_payload_text () @: LmP0Text
     fn: l2_letter_synth_name (const: @(LmP0Text model)) @: LmP0Text
     fn: l2_msg_ref_ty () int
+    fn: l2_ptr_cell_type (int: code; @: char dest) int
     fn: l2_letter_ns_for (const: @(LmP0Text model); const: @(LmP0Node at); const: @(char path); @: int out_ni) int
     fn: l2_body_receives (const: @(LmP0Structure body)) int
     fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
@@ -6587,6 +6588,17 @@ return: r
 # description with no source fields, sender a reference to it, D-80 by identity.
 fn: l2_msg_ref_ty () int
 return: 29
+
+# The C type expression of a pointer cell whose pointee code is `code` (own code - 1000): the
+# kernel's closed-unit encoding LMX_TYPE_POINTER_BASE + code, except the Message reference, which
+# the kernel names (LMX_TYPE_MSG_REF, lmx.h.lm1) -- so kernel and translator meet at one name,
+# not at a shared literal.
+fn: l2_ptr_cell_type (int: code; @: char dest) int
+    if: dest = 0
+        return: 1
+    if: code = l2_msg_ref_ty()
+        return: (cast: (int) (c.sprintf(dest, "c.LMX_TYPE_MSG_REF") < 0))
+return: (cast: (int) (c.sprintf(dest, "c.LMX_TYPE_POINTER_BASE + %d", code) < 0))
 
 # The synthesized letter model for a receiveMessage payload (0 model =
 # untyped): a Structure {sender: @: LmxMsg; payload: Model}, memoized by
@@ -21068,9 +21080,9 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
     # itself (FABLE-SONNET-SEND-REF-20260925-172 commit 4, author's Q26.2 ruling: a reference is a
     # reference TO a reference -- storing the raw address directly would make the sender a CHILD of
     # the letter, and its domain would then disagree with a receiving field's own prototype cell at
-    # admission, D-56's real cause). Same shape D-52's kind-10/11 cells use: LMX_TYPE_POINTER_BASE +
-    # the Message reference's code (l2_msg_ref_ty) so a receiver's `m\sender` field agrees.
-    if: c.fprintf(l2_out, "    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        l2_send_fail()\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n", l2_msg_ref_ty()) < 0
+    # admission, D-56's real cause). Same cell type D-52's kind-10/11 cells get from
+    # l2_ptr_cell_type (LMX_TYPE_MSG_REF) so a receiver's `m\sender` field agrees.
+    if: c.fprintf(l2_out, "    cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        l2_send_fail()\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n") < 0
         return: 1
     if: has_ref != 0
         if: c.fprintf(l2_out, "    if: lmx_service_post(lmx_child_service(t), refs[%d], m, a) != c.LMX_SERVICE_OK\n        l2_send_fail()\n    return: 0\n", ni) < 0
@@ -25464,6 +25476,7 @@ return: 0
 # (and `fail2`) when it cannot be made: the one typed-cell emission, for an own field and a header
 # part alike.
 fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char slot); const: @(char chr0); const: @(char fail); const: @(char fail2)) int
+    []: char pty 96
     if: ty = 1
         return: (cast: (int) (c.fprintf(l2_out, "%s%s[0]: %s\n", ind, slot, chr0) < 0))
     if: ty = 2 && c.fprintf(l2_out, "%s%s[0]: lmx_size_new_owned(l2_program_arena)\n", ind, slot) < 0
@@ -25474,7 +25487,7 @@ fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char s
         return: 1
     if: ty = 36 && c.fprintf(l2_out, "%s%s[0]: lmx_ulong_new_owned(l2_program_arena)\n", ind, slot) < 0
         return: 1
-    if: l2_own_is_pointer(ty) != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n", ind, slot, ty - 1000) < 0
+    if: l2_own_is_pointer(ty) != 0 && (l2_ptr_cell_type(ty - 1000, pty) != 0 || c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_owned(%s, l2_program_arena)\n", ind, slot, pty) < 0)
         return: 1
     if: ty = 4 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", ind, slot, n) < 0
         return: 1
@@ -25609,6 +25622,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     int: k
     int: oi
     []: char sx 192
+    []: char pty 96
     unsigned: kids
     unsigned: l2_children_field
     int: fx
@@ -26374,10 +26388,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
             # OWN sender slot -- built with the raw address, not a cell --
             # was the actual mismatch, fixed at the letter builders instead,
             # not here; see steps/send-ref-172.md commit 4).
-            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx]) < 0
+            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] < 0 && (l2_ptr_cell_type(l2_nsf_ref[fx], pty) != 0 || c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_pointer_new_owned(%s, l2_program_arena)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), pty) < 0)
                 fclose(l2_out)
                 return: 1
-            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] >= 0 && c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_POINTER_BASE + %d, l2_eprofile%u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), l2_nsf_ref[fx], (cast: (unsigned) l2_ns_eternal[k])) < 0
+            if: l2_nsf_owner[fx] = k && (l2_nsf_kind[fx] = 10 || l2_nsf_kind[fx] = 11) && l2_ns_eternal[k] >= 0 && (l2_ptr_cell_type(l2_nsf_ref[fx], pty) != 0 || c.fprintf(l2_out, "        l2_entry_slot: lmx_arena_ref_cell(l2_nsp[%d], %uU)\n        if: l2_entry_slot = 0\n            return: 1\n        l2_entry_slot[0]: lmx_arena_take_profiled(l2_program_arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, %s, l2_eprofile%u)\n        if: l2_entry_slot[0] = 0\n            return: 1\n", k, (cast: (unsigned) oi), pty, (cast: (unsigned) l2_ns_eternal[k])) < 0)
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k

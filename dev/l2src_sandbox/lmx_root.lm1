@@ -1072,7 +1072,7 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     # directly -- a direct address would make the host's own Message a CHILD of this letter's graph
     # (the copier would descend into it); a reference is a reference TO a reference. Same shape
     # l2trans.lm1's own kind-10/11 prototype cells and its sendMessage letter emission use:
-    # LMX_TYPE_POINTER_BASE + 29 (LmxMsg).
+    # LMX_TYPE_MSG_REF (lmx.h.lm1: the Message reference, LMX_TYPE_POINTER_BASE + 29).
     if: lmx_arena_open(@ letter_arena) != 0
         return: lmx_root_launch_refuse(root, 0, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
@@ -1103,7 +1103,7 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     if: lmx_arena_ref_store(letter_payload, 0U, (cast: (@: void) main_args)) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---
-    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, letter_at)
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, letter_at)
     if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) message)) != 0 || lmx_arena_ref_store(letter_graph, 0U, cell) != 0 || lmx_arena_ref_store(letter_graph, 1U, (cast: (@: void) letter_payload)) != 0
         return: lmx_root_launch_refuse(root, letter_at, (cast: (@: char) "lmx: the host could not build the mainArgs letter\n"), out, err)
     ---

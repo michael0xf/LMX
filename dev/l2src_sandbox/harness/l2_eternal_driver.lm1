@@ -312,7 +312,7 @@ fn: l2_driver_before_turn (@: LmxRoot root; @: LmxMsg r0) int
     ---
     # The sender is a pointer cell holding the peer's own address (author's Q26.2 ruling -- the
     # same shape lmx_root_launch_tapped now builds mainArgs's own sender with).
-    sender_cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, letter_arena)
+    sender_cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, letter_arena)
     if: sender_cell = 0 || lmx_pointer_store_known(sender_cell, (cast: (@: void) l2_ref_peer)) != 0
         return: 1
     ---

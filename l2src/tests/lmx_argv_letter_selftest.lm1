@@ -83,7 +83,7 @@ fn: al_make (@: LmxArena arena; @: void sender; int: argc; @@: char argv) @: Lmx
     # lmx_root_launch now builds for the real mainArgs letter (author's Q26.2 ruling), so scenario C
     # below (al_holds against the host's own letter) and A/B (against this synthetic one) exercise
     # one shape.
-    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, arena)
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, arena)
     if: cell = 0 || lmx_pointer_store_known(cell, sender) != 0
         return: 0
     if: lmx_arena_ref_store(graph, 0U, cell) != 0 || lmx_arena_ref_store(graph, 1U, (cast: (@: void) payload)) != 0

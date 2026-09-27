@@ -158,6 +158,11 @@ enum: LmxType
     # type is encoded as LMX_TYPE_POINTER_BASE + a closed-unit type id, so @T and @@T
     # occupy distinct address domains.
     LMX_TYPE_POINTER_BASE 1024
+    # The Message reference -- a pointer cell holding a Message record's address, a letter's
+    # sender -- is LMX_TYPE_POINTER_BASE + 29 (29 is l2trans's l2_msg_ref_ty()).  Named once here:
+    # the kernel, the driver, the selftests and the cells the translator emits all say
+    # LMX_TYPE_MSG_REF.  (An L1 enum value is one literal; the sum is written out.)
+    LMX_TYPE_MSG_REF 1053
     # Array<@T> descriptors have their own exact address domain.  For the same
     # closed-unit T id, backing cells use POINTER_BASE + id and the descriptor uses
     # ARRAY_OF_POINTER_BASE + id.  Array length is dynamic; these values classify

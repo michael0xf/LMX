@@ -680,6 +680,7 @@ prototype:
     fn: l2_sender_text () @: LmP0Text
     fn: l2_payload_text () @: LmP0Text
     fn: l2_letter_synth_name (const: @(LmP0Text model)) @: LmP0Text
+    fn: l2_msg_ref_ty () int
     fn: l2_letter_ns_for (const: @(LmP0Text model); const: @(LmP0Node at); const: @(char path); @: int out_ni) int
     fn: l2_body_receives (const: @(LmP0Structure body)) int
     fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
@@ -6579,6 +6580,14 @@ fn: l2_letter_synth_name (const: @(LmP0Text model)) @: LmP0Text
     r\length: model\length + 1U
 return: r
 
+# The Message reference: the type of a letter's sender, which the translator builds itself
+# (l2_letter_ns_for) and never recognizes from a source spelling (§GATE G2).  One code, named
+# here; it projects to C once, as `const LmxMsg *` (l2_pointer_decl_text), and D-80's addressee
+# check compares the own code of that reference.  Target (plan §7): Message as a translator
+# description with no source fields, sender a reference to it, D-80 by identity.
+fn: l2_msg_ref_ty () int
+return: 29
+
 # The synthesized letter model for a receiveMessage payload (0 model =
 # untyped): a Structure {sender: @: LmxMsg; payload: Model}, memoized by
 # model so every receive site naming the same model -- or none -- shares one
@@ -6621,7 +6630,7 @@ fn: l2_letter_ns_for (const: @(LmP0Text model); const: @(LmP0Node at); const: @(
     if: ni < 0
         return: l2_error(path, at, "out of memory")
     l2_ns_first[ni]: l2_nsf_n
-    if: l2_nsf_push(10, 0U, 29, ni) < 0
+    if: l2_nsf_push(10, 0U, l2_msg_ref_ty(), ni) < 0
         return: l2_error(path, at, "out of memory")
     l2_nsf_fname[l2_nsf_n - 1]: l2_sender_text()
     if: model != 0
@@ -8040,21 +8049,6 @@ fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int ou
             if: l2_ty_raw_c_members(l2_ft(mi, j)) != 0
                 \out_fld: 5
                 return: 0
-            if: pn - sl - 1U = 4U && memcmp(pd + sl + 1U, "data", 4U) = 0
-                \out_fld: 0
-                return: 0
-            if: pn - sl - 1U = 6U && memcmp(pd + sl + 1U, "length", 6U) = 0
-                \out_fld: 1
-                return: 0
-            if: pn - sl - 1U = 7U && memcmp(pd + sl + 1U, "columns", 7U) = 0
-                \out_fld: 2
-                return: 0
-            if: pn - sl - 1U = 5U && memcmp(pd + sl + 1U, "count", 5U) = 0
-                \out_fld: 3
-                return: 0
-            if: pn - sl - 1U = 8U && memcmp(pd + sl + 1U, "capacity", 8U) = 0
-                \out_fld: 4
-                return: 0
             # Root matched a formal but is not c.*-raw: L2 dispatcher decides.
             return: 1
         j: j + 1
@@ -8068,21 +8062,6 @@ fn: l2_raw_path (const: @(char pd); size_t: pn; int: mi; @: int out_j; @: int ou
             # A runtime struct or foreign type field is spelled as written.
             if: l2_ty_raw_c_members(l2_st[l2_slot_off(mi, j)]) != 0
                 \out_fld: 5
-                return: 0
-            if: pn - sl - 1U = 4U && memcmp(pd + sl + 1U, "data", 4U) = 0
-                \out_fld: 0
-                return: 0
-            if: pn - sl - 1U = 6U && memcmp(pd + sl + 1U, "length", 6U) = 0
-                \out_fld: 1
-                return: 0
-            if: pn - sl - 1U = 7U && memcmp(pd + sl + 1U, "columns", 7U) = 0
-                \out_fld: 2
-                return: 0
-            if: pn - sl - 1U = 5U && memcmp(pd + sl + 1U, "count", 5U) = 0
-                \out_fld: 3
-                return: 0
-            if: pn - sl - 1U = 8U && memcmp(pd + sl + 1U, "capacity", 8U) = 0
-                \out_fld: 4
                 return: 0
             # Root matched a slot but is not c.*-raw: L2 dispatcher decides.
             return: 1
@@ -8106,7 +8085,7 @@ fn: l2_pointer_depth (int: ty) int
     int: fi
     if: ty >= 1000 && ty < 2000
         ty: ty - 1000
-    if: ty = 3 || ty = 9 || ty = 11 || ty = 12 || ty = 16 || ty = 25 || ty = 29 || ty = 38
+    if: ty = 3 || ty = 9 || ty = 11 || ty = 12 || ty = 16 || ty = 25 || ty = l2_msg_ref_ty() || ty = 38
         return: 1
     if: ty = 17 || ty = 18 || ty = 19 || ty = 20 || ty = 24 || ty = 39
         return: 2
@@ -9149,7 +9128,7 @@ fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: ch
         base: "char"
         depth: 1
         is_const: 1
-    if: raw = 29
+    if: raw = l2_msg_ref_ty()
         base: "LmxMsg"
         depth: 1
         is_const: 1
@@ -20748,7 +20727,7 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
         l2_rw_mi: mi
         refty: l2_rw_fields_ty(f, refn)
         l2_rw_mi: save_mi
-        if: refty != 1000 + 29
+        if: refty != 1000 + l2_msg_ref_ty()
             if: refty < 1000
                 return: l2_error(path, f\value, "a Ref that is not a reference")
             return: l2_error(path, f\value, "a plain Message does not implement Thread")
@@ -20857,7 +20836,7 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
         # this static check: a Thread address is `@: LmxMsg` (pointee 29, the type
         # of `m\sender`). A letter or a user Structure is a plain Message and does
         # not have Thread's fields. The full implements port stays in §7.
-        if: refty != 1000 + 29
+        if: refty != 1000 + l2_msg_ref_ty()
             return: l2_rw_refuse(f\value, "a plain Message does not implement Thread")
         ---
     ---
@@ -21094,8 +21073,8 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
     # reference TO a reference -- storing the raw address directly would make the sender a CHILD of
     # the letter, and its domain would then disagree with a receiving field's own prototype cell at
     # admission, D-56's real cause). Same shape D-52's kind-10/11 cells use: LMX_TYPE_POINTER_BASE +
-    # 29 (LmxMsg, l2_kernel_ptr_word's own code) so a receiver's `m\sender` field agrees.
-    if: fputs("    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        l2_send_fail()\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n", l2_out) < 0
+    # the Message reference's code (l2_msg_ref_ty) so a receiver's `m\sender` field agrees.
+    if: c.fprintf(l2_out, "    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + %d, a)\n    if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0 || lmx_arena_ref_store(g, 0U, cell) != 0 || lmx_arena_ref_store(g, 1U, (cast: (@: void) p)) != 0\n        l2_send_fail()\n    m\\running: 1\n    m\\success: 0\n    m\\handoff_ready: 0\n    m\\graph: g\n", l2_msg_ref_ty()) < 0
         return: 1
     if: has_ref != 0
         if: c.fprintf(l2_out, "    if: lmx_service_post(lmx_child_service(t), refs[%d], m, a) != c.LMX_SERVICE_OK\n        l2_send_fail()\n    return: 0\n", ni) < 0
@@ -25445,20 +25424,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0
             raw: l2_raw_head(fr\head, mi, @ rj, @ rf)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_is_known(fr\head) = 0 && raw = 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 0 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\data: %s\n", ind, mi, rj, l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 0 && rj >= l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_s%d_%d\\data: %s\n", ind, mi, rj - l2_m_arity[mi], l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 1 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\length: %s\n", ind, mi, rj, l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 1 && rj >= l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_s%d_%d\\length: %s\n", ind, mi, rj - l2_m_arity[mi], l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 2 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\columns: %s\n", ind, mi, rj, l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 3 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\count: %s\n", ind, mi, rj, l2_tok) < 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 4 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\capacity: %s\n", ind, mi, rj, l2_tok) < 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && raw = 0 && rf = 5 && rj < l2_m_arity[mi] && c.fprintf(l2_out, "%sl2_p%d_%d\\%.*s: %s\n", ind, mi, rj, (cast: (int) (fr\head\length - l2_fn(mi, rj)\length - 1U)), fr\head\data + l2_fn(mi, rj)\length + 1U, l2_tok) < 0
             return: 1

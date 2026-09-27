@@ -1812,6 +1812,15 @@ $fixtures = @(
         Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_forward_import_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'not callable'; Absent = @(); Debt = @() },
+    # Q8 = U2 (plan §3, "the order of the unit's declarations"; implemented in S2, f6f213a -- this is
+    # its row): a declaration is an entry statement at its place; the unit's own cells exist from
+    # construction, zero until their statements run.  f, declared below x and y, reads them; its call
+    # above their declarations reads 0, below them 5 + 6 = 11 (a literal and an expression
+    # initializer alike).  Natively and with f walked.
+    [pscustomobject]@{ Name = 'unit_decl_order_u2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_decl_order_u2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     # GROK-PREGATE-20260922-01. Needles and Debt are measured on the live translator
     # (HEAD 4da4658 / gate l2trans). Colon updates with no qualified roots run under
     # the driver with 0 roots; graph/const/type refusals stay l2trans-refuses.

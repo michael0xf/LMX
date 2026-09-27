@@ -15,14 +15,16 @@ if (Test-Path -LiteralPath $l3) { $files += Get-ChildItem -LiteralPath $l3 -File
 # Active sandbox sources, tests and dev/l3_interp must not spell the old names (blog/plan history may).
 $banned = @('LmxByteArray', 'LmxByteDynamicArray', 'LmxArrayDesc', 'LmxArrayDynamicArray')
 
-# The rule: a `size_t: capacity` field only in a struct whose name ends in DynamicArray.
+# The rule: a field named capacity -- of any type, in any of L1's field forms (`T: capacity`,
+# `@: T capacity`, `[]: T capacity N`) -- only in a struct whose name ends in DynamicArray.  (Only
+# `size_t: capacity` was matched before: `int: capacity` in VoidArray passed -- REVIEW 4071470.)
 # Each file is searched as one text by regexes, not interpreted line by line
 # (next_core_tasks.md §0, build memory): a PowerShell loop over the kernel's ~40 000 lines peaked at
 # 130 MB and Get-Content into arrays at 251 MB -- more than any compiler of the gate.  A line number
 # is counted only for a finding.
 $opt = [System.Text.RegularExpressions.RegexOptions]::Multiline
 $structRe = New-Object System.Text.RegularExpressions.Regex('^[ \t]*struct:[ \t]+(\w+)[ \t]*\r?$', $opt)
-$capRe = New-Object System.Text.RegularExpressions.Regex('^[ \t]*size_t:[ \t]*capacity\b', $opt)
+$capRe = New-Object System.Text.RegularExpressions.Regex('^[ \t]*(\w+:[ \t]*capacity\b|@+:[ \t]*\w+[ \t]+capacity\b|\[\]:[ \t]*\w+[ \t]+capacity\b)', $opt)
 function Get-LineNumber([string]$Text, [int]$Index) {
   $n = 1
   for ($k = $Text.IndexOf("`n"); $k -ge 0 -and $k -lt $Index; $k = $Text.IndexOf("`n", $k + 1)) { $n++ }

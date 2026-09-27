@@ -1,0 +1,16 @@
+# Q8 = U2 (author, 2026-09-23; plan §3, "the order of the unit's declarations"): a declaration is an
+# entry statement at its place; the cell of the unit's own field exists from construction and is zero
+# until its statement runs.  f, declared below x and y, reads them legally; the call above their
+# declarations reads zeros, the call below reads 5 and 6 -- a literal and an expression initializer
+# alike.  r0 = 0, r11 = 11.  Implemented in S2 (f6f213a); this is its row.  Entry 7.
+int: r0 f()
+int: x 5
+int: y (x + 1)
+int: r11 f()
+fn: f () int
+    return: x + y
+int: ok 0
+if: r0 = 0 && r11 = 11
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

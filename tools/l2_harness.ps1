@@ -1521,6 +1521,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a Structure formal is not supported yet'; Absent = @(); Debt = @() },
+    # REVIEW dd07174 (fable_pc's M36 and probe ns4_two_types): two executed fields of two types, each
+    # runs its own type's code -- m\v = 2, o\w = 15.  Mutant: every field takes the first Structure's
+    # code -- red.  One row: the root is walked in both modes (the knob acts on methods).
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_two_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
     # THE RECEIVER CONTRACT (plan §3 native gate (б)-(е); FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).

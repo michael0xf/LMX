@@ -1,0 +1,25 @@
+# steps/named-struct-exec.md §11, slice 4 (REVIEW dd07174; fable_pc's M36 and probe ns4_two_types): two
+# executed fields of two types -- `Other: o` then `Model: m` -- each runs its own type's code: m\v = 2,
+# o\w = 15.  With the type dropped (every field takes the first Structure's code), o runs Model's code
+# over its data and o\w reads 2.  Entry 7.
+Model:
+    size_t: v 1U
+    v: v + 1U
+return
+Other:
+    size_t: w 10U
+    w: w + 5U
+return
+Model: m
+Other: o
+o
+m
+size_t: a 0U
+a: m\v
+size_t: b 0U
+b: o\w
+int: ok 0
+if: a = 2U && b = 15U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

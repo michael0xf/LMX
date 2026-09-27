@@ -1,0 +1,14 @@
+# D-94 (REVIEW e8b8a8d, fable_pc's probe): a second return after the host's return is dead -- checked,
+# never emitted, natively or in the walk (l2_mad_return_point).  Before this row the walk built the
+# tail BEFORE the host's trailer build, so it ran (a call or a return broke the run, exit 3).
+# Mutant: the walk builds the tail again -- RED by run.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+    return: 0
+
+add5: makeAdder 5
+int: a (add5: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

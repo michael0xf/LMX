@@ -1029,6 +1029,8 @@ prototype:
     fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
     fn: l2_mad_held (const: @(LmP0Text name)) int
     fn: l2_mad_held_sig (int: oi; @: int aty; @: int rty) int
+    fn: l2_mcap_count (int: mi) int
+    fn: l2_mad_return_point (const: @(LmP0Structure body); int: mi; @: LmP0Field field) int
     fn: l2_mad_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_mad_atom_field (@: LmP0Node node; const: @(LmP0Text name)) @: LmP0Field
     fn: l2_mad_has_return (const: @(LmP0Node node)) int
@@ -12000,7 +12002,7 @@ fn: l2_emit_body_in (const: @(LmP0Structure body); int: mi; const: @(char ind)) 
     # host's own statements run first (l2_mad_host_body).
     if: l2_mad_on(mi) != 0
         return: l2_mad_host_body(body, mi, ind)
-    if: l2_mad_host_of(mi) >= 0
+    if: l2_mad_host_of(mi) >= 0 && l2_mcap_count(mi) > 0
         if: l2_m_ret[mi] != 8 && c.fprintf(l2_out, "%sreturn: 0\n", ind) < 0
             return: 1
         return: 0
@@ -22123,6 +22125,11 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: int made) int
     field: l2_next_active(first)
     while: field != 0
         pbase: l2_rw_pre_n
+        # D-94: nothing after the host's return point is built -- the build is the host's trailer,
+        # so a statement built here would run before it (REVIEW e8b8a8d).
+        if: l2_mad_on(l2_rw_mi) != 0 && l2_m_body[l2_rw_mi] != 0 && l2_m_body[l2_rw_mi]\as != 0 && l2_mad_return_point(l2_m_body[l2_rw_mi]\as\structure, l2_rw_mi, field) != 0
+            field: 0
+            continue
         # T6/T6b: a nested fn: is the host's model, not a statement to walk (l2_check_body's
         # own l2_mad_on(mi)/"fn" skip, l2trans.lm1:15469, mirrored here for the walk pass).
         if: l2_mad_on(l2_rw_mi) != 0 && l2_frame_head(field\value, "fn") != 0
@@ -22550,6 +22557,33 @@ fn: l2_mad_returns_number (const: @(LmP0Node node); int: mi) int
     ---
 return: 0
 
+# D-94 (REVIEW e8b8a8d, fable_pc's finding): whether field is the host's return point -- a
+# `return: model` statement, or the model's own `fn:` frame when the return hangs there (no such
+# statement and no trailer return), exactly as l2_mad_host_body finds it.  What follows it in the
+# body is dead: never emitted, natively or in the walk (whose build is the host's trailer, so a
+# statement built after the point would run BEFORE the build).  l2_check_body still checks it.
+fn: l2_mad_return_point (const: @(LmP0Structure body); int: mi; @: LmP0Field field) int
+    @: LmP0Field f
+    int: model
+    if: body = 0 || field = 0 || field\value = 0 || l2_mad_model = 0 || mi < 0
+        return: 0
+    model: l2_mad_model[mi]
+    if: model < 0
+        return: 0
+    if: l2_mad_is_return(field\value, model) != 0
+        return: 1
+    if: l2_frame_head(field\value, "fn") = 0 || field\value != l2_m_node[model]
+        return: 0
+    f: l2_next_active(body\first_field)
+    while: f != 0
+        if: l2_mad_is_return(f\value, model) != 0
+            return: 0
+        f: l2_next_active(f\next)
+    ---
+    if: l2_mad_trailer_return(mi, model) != 0
+        return: 0
+return: 1
+
 # `return: model` as a statement of the host's body.
 fn: l2_mad_is_return (const: @(LmP0Node stmt); int: model) int
     @: LmP0Field only
@@ -22560,12 +22594,13 @@ fn: l2_mad_is_return (const: @(LmP0Node stmt); int: model) int
         return: 0
 return: l2_find_method(only\value\as\atom) = model
 
-# stmt names a method nested in host mi -- the model or another.  A nested method is walked; its
-# native function returns 0, so the host cannot call it as C.
+# stmt names a method nested in host mi -- the model or another -- that captures host names (D-93:
+# its native function is the stub, returning 0, so the host cannot call it as C).  A nested method
+# that captures nothing has its own native body and is called like any other.
 fn: l2_mad_names_nested (const: @(LmP0Node stmt); int: mi) int
     int: k 0
     while: k < l2_m_n
-        if: l2_mad_host_of(k) = mi && l2_mad_mentions(stmt, l2_m_name[k]) != 0
+        if: l2_mad_host_of(k) = mi && l2_mcap_count(k) > 0 && l2_mad_mentions(stmt, l2_m_name[k]) != 0
             return: 1
         k: k + 1
     ---
@@ -22715,6 +22750,20 @@ fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty) int
     l2_mcap_n: l2_mcap_n + 1
 return: 0
 
+# D-93: how many host names nested method mi captures (l2_scan_ident recorded them).  A nested
+# method that captures nothing is an ordinary method with its own native body -- its host may call
+# it before the return; one that captures reads its host's activation, which only the built node
+# carries, so its native function stays the stub and a call of it from the host stays refused.
+fn: l2_mcap_count (int: mi) int
+    int: k 0
+    int: n 0
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = mi
+            n: n + 1
+        k: k + 1
+    ---
+return: n
+
 # Slot of host name t in model mi's node, or -1. Slot 0 is args, 1 is return, then the captures
 # in the order the scan recorded them (T6b: what the model resolves, not every host formal).
 fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
@@ -22769,12 +22818,11 @@ return: n
 # parser hangs a `return: model` that follows the model's block on that frame, and
 # l2_mad_take_nested took it off there.  A statement after the return, one that names a nested
 # method (walked; its native function returns 0), or one that returns, is refused: the build is
-# the host's one exit.  D-94: a statement after the return is dead, as after any method's return --
-# emitted after the build and never reached; a return of a number is the result's type error.
+# the host's one exit.  D-94: a statement after the return is dead -- checked, never emitted (natively
+# or in the walk, l2_mad_return_point); a return of a number is the result's type error.
 fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
     @: LmP0Field f
     @: LmP0Field seg
-    @: LmP0Field dead 0
     @: LmP0Node stmt
     int: model
     int: done 0
@@ -22796,7 +22844,6 @@ fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind))
     while: f != 0
         stmt: f\value
         if: done != 0
-            dead: f
             f: 0
             continue
         cut: 0
@@ -22824,11 +22871,7 @@ fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind))
     ---
     if: done = 0 && l2_emit_stmts(body, seg, 0, mi, ind) != 0
         return: 1
-    if: l2_mad_emit(mi, ind) != 0
-        return: 1
-    if: dead != 0 && l2_emit_stmts(body, dead, 0, mi, ind) != 0
-        return: 1
-return: 0
+return: l2_mad_emit(mi, ind)
 
 fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     @: LmP0Field field

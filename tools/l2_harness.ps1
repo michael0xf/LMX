@@ -1036,6 +1036,8 @@ $fixtures = @(
         Needle = 'a held callable whose header is not one number to a number'; Absent = @(); Debt = @() },
     # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
     # dropped the statements with the host's body; nested_call it refused with the old phrase.
+    # (D-93/D-94, 2026-09-27: after_return and nested_call now run -- rows below; the note that
+    # follows holds for the two refusal rows left, model_call and early_return.)
     # §6 (REVIEW d456aff-2, fable_pc's own correction): these four give the SAME phrase with or
     # without --walk-methods on the CURRENT translator -- not because a check pass preempts the
     # count/walk pass, but because a6de5a9's own blanket "outside the walkable subset" exclusion
@@ -1049,10 +1051,28 @@ $fixtures = @(
     # the build, never reached (it was refused).  Mutant: the old refusal -- l2trans refuses, RED.
     [pscustomobject]@{ Name = 'unit_make_adder_after_return_dead.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 6;
         Absent = @(); Debt = @() },
+    # REVIEW e8b8a8d (fable_pc's probes): a tail after the host's return is dead in the walk too --
+    # l2_mad_return_point stops l2_rw_stmts there (the build is the host's trailer, so a tail built
+    # in the body ran before it; a call or a return broke the run).  A call, a second return, a
+    # declaration with an assignment; the call once more natively.  Mutant: the walk builds the tail.
+    [pscustomobject]@{ Name = 'unit_make_adder_after_return_call.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_after_return_ret.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_after_return_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_after_return_call_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_make_adder_model_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_make_adder_nested_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'a callable merge host names a nested method outside the return'; Absent = @(); Debt = @() },
+    # D-93: a nested method that captures nothing of its host has its own native body; the host calls
+    # it before its return (it was refused).  A nested method that captures (the model in
+    # _model_call_refused) stays refused.  Mutant: every nested method the stub -- the native twin
+    # gives k = 0, RED by run (under the knob the host and twice are walked, the stub never runs).
+    [pscustomobject]@{ Name = 'unit_make_adder_nested_plain_call.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_make_adder_nested_plain_call_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # D-94: `return: 0` from a method whose result is a callable is the result's type error, said so
     # (l2_mad_returns_number), not a limit of the callable merge.  Mutant: no number check -- the old
     # boundary phrase, RED on the needle.

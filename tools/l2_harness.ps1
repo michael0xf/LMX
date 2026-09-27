@@ -2490,6 +2490,17 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s4_ret_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # Opus's check on unit_merged_callable's own shape (REVIEW 12195ef, follow-up): the same edge
+    # and catch, but M is a shared occurrence (A: fn: M) called through a merge result (R\M()), not
+    # a plain name() -- the edge lives inside M's own body, so it does not care how M was reached.
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_merge_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # fable_pc's own check on REVIEW 12195ef: unit_s4_ret_conv_range.lm2 exercises a body-field
+    # return; this is the SAME out-of-range value as the method's own trailer (l2_check_ret_tr's
+    # own path, not l2_check_body's), so a mutant dropping l2_check_ret_convert specifically inside
+    # l2_check_ret_tr (visible only in L1 today) goes RED by run here too.
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_range_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s4_ret_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_methods_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;

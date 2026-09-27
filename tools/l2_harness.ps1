@@ -2476,6 +2476,11 @@ $fixtures = @(
         Absent = @('lmx: converter range', 'fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx: converter range', 'fn: lm_stg_convert_'); Debt = @('< 0') },
+    # Slices 3/4 boundary (Opus, 2026-09-27): a composite store (`a: b + 1U`) now gets the same edge.
+    [pscustomobject]@{ Name = 'unit_s7_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_compound_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
     # Q33: a row whose receiver has no fn: in its impl source refuses at the edge.  The row's own
     # convert_impl.lm2 is tests\unit_s7_conv_nobody_impl.lm2, which has no lm_stg_convert_size_t_int.
     [pscustomobject]@{ Name = 'unit_s7_conv_nobody.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_nobody_impl.lm2';
@@ -2498,6 +2503,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s3_arg_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # Slices 3/4 boundary (Opus, 2026-09-27): a composite argument (`n - 1`) now gets the same edge.
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_compound_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s3_arg_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     # The same edge under --walk-methods: `go` throws (its implicit `convert`) and a throwing method
@@ -2516,6 +2526,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s4_ret_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # Slices 3/4 boundary (Opus, 2026-09-27): a composite return (`b + 1U`) now gets the same edge.
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_compound_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
     # Opus's check on unit_merged_callable's own shape (REVIEW 12195ef, follow-up): the same edge
     # and catch, but M is a shared occurrence (A: fn: M) called through a merge result (R\M()), not

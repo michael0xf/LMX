@@ -675,6 +675,7 @@ prototype:
     fn: l2_convert_method (const: @(LmP0Node body)) int
     fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
     fn: l2_method_src (int: mi; const: @(char path)) const: @: char
+    fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
     fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: char dest) int
@@ -6263,20 +6264,37 @@ return: path
 # The store of a keyed pair calls the receiver: the value is its actual and
 # the result is the stored token (l2_tok). A refusal of the receiver is the
 # implicit throw `convert` of this method (l2_emit_call). 0: no conversion
-# here. 1: error. 2: no row. 3: the call is emitted.
+# here. 1: error. 2: no row. 3: the call is emitted.  A composite value (n > 1
+# fields, the slices 3/4 boundary) is typed by l2_native_composite_ty and the
+# WHOLE field chain is handed to the receiver unchanged -- fr\body already
+# holds exactly the store's own value fields and nothing else consumes them
+# when this returns 3 (the caller skips its own plain l2_eval_fields then).
 fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     int: from_ft 0
     int: to_ft
     int: idx
     int: rc
+    int: n
     @: LmP0Field only
     const: @(char from_n)
     const: @(char to_n)
-    if: oi < 0 || fr = 0 || fr\body = 0 || l2_count_active(fr\body) != 1
+    if: oi < 0 || fr = 0 || fr\body = 0
         return: 0
-    only: l2_next_active(fr\body\first_field)
-    if: only = 0 || l2_colon_simple_ty(only\value, mi, @ from_ft) != 0
+    n: l2_count_active(fr\body)
+    if: n < 1
         return: 0
+    if: n = 1
+        only: l2_next_active(fr\body\first_field)
+        if: only = 0 || l2_colon_simple_ty(only\value, mi, @ from_ft) != 0
+            return: 0
+    ---
+    if: n > 1
+        from_ft: l2_native_composite_ty(fr\body\first_field, n, mi)
+        if: from_ft = 0 - 3
+            return: 2
+        if: from_ft = 0 - 1
+            return: 0
+    ---
     to_ft: l2_ft_of_own(l2_own_ty[oi])
     from_n: l2_prim_code_name(from_ft)
     to_n: l2_prim_code_name(to_ft)
@@ -6292,19 +6310,113 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP
         return: 1
 return: 3
 
+# A composite (multi-field) value's translation-time type, native-safe: reuses l2_rw_tokens (pure
+# field flattening) and l2_rw_split/l2_rw_prec/l2_rw_unify (pure precedence structure) from the
+# walked root's own l2_rw_tyof, but types each LEAF through l2_colon_bound_ty/l2_colon_simple_ty
+# (l2_native_leaf_ty) instead of l2_rw_opty -- l2_rw_opty's bound-name path (l2_rw_own_ty) reads
+# l2_rw_seen, the walk's own count-pass bookkeeping, which is never populated for an ordinary
+# method's own fields outside a walk (measured: reusing l2_rw_tyof directly refused ordinary
+# local-variable composites like `keep - 1U` as "incompatible type" across two dozen unrelated
+# fixtures).  Two shapes l2_colon_bound_ty/l2_colon_simple_ty do not resolve as a plain numeric
+# value -- a path atom's glued text (`a\value`, l2_rw_path_atom; l2_colon_bound_ty looks up a
+# plain declared name, not a path) and a non-numeric bound name (a callable formal used bare, a
+# dynamic call) -- must poison the WHOLE composite (a distinct code, -99, that a leaf's own
+# unify-permissive -1/-2 must never be confused with: unify(-1, -1) already means "two untyped
+# literals," not "two things I could not resolve," and defaulting the latter to unsigned produced
+# the same false "incompatible type" refusal one level up).  Returns a plain primitive type code
+# (0/1/2/3/36), or -3 when the composite is itself internally mixed (located "mixed numeric
+# types"), or -1 when it cannot be typed at all -- the caller's silent bypass, same as an
+# unresolved single value.
+fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
+    @: LmP0Text t
+    int: neg 0
+    size_t: mag 0U
+    int: usuf 0
+    int: ty 0
+    if: node = 0 || node\as = 0
+        return: 0 - 99
+    if: node\kind = c.LM_P0_NODE_ATOM
+        t: node\as\atom
+        if: l2_rw_num_lit(t, @ neg, @ mag, @ usuf) != 0
+            if: usuf != 0
+                return: 0 - 2
+            return: 0 - 1
+        if: l2_rw_has_slash(t) != 0
+            return: 0 - 99
+        if: l2_colon_simple_ty(node, mi, @ ty) != 0
+            return: 0 - 99
+        if: ty = 0 - 10 || ty = 0 - 11
+            return: 0 - 1
+        if: l2_prim_code_name(ty) = 0
+            return: 0 - 99
+        return: ty
+    if: node\kind = c.LM_P0_NODE_FRAME
+        if: l2_colon_simple_ty(node, mi, @ ty) != 0
+            return: 0 - 99
+        if: l2_prim_code_name(ty) = 0
+            return: 0 - 99
+        return: ty
+return: 0 - 99
+
+fn: l2_native_expr_ty (@@: LmP0Node tok; int: lo; int: hi; int: mi) int
+    int: best
+    int: p
+    int: a
+    int: b
+    int: u
+    if: lo = hi
+        return: l2_native_leaf_ty(tok[lo], mi)
+    best: l2_rw_split(tok, lo, hi)
+    p: l2_rw_prec(tok[best]\as\atom)
+    a: l2_native_expr_ty(tok, lo, best - 1, mi)
+    b: l2_native_expr_ty(tok, best + 1, hi, mi)
+    if: a = 0 - 99 || b = 0 - 99
+        return: 0 - 99
+    if: p = 1 || p = 2
+        if: a = 0 - 3 || b = 0 - 3
+            return: 0 - 3
+        return: 0
+    ---
+    u: l2_rw_unify(a, b)
+    if: u = 0 - 3
+        return: 0 - 3
+    ---
+    p: l2_rw_prec(tok[best]\as\atom)
+    if: p = 3 || p = 4
+        return: 0
+return: u
+
+fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
+    []: @(LmP0Node) tok 64
+    int: m
+    int: ty
+    if: field = 0 || n < 2 || n > 63
+        return: 0 - 1
+    m: l2_rw_tokens(field, n, tok)
+    if: m < 3
+        return: 0 - 1
+    ty: l2_native_expr_ty(tok, 0, m - 1, mi)
+    if: ty = 0 - 3
+        return: 0 - 3
+    if: ty = 0 - 99
+        return: 0 - 1
+    if: ty = 0 - 1
+        ty: 0
+    if: ty = 0 - 2
+        ty: 3
+return: ty
+
 # implements-port slices 3 and 4 (A3; steps/implements-port-plan.md): one value of one named
 # primitive type given to a place of another -- a formal (slice 3) or a callable's result
 # (slice 4) -- is the edge an assignment has (l2_colon_check_assignment): the row's receiver is
 # called on the value and its result takes the place; with no row it is refused, located at the
-# value.  to_ft is the place's formal code.  A literal is typed by its place (-10).  A compound
-# value (`n - 1`) has no translation-time type here and keeps C's own conversion: the boundary of
-# these slices.  0: nothing to do or the edge noted; 1: error.
-fn: l2_check_value_convert (const: @(LmP0Node value); int: to_ft; int: mi; const: @(char path)) int
-    int: from_ft 0
+# value.  to_ft is the place's formal code.  A literal is typed by its place (-10).  The shared
+# core once from_ft is known (l2_colon_simple_ty for one value, l2_native_composite_ty for a
+# composite, l2_check_value_convert_field's own dispatch) -- 0: nothing to do or the edge noted;
+# 1: error.
+fn: l2_check_value_convert_core (const: @(LmP0Node value); int: from_ft; int: to_ft; int: mi; const: @(char path)) int
     int: cok
-    if: value = 0 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
-        return: 0
-    if: l2_colon_simple_ty(value, mi, @ from_ft) != 0 || from_ft = 8 || l2_prim_code_name(from_ft) = 0
+    if: from_ft = 8 || l2_prim_code_name(from_ft) = 0
         return: 0
     if: c.strcmp(l2_prim_code_name(from_ft), l2_prim_code_name(to_ft)) = 0
         return: 0
@@ -6321,6 +6433,37 @@ fn: l2_check_value_convert (const: @(LmP0Node value); int: to_ft; int: mi; const
         return: l2_error(path, value, "value has incompatible type")
     if: l2_cv_used != 0 && l2_convert_edge(mi, path, value) != 0
         return: 1
+return: 0
+
+fn: l2_check_value_convert (const: @(LmP0Node value); int: to_ft; int: mi; const: @(char path)) int
+    int: from_ft 0
+    if: value = 0 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
+        return: 0
+    if: l2_colon_simple_ty(value, mi, @ from_ft) != 0
+        return: 0
+return: l2_check_value_convert_core(value, from_ft, to_ft, mi, path)
+
+# The field-span form of l2_check_value_convert: one value (n = 1, l2_colon_simple_ty, unchanged)
+# or a composite (n > 1, l2_native_composite_ty -- the slices 3/4 boundary). field is the span's
+# own first field, unadvanced (as l2_rw_tokens itself expects). A composite that is internally
+# mixed is a located refusal, same phrase as a single mismatched value with no converter row.
+fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: mi; const: @(char path)) int
+    int: from_ft
+    @: LmP0Field only
+    if: field = 0 || n < 1 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
+        return: 0
+    only: l2_next_active(field)
+    if: only = 0
+        return: 0
+    if: n = 1
+        return: l2_check_value_convert(only\value, to_ft, mi, path)
+    if: n > 1
+        from_ft: l2_native_composite_ty(field, n, mi)
+        if: from_ft = 0 - 3
+            return: l2_error(path, only\value, "mixed numeric types (a conversion)")
+        if: from_ft = 0 - 1
+            return: 0
+        return: l2_check_value_convert_core(only\value, from_ft, to_ft, mi, path)
 return: 0
 
 # The emission of l2_check_value_convert's edge: the receiver is called on the one value -- a
@@ -6364,6 +6507,82 @@ fn: l2_emit_value_convert (const: @(LmP0Node node); @: LmP0Field a0; int: to_ft;
         return: 1
 return: 0
 
+# The composite (n > 1 fields) form of l2_emit_value_convert's edge: the same shape, but the
+# receiver's one actual is a COPY of the whole n-field chain (not one field) -- l2_emit_call groups
+# it into the receiver's single formal by arity, the same way a composite actual already groups
+# into any one-formal call today (`take(n - 1)`).  The copy is taken once (l2_xmalloc'd as an
+# array, relinked by \next, mirroring l2_rw_convert's own root-side copy) so the composite
+# expression is evaluated exactly once, in the receiver call, not duplicated.
+fn: l2_emit_value_convert_n (const: @(LmP0Node node); @: LmP0Field field; int: n; int: to_ft; int: mi; const: @(char ind); @: char dest) int
+    int: from_ft
+    int: cidx
+    int: rc
+    int: i 0
+    @: LmP0Field f
+    @: LmP0Field copy 0
+    @: LmP0Field cur 0
+    @: LmP0Field prev 0
+    @: LmP0Structure one 0
+    if: field = 0 || n < 2 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
+        return: 2
+    from_ft: l2_native_composite_ty(field, n, mi)
+    if: from_ft = 0 - 3 || from_ft = 0 - 1 || l2_prim_code_name(from_ft) = 0
+        return: 2
+    if: c.strcmp(l2_prim_code_name(from_ft), l2_prim_code_name(to_ft)) = 0
+        return: 2
+    if: l2_convert_hit(l2_prim_code_name(from_ft), l2_prim_code_name(to_ft)) = 0
+        return: l2_error(l2_src, node, "internal: a conversion site was not checked")
+    cidx: l2_convert_method(l2_cv_body)
+    if: cidx < 0
+        return: l2_error(l2_src, node, "internal: a conversion site was not checked")
+    one: (cast: (@: LmP0Structure) l2_xmalloc(c.sizeof(c.LmP0Structure)))
+    copy: (cast: (@: LmP0Field) l2_xmalloc((cast: (size_t) n) * c.sizeof(c.LmP0Field)))
+    if: one = 0 || copy = 0
+        if: one != 0
+            l2_xfree((cast: (@: void) one))
+        if: copy != 0
+            l2_xfree((cast: (@: void) copy))
+        return: l2_error(l2_src, node, "out of memory")
+    memset((cast: (@: void) one), 0, c.sizeof(c.LmP0Structure))
+    f: l2_next_active(field)
+    while: i < n && f != 0
+        cur: copy + i
+        memcpy((cast: (@: void) cur), (cast: (@: void) f), c.sizeof(c.LmP0Field))
+        cur\next: 0
+        if: prev != 0
+            prev\next: cur
+        ---
+        prev: cur
+        f: l2_next_active(f\next)
+        i: i + 1
+    ---
+    if: i != n
+        l2_xfree((cast: (@: void) copy))
+        l2_xfree((cast: (@: void) one))
+        return: l2_error(l2_src, node, "internal: a conversion value is shorter than its run")
+    one\first_field: copy
+    rc: l2_emit_call(node, cidx, 0, 0 - 1, one, mi, ind, dest, 1)
+    l2_xfree((cast: (@: void) copy))
+    l2_xfree((cast: (@: void) one))
+    if: rc != 0
+        return: 1
+return: 0
+
+# The field-span dispatcher for l2_emit_value_convert's edge: one value (n = 1, unchanged) or a
+# composite (n > 1, l2_emit_value_convert_n). field is the span's own first field, unadvanced.
+fn: l2_emit_value_convert_field (const: @(LmP0Node node); @: LmP0Field field; int: n; int: to_ft; int: mi; const: @(char ind); @: char dest) int
+    @: LmP0Field only
+    if: field = 0 || n < 1
+        return: 2
+    if: n = 1
+        only: l2_next_active(field)
+        if: only = 0
+            return: 2
+        return: l2_emit_value_convert(node, only, to_ft, mi, ind, dest)
+    if: n > 1
+        return: l2_emit_value_convert_n(node, field, n, to_ft, mi, ind, dest)
+return: 2
+
 # A callable's result code as the formal code of the same type (unsigned is 33 as a result, 34 as
 # a formal; the others coincide).
 fn: l2_ret_ft (int: mi) int
@@ -6371,22 +6590,18 @@ fn: l2_ret_ft (int: mi) int
         return: 34
 return: l2_m_ret[mi]
 
-# Slice 4: `return: v` with one value, in a body or a trailer.  A Structure result is admitted
-# (l2_admit_return), never converted.
+# Slice 4: `return: v` with one value or a composite, in a body or a trailer.  A Structure result
+# is admitted (l2_admit_return), never converted.
 fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
-    @: LmP0Field only
-    if: body = 0 || l2_m_ret[mi] = 8 || l2_count_active(body) != 1 || l2_nsty_get(mi, 0 - 1) >= 0
+    if: body = 0 || l2_m_ret[mi] = 8 || l2_nsty_get(mi, 0 - 1) >= 0
         return: 0
-    only: l2_next_active(body\first_field)
-    if: only = 0
-        return: 0
-return: l2_check_value_convert(only\value, l2_ret_ft(mi), mi, path)
+return: l2_check_value_convert_field(body\first_field, l2_count_active(body), l2_ret_ft(mi), mi, path)
 
 # Its emission: 0 emitted into dest, 1 error, 2 none.
 fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: char dest) int
-    if: body = 0 || l2_m_ret[mi] = 8 || l2_count_active(body) != 1 || l2_nsty_get(mi, 0 - 1) >= 0
+    if: body = 0 || l2_m_ret[mi] = 8 || l2_nsty_get(mi, 0 - 1) >= 0
         return: 2
-return: l2_emit_value_convert(at, l2_next_active(body\first_field), l2_ret_ft(mi), mi, ind, dest)
+return: l2_emit_value_convert_field(at, body\first_field, l2_count_active(body), l2_ret_ft(mi), mi, ind, dest)
 
 # Named primitive value codes are l2_primitive_leaf_implements. The lists
 # below are the literal class (-10), a quoted pointer (-11), and a code that
@@ -6460,22 +6675,35 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     int: target_ty
     int: value_ty
     int: cok 0
+    int: n
+    int: composite 0
     if: l2_is_asgn(stmt) = 0 || stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: 0
-    if: l2_count_active(stmt\as\frame\body) != 1
+    n: l2_count_active(stmt\as\frame\body)
+    if: n < 1
         return: 0
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         return: 0
     if: target_ty >= 100 && l2_foreign_const[target_ty - 100] != 0
         return: l2_error(path, stmt, "const write")
     only: l2_next_active(stmt\as\frame\body\first_field)
-    if: only = 0 || l2_colon_simple_ty(only\value, mi, @ value_ty) != 0
-        return: l2_error(path, stmt, "assignment value has unknown type")
-    if: only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "sizeof")
+    if: n = 1
+        if: only = 0 || l2_colon_simple_ty(only\value, mi, @ value_ty) != 0
+            return: l2_error(path, stmt, "assignment value has unknown type")
+    ---
+    if: n > 1
+        composite: 1
+        value_ty: l2_native_composite_ty(stmt\as\frame\body\first_field, n, mi)
+        if: value_ty = 0 - 3
+            return: l2_error(path, stmt, "mixed numeric types (a conversion)")
+        if: value_ty = 0 - 1
+            return: 0
+    ---
+    if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "sizeof")
         if: l2_check_sizeof(only\value, mi, path) != 0
             return: 1
     ---
-    if: only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
+    if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
         if: l2_array_length_own(only\value, mi) < 0 && l2_arr_len_shape(only\value, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, only\value, "length requires one known primitive own array")
     ---
@@ -6502,7 +6730,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     # receiver puts this method on the throw channel (l2_throws_close).
     if: l2_cv_used != 0 && l2_convert_edge(mi, path, stmt) != 0
         return: 1
-    if: only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
+    if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(target_ty), path, stmt) != 0
         return: 1
     # Reference rebinding requires execution of the receiving expression's
     # language-level unit tests.  The legacy positional RuntimeImplements walk
@@ -15103,7 +15331,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
             ---
             if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
-            if: handled = 0 && req_mi < 0 && nst < 0 && actual_span = 1 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert(a0\value, l2_ft(idx, actual_i), mi, path) != 0
+            if: handled = 0 && req_mi < 0 && nst < 0 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
                 return: 1
             if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
                 if: l2_admit_consumer_uses(a0\value\as\atom, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
@@ -17109,8 +17337,8 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_prep_drop(acts, hides)
         if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0
             er: 2
-            if: actual_span = 1 && l2_nsty_get(idx, t) < 0
-                er: l2_emit_value_convert(node, a0, l2_ft(idx, t), mi, ind, l2_act_at(acts, t))
+            if: l2_nsty_get(idx, t) < 0
+                er: l2_emit_value_convert_field(node, a0, actual_span, l2_ft(idx, t), mi, ind, l2_act_at(acts, t))
             if: actual_span >= 3 && l2_nsty_get(idx, t) >= 0
                 er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_act_at(acts, t))
             if: er = 1

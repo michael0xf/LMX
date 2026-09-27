@@ -1,0 +1,15 @@
+# Slices 3/4 boundary: a composite value (`b + 1U`) stored into a place of another named primitive
+# type now gets the same edge a single value has -- l2_convert_on_store types the composite itself
+# (l2_native_composite_ty) and hands the receiver the store's own field chain unchanged (fr\body
+# already holds exactly those fields).  b + 1U = 6U fits int: the entry is 7.  The refusal is
+# unit_s7_conv_compound_range.
+fn: go () int
+    int: a 1
+    size_t: b 5U
+    a: b + 1U
+    if: a = 6
+        return: 7
+    return: 0
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

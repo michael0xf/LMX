@@ -1442,6 +1442,13 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_own_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 49;
         Absent = @(); Debt = @() },
+    # steps/named-struct-exec.md, slice 1 (plan §3 :245 (a)): today's refusals the slice flips -- a
+    # named Structure closed by a column-0 bare `return` (Q19.1) is read as a statement of the entry,
+    # and a named Structure body takes field declarations only (Q19.2 = 2 wants the whole body).
+    [pscustomobject]@{ Name = 'unit_named_struct_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a Structure reference field needs a name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bare_struct_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

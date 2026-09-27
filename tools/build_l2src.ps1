@@ -110,6 +110,11 @@ $nm = (Get-Command nm -ErrorAction Stop).Source
 $ps51Proc = Join-Path $root 'tools\ps51_proc.ps1'
 if (-not (Test-Path -LiteralPath $ps51Proc)) { throw "missing process helper: $ps51Proc" }
 . $ps51Proc
+# The peak memory of the steps (next_core_tasks.md §0, build memory, item 3), reported at the end.
+$peakMem = Join-Path $root 'tools\peak_mem.ps1'
+if (-not (Test-Path -LiteralPath $peakMem)) { throw "missing helper: $peakMem" }
+. $peakMem
+Start-PeakSampler
 
 # WHERE THE KERNEL SOURCES ARE, and why this is not a one-liner.  The sources reference each other
 # as "l2src/<name>.lm1" -- that segment is HARDCODED IN THEIR TEXT -- so the build needs them
@@ -227,6 +232,7 @@ function Get-SafeName([string]$Name) {
     return ($Name -replace '[:/\\*?"<>|]', '_')
 }
 function Invoke-Captured([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$LogName) {
+    Set-PeakStep $Label $Exe
     # The parameter is NOT named $Args: that name is PowerShell's automatic
     # unbound-argument array, and it wins inside the body -- the tool was invoked
     # with no arguments at all and printed its usage line.
@@ -315,6 +321,7 @@ function Test-ExpectedFatal([string]$Label, [string]$Exe, [string]$ArgvJoined, [
 }
 
 function Invoke-Bounded([string]$Label, [string]$Exe, [string[]]$ArgList, [int]$Seconds) {
+    Set-PeakStep $Label $Exe
     # Started through the .NET process API, not Start-Process: with redirected streams PS 5.1's
     # -PassThru object does not report the child's exit code (measured: a passing test was reported
     # as a failure), and a bound whose verdict cannot be read is worse than no bound.  The .NET
@@ -582,6 +589,7 @@ foreach ($c in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*_selftest.c' -F
 }
 
 Write-Output ''
+foreach ($l in @(Format-PeakReport (Stop-PeakSampler) 10)) { Write-Output ('build_l2src: ' + $l) }
 if ($failed.Count -gt 0) {
     Write-Output ("build_l2src RED: {0} of {1} targets failed ({2}); evidence {3}" -f $failed.Count, $rows.Count, ($failed -join ', '), $OutDir)
     exit 1

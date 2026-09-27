@@ -39,6 +39,9 @@
 
 param(
     [string]$OutDir, [string]$Translator,
+    # -KeepAll keeps every file of the run (next_core_tasks.md §0, build memory, item 4): without it an
+    # OK fixture row's per-fixture logs and generated files are removed at the end, see below.
+    [switch]$KeepAll,
     # ---- provenance mode (DEEPSEEK-L2TRANSLATOR-EVIDENCE-BUILDER-20260921-146) ----------------
     # -Provenance builds l2trans from a NAMED, hash-verified translator and leaves a consumable
     # provenance manifest.  There is no default translator, no bin\ fallback and no newest-stamp
@@ -65,6 +68,10 @@ param(
 $ErrorActionPreference = 'Continue'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $sandbox = Join-Path $root 'dev\l2src_sandbox'
+# The peak memory of the steps (next_core_tasks.md §0, build memory, item 3).
+$peakMem = Join-Path $root 'tools\peak_mem.ps1'
+if (-not (Test-Path -LiteralPath $peakMem)) { throw "missing helper: $peakMem" }
+. $peakMem
 
 # ---- PE identity ------------------------------------------------------------------------------
 # e_lfanew is read from 0x3C FOR EACH FILE and is NOT a format constant: TDS sits at e_lfanew+8
@@ -245,6 +252,7 @@ function Safe([string]$Name) { return ($Name -replace '[^A-Za-z0-9_.-]', '_') }
 
 # Run a command, capture everything, return the exit code; the transcript is the evidence.
 function Invoke-Step([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$WorkDir) {
+    Set-PeakStep $Label $Exe
     # THE OUTPUT IS NEVER HELD IN MEMORY -- the same fix as tools/build_l2src.ps1's Invoke-Captured,
     # and the same reason: `| Out-String` built each command's whole output as one string and then a
     # second copy to prepend the header. This harness inherited the shape because it was modelled on
@@ -331,6 +339,7 @@ if ($provenanceMode) {
 }
 
 # ---- 2. build l2trans -----------------------------------------------------------------------
+Start-PeakSampler
 # The same four narrow -Werror guards build_l2src.ps1's default flags use (tools/build_l2src.ps1),
 # so a green harness here reliably predicts a green build_l2src gate for this class of defect
 # (fable_pc's remark on REVIEW c08e34f: harness flags lacked them, so a missing forward
@@ -2994,6 +3003,36 @@ foreach ($fx in $fixtures) {
 
 foreach ($r in $rows) { Write-Output ($r.State.PadRight(5) + $r.Label.PadRight(34) + $r.Note) }
 Write-Output ''
+# A STAMP KEEPS WHAT A REVIEW NEEDS (next_core_tasks.md §0, build memory, item 4; the author,
+# 2026-09-27: build/ had grown to 1.7 million files, the load behind the kernel pools and the
+# scanner).  summary.txt lists EVERY row with its state and note, so "N rows, 0 failed" is provable
+# from the stamp (fable_pc's condition); src/ and headers/ stay (staged = blob); the build steps'
+# own logs and artifacts stay.  A fixture whose rows are all OK loses its per-fixture logs
+# (fixture.<stem>.*.log) and generated files (gen/<stem>.lm1 .c .o, bin/<stem>.exe); a fixture
+# with any other row keeps everything.  -KeepAll keeps every file, as before.
+$peakLines = @(Format-PeakReport (Stop-PeakSampler) 10)
+foreach ($l in $peakLines) { Write-Output ('l2_harness: ' + $l) }
+# The staged translator source as a git blob (the repository's eol filter applied, as a commit
+# stores it), so "staged = blob" reads from this one file (fable_pc's request).
+$stagedTrans = Join-Path $src 'l2src\l2trans.lm1'
+$stagedBlob = ((git -C $root hash-object --path=dev/l2src_sandbox/l2trans.lm1 $stagedTrans) -join '').Trim()
+$summaryPath = Join-Path $OutDir 'summary.txt'
+[System.IO.File]::WriteAllText($summaryPath, ((@('staged' + "`t" + 'src/l2src/l2trans.lm1' + "`t" + $stagedBlob) + @($rows | ForEach-Object { $_.State + "`t" + $_.Label + "`t" + $_.Note }) + $peakLines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+if (-not $KeepAll) {
+    $keepStem = @{}
+    foreach ($r in $rows) { if ($r.State -ne 'OK' -and $r.Label.StartsWith('fixture:')) { $keepStem[$r.Label.Substring(8)] = 1 } }
+    $pruned = 0
+    foreach ($r in $rows) {
+        if ($r.State -ne 'OK' -or -not $r.Label.StartsWith('fixture:')) { continue }
+        $stem = $r.Label.Substring(8)
+        if ($keepStem.ContainsKey($stem)) { continue }
+        foreach ($f in @(Get-ChildItem -LiteralPath $logs -File -Filter ('fixture.' + (Safe $stem) + '.*.log') -ErrorAction SilentlyContinue)) { Remove-Item -LiteralPath $f.FullName -Force; $pruned++ }
+        foreach ($f in @((Join-Path $gen ($stem + '.lm1')), (Join-Path $gen ($stem + '.c')), (Join-Path $gen ($stem + '.o')), (Join-Path $bin ($stem + '.exe')))) {
+            if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force; $pruned++ }
+        }
+    }
+    Write-Output ('l2_harness: ' + $pruned + ' per-fixture files of OK rows removed (-KeepAll keeps them); every row is in ' + $summaryPath)
+}
 if ($red.Count -eq 0) {
     if ($provenanceMode) {
         # FAIL CLOSED ON AN INCOMPLETE MANIFEST: the marker may only be written when every fact it

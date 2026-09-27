@@ -618,13 +618,6 @@ fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
     f\context\classified: f\context\classified + 1U
 return: (cast: (int) (lmx_range_profile(f\arena, p) = f\context\immutable_profile))
 
-# ---- checkpoint: -188 k.2 cells written immediately; no-op (call sites kept) -----------
-
-fn: lmx_walk_checkpoint (@: LmxWalkFrame f) int
-    if: f = 0
-        return: c.LMX_WALK_INVALID
-return: c.LMX_WALK_OK
-
 # ---- execution -------------------------------------------------------------------------
 
 # A question to an arena that is not the Message's -- the scratch store's -- through the
@@ -1060,9 +1053,6 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         i: i + 1U
     ---
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_checkpoint(f)
-    ---
-    if: status = c.LMX_WALK_OK
         if: addr != 0
             # Native: entry(owner=data); dispatch word from code. Walk does not link call.o
             # (duplicate symbols); same owner=data rule as lmx_call_prim.
@@ -1193,10 +1183,6 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         ---
         i: i + 1U
     ---
-    # 21.6: dirty values are published before every outbound call, and this is one.
-    if: status = c.LMX_WALK_OK
-        status: lmx_walk_checkpoint(f)
-    ---
     if: status = c.LMX_WALK_OK
         said: record\fn(record\owner, refs, n, dest, out)
         # -177 c5 / D-55: admission throw statuses -> THROWN+k at the walked root (d=0).
@@ -1285,10 +1271,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         # A bare role record: only a void return has no operands.
         if: op != c.LMX_WALK_OP_RET
             return: c.LMX_WALK_INVALID
-        status: lmx_walk_checkpoint(f)
-        if: status = c.LMX_WALK_OK
-            f\returned: 1
-        return: status
+        f\returned: 1
+        return: c.LMX_WALK_OK
     code: (cast: (@: Lmx) node)
     if: op = c.LMX_WALK_OP_LIT
         # The literal's own cell, by reference: reading it copies nothing.
@@ -1690,12 +1674,12 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         ---
         return: status
     if: op = c.LMX_WALK_OP_RET
-        # One exit order: evaluate the argument -> checkpoint (no-op) -> return.  The
-        # argument is computed straight into the CALLER's destination and returned as a
-        # plain reference -- k.4 (author, §3 item 8): no auto-invoke of a returned
-        # callable-looking reference; the translator emits an explicit CALL wherever a
-        # call is meant (callable-priority, -130).  Nested if/else/while/for stay
-        # ordinary child Structures -- not nested callables.
+        # One exit order: evaluate the argument -> return.  The argument is computed
+        # straight into the CALLER's destination and returned as a plain reference -- k.4
+        # (author, §3 item 8): no auto-invoke of a returned callable-looking reference; the
+        # translator emits an explicit CALL wherever a call is meant (callable-priority,
+        # -130).  Nested if/else/while/for stay ordinary child Structures -- not nested
+        # callables.
         if: code\array.size > 1U
             status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), f\dest, @ value)
             if: status != c.LMX_WALK_OK
@@ -1712,9 +1696,6 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
                 value: f\result
             ---
         ---
-        status: lmx_walk_checkpoint(f)
-        if: status != c.LMX_WALK_OK
-            return: status
         f\returned: 1
         \out: value
         return: c.LMX_WALK_OK
@@ -2012,9 +1993,6 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
     if: status = c.LMX_WALK_OK
         f\dest: dest
         status: lmx_walk_body(f, code, 0U)
-    # Falling off the end is an exit too: dirty values are published (21.6).
-    if: status = c.LMX_WALK_OK && f\returned = 0
-        status: lmx_walk_checkpoint(f)
     if: status = c.LMX_WALK_OK && f\valued != 0
         if: result != 0
             \result: f\result

@@ -331,7 +331,14 @@ if ($provenanceMode) {
 }
 
 # ---- 2. build l2trans -----------------------------------------------------------------------
-$cflags = @('-std=c99', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $sandbox)
+# The same four narrow -Werror guards build_l2src.ps1's default flags use (tools/build_l2src.ps1),
+# so a green harness here reliably predicts a green build_l2src gate for this class of defect
+# (fable_pc's remark on REVIEW c08e34f: harness flags lacked them, so a missing forward
+# declaration -- implicit-function-declaration -- was caught only by build_l2src, after the
+# harness had already gone green on the same translator source).
+$cflags = @('-std=c99', '-Wall', '-Wextra', '-Wpedantic', '-I', $root, '-I', (Join-Path $root 'lm1\build'), '-I', $sandbox,
+            '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
+            '-Werror=implicit-function-declaration', '-Werror=implicit-int')
 $l2transC = Join-Path $gen 'l2trans.c'
 $l2libcC = Join-Path $gen 'l2_libc.c'
 $l2libcO = Join-Path $gen 'l2_libc.o'

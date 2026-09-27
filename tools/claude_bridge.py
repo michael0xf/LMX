@@ -24,7 +24,7 @@ def profile_directory(name):
 
 def save(path, value):
     temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8', newline='\n')
     temporary.replace(path)
 
 
@@ -103,7 +103,7 @@ def ask(directory, prompt, timeout=180, runner=invoke):
         state['started'] = True
         state['pending'] = False
         save(state_path, state)
-        with (directory / 'exchanges.jsonl').open('a', encoding='utf-8') as log:
+        with (directory / 'exchanges.jsonl').open('a', encoding='utf-8', newline='\n') as log:
             log.write(json.dumps({'prompt': prompt, 'response': response}, ensure_ascii=False) + '\n')
         if result.returncode or response.get('is_error'):
             raise RuntimeError('Claude reported an error. See local exchanges.jsonl (not tracked).')

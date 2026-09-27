@@ -68,6 +68,27 @@ def main():
             assert dest.exists(),f'Broken link in {path}: {target}'
             if anchor:
                 assert f'id="{anchor}"' in dest.read_text(encoding='utf-8'),f'Missing anchor {target}'
-    print(f'OK: {semantic_count} paired semantic chapters, 14 implements cases, both source snapshots; {len(ids)} paired grammar sections, {count} verbatim source excerpts, {len(files)} imported files, links, exact semantic opening')
+    tracked=check_eol()
+    print(f'OK: {semantic_count} paired semantic chapters, 14 implements cases, both source snapshots; {len(ids)} paired grammar sections, {count} verbatim source excerpts, {len(files)} imported files, links, exact semantic opening; line endings LF in the index for all {tracked} tracked files (verbatim imports exempt)')
+
+def check_eol():
+    '''Every tracked text file is LF in the index (author, 2026-09-27: the whole project is LF, Windows adapts).
+    Paths marked -text in .gitattributes are verbatim imports and exempt; i/none is git's own binary verdict.'''
+    import subprocess
+    out=subprocess.run(['git','-C',str(ROOT),'ls-files','--eol','-z'],capture_output=True,check=True).stdout
+    NUL=bytes([0]);TAB=bytes([9]);bad=[];seen=0
+    for rec in out.split(NUL):
+        if not rec:continue
+        seen+=1
+        head,path=rec.split(TAB,1)
+        fields=head.split()
+        index=fields[0].decode();attrs=b' '.join(fields[2:]).decode()
+        if '-text' in attrs or index in ('i/none','i/-text'):continue
+        if index!='i/lf':bad.append(index+' '+path.decode())
+        work=fields[1].decode()
+        if work in ('w/crlf','w/mixed'):bad.append(work+' '+path.decode()+' (a tool or editor wrote CRLF into the working tree)')
+    assert not bad,'CRLF or mixed line endings (LF everywhere; index and working tree): '+', '.join(bad[:12])+(' ... %d files'%len(bad) if len(bad)>12 else '')
+    return seen
+
 
 if __name__=='__main__':main()

@@ -89,7 +89,7 @@ def run_one(translator, l1src, cc, test, output):
         (output / f'{label}.stderr').write_bytes(result.stderr)
         manifest['steps'].append({'label': label, 'exit': result.returncode})
         if check and result.returncode:
-            (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+            (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
             err = (output / (label + '.stderr')).read_text(encoding='utf-8', errors='replace')[-2000:]
             print(f'{test} {label} failed ({result.returncode}); {err}', file=sys.stderr)
         return result
@@ -125,7 +125,7 @@ def run_one(translator, l1src, cc, test, output):
     result = run([str(exe)], 'selftest', check=False)
     manifest['selftest_exit'] = result.returncode
     manifest['selftest_stdout'] = result.stdout.decode('utf-8', errors='replace').strip()
-    (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+    (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
     print(manifest['selftest_stdout'])
     print(f'exit={result.returncode}; evidence: {output}')
     return result.returncode

@@ -61,7 +61,7 @@ def save_state(name, value):
     directory.mkdir(parents=True, exist_ok=True)
     path = state_path(name)
     temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8', newline='\n')
     temporary.replace(path)
 
 

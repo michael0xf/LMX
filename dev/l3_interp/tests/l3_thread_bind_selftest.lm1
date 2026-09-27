@@ -95,6 +95,23 @@ fn: mk_walk_int (@: LmxArena a; @: Lmx roles; int: value) @: Lmx
         return: 0
 return: m
 
+# q40: an entry whose body is `return: <its argument 0>` (RET over ARG 0).  The turn passes no
+# argument -- execute(code data) with data = code is no argument -- so reading one is refused.
+fn: mk_walk_arg0 (@: LmxArena a; @: Lmx roles) @: Lmx
+    @: Lmx m
+    @: Lmx ret
+    @: Lmx arg
+    m: mk_walk_void(a, roles)
+    if: m = 0
+        return: 0
+    ret: lmx_walk_frame(a, roles, m, c.LMX_WALK_OP_RET, 2U)
+    if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
+        return: 0
+    arg: lmx_walk_frame(a, roles, ret, c.LMX_WALK_OP_ARG, 2U)
+    if: arg = 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) arg)) != 0 || lmx_walk_store_size(a, arg, 1U, 0U) != c.LMX_WALK_OK
+        return: 0
+return: m
+
 fn: mk_thread (@: LmxArena arena; @: Lmx graph; @@: LmxThread out_t) int
     @: LmxThread t
     @: LmxPost mail
@@ -204,21 +221,23 @@ fn: main () int
     fail(counts, l3_thread_roles(t) = roles, "two turns later the table is the same table")
     fail(counts, lmx_range_classify(a, (cast: (@: void) roles)) = c.LMX_KIND_STRUCT, "and still a Structure by the arena's ranges")
     fail(counts, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_RET)) = ret_record && lmx_range_classify(a, ret_record) = c.LMX_DOMAIN_KIND_OP, "and RET is the same live OP record")
-    # E1: the int the interpreted entry returns is the host's exit value, and it is a VALUE --
-    # a nonzero one does not fail the turn.  The void entry above returned none.
-    result: 99
-    fail(counts, l3_thread_result(t, @ result) = 0 && result = 99, "a void entry leaves no exit value")
+    # q40: the int an interpreted entry returns is kept nowhere (E1 was cancelled; the exit is R0's
+    # exit letter or its success) and is no status -- a nonzero one does not fail the turn.
     graph: mk_walk_int(a, l3_thread_roles(t), 7)
     fail(counts, graph != 0, "entry returning 7")
     msg\graph: graph
     fail(counts, lmx_thread_turn(t, 0, 5U) = c.LMX_THREAD_OK, "an entry returning 7 is an ordinary successful turn")
-    fail(counts, l3_thread_result(t, @ result) = 1 && result = 7, "the entry's 7 is observed as the host's exit value")
     graph: mk_walk_int(a, l3_thread_roles(t), 0)
     fail(counts, graph != 0, "entry returning 0")
     msg\graph: graph
     fail(counts, lmx_thread_turn(t, 0, 6U) = c.LMX_THREAD_OK, "an entry returning 0 is an ordinary successful turn")
-    fail(counts, l3_thread_result(t, @ result) = 1 && result = 0, "the entry's 0 is observed as 0")
-    fail(counts, l3_thread_result(other_t, @ result) = 0, "an unbound Thread has no exit value")
+    # q40: the turn executes the graph as (graph, graph) with no argument -- an entry that reads its
+    # argument 0 finds none, and the walk refuses it: a failed turn.  (With the graph passed as a
+    # "subject" argument, as before, it read the graph and the turn was ordinary.)
+    graph: mk_walk_arg0(a, l3_thread_roles(t))
+    fail(counts, graph != 0, "entry reading argument 0")
+    msg\graph: graph
+    fail(counts, lmx_thread_turn(t, 0, 9U) != c.LMX_THREAD_OK, "q40: the turn passes the graph no argument")
     # Q35 (author, 2026-09-27; D-90): the value a graph returned is no status of the turn.  A graph
     # with a native word, under the L3 bind: its handler's value 1 and 2 -- ordinary turns both.
     # (The old branch failed the turn on 1 and passed 2 only by its NOT_CALLABLE code.)

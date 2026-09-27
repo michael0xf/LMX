@@ -516,14 +516,36 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_int_lt_negative.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_size_t_wide.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2; Absent = @(); Debt = @() },
 
-    # S2: there is no standalone L1-only program any more -- every program is its unit, E runs in
-    # R0 -- so the c.puts entries run on the kernel route, and say what they print.  The empty
-    # line of entry_puts_empty is not countable by Says (blank lines are not the program's).
-    [pscustomobject]@{ Name = 'entry_puts_hello.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Says = @('Hello'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_seq.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Says = @('one', 'two'); Absent = @(); Debt = @() },
+    # S2: root-level c.puts refuses "L2 operation outside a method body" (D-81, Q31) -- these five
+    # rows never run, so they carry no Says (the harness's l2trans-refuses branch returns before
+    # any run step reads it; a refusal row asserting program output was dead weight, G4).
+    [pscustomobject]@{ Name = 'entry_puts_hello.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_seq.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_puts_empty.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_nl.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Says = @('x', 'y'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'entry_puts_esc.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Says = @('a"b\c'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_nl.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_esc.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    # G4: 15 more c.puts fixtures (arg-shape probes and triple-quote parser probes, all root-level)
+    # were never run by any row -- gated here with what l2trans actually gives each today, same
+    # class as the five rows above. entry_puts_after_return refuses earlier, at its own `return: 0`
+    # (root doesn't allow a value there at all, before the c.puts line is even reached).
+    # entry_puts_triple_fence4 is a genuine P0 parse failure, not the semantic refusal the other
+    # triple-quote forms get -- a real parser gap in the four-quote-both-sides fence, not fixed
+    # here, just gated with what it is.
+    [pscustomobject]@{ Name = 'entry_puts_after_return.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'return with a value at the root'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_bad_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_extra_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_fence4.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unterminated python-like string literal'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_lead.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_lead_sq.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_long.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_runs.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_seven.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_seven_sq.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_puts_triple_single.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_ret_tr_puts.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_ret_tr_two.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Absent = @(); Debt = @() },
     # FABLE-126 part2: migrate/gate former c.array entry fixtures (owned []: char).
     # -170 (translator half, over grok_bot's ELEM 25 / ELEMPUT 26): an own Array of the root is its
     # descriptor in the unit's slot (the graph build makes it; the declaration is no step); `x[N]: v`
@@ -703,8 +725,7 @@ $fixtures = @(
     # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
     # length() is size_t. exit_code is int, and there is no conversion yet (S7).
     [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)'; Args = @('0'); Argv = @('ok'); Entry = 2;
-        Absent = @('lmx_msg_poll_abort', 'lmx: receiveMessage', 'lmx: rebinding');
-        Debt = @('c.fprintf(c.stderr, "lmx: invariant: receiveMessage store failed for own field ', 'c.fprintf(c.stderr, "lmx: invariant: rebinding store failed for own field ') },
+        Absent = @(); Debt = @() },
     # length(m\mainArgs) is the outer array's size_t length (semantics §17: first dimension).
     # No extra argv: the letter holds argv[0] alone, so length is 1. Success is exit 7,
     # not the walker's silent 0. An inverted entry 0 is red.
@@ -1083,11 +1104,7 @@ $fixtures = @(
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
         Args = @('0');
-        Absent = @('Lmx node; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
-        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; @: Lmx l2_msg; @: int l2_out_result; @@: Lmx l2_out_throw) int',
-                 'l2_m0(l2_c0\parent, l2_c0, l2_msg, @ l2_t1, @ l2_te1)',
-                 'l2_out_throw[0]: 0',
-                 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
@@ -1483,7 +1500,6 @@ $fixtures = @(
                  'if: lmx_ulong_store_known(l2_q5_from[0], (l2_p6_0)) != 0') },
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
-        Says = @('P local is null');
         Absent = @();
         Debt = @() },
     # THE ADDRESS OF AN ETERNAL FIELD IS REFUSED WHERE IT IS TAKEN (FABLE-L2-R0-WRITE-GUARD-DESIGN-20260921-111, M0).
@@ -1502,8 +1518,7 @@ $fixtures = @(
     # `@ A\e)` is Absent; the typed cell pointer is the positive lowering.
     [pscustomobject]@{ Name = 'unit_named_addr_gap.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
-        Absent = @('@ A\e)');
-        Debt = @('(cast: (@: size_t) l2_pxp[0])') },
+        Absent = @(); Debt = @() },
     # THE SAME RULE FOR A HIDDEN/DYNAMIC INPUT (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  A free name
     # read before the body's own same-name binding line arrives in a hidden formal, and that line
     # binds it exactly as it binds a declared formal.  The matrix runs for int and for size_t.
@@ -1573,13 +1588,7 @@ $fixtures = @(
     # Measured, one mutant per emitter: K2 200 255; the entry stops after M1; P2 202 255.
     [pscustomobject]@{ Name = 'unit_char_own_publish.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
-        Says = @('M1 67 67', 'M2 202 202', 'K1 65 65', 'K2 200 200', 'P1 66 66', 'P2 202 202');
-        # D-06: the char checkpoint's failed rebinding is an invariant on the X1 route, not a printed line.
-        Absent = @('(cast: (uchar)', 'lmx_msg_poll_abort', 'lmx: checkpoint');
-        Debt = @(('lmx_char_rebind_known(l2_q0_from[0], ((cast: (int) l2_q0) & 255)) = 0' + "`n" + '            c.fprintf(c.stderr, "lmx: invariant: checkpoint store failed for own field 0\n")'),
-                 'lmx_char_rebind_known(l2_q0_from[0], ((cast: (int) l2_q0) & 255))',
-                 'lmx_char_rebind_known(l2_q1_from[0], ((cast: (int) l2_q1) & 255))',
-                 'lmx_char_rebind_known(l2_pxp[0], ((cast: (int) l2_p1_0) & 255))') },
+        Absent = @(); Debt = @() },
     # TWO LIBRARY UNITS IN ONE LINK (FABLE-L2-LIBRARY-P2-UNIQUE-STATE-20260921-137).  A library unit keeps
     # two module cells of its own -- its arena and its opened mark -- and both were emitted under ONE
     # unhashed name for every unit, so two units could not share a link: measured, exit 1 with
@@ -1731,8 +1740,7 @@ $fixtures = @(
         Debt = @('l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 5; Needle = 'root operation not walkable yet: mixed numeric types (a conversion)';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_entry_unit: graph') },
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_self_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 1; EmptyEntry = $true; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -1835,8 +1843,7 @@ $fixtures = @(
         Debt = @('c.puts("from-method")') },
     [pscustomobject]@{ Name = 'unit_puts_main_beside_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
-        Absent = @();
-        Debt = @('c.puts("beside-method")') },
+        Absent = @(); Debt = @() },
     # COMPACT-DECL-BATCHB-75: struct local form-independent; float refuse form-independent;
     # opposite controls for fnptr call and ordinary call.
     [pscustomobject]@{ Name = 'unit_struct_decl_colon.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
@@ -1916,8 +1923,7 @@ $fixtures = @(
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_addr.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_entry_unit: graph') },
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');
@@ -2070,7 +2076,7 @@ $fixtures = @(
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_priority_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @('assignment target must be a declared typed mutable value'); Debt = @() },
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_model_fresh_synonyms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
@@ -2124,7 +2130,6 @@ $fixtures = @(
         Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))') },
     [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
-        Says = @('1 2 3 4 5');
         Absent = @();
         Debt = @() },
     # FABLE-SONNET-ARRAY-ADDR-20260924-144 D-21: `@` on a bare own-array
@@ -2211,8 +2216,7 @@ $fixtures = @(
     # FABLE-OPUS-P0-SIZEOF-ATOM-20260924-157: a private buffer's element size through the sizeof:
     # receiver, `sizeof(unsigned)`, lowered as L1's single-word `c.sizeof(unsigned)`.  Success is 7.
     [pscustomobject]@{ Name = 'unit_ptr_grow.lm2'; Expect = 'root-pending'; Exit = 0; Entry = 7; Needle = 'root operation not walkable yet: a call with an input that is not a number';
-        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('c.sizeof(unsigned)') },
+        Args = @('0'); Absent = @(); Debt = @() },
     # FABLE-OPUS-P0-SIZEOF-ATOM-20260924-157 commit 2: P0 keeps no raw `c.sizeof(...)` atom, so an L2
     # operand of the door is lowered like any door operand -- an own int x becomes a temp -- where
     # the raw atom passed the name `x` to C ("x undeclared").  Success is 7.
@@ -2222,7 +2226,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_sizeof_own_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_native_activation.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
-        Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.array'); Debt = @('l2_entry_unit: graph') },
+        Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_write_root_out_of_range.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'own array index requires an in-bounds primitive literal'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_write_general_root_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2349,7 +2353,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_arg_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_arg_deep_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'implements is false in function argument'; Absent = @('translation failed with no located diagnostic'); Debt = @() },
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2378,7 +2382,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'mixed numeric types (a conversion)'; Absent = @('assignment value has incompatible type'); Debt = @() },
+        Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     # D-83: a converter's refusal is the implicit throw `convert` (g = 3), not c.abort() and not 0.
     # Uncaught it reaches the root: no value, Message stopped, status 3.  Caught, the handler runs
     # and the destination keeps its value.  Mutant: a body without its range test -- the first row
@@ -2524,7 +2528,7 @@ $fixtures = @(
         Args = @('0'); Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @('assignment target must be a declared typed mutable value'); Debt = @() },
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     # FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 2: the norm's negative witness -- no
     # predef: at all for lm_own_new_zero, so l2_is_known (name resolves only through c.* or a
     # predef: declaration, never a hard-coded list) must refuse it. Measured message for a
@@ -2578,6 +2582,16 @@ foreach ($fx in $fixtures) {
     # (the needle) -- never dropped, never run natively -- and flips back to eternal-runs when that
     # operation is built.
     if ($fx.Expect -eq 'l2trans-refuses' -or $fx.Expect -eq 'root-pending') {
+        # G4: this branch `continue`s right after the Needle check, below -- Says/Debt/Absent are
+        # never read for a refusal row (they belong to the eternal-runs/translates branches that a
+        # refusal never reaches; l2trans doesn't even produce an L1 file here). A row's own Says/
+        # Debt/Absent claiming otherwise is dead weight nobody checks -- fail the ROW ITSELF, not
+        # the fixture, so a reintroduced claim like that cannot sit silently again.
+        $shapeBad = @()
+        if ($fx.PSObject.Properties['Says'] -and $fx.Says -and $fx.Says.Count -gt 0) { $shapeBad += 'Says' }
+        if ($fx.PSObject.Properties['Debt'] -and $fx.Debt -and $fx.Debt.Count -gt 0) { $shapeBad += 'Debt' }
+        if ($fx.PSObject.Properties['Absent'] -and $fx.Absent -and $fx.Absent.Count -gt 0) { $shapeBad += 'Absent' }
+        if ($shapeBad.Count -gt 0) { Add-Row 'FAIL' ('fixture:' + $stem) ('a ' + $fx.Expect + ' row cannot carry ' + ($shapeBad -join '/') + ' -- l2trans never runs far enough for it to mean anything'); continue }
         if ($made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans ACCEPTED a fixture that must be refused'; continue }
         # The log is matched with its line breaks removed: Windows PowerShell wraps a native stderr
         # line at the console width, and a long fixture path pushes the message across the break.

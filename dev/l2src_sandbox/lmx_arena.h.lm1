@@ -16,6 +16,18 @@ predef: "lmx_arena_blocks.h.lm1"
 # entry names.  Nothing outside this module writes the index, and nothing at all gates
 # writing into the cells themselves -- code that holds a reference and has determined
 # its type once writes straight into the cell, because a cell's address never changes.
+# D-105 (the author's Q39, 2026-09-27; steps/d105-index-table.md): one address correspondence
+# of the `implements` table.  `value` was admitted to the named Structure `req`; `table` is a
+# Structure of size_t cells, cell j the value's slot of req's field j, or null when the value's
+# own type is req (read at req's own slots).  The entry holds `value` weakly: it never keeps
+# the value alive, and it leaves in the pass that frees it (lmx_arena_impl_prune) -- an address
+# that comes back must not inherit another value's table.
+struct: LmxImplEntry
+    @: Lmx value
+    @: Lmx req
+    @: Lmx table
+end: LmxImplEntry
+
 struct: LmxArena
     @: LmxArenaBlock blocks
     @: LmxPool arrays
@@ -31,6 +43,12 @@ struct: LmxArena
     # descriptors + address stability; no GC pass; no multi-chunk growth per array.
     # Cleared by release / left 0 after attach empties the donor.
     unsigned: simple
+    # D-105: the `implements` table's address correspondences (LmxImplEntry) -- malloc'd like
+    # the index, `impl_len` live entries of room for `impl_cap`.  Written only by
+    # lmx_implements_register and lmx_arena_impl_prune; attach moves the donor's.
+    @: LmxImplEntry impl
+    size_t: impl_len
+    size_t: impl_cap
 end: LmxArena
 
 prototype:
@@ -93,6 +111,12 @@ prototype:
     # The next mark generation for a collection pass.  Never zero: a freshly cleared chunk
     # holds zero, and the first pass must not read that as its own stamp.
     fn: lmx_arena_generation_next (@: LmxArena arena) unsigned
+    # D-105: drop every `implements` correspondence whose value, model or table no longer
+    # classifies as a live Structure of this arena -- run where storage leaves (the sweep,
+    # a revert), before any address can be handed out again.
+    fn: lmx_arena_impl_prune (@: LmxArena arena) void
+    # D-105: room for `need` correspondences in that table.  0 = there is room.
+    fn: lmx_arena_impl_room (@: LmxArena arena; size_t: need) int
 
     # The index itself: the arena's index of its arrays, one entry per interval.  An
     # entry names an array and its interval; the entries are bisected, never walked,

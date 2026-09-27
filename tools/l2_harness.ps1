@@ -1521,6 +1521,22 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a Structure formal is not supported yet'; Absent = @(); Debt = @() },
+    # D-105 slice 1 (the author's Q39: the interpreter first; steps/d105-index-table.md §5): the walked
+    # root hands `o: Other` (Model's fields in the other order) to `rd (Model: m)` and `wr` -- admitted by
+    # NAME through lmx_walk_admit_as, whose correspondence table the arena's `implements` table keeps;
+    # `m\a` is read and written at Other's slot for `a` (OF/PUT_OF carry Model).  `mm: Model` goes to
+    # the same formal as Model's own.  Under --walk-methods only: without it the callees are native, and
+    # the root refuses at the call (the native slice is later); a field of another Structure type is
+    # refused.  Mutants (copies; scratchpad d105/mut): identity not admitted -- X1, exit 3; OF or PUT_OF
+    # without Model, or a positional table -- the perm row red; the walker ignoring req in OF or PUT_OF,
+    # or admit_as recording nothing (X1) -- red; the nested check dropped, or native callees let through
+    # (then `m\a` reads Other's `b`) -- their refusal rows red.
+    [pscustomobject]@{ Name = 'unit_walk_d105_perm.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105_perm_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:22:6: root operation not walkable yet: an admission to a Structure type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_d105_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'lm2:25:6: root operation not walkable yet: an admission to a Structure type through a Structure field of another type'; Absent = @(); Debt = @() },
     # REVIEW dd07174 (fable_pc's M36 and probe ns4_two_types): two executed fields of two types, each
     # runs its own type's code -- m\v = 2, o\w = 15.  Mutant: every field takes the first Structure's
     # code -- red.  One row: the root is walked in both modes (the knob acts on methods).

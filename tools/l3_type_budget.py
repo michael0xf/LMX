@@ -73,11 +73,13 @@ _POSIX_ABI = 0 if os.name == 'nt' else 9
 # lmx_win32_api.h.lm1 instead of <windows.h> -- 1 name, fnptr LmxWin32ThreadStart (its defines and
 # prototypes are not type names).  POSIX does not predef it.
 _WIN32_ABI = 1 if os.name == 'nt' else 0
+# 70 after D-105 slice 1 (Q39, steps/d105-index-table.md §5): struct LmxImplEntry in lmx_arena.h.lm1
+# -- one record of the arena's `implements` table of address correspondences (LmxArena.impl).
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 69 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

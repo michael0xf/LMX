@@ -1347,7 +1347,16 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
             return: status
         if: value = 0 || lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID
-        slot: lmx_arena_ref_cell((cast: (@: Lmx) value), lmx_size_value_known(lmx_arena_ref_value(code, 2U)))
+        index: lmx_size_value_known(lmx_arena_ref_value(code, 2U))
+        # D-105: a place typed with a named Structure (req, child 3) reads req's field at the
+        # value's own slot for it, from the `implements` table; a value with no record there
+        # reached the place unadmitted -- X1, never slot `index` by default.
+        if: code\array.size > 3U && lmx_arena_ref_value(code, 3U) != 0
+            if: lmx_implements_slot(f\arena, (cast: (@: Lmx) value), (cast: (@: Lmx) lmx_arena_ref_value(code, 3U)), index, @ index) != 0
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
+        slot: lmx_arena_ref_cell((cast: (@: Lmx) value), index)
         if: slot = 0
             return: c.LMX_WALK_INVALID
         \out: slot[0]
@@ -1434,7 +1443,14 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         if: status != c.LMX_WALK_OK
             return: status
         ---
-        slot: lmx_arena_ref_cell((cast: (@: Lmx) other), lmx_size_value_known(lmx_arena_ref_value(code, 2U)))
+        index: lmx_size_value_known(lmx_arena_ref_value(code, 2U))
+        # D-105: the holder's place is typed with req (child 4) -- its field at the value's slot.
+        if: code\array.size > 4U && lmx_arena_ref_value(code, 4U) != 0
+            if: lmx_implements_slot(f\arena, (cast: (@: Lmx) other), (cast: (@: Lmx) lmx_arena_ref_value(code, 4U)), index, @ index) != 0
+                return: c.LMX_WALK_INVALID
+            ---
+        ---
+        slot: lmx_arena_ref_cell((cast: (@: Lmx) other), index)
         if: slot = 0 || slot[0] = 0
             return: c.LMX_WALK_INVALID
         ---
@@ -2147,3 +2163,41 @@ fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void 
         return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
     ---
 return: lmx_walk_admit_against(arena, (cast: (@: Lmx) payload), model, out)
+
+# D-105 (the author's Q39, 2026-09-27): PRIM [prim, record, value, model, table] -- the value admitted
+# to `model` through `table` (or as the model's own, table null) and recorded in the arena's
+# `implements` table, where every later admission and every OF/PUT_OF typed with the model finds it.
+fn: lmx_walk_admit_as (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxArena arena 0
+    @: Lmx model 0
+    @: Lmx table 0
+    @: void value 0
+    int: answer
+    \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs != 3U
+        return: 1
+    ---
+    arena: (cast: (@: LmxArena) owner)
+    model: (cast: (@: Lmx) refs[1])
+    table: (cast: (@: Lmx) refs[2])
+    if: model = 0 || lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    if: table != 0 && lmx_range_classify(arena, (cast: (@: void) table)) != c.LMX_KIND_STRUCT
+        return: 1
+    ---
+    if: lmx_walk_admit_resolve(arena, refs[0], @ value) != 0
+        return: 1
+    ---
+    if: value = 0
+        return: 0
+    ---
+    answer: lmx_implements_register(arena, (cast: (@: Lmx) value), model, table)
+    if: answer = c.LMX_IMPLEMENTS_YES
+        \out: value
+        return: 0
+    ---
+    if: answer = c.LMX_IMPLEMENTS_NO
+        return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
+    ---
+return: 1

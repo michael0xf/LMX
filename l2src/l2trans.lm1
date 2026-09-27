@@ -165,6 +165,14 @@ int: l2_t7h_n 0
 @: LmP0Node l2_rw_mix_at 0
 # The root name of a path being resolved (l2_rw_path).
 @: LmP0Text l2_rw_seg 0
+# D-105 slice 1 (the author's Q39; steps/d105-index-table.md §5): the (method, formal) pairs a call
+# site of the walked root fills with a named Structure of another type, admitted by name.  Such a
+# formal's field reads and writes carry its type (OF/PUT_OF req), and every call site into it
+# admits its value through lmx_walk_admit_as -- another type with its correspondence table, the
+# formal's own type with none -- so a value that reaches the place unadmitted is X1, never slot j.
+[]: int l2_d105_mi 64
+[]: int l2_d105_k 64
+int: l2_d105_n 0
 # The flag steps of the statement being built (-196): a short-circuit `a && b` / `a || b` is an IF
 # step that runs before its statement and leaves the value in a cell (l2_rw_sc); l2_rw_stmts puts
 # them in front of the statement's own steps.
@@ -663,7 +671,12 @@ prototype:
     fn: l2_rw_empty_assign (const: @(LmP0Node stmt); int: into; @: int out) int
     fn: l2_rw_is_letter (int: oi) int
     fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
-    fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: parent; @: int out) int
+    fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
+    fn: l2_d105_sub (int: mi; int: k) int
+    fn: l2_d105_mark (int: mi; int: k) int
+    fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n) int
+    fn: l2_rw_d105_need (const: @(LmP0Node node); int: idx; int: k; int: cand; @: int out) int
+    fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
     fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr; @: int has_ref_arr) int
@@ -19786,6 +19799,7 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     int: base
     int: kind
     int: uslot
+    int: req 0 - 1
     # An own Structure root is its slot (-189 c3b-3): AT reads the Structure the slot holds.
     if: level = 0 && path[0] = 1 && l2_own_is_slot(path[1]) != 0
         return: l2_rw_own(parent, path[1], out)
@@ -19828,9 +19842,16 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             return: 1
         node: \out
     ---
-    if: l2_rw_frame(node, "LMX_WALK_OP_OF", 3, @ raw) != 0 || l2_rw_path_value(path, level - 1, raw, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
+    # D-105: the first field of a formal some call site fills with another named type is read
+    # through the formal's type (OF child 3): the walk takes the value's slot for it from the
+    # `implements` table.
+    if: level = 1 && path[0] = 6 && l2_d105_sub(l2_rw_mi, path[1]) != 0
+        req: l2_nsty_get(l2_rw_mi, path[1])
+    if: l2_rw_frame(node, "LMX_WALK_OP_OF", 3 + (cast: (int) (req >= 0)), @ raw) != 0 || l2_rw_path_value(path, level - 1, raw, @ base) != 0 || l2_rw_put(raw, 1, base) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", raw, path[6 + 2 * (level - 1)]) < 0
+        return: 1
+    if: req >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", raw, req) < 0
         return: 1
     if: node != parent
         return: l2_rw_put(node, 1, raw)
@@ -19881,9 +19902,15 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
         return: l2_rw_put(\out, 3, v)
     ---
     if: path[5] != 0
-        if: l2_rw_frame(into, "LMX_WALK_OP_PUT_OF", 4, out) != 0 || l2_rw_path_value(path, path[2] - 1, \out, @ h) != 0 || l2_rw_put(\out, 1, h) != 0
+        # D-105: a field of a formal admitted by name is written at the value's slot (child 4).
+        kind: 0 - 1
+        if: path[2] = 1 && path[0] = 6 && l2_d105_sub(l2_rw_mi, path[1]) != 0
+            kind: l2_nsty_get(l2_rw_mi, path[1])
+        if: l2_rw_frame(into, "LMX_WALK_OP_PUT_OF", 4 + (cast: (int) (kind >= 0)), out) != 0 || l2_rw_path_value(path, path[2] - 1, \out, @ h) != 0 || l2_rw_put(\out, 1, h) != 0
             return: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, path[6 + 2 * (path[2] - 1)]) < 0
+            return: 1
+        if: kind >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, kind) < 0
             return: 1
         if: l2_rw_texpr(value, n, path[3], \out, @ v) != 0
             return: 1
@@ -19896,6 +19923,138 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
     if: l2_rw_texpr(value, n, path[3], \out, @ v) != 0
         return: 1
 return: l2_rw_put(\out, 3, v)
+
+# D-105 slice 1: is formal k of method mi one a root call site fills with another named type?
+fn: l2_d105_sub (int: mi; int: k) int
+    int: i 0
+    while: i < l2_d105_n
+        if: l2_d105_mi[i] = mi && l2_d105_k[i] = k
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# Record it (once).  1 when the table is full.
+fn: l2_d105_mark (int: mi; int: k) int
+    if: l2_d105_sub(mi, k) != 0
+        return: 0
+    if: l2_d105_n >= 64
+        return: 1
+    l2_d105_mi[l2_d105_n]: mi
+    l2_d105_k[l2_d105_n]: k
+    l2_d105_n: l2_d105_n + 1
+return: 0
+
+# D-105 (Q39): the first, heavy `implements` of named Structure cand admitted to req is by NAME:
+# t[j] is the slot of cand's field named as req's field j (l2_ns_slot_named -- slots are the
+# declaration order).  0 and t[0..n), or 1 when a field of req has no one field of that name in
+# cand, or 2 when a Structure field -- nested or a reference -- is of another named type: a way
+# through it would read that type's slots again, which slice 1 does not translate.
+fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n) int
+    int: k 0
+    int: j 0
+    int: kc
+    int: slot
+    int: hit
+    int: hs
+    @: LmP0Text nm
+    \out_n: 0
+    while: k < l2_nsf_n
+        if: l2_nsf_owner[k] = req
+            nm: l2_nsf_fname[k]
+            if: nm = 0 || nm\data = 0 || j >= cap
+                return: 1
+            # cand's one field of that name, and its slot (a slot is a field's place among its
+            # Structure's fields, in declaration order).
+            kc: 0
+            slot: 0
+            hit: 0 - 1
+            hs: 0
+            while: kc < l2_nsf_n
+                if: l2_nsf_owner[kc] = cand && l2_nsf_fname[kc] != 0 && l2_text_same(l2_nsf_fname[kc], nm) != 0
+                    if: hit >= 0
+                        return: 1
+                    hit: kc
+                    hs: slot
+                ---
+                if: l2_nsf_owner[kc] = cand
+                    slot: slot + 1
+                kc: kc + 1
+            ---
+            if: hit < 0 || l2_nsf_kind[hit] != l2_nsf_kind[k]
+                return: 1
+            # A nested or shared Structure field of another named type (kinds 2, 3: l2_nsf_ref),
+            # or a reference field to another pointee (kind 10: its spelling, l2_nsf_name).
+            if: (l2_nsf_kind[k] = 2 || l2_nsf_kind[k] = 3) && l2_nsf_ref[hit] != l2_nsf_ref[k]
+                return: 2
+            if: l2_nsf_kind[k] = 10 && (l2_nsf_name[hit] = 0 || l2_nsf_name[k] = 0 || l2_text_same(l2_nsf_name[hit], l2_nsf_name[k]) = 0)
+                return: 2
+            t[j]: hs
+            j: j + 1
+        ---
+        k: k + 1
+    ---
+    \out_n: j
+return: 0
+
+# D-105 slice 1: how input k of callee idx, whose actual is of named type cand (-1: not a named
+# root field -- a letter, a fresh empty Structure), is admitted: \out 0 as before, 1 as the formal's
+# own type through lmx_walk_admit_as (the formal is one a root call site fills with another type),
+# 2 by name through the correspondence table.  Another type is admitted at the walked root only,
+# into a walked callee (--walk-methods): a native callee reads the formal's type's slots -- the
+# native slice of D-105 -- and a method's walk is refused and stays native, as it did.
+fn: l2_rw_d105_need (const: @(LmP0Node node); int: idx; int: k; int: cand; @: int out) int
+    int: ni
+    []: int t 64
+    int: n 0
+    int: why
+    ni: l2_nsty_get(idx, k)
+    \out: 0
+    if: cand >= 0 && cand != ni
+        if: l2_walk_methods = 0 || l2_library_mode != 0 || l2_rw_mi != l2_e
+            return: l2_rw_refuse(node, "an admission to a Structure type")
+        why: l2_d105_table(cand, ni, t, 64, @ n)
+        if: why = 2
+            return: l2_rw_refuse(node, "an admission to a Structure type through a Structure field of another type")
+        if: why != 0
+            return: l2_rw_refuse(node, "an admission to a Structure type")
+        if: l2_d105_mark(idx, k) != 0
+            return: l2_rw_refuse(node, "too many formals admitted by name")
+        if: l2_rw_emit != 0 && (l2_m_steps = 0 || l2_m_steps[idx] <= 0)
+            return: l2_error(l2_src, node, "an admission to a Structure type: its callee stays native under --walk-methods (D-105: the native slice is later)")
+        \out: 2
+        return: 0
+    ---
+    if: l2_rw_emit != 0 && l2_d105_sub(idx, k) != 0
+        \out: 1
+return: 0
+
+# D-105 slice 1 (Q39): PRIM [prim, record, catch, value, model, table] -- record lmx_walk_admit_as,
+# owner the program's arena; the caller builds the value into slot 3; the model is the named
+# Structure itself (l2_nsp); the table, for a cand of another type, a plain Structure of size_t
+# cells (l2_d105_table), else none (the value is the model's own).  Its out is the admitted value; a
+# refusal is the implicit throw `implements`, as lmx_walk_admit's.
+fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
+    []: int t 64
+    int: n 0
+    int: j 0
+    int: tbl
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 6, out) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_admit_as\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, \out, \out, \out, \out, \out, ni) < 0
+        return: 1
+    if: cand >= 0 && cand != ni
+        if: l2_d105_table(cand, ni, t, 64, @ n) != 0
+            return: l2_error(l2_src, 0, "internal: a correspondence table changed between the passes")
+        if: l2_rw_plain(\out, n, @ tbl) != 0 || l2_rw_put(\out, 5, tbl) != 0
+            return: 1
+        while: j < n
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", tbl, j, t[j]) < 0
+                return: 1
+            j: j + 1
+        ---
+    ---
+return: l2_rw_catch_fixed(\out, 2, "implements")
 
 # An admission at the walked root (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 3; the 2026-09-23
 # rule B2: binding an untyped graph to a typed place admits it at the binding point, and a refusal
@@ -20898,6 +21057,10 @@ return: 0
 # `args` (a field run, split by l2_expr_span like any actual list).
 fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: parent; @: int out) int
     @: LmP0Field a
+    int: cand
+    int: need 0
+    int: holder
+    int: oi
     int: n 0
     int: k 0
     int: span
@@ -20992,14 +21155,37 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
             ---
         else:
             if: l2_nsty_get(idx, k) >= 0
+                # D-105 slice 1: the actual's own named type (a root field of one), and whether the
+                # input goes through lmx_walk_admit_as (l2_rw_d105_need) -- then it is built into
+                # that admission's slot 3, and the admission is the input.
+                cand: 0 - 1
+                if: l2_named_empty_actual(a, idx, k) = 0 && span = 1 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
+                    oi: l2_rw_find(a\value\as\atom)
+                    if: oi >= 0 && l2_rw_seen(oi) != 0
+                        cand: l2_own_nsty_get(oi)
+                    ---
+                ---
+                if: l2_rw_d105_need(node, idx, k, cand, @ need) != 0
+                    return: 1
+                holder: \out
+                if: need != 0 && l2_rw_admit_as(\out, l2_nsty_get(idx, k), cand, @ holder) != 0
+                    return: 1
                 if: l2_named_empty_actual(a, idx, k) != 0
-                    if: l2_rw_empty_arg(l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
+                    if: l2_rw_empty_arg(l2_nsty_get(idx, k), holder, @ arg) != 0
                         return: 1
                     ---
                 else:
-                    if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
+                    if: l2_rw_struct_arg(node, a, span, l2_nsty_get(idx, k), (cast: (int) (need = 2)), holder, @ arg) != 0
                         return: 1
                     ---
+                ---
+                if: need != 0
+                    if: l2_rw_put(holder, 3, arg) != 0
+                        return: 1
+                    arg: holder
+                ---
+                if: l2_rw_put(\out, 5 + k, arg) != 0
+                    return: 1
                 ---
             else:
                 if: l2_rw_texpr(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), \out, @ arg) != 0 || l2_rw_put(\out, 5 + k, arg) != 0
@@ -21076,7 +21262,7 @@ return: 0
 # Structure that field holds -- DEREF(AT(unit, its cell)), the same node, not a copy -- so a write
 # through the formal is the caller's.  An actual of another type, or an untyped graph (a letter),
 # is admitted first: the caller's implicit `implements` (D-55), not built here.
-fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: parent; @: int out) int
+fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     int: oi
     int: raw
     if: span != 1 || a\value = 0 || a\value\kind != c.LM_P0_NODE_ATOM || a\value\as = 0
@@ -21092,7 +21278,8 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
             return: 1
         return: l2_rw_put(\out, 3, raw)
     ---
-    if: l2_own_nsty_get(oi) != ni
+    # Another named type is admitted by name around this node (D-105: l2_rw_d105_need, other_ok).
+    if: l2_own_nsty_get(oi) != ni && other_ok = 0
         return: l2_rw_refuse(node, "an admission to a Structure type")
     if: l2_own_is_slot(oi) != 0
         return: l2_rw_own(parent, oi, out)
@@ -27535,6 +27722,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_rw_t: 0
     l2_rw_pn: 0
     l2_rw_steps: 0
+    l2_d105_n: 0
     l2_rw_send_n: 0
     l2_rw_send_i: 0
     l2_rw_send_rec: 1

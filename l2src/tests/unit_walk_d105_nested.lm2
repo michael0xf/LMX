@@ -1,0 +1,27 @@
+# D-105 slice 1 (Q39), under --walk-methods: Model and Other agree by name, but their field `x` is a
+# reference to InA in one and to InB in the other.  A way through `m\x` would read InB at InA's slots
+# -- the correspondence of slice 1 is one level -- so the walked root refuses the admission:
+# "an admission to a Structure type through a Structure field of another type".
+InA:
+    size_t: p 1U
+    size_t: q 2U
+end: InA
+InB:
+    size_t: q 20U
+    size_t: p 10U
+end: InB
+Model:
+    size_t: a 1U
+    @: InA x
+end: Model
+Other:
+    @: InB x
+    size_t: a 10U
+end: Other
+fn: rd (Model: m) size_t
+return: m\a
+Other: o
+size_t: got 0U
+got: rd(o)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,213 @@
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_turn.lm1"
+predef: "l2src/lmx_child.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_range.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# D-105 (the author's Q39, 2026-09-27; steps/d105-index-table.md): the `implements` table of
+# address correspondences.  What this file pins:
+#
+#   * the first admission of a value to a named Structure it is not an instance of is the heavy
+#     one: `Other` (b: int, a: size_t) admitted to `Model` (a: size_t, b: int) through the table
+#     [1, 0] is recorded, and a field of Model is then read at the value's own slot for it;
+#   * a later admission finds the record -- the same correspondence answers YES, another one
+#     (the identity) NO: one value, one own type;
+#   * a table that does not match the value field by field is refused and records nothing;
+#   * a value with no record has no slot for Model -- never "slot j" by default;
+#   * the identity (a null table) is an instance of Model, read at Model's own slots;
+#   * a record never outlives its value: a revert takes back the value and its record, and a
+#     collection pass that frees the storage drops the record in the same pass, while one that
+#     keeps the storage keeps it;
+#   * attach carries the donor's records.
+
+sub: it_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: it_check
+
+# A Structure of two cells, in the order given: 0 = a size_t cell, 1 = an int cell.
+fn: it_pair (@: LmxArena arena; int: first; int: second) @: Lmx
+    @: Lmx s
+    @: void x
+    @: void y
+    s: lmx_node_new_owned(arena)
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 2U) != 0
+        return: 0
+    ---
+    x: lmx_size_new_owned(arena)
+    if: first != 0
+        x: lmx_int_new_owned(arena)
+    ---
+    y: lmx_size_new_owned(arena)
+    if: second != 0
+        y: lmx_int_new_owned(arena)
+    ---
+    if: x = 0 || y = 0 || lmx_arena_ref_store(s, 0U, x) != 0 || lmx_arena_ref_store(s, 1U, y) != 0
+        return: 0
+    ---
+return: s
+
+# A correspondence table of two size_t cells.
+fn: it_table (@: LmxArena arena; size_t: t0; size_t: t1) @: Lmx
+    @: Lmx s
+    @: void x
+    @: void y
+    s: lmx_node_new_owned(arena)
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 2U) != 0
+        return: 0
+    ---
+    x: lmx_size_new_owned(arena)
+    y: lmx_size_new_owned(arena)
+    if: x = 0 || y = 0 || lmx_size_store_known(x, t0) != 0 || lmx_size_store_known(y, t1) != 0
+        return: 0
+    ---
+    if: lmx_arena_ref_store(s, 0U, x) != 0 || lmx_arena_ref_store(s, 1U, y) != 0
+        return: 0
+    ---
+return: s
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxArena: donor
+    @: LmxArena at 0
+    @: LmxArena dn 0
+    @: Lmx model 0
+    @: Lmx other 0
+    @: Lmx other2 0
+    @: Lmx own 0
+    @: Lmx late 0
+    @: Lmx lent 0
+    @: Lmx dmodel 0
+    @: Lmx dtable 0
+    @: Lmx perm 0
+    @: Lmx wrong 0
+    @: Lmx wide 0
+    @: LmxArenaBlock mark 0
+    size_t: slot 99U
+    size_t: kept 0U
+    unsigned: gen
+    int: failures
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ donor)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ donor) != 0
+        fputs("lmx_implements_table: the arena did not open\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    at: @ arena
+    dn: @ donor
+    # Model (a: size_t, b: int); Other permutes them (b: int, a: size_t).
+    model: it_pair(at, 0, 1)
+    other: it_pair(at, 1, 0)
+    other2: it_pair(at, 1, 0)
+    own: it_pair(at, 0, 1)
+    perm: it_table(at, 1U, 0U)
+    wrong: it_table(at, 0U, 1U)
+    wide: lmx_node_new_owned(at)
+    if: model = 0 || other = 0 || other2 = 0 || own = 0 || perm = 0 || wrong = 0 || wide = 0 || lmx_arena_refs_open_owned(at, wide, 3U) != 0
+        free(counts)
+        return: 2
+    ---
+
+    # The heavy first admission, then a read through the record.
+    it_check(counts, lmx_implements_register(at, other, model, perm) = c.LMX_IMPLEMENTS_YES, "Other through [1, 0] was not admitted to Model")
+    it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) = 0 && slot = 1U, "Model's field a is not read at Other's slot 1")
+    it_check(counts, lmx_implements_slot(at, other, model, 1U, @ slot) = 0 && slot = 0U, "Model's field b is not read at Other's slot 0")
+    it_check(counts, lmx_implements_slot(at, other, model, 2U, @ slot) != 0, "a field Model does not have got a slot")
+    # A later admission takes the record: the same correspondence answers, another is refused.
+    it_check(counts, lmx_implements_register(at, other, model, perm) = c.LMX_IMPLEMENTS_YES, "a later admission with the same correspondence was refused")
+    it_check(counts, lmx_implements_register(at, other, model, 0) = c.LMX_IMPLEMENTS_NO, "the same value answered Model through a second correspondence")
+    it_check(counts, at\impl_len = 1U, "a later admission added a record")
+    # A table that does not match field by field: refused, nothing recorded.
+    it_check(counts, lmx_implements_register(at, other2, model, wrong) = c.LMX_IMPLEMENTS_NO, "a table that reads an int as a size_t was admitted")
+    it_check(counts, lmx_implements_find(at, other2, model) = 0, "a refused admission left a record")
+    it_check(counts, lmx_implements_register(at, other2, model, wide) = c.LMX_IMPLEMENTS_NO, "a table of another width was admitted")
+    # The identity reads Other2 at Model's own slots only if it IS Model -- it is not.
+    it_check(counts, lmx_implements_register(at, other2, model, 0) = c.LMX_IMPLEMENTS_NO, "Other admitted to Model as its own type")
+    # No record, no slot: never "slot j" by default.
+    slot: 99U
+    it_check(counts, lmx_implements_slot(at, other2, model, 0U, @ slot) != 0 && slot = 99U, "a value with no record was given a slot")
+    # The identity: an instance of Model, read at Model's own slots.
+    it_check(counts, lmx_implements_register(at, own, model, 0) = c.LMX_IMPLEMENTS_YES, "an instance of Model was not admitted to Model")
+    it_check(counts, lmx_implements_slot(at, own, model, 1U, @ slot) = 0 && slot = 1U, "an instance of Model is not read at Model's slots")
+    it_check(counts, lmx_implements_register(at, own, model, perm) = c.LMX_IMPLEMENTS_NO, "an instance of Model answered Model through a permutation")
+
+    # A revert takes back the value built after the mark, and its record with it.
+    kept: at\impl_len
+    mark: lmx_arena_mark(at)
+    late: it_pair(at, 1, 0)
+    it_check(counts, late != 0 && lmx_implements_register(at, late, model, perm) = c.LMX_IMPLEMENTS_YES, "a value built after the mark was not admitted")
+    it_check(counts, at\impl_len = kept + 1U, "the admission after the mark was not recorded")
+    lmx_arena_revert(at, mark)
+    it_check(counts, lmx_implements_find(at, late, model) = 0, "a record outlived the revert of its value")
+    it_check(counts, at\impl_len = kept && lmx_implements_find(at, other, model) != 0 && lmx_implements_find(at, own, model) != 0, "a revert dropped a record of a value it did not take back")
+
+    # Attach carries the donor's records.
+    dmodel: it_pair(dn, 0, 1)
+    lent: it_pair(dn, 1, 0)
+    dtable: it_table(dn, 1U, 0U)
+    if: dmodel = 0 || lent = 0 || dtable = 0
+        free(counts)
+        return: 2
+    ---
+    it_check(counts, lmx_implements_register(dn, lent, dmodel, 0) = c.LMX_IMPLEMENTS_NO, "the donor admitted Other to Model as its own type")
+    it_check(counts, lmx_implements_register(dn, lent, dmodel, dtable) = c.LMX_IMPLEMENTS_YES, "the donor did not admit Other through [1, 0]")
+    kept: at\impl_len
+    it_check(counts, lmx_arena_attach(at, dn) = 0, "attach refused")
+    it_check(counts, at\impl_len = kept + 1U && dn\impl_len = 0U && dn\impl = 0, "attach did not carry the donor's record")
+    it_check(counts, lmx_implements_slot(at, lent, dmodel, 0U, @ slot) = 0 && slot = 1U, "the carried record does not answer in the receiving arena")
+
+    # A collection pass that keeps the storage keeps the records ...
+    kept: at\impl_len
+    gen: lmx_arena_generation_next(at)
+    lmx_gc_mark_value(at, (cast: (@: void) model), gen, 0)
+    lmx_gc_mark_value(at, (cast: (@: void) other), gen, 0)
+    lmx_gc_mark_value(at, (cast: (@: void) own), gen, 0)
+    lmx_gc_mark_value(at, (cast: (@: void) perm), gen, 0)
+    lmx_gc_mark_value(at, (cast: (@: void) lent), gen, 0)
+    lmx_gc_mark_value(at, (cast: (@: void) dmodel), gen, 0)
+    lmx_gc_mark_value(at, (cast: (@: void) dtable), gen, 0)
+    it_check(counts, lmx_gc_sweep(at, gen) = c.LMX_GC_OK, "the keeping sweep failed")
+    it_check(counts, at\impl_len = kept && lmx_implements_find(at, other, model) != 0, "a record of a kept value left in the sweep")
+    # ... and one that frees it drops them in the same pass.
+    gen: lmx_arena_generation_next(at)
+    it_check(counts, lmx_gc_sweep(at, gen) = c.LMX_GC_OK, "the freeing sweep failed")
+    it_check(counts, at\impl_len = 0U, "a record outlived the sweep that freed its value")
+    # The table is keyed by address alone: a Structure made later at a freed address must find
+    # nothing there -- asked with the freed addresses themselves, which is exactly what such a
+    # Structure would ask with (a lookup reads no cell of the value).  The identity record is the
+    # one that would answer: it has no table whose freed cells could refuse.
+    slot: 99U
+    it_check(counts, lmx_implements_slot(at, own, model, 1U, @ slot) != 0 && slot = 99U, "a freed address still answers Model as Model's own")
+    it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) != 0 && slot = 99U, "a freed address still answers Model through the old table")
+
+    lmx_arena_release(at)
+    lmx_arena_release(dn)
+    it_check(counts, at\impl = 0 && at\impl_len = 0U && at\impl_cap = 0U, "release left the table")
+    failures: counts[1]
+    c.printf("lmx_implements_table: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    if: failures != 0
+        return: 1
+return: 0

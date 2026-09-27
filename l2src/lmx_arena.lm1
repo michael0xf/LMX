@@ -83,6 +83,9 @@ fn: lmx_arena_open (@: LmxArena arena) int
     if: lmx_arena_index_len(arena) != 0U || lmx_arena_index_cap(arena) != 0U
         return: 1
     ---
+    if: arena\impl != 0 || arena\impl_len != 0U || arena\impl_cap != 0U
+        return: 1
+    ---
     arena\generation: 0U
     arena\simple: 0U
 return: 0
@@ -214,6 +217,8 @@ fn: lmx_arena_revert (@: LmxArena arena; @: LmxArenaBlock mark) int
     while: arena\blocks != 0 && arena\blocks != mark
         lmx_arena_drop(arena, arena\blocks)
     ---
+    # D-105: a correspondence of a value the revert took back leaves with it.
+    lmx_arena_impl_prune(arena)
 return: 0
 
 # A cell of the arena's array of this kind and type.  The array is the arena's own: it is
@@ -282,6 +287,11 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     if: lmx_arena_blocks_can_move(@ arena\blocks, @ other\blocks) != c.LMX_ARENA_BLOCKS_OK
         return: 1
     ---
+    # D-105: the donor's `implements` correspondences name its values, whose addresses do not
+    # change -- they join this arena's table.  Room first, so a refusal disturbs nothing.
+    if: other\impl_len != 0U && lmx_arena_impl_room(arena, arena\impl_len + other\impl_len) != 0
+        return: 1
+    ---
     mark: lmx_arena_index_len(arena)
     index: 0U
     while: index < lmx_arena_index_len(other)
@@ -323,6 +333,18 @@ fn: lmx_arena_attach (@: LmxArena arena; @: LmxArena other) int
     lmx_arena_index_set_cap(other, 0U)
     other\generation: 0U
     other\simple: 0U
+    index: 0U
+    while: index < other\impl_len
+        arena\impl[arena\impl_len]: other\impl[index]
+        arena\impl_len: arena\impl_len + 1U
+        index: index + 1U
+    ---
+    if: other\impl != 0
+        free((cast: (@: void) other\impl))
+    ---
+    other\impl: 0
+    other\impl_len: 0U
+    other\impl_cap: 0U
 return: lmx_arena_blocks_move_all(@ arena\blocks, @ other\blocks)
 
 # Release everything the arena owns: every entry it holds is retired, then the storage
@@ -349,6 +371,12 @@ fn: lmx_arena_release (@: LmxArena arena) int
     lmx_arena_index_set_data(arena, 0)
     lmx_arena_index_set_len(arena, 0U)
     lmx_arena_index_set_cap(arena, 0U)
+    if: arena\impl != 0
+        free((cast: (@: void) arena\impl))
+    ---
+    arena\impl: 0
+    arena\impl_len: 0U
+    arena\impl_cap: 0U
     arena\generation: 0U
     arena\simple: 0U
 return: status
@@ -369,3 +397,56 @@ fn: lmx_arena_generation_next (@: LmxArena arena) unsigned
         arena\generation: 1U
     ---
 return: arena\generation
+
+# D-105: room for `need` correspondences in the arena's `implements` table (malloc'd, grown by
+# doubling like the index).  0 = there is room.
+fn: lmx_arena_impl_room (@: LmxArena arena; size_t: need) int
+    LmxImplEntry: probe
+    size_t: capacity
+    @: LmxImplEntry grown
+    if: arena = 0
+        return: 1
+    if: need <= arena\impl_cap
+        return: 0
+    capacity: arena\impl_cap
+    if: capacity = 0U
+        capacity: 8U
+    ---
+    while: capacity < need
+        if: capacity > ((cast: (size_t) -1) / 2U)
+            return: 1
+        ---
+        capacity: capacity * 2U
+    ---
+    if: capacity > ((cast: (size_t) -1) / c.sizeof(probe))
+        return: 1
+    grown: (cast: (@: LmxImplEntry) realloc((cast: (@: void) arena\impl), capacity * c.sizeof(probe)))
+    if: grown = 0
+        return: 1
+    ---
+    arena\impl: grown
+    arena\impl_cap: capacity
+return: 0
+
+# D-105: drop every correspondence whose value, model or table no longer classifies as a live
+# Structure of this arena.  Run where storage leaves -- the sweep, after its blocks are gone, and
+# a revert -- so an entry never outlives its value by one pass: the next Structure at that address
+# starts with no correspondence.  Order is kept (lookups scan the table).
+fn: lmx_arena_impl_prune (@: LmxArena arena) void
+    size_t: i 0U
+    size_t: kept 0U
+    @: LmxImplEntry e
+    if: arena = 0 || arena\impl = 0
+        return
+    ---
+    while: i < arena\impl_len
+        e: arena\impl + i
+        if: lmx_range_classify(arena, (cast: (@: void) e\value)) = c.LMX_KIND_STRUCT && lmx_range_classify(arena, (cast: (@: void) e\req)) = c.LMX_KIND_STRUCT && (e\table = 0 || lmx_range_classify(arena, (cast: (@: void) e\table)) = c.LMX_KIND_STRUCT)
+            if: kept != i
+                arena\impl[kept]: arena\impl[i]
+            ---
+            kept: kept + 1U
+        ---
+        i: i + 1U
+    ---
+    arena\impl_len: kept

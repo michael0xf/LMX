@@ -156,3 +156,140 @@ fn: lmx_runtime_implements (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx 
     if: arena = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
 return: lmx_implements_walk(arena, varA, varB, consumer, 0)
+
+# D-105 (the author's Q39, 2026-09-27, LMX_blog/2026-09-27.md: "если поставляется исходная
+# структура то берется прямо по смещению исходной. Если подставляется другая то надо ей прикрепить
+# таблицу преобразований индексов. ОЧевидное место длятакой таблице -- сам implements. Все равно
+# там тяжелеовесный только первый implements должен быть а в дальнейших проверках он должен брать
+# соответствие адресов из своей таблицы").  The table is the arena's (LmxArena.impl): the arena
+# is the context of every question in this unit, and its values are what the records name.
+
+# Cell j of a correspondence table: a size_t cell of the arena.  0 and *out, or 1.
+fn: lmx_implements_cell (@: LmxArena arena; @: Lmx table; size_t: j; @: size_t out) int
+    @: void cell
+    @: size_t at
+    if: arena = 0 || table = 0 || out = 0 || j >= table\array.size
+        return: 1
+    cell: lmx_arena_ref_value(table, j)
+    if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+        return: 1
+    at: (cast: (@: size_t) cell)
+    \out: at[0]
+return: 0
+
+# The record of (value, req), or null.
+fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
+    size_t: i 0U
+    @: LmxImplEntry e
+    if: arena = 0 || arena\impl = 0 || value = 0 || req = 0
+        return: 0
+    while: i < arena\impl_len
+        e: arena\impl + i
+        if: e\value = value && e\req = req
+            return: e
+        i: i + 1U
+    ---
+return: 0
+
+# Two correspondences to req (n fields) give every field the same slot -- null is the identity.
+fn: lmx_implements_same_map (@: LmxArena arena; @: Lmx a; @: Lmx b; size_t: n) int
+    size_t: j 0U
+    size_t: sa
+    size_t: sb
+    while: j < n
+        sa: j
+        sb: j
+        if: a != 0 && lmx_implements_cell(arena, a, j, @ sa) != 0
+            return: 0
+        if: b != 0 && lmx_implements_cell(arena, b, j, @ sb) != 0
+            return: 0
+        if: sa != sb
+            return: 0
+        j: j + 1U
+    ---
+return: 1
+
+# The heavy check of the first admission: every field of req through the table -- the value's
+# slot T[j] present, of req's field's domain and type, a Structure field by the ordinary walk.
+# A null table is the ordinary check (lmx_implements_walk, index paths): the value is req's own.
+fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx table) int
+    size_t: j 0U
+    size_t: k
+    @: void a
+    @: void c
+    int: kindA
+    int: kindC
+    int: answer
+    if: arena = 0 || value = 0 || req = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) req)) != c.LMX_KIND_STRUCT
+        return: c.LMX_IMPLEMENTS_NO
+    if: table = 0
+        return: lmx_implements_walk(arena, value, value, req, 0)
+    if: lmx_domain_kind(arena, (cast: (@: void) table)) != c.LMX_KIND_STRUCT || table\array.size != req\array.size
+        return: c.LMX_IMPLEMENTS_NO
+    while: j < req\array.size
+        c: lmx_arena_ref_value(req, j)
+        if: c != 0
+            if: lmx_implements_cell(arena, table, j, @ k) != 0 || k >= value\array.size
+                return: c.LMX_IMPLEMENTS_NO
+            a: lmx_arena_ref_value(value, k)
+            if: a = 0
+                return: c.LMX_IMPLEMENTS_NO
+            kindA: lmx_domain_kind(arena, a)
+            kindC: lmx_domain_kind(arena, c)
+            if: kindA = c.LMX_KIND_NONE || kindC = c.LMX_KIND_NONE
+                return: c.LMX_IMPLEMENTS_UNKNOWN
+            if: kindA != kindC
+                return: c.LMX_IMPLEMENTS_NO
+            if: kindC = c.LMX_KIND_STRUCT
+                answer: lmx_implements_walk(arena, (cast: (@: Lmx) a), (cast: (@: Lmx) a), (cast: (@: Lmx) c), 1)
+                if: answer != c.LMX_IMPLEMENTS_YES
+                    return: answer
+                ---
+            else:
+                if: lmx_domain_type(arena, a) != lmx_domain_type(arena, c)
+                    return: c.LMX_IMPLEMENTS_NO
+                ---
+            ---
+        ---
+        j: j + 1U
+    ---
+return: c.LMX_IMPLEMENTS_YES
+
+fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx table) int
+    @: LmxImplEntry e
+    int: answer
+    if: arena = 0 || value = 0 || req = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    e: lmx_implements_find(arena, value, req)
+    if: e != 0
+        # A later admission: the record answers.  One value has one own type, so a different
+        # correspondence to the same req is a broken promise of the caller, refused.
+        if: lmx_implements_same_map(arena, e\table, table, (req\array.size)) != 0
+            return: c.LMX_IMPLEMENTS_YES
+        return: c.LMX_IMPLEMENTS_NO
+    ---
+    answer: lmx_implements_through(arena, value, req, table)
+    if: answer != c.LMX_IMPLEMENTS_YES
+        return: answer
+    if: lmx_arena_impl_room(arena, arena\impl_len + 1U) != 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    e: arena\impl + arena\impl_len
+    e\value: value
+    e\req: req
+    e\table: table
+    arena\impl_len: arena\impl_len + 1U
+return: c.LMX_IMPLEMENTS_YES
+
+fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out) int
+    @: LmxImplEntry e
+    if: out = 0
+        return: 1
+    e: lmx_implements_find(arena, value, req)
+    if: e = 0
+        return: 1
+    if: e\table = 0
+        \out: j
+        return: 0
+return: lmx_implements_cell(arena, e\table, j, out)

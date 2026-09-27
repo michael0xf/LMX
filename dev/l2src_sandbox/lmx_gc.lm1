@@ -330,6 +330,9 @@ fn: lmx_gc_sweep (@: LmxArena arena; unsigned: gen) int
         ---
         node: next
     ---
+    # D-105: a correspondence of the `implements` table never outlives its value by one pass --
+    # dropped here, after the storage and before anything can be handed out at its address.
+    lmx_arena_impl_prune(arena)
 return: c.LMX_GC_OK
 
 fn: lmx_gc_collect (@: LmxArena arena; @: LmxThread t) int

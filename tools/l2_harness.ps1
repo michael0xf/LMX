@@ -1060,6 +1060,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_capture_struct_whole_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':21:5: a callable merge needs a walkable body: it can throw (a throwing method stays native)'; Args = @('0'); Absent = @(); Debt = @() },
     # REVIEW 9256c3b: one cause, one line -- a model's refusal said by the scan is not followed by
     # "unsupported body" (the at-most-one-line check above holds every refusal row to it).
+    # D-108: an actual admitted to a Structure-typed formal is checked as any actual is (l2_check_call) --
+    # a call inside it records its edge, so the throw closure makes the caller throwing (_throwing: 5 through
+    # mk's converted field; before, gcc: 'l2_msg' / 'l2_out_throw' undeclared), and meets the static rule of
+    # §14 (_declared_refused; before, only the internal backstop at 1:1).
+    [pscustomobject]@{ Name = 'unit_d108_nested_throwing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d108_nested_declared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':15:12: unhandled throw: Oops'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_model_decl_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':11:5: a callable merge binds a name that is not a formal'; Args = @('0'); Absent = @(); Debt = @() },
     # Item 738 slice 2: _write_only (REVIEW 2032ca0, M46/P46) -- a field the model only writes is in the
     # copy (42, 43); _write_root -- a model that uses its capture only in update position records it (2, 3;

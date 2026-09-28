@@ -15925,6 +15925,11 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                     handled: 1
                 ---
             ---
+            # D-108: an actual admitted to a Structure-typed formal is checked as any other actual is --
+            # a call in it records its edge (the throw closure reaches this caller) and meets the static
+            # rule of §14; the admission above decided only its type.
+            if: handled != 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
+                return: 1
             if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
             if: handled = 0 && req_mi < 0 && nst < 0 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0

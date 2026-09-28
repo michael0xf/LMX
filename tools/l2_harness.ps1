@@ -315,8 +315,8 @@ if (Test-Path -LiteralPath $testsHdr) {
 }
 Copy-Item -LiteralPath (Join-Path $sandbox 'convert.lm2') -Destination (Join-Path $src 'convert.lm2') -Force
 $staged++
-# The primitive table (slice 2 of the receiver `table`): read beside the source at the start of every
-# translation, as convert.lm2 is (where the translator's tables live is Q46, open).
+# The sandbox's tables and receivers: parts of every row's program, named at the call (steps/table-receiver.md
+# §8, Q46; the rows' Table, Primitive, Impl and Parts below).
 Copy-Item -LiteralPath (Join-Path $sandbox 'primitive.lm2') -Destination (Join-Path $src 'primitive.lm2') -Force
 $staged++
 # The receivers the rows name (Q33): ordinary L2 methods beside the table.
@@ -751,7 +751,7 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
     # length() is size_t and exit_code is int: the root's conversion edge (implements-port slice 13).
-    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_admit_rebind_read.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 2;
         Absent = @(); Debt = @() },
     # length(m\mainArgs) is the outer array's size_t length (semantics §17: first dimension).
     # No extra argv: the letter holds argv[0] alone, so length is 1. Success is exit 7,
@@ -788,7 +788,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_charpp_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @(); Debt = @() },
     # plus_one's formal is int; length() is size_t: the root's conversion edge (slice 13).
-    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
+    [pscustomobject]@{ Name = 'unit_entry_args.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_parse_min.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body'; Args = @('0'); Argv = @('{source}');
         Absent = @(); Debt = @() },
@@ -972,7 +972,7 @@ $fixtures = @(
     # D-75: a call through a path at the walked root is typed by its method; the int result stored into
     # a size_t own takes the root's conversion edge (slice 13 -- before it, a located refusal of the mix;
     # before D-75, walk error INVALID at run time), and its running twin.
-    [pscustomobject]@{ Name = 'unit_root_path_call_type.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_root_path_call_type.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_path_call_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
@@ -1111,9 +1111,9 @@ $fixtures = @(
     # the node as the status again -- unknown status, exit 3.  Under the knob the same host stays
     # native and l2trans notes it (REVIEW c953b22), located; the row requires the note.  Mutant: no
     # note -- the Notes line is missing.
-    [pscustomobject]@{ Name = 'unit_make_adder_throwing_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_make_adder_throwing_host.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_make_adder_native_note.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_walk_make_adder_native_note.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Notes = @('the callable merge host makeAdder stays native under --walk-methods: it can throw'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t6_root_held_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a held callable whose header is not one number to a number'; Absent = @(); Debt = @() },
@@ -1269,7 +1269,7 @@ $fixtures = @(
         Needle = 'a callable merge header does not match the model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_from_int.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'merge needs at least one operand'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+    [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Absent = @(); Debt = @('merge result check 77', 'merge result check 79') },
     # -193 T1b (Q6 = a): no name is decided by its spelling.  l2_upper_name (all-caps = a C constant
     # for gcc) is gone: a `define:` of the unit or its predef chain is a DECLARED name
@@ -1333,7 +1333,7 @@ $fixtures = @(
                  'l2_out_throw[0]: 0',
                  'c.fprintf(c.stderr, "lmx: invariant: merge result check 71\n")',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
-    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+    [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
@@ -1628,6 +1628,11 @@ $fixtures = @(
         Needle = 'lm2:4:5: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_nested_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:8:9: a statement in a nested or qualified named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # REVIEW 99511ff (fable_pc's M51, probe P59): a Structure of fields only executed in an `else:` of the root
+    # and of a method -- the scan finds executions in else bodies; and `else: Counter` is no declaration of a
+    # field Counter (l2_unit_declares took any `X: name` for one, so Counter was no named Structure).
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_else.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # D-105 slice 1 (the author's Q39: the interpreter first; steps/d105-index-table.md §5): the walked
     # root hands `o: Other` (Model's fields in the other order) to `rd (Model: m)` and `wr` -- admitted by
     # NAME through lmx_walk_admit_as, whose correspondence table the arena's `implements` table keeps;
@@ -2193,7 +2198,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
-    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 5; Needle = '';
+    [pscustomobject]@{ Name = 'unit_field_path_formal_value.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Entry = 5; Needle = '';
         Args = @('0');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_self_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 1; EmptyEntry = $true; Needle = '';
@@ -2595,7 +2600,7 @@ $fixtures = @(
     # its own witness function, so a broken address write would have
     # passed silently either way. Completed with a real call and assertion
     # rather than rewritten from scratch (the shapes were already correct).
-    [pscustomobject]@{ Name = 'unit_addr_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+    [pscustomobject]@{ Name = 'unit_addr_arg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0');
         Absent = @();
         Debt = @() },
@@ -2603,7 +2608,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_addr_take.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_addr_take.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },
@@ -2887,9 +2892,9 @@ $fixtures = @(
     # unit_s7_prim_cross over it is still Entry 7.  A table without its receiver column is refused by
     # name.  Mutant: rows read by position -- the reversed table matches no row; the refusal row is
     # refused in other words.
-    [pscustomobject]@{ Name = 'unit_s7_conv_columns.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_columns_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_conv_columns.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_columns_table.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_nocolumn.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_nocolumn_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_conv_nocolumn.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_nocolumn_table.lm2';
         Needle = 'conversion table has no column receiver'; Absent = @(); Debt = @() },
     # REVIEW f2a1578 (fable_pc's M37: no row went red without the partial-row check; P37: without it a
     # partial row fell out silently): the table's other refusals, each over its own broken table and
@@ -2898,14 +2903,14 @@ $fixtures = @(
     # written before the columns were refused by the tree walk; `columns:` and `rows:` are named
     # arguments now, bound by their names (book §10): the same table, Entry 7.
     # Mutants: each check dropped -- exactly its rows red; named arguments bound by place -- rowsfirst red.
-    [pscustomobject]@{ Name = 'unit_s7_conv_twice.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_twice_table.lm2';
-        Needle = 'convert.lm2:6:101: a table column is named twice'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_rowsfirst.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_rowsfirst_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_conv_twice.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_twice_table.lm2';
+        Needle = 'unit_s7_conv_twice_table.lm2:6:101: a table column is named twice'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_rowsfirst.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_rowsfirst_table.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_partial.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_partial_table.lm2';
-        Needle = 'convert.lm2:8:5: table rows are not whole rows of its columns'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_wide.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_wide_table.lm2';
-        Needle = 'convert.lm2:6:549: a table has too many columns'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_partial.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_partial_table.lm2';
+        Needle = 'unit_s7_conv_partial_table.lm2:8:5: table rows are not whole rows of its columns'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_wide.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_wide_table.lm2';
+        Needle = 'unit_s7_conv_wide_table.lm2:6:549: a table has too many columns'; Absent = @(); Debt = @() },
     # Q43 (the author, 2026-09-27): a cell of `rows:` is an argument of any kind -- an atom, a Structure, an
     # array -- through the common gate of actuals (l2_expr_span), no exceptions; refusing a cell that is
     # not one atom is a bug.  A Structure cell and an expression cell are one cell each (the gated reading
@@ -2914,19 +2919,19 @@ $fixtures = @(
     # name (REVIEW daee4f7, P40) is kept and not read.  Mutants: a cell one field, not one actual --
     # cellexpr red; a non-atom not a cell -- cellstruct and cellneed red; no check at use -- cellneed
     # segfaults.
-    [pscustomobject]@{ Name = 'unit_s7_conv_cellstruct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_cellstruct_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellstruct.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_cellstruct_table.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_cellexpr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_cellexpr_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellexpr.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_cellexpr_table.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_cellneed.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_cellneed_table.lm2';
-        Needle = 'convert.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_extra.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_extra_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellneed.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_cellneed_table.lm2';
+        Needle = 'unit_s7_conv_cellneed_table.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_extra.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_extra_table.lm2';
         Absent = @(); Debt = @() },
     # REVIEW 914ae15 (fable_pc's M43/P43): a name only for a cell that is one atom holds for an expression
     # too -- the size_t -> int receiver written `lm_stg_convert_size_t_int + 0` is said at the cell.
     # Mutant M43 (the span check dropped: the first atom's name taken) -- accepted silently, red.
-    [pscustomobject]@{ Name = 'unit_s7_conv_cellneed_expr.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_cellneed_expr_table.lm2';
-        Needle = 'convert.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellneed_expr.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_cellneed_expr_table.lm2';
+        Needle = 'unit_s7_conv_cellneed_expr_table.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
     # The receiver `table` (Q41, Q43; steps/table-receiver.md §5): `table:` is a call of the receiver; its
     # actuals are bound to its formals -- source, name, columns, rows, read from its header by the
     # method-formal parser -- by the book's rule for positional and named arguments (§10, l2_bind_actuals);
@@ -2939,27 +2944,27 @@ $fixtures = @(
     # Mutants (steps/table-receiver.md §5): each check dropped, the first table taken whatever its name,
     # names compared as written, a table without `source` taken, the tables below the root looked into --
     # exactly their rows red.
-    [pscustomobject]@{ Name = 'unit_s7_tbl_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_named_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_tbl_named.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_named_table.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_quoted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_quoted_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_tbl_quoted.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_quoted_table.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_runtime.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_runtime_table.lm2';
-        Needle = 'convert.lm2:1:1: convert.lm2 has no source table `primitive.convert`'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_nested_table.lm2';
-        Needle = 'convert.lm2:1:1: convert.lm2 has no source table `primitive.convert`'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_twice_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twice_arg_table.lm2';
-        Needle = 'convert.lm2:5:5: the argument name of table is given twice'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_noarg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_noarg_table.lm2';
-        Needle = 'convert.lm2:2:1: table has no argument columns'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_unknown_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_unknown_arg_table.lm2';
-        Needle = 'convert.lm2:5:5: colums is not an argument of table'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_positional_after.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_positional_after_table.lm2';
-        Needle = 'convert.lm2:137:5: a positional argument of table after a named one'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_toomany.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_toomany_table.lm2';
-        Needle = 'convert.lm2:7:5: more arguments than table has formals'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_twotables.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twotables_table.lm2';
-        Needle = 'convert.lm2:141:11: two source tables have this name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_empty.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_empty_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_tbl_runtime.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_runtime_table.lm2';
+        Needle = 'unit_s7_tbl_runtime_table.lm2:2:1: a statement in a program part is not supported yet (the part''s root is not built as a Structure of its own yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_nested.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_nested_table.lm2';
+        Needle = 'unit_s7_tbl_nested_table.lm2:2:1: a named Structure in a program part is not supported yet (the part''s root is not built as a Structure of its own yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_twice_arg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twice_arg_table.lm2';
+        Needle = 'unit_s7_tbl_twice_arg_table.lm2:5:5: the argument name of table is given twice'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_noarg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_noarg_table.lm2';
+        Needle = 'unit_s7_tbl_noarg_table.lm2:2:1: table has no argument columns'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_unknown_arg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_unknown_arg_table.lm2';
+        Needle = 'unit_s7_tbl_unknown_arg_table.lm2:5:5: colums is not an argument of table'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_positional_after.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_positional_after_table.lm2';
+        Needle = 'unit_s7_tbl_positional_after_table.lm2:137:5: a positional argument of table after a named one'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_toomany.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_toomany_table.lm2';
+        Needle = 'unit_s7_tbl_toomany_table.lm2:7:5: more arguments than table has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_twotables.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twotables_table.lm2';
+        Needle = 'unit_s7_tbl_twotables_table.lm2:141:11: two source tables have this name (the other at unit_s7_tbl_twotables_table.lm2:4:11)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_empty.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_empty_table.lm2';
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     # REVIEW e682d71: every argument of `table` by position, the columns and the one row each a Structure --
     # bound as the named form is (M48: the positional-Structure branch of l2_arg_fields -- no gated row saw
@@ -2967,14 +2972,14 @@ $fixtures = @(
     # a convert.lm2, and an impl source, that P0 refuses: the P0 diagnostic, located in that file and counted,
     # and the use site adds nothing (P54a -- it said only "cannot read ...").  Mutants: each change undone --
     # exactly its row red.
-    [pscustomobject]@{ Name = 'unit_s7_tbl_positional.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_positional_table.lm2';
+    [pscustomobject]@{ Name = 'unit_s7_tbl_positional.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_positional_table.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_posname.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_posname_table.lm2';
-        Needle = 'convert.lm2:5:5: the argument name of table is given by position (colums:) and again by name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_tbl_unparsable.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_unparsable_table.lm2';
-        Needle = 'convert.lm2:139:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_posname.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_posname_table.lm2';
+        Needle = 'unit_s7_tbl_posname_table.lm2:5:5: the argument name of table is given by position (colums:) and again by name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_unparsable.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_unparsable_table.lm2';
+        Needle = 'unit_s7_tbl_unparsable_table.lm2:139:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_impl_unparsable.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_impl_unparsable_impl.lm2';
-        Needle = 'convert_impl.lm2:52:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_conv_impl_unparsable_impl.lm2:52:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
     # Slice 2 of the receiver `table` (steps/table-receiver.md §7): the primitive question asks
     # `primitive.description` of primitive.lm2 (lingvamyxa_prev's table, the 23 names the translator knew),
     # and the translator's tables are read at the start of every translation -- one rule for both.  A table
@@ -2982,31 +2987,72 @@ $fixtures = @(
     # without its table or a column, one P0 refuses, one without a row for a type word of the translator:
     # refused once, at the start.  The table decides -- size_t with cell 0 does not implement int -- and a
     # cell the decision needs that gives no name is said at the cell, the translation failing with that one
-    # line.  Mutants: each change undone -- exactly its row red.
-    [pscustomobject]@{ Name = 'unit_s7_prim_table_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'absent';
-        Needle = 'primitive.lm2: cannot read a table file of the translator'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_table_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'absent';
-        Needle = 'convert.lm2: cannot read a table file of the translator'; Absent = @(); Debt = @() },
+    # line.  Mutants: each change undone -- exactly its row red.  (§8, slice 3: the tables are the program's,
+    # asked by name when a question comes -- a program that asks nothing needs none, the two `absent` rows
+    # run; a row's own table is a part under its own name, and its diagnostics name that file.)
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_absent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Primitive = 'absent';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_table_absent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'absent';
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_table_nodesc.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_nodesc_prim.lm2';
-        Needle = 'primitive.lm2:1:1: primitive.lm2 has no source table `primitive.description`'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_prim_table_nodesc.lm2:7:5: the program has no source table `primitive.description`'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_table_nocol.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_nocol_prim.lm2';
-        Needle = 'primitive.lm2:5:5: primitive table has no column cell'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_prim_table_cell.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_cell_prim.lm2';
+        Needle = 'unit_s7_prim_table_nocol_prim.lm2:5:5: primitive table has no column cell'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_cell.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_cell_prim.lm2';
         Needle = ':8:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_prim_table_cellneed.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_cellneed_prim.lm2';
-        Needle = 'primitive.lm2:19:23: a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_cellneed.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_cellneed_prim.lm2';
+        Needle = 'unit_s7_prim_table_cellneed_prim.lm2:19:23: a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_table_unparsable.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_unparsable_prim.lm2';
-        Needle = 'primitive.lm2:33:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_prim_table_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_norow_prim.lm2';
-        Needle = 'primitive.lm2:2:1: primitive table has no row for size_t, a type word of the translator'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_prim_table_unparsable_prim.lm2:33:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_norow.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_norow_prim.lm2';
+        Needle = 'unit_s7_prim_table_norow_prim.lm2:2:1: primitive table has no row for size_t, a type word of the translator'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_table_implcell.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_implcell_prim.lm2';
-        Needle = 'primitive.lm2:24:23: a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_prim_table_implcell_prim.lm2:24:23: a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_table_forbid.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Primitive = 'unit_s7_prim_table_forbid_prim.lm2';
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    # Slice 3 of the receiver `table` (steps/table-receiver.md §8-9; the author, Q46: "таблица это тупо ресивер
+    # table ... В ЛЮБОМ МЕСТЕ ПРОГРАММЫ"): the program is the source and the files named after it at the call;
+    # its source tables are every `table:` with `source` first, in any of its files, at any depth; a
+    # conversion's receiver is a method of the program, found by name.  The table in the source itself -- at
+    # its root, in a method's body -- and at depth in a method of a part; two parts with one table name,
+    # refused with both places; a program that converts with no conversion table, refused at the edge.  A
+    # part gives methods and source tables: a field at its root waits for the part's root built as a
+    # Structure of its own (§9), refused in those words; a method of a part reads its free names from its
+    # callers (the book :1178) -- m's own k, 9, not the source's field k, 5 -- and one no caller binds is
+    # unresolved at its read, in the part.  A `table:` without `source` is refused in its own words.
+    # Mutants (steps/table-receiver.md §9, each by copy, both modes): tables only at a file's root -- the
+    # method and part-depth rows red; the source's own tables unread -- the two in-source rows red; a part's
+    # methods not collected -- the converting rows red (no receiver); fable_pc's: a part's method binding a
+    # free name by name to the source's field -- the free-bound rows read 5, red; the primitive table
+    # required at the start -- the absent row refused; a missing table said at 1:1 -- the nodesc row red;
+    # two tables of one name without the other's place -- the dup-parts row red; the run-time words gone --
+    # its row red; a part's root item skipped silently -- the field row runs, red; the P59 fix undone -- the
+    # else row red; the return trailer not searched -- the free-refused row red; said without the flags --
+    # two lines, the cellneed and implcell rows red.
+    [pscustomobject]@{ Name = 'unit_s7_tbl_in_source.lm2'; Table = 'absent'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_in_method.lm2'; Table = 'absent'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_part_depth.lm2'; Table = 'unit_s7_tbl_part_depth_part.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_dup_parts_refused.lm2'; Parts = @('unit_s7_tbl_dup_parts_second.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_tbl_dup_parts_second.lm2:4:11: two source tables have this name (the other at convert.lm2:3:11)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_table_asks_refused.lm2'; Table = 'absent'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:7:5: the program has no source table `primitive.convert`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_field_refused.lm2'; Parts = @('unit_s7_part_field_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = "unit_s7_part_field_refused_part.lm2:2:1: a field in a program part is not supported yet (the part's root is not built as a Structure of its own yet)"; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_free_bound.lm2'; Parts = @('unit_s7_part_free_bound_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_s7_part_free_bound.lm2'; Parts = @('unit_s7_part_free_bound_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_free_refused.lm2'; Parts = @('unit_s7_part_free_bound_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_free_bound_part.lm2:4:9: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_runtime_src_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:4:1: a table built at run time is not supported yet'; Absent = @(); Debt = @() },
     # D-83: a converter's refusal is the implicit throw `convert` (g = 3), not c.abort() and not 0.
     # Uncaught it reaches the root: no value, Message stopped, status 3.  Caught, the handler runs
     # and the destination keeps its value.  Mutant: a body without its range test -- the first row
@@ -3014,48 +3060,48 @@ $fixtures = @(
     # Q33: the receiver is an ordinary method of the unit taken from convert_impl.lm2 (throws: range);
     # the edge calls it and turns its refusal into the caller's `convert`.  No converter is an L1
     # function spelled by the translator any more.
-    [pscustomobject]@{ Name = 'unit_s7_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s7_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @('lmx: converter range', 'fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
-    [pscustomobject]@{ Name = 'unit_s7_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s7_conv_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx: converter range', 'fn: lm_stg_convert_'); Debt = @('< 0') },
     # Slices 3/4 boundary (Opus, 2026-09-27): a composite store (`a: b + 1U`) now gets the same edge.
-    [pscustomobject]@{ Name = 'unit_s7_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s7_conv_compound.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_compound_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s7_conv_compound_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
     # Q33: a row whose receiver has no fn: in its impl source refuses at the edge.  The row's own
     # convert_impl.lm2 is tests\unit_s7_conv_nobody_impl.lm2, which has no lm_stg_convert_size_t_int.
     [pscustomobject]@{ Name = 'unit_s7_conv_nobody.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_nobody_impl.lm2';
-        Needle = 'no converter body ported'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_conv_nobody.lm2:9:5: the program has no method `lm_stg_convert_size_t_int`, the receiver of this conversion'; Absent = @(); Debt = @() },
     # REVIEW 38fe8b8-1: a receiver is checked as a method of the impl source it came from, so a
     # refusal inside its body names convert_impl.lm2 (and that file's line), not the program.
     # Mutant: collect and check receivers with the program's path -- the same refusal names
     # unit_s7_conv_badbody.lm2:6:9, a line of a different file.
     [pscustomobject]@{ Name = 'unit_s7_conv_badbody.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_badbody_impl.lm2';
-        Needle = 'convert_impl.lm2:6:9: throw of an undeclared name'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_conv_badbody_impl.lm2:6:9: throw of an undeclared name'; Absent = @(); Debt = @() },
     # implements-port slice 3 (A3, arguments; steps/implements-port-plan.md): a value of one named
     # primitive type given to a formal of another calls the row's receiver on it, as a store does
     # (l2_check_arg_convert, l2_emit_arg_convert) -- a direct call and a callable formal's call
     # alike; the receiver's refusal is the caller's implicit throw `convert`.  Mutants (copies
     # under build/): the edge not emitted -- _range completes with 7 and _catch skips its handler
     # with 1, both RED by run; no argument check -- _norow is accepted.
-    [pscustomobject]@{ Name = 'unit_s3_arg_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s3_arg_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s3_arg_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # Slices 3/4 boundary (Opus, 2026-09-27): a composite argument (`n - 1`) now gets the same edge.
-    [pscustomobject]@{ Name = 'unit_s3_arg_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_compound.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s3_arg_conv_compound_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s3_arg_conv_compound_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s3_arg_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     # The same edge under --walk-methods: `go` throws (its implicit `convert`) and a throwing method
     # is outside l2_rw_may -- it stays native, as with a store's edge; `take` is walked (its native
     # entry is absent).  The root receives the same status 3.
-    [pscustomobject]@{ Name = 'unit_walk_methods_s3_arg_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_walk_methods_s3_arg_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)') },
     # implements-port slice 4 (A3, return): one value of a named primitive type returned from a
     # callable whose result is another calls the row's receiver on it (l2_check_ret_convert,
@@ -3063,39 +3109,39 @@ $fixtures = @(
     # callable's implicit throw `convert`, which its caller catches by that name.  Mutants (copies
     # under build/): the edge not emitted -- _range and its WalkMethods twin complete and _catch
     # skips its handler, RED by run; no return check -- _norow is not refused with its phrase.
-    [pscustomobject]@{ Name = 'unit_s4_ret_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s4_ret_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # Slices 3/4 boundary (Opus, 2026-09-27): a composite return (`b + 1U`) now gets the same edge.
-    [pscustomobject]@{ Name = 'unit_s4_ret_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_compound.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s4_ret_conv_compound_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_compound_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
     # Opus's check on unit_merged_callable's own shape (REVIEW 12195ef, follow-up): the same edge
     # and catch, but M is a shared occurrence (A: fn: M) called through a merge result (R\M()), not
     # a plain name() -- the edge lives inside M's own body, so it does not care how M was reached.
-    [pscustomobject]@{ Name = 'unit_s4_ret_conv_merge_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_merge_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # fable_pc's own check on REVIEW 12195ef: unit_s4_ret_conv_range.lm2 exercises a body-field
     # return; this is the SAME out-of-range value as the method's own trailer (l2_check_ret_tr's
     # own path, not l2_check_body's), so a mutant dropping l2_check_ret_convert specifically inside
     # l2_check_ret_tr (visible only in L1 today) goes RED by run here too.
-    [pscustomobject]@{ Name = 'unit_s4_ret_conv_range_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s4_ret_conv_range_trailer.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s4_ret_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_methods_s4_ret_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_walk_methods_s4_ret_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
     # implements-port B3, a declaration's initializer: `size_t: s (x)` with an int x calls the row's
     # receiver on the value as a store does (l2_check_init_convert, l2_emit_init_convert), bare, in
     # parentheses or compound.  Mutants (copies under build/): the edge not emitted -- _range completes,
     # RED by run; no initializer check -- _norow refused with another phrase, RED.
-    [pscustomobject]@{ Name = 'unit_b3_init_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_b3_init_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_b3_init_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_b3_init_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_b3_init_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
@@ -3106,13 +3152,13 @@ $fixtures = @(
     # receiver only the walk names is taken by a second translation (l2_emit_unit returns 3).
     # Mutants (copies under build/): the rows not written -- _range notes the receiver's 1, _catch
     # goes uncaught; no second translation -- _compound refuses.
-    [pscustomobject]@{ Name = 'unit_s13_root_conv.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s13_root_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s13_root_conv_range.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+    [pscustomobject]@{ Name = 'unit_s13_root_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s13_root_conv_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s13_root_conv_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s13_root_conv_compound.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_s13_root_conv_compound.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s13_root_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
@@ -3291,36 +3337,32 @@ foreach ($fx in $fixtures) {
         $source = Join-Path $sandbox ('tests\' + $fx.Name)
     }
     if (-not $missing -and -not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
-    # The conversion table is the convert.lm2 beside the source, not the launch directory.
-    # Stage the fixture next to the copy made at the top of this script.  A row with Impl, Table or
-    # Primitive gets a directory of its own: tests\<Table> as its convert.lm2 (else the sandbox's table),
-    # tests\<Impl> as its convert_impl.lm2 (else the sandbox's), and tests\<Primitive> as its
-    # primitive.lm2 (else the sandbox's).  Table or Primitive 'absent' stages no such file.
+    # The program (steps/table-receiver.md §8, Q46): the fixture, then its parts, named at the call.  By
+    # default the parts are the sandbox's convert.lm2 and primitive.lm2, staged at the top of this script.
+    # Table and Primitive name a row's own file for either (tests\<file>, staged under its own name) or
+    # 'absent' (no such part); Impl names a row's own receivers file; Parts adds files (a tests\<file>, or a
+    # sandbox file staged at the top, by its name).  Nothing is renamed: a diagnostic in a part names that
+    # part's own file.
     $stagedLm2 = Join-Path $src $fx.Name
     if ($missing) { $stagedLm2 = $source }
-    $hasImpl = ($fx.PSObject.Properties['Impl'] -and $fx.Impl)
-    $hasTable = ($fx.PSObject.Properties['Table'] -and $fx.Table)
-    $hasPrim = ($fx.PSObject.Properties['Primitive'] -and $fx.Primitive)
-    if ($hasImpl -or $hasTable -or $hasPrim) {
-        $own = Join-Path $src $stem
-        New-Item -ItemType Directory -Force -Path $own | Out-Null
-        $tableSrc = Join-Path $sandbox 'convert.lm2'
-        if ($hasTable) { $tableSrc = Join-Path $sandbox ('tests\' + $fx.Table) }
-        $implSrc = Join-Path $sandbox 'convert_impl.lm2'
-        if ($hasImpl) { $implSrc = Join-Path $sandbox ('tests\' + $fx.Impl) }
-        $tableDst = Join-Path $own 'convert.lm2'
-        if (Test-Path -LiteralPath $tableDst) { Remove-Item -LiteralPath $tableDst -Force }
-        if (-not ($hasTable -and $fx.Table -eq 'absent')) { Copy-Item -LiteralPath $tableSrc -Destination $tableDst -Force }
-        Copy-Item -LiteralPath $implSrc -Destination (Join-Path $own 'convert_impl.lm2') -Force
-        $primDst = Join-Path $own 'primitive.lm2'
-        if (Test-Path -LiteralPath $primDst) { Remove-Item -LiteralPath $primDst -Force }
-        if (-not ($hasPrim -and $fx.Primitive -eq 'absent')) {
-            $primSrc = Join-Path $sandbox 'primitive.lm2'
-            if ($hasPrim) { $primSrc = Join-Path $sandbox ('tests\' + $fx.Primitive) }
-            Copy-Item -LiteralPath $primSrc -Destination $primDst -Force
-        }
-        $stagedLm2 = Join-Path $own $fx.Name
+    $partNames = @()
+    if ($fx.PSObject.Properties['Table'] -and $fx.Table) {
+        if ($fx.Table -ne 'absent') { $partNames += @($fx.Table) }
+    } else { $partNames += @('convert.lm2') }
+    if ($fx.PSObject.Properties['Primitive'] -and $fx.Primitive) {
+        if ($fx.Primitive -ne 'absent') { $partNames += @($fx.Primitive) }
+    } else { $partNames += @('primitive.lm2') }
+    if ($fx.PSObject.Properties['Impl'] -and $fx.Impl) { $partNames += @($fx.Impl) }
+    if ($fx.PSObject.Properties['Parts'] -and $fx.Parts) { $partNames += @($fx.Parts) }
+    $partArgs = @()
+    $partMissing = ''
+    foreach ($pn in $partNames) {
+        $ownPart = Join-Path $sandbox ('tests\' + $pn)
+        if (Test-Path -LiteralPath $ownPart) { Copy-Item -LiteralPath $ownPart -Destination (Join-Path $src $pn) -Force }
+        if (-not (Test-Path -LiteralPath (Join-Path $src $pn))) { $partMissing = $pn }
+        $partArgs += @($pn)
     }
+    if ($partMissing) { Add-Row 'FAIL' ('fixture:' + $stem) ('a part of the program is missing: ' + $partMissing); continue }
     if (-not $missing) { Copy-Item -LiteralPath $source -Destination $stagedLm2 -Force }
     $source = $stagedLm2
     $genLm1 = Join-Path $gen ($stem + '.lm1')
@@ -3330,7 +3372,7 @@ foreach ($fx in $fixtures) {
     # gives every method with frames (its body built as walker nodes) native 0, so a CALL of it walks.
     if ($fx.PSObject.Properties['WalkMethods'] -and $fx.WalkMethods) { $profileArgs += @('--walk-methods') }
     if ($fx.Expect -eq 'library-links') { $profileArgs += @('--library') }
-    $made = Step-Made $label $l2trans ($profileArgs + @($source, $genLm1)) $src $genLm1
+    $made = Step-Made $label $l2trans ($profileArgs + @($source) + $partArgs + @($genLm1)) $src $genLm1
 
     # 'root-pending' (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159): a row whose root uses an operation the
     # translator does not build as walker nodes yet.  It is refused, located, with the operation it needs
@@ -3436,7 +3478,7 @@ foreach ($fx in $fixtures) {
             if (-not (Test-Path -LiteralPath $osource)) { $why = 'the partner fixture is missing: ' + $other; break }
             $ostaged = Join-Path $src $other
             Copy-Item -LiteralPath $osource -Destination $ostaged -Force
-            if (-not (Step-Made ('fixture.' + $ostem + '.l2trans') $l2trans @('--library', $ostaged, $oLm1) $src $oLm1)) { $why = 'l2trans produced no L1 for the partner ' + $other; break }
+            if (-not (Step-Made ('fixture.' + $ostem + '.l2trans') $l2trans @('--library', $ostaged, 'convert.lm2', 'primitive.lm2', $oLm1) $src $oLm1)) { $why = 'l2trans produced no L1 for the partner ' + $other; break }
             if (-not (Step-Made ('fixture.' + $ostem + '.l1trans') $Translator @($oLm1, $oC) $src $oC)) { $why = 'l1trans produced no C for the partner ' + $other; break }
             $units += $ostem
         }

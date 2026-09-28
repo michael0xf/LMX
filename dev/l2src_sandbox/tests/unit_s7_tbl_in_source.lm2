@@ -1,0 +1,26 @@
+# steps/table-receiver.md §8 (Q46: "таблица это тупо ресивер table ... В ЛЮБОМ МЕСТЕ ПРОГРАММЫ"): the
+# program carries its conversion table itself, at its root -- no convert.lm2 among its parts (harness
+# Table = absent); the receiver is a method of its part convert_impl.lm2.  go's `a: b` converts size_t 2 to
+# int by the row's receiver: Entry 7.  Without the table, "the program has no source table" at the edge
+# (unit_s7_conv_table_asks_refused).
+table:
+    source
+    name: `primitive.convert`
+    columns: (class: from) (class: to) (categoryFlag: forbidden) (@: char kind) (@: char receiver) (@: char impl)
+    rows:
+             size_t    int        0  sign      lm_stg_convert_size_t_int    "convert_impl.lm2"
+end: `primitive.convert`
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

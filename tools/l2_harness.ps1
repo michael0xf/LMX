@@ -2221,7 +2221,8 @@ $fixtures = @(
     # a callable formal whose contract is its header written in place -- registered as the
     # descriptor-only method `apply(op)`, as a bodiless `fn:` named in `(test3: f)` is.  `apply(inc 10)`
     # = 11; `add` of two inputs refused at the call (13:5); `op` called with two inputs refused at that
-    # call (9:13) -- before A2 the same phrase was said at the header, so the needles pin the places.
+    # call -- before A2 the same phrase was said at the header, so the needles pin the places; since the named
+    # actuals (steps/named-actuals.md) a call's arity is the binding's, said at the extra actual (9:22).
     # Mutants: the header not a contract -- all three red (refused at the header); the contract not
     # made the formal's -- "unknown method", all three red; the header's inputs unread -- the witness
     # and the arity row red.
@@ -2230,7 +2231,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_callable_anon_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:13:5: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_anon_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'lm2:9:13: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'lm2:9:22: more arguments than op has formals'; Absent = @(); Debt = @() },
     # D-106 (REVIEW eb60712, fable_pc's P42): a top-level method `op` of two inputs beside `apply`'s
     # callable formal `op(fn: (int: x) int)` -- inside `apply` the formal is meant (apply(inc 10) = 11),
     # outside the method (op(1 2) = 103).  The gated translator took the method inside `apply` and refused
@@ -2307,9 +2308,9 @@ $fixtures = @(
         Absent = @();
         Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw4, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw5, 1U, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'lm2:7:4: add has no argument b'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'lm2:4:9: add has no argument b'; Absent = @(); Debt = @() },
     # Superseded by FABLE-SONNET-EMPTY-STRUCT-20260923-132: `mystruct: ()`
     # now declares an empty Structure instead of refusing as an unresolved
     # call (see the fixture's own header comment).
@@ -2584,7 +2585,7 @@ $fixtures = @(
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_priority_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'lm2:14:6: more arguments than bar has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_model_fresh_synonyms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
@@ -3061,7 +3062,9 @@ $fixtures = @(
     # field or its named Structure, a part's method reading node\got where only the source declares got --
     # each refused where it reads, in its file: no binding across files, and the last said while the method
     # is written, in the part; an unknown Structure type of a part's root field, said at it, in the part; a
-    # part's root field named as a method, refused as a unit field is; a callable field naming a part's
+    # part's root field named as a method, refused as a unit field is; a part's root field written by a
+    # method above its declaration, refused as a unit field is (REVIEW dcc5fd3: fable_pc's M53, which drops
+    # the place check, reddens it); a callable field naming a part's
     # method, its occurrence checked against that root; a run-time table at a part's root, a statement of its
     # procedure; a directive, the os block and a qualified branch at a part's root, refused in the words of
     # their registration; a forward declaration in a part, bound in its own file -- a part is read against
@@ -3094,6 +3097,8 @@ $fixtures = @(
         Needle = 'unit_s7_part_root_hidden.lm2:6:9: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_src_refused.lm2'; Parts = @('unit_s7_part_root_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_src_refused_part.lm2:4:1: assignment value has unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_root_below_refused.lm2'; Parts = @('unit_s7_part_root_below_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_root_below_refused_part.lm2:4:5: assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_ns_refused.lm2'; Parts = @('unit_s7_part_root_ns_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_ns_refused_part.lm2:4:4: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_node_src_refused.lm2'; Parts = @('unit_s7_part_node_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
@@ -3345,15 +3350,52 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     # (e) empty Structure as ONE named value vs empty arg list. D-23: `take(x: ())`
-    # admits the empty Structure to E and returns 7. Arglist is a nullary CALL.
+    # admits the empty Structure to E and returns 7. Arglist is a nullary CALL.  Since the named actuals
+    # (steps/named-actuals.md), `x: ()` is bound like any named argument: the empty Structure in x's place.
     # Mutant: treat the named frame as a call again -- unknown method, this row RED.
     [pscustomobject]@{ Name = 'unit_matrix_empty_named_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Entry = 7; Absent = @(); Debt = @('lmx_walk_admit', 'LMX_WALK_OP_FRESH') },
     [pscustomobject]@{ Name = 'unit_matrix_empty_arglist.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
+    # Named actuals of an ordinary call (book :1060; steps/named-actuals.md): every call's actuals are bound to
+    # its callee's formals by the one binding the receiver `table` uses (l2_bind_actuals), before any pass reads
+    # them (l2_bind_calls); a call with a named argument is rewritten in its formals' order, a named argument's
+    # body its formal's positional actual, kept whole when by position it would not be one actual.  Witnesses:
+    # named, reordered, positional then named, an expression body, a call bound inside an argument, from a
+    # method and walked; the binding's five refusals in the book's words; a callable formal called by its
+    # contract's formal name (native: a callable formal is outside the walkable subset); a path call; a frame
+    # among the actuals that names a formal of the callee is that formal's argument (P0 gives g(2) and g: 2 one
+    # tree); a body kept whole (b: - 1).  D-23's `take(x: ())` (above) is the empty Structure after the binding.
+    # Mutants (steps/named-actuals.md §3, each by copy, both modes): no binding pass -- every named row red, the
+    # formal-name row runs the method g (81), D-23's row red; bound but not rewritten -- the running rows red;
+    # a body never kept whole -- the whole row, "incompatible entry signature"; the callee by method name only --
+    # the formal and path rows red; a bound call's actuals not read for calls of their own -- the nested call
+    # red; the empty actual known only in D-23's frame form -- D-23's row red.
+    [pscustomobject]@{ Name = 'unit_named_actuals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_actuals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_twice_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_twice_refused.lm2:6:12: the argument a of f is given twice'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_unknown_refused.lm2:6:12: c is not an argument of f'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_order_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_order_refused.lm2:6:12: a positional argument of f after a named one'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_missing_refused.lm2:6:4: f has no argument b'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_again_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_again_refused.lm2:6:9: the argument a of f is given by position and again by name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_formal_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'lm2:14:5: more arguments than bar has formals'; Absent = @(); Debt = @() },
     # FABLE-SONNET-NAME-SPECIALS-20260924-155 commit 2: the norm's negative witness -- no
     # predef: at all for lm_own_new_zero, so l2_is_known (name resolves only through c.* or a
     # predef: declaration, never a hard-coded list) must refuse it. Measured message for a

@@ -623,7 +623,12 @@ prototype:
     fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
-    fn: l2_named_empty_actual (@: LmP0Field field; int: idx; int: k) int
+    fn: l2_empty_actual (@: LmP0Field field; int: idx; int: k) int
+    fn: l2_bind_calls (const: @(char path)) int
+    fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
+    fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
+    fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
+    fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0Node
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
     fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
     fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path)) int
@@ -4002,6 +4007,8 @@ return: l2_parse_unit(path)
 
 fn: l2_parse_library (const: @(char path)) int
     int: i 0
+    if: l2_bind_calls(path) != 0
+        return: 1
     while: i < l2_m_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_merge_scan(l2_m_body[i]\as\structure) != 0
             return: 1
@@ -6762,8 +6769,7 @@ return: memcmp(ad, bd, an) = 0
 # An argument given twice, an argument after a named one that names no formal or names none at all,
 # more positional ones than formals, a formal left without one: refused, located, in the book's words.
 # out_at[k] is formal k's first field; out_span[k] its span, 0 for a named one.  The receiver `table`
-# binds by it; an ordinary call still binds by position (l2_check_call; D-23's `Name: ()` aside) --
-# steps/table-receiver.md §5.
+# binds by it (steps/table-receiver.md §5), and so does every call (l2_bind_calls).
 fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(char callee); @@: LmP0Field out_at; @: int out_span; const: @(char path); const: @(LmP0Node at)) int
     @: LmP0Field f
     @: LmP0Frame fr
@@ -6829,6 +6835,237 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
             c.snprintf(msg, 200U, "%s has no argument %.*s", callee, (cast: (int) names[k]\length), names[k]\data)
             return: l2_error(path, at, msg)
         k: k + 1
+return: 0
+
+# Book :1060 ("Positional actual arguments precede named ones ... A named argument's body is supplied as a
+# structural value when that is the receiving expression's specified mode"): the actuals of every call are
+# bound to its callee's formals by the one binding (l2_bind_actuals, as the receiver `table`'s are) before any
+# pass reads them, and a call with a named one is rewritten in its formals' order -- each named argument's
+# body is its formal's positional actual, `name: ()` the empty Structure.  A call's callee is read as the
+# checker reads it (l2_call_head_method): a callable formal of the caller, then a method by name or path.  P0
+# gives `name(value)` and `name: value` one tree, so a frame among the actuals whose head names a formal of
+# the callee is that formal's argument.  0, or 1 said.
+fn: l2_bind_calls (const: @(char path)) int
+    int: i 0
+    while: i < l2_m_n
+        l2_cur_mi: i
+        l2_vis_method(i)
+        if: l2_m_body[i] != 0 && l2_bind_node(l2_m_body[i], i, l2_method_src(i, path)) != 0
+            return: 1
+        if: l2_m_node[i] != 0 && l2_m_node[i]\kind = c.LM_P0_NODE_FRAME && l2_m_node[i]\as != 0 && l2_m_node[i]\as\frame != 0 && l2_bind_struct(l2_ret_tr(l2_m_node[i]\as\frame), i, l2_method_src(i, path)) != 0
+            return: 1
+        i: i + 1
+    ---
+    l2_cur_mi: 0 - 1
+    l2_vis_on: 0
+return: 0
+
+# The calls in node, read as method mi's: a nested method's body is its own (l2_bind_calls reads it).
+fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
+    int: idx
+    int: fi 0
+    if: n = 0 || n\as = 0
+        return: 0
+    if: n\kind = c.LM_P0_NODE_STRUCTURE
+        return: l2_bind_struct(n\as\structure, mi, path)
+    if: n\kind != c.LM_P0_NODE_FRAME || n\as\frame = 0
+        return: 0
+    if: l2_frame_head(n, "fn") != 0 || l2_frame_head(n, "sub") != 0
+        return: 0
+    if: n\as\frame\head != 0 && n\as\frame\body != 0
+        idx: l2_call_head_method(mi, n\as\frame\head, @ fi)
+        if: idx >= 0 && idx != l2_e && l2_bind_call(n, idx, path) != 0
+            return: 1
+    ---
+    if: l2_bind_struct(n\as\frame\body, mi, path) != 0
+        return: 1
+    if: n\as\frame\trailer != 0
+        return: l2_bind_struct(n\as\frame\trailer\body, mi, path)
+return: 0
+
+fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
+    @: LmP0Field f
+    if: s = 0
+        return: 0
+    f: l2_next_active(s\first_field)
+    while: f != 0
+        if: l2_bind_node(f\value, mi, path) != 0
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+    if: s\trailer != 0
+        return: l2_bind_struct(s\trailer\body, mi, path)
+return: 0
+
+# One Structure value around fields: a named argument's body that is not one actual as written.
+fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0Node
+    @: LmP0Field copies 0
+    @: LmP0Field cp 0
+    @: LmP0Field last 0
+    @: LmP0Field f
+    @: LmP0Structure body 0
+    @: LmP0NodeAs as 0
+    @: LmP0Node node 0
+    int: j 0
+    if: cnt > 0
+        copies: (cast: (@: LmP0Field) calloc((cast: (size_t) cnt), c.sizeof(c.LmP0Field)))
+    body: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(c.LmP0Structure)))
+    as: (cast: (@: LmP0NodeAs) calloc(1U, c.sizeof(c.LmP0NodeAs)))
+    node: (cast: (@: LmP0Node) calloc(1U, c.sizeof(c.LmP0Node)))
+    if: (cnt > 0 && copies = 0) || body = 0 || as = 0 || node = 0
+        return: 0
+    f: first
+    while: j < cnt && f != 0
+        cp: copies + j
+        cp\value: f\value
+        if: last != 0
+            last\next: cp
+        last: cp
+        j: j + 1
+        f: l2_next_active(f\next)
+    ---
+    if: cnt > 0
+        body\first_field: copies
+        body\last_field: copies + (cnt - 1)
+    body\field_count: (cast: (size_t) cnt)
+    as\structure: body
+    node\kind: c.LM_P0_NODE_STRUCTURE
+    node\as: as
+    if: at != 0
+        node\span: at\span
+return: node
+
+# Call node of callee idx, its actuals bound (l2_bind_actuals); a call with a named one is rewritten in its
+# formals' order.  0, or 1 said.
+fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
+    @: LmP0Structure body
+    []: @(LmP0Field) at 16
+    []: int span 16
+    []: @(LmP0Text) names 16
+    []: @(LmP0Field) first 16
+    []: int cnt 16
+    []: char callee 160
+    @: LmP0Field f
+    @: LmP0Field copies 0
+    @: LmP0Field cp 0
+    @: LmP0Field last 0
+    @: LmP0Node whole
+    int: nf
+    int: k 0
+    int: j
+    int: n 0
+    int: named 0
+    int: again 1
+    int: rounds 0
+    int: s0
+    body: node\as\frame\body
+    nf: l2_m_arity[idx]
+    if: nf > 16
+        return: l2_error(path, node, "internal: a callee with more formals than a binding holds")
+    while: k < nf
+        names[k]: l2_fn(idx, k)
+        k: k + 1
+    ---
+    c.snprintf(callee, 160U, "%.*s", (cast: (int) node\as\frame\head\length), node\as\frame\head\data)
+    if: l2_bind_actuals(body\first_field, nf, names, callee, at, span, path, node) != 0
+        return: 1
+    k: 0
+    while: k < nf
+        if: span[k] = 0
+            named: 1
+        k: k + 1
+    ---
+    # Every actual by position, in order: the call stands as written.
+    if: named = 0
+        return: 0
+    # Each formal's actual: a positional one's fields as written; a named one's body -- no field is the
+    # empty Structure (`name: ()`, P0 flattens its sole ()).
+    k: 0
+    while: k < nf
+        if: span[k] > 0
+            first[k]: at[k]
+            cnt[k]: span[k]
+        else:
+            first[k]: l2_next_active(at[k]\value\as\frame\body\first_field)
+            cnt[k]: l2_count_active(at[k]\value\as\frame\body)
+            if: cnt[k] = 0
+                whole: l2_bind_whole(0, 0, at[k]\value)
+                if: whole = 0
+                    return: l2_error(path, node, "out of memory")
+                first[k]: (cast: (@: LmP0Field) calloc(1U, c.sizeof(c.LmP0Field)))
+                if: first[k] = 0
+                    return: l2_error(path, node, "out of memory")
+                first[k]\value: whole
+                cnt[k]: 1
+            ---
+        ---
+        k: k + 1
+    ---
+    # A named argument's body is one value: read back as positional actuals, each must be one actual of its
+    # own fields.  One that is several (`p: 1 2`) or joins its neighbour (`b: - 1` after `a: x`) is kept
+    # whole, one Structure value.
+    while: again != 0
+        again: 0
+        # Each round keeps one more body whole; a body kept whole is one field, so nf rounds suffice.
+        rounds: rounds + 1
+        if: rounds > nf + 1
+            return: l2_error(path, node, "internal: a call's bound actuals do not settle")
+        n: 0
+        k: 0
+        while: k < nf
+            n: n + cnt[k]
+            k: k + 1
+        ---
+        copies: (cast: (@: LmP0Field) calloc((cast: (size_t) n), c.sizeof(c.LmP0Field)))
+        if: copies = 0
+            return: l2_error(path, node, "out of memory")
+        last: 0
+        j: 0
+        k: 0
+        while: k < nf
+            f: first[k]
+            s0: 0
+            while: s0 < cnt[k] && f != 0
+                cp: copies + j
+                cp\value: f\value
+                cp\next: 0
+                if: last != 0
+                    last\next: cp
+                last: cp
+                j: j + 1
+                s0: s0 + 1
+                f: l2_next_active(f\next)
+            ---
+            k: k + 1
+        ---
+        f: copies
+        k: 0
+        while: k < nf && again = 0
+            s0: l2_expr_span(f)
+            if: s0 != cnt[k]
+                j: k
+                if: s0 > cnt[k] && k + 1 < nf
+                    j: k + 1
+                if: span[j] > 0 || cnt[j] < 1
+                    return: l2_error(path, f\value, "internal: a bound actual is not one argument")
+                whole: l2_bind_whole(first[j], cnt[j], first[j]\value)
+                if: whole = 0
+                    return: l2_error(path, node, "out of memory")
+                first[j]: (cast: (@: LmP0Field) calloc(1U, c.sizeof(c.LmP0Field)))
+                if: first[j] = 0
+                    return: l2_error(path, node, "out of memory")
+                first[j]\value: whole
+                cnt[j]: 1
+                again: 1
+            ---
+            if: again = 0
+                f: l2_skip_span(f, cnt[k])
+            k: k + 1
+        ---
+    ---
+    body\first_field: copies
+    body\last_field: copies + (n - 1)
+    body\field_count: (cast: (size_t) n)
 return: 0
 
 # A bound argument's fields: a named one's are its Frame's body; a positional Structure's are its own;
@@ -8941,14 +9178,14 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
         if: oi >= 0 && oi != l2_e
             if: l2_scan_ident(mi, node\as\frame\head, seen) != 0
                 return: 1
-            # A named empty actual's head is the formal, not a free name.
+            # An empty Structure actual (D-23) has nothing to scan.
             f: l2_next_active(node\as\frame\body\first_field)
             n: 0
             while: f != 0
                 span: l2_expr_span(f)
                 if: span < 1
                     return: 1
-                if: l2_named_empty_actual(f, oi, n) = 0 && l2_scan_fields(f, span, mi, seen) != 0
+                if: l2_empty_actual(f, oi, n) = 0 && l2_scan_fields(f, span, mi, seen) != 0
                     return: 1
                 f: l2_skip_span(f, span)
                 n: n + 1
@@ -16468,33 +16705,12 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_error(path, node, "unsupported trailer")
 return: l2_check_call(node, idx, fi, call\body, mi, path)
 
-# `Name: ()` in a call, Name this structure formal: the empty Structure value.
-# P0 flattens the sole anonymous (), so the frame has no fields -- the same
-# tree as a nullary call. The formal name is what makes it the value.
-fn: l2_named_empty_actual (@: LmP0Field field; int: idx; int: k) int
-    @: LmP0Frame fr
-    @: LmP0Field only
-    int: n
-    if: idx < 0 || k < 0 || field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_FRAME || field\value\as = 0
+# The empty Structure given for Structure formal k of idx (D-23): `x: ()` binds x to it (l2_bind_calls), a
+# Structure with no field -- P0 flattens the sole anonymous (), so it could not be written by position.
+fn: l2_empty_actual (@: LmP0Field field; int: idx; int: k) int
+    if: idx < 0 || k < 0 || field = 0 || l2_nsty_get(idx, k) < 0
         return: 0
-    if: l2_nsty_get(idx, k) < 0
-        return: 0
-    fr: field\value\as\frame
-    if: fr = 0 || fr\head = 0 || fr\trailer != 0 || l2_text_same(fr\head, l2_fn(idx, k)) = 0
-        return: 0
-    if: fr\body = 0
-        return: 1
-    if: fr\body\trailer != 0
-        return: 0
-    n: l2_count_active(fr\body)
-    if: n = 0
-        return: 1
-    if: n != 1
-        return: 0
-    only: l2_next_active(fr\body\first_field)
-    if: only = 0
-        return: 0
-return: l2_empty_struct(only\value)
+return: l2_empty_struct(field\value)
 
 fn: l2_emit_empty_actual (int: idx; int: k; int: mi; const: @(char ind); @: char dest) int
     int: tn
@@ -16812,7 +17028,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 l2_m_value_used[cand_mi]: 1
             ---
         ---
-        if: req_mi < 0 && l2_named_empty_actual(a0, idx, actual_i) != 0
+        if: req_mi < 0 && l2_empty_actual(a0, idx, actual_i) != 0
             if: l2_admit_site(mi) != 0
                 return: l2_error(path, node, "internal: admission outside a method")
             ---
@@ -16845,7 +17061,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 return: 1
             if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
-            if: handled = 0 && req_mi < 0 && nst < 0 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
+            if: handled = 0 && req_mi < 0 && nst < 0 && l2_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
                 return: 1
             # D-105 native: a bound name -- a formal, an own field -- of a named type is a source of that
             # type for the formal (l2_actual_ns resolves a type name or a path, not a bound name), or an edge
@@ -17892,6 +18108,10 @@ return: 0
 
 fn: l2_parse_unit (const: @(char path)) int
     int: i 0
+    # Every call's actuals bound to its callee's formals first (book :1060, l2_bind_calls): no pass reads a
+    # named argument as a call of its name.
+    if: l2_bind_calls(path) != 0
+        return: 1
     # Merge result names are reserved here, before any statement is checked: a
     # field path rooted at a bound result is otherwise an unknown head at the
     # moment the unsupported-body guard runs. The scan is idempotent, and the
@@ -18977,9 +19197,9 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
                 return: l2_prep_drop(acts, hides)
             ---
         ---
-        if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) != 0 && l2_emit_empty_actual(idx, t, mi, ind, l2_act_at(acts, t)) != 0
+        if: l2_cf_get(idx, t) < 0 && l2_empty_actual(a0, idx, t) != 0 && l2_emit_empty_actual(idx, t, mi, ind, l2_act_at(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
-        if: l2_cf_get(idx, t) < 0 && l2_named_empty_actual(a0, idx, t) = 0
+        if: l2_cf_get(idx, t) < 0 && l2_empty_actual(a0, idx, t) = 0
             er: 2
             if: l2_nsty_get(idx, t) < 0
                 er: l2_emit_value_convert_field(node, a0, actual_span, l2_ft(idx, t), mi, ind, l2_act_at(acts, t))
@@ -22770,7 +22990,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
                 # input goes through lmx_walk_admit_as (l2_rw_d105_need) -- then it is built into
                 # that admission's slot 3, and the admission is the input.
                 cand: 0 - 1
-                if: l2_named_empty_actual(a, idx, k) = 0 && span = 1 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
+                if: l2_empty_actual(a, idx, k) = 0 && span = 1 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
                     oi: l2_rw_find(a\value\as\atom)
                     if: oi >= 0 && l2_rw_seen(oi) != 0
                         cand: l2_own_nsty_get(oi)
@@ -22781,7 +23001,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
                 holder: \out
                 if: need != 0 && l2_rw_admit_as(\out, l2_nsty_get(idx, k), cand, @ holder) != 0
                     return: 1
-                if: l2_named_empty_actual(a, idx, k) != 0
+                if: l2_empty_actual(a, idx, k) != 0
                     if: l2_rw_empty_arg(l2_nsty_get(idx, k), holder, @ arg) != 0
                         return: 1
                     ---

@@ -1,0 +1,15 @@
+# Book :1060 and P0: `name(value)` and `name: value` are one tree, so among f's actuals a frame whose head
+# names a formal of f is that formal's argument, whatever else the name names.  Here g is both a method and
+# f's formal: f(g(2)) gives f's g the value 2 -- 2 + 10, 12 -- not the result of the method g (which would
+# give 30 + 10).  Entry 7.
+fn: g (int: q) int
+    return: q + 28
+fn: f (int: g) int
+    return: g + 10
+int: r 0
+r: f(g(2))
+if: r != 12
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

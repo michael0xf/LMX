@@ -1,0 +1,16 @@
+# Book :1060 through a callable formal: apply calls its formal op by the name of the contract's formal,
+# op(x: value) -- the contract's formals are the callee's (l2_call_head_method: a callable formal of the
+# caller first).  apply(inc 10) is 11.  Entry 7.
+fn: inc (int: x) int
+    return: x + 1
+end: inc
+
+fn: apply (op(fn: (int: x) int) int(value)) int
+    return: op(x: value)
+end: apply
+
+int: ok 7
+if: apply(inc 10) != 11
+    ok: 1
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

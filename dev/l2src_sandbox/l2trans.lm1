@@ -741,6 +741,9 @@ prototype:
     fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; const: @(char ind)) int
     fn: l2_d105_emit_tables () int
     fn: l2_uses_walk_body (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
+    fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) int
+    fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
+    fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: char dest) int
     fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
@@ -14203,9 +14206,6 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     size_t: n
     int: kind
     int: fpc
-    int: t
-    int: oty
-    int: ent
     if: dest = 0
         return: 1
     fpc: l2_field_path_check(mi, left, right, @ kind)
@@ -14217,6 +14217,18 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     buf[left\length]: 92
     memcpy((cast: (@: void) (buf + left\length + 1U)), (cast: (@: void) right\data), right\length)
     n: left\length + right\length + 1U
+return: l2_path_text_read(mi, buf, n, ind, at, dest)
+
+# The path buf[0..n), its leaf a value field, read into a temp named in dest (l2_emit_path walks it,
+# any depth; the leaf cell is loaded as its kind's value).  One reading for a single hop
+# (l2_field_path_read) and a deeper path in an expression (D-112/D-113).
+fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: char dest) int
+    int: kind
+    int: t
+    int: oty
+    int: ent
+    if: dest = 0
+        return: 1
     if: l2_emit_path(buf, n, mi, ind, at, @ kind) != 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_xp: l2_pxp\n", ind) < 0
@@ -14251,6 +14263,59 @@ return: 0
 
 # The value type a primitive field kind loads as (l2_emit_cell_load): size_t, char, int,
 # unsigned, ulong; -1 for any other kind.
+
+# D-112/D-113: a field path deeper than one field, written in value position -- P0 gives `m\in\x` as the
+# atoms `m`, `\`, `in`, `\`, `x` -- joined into buf.  The number of fields it takes (5, 7, ...), or 0 when f
+# starts no such path: a single hop stays l2_field_path_read's.
+fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) int
+    @: LmP0Field s
+    @: LmP0Field g
+    int: taken 1
+    size_t: n 0U
+    \out_n: 0U
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || l2_ident(f\value\as\atom) = 0
+        return: 0
+    if: f\value\as\atom\length + 1U > cap
+        return: 0
+    memcpy((cast: (@: void) buf), (cast: (@: void) f\value\as\atom\data), f\value\as\atom\length)
+    n: f\value\as\atom\length
+    s: l2_next_active(f\next)
+    while: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
+        g: l2_next_active(s\next)
+        if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || g\value\as\atom = 0 || l2_ident(g\value\as\atom) = 0
+            break
+        if: n + 1U + g\value\as\atom\length + 1U > cap
+            return: 0
+        buf[n]: 92
+        memcpy((cast: (@: void) (buf + n + 1U)), (cast: (@: void) g\value\as\atom\data), g\value\as\atom\length)
+        n: n + 1U + g\value\as\atom\length
+        taken: taken + 2
+        s: l2_next_active(g\next)
+    ---
+    if: taken < 5
+        return: 0
+    buf[n]: 0
+    \out_n: n
+return: taken
+
+# D-112/D-113: the path buf[0..n) rooted at `root` (a declared field, a named Structure, a bound merge
+# result, node, for -- the roots of l2_field_path_check), walked to its leaf by the general path walk.
+# -1: not a path of such a root; 0: its leaf is a value field (*out_kind); 1: its leaf is not a value
+# field; 2: a segment names no field.
+fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
+    int: leaf_mi
+    \out_kind: 0 - 1
+    if: mi < 0 || root = 0 || root\data = 0 || buf = 0
+        return: 0 - 1
+    if: l2_own_find(mi, root) < 0 && l2_nsty_of_name(mi, root) < 0 && l2_mres_find(root) < 0 && l2_text_eq(root, "node") = 0 && l2_text_eq(root, "for") = 0
+        return: 0 - 1
+    \out_kind: l2_path_kind(buf, n, @ leaf_mi)
+    if: \out_kind < 0
+        return: 2
+    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
+        return: 1
+return: 0
+
 fn: l2_kind_cell_ty (int: kind) int
     if: kind = 0
         return: 2
@@ -16167,6 +16232,11 @@ fn: l2_ptr_land_ty (const: @(LmP0Node at); int: mi; @: int out_ty) int
 
 fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
     @: LmP0Field f
+    []: char chbuf 256
+    size_t: chn 0U
+    int: chain
+    int: cck
+    int: ck
     size_t: cpn 0U
     int: cpni 0
     int: cpres 0
@@ -16270,6 +16340,27 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         # first -- FABLE-SONNET-FIELD-PATHS-20260923-113 for the general
         # mechanism itself, which l2_field_path_check's own gate now also
         # admits them into).
+        # D-112/D-113: a path deeper than one field (`m\in\x`, five atoms) is one value -- the general
+        # path walk reads it to its leaf, as it does for `v: m\in\x`.  Its first hop alone is a
+        # Structure field, which the single-hop check below would take for a name it cannot resolve.
+        chain: l2_path_chain(f, chbuf, 255U, @ chn)
+        if: chain > 0
+            cck: l2_path_chain_check(mi, f\value\as\atom, chbuf, chn, @ fpk)
+            if: cck = 1
+                return: l2_error(path, f\value, "a field path must end at a primitive field")
+            if: cck = 2
+                return: l2_error(path, f\value, "unknown field path segment")
+            if: cck = 0
+                have_value: 1
+                i: i + chain
+                ck: 0
+                while: ck < chain && f != 0
+                    f: l2_next_active(f\next)
+                    ck: ck + 1
+                ---
+                continue
+            ---
+        ---
         fpc: 0 - 1
         if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM
             fpc: l2_field_path_check(mi, f\value\as\atom, p2\value\as\atom, @ fpk)
@@ -18415,6 +18506,11 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: fld
     int: po
     int: fpr
+    []: char chbuf 256
+    size_t: chn 0U
+    int: chain
+    int: chk
+    int: ck
     int: have_value 0
     size_t: array_index
     int: array_count
@@ -18475,6 +18571,26 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         # A field path off an own field, a namespace-typed name, or node/for
         # -- FABLE-SONNET-NODE-ROOT-20260923-121, FABLE-SONNET-FIELD-PATHS-
         # 20260923-113.
+        # D-112: a path deeper than one field is one value, read by the general path walk
+        # (l2_path_text_read); its first hop alone is a Structure field, and the single-hop read below
+        # failed on it without a word.
+        chain: l2_path_chain(f, chbuf, 255U, @ chn)
+        if: chain > 0 && l2_path_chain_check(mi, f\value\as\atom, chbuf, chn, @ chk) = 0
+            if: l2_path_text_read(mi, chbuf, chn, ind, at, piece) != 0
+                return: 1
+            if: l2_cat(buf, piece) != 0
+                return: l2_error(l2_src, at, "expression too long")
+            ao: 0
+            after: 0
+            have_value: 1
+            i: i + chain
+            ck: 0
+            while: ck < chain && f != 0
+                f: l2_next_active(f\next)
+                ck: ck + 1
+            ---
+            continue
+        ---
         fpr: 0 - 1
         if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM
             fpr: l2_field_path_read(mi, f\value\as\atom, p2\value\as\atom, ind, at, piece)
@@ -29754,9 +29870,12 @@ external:
             l2_fail_left: c.atoi(c.getenv("L2_FAIL_MALLOC"))
         r: l2_translate(argv[a], argv[a + 1])
         # A failure that printed no located diagnostic is still a failure the
-        # user must see; a silent exit 1 names nothing to fix.
+        # user must see; a silent exit 1 names nothing to fix.  It is an invariant break of the
+        # translator (D-112): every refusal says where and why -- this line names the step that did
+        # not, and exits 3, apart from a refusal's 1.
         if: r != 0 && l2_diag_n = 0
-            c.fprintf(l1_stderr(), "l2trans error: %s: translation failed with no located diagnostic\n", argv[a])
+            c.fprintf(l1_stderr(), "l2trans error: %s: internal: a refusal said nothing (a step failed without a located diagnostic)\n", argv[a])
+            r: 3
         l2_release()
         lg: c.getenv("L2_ALLOC_LOG")
         if: lg != 0

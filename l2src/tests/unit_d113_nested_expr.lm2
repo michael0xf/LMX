@@ -1,0 +1,30 @@
+# D-113 (steps/defects.md): a field path deeper than one field inside an expression -- `m\in\x + m\a` --
+# is read by the general path walk; the single-hop check took `m\in` and refused "unresolved name" on a
+# name that resolves.  Through `o: Outer` (5 + 1) and `p: Other` (5 + 10, admitted by name): 6 + 15 = 21.
+# Success is 7.
+Inner:
+    size_t: x 5U
+end: Inner
+Outer:
+    Inner: in
+    size_t: a 1U
+end: Outer
+Other:
+    size_t: a 10U
+    Inner: in
+end: Other
+fn: rd (Outer: m) size_t
+    return: m\in\x + m\a
+fn: go () size_t
+    Outer: o
+    Other: p
+    size_t: u rd(o)
+    size_t: v rd(p)
+    return: u + v
+size_t: got 0U
+got: go()
+int: ok 3
+if: got = 21U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

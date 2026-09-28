@@ -1618,6 +1618,16 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_d105r_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_d105r_edge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:1: implements is false in return value'; Args = @('0'); Absent = @(); Debt = @() },
+    # D-112/D-113: a field path deeper than one field in value position (`m\in\x`: five atoms) is one value,
+    # read by the general path walk (l2_path_chain, l2_path_text_read) -- as the whole value of a return
+    # (D-112: before, "translation failed with no located diagnostic") and inside an expression (D-113:
+    # before, "unresolved name" on a name that resolves); through a formal admitted by name too.  A leaf
+    # that is no field is refused in its own words, located.
+    [pscustomobject]@{ Name = 'unit_d112_nested_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d113_nested_expr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d112_nested_leaf_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':15:13: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
     # D-111: the value of a `return:` in a Structure-result method was admitted and never checked as a
     # value -- a call in it met no rule of §14 (the internal backstop at 1:1 alone): now it is checked as
     # any value is.

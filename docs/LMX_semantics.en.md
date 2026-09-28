@@ -436,7 +436,10 @@ implements(aVar, bVar, Consumer) ⇔
         present(aVar, p)
         ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
         ∧ (invoked_callable(p) ⇒
-            sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)
+            ∀ u ∈ calls(Consumer, p):
+                accepts(iface(aVar.p), supplied(u))
+                ∧ formed(aVar.p, supplied(u)) ⊨ descriptor(aVar.p)
+                ∧ result_exits_modes(aVar.p) ⊨ expects(Consumer, u)
           )
 
 admitted(aVar, bVar, Consumer) ⇔
@@ -446,7 +449,7 @@ admitted(aVar, bVar, Consumer) ⇔
         run_graph_test(t, aVar, bVar, Consumer) = PASS
 ```
 
-The complete callable-leaf signature includes declared and dynamic inputs, their canonical names, order and passing modes, result, thrown values, and target ABI. Three notions are distinct: the accepted interface -- everything the callable is able to accept, including a formal with a provided default value ([§11](#callables)); the mandatory supply -- the inputs a particular call must provide; the formed inputs -- what the selected implementation actually receives after explicit arguments, defaults and permitted conversions have been processed. The check is Consumer-relative: the Consumer's actual use of the callable `p` imposes the arguments and requirements of that use; the candidate's accepted interface must accept them; missing candidate inputs may be formed by its ordinary defaults and permitted conversions; the formed call must satisfy the selected callable's actual descriptor; the result, exits and passing modes must satisfy the Consumer. Equality of only the mandatory argument set is therefore not sufficient: `A` with the formals `x` and `y = 5` and `B` with `x` alone both permit `f(1)`, but only `A` accepts `f(1; y: 25)`; conversely, a candidate's optional formal need not occur in every Consumer's expected call descriptor merely because it belongs to the accepted interface. An optional formal is removed neither from `sig` nor from the requirements of the body or the implementation's ABI -- the required value is obtained by the ordinary call mechanism before entry. Implementation addresses may differ. If a callable value is merely transported as opaque data and is not invoked here, that transport does not require knowledge of its future calls. At a primitive leaf, plain reading, passing, storing, or returning is thin consumption; following explicit description fields continues a thick path and makes those fields requirements.
+The complete callable-leaf signature includes declared and dynamic inputs, their canonical names, order and passing modes, result, thrown values, and target ABI. Three notions are distinct: the accepted interface -- everything the callable is able to accept, including a formal with a provided default value ([§11](#callables)); the mandatory supply -- the inputs a particular call must provide; the formed inputs -- what the selected implementation actually receives after explicit arguments, defaults and permitted conversions have been processed. The check is Consumer-relative: the Consumer's actual use of the callable `p` imposes the arguments and requirements of that use; the candidate's accepted interface must accept them; missing candidate inputs may be formed by its ordinary defaults and permitted conversions; the formed call must satisfy the selected callable's actual descriptor; the result, exits and passing modes must satisfy the Consumer. Equality of only the mandatory argument set is therefore not sufficient: `A` with the formals `x` and `y = 5` and `B` with `x` alone both permit `f(1)`, but only `A` accepts `f(1; y: 25)`; conversely, a candidate's optional formal need not occur in every Consumer's expected call descriptor merely because it belongs to the accepted interface. In the formula (the author, Q49, 2026-09-28): `calls(Consumer, p)` are the uses of `p` as a call visible in the Consumer's tree, each checked separately, never collapsed to one arity; `supplied(u)` the actuals of that use, positional and named, including explicitly supplied optional ones; `iface(aVar.p)` the candidate's accepted interface; `formed` the inputs after the defaults of omitted formals, permitted conversions and the ordinary sources of free names; `descriptor` the selected callable's actual descriptor (names, order, passing modes, ABI); `expects(Consumer, u)` the result, exits and passing modes that use requires. The exemplar `bVar` takes no part in the callable-leaf check: its role is the collection of `uses`. Equality of complete unprepared signatures is neither required nor declared: exact descriptor satisfaction after formation is not permission to declare distinct original interfaces equal. An optional formal is removed neither from the accepted interface nor from the requirements of the body or the implementation's ABI -- the required value is obtained by the ordinary call mechanism before entry. Implementation addresses may differ. If a callable value is merely transported as opaque data and is not invoked here, that transport does not require knowledge of its future calls. At a primitive leaf, plain reading, passing, storing, or returning is thin consumption; following explicit description fields continues a thick path and makes those fields requirements.
 
 Unused fields and methods of `bVar`, values behind unused names, the order of differently named fields, unselected repeated occurrences, unused nested contents, ownership, mutability, effects, and target-language layout are not compared. Empty `uses(Consumer, bVar)` means only that the analytical stage has no structural requirements. An unknown computed path is neither certified nor classified as known-thin; it is reported separately as outside analytical coverage.
 
@@ -458,7 +461,7 @@ Collection of `uses` does not expand every callee, execute computed names, or pe
 
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which same-name branch composition selects (the last by the general rule, or the explicitly selected occurrence), which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 
-An executed call must receive every input required by the selected expression. Equal signatures make the call admissible but do not prove equal implementation behavior.
+An executed call must receive every input required by the selected expression. A passed directed check makes the call admissible but does not prove equal implementation behavior.
 
 <a id="graph-tests"></a>
 ### Test execution
@@ -481,7 +484,7 @@ The following fourteen cases are recipes: what to express, what that expression 
 <a id="admission-case-1"></a>
 ### 1. One receiving expression for multiple data shapes
 
-Write the receiving expression against the paths it actually needs. Any Structure providing those paths, admitted leaves and the exact signatures of expressions actually invoked can qualify. Structures are ordinary data, material for explicit descriptions and results of composition, so the used tree is the contract. There is no separate generic type-parameter declaration or instantiation operation. Used-tree checking is LMX's structural-generalization mechanism, not a promise of every property of parametric polymorphism.
+Write the receiving expression against the paths it actually needs. Any Structure providing those paths, admitted leaves and actually invoked expressions that pass the directed check of [§7](#admission) can qualify. Structures are ordinary data, material for explicit descriptions and results of composition, so the used tree is the contract. There is no separate generic type-parameter declaration or instantiation operation. Used-tree checking is LMX's structural-generalization mechanism, not a promise of every property of parametric polymorphism.
 
 <a id="admission-case-2"></a>
 ### 2. Knowing what a particular site checks
@@ -511,12 +514,12 @@ To make a change visible to other holders, write through an explicit path: `p\x:
 <a id="admission-case-7"></a>
 ### 7. Establishing that a call can proceed
 
-Both conditions must hold: compatibility covers used paths and the callable's exact signature, and every dynamic input must be available from caller locals, inherited inputs or that callable occurrence's immediate `node\x`. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`: the used-callable check can pass while call admission still rejects a missing `x`. A known case is rejected during translation; a runtime-selected target requires the corresponding runtime boundary. This rule does not add callee-body expansion to `uses`.
+Both conditions must hold: compatibility covers used paths and the directed check of the callable against its use ([§7](#admission)), and every dynamic input must be available from caller locals, inherited inputs or that callable occurrence's immediate `node\x`. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`: the used-callable check can pass while call admission still rejects a missing `x`. A known case is rejected during translation; a runtime-selected target requires the corresponding runtime boundary. This rule does not add callee-body expansion to `uses`.
 
 <a id="admission-case-8"></a>
 ### 8. Checking a transported callable
 
-Transporting a callable neither executes it nor requires knowledge of every future call contract. Checking occurs at the actual call: the selected expression must have the exact signature (a match over the mandatory supply; optional formals are prepared with their default values), receive every dynamic input and satisfy applicable admission, even if an earlier partial check never inspected it. Equal signatures do not imply equal behavior.
+Transporting a callable neither executes it nor requires knowledge of every future call contract. Checking occurs at the actual call: the selected expression must pass the directed check of [§7](#admission) after ordinary input formation (optional formals are prepared with their default values), receive every dynamic input and satisfy applicable admission, even if an earlier partial check never inspected it. A passed check does not imply equal behavior.
 
 <a id="admission-case-9"></a>
 ### 9. Changing a method body without breaking calls

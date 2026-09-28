@@ -714,7 +714,10 @@ implements(aVar, bVar, Consumer) ⇔
         present(aVar, p)
         ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
         ∧ (invoked_callable(p) ⇒
-            sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)
+            ∀ u ∈ calls(Consumer, p):
+                accepts(iface(aVar.p), supplied(u))
+                ∧ formed(aVar.p, supplied(u)) ⊨ descriptor(aVar.p)
+                ∧ result_exits_modes(aVar.p) ⊨ expects(Consumer, u)
           )
 
 admitted(aVar, bVar, Consumer) ⇔
@@ -724,7 +727,7 @@ admitted(aVar, bVar, Consumer) ⇔
         run_graph_test(t, aVar, bVar, Consumer) = PASS
 ```
 
-Полная сигнатура вызываемого листа включает объявленные и динамические входы, их канонические имена, порядок и способы передачи, результат, выбрасываемые значения и целевой ABI. Различаются три понятия: принимаемый интерфейс — всё, что вызываемое способно принять, включая формал с предусмотренным значением по умолчанию ([§11](#callables)); обязательная подача — входы, которые конкретный вызов обязан предоставить; сформированные входы — то, что выбранная реализация фактически получает после явных аргументов, значений по умолчанию и допустимых преобразований. Проверка относительна к Consumer: реальное использование вызываемого `p` в Consumer задаёт аргументы и требования этого использования; принимаемый интерфейс кандидата обязан их принять; недостающие входы кандидата могут быть сформированы его обычными значениями по умолчанию и допустимыми преобразованиями; сформированный вызов должен удовлетворять действительному описанию выбранного вызываемого; результат, выходы и способы передачи должны удовлетворять Consumer. Поэтому равенства одного лишь множества обязательных аргументов недостаточно: `A` с формалами `x` и `y = 5` и `B` с одним `x` оба допускают `f(1)`, но `f(1; y: 25)` принимает только `A`; и обратно, необязательный формал кандидата не обязан входить в ожидаемое описание вызова каждого Consumer только потому, что он входит в принимаемый интерфейс. Необязательный формал не удаляется ни из `sig`, ни из требований тела или ABI реализации — нужное значение получается обычным механизмом вызова до входа. Адреса реализаций могут различаться. Если вызываемое значение только переносится как непрозрачное значение и здесь не вызывается, этот перенос не требует знания его будущих вызовов. Для примитивного листа простое чтение, передача, хранение или возврат являются тонким потреблением; следование по явным полям описания продолжает толстый путь и делает эти поля требованиями.
+Полная сигнатура вызываемого листа включает объявленные и динамические входы, их канонические имена, порядок и способы передачи, результат, выбрасываемые значения и целевой ABI. Различаются три понятия: принимаемый интерфейс — всё, что вызываемое способно принять, включая формал с предусмотренным значением по умолчанию ([§11](#callables)); обязательная подача — входы, которые конкретный вызов обязан предоставить; сформированные входы — то, что выбранная реализация фактически получает после явных аргументов, значений по умолчанию и допустимых преобразований. Проверка относительна к Consumer: реальное использование вызываемого `p` в Consumer задаёт аргументы и требования этого использования; принимаемый интерфейс кандидата обязан их принять; недостающие входы кандидата могут быть сформированы его обычными значениями по умолчанию и допустимыми преобразованиями; сформированный вызов должен удовлетворять действительному описанию выбранного вызываемого; результат, выходы и способы передачи должны удовлетворять Consumer. Поэтому равенства одного лишь множества обязательных аргументов недостаточно: `A` с формалами `x` и `y = 5` и `B` с одним `x` оба допускают `f(1)`, но `f(1; y: 25)` принимает только `A`; и обратно, необязательный формал кандидата не обязан входить в ожидаемое описание вызова каждого Consumer только потому, что он входит в принимаемый интерфейс. В формуле (автор, Q49, 2026-09-28): `calls(Consumer, p)` — видимые в дереве Consumer использования `p` как вызова, каждое отдельно, без сведения к одной арности; `supplied(u)` — фактические этого использования, позиционные и именованные, включая явно поданные необязательные; `iface(aVar.p)` — принимаемый интерфейс кандидата; `formed` — сформированные входы после дефолтов пропущенных формалов, допустимых преобразований и обычных источников свободных имён; `descriptor` — действительное описание выбранного вызываемого (имена, порядок, способы передачи, ABI); `expects(Consumer, u)` — результат, выходы и способы передачи, которых требует это использование. Образец `bVar` в проверке вызываемого листа не участвует: его роль — сбор `uses`. Равенство полных неподготовленных сигнатур не требуется и не объявляется: точное удовлетворение описанию после формирования — не разрешение считать различные исходные интерфейсы равными. Необязательный формал не удаляется ни из принимаемого интерфейса, ни из требований тела или ABI реализации — нужное значение получается обычным механизмом вызова до входа. Адреса реализаций могут различаться. Если вызываемое значение только переносится как непрозрачное значение и здесь не вызывается, этот перенос не требует знания его будущих вызовов. Для примитивного листа простое чтение, передача, хранение или возврат являются тонким потреблением; следование по явным полям описания продолжает толстый путь и делает эти поля требованиями.
 
 Неиспользуемые поля и методы `bVar`, значения за неиспользуемыми именами, порядок различно названных полей, невыбранные повторные вхождения, неиспользуемое вложенное содержимое, владение, изменяемость, эффекты и раскладка целевого языка не сравниваются. Пустое `uses(Consumer, bVar)` означает лишь отсутствие структурных требований аналитической части. Неизвестный вычисляемый путь не считается ни доказанным, ни заведомо тонким: он отдельно отмечается как непокрытый анализом.
 
@@ -736,7 +739,7 @@ admitted(aVar, bVar, Consumer) ⇔
 
 Диагностика должна различать действительно тонкое использование и невозможность установить используемые пути. Она может показать, какая одноимённая ветвь выбрана после композиции (последняя по общему правилу или явно выбранное вхождение), какие описательные поля не используются и какие требования остались неустановленными. Диагностика не вводит глобальный «строгий режим» и не меняет правила выбора поля.
 
-На реально исполняемом вызове должны быть предоставлены все требуемые входы выбранного выражения. Равная сигнатура делает вызов допустимым, но не доказывает одинакового поведения реализаций.
+На реально исполняемом вызове должны быть предоставлены все требуемые входы выбранного выражения. Успешная направленная проверка делает вызов допустимым, но не доказывает одинакового поведения реализаций.
 
 <a id="graph-tests"></a>
 ### Исполнение тестов
@@ -767,7 +770,10 @@ implements(aVar, bVar, Consumer) ⇔
         present(aVar, p)
         ∧ (primitive_leaf(p) ⇒ leaf_consumption_admitted(aVar.p, Consumer, p))
         ∧ (invoked_callable(p) ⇒
-            sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)
+            ∀ u ∈ calls(Consumer, p):
+                accepts(iface(aVar.p), supplied(u))
+                ∧ formed(aVar.p, supplied(u)) ⊨ descriptor(aVar.p)
+                ∧ result_exits_modes(aVar.p) ⊨ expects(Consumer, u)
           )
 
 admitted(aVar, bVar, Consumer) ⇔
@@ -777,7 +783,7 @@ admitted(aVar, bVar, Consumer) ⇔
         run_graph_test(t, aVar, bVar, Consumer) = PASS
 ```
 
-The complete callable-leaf signature includes declared and dynamic inputs, their canonical names, order and passing modes, result, thrown values, and target ABI. Three notions are distinct: the accepted interface -- everything the callable is able to accept, including a formal with a provided default value ([§11](#callables)); the mandatory supply -- the inputs a particular call must provide; the formed inputs -- what the selected implementation actually receives after explicit arguments, defaults and permitted conversions have been processed. The check is Consumer-relative: the Consumer's actual use of the callable `p` imposes the arguments and requirements of that use; the candidate's accepted interface must accept them; missing candidate inputs may be formed by its ordinary defaults and permitted conversions; the formed call must satisfy the selected callable's actual descriptor; the result, exits and passing modes must satisfy the Consumer. Equality of only the mandatory argument set is therefore not sufficient: `A` with the formals `x` and `y = 5` and `B` with `x` alone both permit `f(1)`, but only `A` accepts `f(1; y: 25)`; conversely, a candidate's optional formal need not occur in every Consumer's expected call descriptor merely because it belongs to the accepted interface. An optional formal is removed neither from `sig` nor from the requirements of the body or the implementation's ABI -- the required value is obtained by the ordinary call mechanism before entry. Implementation addresses may differ. If a callable value is merely transported as opaque data and is not invoked here, that transport does not require knowledge of its future calls. At a primitive leaf, plain reading, passing, storing, or returning is thin consumption; following explicit description fields continues a thick path and makes those fields requirements.
+The complete callable-leaf signature includes declared and dynamic inputs, their canonical names, order and passing modes, result, thrown values, and target ABI. Three notions are distinct: the accepted interface -- everything the callable is able to accept, including a formal with a provided default value ([§11](#callables)); the mandatory supply -- the inputs a particular call must provide; the formed inputs -- what the selected implementation actually receives after explicit arguments, defaults and permitted conversions have been processed. The check is Consumer-relative: the Consumer's actual use of the callable `p` imposes the arguments and requirements of that use; the candidate's accepted interface must accept them; missing candidate inputs may be formed by its ordinary defaults and permitted conversions; the formed call must satisfy the selected callable's actual descriptor; the result, exits and passing modes must satisfy the Consumer. Equality of only the mandatory argument set is therefore not sufficient: `A` with the formals `x` and `y = 5` and `B` with `x` alone both permit `f(1)`, but only `A` accepts `f(1; y: 25)`; conversely, a candidate's optional formal need not occur in every Consumer's expected call descriptor merely because it belongs to the accepted interface. In the formula (the author, Q49, 2026-09-28): `calls(Consumer, p)` are the uses of `p` as a call visible in the Consumer's tree, each checked separately, never collapsed to one arity; `supplied(u)` the actuals of that use, positional and named, including explicitly supplied optional ones; `iface(aVar.p)` the candidate's accepted interface; `formed` the inputs after the defaults of omitted formals, permitted conversions and the ordinary sources of free names; `descriptor` the selected callable's actual descriptor (names, order, passing modes, ABI); `expects(Consumer, u)` the result, exits and passing modes that use requires. The exemplar `bVar` takes no part in the callable-leaf check: its role is the collection of `uses`. Equality of complete unprepared signatures is neither required nor declared: exact descriptor satisfaction after formation is not permission to declare distinct original interfaces equal. An optional formal is removed neither from the accepted interface nor from the requirements of the body or the implementation's ABI -- the required value is obtained by the ordinary call mechanism before entry. Implementation addresses may differ. If a callable value is merely transported as opaque data and is not invoked here, that transport does not require knowledge of its future calls. At a primitive leaf, plain reading, passing, storing, or returning is thin consumption; following explicit description fields continues a thick path and makes those fields requirements.
 
 Unused fields and methods of `bVar`, values behind unused names, the order of differently named fields, unselected repeated occurrences, unused nested contents, ownership, mutability, effects, and target-language layout are not compared. Empty `uses(Consumer, bVar)` means only that the analytical stage has no structural requirements. An unknown computed path is neither certified nor classified as known-thin; it is reported separately as outside analytical coverage.
 
@@ -789,7 +795,7 @@ Collection of `uses` does not expand every callee, execute computed names, or pe
 
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which same-name branch composition selects (the last by the general rule, or the explicitly selected occurrence), which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 
-An executed call must receive every input required by the selected expression. Equal signatures make the call admissible but do not prove equal implementation behavior.
+An executed call must receive every input required by the selected expression. A passed directed check makes the call admissible but does not prove equal implementation behavior.
 
 <a id="graph-tests"></a>
 ### Test execution
@@ -809,7 +815,7 @@ A statically established violation is reported during analysis. Failure of any m
 
 ### 1. Одно принимающее выражение для разных форм данных
 
-Принимающее выражение записывается относительно путей, которые ему действительно нужны. Подходит любая структура, предоставляющая эти пути, допустимые листья и точные сигнатуры реально вызываемых выражений. Структуры одновременно являются обычными данными, материалом явных описаний и результатами композиции, поэтому контрактом служит используемое дерево. Отдельного объявления параметров обобщённого типа и отдельной операции инстанцирования нет. Проверка используемого дерева является механизмом структурного обобщения LMX, но не обещает всех свойств параметрического полиморфизма.
+Принимающее выражение записывается относительно путей, которые ему действительно нужны. Подходит любая структура, предоставляющая эти пути, допустимые листья и реально вызываемые выражения, проходящие направленную проверку [§7](#admission). Структуры одновременно являются обычными данными, материалом явных описаний и результатами композиции, поэтому контрактом служит используемое дерево. Отдельного объявления параметров обобщённого типа и отдельной операции инстанцирования нет. Проверка используемого дерева является механизмом структурного обобщения LMX, но не обещает всех свойств параметрического полиморфизма.
 
 ### 2. Понимание того, что проверяется в данном месте
 
@@ -833,11 +839,11 @@ Consumer определяет область аналитической пров
 
 ### 7. Гарантия возможности вызова
 
-Нужны оба условия: совместимость используемых путей и точной сигнатуры вызываемого выражения, а также наличие всех его динамических входов среди локальных значений вызывающего выражения, уже унаследованных входов или непосредственного `node\x` вызываемого вхождения. Пусть A и B предоставляют одинаковый `m`, тело которого использует голое `x`, а Consumer лишь вызывает `m`: проверка используемого вызываемого пути может пройти, но допуск вызова всё равно отвергнет отсутствие `x`. Известный случай отвергается при трансляции, динамически выбранная цель требует соответствующей runtime-границы. Это правило не добавляет разворачивание тела вызываемого выражения в `uses`.
+Нужны оба условия: совместимость используемых путей и направленная проверка вызываемого выражения по его использованию ([§7](#admission)), а также наличие всех его динамических входов среди локальных значений вызывающего выражения, уже унаследованных входов или непосредственного `node\x` вызываемого вхождения. Пусть A и B предоставляют одинаковый `m`, тело которого использует голое `x`, а Consumer лишь вызывает `m`: проверка используемого вызываемого пути может пройти, но допуск вызова всё равно отвергнет отсутствие `x`. Известный случай отвергается при трансляции, динамически выбранная цель требует соответствующей runtime-границы. Это правило не добавляет разворачивание тела вызываемого выражения в `uses`.
 
 ### 8. Проверка передаваемого вызываемого значения
 
-Передача вызываемого значения не является его исполнением и не требует знания всех требований будущего вызова. Проверка выполняется на реальном вызове: выбранное выражение должно иметь точную сигнатуру (совпадение по обязательной подаче; необязательные формалы готовятся значениями по умолчанию), получить все динамические входы и пройти применимый допуск, даже если прежняя частичная проверка его не исследовала. Одинаковые сигнатуры не означают одинакового поведения.
+Передача вызываемого значения не является его исполнением и не требует знания всех требований будущего вызова. Проверка выполняется на реальном вызове: выбранное выражение должно пройти направленную проверку [§7](#admission) после обычного формирования входов (необязательные формалы готовятся значениями по умолчанию), получить все динамические входы и пройти применимый допуск, даже если прежняя частичная проверка его не исследовала. Пройденная проверка не означает одинакового поведения.
 
 ### 9. Изменение тела метода без нарушения вызовов
 
@@ -869,7 +875,7 @@ The following fourteen cases are recipes: what to express, what that expression 
 
 ### 1. One receiving expression for multiple data shapes
 
-Write the receiving expression against the paths it actually needs. Any Structure providing those paths, admitted leaves and the exact signatures of expressions actually invoked can qualify. Structures are ordinary data, material for explicit descriptions and results of composition, so the used tree is the contract. There is no separate generic type-parameter declaration or instantiation operation. Used-tree checking is LMX's structural-generalization mechanism, not a promise of every property of parametric polymorphism.
+Write the receiving expression against the paths it actually needs. Any Structure providing those paths, admitted leaves and actually invoked expressions that pass the directed check of [§7](#admission) can qualify. Structures are ordinary data, material for explicit descriptions and results of composition, so the used tree is the contract. There is no separate generic type-parameter declaration or instantiation operation. Used-tree checking is LMX's structural-generalization mechanism, not a promise of every property of parametric polymorphism.
 
 ### 2. Knowing what a particular site checks
 
@@ -893,11 +899,11 @@ To make a change visible to other holders, write through an explicit path: `p\x:
 
 ### 7. Establishing that a call can proceed
 
-Both conditions must hold: compatibility covers used paths and the callable's exact signature, and every dynamic input must be available from caller locals, inherited inputs or that callable occurrence's immediate `node\x`. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`: the used-callable check can pass while call admission still rejects a missing `x`. A known case is rejected during translation; a runtime-selected target requires the corresponding runtime boundary. This rule does not add callee-body expansion to `uses`.
+Both conditions must hold: compatibility covers used paths and the directed check of the callable against its use ([§7](#admission)), and every dynamic input must be available from caller locals, inherited inputs or that callable occurrence's immediate `node\x`. Suppose A and B expose the same `m`, whose body uses bare `x`, while Consumer only invokes `m`: the used-callable check can pass while call admission still rejects a missing `x`. A known case is rejected during translation; a runtime-selected target requires the corresponding runtime boundary. This rule does not add callee-body expansion to `uses`.
 
 ### 8. Checking a transported callable
 
-Transporting a callable neither executes it nor requires knowledge of every future call contract. Checking occurs at the actual call: the selected expression must have the exact signature (a match over the mandatory supply; optional formals are prepared with their default values), receive every dynamic input and satisfy applicable admission, even if an earlier partial check never inspected it. Equal signatures do not imply equal behavior.
+Transporting a callable neither executes it nor requires knowledge of every future call contract. Checking occurs at the actual call: the selected expression must pass the directed check of [§7](#admission) after ordinary input formation (optional formals are prepared with their default values), receive every dynamic input and satisfy applicable admission, even if an earlier partial check never inspected it. A passed check does not imply equal behavior.
 
 ### 9. Changing a method body without breaking calls
 

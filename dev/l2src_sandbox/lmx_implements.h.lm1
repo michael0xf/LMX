@@ -102,12 +102,10 @@ define: LMX_DOMAIN_KIND_POST 13
 define: LMX_DOMAIN_KIND_RESERVED_14 14
 define: LMX_DOMAIN_KIND_POST_RING 15
 # k.4 (2026-09-25): the LmxCallable descriptor type is gone (Lmx.native replaces the
-# child[0] descriptor entirely); the domain NUMBER stays defined and in use, though,
-# because it is still the answer lmx_range_classify gives an address in this domain's
-# array -- lmx_fresh.lm1 and lmx_graph_copy_owned.lm1's Q22=II shared-method-reference
-# terminal test still read it (pending a decision on whether Q22=II's own test needs to
-# change shape under k.4 -- see the coding-commit report).  Only the STRUCT this domain
-# used to hold is gone; the domain slot itself is not retired.
+# child[0] descriptor entirely).  The domain NUMBER stays defined, but nothing reads it
+# (measured 2026-09-27, steps/copier-q42.md): the copier's shared-method test it once served
+# is gone (Q44 -- a method occurrence is copied like any Structure).  Retiring the number is
+# a separate change.
 define: LMX_DOMAIN_KIND_CALLABLE 16
 define: LMX_DOMAIN_KIND_OP 17
 define: LMX_DOMAIN_KIND_SCRATCH 18

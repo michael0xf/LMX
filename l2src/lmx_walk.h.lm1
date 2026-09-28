@@ -354,6 +354,11 @@ prototype:
     # record.  Value null / pointer-null -> out 0 OK; YES -> the value by reference; NO ->
     # THROW_IMPLEMENTS; UNKNOWN or a malformed operand -> FAIL=1.
     fn: lmx_walk_admit_as (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    # Item 738 (steps/capture-738.md): the capture of a Structure -- a copy of src's fields fields[0..n)
+    # names (req's slots, in the copy's order), fresh value cells, hung under `parent`, its
+    # correspondence to req recorded in the arena's `implements` table with "not carried" for the
+    # rest.  0 on a field that is not a value cell, or on no room.
+    fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n) @: Lmx
     # k.4: ty is read from the CALL's rtype operand (a reference to the callee's declared
     # result cell, classified by range), not from a sig word; lmx_walk_callable_result_type
     # is gone with LmxMethod.sig.

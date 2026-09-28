@@ -2201,3 +2201,77 @@ fn: lmx_walk_admit_as (@: void owner; @@: void refs; size_t: nargs; @: void dest
         return: c.LMX_PRIMITIVE_THROW_IMPLEMENTS
     ---
 return: 1
+
+# Item 738 (Q38/Q42/Q44, the author: a capture is a copy of the fields the model reads; steps/capture-
+# 738.md): a Structure of the fields fields[0..n) names -- req's slots, in the copy's order -- each a
+# fresh cell holding src's value now (a char cell is the byte table's, shared
+# as those cells always are).  Its correspondence to req is a table of req's width, cell j the copy's
+# place of req's field j or "not carried" (SIZE_MAX), recorded in the arena's `implements` table: the
+# model reads the fields by req's slots through it (D-105).  The copy and its table hang under
+# `parent` (no slot of it).  0 when a field is not a value cell, or on no room.
+fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n) @: Lmx
+    @: Lmx copy 0
+    @: Lmx table 0
+    size_t: i 0U
+    size_t: j
+    @: void cell
+    @: void fresh
+    int: ty
+    if: arena = 0 || parent = 0 || src = 0 || req = 0 || fields = 0
+        return: 0
+    copy: lmx_struct_new_owned(parent, arena)
+    table: lmx_struct_new_owned(parent, arena)
+    if: copy = 0 || table = 0
+        return: 0
+    if: n != 0U && lmx_arena_refs_open_owned(arena, copy, n) != 0
+        return: 0
+    if: (req\array.size) != 0U && lmx_arena_refs_open_owned(arena, table, (req\array.size)) != 0
+        return: 0
+    j: 0U
+    while: j < req\array.size
+        if: lmx_walk_store_size(arena, table, j, (cast: (size_t) -1)) != c.LMX_WALK_OK
+            return: 0
+        j: j + 1U
+    ---
+    while: i < n
+        j: fields[i]
+        if: j >= src\array.size || j >= req\array.size
+            return: 0
+        cell: lmx_arena_ref_value(src, j)
+        if: cell = 0 || lmx_range_classify(arena, cell) != c.LMX_KIND_PRIMITIVE
+            return: 0
+        ty: lmx_range_type_of(arena, cell)
+        fresh: 0
+        if: ty = c.LMX_TYPE_CHAR
+            fresh: cell
+        if: ty = c.LMX_TYPE_INT
+            fresh: lmx_int_new_owned(arena)
+            if: fresh = 0 || lmx_int_store_known(fresh, lmx_int_value_known(cell)) != 0
+                return: 0
+            ---
+        if: ty = c.LMX_TYPE_SIZE_T
+            fresh: lmx_size_new_owned(arena)
+            if: fresh = 0 || lmx_size_store_known(fresh, lmx_size_value_known(cell)) != 0
+                return: 0
+            ---
+        if: ty = c.LMX_TYPE_UNSIGNED
+            fresh: lmx_unsigned_new_owned(arena)
+            if: fresh = 0 || lmx_unsigned_store_known(fresh, lmx_unsigned_value_known(cell)) != 0
+                return: 0
+            ---
+        if: ty = c.LMX_TYPE_ULONG
+            fresh: lmx_ulong_new_owned(arena)
+            if: fresh = 0 || lmx_ulong_store_known(fresh, lmx_ulong_value_known(cell)) != 0
+                return: 0
+            ---
+        if: fresh = 0
+            return: 0
+        if: lmx_arena_ref_store(copy, i, fresh) != 0
+            return: 0
+        if: lmx_walk_store_size(arena, table, j, i) != c.LMX_WALK_OK
+            return: 0
+        i: i + 1U
+    ---
+    if: lmx_implements_register(arena, copy, req, table) != c.LMX_IMPLEMENTS_YES
+        return: 0
+return: copy

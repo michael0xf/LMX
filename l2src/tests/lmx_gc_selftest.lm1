@@ -137,6 +137,16 @@ fn: main () int
     @: void incoming_record 0
     @: void incoming_graph 0
     @: void retained_record 0
+    @: Lmx impl_pair 0
+    @: Lmx impl_model 0
+    @: Lmx impl_value 0
+    @: Lmx impl_table 0
+    @: Lmx impl_filler 0
+    @: LmxPool impl_pool 0
+    @: LmxChunk impl_chunk 0
+    @: void impl_cell 0
+    size_t: impl_slot 99U
+    int: impl_n 0
     @: void taken 0
     @: LmxArenaBlock counted_block 0
     @: void counted_base 0
@@ -278,6 +288,46 @@ fn: main () int
     gc_check(counts, lmx_range_classify(@ arena, retained_record) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the retained child's record was freed")
     gc_check(counts, lmx_arena_ref_value(graph, 1U) = retained_record, "the retained child left its slot")
     gc_check(counts, lmx_arena_ref_value(retained\graph, 1U) != 0, "the retained child's graph was emptied")
+
+    # D-105 / item 738: a record of the arena's `implements` table keeps its correspondence table alive
+    # while its value lives -- through the collection itself (lmx_gc_collect -> lmx_gc_mark ->
+    # lmx_gc_mark_impl).  The model and the value hang in the live graph (slot 3); the table is
+    # referenced by the record alone, and it is put in a chunk of its own: fillers, garbage, close the
+    # chunk the value is in, and the table follows the first filler of the next one.  Mutant: the table
+    # pass out of lmx_gc_mark -- the table's chunk is freed, the record goes with it, the read is refused.
+    impl_pair: lmx_node_new_owned(@ arena)
+    impl_model: lmx_node_new_owned(@ arena)
+    impl_value: lmx_node_new_owned(@ arena)
+    if: impl_pair = 0 || impl_model = 0 || impl_value = 0 || lmx_arena_refs_open_owned(@ arena, impl_pair, 2U) != 0 || lmx_arena_refs_open_owned(@ arena, impl_model, 1U) != 0 || lmx_arena_refs_open_owned(@ arena, impl_value, 1U) != 0
+        fputs("lmx_gc: the implements pair was not built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    lmx_arena_ref_store(impl_model, 0U, lmx_int_new_owned(@ arena))
+    lmx_arena_ref_store(impl_value, 0U, lmx_int_new_owned(@ arena))
+    lmx_arena_ref_store(impl_pair, 0U, (cast: (@: void) impl_model))
+    lmx_arena_ref_store(impl_pair, 1U, (cast: (@: void) impl_value))
+    lmx_arena_ref_store(graph, 3U, (cast: (@: void) impl_pair))
+    impl_pool: lmx_range_pool(@ arena, (cast: (@: void) impl_value))
+    impl_chunk: lmx_pool_chunk_at(impl_pool, (cast: (@: void) impl_value))
+    impl_filler: impl_value
+    impl_n: 0
+    while: impl_n < 100000 && lmx_pool_chunk_at(impl_pool, (cast: (@: void) impl_filler)) = impl_chunk
+        impl_filler: lmx_node_new_owned(@ arena)
+        if: impl_filler = 0
+            break
+        impl_n: impl_n + 1
+    ---
+    impl_table: lmx_node_new_owned(@ arena)
+    impl_cell: lmx_size_new_owned(@ arena)
+    gc_check(counts, impl_filler != 0 && impl_table != 0 && impl_cell != 0 && lmx_pool_chunk_at(impl_pool, (cast: (@: void) impl_table)) != impl_chunk, "the table did not get a chunk apart from its value's -- the collection's table pass cannot be seen")
+    if: impl_table != 0 && impl_cell != 0 && lmx_arena_refs_open_owned(@ arena, impl_table, 1U) = 0 && lmx_size_store_known(impl_cell, 0U) = 0
+        lmx_arena_ref_store(impl_table, 0U, impl_cell)
+    ---
+    gc_check(counts, lmx_implements_register(@ arena, impl_value, impl_model, impl_table) = c.LMX_IMPLEMENTS_YES, "the record for the collection's table pass was not admitted")
+    gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "the collection with a record did not run")
+    gc_check(counts, lmx_implements_find(@ arena, impl_value, impl_model) != 0, "the collection dropped a record whose value lives (its table was not kept)")
+    gc_check(counts, lmx_implements_slot(@ arena, impl_value, impl_model, 0U, @ impl_slot) = 0 && impl_slot = 0U, "a live value's field is not read through its table after the collection")
 
     # An incomplete mark sweeps nothing: a chain deeper than the tracer's bound answers
     # LMX_GC_PARTIAL, and the index loses no entry because of it.

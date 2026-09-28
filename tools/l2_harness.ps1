@@ -1034,6 +1034,16 @@ $fixtures = @(
     # written -- the slot stays empty; the byte taken as the signed C char -- makeTag 200 aborts.
     [pscustomobject]@{ Name = 'unit_make_adder_char.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('l2_program_chars: process_chars') },
+    # Item 738 slice 1 (steps/capture-738.md; Q38/Q42/Q44): a Structure captured by a callable merge is a
+    # copy of the fields its model reads, and the model reads them by the type's slots through the copy's
+    # table in the arena's `implements` table (D-105).  _own: the host's own `Model: loc` -- 42 and 9 from
+    # two nodes; _formal: the host's formal -- the model's writes seen by the next call of the same node
+    # (41, 42), not by the root's `left` (40), and the root's write after the node is made not seen by it
+    # (43).  The base translator refused both hosts, "a callable merge needs a walkable body".
+    [pscustomobject]@{ Name = 'unit_capture_struct_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # Item 739: at the root a held callable's argument is built with its model's header formal type
     # (a size_t formal was read from an int cell: the walk failed, INVALID), and its result has the
     # header's number type: the walk reads a destination it did not classify as an int, so a

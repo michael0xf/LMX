@@ -1,0 +1,35 @@
+# Item 738 (steps/capture-738.md; Q38/Q42/Q44): the host `makeReader` declares `Model: loc`, writes
+# `loc\value`, and returns the model `read`, which reads `loc\value`.  The node carries a copy of the
+# fields the model reads -- `value` alone, not `other` or `box` (Q42 p. 2) -- and `loc\value` is read by
+# Model's slot through the copy's table in the arena's `implements` table (D-105).  `box` is a Structure
+# field the model does not read: the capture copies value cells only, so a copy of every field would be
+# refused at the return.  The base translator refused the host: "a callable merge needs a walkable
+# body".  Success is 7.
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    Inner: box
+    int: value 0
+end: Model
+
+fn: makeReader (int: n) fn: (int: x) int
+    Model: loc
+    loc\value: n
+    fn: read (int: x) int
+        return: loc\value + x
+    return: read
+
+r40: makeReader 40
+r7: makeReader 7
+int: a (r40: 2)
+int: b (r7: 2)
+int: ok 7
+if: a != 42
+    ok: 1
+if: b != 9
+    ok: 2
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,40 @@
+# Item 738 (steps/capture-738.md; Q38: nothing outside the copy is visible): the host `makeCounter`
+# takes `Model: m` and returns the model `bump`, which reads and writes `m\value`.  The node carries a
+# copy of `value` made at the return: the model's writes go to the copy -- the next call of the same
+# node sees them (41, 42), the root's `left` does not (40) -- and a write of the root after the node is
+# made is not seen by the node (43, not 100).  Success is 7; otherwise 16 plus a bit per failed reading:
+# 1 and 2 the node's own calls, 4 the model's write seen by the root, 8 the root's write seen by the node
+# -- so each side of the copy is read on its own.
+Model:
+    int: other 5
+    int: value 40
+end: Model
+
+fn: makeCounter (Model: m) fn: (int: x) int
+    fn: bump (int: x) int
+        m\value: m\value + x
+        return: m\value
+    return: bump
+
+Model: left
+c: makeCounter left
+int: a (c: 1)
+int: b (c: 1)
+int: seen 0
+seen: left\value
+left\value: 99
+int: d (c: 1)
+int: bad 0
+if: a != 41
+    bad: bad + 1
+if: b != 42
+    bad: bad + 2
+if: seen != 40
+    bad: bad + 4
+if: d != 43
+    bad: bad + 8
+int: ok 7
+if: bad != 0
+    ok: 16 + bad
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -88,6 +88,15 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     LmxArena: donor
+    LmxArena: fresh_arena
+    @: LmxArena ea 0
+    @: Lmx hmodel 0
+    @: Lmx half 0
+    @: Lmx htable 0
+    @: Lmx emodel 0
+    @: Lmx evalue 0
+    @: Lmx etable 0
+    unsigned: egen
     @: LmxArena at 0
     @: LmxArena dn 0
     @: Lmx model 0
@@ -201,6 +210,52 @@ fn: main () int
     slot: 99U
     it_check(counts, lmx_implements_slot(at, own, model, 1U, @ slot) != 0 && slot = 99U, "a freed address still answers Model as Model's own")
     it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) != 0 && slot = 99U, "a freed address still answers Model through the old table")
+
+    # Item 738: a table with a "not carried" cell (SIZE_MAX) -- a capture's copy holds only the fields
+    # its model reads.  Model (a: size_t, b: int); half holds b alone, the table [not carried, 0].  The
+    # heavy check passes; b is read at the copy's slot 0; a read of a is refused.
+    memset((cast: (@: void) (@ fresh_arena)), 0, c.sizeof(c.LmxArena))
+    ea: @ fresh_arena
+    if: lmx_arena_open(ea) != 0
+        free(counts)
+        return: 2
+    ---
+    hmodel: it_pair(ea, 0, 1)
+    half: lmx_node_new_owned(ea)
+    htable: it_table(ea, (cast: (size_t) -1), 0U)
+    if: hmodel = 0 || half = 0 || htable = 0 || lmx_arena_refs_open_owned(ea, half, 1U) != 0 || lmx_arena_ref_store(half, 0U, lmx_int_new_owned(ea)) != 0
+        free(counts)
+        return: 2
+    ---
+    it_check(counts, lmx_implements_register(ea, half, hmodel, htable) = c.LMX_IMPLEMENTS_YES, "a copy of the read fields alone was not admitted through its table")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, half, hmodel, 1U, @ slot) = 0 && slot = 0U, "a carried field is not read at the copy's slot")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, half, hmodel, 0U, @ slot) != 0, "a field the copy does not carry was given a slot")
+    it_check(counts, lmx_implements_register(ea, lmx_node_new_owned(ea), hmodel, htable) != c.LMX_IMPLEMENTS_YES, "a value without the carried field was admitted through a table with a hole")
+
+    # The table lives as long as its value: a record holds its value weakly and its table strongly
+    # (lmx_gc_mark_impl).  In a fresh arena the table's header lands in a chunk of its own, after the
+    # value's; the pass marks the model and the value and then the tables of the reached records.
+    emodel: it_pair(ea, 0, 1)
+    evalue: it_pair(ea, 1, 0)
+    etable: it_table(ea, 1U, 0U)
+    it_check(counts, emodel != 0 && evalue != 0 && etable != 0 && lmx_implements_register(ea, evalue, emodel, etable) = c.LMX_IMPLEMENTS_YES, "the record for the table pass was not admitted")
+    egen: lmx_arena_generation_next(ea)
+    lmx_gc_mark_value(ea, (cast: (@: void) hmodel), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) half), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) htable), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) emodel), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) evalue), egen, 0)
+    # The check can only see the pass when the table is not already kept by its chunk.
+    it_check(counts, lmx_gc_value_marked(ea, (cast: (@: void) etable), egen) = 0, "the table shares a chunk with its value -- the table pass cannot be seen here")
+    it_check(counts, lmx_gc_mark_impl(ea, egen) = c.LMX_GC_OK, "the table pass failed")
+    it_check(counts, lmx_gc_value_marked(ea, (cast: (@: void) etable), egen) != 0, "the table of a reached value was not marked")
+    it_check(counts, lmx_gc_sweep(ea, egen) = c.LMX_GC_OK, "the sweep after the table pass failed")
+    it_check(counts, lmx_implements_find(ea, evalue, emodel) != 0, "a record whose value lives lost its table in the sweep")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, evalue, emodel, 0U, @ slot) = 0 && slot = 1U, "the kept table is not read")
+    lmx_arena_release(ea)
 
     lmx_arena_release(at)
     lmx_arena_release(dn)

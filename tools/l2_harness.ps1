@@ -457,7 +457,8 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 # ---- 3. the fixtures ------------------------------------------------------------------------
 # `Expect` says how far this fixture is supposed to get, and each value is a claim about the
 # translator, not about this script:
-#   l2trans-refuses      -- l2trans must REFUSE it; Needle must appear in what it printed.
+#   l2trans-refuses      -- l2trans must REFUSE it; Needle must appear in what it printed, and it
+#                           prints at most one "l2trans error:" line (one cause, one line).
 #   translates-with-debt -- the whole translator chain succeeds, AND the generated L1 is then
 #                           read: every string in Absent must be GONE from it and every string
 #                           in Debt must still be THERE.  This is for a gap that no longer stops
@@ -1057,6 +1058,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_capture_struct_field_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':13:21: a captured Structure''s field that is not a number or a char is not copied yet (item 738: value fields)'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_call_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':13:17: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_whole_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':21:5: a callable merge needs a walkable body: it can throw (a throwing method stays native)'; Args = @('0'); Absent = @(); Debt = @() },
+    # REVIEW 9256c3b: one cause, one line -- a model's refusal said by the scan is not followed by
+    # "unsupported body" (the at-most-one-line check above holds every refusal row to it).
+    [pscustomobject]@{ Name = 'unit_callable_model_decl_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':11:5: a callable merge binds a name that is not a formal'; Args = @('0'); Absent = @(); Debt = @() },
     # Item 738 slice 2: _write_only (REVIEW 2032ca0, M46/P46) -- a field the model only writes is in the
     # copy (42, 43); _write_root -- a model that uses its capture only in update position records it (2, 3;
     # before, "unknown field path root"); _call_arg -- a value field as a call argument (82).
@@ -3113,7 +3117,17 @@ foreach ($fx in $fixtures) {
         if ($made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans ACCEPTED a fixture that must be refused'; continue }
         # The log is matched with its line breaks removed: Windows PowerShell wraps a native stderr
         # line at the console width, and a long fixture path pushes the message across the break.
-        if (((Log-Text $label) -replace "`r?`n", '') -notmatch [regex]::Escape($fx.Needle)) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused, but not with "' + $fx.Needle + '"'); continue }
+        $refusedLog = Log-Text $label
+        $refusedText = $refusedLog -replace "`r?`n", ''
+        # One cause, one line (REVIEW 9256c3b): l2trans stops at its first refusal, so a second
+        # "l2trans error:" is a tail of the first -- general words after a located one -- and miscounts
+        # refusals.  A parse error prints none of these lines, so at most one, not exactly one.  Lines
+        # are counted where they START (the log with its breaks): PS 5.1 turns the first native stderr
+        # line into an error record, prefixed "l2trans.exe : " and repeated inside its CategoryInfo, so
+        # a substring count sees every refusal twice.
+        $errorLines = ([regex]::Matches($refusedLog, '(?m)^(?:l2trans\.exe : )?l2trans error:')).Count
+        if ($errorLines -gt 1) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused with ' + $errorLines + ' "l2trans error:" lines -- one cause, one line'); continue }
+        if ($refusedText -notmatch [regex]::Escape($fx.Needle)) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused, but not with "' + $fx.Needle + '"'); continue }
         Add-Row 'OK' ('fixture:' + $stem) ('refused as expected: ' + $fx.Needle); continue
     }
     if (-not $made) { Add-Row 'FAIL' ('fixture:' + $stem) 'l2trans produced no L1; see the log'; continue }

@@ -113,13 +113,15 @@ int: l2_rw_conv 0
 int: l2_rw_quiet 0
 # The first refusal met while a method's body is tried quietly (l2_error keeps it, where it stands):
 # what the note says when a callable-merge host stays native under --walk-methods (REVIEW c953b22).
-[]: char l2_rw_quiet_msg 192
+# A copy of its whole length (l2_msg_copy): a reason is never cut (REVIEW 9256c3b).
+@: char l2_rw_quiet_msg 0
 size_t: l2_rw_quiet_line 0U
 size_t: l2_rw_quiet_col 0U
 @: int l2_m_steps 0
-# The first refusal of each method's quiet walk (l2_rw_methods_count), 192 bytes a method, and where it
-# stands: a callable merge whose model is not walked says the model's own reason (l2_mad_unwalkable).
-@: char l2_m_why 0
+# The first refusal of each method's quiet walk (l2_rw_methods_count), a copy of its whole length, and
+# where it stands: a callable merge whose model is not walked says the model's own reason
+# (l2_mad_unwalkable).
+@@: char l2_m_why 0
 @: size_t l2_m_why_line 0
 @: size_t l2_m_why_col 0
 int: l2_walk_methods 0
@@ -513,6 +515,9 @@ int: l2_cv_row 0
 # The table's `rows:` frame, where a refusal of its rows is said (REVIEW f2a1578).
 @: LmP0Node l2_cv_rows_at 0
 int: l2_cv_gap 0
+# 1 once the conversion table's own reading said why it cannot be read (a located diagnostic in
+# convert.lm2): a use site then adds nothing (l2_cv_table_refused -- one cause, one line).
+int: l2_cv_said 0
 int: l2_cv_used 0
 []: @(char) l2_cv_cell 960
 # Q43 (the author, 2026-09-27): a cell is an argument of any kind -- an atom, a Structure, an array --
@@ -1117,6 +1122,11 @@ prototype:
     fn: l2_cap_named (int: mi; const: @(LmP0Text name)) int
     fn: l2_mad_struct_caps (int: mi) int
     fn: l2_scan_path_root (int: mi; const: @(LmP0Text t); @: int seen) int
+    fn: l2_msg_copy (const: @(char s)) @: char
+    fn: l2_said_or (const: @(char path); const: @(LmP0Node at); int: d0; const: @(char fallback)) int
+    fn: l2_cv_table_refused (const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_msg_drop (@: char p) @: char
+    fn: l2_msg_text (const: @(char p)) const: @: char
     fn: l2_cap_fields (int: mi; const: @(LmP0Text name); int: ns; @: int out; int: cap) int
     fn: l2_cap_scan (const: @(LmP0Node node); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
     fn: l2_cap_scan_struct (const: @(LmP0Structure s); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
@@ -1318,13 +1328,38 @@ fn: l2_ignored (const: @(LmP0Node node)) int
         return: 1
 return: 0
 
+# A diagnostic kept for later (the quiet record, l2_m_why): a copy of its whole length -- plain malloc,
+# outside l2_xmalloc's counted allocations (a kept reason is not the translation's storage); 0 when there
+# is no room, and the reason is then not said.
+fn: l2_msg_copy (const: @(char s)) @: char
+    @: char p
+    size_t: n
+    if: s = 0
+        return: 0
+    n: strlen(s)
+    p: (cast: (@: char) malloc(n + 1U))
+    if: p = 0
+        return: 0
+    memcpy((cast: (@: void) p), s, n + 1U)
+return: p
+
+fn: l2_msg_drop (@: char p) @: char
+    if: p != 0
+        free((cast: (@: void) p))
+return: 0
+
+fn: l2_msg_text (const: @(char p)) const: @: char
+    if: p = 0
+        return: ""
+return: p
+
 fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) int
     size_t: line 1U
     size_t: column 1U
     # A method's body tried for the walk (l2_rw_quiet, -193 T4a) is refused silently: it only gets
     # no frames.  The first such refusal is kept for a note (l2_rw_methods_count).
-    if: l2_rw_quiet != 0 && l2_rw_quiet_msg[0] = 0
-        c.snprintf(l2_rw_quiet_msg, 192U, "%s", msg)
+    if: l2_rw_quiet != 0 && l2_rw_quiet_msg = 0
+        l2_rw_quiet_msg: l2_msg_copy(msg)
         if: node != 0 && node\span != 0
             l2_rw_quiet_line: node\span\line
             l2_rw_quiet_col: node\span\column
@@ -1351,6 +1386,20 @@ fn: l2_alloc_or (const: @(char path); const: @(LmP0Node at); const: @(char fallb
     if: l2_alloc_err != 0
         return: l2_error(path, at, "out of memory")
 return: l2_error(path, at, fallback)
+
+# A use of a conversion table that cannot be read: the table's own diagnostic, when its reading gave
+# one (l2_cv_said), is the one line; else it is said here, where the table was needed.
+fn: l2_cv_table_refused (const: @(char path); const: @(LmP0Node at)) int
+    if: l2_cv_said != 0
+        return: 1
+return: l2_error(path, at, "cannot read the conversion table")
+
+# A refusal after a pass that may already have said why: nothing more when a diagnostic came since d0
+# (l2_diag_n), else l2_alloc_or's words.
+fn: l2_said_or (const: @(char path); const: @(LmP0Node at); int: d0; const: @(char fallback)) int
+    if: l2_diag_n != d0
+        return: 1
+return: l2_alloc_or(path, at, fallback)
 
 fn: l2_xmalloc (size_t: n) @: void
     @: void p
@@ -6500,11 +6549,15 @@ return: 0
 fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
     int: i 0
     int: k 0
+    int: d0 0
     l2_cv_gap: 0
     l2_cv_body: 0
     if: from_n = 0 || to_n = 0
         return: 0
+    d0: l2_diag_n
     if: l2_convert_load(l2_src) != 0
+        if: l2_diag_n != d0
+            l2_cv_said: 1
         l2_cv_gap: 3
         return: 0
     while: i + 5 < l2_cv_cell_n
@@ -6520,6 +6573,7 @@ fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
                 if: l2_cv_cell[i + 2] = 0
                     k: i + 2
                 l2_error("convert.lm2", l2_cv_arg[k], "a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)")
+                l2_cv_said: 1
                 l2_cv_gap: 3
                 return: 0
             if: c.strcmp(l2_cv_cell[i + 2], "1") = 0 || c.strcmp(l2_cv_cell[i + 4], "None") = 0
@@ -6741,7 +6795,7 @@ fn: l2_check_value_convert_core (const: @(LmP0Node value); int: from_ft; int: to
         return: 0
     cok: l2_colon_types_compatible(to_ft, from_ft)
     if: cok = 0 && l2_cv_gap = 3
-        return: l2_error(path, value, "cannot read the conversion table")
+        return: l2_cv_table_refused(path, value)
     if: cok = 0 && l2_cv_gap = 4
         return: l2_error(path, value, "cannot read the converter source")
     if: cok = 0 && l2_cv_gap = 2
@@ -7065,7 +7119,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_error(path, stmt, "a callable without a result has no value")
     cok: l2_colon_types_compatible(target_ty, value_ty)
     if: cok = 0 && l2_cv_gap = 3
-        return: l2_error(path, stmt, "cannot read the conversion table")
+        return: l2_cv_table_refused(path, stmt)
     if: cok = 0 && l2_cv_gap = 4
         return: l2_error(path, stmt, "cannot read the converter source")
     if: cok = 0 && l2_cv_gap = 2
@@ -8562,6 +8616,7 @@ fn: l2_colon_decl_room (const: @(LmP0Node node)) int
 return: n
 
 fn: l2_dyn_local (const: @(char path)) int
+    int: d0 0
     int: i 0
     int: k
     int: oi
@@ -8600,14 +8655,17 @@ fn: l2_dyn_local (const: @(char path)) int
             if: heap != 0
                 l2_xfree((cast: (@: void) seen))
             return: 1
+        # One cause, one line (REVIEW 9256c3b): a scan that said why (l2_scan_ident's located
+        # refusals) is not followed by the general words.
+        d0: l2_diag_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_scan_body(l2_m_body[i]\as\structure, i, seen) != 0
             if: heap != 0
                 l2_xfree((cast: (@: void) seen))
-            return: l2_alloc_or(path, l2_m_node[i], "unsupported body")
+            return: l2_said_or(path, l2_m_node[i], d0, "unsupported body")
         if: l2_m_node[i] != 0 && l2_m_node[i]\as != 0 && l2_ret_tr(l2_m_node[i]\as\frame) != 0 && l2_scan_fields(l2_ret_tr(l2_m_node[i]\as\frame)\first_field, l2_count_active(l2_ret_tr(l2_m_node[i]\as\frame)), i, seen) != 0
             if: heap != 0
                 l2_xfree((cast: (@: void) seen))
-            return: l2_alloc_or(path, l2_m_node[i], "unsupported body")
+            return: l2_said_or(path, l2_m_node[i], d0, "unsupported body")
         oi: 0
         while: oi < l2_own_n
             if: l2_m_uses[l2_own_off(i, oi)] != 0 && l2_m_pre[l2_own_off(i, oi)] != 0 && l2_dyn_add(i, l2_own_name[oi], l2_dt_of_own(l2_own_ty[oi])) != 0
@@ -19075,12 +19133,24 @@ return: 0
 
 # A root statement or operand this translator does not build as walker nodes yet.
 fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
-    []: char msg 192
+    @: char msg 0
+    size_t: n
+    int: r
+    if: what = 0
+        what: ""
+    # The longest lead, "named Structure body not walkable yet: ", is 39 bytes: the message is never cut.
+    n: strlen(what) + 48U
+    msg: (cast: (@: char) malloc(n))
+    if: msg = 0
+        return: l2_error(l2_src, node, what)
     if: l2_rw_ns >= 0
-        c.snprintf(msg, 192U, "named Structure body not walkable yet: %s", what)
-        return: l2_error(l2_src, node, msg)
-    c.snprintf(msg, 192U, "root operation not walkable yet: %s", what)
-return: l2_error(l2_src, node, msg)
+        c.snprintf(msg, n, "named Structure body not walkable yet: %s", what)
+    else:
+        c.snprintf(msg, n, "root operation not walkable yet: %s", what)
+    ---
+    r: l2_error(l2_src, node, msg)
+    free((cast: (@: void) msg))
+return: r
 
 # An L2 operation in an interpreted body. The interpreter executes only L3.
 # The wording of the refusal is old: the check is not "this is not a method".
@@ -21169,7 +21239,7 @@ fn: l2_rw_convert (@: LmP0Field field; int: n; int: from; int: to; const: @(LmP0
         if: l2_cv_gap = 2
             return: l2_error(l2_src, at, "no converter body ported")
         if: l2_cv_gap = 3
-            return: l2_error(l2_src, at, "cannot read the conversion table")
+            return: l2_cv_table_refused(l2_src, at)
         if: l2_cv_gap = 4
             return: l2_error(l2_src, at, "cannot read the converter source")
         return: l2_error(l2_src, at, "mixed numeric types (a conversion)")
@@ -24252,18 +24322,26 @@ return: l2_mad_emit_into(mi, l2_mad_model[mi], ind, 0 - 1)
 # this its reason (a path past a captured field, an operation the walk does not build) stopped at the
 # host's header; the host's header otherwise.
 fn: l2_mad_unwalkable (int: host; int: model) int
-    []: char msg 320
     @: char why 0
+    @: char msg 0
+    size_t: n
+    int: r
     if: model >= 0 && model < l2_m_n && l2_m_why != 0
-        why: l2_m_why + (cast: (size_t) model) * 192U
+        why: l2_m_why[model]
     if: why = 0 || why[0] = 0
         return: l2_error(l2_src, l2_m_node[host], "a callable merge needs a walkable body")
-    c.snprintf(msg, 320U, "a callable merge needs a walkable body: %s", why)
-    if: l2_rw_quiet != 0 || l2_src = 0 || l2_m_why_line = 0 || l2_m_why_col = 0 || l2_m_why_line[model] = 0U
-        return: l2_error(l2_src, l2_m_node[host], msg)
-    c.fprintf(l1_stderr(), "l2trans error: %s:%zu:%zu: %s\n", l2_src, l2_m_why_line[model], l2_m_why_col[model], msg)
-    l2_diag_n: l2_diag_n + 1
-return: 1
+    if: l2_rw_quiet = 0 && l2_src != 0 && l2_m_why_line != 0 && l2_m_why_col != 0 && l2_m_why_line[model] != 0U
+        c.fprintf(l1_stderr(), "l2trans error: %s:%zu:%zu: a callable merge needs a walkable body: %s\n", l2_src, l2_m_why_line[model], l2_m_why_col[model], why)
+        l2_diag_n: l2_diag_n + 1
+        return: 1
+    n: strlen(why) + 48U
+    msg: (cast: (@: char) malloc(n))
+    if: msg = 0
+        return: l2_error(l2_src, l2_m_node[host], "a callable merge needs a walkable body")
+    c.snprintf(msg, n, "a callable merge needs a walkable body: %s", why)
+    r: l2_error(l2_src, l2_m_node[host], msg)
+    free((cast: (@: void) msg))
+return: r
 
 # The node host mi's return builds (into < 0: its `return:`), or -- D-93 -- the node of its capturing
 # nested method nk (the model, or another) built at a call of it before the return, into l2_c<into>
@@ -25702,14 +25780,14 @@ fn: l2_rw_methods_count () int
     l2_m_steps: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
     if: l2_m_steps = 0
         return: l2_error(l2_src, 0, "out of memory")
-    l2_m_why: (cast: (@: char) calloc((cast: (size_t) (l2_m_n + 1)) * 192U, 1U))
+    l2_m_why: (cast: (@@: char) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(@: char)))
     l2_m_why_line: (cast: (@: size_t) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.size_t)))
     l2_m_why_col: (cast: (@: size_t) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.size_t)))
     if: l2_m_why = 0 || l2_m_why_line = 0 || l2_m_why_col = 0
         return: l2_error(l2_src, 0, "out of memory")
     while: i < l2_m_n
         l2_m_steps[i]: 0 - 1
-        l2_rw_quiet_msg[0]: 0
+        l2_rw_quiet_msg: l2_msg_drop(l2_rw_quiet_msg)
         l2_rw_quiet_line: 0U
         l2_rw_quiet_col: 0U
         if: l2_library_mode = 0 && l2_pap_on(i) != 0
@@ -25735,7 +25813,7 @@ fn: l2_rw_methods_count () int
             if: bad = 0
                 l2_m_steps[i]: made + one
             if: bad != 0
-                c.snprintf(l2_m_why + (cast: (size_t) i) * 192U, 192U, "%s", l2_rw_quiet_msg)
+                l2_m_why[i]: l2_msg_copy(l2_rw_quiet_msg)
                 l2_m_why_line[i]: l2_rw_quiet_line
                 l2_m_why_col[i]: l2_rw_quiet_col
             ---
@@ -25745,7 +25823,7 @@ fn: l2_rw_methods_count () int
             l2_vis_on: 0
         # A method the walk does not try keeps why (l2_rw_may_why), at its own header.
         if: l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_m_node[i] != 0 && l2_m_node[i]\span != 0
-            c.snprintf(l2_m_why + (cast: (size_t) i) * 192U, 192U, "%s", l2_rw_may_why(i))
+            l2_m_why[i]: l2_msg_copy(l2_rw_may_why(i))
             l2_m_why_line[i]: l2_m_node[i]\span\line
             l2_m_why_col[i]: l2_m_node[i]\span\column
         ---
@@ -25760,14 +25838,14 @@ fn: l2_rw_methods_count () int
         # return and its calls of the model are built -- said in a note, not only visible in the L1:
         # located at the first refusal of its walk, or at the host when it was kept out before.
         if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_mad_on(i) != 0 && l2_t7_host_site(i) < 0 && l2_m_steps[i] < 0
-            if: l2_rw_quiet_msg[0] = 0
-                c.snprintf(l2_rw_quiet_msg, 192U, "%s", l2_rw_may_why(i))
+            if: l2_rw_quiet_msg = 0
+                l2_rw_quiet_msg: l2_msg_copy(l2_rw_may_why(i))
                 if: l2_m_node[i] != 0 && l2_m_node[i]\span != 0
                     l2_rw_quiet_line: l2_m_node[i]\span\line
                     l2_rw_quiet_col: l2_m_node[i]\span\column
                 ---
             ---
-            c.fprintf(l1_stderr(), "l2trans note: %s:%zu:%zu: the callable merge host %.*s stays native under --walk-methods: %s\n", l2_src, l2_rw_quiet_line, l2_rw_quiet_col, (cast: (int) l2_m_name[i]\length), l2_m_name[i]\data, l2_rw_quiet_msg)
+            c.fprintf(l1_stderr(), "l2trans note: %s:%zu:%zu: the callable merge host %.*s stays native under --walk-methods: %s\n", l2_src, l2_rw_quiet_line, l2_rw_quiet_col, (cast: (int) l2_m_name[i]\length), l2_m_name[i]\data, l2_msg_text(l2_rw_quiet_msg))
         ---
         i: i + 1
     ---

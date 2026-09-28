@@ -1,0 +1,17 @@
+# P54a (REVIEW e682d71): unit_s7_prim_cross whose convert_impl.lm2 P0 refuses -- a hanging `bad:` at its
+# end (tests/unit_s7_conv_impl_unparsable_impl.lm2): the P0 diagnostic is said, located in that file,
+# and the use site adds nothing (it said only "cannot read the converter source").
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

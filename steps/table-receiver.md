@@ -169,3 +169,33 @@ m14 предел 32 столбцов снят                    conv_wide (др
 m15 пустые rows — отказ, как прежде            tbl_empty
 (m1–m14 — на 22 строках без tbl_empty; m0, m9b, m15 — на 23.)
 ```
+
+## 6. Учёт REVIEW e682d71 и REVIEW ee58ce4 (P50) (Opus, 2026-09-28)
+
+- **P50** (REVIEW ee58ce4). Отсутствующий вход: `l2trans parse error: <path>` печаталась, но не считалась, и страж
+  добавлял «internal: a refusal said nothing», exit 3. Теперь строка — «l2trans parse error: <path>: cannot read the
+  source» — считается в `l2_diag_n`, exit 1. Харнесс получил два свойства строки: `Missing` (вход, которого нет; ничего
+  не ставится) и `ErrorLines` (точное число строк «l2trans error:» у отказа). Свидетель `unit_p50_missing_input`
+  (`Missing`, `ErrorLines = 0`); `unit_empty_struct_hanging_refused` получил `ErrorLines = 0` — то же для
+  диагностики P0.
+- **P54a.** `convert.lm2` или источник-реализация (`convert_impl.lm2` строки), которые P0 отвергает: диагностика P0
+  говорится в этом файле, на её месте, и считается (`l2_input_said`); место использования молчит (`l2_cv_refused` —
+  общий вид `l2_cv_table_refused`, теперь и для «cannot read the converter source»). Файл, которого нет, как и
+  раньше, говорится там, где он нужен. Свидетели `unit_s7_tbl_unparsable` (convert.lm2:139:1),
+  `unit_s7_conv_impl_unparsable` (convert_impl.lm2:52:1).
+- **M48.** Позиционная форма получила свидетеля: `unit_s7_tbl_positional` — все четыре фактических позиционно,
+  столбцы и одна нужная строка — по Structure; Entry 7.
+- **P51.** Аргумент, данный сначала по позиции, а потом по имени, говорится так: «the argument name of table is given
+  by position (colums:) and again by name» — позиционный кадр назван (`unit_s7_tbl_posname`).
+- **P53**, пределы (8 таблиц, 128 имён столбцов, 4096 ячеек) — учёт, без изменений.
+- **Корпус** `e682d71` → срез: все `tests/*.lm2` и корневые `.lm2` песочницы, оба режима — 873 файла, 1746 запусков, 1746 идентичны (exit, строки ошибок, байты L1).
+- **Мутанты** (каждая правка отменена, M48 — мутант fable_pc; строки таблиц нативно и отсутствующий вход):
+
+```text
+n0 контроль (27 строк и отсутствующий вход)   красных 0
+n1 строка P50 не считается                    p50_missing_input (exit 3, одна строка «internal»)
+n2 диагностика convert.lm2 не говорится        tbl_unparsable («cannot read the conversion table» у места)
+n3 диагностика convert_impl.lm2 не говорится   conv_impl_unparsable («cannot read the converter source»)
+n4 слова P51 сняты                             tbl_posname («given twice»)
+n5 M48: позиционная Structure — одним полем    tbl_positional («a table column needs a name»)
+```

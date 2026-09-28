@@ -2299,8 +2299,14 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_empty_struct_hanging_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+    [pscustomobject]@{ Name = 'unit_empty_struct_hanging_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; ErrorLines = 0;
         Needle = 'empty colon Frame is not allowed'; Absent = @(); Debt = @() },
+    # P50 (REVIEW ee58ce4): an input that does not exist is refused in its own line, "cannot read the
+    # source" -- counted, so the guard adds no "internal: a refusal said nothing" and exit 3 (it did: the
+    # line was printed and not counted).  The row above pins the same for a P0 diagnostic.  Mutant: the
+    # line not counted -- this row red (one "l2trans error:" line, not 0).
+    [pscustomobject]@{ Name = 'unit_p50_missing_input.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Missing = 1; ErrorLines = 0;
+        Needle = ': cannot read the source'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_empty_struct_existing_nonstruct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported body'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_typed_decl_vertical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -2891,6 +2897,20 @@ $fixtures = @(
         Needle = 'convert.lm2:141:11: two source tables have this name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_empty.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_empty_table.lm2';
         Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    # REVIEW e682d71: every argument of `table` by position, the columns and the one row each a Structure --
+    # bound as the named form is (M48: the positional-Structure branch of l2_arg_fields -- no gated row saw
+    # it; this one does); a misspelt `colums:` before `name:` binds by position, and the words say so (P51);
+    # a convert.lm2, and an impl source, that P0 refuses: the P0 diagnostic, located in that file and counted,
+    # and the use site adds nothing (P54a -- it said only "cannot read ...").  Mutants: each change undone --
+    # exactly its row red.
+    [pscustomobject]@{ Name = 'unit_s7_tbl_positional.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_positional_table.lm2';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_posname.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_posname_table.lm2';
+        Needle = 'convert.lm2:5:5: the argument name of table is given by position (colums:) and again by name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_unparsable.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_unparsable_table.lm2';
+        Needle = 'convert.lm2:139:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_impl_unparsable.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_impl_unparsable_impl.lm2';
+        Needle = 'convert_impl.lm2:52:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3166,17 +3186,25 @@ foreach ($fx in $fixtures) {
     # RootSource: a handful of fixtures are dev\l2src_sandbox's own top-level L2 parser-port
     # sources (steps/gate-measure-20260927.md), not tests\ fixtures -- same sandbox, different
     # subdirectory of it.
-    if ($fx.PSObject.Properties['RootSource'] -and $fx.RootSource) {
+    # Missing (P50, REVIEW ee58ce4): the row's input does not exist -- l2trans is given a path that is not
+    # there and must say so in a line of its own (a parse error without a P0 diagnostic), never as the
+    # guard's "internal: a refusal said nothing".  Nothing is staged for it.
+    $missing = ($fx.PSObject.Properties['Missing'] -and $fx.Missing)
+    if ($missing) {
+        $source = Join-Path $src ('absent\' + $fx.Name)
+        if (Test-Path -LiteralPath $source) { Add-Row 'FAIL' ('fixture:' + $stem) 'the absent input exists'; continue }
+    } elseif ($fx.PSObject.Properties['RootSource'] -and $fx.RootSource) {
         $source = Join-Path $sandbox $fx.Name
     } else {
         $source = Join-Path $sandbox ('tests\' + $fx.Name)
     }
-    if (-not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
+    if (-not $missing -and -not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
     # The conversion table is the convert.lm2 beside the source, not the launch directory.
     # Stage the fixture next to the copy made at the top of this script.  A row with Impl or Table
     # gets a directory of its own: tests\<Table> as its convert.lm2 (else the sandbox's table), and
     # tests\<Impl> as its convert_impl.lm2 (else the sandbox's).
     $stagedLm2 = Join-Path $src $fx.Name
+    if ($missing) { $stagedLm2 = $source }
     $hasImpl = ($fx.PSObject.Properties['Impl'] -and $fx.Impl)
     $hasTable = ($fx.PSObject.Properties['Table'] -and $fx.Table)
     if ($hasImpl -or $hasTable) {
@@ -3190,7 +3218,7 @@ foreach ($fx in $fixtures) {
         Copy-Item -LiteralPath $implSrc -Destination (Join-Path $own 'convert_impl.lm2') -Force
         $stagedLm2 = Join-Path $own $fx.Name
     }
-    Copy-Item -LiteralPath $source -Destination $stagedLm2 -Force
+    if (-not $missing) { Copy-Item -LiteralPath $source -Destination $stagedLm2 -Force }
     $source = $stagedLm2
     $genLm1 = Join-Path $gen ($stem + '.lm1')
     $label = 'fixture.' + $stem + '.l2trans'
@@ -3229,6 +3257,9 @@ foreach ($fx in $fixtures) {
         # a substring count sees every refusal twice.
         $errorLines = ([regex]::Matches($refusedLog, '(?m)^(?:l2trans\.exe : )?l2trans error:')).Count
         if ($errorLines -gt 1) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused with ' + $errorLines + ' "l2trans error:" lines -- one cause, one line'); continue }
+        # ErrorLines (P50): a refusal said in a line of another kind -- a P0 parse error -- has exactly this
+        # many "l2trans error:" lines; 0 pins that the silent-refusal guard does not re-say it.
+        if ($fx.PSObject.Properties['ErrorLines'] -and $errorLines -ne $fx.ErrorLines) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused with ' + $errorLines + ' "l2trans error:" lines, not ' + $fx.ErrorLines); continue }
         if ($refusedText -notmatch [regex]::Escape($fx.Needle)) { Add-Row 'FAIL' ('fixture:' + $stem) ('refused, but not with "' + $fx.Needle + '"'); continue }
         Add-Row 'OK' ('fixture:' + $stem) ('refused as expected: ' + $fx.Needle); continue
     }

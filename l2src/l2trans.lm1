@@ -1174,6 +1174,7 @@ prototype:
     fn: l2_msg_copy (const: @(char s)) @: char
     fn: l2_said_or (const: @(char path); const: @(LmP0Node at); int: d0; const: @(char fallback)) int
     fn: l2_cv_table_refused (const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_cv_refused (const: @(char path); const: @(LmP0Node at); const: @(char msg)) int
     fn: l2_msg_drop (@: char p) @: char
     fn: l2_msg_text (const: @(char p)) const: @: char
     fn: l2_cap_fields (int: mi; const: @(LmP0Text name); int: ns; @: int out; int: cap) int
@@ -1435,12 +1436,15 @@ fn: l2_alloc_or (const: @(char path); const: @(LmP0Node at); const: @(char fallb
         return: l2_error(path, at, "out of memory")
 return: l2_error(path, at, fallback)
 
-# A use of a conversion table that cannot be read: the table's own diagnostic, when its reading gave
-# one (l2_cv_said), is the one line; else it is said here, where the table was needed.
-fn: l2_cv_table_refused (const: @(char path); const: @(LmP0Node at)) int
+# A use of a conversion table, or of a converter source, that cannot be read: the file's own diagnostic,
+# when its reading gave one (l2_cv_said), is the one line; else it is said here, where it was needed.
+fn: l2_cv_refused (const: @(char path); const: @(LmP0Node at); const: @(char msg)) int
     if: l2_cv_said != 0
         return: 1
-return: l2_error(path, at, "cannot read the conversion table")
+return: l2_error(path, at, msg)
+
+fn: l2_cv_table_refused (const: @(char path); const: @(LmP0Node at)) int
+return: l2_cv_refused(path, at, "cannot read the conversion table")
 
 # A refusal after a pass that may already have said why: nothing more when a diagnostic came since d0
 # (l2_diag_n), else l2_alloc_or's words.
@@ -3692,7 +3696,11 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
             # l2_error call sites in -129 part 1, here for the parser's.
             l2_diag_n: l2_diag_n + 1
         else:
-            c.fprintf(l1_stderr(), "l2trans parse error: %s\n", in_path)
+            # P0 failed without a diagnostic: the file could not be opened, read or held (P50, REVIEW
+            # ee58ce4).  This line is the refusal, so it counts: the guard in main must not re-say it as
+            # "internal: a refusal said nothing".
+            c.fprintf(l1_stderr(), "l2trans parse error: %s: cannot read the source\n", in_path)
+            l2_diag_n: l2_diag_n + 1
         lm_p0_document_destroy(document)
         return: 1
     root: lm_p0_document_root(document)
@@ -6377,6 +6385,7 @@ return: memcmp(ad, bd, an) = 0
 fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(char callee); @@: LmP0Field out_at; @: int out_span; const: @(char path); const: @(LmP0Node at)) int
     @: LmP0Field f
     @: LmP0Frame fr
+    @: LmP0Frame pf
     int: span
     int: k 0
     int: pos 0
@@ -6399,6 +6408,18 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
         while: fr != 0 && k < nf && l2_payload_same(fr\head, names[k]) = 0
             k: k + 1
         if: fr != 0 && k < nf
+            # Given by position first (P51, REVIEW e682d71): a frame whose head names no formal -- a
+            # misspelt name -- binds by position, so the words name it.
+            if: out_at[k] != 0 && out_span[k] > 0
+                pf: 0
+                if: out_at[k]\value != 0 && out_at[k]\value\kind = c.LM_P0_NODE_FRAME && out_at[k]\value\as != 0
+                    pf: out_at[k]\value\as\frame
+                if: pf != 0 && pf\head != 0
+                    c.snprintf(msg, 200U, "the argument %.*s of %s is given by position (%.*s:) and again by name", (cast: (int) names[k]\length), names[k]\data, callee, (cast: (int) pf\head\length), pf\head\data)
+                    return: l2_error(path, f\value, msg)
+                ---
+                c.snprintf(msg, 200U, "the argument %.*s of %s is given by position and again by name", (cast: (int) names[k]\length), names[k]\data, callee)
+                return: l2_error(path, f\value, msg)
             if: out_at[k] != 0
                 c.snprintf(msg, 200U, "the argument %.*s of %s is given twice", (cast: (int) names[k]\length), names[k]\data, callee)
                 return: l2_error(path, f\value, msg)
@@ -6612,6 +6633,21 @@ fn: l2_convert_colname (int: k) const: @: char
         return: "receiver"
 return: "impl"
 
+# A translation input beside the source that P0 refuses with a diagnostic (P54a, REVIEW e682d71): the
+# diagnostic, located in that file and counted, as the source's own is (l2_translate) -- one cause, one
+# line, and the use site adds nothing.  1 when it was said; 0 when P0 left none (the file could not be
+# read -- said where it was needed).
+fn: l2_input_said (const: @(char label); @: LmP0Document document) int
+    const: @: LmP0Diagnostic diagnostic
+    if: document = 0
+        return: 0
+    diagnostic: lm_p0_document_diagnostic(document)
+    if: diagnostic = 0
+        return: 0
+    c.fprintf(l1_stderr(), "l2trans error: %s:%zu:%zu: %s (P0 %d)\n", label, diagnostic\line, diagnostic\column, diagnostic\message, diagnostic\code)
+    l2_diag_n: l2_diag_n + 1
+return: 1
+
 # A file beside the source: the table, or the impl source a row names. The
 # launch directory is not a second place to look.
 fn: l2_convert_beside (const: @(char src); const: @(char leaf); @: char dst; size_t: cap) int
@@ -6661,6 +6697,9 @@ fn: l2_convert_load (const: @(char src)) int
         return: 1
     fclose(raw)
     if: lm_p0_parse_file(path, @ document) != 0 || document = 0
+        l2_input_said("convert.lm2", document)
+        if: document != 0
+            lm_p0_document_destroy(document)
         return: 1
     # The tables keep nodes of this tree (l2_tbx_arg, l2_tbc_name): it stays for the translation.
     l2_cv_doc: document
@@ -6704,6 +6743,10 @@ fn: l2_convert_impl (const: @(char impl)) @: LmP0Document
     if: l2_cv_impl_n >= 8 || l2_convert_beside(l2_src, leaf, path, 1024U) != 0
         return: 0
     if: lm_p0_parse_file(path, @ document) != 0 || document = 0 || lm_p0_document_root(document) = 0
+        if: l2_input_said(path, document) != 0
+            l2_cv_said: 1
+        if: document != 0
+            lm_p0_document_destroy(document)
         return: 0
     n: c.strlen(impl) + 1U
     copy: (cast: (@: char) l2_xmalloc(n))
@@ -7014,7 +7057,7 @@ fn: l2_check_value_convert_core (const: @(LmP0Node value); int: from_ft; int: to
     if: cok = 0 && l2_cv_gap = 3
         return: l2_cv_table_refused(path, value)
     if: cok = 0 && l2_cv_gap = 4
-        return: l2_error(path, value, "cannot read the converter source")
+        return: l2_cv_refused(path, value, "cannot read the converter source")
     if: cok = 0 && l2_cv_gap = 2
         return: l2_error(path, value, "no converter body ported")
     if: cok = 0 && l2_cv_gap = 1
@@ -7338,7 +7381,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     if: cok = 0 && l2_cv_gap = 3
         return: l2_cv_table_refused(path, stmt)
     if: cok = 0 && l2_cv_gap = 4
-        return: l2_error(path, stmt, "cannot read the converter source")
+        return: l2_cv_refused(path, stmt, "cannot read the converter source")
     if: cok = 0 && l2_cv_gap = 2
         return: l2_error(path, stmt, "no converter body ported")
     if: cok = 0 && l2_cv_gap = 1
@@ -21916,7 +21959,7 @@ fn: l2_rw_convert (@: LmP0Field field; int: n; int: from; int: to; const: @(LmP0
         if: l2_cv_gap = 3
             return: l2_cv_table_refused(l2_src, at)
         if: l2_cv_gap = 4
-            return: l2_error(l2_src, at, "cannot read the converter source")
+            return: l2_cv_refused(l2_src, at, "cannot read the converter source")
         return: l2_error(l2_src, at, "mixed numeric types (a conversion)")
     cidx: l2_convert_method(l2_cv_body)
     if: cidx < 0

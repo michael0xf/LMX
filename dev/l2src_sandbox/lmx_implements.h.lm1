@@ -148,9 +148,12 @@ prototype:
     # no record for req -- a value that reached a place of type req unadmitted is an invariant
     # break, never a read of slot j.
     fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out) int
-    # A table cell SIZE_MAX is "not carried" (item 738): the value -- a capture's copy of the fields its
-    # model reads -- holds no copy of that field.  The heavy check skips it; a read through it is refused.
-    # Invariant: only a capture builds a table with such cells (steps/capture-738.md).
+    # A table cell SIZE_MAX is "not carried": the value holds no such field -- a capture's copy of the
+    # fields its model reads (item 738), or a value admitted by name to a formal whose method never reads
+    # that field (D-105 native, admission by the consumer's uses).  The heavy check skips it; a read
+    # through it is refused.  Invariant: a table with such cells is built only where the translator
+    # proved no read reaches them -- a capture's fields (steps/capture-738.md) and a formal's uses,
+    # checked for every type that reaches it (steps/d105-native.md).
     fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx table) int
     fn: lmx_implements_same_map (@: LmxArena arena; @: Lmx a; @: Lmx b; size_t: n) int
     fn: lmx_implements_cell (@: LmxArena arena; @: Lmx table; size_t: j; @: size_t out) int

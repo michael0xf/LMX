@@ -1568,18 +1568,50 @@ $fixtures = @(
     # root hands `o: Other` (Model's fields in the other order) to `rd (Model: m)` and `wr` -- admitted by
     # NAME through lmx_walk_admit_as, whose correspondence table the arena's `implements` table keeps;
     # `m\a` is read and written at Other's slot for `a` (OF/PUT_OF carry Model).  `mm: Model` goes to
-    # the same formal as Model's own.  Under --walk-methods only: without it the callees are native, and
-    # the root refuses at the call (the native slice is later); a field of another Structure type is
-    # refused.  Mutants (copies; scratchpad d105/mut): identity not admitted -- X1, exit 3; OF or PUT_OF
-    # without Model, or a positional table -- the perm row red; the walker ignoring req in OF or PUT_OF,
-    # or admit_as recording nothing (X1) -- red; the nested check dropped, or native callees let through
-    # (then `m\a` reads Other's `b`) -- their refusal rows red.
+    # the same formal as Model's own.  Under --walk-methods; without it (D-105 native, steps/d105-native.md
+    # §4) the callees are native and read the marked formal through the record -- _perm_native, Entry 7;
+    # a field of another Structure type is refused.  Mutants (copies; scratchpad d105/mut): identity not
+    # admitted -- X1, exit 3; OF or PUT_OF without Model, or a positional table -- the perm row red; the
+    # walker ignoring req in OF or PUT_OF, or admit_as recording nothing (X1) -- red; the nested check
+    # dropped -- its refusal row red.
     [pscustomobject]@{ Name = 'unit_walk_d105_perm.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_d105_perm_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'lm2:22:6: root operation not walkable yet: an admission to a Structure type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105_perm_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_d105_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'lm2:25:6: root operation not walkable yet: an admission to a Structure type through a Structure field of another type'; Absent = @(); Debt = @() },
+    # D-105 native (the author's Q39: the interpreter first, then native; steps/d105-native.md §4, REVIEW
+    # 9c34b3b): a formal a value of another named type reaches is marked (to a fixed point over the call
+    # sites), each call site into it records its value in the arena's implements table with the unit's
+    # pair table of the two types, and the formal's first field is read and written at the slot the
+    # record gives.  Before, every row read Model's slot: 20.  _arg: native go -> rd(o); _write: a write
+    # through the formal; _passon: rd2 -> rd; _passon_other: Model -> Part, the pair picked by the
+    # record's table; _mixed: one formal reached by Other and by Model's own; _ownfield: a unit field;
+    # _capture: a formal captured by a callable merge (item 738) -- lmx_walk_capture reads through the
+    # source's record -- native and walked.
+    [pscustomobject]@{ Name = 'unit_d105n_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105n_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105n_passon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105n_passon_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105n_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105n_ownfield.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105n_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_d105n_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # D-109: a bound name of another named type handed to a Structure formal was admitted by nothing; the
+    # formal's uses are now checked for every type that reaches it (l2_d105_close): refused at the call.
+    # D-110: a consumer's uses were its body's alone -- the hung `return:` (P0 trailer) was not walked --
+    # so `rd(Lacks)` into a formal read only by `return: m\a` was admitted with empty uses; the walk reads
+    # the trailer now (l2_uses_walk_body).  Before, both translated silently.
+    [pscustomobject]@{ Name = 'unit_d109_uses_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':19:13: implements is false in function argument'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d110_return_uses_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':16:9: implements is false in function argument'; Args = @('0'); Absent = @(); Debt = @() },
     # REVIEW dd07174 (fable_pc's M36 and probe ns4_two_types): two executed fields of two types, each
     # runs its own type's code -- m\v = 2, o\w = 15.  Mutant: every field takes the first Structure's
     # code -- red.  One row: the root is walked in both modes (the knob acts on methods).

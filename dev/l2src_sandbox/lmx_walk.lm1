@@ -2218,8 +2218,13 @@ fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; 
     @: void cell
     @: void fresh
     int: ty
+    size_t: sj
+    @: LmxImplEntry own 0
     if: arena = 0 || parent = 0 || src = 0 || req = 0 || fields = 0
         return: 0
+    # D-105 native x item 738 (steps/d105-native.md): a source admitted to req by name -- a formal that a
+    # value of another type reached -- holds req's field j at the slot its record gives, not at j.
+    own: lmx_implements_find(arena, src, req)
     copy: lmx_struct_new_owned(parent, arena)
     table: lmx_struct_new_owned(parent, arena)
     if: copy = 0 || table = 0
@@ -2236,9 +2241,14 @@ fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; 
     ---
     while: i < n
         j: fields[i]
-        if: j >= src\array.size || j >= req\array.size
+        if: j >= req\array.size
             return: 0
-        cell: lmx_arena_ref_value(src, j)
+        sj: j
+        if: own != 0 && lmx_implements_slot(arena, src, req, j, @ sj) != 0
+            return: 0
+        if: sj >= src\array.size
+            return: 0
+        cell: lmx_arena_ref_value(src, sj)
         if: cell = 0 || lmx_range_classify(arena, cell) != c.LMX_KIND_PRIMITIVE
             return: 0
         ty: lmx_range_type_of(arena, cell)

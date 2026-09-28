@@ -1,0 +1,21 @@
+# D-110 (steps/defects.md): a consumer's uses were its body's alone -- P0 hangs a `return:` after the body
+# on the frame as its trailer, and the walk (l2_uses_walk_frame) never read it.  `rd`'s one read is its
+# `return: m\a`, so its uses were empty and any Structure passed was admitted: `rd(Lacks)` (the type as
+# the actual, admitted by uses since slice 1 of implements) translated and read a slot `Lacks` has not.
+# Now the walk reads the trailer too (l2_uses_walk_body): refused at the call.
+Model:
+    size_t: a 1U
+    size_t: b 2U
+end: Model
+Lacks:
+    size_t: b 20U
+end: Lacks
+fn: rd (Model: m) size_t
+return: m\a
+fn: go () size_t
+return: rd(Lacks)
+
+size_t: got 0U
+got: go()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

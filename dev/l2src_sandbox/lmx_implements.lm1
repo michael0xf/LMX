@@ -232,9 +232,9 @@ fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx 
         c: lmx_arena_ref_value(req, j)
         if: c != 0 && lmx_implements_cell(arena, table, j, @ k) != 0
             return: c.LMX_IMPLEMENTS_NO
-        # Item 738: a cell of "not carried" (SIZE_MAX) -- the value holds no copy of req's field j.
-        # Only a capture's table has one (the translator's name-matched tables refuse a missing
-        # field instead), and lmx_implements_slot refuses to read through it.
+        # A cell of "not carried" (SIZE_MAX) -- the value holds no copy of req's field j: a capture's
+        # table (item 738) or a D-105 pair table for a formal that never reads it (see the prototype);
+        # lmx_implements_slot refuses to read through it.
         if: c != 0 && k != (cast: (size_t) -1)
             if: k >= value\array.size
                 return: c.LMX_IMPLEMENTS_NO

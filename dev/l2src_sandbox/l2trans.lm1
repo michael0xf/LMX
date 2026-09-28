@@ -190,6 +190,28 @@ int: l2_t7h_n 0
 []: int l2_d105_mi 64
 []: int l2_d105_k 64
 int: l2_d105_n 0
+# D-105 native (steps/d105-native.md; REVIEW 9c34b3b): a source -- named type ty reaching formal k of
+# method mi at a call site -- and an edge -- formal fk of fmi passed on, as it is, to formal tk of tmi.
+# After the checks and the root's count, l2_d105_close carries the sources along the edges, marks every
+# formal a source of another type reaches (l2_d105_mark: its fields are read through the arena's
+# implements table), and lists the pair tables S -> R the unit carries, one per pair of types, built by
+# the program at l2_d105t_base.
+int: l2_d105s_n 0
+[]: int l2_d105s_mi 256
+[]: int l2_d105s_k 256
+[]: int l2_d105s_ty 256
+[]: @(LmP0Node) l2_d105s_at 256
+int: l2_d105e_n 0
+[]: int l2_d105e_fmi 128
+[]: int l2_d105e_fk 128
+[]: int l2_d105e_tmi 128
+[]: int l2_d105e_tk 128
+[]: @(LmP0Node) l2_d105e_at 128
+int: l2_d105t_n 0
+[]: int l2_d105t_cand 64
+[]: int l2_d105t_req 64
+int: l2_d105t_base 0
+int: l2_d105_seq 0
 # The flag steps of the statement being built (-196): a short-circuit `a && b` / `a || b` is an IF
 # step that runs before its statement and leaves the value in a cell (l2_rw_sc); l2_rw_stmts puts
 # them in front of the statement's own steps.
@@ -703,8 +725,21 @@ prototype:
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_d105_sub (int: mi; int: k) int
     fn: l2_d105_mark (int: mi; int: k) int
-    fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n) int
+    fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
     fn: l2_rw_d105_need (const: @(LmP0Node node); int: idx; int: k; int: cand; @: int out) int
+    fn: l2_d105_reset () int
+    fn: l2_d105_has (int: mi; int: k; int: ty) int
+    fn: l2_d105_source (int: mi; int: k; int: ty; const: @(LmP0Node at)) int
+    fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) int
+    fn: l2_d105_pair (int: cand; int: req) int
+    fn: l2_d105_note (int: mi; int: idx; int: k; int: cand; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
+    fn: l2_d105_close () int
+    fn: l2_d105_any (int: mi) int
+    fn: l2_d105_tnode (int: p; @: char dest) int
+    fn: l2_d105_emit_admit (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; const: @(char value); const: @(char ind)) int
+    fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; const: @(char ind)) int
+    fn: l2_d105_emit_tables () int
+    fn: l2_uses_walk_body (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
     fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
@@ -3560,6 +3595,7 @@ fn: l2_parse_library (const: @(char path)) int
     l2_m_throws: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
     if: l2_m_throws = 0
         return: l2_error(path, 0, "out of memory")
+    l2_d105_reset()
     while: i < l2_m_n
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0
             l2_m_throws[i]: l2_body_throws(l2_m_body[i]\as\structure, i)
@@ -11406,10 +11442,20 @@ fn: l2_uses_walk_frame (const: @(LmP0Text varb); @: char paths; @: size_t count;
                     l2_xfree((cast: (@: void) head))
                 ---
             ---
-            return: l2_uses_walk_structure(varb, paths, count, frame\body)
+            return: l2_uses_walk_body(varb, paths, count, frame)
         ---
     ---
-return: l2_uses_walk_structure(varb, paths, count, frame\body)
+return: l2_uses_walk_body(varb, paths, count, frame)
+
+# D-109: the uses of a consumer are its body's and its hung `return:`'s -- P0 makes a `return:` after the
+# body the frame's trailer, and a read there (`return: m\a`) is a use like any other.  The walk read the
+# body alone, and a formal admitted by the consumer's uses could lack a field its return reads.
+fn: l2_uses_walk_body (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
+    if: l2_uses_walk_structure(varb, paths, count, frame\body) != 0
+        return: 1
+    if: frame\trailer != 0 && frame\trailer\body != 0
+        return: l2_uses_walk_structure(varb, paths, count, frame\trailer\body)
+return: 0
 
 fn: l2_uses_walk_structure (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Structure body)) int
     @: LmP0Field field
@@ -13966,6 +14012,7 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     int: root 0 - 1
     int: fi 0 - 1
     []: char l2_proot 64
+    []: char sl 40
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
         return: l2_error(l2_src, at, "unknown field path root")
     segs: l2_seg_count(pd, pn)
@@ -14060,18 +14107,26 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             return: l2_error(l2_src, at, "ambiguous field path segment")
         if: slot < 0
             return: l2_error(l2_src, at, "unknown field path segment")
+        # D-105 native: the first field of a formal admitted by name is at the slot its value's record
+        # gives (l2_d105_emit_slot); any other field at its type's own slot.
+        c.sprintf(sl, "%uU", (cast: (unsigned) slot))
+        if: i = 1 && oi < 0 && fi >= 0 && l2_d105_sub(mi, fi) != 0
+            if: l2_d105_emit_slot(mi, fi, slot, ind) != 0
+                return: 1
+            c.sprintf(sl, "l2_dslot")
+        ---
         if: i + 1 < segs && kind = 10 && res < 0
             ent: l2_ns_ref_pointee(ni, pd, off, len)
         if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || res >= 0 || ent < 0)
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
         # Through a reference field (D-76): its pointer cell holds the pointee Structure.
-        if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %uU)\n%sif: l2_pxp = 0\n", ind, (cast: (unsigned) slot), ind) < 0
+        if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
             return: 1
         if: i + 1 < segs && kind = 10 && l2_emit_path_bail(mi, ind) != 0
             return: 1
         if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))\n%sif: l2_pst = 0\n", ind, ind) < 0
             return: 1
-        if: i + 1 < segs && kind != 10 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
+        if: i + 1 < segs && kind != 10 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
             return: 1
         if: i + 1 < segs && l2_emit_path_bail(mi, ind) != 0
             return: 1
@@ -14081,11 +14136,11 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
         ---
         if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && (arr_ok = 0 || (kind != 5 && kind != 6))
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
-        if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) slot), ind) < 0
+        if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
             return: 1
         if: i + 1 = segs && kind = 4 && l2_emit_path_bail(mi, ind) != 0
             return: 1
-        if: i + 1 = segs && kind != 4 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %uU)\n%sif: l2_pxp = 0\n", ind, (cast: (unsigned) slot), ind) < 0
+        if: i + 1 = segs && kind != 4 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
             return: 1
         if: i + 1 = segs && kind != 4 && l2_emit_path_bail(mi, ind) != 0
             return: 1
@@ -15922,6 +15977,8 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                             return: 1
                         ---
                     ---
+                    if: l2_d105_note(mi, idx, actual_i, cand_ns, a0, actual_span, node) != 0
+                        return: 1
                     handled: 1
                 ---
             ---
@@ -15934,6 +15991,14 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 return: 1
             if: handled = 0 && req_mi < 0 && nst < 0 && l2_named_empty_actual(a0, idx, actual_i) = 0 && l2_check_value_convert_field(a0, actual_span, l2_ft(idx, actual_i), mi, path) != 0
                 return: 1
+            # D-105 native: a bound name -- a formal, an own field -- of a named type is a source of that
+            # type for the formal (l2_actual_ns resolves a type name or a path, not a bound name), or an edge
+            # when it is a formal passed on as it is.  l2_d105_close builds its pair table by name and
+            # refuses, located, a pair it cannot build.
+            if: handled = 0 && req_mi < 0 && nst >= 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0 && l2_bound_nsty(mi, a0\value\as\atom) >= 0
+                if: l2_d105_note(mi, idx, actual_i, l2_bound_nsty(mi, a0\value\as\atom), a0, actual_span, node) != 0
+                    return: 1
+            ---
             if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
                 if: l2_admit_consumer_uses(a0\value\as\atom, nst, l2_fn(idx, actual_i), l2_m_node[idx]\as\frame, path, node, "function argument") != 0
                     return: 1
@@ -16956,6 +17021,7 @@ fn: l2_parse_unit (const: @(char path)) int
     l2_m_throws: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
     if: l2_m_throws = 0
         return: l2_error(path, 0, "out of memory")
+    l2_d105_reset()
     i: 0
     while: i < l2_m_n
         l2_vis_method(i)
@@ -18031,6 +18097,10 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_at(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
         if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_admit(mi, l2_nsty_get(idx, t), l2_act_at(acts, t), ind) != 0
+            return: l2_prep_drop(acts, hides)
+        # D-105 native (steps/d105-native.md): the actual of a formal admitted by name is recorded before
+        # the call (l2_d105_emit_admit).
+        if: l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_d105_sub(idx, t) != 0 && l2_d105_emit_admit(mi, idx, t, a0, actual_span, l2_act_at(acts, t), ind) != 0
             return: l2_prep_drop(acts, hides)
         t: t + 1
         actual_i: 0
@@ -20258,8 +20328,10 @@ return: 0
 # t[j] is the slot of cand's field named as req's field j (l2_ns_slot_named -- slots are the
 # declaration order).  0 and t[0..n), or 1 when a field of req has no one field of that name in
 # cand, or 2 when a Structure field -- nested or a reference -- is of another named type: a way
-# through it would read that type's slots again, which slice 1 does not translate.
-fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n) int
+# through it would read that type's slots again, which slice 1 does not translate.  With holes, a
+# field of req cand has not is -1, "not carried" (D-105 native: admission is by the consumer's uses,
+# and l2_d105_close refuses a source whose consumer reads such a field).
+fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
     int: k 0
     int: j 0
     int: kc
@@ -20290,6 +20362,12 @@ fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n) int
                     slot: slot + 1
                 kc: kc + 1
             ---
+            if: hit < 0 && holes != 0
+                t[j]: 0 - 1
+                j: j + 1
+                k: k + 1
+                continue
+            ---
             if: hit < 0 || l2_nsf_kind[hit] != l2_nsf_kind[k]
                 return: 1
             # A nested or shared Structure field of another named type (kinds 2, 3: l2_nsf_ref),
@@ -20306,6 +20384,263 @@ fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n) int
     \out_n: j
 return: 0
 
+# D-105 native (steps/d105-native.md): the native slice's state starts empty with each translation's
+# checks.
+fn: l2_d105_reset () int
+    l2_d105s_n: 0
+    l2_d105e_n: 0
+    l2_d105t_n: 0
+return: 0
+
+# Is named type ty already a source of formal k of mi?
+fn: l2_d105_has (int: mi; int: k; int: ty) int
+    int: i 0
+    while: i < l2_d105s_n
+        if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = k && l2_d105s_ty[i] = ty
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# D-105 native: named type ty reaches formal k of method mi at `at` (recorded once).
+fn: l2_d105_source (int: mi; int: k; int: ty; const: @(LmP0Node at)) int
+    if: mi < 0 || k < 0 || ty < 0 || l2_d105_has(mi, k, ty) != 0
+        return: 0
+    if: l2_d105s_n >= 256
+        return: l2_error(l2_src, at, "too many named types admitted to Structure formals (D-105)")
+    l2_d105s_mi[l2_d105s_n]: mi
+    l2_d105s_k[l2_d105s_n]: k
+    l2_d105s_ty[l2_d105s_n]: ty
+    l2_d105s_at[l2_d105s_n]: (cast: (@: LmP0Node) at)
+    l2_d105s_n: l2_d105s_n + 1
+return: 0
+
+# D-105 native: formal fk of fmi is passed on, as it is, to formal tk of tmi at `at` (recorded once).
+fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) int
+    int: i 0
+    while: i < l2_d105e_n
+        if: l2_d105e_fmi[i] = fmi && l2_d105e_fk[i] = fk && l2_d105e_tmi[i] = tmi && l2_d105e_tk[i] = tk
+            return: 0
+        i: i + 1
+    ---
+    if: l2_d105e_n >= 128
+        return: l2_error(l2_src, at, "too many formals passed on to Structure formals (D-105)")
+    l2_d105e_fmi[l2_d105e_n]: fmi
+    l2_d105e_fk[l2_d105e_n]: fk
+    l2_d105e_tmi[l2_d105e_n]: tmi
+    l2_d105e_tk[l2_d105e_n]: tk
+    l2_d105e_at[l2_d105e_n]: (cast: (@: LmP0Node) at)
+    l2_d105e_n: l2_d105e_n + 1
+return: 0
+
+# D-105 native: the unit's pair table cand -> req -- its index (added once), or -1 when the list is full.
+fn: l2_d105_pair (int: cand; int: req) int
+    int: i 0
+    while: i < l2_d105t_n
+        if: l2_d105t_cand[i] = cand && l2_d105t_req[i] = req
+            return: i
+        i: i + 1
+    ---
+    if: l2_d105t_n >= 64
+        return: 0 - 1
+    l2_d105t_cand[l2_d105t_n]: cand
+    l2_d105t_req[l2_d105t_n]: req
+    l2_d105t_n: l2_d105t_n + 1
+return: l2_d105t_n - 1
+
+# D-105 native: the check of a call (l2_check_call) admitted the actual of formal k of idx, of static
+# named type cand, in method mi.  A formal of mi passed on as it is -- an edge; any other actual -- a
+# source of its type.
+fn: l2_d105_note (int: mi; int: idx; int: k; int: cand; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
+    int: f 0 - 1
+    if: mi < 0 || idx < 0 || k < 0 || cand < 0
+        return: 0
+    if: span = 1 && a0 != 0 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0
+        f: l2_formal_find(mi, a0\value\as\atom)
+    if: f >= 0 && l2_nsty_get(mi, f) = cand
+        return: l2_d105_edge(mi, f, idx, k, at)
+return: l2_d105_source(idx, k, cand, at)
+
+# D-105 native (REVIEW 9c34b3b: marking is transitive; the tables are the unit's, one per pair of types):
+# after the checks and the root's count, before any layout.  The sources flow along the edges to a fixed
+# point; a formal that a source of another type reaches is marked (l2_d105_mark), and the pair table
+# source -> the formal's type joins the unit's (l2_d105_pair) -- built by name (l2_d105_table), refused
+# here, located at the call site, when it cannot be.
+fn: l2_d105_close () int
+    int: changed 1
+    int: e
+    int: i
+    int: n
+    int: req
+    int: ty
+    int: why
+    int: tn 0
+    []: int t 64
+    while: changed != 0
+        changed: 0
+        e: 0
+        while: e < l2_d105e_n
+            i: 0
+            n: l2_d105s_n
+            while: i < n
+                if: l2_d105s_mi[i] = l2_d105e_fmi[e] && l2_d105s_k[i] = l2_d105e_fk[e] && l2_d105_has(l2_d105e_tmi[e], l2_d105e_tk[e], l2_d105s_ty[i]) = 0
+                    if: l2_d105_source(l2_d105e_tmi[e], l2_d105e_tk[e], l2_d105s_ty[i], l2_d105e_at[e]) != 0
+                        return: 1
+                    changed: 1
+                ---
+                i: i + 1
+            ---
+            e: e + 1
+        ---
+    ---
+    i: 0
+    while: i < l2_d105s_n
+        req: l2_nsty_get(l2_d105s_mi[i], l2_d105s_k[i])
+        ty: l2_d105s_ty[i]
+        if: req >= 0 && ty != req
+            if: l2_library_mode != 0
+                return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type by name in a library unit (D-105: the pair tables are a program's)")
+            # Admission is by the consumer's uses (book: a field the formal's method never reads need not
+            # be there): the same check a direct call site had, for every source -- one carried along an
+            # edge too; a field the source has not is a hole of the pair table.
+            if: l2_m_node[l2_d105s_mi[i]] != 0 && l2_m_node[l2_d105s_mi[i]]\as != 0 && l2_admit_consumer_ix(ty, req, l2_fn(l2_d105s_mi[i], l2_d105s_k[i]), l2_m_node[l2_d105s_mi[i]]\as\frame, l2_src, l2_d105s_at[i], "function argument") != 0
+                return: 1
+            why: l2_d105_table(ty, req, t, 64, @ tn, 1)
+            if: why = 2
+                return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type through a Structure field of another type")
+            if: why != 0
+                return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type")
+            if: l2_d105_mark(l2_d105s_mi[i], l2_d105s_k[i]) != 0
+                return: l2_error(l2_src, l2_d105s_at[i], "too many formals admitted by name")
+            if: l2_d105_pair(ty, req) < 0
+                return: l2_error(l2_src, l2_d105s_at[i], "too many pairs of types admitted by name (D-105)")
+        ---
+        i: i + 1
+    ---
+return: 0
+
+# Has method mi a formal admitted by name?
+fn: l2_d105_any (int: mi) int
+    int: i 0
+    while: i < l2_d105_n
+        if: l2_d105_mi[i] = mi
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# The unit's pair table p, as an expression in the method being written (its unit child).
+fn: l2_d105_tnode (int: p; @: char dest) int
+    if: p < 0 || p >= l2_d105t_n
+        return: 1
+return: (cast: (int) (c.sprintf(dest, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_d105t_base + p))) < 0))
+
+# D-105 native: before the call, the actual `value` of marked formal k of idx (type R) is recorded in the
+# arena's implements table with the unit's pair table of its type.  Its static type S: another named
+# type -- the pair S -> R; R itself, or no named type (a letter) -- no table, the value is R's own.  A
+# formal of mi passed on as it is, itself marked: the value's own record (value, S) tells its type -- its
+# table is compared by content with each source's pair table S0 -> S (tables of one pair of types are
+# equal), and the pair S0 -> R is taken.
+# The kernel's "no" here is a guard, not a throw: the translator admitted each pair by name
+# (l2_admit_implements / l2_admit_consumer_ix at the check of the call), and built each table by name
+# over every field of R (l2_d105_table: exactly one field of each name, of the same kind; a nested or
+# reference field of another type is refused in l2_d105_close), so the heavy check at registration finds
+# every field where the table says, and a repeated admission brings a table equal to the recorded one.
+fn: l2_d105_emit_admit (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; const: @(char value); const: @(char ind)) int
+    int: req
+    int: cand 0 - 1
+    int: f 0 - 1
+    int: i 0
+    int: p
+    int: q
+    int: seq
+    []: char rinst 128
+    []: char sinst 128
+    []: char tq 160
+    []: char tp 160
+    []: char tb 160
+    req: l2_nsty_get(idx, k)
+    if: req < 0 || l2_type_inst(req, rinst) != 0
+        return: l2_error(l2_src, 0, "internal: an admission by name to a type with no shape")
+    if: span = 1 && a0 != 0 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0
+        f: l2_formal_find(mi, a0\value\as\atom)
+    if: f >= 0
+        cand: l2_nsty_get(mi, f)
+    if: f < 0 && span = 1 && a0 != 0 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0
+        cand: l2_bound_nsty(mi, a0\value\as\atom)
+    if: f < 0 && cand < 0 && a0 != 0 && l2_actual_ns(mi, a0, span, l2_src, a0\value, @ cand) != 0
+        cand: 0 - 1
+    seq: l2_d105_seq
+    l2_d105_seq: l2_d105_seq + 1
+    c.sprintf(tb, "0")
+    if: cand >= 0 && cand != req
+        p: l2_d105_pair(cand, req)
+        if: l2_d105_tnode(p, tb) != 0
+            return: l2_error(l2_src, 0, "internal: a pair table of D-105 is missing")
+    ---
+    if: f >= 0 && cand >= 0 && l2_d105_sub(mi, f) != 0
+        if: l2_type_inst(cand, sinst) != 0
+            return: l2_error(l2_src, 0, "internal: an admission by name from a type with no shape")
+        if: c.fprintf(l2_out, "%s@: LmxImplEntry l2_d105e%d lmx_implements_find(l2_program_arena, (cast: (@: Lmx) %s), %s)\n%s@: Lmx l2_d105t%d %s\n", ind, seq, value, sinst, ind, seq, tb) < 0
+            return: 1
+        i: 0
+        while: i < l2_d105s_n
+            if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = f && l2_d105s_ty[i] != cand
+                q: l2_d105_pair(l2_d105s_ty[i], cand)
+                if: l2_d105_tnode(q, tq) != 0
+                    return: l2_error(l2_src, 0, "internal: a pair table of D-105 is missing")
+                c.sprintf(tp, "0")
+                if: l2_d105s_ty[i] != req && l2_d105_tnode(l2_d105_pair(l2_d105s_ty[i], req), tp) != 0
+                    return: l2_error(l2_src, 0, "internal: a pair table of D-105 is missing")
+                if: c.fprintf(l2_out, "%sif: l2_d105e%d != 0 && lmx_implements_same_map(l2_program_arena, l2_d105e%d\\table, %s, %dU) != 0\n%s    l2_d105t%d: %s\n", ind, seq, seq, tq, l2_ns_count[cand], ind, seq, tp) < 0
+                    return: 1
+            ---
+            i: i + 1
+        ---
+        c.sprintf(tb, "l2_d105t%d", seq)
+    ---
+    if: c.fprintf(l2_out, "%sif: lmx_implements_register(l2_program_arena, (cast: (@: Lmx) %s), %s, %s) != c.LMX_IMPLEMENTS_YES\n%s    c.fprintf(c.stderr, \"lmx: invariant: an admission by name was refused\\n\")\n%s    c.abort()\n", ind, value, rinst, tb, ind, ind) < 0
+        return: 1
+return: 0
+
+# D-105 native: the first field of formal fi of mi, admitted by name, is at the slot its value's record
+# gives -- into l2_dslot.  No record, or a hole, is a guard: every call site into the formal records its
+# value (l2_d105_emit_admit, and the walked root's lmx_walk_admit_as), and the translator emits no read
+# of a field a source does not carry -- the formal's uses are checked for every source (l2_d105_close).
+fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; const: @(char ind)) int
+    []: char rinst 128
+    if: l2_type_inst(l2_nsty_get(mi, fi), rinst) != 0
+        return: l2_error(l2_src, 0, "internal: a formal admitted by name has no shape")
+    if: c.fprintf(l2_out, "%sif: lmx_implements_slot(l2_program_arena, l2_pst, %s, %uU, @ l2_dslot) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a field of a formal admitted by name is not carried by its value (no record, or a hole)\\n\")\n%s    c.abort()\n", ind, rinst, (cast: (unsigned) slot), ind, ind) < 0
+        return: 1
+return: 0
+
+# D-105 native: the program builds the unit's pair tables -- a Structure of size_t cells each, cell j
+# the slot of the source type's field named as the formal type's field j -- as unit children.
+fn: l2_d105_emit_tables () int
+    int: p 0
+    int: j
+    int: n 0
+    []: int t 64
+    while: p < l2_d105t_n
+        if: l2_d105_table(l2_d105t_cand[p], l2_d105t_req[p], t, 64, @ n, 1) != 0
+            return: l2_error(l2_src, 0, "internal: a pair table of D-105 could not be built")
+        if: c.fprintf(l2_out, "        l2_fkid: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_fkid = 0 || lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_fkid)) != 0\n            return: 1\n", (cast: (unsigned) (l2_d105t_base + p))) < 0
+            return: 1
+        if: n > 0 && c.fprintf(l2_out, "        if: lmx_arena_refs_open_owned(l2_program_arena, l2_fkid, %dU) != 0\n            return: 1\n", n) < 0
+            return: 1
+        j: 0
+        while: j < n
+            if: t[j] >= 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_fkid, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", j, t[j]) < 0
+                return: 1
+            if: t[j] < 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_fkid, %dU, (cast: (size_t) -1)) != c.LMX_WALK_OK\n            return: 1\n", j) < 0
+                return: 1
+            j: j + 1
+        ---
+        p: p + 1
+    ---
+return: 0
+
 # D-105 slice 1: how input k of callee idx, whose actual is of named type cand (-1: not a named
 # root field -- a letter, a fresh empty Structure), is admitted: \out 0 as before, 1 as the formal's
 # own type through lmx_walk_admit_as (the formal is one a root call site fills with another type),
@@ -20319,18 +20654,22 @@ fn: l2_rw_d105_need (const: @(LmP0Node node); int: idx; int: k; int: cand; @: in
     int: why
     ni: l2_nsty_get(idx, k)
     \out: 0
+    # D-105 native: the value's type reaches the formal (l2_d105_close), whether the callee is walked or
+    # native -- a native callee reads the formal's fields through the record the root's admission makes.
+    if: l2_rw_emit = 0 && cand >= 0 && l2_d105_source(idx, k, cand, node) != 0
+        return: 1
+    if: l2_rw_emit = 0 && cand < 0 && ni >= 0 && l2_d105_source(idx, k, ni, node) != 0
+        return: 1
     if: cand >= 0 && cand != ni
-        if: l2_walk_methods = 0 || l2_library_mode != 0 || l2_rw_mi != l2_e
+        if: l2_library_mode != 0 || l2_rw_mi != l2_e
             return: l2_rw_refuse(node, "an admission to a Structure type")
-        why: l2_d105_table(cand, ni, t, 64, @ n)
+        why: l2_d105_table(cand, ni, t, 64, @ n, 0)
         if: why = 2
             return: l2_rw_refuse(node, "an admission to a Structure type through a Structure field of another type")
         if: why != 0
             return: l2_rw_refuse(node, "an admission to a Structure type")
         if: l2_d105_mark(idx, k) != 0
             return: l2_rw_refuse(node, "too many formals admitted by name")
-        if: l2_rw_emit != 0 && (l2_m_steps = 0 || l2_m_steps[idx] <= 0)
-            return: l2_error(l2_src, node, "an admission to a Structure type: its callee stays native under --walk-methods (D-105: the native slice is later)")
         \out: 2
         return: 0
     ---
@@ -20353,7 +20692,7 @@ fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_admit_as\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, \out, \out, \out, \out, \out, ni) < 0
         return: 1
     if: cand >= 0 && cand != ni
-        if: l2_d105_table(cand, ni, t, 64, @ n) != 0
+        if: l2_d105_table(cand, ni, t, 64, @ n, 0) != 0
             return: l2_error(l2_src, 0, "internal: a correspondence table changed between the passes")
         if: l2_rw_plain(\out, n, @ tbl) != 0 || l2_rw_put(\out, 5, tbl) != 0
             return: 1
@@ -28403,6 +28742,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # And the named Structures' bodies (steps/named-struct-exec.md, slice 2).
     if: l2_rw_ns_count() != 0
         return: 1
+    # D-105 native (steps/d105-native.md): the formals admitted by name and the unit's pair tables,
+    # final before any layout and before any statement is written.
+    if: l2_d105_close() != 0
+        return: 1
     # Slice 13: a root conversion edge noted a receiver the unit has not taken (l2_rw_convert):
     # nothing is written yet; l2_translate translates the unit again with it and comes back.
     if: l2_cv_need_n > l2_cv_inj_n
@@ -28415,6 +28758,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     l2_mres_base: l2_unit_base + l2_occ_n() + l2_ebr_n
     l2_ns_base: l2_mres_base + l2_mres_n
     l2_nsx_base: l2_ns_base + l2_ns_top_count()
+    l2_d105t_base: l2_nsx_base + l2_nsx_count()
     l2_nso_n: 0
     l2_pub_free()
     if: l2_pub_prepare(out_path) != 0
@@ -28769,6 +29113,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: (l2_ns_n != 0 || l2_mres_n != 0 || l2_uses_node_for_root != 0) && fputs("    @: Lmx l2_pst 0\n    @@: void l2_pxp 0\n", l2_out) < 0
             fclose(l2_out)
             return: 1
+        # D-105 native: a formal admitted by name reads its fields at the slot its value's record gives.
+        if: l2_d105_any(i) != 0 && fputs("    size_t: l2_dslot 0U\n", l2_out) < 0
+            fclose(l2_out)
+            return: 1
         l2_tn: 0
         l2_call_node: "self"
         if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_rebuild(l2_m_body[i]\as\structure, l2_src) != 0
@@ -28846,6 +29194,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # it.  Nothing moves in a program that executes none.
     l2_nsx_base: l2_ns_base + l2_ns_top_count()
     kids: kids + (cast: (unsigned) l2_nsx_count())
+    # Then one table per pair of named types a formal is admitted across (D-105 native).
+    l2_d105t_base: l2_nsx_base + l2_nsx_count()
+    kids: kids + (cast: (unsigned) l2_d105t_n)
     # The current Thread's already-created growable children Array is an ordinary
     # physical field of the generated unit at its private tail. Publishing the
     # unit as Message.graph therefore preserves the standard Thread graph shape
@@ -29144,6 +29495,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         ---
         k: k + 1
     ---
+    if: l2_d105_emit_tables() != 0
+        fclose(l2_out)
+        return: 1
     # Second phase of construction: every entry already exists. A Structure-
     # typed field (Name: field) of an ordinary model is materialized as a real
     # typed occurrence owned by that model -- merge(Type, empty) with the owner

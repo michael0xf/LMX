@@ -3393,6 +3393,22 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # REVIEW 394f6a9: a callee's formals have no bound -- 17 bound by position and by name past the sixteenth
+    # (fable_pc's P62 a; red under a copy with the former 16-slot binding: "internal: a callee with more formals
+    # than a binding holds"); a named call in a method's `return:` trailer, outside its body (M54, P62 c; red
+    # under M54: "unknown method"); a sub's named call as a statement (P62 d; red with no binding pass).
+    [pscustomobject]@{ Name = 'unit_named_actual_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_actual_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_actual_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_actual_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:14:5: more arguments than bar has formals'; Absent = @(); Debt = @() },

@@ -628,6 +628,7 @@ prototype:
     fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
     fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
     fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
+    fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0Node
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
     fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
@@ -6936,21 +6937,65 @@ fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0N
 return: node
 
 # Call node of callee idx, its actuals bound (l2_bind_actuals); a call with a named one is rewritten in its
-# formals' order.  0, or 1 said.
+# formals' order.  One slot per formal of the callee (l2_m_arity): the language puts no bound on a callable's
+# formals (REVIEW 394f6a9, P62).  0, or 1 said.
 fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
+    int: nf
+    int: rc
+    size_t: m
+    size_t: psz
+    @@: LmP0Field at 0
+    @@: LmP0Text names 0
+    @@: LmP0Field first 0
+    @: int span 0
+    @: int cnt 0
+    nf: l2_m_arity[idx]
+    m: (cast: (size_t) nf) + 1U
+    psz: c.sizeof(@: char)
+    if: nf < 0 || l2_mul_ok(m, psz) = 0 || l2_mul_ok(m, c.sizeof(c.int)) = 0
+        l2_alloc_err: 2
+        return: l2_alloc_or(path, node, "out of memory")
+    l2_alloc_kind: 5
+    at: (cast: (@@: LmP0Field) l2_xmalloc(m * psz))
+    l2_alloc_kind: 5
+    names: (cast: (@@: LmP0Text) l2_xmalloc(m * psz))
+    l2_alloc_kind: 5
+    first: (cast: (@@: LmP0Field) l2_xmalloc(m * psz))
+    l2_alloc_kind: 5
+    span: (cast: (@: int) l2_xmalloc(m * c.sizeof(c.int)))
+    l2_alloc_kind: 5
+    cnt: (cast: (@: int) l2_xmalloc(m * c.sizeof(c.int)))
+    rc: 1
+    if: at != 0 && names != 0 && first != 0 && span != 0 && cnt != 0
+        memset((cast: (@: void) at), 0, m * psz)
+        memset((cast: (@: void) names), 0, m * psz)
+        memset((cast: (@: void) first), 0, m * psz)
+        memset((cast: (@: void) span), 0, m * c.sizeof(c.int))
+        memset((cast: (@: void) cnt), 0, m * c.sizeof(c.int))
+        rc: l2_bind_call_in(node, idx, path, nf, at, span, names, first, cnt)
+    else:
+        rc: l2_alloc_or(path, node, "out of memory")
+    if: at != 0
+        l2_xfree((cast: (@: void) at))
+    if: names != 0
+        l2_xfree((cast: (@: void) names))
+    if: first != 0
+        l2_xfree((cast: (@: void) first))
+    if: span != 0
+        l2_xfree((cast: (@: void) span))
+    if: cnt != 0
+        l2_xfree((cast: (@: void) cnt))
+return: rc
+
+# The binding of l2_bind_call over its nf per-formal slots.  0, or 1 said.
+fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     @: LmP0Structure body
-    []: @(LmP0Field) at 16
-    []: int span 16
-    []: @(LmP0Text) names 16
-    []: @(LmP0Field) first 16
-    []: int cnt 16
     []: char callee 160
     @: LmP0Field f
     @: LmP0Field copies 0
     @: LmP0Field cp 0
     @: LmP0Field last 0
     @: LmP0Node whole
-    int: nf
     int: k 0
     int: j
     int: n 0
@@ -6959,9 +7004,6 @@ fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
     int: rounds 0
     int: s0
     body: node\as\frame\body
-    nf: l2_m_arity[idx]
-    if: nf > 16
-        return: l2_error(path, node, "internal: a callee with more formals than a binding holds")
     while: k < nf
         names[k]: l2_fn(idx, k)
         k: k + 1
@@ -28904,8 +28946,10 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # -189 c3b-1: a plain own local takes the value in its cell.
             if: l2_own_direct(mi, l2_pown) != 0 && l2_own_store(mi, l2_pown, ind, l2_pval) != 0
                 return: 1
-            if: l2_own_direct(mi, l2_pown) = 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n%sl2_q%d_dirty: 1\n", ind, l2_pown, l2_pval, ind, l2_pown) < 0
-                return: 1
+            # Every field the checks above admit is a cell (l2_own_direct); the book has no other working state
+            # (9f64ab8, N02) -- no cache, no dirty mark, no checkpoint.
+            if: l2_own_direct(mi, l2_pown) = 0
+                return: l2_error(l2_src, stmt, "internal: an own field written outside its cell")
             field: l2_next_active(field\next)
             need_cut: 1
             continue
@@ -29023,9 +29067,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: l2_own_direct(mi, oi) != 0 && l2_own_store(mi, oi, ind, l2_tok) != 0
                 l2_scope_pop()
                 return: 1
-            if: l2_own_direct(mi, oi) = 0 && c.fprintf(l2_out, "%sl2_q%d: %s\n%sl2_q%d_dirty: 1\n", ind, oi, l2_tok, ind, oi) < 0
+            if: l2_own_direct(mi, oi) = 0
                 l2_scope_pop()
-                return: 1
+                return: l2_error(l2_src, stmt, "internal: an own field written outside its cell")
             last: l2_next_active(last\next)
             if: l2_new_temp(ind, wkeep) != 0
                 l2_scope_pop()
@@ -29072,12 +29116,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                     l2_scope_pop()
                     return: 1
             ---
-            if: l2_own_direct(mi, si) = 0 && nxt != 0 && nxt\value != 0 && l2_text_eq(nxt\value\as\atom, "--") && c.fprintf(l2_out, "%s    l2_q%d: l2_q%d - 1\n%s    l2_q%d_dirty: 1\n", deep, si, si, deep, si) < 0
+            if: l2_own_direct(mi, si) = 0
                 l2_scope_pop()
-                return: 1
-            if: l2_own_direct(mi, si) = 0 && nxt != 0 && nxt\value != 0 && l2_text_eq(nxt\value\as\atom, "--") = 0 && c.fprintf(l2_out, "%s    l2_q%d: l2_q%d + 1\n%s    l2_q%d_dirty: 1\n", deep, si, si, deep, si) < 0
-                l2_scope_pop()
-                return: 1
+                return: l2_error(l2_src, stmt, "internal: an own field written outside its cell")
             if: c.fprintf(l2_out, "%s%s: 0\n", deep, wfirst) < 0
                 l2_scope_pop()
                 return: 1
@@ -29967,7 +30008,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: k > 0 && fputs("end: prototype\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# OwnUsed char/int/size_t/unsigned fields are children of the selected callable occurrence `self`; source-visible `node` is the fixed lexical space above the method for the whole activation. Char cache is typed char; graph data is all_chars cell. Numeric caches keep their declared C type; graph data uses a distinct owned LMX_TYPE_INT, LMX_TYPE_SIZE_T or LMX_TYPE_UNSIGNED cell mutated in place (no interned shared size_t, no int narrowing). Dirty-only checkpoint after actuals, immediately before the executed call, and before return. Explicit node\\name writes that fixed above-method graph, not the cache.\n# Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 call resolved against unit methods and parsed prototype: declarations. Body @: LmP0Text is an 11.2.1 address slot l2_s, not OwnUsed. Pointer results @: char / @: LmP0Text; sub: is void. return: slot is the pointer value, not @slot. @: size_t is a typed out-param; name[0]: stores through it (literal 0 only). L2 @ actuals are not emitted; a type-9 actual is the pointer value forwarded. Checkpoint even if OwnUsed is empty. Same-name char/size_t argument and own field share the parameter from the own-decl line; dirty-only publish is to this method's selected occurrence self, not to source node and not to the caller. An argument without that bind is never published. Executable if/else/while/for bodies are graph Structures; body own fields publish into their exact host without rebinding source node. &&/|| with calls use guarded if/temps; skipped RHS does not prep nested actuals. Pure &&/|| stay L1 C expressions.\n\n", l2_out) < 0
+    if: fputs("\n# Backend method symbols are l2_m{i}; intern and find_method keep source names. c.malloc stays the foreign door.\n# Publication: write tmp; if dest.bak exists pick dest.bak.N; rename dest to that bak; rename tmp to dest; on fail restore bak or report its path. Not atomic. No recursive FS. Foreign bak is not deleted.\n# A method's own fields are cells of its selected occurrence `self`, read and written in place through their slot handles (l2_qN_from): no local cache, no dirty mark, no checkpoint (the book's one model of working state). Source-visible `node` is the fixed lexical space above the method for the whole activation; explicit node\\name reads and writes that graph. A char field is a cell of the byte table; a numeric field a distinct owned LMX_TYPE_INT, LMX_TYPE_SIZE_T or LMX_TYPE_UNSIGNED cell of its declared C type (no interned shared size_t, no int narrowing).\n# Lmx structural access stays child-index. Foreign C is spelled c.name and emitted as written; the C compiler checks it. A bare name is an L2 call resolved against unit methods and parsed prototype: declarations. Body @: LmP0Text is an 11.2.1 address slot l2_s. Pointer results @: char / @: LmP0Text; sub: is void. return: slot is the pointer value, not @slot. @: size_t is a typed out-param; name[0]: stores through it (literal 0 only). L2 @ actuals are not emitted; a type-9 actual is the pointer value forwarded. A declaration of a formal's name without an initializer takes the argument into its cell. Executable if/else/while/for bodies are graph Structures; their own fields are cells of their exact host. &&/|| with calls use guarded if/temps; skipped RHS does not prep nested actuals. Pure &&/|| stay L1 C expressions.\n\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     i: 0

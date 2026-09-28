@@ -1,0 +1,19 @@
+# steps/merge-callable-r48.md S1: a held callable -- add5, a root own holding makeAdder's merged node -- called from a
+# method, as a value and on the right of && (a guarded call), through the same l2_mad_call helper the root's walk
+# calls.  Before S1 the method's call left the translator without a word (exit 3, "a refusal said nothing").  6 and
+# 6: entry 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+add5: makeAdder 5
+fn: go () int
+    int: a (add5: 1)
+    int: ok 0
+    if: a = 6 && (add5: 1) = 6
+        ok: 7
+    return: ok
+int: r 0
+r: go()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

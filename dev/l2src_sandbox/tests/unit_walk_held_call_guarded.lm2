@@ -1,0 +1,17 @@
+# steps/merge-callable-r48.md S1: a held callable's call is a call (l2_node_has_call) -- on the right of && it runs
+# only when the left holds.  The root calls go(0) before add5's statement runs, so add5 holds no node yet: a call of
+# it there would stop the program in its held helper.  go(0) must not make it, so the entry is 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+int: r 0
+r: go(0)
+add5: makeAdder 5
+fn: go (int: t) int
+    int: ok 7
+    if: t = 1 && (add5: 1) = 6
+        ok: 81
+    return: ok
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

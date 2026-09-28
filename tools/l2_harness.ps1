@@ -2068,6 +2068,16 @@ $fixtures = @(
     # translation fails.
     [pscustomobject]@{ Name = 'unit_callable_anon_named_clash.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # D-106's fifth site, the typing of `int: t op(value)` (REVIEW 59c74b3, fable_pc's M44/P44): the
+    # top-level `op` returns size_t, the formal an int (-1).  Mutant M44 (the typing asks the method
+    # first) -- the int taken for a size_t is converted to int and the conversion throws: exit 1.
+    [pscustomobject]@{ Name = 'unit_callable_anon_named_clash_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # D-107 (REVIEW 59c74b3, fable_pc): the unit's first method `zz (int: a; int: b) size_t` -- the
+    # interner's self-check took it for its probe (two int inputs a, b, an int result) by two names and
+    # one type and refused the unit.  Mutant: the name check back -- refused.
+    [pscustomobject]@{ Name = 'unit_intern_first_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # COMPACT-RAWFIELD-BATCHA-72: raw_fld=5 call without form-COMPACT. Debt pins emitted
     # raw-field ccall. Absent is unused (empty proves nothing; no genuine form-gate
     # leftover string appears in generated L1). `translates` catches

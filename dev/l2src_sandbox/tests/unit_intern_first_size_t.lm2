@@ -1,0 +1,13 @@
+# D-107 (REVIEW 59c74b3, fable_pc): the unit's first method has two int inputs named `a` and `b` and a
+# size_t result.  The translator's own check of its interner took it for the probe contract (two int
+# inputs `a`, `b`, an int result) by the names and the first input's type alone, and refused the unit:
+# "intern failed memcmp of equal names".  Success is 7.
+fn: zz (int: a; int: b) size_t
+    return: 7U
+end: zz
+
+int: ok 7
+if: zz(1 2) != 7U
+    ok: 1
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

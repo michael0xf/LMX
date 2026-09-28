@@ -10691,9 +10691,13 @@ fn: l2_intern_prove (const: @(char path); const: @(LmP0Node node)) int
         return: l2_error(path, node, "out of memory")
     if: l2_intern_probe = 0U
         return: l2_error(path, node, "intern broken")
-    if: two != 0 && l2_text_eq(l2_m_f0[0], "a") && l2_text_eq(l2_m_f1[0], "b") && l2_ft(0, 0) = 0 && l2_intern_probe != id
+    # D-107 (REVIEW 59c74b3, fable_pc): the probe is the contract of two int inputs `a`, `b` and an
+    # int result; whether the unit's first method IS that contract is the interner's own equality
+    # (l2_intern_eq_mi: arity, input types, result, throws, names) -- not a look at two names and one
+    # type, which took `fn: zz (int: a; int: b) size_t` for the probe's and refused the unit.
+    if: two != 0 && l2_intern_eq_mi(l2_intern_probe - 1U, 0) != 0 && l2_intern_probe != id
         return: l2_error(path, node, "intern failed memcmp of equal names")
-    if: two != 0 && (l2_text_eq(l2_m_f0[0], "a") = 0 || l2_text_eq(l2_m_f1[0], "b") = 0 || l2_ft(0, 0) != 0) && l2_intern_probe = id
+    if: two != 0 && l2_intern_eq_mi(l2_intern_probe - 1U, 0) = 0 && l2_intern_probe = id
         return: l2_error(path, node, "intern false-equal distinct contracts")
     l2_sigv: id
 return: 0

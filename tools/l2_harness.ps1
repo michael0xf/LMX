@@ -315,6 +315,10 @@ if (Test-Path -LiteralPath $testsHdr) {
 }
 Copy-Item -LiteralPath (Join-Path $sandbox 'convert.lm2') -Destination (Join-Path $src 'convert.lm2') -Force
 $staged++
+# The primitive table (slice 2 of the receiver `table`): read beside the source at the start of every
+# translation, as convert.lm2 is (where the translator's tables live is Q46, open).
+Copy-Item -LiteralPath (Join-Path $sandbox 'primitive.lm2') -Destination (Join-Path $src 'primitive.lm2') -Force
+$staged++
 # The receivers the rows name (Q33): ordinary L2 methods beside the table.
 Copy-Item -LiteralPath (Join-Path $sandbox 'convert_impl.lm2') -Destination (Join-Path $src 'convert_impl.lm2') -Force
 $staged++
@@ -2911,6 +2915,34 @@ $fixtures = @(
         Needle = 'convert.lm2:139:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_impl_unparsable.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Impl = 'unit_s7_conv_impl_unparsable_impl.lm2';
         Needle = 'convert_impl.lm2:52:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
+    # Slice 2 of the receiver `table` (steps/table-receiver.md §7): the primitive question asks
+    # `primitive.description` of primitive.lm2 (lingvamyxa_prev's table, the 23 names the translator knew),
+    # and the translator's tables are read at the start of every translation -- one rule for both.  A table
+    # file that is not there (primitive.lm2; convert.lm2 too, for a source that converts nothing), a file
+    # without its table or a column, one P0 refuses, one without a row for a type word of the translator:
+    # refused once, at the start.  The table decides -- size_t with cell 0 does not implement int -- and a
+    # cell the decision needs that gives no name is said at the cell, the translation failing with that one
+    # line.  Mutants: each change undone -- exactly its row red.
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'absent';
+        Needle = 'primitive.lm2: cannot read a table file of the translator'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_table_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'absent';
+        Needle = 'convert.lm2: cannot read a table file of the translator'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_nodesc.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_nodesc_prim.lm2';
+        Needle = 'primitive.lm2:1:1: primitive.lm2 has no source table `primitive.description`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_nocol.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_nocol_prim.lm2';
+        Needle = 'primitive.lm2:5:5: primitive table has no column cell'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_cell.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_cell_prim.lm2';
+        Needle = ':8:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_cellneed.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_cellneed_prim.lm2';
+        Needle = 'primitive.lm2:19:23: a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_unparsable.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_unparsable_prim.lm2';
+        Needle = 'primitive.lm2:33:1: empty colon Frame is not allowed (P0 32)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_norow_prim.lm2';
+        Needle = 'primitive.lm2:2:1: primitive table has no row for size_t, a type word of the translator'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_implcell.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Primitive = 'unit_s7_prim_table_implcell_prim.lm2';
+        Needle = 'primitive.lm2:24:23: a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_prim_table_forbid.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Primitive = 'unit_s7_prim_table_forbid_prim.lm2';
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3200,22 +3232,33 @@ foreach ($fx in $fixtures) {
     }
     if (-not $missing -and -not (Test-Path -LiteralPath $source)) { Add-Row 'FAIL' ('fixture:' + $stem) 'fixture file is missing'; continue }
     # The conversion table is the convert.lm2 beside the source, not the launch directory.
-    # Stage the fixture next to the copy made at the top of this script.  A row with Impl or Table
-    # gets a directory of its own: tests\<Table> as its convert.lm2 (else the sandbox's table), and
-    # tests\<Impl> as its convert_impl.lm2 (else the sandbox's).
+    # Stage the fixture next to the copy made at the top of this script.  A row with Impl, Table or
+    # Primitive gets a directory of its own: tests\<Table> as its convert.lm2 (else the sandbox's table),
+    # tests\<Impl> as its convert_impl.lm2 (else the sandbox's), and tests\<Primitive> as its
+    # primitive.lm2 (else the sandbox's).  Table or Primitive 'absent' stages no such file.
     $stagedLm2 = Join-Path $src $fx.Name
     if ($missing) { $stagedLm2 = $source }
     $hasImpl = ($fx.PSObject.Properties['Impl'] -and $fx.Impl)
     $hasTable = ($fx.PSObject.Properties['Table'] -and $fx.Table)
-    if ($hasImpl -or $hasTable) {
+    $hasPrim = ($fx.PSObject.Properties['Primitive'] -and $fx.Primitive)
+    if ($hasImpl -or $hasTable -or $hasPrim) {
         $own = Join-Path $src $stem
         New-Item -ItemType Directory -Force -Path $own | Out-Null
         $tableSrc = Join-Path $sandbox 'convert.lm2'
         if ($hasTable) { $tableSrc = Join-Path $sandbox ('tests\' + $fx.Table) }
         $implSrc = Join-Path $sandbox 'convert_impl.lm2'
         if ($hasImpl) { $implSrc = Join-Path $sandbox ('tests\' + $fx.Impl) }
-        Copy-Item -LiteralPath $tableSrc -Destination (Join-Path $own 'convert.lm2') -Force
+        $tableDst = Join-Path $own 'convert.lm2'
+        if (Test-Path -LiteralPath $tableDst) { Remove-Item -LiteralPath $tableDst -Force }
+        if (-not ($hasTable -and $fx.Table -eq 'absent')) { Copy-Item -LiteralPath $tableSrc -Destination $tableDst -Force }
         Copy-Item -LiteralPath $implSrc -Destination (Join-Path $own 'convert_impl.lm2') -Force
+        $primDst = Join-Path $own 'primitive.lm2'
+        if (Test-Path -LiteralPath $primDst) { Remove-Item -LiteralPath $primDst -Force }
+        if (-not ($hasPrim -and $fx.Primitive -eq 'absent')) {
+            $primSrc = Join-Path $sandbox 'primitive.lm2'
+            if ($hasPrim) { $primSrc = Join-Path $sandbox ('tests\' + $fx.Primitive) }
+            Copy-Item -LiteralPath $primSrc -Destination $primDst -Force
+        }
         $stagedLm2 = Join-Path $own $fx.Name
     }
     if (-not $missing) { Copy-Item -LiteralPath $source -Destination $stagedLm2 -Force }

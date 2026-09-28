@@ -1,0 +1,17 @@
+# slice 2: unit_s7_prim_same over its own primitive.lm2 whose column `cell` is named `celled`
+# (tests/unit_s7_prim_table_nocol_prim.lm2): the primitive question asks its columns by name --
+# "primitive table has no column cell".
+
+fn: go () int
+    int: a 1
+    int: b 7
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 7
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

@@ -531,17 +531,33 @@ int: l2_cv_failed 0
 int: l2_cv_t 0
 []: int l2_cv_c 5
 int: l2_cv_gap 0
-# 1 once the conversion table's own reading said why it cannot be read (a located diagnostic in
-# convert.lm2): a use site then adds nothing (l2_cv_table_refused -- one cause, one line).
+# 1 once a diagnostic located at its cause was said for the pair being asked (the counter's shift since
+# it was asked -- a cell the row needs, the impl source's P0 diagnostic): a use site then adds nothing
+# (l2_cv_refused -- one cause, one line).
 int: l2_cv_said 0
+# The conversion table's file: convert.lm2 beside the source, the path its diagnostics are located in --
+# the same form as an impl source's (REVIEW 6f49efe: one label form).
+[]: char l2_cv_path 1024
 int: l2_cv_used 0
 @: LmP0Document l2_cv_doc 0
+# The primitive table (slice 2): primitive.lm2 beside the source, its table `primitive.description`, the
+# columns class, cell and convert found by name; its document stays for the translation.
+int: l2_pr_ready 0
+int: l2_pr_failed 0
+int: l2_pr_t 0
+[]: int l2_pr_c 3
+[]: char l2_pr_path 1024
+@: LmP0Document l2_pr_doc 0
+# 1 once a primitive table cell a row needs was said at its cause (l2_prim_kind): the primitive decision
+# is then malformed (l2_primitive_leaf_implements 1), and no site that asked adds a line.
+int: l2_pr_said 0
 # The receiver `table` (Q41, Q43; steps/table-receiver.md §5): the source tables of this translation.
 # Table t: its name (the one atom of its `name:` argument, or 0), its `columns:` argument, its first
 # column and number of columns in l2_tbc_name, its first cell and number of rows in l2_tbx_*.
 int: l2_tb_n 0
 []: @(LmP0Text) l2_tb_name 8
 []: @(LmP0Node) l2_tb_cols 8
+[]: @(LmP0Node) l2_tb_call 8
 []: int l2_tb_col0 8
 []: int l2_tb_ncol 8
 []: int l2_tb_cell0 8
@@ -792,6 +808,8 @@ prototype:
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_prim_code_name (int: ty) @: char
     fn: l2_convert_load (const: @(char src)) int
+    fn: l2_prim_load (const: @(char src)) int
+    fn: l2_convert_beside (const: @(char src); const: @(char leaf); @: char dst; size_t: cap) int
     fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
     fn: l2_convert_method (const: @(LmP0Node body)) int
     fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
@@ -1173,7 +1191,6 @@ prototype:
     fn: l2_scan_path_root (int: mi; const: @(LmP0Text t); @: int seen) int
     fn: l2_msg_copy (const: @(char s)) @: char
     fn: l2_said_or (const: @(char path); const: @(LmP0Node at); int: d0; const: @(char fallback)) int
-    fn: l2_cv_table_refused (const: @(char path); const: @(LmP0Node at)) int
     fn: l2_cv_refused (const: @(char path); const: @(LmP0Node at); const: @(char msg)) int
     fn: l2_msg_drop (@: char p) @: char
     fn: l2_msg_text (const: @(char p)) const: @: char
@@ -1443,8 +1460,6 @@ fn: l2_cv_refused (const: @(char path); const: @(LmP0Node at); const: @(char msg
         return: 1
 return: l2_error(path, at, msg)
 
-fn: l2_cv_table_refused (const: @(char path); const: @(LmP0Node at)) int
-return: l2_cv_refused(path, at, "cannot read the conversion table")
 
 # A refusal after a pass that may already have said why: nothing more when a diagnostic came since d0
 # (l2_diag_n), else l2_alloc_or's words.
@@ -3701,6 +3716,12 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
             # "internal: a refusal said nothing".
             c.fprintf(l1_stderr(), "l2trans parse error: %s: cannot read the source\n", in_path)
             l2_diag_n: l2_diag_n + 1
+        lm_p0_document_destroy(document)
+        return: 1
+    # The translator's tables are read at the start (slice 2 of the receiver `table`): nearly every source
+    # asks a primitive question (279 of 873, steps/table-receiver.md §7), and a table that cannot be read
+    # is refused once, here -- not at each place that would ask it.
+    if: l2_convert_load(in_path) != 0 || l2_prim_load(in_path) != 0
         lm_p0_document_destroy(document)
         return: 1
     root: lm_p0_document_root(document)
@@ -6325,8 +6346,13 @@ fn: l2_table_formals () int
     @: LmP0Text fa
     int: ty
     int: k 0
+    int: fn0
     if: l2_tb_sig != 0
         return: 0
+    # The header's types (`@: Lmx`) are the receiver's, not the unit's: reading them leaves the unit's
+    # foreign types as they were -- an index of l2_foreign_intern is emitted (LMX_TYPE_POINTER_BASE + i),
+    # and the tables are read before the unit, at the start of its translation.
+    fn0: l2_foreign_n
     if: lm_p0_parse_string(l2_table_header(), @ sig) != 0 || sig = 0
         return: l2_error(l2_src, 0, "internal: the header of the receiver table does not parse")
     root: lm_p0_document_root(sig)
@@ -6349,6 +6375,7 @@ fn: l2_table_formals () int
         l2_tb_formal[k]: fa
         k: k + 1
         p: l2_next_active(p\next)
+    l2_foreign_n: fn0
     l2_tb_sig: sig
 return: 0
 
@@ -6511,6 +6538,7 @@ fn: l2_table_call (const: @(LmP0Node call); const: @(char path)) int
         ---
     ---
     l2_tb_cols[t]: at[2]\value
+    l2_tb_call[t]: (cast: (@: LmP0Node) call)
     l2_tb_col0[t]: l2_tbc_n
     l2_tb_ncol[t]: 0
     l2_tb_cell0[t]: l2_tbx_n
@@ -6648,6 +6676,38 @@ fn: l2_input_said (const: @(char label); @: LmP0Document document) int
     l2_diag_n: l2_diag_n + 1
 return: 1
 
+# A table file of the translator beside the source (convert.lm2, primitive.lm2; where they live is Q46,
+# open): read at the start of a translation (l2_translate), its source tables built by the receiver
+# `table` (l2_table_source).  A file that is not there, or that P0 refuses, is refused once -- in the
+# file, at its P0 diagnostic (l2_input_said), or in one line -- and the translation stops.  Its document
+# stays for the translation: the tables keep its nodes.
+fn: l2_input_tables (const: @(char src); const: @(char leaf); @: char path; @@: LmP0Document out_doc) int
+    @: FILE raw 0
+    @: LmP0Document document 0
+    const: @: LmP0Node root
+    \out_doc: 0
+    if: src = 0 || l2_convert_beside(src, leaf, path, 1024U) != 0
+        return: l2_error(src, 0, "the path of a table file of the translator is too long")
+    raw: c.fopen(path, "rb")
+    if: raw = 0
+        c.fprintf(l1_stderr(), "l2trans error: %s: cannot read a table file of the translator\n", path)
+        l2_diag_n: l2_diag_n + 1
+        return: 1
+    fclose(raw)
+    if: lm_p0_parse_file(path, @ document) != 0 || document = 0
+        if: l2_input_said(path, document) = 0
+            c.fprintf(l1_stderr(), "l2trans error: %s: cannot read a table file of the translator\n", path)
+            l2_diag_n: l2_diag_n + 1
+        ---
+        if: document != 0
+            lm_p0_document_destroy(document)
+        return: 1
+    \out_doc: document
+    root: lm_p0_document_root(document)
+    if: root = 0
+        return: l2_error(path, 0, "internal: a parsed table file has no root")
+return: l2_table_source(root, path)
+
 # A file beside the source: the table, or the impl source a row names. The
 # launch directory is not a second place to look.
 fn: l2_convert_beside (const: @(char src); const: @(char leaf); @: char dst; size_t: cap) int
@@ -6673,49 +6733,86 @@ fn: l2_convert_beside (const: @(char src); const: @(char leaf); @: char dst; siz
     dst[i]: 0
 return: 0
 
-# Read once, at the first pair that asks: the source tables of convert.lm2 (l2_table_source), and of
-# them the table `primitive.convert`, its columns asked by name.  The table is read at the first pair of
-# different names, so a source that converts nothing needs none.  A table that cannot be read stays
-# unread for the whole source: every pair then refuses at its own line.  l2_cv_gap 1: no usable row.
-# 2: the row's receiver has no fn: in its impl source. 3: the table cannot be read. 4: the impl source
-# cannot be read.
+# Read once, at the start of a translation (l2_translate; one rule for the translator's tables, REVIEW
+# of slice 2's question): the source tables of convert.lm2, and of them the table `primitive.convert`, its
+# columns asked by name.  l2_cv_gap 1: no usable row.  2: the row's receiver has no fn: in its impl
+# source.  3: said at its cause (a cell the row needs, the impl source's P0 diagnostic).  4: the impl
+# source cannot be read.
 fn: l2_convert_load (const: @(char src)) int
-    @: FILE raw 0
-    @: LmP0Document document 0
-    const: @: LmP0Node root
-    []: char path 1024
     []: char msg 160
     int: k 0
     if: l2_cv_ready != 0
         return: l2_cv_failed
     l2_cv_ready: 1
     l2_cv_failed: 1
-    if: src = 0 || l2_convert_beside(src, "convert.lm2", path, 1024U) != 0
-        return: 1
-    raw: c.fopen(path, "rb")
-    if: raw = 0
-        return: 1
-    fclose(raw)
-    if: lm_p0_parse_file(path, @ document) != 0 || document = 0
-        l2_input_said("convert.lm2", document)
-        if: document != 0
-            lm_p0_document_destroy(document)
-        return: 1
-    # The tables keep nodes of this tree (l2_tbx_arg, l2_tbc_name): it stays for the translation.
-    l2_cv_doc: document
-    root: lm_p0_document_root(document)
-    if: root = 0 || l2_table_source(root, "convert.lm2") != 0
+    if: l2_input_tables(src, "convert.lm2", l2_cv_path, @ l2_cv_doc) != 0
         return: 1
     l2_cv_t: l2_table_find("primitive.convert")
     if: l2_cv_t < 0
-        return: l2_error("convert.lm2", 0, "convert.lm2 has no source table `primitive.convert`")
+        return: l2_error(l2_cv_path, 0, "convert.lm2 has no source table `primitive.convert`")
     while: k < 5
         l2_cv_c[k]: l2_table_col(l2_cv_t, l2_convert_colname(k))
         if: l2_cv_c[k] < 0
             c.snprintf(msg, 160U, "conversion table has no column %s", l2_convert_colname(k))
-            return: l2_error("convert.lm2", l2_tb_cols[l2_cv_t], msg)
+            return: l2_error(l2_cv_path, l2_tb_cols[l2_cv_t], msg)
         k: k + 1
     l2_cv_failed: 0
+return: 0
+
+# The columns the primitive question reads, by name: its query of `primitive.description`.
+fn: l2_prim_colname (int: k) const: @: char
+    if: k = 0
+        return: "class"
+    if: k = 1
+        return: "cell"
+return: "convert"
+
+# The row of primitive.description whose `class` is this name (a quoted spelling the same name) -- the
+# name as written (name), or a type word of the translator (cname) -- or -1.
+fn: l2_prim_row (const: @(LmP0Text name); const: @(char cname)) int
+    int: r 0
+    int: at
+    while: r < l2_tb_nrow[l2_pr_t]
+        at: l2_tb_cell0[l2_pr_t] + r * l2_tb_ncol[l2_pr_t] + l2_pr_c[0]
+        if: l2_tbx_name[at] != 0 && name != 0 && l2_payload_same(name, l2_tbx_arg[at]\as\atom) != 0
+            return: r
+        if: l2_tbx_name[at] != 0 && cname != 0 && l2_payload_eq(l2_tbx_arg[at]\as\atom, cname) != 0
+            return: r
+        r: r + 1
+return: 0 - 1
+
+# Read once, at the start of a translation (l2_translate): the source tables of primitive.lm2, and of them
+# `primitive.description` (lingvamyxa_prev's, lm2/primitive.lm2), its columns class, cell and convert
+# asked by name.
+fn: l2_prim_load (const: @(char src)) int
+    []: char msg 160
+    int: k 0
+    if: l2_pr_ready != 0
+        return: l2_pr_failed
+    l2_pr_ready: 1
+    l2_pr_failed: 1
+    if: l2_input_tables(src, "primitive.lm2", l2_pr_path, @ l2_pr_doc) != 0
+        return: 1
+    l2_pr_t: l2_table_find("primitive.description")
+    if: l2_pr_t < 0
+        return: l2_error(l2_pr_path, 0, "primitive.lm2 has no source table `primitive.description`")
+    while: k < 3
+        l2_pr_c[k]: l2_table_col(l2_pr_t, l2_prim_colname(k))
+        if: l2_pr_c[k] < 0
+            c.snprintf(msg, 160U, "primitive table has no column %s", l2_prim_colname(k))
+            return: l2_error(l2_pr_path, l2_tb_cols[l2_pr_t], msg)
+        k: k + 1
+    # The translator's own type words (l2_prim_code_name: its codes for int, char, size_t, unsigned,
+    # ulong, void) are what it asks the table about on every typed store: each needs its row, or the
+    # translator would answer for it by its codes where the table says nothing.  Until those codes come
+    # from the table (the inventory of closed lists), a missing row is refused here, at the table.
+    k: 0
+    while: k <= 64
+        if: l2_prim_code_name(k) != 0 && l2_prim_row(0, l2_prim_code_name(k)) < 0
+            c.snprintf(msg, 160U, "primitive table has no row for %s, a type word of the translator", l2_prim_code_name(k))
+            return: l2_error(l2_pr_path, l2_tb_call[l2_pr_t], msg)
+        k: k + 1
+    l2_pr_failed: 0
 return: 0
 
 # The impl source a row names, beside the source, parsed once and kept for
@@ -6743,8 +6840,7 @@ fn: l2_convert_impl (const: @(char impl)) @: LmP0Document
     if: l2_cv_impl_n >= 8 || l2_convert_beside(l2_src, leaf, path, 1024U) != 0
         return: 0
     if: lm_p0_parse_file(path, @ document) != 0 || document = 0 || lm_p0_document_root(document) = 0
-        if: l2_input_said(path, document) != 0
-            l2_cv_said: 1
+        l2_input_said(path, document)
         if: document != 0
             lm_p0_document_destroy(document)
         return: 0
@@ -6832,14 +6928,19 @@ fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
                     k: at + l2_cv_c[3]
                 if: cx = 0
                     k: at + l2_cv_c[2]
-                l2_error("convert.lm2", l2_tbx_arg[k], "a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)")
-                l2_cv_said: 1
+                l2_error(l2_cv_path, l2_tbx_arg[k], "a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)")
+                if: l2_diag_n != d0
+                    l2_cv_said: 1
                 l2_cv_gap: 3
                 return: 0
             if: c.strcmp(cx, "1") = 0 || c.strcmp(cr, "None") = 0
                 l2_cv_gap: 1
                 return: 0
             l2_cv_body: l2_convert_body(cr, ci)
+            # One mechanism (REVIEW 6f49efe): what the impl source's reading said -- its P0 diagnostic
+            # (l2_input_said) -- is seen as the counter's shift, as the table's is above.
+            if: l2_cv_body = 0 && l2_diag_n != d0
+                l2_cv_said: 1
             if: l2_cv_body = 0
                 return: 0
             return: cr
@@ -7055,7 +7156,7 @@ fn: l2_check_value_convert_core (const: @(LmP0Node value); int: from_ft; int: to
         return: 0
     cok: l2_colon_types_compatible(to_ft, from_ft)
     if: cok = 0 && l2_cv_gap = 3
-        return: l2_cv_table_refused(path, value)
+        return: l2_cv_refused(path, value, "internal: a conversion refused without its reason")
     if: cok = 0 && l2_cv_gap = 4
         return: l2_cv_refused(path, value, "cannot read the converter source")
     if: cok = 0 && l2_cv_gap = 2
@@ -7379,7 +7480,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_error(path, stmt, "a callable without a result has no value")
     cok: l2_colon_types_compatible(target_ty, value_ty)
     if: cok = 0 && l2_cv_gap = 3
-        return: l2_cv_table_refused(path, stmt)
+        return: l2_cv_refused(path, stmt, "internal: a conversion refused without its reason")
     if: cok = 0 && l2_cv_gap = 4
         return: l2_cv_refused(path, stmt, "cannot read the converter source")
     if: cok = 0 && l2_cv_gap = 2
@@ -11259,22 +11360,46 @@ return: 0
 # Hosted primitive.description rows from lingvamyxa_prev/lm2/primitive.lm2.
 # cell=0 and convert=forbidden are void/None; every other listed name has a cell
 # and a non-forbidden convert (keyed).
+# A primitive by the table (§GATE settings, slice 2; Q41): the row of primitive.description whose `class`
+# is this name (a quoted spelling the same name) -- 1, its cell (the `cell` column is 1) and whether a
+# conversion to or from it is forbidden (the `convert` column is `forbidden`); 0 when no row names it.  A
+# cell this row needs that gives no name is said at the cell -- evaluating a table argument by its
+# column's type is slice 3 -- and the decision is malformed (l2_pr_said): the site that asked refuses
+# without a line of its own.
 fn: l2_prim_kind (const: @(LmP0Text name); @: int out_cell; @: int out_forbid) int
+    int: r
+    int: at
+    int: k
+    @: char ce
+    @: char cv
     if: out_cell != 0
         \out_cell: 0
     if: out_forbid != 0
         \out_forbid: 0
-    if: name = 0
+    if: name = 0 || l2_prim_load(l2_src) != 0
         return: 0
-    if: l2_payload_eq(name, "void") != 0 || l2_payload_eq(name, "None") != 0
-        \out_cell: 0
-        \out_forbid: 1
-        return: 1
-    if: l2_payload_eq(name, "int") != 0 || l2_payload_eq(name, "u32") != 0 || l2_payload_eq(name, "long") != 0 || l2_payload_eq(name, "double") != 0 || l2_payload_eq(name, "Boolean") != 0 || l2_payload_eq(name, "FILE") != 0 || l2_payload_eq(name, "char") != 0 || l2_payload_eq(name, "short") != 0 || l2_payload_eq(name, "float") != 0 || l2_payload_eq(name, "unsigned") != 0 || l2_payload_eq(name, "size_t") != 0 || l2_payload_eq(name, "u8") != 0 || l2_payload_eq(name, "u16") != 0 || l2_payload_eq(name, "u64") != 0 || l2_payload_eq(name, "i8") != 0 || l2_payload_eq(name, "i16") != 0 || l2_payload_eq(name, "i32") != 0 || l2_payload_eq(name, "i64") != 0 || l2_payload_eq(name, "bool") != 0 || l2_payload_eq(name, "uint") != 0 || l2_payload_eq(name, "ulong") != 0
+    r: l2_prim_row(name, 0)
+    if: r < 0
+        return: 0
+    at: l2_tb_cell0[l2_pr_t] + r * l2_tb_ncol[l2_pr_t]
+    ce: l2_tbx_name[at + l2_pr_c[1]]
+    cv: l2_tbx_name[at + l2_pr_c[2]]
+    if: ce = 0 || cv = 0
+        k: at + l2_pr_c[2]
+        if: ce = 0
+            k: at + l2_pr_c[1]
+        # Said at its cause: the site that asked adds nothing (gap 3 and l2_cv_said, as a cell a
+        # conversion row needs; l2_pr_said for the explicit `implements`).
+        l2_error(l2_pr_path, l2_tbx_arg[k], "a primitive table cell this row needs is not a name (evaluating a table argument is not ported yet)")
+        l2_pr_said: 1
+        l2_cv_gap: 3
+        l2_cv_said: 1
+        return: 0
+    if: out_cell != 0 && c.strcmp(ce, "1") = 0
         \out_cell: 1
-        \out_forbid: 0
-        return: 1
-return: 0
+    if: out_forbid != 0 && c.strcmp(cv, "forbidden") = 0
+        \out_forbid: 1
+return: 1
 
 # Prior lm_trans_primitive_leaf_implements: 0 = decided, 1 = malformed, 2 = not
 # a primitive pair (fall through to structural descriptors).
@@ -11308,6 +11433,10 @@ fn: l2_primitive_leaf_implements (const: @(LmP0Text cand); const: @(LmP0Text req
         return: 0
     c_ok: l2_prim_kind(cand, @ c_cell, @ c_forb)
     r_ok: l2_prim_kind(req, @ r_cell, @ r_forb)
+    # A cell of the primitive table the decision needed was said at its cause: the decision is malformed,
+    # not "not a primitive pair" -- which would fall through to the translator's own numeric codes.
+    if: l2_pr_said != 0
+        return: 1
     if: c_ok != 0 && cn = rn && memcmp(cd, rd, cn) = 0
         \out_result: 1
         return: 0
@@ -11418,6 +11547,8 @@ fn: l2_check_implements (const: @(LmP0Node node); const: @(char path)) int
         return: l2_error(path, a0\value, "unknown candidate descriptor")
     if: status = 4
         return: l2_error(path, a1\value, "unknown required descriptor")
+    if: status != 0 && l2_pr_said != 0
+        return: 1
     if: status != 0
         return: l2_error(path, node, "malformed implements descriptor")
 return: 0
@@ -21957,7 +22088,7 @@ fn: l2_rw_convert (@: LmP0Field field; int: n; int: from; int: to; const: @(LmP0
         if: l2_cv_gap = 2
             return: l2_error(l2_src, at, "no converter body ported")
         if: l2_cv_gap = 3
-            return: l2_cv_table_refused(l2_src, at)
+            return: l2_cv_refused(l2_src, at, "internal: a conversion refused without its reason")
         if: l2_cv_gap = 4
             return: l2_cv_refused(l2_src, at, "cannot read the converter source")
         return: l2_error(l2_src, at, "mixed numeric types (a conversion)")
@@ -30090,6 +30221,14 @@ external:
         # not, and exits 3, apart from a refusal's 1.
         if: r != 0 && l2_diag_n = 0
             c.fprintf(l1_stderr(), "l2trans error: %s: internal: a refusal said nothing (a step failed without a located diagnostic)\n", argv[a])
+            r: 3
+        # The other half of that invariant (slice 2 of the receiver `table`, REVIEW of its CHECK): what says an
+        # error refuses.  A translation that said one and still succeeded would leave an "l2trans error:" line
+        # with an L1 file behind it -- a place that said why it cannot answer and let the translation go on.
+        # No place does that today; this names the step that would, removes its output and exits 3.
+        if: r = 0 && l2_diag_n != 0
+            c.fprintf(l1_stderr(), "l2trans error: %s: internal: a diagnostic was said and the translation went on\n", argv[a])
+            c.remove(argv[a + 1])
             r: 3
         l2_release()
         lg: c.getenv("L2_ALLOC_LOG")

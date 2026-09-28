@@ -1,0 +1,13 @@
+# slice 2: `int` implements `u32` for WordMover over its own primitive.lm2 whose u32 row says `forbidden`
+# in its `convert` column (tests/unit_s7_prim_table_forbid_prim.lm2): the table decides -- no longer, so
+# 0 and Entry 7 (with the sandbox's table it is 1, unit_implements_primitives).
+
+WordMover:
+    size_t: cell 0U
+end: WordMover
+
+if: implements(`int`, `u32`, WordMover) != 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

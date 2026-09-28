@@ -1,0 +1,16 @@
+# slice 2: unit_s7_prim_cross over its own primitive.lm2 without its size_t row
+# (tests/unit_s7_prim_table_norow_prim.lm2): size_t is not a primitive of the table.
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

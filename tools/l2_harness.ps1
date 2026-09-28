@@ -2060,6 +2060,14 @@ $fixtures = @(
         Needle = 'lm2:13:5: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_anon_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:9:13: incompatible entry signature'; Absent = @(); Debt = @() },
+    # D-106 (REVIEW eb60712, fable_pc's P42): a top-level method `op` of two inputs beside `apply`'s
+    # callable formal `op(fn: (int: x) int)` -- inside `apply` the formal is meant (apply(inc 10) = 11),
+    # outside the method (op(1 2) = 103).  The gated translator took the method inside `apply` and refused
+    # op(value) (16:13); with the method of the formal's own signature it called the method silently.
+    # Mutants: the check asks the method first -- refused 16:13; the emission asks it first -- the
+    # translation fails.
+    [pscustomobject]@{ Name = 'unit_callable_anon_named_clash.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # COMPACT-RAWFIELD-BATCHA-72: raw_fld=5 call without form-COMPACT. Debt pins emitted
     # raw-field ccall. Absent is unused (empty proves nothing; no genuine form-gate
     # leftover string appears in generated L1). `translates` catches
@@ -2730,6 +2738,11 @@ $fixtures = @(
         Needle = 'convert.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_extra.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_extra_table.lm2';
         Absent = @(); Debt = @() },
+    # REVIEW 914ae15 (fable_pc's M43/P43): a name only for a cell that is one atom holds for an expression
+    # too -- the size_t -> int receiver written `lm_stg_convert_size_t_int + 0` is said at the cell.
+    # Mutant M43 (the span check dropped: the first atom's name taken) -- accepted silently, red.
+    [pscustomobject]@{ Name = 'unit_s7_conv_cellneed_expr.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_cellneed_expr_table.lm2';
+        Needle = 'convert.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

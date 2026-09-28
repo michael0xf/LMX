@@ -528,6 +528,9 @@ int: l2_cv_inj_n 0
 
 prototype:
     fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
+    fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
+    fn: l2_head_is_method_call (int: mi; const: @(LmP0Text head)) int
+    fn: l2_head_is_callable_formal (int: mi; const: @(LmP0Text head)) int
     fn: l2_anon_cf_name (const: @(LmP0Text host); const: @(LmP0Text formal)) @: LmP0Text
     fn: l2_type_nodes_same (const: @(LmP0Node a); const: @(LmP0Node b)) int
     fn: l2_fn_defined (const: @(LmP0Node fn_node)) int
@@ -6100,6 +6103,10 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     ---
     # A call by name or through a callable field path (`Holder\viaPath(4U)`).
     m: l2_head_method(value\as\frame\head)
+    # D-106: a callable formal of this method shadows a unit method of its name -- typed as when the
+    # unit has no such method.
+    if: m >= 0 && l2_head_is_callable_formal(mi, value\as\frame\head) != 0
+        m: 0 - 1
     # A predef'd C function (l2_is_known: the c.* door, or a name the unit's
     # own predef: files declare) is an external ABI leaf, not an L2 method
     # l2_head_method can find. Assigning its result already works in every
@@ -13304,6 +13311,37 @@ fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigne
         return: 1
 return: 0
 
+# D-106: the method a call head names inside method mi.  A callable formal of mi is the innermost name
+# and shadows a unit method of the same spelling (`op(value)` inside `apply (op(fn: (int: x) int) ...)`
+# is the formal, whatever the unit declares); otherwise the unit method or a method's occurrence
+# path (l2_head_method).  out_fi: the formal's index, or -1 -- and, as before, the index of a formal
+# of that name that is not callable, with -1 returned, when no method answers either.
+fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
+    int: fi
+    int: m
+    fi: l2_formal_find(mi, head)
+    \out_fi: fi
+    if: fi >= 0 && l2_cf_get(mi, fi) >= 0
+        return: l2_cf_get(mi, fi)
+    m: l2_head_method(head)
+    if: m >= 0
+        \out_fi: 0 - 1
+    ---
+return: m
+
+# D-106: does a call head inside method mi name a callable formal of mi?
+fn: l2_head_is_callable_formal (int: mi; const: @(LmP0Text head)) int
+    int: fi
+    fi: l2_formal_find(mi, head)
+return: (cast: (int) (fi >= 0 && l2_cf_get(mi, fi) >= 0))
+
+# D-106: is a call head inside method mi a call of a unit method by its name (not a callable formal of
+# mi)?  A method's occurrence path (`Holder\viaPath`) is not a name here, as l2_find_method has it.
+fn: l2_head_is_method_call (int: mi; const: @(LmP0Text head)) int
+    if: l2_head_is_callable_formal(mi, head) != 0
+        return: 0
+return: (cast: (int) (l2_find_method(head) >= 0))
+
 fn: l2_head_method (const: @(LmP0Text t)) int
     int: k 0
     int: r
@@ -15384,14 +15422,8 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     ---
     if: l2_text_eq(call\head, "implements")
         return: l2_check_implements(node, path)
-    idx: l2_head_method(call\head)
-    fi: 0 - 1
-    if: idx < 0
-        fi: l2_formal_find(mi, call\head)
-        if: fi >= 0
-            idx: l2_cf_get(mi, fi)
-        ---
-    ---
+    # D-106: a callable formal of this method shadows a unit method of its name.
+    idx: l2_call_head_method(mi, call\head, @ fi)
     if: idx < 0 && l2_text_eq(call\head, "length")
         if: l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, node, "length requires one known primitive own array")
@@ -15823,13 +15855,8 @@ fn: l2_frame_void_call (const: @(LmP0Node node); int: mi) int
     int: fi
     if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
         return: 0
-    idx: l2_head_method(node\as\frame\head)
-    if: idx < 0
-        fi: l2_formal_find(mi, node\as\frame\head)
-        if: fi >= 0
-            idx: l2_cf_get(mi, fi)
-        ---
-    ---
+    # D-106: a callable formal of this method shadows a unit method of its name.
+    idx: l2_call_head_method(mi, node\as\frame\head, @ fi)
     if: idx < 0
         return: 0
 return: l2_m_ret[idx] = 8
@@ -17698,6 +17725,10 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: l2_prep_implements(node, dest)
     idx: l2_find_method(call\head)
     l2_call_sel: 0
+    # D-106: a callable formal of this method shadows a unit method of its name (the formal branch
+    # below takes it).
+    if: l2_head_is_method_call(mi, call\head) = 0
+        idx: 0 - 1
     if: idx < 0 && call\head != 0 && call\head\data != 0 && call\head\length < 256U && l2_seg_count(call\head\data, call\head\length) > 1 && l2_path_kind(call\head\data, call\head\length, @ l2_call_mi) = 4
         # The path selects THIS occurrence of the callable. Its slot 0 holds a
         # typed LmxCallable referring to the shared METHOD; this occurrence is
@@ -18455,11 +18486,11 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             ao: l2_is_andor(f\value\as\atom)
             have_value: 0
             fld: 2
-        if: fld = 0 && ao != 0 && f\value\kind = c.LM_P0_NODE_FRAME && l2_find_method(f\value\as\frame\head) >= 0
+        if: fld = 0 && ao != 0 && f\value\kind = c.LM_P0_NODE_FRAME && l2_head_is_method_call(mi, f\value\as\frame\head) != 0
             return: 1
-        if: fld = 0 && (ao = 0 || f\value\kind != c.LM_P0_NODE_FRAME || l2_find_method(f\value\as\frame\head) < 0) && l2_prep(f\value, mi, ind, piece) != 0
+        if: fld = 0 && (ao = 0 || f\value\kind != c.LM_P0_NODE_FRAME || l2_head_is_method_call(mi, f\value\as\frame\head) = 0) && l2_prep(f\value, mi, ind, piece) != 0
             return: 1
-        if: fld = 0 && (ao = 0 || f\value\kind != c.LM_P0_NODE_FRAME || l2_find_method(f\value\as\frame\head) < 0) && l2_cat(buf, piece) != 0
+        if: fld = 0 && (ao = 0 || f\value\kind != c.LM_P0_NODE_FRAME || l2_head_is_method_call(mi, f\value\as\frame\head) = 0) && l2_cat(buf, piece) != 0
             return: l2_error(l2_src, at, "expression too long")
         if: fld = 0
             ao: 0

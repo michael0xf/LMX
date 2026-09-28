@@ -1,362 +1,251 @@
-# Follow-up corrections after response48 — corrected cache/dirty decision
+# Revised follow-up to Fable — restore load/dirty caching at the author's request
 
-The latest revision correctly incorporates the main decisions from `response48.md`. Do not reopen or revert the accepted semantics for `merge`, callable defaults, free dynamic names, or `native`.
+**To:** Fable / fable_pc  
+**Scope:** aligned documentation corrections in `docs/LMX_semantics.en.md` and `docs/LMX_semantics.ru.md`, following `response48.md`.  
+**Reviewed snapshots:** `LMX_semantics.en(5).md` and `LMX_semantics.ru(4).md`. Section numbers, anchors and exact phrases below are primary locators; line numbers refer only to these snapshots.  
+**Status:** the restoration of local load/dirty caching in §1 is the author's explicit latest request. The proposed resolution of the remaining `sig` ambiguity is a reviewer proposal, not a new author-approved language rule.
 
-This note also **corrects one mistake in the previous review instruction**: the earlier suggestion to remove the remaining `dirty` / local-cache semantics was wrong.
+## 1. Author request: restore load/dirty caching, not mandatory direct writes
 
-## 1. AUTHOR DECISION: keep the load/cache/dirty model and remove the contradictory “no caches / dirty / checkpoints” wording
+The author explicitly requests:
 
-**This section is an explicit request from the language author, not an inference by the reviewing agent.**
+> «Тогда наоборот давай попросим вот это удалить "there are no caches, dirty marks, working copies or checkpoints" и вернуть нормальное load и dirty как кеширование. Напиши еще раз и укажи что последнее — моя просьба».
 
-The intended model is the ordinary efficient load/cache/dirty model.
+Accordingly:
 
-A graph field may be loaded into activation-local working storage (and, in native code, may ultimately reside in an ordinary C local or machine register). Repeated operations use that local value. When the local value is modified, it becomes dirty. At the applicable publication/checkpoint boundary, only the required modified own-fields are written back to their graph locations.
+> **Remove the categorical prohibition of caches, dirty marks, working copies and checkpoints. Restore ordinary local working values with load/dirty caching and write-back under the applicable publication contract. This is the language author's request, not the reviewer's inference.**
 
-Conceptually:
+The previous instruction to remove the remaining `dirty` sentence and make every bare assignment a mandatory immediate graph write is **withdrawn**. Any dependent recommendation based on “working-field publication no longer exists” must also be reconsidered.
 
-```text
-graph own-field
-    ↓ load
-activation-local cached value
-    ↓
-ordinary repeated computation
-    ↓
-dirty
-    ↓ checkpoint/publication
-graph own-field
-```
+Do not ask again whether the author wants load/dirty caching restored: that question is answered. Questions about an exact observation, checkpoint, or reload rule remain appropriate where the existing author decisions do not settle them.
 
-The specification already describes this model in several places. For example, the current §4 says that a resolved bare assignment uses a prepared own-field, binds the local cache to it, marks it dirty, and later publishes into that own-field rather than into the source of a hidden argument.
+Do not justify this restoration by counting passages in an older revision. Older snapshots contained both cached and direct-write descriptions, and the review previously confused their authority. The governing basis is the author's latest request above. Restore the mechanism coherently rather than reverting whole documents and losing the accepted `response48.md` changes.
 
-§8 case 5 and §9 likewise still describe the local-cache/dirty model. This is intentional, not stale wording.
+### 1.1 What must be described
 
-Therefore:
+Local computation and the retained graph field are distinct representations of the relevant state. The restored description must cover the following operations under the existing field, argument and ownership contracts:
 
-### Remove or rewrite the contradictory rule
+- **Load / initialization:** obtain the local working value from its resolved source. For an own field this can be a graph load; an explicit or hidden input can already supply the initial local value. Do not overwrite a correctly supplied input with an unrelated old graph value merely to perform a uniform “load”.
+- **Local work:** reads and arithmetic use the working value. Loading or reading a value does not itself mark it dirty.
+- **Accepted assignment:** update the local working value and record that its associated own-field destination needs write-back. Failed admission does not commit the attempted write or newly mark the destination dirty; an earlier valid pending change is not erased by that failure.
+- **Write-back:** at the applicable publication/checkpoint boundary, publish the required dirty working values to their corresponding own fields. A clean cached value must not be written back merely because it was loaded.
 
-Find the current statement equivalent to:
+These are implementation operations, not new source receivers named `load` or `dirty`. In particular, this request does **not** reintroduce raw L2 memory access into L3 source code.
 
-> there are no caches, dirty marks, working copies or checkpoints
+A local cache does not create a second persistent graph field at each assignment site. Keep the established locations of declarations, the fixed graph layout, and the distinction between a callable's fields and fields declared in nested bodies. An explicit or hidden argument's local assignment targets the method's own prepared state under the established rules; it is not copy-back into the caller's argument source.
 
-and its RU equivalent.
+Ordinary Structure/Array passing still passes a reference, not a deep copy. Restoring a cached reference value must not be described as silently copying its referent.
 
-That statement is contrary to the author's intended model and must not remain as the semantic rule.
+### 1.2 Suggested replacement passage
 
-Also find any nearby text that was previously rewritten under the assumption that graph-field assignment is always an immediate physical graph store. Restore it to the cache/dirty model where required for consistency.
+Use this substance in the working-state section, integrating it with the already established rules rather than appending a second conflicting model.
 
-### Preserve the semantic distinction between local publication and source mutation
+**EN:**
 
-For a bare dynamically obtained name:
+> Execution uses local working values initialized from their resolved sources. An admitted local assignment updates the working value and marks its associated own field dirty. At the publication points defined for the activation, dirty working values are written back to their corresponding fields; clean cached values are not published merely because they were loaded. A local assignment to an explicit or hidden argument does not write back to the caller's argument source. Explicit reference-path accesses retain their own graph-access contract. The visibility of cached values through aliases, nested calls and external observation follows the established publication and reload rules; it is not determined by an assumption that every assignment immediately writes the graph. This caching mechanism neither adds a graph field at every assignment site nor creates an implicit deep copy of referenced objects.
 
-```text
-x
-```
+**RU:**
 
-the value may be loaded into activation-local working state.
+> Исполнение использует локальные рабочие значения, инициализируемые из разрешённых источников. Допущенное локальное присваивание меняет рабочее значение и отмечает связанное с ним собственное поле как `dirty`. В установленных для активации точках публикации изменённые рабочие значения записываются в соответствующие поля; чистые кэшированные значения не публикуются только потому, что их загрузили. Локальное присваивание явному или скрытому аргументу не записывается обратно в источник аргумента вызывающего выражения. Явные обращения через ссылочные пути сохраняют собственный контракт доступа к графу. Видимость кэшированных значений через псевдонимы, вложенные вызовы и внешнее наблюдение определяется установленными правилами публикации и перечитывания, а не предположением, что каждое присваивание немедленно пишет в граф. Кэширование не добавляет поле графа в каждом месте присваивания и не создаёт неявную глубокую копию объектов по ссылкам.
 
-If the body executes:
+The reference to “established rules” is not a substitute for documenting those rules. Locate the previously approved contract, state or cross-reference it precisely, and ask the author about any unresolved boundary before marking the section complete.
 
-```text
-x: x + 1
-```
+### 1.3 Do not invent a coherence policy while restoring caching
 
-the write is local with respect to the source from which the input was obtained. It updates the body's prepared own occurrence through the working-state/cache mechanism; it does **not** write back into the caller's argument source merely because the original value came from there.
+The request confirms caching. It does not, by itself, answer every ordering question.
 
-An explicit graph path is different. For example:
+Distinguish **write-back** from **reload**. Writing dirty locals to the graph does not automatically imply reloading all caller locals after every call. Conversely, keeping a value local does not by itself authorize arbitrary stale observations through every explicit path.
 
-```text
-node\x: value
-```
+Use already recorded author decisions for the following cases. If they are not sufficient, submit the smallest unresolved example to the author:
 
-explicitly addresses the selected graph field and is the mechanism for mutating that graph location.
+| Observation or boundary | What must be determined from the approved contract |
+| --- | --- |
+| A local write followed by an explicit path read of the same field | Whether this access requires publication or reads the previously published graph value |
+| A nested call/callback writes that field through an explicit path | Whether and when an outer cached value is reloaded, and what a later outer write-back does |
+| Outbound calls, argument evaluation and foreign callbacks | Which dirty values must be visible, and in what order argument evaluation and publication occur |
+| `return`, `throw`, diagnostic termination and `finally` | Publication and cleanup order, including changes made by cleanup |
+| `yield` and resumption | What is published at suspension and what local/dirty state is retained |
+| `retry` and loop transfers | Whether there is a boundary at all; do not add publication to every jump by guesswork |
+| Graph copying, serialization or observation | Which already established boundary supplies the observable state; do not add AI-specific flush semantics |
 
-Do not collapse these two cases.
+For example, an older §14 explicitly ordered: evaluate/retain the result, publish dirty own fields, run cleanup, publish fields dirtied by cleanup, then transfer control. It also said clean caches are not published and the caller is not reloaded. That is useful restoration material, **not proof that every older sentence is authoritative**. Retrieve the corresponding author decision; retain it when applicable and ask if it conflicts with another confirmed rule. [Previous EN snapshot `en(4)`, §14, lines 757–761.]
 
-### `dirty` is semantic working-state information, not necessarily one physical Boolean per variable
+Do not create a new global alias-coherence service, a new closure record, a universal reload after every call, or a different language semantics for the native and interpreted paths. No such design is requested.
 
-The specification should define the observable working-state rule, not require one particular backend representation.
+### 1.4 Patch all dependent direct-write claims, not just one sentence
 
-A native translator may statically know that a cached local was modified and emit the necessary store at a checkpoint. An interpreter may use a dirty bit or bitmap. Another backend may use an equivalent mechanism.
+The reviewed `en(5)` / `ru(4)` snapshots contain the following affected passages:
 
-The required semantics are:
+| Location | Existing wording or assumption | Required treatment |
+| --- | --- | --- |
+| §4, `#fields`, line 114 | A bare assignment writes directly; there are no working copies, dirty marks or checkpoints | Restore the local-working-value / dirty / own-field publication explanation |
+| §8 case 5, line 504 | Direct writes with no local cache, dirty mark or checkpoint | Align the recipe with the restored working-state contract |
+| §9, `#construction`, line 562 | The surviving local-cache / dirty sentence | **Do not delete it as obsolete.** Reconcile its terminology with the restored common rule; keep ordinary admission and source-locality rules |
+| §10, `#qualification`, line 593 | The no-rollback explanation was rewritten around direct instance writes | Check the wording against restored publication; preserve qualification and no-transaction semantics |
+| §12, `#dynamic`, lines 649–651 | Direct own-field writes and assignment explanation | Distinguish local updates from graph write-back without moving the destination or inventing additional fields |
+| §12, lines 679–685 | “There are no caches”; “There is no publication”; no dirty/checkpoints; immediate observation after a nested write | Replace the whole dependent explanation, not just its negative sentence. Resolve alias visibility using §1.3 above |
+| §12, recursive trace and explanation, approximately 690–708 | Graph observations shown without distinguishing local state from a publication point | Preserve activation identity and recursion rules; identify the observation boundaries required by the restored model |
+| §12, line 725 | Loop example explained by universal immediate field visibility | Keep its source program. Explain its observation using the approved publication/argument-evaluation order, or ask where not settled |
+| §12, line 731 | Calls, returns, throws, diagnostics and yields require no publication | Replace the blanket denial with the applicable boundary rules |
+| §14, `#exits`, lines 759–763 | Cleanup assumes fields are always current; reload rationale assumes shared direct storage | Restore the approved publication/cleanup ordering; do not invent reload merely to preserve the former rationale |
+| §15, `#exceptions`, line 823 | “publication and cleanup” | Clarify working-field publication under restored §14; keep it distinct from outgoing Message publication (§4 below) |
+| §16, `#suspension`, lines 832–834 | Retry/yield explanations use direct field state or deny publication on that basis | Apply the approved transfer/suspension contract. Do not infer a new checkpoint at every transfer |
 
-- the current activation may operate on local cached values;
-- modified values that require publication are distinguishable from unchanged ones;
-- required dirty own-fields are published at the defined boundaries;
-- unchanged values need not be redundantly written back;
-- publication never silently changes the source of a dynamically supplied argument when the assignment is defined as local.
+This map identifies what to review, not a blind line-replacement script. Search the matching current paragraphs in the repository. An unaffected example should not be rewritten simply to make an editorial patch easier.
 
-Do not introduce a mandatory physical `bool dirty` field merely because the specification uses the word `dirty`.
+### 1.5 Representation and performance
 
-### Audit checkpoint boundaries, but do not invent them
+Describe `dirty` as write-back information, not a compulsory new flag inside every persistent Structure. The task does not prescribe whether a backend represents it with local flags, an interpreter record, or statically determined stores. Any representation must preserve the approved observable behavior.
 
-After restoring the cache/dirty model, inspect all existing rules that define when working state is published: normal callable exit, `return`, `finally`, failure paths, suspension/retry, turn boundaries, calls requiring published graph state, or any other already documented boundary.
+The author's purpose is to retain local computation and avoid forcing every elementary local operation through graph storage. Do not claim that every direct store necessarily incurs a full graph traversal, or that a specific speedup has been measured. No benchmark is part of this documentation task.
 
-**Do not choose missing checkpoint semantics yourself.**
+## 2. Remaining `sig` issue — keep the observation and propose a Consumer-relative correction
 
-If two existing rules disagree about when dirty working state becomes visible, or if a required boundary is genuinely unspecified, quote the conflicting/insufficient passages and ask the author.
+This issue is **not cancelled** by restoring caching.
 
-Do not confuse this with publication of outgoing Messages. Message publication is a separate mechanism and must remain governed by its own rules.
+### 2.1 What still conflicts
 
-## 2. Callable `sig` still needs a consistency pass after defaults
-
-The current callable-admission formula still contains:
+In §7, `#three-argument-implements`, the equation still contains:
 
 ```text
 sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)
 ```
 
-while the revised callable/default discussion now distinguishes at least:
+The prose at line 449 distinguishes the accepted interface, mandatory supply and formed implementation inputs, but says exact matching compares the **mandatory supply**, passing modes, result and exits. §8 case 8, line 519, repeats “a match over the mandatory supply”.
 
-1. the **accepted interface** — all arguments the callable accepts, including optional/defaulted formals;
-2. the **mandatory supply** — inputs that must be supplied for a particular call;
-3. the **formed inputs** — the actual inputs presented to the selected implementation after explicit arguments, defaults and permitted conversions have been processed.
+The notation therefore needs a precise meaning. Comparing complete unprepared descriptors, comparing only mandatory inputs, and checking a concrete call after ordinary argument formation are different descriptions.
 
-The complete callable signature is still described as including declared and dynamic inputs, names, order, passing modes, result, throws and ABI.
+### 2.2 Minimal counterexample
 
-Do not resolve this by simply deleting optional formals from `sig`.
-
-For example:
+These are contract sketches, not new LMX source syntax. Assume the same result type, no extra dynamic requirements and no converter that changes the argument structure.
 
 ```text
-A:
-    x: int
-    y: int = 5
-
-B:
-    x: int
+A accepts: x: int, optional y: int with default 5
+B accepts: x: int
+Both return int.
 ```
 
-Both may permit the short call:
-
-```text
-f(1)
-```
-
-but only A accepts:
+Both require only `x` to be supplied, but a Consumer using:
 
 ```text
 f(1; y: 25)
 ```
 
-Therefore equality of only the mandatory argument set is not sufficient to describe everything the Consumer may require.
+cannot use B as the target: B accepts no `y`. Do not silently drop the supplied argument. Equality of mandatory sets `{x}` is therefore insufficient.
 
-At the same time, do not revert to a rule saying that every optional formal must occur in every Consumer's expected call descriptor merely because it belongs to the candidate's accepted interface.
+For a Consumer using only `f(1)`, A's extra optional `y` is not by itself a call-shape obstacle: the already accepted default supplies it. This does not certify behavior or bypass the Consumer's tests.
 
-The check is Consumer-relative.
+### 2.3 Proposed wording and method of correction
 
-The intended direction is conceptually:
+**Reviewer proposal, subject to author confirmation where it resolves the remaining formal ambiguity:**
 
-```text
-Consumer's actual use of callable p
-    ↓
-arguments/requirements imposed at that use
-    ↓
-candidate accepted interface must accept them
-    ↓
-missing candidate inputs may be formed by its ordinary defaults
-    and permitted conversions
-    ↓
-formed call must satisfy the selected callable's actual descriptor
-    ↓
-result / throws / passing-mode requirements must satisfy Consumer
-```
+> For each use of a callable visible in Consumer, compatibility must account for the arguments that Consumer actually supplies, including explicitly supplied optional parameters. The selected callable must accept those arguments under the ordinary formation and conversion rules. Inputs not supplied explicitly must be obtainable from their permitted sources: formal defaults for omitted defaulted formals, and the existing dynamic/lexical sources for free inputs. The formed inputs must satisfy the selected implementation's actual descriptor, and its result must satisfy the receiving requirement after any admitted conversion. Passing modes, declared exits and the applicable ABI constraints remain checked under their existing contracts. Equal sets of mandatory arguments are not a sufficient substitute for this check.
 
-Please make the formal notation and the prose describe the same mechanism.
+Use this to clarify **the existing** admission mechanism, not to introduce a second receiver, global compatibility registry, optional-argument erasure pass or hidden wrapper mandated for every call.
 
-If the existing meaning of `sig`, `ExpectedSig`, and `implements` does not uniquely determine how to express this, **ask the author before choosing a new formula**.
+Analytical checking reasons about the available descriptions and conversions; it must not start executing callable bodies, default expressions or converters merely because the explanation uses the word “prepare”. Actual preparation and execution remain governed by their existing stages. Mandatory Consumer tests still follow the analytical stage.
 
-Do not reopen the already answered question whether a defaulted formal remains explicitly passable. It does:
+If a callable path is used at several visible call sites with different supplied arguments, the corrected notation must cover those uses rather than collapse them to one arity. Preserve the existing analytical coverage limits; do not add whole-heap analysis or arbitrary expansion of callee bodies.
 
-```text
-add5(1)         -> 6
-add5(1; y: 25)  -> 26
-add5(1; y: 0)   -> 1
-```
+Clarify the existing equation and §8 case 8 together. Do not leave the old equality as a contradictory normative formula beside new prose. Exact descriptor satisfaction after formation is not permission to declare distinct original interfaces equal.
 
-## 3. Fix the `DynRequired` wording so defaults and free inputs remain distinct
+**Question to the author when not already answered by a recorded decision:**
 
-A formal with a default value is not a free dynamic name merely because it may be omitted at a call.
+> What does `sig` denote in the equality in §7 after defaults are introduced, and how does it account for an optional parameter that this Consumer supplies explicitly? May we express this as the existing Consumer-relative call check after ordinary input formation, without erasing optional parameters or requiring equality of unrelated unprepared interfaces?
 
-A free dynamic name in a body is different.
+Do not re-ask whether `add5(1; y: 25)` is legal; that is already approved. The open point is the unambiguous formulation of compatibility.
 
-Please make the wording explicit:
+## 3. Fix the ambiguous antecedent in §8 case 9
 
-> A formal with a provided default value is not a free name: it does not enter `DynRequired` merely because it can be omitted, and it remains part of the callable's accepted interface. Adding a **new free dynamic name to the body** changes `DynRequired` and therefore the corresponding callable requirements.
+At line 524, the inserted sentence about a defaulted formal is followed by “Adding one changes `DynRequired`” / «Добавление такого имени меняет `DynRequired`».
 
-RU equivalent:
+Make the subject explicit; no semantic decision is needed to identify which kind of name is intended here.
 
-> Формал с предусмотренным значением по умолчанию — не свободное имя: возможность опустить его при вызове сама по себе не включает его в `DynRequired`, и он остаётся частью принимаемого интерфейса. Добавление **нового свободного динамического имени в тело** меняет `DynRequired` и соответствующие требования вызываемого выражения.
+**EN replacement:**
 
-Use the final agreed terminology for `sig` after item 2 is resolved.
+> The body's free dynamic names are part of its interface. A formal with a provided default value is not a free name: it is not in `DynRequired` and remains part of the accepted interface. Adding a new free dynamic name to the body changes `DynRequired` and the corresponding call requirements; known callers require rechecking, while runtime-selected callables remain subject to actual-call admission.
 
-## 4. Re-check `assert` / failure wording in light of the restored cache/dirty model
+**RU replacement:**
 
-The previous review treated wording such as:
+> Свободные динамические имена тела входят в его интерфейс. Формал с предусмотренным значением по умолчанию — не свободное имя: в `DynRequired` он не входит и остаётся частью принимаемого интерфейса. Добавление нового свободного динамического имени в тело меняет `DynRequired` и соответствующие требования вызова; известные вызывающие выражения требуется проверить заново, динамически выбранные остаются под допуском фактического вызова.
 
-> after publication and cleanup
+Retain the rest of the paragraph about occurrence mutability, replacement and behavioral tests. After §2 is resolved, connect “call requirements” to the final definition of `sig` rather than introducing another meaning.
 
-as suspicious because it assumed that working-field publication had been removed.
+## 4. Clarify `assert`: field write-back is not Message publication
 
-That assumption was wrong.
+The previous review treated “publication and cleanup” in §15 as potentially obsolete because it assumed the no-cache model. **That assumption is withdrawn.** Working-field publication has a place in the restored model; the sentence must name the relevant contract, not delete the operation.
 
-Now re-read the relevant `assert`, failure, `finally`, return and cleanup rules **under the restored cache/dirty model**.
+At line 823, replace the ambiguous phrase by a cross-reference to the restored diagnostic-exit ordering.
 
-If “publication” there refers to publishing dirty own-fields at a defined checkpoint, retain it and make that relation explicit if useful.
+**Suggested EN wording:**
 
-If it refers to outgoing Message publication, retain that separate meaning.
+> In the actor profile, diagnostic termination follows the activation's working-field publication and cleanup rules in §14 before the diagnostic is delivered to the executing Message's diagnostic root. That Message stops executing and receives no further turns. This does not make the failed turn successful or authorize publication of its pending outgoing Messages; those remain governed by §25. Stopping execution and destroying the object remain distinct.
 
-If the text conflates the two, distinguish them.
+**Suggested RU wording:**
 
-If the intended publication boundary cannot be determined uniquely from the existing rules, **ask the author** rather than deleting the wording.
+> В акторном профиле диагностическое прекращение выполняет правила публикации рабочих полей и очистки активации из §14 до передачи диагностики корню исполняющегося Message. Message прекращает исполнение и больше не получает тактов. Это не делает неуспешный такт успешным и не разрешает публикацию его ожидающих исходящих писем: они по-прежнему подчиняются §25. Остановка исполнения и уничтожение объекта различаются.
 
-## 5. Preserve the accepted `merge` rules
+Use this wording once the §14 order is established from the approved contract. Do not invent a special forced store to inaccessible or invalid storage on `assert` failure. Any unresolved exceptional case is a question for the author.
 
-Do not restore any previous interpretation in which `merge` binds arguments.
-
-`merge` copies/composes the applicable graph material. Copying lexical data does not disable dynamic-input precedence and does not itself turn a free name into a formal.
-
-The declared callable header is the receiving-place/admission contract, not an implicit extra `merge` operand.
-
-A defaulted formal is governed by ordinary call preparation, not by a special `merge` binder.
-
-## 6. Preserve the accepted `native` rules
-
-Do not restore the old rule that every result of `merge` receives an empty `native`.
-
-The correct rule remains:
-
-- unchanged executable code/body may retain its corresponding native implementation even when its data or copied lexical graph differs;
-- the native implementation receives the graph/context it operates on;
-- selecting another already existing body may select that body's corresponding native implementation;
-- if executable code is actually changed and there is no native implementation corresponding to the resulting code, the old native address cannot be reused and the valid L3 graph is interpreted.
-
-Changing data merely located under a structural field named `body` is not automatically changing executable code.
-
-The 2026-09-25 author confirmation about an interpreted result referred to the case where the executable body had changed. Do not record the current clarification as a reversal of that decision.
-
-## 7. Preserve copying versus physical sharing
-
-Reusing a native implementation does not mean retaining the original mutable graph.
-
-Ordinary copied Structures and their applicable lexical graph follow the normal copying rules.
-
-The established whole-branch exception remains:
+Keep the three meanings separate throughout the text:
 
 ```text
-independent: const: immutable
+working-field write-back:  local dirty value -> associated graph field
+construction publication: fully built result becomes available
+Message publication:      prepared outgoing mail -> published delivery state
 ```
 
-Such a branch has no external lexical parent and cannot change, so retaining its original physical reference is the intended exception rather than uselessly copying the whole branch.
+Restoring the first does not change the third. §25's existing success/failure treatment of outgoing mail and the lack of automatic rollback of previous graph effects remain intact.
 
-Do not generalize that exception to ordinary mutable Structures or callable occurrences.
+## 5. Preserve the accepted response48 decisions
 
-## 8. EN/RU consistency audit
+The following are not being reopened by the caching request.
 
-After the changes, search both specifications for at least:
+**Native code.** Unchanged executable code retains its matching `native` over copied/composed data. Selecting another whole ready body selects its matching implementation. Changed code without a corresponding implementation cannot use the former address. A change to data under a part named `body` is not automatically a change to executable code. The 2026-09-25 interpreted-result statement concerned changed bodies, not every `merge`.
+
+**Formals and defaults.** A defaulted formal remains explicitly passable. For the formal-`y` example:
 
 ```text
-dirty
-checkpoint
-cache
-local cache
-working state
-working copy
-publish / publication
-sig
-ExpectedSig
-DynRequired
-default
-optional
-accepted interface
-mandatory supply
-formed inputs
-native
-merge
+add5(1)                       -> 6
+add5(1; y: 25)                -> 26
+add5(1; y: 0)                 -> 1
+caller-local y = 25, omitted y: add5(1) -> 6
+add5(1; y: 25), then add5(1)  -> 26, then 6
 ```
 
-For every occurrence, classify what it refers to.
+The last line assumes the default's source was not explicitly changed. Do not let dirty write-back of an activation's working argument silently overwrite the default's source. Preserve the existing distinction between those roles; if their representation is unresolved, ask rather than creating a second hidden environment.
 
-In particular, keep distinct:
+**Free dynamic names.** A free `n` in `addN` remains a free input with dynamic-before-lexical priority. It does not become a formal merely because its lexical fallback was copied. Cache initialization must use the value selected by this priority; explicit `node\n` remains a graph access, not that dynamic local.
 
-```text
-working-field publication
-≠
-outgoing Message publication
-```
+**Composition and types.** `merge` does not become an argument binder. The declared callable header is the receiving-place contract, not an extra implicit operand. Defaults are ordinary call preparation, not a special `merge` facility.
 
-and:
+**Copying and sharing.** Copy ordinary used Structures and lexical relations under the existing rule. Reusing a native implementation does not retain the original mutable occurrence. Preserve the `independent: const: immutable` whole-branch exception and its lifetime/protection rules.
 
-```text
-formal with a default
-≠
-free dynamic input
-```
+**Other boundaries.** Do not change Message ownership, ordinary reference passing, storage handoff, type-conversion context, cleanup obligations, or the confirmed last-occurrence name rule as a side effect of this patch.
 
-and:
+## 6. Editing workflow and acceptance checks
 
-```text
-reused native implementation
-≠
-shared mutable graph
-```
+Make the bilingual documentation patch against the current canonical files, not by restoring an entire older snapshot. Record the author request in §1 as the reason for the state-model change; record the separate resolution of §2 when obtained.
 
-## 9. Mandatory contradiction rule
+| ID | Check |
+| --- | --- |
+| F49-01 | The change log explicitly attributes restoration of load/dirty caching to the author's latest request and withdraws the reviewer's opposite instruction |
+| F49-02 | No remaining normative passage categorically forbids local caches, dirty marks, working copies or their publication boundaries |
+| F49-03 | Loads/reads alone do not mark values dirty; accepted local changes can require own-field write-back; clean values are not blindly published |
+| F49-04 | Failed assignment does not commit its candidate or newly dirty the destination; an earlier valid pending write is not discarded by that failure |
+| F49-05 | Local explicit/hidden argument assignment does not write back into the caller's argument source; field locations and recursion ownership remain unchanged |
+| F49-06 | Alias/path reads, nested writes, callbacks, exits and suspension have documented author-approved boundaries or are explicitly reported as blocked questions |
+| F49-07 | Write-back is distinguished from reload; no universal automatic reload or new alias-coherence mechanism is introduced by inference |
+| F49-08 | `finally` and diagnostics use the restored field-publication contract without promoting a failed turn's pending mail to successful publication |
+| F49-09 | Consumer's explicit use of optional `y` is not erased by a mandatory-only signature comparison; §7's equation and §8's recipe agree |
+| F49-10 | Adding a defaulted formal is not called adding a free dynamic name in the `DynRequired` paragraph |
+| F49-11 | All accepted `native`, default, free-input, composition and qualified-branch examples remain consistent |
+| F49-12 | EN/RU say the same thing; anchors and numbering remain stable; the report distinguishes text checks from any actual runtime tests |
 
-If you encounter a semantic contradiction, do **not** silently choose the interpretation that is easiest to implement or that appears more conventional.
+Deliver the EN/RU edits, their diff, a short change map and any precise unanswered questions. No runtime rewrite is authorized merely by this documentation task.
 
-The main specification already requires that a contradictory decision be suspended for explicit discussion rather than resolved by invented workaround semantics.
+## 7. Mandatory rule for contradictions
 
-When asking the author:
+> **If an agent finds a contradiction, ask the language author before choosing a semantic resolution. Quote the conflicting passages, show the smallest case with different consequences, and state the exact unanswered question. Do not silently invent a rule, choose by implementation convenience, or treat the reviewer's proposal as an author decision.**
 
-1. quote the two conflicting rules;
-2. give the smallest example for which they produce different observable results;
-3. ask one concrete semantic question.
-
-Do not ask again about decisions explicitly answered above.
-
----
-
-### Author correction to the previous review
-
-**The request to restore and retain the load/cache/dirty model is explicitly from the language author.**
-
-The previous reviewer instruction that treated the remaining `dirty` wording as stale was incorrect. Do not use that earlier instruction as evidence for removing caches, dirty tracking, or checkpoints.
-
-The remaining issues concerning callable admission/`sig`, `DynRequired`, and wording around publication should be reconsidered consistently with this corrected working-state model.
-
-## Applied (fable_pc, 2026-09-28)
-
-Edited: `provenance/semantics-book.md` (both languages, one paired file; `docs/LMX_semantics.{en,ru}.md` regenerated by `tools/build_semantics.py`), `docs/L2_spec_{en,ru}.md` §10 and §18.2, `next_core_tasks.md` (§5 header, new §7b before GATE, a GATE item), this file (line endings normalized to LF without BOM, the project's rule; the text is untouched). `check_docs` passes. Section numbers below are the generated documents'.
-
-### 1. The load/cache/dirty model restored
-
-**Decision record.** The author's decision of 2026-09-28 (this file, §1) supersedes the reading, recorded in `merge_documentation_corrections_next.en.md` "Applied", N02, of the author's 2026-09-25 words as "no caches, dirty marks, working copies or checkpoints"; that record now says so. The execution pair (code and data as roles by position, a fresh data instance on re-entry; the author, 2026-09-25, Q27–Q29) is unchanged, and so are every later decision (Q22.2, Q44, Q48). The wording restored is the book's own pre-2026-09-25 wording (the commit before `b2a8b24`), merged with the instance model where the two met (the recursive trace).
-
-**Edit map.** §4 (`node` paragraph): the assignment binds the local cache, marks it `dirty`, the checkpoint publishes into the own field, never into the hidden argument's source. §8 recipe 5: same. §9: on failure neither the target nor its `dirty` state changes; executing a bare assignment binds the local cache to the prepared own occurrence and marks it `dirty`. §10: qualification does not roll back pre-call publication of working fields; protection applies to writes and to publication of working fields. §11: each activation receives an ordinary frame with working copies of the own fields it uses, loaded and marked `dirty` under the same rules in both execution modes. §12: the own field's working value is loaded for the activation, assignment marks it `dirty`, a checkpoint publishes it; the bare-assignment rule binds the cache (no previous graph value is loaded over the input, an untaken branch does not activate the binding, publication targets the body's data instance); only own fields used by a bare name or to forward a dynamic input are cached; before control passes to another callable only `dirty` own working fields are published and marks are cleared, a clean cached field is not written back, the caller does not reload after return; `dirty` follows an executed write and is semantic working-state information, not a mandatory physical flag (the native translator may know statically, the interpreter may keep a bit or a bitmap); publication in forward field order and before a foreign boundary; after a nested `node\x` write the caller's bare working `x` may retain its earlier value while the explicit path sees the new one; the recursive trace S/I2 rewritten with working values and the published `S\x` (pre-call publication, the inner instance publishes into I2, the outer keeps 2 until its next write); a declared field combines the persistence of an instance field with the working locality of a stack variable; the `for`/`print` example is `9 0` again (`acc` from the cache, `for\j` the previously published graph value; `end: for` is not a checkpoint); publication is required at call, return, `throw`, diagnostic termination and `yield`, with the two publications of an exit with `finally`. §14: the exit order publishes dirty own working fields before cleanups and own fields dirtied by cleanup after them; clean cached fields are not published; calls within cleanup have ordinary publication boundaries. §16: `retry` publishes nothing merely because of the transfer, `retryable` rolls back neither published fields nor Messages, `yield` publishes dirty own fields before suspension and resumption does not reload. L2 spec §18.2: writing through the address of an own field changes the graph cell and neither assigns nor dirties the activation's working copy; `\p: 9` after `p: @x` leaves bare working `x` at 5 while an explicit graph read sees 9; §10: an argument becomes a data field by the assignment rule or by composition through `merge` (a formal's default), and the used own fields are loaded, dirtied and published at the checkpoints §12 defines, the physical form of `dirty` being the backend's.
-
-**Checkpoint audit (§1 of the note, "do not invent them").** The boundaries are the book's own list, all restored from its earlier text: before control passes to another callable expression (call); return; `throw`; diagnostic termination; `yield`; the two publications of an exit with `finally` (before and after cleanups); a foreign boundary capable of calling back into LMX or exposing graph state. `end: for`, an explicit path read, `retry` and a local loop transfer are not checkpoints. No two rules were found to disagree; no boundary is invented. Outgoing Message publication (§22 end-of-turn, §25 delivery, §28 `post`) is a separate mechanism and is untouched; §15 `assert` ("publication and cleanup precede delivery to the diagnostic root") refers to the working-field publications of §14 and stays.
-
-### 2. Callable `sig` (note §2)
-
-§7's prose now describes the Consumer-relative mechanism in the author's order: the Consumer's actual use of `p` imposes requirements; the candidate's accepted interface must accept them; missing inputs may be formed by its ordinary defaults and permitted conversions; the formed call must satisfy the selected callable's descriptor; result, exits and passing modes must satisfy the Consumer; the `A`/`B` example (`f(1)` both, `f(1; y: 25)` only `A`) is in the text; an optional formal is removed neither from `sig` nor from the body's requirements or the ABI. The formula `sig(aVar.p) = sig(bVar.p) = ExpectedSig(Consumer, p)` is left as it was, because the existing meaning of `sig`, `ExpectedSig` and `implements` does not uniquely determine how to write the mechanism: `LMX_blog/q/current/q49.md` asks the author, with the two conflicting positions, the smallest example and two candidate notations. The answered question (a defaulted formal remains explicitly passable) is not reopened.
-
-### 3. `DynRequired` (note §3)
-
-§8 recipe 9 now carries the note's wording verbatim in both languages ("A formal with a provided default value is not a free name: it does not enter `DynRequired` merely because it can be omitted, and it remains part of the callable's accepted interface. Adding a **new free dynamic name to the body** changes `DynRequired` and therefore the corresponding callable requirements").
-
-### 4. `assert` / failure wording (note §4)
-
-Re-read under the restored model: §15 `assert` "after publication and cleanup" is the working-field publication of §14 and is retained; §14 exits, `finally`, return and cleanup are the two-publication order; §16 `retry`/`yield` as above. Nothing conflates working-field publication with Message publication; no boundary was deleted or invented.
-
-### 5–7. Preserved
-
-`merge` binds no argument (§11, §20; the L2 spec §10 phrase "or by binding through merge" corrected to composition giving a formal its default); the declared header is the receiving place's admission contract; a defaulted formal is governed by ordinary call preparation. `native` rules of §20 (unchanged body keeps its implementation; another body brings its own; a changed body without one is interpreted; the 2026-09-25 confirmation scoped, not reversed) untouched. Copying versus physical sharing untouched: ordinary Structures and lexical graph copied, the `independent: const: immutable` branch the single retained exception, native implementation reuse is not a shared mutable graph.
-
-### 8. EN/RU audit
-
-Counts in the generated documents (EN/RU): dirty 18/16, checkpoint 5/RU «контрольн»… , cache 15/RU «кэш», working state 4, working copy 0 (the RU says «рабочая копия/рабочее значение»), publish+publication 69/RU «публик…», `sig(` 3/3, ExpectedSig 1/1, DynRequired 2/2, default 35/RU «по умолчанию», optional 10/RU «необязательн», accepted interface 5/RU «принимаемый интерфейс», mandatory supply 2/RU «обязательная подача», formed inputs 1/RU «сформированные входы», native 50/8 (the RU writes «нативн…»), merge 54/51. Classification: every "dirty", "cache", "checkpoint", "working state" occurrence is the working-state model of §§4, 8, 9, 10, 11, 12, 14, 16 (plus §1's "implementation may cache resolved bindings", an optimization statement, and §9's "cached physical addresses", both unrelated to fields); "publication" occurrences split into working-field publication (§§4, 8, 10, 12, 14, 15, 16) and Message/child/queue publication (§§11 return-order pointer to exits, 22, 23, 25, 28), plus construction-time "before publication" of a built value (§9, §10) and the crypto profile's "publishes derived material" (ordinary storage); none conflates the two. "default"/"optional" occurrences in §§7, 11, 12, 20 are the defaulted formal, always distinct from a free dynamic input (§8 recipe 9, §12, §20). "native" occurrences in §§20, 23 are the reused implementation, never a shared mutable graph (§20 last sentence of the native paragraph). Both languages edited in the same places; the build's structural equality check passes.
-
-### 9. Contradictions
-
-One, filed as a question rather than resolved: the `sig` formula (q49). None on checkpoint boundaries. The implementation follows the note's request "at this stage": `next_core_tasks.md` §7b (steps before GATE and the self-build) and a blocking GATE item; the lead has the request.
+Already answered points are applied, not re-asked. In particular, **restoring load/dirty caching is now an explicit author request**. Unanswered checkpoint, reload or `sig` questions block only the dependent change; unrelated edits can proceed. A complete-looking document with an invented answer is not an acceptable substitute for the author's decision.

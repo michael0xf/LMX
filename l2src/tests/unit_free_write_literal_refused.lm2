@@ -1,0 +1,14 @@
+# steps/free-names.md §7: the write-only target's type is its binding's (int, from m), so `k: 1U` is refused at the
+# write as the same int declared in peek is.
+fn: peek () int
+    k: 1U
+    return: 0
+fn: m () int
+    int: k 5
+    int: t 0
+    t: peek()
+    return: t
+int: r 0
+r: m()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

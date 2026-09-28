@@ -1,0 +1,17 @@
+# steps/free-names.md §7: peek only writes k -- a free name the caller m binds (int), so the bare `k: 1` makes k
+# peek's own field (book :1188) typed by that binding; m's k stays 5.  Before, "assignment target must be a
+# declared typed mutable value".  Entry 7.
+fn: peek () int
+    k: 1
+    return: 0
+fn: m () int
+    int: k 5
+    int: t 0
+    t: peek()
+    if: k = 5 && t = 0
+        return: 7
+    return: 81
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

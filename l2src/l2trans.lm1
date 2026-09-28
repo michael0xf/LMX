@@ -6908,10 +6908,10 @@ fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
         if: idx >= 0 && idx != l2_e && l2_bind_call(n, idx, path) != 0
             return: 1
     ---
+    # A frame's trailer holds no call to bind: a valued `return:` closes only an fn (P0), whose trailer
+    # l2_bind_calls binds; every other trailer is a cutter, or an `until:` the check refuses (REVIEW 3ed919e, M55).
     if: l2_bind_struct(n\as\frame\body, mi, path) != 0
         return: 1
-    if: n\as\frame\trailer != 0
-        return: l2_bind_struct(n\as\frame\trailer\body, mi, path)
 return: 0
 
 fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
@@ -6924,8 +6924,6 @@ fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
             return: 1
         f: l2_next_active(f\next)
     ---
-    if: s\trailer != 0
-        return: l2_bind_struct(s\trailer\body, mi, path)
 return: 0
 
 # One Structure value around fields: a named argument's body that is not one actual as written.
@@ -9542,6 +9540,13 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             continue
         ---
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt)
+            # steps/free-names.md §7: the target is resolved as a read of it is (book :1182), and first, in reading
+            # order -- a name no declaration of this body gives is read like any name, so a free one is a dynamic
+            # input: a hidden argument of the callers, which the bare assignment makes this body's field (:1188), or
+            # unresolved if none binds it.  Not an empty-Structure body: `f()` whose head resolves to nothing
+            # declares f (l2_empty_struct_decl_shape, -132).
+            if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0 && l2_own_find_decl(mi, stmt\as\frame\head, stmt) < 0 && l2_own_find_last(mi, stmt\as\frame\head) < 0 && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
+                return: 1
             if: stmt\as\frame\body != 0 && l2_scan_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, seen) != 0
                 return: 1
             oi: l2_own_find_decl(mi, stmt\as\frame\head, stmt)

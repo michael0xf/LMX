@@ -601,7 +601,7 @@ $fixtures = @(
         Absent = @();
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int', 'l2_t1: l2_m0(l2_c0\parent, l2_c0, lmx_int_value_known(l2_q0_from[0]))') },
     [pscustomobject]@{ Name = 'unit_s2_vis_structure_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_s2_vis_structure_below_refused.lm2:3:1: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -696,7 +696,7 @@ $fixtures = @(
     # to an undeclared name, refused like any other (measured: not "unknown method" -- the shape
     # is an assignment target, not a call).
     [pscustomobject]@{ Name = 'unit_next_message_word_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_next_message_word_refused.lm2:6:18: unresolved name'; Absent = @(); Debt = @() },
     # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48, Q24 = A): a repeated typed
     # declaration of one name is a new occurrence.
     [pscustomobject]@{ Name = 'unit_q24_repeated_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
@@ -827,7 +827,7 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'entry_ret_tr_bad.lm2:1:1: unresolved name'; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone
     # main (literal and full body), in main beside a method (body and trailer), and in a method.
     [pscustomobject]@{ Name = 'entry_overflow.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'literal not representable as int'; Absent = @(); Debt = @() },
@@ -1506,7 +1506,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_struct_guard_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported trailer'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_guard_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_struct_guard_call_refused.lm2:7:1: unsupported trailer'; Absent = @(); Debt = @() },
     # steps/named-struct-exec.md, slice 2: a bare `S` at the root executes the named Structure -- its
     # whole body (Q19.2 = 2), the pair (a code node, S as data; §12: its procedure) walked by the root's CALL.  The author's
     # example reads Counter\n 0 before, 1 after one execution and 1 after two (was
@@ -2107,11 +2107,11 @@ $fixtures = @(
     # One logical negative fixture, three TUs: l2trans reports only the first
     # diagnostic. Needle is the converged class for every representable form.
     [pscustomobject]@{ Name = 'unit_universal_absent_paren.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_universal_absent_paren.lm2:4:1: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_universal_absent_colon.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_universal_absent_colon.lm2:4:1: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_universal_absent_vertical.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_universal_absent_vertical.lm2:5:1: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_existing_value_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -2578,8 +2578,18 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_field_write_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    # steps/free-names.md §7 (REVIEW 7124005): a method above a unit field's declaration does not see the field
+    # (backward visibility), so the name is free: the root's field at the call is its hidden argument, and a bare
+    # write makes it the method's own field (book :1188) -- the unit field stays 5.  The read mirror reads it the same
+    # way.  (Before: unit_field_write_below_refused, "assignment target must be a declared typed mutable value".)
+    [pscustomobject]@{ Name = 'unit_field_write_below_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_field_write_below_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_field_read_below.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_field_read_below.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_priority.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
@@ -2591,7 +2601,7 @@ $fixtures = @(
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_decl_unknown_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_decl_unknown_type_refused.lm2:5:1: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_addr_slot_structure_projection.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'L2 operation outside a method body';
         Args = @('0');
         Absent = @();
@@ -2743,7 +2753,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_array_write_general_root_real_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported index'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_colon_undeclared_refused.lm2:2:5: unresolved name'; Absent = @(); Debt = @() },
     # missing_value is a free name no caller binds: "unresolved name" at the name (l2_dyn_typed), before the
     # assignment's check, which waits for the name's type (steps/free-names.md M2).
     [pscustomobject]@{ Name = 'unit_colon_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3101,7 +3111,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_part_root_src_refused.lm2'; Parts = @('unit_s7_part_root_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_src_refused_part.lm2:4:4: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_below_refused.lm2'; Parts = @('unit_s7_part_root_below_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_root_below_refused_part.lm2:4:5: assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_root_below_refused_part.lm2:4:5: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_ns_refused.lm2'; Parts = @('unit_s7_part_root_ns_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_ns_refused_part.lm2:4:4: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_node_src_refused.lm2'; Parts = @('unit_s7_part_node_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
@@ -3323,9 +3333,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_matrix_absent_struct_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_absent_prim_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_matrix_absent_prim_refused.lm2:4:5: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_absent_arrayish_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_matrix_absent_arrayish_refused.lm2:4:5: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_noncall_prim_asgn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_noncall_empty_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3480,6 +3490,18 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_held_call_guarded.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # The write-only assignment to a free name (steps/free-names.md §7): the scan reads a bare assignment's target
+    # like a read, so `k: 1` in peek, with k bound by the caller, makes k peek's field typed by that binding (the
+    # assignment waits for the closure, M2) and m's k stays 5; `k: 1U` against the caller's int k is refused at the
+    # write, as the same int declared in peek is.  Mutant: the target not read -- the write refused again.
+    [pscustomobject]@{ Name = 'unit_free_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_write_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_write_literal_refused.lm2:4:5: literal not representable as int'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_write_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_free_write_literal_refused.lm2:4:5: literal not representable as int'; Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:14:5: more arguments than bar has formals'; Absent = @(); Debt = @() },

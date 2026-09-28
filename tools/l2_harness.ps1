@@ -1508,7 +1508,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_struct_guard_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     # steps/named-struct-exec.md, slice 2: a bare `S` at the root executes the named Structure -- its
-    # whole body (Q19.2 = 2), the pair (a code node, S as data) walked by the root's CALL.  The author's
+    # whole body (Q19.2 = 2), the pair (a code node, S as data; §12: its procedure) walked by the root's CALL.  The author's
     # example reads Counter\n 0 before, 1 after one execution and 1 after two (was
     # unit_bare_struct_refused); a Structure only of fields goes back to its initializers; a bare
     # `return` ends the plan and the root executes S from an anonymous block and an if body.
@@ -1517,21 +1517,24 @@ $fixtures = @(
     # words).  Mutants: declarations not stored again, the
     # root's CALL placed nowhere -- the three runs red; the anonymous block inert, the plan not
     # stopped at the return -- the return row red; the tail after the return or an unexecuted S not
-    # checked, the return-value phrase or the array refusal gone -- their refusal rows red.
+    # checked, the return-value phrase or the array refusal gone -- their refusal rows red.  §12 (below):
+    # the tail's g is refused as any free name nobody binds ("unresolved name", at g), the return with a
+    # value in the words of every callable that returns nothing; an executed S's array field and a unit
+    # field's read run (were unit_named_struct_exec_array_refused, unit_named_struct_stmt_operand_refused).
     [pscustomobject]@{ Name = 'unit_named_struct_exec.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_struct_stmt_operand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'named Structure body not walkable yet: a name that is not a field of this Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'named Structure body not walkable yet: a name that is not a field of this Structure'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_struct_exec_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'named Structure body not walkable yet: a field that is not a number'; Absent = @(); Debt = @() },
+        Needle = 'lm2:7:12: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_return_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = "a named Structure's return carries no value"; Absent = @(); Debt = @() },
+        Needle = 'lm2:6:5: return with a value in a callable that returns nothing'; Absent = @(); Debt = @() },
     # Slice 3: a bare S in a unit-level method's body -- natively the same pair through lmx_call_prim,
     # whose walk hook is the root's executor; under --walk-methods the root's CALL in the method's
     # frames.  bump executes Counter twice and reads 1; the root, which wrote 5, reads 1 after (was
@@ -1541,7 +1544,8 @@ $fixtures = @(
     # refusal.  Mutants: the native execution emitting nothing -- the native row red, the walked one
     # green; the walked method's CALL placed nowhere -- the walked row red, the native one green; the
     # early base off by one -- the native row red; the empty node a bare return again -- the empty row
-    # red; the nested guard gone -- the nested row red.
+    # red; the nested guard gone -- the nested row red.  (§12 replaced the code nodes by the procedures'
+    # occurrences: those mutants were of slice 3's code.)
     [pscustomobject]@{ Name = 'unit_named_struct_exec_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -1551,7 +1555,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_struct_exec_nested_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     # REVIEW b193fbb (fable_pc's M35 and probe ns3_two_exec): two executed Structures, two code nodes --
-    # the root executes A, go executes B, each by its code node's rank: A\n = 5, B\m = 11.  Mutants: the
+    # the root executes A, go executes B, each by its code node's rank (§12: by its procedure): A\n = 5,
+    # B\m = 11.  Mutants: the
     # rank dropped in the native execution -- the native row red, the walked one green; dropped in the
     # walk's CALL -- the walked row red, the native one green.
     [pscustomobject]@{ Name = 'unit_named_struct_exec_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -1568,6 +1573,61 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'executing a Structure formal is not supported yet'; Absent = @(); Debt = @() },
+    # steps/named-struct-exec.md §12 (the author, Q45 and its two additions: a named Structure is "просто
+    # процедура без аргументов и возвращаемого значения"): its body is a method's -- its procedure's, whose
+    # own fields are the Structure's, in its slots -- and executing S is a call of the procedure over S.
+    # The body's receivers are any body's: if/else, while, a return in a block, a method's call, for (each
+    # was "a Structure reference field needs a name"), executed from the root, from a method, and walked; a
+    # field declared in a block is the block's, in the procedure's occurrence (walked: reached through it,
+    # not through the data); a caught throw.  Refused as in every callable: an uncaught throw (a procedure
+    # lists none); a return with a value, in a block as at the top (a sub's too, which was "unsupported
+    # body"); a free name nobody binds, said where it stands (it was said at the method's line, or at 1:1
+    # at the root and in a procedure).
+    # Mutants (steps/named-struct-exec.md §13, each by copy, both modes): the execution naming S as its code
+    # -- the if, method and walked ctl rows red; the procedure run over its occurrence -- exec, if, method
+    # red; fable_pc's own slots counted from the header parts -- the layout invariant says so where the
+    # field is declared, and without it the program aborts (own field 0 has no cell); head 0 -- the empty
+    # and walked block rows red; the walked block reached through the data -- the walked block row red,
+    # the native one green; an item of no declaration shape read as a field -- the array row refused;
+    # only methods declared above -- the call row refused; size_t read as a statement -- the registration
+    # invariant says so at the declaration, and without it the translation fails at a reader far off;
+    # the free name's old place -- the three located rows red; the old return words -- the three return
+    # rows red; the empty body refused -- the empty row red; the nested statement let through -- its row
+    # red.  Equivalent: the procedure's own fields counted in its occurrence again (no reader of them).
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_return_in_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_block_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_block_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_throw_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:12:8: unhandled throw: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_return_value_block_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:6:9: return with a value in a callable that returns nothing'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_sub_return_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:7:9: return with a value in a callable that returns nothing'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_unresolved_name_located_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:5:8: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_unresolved_name_located_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:4:5: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_nested_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'lm2:8:9: a statement in a nested or qualified named Structure is not supported yet'; Absent = @(); Debt = @() },
     # D-105 slice 1 (the author's Q39: the interpreter first; steps/d105-index-table.md §5): the walked
     # root hands `o: Other` (Model's fields in the other order) to `rd (Model: m)` and `wr` -- admitted by
     # NAME through lmx_walk_admit_as, whose correspondence table the arena's `implements` table keeps;

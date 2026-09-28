@@ -1,0 +1,26 @@
+# steps/named-struct-exec.md §12 (Q45, the author: "if" это ресивер): an `if:` in a named Structure's body
+# is a statement of the body, run as in a method's body -- not a field (before: "a Structure reference
+# field needs a name").  Counter's body has two ifs with their elses; executed once from the root, n is 7:
+# 5 from the first if's block, 2 from the second's else.  Construction runs none of it: 0 before.  Entry 7.
+Counter:
+    size_t: n 0U
+    size_t: k 3U
+    if: k = 3U
+        n: n + 5U
+    else:
+        n: 100U
+    if: k = 4U
+        n: 200U
+    else:
+        n: n + 2U
+return
+size_t: before 9U
+before: Counter\n
+Counter
+size_t: after 9U
+after: Counter\n
+int: ok 0
+if: before = 0U && after = 7U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

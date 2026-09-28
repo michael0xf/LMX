@@ -1,0 +1,40 @@
+# steps/named-struct-exec.md §12 (Q45 and its additions): a unit-level method executes Counter natively --
+# a call of its procedure, the pair (its occurrence, Counter) through lmx_call_prim -- and Counter's body
+# runs as a method's: while counts 5, the if adds 2, the for 3, put adds 4 to seen, and the return in a
+# block ends it before `n: 100U`.  run executes it twice and reads n: 10 (its declaration runs again);
+# seen 8.  Entry 7.
+size_t: seen 0U
+fn: put (size_t: a) int
+    seen: seen + a
+return: 0
+Counter:
+    size_t: n 0U
+    size_t: k 0U
+    while: k < 5U
+        n: n + 1U
+        k: k + 1U
+    if: n = 5U
+        n: n + 2U
+    else:
+        n: 100U
+    for: int(i, 0) (i < 3) i++
+        n: n + 1U
+    end: for
+    put: 4U
+    if: n = 10U
+        return
+    n: 100U
+return
+fn: run () size_t
+    Counter
+    Counter
+    size_t: v 9U
+    v: Counter\n
+return: v
+size_t: got 9U
+got: run()
+int: ok 0
+if: got = 10U && seen = 8U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

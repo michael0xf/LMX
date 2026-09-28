@@ -1,0 +1,18 @@
+# steps/named-struct-exec.md §12 (Q45): a `for:` in a named Structure's body is a statement of the body,
+# as in a method's body.  Two executions from the root: n counts 3 at each (its declaration runs again),
+# the unit's total 6.  Entry 7.
+size_t: total 0U
+Counter:
+    size_t: n 0U
+    for: int(i, 0) (i < 3) i++
+        n: n + 1U
+        total: total + 1U
+    end: for
+return
+Counter
+Counter
+int: ok 0
+if: Counter\n = 3U && total = 6U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

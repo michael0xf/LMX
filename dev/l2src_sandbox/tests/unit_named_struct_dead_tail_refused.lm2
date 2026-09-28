@@ -1,6 +1,6 @@
-# steps/named-struct-exec.md, slice 2: nothing after a bare `return` of the body is built, but it is
-# checked -- `n: n + g` after the return reads g, no field of Counter, and is refused as it would be
-# before the return.
+# steps/named-struct-exec.md, slice 2 and §12: the tail after a bare `return` never runs and is checked, as
+# a method's dead code is.  `n: n + g` reads g, which nothing declares or passes: "unresolved name" at g.
+# (Before §12 the special path's words: "a name that is not a field of this Structure".)
 Counter:
     size_t: n 0U
     return

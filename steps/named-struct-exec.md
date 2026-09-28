@@ -236,3 +236,171 @@ N)`), корпус «до/после» с перечнем изменивших�
 `_instance`, `_empty`) — те же результаты; новые — `if:`/`else:`, `while:`, `return` в блоке, вызов метода и `for:` в
 теле `Counter`, исполненного из корня, из метода и под `--walk-methods`. Мутанты: исполнение через прежний узел кода,
 тело без операторов, `self` — не данные.
+
+## 13. §12 — сделано (Opus, 2026-09-28)
+
+**Что сделано.** Именованная Structure уровня единицы, у которой в теле есть оператор или которую исполняют, — процедура:
+метод таблицы методов (`l2_ns_proc`), зарегистрированный до входа E (`l2_ns_procs`, `l2_ns_proc_add`), без формалов и
+результата. Тело процедуры — тело Structure, и собирается, проверяется, пишется нативно (`sub: l2_mK (node, self)`) и
+обходится общим путём метода. Свои поля процедуры — поля Structure: `l2_own_mslot` берёт слот по имени
+(`l2_ns_slot_named`). Данные — сама Structure (у экземпляра, срез 4, — экземпляр), `self` = данные. Исполнение — вызов
+процедуры: CALL(код = её вхождение, данные = S) у корня и в обходе, нативно — та же пара через `lmx_call_prim` (натив
+вхождения — трамплин процедуры, owner = данные).
+
+**Три отступления от плана §12.**
+
+1. *Голова 2, не 0.* План давал процедуре голову 0, «как у E». При посадке обходчик прочёл первое управляющее тело
+   процедуры как часть `args` и отказал вызову (INVALID): `lmx_walk_arg_arity` читает слот 0 вхождения, если это простая
+   Structure. Это та дыра, о которой fable_pc спрашивал до кода (REVIEW fd7d396, вопрос 1: голова 0 у дочернего
+   вхождения — сочетание, которого нет). Теперь у процедуры обе части заголовка, как у любого метода, и обе пустые. Свои
+   её поля лежат в Structure, поэтому во вхождении за заголовком только управляющие тела и шаги обхода
+   (`l2_m_own_count` = 0 для процедуры). Пустая Structure получает вхождение из двух пустых частей.
+2. *Управляющие тела и поля, объявленные в блоке тела, живут во вхождении процедуры, как у метода, а не в узле
+   Structure.* Ширина узла — его тип: допуск и merge сравнивают по детям. Пути `Counter\t` к полю блока нет.
+   - Нативно тело достаётся через вхождение.
+   - В обходе кадр берёт само тело как простую Structure (`l2_rw_host_at`): держатель, равный исполняемому коду, ядро
+     читает как данные активации (`lmx_walk_data_holder`), а данные процедуры — Structure.
+3. *`l2_emit_ns_exec`, `l2_rw_ns_call`, `l2_rw_ns_var_call` остались.* Теперь они пишут вызов процедуры (код —
+   вхождение, данные — S). Общий вызов метода берёт данными вхождение, поэтому свой вызов с данными S и есть
+   «исполнение Structure».
+
+**Снято.**
+- Особый путь тела: переменная `l2_rw_ns` и пять её ветвей, `l2_rw_ns_body`, `l2_rw_ns_item`, `l2_rw_ns_ty`,
+  `l2_rw_ns_at`, `l2_ns_kind_ty`.
+- Узлы кода: `l2_nsx_base`, `l2_nsx_rank`, `l2_nsx_count`.
+- Мёртвый блок `if: 0`.
+- Особые отказы «named Structure body not walkable yet: …» и «a named Structure's return carries no value».
+
+**Разбор тела — одно правило.** Поле — только форма объявления: `l2_ns_decl_first`, та же проверка, что узнаёт первое
+поле именованной Structure. Всё прочее — оператор:
+- вызов ресивера: `return`, `if`, `else`, `while`, `for`, метод единицы, где бы ни стоял (`l2_unit_names_method`);
+- присваивание полю;
+- `cells[1]: …`, `x\f: …`, `g: 5`, `sendMessage: …`.
+
+Первая попытка — «не имя и не слово объявления» по `l2_ident` — прочла `int:` как оператор: `l2_ident` не пускает
+ключевые слова C. Это поймал инвариант регистрации.
+
+**Общие правки, найденные по пути.**
+- *Пустое тело.* `E: ()` проверка отказывала без места («unsupported body» в 1:1, `l2_check_body`). Пустая Structure
+  законна (book §10): проверять нечего.
+- *«unresolved name» — у места чтения.* Свободное имя метода говорилось на строке метода, у корня и у процедуры — в 1:1.
+  Запись свободного имени хранит текст чтения (`l2_dyn_add`), а у каждого атома свой текст
+  (`lm_p0_append_atom_slice`). Поэтому узел находится по указателю (`l2_node_of_text`, `l2_free_name_at`); если не
+  нашёлся, место прежнее.
+- *`return` со значением в вызываемом без результата* (`sub:`, процедура) — одни слова в любом месте тела: «return
+  with a value in a callable that returns nothing». Было «unsupported body» (Q45: одни слова в любом месте). Корень
+  сохраняет свои слова, «return with a value at the root».
+
+**Инварианты.**
+1. *При регистрации:* каждое своё поле процедуры — поле Structure (`l2_own_mslot` ≥ 0). Иначе located «internal: a
+   declaration of a named Structure's body is not a field of the Structure».
+2. *В раскладке* (`l2_layout_owns`): ребёнок, к которому обращается код своего поля процедуры, — слот поля Structure
+   того же имени, найденный заново по имени. Иначе located «internal: a named Structure's procedure addresses an own
+   field outside the Structure's field of that name».
+
+Первый ловит поле, которого нет в Structure; второй — поле не в том слоте. Для недостающего поля оба слота равны −1,
+поэтому нужны оба.
+
+**Ответы fable_pc (раунд 10:34 UTC).**
+1. *dead_tail.* Хвост — операторы после голого `return` тела: мёртвый код, который проверяется, как мёртвый код
+   метода. У `unit_named_struct_exec_return` хвост `n: n + 5U` законен (читает своё поле) и не исполняется: n = 1, не 6.
+   У `unit_named_struct_dead_tail_refused` хвост читает g, которого не объявляет ни Structure, ни единица и не передаёт
+   вызывающий. Это свободное имя процедуры, которое никто не связывает, — «unresolved name» у g (7:12), общий отказ.
+   Прежние слова называли предел особого пути: только свои числовые поля Structure.
+2. *Переименования.*
+   - `unit_named_struct_exec_array_refused` → `unit_named_struct_exec_array`: массив в теле — как у метода. Хранится в
+     поле Structure и держит записанное между исполнениями, как массив метода между вызовами (`unit_for_own_arrays`):
+     два исполнения дают seen 6, twin-метод с тем же телом — тоже 6.
+   - `unit_named_struct_stmt_operand_refused` → `unit_named_struct_exec_unit_field`: тело читает поле единицы через
+     пространство над собой, как тело метода: 2, затем 5.
+3. *Изменившиеся строки корпуса* — ниже.
+
+**Корпус.** Переводчик 2a48dc7 (50abcae) против среза, каждый `tests/*.lm2` и `*.lm2` песочницы, оба режима, с
+`convert.lm2` и `primitive.lm2` рядом. 909 файлов, 1818 прогонов: 1738 тождественны, 80 различны — 40 файлов, каждый в
+обоих режимах одинаково.
+
+*«unresolved name» у места чтения* — 9 файлов:
+
+| Файл | Было | Стало |
+|---|---|---|
+| `entry_unresolved` | 2:5 (строка метода) | 3:21 (`z`) |
+| `unit_bare_unknown_refused` | 1:1 | 2:1 (`nothing`) |
+| `unit_discard_unknown_refused` | 1:1 | 3:1 (`nothing`) |
+| `unit_dyn_miss` | 1:1 | 2:9 (`quote`) |
+| `unit_own_pointer_fields` | 7:5 (строка метода) | 10:13 (`first`) |
+| `unit_upper_undeclared_refused` | 4:1 (строка метода) | 6:8 (`NOPE`) |
+| `unit_unresolved_name_located_refused` (новый) | 3:1 | 5:8 |
+| `unit_root_unresolved_name_located_refused` (новый) | 1:1 | 4:5 |
+| `unit_named_struct_dead_tail_refused` | особые слова, 7:12 | «unresolved name», 7:12 |
+
+*Слова `return` со значением* — 4 файла:
+- `unit_sub_retval`: 2:5 «unsupported body» → общие слова;
+- `unit_sub_return_value_refused` (новый): 7:9, то же;
+- `unit_named_struct_return_value_refused`: 6:5 «a named Structure's return carries no value» → общие слова;
+- `unit_named_struct_return_value_block_refused` (новый): у 2a48dc7 было 3:1 «a Structure reference field needs a
+  name», теперь 6:9, общие слова.
+
+*Неперехваченный throw* — `unit_named_struct_throw_refused` (новый): 12:8 «named Structure body not walkable yet: a
+call» → 12:8 «unhandled throw: Oops».
+
+*Таблица* — `unit_s7_tbl_nested_table`: 2:1 «a Structure reference field needs a name» → 3:5 «assignment target must be
+a declared typed mutable value». Это файл таблицы строки `unit_s7_tbl_nested`, переведённый корпусом как программа;
+сама строка не меняется. `table:` в теле `group:` теперь оператор, а ресивер `table` в теле пока не знают — это
+следующий срез таблиц (Q46).
+
+*Новое L1 (rc 0 в обоих)* — `unit_named_struct_exec`, `_exec_empty`, `_exec_fields`, `_exec_instance`,
+`_exec_method`, `_exec_return`, `_exec_two`, `_exec_two_types`, `unit_named_struct_return`, `unit_named_struct_stmt`,
+`unit_walk_named_struct_exec_method`, `unit_walk_named_struct_exec_two`. Тело теперь пишется путём метода; исполнение
+проверено строками харнесса.
+
+*Новые файлы, которые 2a48dc7 отказывает, а срез исполняет:*
+- `_exec_array`, `_exec_block_field`, `_exec_call`, `_exec_catch`, `_exec_ctl_method`, `_exec_for`, `_exec_if`,
+  `_exec_return_in_block`, `_exec_unit_field`, `_exec_while`;
+- три `unit_walk_…` к ним.
+
+Остальные 869 файлов тождественны.
+
+**Свидетели** (`tools/l2_harness.ps1`, блок §12). Прежние строки — те же результаты, кроме названных выше. Новые:
+- `unit_named_struct_exec_if`, `_while`, `_return_in_block` — из корня;
+- `unit_named_struct_exec_call` — метод выше и метод ниже Structure, с именем в аргументе;
+- `unit_named_struct_exec_for`;
+- `unit_named_struct_exec_ctl_method` — всё это из метода — и `unit_walk_named_struct_exec_ctl_method`;
+- `unit_named_struct_exec_block_field` и `unit_walk_…_block_field`;
+- `unit_named_struct_exec_catch` и `unit_walk_…_catch`;
+- отказы: `unit_named_struct_throw_refused`, `unit_named_struct_return_value_block_refused`,
+  `unit_sub_return_value_refused`, `unit_unresolved_name_located_refused`,
+  `unit_root_unresolved_name_located_refused`;
+- `unit_named_struct_nested_stmt_refused` — прежний отказ, строки у него не было;
+- `unit_named_struct_exec_array` и `_exec_unit_field` — переименованы.
+
+Отказы с местом в Needle.
+
+**Мутанты** (копией, по поведению, оба режима; C каждого отличен от C среза):
+
+| Мутант | Что сломано | Результат |
+|---|---|---|
+| code | исполнение называет кодом S, не процедуру (место прежнего узла кода) | `_exec_if`, `_exec_method`, `unit_walk_…_ctl_method` красные |
+| data | процедура исполняется над своим вхождением, `self` — не данные | `_exec`, `_exec_if`, `_exec_method` красные |
+| slots2 (fable_pc) | свои слоты процедуры считаются, как у метода, от частей заголовка | инвариант раскладки говорит у объявления (8:5, 5:5) |
+| slots2_noguard | то же без инварианта | программа падает, «own field 0 has no cell» |
+| head0 | голова 0 | `_exec_empty` и `unit_walk_…_block_field` красные; `_exec` зелёная — без тел и с шириной ≥ 2 голова не видна |
+| holder | обходное тело блока через данные | обходная строка красная, нативная зелёная |
+| class_decl | элемент не формы объявления прочитан как поле | `_exec_array` отказана |
+| class_method | только методы выше | `_exec_call` отказана («unknown nested Structure reference») |
+| class_size | `size_t:` прочитан как оператор | инвариант регистрации говорит у объявления (5:5, 11:5) |
+| class_size_noguard | то же без инварианта | перевод идёт дальше и падает у читателя вдали: 13:8 «root operation not walkable yet: a field path», 32:5 «unknown field path segment» |
+| loc | прежнее место свободного имени | три строки с местом красные |
+| ret | прежние слова `return` | три строки `return` красные |
+| empty_check | пустое тело снова отказано | `_exec_empty` красная |
+| nested | оператор вложенной не отказан | её строка красная: переводится и исполняется, оператор отброшен |
+| owncount | свои поля процедуры снова считаются во вхождении | эквивалентен: у мёртвых детей нет читателя; изменение — раскладка без поведения |
+| class_int | первая попытка правила | `_exec_array` отказана раньше, в раскладке, — свидетель инварианта не он, а class_size |
+
+**Остаётся.**
+- Операторы вложенных и квалифицированных именованных Structure. Отказ в своих словах, теперь со строкой; следующий шаг
+  — как вложенные методы.
+- Ресивер `table` в теле (Q46, следующий срез таблиц).
+- Поле-вызываемое `fn: name` в теле исполняемой Structure. Путь метода говорит «unsupported body» (4:5); раньше
+  отказывал особый путь.
+- Формы `for: n < 3U` в LMX нет: общий путь говорит «unsupported loop», а LMX-форма `for: int(i, 0) (i < 3) i++`
+  исполняется.

@@ -1,0 +1,18 @@
+# steps/named-struct-exec.md §12 (Q45): a bare `return` in a block of a named Structure's body ends the
+# execution there, as in a method's body -- n is 7, not 100 (before: "a Structure reference field needs a
+# name").  Entry 7.
+Counter:
+    size_t: n 0U
+    n: n + 7U
+    if: n = 7U
+        return
+    n: 100U
+return
+Counter
+size_t: after 9U
+after: Counter\n
+int: ok 0
+if: after = 7U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

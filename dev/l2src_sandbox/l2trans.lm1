@@ -42,6 +42,19 @@ int: l2_loop_depth 0
 int: l2_scope_n 0
 int: l2_scope_cap 0
 @@: LmP0Node l2_scope_at 0
+# steps/free-names.md M2: the waited checks.  A check that needs the type of a value (or of a hidden argument it
+# assigns) whose dynamic input the closure has not typed yet is kept -- six ints per check in l2_wait_i: kind (1:
+# l2_colon_check_assignment's statement, 2: l2_check_value_convert_field's span), method, span count, place type,
+# first and count of its scope stack in l2_wait_scope; its site in l2_wait_site -- and runs again at the same site
+# after l2_dyn_close (l2_wait_run).
+int: l2_wait_n 0
+int: l2_wait_cap 0
+int: l2_wait_on 0
+@: int l2_wait_i 0
+@@: void l2_wait_site 0
+int: l2_wait_sn 0
+int: l2_wait_scap 0
+@@: LmP0Node l2_wait_scope 0
 int: l2_indent_n 0
 int: l2_indent_cap 0
 @@: char l2_indent_at 0
@@ -883,6 +896,11 @@ prototype:
     fn: l2_dyn_close (const: @(char path)) int
     fn: l2_dyn_step (const: @(char path); @: int changed) int
     fn: l2_dyn_typed (const: @(char path)) int
+    fn: l2_wait_name (int: mi; const: @(LmP0Text t)) int
+    fn: l2_waits (@: LmP0Field field; int: n; int: mi) int
+    fn: l2_wait_add (int: kind; int: mi; @: void site; int: n; int: to; const: @(char path)) int
+    fn: l2_wait_run (const: @(char path)) int
+    fn: l2_wait_free () int
     fn: l2_scan_fields (@: LmP0Field field; int: n; int: mi; @: int seen) int
     fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
@@ -1664,6 +1682,7 @@ fn: l2_release () int
     l2_intern_cap: 0U
     l2_own_free()
     l2_scope_free()
+    l2_wait_free()
     l2_indent_free()
     l2_pub_free()
     l2_for_free()
@@ -3863,6 +3882,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_loop_depth: 0
     l2_scope_n: 0
     l2_scope_free()
+    l2_wait_free()
     l2_indent_free()
     l2_pub_free()
     l2_for_free()
@@ -4046,6 +4066,9 @@ fn: l2_parse_library (const: @(char path)) int
     if: l2_reach_close(path) != 0
         return: 1
     if: l2_dyn_close(path) != 0
+        return: 1
+    # steps/free-names.md M2/M3: the checks that waited for the dynamic inputs' types run now.
+    if: l2_wait_run(path) != 0
         return: 1
     if: l2_collect_asgn_binds(path) != 0
         return: 1
@@ -7771,6 +7794,9 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
     @: LmP0Field only
     if: field = 0 || n < 1 || to_ft = 8 || l2_prim_code_name(to_ft) = 0
         return: 0
+    # steps/free-names.md M2: a value reading a dynamic input the closure has not typed yet waits for its type.
+    if: l2_waits(field, n, mi) != 0
+        return: l2_wait_add(2, mi, (cast: (@: void) field), n, to_ft, path)
     only: l2_next_active(field)
     if: only = 0
         return: 0
@@ -8030,6 +8056,10 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     n: l2_count_active(stmt\as\frame\body)
     if: n < 1
         return: 0
+    # steps/free-names.md M2: a value, or a hidden argument it assigns, that reads a dynamic input the closure has not
+    # typed yet waits for its type.
+    if: l2_waits(stmt\as\frame\body\first_field, n, mi) != 0 || l2_wait_name(mi, stmt\as\frame\head) != 0
+        return: l2_wait_add(1, mi, (cast: (@: void) stmt), n, 0, path)
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         return: 0
     if: target_ty >= 100 && l2_foreign_const[target_ty - 100] != 0
@@ -9526,6 +9556,19 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             # l2_emit_body's own-decl-line branch -- same Q24 fix, this statement's own row.
             fa: l2_own_decl_name(stmt)
             oi: l2_own_find_decl(mi, fa, stmt)
+            # steps/free-names.md M1: the initializer is read before the declared name is bound, and its names are
+            # reads as anywhere else -- a free one is a dynamic input of the method, as the pointer-local branch
+            # below reads its own initializer.  Its own name reads the occurrence declared before it (Q24 = A,
+            # D-48: l2_own_excl, as the emitter reads it).  An array declaration's fields are its element type, name
+            # and count.
+            if: l2_own_array_count(stmt) = 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) = 2
+                last: l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next)
+                l2_own_excl: oi
+                if: last != 0 && last\value != 0 && l2_scan_node(last\value, mi, seen) != 0
+                    l2_own_excl: 0 - 1
+                    return: 1
+                l2_own_excl: 0 - 1
+            ---
             if: oi >= 0 && seen != 0
                 seen[oi]: 1
             field: l2_next_active(field\next)
@@ -9766,6 +9809,166 @@ fn: l2_dyn_close (const: @(char path)) int
         if: l2_dyn_step(path, @ changed) != 0
             return: 1
 return: l2_dyn_typed(path)
+
+# steps/free-names.md M2: is t a dynamic input of mi that the closure has not typed yet?  Never while the waited
+# checks run (l2_wait_on): by then every input has its type, or l2_dyn_typed refused it as unresolved.
+fn: l2_wait_name (int: mi; const: @(LmP0Text t)) int
+    int: k
+    if: l2_wait_on != 0 || mi < 0 || mi >= l2_m_n || t = 0 || l2_m_dyn = 0 || l2_m_dyn[mi] = 0
+        return: 0
+    k: l2_dyn_find(mi, t)
+    if: k >= 0 && l2_dt(mi, k) = 0
+        return: 1
+return: 0
+
+# Does a span of n fields read such an input -- an atom of it, or of a parenthesized Structure in it?  A call is a
+# site of its own: its actuals wait at the call, and its result has its callee's type.
+fn: l2_waits (@: LmP0Field field; int: n; int: mi) int
+    @: LmP0Field f
+    int: i 0
+    f: l2_next_active(field)
+    while: i < n && f != 0
+        if: f\value != 0 && f\value\as != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_wait_name(mi, f\value\as\atom) != 0
+            return: 1
+        if: f\value != 0 && f\value\as != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as\structure != 0 && l2_waits(f\value\as\structure\first_field, l2_count_active(f\value\as\structure), mi) != 0
+            return: 1
+        f: l2_next_active(f\next)
+        i: i + 1
+return: 0
+
+# Keep a waited check: its six ints, its site, and a copy of the scope stack it is checked under.  0: kept; 1: error.
+fn: l2_wait_add (int: kind; int: mi; @: void site; int: n; int: to; const: @(char path)) int
+    size_t: cap
+    size_t: psz
+    @: int ni 0
+    @@: void np 0
+    @@: LmP0Node ns 0
+    int: i 0
+    psz: c.sizeof(@: char)
+    if: l2_wait_n >= l2_wait_cap
+        cap: (cast: (size_t) l2_wait_cap) * 2U
+        if: cap < 8U
+            cap: 8U
+        if: cap > (cast: (size_t) c.INT_MAX) || l2_mul_ok(cap, 6U * c.sizeof(c.int)) = 0 || l2_mul_ok(cap, psz) = 0
+            l2_alloc_err: 2
+            return: l2_alloc_or(path, 0, "out of memory")
+        l2_alloc_kind: 5
+        ni: (cast: (@: int) l2_xmalloc(cap * 6U * c.sizeof(c.int)))
+        if: ni = 0
+            return: l2_alloc_or(path, 0, "out of memory")
+        l2_alloc_kind: 5
+        np: (cast: (@@: void) l2_xmalloc(cap * psz))
+        if: np = 0
+            l2_xfree((cast: (@: void) ni))
+            return: l2_alloc_or(path, 0, "out of memory")
+        while: i < l2_wait_n * 6
+            ni[i]: l2_wait_i[i]
+            i: i + 1
+        i: 0
+        while: i < l2_wait_n
+            np[i]: l2_wait_site[i]
+            i: i + 1
+        if: l2_wait_i != 0
+            l2_xfree((cast: (@: void) l2_wait_i))
+        if: l2_wait_site != 0
+            l2_xfree((cast: (@: void) l2_wait_site))
+        l2_wait_i: ni
+        l2_wait_site: np
+        l2_wait_cap: (cast: (int) cap)
+    ---
+    if: l2_wait_sn + l2_scope_n > l2_wait_scap
+        cap: (cast: (size_t) l2_wait_scap) * 2U
+        if: cap < 8U
+            cap: 8U
+        while: cap < (cast: (size_t) (l2_wait_sn + l2_scope_n))
+            cap: cap * 2U
+        if: cap > (cast: (size_t) c.INT_MAX) || l2_mul_ok(cap, psz) = 0
+            l2_alloc_err: 2
+            return: l2_alloc_or(path, 0, "out of memory")
+        l2_alloc_kind: 5
+        ns: (cast: (@@: LmP0Node) l2_xmalloc(cap * psz))
+        if: ns = 0
+            return: l2_alloc_or(path, 0, "out of memory")
+        i: 0
+        while: i < l2_wait_sn
+            ns[i]: l2_wait_scope[i]
+            i: i + 1
+        if: l2_wait_scope != 0
+            l2_xfree((cast: (@: void) l2_wait_scope))
+        l2_wait_scope: ns
+        l2_wait_scap: (cast: (int) cap)
+    ---
+    i: 0
+    while: i < l2_scope_n
+        l2_wait_scope[l2_wait_sn + i]: l2_scope_at[i]
+        i: i + 1
+    l2_wait_i[6 * l2_wait_n]: kind
+    l2_wait_i[6 * l2_wait_n + 1]: mi
+    l2_wait_i[6 * l2_wait_n + 2]: n
+    l2_wait_i[6 * l2_wait_n + 3]: to
+    l2_wait_i[6 * l2_wait_n + 4]: l2_wait_sn
+    l2_wait_i[6 * l2_wait_n + 5]: l2_scope_n
+    l2_wait_site[l2_wait_n]: site
+    l2_wait_sn: l2_wait_sn + l2_scope_n
+    l2_wait_n: l2_wait_n + 1
+return: 0
+
+# steps/free-names.md M2/M3: after l2_dyn_close every waited check runs at its site -- in its method, under the scope
+# stack it was checked under, with the dynamic inputs typed -- and the edges it notes (a conversion's receiver,
+# l2_convert_edge) are closed again: throws, reach, dynamic inputs.
+fn: l2_wait_run (const: @(char path)) int
+    int: w 0
+    int: j
+    int: mi
+    int: base
+    int: rc 0
+    if: l2_wait_n = 0
+        return: 0
+    base: l2_scope_n
+    l2_wait_on: 1
+    while: w < l2_wait_n && rc = 0
+        mi: l2_wait_i[6 * w + 1]
+        l2_vis_method(mi)
+        l2_cur_mi: mi
+        j: 0
+        while: j < l2_wait_i[6 * w + 5] && rc = 0
+            if: l2_scope_push(l2_wait_scope[l2_wait_i[6 * w + 4] + j]) != 0
+                rc: l2_alloc_or(l2_method_src(mi, path), 0, "out of memory")
+            j: j + 1
+        if: rc = 0 && l2_wait_i[6 * w] = 1
+            rc: l2_colon_check_assignment((cast: (@: LmP0Node) l2_wait_site[w]), mi, l2_method_src(mi, path))
+        if: rc = 0 && l2_wait_i[6 * w] = 2
+            rc: l2_check_value_convert_field((cast: (@: LmP0Field) l2_wait_site[w]), l2_wait_i[6 * w + 2], l2_wait_i[6 * w + 3], mi, l2_method_src(mi, path))
+        while: l2_scope_n > base
+            l2_scope_pop()
+        w: w + 1
+    l2_wait_on: 0
+    l2_cur_mi: 0 - 1
+    l2_vis_on: 0
+    if: rc != 0
+        return: 1
+    if: l2_throws_close() != 0
+        return: 1
+    if: l2_reach_close(path) != 0
+        return: 1
+return: l2_dyn_close(path)
+
+fn: l2_wait_free () int
+    if: l2_wait_i != 0
+        l2_xfree((cast: (@: void) l2_wait_i))
+    if: l2_wait_site != 0
+        l2_xfree((cast: (@: void) l2_wait_site))
+    if: l2_wait_scope != 0
+        l2_xfree((cast: (@: void) l2_wait_scope))
+    l2_wait_i: 0
+    l2_wait_site: 0
+    l2_wait_scope: 0
+    l2_wait_n: 0
+    l2_wait_cap: 0
+    l2_wait_sn: 0
+    l2_wait_scap: 0
+    l2_wait_on: 0
+return: 0
 
 
 # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1 / FABLE-GROKBOT-RAW-MEMBER-ROOT-AND-7A-CLOSE-20260923-126 part1:
@@ -18210,6 +18413,9 @@ fn: l2_parse_unit (const: @(char path)) int
     if: l2_reach_close(path) != 0
         return: 1
     if: l2_dyn_close(path) != 0
+        return: 1
+    # steps/free-names.md M2/M3: the checks that waited for the dynamic inputs' types run now.
+    if: l2_wait_run(path) != 0
         return: 1
     if: l2_collect_asgn_binds(path) != 0
         return: 1
@@ -28222,6 +28428,9 @@ fn: l2_reach_close (const: @(char path)) int
     int: b 0
     int: k 0
     int: dyn 0
+    # It runs again after the waited checks (steps/free-names.md M3): the previous matrix is replaced, not leaked.
+    if: l2_m_reach != 0
+        l2_xfree((cast: (@: void) l2_m_reach))
     l2_m_reach: (cast: (@: int) l2_xmalloc(n * c.sizeof(c.int)))
     if: l2_m_reach = 0
         return: l2_error(path, 0, "out of memory")

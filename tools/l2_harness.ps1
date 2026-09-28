@@ -2744,14 +2744,17 @@ $fixtures = @(
         Needle = 'unsupported index'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    # missing_value is a free name no caller binds: "unresolved name" at the name (l2_dyn_typed), before the
+    # assignment's check, which waits for the name's type (steps/free-names.md M2).
     [pscustomobject]@{ Name = 'unit_colon_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment value has unknown type'; Absent = @(); Debt = @() },
+        Needle = 'unit_colon_unknown_value_refused.lm2:2:10: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_incompatible_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_graph_const_target_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'const write'; Absent = @(); Debt = @() },
+    # The same for a graph target: missing_graph is unresolved, said at the name (steps/free-names.md M2).
     [pscustomobject]@{ Name = 'unit_colon_graph_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment value has unknown type'; Absent = @(); Debt = @() },
+        Needle = 'unit_colon_graph_unknown_value_refused.lm2:2:12: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_graph_update_admission_blocked.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
     # Two identical full qualifier occurrences get distinct physical profile identities.
@@ -3022,7 +3025,7 @@ $fixtures = @(
     # its root, in a method's body -- and at depth in a method of a part; two parts with one table name,
     # refused with both places; a program that converts with no conversion table, refused at the edge.  A
     # part gives methods, source tables and (§10, the block below) its root's fields and statements; a
-    # method of a part reads its free names from its callers (the book :1178) -- m's own k, 9, not the
+    # method of a part reads its free names from its callers (the book :1182) -- m's own k, 9, not the
     # source's field k, 5 -- and one no caller binds is
     # unresolved at its read, in the part.  A `table:` without `source` is refused in its own words.
     # Mutants (steps/table-receiver.md §9, each by copy, both modes): tables only at a file's root -- the
@@ -3096,7 +3099,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_part_root_hidden.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_hidden.lm2:6:9: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_src_refused.lm2'; Parts = @('unit_s7_part_root_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_root_src_refused_part.lm2:4:1: assignment value has unknown type'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_root_src_refused_part.lm2:4:4: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_below_refused.lm2'; Parts = @('unit_s7_part_root_below_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_below_refused_part.lm2:4:5: assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_ns_refused.lm2'; Parts = @('unit_s7_part_root_ns_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
@@ -3409,6 +3412,60 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_actual_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # A free name under the type checks (book :1180, :1182; steps/free-names.md): a dynamic input is a value of its
+    # binding's type, under the rule a local of that type is under.  The check reads types before l2_dyn_close gives
+    # the inputs theirs, so a check whose value (or the hidden argument it assigns) reads an input without a type
+    # waits: it runs after the closure at the same site, in its method and scope stack, and the edges it notes are
+    # closed again (M2, M3); the scan reads a declaration's initializer (M1).  Witnesses, each also walked: int ->
+    # size_t through a free name in a return, a composite, an argument and a hidden argument's field (B: accepted
+    # before with an L1 that cannot build), its refusal caught and uncaught; `r: k` and a declaration's
+    # initializer (D: refused before); a mix with a typed local, at the method and inside an if body (A: accepted
+    # before, the C compiler decided); char -> size_t (C: internal words before).
+    # Mutants (copies of the translator, each row in both modes):
+    #   the waited checks never run -- every witness red except the char assignment, which the emitter's store
+    #     conversion refuses in the same words;
+    #   no check waits (the sites as before) -- all red;
+    #   the closures not run again -- the runnable rows' L1 cannot build;
+    #   M1 removed -- the declaration's initializer is "unresolved name";
+    #   the waited check run without its scope stack -- the if-body mix is accepted;
+    #   M1's initializer read with the declaration's own row visible (Q24 = A broken) -- unit_root_decl_init_prev
+    #     and unit_q24_repeated_decl, above, refused.
+    [pscustomobject]@{ Name = 'unit_free_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_conv_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_conv_catch.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_assign.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_assign.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_decl_init.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_decl_init.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_mixed_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_mixed_refused.lm2:5:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_mixed_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_free_mixed_refused.lm2:5:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_ctx_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_ctx_refused.lm2:6:17: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_ctx_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_free_ctx_refused.lm2:6:17: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_conv_norow_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_conv_norow_refused.lm2:5:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_conv_norow_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_free_conv_norow_refused.lm2:5:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_assign_mixed_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_assign_mixed_refused.lm2:5:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_assign_mixed_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_free_assign_mixed_refused.lm2:5:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:14:5: more arguments than bar has formals'; Absent = @(); Debt = @() },

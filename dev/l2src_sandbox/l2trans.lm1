@@ -526,27 +526,37 @@ int: l2_rw_pn 0
 []: char l2_ctok 2048
 int: l2_cv_ready 0
 int: l2_cv_failed 0
-int: l2_cv_cell_n 0
-# implements-port slice 11 (B2): the conversion table's columns by name.  For the table's k-th column,
-# its place among from, to, forbidden, kind, receiver, impl (the order l2_cv_cell keeps a row in);
-# their number; the column the next row cell belongs to; the row being filled.
-[]: int l2_cv_colmap 32
-int: l2_cv_ncol 0
-int: l2_cv_col 0
-int: l2_cv_row 0
-# The table's `rows:` frame, where a refusal of its rows is said (REVIEW f2a1578).
-@: LmP0Node l2_cv_rows_at 0
+# The conversion table among the translation's source tables (l2_tb_*), and the columns the conversion
+# reads, found by their names -- from, to, forbidden, receiver, impl (l2_convert_colname).
+int: l2_cv_t 0
+[]: int l2_cv_c 5
 int: l2_cv_gap 0
 # 1 once the conversion table's own reading said why it cannot be read (a located diagnostic in
 # convert.lm2): a use site then adds nothing (l2_cv_table_refused -- one cause, one line).
 int: l2_cv_said 0
 int: l2_cv_used 0
-[]: @(char) l2_cv_cell 960
-# Q43 (the author, 2026-09-27): a cell is an argument of any kind -- an atom, a Structure, an array --
-# so the table keeps each cell's node (its document stays for the translation, as the impl sources'
-# do); l2_cv_cell holds a name only for a cell that is one atom, and 0 for any other.
-[]: @(LmP0Node) l2_cv_arg 960
 @: LmP0Document l2_cv_doc 0
+# The receiver `table` (Q41, Q43; steps/table-receiver.md §5): the source tables of this translation.
+# Table t: its name (the one atom of its `name:` argument, or 0), its `columns:` argument, its first
+# column and number of columns in l2_tbc_name, its first cell and number of rows in l2_tbx_*.
+int: l2_tb_n 0
+[]: @(LmP0Text) l2_tb_name 8
+[]: @(LmP0Node) l2_tb_cols 8
+[]: int l2_tb_col0 8
+[]: int l2_tb_ncol 8
+[]: int l2_tb_cell0 8
+[]: int l2_tb_nrow 8
+[]: @(LmP0Text) l2_tbc_name 128
+int: l2_tbc_n 0
+# Q43 (the author, 2026-09-27): a cell is an argument of any kind -- an atom, a Structure, an array --
+# so a table keeps each cell's node (its document stays for the translation, as the impl sources'
+# do); l2_tbx_name holds a name only for a cell that is one atom, and 0 for any other.
+[]: @(LmP0Node) l2_tbx_arg 4096
+[]: @(char) l2_tbx_name 4096
+int: l2_tbx_n 0
+# The receiver's formals, read once from its header (l2_table_header); the header's document stays.
+[]: @(LmP0Text) l2_tb_formal 4
+@: LmP0Document l2_tb_sig 0
 # Q33: the impl sources rows name, parsed once; the receivers the edges need.
 []: @(char) l2_cv_impl_path 8
 []: @(LmP0Document) l2_cv_impl_doc 8
@@ -1216,7 +1226,6 @@ prototype:
     fn: l2_rw_ns_at (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
     fn: l2_rw_ns_call (int: ni; int: into; @: int out) int
     fn: l2_rw_ns_var_call (int: ni; int: oi; int: into; @: int out) int
-    fn: l2_convert_columns (const: @(LmP0Node node)) int
     fn: l2_rw_ns_count () int
     fn: l2_rw_ns_emit () int
     fn: l2_nsx_rank (int: ni) int
@@ -6292,84 +6301,202 @@ fn: l2_prim_code_name (int: ty) @: char
         return: "void"
     return: 0
 
-# The conversion rows are the `table:` in the translation input convert.lm2,
-# read by the same P0 parser as any other source, by the names of its
-# `columns:` (slice 11, B2: from, to, forbidden, kind, receiver, impl, in any
-# order; l2_convert_columns). The table's own name is not consulted. implements does not call a receiver: the assignment edge does.
-# The table is read at the first pair of different names, so a source that
-# converts nothing needs none. l2_cv_gap 1: no usable row. 2: the row's
-# receiver has no fn: in its impl source. 3: the table cannot be read. 4: the
-# impl source cannot be read.
-fn: l2_convert_keep (@: LmP0Field f) int
-    []: char buf 128
-    @: char copy
-    size_t: n
-    int: slot
-    int: at
-    # A row cell goes to the place of its column's name (slice 11, B2): the order the table writes
-    # its columns in decides nothing.
-    if: l2_cv_ncol = 0
-        return: l2_error("convert.lm2", l2_cv_rows_at, "conversion table rows come before its columns")
-    slot: l2_cv_colmap[l2_cv_col]
-    at: l2_cv_row * 6 + slot
-    l2_cv_col: l2_cv_col + 1
-    if: l2_cv_col >= l2_cv_ncol
-        l2_cv_col: 0
-        l2_cv_row: l2_cv_row + 1
-    ---
-    if: slot < 0
+# The receiver `table` (Q41, Q43; steps/table-receiver.md §3, §5).  Its header, as data: its formals are
+# read by the method-formal parser (l2_typed_formal), as any method's are, and a `table:` call's actuals
+# are bound to them by l2_bind_actuals, as any call's are (REVIEW 7dad13b, answer 3).  Each formal takes
+# an ordinary Structure (Q41).
+fn: l2_table_header () const: @: char
+return: "fn: table (@: Lmx source; @: Lmx name; @: Lmx columns; @: Lmx rows) Lmx"
+
+# The receiver's formals, read once: 0, or 1 said.
+fn: l2_table_formals () int
+    @: LmP0Document sig 0
+    const: @: LmP0Node root
+    @: LmP0Field f
+    @: LmP0Field p
+    @: LmP0Text fa
+    int: ty
+    int: k 0
+    if: l2_tb_sig != 0
         return: 0
-    if: at >= 960
-        return: l2_error("convert.lm2", 0, "conversion table is too large")
-    l2_cv_arg[at]: f\value
-    l2_cv_cell[at]: 0
-    if: l2_expr_span(f) != 1 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
-        return: 0
-    if: l2_tok_text(f\value\as\atom, buf, 128U) != 0
-        return: 1
-    n: c.strlen(buf) + 1U
-    copy: (cast: (@: char) l2_xmalloc(n))
-    if: copy = 0
-        return: 1
-    memcpy(copy, buf, n)
-    l2_cv_cell[at]: copy
+    if: lm_p0_parse_string(l2_table_header(), @ sig) != 0 || sig = 0
+        return: l2_error(l2_src, 0, "internal: the header of the receiver table does not parse")
+    root: lm_p0_document_root(sig)
+    f: 0
+    if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0 && root\as\structure != 0
+        f: l2_next_active(root\as\structure\first_field)
+    if: f = 0 || l2_frame_head(f\value, "fn") = 0 || f\value\as\frame\body = 0
+        return: l2_error(l2_src, 0, "internal: the header of the receiver table is not a method header")
+    f: l2_next_active(f\value\as\frame\body\first_field)
+    if: f != 0
+        f: l2_next_active(f\next)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0 || f\value\as\structure = 0 || l2_count_active(f\value\as\structure) != 4
+        return: l2_error(l2_src, 0, "internal: the receiver table does not declare four formals")
+    p: l2_next_active(f\value\as\structure\first_field)
+    while: p != 0 && k < 4
+        fa: 0
+        ty: 0
+        if: l2_typed_formal(p\value, l2_src, @ fa, @ ty) != 0
+            return: 1
+        l2_tb_formal[k]: fa
+        k: k + 1
+        p: l2_next_active(p\next)
+    l2_tb_sig: sig
 return: 0
 
-# The place of a column name among from, to, forbidden, kind, receiver, impl, or -1.
-fn: l2_convert_canon (const: @(LmP0Text name)) int
-    if: l2_text_eq(name, "from")
+# Two names the same: a quoted spelling (`name`) is the same name as its plain one (l2_payload_eq).
+fn: l2_payload_same (const: @(LmP0Text a); const: @(LmP0Text b)) int
+    const: @(char ad)
+    const: @(char bd)
+    size_t: an
+    size_t: bn
+    if: a = 0 || b = 0 || a\data = 0 || b\data = 0
         return: 0
-    if: l2_text_eq(name, "to")
-        return: 1
-    if: l2_text_eq(name, "forbidden")
-        return: 2
-    if: l2_text_eq(name, "kind")
-        return: 3
-    if: l2_text_eq(name, "receiver")
-        return: 4
-    if: l2_text_eq(name, "impl")
-        return: 5
-return: 0 - 1
+    ad: a\data
+    an: a\length
+    bd: b\data
+    bn: b\length
+    if: an >= 2U && ad[0] = 96 && ad[an - 1U] = 96
+        ad: ad + 1U
+        an: an - 2U
+    if: bn >= 2U && bd[0] = 96 && bd[bn - 1U] = 96
+        bd: bd + 1U
+        bn: bn - 2U
+    if: an != bn
+        return: 0
+return: memcmp(ad, bd, an) = 0
 
-# `columns: (class: from) (class: to) ...` -- each column is one frame, its name the last atom of that
-# frame's body (`(@: char kind)` names kind); a bare atom is a name too.  Every one of the six names
-# once; a column of another name is kept in the row and not read.
-fn: l2_convert_columns (const: @(LmP0Node node)) int
+# The actuals of a call bound to its formals (book §10: "Positional actual arguments precede named
+# ones").  Each actual is delimited as any actual is (l2_expr_span).  A positional one binds to the next
+# formal; a named one -- a Frame whose head is a formal's name -- to that formal, its body the value.
+# An argument given twice, an argument after a named one that names no formal or names none at all,
+# more positional ones than formals, a formal left without one: refused, located, in the book's words.
+# out_at[k] is formal k's first field; out_span[k] its span, 0 for a named one.  The receiver `table`
+# binds by it; an ordinary call still binds by position (l2_check_call; D-23's `Name: ()` aside) --
+# steps/table-receiver.md §5.
+fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(char callee); @@: LmP0Field out_at; @: int out_span; const: @(char path); const: @(LmP0Node at)) int
+    @: LmP0Field f
+    @: LmP0Frame fr
+    int: span
+    int: k 0
+    int: pos 0
+    int: named 0
+    []: char msg 200
+    while: k < nf
+        out_at[k]: 0
+        out_span[k]: 0
+        k: k + 1
+    f: l2_next_active(first)
+    while: f != 0
+        span: l2_expr_span(f)
+        if: span < 1
+            c.snprintf(msg, 200U, "an actual of %s is not an argument", callee)
+            return: l2_error(path, f\value, msg)
+        fr: 0
+        if: span = 1 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0
+            fr: f\value\as\frame
+        k: 0
+        while: fr != 0 && k < nf && l2_payload_same(fr\head, names[k]) = 0
+            k: k + 1
+        if: fr != 0 && k < nf
+            if: out_at[k] != 0
+                c.snprintf(msg, 200U, "the argument %.*s of %s is given twice", (cast: (int) names[k]\length), names[k]\data, callee)
+                return: l2_error(path, f\value, msg)
+            out_at[k]: f
+            out_span[k]: 0
+            named: 1
+        else:
+            if: named != 0 && fr != 0
+                c.snprintf(msg, 200U, "%.*s is not an argument of %s", (cast: (int) fr\head\length), fr\head\data, callee)
+                return: l2_error(path, f\value, msg)
+            if: named != 0
+                c.snprintf(msg, 200U, "a positional argument of %s after a named one", callee)
+                return: l2_error(path, f\value, msg)
+            if: pos >= nf
+                c.snprintf(msg, 200U, "more arguments than %s has formals", callee)
+                return: l2_error(path, f\value, msg)
+            out_at[pos]: f
+            out_span[pos]: span
+            pos: pos + 1
+        ---
+        f: l2_skip_span(f, span)
+    k: 0
+    while: k < nf
+        if: out_at[k] = 0
+            c.snprintf(msg, 200U, "%s has no argument %.*s", callee, (cast: (int) names[k]\length), names[k]\data)
+            return: l2_error(path, at, msg)
+        k: k + 1
+return: 0
+
+# A bound argument's fields: a named one's are its Frame's body; a positional Structure's are its own;
+# any other positional actual is its own span of fields.  *out_n: how many.
+fn: l2_arg_fields (@: LmP0Field a; int: span; @: int out_n) @: LmP0Field
+    @: LmP0Node v
+    \out_n: 0
+    if: a = 0 || a\value = 0
+        return: 0
+    v: a\value
+    if: span = 0
+        if: v\as = 0 || v\as\frame = 0 || v\as\frame\body = 0
+            return: 0
+        \out_n: l2_count_active(v\as\frame\body)
+        return: l2_next_active(v\as\frame\body\first_field)
+    if: span = 1 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0
+        \out_n: l2_count_active(v\as\structure)
+        return: l2_next_active(v\as\structure\first_field)
+    \out_n: span
+return: a
+
+# A `table:` call (Q41, Q43): its actuals bound to the receiver's formals by l2_bind_actuals.  Its name
+# is the one atom of its `name:` argument (a quoted spelling is the same name, l2_payload_same), one
+# name to one source table; a name of another form names no table (l2_table_find).  Its columns are its
+# `columns:` argument's formals, each named as a formal is named -- `(T: n)`, `(@: T n)`: the last atom
+# of the formal's frame; a bare atom is a name -- their types kept as written (a column's type is read
+# when the tables that define `class` and `categoryFlag` are: steps/table-receiver.md §5).  Its rows are
+# the chain of its `rows:` argument, each cell one actual (l2_expr_span) of any kind, cut into rows by
+# the number of columns -- the one place a table differs from an ordinary call, and by the author's norm
+# (Q43): N actuals a row to its N formals.
+fn: l2_table_call (const: @(LmP0Node call); const: @(char path)) int
+    []: @(LmP0Field) at 4
+    []: int span 4
     @: LmP0Field f
     @: LmP0Field g
     @: LmP0Node v
     @: LmP0Text name
-    []: int seen 6
-    int: k 0
-    []: char msg 160
-    while: k < 6
-        seen[k]: 0
-        k: k + 1
+    []: char buf 128
+    @: char copy
+    size_t: len
+    int: t
+    int: n
+    int: k
+    int: w
+    int: col 0
+    if: l2_table_formals() != 0
+        return: 1
+    if: l2_tb_n >= 8
+        return: l2_error(path, call, "too many source tables")
+    if: l2_bind_actuals(call\as\frame\body\first_field, 4, l2_tb_formal, "table", at, span, path, call) != 0
+        return: 1
+    t: l2_tb_n
+    l2_tb_name[t]: 0
+    f: l2_arg_fields(at[1], span[1], @ n)
+    if: n = 1 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0
+        l2_tb_name[t]: (cast: (@: LmP0Text) f\value\as\atom)
+        k: 0
+        while: k < t
+            if: l2_tb_name[k] != 0 && l2_payload_same(l2_tb_name[k], l2_tb_name[t])
+                return: l2_error(path, f\value, "two source tables have this name")
+            k: k + 1
+        ---
     ---
-    l2_cv_ncol: 0
-    l2_cv_col: 0
-    f: l2_next_active(node\as\frame\body\first_field)
-    while: f != 0
+    l2_tb_cols[t]: at[2]\value
+    l2_tb_col0[t]: l2_tbc_n
+    l2_tb_ncol[t]: 0
+    l2_tb_cell0[t]: l2_tbx_n
+    l2_tb_nrow[t]: 0
+    f: l2_arg_fields(at[2], span[2], @ n)
+    k: 0
+    while: k < n && f != 0
         v: f\value
         if: v != 0 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0 && l2_count_active(v\as\structure) = 1
             v: l2_next_active(v\as\structure\first_field)\value
@@ -6384,76 +6511,106 @@ fn: l2_convert_columns (const: @(LmP0Node node)) int
                 g: l2_next_active(g\next)
             ---
         ---
-        if: l2_cv_ncol >= 32
-            return: l2_error("convert.lm2", v, "conversion table has too many columns")
+        if: l2_tb_ncol[t] >= 32 || l2_tbc_n >= 128
+            return: l2_error(path, v, "a table has too many columns")
         if: name = 0
-            return: l2_error("convert.lm2", v, "a conversion table column needs a name")
-        k: l2_convert_canon(name)
-        if: k >= 0 && seen[k] != 0
-            return: l2_error("convert.lm2", v, "a conversion table column is named twice")
-        if: k >= 0
-            seen[k]: 1
-        l2_cv_colmap[l2_cv_ncol]: k
-        l2_cv_ncol: l2_cv_ncol + 1
+            return: l2_error(path, v, "a table column needs a name")
+        w: l2_tb_col0[t]
+        while: w < l2_tbc_n
+            if: l2_payload_same(l2_tbc_name[w], name)
+                return: l2_error(path, v, "a table column is named twice")
+            w: w + 1
+        l2_tbc_name[l2_tbc_n]: name
+        l2_tbc_n: l2_tbc_n + 1
+        l2_tb_ncol[t]: l2_tb_ncol[t] + 1
         f: l2_next_active(f\next)
-    ---
-    k: 0
-    while: k < 6
-        if: seen[k] = 0
-            if: k = 0
-                c.snprintf(msg, 160U, "conversion table has no column from")
-            if: k = 1
-                c.snprintf(msg, 160U, "conversion table has no column to")
-            if: k = 2
-                c.snprintf(msg, 160U, "conversion table has no column forbidden")
-            if: k = 3
-                c.snprintf(msg, 160U, "conversion table has no column kind")
-            if: k = 4
-                c.snprintf(msg, 160U, "conversion table has no column receiver")
-            if: k = 5
-                c.snprintf(msg, 160U, "conversion table has no column impl")
-            return: l2_error("convert.lm2", node, msg)
         k: k + 1
-    ---
+    f: l2_arg_fields(at[3], span[3], @ n)
+    k: 0
+    while: k < n && f != 0
+        w: l2_expr_span(f)
+        if: w < 1
+            return: l2_error(path, f\value, "a table cell is not an argument")
+        if: l2_tb_ncol[t] = 0
+            return: l2_error(path, at[3]\value, "table rows are not whole rows of its columns")
+        if: l2_tbx_n >= 4096
+            return: l2_error(path, f\value, "a table is too large")
+        l2_tbx_arg[l2_tbx_n]: f\value
+        l2_tbx_name[l2_tbx_n]: 0
+        if: w = 1 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0
+            if: l2_tok_text(f\value\as\atom, buf, 128U) != 0
+                return: l2_error(path, f\value, "a table cell is too long")
+            len: c.strlen(buf) + 1U
+            copy: (cast: (@: char) l2_xmalloc(len))
+            if: copy = 0
+                return: l2_alloc_or(path, f\value, "out of memory")
+            memcpy(copy, buf, len)
+            l2_tbx_name[l2_tbx_n]: copy
+        ---
+        l2_tbx_n: l2_tbx_n + 1
+        col: col + 1
+        if: col >= l2_tb_ncol[t]
+            col: 0
+            l2_tb_nrow[t]: l2_tb_nrow[t] + 1
+        ---
+        k: k + w
+        f: l2_skip_span(f, w)
+    if: col != 0
+        return: l2_error(path, at[3]\value, "table rows are not whole rows of its columns")
+    l2_tb_n: l2_tb_n + 1
 return: 0
 
-fn: l2_convert_walk (const: @(LmP0Node node)) int
+# The source tables of a translation input (lingvamyxa_prev's book :663, :684): a `table:` directly at
+# its root whose body begins with the atom `source` is built now, in source order.  Any other form is
+# not the translation's -- a `table:` without `source` is a runtime construction site, left to the
+# program (REVIEW 7dad13b, answer 1) -- and nothing below the root is looked into.
+fn: l2_table_source (const: @(LmP0Node root); const: @(char path)) int
     @: LmP0Field f
-    int: n
-    if: node = 0
+    @: LmP0Field g
+    if: root = 0 || root\kind != c.LM_P0_NODE_STRUCTURE || root\as = 0 || root\as\structure = 0
         return: 0
-    if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
-        f: l2_next_active(node\as\structure\first_field)
-        while: f != 0
-            if: l2_convert_walk(f\value) != 0
-                return: 1
-            f: l2_next_active(f\next)
-        return: 0
-    if: l2_frame_head(node, "columns") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
-        return: l2_convert_columns(node)
-    if: l2_frame_head(node, "rows") != 0 && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
-        l2_cv_rows_at: (cast: (@: LmP0Node) node)
-        f: l2_next_active(node\as\frame\body\first_field)
-        # Q43 (the author, 2026-09-27): `rows:` is a chain of ARGUMENTS -- an atom, a Structure, an
-        # array -- cut into rows by the number of columns, through the common gate of arguments: a cell
-        # is one actual, delimited as any actual list is (l2_expr_span), and kept whatever its kind.
-        # Nothing is implied and nothing refused here; a cell is never walked into, split or dropped.
-        while: f != 0
-            n: l2_expr_span(f)
-            if: n < 1
-                return: l2_error("convert.lm2", f\value, "a conversion table cell is not an argument")
-            if: l2_convert_keep(f) != 0
-                return: 1
-            f: l2_skip_span(f, n)
-        return: 0
-    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0
-        f: l2_next_active(node\as\frame\body\first_field)
-        while: f != 0
-            if: l2_convert_walk(f\value) != 0
-                return: 1
-            f: l2_next_active(f\next)
-        return: 0
+    f: l2_next_active(root\as\structure\first_field)
+    while: f != 0
+        if: l2_frame_head(f\value, "table") != 0 && f\value\as\frame\body != 0
+            g: l2_next_active(f\value\as\frame\body\first_field)
+            if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_payload_eq(g\value\as\atom, "source") != 0
+                if: l2_table_call(f\value, path) != 0
+                    return: 1
+                ---
+            ---
+        ---
+        f: l2_next_active(f\next)
 return: 0
+
+# The source table of this name (a quoted spelling is the same name), or -1.
+fn: l2_table_find (const: @(char name)) int
+    int: t 0
+    while: t < l2_tb_n
+        if: l2_tb_name[t] != 0 && l2_payload_eq(l2_tb_name[t], name) != 0
+            return: t
+        t: t + 1
+return: 0 - 1
+
+# Table t's column of this name, or -1.
+fn: l2_table_col (int: t; const: @(char name)) int
+    int: k 0
+    while: k < l2_tb_ncol[t]
+        if: l2_payload_eq(l2_tbc_name[l2_tb_col0[t] + k], name) != 0
+            return: k
+        k: k + 1
+return: 0 - 1
+
+# The columns the conversion reads, by name: its query of the table, which keeps any others.
+fn: l2_convert_colname (int: k) const: @: char
+    if: k = 0
+        return: "from"
+    if: k = 1
+        return: "to"
+    if: k = 2
+        return: "forbidden"
+    if: k = 3
+        return: "receiver"
+return: "impl"
 
 # A file beside the source: the table, or the impl source a row names. The
 # launch directory is not a second place to look.
@@ -6480,22 +6637,23 @@ fn: l2_convert_beside (const: @(char src); const: @(char leaf); @: char dst; siz
     dst[i]: 0
 return: 0
 
-# Read once, at the first pair that asks. A table that cannot be read stays
-# unread for the whole source: every pair then refuses at its own line.
+# Read once, at the first pair that asks: the source tables of convert.lm2 (l2_table_source), and of
+# them the table `primitive.convert`, its columns asked by name.  The table is read at the first pair of
+# different names, so a source that converts nothing needs none.  A table that cannot be read stays
+# unread for the whole source: every pair then refuses at its own line.  l2_cv_gap 1: no usable row.
+# 2: the row's receiver has no fn: in its impl source. 3: the table cannot be read. 4: the impl source
+# cannot be read.
 fn: l2_convert_load (const: @(char src)) int
     @: FILE raw 0
     @: LmP0Document document 0
     const: @: LmP0Node root
     []: char path 1024
+    []: char msg 160
+    int: k 0
     if: l2_cv_ready != 0
         return: l2_cv_failed
     l2_cv_ready: 1
     l2_cv_failed: 1
-    l2_cv_cell_n: 0
-    l2_cv_ncol: 0
-    l2_cv_col: 0
-    l2_cv_row: 0
-    l2_cv_rows_at: 0
     if: src = 0 || l2_convert_beside(src, "convert.lm2", path, 1024U) != 0
         return: 1
     raw: c.fopen(path, "rb")
@@ -6504,19 +6662,20 @@ fn: l2_convert_load (const: @(char src)) int
     fclose(raw)
     if: lm_p0_parse_file(path, @ document) != 0 || document = 0
         return: 1
-    root: lm_p0_document_root(document)
-    if: root = 0 || l2_convert_walk(root) != 0
-        lm_p0_document_destroy(document)
-        return: 1
-    if: l2_cv_row = 0 || l2_cv_col != 0
-        l2_error("convert.lm2", l2_cv_rows_at, "conversion table rows are not whole rows of its columns")
-        l2_cv_rows_at: 0
-        lm_p0_document_destroy(document)
-        return: 1
-    l2_cv_cell_n: l2_cv_row * 6
-    l2_cv_rows_at: 0
-    # The cells are nodes of this tree (l2_cv_arg): it stays for the translation.
+    # The tables keep nodes of this tree (l2_tbx_arg, l2_tbc_name): it stays for the translation.
     l2_cv_doc: document
+    root: lm_p0_document_root(document)
+    if: root = 0 || l2_table_source(root, "convert.lm2") != 0
+        return: 1
+    l2_cv_t: l2_table_find("primitive.convert")
+    if: l2_cv_t < 0
+        return: l2_error("convert.lm2", 0, "convert.lm2 has no source table `primitive.convert`")
+    while: k < 5
+        l2_cv_c[k]: l2_table_col(l2_cv_t, l2_convert_colname(k))
+        if: l2_cv_c[k] < 0
+            c.snprintf(msg, 160U, "conversion table has no column %s", l2_convert_colname(k))
+            return: l2_error("convert.lm2", l2_tb_cols[l2_cv_t], msg)
+        k: k + 1
     l2_cv_failed: 0
 return: 0
 
@@ -6592,9 +6751,15 @@ return: 0
 
 # The row for from_n -> to_n. Its receiver's fn: is left in l2_cv_body.
 fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
-    int: i 0
+    int: r 0
+    int: at
     int: k 0
     int: d0 0
+    @: char cf
+    @: char ct
+    @: char cx
+    @: char cr
+    @: char ci
     l2_cv_gap: 0
     l2_cv_body: 0
     if: from_n = 0 || to_n = 0
@@ -6605,30 +6770,37 @@ fn: l2_convert_hit (const: @(char from_n); const: @(char to_n)) @: char
             l2_cv_said: 1
         l2_cv_gap: 3
         return: 0
-    while: i + 5 < l2_cv_cell_n
-        # A cell gives a name only when it is one atom (l2_cv_cell); another argument is no type name,
+    while: r < l2_tb_nrow[l2_cv_t]
+        # A cell gives a name only when it is one atom (l2_tbx_name); another argument is no type name,
         # so it matches no from or to.  The row chosen needs a flag and names from its other cells:
         # where one of them is another argument, that is said at the cell -- evaluating a table
-        # argument is the `table` receiver's, not ported yet -- never read as a default.
-        if: l2_cv_cell[i] != 0 && l2_cv_cell[i + 1] != 0 && c.strcmp(l2_cv_cell[i], from_n) = 0 && c.strcmp(l2_cv_cell[i + 1], to_n) = 0
-            if: l2_cv_cell[i + 2] = 0 || l2_cv_cell[i + 4] = 0 || l2_cv_cell[i + 5] = 0
-                k: i + 5
-                if: l2_cv_cell[i + 4] = 0
-                    k: i + 4
-                if: l2_cv_cell[i + 2] = 0
-                    k: i + 2
-                l2_error("convert.lm2", l2_cv_arg[k], "a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)")
+        # argument by its column's type waits for the column types (steps/table-receiver.md §5) --
+        # never read as a default.
+        at: l2_tb_cell0[l2_cv_t] + r * l2_tb_ncol[l2_cv_t]
+        cf: l2_tbx_name[at + l2_cv_c[0]]
+        ct: l2_tbx_name[at + l2_cv_c[1]]
+        cx: l2_tbx_name[at + l2_cv_c[2]]
+        cr: l2_tbx_name[at + l2_cv_c[3]]
+        ci: l2_tbx_name[at + l2_cv_c[4]]
+        if: cf != 0 && ct != 0 && c.strcmp(cf, from_n) = 0 && c.strcmp(ct, to_n) = 0
+            if: cx = 0 || cr = 0 || ci = 0
+                k: at + l2_cv_c[4]
+                if: cr = 0
+                    k: at + l2_cv_c[3]
+                if: cx = 0
+                    k: at + l2_cv_c[2]
+                l2_error("convert.lm2", l2_tbx_arg[k], "a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)")
                 l2_cv_said: 1
                 l2_cv_gap: 3
                 return: 0
-            if: c.strcmp(l2_cv_cell[i + 2], "1") = 0 || c.strcmp(l2_cv_cell[i + 4], "None") = 0
+            if: c.strcmp(cx, "1") = 0 || c.strcmp(cr, "None") = 0
                 l2_cv_gap: 1
                 return: 0
-            l2_cv_body: l2_convert_body(l2_cv_cell[i + 4], l2_cv_cell[i + 5])
+            l2_cv_body: l2_convert_body(cr, ci)
             if: l2_cv_body = 0
                 return: 0
-            return: l2_cv_cell[i + 4]
-        i: i + 6
+            return: cr
+        r: r + 1
     l2_cv_gap: 1
 return: 0
 

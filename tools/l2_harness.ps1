@@ -2823,17 +2823,19 @@ $fixtures = @(
         Needle = 'conversion table has no column receiver'; Absent = @(); Debt = @() },
     # REVIEW f2a1578 (fable_pc's M37: no row went red without the partial-row check; P37: without it a
     # partial row fell out silently): the table's other refusals, each over its own broken table and
-    # pinned to its place -- a column named twice, rows written before the columns and a row short of
-    # a cell (both said at `rows:`, no longer at 1:1), a 33rd column (no longer "needs a name").
-    # Mutants: each check dropped, and `rows:` not kept -- exactly its rows red.
+    # pinned to its place -- a column named twice, a row short of a cell (said at `rows:`), a 33rd
+    # column; since the receiver `table` (steps/table-receiver.md §5) in the receiver's words.  Rows
+    # written before the columns were refused by the tree walk; `columns:` and `rows:` are named
+    # arguments now, bound by their names (book §10): the same table, Entry 7.
+    # Mutants: each check dropped -- exactly its rows red; named arguments bound by place -- rowsfirst red.
     [pscustomobject]@{ Name = 'unit_s7_conv_twice.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_twice_table.lm2';
-        Needle = 'convert.lm2:6:101: a conversion table column is named twice'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_rowsfirst.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_rowsfirst_table.lm2';
-        Needle = 'convert.lm2:6:5: conversion table rows come before its columns'; Absent = @(); Debt = @() },
+        Needle = 'convert.lm2:6:101: a table column is named twice'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_conv_rowsfirst.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_rowsfirst_table.lm2';
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_partial.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_partial_table.lm2';
-        Needle = 'convert.lm2:8:5: conversion table rows are not whole rows of its columns'; Absent = @(); Debt = @() },
+        Needle = 'convert.lm2:8:5: table rows are not whole rows of its columns'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_wide.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_wide_table.lm2';
-        Needle = 'convert.lm2:6:549: conversion table has too many columns'; Absent = @(); Debt = @() },
+        Needle = 'convert.lm2:6:549: a table has too many columns'; Absent = @(); Debt = @() },
     # Q43 (the author, 2026-09-27): a cell of `rows:` is an argument of any kind -- an atom, a Structure, an
     # array -- through the common gate of actuals (l2_expr_span), no exceptions; refusing a cell that is
     # not one atom is a bug.  A Structure cell and an expression cell are one cell each (the gated reading
@@ -2855,6 +2857,40 @@ $fixtures = @(
     # Mutant M43 (the span check dropped: the first atom's name taken) -- accepted silently, red.
     [pscustomobject]@{ Name = 'unit_s7_conv_cellneed_expr.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_cellneed_expr_table.lm2';
         Needle = 'convert.lm2:72:48: a conversion table cell this row needs is not a name (evaluating a table argument is not ported yet)'; Absent = @(); Debt = @() },
+    # The receiver `table` (Q41, Q43; steps/table-receiver.md §5): `table:` is a call of the receiver; its
+    # actuals are bound to its formals -- source, name, columns, rows, read from its header by the
+    # method-formal parser -- by the book's rule for positional and named arguments (§10, l2_bind_actuals);
+    # the source tables are those at the root whose body begins with `source`; the conversion asks for its
+    # table and its columns by name, a quoted spelling the same name.  Witnesses: the table found by name
+    # among two; quoted column names; a table without `source`, and one below the root, not the
+    # translation's; an argument given twice, a formal without one, a name of no formal, a positional
+    # argument after a named one, more positional ones than formals; two source tables of one name; an
+    # empty `rows: ()`, an empty table (the tree walk refused it as not whole rows): no row converts.
+    # Mutants (steps/table-receiver.md §5): each check dropped, the first table taken whatever its name,
+    # names compared as written, a table without `source` taken, the tables below the root looked into --
+    # exactly their rows red.
+    [pscustomobject]@{ Name = 'unit_s7_tbl_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_named_table.lm2';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_quoted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_quoted_table.lm2';
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_runtime.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_runtime_table.lm2';
+        Needle = 'convert.lm2:1:1: convert.lm2 has no source table `primitive.convert`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_nested_table.lm2';
+        Needle = 'convert.lm2:1:1: convert.lm2 has no source table `primitive.convert`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_twice_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twice_arg_table.lm2';
+        Needle = 'convert.lm2:5:5: the argument name of table is given twice'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_noarg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_noarg_table.lm2';
+        Needle = 'convert.lm2:2:1: table has no argument columns'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_unknown_arg.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_unknown_arg_table.lm2';
+        Needle = 'convert.lm2:5:5: colums is not an argument of table'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_positional_after.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_positional_after_table.lm2';
+        Needle = 'convert.lm2:137:5: a positional argument of table after a named one'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_toomany.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_toomany_table.lm2';
+        Needle = 'convert.lm2:7:5: more arguments than table has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_twotables.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twotables_table.lm2';
+        Needle = 'convert.lm2:141:11: two source tables have this name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_empty.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_empty_table.lm2';
+        Needle = 'mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_prim_cross.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     [pscustomobject]@{ Name = 'unit_s7_conv_norow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

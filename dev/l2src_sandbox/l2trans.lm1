@@ -117,6 +117,11 @@ int: l2_rw_quiet 0
 size_t: l2_rw_quiet_line 0U
 size_t: l2_rw_quiet_col 0U
 @: int l2_m_steps 0
+# The first refusal of each method's quiet walk (l2_rw_methods_count), 192 bytes a method, and where it
+# stands: a callable merge whose model is not walked says the model's own reason (l2_mad_unwalkable).
+@: char l2_m_why 0
+@: size_t l2_m_why_line 0
+@: size_t l2_m_why_col 0
 int: l2_walk_methods 0
 # T5 slice 1: model method of a callable-merge result, or -1. The result's native stays 0.
 @: int l2_pap_model 0
@@ -1109,6 +1114,9 @@ prototype:
     fn: l2_mcap_add (int: mi; const: @(LmP0Text name); int: ty; int: ns) int
     fn: l2_mad_slot_ns (int: mi; int: slot) int
     fn: l2_cap_path_head (int: mi; const: @(LmP0Text t)) int
+    fn: l2_cap_named (int: mi; const: @(LmP0Text name)) int
+    fn: l2_mad_struct_caps (int: mi) int
+    fn: l2_scan_path_root (int: mi; const: @(LmP0Text t); @: int seen) int
     fn: l2_cap_fields (int: mi; const: @(LmP0Text name); int: ns; @: int out; int: cap) int
     fn: l2_cap_scan (const: @(LmP0Node node); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
     fn: l2_cap_scan_struct (const: @(LmP0Structure s); const: @(LmP0Text name); int: ns; @: int out; int: cap; @: int n) int
@@ -1125,6 +1133,7 @@ prototype:
     fn: l2_mad_caps (int: mi) int
     fn: l2_mad_emit (int: mi; const: @(char ind)) int
     fn: l2_mad_emit_into (int: mi; int: nk; const: @(char ind); int: into) int
+    fn: l2_mad_unwalkable (int: host; int: model) int
     fn: l2_mad_call_name (int: rty) const: @: char
     fn: l2_mad_call_bit (int: rty) int
     fn: l2_ret_own (int: code) int
@@ -8094,6 +8103,9 @@ return: 0
 fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     int: oi
     int: ty
+    # Item 738: a frame head `name\f` in a callable merge's model -- an update through a capture.
+    if: mi >= 0 && t != 0 && l2_ident(t) = 0 && l2_mad_host_of(mi) >= 0
+        return: l2_scan_path_root(mi, t, seen)
     if: mi < 0 || t = 0 || l2_ident(t) = 0
         return: 0
     if: l2_formal_find(mi, t) >= 0
@@ -15322,6 +15334,9 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     int: k 0
     @: LmP0Text onm 0
     []: char cast_ty 1024
+    []: int capf 32
+    int: capn 0
+    int: capk
     if: node = 0
         return: l2_error(path, node, "unsupported body")
     if: node\kind = c.LM_P0_NODE_ATOM
@@ -15469,6 +15484,12 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_error(path, node, "incompatible entry signature")
         return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
     if: idx < 0 && call\head != 0 && call\head\data != 0 && call\head\length < 256U && l2_seg_count(call\head\data, call\head\length) > 1
+        # Item 738: a path through a Structure capture of the model -- the capture says what is
+        # wrong with it (past its field, no such field, a Structure field); a path it takes is the
+        # walk's.
+        if: l2_cap_path_head(mi, call\head) != 0
+            capk: l2_cap_path_head(mi, call\head) - 1
+            return: l2_cap_text(call\head, node, l2_mcap_name[capk], l2_mcap_ns[capk], capf, 32, @ capn)
         # The head is spelled as a path. Say which part of it failed rather
         # than calling the whole statement unsupported.
         if: l2_path_root(call\head\data, call\head\length, @ pni, @ pres, @ poi, @ proot, @ pfi) != 0
@@ -15548,6 +15569,9 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
     int: fx
     int: consumed
     []: char buf 128
+    []: int capf 32
+    int: capn 0
+    int: capk
     if: span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: 2
     sl: l2_next_active(a0\next)
@@ -15557,6 +15581,14 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
     if: sl = 0 || sl\value = 0 || sl\value\kind != c.LM_P0_NODE_ATOM || sl\value\as = 0 || l2_is_slash(sl\value\as\atom) = 0 || mem = 0 || mem\value = 0 || mem\value\kind != c.LM_P0_NODE_ATOM || mem\value\as = 0 || mem\value\as\atom = 0 || l2_ident(mem\value\as\atom) = 0
         return: 2
     owner: l2_bound_nsty(mi, a0\value\as\atom)
+    # Item 738: through a Structure capture of the model the field is the capture's to check (a
+    # Structure field is not copied, a name its type has not is refused); a value field is not this
+    # shape.
+    if: owner < 0 && l2_cap_named(mi, a0\value\as\atom) != 0
+        capk: l2_cap_named(mi, a0\value\as\atom) - 1
+        if: l2_cap_add(mem\value\as\atom\data, 0U, mem\value\as\atom\length, mem\value, l2_mcap_ns[capk], capf, 32, @ capn) != 0
+            return: 1
+        return: 2
     if: owner < 0
         return: l2_error(path, a0\value, "unresolved name")
     consumed: 3
@@ -19934,6 +19966,11 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
             slot: l2_ns_slot_named(ni, t\data, b, i - b, @ kind, @ ent)
         ---
         last: (cast: (int) (i >= t\length))
+        # Item 738: the same words as the capture's own check (l2_cap_add).
+        if: slot < 0 && path[0] = 7
+            if: say != 0
+                l2_rw_refuse(node, "a path through a captured Structure names no field of its type")
+            return: 1
         if: slot < 0 || (last = 0 && kind != 2 && kind != 3)
             if: say != 0
                 l2_rw_refuse(node, "a field path")
@@ -23712,9 +23749,9 @@ fn: l2_mad_slot (int: mi; const: @(LmP0Text name)) int
     ---
 return: 0 - 1
 
-# Item 738: is t a path `name\...` rooted at a Structure capture of model mi?  Such a path is the
-# walk's (the model is interpreted, its native function a stub): its fields are checked there and
-# in l2_cap_fields, not by the native path root.
+# Item 738: is t a path `name\...` rooted at a Structure capture of model mi -- 1 + the capture's
+# index in l2_mcap_*, or 0?  Such a path is the walk's (the model is interpreted, its native function
+# a stub): its fields are checked there and by the capture (l2_cap_text), not by the native path root.
 fn: l2_cap_path_head (int: mi; const: @(LmP0Text t)) int
     size_t: e 0U
     int: k 0
@@ -23727,7 +23764,62 @@ fn: l2_cap_path_head (int: mi; const: @(LmP0Text t)) int
         return: 0
     while: k < l2_mcap_n
         if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0 && l2_mcap_name[k] != 0 && l2_mcap_name[k]\length = e && memcmp(l2_mcap_name[k]\data, t\data, e) = 0
+            return: k + 1
+        k: k + 1
+    ---
+return: 0
+
+# Item 738: the root of a frame head `name\f` in model mi.  In value position the root is an atom
+# of its own and l2_scan_ident meets it; a head is one text, so a model that only writes through a
+# capture (`m\count: x`) recorded no capture, and its check refused the head as an unknown path root.
+# The root resolves as that atom would: the host's formal or own field of that spelling, by its own
+# name -- so the model's own names shadow it here as there.
+fn: l2_scan_path_root (int: mi; const: @(LmP0Text t); @: int seen) int
+    size_t: e 0U
+    int: host
+    int: j 0
+    if: mi < 0 || t = 0 || t\data = 0
+        return: 0
+    host: l2_mad_host_of(mi)
+    if: host < 0
+        return: 0
+    while: e < t\length && t\data[e] != 92
+        e: e + 1U
+    ---
+    if: e = 0U || e >= t\length
+        return: 0
+    while: j < l2_m_arity[host]
+        if: l2_fn(host, j) != 0 && l2_fn(host, j)\length = e && memcmp(l2_fn(host, j)\data, t\data, e) = 0
+            return: l2_scan_ident(mi, l2_fn(host, j), seen)
+        j: j + 1
+    ---
+    j: 0
+    while: j < l2_own_n
+        if: l2_own_mi[j] = host && l2_own_host[j] = 0 && l2_own_name[j] != 0 && l2_own_name[j]\length = e && memcmp(l2_own_name[j]\data, t\data, e) = 0
+            return: l2_scan_ident(mi, l2_own_name[j], seen)
+        j: j + 1
+    ---
+return: 0
+
+# Item 738: does model mi capture a Structure?  Only then do its host and its walk constructor
+# declare the capture's field list (l2_capf).
+fn: l2_mad_struct_caps (int: mi) int
+    int: k 0
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0
             return: 1
+        k: k + 1
+    ---
+return: 0
+
+# Item 738: is name a Structure capture of model mi -- 1 + its index in l2_mcap_*, or 0?
+fn: l2_cap_named (int: mi; const: @(LmP0Text name)) int
+    int: k 0
+    if: name = 0 || mi < 0
+        return: 0
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0 && l2_text_same(l2_mcap_name[k], name) != 0
+            return: k + 1
         k: k + 1
     ---
 return: 0
@@ -23779,6 +23871,10 @@ fn: l2_cap_add (const: @(char pd); size_t: off; size_t: len; const: @(LmP0Node a
         return: l2_error(l2_src, at, "a path through a captured Structure names no field of its type")
     if: kind = 2 || kind = 3 || kind = 10
         return: l2_error(l2_src, at, "a captured Structure's Structure field is not copied yet (item 738: value fields)")
+    # A number or a char (kinds 0, 1, 7, 8, 9) is what lmx_walk_capture copies; a callable, an array
+    # or a reference's pointee is not copied yet.  So every field named here is one the kernel copies.
+    if: kind != 0 && kind != 1 && kind != 7 && kind != 8 && kind != 9
+        return: l2_error(l2_src, at, "a captured Structure's field that is not a number or a char is not copied yet (item 738: value fields)")
     k: 0
     while: k < \n && out[k] < slot
         k: k + 1
@@ -24151,6 +24247,24 @@ return: l2_count_active(f\value\as\structure)
 fn: l2_mad_emit (int: mi; const: @(char ind)) int
 return: l2_mad_emit_into(mi, l2_mad_model[mi], ind, 0 - 1)
 
+# A callable merge in host `host` whose model is not walked: the model's own first refusal, where it
+# stands, when its quiet walk kept one (l2_rw_methods_count) -- the model is tried silently, and without
+# this its reason (a path past a captured field, an operation the walk does not build) stopped at the
+# host's header; the host's header otherwise.
+fn: l2_mad_unwalkable (int: host; int: model) int
+    []: char msg 320
+    @: char why 0
+    if: model >= 0 && model < l2_m_n && l2_m_why != 0
+        why: l2_m_why + (cast: (size_t) model) * 192U
+    if: why = 0 || why[0] = 0
+        return: l2_error(l2_src, l2_m_node[host], "a callable merge needs a walkable body")
+    c.snprintf(msg, 320U, "a callable merge needs a walkable body: %s", why)
+    if: l2_rw_quiet != 0 || l2_src = 0 || l2_m_why_line = 0 || l2_m_why_col = 0 || l2_m_why_line[model] = 0U
+        return: l2_error(l2_src, l2_m_node[host], msg)
+    c.fprintf(l1_stderr(), "l2trans error: %s:%zu:%zu: %s\n", l2_src, l2_m_why_line[model], l2_m_why_col[model], msg)
+    l2_diag_n: l2_diag_n + 1
+return: 1
+
 # The node host mi's return builds (into < 0: its `return:`), or -- D-93 -- the node of its capturing
 # nested method nk (the model, or another) built at a call of it before the return, into l2_c<into>
 # (l2_emit_call): nk called with the host's values at the call.  A capture is read-only in a nested
@@ -24180,14 +24294,14 @@ fn: l2_mad_emit_into (int: mi; int: nk; const: @(char ind); int: into) int
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge host names a nested method outside the return")
     model: nk
     if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0
-        return: l2_error(l2_src, l2_m_node[mi], "a callable merge needs a walkable body")
+        return: l2_mad_unwalkable(mi, model)
     steps: l2_m_steps[model]
     # T6b: a model that uses nothing of the activation is a node with no captured field.
     caps: l2_mad_node_caps(mi, nk)
     arity: l2_mad_node_arity(mi, nk)
     width: 2 + caps + steps
     base: l2_m_kids(model)
-    if: c.fprintf(l2_out, "%s[]: size_t l2_capf%s 32\n", ind, sx) < 0
+    if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "%s[]: size_t l2_capf%s 32\n", ind, sx) < 0
         return: 1
     if: c.fprintf(l2_out, "%s@: Lmx l2_mad%s 0\n%s@: Lmx l2_mad_part%s 0\n%s@: Lmx l2_mad_src%s 0\n%s@: void l2_mad_cell%s 0\n%sint: l2_mad_k%s 0\n%sl2_mad%s: lmx_struct_new_owned(node, l2_program_arena)\n%sif: l2_mad%s = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad%s, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, sx, ind, sx, ind, sx, ind, sx, ind, sx, ind, sx, ind, sx, sx, (cast: (unsigned) width), ind, ind) < 0
         return: 1
@@ -24367,7 +24481,8 @@ fn: l2_mad_cap_emit_walk (int: model; int: j; int: ri; int: slot) int
 return: 0
 
 # Item 738: in the native host mi, capture j of model -- the Structure the host's formal or own field
-# holds -- copied field by field into the node l2_mad<sx> at `slot`.
+# holds -- copied field by field into the node l2_mad<sx> at `slot`.  The abort on lmx_walk_capture's
+# 0 is a guard (and out of memory): l2_cap_add names value fields only, and those the kernel copies.
 fn: l2_mad_cap_emit (int: mi; int: model; int: j; const: @(char sx); const: @(char ind); int: slot) int
     []: int fl 32
     []: char src 128
@@ -24421,7 +24536,7 @@ fn: l2_emit_mad_construct_one (int: mi; int: nk) int
     int: ci 0
     int: slot 2
     if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0
-        return: l2_error(l2_src, l2_m_node[mi], "a callable merge needs a walkable body")
+        return: l2_mad_unwalkable(mi, model)
     steps: l2_m_steps[model]
     caps: l2_mad_node_caps(mi, nk)
     arity: l2_mad_node_arity(mi, nk)
@@ -24429,7 +24544,11 @@ fn: l2_emit_mad_construct_one (int: mi; int: nk) int
     base: l2_m_kids(model)
     if: l2_mad_construct_name(mi, nk, cname) != 0
         return: 1
-    if: c.fprintf(l2_out, "fn: %s (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_part 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    int: l2_mad_k 0\n    []: size_t l2_capf 32\n    \\out: 0\n    if: nargs != %uU || refs = 0 || refs[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge construct was called outside its header\\n\")\n        c.abort()\n    l2_mad_src: (cast: (@: Lmx) refs[0])\n    l2_mad: lmx_struct_new_owned(l2_mad_src, (cast: (@: LmxArena) owner))\n    if: l2_mad = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", cname, (cast: (unsigned) (1 + caps)), (cast: (unsigned) width)) < 0
+    if: c.fprintf(l2_out, "fn: %s (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_part 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    int: l2_mad_k 0\n", cname) < 0
+        return: 1
+    if: l2_mad_struct_caps(model) != 0 && fputs("    []: size_t l2_capf 32\n", l2_out) < 0
+        return: 1
+    if: c.fprintf(l2_out, "    \\out: 0\n    if: nargs != %uU || refs = 0 || refs[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge construct was called outside its header\\n\")\n        c.abort()\n    l2_mad_src: (cast: (@: Lmx) refs[0])\n    l2_mad: lmx_struct_new_owned(l2_mad_src, (cast: (@: LmxArena) owner))\n    if: l2_mad = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", (cast: (unsigned) (1 + caps)), (cast: (unsigned) width)) < 0
         return: 1
     if: c.fprintf(l2_out, "    l2_mad_part: lmx_struct_new_owned(l2_mad, (cast: (@: LmxArena) owner))\n    if: l2_mad_part = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_mad_part, %uU) != 0 || lmx_arena_ref_store(l2_mad, 0U, (cast: (@: void) l2_mad_part)) != 0\n        c.abort()\n", (cast: (unsigned) arity)) < 0
         return: 1
@@ -25583,6 +25702,11 @@ fn: l2_rw_methods_count () int
     l2_m_steps: (cast: (@: int) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.int)))
     if: l2_m_steps = 0
         return: l2_error(l2_src, 0, "out of memory")
+    l2_m_why: (cast: (@: char) calloc((cast: (size_t) (l2_m_n + 1)) * 192U, 1U))
+    l2_m_why_line: (cast: (@: size_t) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.size_t)))
+    l2_m_why_col: (cast: (@: size_t) calloc((cast: (size_t) (l2_m_n + 1)), c.sizeof(c.size_t)))
+    if: l2_m_why = 0 || l2_m_why_line = 0 || l2_m_why_col = 0
+        return: l2_error(l2_src, 0, "out of memory")
     while: i < l2_m_n
         l2_m_steps[i]: 0 - 1
         l2_rw_quiet_msg[0]: 0
@@ -25610,10 +25734,21 @@ fn: l2_rw_methods_count () int
                 bad: 1
             if: bad = 0
                 l2_m_steps[i]: made + one
+            if: bad != 0
+                c.snprintf(l2_m_why + (cast: (size_t) i) * 192U, 192U, "%s", l2_rw_quiet_msg)
+                l2_m_why_line[i]: l2_rw_quiet_line
+                l2_m_why_col[i]: l2_rw_quiet_col
+            ---
             l2_rw_quiet: 0
             l2_rw_pre_n: 0
             l2_rw_mi: l2_e
             l2_vis_on: 0
+        # A method the walk does not try keeps why (l2_rw_may_why), at its own header.
+        if: l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_m_node[i] != 0 && l2_m_node[i]\span != 0
+            c.snprintf(l2_m_why + (cast: (size_t) i) * 192U, 192U, "%s", l2_rw_may_why(i))
+            l2_m_why_line[i]: l2_m_node[i]\span\line
+            l2_m_why_col[i]: l2_m_node[i]\span\column
+        ---
         # --walk-methods (-193 T4a) walks every method it can; a PAP/merge-callable class it
         # cannot (callable result or formal, l2_rw_callable_excluded) used to stay silently
         # native, indistinguishable from "not translated yet". Diagnose it instead, located at

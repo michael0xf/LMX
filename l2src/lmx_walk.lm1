@@ -2208,7 +2208,8 @@ return: 1
 # as those cells always are).  Its correspondence to req is a table of req's width, cell j the copy's
 # place of req's field j or "not carried" (SIZE_MAX), recorded in the arena's `implements` table: the
 # model reads the fields by req's slots through it (D-105).  The copy and its table hang under
-# `parent` (no slot of it).  0 when a field is not a value cell, or on no room.
+# `parent` (no slot of it).  0 when a field is not a value cell, or on no room.  The translator names
+# value fields only (l2_cap_add), so its host's abort on 0 is a guard and an out-of-memory stop.
 fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n) @: Lmx
     @: Lmx copy 0
     @: Lmx table 0

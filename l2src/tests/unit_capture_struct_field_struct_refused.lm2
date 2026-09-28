@@ -1,0 +1,27 @@
+# Item 738 slice 2: a captured Structure's Structure field passed on (`probe(loc\box)`) -- slice 1 copies
+# value fields only.  Before: "unresolved name" at `loc` (l2_actual_path knew no capture).
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    Inner: box
+    int: count 0
+    int: value 0
+end: Model
+
+fn: probe (Inner: q) int
+    return: q\c
+
+fn: makeReader (int: n) fn: (int: x) int
+    Model: loc
+    loc\value: n
+    fn: read (int: x) int
+        return: probe(loc\box) + x
+    return: read
+
+r40: makeReader 40
+int: a (r40: 2)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

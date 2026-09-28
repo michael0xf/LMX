@@ -1,0 +1,19 @@
+# Item 738 slice 2: a captured Structure's Array field (`loc\buf[0]`) -- the capture copies a number or a
+# char only (l2_cap_add, kinds 0, 1, 7, 8, 9).  Before, the translator named it and the kernel's copy
+# returned 0: the host aborted at the return, "a Structure capture could not be copied".
+Model:
+    []: int buf 3
+    int: value 0
+end: Model
+
+fn: makeReader (int: n) fn: (int: x) int
+    Model: loc
+    loc\value: n
+    fn: read (int: x) int
+        return: loc\buf[0] + x
+    return: read
+
+r40: makeReader 40
+int: a (r40: 2)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

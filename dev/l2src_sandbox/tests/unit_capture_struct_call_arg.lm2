@@ -1,0 +1,24 @@
+# Item 738 slice 2: a captured Structure's value field as a call argument (`twice(loc\value)`) is read
+# through the copy's table like any read: 2 * 40 + 2.  Success is 7.
+Model:
+    int: other 5
+    int: value 0
+end: Model
+
+fn: twice (int: v) int
+    return: v + v
+
+fn: makeReader (int: n) fn: (int: x) int
+    Model: loc
+    loc\value: n
+    fn: read (int: x) int
+        return: twice(loc\value) + x
+    return: read
+
+r40: makeReader 40
+int: a (r40: 2)
+int: ok 7
+if: a != 82
+    ok: 1
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

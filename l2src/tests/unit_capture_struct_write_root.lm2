@@ -1,0 +1,35 @@
+# Item 738 slice 2: the model uses its capture only in update position (`m\count: x`).  A frame head is
+# one text, and l2_scan_ident met no atom `m`: no capture was recorded, and the check refused the head,
+# "unknown field path root".  l2_scan_path_root resolves its root as the atom would.  2 and 3; the root's
+# `count` stays 0.  Success is 7.
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    Inner: box
+    int: count 0
+    int: value 0
+end: Model
+
+fn: makeCounter (Model: m) fn: (int: x) int
+    fn: bump (int: x) int
+        m\count: x
+        return: x
+    return: bump
+
+Model: left
+left\value: 40
+c: makeCounter left
+int: a (c: 2)
+int: b (c: 3)
+int: ok 7
+if: a != 2
+    ok: 1
+if: b != 3
+    ok: 2
+if: left\count != 0
+    ok: 3
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

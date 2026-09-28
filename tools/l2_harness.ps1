@@ -1605,6 +1605,23 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_d105n_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # D-105 native, the result route (steps/d105-native.md §5): a method's result is a place like a formal
+    # (k = -1); a `return:` feeds it (a source, or an edge from a formal or from a call's result), a marked
+    # result records its value at its return, and a call's result passed on is picked by the value's
+    # record.  _return: mk () Model returns Other; _formal: id returns its formal; _chain: a result
+    # through a result; _edge_refused: a type reaching a result along an edge is admitted as a return
+    # value is -- every field of the result's type -- refused at id.  Before, 20 (C2 until D-108: gcc).
+    [pscustomobject]@{ Name = 'unit_d105r_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105r_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105r_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_d105r_edge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:1: implements is false in return value'; Args = @('0'); Absent = @(); Debt = @() },
+    # D-111: the value of a `return:` in a Structure-result method was admitted and never checked as a
+    # value -- a call in it met no rule of §14 (the internal backstop at 1:1 alone): now it is checked as
+    # any value is.
+    [pscustomobject]@{ Name = 'unit_d111_return_declared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:9: unhandled throw: Oops'; Args = @('0'); Absent = @(); Debt = @() },
     # D-109: a bound name of another named type handed to a Structure formal was admitted by nothing; the
     # formal's uses are now checked for every type that reaches it (l2_d105_close): refused at the call.
     # D-110: a consumer's uses were its body's alone -- the hung `return:` (P0 trailer) was not walked --

@@ -733,6 +733,7 @@ prototype:
     fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) int
     fn: l2_d105_pair (int: cand; int: req) int
     fn: l2_d105_note (int: mi; int: idx; int: k; int: cand; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
+    fn: l2_d105_callee (@: LmP0Field a0; int: span) int
     fn: l2_d105_close () int
     fn: l2_d105_any (int: mi) int
     fn: l2_d105_tnode (int: p; @: char dest) int
@@ -3033,8 +3034,10 @@ fn: l2_check_ret_tr (int: mi; const: @(char path); const: @(LmP0Structure body);
     if: l2_check_ret_convert(mi, body, path) != 0
         return: 1
     # Callers are not in this body. The Consumer is the required descriptor.
-    if: l2_nsty_get(mi, 0 - 1) >= 0 && n > 0
-        return: l2_admit_return(mi, body\first_field, n, path, at)
+    if: l2_nsty_get(mi, 0 - 1) >= 0 && n > 0 && l2_admit_return(mi, body\first_field, n, path, at) != 0
+        return: 1
+    # The value is checked as any value is, a Structure result's too (the D-108 gate for a return): a call
+    # in it records its edges -- of the throw closure and of D-105 -- and meets the static rule of §14.
     if: n != 0 && l2_check_fields(body\first_field, n, mi, path, at) != 0
         return: 1
 return: 0
@@ -3068,6 +3071,9 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
             return: 1
         ---
     if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
+        return: 1
+    # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).
+    if: l2_d105_sub(mi, 0 - 1) != 0 && l2_d105_emit_admit(mi, mi, 0 - 1, body\first_field, n, l2_tok, ind) != 0
         return: 1
     if: (l2_m_throws = 0 || l2_m_throws[mi] = 0) && c.fprintf(l2_out, "%sreturn: %s\n", ind, l2_tok) < 0
         return: 1
@@ -15879,6 +15885,9 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
             cand: l2_nsty_get(cmi, 0 - 1)
             if: cand < 0
                 return: l2_error(path, at, "implements is false in return value")
+            # D-105 native: the result of cmi reaches this method's result.
+            if: l2_d105_note(mi, mi, 0 - 1, cand, first, n, at) != 0
+                return: 1
             return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
         ---
     ---
@@ -15893,6 +15902,9 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
     ---
     if: ast = 2
         return: l2_error(path, at, "implements is false in return value")
+    # D-105 native: the value's type reaches this method's result (or its formal, passed on as it is).
+    if: l2_d105_note(mi, mi, 0 - 1, cand, first, n, at) != 0
+        return: 1
 return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
 
 # A Structure field path as a return value, one field or deeper.
@@ -16987,7 +16999,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             if: l2_admit_return(mi, fr\body\first_field, l2_count_active(fr\body), path, stmt) != 0
                 return: 1
             ---
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_nsty_get(mi, 0 - 1) < 0 && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
+        # The value of a `return:` is checked as any value is, a Structure result's too (the D-108 gate
+        # for a return): a call in it records its edges and meets the static rule of §14.
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_count_active(fr\body) != 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) = 0 && l2_check_fields(fr\body\first_field, l2_count_active(fr\body), mi, path, stmt) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
             field: l2_next_active(field\next)
@@ -20402,9 +20416,10 @@ fn: l2_d105_has (int: mi; int: k; int: ty) int
     ---
 return: 0
 
-# D-105 native: named type ty reaches formal k of method mi at `at` (recorded once).
+# D-105 native: named type ty reaches place k of method mi -- formal k, or its result (k = -1) -- at
+# `at` (recorded once).
 fn: l2_d105_source (int: mi; int: k; int: ty; const: @(LmP0Node at)) int
-    if: mi < 0 || k < 0 || ty < 0 || l2_d105_has(mi, k, ty) != 0
+    if: mi < 0 || k < 0 - 1 || ty < 0 || l2_d105_has(mi, k, ty) != 0
         return: 0
     if: l2_d105s_n >= 256
         return: l2_error(l2_src, at, "too many named types admitted to Structure formals (D-105)")
@@ -20448,18 +20463,27 @@ fn: l2_d105_pair (int: cand; int: req) int
     l2_d105t_n: l2_d105t_n + 1
 return: l2_d105t_n - 1
 
-# D-105 native: the check of a call (l2_check_call) admitted the actual of formal k of idx, of static
-# named type cand, in method mi.  A formal of mi passed on as it is -- an edge; any other actual -- a
-# source of its type.
+# D-105 native: a value of static named type cand, written a0 in method mi, reaches place k of idx --
+# formal k, or (k = -1) idx's result, at its `return:`.  A formal of mi passed on as it is, or a call
+# of a method, whose result is a place too -- an edge; any other value -- a source of its type.
 fn: l2_d105_note (int: mi; int: idx; int: k; int: cand; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
     int: f 0 - 1
-    if: mi < 0 || idx < 0 || k < 0 || cand < 0
+    if: mi < 0 || idx < 0 || k < 0 - 1 || cand < 0
         return: 0
     if: span = 1 && a0 != 0 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0
         f: l2_formal_find(mi, a0\value\as\atom)
     if: f >= 0 && l2_nsty_get(mi, f) = cand
         return: l2_d105_edge(mi, f, idx, k, at)
+    f: l2_d105_callee(a0, span)
+    if: f >= 0 && l2_nsty_get(f, 0 - 1) = cand
+        return: l2_d105_edge(f, 0 - 1, idx, k, at)
 return: l2_d105_source(idx, k, cand, at)
+
+# D-105 native: the method a value written a0 calls, when it is one call (its result is the value), or -1.
+fn: l2_d105_callee (@: LmP0Field a0; int: span) int
+    if: span != 1 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_FRAME || a0\value\as = 0 || a0\value\as\frame = 0 || a0\value\as\frame\head = 0
+        return: 0 - 1
+return: l2_find_method(a0\value\as\frame\head)
 
 # D-105 native (REVIEW 9c34b3b: marking is transitive; the tables are the unit's, one per pair of types):
 # after the checks and the root's count, before any layout.  The sources flow along the edges to a fixed
@@ -20468,6 +20492,7 @@ return: l2_d105_source(idx, k, cand, at)
 # here, located at the call site, when it cannot be.
 fn: l2_d105_close () int
     int: changed 1
+    int: before
     int: e
     int: i
     int: n
@@ -20484,9 +20509,12 @@ fn: l2_d105_close () int
             n: l2_d105s_n
             while: i < n
                 if: l2_d105s_mi[i] = l2_d105e_fmi[e] && l2_d105s_k[i] = l2_d105e_fk[e] && l2_d105_has(l2_d105e_tmi[e], l2_d105e_tk[e], l2_d105s_ty[i]) = 0
+                    before: l2_d105s_n
                     if: l2_d105_source(l2_d105e_tmi[e], l2_d105e_tk[e], l2_d105s_ty[i], l2_d105e_at[e]) != 0
                         return: 1
-                    changed: 1
+                    # A change is a source added: the fixed point cannot turn on one that was not.
+                    if: l2_d105s_n != before
+                        changed: 1
                 ---
                 i: i + 1
             ---
@@ -20503,7 +20531,11 @@ fn: l2_d105_close () int
             # Admission is by the consumer's uses (book: a field the formal's method never reads need not
             # be there): the same check a direct call site had, for every source -- one carried along an
             # edge too; a field the source has not is a hole of the pair table.
-            if: l2_m_node[l2_d105s_mi[i]] != 0 && l2_m_node[l2_d105s_mi[i]]\as != 0 && l2_admit_consumer_ix(ty, req, l2_fn(l2_d105s_mi[i], l2_d105s_k[i]), l2_m_node[l2_d105s_mi[i]]\as\frame, l2_src, l2_d105s_at[i], "function argument") != 0
+            if: l2_d105s_k[i] >= 0 && l2_m_node[l2_d105s_mi[i]] != 0 && l2_m_node[l2_d105s_mi[i]]\as != 0 && l2_admit_consumer_ix(ty, req, l2_fn(l2_d105s_mi[i], l2_d105s_k[i]), l2_m_node[l2_d105s_mi[i]]\as\frame, l2_src, l2_d105s_at[i], "function argument") != 0
+                return: 1
+            # A result's callers are not in its method: its value is admitted as a return value is, by
+            # every field of the result's type (l2_admit_return), for a type carried along an edge too.
+            if: l2_d105s_k[i] < 0 && l2_admit_implements(ty, req, req, 0, l2_src, l2_d105s_at[i], "return value") != 0
                 return: 1
             why: l2_d105_table(ty, req, t, 64, @ tn, 1)
             if: why = 2
@@ -20550,6 +20582,8 @@ fn: l2_d105_emit_admit (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; c
     int: req
     int: cand 0 - 1
     int: f 0 - 1
+    int: smi
+    int: sk
     int: i 0
     int: p
     int: q
@@ -20570,6 +20604,15 @@ fn: l2_d105_emit_admit (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; c
         cand: l2_bound_nsty(mi, a0\value\as\atom)
     if: f < 0 && cand < 0 && a0 != 0 && l2_actual_ns(mi, a0, span, l2_src, a0\value, @ cand) != 0
         cand: 0 - 1
+    # The place the value comes from: a formal of mi (f), or the result of the method it calls (-1).
+    smi: 0 - 1
+    sk: 0
+    if: f >= 0
+        smi: mi
+        sk: f
+    if: f < 0 && l2_d105_callee(a0, span) >= 0 && l2_nsty_get(l2_d105_callee(a0, span), 0 - 1) = cand
+        smi: l2_d105_callee(a0, span)
+        sk: 0 - 1
     seq: l2_d105_seq
     l2_d105_seq: l2_d105_seq + 1
     c.sprintf(tb, "0")
@@ -20578,14 +20621,14 @@ fn: l2_d105_emit_admit (int: mi; int: idx; int: k; @: LmP0Field a0; int: span; c
         if: l2_d105_tnode(p, tb) != 0
             return: l2_error(l2_src, 0, "internal: a pair table of D-105 is missing")
     ---
-    if: f >= 0 && cand >= 0 && l2_d105_sub(mi, f) != 0
+    if: smi >= 0 && cand >= 0 && l2_d105_sub(smi, sk) != 0
         if: l2_type_inst(cand, sinst) != 0
             return: l2_error(l2_src, 0, "internal: an admission by name from a type with no shape")
         if: c.fprintf(l2_out, "%s@: LmxImplEntry l2_d105e%d lmx_implements_find(l2_program_arena, (cast: (@: Lmx) %s), %s)\n%s@: Lmx l2_d105t%d %s\n", ind, seq, value, sinst, ind, seq, tb) < 0
             return: 1
         i: 0
         while: i < l2_d105s_n
-            if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = f && l2_d105s_ty[i] != cand
+            if: l2_d105s_mi[i] = smi && l2_d105s_k[i] = sk && l2_d105s_ty[i] != cand
                 q: l2_d105_pair(l2_d105s_ty[i], cand)
                 if: l2_d105_tnode(q, tq) != 0
                     return: l2_error(l2_src, 0, "internal: a pair table of D-105 is missing")
@@ -28404,6 +28447,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+            return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_d105_sub(mi, 0 - 1) != 0 && l2_d105_emit_admit(mi, mi, 0 - 1, fr\body\first_field, l2_count_active(fr\body), l2_tok, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_poll(mi, ind) != 0
             return: 1

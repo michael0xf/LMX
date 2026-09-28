@@ -19435,6 +19435,12 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: 1
         ---
     ---
+    # S2a (steps/merge-callable-r48.md §4): a merge result (l2_pap_on) has native 0, and its C function is no body of
+    # it -- it is called through its leaf, as the root's walk calls it: the D-93 path, its occurrence (l2_c above) the
+    # code and the data, its arguments cells of their types (lmx_call_prim, no fresh instance).
+    if: sel != 2 && l2_pap_on(idx) != 0
+        mcall: 1
+        sel: 2
     if: sel = 2 && mcall = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_p%d_%d\n", ind, self_t, mi, fi) < 0
         return: 1
     if: body != 0

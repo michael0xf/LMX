@@ -1,0 +1,17 @@
+# steps/merge-callable-r48.md S1 (REVIEW ebae3b0, fable_pc's M57): a held callable with a size_t header called from a
+# method -- its argument goes in a size_t cell and its result comes back in the size_t variant's cell, so add5(1U) is
+# 6U.  An int cell in the argument's place would hand the helper a cell of another type.  Entry 7.
+fn: makeAdder (size_t: n) fn: (size_t: x) size_t
+    fn: addN (size_t: x) size_t
+        return: n + x
+    return: addN
+add5: makeAdder 5U
+fn: go () int
+    size_t: a (add5: 1U)
+    if: a = 6U
+        return: 7
+    return: 81
+int: r 0
+r: go()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

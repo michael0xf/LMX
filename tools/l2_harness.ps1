@@ -3490,6 +3490,21 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_held_call_guarded.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # S1's typed argument cell (REVIEW ebae3b0, fable_pc's M57): a size_t header's call from a method passes a size_t
+    # cell and takes the size_t variant's result -- red natively under a copy that always makes an int cell ("walk
+    # error: INVALID").
+    [pscustomobject]@{ Name = 'unit_held_call_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_held_call_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # A merge result (T5, l2_pap_on) called from a method (steps/merge-callable-r48.md S2a): its leaf has native 0 and its
+    # C function is a stub, so the call goes through the leaf as the root's walk does -- the D-93 path, lmx_call_prim over
+    # its occurrence -- and go() is 6.  Before, the native call reached the stub: 0 instead of 6 (the translator before
+    # this is the mutant; walked, go reached the leaf already).
+    [pscustomobject]@{ Name = 'unit_pap_add5_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_pap_add5_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     # The write-only assignment to a free name (steps/free-names.md §7): the scan reads a bare assignment's target
     # like a read, so `k: 1` in peek, with k bound by the caller, makes k peek's field typed by that binding (the
     # assignment waits for the closure, M2) and m's k stays 5; `k: 1U` against the caller's int k is refused at the

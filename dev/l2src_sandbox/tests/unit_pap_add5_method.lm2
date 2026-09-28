@@ -1,0 +1,19 @@
+# steps/merge-callable-r48.md S2a: add5 is merge(add; y: 5) (the model first, the author's 2026-09-25 rule), native 0,
+# and its C function is a stub.  A method calls it through its leaf, as the root's walk does -- lmx_call_prim over its
+# occurrence -- so go() is 6.  Before, go called the stub directly and got 0 (a silently wrong value).  Entry 6.
+fn: add (int: x; int: y) int
+    return: x + y
+end: add
+
+fn: add5 (int: x) int
+    merge(add; y: 5)
+end: add5
+
+fn: go () int
+    int: a 0
+    a: add5(1)
+    return: a
+end: go
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

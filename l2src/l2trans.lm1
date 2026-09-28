@@ -399,6 +399,7 @@ int: l2_ebr_cap 0
 # select the owning callable occurrence out of the unit first.
 int: l2_cur_mi 0 - 1
 []: char l2_ctr_buf 160
+[]: char l2_lexp_buf 32
 @: FILE l2_out 0
 const: @: char l2_src 0
 # Where the generated L1 finds the runtime headers. The generated unit also
@@ -578,6 +579,9 @@ int: l2_part_n 0
 @@: LmP0Document l2_part_doc 0
 @: int l2_part_m0 0
 @: int l2_part_m1 0
+# §10: the named-Structure entry of each part's root (l2_part_root) -- the Structure of the program its fields
+# and statements make, with no name -- or -1 when the root holds nothing but methods and source tables.
+@: int l2_part_ns 0
 # The statement or unit item being read, and its file: where a question the program's tables cannot answer
 # is said (l2_prim_load).
 const: @: LmP0Node l2_q_at 0
@@ -815,6 +819,13 @@ prototype:
     fn: l2_convert_edge (int: mi; const: @(char path); const: @(LmP0Node stmt)) int
     fn: l2_method_src (int: mi; const: @(char path)) const: @: char
     fn: l2_m_part (int: mi) int
+    fn: l2_m_file (int: mi) int
+    fn: l2_ns_part (int: ni) int
+    fn: l2_ns_top (int: ni) int
+    fn: l2_part_root (int: k) int
+    fn: l2_m_lexparent (int: mi) const: @: char
+    fn: l2_node_in (const: @(LmP0Node n); const: @(LmP0Node x)) int
+    fn: l2_struct_has (const: @(LmP0Structure s); const: @(LmP0Node x)) int
     fn: l2_program_tables (const: @(LmP0Node root); const: @(char path)) int
     fn: l2_parts_read () int
     fn: l2_table_said (const: @(char path); const: @(LmP0Node at); const: @(char msg)) int
@@ -1419,9 +1430,42 @@ fn: l2_msg_text (const: @(char p)) const: @: char
         return: ""
 return: p
 
+# Whether node x is n or stands in n's tree: a frame's body and trailer, a Structure's fields and trailer.
+fn: l2_node_in (const: @(LmP0Node n); const: @(LmP0Node x)) int
+    if: n = 0 || x = 0
+        return: 0
+    if: n = x
+        return: 1
+    if: n\as = 0
+        return: 0
+    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0
+        if: l2_struct_has(n\as\frame\body, x) != 0
+            return: 1
+        if: n\as\frame\trailer != 0
+            return: l2_struct_has(n\as\frame\trailer\body, x)
+        return: 0
+    if: n\kind = c.LM_P0_NODE_STRUCTURE
+        return: l2_struct_has(n\as\structure, x)
+return: 0
+
+fn: l2_struct_has (const: @(LmP0Structure s); const: @(LmP0Node x)) int
+    @: LmP0Field f
+    if: s = 0
+        return: 0
+    f: s\first_field
+    while: f != 0
+        if: l2_node_in(f\value, x) != 0
+            return: 1
+        f: f\next
+    ---
+    if: s\trailer != 0
+        return: l2_struct_has(s\trailer\body, x)
+return: 0
+
 fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) int
     size_t: line 1U
     size_t: column 1U
+    int: k 0
     # A method's body tried for the walk (l2_rw_quiet, -193 T4a) is refused silently: it only gets
     # no frames.  The first such refusal is kept for a note (l2_rw_methods_count).
     if: l2_rw_quiet != 0 && l2_rw_quiet_msg = 0
@@ -1433,6 +1477,13 @@ fn: l2_error (const: @(char path); const: @(LmP0Node node); const: @(char msg)) 
     ---
     if: l2_rw_quiet != 0
         return: 1
+    # A node read from a program part is said in that part (§10): the file of a diagnostic is the file its node
+    # was read from, whichever pass says it -- one handed the source's path included.
+    while: node != 0 && l2_part_doc != 0 && k < l2_part_n
+        if: l2_part_doc[k] != 0 && l2_node_in(lm_p0_document_root(l2_part_doc[k]), node) != 0
+            path: l2_part_path[k]
+        k: k + 1
+    ---
     if: node != 0 && node\span != 0
         line: node\span\line
         column: node\span\column
@@ -1663,8 +1714,9 @@ fn: l2_vis_method (int: mi) int
     if: mi >= 0 && mi != l2_e && mi < l2_m_n && l2_m_node[mi] != 0
         l2_vis_from(l2_m_node[mi])
     ---
-    # A method of a program part (§8): nothing of the source is visible from it by its place (l2_vis_ok).
-    if: l2_m_part(mi) >= 0
+    # Code of a program part -- a method a part gave (§8), its root's procedure (§10): nothing of the source is
+    # visible from it by its place (l2_vis_ok).
+    if: l2_m_file(mi) >= 0
         l2_vis_on: 2
 return: 0
 
@@ -1676,13 +1728,26 @@ return: 0
 
 # Is own row oi a unit field as seen from method mi -- reached through the unit,
 # not through mi's own occurrence -- and visible from where mi is being read?
-# E's top-level own fields are the unit fields; inside E they are E's own.
+# E's top-level own fields are the unit fields; inside E they are E's own.  For a
+# method of a program part, its unit's fields are its part's root's (§10),
+# reached through its node.
 fn: l2_own_unit_seen (int: oi; int: mi) int
-    if: oi < 0 || oi >= l2_own_n || l2_own_host[oi] != 0 || l2_e < 0 || l2_own_mi[oi] != l2_e || mi = l2_e
+    int: k
+    if: oi < 0 || oi >= l2_own_n || l2_own_host[oi] != 0
         return: 0
-    # A method of a program part is another unit's (§8): the source's fields are not in its scope -- a name it
-    # reads that it does not declare is a free name, bound by its callers or unresolved.
-    if: l2_m_part(mi) >= 0
+    # §10: a method of a program part sees its part's root's fields -- own fields of that root's procedure, in
+    # the root's slots -- declared above it in the part, as a method of the source sees the unit's fields.
+    k: l2_m_part(mi)
+    if: k >= 0 && l2_part_ns[k] >= 0 && l2_ns_proc[l2_part_ns[k]] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]
+        if: l2_own_decl[oi] = 0 || l2_own_decl[oi]\span = 0 || l2_m_node[mi] = 0 || l2_m_node[mi]\span = 0
+            return: 1
+        return: (cast: (int) (l2_own_decl[oi]\span\offset <= l2_m_node[mi]\span\offset))
+    if: l2_e < 0 || l2_own_mi[oi] != l2_e || mi = l2_e
+        return: 0
+    # Code of a program part -- a method a part gave, its root's procedure -- is another unit's (§8, §10): the
+    # source's fields are not in its scope -- a name it reads that it does not declare is a free name, bound
+    # by its callers or unresolved.
+    if: l2_m_file(mi) >= 0
         return: 0
 return: l2_vis_ok(l2_own_decl[oi])
 
@@ -3335,22 +3400,23 @@ fn: l2_unit_names_method (const: @(LmP0Text name)) int
     ---
 return: 0
 
-# An item of a program part's root that is not a method (§8): refused in the words of the mechanism it
-# waits for -- the part's root built as a Structure of its own (§9) -- and nothing else.
+# A declaration at a program part's root that the program does not take from a part yet (§10: a part gives
+# its methods, its source tables, and its root's fields and statements) -- refused in the words of the
+# mechanism it waits for, its registration from a part, and nothing else.
 fn: l2_part_refused (const: @(char path); const: @(LmP0Node item); int: role) int
-    []: char msg 200
-    const: @: char what "a statement"
-    if: role = 0 && l2_ns_decl_first(item) != 0
-        what: "a field"
+    []: char msg 240
+    const: @: char what "a named Structure"
+    const: @: char why "the program registers the named Structures of its source only"
     if: role = 2
         what: "a qualified branch"
+        why: "the program registers the qualified branches of its source only"
     if: role = 3
         what: "the os block"
+        why: "the program reads the os block of its source only"
     if: role = 4
         what: "a directive"
-    if: role = 5
-        what: "a named Structure"
-    c.snprintf(msg, 200U, "%s in a program part is not supported yet (the part's root is not built as a Structure of its own yet)", what)
+        why: "the program reads the directives of its source only"
+    c.snprintf(msg, 240U, "%s in a program part is not supported yet (%s)", what, why)
 return: l2_error(path, item, msg)
 
 # What one unit item is: 1 a method, 2 a qualified branch, 3 the os block, 4 a
@@ -3505,6 +3571,10 @@ fn: l2_make_entry (const: @(char path)) int
             return: l2_error(path, l2_own_decl[k], "method collides with a unit field")
         if: l2_own_mi[k] = l2_e && l2_own_host[k] = 0 && (l2_ns_find(l2_own_name[k]) >= 0 || l2_ebr_find(l2_own_name[k]) >= 0)
             return: l2_error(path, l2_own_decl[k], "named Structure collides with a unit field")
+        # §10: a field of a part's root is a unit field for the part's methods, and the program's methods are
+        # visible from them.  (The source's named Structures are not: nothing of the source is.)
+        if: l2_own_host[k] = 0 && l2_m_file(l2_own_mi[k]) >= 0 && l2_m_part(l2_own_mi[k]) < 0 && l2_find_method(l2_own_name[k]) >= 0
+            return: l2_error(l2_method_src(l2_own_mi[k], path), l2_own_decl[k], "method collides with a unit field")
         k: k + 1
     ---
 return: 0
@@ -3636,12 +3706,18 @@ fn: l2_ns_procs (const: @(char path)) int
             return: l2_error(path, l2_ns_stmt[i], "a statement in a nested or qualified named Structure is not supported yet")
         i: i + 1
     ---
+    # §10: a part's root's procedure is registered whatever its body holds -- its own fields are the root's
+    # fields a method of the part reads by name (l2_own_unit_seen) -- and no statement executes it: its entry
+    # has no name, and each lookup that could name an entry compares a name (l2_ns_find, l2_ns_find_payload,
+    # l2_ns_count_named, l2_path_root), so its l2_ns_exec stays 0.
     while: more != 0
         more: 0
         i: 0
         while: i < l2_ns_n
-            if: l2_ns_proc[i] < 0 && l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && (l2_ns_exec[i] != 0 || l2_ns_stmt[i] != 0)
-                if: l2_ns_proc_add(i, path) != 0
+            if: l2_ns_proc[i] < 0 && l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && (l2_ns_exec[i] != 0 || l2_ns_stmt[i] != 0 || l2_ns_part(i) >= 0)
+                if: l2_ns_part(i) < 0 && l2_ns_proc_add(i, path) != 0
+                    return: 1
+                if: l2_ns_part(i) >= 0 && l2_ns_proc_add(i, l2_part_path[l2_ns_part(i)]) != 0
                     return: 1
                 if: l2_ns_exec_scan(l2_ns_at[i]\as\frame\body\first_field, 0) != 0
                     more: 1
@@ -3651,6 +3727,106 @@ fn: l2_ns_procs (const: @(char path)) int
         ---
     ---
 return: 0
+
+# A part's root as a Structure of the program (§10): its fields and statements -- the items of its root that
+# are neither methods nor source tables -- gathered into a body of their own, taken as a named Structure's
+# body is (l2_take_ns_body) with no name.  The frame it hangs from is the translator's, with the root's
+# place.  Nothing to gather, no entry; in a library, which executes no statements, a part's root may hold
+# none, as the source's may not.
+fn: l2_part_root (int: k) int
+    const: @: LmP0Node rootn
+    @: LmP0Field f
+    @: LmP0Field copies 0
+    @: LmP0Field cp 0
+    @: LmP0Field last 0
+    @: LmP0Node first 0
+    @: LmP0Structure body 0
+    @: LmP0Frame frame 0
+    @: LmP0NodeAs as 0
+    @: LmP0Node node 0
+    int: n 0
+    int: j 0
+    rootn: lm_p0_document_root(l2_part_doc[k])
+    if: rootn = 0 || rootn\kind != c.LM_P0_NODE_STRUCTURE || rootn\as = 0 || rootn\as\structure = 0
+        return: 0
+    f: l2_next_active(rootn\as\structure\first_field)
+    while: f != 0
+        if: l2_unit_role(f\value) = 0
+            if: first = 0
+                first: f\value
+            n: n + 1
+        f: l2_next_active(f\next)
+    ---
+    if: n = 0
+        return: 0
+    if: l2_library_mode != 0
+        return: l2_error(l2_part_path[k], first, "a library unit executes no statements")
+    copies: (cast: (@: LmP0Field) calloc((cast: (size_t) n), c.sizeof(c.LmP0Field)))
+    body: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(c.LmP0Structure)))
+    frame: (cast: (@: LmP0Frame) calloc(1U, c.sizeof(c.LmP0Frame)))
+    as: (cast: (@: LmP0NodeAs) calloc(1U, c.sizeof(c.LmP0NodeAs)))
+    node: (cast: (@: LmP0Node) calloc(1U, c.sizeof(c.LmP0Node)))
+    if: copies = 0 || body = 0 || frame = 0 || as = 0 || node = 0
+        return: l2_error(l2_part_path[k], first, "out of memory")
+    f: l2_next_active(rootn\as\structure\first_field)
+    while: f != 0
+        if: l2_unit_role(f\value) = 0
+            cp: copies + j
+            cp\value: f\value
+            if: last != 0
+                last\next: cp
+            last: cp
+            j: j + 1
+        ---
+        f: l2_next_active(f\next)
+    ---
+    body\first_field: copies
+    body\last_field: copies + (n - 1)
+    body\field_count: (cast: (size_t) n)
+    frame\body: body
+    as\frame: frame
+    node\kind: c.LM_P0_NODE_FRAME
+    node\as: as
+    node\span: rootn\span
+    l2_part_ns[k]: l2_ns_n
+return: l2_take_ns_body(0, 0 - 1, body, node, l2_part_path[k])
+
+# The part whose root is named-Structure entry ni (§10), or -1.
+fn: l2_ns_part (int: ni) int
+    int: k 0
+    while: ni >= 0 && l2_part_ns != 0 && k < l2_part_n
+        if: l2_part_ns[k] = ni
+            return: k
+        k: k + 1
+    ---
+return: 0 - 1
+
+# The unit-level entry that holds entry ni: ni, or the entry its parents lead to.
+fn: l2_ns_top (int: ni) int
+    int: t ni
+    while: t >= 0 && t < l2_ns_n && l2_ns_parent[t] >= 0
+        t: l2_ns_parent[t]
+    ---
+return: t
+
+# The program part whose code method mi is, or -1: a method a part gave (l2_m_part), or the procedure of a
+# part's root (§10).
+fn: l2_m_file (int: mi) int
+    int: k
+    k: l2_m_part(mi)
+    if: k < 0
+        k: l2_ns_part(l2_m_nsof(mi))
+return: k
+
+# The lexical parent of method mi's occurrence, as the builder names it: the unit, or for a method of a program
+# part whose root is built, that root (§10).
+fn: l2_m_lexparent (int: mi) const: @: char
+    int: k
+    k: l2_m_part(mi)
+    if: k >= 0 && l2_part_ns[k] >= 0
+        c.snprintf(l2_lexp_buf, 32U, "l2_nsp[%d]", l2_part_ns[k])
+        return: l2_lexp_buf
+return: "l2_entry_unit"
 
 fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     @: LmP0Field field
@@ -3772,27 +3948,35 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
         field: l2_next_active(field\next)
     ---
     # The program's parts (§8, Q46): a part's methods are the program's, found by name as the source's are (a
-    # conversion's receiver among them); its source tables were built at the start and are inactive.  The
-    # rest of a part's root waits for that root to be built as a Structure of its own (§9): its fields with
-    # their initializers, the procedure of its statements, the lexical parent of its methods.
+    # conversion's receiver among them); its source tables were built at the start and are inactive.  §10: the
+    # rest of its root -- its fields and statements -- is a Structure of the program with no name
+    # (l2_part_root): its fields built with their initializers, its statements the body of its procedure,
+    # which nothing executes; it is the lexical parent of the part's methods.  A part is read as the source
+    # is, each item against its own root (l2_cur_unit: a method named there, a field declared there).  A named
+    # Structure, a qualified branch, the os block, a directive at a part's root wait (l2_part_refused).
     i: 0
     while: i < l2_part_n
         l2_part_m0[i]: l2_m_n
         l2_part_m1[i]: c.INT_MAX
+        l2_part_ns[i]: 0 - 1
         field: 0
         if: lm_p0_document_root(l2_part_doc[i]) != 0 && lm_p0_document_root(l2_part_doc[i])\kind = c.LM_P0_NODE_STRUCTURE && lm_p0_document_root(l2_part_doc[i])\as != 0
-            field: l2_next_active(lm_p0_document_root(l2_part_doc[i])\as\structure\first_field)
+            l2_cur_unit: lm_p0_document_root(l2_part_doc[i])\as\structure
+            field: l2_next_active(l2_cur_unit\first_field)
         while: field != 0
             item: field\value
             l2_q_at: item
             l2_q_path: l2_part_path[i]
             role: l2_unit_role(item)
-            if: role != 1
+            if: role != 0 && role != 1
                 return: l2_part_refused(l2_part_path[i], item, role)
-            if: l2_collect_method(item, l2_part_path[i]) != 0
+            if: role = 1 && l2_collect_method(item, l2_part_path[i]) != 0
                 return: 1
             field: l2_next_active(field\next)
         l2_part_m1[i]: l2_m_n
+        if: l2_part_root(i) != 0
+            return: 1
+        l2_cur_unit: unit
         i: i + 1
     ---
     if: l2_ns_resolve_refs(path, first_stmt) != 0
@@ -6898,12 +7082,14 @@ fn: l2_parts_read () int
     l2_part_doc: (cast: (@@: LmP0Document) malloc((cast: (size_t) l2_part_n) * c.sizeof(@: void)))
     l2_part_m0: (cast: (@: int) malloc((cast: (size_t) l2_part_n) * c.sizeof(c.int)))
     l2_part_m1: (cast: (@: int) malloc((cast: (size_t) l2_part_n) * c.sizeof(c.int)))
-    if: l2_part_doc = 0 || l2_part_m0 = 0 || l2_part_m1 = 0
+    l2_part_ns: (cast: (@: int) malloc((cast: (size_t) l2_part_n) * c.sizeof(c.int)))
+    if: l2_part_doc = 0 || l2_part_m0 = 0 || l2_part_m1 = 0 || l2_part_ns = 0
         return: l2_error(l2_part_path[0], 0, "out of memory")
     while: k < l2_part_n
         l2_part_doc[k]: 0
         l2_part_m0[k]: 0
         l2_part_m1[k]: 0
+        l2_part_ns[k]: 0 - 1
         k: k + 1
     k: 0
     while: k < l2_part_n
@@ -7106,11 +7292,11 @@ fn: l2_m_part (int: mi) int
         k: k + 1
 return: 0 - 1
 
-# The file a method was read from: a method of a program part is located in that part (§8), every other in
-# the source.
+# The file a method was read from: a method of a program part, and its root's procedure (§10), is located in
+# that part (§8), every other in the source.
 fn: l2_method_src (int: mi; const: @(char path)) const: @: char
     int: k
-    k: l2_m_part(mi)
+    k: l2_m_file(mi)
     if: k >= 0
         return: l2_part_path[k]
 return: path
@@ -10903,10 +11089,16 @@ return: n
 # method's own field is a child of that method's own Structure, reached through
 # `self`; a shared own field stays a child of the program unit.
 fn: l2_own_ctr (int: oi) const: @: char
+    int: k
     if: oi < 0 || oi >= l2_own_n
         return: l2_unit_ref
     if: l2_own_mi[oi] = l2_cur_mi
         return: "self"
+    # A field of a program part's root, read by a method of that part (§10): the root is the method's `node`,
+    # its lexical parent.
+    k: l2_m_part(l2_cur_mi)
+    if: k >= 0 && l2_part_ns[k] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]
+        return: "node"
     # E's occurrence is the unit.
     if: l2_own_mi[oi] = l2_e
         return: l2_unit_ref
@@ -14294,7 +14486,8 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
     if: \out_root <= 0 - 1000
         l2_uses_node_for_root: 1
         return: 0
-    if: len = 4U && memcmp(pd + off, "node", 4U) = 0 && l2_cur_mi >= 0 && l2_cur_mi != l2_e
+    # `node` is a method's lexical parent; a unit's root -- E, a part's root's procedure (§10) -- has none.
+    if: len = 4U && memcmp(pd + off, "node", 4U) = 0 && l2_cur_mi >= 0 && l2_cur_mi != l2_e && l2_ns_part(l2_m_nsof(l2_cur_mi)) < 0
         \out_root: 0 - 2
         l2_uses_node_for_root: 1
         return: 0
@@ -14425,8 +14618,15 @@ fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t
         return: hit
 return: 0 - 1
 
+# The field `node\name` names in the method being read (l2_cur_mi): a field of its lexical parent -- for a
+# method of the source the unit, whose fields are E's own; for a method of a program part its part's root,
+# whose fields are that root's procedure's own (§10), and none when the part's root holds none.
 fn: l2_e_own_seg (const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
-    if: l2_e < 0
+    int: k
+    k: l2_m_part(l2_cur_mi)
+    if: k >= 0 && l2_part_ns[k] >= 0 && l2_ns_proc[l2_part_ns[k]] >= 0
+        return: l2_own_seg_scan(l2_ns_proc[l2_part_ns[k]], 0, pd, off, len, out_kind, out_ent)
+    if: l2_e < 0 || k >= 0
         \out_kind: 0 - 1
         \out_ent: 0 - 1
         return: 0 - 1
@@ -14615,12 +14815,13 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     if: oi < 0 && fi < 0 && (root > 0 - 3 || root <= 0 - 1000) && ni >= 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
     # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): node's value is the
-    # unit itself (l2_own_ctr's rule for any own field E owns), needing no
+    # method's own `node`, its lexical parent -- the unit, or for a method of a
+    # program part its part's root (§10) -- needing no
     # arena hop to reach; for's value is the innermost enclosing for-frame's
     # own Structure, one hop from self at its already-laid-out child slot
     # (l2_for_uchild, safe here: l2_emit_path only ever runs after the
     # layout pass that fills it, never at check time).
-    if: oi < 0 && root = 0 - 2 && c.fprintf(l2_out, "%sl2_pst: %s\n", ind, l2_unit_ref) < 0
+    if: oi < 0 && root = 0 - 2 && c.fprintf(l2_out, "%sl2_pst: node\n", ind) < 0
         return: 1
     if: oi < 0 && root >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(self, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) l2_for_uchild[root]), ind) < 0
         return: 1
@@ -15246,13 +15447,23 @@ return: r
 fn: l2_ns_resolve_refs (const: @(char path); const: @(LmP0Node at)) int
     int: k 0
     int: n
+    int: pk
+    const: @: char rpath
+    const: @: LmP0Node rat
     while: k < l2_nsf_n
+        # A field of a part's root (§10) is said in its part, at its name.
+        rpath: path
+        rat: at
+        pk: l2_ns_part(l2_ns_top(l2_nsf_owner[k]))
+        if: pk >= 0
+            rpath: l2_part_path[pk]
+            rat: l2_node_of_text(l2_ns_at[l2_part_ns[pk]]\as\frame\body, l2_nsf_fname[k])
         if: l2_nsf_kind[k] = 3
             n: l2_ns_count_named(l2_nsf_name[k])
             if: n = 0
-                return: l2_error(path, at, "unknown nested Structure reference")
+                return: l2_error(rpath, rat, "unknown nested Structure reference")
             if: n > 1
-                return: l2_error(path, at, "ambiguous nested Structure reference")
+                return: l2_error(rpath, rat, "ambiguous nested Structure reference")
             l2_nsf_ref[k]: l2_ns_find(l2_nsf_name[k])
             # Qualification admits an ADDRESS RANGE, not a promise. A reference
             # out of a qualified branch into ordinary mutable storage would make
@@ -15264,7 +15475,7 @@ fn: l2_ns_resolve_refs (const: @(char path); const: @(LmP0Node at)) int
         if: l2_nsf_kind[k] = 4
             n: l2_find_method(l2_nsf_name[k])
             if: n < 0
-                return: l2_error(path, at, "unknown callable field")
+                return: l2_error(rpath, rat, "unknown callable field")
             if: l2_ns_eternal[l2_nsf_owner[k]] >= 0
                 return: l2_error(path, at, "an eternal branch cannot hold a callable field")
             l2_nsf_ref[k]: n
@@ -15756,6 +15967,19 @@ fn: l2_anon_cf_name (const: @(LmP0Text host); const: @(LmP0Text formal)) @: LmP0
     t\length: n
 return: t
 
+# Two definitions of one method name in the program -- in one file or in two (§8): said at the second, with
+# the other's place, as two source tables of one name are (l2_table_twice; REVIEW 70f869c, account 2).
+fn: l2_dup_method (const: @(char path); const: @(LmP0Node at); int: other) int
+    []: char msg 1400
+    size_t: line 1U
+    size_t: column 1U
+    if: other >= 0 && other < l2_m_n && l2_m_node[other] != 0 && l2_m_node[other]\span != 0
+        line: l2_m_node[other]\span\line
+        column: l2_m_node[other]\span\column
+    ---
+    c.snprintf(msg, 1400U, "duplicate definition (the other at %s:%zu:%zu)", l2_method_src(other, l2_src), line, column)
+return: l2_error(path, at, msg)
+
 fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     @: LmP0Field field
     const: @: LmP0Frame fr
@@ -15826,7 +16050,7 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     if: anon = 0 && is_sub != 0 && l2_fn_close(fr, nm, "sub") != 0
         return: l2_error(path, fn_node, "end target does not match close target")
     if: l2_find_method(nm) >= 0
-        return: l2_error(path, fn_node, "duplicate definition")
+        return: l2_dup_method(path, fn_node, l2_find_method(nm))
     if: nm\length >= 63U
         return: l2_error(path, fn_node, "name too long")
     if: anon = 0
@@ -20169,9 +20393,16 @@ fn: l2_rw_carry (int: into; int: oi; @: int out) int
         return: 1
 return: l2_rw_put(\out, 3, arg)
 
-# Is own row oi one the body being built reaches: its own, or the unit's?
+# Is own row oi one the body being built reaches: its own, or its lexical space's -- the unit's, or for a
+# method of a program part its part's root's (§10)?
 fn: l2_rw_seen (int: oi) int
-return: (cast: (int) (oi >= 0 && (l2_own_mi[oi] = l2_rw_mi || l2_own_mi[oi] = l2_e)))
+    int: k
+    if: oi < 0
+        return: 0
+    if: l2_own_mi[oi] = l2_rw_mi || l2_own_mi[oi] = l2_e
+        return: 1
+    k: l2_m_part(l2_rw_mi)
+return: (cast: (int) (k >= 0 && l2_part_ns[k] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]))
 
 # The type of the root's own numeric field named t, or -9 (not one: the emission says why).
 fn: l2_rw_own_ty (const: @(LmP0Text t)) int
@@ -21731,6 +21962,7 @@ return: l2_rw_put(\out, 3, prim)
 # model's -- and the slot is the field's own child (l2_own_mslot).  A unit field a method sees is
 # named by its holder, the unit.
 fn: l2_rw_cell (int: node; int: oi) int
+    int: k
     if: l2_rw_emit = 0
         return: 0
     # A catch parameter lives in its catch frame's Structure, which entry built as l2_b.
@@ -21738,6 +21970,11 @@ fn: l2_rw_cell (int: node; int: oi) int
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_b%d)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, l2_own_fid[oi], node, (cast: (unsigned) l2_own_fchild[oi])) < 0))
     if: l2_own_mi[oi] = l2_rw_mi
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
+    # A field of a program part's root, read by a method of that part (§10), is named by its holder, that
+    # root -- a unit child the builder holds in l2_nsp.
+    k: l2_m_part(l2_rw_mi)
+    if: k >= 0 && l2_part_ns[k] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, l2_part_ns[k], node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
 return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", node, node, (cast: (unsigned) l2_own_uchild[oi])) < 0))
 
 # The walker op that binds the root's own field oi (-189 c3b-3; grok_bot -186): an own Structure
@@ -25483,7 +25720,9 @@ fn: l2_mad_emit_into (int: mi; int: nk; const: @(char ind); int: into) int
             slot: slot + 1
             ---
         j: j + 1
-    if: c.fprintf(l2_out, "%sl2_mad_src%s: lmx_arena_ref_struct(node, %uU)\n%sif: l2_mad_src%s = 0\n%s    c.abort()\n%sl2_mad_k%s: 0\n%swhile: l2_mad_k%s < %d\n%s    if: lmx_arena_ref_store(l2_mad%s, %uU + (cast: (unsigned) l2_mad_k%s), lmx_arena_ref_value(l2_mad_src%s, %uU + (cast: (unsigned) l2_mad_k%s))) != 0\n%s        c.abort()\n%s    l2_mad_k%s: l2_mad_k%s + 1\n", ind, sx, (cast: (unsigned) (l2_unit_base + model)), ind, sx, ind, ind, sx, ind, sx, steps, ind, sx, (cast: (unsigned) (2 + caps)), sx, sx, (cast: (unsigned) base), sx, ind, ind, sx, sx) < 0
+    # The model's occurrence is a unit child, reached through the unit (l2_unit_ref: `node` for a method of the
+    # source, the program's unit for a method of a part whose root is built, §10).
+    if: c.fprintf(l2_out, "%sl2_mad_src%s: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_mad_src%s = 0\n%s    c.abort()\n%sl2_mad_k%s: 0\n%swhile: l2_mad_k%s < %d\n%s    if: lmx_arena_ref_store(l2_mad%s, %uU + (cast: (unsigned) l2_mad_k%s), lmx_arena_ref_value(l2_mad_src%s, %uU + (cast: (unsigned) l2_mad_k%s))) != 0\n%s        c.abort()\n%s    l2_mad_k%s: l2_mad_k%s + 1\n", ind, sx, l2_unit_ref, (cast: (unsigned) (l2_unit_base + model)), ind, sx, ind, ind, sx, ind, sx, steps, ind, sx, (cast: (unsigned) (2 + caps)), sx, sx, (cast: (unsigned) base), sx, ind, ind, sx, sx) < 0
         return: 1
     # D-103: a host that can throw has the declared-throw ABI -- its return is the status and the
     # node goes out through l2_out_result, as any throwing method's result does.  Returned as the
@@ -26293,7 +26532,7 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
             return: 1
         j: j + 1
     ---
-    if: c.fprintf(l2_out, "%sl2_t7s%d: lmx_arena_ref_struct(node, %uU)\n%sif: l2_t7s%d = 0\n%s    c.abort()\n", ind, site, (cast: (unsigned) (l2_unit_base + anchor)), ind, site, ind) < 0
+    if: c.fprintf(l2_out, "%sl2_t7s%d: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_t7s%d = 0\n%s    c.abort()\n", ind, site, l2_unit_ref, (cast: (unsigned) (l2_unit_base + anchor)), ind, site, ind) < 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_t7k%d: 0\n%swhile: l2_t7k%d < %d\n", ind, site, ind, site, steps) < 0
         return: 1
@@ -29562,6 +29801,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
         l2_unit_ref: "node"
         if: i = l2_e
             l2_unit_ref: "self"
+        # A method of a program part whose root is built (§10): its `node` is that root; the unit -- the other
+        # methods' occurrences, the named Structures -- is the program's, the one every method holds.
+        if: l2_m_part(i) >= 0 && l2_part_ns[l2_m_part(i)] >= 0
+            l2_unit_ref: "l2_program_unit"
         l2_cur_mi: i
         l2_vis_method(i)
         k: 0
@@ -30004,6 +30247,15 @@ fn: l2_emit_unit (const: @(char out_path)) int
         ---
         k: k + 1
     ---
+    # §10: the occurrence of a method of a program part whose root is built is that root's child -- the `node`
+    # the method runs under (lmx_call_node, lmx_fresh) -- once the root exists.
+    i: 0
+    while: i < l2_m_n
+        if: i != l2_e && l2_m_part(i) >= 0 && l2_part_ns[l2_m_part(i)] >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0 || l2_nsp[%d] = 0\n            return: 1\n        l2_entry_leaf\\parent: l2_nsp[%d]\n", (cast: (unsigned) (l2_unit_base + i)), l2_part_ns[l2_m_part(i)], l2_part_ns[l2_m_part(i)]) < 0
+            fclose(l2_out)
+            return: 1
+        i: i + 1
+    ---
     if: l2_d105_emit_tables() != 0
         fclose(l2_out)
         return: 1
@@ -30034,9 +30286,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
                 return: 1
             # A CALLABLE field stores that method own Structure, the unit child
             # at l2_unit_base + mi. Storing it does not reparent it either, so
-            # its node is checked the same way. merge then deep-copies it like
+            # its node is checked the same way -- its lexical parent, the unit or
+            # a part's root (§10). merge then deep-copies it like
             # any other Structure, sharing only the descriptor at slot 0.
-            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n        if: lmx_arena_ref_struct(l2_entry_unit, %uU)\\parent != l2_entry_unit\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx])), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx]))) < 0
+            if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n        if: lmx_arena_ref_struct(l2_entry_unit, %uU)\\parent != %s\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx])), (cast: (unsigned) (l2_unit_base + l2_nsf_ref[fx])), l2_m_lexparent(l2_nsf_ref[fx])) < 0
                 fclose(l2_out)
                 return: 1
             if: l2_nsf_owner[fx] = k

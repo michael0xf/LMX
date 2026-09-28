@@ -2949,9 +2949,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_tbl_quoted.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_quoted_table.lm2';
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_runtime.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_runtime_table.lm2';
-        Needle = 'unit_s7_tbl_runtime_table.lm2:2:1: a statement in a program part is not supported yet (the part''s root is not built as a Structure of its own yet)'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_tbl_runtime.lm2:9:5: the program has no source table `primitive.convert`'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_nested.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_nested_table.lm2';
-        Needle = 'unit_s7_tbl_nested_table.lm2:2:1: a named Structure in a program part is not supported yet (the part''s root is not built as a Structure of its own yet)'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_tbl_nested_table.lm2:2:1: a named Structure in a program part is not supported yet (the program registers the named Structures of its source only)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_twice_arg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_twice_arg_table.lm2';
         Needle = 'unit_s7_tbl_twice_arg_table.lm2:5:5: the argument name of table is given twice'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_noarg.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_tbl_noarg_table.lm2';
@@ -3020,9 +3020,9 @@ $fixtures = @(
     # conversion's receiver is a method of the program, found by name.  The table in the source itself -- at
     # its root, in a method's body -- and at depth in a method of a part; two parts with one table name,
     # refused with both places; a program that converts with no conversion table, refused at the edge.  A
-    # part gives methods and source tables: a field at its root waits for the part's root built as a
-    # Structure of its own (§9), refused in those words; a method of a part reads its free names from its
-    # callers (the book :1178) -- m's own k, 9, not the source's field k, 5 -- and one no caller binds is
+    # part gives methods, source tables and (§10, the block below) its root's fields and statements; a
+    # method of a part reads its free names from its callers (the book :1178) -- m's own k, 9, not the
+    # source's field k, 5 -- and one no caller binds is
     # unresolved at its read, in the part.  A `table:` without `source` is refused in its own words.
     # Mutants (steps/table-receiver.md §9, each by copy, both modes): tables only at a file's root -- the
     # method and part-depth rows red; the source's own tables unread -- the two in-source rows red; a part's
@@ -3030,7 +3030,7 @@ $fixtures = @(
     # free name by name to the source's field -- the free-bound rows read 5, red; the primitive table
     # required at the start -- the absent row refused; a missing table said at 1:1 -- the nodesc row red;
     # two tables of one name without the other's place -- the dup-parts row red; the run-time words gone --
-    # its row red; a part's root item skipped silently -- the field row runs, red; the P59 fix undone -- the
+    # its row red; a part's root item skipped silently -- the §10 field rows red; the P59 fix undone -- the
     # else row red; the return trailer not searched -- the free-refused row red; said without the flags --
     # two lines, the cellneed and implcell rows red.
     [pscustomobject]@{ Name = 'unit_s7_tbl_in_source.lm2'; Table = 'absent'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -3043,8 +3043,6 @@ $fixtures = @(
         Needle = 'unit_s7_tbl_dup_parts_second.lm2:4:11: two source tables have this name (the other at convert.lm2:3:11)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_table_asks_refused.lm2'; Table = 'absent'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:7:5: the program has no source table `primitive.convert`'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_part_field_refused.lm2'; Parts = @('unit_s7_part_field_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = "unit_s7_part_field_refused_part.lm2:2:1: a field in a program part is not supported yet (the part's root is not built as a Structure of its own yet)"; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_free_bound.lm2'; Parts = @('unit_s7_part_free_bound_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_s7_part_free_bound.lm2'; Parts = @('unit_s7_part_free_bound_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -3053,6 +3051,75 @@ $fixtures = @(
         Needle = 'unit_s7_part_free_bound_part.lm2:4:9: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_runtime_src_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:4:1: a table built at run time is not supported yet'; Absent = @(); Debt = @() },
+    # §10 (steps/table-receiver.md; REVIEW a582309 with fable_pc's three conditions): a part's root is a
+    # Structure of the program with no name -- its fields built with their initializers, its statements the
+    # body of its procedure, checked and never executed -- and the lexical parent, `node`, of the part's
+    # methods, which reach the program's unit through l2_program_unit.  Witnesses: a part's method reads its
+    # part's k, 5 (through another method, and as node\k), writes 6 and reads 6, the root's `k: 7U` not
+    # executed, in both modes (the walked read through the root pinned); two parts' k's apart, and the
+    # source's own; the source's method reading a part's field, a part's root statement reading the source's
+    # field or its named Structure, a part's method reading node\got where only the source declares got --
+    # each refused where it reads, in its file: no binding across files, and the last said while the method
+    # is written, in the part; an unknown Structure type of a part's root field, said at it, in the part; a
+    # part's root field named as a method, refused as a unit field is; a callable field naming a part's
+    # method, its occurrence checked against that root; a run-time table at a part's root, a statement of its
+    # procedure; a directive, the os block and a qualified branch at a part's root, refused in the words of
+    # their registration; a forward declaration in a part, bound in its own file -- a part is read against
+    # its own root.  REVIEW 70f869c's accounts: a table in a named Structure's body; a part's method
+    # reading the source's named Structure, unresolved; one method name in two files, said with the other's
+    # place.  A library executes no statements, its source's or a part root's (Library: --library).
+    # Mutants (steps/table-receiver.md §11, each by copy, every row of the block in both modes): the part's
+    # method's occurrence left the unit's child -- the field rows red; the unit through node -- the native
+    # field rows crash; the root's initializers not built -- the field rows red; the root's procedure run at
+    # the start -- peek reads 7, red; the nameless entry found by any name -- every unit field collides, eight
+    # rows red; a part's method blind to its root -- the field rows red; the root's procedure reading the
+    # source by place -- the ns row accepted; that and the field check both dropped -- the src row binds the
+    # source's total (either alone is masked by the other); node\x through E -- the node row accepted; the
+    # walked holder the unit, or the walker not reaching the root -- the twin's pin red (and the walked
+    # values); the callable field checked against the unit -- refused at the start; a colliding field
+    # accepted, a reference said at the source's first statement, a diagnostic said in its pass's file, a
+    # library taking a part's root, a part read against the source's root, a duplicate without the other's
+    # place -- each its own row red.
+    [pscustomobject]@{ Name = 'unit_s7_part_root_field.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_s7_part_root_field.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('(cast: (@: void) l2_nsp[0])) != 0 || lmx_walk_store_size') },
+    [pscustomobject]@{ Name = 'unit_s7_part_root_two.lm2'; Parts = @('unit_s7_part_root_two_a.lm2', 'unit_s7_part_root_two_b.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_callable_field.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_forward.lm2'; Parts = @('unit_s7_part_forward_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_root_hidden.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_root_hidden.lm2:6:9: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_root_src_refused.lm2'; Parts = @('unit_s7_part_root_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_root_src_refused_part.lm2:4:1: assignment value has unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_root_ns_refused.lm2'; Parts = @('unit_s7_part_root_ns_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_root_ns_refused_part.lm2:4:4: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_node_src_refused.lm2'; Parts = @('unit_s7_part_node_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_node_src_refused_part.lm2:6:5: unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_root_type_refused.lm2'; Parts = @('unit_s7_part_root_type_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_root_type_refused_part.lm2:4:8: unknown nested Structure reference'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_root_collide_refused.lm2'; Parts = @('unit_s7_part_root_collide_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_root_collide_refused_part.lm2:3:1: method collides with a unit field'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_tbl_runtime_refused.lm2'; Parts = @('unit_s7_part_tbl_runtime_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_tbl_runtime_refused_part.lm2:3:1: a table built at run time is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_directive_refused.lm2'; Parts = @('unit_s7_part_directive_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_directive_refused_part.lm2:2:1: a directive in a program part is not supported yet (the program reads the directives of its source only)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_os_refused.lm2'; Parts = @('unit_s7_part_os_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_os_refused_part.lm2:2:1: the os block in a program part is not supported yet (the program reads the os block of its source only)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_branch_refused.lm2'; Parts = @('unit_s7_part_branch_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_branch_refused_part.lm2:3:1: a qualified branch in a program part is not supported yet (the program registers the qualified branches of its source only)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_tbl_in_struct.lm2'; Table = 'absent'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_ns_hidden.lm2'; Parts = @('unit_s7_part_ns_hidden_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_ns_hidden_part.lm2:4:9: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_part_dup_method_refused.lm2'; Parts = @('unit_s7_part_dup_method_refused_part.lm2', 'unit_s7_part_dup_method_refused_second.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_part_dup_method_refused_second.lm2:3:1: duplicate definition (the other at unit_s7_part_dup_method_refused_part.lm2:3:1)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_lib_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Library = $true;
+        Needle = 'unit_lib_stmt_refused.lm2:5:1: a library unit executes no statements'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_lib_part_root_refused.lm2'; Parts = @('unit_lib_part_root_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Library = $true;
+        Needle = 'unit_lib_part_root_refused_part.lm2:2:1: a library unit executes no statements'; Absent = @(); Debt = @() },
     # D-83: a converter's refusal is the implicit throw `convert` (g = 3), not c.abort() and not 0.
     # Uncaught it reaches the root: no value, Message stopped, status 3.  Caught, the handler runs
     # and the destination keeps its value.  Mutant: a body without its range test -- the first row
@@ -3372,6 +3439,8 @@ foreach ($fx in $fixtures) {
     # gives every method with frames (its body built as walker nodes) native 0, so a CALL of it walks.
     if ($fx.PSObject.Properties['WalkMethods'] -and $fx.WalkMethods) { $profileArgs += @('--walk-methods') }
     if ($fx.Expect -eq 'library-links') { $profileArgs += @('--library') }
+    # Library (§10): a refusal row translated as a library -- whose unit executes no statements.
+    if ($fx.PSObject.Properties['Library'] -and $fx.Library) { $profileArgs += @('--library') }
     $made = Step-Made $label $l2trans ($profileArgs + @($source) + $partArgs + @($genLm1)) $src $genLm1
 
     # 'root-pending' (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159): a row whose root uses an operation the

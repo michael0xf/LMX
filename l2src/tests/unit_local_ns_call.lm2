@@ -1,0 +1,32 @@
+# A method executes its own named Structure (OPUS-Q54-CONTINUE-20260929-14 slice 2c; book §9 after 55c1abc: `S` and
+# `S()` call S; §12: a named Structure is a procedure without arguments).  S's procedure is a method of its own -- its
+# own fields S's fields, in S's slots -- registered with the method's entries, after the entry E, so it has no unit
+# child: its occurrence is S itself, built at S's statement with the procedure's trampoline as its native word
+# (pinned).  The call is lmx_call_prim(S, S) (pinned): owner = data = S, so `node` in S's body is S's parent, the
+# method's occurrence.  S's body here is its field declaration, and every call -- `S()`, `S: ()`, the bare `S` -- stores
+# its initializer again: S\v, written 9 before each, reads 4 after each.  Was unit_local_ns_call_refused.  Entry 7.
+fn: m () int
+    S:
+        size_t: v 4U
+    S\v: 9U
+    S()
+    size_t: a 9U
+    a: S\v
+    S\v: 9U
+    S: ()
+    size_t: b 9U
+    b: S\v
+    S\v: 9U
+    S
+    size_t: c 9U
+    c: S\v
+    int: r 0
+    if: a = 4U && b = 4U && c = 4U
+        r: 7
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -1,0 +1,26 @@
+# A method's own named Structure declared in an `if:` body and executed there, and executed from an anonymous block
+# (slice 2c): S's procedure is registered outside the scope S stands in -- its fields are S's, never fields of the body
+# (they were hosted in the `if:` body, and the procedure named a container it does not have).  S\v, written 9, reads 4
+# after each call.  Entry 7.
+fn: m () int
+    int: r 0
+    if: r = 0
+        S:
+            size_t: v 4U
+        S\v: 9U
+        S()
+        ---
+            if: S\v = 4U
+                S\v: 9U
+                S
+            r: r + 0
+        if: S\v = 4U
+            r: 7
+        r: r + 0
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -1,0 +1,28 @@
+# unit_local_ns_call under --walk-methods: a method with its own named Structure stays native (2b-1, pinned), and S's
+# procedure is never walked -- its occurrence is built natively, at S's statement, with the trampoline as its native
+# word.  Each call stores S's initializer again: 4 after each.  Entry 7.
+fn: m () int
+    S:
+        size_t: v 4U
+    S\v: 9U
+    S()
+    size_t: a 9U
+    a: S\v
+    S\v: 9U
+    S: ()
+    size_t: b 9U
+    b: S\v
+    S\v: 9U
+    S
+    size_t: c 9U
+    c: S\v
+    int: r 0
+    if: a = 4U && b = 4U && c = 4U
+        r: 7
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

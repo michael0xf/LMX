@@ -913,6 +913,11 @@ prototype:
     fn: l2_tail_decl_first (const: @(LmP0Frame fr)) int
     fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    fn: l2_body_calls_name (@: LmP0Field first; const: @(LmP0Text h)) int
+    fn: l2_local_ns_proc (int: ni; const: @(char path)) int
+    fn: l2_local_ns_callee (const: @(LmP0Text t); int: mi) int
+    fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
+    fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
     fn: l2_emit_local_ns (int: mi; int: oi; int: ni; const: @(char ind)) int
     fn: l2_own_of_local_ns (int: mi; int: ni) int
     fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_model) int
@@ -8733,7 +8738,104 @@ fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) in
         l2_ns_local[i]: mi
         i: i + 1
     ---
+    # Slice 2c: a method that executes its own named Structure -- `S` or `S()` -- gets S's procedure (§12), as a unit
+    # named Structure has one (l2_local_ns_proc).
+    if: l2_m_body[mi] != 0 && l2_m_body[mi]\as != 0 && l2_m_body[mi]\as\structure != 0 && l2_body_calls_name(l2_m_body[mi]\as\structure\first_field, stmt\as\frame\head) != 0 && l2_local_ns_proc(ni, path) != 0
+        return: 0 - 1
 return: ni
+
+# Whether the statements from `first` -- nested bodies too -- execute the name h: its bare atom, or `h()` (one P0 Frame
+# with `h: ()`, l2_empty_call_shape).  A syntactic reading, before the method is checked; it errs only toward a
+# procedure no statement runs (the call's own check decides what h is, l2_check_struct_call).
+fn: l2_body_calls_name (@: LmP0Field first; const: @(LmP0Text h)) int
+    @: LmP0Field f
+    @: LmP0Field g
+    @: LmP0Node v
+    f: l2_next_active(first)
+    while: f != 0
+        v: f\value
+        if: v != 0 && v\kind = c.LM_P0_NODE_ATOM && v\as != 0 && l2_discard_run(f) = 1 && l2_text_same(v\as\atom, h) != 0
+            return: 1
+        if: l2_empty_call_shape(v) != 0 && l2_text_same(v\as\frame\head, h) != 0
+            return: 1
+        if: v != 0 && v\kind = c.LM_P0_NODE_FRAME && v\as != 0 && v\as\frame != 0 && v\as\frame\body != 0
+            g: l2_next_active(v\as\frame\body\first_field)
+            while: g != 0
+                if: g\value != 0 && g\value\kind = c.LM_P0_NODE_STRUCTURE && g\value\as != 0 && g\value\as\structure != 0 && l2_body_calls_name(g\value\as\structure\first_field, h) != 0
+                    return: 1
+                g: l2_next_active(g\next)
+            ---
+            if: l2_frame_head(v, "else") != 0 && l2_body_calls_name(v\as\frame\body\first_field, h) != 0
+                return: 1
+        ---
+        if: v != 0 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0 && l2_body_calls_name(v\as\structure\first_field, h) != 0
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
+# The procedure of a method's own named Structure ni (slice 2c): a method whose body is S's body and whose own fields
+# are S's fields in S's slots (l2_ns_proc_add, §12).  Registered in the collection pre-pass, after the entry E: a
+# method after E has no unit child (l2_occ_n), and none is wanted -- its occurrence is S itself, built at S's statement
+# in the method (l2_emit_local_ns).  The one table the unit sized before this pass takes it too (l2_m_value_used).  A
+# library unit executes no named Structure: none there.
+fn: l2_local_ns_proc (int: ni; const: @(char path)) int
+    int: n0
+    int: k
+    int: sn
+    int: bad
+    size_t: nb 0U
+    @: int grown
+    @@: LmP0Node saved 0
+    if: l2_library_mode != 0 || ni < 0 || ni >= l2_ns_n || l2_ns_proc[ni] >= 0
+        return: 0
+    n0: l2_m_n
+    # Registered as a unit named Structure's is, with no scope open: the scopes the method's pre-pass is in at S's
+    # statement are the method's, set aside and restored -- S's fields are S's, never a field of the body S stands in.
+    sn: l2_scope_n
+    if: sn > 0
+        nb: (cast: (size_t) sn) * c.sizeof(@: void)
+        saved: (cast: (@@: LmP0Node) l2_xmalloc(nb))
+        if: saved = 0
+            return: l2_alloc_or(path, l2_ns_at[ni], "out of memory")
+        memcpy((cast: (@: void) saved), (cast: (@: void) l2_scope_at), nb)
+    ---
+    l2_scope_n: 0
+    bad: l2_ns_proc_add(ni, path)
+    if: sn > 0
+        memcpy((cast: (@: void) l2_scope_at), (cast: (@: void) saved), nb)
+        l2_xfree((cast: (@: void) saved))
+    ---
+    l2_scope_n: sn
+    if: bad != 0
+        return: 1
+    if: l2_m_value_used != 0
+        grown: (cast: (@: int) realloc((cast: (@: void) l2_m_value_used), (cast: (size_t) l2_m_n) * c.sizeof(c.int)))
+        if: grown = 0
+            return: l2_alloc_or(path, l2_ns_at[ni], "out of memory")
+        l2_m_value_used: grown
+        k: n0
+        while: k < l2_m_n
+            l2_m_value_used[k]: 0
+            k: k + 1
+        ---
+    ---
+return: 0
+
+# The own field of mi a call names when t is a method's own named Structure with a procedure (slice 2c): the field S
+# its declaration declares, typed by the entry local to mi (l2_ns_local) -- or -1.  No formal, slot or local.
+fn: l2_local_ns_callee (const: @(LmP0Text t); int: mi) int
+    int: oi
+    int: ni
+    if: t = 0 || mi < 0 || l2_param_find(mi, t) >= 0 || l2_slot_find(mi, t) >= 0 || l2_ml_find(t) >= 0
+        return: 0 - 1
+    oi: l2_own_find_last(mi, t)
+    if: oi < 0
+        return: 0 - 1
+    ni: l2_own_nsty_get(oi)
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_local[ni] != mi || l2_ns_proc[ni] < 0
+        return: 0 - 1
+return: oi
 
 # The own field of mi that a method's own named Structure ni types: the one its declaration declares.  -1 if none.
 fn: l2_own_of_local_ns (int: mi; int: ni) int
@@ -14889,9 +14991,13 @@ fn: l2_emit_local_ns (int: mi; int: oi; int: ni; const: @(char ind)) int
         return: 1
     if: l2_emit_invariant(ind, "a method's named Structure did not allocate") != 0
         return: 1
-    if: c.fprintf(l2_out, "%sif: lmx_arena_refs_open_owned(l2_program_arena, l2_t%d, %uU) != 0\n", ind, t, (cast: (unsigned) l2_ns_count[ni])) < 0
+    # With a procedure (slice 2c) the Structure is its occurrence (R9): its fields, then its control bodies and steps
+    # (l2_ns_width); its native word is the procedure's trampoline.
+    if: c.fprintf(l2_out, "%sif: lmx_arena_refs_open_owned(l2_program_arena, l2_t%d, %uU) != 0\n", ind, t, (cast: (unsigned) l2_ns_width(ni))) < 0
         return: 1
     if: l2_emit_invariant(ind, "a method's named Structure did not open its fields") != 0
+        return: 1
+    if: l2_ns_proc[ni] >= 0 && (c.fprintf(l2_out, "%sl2_t%d\\native: (cast: (LmxEntry) ", ind, t) < 0 || l2_write_sym(l2_out, l2_ns_proc[ni]) != 0 || fputs("_tr)\n", l2_out) < 0)
         return: 1
     if: c.fprintf(l2_out, "%s@@: void l2_ls%d 0\n", ind, t) < 0
         return: 1
@@ -19162,6 +19268,11 @@ fn: l2_check_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi
         l2_ns_exec[idx]: 1
         # §12: executing S calls its procedure -- an edge as any call's.
         l2_m_edge[l2_edge_off(mi, l2_ns_proc[idx])]: l2_m_edge[l2_edge_off(mi, l2_ns_proc[idx])] | 1
+        return: 0
+    # Slice 2c: a method's own named Structure the method executes -- its procedure, over the Structure at S's place.
+    idx: l2_local_ns_callee(t, mi)
+    if: idx >= 0
+        l2_m_edge[l2_edge_off(mi, l2_ns_proc[l2_own_nsty_get(idx)])]: l2_m_edge[l2_edge_off(mi, l2_ns_proc[l2_own_nsty_get(idx)])] | 1
         return: 0
     if: l2_struct_call_inert(t, mi) != 0
         return: 0
@@ -26473,6 +26584,10 @@ fn: l2_rw_may (int: mi) int
     int: cls
     if: mi < 0 || mi = l2_e || mi >= l2_m_n || l2_m_native(mi) = 0
         return: 0
+    # A method's own named Structure's procedure (slice 2c) runs natively: its occurrence is built at run time, in a
+    # native method, with the trampoline as its native word -- no unit child holds walker frames for it.
+    if: l2_m_nsof(mi) >= 0 && l2_ns_local[l2_m_nsof(mi)] >= 0
+        return: 0
     if: l2_m_throws != 0 && l2_m_throws[mi] != 0
         return: 0
     cls: l2_tramp_class(mi)
@@ -30487,6 +30602,26 @@ return: 0
 # data = the Structure; walked under the knob, the call is the walker's activation (lmx_walk_call_prim_dispatch).
 # A status is an invariant here, as at every call that cannot throw (l2_emit_dyn_tail).
 fn: l2_emit_ns_exec (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind)) int
+    []: char at 128
+    if: c.sprintf(at, "lmx_arena_ref_struct(%s, %uU)", l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
+        return: 1
+return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
+
+# Slice 2c: method mi's execution of its own named Structure, the one own field oi holds -- its procedure over it, as a
+# unit named Structure's over its unit child (l2_emit_ns_exec_at): the Structure the field holds now, its working value
+# when it has one (l2_q<oi>), else its slot.
+fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
+    []: char slot 256
+    []: char at 320
+    if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && c.sprintf(at, "(cast: (@: Lmx) l2_q%d)", oi) < 0
+        return: 1
+    if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0)
+        return: 1
+return: l2_emit_ns_exec_at(l2_own_nsty_get(oi), mi, node, ind, at)
+
+# The execution of named Structure ni over the Structure `at` names: its procedure through lmx_call_prim, owner = data
+# = that Structure.
+fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
     int: k l2_nso_n
     int: pr
     int: nh
@@ -30510,9 +30645,9 @@ fn: l2_emit_ns_exec (int: ni; int: mi; const: @(LmP0Node node); const: @(char in
             return: 1
         j: j + 1
     ---
-    if: nh = 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, lmx_arena_ref_struct(%s, %uU), lmx_arena_ref_struct(%s, %uU), 0, 0U, 0, @ l2_nso%d) != 0\n", ind, k, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), k) < 0
+    if: nh = 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, %s, %s, 0, 0U, 0, @ l2_nso%d) != 0\n", ind, k, ind, at, at, k) < 0
         return: 1
-    if: nh > 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, lmx_arena_ref_struct(%s, %uU), lmx_arena_ref_struct(%s, %uU), l2_nsr%d, %dU, 0, @ l2_nso%d) != 0\n", ind, k, ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), k, nh, k) < 0
+    if: nh > 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, %s, %s, l2_nsr%d, %dU, 0, @ l2_nso%d) != 0\n", ind, k, ind, at, at, k, nh, k) < 0
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: executing a named Structure reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0))
 
@@ -30524,6 +30659,9 @@ fn: l2_emit_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi;
     idx: l2_ns_exec_named(t, mi)
     if: idx >= 0 && l2_ns_exec[idx] != 0
         return: l2_emit_ns_exec(idx, mi, node, ind)
+    idx: l2_local_ns_callee(t, mi)
+    if: idx >= 0
+        return: l2_emit_local_exec(idx, mi, node, ind)
 return: 0
 
 # THE EXPRESSION STATEMENT, emitted (l2_check_discard; plan §3; FABLE-OPUS-DISCARD-20260924-147).
@@ -31821,6 +31959,10 @@ return: 0
 fn: l2_emit_parts (int: i) int
     int: j 0
     int: ty
+    # A method's own named Structure's procedure (slice 2c) has no unit child: its occurrence is built at its
+    # statement, which puts the native word on it (l2_emit_local_ns).
+    if: l2_m_nsof(i) >= 0 && l2_ns_local[l2_m_nsof(i)] >= 0
+        return: 0
     # R9: a named Structure's procedure declares no formals and no result -- no parts; its native word goes on the
     # Structure, its occurrence.
     if: l2_m_nsof(i) >= 0

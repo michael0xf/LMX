@@ -2432,9 +2432,8 @@ $fixtures = @(
     # nothing there -- declared by the general route (book §9: an absent target with an explicit Structure value).  At
     # run time only its Structure exists: built at its statement, a child of the method's own Structure (pinned), bound
     # at S's slot -- no unit child (Absent) -- and each execution builds a new one (94; one kept would give 99).  The
-    # walk takes no method with one (pinned native).  A statement in its body, a field that is no number, and `S()` --
-    # its nullary call (book §9: a named Structure is called, never assigned), refused as its bare atom is (ticket 15)
-    # until 2c executes it -- are refused where they stand.
+    # walk takes no method with one (pinned native).  A statement in its body and a field that is no number are refused
+    # where they stand.
     [pscustomobject]@{ Name = 'unit_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -2443,8 +2442,19 @@ $fixtures = @(
         Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 94;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_ns_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_call_refused.lm2:8:5: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # Slice 2c-1: the method executes its own named Structure -- `S()`, `S: ()`, the bare `S` -- S's procedure (§12), a
+    # method after the entry E with no unit child, its occurrence S itself: built at S's statement with the
+    # procedure's trampoline as its native word, run by lmx_call_prim(S, S) (both pinned), so `node` in S's body is the
+    # method's occurrence.  Each call stores S's initializer again: 4 after each, though 9 was written (was
+    # unit_local_ns_call_refused).  Declared in an `if:` body and executed there and from a block: the procedure's
+    # fields are S's, not the body's.  Under the knob the method stays native (pinned) and the procedure is never
+    # walked.
+    [pscustomobject]@{ Name = 'unit_local_ns_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('l2_t0\native: (cast: (LmxEntry) l2_m2_tr)', 'lmx_call_prim(l2_program_arena, (cast: (@: Lmx) l2_q7), (cast: (@: Lmx) l2_q7), 0, 0U, 0, @ l2_nso0)') },
+    [pscustomobject]@{ Name = 'unit_walk_local_ns_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_t0\native: (cast: (LmxEntry) l2_m2_tr)') },
+    [pscustomobject]@{ Name = 'unit_local_ns_call_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_stmt_refused.lm2:7:9: a statement in a named Structure declared in a method is not executed yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

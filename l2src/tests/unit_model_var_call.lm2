@@ -1,0 +1,28 @@
+# `Model: m`, m bound nowhere before, declares m -- a merge of Model, which runs none of Model's body (book :928) --
+# and m is then a named Structure, callable like any (Codex's decision on the author's rule, 55c1abc: no binding is
+# non-callable by its origin).  `m()` -- one P0 Frame with `m: ()` -- is m's nullary call, Model's body run over m's
+# Structure (steps/named-struct-exec.md §10-12), as the bare atom m is: m\v, written 7, reads 2 after each -- the
+# declaration ran again (1), then the statement.  Model\v stays 1: the code ran over m's data only.  Before the ticket
+# `m()` assigned a new empty Structure to m with admission to Model, which () fails: `implements`.  Entry 7.
+Model:
+    size_t: v 1U
+    v: v + 1U
+return
+Model: m
+size_t: d 9U
+d: m\v
+m\v: 7U
+m()
+size_t: a 9U
+a: m\v
+m\v: 7U
+m: ()
+size_t: b 9U
+b: m\v
+size_t: o 9U
+o: Model\v
+int: ok 0
+if: d = 1U && a = 2U && b = 2U && o = 1U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

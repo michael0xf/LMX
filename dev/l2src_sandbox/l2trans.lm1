@@ -680,6 +680,10 @@ prototype:
     fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
     fn: l2_tok_method_occ (int: idx; @: char dest) int
     fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
+    fn: l2_empty_call_shape (const: @(LmP0Node v)) int
+    fn: l2_check_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi; const: @(char path)) int
+    fn: l2_emit_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi; const: @(char ind)) int
+    fn: l2_ns_exec_mark (const: @(LmP0Text t); @: LmP0Field first; int: root) int
     fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_addr (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_cat (@: char dest; const: @(char src)) int
@@ -794,7 +798,6 @@ prototype:
     fn: l2_is_letter_name (int: mi; const: @(LmP0Node node)) int
     fn: l2_payload_expr (@: char val) int
     fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
-    fn: l2_rw_empty_assign (const: @(LmP0Node stmt); int: into; @: int out) int
     fn: l2_rw_is_letter (int: oi) int
     fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
@@ -904,8 +907,8 @@ prototype:
     fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_own_self_typed (int: oi) int
     fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
-    fn: l2_lit_admits (int: t; const: @(LmP0Structure body)) int
-    fn: l2_value_admits (int: t; const: @(LmP0Structure body); int: mi) int
+    fn: l2_ns_empty (int: ni) int
+    fn: l2_struct_call_inert (const: @(LmP0Text t); int: mi) int
     fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_tail_decl_first (const: @(LmP0Frame fr)) int
     fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
@@ -1371,6 +1374,8 @@ prototype:
     fn: l2_rw_mad_store (const: @(LmP0Node stmt); int: into; @: int out) int
     fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) int
     fn: l2_rw_ns_call (const: @(LmP0Node node); int: ni; int: into; @: int out) int
+    fn: l2_rw_struct_call (const: @(LmP0Node node); const: @(LmP0Text h); int: into; int: slot; @: int made) int
+    fn: l2_rw_struct_callee (const: @(LmP0Text h)) int
     fn: l2_rw_ns_var_call (const: @(LmP0Node node); int: ni; int: oi; int: into; @: int out) int
     fn: l2_rw_ns_hidden (const: @(LmP0Node node); int: ni; int: frame) int
 end: prototype
@@ -3851,39 +3856,27 @@ fn: l2_ns_proc_add (int: ni; const: @(char path)) int
     ---
 return: 0
 
-# §12: whether the statements from `first` execute the unit-level named Structures by a bare atom -- its
-# own name, or (in the root) a field the root declares `Model: v` -- marking each (l2_ns_exec).  A
-# syntactic reading, before any method is checked: the procedures are registered before the entry E
-# (l2_occ_n).  It errs only toward a procedure no statement runs.
+# §12: whether the statements from `first` execute the unit-level named Structures -- by a bare atom, or by `t()` on
+# the existing binding: one nullary call (book §9 after 55c1abc: `f` and `f()` call f) -- by its own name, or (in the
+# root) a field the root declares `Model: v` -- marking each (l2_ns_exec_mark).  A syntactic reading, before any
+# method is checked: the procedures are registered before the entry E (l2_occ_n).  It errs only toward a procedure no
+# statement runs.
 fn: l2_ns_exec_scan (@: LmP0Field first; int: root) int
     @: LmP0Field f
     @: LmP0Field g
     @: LmP0Node v
-    int: ni
+    @: LmP0Text t
     int: hit 0
     f: l2_next_active(first)
     while: f != 0
         v: f\value
+        t: 0
         if: v != 0 && v\kind = c.LM_P0_NODE_ATOM && v\as != 0 && l2_discard_run(f) = 1
-            ni: l2_ns_find(v\as\atom)
-            if: ni >= 0 && l2_ns_parent[ni] < 0 && l2_ns_eternal[ni] < 0 && l2_ns_exec[ni] = 0
-                l2_ns_exec[ni]: 1
-                hit: 1
-            ---
-            if: ni < 0 && root != 0
-                g: l2_next_active(first)
-                while: g != 0
-                    if: g\value != 0 && g\value\kind = c.LM_P0_NODE_FRAME && g\value\as != 0 && g\value\as\frame != 0 && g\value\as\frame\body != 0 && l2_count_active(g\value\as\frame\body) = 1
-                        ni: l2_ns_find(g\value\as\frame\head)
-                        if: ni >= 0 && l2_ns_parent[ni] < 0 && l2_ns_eternal[ni] < 0 && l2_next_active(g\value\as\frame\body\first_field)\value != 0 && l2_next_active(g\value\as\frame\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_text_same(l2_next_active(g\value\as\frame\body\first_field)\value\as\atom, v\as\atom) != 0 && l2_ns_exec[ni] = 0
-                            l2_ns_exec[ni]: 1
-                            hit: 1
-                        ---
-                    ---
-                    g: l2_next_active(g\next)
-                ---
-            ---
-        ---
+            t: v\as\atom
+        if: l2_empty_call_shape(v) != 0
+            t: v\as\frame\head
+        if: t != 0 && l2_ns_exec_mark(t, first, root) != 0
+            hit: 1
         if: v != 0 && v\kind = c.LM_P0_NODE_FRAME && v\as != 0 && v\as\frame != 0 && v\as\frame\body != 0
             g: l2_next_active(v\as\frame\body\first_field)
             while: g != 0
@@ -3897,6 +3890,34 @@ fn: l2_ns_exec_scan (@: LmP0Field first; int: root) int
         if: v != 0 && v\kind = c.LM_P0_NODE_STRUCTURE && v\as != 0 && v\as\structure != 0 && l2_ns_exec_scan(v\as\structure\first_field, 0) != 0
             hit: 1
         f: l2_next_active(f\next)
+    ---
+return: hit
+
+# The named Structure a statement of l2_ns_exec_scan's executes by the name t, marked (l2_ns_exec): t's own, or, in the
+# root, the Model of the root's field `Model: t`.  1 when it marked one.  (The root's declaring `E()` is a unit item,
+# l2_unit_role 5, never one of the statements scanned.)
+fn: l2_ns_exec_mark (const: @(LmP0Text t); @: LmP0Field first; int: root) int
+    @: LmP0Field g
+    @: LmP0Field a
+    int: ni
+    int: hit 0
+    ni: l2_ns_find(t)
+    if: ni >= 0 && l2_ns_parent[ni] < 0 && l2_ns_eternal[ni] < 0 && l2_ns_exec[ni] = 0
+        l2_ns_exec[ni]: 1
+        return: 1
+    if: ni >= 0 || root = 0
+        return: 0
+    g: l2_next_active(first)
+    while: g != 0
+        if: g\value != 0 && g\value\kind = c.LM_P0_NODE_FRAME && g\value\as != 0 && g\value\as\frame != 0 && g\value\as\frame\body != 0 && l2_count_active(g\value\as\frame\body) = 1
+            ni: l2_ns_find(g\value\as\frame\head)
+            a: l2_next_active(g\value\as\frame\body\first_field)
+            if: ni >= 0 && l2_ns_parent[ni] < 0 && l2_ns_eternal[ni] < 0 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && l2_text_same(a\value\as\atom, t) != 0 && l2_ns_exec[ni] = 0
+                l2_ns_exec[ni]: 1
+                hit: 1
+            ---
+        ---
+        g: l2_next_active(g\next)
     ---
 return: hit
 
@@ -6745,6 +6766,7 @@ return: l2_text_eq(l2_foreign_name[fi], "Lmx")
 fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop); int: mi; const: @(LmP0Text name)) int
     @: LmP0Field f
     @: LmP0Text dn
+    @: LmP0Text dm
     if: name = 0
         return: 0
     if: l2_param_find(mi, name) >= 0
@@ -6757,6 +6779,15 @@ fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop)
                 if: l2_text_same(dn, name)
                     return: 1
                 ---
+            # A field declared by a merge (`Model: name`), a letter (`receiveMessage: name`) or the empty Structure
+            # (`name()`) is bound after its statement as well: `Model: name` there is Model's call with it (book §9
+            # after 55c1abc), not a second declaration.
+            if: l2_colon_decl_shape(f\value, @ dm, @ dn) = 0 && l2_text_same(dn, name) != 0
+                return: 1
+            if: l2_receive_msg_shape(f\value, @ dn, 0) = 0 && l2_text_same(dn, name) != 0
+                return: 1
+            if: l2_empty_call_shape(f\value) != 0 && l2_text_same(f\value\as\frame\head, name) != 0
+                return: 1
             f: l2_next_active(f\next)
         ---
     if: l2_ns_find(name) >= 0 || l2_ebr_find(name) >= 0 || l2_mres_find(name) >= 0 || l2_find_method(name) >= 0 || l2_is_known(name)
@@ -8489,20 +8520,28 @@ return: 0
 # safety net (the (c) fix, a few lines up) fired instead, since nothing
 # had called l2_error. An existing row is only a genuine conflict when
 # some OTHER statement declared it.
-# `f()` -- one P0 tree with `f: ()` and the closed empty vertical: a Frame with an empty
-# Structure-body -- when f already binds an ordinary Structure (the book §12; FABLE-OPUS-RECEIVER-
-# CONTRACT-20260924-139): 1 an own field of graph type, of a declared Structure type or of none;
-# 2 a declared named Structure, a unit child.  0 otherwise: absent (the -132 declaration below),
-# a callable head (a call, -130; l2_is_asgn), or a binding that holds no Structure.
+# `t()`, `t: ()` or the closed empty vertical -- one P0 Frame (-127): a name that is no call's head (l2_is_asgn), a
+# body with no field, no trailer.  Whether it declares t or calls t is resolution's: l2_empty_struct_decl_shape,
+# l2_empty_struct_assign_shape.
+fn: l2_empty_call_shape (const: @(LmP0Node v)) int
+    if: l2_is_asgn(v) = 0
+        return: 0
+    if: v\as\frame\trailer != 0 || v\as\frame\body\trailer != 0 || l2_count_active(v\as\frame\body) != 0
+        return: 0
+return: 1
+
+# `f()` -- one P0 tree with `f: ()` and the closed empty vertical (l2_empty_call_shape) -- when f already binds a
+# Structure: f's nullary call, as the bare atom f is (book §9 after 55c1abc: a callable, an ordinary named Structure
+# included, is called, never assigned; l2_check_struct_call): 1 an own field of graph type, of a declared Structure
+# type or of none; 2 a declared named Structure, a unit child.  0 otherwise: absent (the -132 declaration below), a
+# callable head (a call, -130; l2_is_asgn), or a binding that holds no Structure.
 fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
     @: LmP0Frame fr
     int: oi
     int: ni
-    if: l2_is_asgn(stmt) = 0
+    if: l2_empty_call_shape(stmt) = 0
         return: 0
     fr: stmt\as\frame
-    if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 0
-        return: 0
     if: l2_param_find(mi, fr\head) >= 0 || l2_slot_find(mi, fr\head) >= 0 || l2_ml_find(fr\head) >= 0
         return: 0
     oi: l2_own_find(mi, fr\head)
@@ -8532,10 +8571,9 @@ return: 1
 
 # Whether own field oi is typed by its own declaration: `f()`, `f: ()` or the closed empty vertical -- one P0 Frame,
 # the name with an empty Structure body (l2_empty_struct_decl_shape) -- declared it, so its declared type is that
-# empty Structure (book §9 :561-:563: the Structure on the right gives the new variable its type).  A later `f()` on
-# it is the assignment with admission to that type, wherever the Frame stands, as a named Structure's `S()` is at the
-# root.  Read from the declaration itself, not from the state of resolution: only that declaration registers an own
-# field at a Frame of the field's own name with no body field.
+# empty Structure (book §9 :561-:563: the Structure on the right gives the new variable its type), whose call runs
+# nothing (l2_struct_call_inert).  Read from the declaration itself, not from the state of resolution: only that
+# declaration registers an own field at a Frame of the field's own name with no body field.
 fn: l2_own_self_typed (int: oi) int
     @: LmP0Node d
     if: oi < 0 || oi >= l2_own_n
@@ -8562,61 +8600,34 @@ fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
         return: 9
 return: 0 - 1
 
-# A Structure literal -- the field declarations of `body` -- assigned to the named Structure t is admitted to t by
-# name (book §9 :561; the author's Q39, D-105: the first, heavy admission is by name): 0 when every field of t has
-# exactly one field of that name and kind in the literal, 1 when one has none or two -- the admission refuses -- and
-# 2 when a field of t is of a kind the literal's number declarations do not name (a Structure, an Array, a
-# reference): not decided here.
-fn: l2_lit_admits (int: t; const: @(LmP0Structure body)) int
-    int: k 0
-    int: hits
-    @: LmP0Field f
-    @: LmP0Field g
-    if: t < 0 || body = 0
-        return: 2
-    while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = t && l2_nsf_kind[k] != 0 && l2_nsf_kind[k] != 1 && l2_nsf_kind[k] != 7 && l2_nsf_kind[k] != 8 && l2_nsf_kind[k] != 9
-            return: 2
-        hits: 0
-        f: l2_next_active(body\first_field)
-        while: l2_nsf_owner[k] = t && f != 0
-            g: 0
-            if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\body != 0 && l2_lit_field_kind(f\value) = l2_nsf_kind[k]
-                g: l2_next_active(f\value\as\frame\body\first_field)
-            if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_nsf_fname[k] != 0 && l2_text_same(g\value\as\atom, l2_nsf_fname[k]) != 0
-                hits: hits + 1
-            f: l2_next_active(f\next)
-        ---
-        if: l2_nsf_owner[k] = t && hits != 1
-            return: 1
-        k: k + 1
-    ---
-return: 0
+# Whether named Structure ni is the empty Structure -- its declaration's body holds no field and no statement, and no
+# `until` loop closes it: `E()`, `E: ()` -- whose call runs nothing.
+fn: l2_ns_empty (int: ni) int
+    @: LmP0Node at
+    if: ni < 0 || ni >= l2_ns_n
+        return: 0
+    at: l2_ns_at[ni]
+    if: at = 0 || at\kind != c.LM_P0_NODE_FRAME || at\as = 0 || at\as\frame = 0
+        return: 0
+    if: at\as\frame\trailer != 0 && at\as\frame\trailer\spelling != 0 && l2_text_eq(at\as\frame\trailer\spelling, "until") != 0
+        return: 0
+return: (cast: (int) (at\as\frame\body = 0 || l2_count_active(at\as\frame\body) = 0))
 
-# One value -- the tail is one value (l2_tail_is_structure = 0) -- assigned to the named Structure t: 3 when it is no
-# Structure (its type is not a graph's: a number, a text), 1 when it is a Structure of a declared named type a field
-# of t has no field of that name and kind in (the admission by name refuses: l2_d105_table), else 0.
-fn: l2_value_admits (int: t; const: @(LmP0Structure body); int: mi) int
-    @: LmP0Field f
-    int: vty 0
-    int: cand 0 - 1
-    int: n 0
-    []: int map 64
-    if: body = 0
+# The nullary call of the Structure bound to t that runs nothing: an own field -- no formal, slot or local -- whose
+# type is the empty Structure, declared by `f()` itself (l2_own_self_typed) or of an empty named Structure
+# (l2_ns_empty).  (A named Structure's own name and the root's field `Model: v` are executed: l2_ns_exec_any.)
+fn: l2_struct_call_inert (const: @(LmP0Text t); int: mi) int
+    int: oi
+    int: ni
+    if: t = 0 || mi < 0 || l2_param_find(mi, t) >= 0 || l2_slot_find(mi, t) >= 0 || l2_ml_find(t) >= 0
         return: 0
-    f: l2_next_active(body\first_field)
-    if: f = 0 || f\value = 0
+    oi: l2_own_find_last(mi, t)
+    if: oi < 0 || l2_colon_is_graph_ty(l2_ft_of_own(l2_own_ty[oi])) = 0
         return: 0
-    if: l2_colon_value_ty(f\value, mi, @ vty) = 0 && l2_colon_is_graph_ty(vty) = 0
-        return: 3
-    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
-        cand: l2_graph_nsty(mi, f\value\as\atom)
-        if: cand < 0 && l2_ns_find(f\value\as\atom) >= 0 && l2_ns_parent[l2_ns_find(f\value\as\atom)] < 0 && l2_ns_eternal[l2_ns_find(f\value\as\atom)] < 0
-            cand: l2_ns_find(f\value\as\atom)
-    ---
-    if: cand >= 0 && cand != t && l2_d105_table(cand, t, map, 64, @ n, 0) = 1
-        return: 1
-return: 0
+    ni: l2_own_nsty_get(oi)
+    if: ni < 0
+        return: l2_own_self_typed(oi)
+return: l2_ns_empty(ni)
 
 # Whether frame fr's tail begins with the declaration of a number or char field with its initializer -- a type word
 # (l2_lit_field_kind), a name, a value: `size_t: v 4U`.  A conversion named by that type word takes one value, so this
@@ -9461,7 +9472,8 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: l2_colon_decl_shape(stmt, @ cmodel, @ fa) = 0
+        # (`Model: name` with name bound before is Model's call, l2_colon_bound_before: it declares nothing.)
+        if: l2_colon_decl_shape(stmt, @ cmodel, @ fa) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
             cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
             if: cj < 0
                 return: 1
@@ -10138,7 +10150,16 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         # with the same statement node finds it and is a no-op past this),
         # so a later statement in this body reading the name through \\field
         # resolves it as an own field instead of an undeclared dynamic input.
-        if: l2_colon_decl_shape(stmt, @ slnm, @ fa) = 0
+        # `f()` with f resolving to nothing declares f (-132, l2_empty_struct_decl_shape, read here with this method's
+        # locals, l2_ml_rebuild): its row made here too, so that a later read of f -- the bare `f`, its nullary call,
+        # among them -- resolves to the field and never makes f a dynamic input.  The check pass's l2_own_add on the
+        # same statement finds this row.
+        if: l2_empty_struct_decl_shape(stmt, mi) != 0
+            if: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt) < 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
+        if: l2_colon_decl_shape(stmt, @ slnm, @ fa) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
             if: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt) < 0
                 return: 1
             field: l2_next_active(field\next)
@@ -10323,7 +10344,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             field: l2_next_active(field\next)
 return: 0
 
-# How many own rows a scan of this node may add: one per `Model: fresh` in it.
+# How many own rows a scan of this node may add: one per `Model: fresh`, letter or `f()` in it.
 fn: l2_colon_decl_room (const: @(LmP0Node node)) int
     @: LmP0Field f 0
     @: LmP0Text cm 0
@@ -10334,6 +10355,8 @@ fn: l2_colon_decl_room (const: @(LmP0Node node)) int
     if: node\kind = c.LM_P0_NODE_FRAME && l2_colon_decl_shape(node, @ cm, @ cn) = 0
         return: 1
     if: node\kind = c.LM_P0_NODE_FRAME && l2_receive_msg_shape(node, @ cn, 0) = 0
+        return: 1
+    if: node\kind = c.LM_P0_NODE_FRAME && l2_empty_call_shape(node) != 0
         return: 1
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as\structure != 0
         f: node\as\structure\first_field
@@ -14830,9 +14853,10 @@ fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) i
         return: 1
 return: l2_emit_implicit_throw(mi, "implements", ind)
 
-# Own field oi typed by its own declaration (l2_own_self_typed): the value admitted to the Structure at the field's
-# place -- its working value when it has one (l2_q<oi>), else its slot -- as a declared named Structure is admitted to
-# the Structure at its place, its unit child (l2_type_inst).  NO or UNKNOWN throws `implements`, as l2_emit_admit's.
+# Own field oi whose type is the Structure at its place -- a method's own named Structure (l2_local_ns_shape): the value
+# admitted to that Structure -- its working value when it has one (l2_q<oi>), else its slot -- as a declared named
+# Structure is admitted to the Structure at its place, its unit child (l2_type_inst).  NO or UNKNOWN throws
+# `implements`, as l2_emit_admit's.
 fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind)) int
     []: char at 256
     []: char inst 320
@@ -19118,25 +19142,34 @@ fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path
     if: l2_check_primary(stmt, mi, path) != 0
         return: 1
     if: l2_bare_structure(stmt\as\atom, mi) != 0
-        # steps/named-struct-exec.md, slices 2 and 3: an ordinary named Structure's own name
-        # executes it -- at the root walked (l2_rw_ns_call), in a unit-level method natively
-        # (l2_emit_ns_exec) or walked under the knob.  A Structure-typed field or local, a nested or
-        # qualified Structure, and a nested method's bare Structure stay refused.
-        idx: l2_ns_exec_any(stmt\as\atom, mi)
-        if: idx >= 0 && l2_ns_proc[idx] < 0
-            return: l2_error(path, stmt, "internal: a named Structure executed without its procedure")
-        if: idx >= 0
-            l2_ns_exec[idx]: 1
-            # §12: executing S calls its procedure -- an edge as any call's.
-            l2_m_edge[l2_edge_off(mi, l2_ns_proc[idx])]: l2_m_edge[l2_edge_off(mi, l2_ns_proc[idx])] | 1
-            return: 0
-        # Slice 4 (§11): a Structure formal's value may be admitted by names with its fields permuted
-        # (D-105) -- Model's steps would write the wrong ones.  A reference field keeps the refusal
-        # below for the same reason.
-        if: mi >= 0 && l2_formal_find(mi, stmt\as\atom) >= 0 && l2_nsty_get(mi, l2_formal_find(mi, stmt\as\atom)) >= 0
-            return: l2_error(path, stmt, "executing a Structure formal is not supported yet")
-        return: l2_error(path, stmt, "executing a named Structure is not supported yet")
+        return: l2_check_struct_call(stmt, stmt\as\atom, mi, path)
 return: 0
+
+# The nullary call of the Structure bound to t -- by the bare atom t (l2_check_discard) or by `t()` on the existing
+# binding (l2_empty_struct_assign_shape): one call (book §9 after 55c1abc: a callable, an ordinary named Structure
+# included, is called, never assigned).  steps/named-struct-exec.md, slices 2 and 3: an ordinary named Structure's own
+# name executes it -- at the root walked (l2_rw_ns_call), in a unit-level method natively (l2_emit_ns_exec) or walked
+# under the knob -- and slice 4: so does the root's field declared `Model: v` (l2_rw_ns_var_call).  A Structure whose
+# type is the empty Structure runs nothing (l2_struct_call_inert).  Any other Structure's call -- a Structure-typed
+# field or local of a method, a nested or qualified Structure, a nested method's bare Structure, a value whose type is
+# not declared -- is not built yet: refused where it stands.
+fn: l2_check_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi; const: @(char path)) int
+    int: idx
+    idx: l2_ns_exec_any(t, mi)
+    if: idx >= 0 && l2_ns_proc[idx] < 0
+        return: l2_error(path, node, "internal: a named Structure executed without its procedure")
+    if: idx >= 0
+        l2_ns_exec[idx]: 1
+        # §12: executing S calls its procedure -- an edge as any call's.
+        l2_m_edge[l2_edge_off(mi, l2_ns_proc[idx])]: l2_m_edge[l2_edge_off(mi, l2_ns_proc[idx])] | 1
+        return: 0
+    if: l2_struct_call_inert(t, mi) != 0
+        return: 0
+    # Slice 4 (§11): a Structure formal's value may be admitted by names with its fields permuted (D-105) -- Model's
+    # steps would write the wrong ones.  A reference field keeps the refusal below for the same reason.
+    if: mi >= 0 && l2_formal_find(mi, t) >= 0 && l2_nsty_get(mi, l2_formal_find(mi, t)) >= 0
+        return: l2_error(path, node, "executing a Structure formal is not supported yet")
+return: l2_error(path, node, "executing a named Structure is not supported yet")
 
 # How many fields a statement that is an expression run takes: 0 when the field starts no run
 # (a single Frame is a statement of its own kind; a single Structure is a nested body), else the
@@ -19587,40 +19620,25 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
-        # `S()` on a method's own named Structure is its nullary call (book §9, 55c1abc: a callable -- an ordinary
-        # named Structure included -- is called, never assigned); executing a method's named Structure is not
-        # built yet: refused where it stands, not the empty Structure's admission below.
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_empty_struct_assign_shape(stmt, mi) = 1 && l2_graph_nsty(mi, stmt\as\frame\head) >= 0 && l2_ns_local[l2_graph_nsty(mi, stmt\as\frame\head)] >= 0
-            return: l2_error(path, stmt, "a call of a named Structure declared in a method is not built yet")
-        # The same Frame when f already binds an ordinary Structure (l2_empty_struct_assign_shape;
-        # the book §12): ordinary assignment of the empty Structure, with admission to f's declared
-        # Structure type when it has one -- a named Structure's, a model's, or, declared by `f()`
-        # itself, its own (l2_own_self_typed) -- the S3 path, whose refusal is the implicit throw
-        # implements.
+        # `f()` -- one Frame with `f: ()` and the closed empty vertical -- when f already binds a Structure
+        # (l2_empty_struct_assign_shape) is f's nullary call, as the bare atom f is (l2_check_struct_call; book §9
+        # after 55c1abc: a callable, an ordinary named Structure included, is called, never assigned).
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_empty_struct_assign_shape(stmt, mi) != 0
-            if: (l2_empty_struct_assign_shape(stmt, mi) = 2 || l2_graph_nsty(mi, stmt\as\frame\head) >= 0 || l2_own_self_typed(l2_own_find_last(mi, stmt\as\frame\head)) != 0) && l2_admit_site(mi) != 0
-                return: l2_error(path, stmt, "internal: admission outside a method")
+            if: l2_check_struct_call(stmt, stmt\as\frame\head, mi, path) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
+        # `T: value` -- a value, a Structure of fields, a name bound before -- with T an existing named Structure: T is
+        # called with the value (book §9 after 55c1abc: a callable, an ordinary named Structure included, is called,
+        # never assigned).  A named Structure's call with an argument is not built yet: refused where it stands -- the
+        # implementation's status, not a rule of the language.  (`T()` is its nullary call, above; `T: fresh`, fresh
+        # bound nowhere before, declares fresh: l2_colon_decl_shape.)
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
+            return: l2_error(path, stmt, "a call of a named Structure with an argument is not built yet")
         # A bare colon frame whose head is not a call is an update only when
         # that head already has a typed mutable binding.  In particular,
         # `arg: 7` must not silently invent arg; the graph-construction role was
         # normalized to an explicit merge before reaching this check.
-        # An assignment to an existing named Structure T -- `T: value`, `T:` + fields -- is the assignment with
-        # admission (book §9 :561), by name (Q39, D-105).  A value that is no Structure is one of another type; a
-        # Structure a field of T has no field of that name and kind in is refused by admission (a literal:
-        # l2_lit_admits; a value typed by a named Structure: l2_value_admits).  A Structure T admits is not
-        # rebound yet: T's field reads would have to go through the correspondence (D-105), which a named
-        # Structure's reads do not do -- a located gap, not the claim that T is no assignable binding.  (`T()` is
-        # the empty Structure's, above.)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
-            if: l2_tail_is_structure(stmt\as\frame) != 0 && l2_ns_parent[l2_ns_find(stmt\as\frame\head)] < 0 && l2_ns_eternal[l2_ns_find(stmt\as\frame\head)] < 0 && l2_lit_admits(l2_ns_find(stmt\as\frame\head), stmt\as\frame\body) = 1
-                return: l2_error(path, stmt, "the assigned Structure lacks a field of the named Structure")
-            if: l2_tail_is_structure(stmt\as\frame) = 0 && l2_value_admits(l2_ns_find(stmt\as\frame\head), stmt\as\frame\body, mi) = 3
-                return: l2_error(path, stmt, "assignment value has incompatible type")
-            if: l2_tail_is_structure(stmt\as\frame) = 0 && l2_ns_parent[l2_ns_find(stmt\as\frame\head)] < 0 && l2_ns_eternal[l2_ns_find(stmt\as\frame\head)] < 0 && l2_value_admits(l2_ns_find(stmt\as\frame\head), stmt\as\frame\body, mi) = 1
-                return: l2_error(path, stmt, "the assigned Structure lacks a field of the named Structure")
-            return: l2_error(path, stmt, "a Structure assigned to a named Structure is not rebound yet")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0
             return: l2_error(path, stmt, "assignment target must be a declared typed mutable value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_colon_check_assignment(stmt, mi, path) != 0
@@ -23691,57 +23709,6 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
         return: 1
 return: l2_rw_catch_fixed(\out, 5, 2, "implements", @ nc)
 
-# `f()` / `S()` when that name already binds an ordinary Structure (l2_empty_struct_assign_shape;
-# the book §12): a fresh empty Structure, admitted to the declared type, stored only when admission
-# passes.  A refusal is the implicit throw `implements` (l2_rw_admit), so the previous binding
-# stays.  Shape 1 stores the own field.  Shape 2 stores the named Structure's unit child, the
-# same slot a path read of `S\v` names.  The new node is the walker's EMPTY, one per execution, not one node built
-# with the graph -- and no prototype of it in the plan.
-fn: l2_rw_empty_assign (const: @(LmP0Node stmt); int: into; @: int out) int
-    @: LmP0Text h
-    int: easn
-    int: oi
-    int: ni
-    int: adm
-    int: fr
-    int: vs 3
-    easn: l2_empty_struct_assign_shape(stmt, l2_rw_mi)
-    h: stmt\as\frame\head
-    if: easn = 2
-        ni: l2_ns_find(h)
-        if: ni < 0 || l2_rw_mi != l2_e
-            return: l2_rw_refuse(stmt, "an admission to a Structure type")
-        if: l2_rw_frame(into, "LMX_WALK_OP_PUT_REF", 4, out) != 0
-            return: 1
-        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
-            return: 1
-    ---
-    if: easn = 1
-        oi: l2_own_find_last(l2_rw_mi, h)
-        ni: l2_graph_nsty(l2_rw_mi, h)
-        if: l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
-            return: l2_rw_refuse(stmt, "a reference assignment")
-        # §7b: the field's working value when it has one (SET), else its slot (l2_rw_write).
-        if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0
-            return: 1
-        # No declared type (E(), m()): the value is a new empty node (EMPTY). Admission is the
-        # typed store below, not this one.
-        if: ni < 0
-            if: l2_rw_frame(\out, "LMX_WALK_OP_EMPTY", 1, @ fr) != 0
-                return: 1
-            return: l2_rw_put(\out, vs, fr)
-        ---
-    ---
-    if: easn != 1 && easn != 2
-        return: l2_rw_refuse(stmt, "an admission to a Structure type")
-    if: l2_rw_admit(\out, ni, 0, @ adm) != 0
-        return: 1
-    if: l2_rw_frame(adm, "LMX_WALK_OP_EMPTY", 1, @ fr) != 0
-        return: 1
-    if: l2_rw_put(adm, 3, fr) != 0
-        return: 1
-return: l2_rw_put(\out, vs, adm)
-
 # `m: raw` at the walked root, m of a declared Structure type T and raw an untyped reference field
 # (a letter, or another untyped graph): raw is admitted to T at this binding point, a refusal the
 # implicit throw `implements` (-178 commit 3): PUT(m, admit(AT(raw), T)), admit_letter for a
@@ -23833,13 +23800,10 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
     int: oi 0
     int: prim
     int: vs
-    # `S()` / `S: ()` assigns the empty Structure to the named Structure itself, admitted to its
-    # own type (the book §12; l2_empty_struct_assign_shape = 2).  A body that is not that shape
-    # stays refused.
+    # `S()` / `S: ()` on the named Structure is its nullary call, made before (l2_rw_struct_call): no empty body is
+    # this declaration.
     if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) = 0
-        if: l2_empty_struct_assign_shape(stmt, l2_rw_mi) = 2
-            return: l2_rw_empty_assign(stmt, into, out)
-        return: l2_rw_refuse(stmt, "an admission to a Structure type")
+        return: l2_rw_refuse(stmt, "this call")
     f: l2_next_active(stmt\as\frame\body\first_field)
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || l2_next_active(f\next) != 0
         return: l2_rw_refuse(stmt, "this declaration")
@@ -25978,26 +25942,14 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     n: l2_discard_run(field)
     if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_quoted(stmt\as\atom) != 0
         return: 0
-    # steps/named-struct-exec.md, slice 2: a bare atom naming a named Structure the check pass marked
-    # (l2_ns_exec) executes it -- the pair (its procedure's occurrence, the Structure; §12), walked.
-    if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_ns_exec_named(stmt\as\atom, l2_rw_mi) >= 0 && l2_ns_exec[l2_ns_exec_named(stmt\as\atom, l2_rw_mi)] != 0
+    # steps/named-struct-exec.md, slices 2 and 4, and book §9 after 55c1abc: the nullary call of a Structure the check
+    # pass took (l2_check_struct_call) -- by the bare atom, or by `f()` on the existing binding
+    # (l2_empty_struct_assign_shape) -- is one step (l2_rw_struct_call), or none when the Structure's type is empty.
+    if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_rw_struct_callee(stmt\as\atom) != 0
         \next: l2_skip_span(field, n)
-        if: l2_rw_ns_call(stmt, l2_ns_exec_named(stmt\as\atom, l2_rw_mi), into, @ t) != 0
-            return: 1
-        \made: 1
-        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, t) < 0
-            return: 1
-        return: 0
-    # Slice 4 (§11): a bare field of the root declared `Model: v` executes Model's code over its value.
-    if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_ns_exec_field(stmt\as\atom, l2_rw_mi) >= 0 && l2_ns_exec[l2_own_nsty_get(l2_ns_exec_field(stmt\as\atom, l2_rw_mi))] != 0
-        \next: l2_skip_span(field, n)
-        k: l2_ns_exec_field(stmt\as\atom, l2_rw_mi)
-        if: l2_rw_ns_var_call(stmt, l2_own_nsty_get(k), k, into, @ t) != 0
-            return: 1
-        \made: 1
-        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, t) < 0
-            return: 1
-        return: 0
+        return: l2_rw_struct_call(stmt, stmt\as\atom, into, slot, made)
+    if: n = 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && l2_empty_struct_assign_shape(stmt, l2_rw_mi) != 0
+        return: l2_rw_struct_call(stmt, stmt\as\frame\head, into, slot, made)
     if: n > 0
         \next: l2_skip_span(field, n)
         if: l2_rw_expr(field, n, into, @ t) != 0
@@ -26416,16 +26368,6 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # A declaration of a root field that is not a number (`Model: m`): what it is.
     if: oi < l2_own_n && l2_rw_num_ty(l2_own_ty[oi]) = 0
         return: l2_rw_refuse_ty(stmt, oi)
-    # `f()` when f already binds an ordinary Structure (l2_empty_struct_assign_shape = 1;
-    # the book §12). A declared type admits through l2_rw_admit. No declared type stores the
-    # new empty node itself (PUT / PUT_REF of EMPTY).
-    if: l2_empty_struct_assign_shape(stmt, l2_rw_mi) = 1
-        if: l2_rw_empty_assign(stmt, into, @ node) != 0
-            return: 1
-        \made: 1
-        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
-            return: 1
-        return: 0
     # An assignment into a reference field (-179): of a declared Structure type it admits the value
     # first -- the caller's implicit `implements` (D-55); an untyped one takes the reference.
     oi: l2_rw_find(h)
@@ -29229,6 +29171,49 @@ fn: l2_rw_ns_call (const: @(LmP0Node node); int: ni; int: into; @: int out) int
         return: 1
 return: l2_rw_ns_hidden(node, ni, \out)
 
+# The nullary call of the Structure bound to h, walked (l2_check_struct_call): the pair of an ordinary named Structure
+# the check pass marked (l2_rw_ns_call) or of the root's field declared `Model: v` (l2_rw_ns_var_call) -- one step,
+# stored in container `into` at slot `slot` -- and no step for a Structure whose type is empty (l2_struct_call_inert).
+fn: l2_rw_struct_call (const: @(LmP0Node node); const: @(LmP0Text h); int: into; int: slot; @: int made) int
+    int: ni
+    int: k
+    int: st 0
+    int: go 0
+    []: char pn 32
+    \made: 0
+    l2_rw_name(into, pn)
+    ni: l2_ns_exec_named(h, l2_rw_mi)
+    k: l2_ns_exec_field(h, l2_rw_mi)
+    if: ni >= 0 && l2_ns_exec[ni] != 0
+        if: l2_rw_ns_call(node, ni, into, @ st) != 0
+            return: 1
+        go: 1
+    ---
+    if: go = 0 && k >= 0 && l2_ns_exec[l2_own_nsty_get(k)] != 0
+        if: l2_rw_ns_var_call(node, l2_own_nsty_get(k), k, into, @ st) != 0
+            return: 1
+        go: 1
+    ---
+    if: go = 0 && l2_struct_call_inert(h, l2_rw_mi) != 0
+        return: 0
+    if: go = 0
+        return: l2_rw_refuse(node, "this call")
+    \made: 1
+return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, st) < 0))
+
+# Whether the bare atom h is the nullary call of a Structure the walk makes (l2_rw_struct_call): a named Structure or the
+# root's field `Model: v` the check pass marked, or a Structure whose type is empty.
+fn: l2_rw_struct_callee (const: @(LmP0Text h)) int
+    int: ni
+    int: k
+    ni: l2_ns_exec_named(h, l2_rw_mi)
+    if: ni >= 0 && l2_ns_exec[ni] != 0
+        return: 1
+    k: l2_ns_exec_field(h, l2_rw_mi)
+    if: k >= 0 && l2_ns_exec[l2_own_nsty_get(k)] != 0
+        return: 1
+return: l2_struct_call_inert(h, l2_rw_mi)
+
 # The hidden inputs of named Structure ni's procedure, each at slot 5 + k of EXEC frame `frame`: the caller's binding
 # first, then the callee's lexical source (book §12), as a call passes them (l2_rw_dyn_arg) -- a procedure without
 # arguments is one with hidden arguments (the author, 2026-09-28).
@@ -30531,6 +30516,16 @@ fn: l2_emit_ns_exec (int: ni; int: mi; const: @(LmP0Node node); const: @(char in
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: executing a named Structure reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0))
 
+# The nullary call of the Structure bound to t, emitted (l2_check_struct_call): an ordinary named Structure's own name
+# executes it natively (l2_emit_ns_exec); a Structure whose type is empty runs nothing, and nothing is emitted.  (The
+# root, whose field declared `Model: v` is executed too, is walked.)
+fn: l2_emit_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi; const: @(char ind)) int
+    int: idx
+    idx: l2_ns_exec_named(t, mi)
+    if: idx >= 0 && l2_ns_exec[idx] != 0
+        return: l2_emit_ns_exec(idx, mi, node, ind)
+return: 0
+
 # THE EXPRESSION STATEMENT, emitted (l2_check_discard; plan §3; FABLE-OPUS-DISCARD-20260924-147).
 # One consumer for every expression in statement position: a bare atom, a run of fields, and a
 # call Frame -- a callable head or a known external.  A callable atom is called with no arguments
@@ -30548,10 +30543,7 @@ fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind))
             return: l2_emit_call(e, idx, 2, fi, 0, mi, ind, l2_tok, 0)
         if: idx >= 0
             return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok, 0)
-        idx: l2_ns_exec_named(e\as\atom, mi)
-        if: idx >= 0 && l2_ns_exec[idx] != 0
-            return: l2_emit_ns_exec(idx, mi, e, ind)
-        return: 0
+        return: l2_emit_struct_call(e, e\as\atom, mi, ind)
     # A c.* or predef C call whose value is dropped is emitted as a statement.  On the value
     # path (l2_prep) l2_emit_ccall writes the call into l2_tok for its consumer, and here there is
     # no consumer: the call would be lost (§GATE G3, steps/gate-measure-20260927.md).
@@ -30639,7 +30631,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     @: LmP0Text cmodel
     @: LmP0Text cname
     []: char l2_esd_tok 64
-    int: easn 0
     int: aj 0
     int: aj2 0
     int: am 0
@@ -31513,41 +31504,10 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
-        # `f()` when f already binds an ordinary Structure (l2_empty_struct_assign_shape): a fresh
-        # empty Structure, admitted to f's declared Structure type when it has one -- the S3
-        # admission, whose refusal is the implicit throw implements -- then bound as any graph
-        # assignment is (the S3 rebinding path below): its slot takes it (l2_own_store).  A declared
-        # named Structure takes it as its unit child, as a merge result does.
-        easn: l2_empty_struct_assign_shape(stmt, mi)
-        if: easn != 0
-            if: c.fprintf(l2_out, "%s@: Lmx l2_t%d\n%sl2_t%d: lmx_node_new_owned(l2_program_arena)\n%sif: l2_t%d = 0\n", ind, l2_tn, ind, l2_tn, ind, l2_tn) < 0
-                return: 1
-            if: l2_emit_invariant(ind, "a fresh empty Structure did not allocate") != 0
-                return: 1
-            if: c.sprintf(l2_esd_tok, "l2_t%d", l2_tn) < 0
-                return: 1
-            l2_tn: l2_tn + 1
-            if: easn = 2
-                ni: l2_ns_find(stmt\as\frame\head)
-                if: l2_emit_admit(mi, ni, l2_esd_tok, ind) != 0
-                    return: 1
-                if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) %s)) != 0\n", ind, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni))), l2_esd_tok) < 0
-                    return: 1
-                if: l2_emit_invariant(ind, "a named Structure did not take its assigned value") != 0
-                    return: 1
-                field: l2_next_active(field\next)
-                continue
-            ---
-            # One lookup: l2_own_find and l2_own_find_last miss on the same names (D-10).
-            oi: l2_own_find_last(mi, stmt\as\frame\head)
-            if: oi < 0
-                return: l2_error(l2_src, stmt, "unresolved name")
-            if: l2_graph_nsty(mi, stmt\as\frame\head) >= 0 && l2_emit_admit(mi, l2_graph_nsty(mi, stmt\as\frame\head), l2_esd_tok, ind) != 0
-                return: 1
-            # Declared by `f()` itself: admitted to the Structure at its place (l2_own_self_typed).
-            if: l2_graph_nsty(mi, stmt\as\frame\head) < 0 && l2_own_self_typed(oi) != 0 && l2_emit_admit_own(mi, oi, l2_esd_tok, ind) != 0
-                return: 1
-            if: l2_own_store(mi, oi, ind, l2_esd_tok) != 0
+        # `f()` on an existing Structure binding (l2_empty_struct_assign_shape): its nullary call, as the bare atom f is
+        # (l2_emit_struct_call; book §9 after 55c1abc).
+        if: l2_empty_struct_assign_shape(stmt, mi) != 0
+            if: l2_emit_struct_call(stmt, stmt\as\frame\head, mi, ind) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue

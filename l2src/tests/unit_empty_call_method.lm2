@@ -1,0 +1,18 @@
+# The empty Structure head resolves alike wherever it stands (book §9 :559-:563 after 55c1abc): in a method, `f()` with
+# no f declares f, typed by the empty Structure its declaration gives.  f then binds a Structure, callable, so a later
+# `f()`, `f: ()` or bare `f` is f's nullary call -- one call, never an assignment -- and the empty Structure's call runs
+# nothing: no admission (pinned absent), nothing thrown.  Before the ticket `f()` and `f: ()` were the assignment of a
+# new empty Structure with admission to f's type, and a bare `f` made f a dynamic input of the method, refusing the
+# declaration ("unsupported body").  Entry 7.
+fn: m () int
+    int: r 7
+    f()
+    f()
+    f: ()
+    f
+    return: r
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

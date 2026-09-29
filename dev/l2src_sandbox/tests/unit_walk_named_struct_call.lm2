@@ -1,0 +1,28 @@
+# unit_named_struct_call under --walk-methods: bump walked (pinned), its `Counter()` the walker's EXEC of Counter's
+# procedure over Counter in bump's frames (§12), as its bare `Counter` would be.  Counter\n reads 1 after each call,
+# though 5 was written before it.  Entry 7.
+Counter:
+    size_t: n 0U
+    n: n + 1U
+return
+fn: bump () size_t
+    Counter()
+    size_t: v 9U
+    v: Counter\n
+return: v
+Counter\n: 5U
+Counter()
+size_t: a 9U
+a: Counter\n
+Counter\n: 5U
+Counter: ()
+size_t: b 9U
+b: Counter\n
+Counter\n: 5U
+size_t: c 9U
+c: bump()
+int: ok 0
+if: a = 1U && b = 1U && c = 1U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

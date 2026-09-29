@@ -304,3 +304,99 @@ Structure. `Model:` + поля, `Model: (поля)`, `Model: R` (R — резу�
 - срез 2a (`9bd346a`): `Model: value` на существующей именованной Structure решён как присваивание с допуском по
   имени. По ответу это вызов Model с аргументом; как именованная Structure связывает аргумент, не записано. Нужен
   отказ на месте вместо слов присваивания.
+
+## 9. Тикет 15: правило вызова в корне, в срезе 1 и в срезе 2a
+
+Решение Codex по правилу автора (`55c1abc`, `5b2979d`): переменная m, объявленная `Model: m`, — именованная
+Structure, и она callable. Объявление (merge) тела не исполняет; позднее `m` или `m()` — нульарный вызов. Особого
+не-callable класса нет: ни по происхождению, ни по пустоте, ни по месту (корень или метод), ни по синтаксису
+объявления. Когда Model и m существуют оба, `Model: m` — вызов Model с m, а не присваивание Model и не допуск к Model.
+Отказ — временный статус реализации, не правило языка и не запасной путь.
+
+Сделано:
+- `f()` на существующей привязке Structure (`l2_empty_struct_assign_shape` = 1 или 2) — нульарный вызов f, тот же,
+  что голый атом f. Это один Frame P0 с `f: ()` (`l2_empty_call_shape`). Одна проверка (`l2_check_struct_call`), одна
+  эмиссия (`l2_emit_struct_call`), один шаг обхода (`l2_rw_struct_call`). Присваивания пустой Structure с допуском
+  больше нет: ветки допуска в проверке и эмиссии удалены, `l2_rw_empty_assign` удалён.
+- Что исполняет вызов, решает тип привязки:
+  - собственное имя именованной Structure единицы — её процедура: на корне обходом, в методе единицы нативно или
+    обходом под ручкой;
+  - поле корня, объявленное `Model: v`, — тело Model над v (обходом);
+  - поле, тип которого пустая Structure, ничего не исполняет, шага нет (`l2_struct_call_inert`). Это поле,
+    объявленное `f()`, или поле пустой именованной Structure: в теле её объявления нет полей и операторов, и её не
+    замыкает `until` (`l2_ns_empty`). Голый f — так же; раньше это был отказ;
+  - остальное не построено — отказ на месте словами голого атома («executing a named Structure is not supported
+    yet»): поле метода типа именованной Structure с телом, собственная Structure метода, письмо без объявленного
+    типа, формал.
+- Скан исполнения (`l2_ns_exec_scan`, `l2_ns_exec_mark`) отмечает `S()` так же, как голый S.
+- `T: value`, где T — существующая именованная Structure, — вызов T с аргументом: Structure полей (в методе и на
+  корне), число, другая именованная Structure, имя, связанное раньше. Не построен: отказ «a call of a named Structure
+  with an argument is not built yet». `l2_lit_admits` и `l2_value_admits` удалены.
+- «Связано раньше» (`l2_colon_bound_before`) учитывает поле, объявленное раньше в том же теле через merge
+  (`Model: m`), письмо (`receiveMessage: m`) или пустую Structure (`m()`). Предпроход и скан свободных имён такое имя
+  не объявляют. Поэтому второе `Model: m` — вызов Model с m. Раньше в методе это было повторное объявление m, а на
+  корне после `int: m` — «incompatible entry signature».
+- `f()`, объявляющее f в методе, регистрирует f в скане свободных имён (`l2_scan_body`), где известны машинные локалы
+  метода (`l2_ml_rebuild`). Поздний голый `f` поэтому не делает f динамическим входом; раньше объявление отказывалось
+  («unsupported body»). Первая версия регистрировала в предпроходе, и корпус её опроверг: предпроход читает таблицу
+  машинных локалов чужого метода, и `L2TestTickFn: f av\tick` + `f()` получали лишнее поле (2 фикстуры, только L1).
+
+Строки (переименованы, чтобы имя говорило правду о поведении):
+- `unit_empty_assign_untyped` → `unit_empty_call_root`: первое E() объявляет E, следующие E() и E: () её вызывают.
+  Пин — кадры EXEC; допуска и узла EMPTY нет: 7. Часть с письмом `m()` → `unit_letter_call_refused`: отказ на месте;
+- `unit_empty_assign_named` → `unit_named_struct_call`: Counter() и Counter: () исполняют тело Counter с корня и из
+  bump. Counter\n — 1 после каждого вызова, хотя перед ним записано 5: 7. Близнец обхода
+  `unit_walk_named_struct_call`: оба метода обходятся (пин);
+- `unit_empty_assign_admit` → `unit_model_var_call`: `Model: m`, затем m() и m: () исполняют тело Model над m. m\v —
+  1 после объявления, 2 после каждого вызова; Model\v остаётся 1: 7;
+- `unit_empty_self_admit_method`, `unit_walk_empty_self_admit_method`, `unit_empty_self_admit_nested` →
+  `unit_empty_call_method`, `unit_walk_empty_call_method`, `unit_empty_call_nested`: f(), f: () и голый f на поле,
+  объявленном f(), ничего не исполняют. Допуска нет (пин), метод под ручкой обходится (пин): 7;
+- `unit_empty_admit_typed_method` → `unit_model_var_call_method_refused`: `S: fresh` + `fresh()` в методе — отказ на
+  месте (было 74). Близнец обхода `unit_walk_empty_admit_typed_method` удалён: отказ одинаков в обоих режимах;
+- новые `unit_empty_type_call_method` (поле пустой именованной Structure: ничего не исполняется, 7) и
+  `unit_until_type_call_method_refused` (пустая, но замкнутая `until`: вызов исполняет цикл — отказ);
+- срез 2a: `unit_assign_named_lacks_method` → `unit_ns_call_arg_method_refused`, `unit_assign_named_not_rebound` →
+  `unit_ns_call_arg_lit_refused`, `unit_assign_named_number_refused` → `unit_ns_call_arg_number_refused`.
+  `unit_assign_named_kind_refused` удалена: это тот же случай, что `_lit`. Новые `unit_ns_call_arg_name_refused`
+  (пример автора `Model: Other`, в методе), `unit_ns_call_arg_bound_refused` (второе `Model: m` в методе),
+  `unit_ns_call_arg_bound_root_refused` (`int: m 5` + `Model: m` на корне). `unit_duplicate_named_struct_refused` и
+  `unit_local_ns_call_refused` переожиданы по правилу.
+
+Корпус: `1c48f55` (транслятор b16) → этот срез: 1149 файлов, 2298 трансляций; 2260 тождественны, 8 расходятся только L1 и 30 исходом — все в 19 строках этого среза (новых, переименованных или переожиданных); вне среза расхождений нет.
+
+Мутанты (копии транслятора на итоговых байтах), все красные:
+- C1 — шаг обхода `S()` не строится: 0 вместо 7 у корня, у обходимого bump и у `m()`. У `unit_empty_call_root`
+  красен только пин EXEC: E пуста, поведение то же;
+- C2 — нативный `S()` ничего не эмитирует: нативная строка даёт 0, обходимый близнец зелён;
+- C3 — скан не отмечает `S()`: «internal: a named Structure executed without its procedure»;
+- C4 — merge-объявление не считается связанным раньше: второе `Model: m` снова объявляет m, и программа исполняется
+  (7) вместо отказа;
+- C5 — предпроход и скан объявляют связанное имя: на корне снова «incompatible entry signature». В методе отказ
+  проверки тот же, свидетель — корневая строка;
+- C6 — отказ `T: value` снят: у всех пяти строк «assignment target must be a declared typed mutable value»;
+- C7 — вызов пустой Structure не пуст: у трёх строк «executing a named Structure is not supported yet»;
+- C8 — скан не регистрирует `f()`: «unsupported body» у двух строк;
+- C9 — `l2_ns_empty` не смотрит в тело: `fresh()` и `S()` в методе транслируются и исполняются вместо отказа;
+- C10 — `l2_ns_empty` не смотрит на `until`: вызов исполняется вместо отказа;
+- C12 — голый f пустого типа в обходе не принят за вызов: метод уходит в натив. Красен пин Absent, поведение то же
+  (7).
+
+Найдено мёртвым и удалено: исключение собственного объявления в `l2_ns_exec_mark`. Мутант C11 дал тождественный L1
+даже на программе из одного `E()`: корневое `E()` — пункт единицы (`l2_unit_role` 5), а не оператор, который читает
+скан. Упрощено: `l2_ns_empty` смотрит только в тело объявления. Число полей и первый оператор говорили то же самое, и
+ни один мутант не мог их достичь.
+
+Не в этом срезе — сообщено Codex:
+1. `v: value`, где v — переменная типа Structure (путь S3, -178), остаётся присваиванием с допуском; по правилу это
+   вызов v с аргументом. Строки (поиск по форме `Model: v` + `v: …`, не исчерпывающий): `unit_admit_rebind_refused`,
+   `unit_admit_rebind_read`, `unit_admit_letter_formal`, `unit_local_init_graph_place_refused`,
+   `unit_matrix_noncall_struct_rebind_refused`, `unit_predef_result_struct_refused`,
+   `unit_struct_return_assign_refused`.
+2. На корне `Model: Other` после `Other:` + поля: `l2_unit_declares` читает позднее `Model: Other` как объявление поля
+   Other (признак консервативен и ошибается только в сторону «не именованная Structure»), и `Other:` отказан как
+   присваивание («assignment value has unknown type») — так же, как до тикета. Поэтому пример автора — в методе.
+3. Предпроход (`l2_collect_asgn_body`) не вызывает `l2_ml_rebuild` и читает таблицу машинных локалов, построенную для
+   другого метода. Признак 2b-1 `l2_local_ns_shape` спрашивает там `l2_ml_find`. Это латентно: корпус чист.
+4. Замкнутая пустая вертикаль (`f:` + `end: f`) отказана P0 («empty colon Frame is not allowed») до тикета и после;
+   свидетели используют `f()` и `f: ()`.

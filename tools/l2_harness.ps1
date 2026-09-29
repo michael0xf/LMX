@@ -1808,24 +1808,24 @@ $fixtures = @(
     # anywhere it is consumed as a value), one diagnostic, now that this fixture's own case is fixed.
     [pscustomobject]@{ Name = 'unit_void_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
-    # OPUS-Q54-TRAILER-20260929-13, re-expected by name: the first E() declares the named Structure E by the general
-    # route (an absent head with the empty Structure, one route with `E: ()` and `end: E`), so the later E() / E: ()
-    # assign a new empty Structure with admission to E's own empty type, which () passes (was the -132 field route,
-    # an untyped store with no lmx_walk_admit).  m() stores an EMPTY node over the untyped letter, no admission.
-    # The driver letter is not null. m() stores over it and does not throw. Success is 4.
-    [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
-        Absent = @();
-        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)') },
-    # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
-    # Empty Structure assigned to a typed binding (book §12): an EMPTY node, admitted by
-    # lmx_walk_admit.  () does not implement Model / S, so implements is caught and the previous
-    # binding stays: 421 and 74.  A store of the empty node without admission would not.
-    [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 421;
-        Absent = @('lmx_msg_poll_abort', 'lmx: rebinding');
-        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)') },
-    [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
-        Absent = @('lmx_msg_poll_abort');
-        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)', 'c.LMX_WALK_OP_PUT_REF, 4U)') },
+    # Ticket 15 (book §9 after 55c1abc, the call rule; OPUS-Q54-CONTINUE-20260929-14): `S()` -- one Frame with `S: ()`
+    # -- on an existing Structure binding is its nullary call, as the bare atom S is (steps/named-struct-exec.md §12),
+    # never the assignment of a new empty Structure with admission these rows pinned before (were
+    # unit_empty_assign_untyped, _named, _admit: 4, 74, 421).  The root's first E() declares E and the later E() / E: ()
+    # call it -- EXEC pinned, no admission, no EMPTY node: 7.  Counter() and Counter: () run Counter's body from the root
+    # and from bump, natively and walked (both methods walked: pinned): 7.  `Model: m` declares m, a named Structure, and
+    # m() / m: () run Model's body over m: 7.  The letter's m() is its call too -- the letter's type is not declared, and
+    # that call is not built yet: refused where it stands, as its bare atom is.
+    [pscustomobject]@{ Name = 'unit_empty_call_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)'); Debt = @('c.LMX_WALK_OP_EXEC, 5U)') },
+    [pscustomobject]@{ Name = 'unit_named_struct_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('fn: lmx_walk_admit', 'LMX_IMPLEMENTS_YES'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_struct_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_model_var_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)'); Debt = @('c.LMX_WALK_OP_EXEC, 5U)') },
+    [pscustomobject]@{ Name = 'unit_letter_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_letter_call_refused.lm2:6:1: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     # A BARE `return` CLOSES A SUB (P0, FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3; author
     # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it -- `s 3` twice.  This is the
     # author's Q52 example (2026-09-28; re-expected by name, 7b): y is s's hidden input, and the unit's y stays 0
@@ -2389,39 +2389,52 @@ $fixtures = @(
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_decl_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_decl_literal_refused.lm2:4:1: unresolved name'; Absent = @(); Debt = @() },
-    # OPUS-Q54-CONTINUE-20260929-14 slice 1: the empty Structure head `f()` resolves alike wherever it stands.  In a
-    # method, f declared by `f()` is typed by that declaration, and a later `f()` / `f: ()` is admitted to it -- to the
-    # Structure at f's place, its working value (pinned) -- 7; an admission to S's type would be refused and caught: 64.
-    # A typed binding's `f()` in a method is refused by admission as at the root: 74.  An admitting method takes the
-    # throw channel, and the knob walks no method that throws (l2_rw_may): the walk twins are pinned native.
-    [pscustomobject]@{ Name = 'unit_empty_self_admit_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('(cast: (@: Lmx) l2_q3), (cast: (@: Lmx) l2_q3)) != c.LMX_IMPLEMENTS_YES') },
-    [pscustomobject]@{ Name = 'unit_walk_empty_self_admit_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
-        Absent = @(); Debt = @('(cast: (@: Lmx) l2_q3), (cast: (@: Lmx) l2_q3)) != c.LMX_IMPLEMENTS_YES', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
-    [pscustomobject]@{ Name = 'unit_empty_self_admit_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('(cast: (@: Lmx) l2_q3), (cast: (@: Lmx) l2_q3)) != c.LMX_IMPLEMENTS_YES') },
-    [pscustomobject]@{ Name = 'unit_empty_admit_typed_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
+    # OPUS-Q54-CONTINUE-20260929-14 slice 1, corrected by the call rule (ticket 15; book §9 after 55c1abc): in a method,
+    # f declared by `f()` is typed by the empty Structure its declaration gives, and a later `f()`, `f: ()` or bare `f`
+    # is its nullary call -- the empty Structure's call runs nothing: no admission (pinned absent), nothing thrown, so
+    # the method is walked under the knob (pinned) -- 7, also in an `if:` body.  A bare `f` made f a dynamic input before
+    # and refused the declaration: the free-name scan registers f now.  A method's field of a named Structure type --
+    # `S: fresh` -- is callable too; its call, S's body over it, is not built in a method yet: refused where it stands,
+    # as its bare atom is (slice 1 had `fresh()` the assignment with admission: 74).
+    [pscustomobject]@{ Name = 'unit_empty_call_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('LMX_IMPLEMENTS_YES'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_empty_call_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('LMX_IMPLEMENTS_YES', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_empty_call_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('LMX_IMPLEMENTS_YES'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_model_var_call_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_model_var_call_method_refused.lm2:11:5: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # The empty type's edges: a field typed by an empty named Structure is called as the empty Structure is -- nothing
+    # runs: 7; one closed by `until` runs its loop at a call (Q54), a method's Structure-typed field's call: refused.
+    [pscustomobject]@{ Name = 'unit_empty_type_call_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_empty_admit_typed_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74; WalkMethods = $true;
-        Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
-    # OPUS-Q54-CONTINUE-20260929-14 slice 2a: an assignment to an existing named Structure is the assignment with
-    # admission, by name (Q39, D-105), in a method as at the root -- a field missing by name or kind is refused by
-    # admission; a number is a value of another type; a Structure Model admits is not rebound yet (the reads through
-    # the correspondence, D-105): a located gap, pinned.
-    [pscustomobject]@{ Name = 'unit_assign_named_lacks_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_assign_named_lacks_method.lm2:7:5: the assigned Structure lacks a field of the named Structure'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_assign_named_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_assign_named_kind_refused.lm2:5:1: the assigned Structure lacks a field of the named Structure'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_assign_named_not_rebound.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_assign_named_not_rebound.lm2:7:1: a Structure assigned to a named Structure is not rebound yet'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_assign_named_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_assign_named_number_refused.lm2:5:1: assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_until_type_call_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_until_type_call_method_refused.lm2:8:5: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # Ticket 15, slice 2a corrected by the call rule: `T: value` with T an existing named Structure is T's call with the
+    # value -- a Structure of fields, in a method or at the root, a number, another named Structure (the author's
+    # `Model: Other`, in a method), a name bound before (Codex: when Model and m both exist, `Model: m` calls Model with m; before,
+    # the second `Model: m` in a method declared m again, and at the root after `int: m` it was "incompatible entry
+    # signature") -- never the assignment with admission slice 2a made of it.  A named Structure's call with an
+    # argument is not built yet: refused where it stands, the implementation's status, not a rule of the language.
+    [pscustomobject]@{ Name = 'unit_ns_call_arg_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_call_arg_method_refused.lm2:8:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_call_arg_lit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_call_arg_lit_refused.lm2:6:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_call_arg_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_call_arg_number_refused.lm2:5:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_call_arg_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_call_arg_name_refused.lm2:10:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_call_arg_bound_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_call_arg_bound_refused.lm2:9:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_call_arg_bound_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns_call_arg_bound_root_refused.lm2:6:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
     # OPUS-Q54-CONTINUE-20260929-14 slice 2b-1: a method's own named Structure -- `S:` + number fields, S resolving to
     # nothing there -- declared by the general route (book §9: an absent target with an explicit Structure value).  At
     # run time only its Structure exists: built at its statement, a child of the method's own Structure (pinned), bound
     # at S's slot -- no unit child (Absent) -- and each execution builds a new one (94; one kept would give 99).  The
     # walk takes no method with one (pinned native).  A statement in its body, a field that is no number, and `S()` --
-    # its nullary call (book §9: a named Structure is called, never assigned) -- are refused where they stand.
+    # its nullary call (book §9: a named Structure is called, never assigned), refused as its bare atom is (ticket 15)
+    # until 2c executes it -- are refused where they stand.
     [pscustomobject]@{ Name = 'unit_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -2431,7 +2444,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 94;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_call_refused.lm2:7:5: a call of a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_local_ns_call_refused.lm2:8:5: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_stmt_refused.lm2:7:9: a statement in a named Structure declared in a method is not executed yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2809,11 +2822,12 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
-    # OPUS-Q54-CONTINUE-20260929-14, re-expected by the rule: a second `Model:` meets the binding the first declared --
-    # the assignment of that Structure with admission, by name (Q39, D-105) -- and Model's field value has none of that
-    # name in it: refused by admission (was "duplicate named Structure", then "assignment target must be...").
+    # OPUS-Q54-CONTINUE-20260929-14, re-expected by the call rule (ticket 15; book §9 after 55c1abc): a second `Model:`
+    # meets the binding the first declared, a callable -- Model's call with that Structure as its argument, not built
+    # yet: refused where it stands (was "duplicate named Structure", then "assignment target must be...", then the
+    # admission's refusal).
     [pscustomobject]@{ Name = 'unit_duplicate_named_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_duplicate_named_struct_refused.lm2:9:1: the assigned Structure lacks a field of the named Structure'; Absent = @(); Debt = @() },
+        Needle = 'unit_duplicate_named_struct_refused.lm2:9:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

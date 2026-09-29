@@ -1,0 +1,16 @@
+# The same in a nested body: f, declared by `f()` inside an `if:` body of the method, is called there by `f()` and by
+# the bare `f` -- the empty Structure's call runs nothing, and nothing is admitted (pinned absent).  Entry 7.
+fn: m () int
+    int: r 7
+    if: r = 7
+        f()
+        f()
+        f
+        r: r + 0
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

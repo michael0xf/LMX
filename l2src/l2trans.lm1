@@ -916,7 +916,6 @@ prototype:
     fn: l2_body_calls_name (@: LmP0Field first; const: @(LmP0Text h)) int
     fn: l2_local_ns_proc (int: ni; const: @(char path)) int
     fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
-    fn: l2_names_node (const: @(LmP0Node n)) int
     fn: l2_emit_local_bodies (int: pr; int: t; const: @(char ind)) int
     fn: l2_local_ns_callee (const: @(LmP0Text t); int: mi) int
     fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
@@ -8829,51 +8828,17 @@ return: 0
 # Slice 2c-2: the statements of a method's own named Structure ni run at S's calls, in S's procedure -- never at its
 # declaration (book :928) -- and a free name of them is a hidden input its caller passes (§12).  Slice 2c-3: a control
 # body among them (`if`, `else`, `while`, `for`, `catch`, a block) is a child of S's occurrence, built with S at its
-# statement (l2_emit_local_bodies).  Two kinds stay out, refused where they stand: `node` -- in S's body it names S's
-# parent, the method's occurrence, and the translator resolves `node` as a file-level method's, the unit -- and a char
-# field declared in a control body -- its cell needs the process's character table, which only the unit build holds.
-# 0, or 1 said.
+# statement (l2_emit_local_bodies).  `node` in S's body names S's parent, the method's occurrence (slice 2c-4,
+# l2_node_seg).  One kind stays out, refused where it stands: a char field declared in a control body -- its cell needs
+# the process's character table, which only the unit build holds.  0, or 1 said.
 fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
-    @: LmP0Field f
-    @: LmP0Node v
     int: oi 0
     if: ni < 0 || ni >= l2_ns_n || l2_ns_at[ni] = 0 || l2_ns_at[ni]\as = 0 || l2_ns_at[ni]\as\frame = 0 || l2_ns_at[ni]\as\frame\body = 0
         return: 0
-    f: l2_next_active(l2_ns_at[ni]\as\frame\body\first_field)
-    while: f != 0
-        v: f\value
-        if: v != 0 && (l2_ns_body_stmt(v, ni) != 0 || v\kind != c.LM_P0_NODE_FRAME) && l2_names_node(v) != 0
-            return: l2_error(path, v, "`node` in a named Structure declared in a method is not built yet")
-        f: l2_next_active(f\next)
-    ---
     while: l2_ns_proc[ni] >= 0 && oi < l2_own_n
         if: l2_own_mi[oi] = l2_ns_proc[ni] && l2_own_host[oi] != 0 && l2_own_ty[oi] = 1
             return: l2_error(path, l2_own_decl[oi], "a char field in a control body of a named Structure declared in a method is not built yet")
         oi: oi + 1
-    ---
-return: 0
-
-# Whether node n -- an atom, a Frame's head or any item under it -- names `node`: the word, or a path from it.
-fn: l2_names_node (const: @(LmP0Node n)) int
-    @: LmP0Field g
-    @: LmP0Text t 0
-    if: n = 0 || n\as = 0
-        return: 0
-    if: n\kind = c.LM_P0_NODE_ATOM
-        t: n\as\atom
-    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0
-        t: n\as\frame\head
-    if: t != 0 && t\data != 0 && t\length >= 4U && memcmp(t\data, "node", 4U) = 0 && (t\length = 4U || t\data[4] = 92)
-        return: 1
-    g: 0
-    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0 && n\as\frame\body != 0
-        g: l2_next_active(n\as\frame\body\first_field)
-    if: n\kind = c.LM_P0_NODE_STRUCTURE && n\as\structure != 0
-        g: l2_next_active(n\as\structure\first_field)
-    while: g != 0
-        if: l2_names_node(g\value) != 0
-            return: 1
-        g: l2_next_active(g\next)
     ---
 return: 0
 
@@ -15042,7 +15007,11 @@ fn: l2_emit_local_ns (int: mi; int: oi; int: ni; const: @(char ind)) int
     []: char val 48
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@: Lmx l2_t%d lmx_struct_new_owned(self, l2_program_arena)\n%sif: l2_t%d = 0\n", ind, t, ind, t) < 0
+    # Its parent is the Structure that holds its slot (book §2: a nested Structure's parent is its immediately enclosing
+    # Structure): the method's occurrence, or the body's Structure it is declared in -- the `node` of S's body.
+    if: l2_own_fid[oi] >= 0 && c.fprintf(l2_out, "%s@: Lmx l2_t%d lmx_struct_new_owned(l2_h%d, l2_program_arena)\n%sif: l2_t%d = 0\n", ind, t, l2_own_fid[oi], ind, t) < 0
+        return: 1
+    if: l2_own_fid[oi] < 0 && c.fprintf(l2_out, "%s@: Lmx l2_t%d lmx_struct_new_owned(self, l2_program_arena)\n%sif: l2_t%d = 0\n", ind, t, ind, t) < 0
         return: 1
     if: l2_emit_invariant(ind, "a method's named Structure did not allocate") != 0
         return: 1
@@ -16385,6 +16354,23 @@ fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int ou
     \out_kind: 0 - 1
     \out_ent: 0 - 1
     host: l2_mad_host_of(mi)
+    # Slice 2c-4: a method's own named Structure's procedure runs over S (lmx_call_prim(S, S): node = S's parent), and
+    # S is a child of the Structure that holds its slot (l2_emit_local_ns): the method's occurrence -- `node\name` is a
+    # field of the method's body, at its slot, as a nested method's is of its host's -- or, for S declared in a body,
+    # that body's Structure: a field declared in that body.  Never a formal: that is the method's args part, which
+    # `node` never names (a nested method's formal is the merge's appended field, below).
+    if: host < 0 && l2_m_nsof(mi) >= 0 && l2_ns_local[l2_m_nsof(mi)] >= 0
+        host: l2_ns_local[l2_m_nsof(mi)]
+        oi: l2_own_of_local_ns(host, l2_m_nsof(mi))
+        if: oi >= 0 && l2_own_host[oi] != 0
+            oi: l2_own_seg_scan(host, l2_own_host[oi], pd, off, len, out_kind, out_ent)
+            if: oi < 0
+                return: 1
+            \out_slot: l2_own_fchild[oi]
+            if: \out_kind = 3 && l2_own_is_slot(oi) != 0
+                \out_kind: 2
+            return: 0
+        ---
     if: host < 0
         oi: l2_e_own_seg_mi(mi, pd, off, len, out_kind, out_ent)
         if: oi < 0
@@ -16399,6 +16385,8 @@ fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int ou
             \out_kind: 2
         return: 0
     ---
+    if: l2_mad_host_of(mi) < 0
+        return: 1
     while: j < l2_m_arity[host]
         if: l2_fn(host, j) != 0 && l2_name_is_seg(l2_fn(host, j), pd, off, len) != 0
             \out_slot: l2_m_width(host) + j
@@ -30747,6 +30735,11 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
             return: 1
         j: j + 1
     ---
+    # §7b: control passes to another callable -- the hidden inputs are evaluated above, so what is marked is published
+    # now, before the call (book §12), as before every call (l2_emit_call): the procedure may read the caller's fields
+    # through the graph (a method's own named Structure's `node\x`, slice 2c-4).
+    if: l2_emit_publish(ind) != 0
+        return: 1
     if: nh = 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, %s, %s, 0, 0U, 0, @ l2_nso%d) != 0\n", ind, k, ind, at, at, k) < 0
         return: 1
     if: nh > 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, %s, %s, l2_nsr%d, %dU, 0, @ l2_nso%d) != 0\n", ind, k, ind, at, at, k, nh, k) < 0

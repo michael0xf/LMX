@@ -2438,8 +2438,9 @@ $fixtures = @(
         Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    # (2c-4: S declared in a body is that body's child -- its parent is the Structure that holds its slot, book §2.)
     [pscustomobject]@{ Name = 'unit_local_ns_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
+        Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(l2_h0, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 94;
         Absent = @(); Debt = @() },
     # Slice 2c-1: the method executes its own named Structure -- `S()`, `S: ()`, the bare `S` -- S's procedure (§12), a
@@ -2458,8 +2459,7 @@ $fixtures = @(
     # Slice 2c-2: S's statements run at its calls, in its procedure, never at its declaration (book :928) -- w 0 after
     # it, then 14 and, after `k: 20`, 24: k is a hidden input the method passes (§12).  Under the knob the method stays
     # native and the procedure unwalked (pinned).  S's statements are checked whether or not S runs (a free name nobody
-    # binds, refused where it stands).  `node` in S's body is not built yet: refused where it stands (the write row was
-    # unit_local_ns_stmt_refused, refused as any statement by 2b-1).  Control bodies: 2c-3, below.
+    # binds, refused where it stands).  Control bodies: 2c-3; `node`: 2c-4, below.
     [pscustomobject]@{ Name = 'unit_local_ns_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -2478,10 +2478,21 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_ctl_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_ctl_char_refused.lm2:7:13: a char field in a control body of a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_ns_node_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_node_refused.lm2:9:9: `node` in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_ns_node_read_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_node_read_refused.lm2:6:9: `node` in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
+    # Slice 2c-4: `node` in S's body is S's parent, the Structure that holds S's slot -- the method's occurrence, or the
+    # body's Structure S is declared in (book §2; pinned: S built as that body's child).  `node\k` reads and writes the
+    # graph; calling S is a publication boundary, so the method's marked `k: 5` is published first: 5, then 6 (were the
+    # two `node` refusals of 2c-2).  In a body, `node\b` is b declared in it: 4, then 5.  Refused where they stand: a
+    # field of the method from S declared in a body (no field of that body), and the method's formal (its args part).
+    [pscustomobject]@{ Name = 'unit_local_ns_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_local_ns_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    [pscustomobject]@{ Name = 'unit_local_ns_node_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_struct_new_owned(l2_h0, l2_program_arena)') },
+    [pscustomobject]@{ Name = 'unit_local_ns_node_outer_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_node_outer_refused.lm2:9:21: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_node_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_node_formal_refused.lm2:6:17: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_kind_refused.lm2:4:5: a field of this kind in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).

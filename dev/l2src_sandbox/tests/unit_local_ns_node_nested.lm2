@@ -1,0 +1,25 @@
+# S declared in an `if:` body of the method is a child of that body's Structure (book §2: a nested Structure's parent is
+# its immediately enclosing Structure; pinned), so `node` in S's body is that body: `node\b` is the field b declared in
+# it -- 4 read, 5 written, 5 read by the second call (slice 2c-4).  Was unit_local_ns_node_read_refused.  Entry 7.
+fn: m () int
+    int: r 0
+    if: r = 0
+        int: b 4
+        S:
+            int: v 0
+            v: node\b
+            node\b: node\b + 1
+        S()
+        if: S\v = 4
+            r: r + 1
+        S()
+        if: S\v = 5
+            r: r + 6
+        r: r + 0
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

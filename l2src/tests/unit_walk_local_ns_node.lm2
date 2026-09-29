@@ -1,0 +1,21 @@
+# unit_local_ns_node under --walk-methods: the method stays native (pinned); 5, then 6: 7.
+fn: m () int
+    int: k 5
+    S:
+        int: v 0
+        v: node\k
+        node\k: node\k + 1
+    S()
+    int: r 0
+    if: S\v = 5
+        r: r + 1
+    S()
+    if: S\v = 6
+        r: r + 6
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

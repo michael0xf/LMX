@@ -83,7 +83,7 @@ Rule: [L2 §12](L2_spec_en.md#child). Creation and reservation prepare a child s
 <a id="copy-merge"></a>
 ## 14. Copy and merge in L1
 
-The rule is already defined in [L2 §13](L2_spec_en.md#copy-merge) and [L3 §8](LMX_semantics.en.md#construction). `lmx_graph_copy_owned.lm1`, `lmx_merge_owned.lm1`, and their paired `.h.lm1` files are the L1 implementation of the full `merge` traversal. L1 itself does not decide whether `left: right` is a declaration, assignment, or call, contain graph bindings, or model `own-load`/`dirty`. Before emitting L1, the L2 translator selects the contextual role, performs the required type, `const`, and `implements` checks, and then emits either an unambiguous call to the `merge` implementation or an ordinary C-like reference assignment. Intermediate spellings may vary provided the generated C preserves the selected L2/L3 semantics and the complete `merge` traversal.
+The rule is already defined in [L2 §13](L2_spec_en.md#copy-merge) and [L3 §9](LMX_semantics.en.md#construction). `lmx_graph_copy_owned.lm1`, `lmx_merge_owned.lm1`, and their paired `.h.lm1` files are the L1 implementation of the full `merge` traversal. L1 itself does not decide whether `left: right` is a declaration, assignment, or call, contain graph bindings, or model `own-load`/`dirty`. Before emitting L1, the L2 translator selects the contextual role, performs the required type, `const`, and `implements` checks, and then emits either an unambiguous call to the `merge` implementation or an ordinary C-like reference assignment. Intermediate spellings may vary provided the generated C preserves the selected L2/L3 semantics and the complete `merge` traversal.
 
 <a id="implements"></a>
 ## 15. `implements` in L1

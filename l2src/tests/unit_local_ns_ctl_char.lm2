@@ -1,0 +1,23 @@
+# A char field declared in a control body of a method's own named Structure (slice 2c-5): built with S at its statement,
+# its cell from the byte table l2_program_chars carries.  `S()` runs the `if:` body, whose d is 'z', so v becomes 5.
+# Was unit_local_ns_ctl_char_refused.  Entry 7.
+fn: m () int
+    S:
+        size_t: v 4U
+        if: v = 4U
+            char: d 'z'
+            if: d = 'z'
+                v: 5U
+            v: v + 0U
+        v: v + 0U
+    S()
+    int: r 0
+    if: S\v = 5U
+        r: 7
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

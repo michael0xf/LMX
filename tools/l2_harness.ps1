@@ -2432,8 +2432,8 @@ $fixtures = @(
     # nothing there -- declared by the general route (book §9: an absent target with an explicit Structure value).  At
     # run time only its Structure exists: built at its statement, a child of the method's own Structure (pinned), bound
     # at S's slot -- no unit child (Absent) -- and each execution builds a new one (94; one kept would give 99).  The
-    # walk takes no method with one (pinned native).  A field that is no number is refused where it stands (its
-    # statements run since 2c-2, below).
+    # walk takes no method with one (pinned native).  A field that is no number and no char is refused where it stands
+    # (char fields since 2c-5, statements since 2c-2, below).
     [pscustomobject]@{ Name = 'unit_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -2469,15 +2469,19 @@ $fixtures = @(
     # Slice 2c-3: S's control bodies are Structures of its occurrence, built with S at its statement (R9) -- the `if:`
     # body with a cell for its field t: w 0 after the declaration, 10 after `S()` (was unit_local_ns_ctl_refused);
     # under the knob the method stays native (pinned); S declared in the method's `while:` gets new bodies each pass:
-    # 15.  A char field in S's control body is not built yet (its cell needs the unit's character table): refused.
+    # 15.  Slice 2c-5: a char field -- S's own or declared in its control body -- is a cell of the program's byte table,
+    # carried into the method by the module cell l2_program_chars (pinned): 'z' written, 'a' after `S()`; the body's d
+    # 'z' steers its `if:`: 5 (was unit_local_ns_ctl_char_refused).
     [pscustomobject]@{ Name = 'unit_local_ns_ctl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_ctl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
     [pscustomobject]@{ Name = 'unit_local_ns_ctl_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_ns_ctl_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_ctl_char_refused.lm2:7:13: a char field in a control body of a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_char.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_char_cell_known(l2_program_chars, 97)', 'l2_program_chars: process_chars') },
+    [pscustomobject]@{ Name = 'unit_local_ns_ctl_char.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_char_cell_known(l2_program_chars, 0)') },
     # Slice 2c-4: `node` in S's body is S's parent, the Structure that holds S's slot -- the method's occurrence, or the
     # body's Structure S is declared in (book §2; pinned: S built as that body's child).  `node\k` reads and writes the
     # graph; calling S is a publication boundary, so the method's marked `k: 5` is published first: 5, then 6 (were the

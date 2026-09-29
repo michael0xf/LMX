@@ -915,8 +915,8 @@ prototype:
     fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_body_calls_name (@: LmP0Field first; const: @(LmP0Text h)) int
     fn: l2_local_ns_proc (int: ni; const: @(char path)) int
-    fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
     fn: l2_emit_local_bodies (int: pr; int: t; const: @(char ind)) int
+    fn: l2_run_chars () int
     fn: l2_local_ns_callee (const: @(LmP0Text t); int: mi) int
     fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
     fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
@@ -8687,8 +8687,8 @@ return: 1
 # The check's half of a method's own named Structure (l2_local_ns_shape): its type -- an entry of the named-Structure
 # table local to mi (l2_ns_local), with every entry its body made (a nested one too), metadata only -- found again by
 # its declaration in a later pass; and S, an own Structure field of mi typed by it, whose value the statement builds at
-# run time (l2_emit_local_ns).  A statement in the body and a field of another kind than a number stay out, located:
-# executing a method's named Structure, and its other fields, are the next steps.
+# run time (l2_emit_local_ns).  Its statements run at its calls (slice 2c); a field of another kind than a number or a
+# char -- an Array, a nested Structure, a reference -- stays out, located: not built at S's statement yet.
 fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     int: ni
     int: k 0
@@ -8698,10 +8698,8 @@ fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
     ni: l2_local_ns_entry(stmt, mi, path)
     if: ni < 0
         return: 1
-    if: l2_local_ns_stmts_ok(ni, path) != 0
-        return: 1
     while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = ni && l2_nsf_kind[k] != 0 && l2_nsf_kind[k] != 7 && l2_nsf_kind[k] != 8 && l2_nsf_kind[k] != 9
+        if: l2_nsf_owner[k] = ni && l2_nsf_kind[k] != 0 && l2_nsf_kind[k] != 1 && l2_nsf_kind[k] != 7 && l2_nsf_kind[k] != 8 && l2_nsf_kind[k] != 9
             return: l2_error(path, stmt, "a field of this kind in a named Structure declared in a method is not built yet")
         k: k + 1
     ---
@@ -8822,23 +8820,6 @@ fn: l2_local_ns_proc (int: ni; const: @(char path)) int
             l2_m_value_used[k]: 0
             k: k + 1
         ---
-    ---
-return: 0
-
-# Slice 2c-2: the statements of a method's own named Structure ni run at S's calls, in S's procedure -- never at its
-# declaration (book :928) -- and a free name of them is a hidden input its caller passes (§12).  Slice 2c-3: a control
-# body among them (`if`, `else`, `while`, `for`, `catch`, a block) is a child of S's occurrence, built with S at its
-# statement (l2_emit_local_bodies).  `node` in S's body names S's parent, the method's occurrence (slice 2c-4,
-# l2_node_seg).  One kind stays out, refused where it stands: a char field declared in a control body -- its cell needs
-# the process's character table, which only the unit build holds.  0, or 1 said.
-fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
-    int: oi 0
-    if: ni < 0 || ni >= l2_ns_n || l2_ns_at[ni] = 0 || l2_ns_at[ni]\as = 0 || l2_ns_at[ni]\as\frame = 0 || l2_ns_at[ni]\as\frame\body = 0
-        return: 0
-    while: l2_ns_proc[ni] >= 0 && oi < l2_own_n
-        if: l2_own_mi[oi] = l2_ns_proc[ni] && l2_own_host[oi] != 0 && l2_own_ty[oi] = 1
-            return: l2_error(path, l2_own_decl[oi], "a char field in a control body of a named Structure declared in a method is not built yet")
-        oi: oi + 1
     ---
 return: 0
 
@@ -15027,6 +15008,20 @@ fn: l2_emit_local_ns (int: mi; int: oi; int: ni; const: @(char ind)) int
         return: 1
     while: fx < l2_nsf_n
         newf: 0
+        # A char field (slice 2c-5): a cell of the program's byte table, carried into the method by l2_program_chars, at
+        # its literal -- as the unit builds a named Structure's (process_chars).
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 1
+            if: c.fprintf(l2_out, "%sl2_ls%d: lmx_arena_ref_cell(l2_t%d, %uU)\n%sif: l2_ls%d = 0\n", ind, t, t, (cast: (unsigned) j), ind, t) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sl2_ls%d[0]: lmx_char_cell_known(l2_program_chars, %d)\n%sif: l2_ls%d[0] = 0\n", ind, t, (cast: (int) l2_nsf_val[fx]), ind, t) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "a method's named Structure field did not allocate") != 0
+                return: 1
+            j: j + 1
+            fx: fx + 1
+            continue
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 0
             newf: "lmx_size_new_owned"
             store: "lmx_size_store_known"
@@ -15111,7 +15106,7 @@ fn: l2_emit_local_bodies (int: pr; int: t; const: @(char ind)) int
                     return: 1
                 if: l2_own_fid[oi] = k && c.sprintf(slot, "l2_ls%d", t) < 0
                     return: 1
-                if: l2_own_fid[oi] = k && l2_emit_cell_new(oi, ind, slot, "0", "c.fprintf(c.stderr, \"lmx: invariant: a field of a control body of a method's named Structure did not allocate\\n\")", "c.abort()") != 0
+                if: l2_own_fid[oi] = k && l2_emit_cell_new(oi, ind, slot, "lmx_char_cell_known(l2_program_chars, 0)", "c.fprintf(c.stderr, \"lmx: invariant: a field of a control body of a method's named Structure did not allocate\\n\")", "c.abort()") != 0
                     return: 1
                 oi: oi + 1
             ---
@@ -27259,6 +27254,26 @@ fn: l2_mcap_has_char () int
     ---
 return: 0
 
+# Is the program's byte table needed inside a method at run time -- a char a callable merge captures (item 738), or a
+# char field of a method's own named Structure, S's own or declared in its control bodies (built at S's statement, slice
+# 2c-5)?  Then the module cell l2_program_chars carries it there.
+fn: l2_run_chars () int
+    int: k 0
+    if: l2_mcap_has_char() != 0
+        return: 1
+    while: k < l2_nsf_n
+        if: l2_nsf_kind[k] = 1 && l2_nsf_owner[k] >= 0 && l2_nsf_owner[k] < l2_ns_n && l2_ns_local[l2_nsf_owner[k]] >= 0
+            return: 1
+        k: k + 1
+    ---
+    k: 0
+    while: k < l2_own_n
+        if: l2_own_ty[k] = 1 && l2_m_nsof(l2_own_mi[k]) >= 0 && l2_ns_local[l2_m_nsof(l2_own_mi[k])] >= 0
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
 fn: l2_mcap_new_helper (int: ty) @: char
     if: ty = 2
         return: "lmx_size_new_owned"
@@ -32316,7 +32331,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # scope -- this module cell carries it there.  No library unit declares it: --library refuses
     # every callable merge (its model is not walked, "a callable merge needs a walkable body";
     # REVIEW 0acac58), so a library's per-unit rename of it would be code with no witness.
-    if: l2_mcap_has_char() != 0 && fputs("@: char l2_program_chars 0\n", l2_out) < 0
+    if: l2_run_chars() != 0 && fputs("@: char l2_program_chars 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # E1: the program's value is the int the entry returns. The adapter stores
@@ -32761,10 +32776,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && fputs("        l2_program_arena: arena\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0 || l2_parts_have_char() != 0 || l2_mcap_has_char() != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
+    if: (l2_has_own_ty(1) != 0 || l2_ns_has_char != 0 || l2_parts_have_char() != 0 || l2_run_chars() != 0) && fputs("        @: char process_chars lmx_chars_new_owned(l2_program_arena)\n        if: process_chars = 0\n            return: 1\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: l2_mcap_has_char() != 0 && fputs("        l2_program_chars: process_chars\n", l2_out) < 0
+    if: l2_run_chars() != 0 && fputs("        l2_program_chars: process_chars\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     if: l2_library_mode = 0 && c.fprintf(l2_out, "        l2_entry_unit: graph\n        if: l2_program_arena = 0 || l2_entry_unit = 0 || l2_entry_unit\\array.size != %uU\n            return: 1\n", kids) < 0

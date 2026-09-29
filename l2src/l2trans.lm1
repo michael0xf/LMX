@@ -747,6 +747,7 @@ prototype:
     fn: l2_rw_find (const: @(LmP0Text t)) int
     fn: l2_rw_bound (const: @(LmP0Text t)) int
     fn: l2_rw_formal_slot (const: @(LmP0Text t)) int
+    fn: l2_rw_carry_work (int: into; int: oi; int: j; @: int out) int
     fn: l2_rw_bseq_zero () int
     fn: l2_rw_carry (int: into; int: oi; @: int out) int
     fn: l2_rw_seen (int: oi) int
@@ -8599,11 +8600,11 @@ fn: l2_own_formal (int: mi; int: k) int
         return: 0 - 1
 return: l2_param_find(mi, l2_own_name[k])
 
-# THE BOUND ROW (-189 c3b-2; R2 with carry, static by position -- L3 §12).  Parameter pk of mi
-# (a formal, or a dynamic input) names the machine argument until an own field bound to it has had
-# its binding line -- its declaration, or its first bare assignment -- and that field from then on.
-# A formal's binding is not scoped to a nested body (D-79): only a field declared in that body
-# ends when the body ends (l2_emit_body).  The latest mark wins; -1 is the machine argument.
+# THE BOUND ROW (L3 §12; L2 §10, §18.3).  Parameter pk of mi (a formal, or a dynamic input) names the machine
+# argument until a same-name field declared in scope has had its declaration line, and that field from then on -- a
+# bare assignment binds nothing (bafca4c).  A field declared in a nested body ends when the body ends (l2_emit_body):
+# its declaration is visible forward and down, never outward (Q51), so a branch not taken binds nothing after it.  The
+# latest mark wins; -1 is the machine argument.
 fn: l2_formal_row (int: mi; int: pk) int
     int: k 0
     int: best 0 - 1
@@ -8629,8 +8630,10 @@ return: 0 - 1
 # THE WORKING STATE (steps/working-state-7b.md; book §12 `#dynamic`, §14; `docs/new_parts/dirty.md`; Lingvamyxa
 # spec 21.5, 21.6).  Own field k has a working value in the activation of method mi -- the root's too, an ordinary
 # activation (Q52) -- when it is mi's own, used by a bare name (l2_m_uses), has a cell (l2_own_direct) and is no
-# array, and is not a same-name field bound to a formal or a dynamic input (the declared argument field of the
-# carry).  An argument itself is its parameter, never a field (bafca4c).  The working value is the C local l2_q<k>, loaded from
+# array.  A same-name field declared for a formal or a dynamic input is one too (7b-2): its declaration is the explicit
+# one that makes the argument graph-backed (book §12), takes the argument's current value into the working value and
+# marks it (l2_own_store), and from there the name is the field (l2_formal_row); before it the name and `@x` are the
+# parameter's (L2 §18.3), never a field (bafca4c).  The working value is the C local l2_q<k>, loaded from
 # the cell at entry (l2_emit_work_decl); a bare read is the local (l2_own_load); an admitted write changes the local
 # and sets l2_q<k>_dirty (l2_own_work_store); a boundary publishes the marked ones and unmarks them
 # (l2_emit_publish).  A clean one is never written back and nothing is reloaded after a call.  An explicit path and
@@ -8646,7 +8649,7 @@ fn: l2_own_cached (int: mi; int: k) int
     # in 7b-1 it keeps no working value in either mode (steps/working-state-7b.md, the open items).
     if: l2_own_host[k] != 0 && l2_frame_head(l2_own_host[k], "catch") != 0
         return: 0
-return: (cast: (int) (l2_own_formal(mi, k) < 0))
+return: 1
 
 # A MACHINE ADDRESS SLOT (L2 §18.2): a pointer own field of mi whose bare name mi addresses -- `@x`, or the flat `@ x` of
 # a raw call's actuals.  What is stored through that address is the field's value ("changes the address stored in it":
@@ -8865,10 +8868,10 @@ fn: l2_own_addr (int: k; @: char dest) int
         return: (cast: (int) (c.sprintf(dest, "(cast: (%s) l2_q%d_from[0])", txt, k) < 0))
 return: 1
 
-# Store `val` into direct own field k's cell: the typed store, X1 when it fails; a char rebinds its
-# interned cell.  The slot is bound first (the prelude has bound it already).  A field bound to a
-# parameter is bound from its first store on (l2_formal_row): its binding line, whose value `val`
-# was spelled before, while the name was still the argument.
+# Store `val` into direct own field k -- its working value when it has one (§7b), else its cell: the typed store, X1
+# when it fails; a char rebinds its interned cell.  The slot is bound first (the prelude has bound it already).  A field
+# declared for a parameter is bound from its first store on (l2_formal_row): its declaration line, whose value `val`
+# was spelled before, while the name was still the argument (the argument's current value, book §12 keep(3) = 4).
 fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
     if: k < 0 || ind = 0 || val = 0
         return: 1
@@ -19121,7 +19124,8 @@ fn: l2_prep_addr (const: @(LmP0Node node); int: mi; const: @(char ind); @: char 
             return: 1
         return: 0
     idx: l2_param_find(mi, t)
-    # -189 c3b-2: after its binding line a formal is its field, and `@x` that field's cell (L2 §10).
+    # 7b-2: after its same-name declaration an argument's name is the declared field, and `@x` that field's cell
+    # (L2 §18.2); before it, the parameter's stable address (L2 §18.3), never retargeted.
     if: idx >= 0 && l2_formal_row(mi, idx) >= 0
         return: l2_own_addr(l2_formal_row(mi, idx), dest)
     if: idx >= 0
@@ -21155,12 +21159,12 @@ fn: l2_rw_bound (const: @(LmP0Text t)) int
     ---
 return: best
 
-# The visible numeric own field named t that a formal's first store will bind, or -1.
-# Not bound yet. A hosted field is visible only while its body is the scope (class 3).
+# The visible numeric own field named t that an argument's -- a formal's or a dynamic input's -- declaration will bind,
+# or -1.  Not bound yet. A hosted field is visible only while its body is the scope (class 3).
 fn: l2_rw_formal_slot (const: @(LmP0Text t)) int
     int: oi 0
     int: best 0 - 1
-    if: l2_rw_bseq = 0 || l2_rw_mi = l2_e || l2_formal_find(l2_rw_mi, t) < 0
+    if: l2_rw_bseq = 0 || l2_rw_mi = l2_e || l2_param_find(l2_rw_mi, t) < 0
         return: 0 - 1
     while: oi < l2_own_n
         if: oi != l2_own_excl && l2_own_mi[oi] = l2_rw_mi && l2_rw_bseq[oi] = 0 && (l2_own_host[oi] = 0 || l2_scope_has(l2_own_host[oi]) != 0) && (l2_own_uchild[oi] >= 0 || l2_own_fchild[oi] >= 0) && l2_rw_num_ty(l2_own_ty[oi]) != 0 && l2_text_same(l2_own_name[oi], t) != 0 && l2_frame_head(l2_own_host[oi], "catch") = 0
@@ -21279,9 +21283,11 @@ fn: l2_rw_host_carry (int: into; int: oi; @: int out) int
     int: arg
     int: h
     int: j
-    j: l2_formal_find(l2_rw_mi, l2_own_name[oi])
+    j: l2_param_find(l2_rw_mi, l2_own_name[oi])
     if: j < 0
         return: 1
+    if: l2_rw_cached(oi) != 0
+        return: l2_rw_carry_work(into, oi, j, out)
     if: l2_rw_frame(into, "LMX_WALK_OP_PUT_OF", 4, out) != 0
         return: 1
     if: l2_rw_host_at(\out, l2_own_fid[oi], @ h) != 0 || l2_rw_put(\out, 1, h) != 0
@@ -21292,16 +21298,29 @@ fn: l2_rw_host_carry (int: into; int: oi; @: int out) int
         return: 1
 return: l2_rw_put(\out, 3, arg)
 
-# A declaration of a formal's field with no initializer carries the argument into the cell.
+# A declaration of a formal's field with no initializer carries the argument: into its working value when it has one
+# (l2_rw_carry_work, 7b-2), else into the cell.
 fn: l2_rw_carry (int: into; int: oi; @: int out) int
     int: arg
     int: j
-    j: l2_formal_find(l2_rw_mi, l2_own_name[oi])
+    j: l2_param_find(l2_rw_mi, l2_own_name[oi])
     if: j < 0
         return: 1
+    if: l2_rw_cached(oi) != 0
+        return: l2_rw_carry_work(into, oi, j, out)
     if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0 || l2_rw_cell(\out, oi) != 0 || l2_rw_arg(\out, j, @ arg) != 0
         return: 1
 return: l2_rw_put(\out, 3, arg)
+
+# 7b-2: the carry into a cached field is the declaration's write of its working value -- SET over its OWN node, or
+# SET_OF over its nested body (l2_rw_write) -- with the argument's current value, ARG j (the activation's own after a
+# SET_ARG): marked dirty like any write, published at the next boundary (L2 §10, book §12 keep(3) = 4).
+fn: l2_rw_carry_work (int: into; int: oi; int: j; @: int out) int
+    int: arg
+    int: vs 0
+    if: l2_rw_write(into, oi, "LMX_WALK_OP_PUT", out, @ vs) != 0 || l2_rw_arg(\out, j, @ arg) != 0
+        return: 1
+return: l2_rw_put(\out, vs, arg)
 
 # Is own row oi one the body being built reaches: its own, or its lexical space's -- the unit's, or for a
 # method of a program part its part's root's (§10)?
@@ -25281,7 +25300,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
             return: l2_rw_refuse_ty(stmt, oi)
         f: l2_next_active(f\next)
         if: f = 0
-            # T4b class 2: `int: n` with no initializer, n a formal, carries the argument.
+            # T4b class 2: `int: n` with no initializer, n an argument (a formal or a dynamic input), carries it.
             # Class 3: the same carry into a field declared in the nested body.
             if: l2_rw_formal_slot(l2_own_name[oi]) = oi
                 if: l2_rw_is_hosted(oi) != 0 && l2_rw_host_carry(into, oi, @ node) != 0
@@ -25548,9 +25567,9 @@ fn: l2_rw_may (int: mi) int
         # and a Structure field declared there still keep the method out.
         if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0
             return: 0
-        # A method-level numeric field named like a formal is class 2. A pointer or a
-        # Structure field of that name stays out. A hosted numeric field is class 3.
-        if: l2_own_mi[oi] = mi && l2_formal_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
+        # A method-level numeric field named like an argument -- a formal or a dynamic input -- is class 2. A pointer or
+        # a Structure field of that name stays out. A hosted numeric field is class 3.
+        if: l2_own_mi[oi] = mi && l2_param_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
             return: 0
         oi: oi + 1
     ---
@@ -25577,8 +25596,8 @@ fn: l2_rw_may_why (int: mi) const: @: char
     while: oi < l2_own_n
         if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0
             return: "a field of a nested body that is not a number"
-        if: l2_own_mi[oi] = mi && l2_formal_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
-            return: "a field named like a formal that is not a number"
+        if: l2_own_mi[oi] = mi && l2_param_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && (l2_rw_num_ty(l2_own_ty[oi]) = 0 || l2_own_uchild[oi] < 0)
+            return: "a field named like an argument that is not a number"
         oi: oi + 1
     ---
 return: "its walk was refused"

@@ -1,0 +1,42 @@
+# 7b-2 (ticket OPUS-7B2-20260929-01; book §12: "an explicit or hidden argument remains an activation-local value
+# unless an explicit declaration establishes a graph-backed field"): a DYNAMIC input bound by a same-name declaration,
+# exactly as a formal.  M is above the unit field x and reads x before declaring it, so that x is M's hidden input, 3
+# from the root.  `int: x` takes it; x: x + 1 makes the working value 4 and marks it; nop() publishes it; peek() reads
+# 4 at the place of declaration; poke() writes 100 there; the second nop() publishes nothing; peek() reads 100; the
+# bare x keeps 4.  4 * 1000000 + 4 * 1000 + 100 = 4004100.  A declaration ignored (the name stays the input, the
+# place never published into): 4000100 -- the walk did that before 7b-2.  Observed from other methods only, so M is
+# walked under the knob.  Success is 7.
+fn: nop () int
+    return: 0
+end: nop
+fn: M () int
+    int: a 0
+    a: x
+    int: x
+    x: x + 1
+    nop()
+    int: before 0
+    before: peek()
+    poke()
+    nop()
+    int: g 0
+    g: peek()
+    return: x * 1000000 + before * 1000 + g
+end: M
+fn: poke () int
+    M\x: 100
+    return: 0
+end: poke
+fn: peek () int
+    return: M\x
+end: peek
+int: x 3
+int: r 0
+r: M()
+int: ok 64
+if: r = 4004100
+    ok: 7
+if: r = 4000100
+    ok: 65
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

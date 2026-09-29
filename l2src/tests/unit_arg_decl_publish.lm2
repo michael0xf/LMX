@@ -1,0 +1,23 @@
+# 7b-2 (ticket OPUS-7B2-20260929-01; book §12): the declaration that makes an argument a field is a write of its
+# working value like any -- marked, and published at the next boundary even when nothing writes it again.  f's
+# `int: n` takes 5; the call of peek publishes it first, and peek reads the place of declaration: 5.  A carry not
+# marked leaves the place unpublished: peek reads its initial 0.  Observed from another method, so f is walked under
+# the knob.  f(5) = 5 is success 7; 0 is 65.
+fn: f (int: n) int
+    int: n
+    int: g 0
+    g: peek()
+    return: g
+end: f
+fn: peek () int
+    return: f\n
+end: peek
+int: r 0
+r: f(5)
+int: ok 64
+if: r = 5
+    ok: 7
+if: r = 0
+    ok: 65
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

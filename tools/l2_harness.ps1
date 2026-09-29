@@ -1930,28 +1930,34 @@ $fixtures = @(
                  'if: lmx_walk_store_size(l2_program_arena, l2_rw68, 2U, 0U) != c.LMX_WALK_OK',
                  '@: Lmx l2_rw71 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw70, c.LMX_WALK_OP_PUT_OF, 4U)',
                  'if: lmx_walk_store_size(l2_program_arena, l2_rw82, 1U, 1U) != c.LMX_WALK_OK') },
-    # T4b class 2: a numeric field named like a formal is ARG until its binding line, then the
-    # field. bump carries ARG 0 into its cell and then reads that cell. see reads ARG before the line.
-    # §7b (7b-1): see's `a` is a declared field with a working value (SET; the walker loads it at the entry); `n` is an argument's
-    # row and stays its cell until 7b-2 (bafca4c).
+    # T4b class 2: a numeric field named like a formal is ARG until its declaration, then the field -- under the
+    # working state (7b-2, by name): bump's `int: n` carries ARG 0 into its working value (SET over OWN, l2_rw54-56)
+    # and then reads that value (OWN); see reads ARG before the declaration (`a: n`, l2_rw67) and carries after it.
+    # (Were PUT of ARG into the cell and AT reads: the c3b-2 in-place row.)
     [pscustomobject]@{ Name = 'unit_walk_formal_bind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
-        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('@: Lmx l2_rw55 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw54, c.LMX_WALK_OP_ARG, 2U)',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw58, 2U, 2U) != c.LMX_WALK_OK',
-                 '@: Lmx l2_rw63 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw62, c.LMX_WALK_OP_SET, 3U)',
-                 '@: Lmx l2_rw65 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw63, c.LMX_WALK_OP_ARG, 2U)',
-                 '@: Lmx l2_rw70 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw69, c.LMX_WALK_OP_AT, 3U)') },
-    # D-79: a field declared in if/else/while is OF/PUT_OF of that body. A bare
-    # write of a formal inside if is PUT of the method cell (l2_rw142), and
-    # keep's return reads that cell (AT), not a field of the if.
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)',
+            '@: Lmx l2_rw54 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw53, c.LMX_WALK_OP_PUT, 4U)');
+        Debt = @('@: Lmx l2_rw54 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw53, c.LMX_WALK_OP_SET, 3U)',
+            '@: Lmx l2_rw55 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw54, c.LMX_WALK_OP_OWN, 3U)',
+            '@: Lmx l2_rw56 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw54, c.LMX_WALK_OP_ARG, 2U)',
+            'if: lmx_walk_store_size(l2_program_arena, l2_rw58, 2U, 2U) != c.LMX_WALK_OK',
+            '@: Lmx l2_rw67 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw65, c.LMX_WALK_OP_ARG, 2U)',
+            '@: Lmx l2_rw70 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw68, c.LMX_WALK_OP_ARG, 2U)') },
+    # D-79: a field declared in if/else/while is OWN_OF/SET_OF of that body.  keep's `int: n` carries ARG into the
+    # method field's working value (SET, l2_rw133) and its bare `n: n + 1` inside `if` writes that same working value
+    # (SET, l2_rw144); branch's `int: n` inside `if` is that body's field -- carried by SET_OF (l2_rw171), and after the
+    # body the name is the argument again (ARG, l2_rw189; Q51: a local is not visible outward).  7b-2, by name: were
+    # PUT/PUT_OF into the cells and OF reads, the c3b-2 in-place rows.
     [pscustomobject]@{ Name = 'unit_walk_nested_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
-        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)',
-                 'c.LMX_WALK_OP_OF, 3U)',
-                 'c.LMX_WALK_OP_ARG, 2U)',
-                 '@: Lmx l2_rw142 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw141, c.LMX_WALK_OP_PUT, 4U)',
-                 'c.LMX_WALK_OP_OWN_OF, 3U)',
-                 'c.LMX_WALK_OP_SET_OF, 4U)') },
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)',
+            'c.LMX_WALK_OP_PUT_OF, 4U)', 'c.LMX_WALK_OP_OF, 3U)');
+        Debt = @('@: Lmx l2_rw133 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw132, c.LMX_WALK_OP_SET, 3U)',
+            '@: Lmx l2_rw135 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw133, c.LMX_WALK_OP_ARG, 2U)',
+            '@: Lmx l2_rw144 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw143, c.LMX_WALK_OP_SET, 3U)',
+            '@: Lmx l2_rw171 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw170, c.LMX_WALK_OP_SET_OF, 4U)',
+            '@: Lmx l2_rw173 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw171, c.LMX_WALK_OP_ARG, 2U)',
+            '@: Lmx l2_rw189 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw185, c.LMX_WALK_OP_ARG, 2U)',
+            'c.LMX_WALK_OP_OWN_OF, 3U)') },
     # Side fixes (-193 T4a): a root `M\x` of a method after the first, in a unit with no named Structure
     # (l2trans crashed); a repeated declaration's initializer reads the occurrence before it
     # (l2_own_excl, as natively); the root names its own fields by no holder (K-OT2).
@@ -2007,43 +2013,48 @@ $fixtures = @(
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_discard_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unresolved name'; Absent = @(); Debt = @() },
-    # AN ARGUMENT AND ITS FIELD (-189 c3b-2: the execution pair; L3 §12, R2 with carry, static by
-    # position -- steps/code-data-split-189.md «c3b-2 plan»).  A formal (or a dynamic input) is the
-    # machine argument until its binding line -- its declaration, or its first bare assignment -- and
-    # its field's cell from then on.  A declaration without an initializer carries the argument's
-    # value into the field.  `@x` is the argument's address before the line and the cell's after it
-    # (L2 §10).  There is no working copy, no checkpoint publication and no sticky flag: every line
-    # printed after `M\x: v` wrote the field shows v.  The -67 sticky rule these rows pinned
-    # (A2 6 6, C3 9 9, ...) was the working copy republished over the graph write; it is gone.
+    # AN ARGUMENT AND ITS DECLARED FIELD (7b-2, ticket OPUS-7B2-20260929-01; L2 §10, §18.2, §18.3; book §12: "an
+    # explicit or hidden argument remains an activation-local value unless an explicit declaration establishes a
+    # graph-backed field").  A formal (or a dynamic input) is the parameter until its same-name declaration executes --
+    # a bare assignment binds nothing (bafca4c) -- and a declared field from then on, under the working state: the
+    # declaration takes the argument's current value into the working value and marks it, the bare name reads the
+    # working value, a graph write through `M\x` or through `@x` (the cell, L2 §18.2) changes the cell and not the
+    # working value, and a marked working value is published at the next checkpoint, over such a write.  `@x` before
+    # the declaration is the parameter's stable address, never retargeted and never a publication destination (L2
+    # §18.3): no sticky flag, no republication.
     #
     # These rows have `Says`: the lines the PROGRAM must print, whole and in order; each line is
-    # "<case> <name> <graph field>".
-    #   A  address before the binding: the argument is poked (5), carried (6), then the field: A2 100 100.
-    #   B  never bound: the name stays the argument (5) while the field holds the graph write: B 5 100.
-    #   C  bound, then the address: the cell is poked (C2 9 9), then written through M\x: C3 100 100.
-    #   D  either order, decided at run time: the field shows the graph write in both: D1/D0 100 100.
-    #   E  declared, address after: E 100 100.
-    # §7b (7b-1): the `_g` fields are plain declared fields with working values; an argument's row has
-    # none, and 7b-2 revisits these rows by name (bafca4c).  Absent names the argument rows' flags (na, nb,
-    # nc, nd, ne) -- the L1 header names `_dirty` in every file now.
+    # "<case> <name> <graph field>".  Re-expected by name in 7b-2 from the c3b-2 in-place values (the name was the
+    # cell: 100 100, 9 9, 200 200):
+    #   A  address before the declaration: the parameter is poked (5), carried, +1: A1 6 6; the graph writes change
+    #      the cell only: A2 6 100, A3 6 9 (`@na` is now the cell), A4 6 200.
+    #   B  never declared: the name stays the parameter (5) while the field holds the graph write: B 5 100; declared
+    #      (go = 1): 5 carried, +1, then the graph write 200 -- the marked 6 is published over it: B+ 6 6.
+    #   C  declared, then the address: the cell is poked, the working value stays: C2 4 9, C3 4 100.
+    #   D  the poke before the declaration is the parameter's (D1: 5 carried, +1), after it the cell's (D0: 3 + 1):
+    #      D1 6 100, D0 4 100.
+    #   E  declared, address after: E 4 100.
+    # Pins: the carry into the working value (l2_q1: the parameter), the parameter's address before it and the
+    # cell's after it; the in-place carry into the cell is gone.
     [pscustomobject]@{ Name = 'unit_arg_addr_sticky.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('A1 6 6', 'A2 100 100', 'A3 9 9', 'A4 200 200', 'B 5 100', 'B 5 100', 'B+ 200 200', 'B 5 100', 'C1 4 4', 'C2 9 9', 'C3 100 100', 'D1 100 100', 'D0 100 100', 'E 100 100');
-        Absent = @('_sticky', '_active', 'l2_q1_dirty', 'l2_q3_dirty', 'l2_q5_dirty', 'l2_q7_dirty', 'l2_q9_dirty');
-        Debt = @('if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0',
-                 'l2_t3: l2_m0(l2_c2\parent, l2_c2, @ l2_p3_0)',
-                 'l2_t13: l2_m1(l2_c12\parent, l2_c12, (cast: (@: int) l2_q1_from[0]))') },
+        Says = @('A1 6 6', 'A2 6 100', 'A3 6 9', 'A4 6 200', 'B 5 100', 'B 5 100', 'B+ 6 6', 'B 5 100', 'C1 4 4', 'C2 4 9', 'C3 4 100', 'D1 6 100', 'D0 4 100', 'E 4 100');
+        Absent = @('_sticky', '_active', 'if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0');
+        Debt = @('l2_q1: (l2_p3_0)',
+            'l2_t3: l2_m0(l2_c2\parent, l2_c2, @ l2_p3_0)',
+            'l2_t13: l2_m1(l2_c12\parent, l2_c12, (cast: (@: int) l2_q1_from[0]))') },
     # TYPE IS AN INDEPENDENT AXIS.  unsigned was REFUSED in the declared form (a formal's type code
     # was compared with an own field's storage code: 34 against 3) and silently left a plain local
     # in the assignment form; a pointer was never bound at all.  Both now go through the same
-    # mechanism, and the type only names the cell.  -189 c3b-2: the declaration carries the poked
-    # argument into the cell, and the graph write of 100 is what the bare name then reads.
+    # mechanism, and the type only names the cell.  7b-2 (by name): the declaration takes the poked argument into its
+    # working value (50, 70, 80), +1 is published, and the graph write of 100 changes the cell only -- U 51 100,
+    # Z local 71, L local 81 (the c3b-2 in-place name read the cell: 100).
     [pscustomobject]@{ Name = 'unit_arg_addr_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('U 100 100', 'Z local 100', 'Z graph 100', 'L local 100', 'L graph 100');
-        Absent = @('_sticky', 'l2_q1_dirty', 'l2_q3_dirty', 'l2_q5_dirty');
-        Debt = @('if: lmx_unsigned_store_known(l2_q1_from[0], (l2_p4_0)) != 0', 'if: lmx_size_store_known(l2_q3_from[0], (l2_p5_0)) != 0',
-                 'if: lmx_ulong_store_known(l2_q5_from[0], (l2_p6_0)) != 0') },
+        Says = @('U 51 100', 'Z local 71', 'Z graph 100', 'L local 81', 'L graph 100');
+        Absent = @('_sticky', 'if: lmx_unsigned_store_known(l2_q1_from[0], (l2_p4_0)) != 0', 'if: lmx_size_store_known(l2_q3_from[0], (l2_p5_0)) != 0',
+            'if: lmx_ulong_store_known(l2_q5_from[0], (l2_p6_0)) != 0');
+        Debt = @('l2_q1: (l2_p4_0)', 'l2_q3: (l2_p5_0)', 'l2_q5: (l2_p6_0)') },
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
         Args = @('0');
         Absent = @();
@@ -2066,22 +2077,25 @@ $fixtures = @(
         Args = @('0');
         Absent = @(); Debt = @() },
     # THE SAME RULE FOR A HIDDEN/DYNAMIC INPUT (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  A free name
-    # read before the body's own same-name binding line arrives in a hidden formal, and that line
+    # read before the body's own same-name declaration arrives in a hidden formal, and that declaration
     # binds it exactly as it binds a declared formal.  The matrix runs for int and for size_t.
     # int was SILENTLY WRONG: its storage code doubled as the dynamic code for "not typed yet", so
     # an int was never passed -- the callee read its own graph field.  Before the change this
     # program printed IA1 1 1, IA2 1 100, IA3 1 9, IA4 1 200, IB 0 100, IB 100 100, IB+ 101 101,
     # IB 101 100 and NO IC line at all (the early return saw 0); every Z line was already right.
     # Debt is the hidden formal itself: `int:` for int_before, and the mixed pair of int_never.
+    # 7b-2 (by name): as unit_arg_addr_sticky -- the declared field has a working value, graph writes change the cell
+    # only, a marked value is published over them: IA2/IA3/IA4 6, IB+ 6 6, IC2/IC3 4, and the Z lines alike (were
+    # the c3b-2 in-place 100/9/200).
     [pscustomobject]@{ Name = 'unit_arg_addr_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('IA1 6 6', 'IA2 100 100', 'IA3 9 9', 'IA4 200 200', 'IB 5 100', 'IB 5 100', 'IB+ 200 200', 'IB 5 100', 'IC1 4 4', 'IC2 9 9', 'IC3 100 100',
-                 'ZA1 6 6', 'ZA2 100 100', 'ZA3 9 9', 'ZA4 200 200', 'ZB 5 100', 'ZB 5 100', 'ZB+ 200 200', 'ZB 5 100', 'ZC1 4 4', 'ZC2 9 9', 'ZC3 100 100',
-                 'CALLER 3 3 3 3 3 3');
+        Says = @('IA1 6 6', 'IA2 6 100', 'IA3 6 9', 'IA4 6 200', 'IB 5 100', 'IB 5 100', 'IB+ 6 6', 'IB 5 100', 'IC1 4 4', 'IC2 4 9', 'IC3 4 100',
+            'ZA1 6 6', 'ZA2 6 100', 'ZA3 6 9', 'ZA4 6 200', 'ZB 5 100', 'ZB 5 100', 'ZB+ 6 6', 'ZB 5 100', 'ZC1 4 4', 'ZC2 4 9', 'ZC3 4 100',
+            'CALLER 3 3 3 3 3 3');
         Absent = @();
         Debt = @('fn: l2_m5 (@: Lmx node; @: Lmx self; int: l2_p5_0) int',
-                 'fn: l2_m6 (@: Lmx node; @: Lmx self; int: l2_p6_0; int: l2_p6_1) int',
-                 'fn: l2_m9 (@: Lmx node; @: Lmx self; int: l2_p9_0; size_t: l2_p9_1) int') },
+            'fn: l2_m6 (@: Lmx node; @: Lmx self; int: l2_p6_0; int: l2_p6_1) int',
+            'fn: l2_m9 (@: Lmx node; @: Lmx self; int: l2_p9_0; size_t: l2_p9_1) int') },
     # TYPE IS AN INDEPENDENT AXIS HERE TOO.  Which types could be a dynamic input was five separate
     # lists (char, size_t).  Before: W -- the translator NEVER FINISHED on a callee reading the
     # caller's int (the typing fixed point stored "not typed" over "not typed" forever; this row's
@@ -2089,25 +2103,26 @@ $fixtures = @(
     # "unresolved name"; F -- "incompatible entry signature", a FORMAL code compared raw with a
     # dynamic code (34 against 3), the mistake -67 removed from l2_bind_own, alive at a second
     # site; DP -- "unresolved name".  Debt is each hidden formal spelled with its own type.
+    # 7b-2 (by name): the declared field keeps its working value under the graph write: U2/L2/F2 6 100 (were 100 100).
     [pscustomobject]@{ Name = 'unit_arg_addr_dyn_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('W 3', 'U1 6 6', 'U2 100 100', 'L1 6 6', 'L2 100 100', 'F1 6 6', 'F2 100 100', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
+        Says = @('W 3', 'U1 6 6', 'U2 6 100', 'L1 6 6', 'L2 6 100', 'F1 6 6', 'F2 6 100', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
         Absent = @();
         Debt = @('l2_p8_0: l2_p8_0', 'fn: l2_m4 (@: Lmx node; @: Lmx self; int: l2_p4_0) int',
                  'fn: l2_m5 (@: Lmx node; @: Lmx self; unsigned: l2_p5_0) int',
                  'fn: l2_m6 (@: Lmx node; @: Lmx self; ulong: l2_p6_0) int',
                  'fn: l2_m8 (@: Lmx node; @: Lmx self; @: int l2_p8_0) int',
                  'l2_t1: l2_m2(l2_c0\parent, l2_c0, @ l2_p8_0)') },
-    # THE ORDINARY CASES ALONE.  Every address here is taken after the binding line, so it is the
-    # field's cell (-189 c3b-2): the poke is the field (OC2 9 9), and the later graph write of 100 is
-    # what the bare name reads (OC3 / OE / OD3 100 100).
+    # THE ORDINARY CASES ALONE.  Every address here is taken after the declaration, so it is the field's cell
+    # (L2 §18.2): the poke changes the cell and not the working value (OC2 4 9), and so does the later graph write of
+    # 100 (OC3 / OE / OD3 4 100) -- 7b-2, re-expected by name (were 9 9 and 100 100 in place).
     # CRASH WARNING, not an old expectation: a translator that raises sticky at the address site
     # AND publishes through a cell nobody resolved dies (exit 139) on a before-bind or never-bound
     # activation, and that death hid these lines -- which is why they have a program of their own.
-    # Load-at-bind and "address-taking invents no graph field" keep those cases alive.
+    # "Address-taking invents no graph field" keeps those cases alive.
     [pscustomobject]@{ Name = 'unit_arg_addr_ordinary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('OC1 4 4', 'OC2 9 9', 'OC3 100 100', 'OE 100 100', 'OD1 4 4', 'OD2 9 9', 'OD3 100 100');
+        Says = @('OC1 4 4', 'OC2 4 9', 'OC3 4 100', 'OE 4 100', 'OD1 4 4', 'OD2 4 9', 'OD3 4 100');
         Absent = @();
         Debt = @('fn: l2_m6 (@: Lmx node; @: Lmx self; size_t: l2_p6_0) int') },
     # THE ONE BOUNDARY.  A dynamic input whose SOURCE exists but has no value cell (the caller's
@@ -2116,6 +2131,38 @@ $fixtures = @(
     # pre-change translator still says, so this row fails on it.
     [pscustomobject]@{ Name = 'unit_arg_addr_dyn_nocell.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'dynamic input type has no value cell'; Absent = @(); Debt = @() },
+    # 7b-2 WITNESSES (ticket OPUS-7B2-20260929-01; L2 §10, §18.2, §18.3; book §12; Q51).  unit_arg_decl_carry: a
+    # formal's same-name declaration takes the argument into a working value, which is published and not reloaded;
+    # observed from other methods, so the walk twin walks carry (the Absent pin).  In place: 65; a carry into the
+    # cell alone (the walk before 7b-2): 66.
+    [pscustomobject]@{ Name = 'unit_arg_decl_carry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_arg_decl_carry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
+    # unit_arg_decl_branch: a declaration binds only when it executes, and only forward and down -- after its body the
+    # name is the argument again, and a branch not taken binds nothing (313 / 300; a binding left active 65, one
+    # activated statically 66).
+    [pscustomobject]@{ Name = 'unit_arg_decl_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_arg_decl_branch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    # unit_arg_decl_dyn: a dynamic input bound by its same-name declaration exactly as a formal (4004100); the walk
+    # ignored the declaration before 7b-2 (4000100, 65).
+    [pscustomobject]@{ Name = 'unit_arg_decl_dyn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_arg_decl_dyn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
+    # unit_arg_decl_oldptr: `@x` of the argument taken before its declaration stays the parameter's address -- a write
+    # through it after the declaration changes the parameter only, never the field (450; a sticky republication
+    # 5150, 65).  Native only: the walk takes no address.
+    [pscustomobject]@{ Name = 'unit_arg_decl_oldptr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('p: @ l2_p0_0', 'l2_q0: (l2_p0_0)') },
+    # unit_arg_decl_publish: the declaration's carry is a marked write like any -- the next boundary (the call of peek)
+    # publishes it with no later write: f(5) = 5.  A carry left unmarked: 0 (65).  Walk twin walks f (the Absent pin).
+    [pscustomobject]@{ Name = 'unit_arg_decl_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('l2_q0: (l2_p0_0)') },
+    [pscustomobject]@{ Name = 'unit_walk_arg_decl_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates
@@ -3405,13 +3452,16 @@ $fixtures = @(
     # through a method root, read and written: unit_q24_repeated_decl.lm2.
     [pscustomobject]@{ Name = 'unit_own_last_occurrence.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_own_last_occurrence.lm2:28:20: no such occurrence'; Absent = @(); Debt = @() },
-    # §7b (7b-1): Absent names the argument rows' flags (ba, af, nn; bt, al) -- the `_g` fields are plain
-    # declared fields with working values, and the L1 header names `_dirty` in every file now.
+    # 7b-2 (by name; ticket OPUS-7B2-20260929-01): the declaration makes the argument's same-name field a declared
+    # field with a working value -- BEFORE: poked parameter 7 carried, `ba: 1` published, the graph write 100 changes
+    # the cell only: BEFORE 1 100; AFTER: `@af` is the cell, the working value 1 stays: AFTER 1 100 (both were
+    # 100 100 in place); NONE lines unchanged.  The fixture's header still states the c3b-2 model (outside this
+    # ticket's file scope).  Pins: the carry into the working value, and `@af` after it is the cell.
     [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('BEFORE 100 100', 'AFTER 100 100', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');
-        Absent = @('_sticky', '_active', 'l2_q1_dirty', 'l2_q3_dirty', 'l2_q5_dirty');
-        Debt = @('if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0', 'l2_t3: l2_m1(l2_c2\parent, l2_c2, (cast: (@: int) l2_q3_from[0]))') },
+        Says = @('BEFORE 1 100', 'AFTER 1 100', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');
+        Absent = @('_sticky', '_active', 'if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0');
+        Debt = @('l2_q1: (l2_p3_0)', 'l2_t3: l2_m1(l2_c2\parent, l2_c2, (cast: (@: int) l2_q3_from[0]))') },
     # bafca4c (7b, by name): bt and al are declared fields now (an argument has no place of declaration).  poke's
     # pointer is the place of declaration (Debt: l2_qN_from[0], the author 2026-09-28); after poke9 the bare al keeps
     # its working value 2 -- `LAST 2`, was 9 -- and the root reads after_last\al 9 at the place of declaration.
@@ -3420,11 +3470,13 @@ $fixtures = @(
         Says = @('BETWEEN 2', 'LAST 2');
         Absent = @('_sticky', '_active');
         Debt = @('l2_t3: l2_m0(l2_c2\parent, l2_c2, (cast: (@: int) l2_q0_from[0]))', 'l2_t1: l2_m1(l2_c0\parent, l2_c0, (cast: (@: int) l2_q1_from[0]))', 'if: l2_q0 != 2') },
-    # D-79: a bare assignment binds the formal's method cell, including from inside
-    # `if`. scoped(3, 1) is 77; nested(3) is 1414. Success is exit 7.
-    # §7b (7b-1): x and y are argument rows, no working value until 7b-2; inner, in2, a, b, r are cached.
+    # D-79, read under bafca4c: a bare assignment creates no field -- scoped's `x: 7` inside `if` writes the parameter,
+    # so after the body x is 7: 77.  nested's `int: y` is the declaration that makes y a field (7b-2: carried into the
+    # working value); `y: y + 10` inside `if` writes that same field: 1414.  Success is exit 7.  The fixture's header
+    # still states the c3b-2 binding by a first write (outside this ticket's file scope).  7b-2: y's field has a working
+    # value now (the dirty flags exist; Absent keeps _sticky only).
     [pscustomobject]@{ Name = 'unit_arg_bind_body_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('_sticky', 'l2_q2_dirty', 'l2_q6_dirty'); Debt = @() },
+        Absent = @('_sticky'); Debt = @('l2_q2: (l2_p1_0)') },
     # THE EXECUTION PAIR (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2): every activation runs over a
     # fresh instance of the method's data prototype in the unit's slot answering it, and the slot shows
     # the latest.  After keep(1) the slot shows its 7; keep(0) does not reach the declaration, so its

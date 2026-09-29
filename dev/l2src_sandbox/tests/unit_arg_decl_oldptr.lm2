@@ -1,0 +1,25 @@
+# 7b-2 (ticket OPUS-7B2-20260929-01; L2 §18.2, §18.3): `@x` of an argument is its parameter's stable address for the
+# activation and never retargets; address-taking invents no graph field and no publication destination.  p takes
+# the parameter's address before `int: x` makes the name the declared field (carrying 3); a write through p after
+# that changes the parameter only -- the field keeps its working value, and no checkpoint publishes the parameter.
+# x + 1 = 4, the parameter 50 through p: 4 * 100 + 50 = 450.  A sticky republication of the parameter into the field
+# gives 51 * 100 + 50 = 5150.  Native only: the walk takes no address.  Success is 7.
+fn: oldp (int: x) int
+    @: int p
+    p: @x
+    int: x
+    \p: 50
+    x: x + 1
+    int: pv 0
+    pv: \p
+    return: x * 100 + pv
+end: oldp
+int: r 0
+r: oldp(3)
+int: ok 64
+if: r = 450
+    ok: 7
+if: r = 5150
+    ok: 65
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

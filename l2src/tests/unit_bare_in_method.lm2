@@ -1,10 +1,12 @@
 # Inside a method body the same holds, and for a callable formal too: w calls m bare, then f,
-# which holds a whole callable occurrence (here m's), with no arguments.  m runs twice (hits 2)
-# and w returns 5: 25.
+# which holds a whole callable occurrence (here m's), with no arguments.  m runs twice -- `m 1`,
+# `m 1`: its hidden input hits comes from w, which forwards the unit's 0 -- and w returns 5.  The
+# unit's hits stays 0: m's bare write changes only its own value (Q52).  0 * 10 + 5 = 5.
 int: hits 0
 
 fn: m () int
     hits: hits + 1
+    c.printf: "m %d\n" hits
     return: 7
 end: m
 

@@ -1,0 +1,29 @@
+# steps/named-struct-exec.md §12: unit_named_struct_exec_catch under the knob --walk-methods: the walked
+# procedure's pad takes mk's Oops: 7 from the root and from the walked run.  Entry 7.
+fn: mk () int
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(5)
+    return: 1
+end: mk
+Counter:
+    int: v 0
+    ---
+        v: mk()
+        catch: Oops (int: w)
+            v: w + 2
+    ---
+return
+fn: run () int
+    Counter
+    int: r 0
+    r: Counter\v
+return: r
+Counter
+int: a 0
+a: Counter\v
+int: ok 0
+if: a = 7 && run() = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

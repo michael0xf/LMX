@@ -1,0 +1,29 @@
+# steps/table-receiver.md §8-9 (REVIEW 70f869c, account 1): the conversion table at depth in the source -- in
+# the body of a named Structure; a `table:` with `source` first is a projection done at translation, wherever it
+# stands, and the Structure is built without it.  Table = absent; Entry 7.
+Holder:
+    size_t: tag 1U
+    table:
+        source
+        name: `primitive.convert`
+        columns: (class: from) (class: to) (categoryFlag: forbidden) (@: char kind) (@: char receiver) (@: char impl)
+        rows:
+                 size_t    int        0  sign      lm_stg_convert_size_t_int    "convert_impl.lm2"
+    end: `primitive.convert`
+end: Holder
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: Holder\tag != 1U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

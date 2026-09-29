@@ -1,0 +1,24 @@
+# steps/free-names.md (class D): `r: k` where k is the caller's -- the value is its binding's, typed by the closure;
+# int -> size_t and size_t -> int convert.  Before M2: "assignment value has unknown type".
+fn: peek () size_t
+    size_t: r 0U
+    r: k
+    return: r
+fn: small () int
+    int: r 0
+    r: n
+    return: r
+fn: m () int
+    int: k 5
+    size_t: n 9U
+    int: ok 0
+    size_t: a 0U
+    int: b 0
+    a: peek()
+    b: small()
+    if: a = 5U && b = 9
+        ok: 7
+    return: ok
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,30 @@
+# steps/named-struct-exec.md §12 (Q45 and its additions: a named Structure is a procedure): an array
+# field of a named Structure is declared as in a method's body.  Its storage is the Structure's field and
+# keeps what the last execution wrote, as a method's array keeps it across calls (unit_for_own_arrays);
+# seen's declaration runs again.  Two executions: seen 6, as twin reads it -- a method with the same body
+# called twice.  Before: 0.  Was unit_named_struct_exec_array_refused ("named Structure body not walkable
+# yet: a field that is not a number").  Entry 7.
+Buf:
+    []: int cells 4
+    int: seen 0
+    cells[1]: cells[1] + 3
+    seen: cells[1]
+return
+fn: twin () int
+    []: int cells 4
+    int: seen 0
+    cells[1]: cells[1] + 3
+    seen: cells[1]
+return: seen
+int: before 9
+before: Buf\seen
+Buf
+Buf
+int: t 0
+twin()
+t: twin()
+int: ok 0
+if: before = 0 && Buf\seen = 6 && t = 6
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,17 @@
+# implements-port slice 11 (B2; REVIEW f2a1578): unit_s7_prim_cross over its own convert.lm2 whose
+# last column is named `from` a second time (tests/unit_s7_conv_twice_table.lm2): refused by name,
+# "a table column is named twice".
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

@@ -123,10 +123,10 @@ fn: main () int
     pair_a\field: 0U
     status_a: lmx_merge_owned(op_a, 1U, body_a, 0, 0, @ arena, @ dst, @ pair_a, 1U, @ result_a)
     mk_check(counts, status_a = LMX_MERGE_OK && result_a != 0, "1a merge OK")
-    mk_check(counts, result_a\len = 2, "1a body's x paired (not appended) -> len 2 (mutant: 1a off -> len 3 RED)")
+    mk_check(counts, (result_a\array.size) = 2U, "1a body's x paired (not appended) -> len 2 (mutant: 1a off -> len 3 RED)")
     mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_a, 0U)) = 99, "1a result[0] = body's x (99), overriding model's own 1")
     mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_a, 1U)) = 7, "1a result[1] = body's unmatched z (7), appended")
-    mk_check(counts, model_a\len = 1 && body_a\len = 2, "1a operands untouched")
+    mk_check(counts, (model_a\array.size) = 1U && (body_a\array.size) = 2U, "1a operands untouched")
     free((cast: (@: void) op_a))
     free((cast: (@: void) pair_a))
 
@@ -159,7 +159,7 @@ fn: main () int
     pair_b\field: 0U
     status_b: lmx_merge_owned(ops_b, 3U, 0, 0, 0, @ arena, @ dst, @ pair_b, 1U, @ result_b)
     mk_check(counts, status_b = LMX_MERGE_OK && result_b != 0, "1b merge OK")
-    mk_check(counts, result_b\len = 2, "1b -> len 2 (model's x + one appended slot, z/w share)")
+    mk_check(counts, (result_b\array.size) = 2U, "1b -> len 2 (model's x + one appended slot, z/w share)")
     mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_b, 0U)) = 1, "1b result[0] = model's x, untouched")
     mk_check(counts, lmx_int_value_known(lmx_arena_ref_value(result_b, 1U)) = 42, "1b result[1] = operand2's w (42), overriding operand1's appended z (mutant: overrides applied before the append pass -> 7 RED)")
     free((cast: (@: void) ops_b))
@@ -221,7 +221,7 @@ fn: main () int
     op_d1[0]: model_d
     status_d1: lmx_merge_owned(op_d1, 1U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result_d1)
     mk_check(counts, status_d1 = LMX_MERGE_OK && result_d1 != 0, "1d first merge OK")
-    mk_check(counts, result_d1\len = 1, "1d first result has one slot")
+    mk_check(counts, (result_d1\array.size) = 1U, "1d first result has one slot")
     inner1: lmx_arena_ref_value(result_d1, 0U)
     mk_check(counts, inner1 != 0 && lmx_range_classify(@ dst, inner1) = c.LMX_KIND_STRUCT, "1d first result's slot 0 is a nested Structure copy")
     mk_check(counts, (cast: (@: Lmx) inner1)\parent = result_d1, "1d first copy's parent re-pointed to result_d1 (mutant: re-parent pass off -> orphan model copy, RED)")

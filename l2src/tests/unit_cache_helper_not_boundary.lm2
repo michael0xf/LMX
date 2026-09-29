@@ -1,0 +1,21 @@
+# §7b witness, negative (Lingvamyxa spec 21.6: a private helper of an explicit graph operation is not a boundary):
+# x and y are published by the call to nop.  `x: 5` is dirty; the explicit write `test\y: 3` is a graph operation of
+# this activation, not a boundary, so the explicit `test\x` after it still reads the published 1.  The program
+# exits 1; a translator that publishes at every helper, or writes in place, gives 5.
+fn: nop () int
+    return: 0
+end: nop
+
+fn: test () int
+    int: x 1
+    int: y 0
+    nop()
+    x: 5
+    test\y: 3
+    int: seen 0
+    seen: test\x
+    return: seen
+end: test
+
+sendMessage: exit(exit_code: test(); stdout: ""; stderr: "")
+return

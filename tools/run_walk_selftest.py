@@ -89,7 +89,7 @@ def main():
         (output / f'{label}.stderr').write_bytes(result.stderr)
         manifest['steps'].append({'label': label, 'exit': result.returncode})
         if check and result.returncode:
-            (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+            (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
             sys.exit(f'{label} failed ({result.returncode}); see {output / (label + ".stderr")}')
         return result
 
@@ -119,7 +119,7 @@ def main():
     result = run([exe], 'selftest', check=False)
     manifest['selftest_exit'] = result.returncode
     manifest['selftest_stdout'] = result.stdout.decode('utf-8', errors='replace').strip()
-    (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+    (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
     print(manifest['selftest_stdout'])
     print(f'exit={result.returncode}; evidence: {output}')
     sys.exit(result.returncode)

@@ -1,0 +1,32 @@
+# §7b witness (book §12: dirty follows an executed write, not the presence of a possible assignment): x is published
+# 1 by the call to nop and stays clean because the branch that assigns it is not taken; poke then writes test\x: 7,
+# and test's exit writes nothing back: check reads 7.  The program exits 7; with dirty marked by the assignment's
+# presence 1.
+fn: nop () int
+    return: 0
+end: nop
+
+fn: poke () int
+    test\x: 7
+    return: 0
+end: poke
+
+fn: test (int: n) int
+    int: x 1
+    nop()
+    if: n = 1
+        x: 5
+    poke()
+    return: 0
+end: test
+
+fn: check () int
+    return: test\x
+end: check
+
+int: v 0
+v: test(0)
+int: w 0
+w: check()
+sendMessage: exit(exit_code: w + v; stdout: ""; stderr: "")
+return

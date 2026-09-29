@@ -1,0 +1,16 @@
+# Book :1060: "A named argument's body is supplied as a structural value" -- it is one value.  Spliced by
+# position, b's body `- 1` would join a's 8 into one actual, 8 - 1 (by position, f(8, - 1) is exactly that);
+# the binding keeps it whole: f(a: 8; b: - 1) is 8 - (- 1), 9.  Entry 7.
+fn: f (int: a; int: b) int
+    return: a - b
+fn: h () int
+    int: t 0
+    t: f(a: 8; b: - 1)
+    return: t
+int: r 0
+r: h()
+if: r != 9
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

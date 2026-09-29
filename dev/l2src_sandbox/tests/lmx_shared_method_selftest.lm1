@@ -12,17 +12,14 @@ predef: "l2src/lmx_implements.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Q22 = II shared method references (FABLE-GROKBOT-MERGE-OVERRIDE-20260924-161 c2),
-# generalized structurally under k.4 (fable, 2026-09-26): a Structure is an OWN CHILD
-# of the copy -- and so gets copied as a subtree -- exactly when its parent lies INSIDE
-# the copied operand subtree; a Structure whose parent lies outside it is a shared
-# terminal kept by address, parent untouched.  There is no descriptor and no domain
-# classification any more; `native` (set directly) only illustrates that the shared/
-# copied occurrence happens to be a method.
-# A: fn: M where M's parent is the unit (outside the operand) -- merge keeps the
-# same occurrence address and does not rewrite M.parent. Mutant (descended into
-# M) yields a distinct address -> RED. A nested callable whose parent is inside
-# the operand is still copied.
+# A method occurrence under merge (Q44, the author, 2026-09-28): the shared reference is
+# to the method's NATIVE IMPLEMENTATION -- the C entry that receives the graph node -- not
+# to the occurrence: "К структурам это отношения не имеет".  So `A: fn: M` with M's
+# parent the unit (outside the operand) is COPIED like any Structure the walk reaches
+# (Q42), its `native` word carried verbatim; the source M, its parent and A's field are
+# untouched.  Mutant: the former k.4 test ("parent outside -> shared by address") back ->
+# the same address -> RED.  A nested callable whose parent is inside the operand is
+# copied too, as before.
 
 # A stand-in native entry: never called by this file, only its address is compared.
 fn: sample_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
@@ -71,7 +68,7 @@ fn: main () int
         return: 2
     ---
     # k.4: native set directly, no descriptor. M and its nested counterpart may point at
-    # the same C entry; what decides shared-vs-copied is only where `parent` points.
+    # the same C entry; both occurrences are copied, and the entry is what stays shared.
     m\native: (cast: (LmxEntry) sample_entry)
     nested_m\native: (cast: (LmxEntry) sample_entry)
     # Unit holds the shared method occurrence M (parent = unit).
@@ -91,11 +88,14 @@ fn: main () int
 
     status: lmx_merge_owned(operands, 1U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result)
     sh_check(counts, status = LMX_MERGE_OK && result != 0, "merge A OK")
-    sh_check(counts, result\len = 2, "result has two slots")
+    sh_check(counts, (result\array.size) = 2U, "result has two slots")
 
-    # Shared external method: same address as A's field; parent untouched.
+    # The method occurrence reached through A's field: copied; its implementation shared.
     got: lmx_arena_ref_value(result, 0U)
-    sh_check(counts, got = (cast: (@: void) m), "shared M kept by address (mutant: copied -> RED)")
+    sh_check(counts, got != 0 && got != (cast: (@: void) m), "M is copied, not kept by address (mutant: k.4 back -> RED)")
+    @: Lmx m_copy (cast: (@: Lmx) got)
+    sh_check(counts, got != 0 && m_copy\native = m\native, "the copy of M carries M's native implementation")
+    sh_check(counts, got != 0 && m_copy\parent != 0 && m_copy\parent != unit, "the copy of M hangs under the copy of its lexical parent")
     sh_check(counts, m\parent = unit, "M.parent still the unit")
     sh_check(counts, lmx_arena_ref_value(a, 0U) = (cast: (@: void) m), "A's field untouched")
 

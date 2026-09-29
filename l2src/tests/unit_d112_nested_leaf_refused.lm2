@@ -1,0 +1,22 @@
+# D-112: a deeper path in value position whose leaf is not a value field (`m\in` inside `m\in\y`, where
+# Inner has no `y`) is refused in its own words, located at the path -- no longer a silent failure.
+Inner:
+    size_t: x 5U
+end: Inner
+Outer:
+    Inner: in
+    size_t: a 1U
+end: Outer
+Other:
+    size_t: a 10U
+    Inner: in
+end: Other
+fn: rd (Outer: m) size_t
+    return: m\in\y + m\a
+fn: go () size_t
+    Outer: o
+    return: rd(o)
+size_t: got 0U
+got: go()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

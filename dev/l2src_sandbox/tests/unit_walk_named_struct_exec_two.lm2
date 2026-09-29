@@ -1,0 +1,25 @@
+# steps/named-struct-exec.md, slice 3, under --walk-methods (REVIEW b193fbb; fable_pc's probe
+# ns3_two_exec): unit_named_struct_exec_two with go walked -- its bare `B` is a CALL of B's procedure
+# over B (§12; slice 3: B's code node by its rank): A\n = 5 and B\m = 11.  Entry 7.
+A:
+    size_t: n 4U
+    n: n + 1U
+return
+B:
+    size_t: m 10U
+    m: m + 1U
+return
+fn: go () int
+    B
+    return: 7
+A
+int: r go()
+size_t: a 0U
+a: A\n
+size_t: b 0U
+b: B\m
+int: ok 0
+if: a = 5U && b = 11U && r = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,20 @@
+# steps/named-struct-exec.md §12: a named Structure's body reads a unit field as a method's body does --
+# through the space above it.  Counter\n is 2 after one execution; with g 5, a second execution makes it
+# 5 (its declaration runs again).  Was unit_named_struct_stmt_operand_refused ("named Structure body not
+# walkable yet: a name that is not a field of this Structure" -- the special path walked the Structure's
+# own number fields only).  Entry 7.
+size_t: g 2U
+Counter:
+    size_t: n 0U
+    n: n + g
+return
+Counter
+size_t: a 9U
+a: Counter\n
+g: 5U
+Counter
+int: ok 0
+if: a = 2U && Counter\n = 5U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,27 @@
+# steps/named-struct-exec.md §12: a field declared in a block of a named Structure's body is the block's,
+# as in a method's body -- it lives in the procedure's occurrence, with the block, not in the Structure
+# (no path `Counter\t`).  t is 5, added to n: n 5 after each of two executions (n's declaration runs
+# again); twin, a method with the same body, reads 5.  Entry 7.
+Counter:
+    size_t: n 0U
+    if: n = 0U
+        size_t: t 5U
+        n: n + t
+return
+fn: twin () size_t
+    size_t: n 0U
+    if: n = 0U
+        size_t: t 5U
+        n: n + t
+return: n
+Counter
+size_t: a 9U
+a: Counter\n
+Counter
+size_t: b 9U
+b: twin()
+int: ok 0
+if: a = 5U && Counter\n = 5U && b = 5U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,44 @@
+# Item 738. A char capture: the node's field is a cell of the program's byte table
+# (l2_program_chars), not a fresh cell.  makeTag captures its char formal c: tagA carries 'A',
+# tagB 200 (above 127 -- the host's C char is signed there, and the table refuses a negative
+# byte), tagZ 'Z'; tagOf tells them apart: 101, 201, 1.  makeHi captures h, a char field the host
+# declares and changes before the return: hi1 carries 250, hi0 'B'; hiOf gives 251 and 67.
+# The base translator refused ("a callable merge needs a walkable body").  Mutants: the capture
+# not written -- the slot stays empty; the byte taken as the signed C char -- makeTag 200 aborts.
+# Entry 7.
+fn: makeTag (char: c) fn: (int: x) int
+    fn: tagOf (int: x) int
+        if: c = 'A'
+            return: x + 100
+        if: c = 200
+            return: x + 200
+        return: x
+    return: tagOf
+
+fn: makeHi (int: n) fn: (int: x) int
+    char: h 'B'
+    if: n > 0
+        h: 250
+    fn: hiOf (int: x) int
+        if: h = 250
+            return: x + 250
+        if: h = 'B'
+            return: x + 66
+        return: x
+    return: hiOf
+
+tagA: makeTag 'A'
+tagB: makeTag 200
+tagZ: makeTag 'Z'
+hi1: makeHi 1
+hi0: makeHi 0
+int: a (tagA: 1)
+int: b (tagB: 1)
+int: z (tagZ: 1)
+int: h1 (hi1: 1)
+int: h0 (hi0: 1)
+int: ok 0
+if: a = 101 && b = 201 && z = 1 && h1 = 251 && h0 = 67
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

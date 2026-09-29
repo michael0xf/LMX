@@ -1,0 +1,17 @@
+# slice 2: unit_s7_prim_cross over its own primitive.lm2 whose size_t row writes its cell as a Structure
+# (tests/unit_s7_prim_table_cellneed_prim.lm2): said at the cell, "a primitive table cell this row needs
+# is not a name"; the decision is malformed, and the store refuses without a line of its own.
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

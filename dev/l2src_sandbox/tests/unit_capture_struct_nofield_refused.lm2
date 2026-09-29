@@ -1,0 +1,25 @@
+# Item 738 slice 2: a path through a captured Structure names a field its type has not (`loc\nope`,
+# value position).  The model is tried for the walk silently; its host said only "a callable merge needs a walkable body" at its
+# header, and the model's own reason, where it stands, was lost (steps/capture-738.md §5, "Остаётся").
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    Inner: box
+    int: count 0
+    int: value 0
+end: Model
+
+fn: makeReader (int: n) fn: (int: x) int
+    Model: loc
+    loc\value: n
+    fn: read (int: x) int
+        return: loc\nope + x
+    return: read
+
+r40: makeReader 40
+int: a (r40: 2)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

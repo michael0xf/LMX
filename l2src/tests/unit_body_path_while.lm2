@@ -1,0 +1,65 @@
+# 7b-3 (ticket OPUS-7B3-20260929-02; book §12 and "names"; L2 §10; Q51, Q52): one path rule for a control body -- the
+# body is the field of its enclosing body named by its statement's head, and a path root naming one is the last such
+# body visible where the path stands (inside it, or after its `end:`).  The book's order with `while`: pair receives acc
+# 9 and while\j 0 (the place, before the call's checkpoint publishes 9): 900; later while\j 9 -- loop B below is not
+# visible yet; `while\j: 42` writes the cell, read back 42.  After loop B a call publishes and while\j is B's: 4.  In
+# the `if` body, after loop C, while\j is C's (a body below another): 6.  Walked twin: unit_walk_body_path_while
+# (test walked, the Absent pin).  Success 7; 9 9 65; later not 9 66; not 42 67; B not 4 68; C not 6 69.
+fn: pair (int: a; int: b) int
+    return: a * 100 + b
+end: pair
+fn: nop () int
+    return: 0
+end: nop
+fn: test () int
+    int: acc
+    acc: 0
+    int: i 0
+    while: i < 10
+        int: j i
+        acc: j
+        i: i + 1
+    end: while
+    int: p 0
+    p: pair(acc while\j)
+    int: later 0
+    later: while\j
+    while\j: 42
+    int: w 0
+    w: while\j
+    int: k 0
+    while: k < 5
+        int: j k
+        k: k + 1
+    end: while
+    nop()
+    int: b 0
+    b: while\j
+    int: c 0
+    int: m 0
+    if: 1
+        while: m < 7
+            int: j m
+            m: m + 1
+        end: while
+        nop()
+        c: while\j
+    int: ok 64
+    if: p = 909
+        ok: 65
+    if: later != 9
+        ok: 66
+    if: w != 42
+        ok: 67
+    if: b != 4
+        ok: 68
+    if: c != 6
+        ok: 69
+    if: p = 900 && later = 9 && w = 42 && b = 4 && c = 6
+        ok: 7
+    return: ok
+end: test
+int: r 0
+r: test()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -109,8 +109,8 @@ fn: main () int
     @: Lmx m 0
     @: Lmx n 0
     @: Lmx litn 0
-    @: LmxArrayDesc desc 0
-    @: LmxArrayDesc outer 0
+    @: VoidArray desc 0
+    @: VoidArray outer 0
     @: Lmx prof 0
     @: Lmx nest 0
     @: Lmx atn 0
@@ -349,10 +349,10 @@ fn: main () int
     # Immutable descriptor through the evaluated operand. Mutant: skip
     # lmx_walk_immutable on that address -> this ELEMPUT goes green, RED.
     prof: lmx_node_new_owned(ga)
-    desc: (cast: (@: LmxArrayDesc) lmx_arena_take_profiled(ga, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, prof))
+    desc: (cast: (@: VoidArray) lmx_arena_take_profiled(ga, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, prof))
     if: prof = 0 || desc = 0
         return: 2
-    desc\len: 1U
+    desc\size: 1U
     desc\data: lmx_arena_take_n(ga, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, 1U)
     if: desc\data = 0
         return: 2

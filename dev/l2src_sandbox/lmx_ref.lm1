@@ -21,31 +21,31 @@ predef: "lmx_arena_refs.lm1"
 # Rebinds its own local reference and returns it. The caller's reference must
 # not follow. 21.4: "Rebinding the callee's local reference changes only that
 # local reference."
-fn: lmx_ref_rebind_local (@: LmxArrayDesc desc; @: LmxArrayDesc other) @: LmxArrayDesc
+fn: lmx_ref_rebind_local (@: VoidArray desc; @: VoidArray other) @: VoidArray
     desc: other
 return: desc
 
 # Writes through the reference into the shared backing. 21.4: visible through
 # every reference and path to that same Array storage.
-fn: lmx_ref_write_through (@: LmxArrayDesc desc; size_t: index; int: value) int
+fn: lmx_ref_write_through (@: VoidArray desc; size_t: index; int: value) int
     @: int cells
     if: desc = 0
         return: 1
     if: desc\data = 0
         return: 1
-    if: index >= desc\len
+    if: index >= desc\size
         return: 1
     cells: (cast: (@: int) desc\data)
     cells[index]: value
 return: 0
 
-fn: lmx_ref_read (@: LmxArrayDesc desc; size_t: index; @: int out) int
+fn: lmx_ref_read (@: VoidArray desc; size_t: index; @: int out) int
     @: int cells
     if: desc = 0 || out = 0
         return: 1
     if: desc\data = 0
         return: 1
-    if: index >= desc\len
+    if: index >= desc\size
         return: 1
     cells: (cast: (@: int) desc\data)
     \out: cells[index]
@@ -74,9 +74,9 @@ return: lmx_arena_ref_value(cell, index)
 # through the reference affects the referent; assigning the local reference to
 # another Array does not rebind the caller." This one mutates the referent, so
 # every holder of that descriptor sees it.
-fn: lmx_ref_restore_storage (@: LmxArrayDesc desc; size_t: len; @: void data) int
+fn: lmx_ref_restore_storage (@: VoidArray desc; size_t: len; @: void data) int
     if: desc = 0
         return: 1
-    desc\len: len
+    desc\size: len
     desc\data: data
 return: 0

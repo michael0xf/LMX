@@ -1,0 +1,19 @@
+# Slices 3/4 boundary (Opus, 2026-09-27, steps/gate-measure-20260927.md): a composite value
+# (`n - 1`) of one named primitive type given to a formal of another now gets the same edge a
+# single value has -- l2_check_value_convert_field/l2_emit_value_convert_field type it themselves
+# (l2_native_composite_ty, l2_rw_tokens+l2_rw_tyof) and the receiver is called on a copy of the
+# whole n-field chain (l2_emit_value_convert_n), the same shape l2_rw_convert already uses at the
+# walked root.  n - 1 = 5U fits size_t: `take` runs and the entry is 7.  The refusal is
+# unit_s3_arg_conv_compound_range.  Mutant: the edge not emitted -- C converts the composite
+# itself, `take` still runs the same way here (every value fits); see the range fixture's mutant.
+fn: take (size_t: n) int
+    if: n = 5
+        return: 7
+    return: 0
+end: take
+fn: go () int
+    int: n 6
+    return: take(n - 1)
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

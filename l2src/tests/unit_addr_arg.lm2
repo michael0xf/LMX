@@ -2,6 +2,9 @@
 # completed -- the original never called go(), so a broken address write
 # through an own-declared formal would have passed silently. @: n (address
 # of an own-declared local formal) into a pointer parameter, write-back read.
+# The root speaks the host's exit (`sendMessage: exit`), and `got: go(0U)` stores an int into a
+# size_t own through the root's conversion edge (implements-port slice 13); `go` returns its
+# size_t n through the return's edge (slice 4).
 fn: set_one (@: size_t p) int
     \p: 1U
     return: 0
@@ -15,5 +18,7 @@ end: go
 size_t: got
 got: go(0U)
 if: got != 1U
-    return: 81
-return: 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

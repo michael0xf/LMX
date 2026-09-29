@@ -1,0 +1,18 @@
+# Book :1060 through a path call: A\M names the method M by A's callable field, and M's formals are the
+# callee's -- A\M(v: 4) is 5.  Entry 7.
+A:
+    fn: M
+    size_t: tag 1U
+end: A
+
+fn: M (size_t: v) size_t
+    return: v + 1U
+end: M
+
+size_t: a1
+a1: A\M(v: 4U)
+if: a1 != 5U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

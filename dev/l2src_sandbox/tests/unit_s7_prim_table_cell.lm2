@@ -1,0 +1,17 @@
+# slice 2: unit_s7_prim_cross (size_t to int) over its own primitive.lm2 whose size_t row has cell 0
+# (tests/unit_s7_prim_table_cell_prim.lm2): the table decides -- size_t is no cell, so it does not
+# implement int, and the store is refused (with the sandbox's table: Entry 7).
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

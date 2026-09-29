@@ -1,0 +1,10 @@
+# implements-port B3: -1 does not fit size_t, so the initializer's edge (row int -> size_t) refuses:
+# `go`'s implicit throw `convert` (g = 3), uncaught -- the root receives status 3.  Mutant: the edge
+# not emitted -- C converts -1 itself and `go` completes with 7.
+fn: go () int
+    int: x -1
+    size_t: s (x)
+    return: 7
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

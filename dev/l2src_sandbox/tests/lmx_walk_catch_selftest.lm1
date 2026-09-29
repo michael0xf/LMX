@@ -15,7 +15,7 @@ predef: "l2src/lmx_merge_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -201: catch table on a PRIM, scanned in place. Success of a caught throw is the
+# -201, D1: catch rows on a PRIM -- its own last operands (k_in, pad, k_out), its catch slot their count -- scanned in place. Success of a caught throw is the
 # statement after the pad (literal 7) plus the bound parameter.
 # Numeric parameter: typed store of payload child 0.
 # Structure parameter: the kernel stores the argument reference and does not admit.
@@ -191,18 +191,16 @@ fn: main () int
     ---
     gpayload: payload
     m: pl(unit, 3U)
-    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(pn, 2U, (cast: (@: void) table))
     pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
     ref(pad, 1U, cell)
     handler: pl(m, 0U)
     ref(pad, 2U, (cast: (@: void) handler))
-    ref(table, 1U, (cast: (@: void) pad))
+    ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK)), "numeric catch resumes")
@@ -229,18 +227,16 @@ fn: main () int
     ref(payload, 0U, (cast: (@: void) value))
     gpayload: payload
     m: pl(unit, 3U)
-    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(pn, 2U, (cast: (@: void) table))
     pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
     ref(pad, 1U, pcell)
     handler: pl(m, 0U)
     ref(pad, 2U, (cast: (@: void) handler))
-    ref(table, 1U, (cast: (@: void) pad))
+    ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "structure catch resumes")
@@ -261,18 +257,16 @@ fn: main () int
     ref(payload, 0U, (cast: (@: void) value))
     gpayload: payload
     m: pl(unit, 3U)
-    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(pn, 2U, (cast: (@: void) table))
     pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
     ref(pad, 1U, pcell)
     handler: pl(m, 0U)
     ref(pad, 2U, (cast: (@: void) handler))
-    ref(table, 1U, (cast: (@: void) pad))
+    ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "structure bind stores without admit")
@@ -290,13 +284,11 @@ fn: main () int
     # pad 0 renumbers THROWN+1 to THROWN+4.
     gpayload: 0
     m: pl(unit, 1U)
-    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 4U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 4U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(pn, 2U, (cast: (@: void) table))
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "pad 0 renumbers to THROWN+4")
 
@@ -311,17 +303,15 @@ fn: main () int
     if: inner = 0 || lmx_walk_store_int(ga, inner, 1U, 0) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    pn: fr(m, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 1U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(pn, 2U, (cast: (@: void) table))
     pad: fr(m, 2U, c.LMX_WALK_OP_PAD, 2U)
     handler: pl(m, 0U)
     ref(pad, 1U, (cast: (@: void) handler))
-    ref(table, 1U, (cast: (@: void) pad))
+    ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 3U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "continue after pad returns 7")
@@ -341,19 +331,17 @@ fn: main () int
     ---
     gpayload: payload
     m: pl(unit, 3U)
-    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(pn, 2U, (cast: (@: void) table))
     pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 4U)
     ref(pad, 1U, cell)
     ref(pad, 2U, cell_b)
     handler: pl(m, 0U)
     ref(pad, 3U, (cast: (@: void) handler))
-    ref(table, 1U, (cast: (@: void) pad))
+    ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && lmx_int_value_known(cell) = 4 && lmx_int_value_known(cell_b) = 9)), "two parameters bind by position")
@@ -366,23 +354,19 @@ fn: main () int
     handler: pl(m, 0U)
     ref(outer_pad, 1U, (cast: (@: void) handler))
     inner: pl(m, 1U)
-    pn: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(inner, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(table, 1U, (cast: (@: void) outer_pad))
-    ref(pn, 2U, (cast: (@: void) table))
+    ref(pn, 4U, (cast: (@: void) outer_pad))
     ref(pad, 1U, (cast: (@: void) inner))
-    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(table, 1U, (cast: (@: void) pad))
-    ref(pn, 2U, (cast: (@: void) table))
+    ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 3U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw in the handler lands on the outer pad")
@@ -399,14 +383,12 @@ fn: main () int
     pn: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 3U)
     ref(pn, 1U, (cast: (@: void) counter))
     ref(pad, 1U, (cast: (@: void) inner))
-    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(table, 1U, (cast: (@: void) pad))
-    ref(pn, 2U, (cast: (@: void) table))
+    ref(pn, 4U, (cast: (@: void) pad))
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 1 && gcount = 1)), "handler throw with no pad propagates")
     counter\fn: count_ok
@@ -415,7 +397,7 @@ fn: main () int
     gcount: 0
     gpayload: 0
     m: pl(unit, 4U)
-    call: fr(m, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    call: fr(m, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(call, 1U, (cast: (@: void) prim_rec))
     pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 2U)
     outer_pad: fr(m, 2U, c.LMX_WALK_OP_PAD, 2U)
@@ -424,21 +406,17 @@ fn: main () int
     ref(pn, 1U, (cast: (@: void) counter))
     ref(outer_pad, 1U, (cast: (@: void) handler))
     inner: pl(m, 1U)
-    pn: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(inner, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(table, 1U, (cast: (@: void) outer_pad))
-    ref(pn, 2U, (cast: (@: void) table))
+    ref(pn, 4U, (cast: (@: void) outer_pad))
     ref(pad, 1U, (cast: (@: void) inner))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, call, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, call, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, call, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(table, 1U, (cast: (@: void) pad))
-    ref(call, 2U, (cast: (@: void) table))
+    ref(call, 4U, (cast: (@: void) pad))
     ret7(m, 3U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gcount = 1 && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw onto a sibling pad of the same body lands once")
@@ -457,14 +435,12 @@ fn: main () int
     ---
     inner: pl(pn, 1U)
     ref(pn, 2U, (cast: (@: void) inner))
-    callee: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    callee: fr(inner, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(callee, 1U, (cast: (@: void) prim_rec))
-    table: pl(inner, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, callee, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, callee, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, callee, 5U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(table, 1U, (cast: (@: void) pad))
-    ref(callee, 2U, (cast: (@: void) table))
+    ref(callee, 4U, (cast: (@: void) pad))
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw inside IF lands on the block pad")
 
@@ -480,27 +456,23 @@ fn: main () int
     ---
     gpayload: payload
     callee: pl(unit, 1U)
-    pn: fr(callee, 0U, c.LMX_WALK_OP_PRIM, 3U)
+    pn: fr(callee, 0U, c.LMX_WALK_OP_PRIM, 6U)
     ref(pn, 1U, (cast: (@: void) prim_rec))
-    table: pl(callee, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 4U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, pn, 2U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 3U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, pn, 5U, 4U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
-    ref(pn, 2U, (cast: (@: void) table))
     m: pl(unit, 3U)
-    call: fr(m, 0U, c.LMX_WALK_OP_CALL, 5U)
+    call: fr(m, 0U, c.LMX_WALK_OP_CALL, 8U)
     ref(call, 1U, (cast: (@: void) callee))
     ref(call, 2U, (cast: (@: void) callee))
-    table: pl(m, 3U)
-    if: table = 0 || lmx_walk_store_size(ga, table, 0U, 4U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, table, 2U, 1U) != c.LMX_WALK_OK
+    if: lmx_walk_store_size(ga, call, 4U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, call, 5U, 4U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, call, 7U, 1U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
     pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 3U)
     ref(pad, 1U, cell)
     handler: pl(m, 0U)
     ref(pad, 2U, (cast: (@: void) handler))
-    ref(table, 1U, (cast: (@: void) pad))
-    ref(call, 4U, (cast: (@: void) table))
+    ref(call, 6U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7 && lmx_int_value_known(cell) = 41)), "walked callee payload is bound")

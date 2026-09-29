@@ -1,3 +1,6 @@
+# An explicit parent update from a nested body of a method, node\shared: 9, is a write at the unit's place
+# of declaration.  Book §12 (and L2 §18.2): after the call the root's bare shared keeps its working value,
+# 4 -- the caller is not reloaded -- while an explicit path sees the new 9: read_parent's node\shared.
 int: shared
 
 fn: write_parent () int
@@ -9,10 +12,19 @@ fn: write_parent () int
     return: 0
 end: write_parent
 
+fn: read_parent () int
+    return: node\shared
+end: read_parent
+
 int: ignored
 shared: 4
 ignored: write_parent()
-if: shared != 9
+if: shared != 4
+    sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+    return
+int: seen 0
+seen: read_parent()
+if: seen != 9
     sendMessage: exit(exit_code: 87; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

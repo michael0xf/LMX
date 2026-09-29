@@ -57,7 +57,7 @@ fn: main () int
     LmxArena: arena_a
     LmxArena: arena_b
     @: Lmx graph
-    @: LmxArrayDesc children
+    @: VoidArray children
     @: LmxMsg parent_message
     @: LmxPost parent_mail
     @: LmxThread parent
@@ -81,9 +81,9 @@ fn: main () int
     a: rn_child(@ arena_a, @ message)
     b: rn_child(@ arena_b, @ message)
     rn_check(counts, a != 0 && b != 0 && lmx_thread_child_add(parent, a, @ parent_arena) = c.LMX_THREAD_OK && lmx_thread_child_add(parent, b, @ parent_arena) = c.LMX_THREAD_OK, "two children")
-    rn_check(counts, lmx_thread_child_count(parent) = 2U && children\len = 2U, "single membership array")
+    rn_check(counts, lmx_thread_child_count(parent) = 2U && children\size = 2U, "single membership array")
     rn_check(counts, lmx_settle_children(parent, @ parent_arena, 0, 0, 1U) = c.LMX_SETTLE_OK, "settle compacted array")
-    rn_check(counts, lmx_thread_child_count(parent) = 0U && children\len = 0U, "both removed before release")
+    rn_check(counts, lmx_thread_child_count(parent) = 0U && children\size = 0U, "both removed before release")
     rn_check(counts, lmx_arena_release(@ parent_arena) = 0, "parent release")
     failures: counts[1]
     c.printf("lmx_settle_reads_node: %d checks, %d failures\n", counts[0], failures)

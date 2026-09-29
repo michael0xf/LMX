@@ -1,4 +1,5 @@
-# GROKBOT-NESTED-BODY-WITNESSES-20260922-69: C-style for-arm nested body Structure hosts own.
+# GROKBOT-NESTED-BODY-WITNESSES-20260922-69: C-style for-arm nested body Structure hosts own.  Read
+# back through read_shared's node\shared: the root's bare shared keeps its working value (book §12).
 int: shared
 
 fn: write_for_nested () int
@@ -9,13 +10,18 @@ fn: write_for_nested () int
     return: 0
 end: write_for_nested
 
+fn: read_shared () int
+    return: node\shared
+end: read_shared
+
 int: ignored
 shared: 3
 ignored: write_for_nested()
 if: ignored != 0
     sendMessage: exit(exit_code: ignored; stdout: ""; stderr: "")
     return
-if: shared != 41
+ignored: read_shared()
+if: ignored != 41
     sendMessage: exit(exit_code: 75; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

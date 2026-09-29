@@ -97,7 +97,7 @@ def build(check=False):
         if check:
             assert path.read_text(encoding='utf-8') == result, f'Out of sync: {path}'
         else:
-            path.write_text(result, encoding='utf-8')
+            path.write_text(result, encoding='utf-8', newline='\n')
 
     inventory['chapters'] = [{'id': c['id'], 'source_sections': c['origin']} for c in chapters]
     inventory['source_examples'] = [
@@ -115,7 +115,7 @@ def build(check=False):
     if check:
         assert inventory == saved, 'Semantic provenance inventory is out of sync'
     else:
-        inventory_path.write_text(json.dumps(inventory, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        inventory_path.write_text(json.dumps(inventory, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
     return len(chapters)
 
 if __name__ == '__main__':

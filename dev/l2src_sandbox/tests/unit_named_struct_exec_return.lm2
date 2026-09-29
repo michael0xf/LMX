@@ -1,0 +1,24 @@
+# steps/named-struct-exec.md, slice 2: a bare `return` in the body ends the execution -- the plan stops
+# there (REVIEW 0c601ea, the lesson of e8b8a8d), so `n: n + 5U` never runs: n is 1, not 6.  The root
+# executes it from its nested bodies too -- an anonymous block (no inert one, l2_body_inert) and an
+# if body.  Entry 7.
+Counter:
+    size_t: n 0U
+    n: n + 1U
+    return
+    n: n + 5U
+return
+size_t: a 9U
+---
+    Counter
+a: Counter\n
+Counter\n: 4U
+if: a = 1U
+    Counter
+size_t: b 9U
+b: Counter\n
+int: ok 0
+if: a = 1U && b = 1U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

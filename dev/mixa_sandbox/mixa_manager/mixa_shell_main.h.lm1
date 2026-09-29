@@ -1,0 +1,15 @@
+predef: "mixa_manager/mixa_backend.h.lm1"
+predef: "mixa_manager/mixa_pump.h.lm1"
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+
+# native is the one backend table Shell uses. Not a Message.
+struct: MixaShellHost
+    const: @: MixaBackendVTable native
+    @: MixaBackend backend
+end: MixaShellHost
+
+prototype:
+    fn: mixa_shell_bind_native (@: MixaShellHost host) int
+    fn: mixa_shell_close (@: MixaShellHost host; @: MixaPump pump) int
+    fn: mixa_shell_run (@: MixaShellHost host; @: MixaCellMetrics metrics; @: MixaFm fm; const: @(char root); @@: MixaFmEntry rows; @: size_t count; @: int out_events) int
+end: prototype

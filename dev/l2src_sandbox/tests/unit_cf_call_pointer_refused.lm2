@@ -1,0 +1,13 @@
+# implements-port slice 1: a callable formal's argument goes by the address of a local of the
+# formal's type -- the five numeric types (unit_cf_call_args.lm2).  A formal of any other type is
+# refused, located, until it has a witness; here a pointer.
+fn: pToInt (@: int p) int
+end: pToInt
+fn: deref (@: int p) int
+    return: 7
+end: deref
+fn: applyP (pToInt: op; @: int p) int
+    return: op(p)
+end: applyP
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

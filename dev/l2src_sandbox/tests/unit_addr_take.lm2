@@ -1,8 +1,8 @@
-# -189 c3b-1 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189; L2 §10: «`@x` для поля данных даёт адрес его
-# ячейки в экземпляре», and no working copies): `n` IS its cell, so the write through the taken
-# address is what the bare `return: n` reads -- 1, not 0.  The reasoning below (L2 18.2's «leaves
-# bare working x at 5») is the old model's, superseded; the author removed the same stale-read rule
-# from L3 §12 (061d753).
+# §7b (steps/working-state-7b.md, 7b-1; the author's load/dirty decision, docs/new_parts/dirty.md): `n` is a
+# declared number with a working value, and a write through the taken address `@: n` changes its cell, not the
+# working value (L2 §18.2: «leaves bare working x at 5»; Lingvamyxa spec 21.6: «does not assign the hidden local»;
+# witness W2), so the bare `return: n` reads the working 0 -- c3b-1's reading (1, no working copies, 2649ee7a) is
+# withdrawn with the model it stood on.
 #
 # FABLE-SONNET-OCC-ROOT-20260924-146 commit 2 / D-25: orphan, measured and
 # completed -- the original never called go(), so this was untested either
@@ -37,7 +37,7 @@ end: go
 
 int: got
 got: go()
-if: got != 1
+if: got != 0
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

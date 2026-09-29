@@ -239,5 +239,29 @@
     "exit": 0,
     "authority": "FABLE-OPUS-DISCARD-20260924-147 (CODEX-FABLE-HEADLESS-DOC-20260923-01; author, LMX_blog/2026-09-23.md): the anonymous vertical forms of (2 + 2), (f) and (): the same subtrees as the inline forms.",
     "stdout_exact": "structure fields=4\n  structure fields=3\n    atom \"2\"\n    atom \"+\"\n    atom \"2\"\n  structure fields=1\n    atom \"f\"\n  structure fields=0\n  frame head=\"return\" body=structure fields=1\n    atom \"0\"\n"
+  },
+  {
+    "path": "tests/parser/current/nested_record_in_body.lmx",
+    "exit": 0,
+    "authority": "next_core_tasks.md §2 (the nested record): which field a line belongs to is decided by the common structure and indentation -- a field nested in the body of `ping` is an argument of `ping`, a field at the level of the outer `c` body is a neighbouring argument of `c`; the pair differs by the indentation of one line only (Opus, 2026-09-27)",
+    "stdout_exact": "structure fields=1\n  frame head=\"c\" body=structure fields=1\n    frame head=\"ping\" body=structure fields=2\n      atom \"0\"\n      frame head=\"field\" body=structure fields=1\n        atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/nested_record_beside_body.lmx",
+    "exit": 0,
+    "authority": "next_core_tasks.md §2 (the nested record): which field a line belongs to is decided by the common structure and indentation -- a field nested in the body of `ping` is an argument of `ping`, a field at the level of the outer `c` body is a neighbouring argument of `c`; the pair differs by the indentation of one line only (Opus, 2026-09-27)",
+    "stdout_exact": "structure fields=1\n  frame head=\"c\" body=structure fields=2\n    frame head=\"ping\" body=structure fields=1\n      atom \"0\"\n    frame head=\"field\" body=structure fields=1\n      atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/nested_record_beside_oneline.lmx",
+    "exit": 0,
+    "authority": "next_core_tasks.md §2 (the nested record): which field a line belongs to is decided by the common structure and indentation -- a field nested in the body of `ping` is an argument of `ping`, a field at the level of the outer `c` body is a neighbouring argument of `c`; the pair differs by the indentation of one line only (Opus, 2026-09-27); the one-line `ping: 0` is the same tree as the vertical one",
+    "stdout_exact": "structure fields=1\n  frame head=\"c\" body=structure fields=2\n    frame head=\"ping\" body=structure fields=1\n      atom \"0\"\n    frame head=\"field\" body=structure fields=1\n      atom \"1\"\n"
+  },
+  {
+    "path": "tests/parser/current/nested_record_empty_ping_refused.lmx",
+    "exit": 1,
+    "authority": "next_core_tasks.md §2 (the nested record): which field a line belongs to is decided by the common structure and indentation -- a field nested in the body of `ping` is an argument of `ping`, a field at the level of the outer `c` body is a neighbouring argument of `c`; the pair differs by the indentation of one line only (Opus, 2026-09-27); a bare `ping:` with its sibling at the same level is an empty colon Frame, refused (P0 error 32)",
+    "diagnostic": "32@2:5"
   }
 ]

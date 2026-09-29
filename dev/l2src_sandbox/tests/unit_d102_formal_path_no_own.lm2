@@ -1,0 +1,13 @@
+# D-102: a field path through a Structure formal (`b\v`) reads its cell into l2_xp, but l2_xp was
+# declared only where the unit has an own field, a dynamic input or a `for` -- in a unit with none
+# l2trans accepted and gcc refused the C ("l2_xp undeclared").  It is now declared wherever the
+# path temps it is read from are.  `peek` needs no caller for its body to be compiled.  Mutant:
+# the old condition -- the row fails at compile.
+Box:
+    int: v 7
+end: Box
+fn: peek (Box: b) int
+    return: b\v
+end: peek
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

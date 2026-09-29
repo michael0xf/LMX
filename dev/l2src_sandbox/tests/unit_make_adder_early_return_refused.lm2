@@ -1,0 +1,12 @@
+# T6b. The build is the host's one exit: a return inside a host statement is refused.
+fn: makeAdder (int: n) fn: (int: x) int
+    if: n > 100
+        return: 0
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+add5: makeAdder 5
+int: a (add5: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

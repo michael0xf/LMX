@@ -134,6 +134,8 @@ fn: main () int
     # k.4: no descriptor slot -- writer's own field x moves to slot 0, SET to slot 1, RET
     # to slot 2; reader's RET to slot 0. CALL gains a 4th leading child (rtype); 0 here
     # since reader is walked, not native -- lmx_walk_call never reads rtype off that path.
+    # §7b: the SET makes x's row (the declaration is the load point); the dirty x is published before the call to
+    # reader.
     writer: mk_m(unit, 0U, 3U)
     reader: mk_m(unit, 1U, 1U)
     xcell: icell(writer, 0U, 0)
@@ -157,8 +159,8 @@ fn: main () int
     if: st = c.LMX_WALK_OK && gv\present != 0 && gv\ref != 0
         r: lmx_int_value_known(gv\ref)
     ---
-    check(st = c.LMX_WALK_OK && r = 7, "reader AT writer\\x sees 7 after SET (mutant off-instance -> RED)")
-    check(xcell != 0 && lmx_int_value_known(xcell) = 7, "writer cell x = 7 in graph (mutant working-copy-only -> RED)")
+    check(st = c.LMX_WALK_OK && r = 7, "reader AT writer\\x sees 7: the dirty SET is published before the call (mutant off-instance or no pre-call publication -> RED)")
+    check(xcell != 0 && lmx_int_value_known(xcell) = 7, "writer cell x = 7 in graph (mutant working-copy never published -> RED)")
 
     if: failures != 0
         c.printf("%d/%d FAILED\n", failures, checks)

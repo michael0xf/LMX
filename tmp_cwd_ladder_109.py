@@ -145,7 +145,7 @@ def main() -> int:
         "timeout_s": TIMEOUT,
         "rows": rows,
     }
-    OUT.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    OUT.write_text(json.dumps(summary, indent=2), encoding="utf-8", newline='\n')
     print("wrote", OUT, flush=True)
     return 0
 

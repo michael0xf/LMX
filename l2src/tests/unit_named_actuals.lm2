@@ -1,0 +1,44 @@
+# Book :1060 ("Positional actual arguments precede named ones"): a call's actuals are bound to its callee's
+# formals -- by position, then by name; a named argument's body is its formal's value.  f(a: 8; b: 1),
+# f(b: 1; a: 8), f(8; b: 1), f(a: x; b: 0 + 1), from method g f(b: 1; a: 8), and a call bound inside an
+# argument, f(b: 1; a: f(b: 1; a: 9)), are all 7.  Before,
+# a named argument was read as a call of its name: "unknown method".  Entry 7.
+fn: f (int: a; int: b) int
+    return: a - b
+fn: g () int
+    int: t 0
+    t: f(b: 1; a: 8)
+    return: t
+int: x 8
+int: r1 0
+int: r2 0
+int: r3 0
+int: r4 0
+int: r5 0
+int: r6 0
+r1: f(a: 8; b: 1)
+r2: f(b: 1; a: 8)
+r3: f(8; b: 1)
+r4: f(a: x; b: 0 + 1)
+r5: g()
+r6: f(b: 1; a: f(b: 1; a: 9))
+if: r1 != 7
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: r2 != 7
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: r3 != 7
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+if: r4 != 7
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+if: r5 != 7
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+if: r6 != 7
+    sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

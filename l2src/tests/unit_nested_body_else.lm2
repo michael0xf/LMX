@@ -1,5 +1,6 @@
 # GROKBOT-NESTED-BODY-WITNESSES-20260922-69: else-arm nested body Structure hosts own;
-# node\shared still hits host-less method own (same invariant as nested if).
+# node\shared still hits host-less method own (same invariant as nested if).  Read back through
+# read_shared's node\shared: the root's bare shared keeps its working value (book §12).
 int: shared
 
 fn: write_else_nested () int
@@ -12,13 +13,18 @@ fn: write_else_nested () int
     return: 0
 end: write_else_nested
 
+fn: read_shared () int
+    return: node\shared
+end: read_shared
+
 int: ignored
 shared: 3
 ignored: write_else_nested()
 if: ignored != 0
     sendMessage: exit(exit_code: ignored; stdout: ""; stderr: "")
     return
-if: shared != 21
+ignored: read_shared()
+if: ignored != 21
     sendMessage: exit(exit_code: 73; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

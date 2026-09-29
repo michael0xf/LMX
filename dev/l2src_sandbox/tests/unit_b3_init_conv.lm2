@@ -1,0 +1,19 @@
+# implements-port B3, a declaration's initializer (steps/implements-port-plan.md): a value of one
+# named primitive type initialising an own of another is the edge a store has -- the row's receiver
+# is called on the value (l2_check_init_convert, l2_emit_init_convert).  Before, `size_t: s (x)`
+# stored lmx_int_value_known(x) through C's own conversion.  Here: an int into size_t, bare and in
+# parentheses, a compound int into size_t, and a char into int.  Every value fits: the entry is 7.
+fn: go () int
+    int: x 5
+    char: ch 'a'
+    size_t: s (x)
+    size_t: t x
+    size_t: u (x + 1)
+    int: c3 ch
+    int: r 0
+    if: s = 5U && t = 5U && u = 6U && c3 = 97
+        r: 7
+    return: r
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

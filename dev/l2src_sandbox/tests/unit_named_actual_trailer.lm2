@@ -1,0 +1,11 @@
+# REVIEW 394f6a9 (fable_pc's M54, P62 c): a named call in a method's `return:` trailer -- P0 hangs the trailer on
+# the method's frame, outside its body -- is bound like one in the body: f(b: 1; a: 8) is 7.  Before the named
+# actuals, and under M54 (the trailer not bound): "unknown method".  Entry 7.
+fn: f (int: a; int: b) int
+    return: a - b
+fn: g () int
+    int: t 0
+return: f(b: 1; a: 8)
+
+sendMessage: exit(exit_code: g(); stdout: ""; stderr: "")
+return

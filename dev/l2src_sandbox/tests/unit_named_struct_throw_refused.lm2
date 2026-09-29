@@ -1,0 +1,16 @@
+# steps/named-struct-exec.md §12: Counter's body calls mk, which throws Oops, and does not catch it; a
+# procedure has no header to list it in, so the rule of every callable (book §14) refuses the call.
+fn: mk () int
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(5)
+    return: 1
+end: mk
+Counter:
+    size_t: n 0U
+    int: v 0
+    v: mk()
+return
+Counter
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

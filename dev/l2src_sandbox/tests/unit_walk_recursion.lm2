@@ -1,7 +1,8 @@
-# -193 T4a: walked recursion (WalkMethods).  A call that can re-enter its caller passes fresh data,
-# [fresh, code] (l2_reenters): each activation keeps its own `keep` while the ones it calls run --
-# the direct recursion of sum and the mutual one of even and odd.  Without fresh data the inner
-# activations overwrite the outer ones' keep: sum(4) would not be 10.
+# -193 T4a: walked recursion (WalkMethods).  Every call runs the callee over its own occurrence, [call, M, M, ...] --
+# a re-entry too (the author, 2026-09-28: no per-call instance): each activation keeps its own `keep` as its working
+# value (§7b) while the ones it calls run -- the direct recursion of sum and the mutual one of even and odd -- and a
+# re-entrant activation publishes nothing (Codex, 2026-09-28).  Were the inner activations' values the outer ones'
+# storage, sum(4) would not be 10.
 fn: sum (int: n) int
     int: keep
     int: rest

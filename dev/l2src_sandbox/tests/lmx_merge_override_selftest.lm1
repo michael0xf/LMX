@@ -72,7 +72,7 @@ fn: main () int
     # Null map: flat append -> len 3.
     status: lmx_merge_owned(operands, 2U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result_flat)
     ov_check(counts, status = LMX_MERGE_OK && result_flat != 0, "null-map merge OK")
-    ov_check(counts, result_flat\len = 3, "null map -> len 3 (append)")
+    ov_check(counts, (result_flat\array.size) = 3U, "null map -> len 3 (append)")
 
     # Map (0 <- 1.0): override model slot 0 with operand 1 field 0.
     one: (cast: (@: LmxMergePair) calloc(1U, c.sizeof(c.LmxMergePair)))
@@ -82,12 +82,12 @@ fn: main () int
     one\field: 0U
     status: lmx_merge_owned(operands, 2U, 0, 0, 0, @ arena, @ dst, @ one, 1U, @ result)
     ov_check(counts, status = LMX_MERGE_OK && result != 0, "mapped merge OK")
-    ov_check(counts, result\len = 2, "map (0 <- 1.0) -> len 2 (mutant: map ignored -> 3 RED)")
+    ov_check(counts, (result\array.size) = 2U, "map (0 <- 1.0) -> len 2 (mutant: map ignored -> 3 RED)")
     got: lmx_arena_ref_value(result, 0U)
     ov_check(counts, got != 0 && lmx_int_value_known(got) = 99, "result[0] = x' value 99")
     got: lmx_arena_ref_value(result, 1U)
     ov_check(counts, got != 0 && lmx_int_value_known(got) = 2, "result[1] = y value 2")
-    ov_check(counts, model\len = 2 && operand\len = 1, "operands untouched")
+    ov_check(counts, (model\array.size) = 2U && (operand\array.size) = 1U, "operands untouched")
 
     failures: counts[1]
     c.printf("lmx_merge_override_selftest: %d checks, %d failed\n", counts[0], failures)

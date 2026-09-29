@@ -1,0 +1,27 @@
+# Gate 3, a direct call (book §3; Codex, 2026-09-28): a nested method's `node` is its host's occurrence, and
+# `node\k` reads the declaration cell of the host's own field k -- never the host's working value: 40 (its
+# initializer) at the first call; the host then writes k 42, its working value, published before the next call
+# (book §12, the `9 0` order): 42.  The returned node reads its copied context: 42 again, while the host is gone.
+# 41 and 42 by the direct calls, 42 + 1 by the node.  Success is 7; otherwise 64 plus a bit per failed reading.
+fn: makeReader (int: n) fn: (int: x) int
+    int: k 40
+    fn: readk (int: x) int
+        return: node\k + x
+    int: d (readk: 1)
+    k: k + n
+    int: e (readk: 0)
+    int: s (d * 1000 + e)
+    fn: pair (int: x) int
+        return: s * 100 + node\k + x
+    return: pair
+
+p: makeReader 2
+int: a (p: 1)
+int: bad 0
+if: a != 4104243
+    bad: bad + 1
+int: ok 7
+if: bad != 0
+    ok: 64 + bad
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

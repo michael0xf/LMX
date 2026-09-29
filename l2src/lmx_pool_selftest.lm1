@@ -25,11 +25,11 @@ fn: main () int
     @: LmxPool ops
     @: LmxPool arrays
     @: LmxPool chars_of
-    @: LmxArrayDesc char_desc
+    @: VoidArray char_desc
     @: LmxOp record
     @: LmxOp second
     @: LmxOp third
-    @: LmxArrayDesc desc
+    @: VoidArray desc
     @: void slot
     @: LmxPool grow_pool
     int: failures
@@ -64,13 +64,13 @@ fn: main () int
     if: lmx_pool_open(@ arena, ops, c.sizeof(c.LmxOp), 2U, c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP) != 0
         fputs("lmx: op pool open failed\n", l1_stdout())
         return: 1
-    if: lmx_pool_open(@ arena, arrays, c.sizeof(c.LmxArrayDesc), 2U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
+    if: lmx_pool_open(@ arena, arrays, c.sizeof(c.VoidArray), 2U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
         fputs("lmx: array pool open failed\n", l1_stdout())
         return: 1
 
     # 2 says N TYPED service arrays, and 6.5 spells out one per Array element
     # type. A second descriptor pool, same shape, different element type.
-    if: lmx_pool_open(@ arena, chars_of, c.sizeof(c.LmxArrayDesc), 2U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR) != 0
+    if: lmx_pool_open(@ arena, chars_of, c.sizeof(c.VoidArray), 2U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR) != 0
         fputs("lmx: second array pool open failed\n", l1_stdout())
         return: 1
 
@@ -163,9 +163,9 @@ fn: main () int
         fputs("lmx: pool count wrong after growth\n", l1_stdout())
         failures: failures + 1
 
-    # 6.5 settles the descriptor's own len as element count, unlike the len in
+    # 6.5 settles the descriptor's own size as element count, unlike the array.size in
     # the Lmx header, which this code still refuses to read.
-    if: desc\len != 3U
+    if: desc\size != 3U
         fputs("lmx: descriptor length not preserved\n", l1_stdout())
         failures: failures + 1
     if: desc\data != (cast: (@: void) backing)

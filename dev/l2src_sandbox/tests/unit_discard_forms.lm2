@@ -1,11 +1,13 @@
 # Every expression statement of the norm (CODEX-FABLE-HEADLESS-DOC-20260923-01), each through the
 # one consumer: bare `2`, `2 + 2`, `hits + 1` (a field read, dropped), a bare callable `f`
 # (called), `(f)` (called), `(2 + 2)`, an empty `()`, and the anonymous vertical forms of the
-# last three.  f counts its calls: f, (f) and the vertical (f) -- 3.
+# last three.  f prints at each call: f, (f) and the vertical (f) -- `f 1` three times.  The unit's
+# hits stays 0: in f it is a hidden input, and the bare write changes only f's value (Q52).  Entry 0.
 int: hits 0
 
 fn: f () int
     hits: hits + 1
+    c.printf: "f %d\n" hits
     return: 7
 end: f
 

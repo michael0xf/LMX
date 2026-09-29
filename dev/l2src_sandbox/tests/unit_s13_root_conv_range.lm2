@@ -1,0 +1,10 @@
+# implements-port slice 13: -1 does not fit size_t, so the root's edge (row int -> size_t, receiver
+# lm_stg_convert_int_size_t) refuses; the receiver's `range` is the root's own `convert` (the call's
+# catch rows renumber every status the receiver leaves with, l2_rw_catch_edge), uncaught: R0
+# stops with status 3 and sends no exit.  Mutant: the rows not written -- the walk notes the
+# receiver's own 1.
+size_t: s 0U
+int: x -1
+s: x
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

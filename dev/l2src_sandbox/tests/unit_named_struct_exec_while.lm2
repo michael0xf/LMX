@@ -1,0 +1,18 @@
+# steps/named-struct-exec.md §12 (Q45): a `while:` in a named Structure's body is a statement of the body,
+# run as in a method's body (before: "a Structure reference field needs a name").  Counter's loop turns
+# seven times; executed once from the root, n is 7.  Entry 7.
+Counter:
+    size_t: n 0U
+    size_t: k 0U
+    while: k < 7U
+        n: n + 1U
+        k: k + 1U
+return
+Counter
+size_t: after 9U
+after: Counter\n
+int: ok 0
+if: after = 7U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

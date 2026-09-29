@@ -120,7 +120,7 @@ fn: numeric_holds (@: void cell; int: ty; int: want) int
 return: 0
 
 fn: inspect (@: LmxArena arena; @: Lmx graph) int
-    @: LmxArrayDesc children 0
+    @: VoidArray children 0
     @: Lmx value 0
     @: Lmx other 0
     @: Lmx member 0
@@ -140,10 +140,10 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
     # R0's graph is independent: the host above it is Message supervision, not a lexical space.
     check(graph != 0 && graph\parent = 0, "program unit is a lexical root: its parent Message is supervision, not a lexical node")
     check(lmx_domain_kind(arena, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT && lmx_domain_type(arena, (cast: (@: void) graph)) = c.LMX_TYPE_STRUCT, "program unit is a live Structure of R0's arena")
-    while: graph != 0 && i < graph\len
+    while: graph != 0 && i < graph\array.size
         field: lmx_arena_ref_value(graph, (cast: (size_t) i))
         if: field != 0 && lmx_domain_kind(arena, field) = c.LMX_KIND_LIST && lmx_domain_type(arena, field) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
-            children: (cast: (@: LmxArrayDesc) field)
+            children: (cast: (@: VoidArray) field)
             children_seen: children_seen + 1
         ---
         i: i + 1
@@ -312,7 +312,7 @@ fn: l2_driver_before_turn (@: LmxRoot root; @: LmxMsg r0) int
     ---
     # The sender is a pointer cell holding the peer's own address (author's Q26.2 ruling -- the
     # same shape lmx_root_launch_tapped now builds mainArgs's own sender with).
-    sender_cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, letter_arena)
+    sender_cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, letter_arena)
     if: sender_cell = 0 || lmx_pointer_store_known(sender_cell, (cast: (@: void) l2_ref_peer)) != 0
         return: 1
     ---

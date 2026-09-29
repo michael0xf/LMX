@@ -1,0 +1,28 @@
+# implements-port slice 4, merge-call path (Opus's check on unit_merged_callable's own shape): M's
+# return-conversion edge (steps/implements-port-plan.md A3) lives inside M's own body, so it fires
+# the same way regardless of how M is called -- including through a merge result, R\M(), not just
+# a plain name(). `A: fn: M` makes M a shared occurrence (Q22); M returns a size_t that does not
+# fit its declared int result (3000000000U), so the edge's implicit throw `convert` (status 3) must
+# propagate through the merge-call machinery to R\M()'s own caller the same way it does for a
+# direct call (unit_s4_ret_conv_catch.lm2). r stays 3, the handler gives 7.
+# Mutant: the edge not emitted -- M narrows the value in C, the handler never runs, r stays whatever
+# the narrowed call returned.
+A:
+    fn: M
+end: A
+
+fn: M () int
+    size_t: big 3000000000U
+    return: big
+end: M
+
+fn: probe () int
+    int: r 3
+    R: merge: A
+    r: R\M()
+    catch: convert ()
+        r: 7
+return: r
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

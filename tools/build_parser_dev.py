@@ -50,7 +50,7 @@ def main():
     run(command, 'gcc')
     manifest['compiler_command'] = command
     manifest['parser_sha256'] = hashlib.sha256(exe.read_bytes()).hexdigest()
-    (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+    (output / 'build.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
     print(exe)
 
 

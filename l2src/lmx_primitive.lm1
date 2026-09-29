@@ -23,7 +23,7 @@ return: c.LMX_PRIMITIVE_REG_OK
 fn: lmx_primitive_register (@: LmxArena store; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx signature; @: Lmx owner; @@: Lmx out_record) int
     @: LmxPrimitive record 0
     \out_record: 0
-    if: store = 0 || registry = 0 || fn = 0 || slot >= (cast: (size_t) registry\len)
+    if: store = 0 || registry = 0 || fn = 0 || slot >= registry\array.size
         return: c.LMX_PRIMITIVE_REG_REFUSED
     record: (cast: (@: LmxPrimitive) lmx_arena_take(store, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
     if: record = 0
@@ -37,6 +37,6 @@ fn: lmx_primitive_register (@: LmxArena store; @: Lmx registry; size_t: slot; Lm
 return: c.LMX_PRIMITIVE_REG_OK
 
 fn: lmx_primitive_record (@: Lmx registry; size_t: slot) @: Lmx
-    if: registry = 0 || slot >= (cast: (size_t) registry\len)
+    if: registry = 0 || slot >= registry\array.size
         return: 0
 return: (cast: (@: Lmx) lmx_arena_ref_value(registry, slot))

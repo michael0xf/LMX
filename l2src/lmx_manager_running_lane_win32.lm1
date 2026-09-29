@@ -1,4 +1,4 @@
-include: "<windows.h>"
+predef: "l2src/lmx_win32_api.h.lm1"
 predef: "l2src/lmx_manager_running.h.lm1"
 
 # The look and the pause live here, not in the manager body. That body inlines
@@ -13,18 +13,18 @@ fn: lmx_manager_running_lane_ended (@: LmxSchedule slot) int
 return: 0
 
 fn: lmx_manager_running_pause_ms (unsigned: ms) int
-    c.Sleep((cast: (DWORD) ms))
+    c.Sleep((cast: (ulong) ms))
 return: 0
 
-fn: lmx_mgr_work_entry (@: void arg) DWORD
+fn: lmx_mgr_work_entry (@: void arg) ulong
     LmxManagerWork: work
     work: (cast: (LmxManagerWork) arg)
     if: work = 0
         return: 0U
-    return: (cast: (DWORD) work(0))
+    return: (cast: (ulong) work(0))
 
 fn: lmx_manager_running_thread_start (LmxManagerWork: work) @: void
-return: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LPTHREAD_START_ROUTINE) lmx_mgr_work_entry), (cast: (@: void) work), 0U, 0))
+return: (cast: (@: void) c.CreateThread(0, 0U, (cast: (LmxWin32ThreadStart) lmx_mgr_work_entry), (cast: (@: void) work), 0U, 0))
 
 fn: lmx_manager_running_thread_running (@: void handle) int
     if: handle = 0

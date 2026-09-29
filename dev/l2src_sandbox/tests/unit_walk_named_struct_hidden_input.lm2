@@ -1,0 +1,34 @@
+# The walked twin of unit_named_struct_hidden_input.lm2 (--walk-methods: run, gt and Counter walked; EXEC passes
+# Counter's hidden input as a call passes one).  OPUS-CODEX-20260928-08, the author's decision (2026-09-28): a named
+# Structure is a procedure without arguments -- that is, a procedure with hidden arguments.  total is a free name of
+# Counter: executed from run, whose local total is 100, Counter takes 100 (the caller's binding first, book §12);
+# executed from the root, the root's 0.  Its bare `total: total + 1` changes only its activation's value (Q52): run
+# reads its own 100 back, and the root's total, at its place of declaration (gt's node\total), stays 0.  Entry 7.
+int: total 0
+Counter:
+    int: seen 0
+    seen: total
+    total: total + 1
+return
+fn: run () int
+    int: total 100
+    Counter
+    return: total
+end: run
+fn: gt () int
+    return: node\total
+end: gt
+int: a 0
+a: run()
+int: b 0
+b: Counter\seen
+Counter
+int: c 0
+c: Counter\seen
+int: d 0
+d: gt()
+int: ok 0
+if: a = 100 && b = 100 && c = 0 && d = 0
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

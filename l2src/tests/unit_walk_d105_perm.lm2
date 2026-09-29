@@ -1,0 +1,39 @@
+# D-105 slice 1 (the author's Q39, 2026-09-27; steps/d105-index-table.md §5), under --walk-methods:
+# `Other` writes Model's two size_t fields in the other order.  The walked root passes its field
+# `o: Other` to `rd (Model: m)` and `wr (Model: m; size_t: v)`: admitted by NAME -- the correspondence
+# table goes with the value into the arena's `implements` table (lmx_walk_admit_as), and `m\a` is read
+# and written at Other's slot for `a`.  `mm: Model` goes to the same formal as Model's own
+# (admitted with no table).  Without the table `m\a` read Model's slot 0 -- Other's `b`, 20 (D-105).
+# Success is 7.
+Model:
+    size_t: a 1U
+    size_t: b 2U
+end: Model
+Other:
+    size_t: b 20U
+    size_t: a 10U
+end: Other
+fn: rd (Model: m) size_t
+return: m\a
+fn: wr (Model: m; size_t: v) size_t
+    m\a: v
+    return: m\b
+Other: o
+Model: mm
+size_t: got 0U
+int: ok 7
+got: rd(o)
+if: got != 10U
+    ok: 1
+got: rd(mm)
+if: got != 1U
+    ok: 2
+got: wr(o 11U)
+if: got != 20U
+    ok: 3
+if: o\a != 11U
+    ok: 4
+if: o\b != 20U
+    ok: 5
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

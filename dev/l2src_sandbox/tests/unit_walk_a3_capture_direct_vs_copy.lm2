@@ -1,0 +1,61 @@
+# Walked twin of unit_a3_capture_direct_vs_copy.lm2 (--walk-methods: the host and read are walked).
+# A3 (Codex, 2026-09-28): a capture is a hidden input of the nested method.  The host's direct call passes the
+# host's current values -- the formal n as it is now, the Structure m by reference, so read's write `m\other` is the
+# host's m, the root's `left` (an explicit path through a reference, book :834) -- and the node the host's return
+# builds carries its own copies: n as it was at the return, and a copy of the fields read reads (item 738), which
+# later writes of `left` do not reach and read's writes do not leave.
+# seen_a: 40 + 1 = 41; seen_b after the host's explicit-path write and its bare write of n: 140 + 1001 = 1141;
+# left\other 5 -> 7 by the two direct calls; then left is written 7000/7000 and the node still reads 140 + 1001 =
+# 1141 twice, its own other going 8, 9 while left\other stays 7000.
+# Success is 7; otherwise 64 plus a bit per failed reading: 1 and 2 the direct calls' values, 4 their writes through
+# m, 8 and 16 the node's calls, 32 the node's writes seen in left.
+Model:
+    int: value 0
+    int: other 5
+    int: seen_a 0
+    int: seen_b 0
+end: Model
+
+fn: makeReader (Model: m; int: n) fn: (int: x) int
+    fn: read (int: x) int
+        m\other: m\other + 1
+        return: m\value + n + x
+    m\seen_a: (read: 0)
+    m\value: m\value + 100
+    n: n + 1000
+    m\seen_b: (read: 0)
+    return: read
+
+Model: left
+left\value: 40
+r: makeReader left 1
+int: sa 0
+int: sb 0
+int: o1 0
+sa: left\seen_a
+sb: left\seen_b
+o1: left\other
+left\value: 7000
+left\other: 7000
+int: c (r: 0)
+int: d (r: 0)
+int: o2 0
+o2: left\other
+int: bad 0
+if: sa != 41
+    bad: bad + 1
+if: sb != 1141
+    bad: bad + 2
+if: o1 != 7
+    bad: bad + 4
+if: c != 1141
+    bad: bad + 8
+if: d != 1141
+    bad: bad + 16
+if: o2 != 7000
+    bad: bad + 32
+int: ok 7
+if: bad != 0
+    ok: 64 + bad
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

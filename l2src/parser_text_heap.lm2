@@ -1,8 +1,9 @@
+predef: "l1src/own.h.lm1"
 fn: lm_p0_copy_bytes (const: @(char source); size_t: length) @: char
     return: lm_own_copy_bytes(source, length)
 end: lm_p0_copy_bytes
-fn: lm_p0_text_view_new_cstr (const: @(char text)) @: LmP0Text
-    @: LmP0Text result
+fn: lm_p0_text_view_new_cstr (const: @(char text)) @: c.LmP0Text
+    @: c.LmP0Text result
     result: lm_own_new_zero(1U * c.sizeof(c.LmP0Text))
     if: result = 0
         return: 0
@@ -13,10 +14,10 @@ fn: lm_p0_text_view_new_cstr (const: @(char text)) @: LmP0Text
     result\length: c.strlen(result\data)
     return: result
 end: lm_p0_text_view_new_cstr
-sub: lm_p0_text_view_delete (@: LmP0Text text)
+sub: lm_p0_text_view_delete (@: c.LmP0Text text)
     lm_own_delete(text, 0)
 end: lm_p0_text_view_delete
-fn: lm_p0_text_from_cstr (const: @(char text)) @: LmP0Text
+fn: lm_p0_text_from_cstr (const: @(char text)) @: c.LmP0Text
     return: lm_p0_text_view_new_cstr(text)
 end: lm_p0_text_from_cstr
 fn: main () int

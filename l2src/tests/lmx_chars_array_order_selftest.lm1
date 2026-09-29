@@ -25,7 +25,7 @@ fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
     @: LmxArena a 0
-    @: LmxArrayDesc command 0
+    @: VoidArray command 0
     @: void bang 0
     @: char data 0
     if: counts = 0
@@ -42,7 +42,7 @@ fn: main () int
     # requested directly by this program at all -- exactly what `[]: char command 32`
     # alone (no char literal) builds.
     command: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, 32U, a)
-    fail(counts, command != 0 && command\len = 32U && command\data != 0, "the char array itself was built")
+    fail(counts, command != 0 && command\size = 32U && command\data != 0, "the char array itself was built")
 
     # The table exists (found among the arena's arrays) even though nothing asked for
     # it by name -- the array's own constructor laid it out.

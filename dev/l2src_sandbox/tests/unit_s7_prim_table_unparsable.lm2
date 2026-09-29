@@ -1,0 +1,16 @@
+# slice 2: unit_s7_prim_same over its own primitive.lm2 that P0 refuses -- a hanging `bad:`
+# (tests/unit_s7_prim_table_unparsable_prim.lm2): the P0 diagnostic, located in primitive.lm2.
+
+fn: go () int
+    int: a 1
+    int: b 7
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 7
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

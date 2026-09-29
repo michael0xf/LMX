@@ -1,0 +1,17 @@
+# steps/named-struct-exec.md, slice 1 (plan §3 :245 (a)): a named Structure closed by a column-0 bare
+# `return` -- Q19.1: a return trailer closes any callable Structure, the named one included -- its
+# body holding a statement besides its field.  Construction computes the initializer (book :928)
+# and runs no statement of the body: Counter\n reads 4, not 5.  Before, the frame was read as a
+# statement of the entry and refused ("assignment target must be a declared typed mutable value").
+# Entry 7.
+Counter:
+    size_t: n 4U
+    n: n + 1U
+return
+size_t: got 0U
+got: Counter\n
+int: ok 0
+if: got = 4U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

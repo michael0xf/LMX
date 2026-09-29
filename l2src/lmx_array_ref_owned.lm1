@@ -8,10 +8,10 @@ include: "<stdlib.h>"
 # The arena allocates both and owns both, each has its own descriptor in the index, and a
 # refusal anywhere reverts the arena to the mark taken before the first one.
 
-fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArrayDesc
+fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
     size_t: stride
     int: element_type
-    @: LmxArrayDesc desc
+    @: VoidArray desc
     @: void backing
     if: arena = 0
         return: 0
@@ -30,11 +30,11 @@ fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: Lmx
     # The descriptor is one cell of the array of Array descriptors of this type; the
     # backing is `count` consecutive pointer cells of the array of that element type.
     # Both are the arena's arrays: found if the arena has them, made here if it does not.
-    desc: (cast: (@: LmxArrayDesc) lmx_arena_take(arena, c.sizeof(c.LmxArrayDesc), c.LMX_KIND_ARRAY, type))
+    desc: (cast: (@: VoidArray) lmx_arena_take(arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, type))
     if: desc = 0
         return: 0
     ---
-    desc\len: count
+    desc\size: count
     desc\data: 0
     if: count != 0U
         backing: lmx_arena_take_n(arena, stride, c.LMX_KIND_REF, element_type, count)
@@ -45,7 +45,7 @@ fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: Lmx
     ---
 return: desc
 
-fn: lmx_array_ref_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: LmxArrayDesc
+fn: lmx_array_ref_new_positive_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
     if: count = 0U
         return: 0
     return: lmx_array_ref_new_owned(type, count, arena)

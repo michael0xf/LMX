@@ -1,0 +1,14 @@
+# implements-port slice 1 under --walk-methods: the natively supported call of a callable formal
+# with arguments (unit_cf_call_args.lm2) is outside the walkable subset (l2_rw_may) and is refused,
+# located -- the walker does not silently leave it native (checkpoint 2-6, row 234: "same in
+# native and walker" is an explicit refusal here, REVIEW 9327b65).
+fn: intToInt (int: x) int
+end: intToInt
+fn: inc (int: x) int
+    return: x + 1
+end: inc
+fn: apply (intToInt: op; int: value) int
+    return: op(value)
+end: apply
+sendMessage: exit(exit_code: apply(inc, 6); stdout: ""; stderr: "")
+return

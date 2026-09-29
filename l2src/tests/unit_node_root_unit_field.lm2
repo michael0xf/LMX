@@ -2,8 +2,10 @@
 # callable occurrence's lexical parent (M.parent) -- for any method other
 # than E, that parent is the unit itself, so node\x reads/writes E's own
 # field x. shared is a genuine unit-level (E-owned) field, read and
-# written from a SEPARATE method (not E), then read back through E's own
-# body to confirm both methods see the SAME cell.
+# written from a SEPARATE method (not E), then read back by another
+# method, peek, through node\shared, to confirm both see the SAME cell.
+# E's own bare shared keeps its working value, 3, after the call: the
+# caller is not reloaded (book §12; L2 §18.2).
 size_t: shared 3U
 
 fn: bump () int
@@ -14,12 +16,20 @@ fn: bump () int
     node\shared: 9U
     return: 0
 
+fn: peek () size_t
+    return: node\shared
+
 int: r
 r: bump()
 if: r != 0
     sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
     return
-if: shared != 9U
+if: shared != 3U
+    sendMessage: exit(exit_code: 97; stdout: ""; stderr: "")
+    return
+size_t: seen 0U
+seen: peek()
+if: seen != 9U
     sendMessage: exit(exit_code: 96; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

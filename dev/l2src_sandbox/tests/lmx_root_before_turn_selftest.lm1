@@ -210,8 +210,8 @@ return: 0
 # k.4: 2 fields, not 3 -- no reserved descriptor slot (native is a sibling Lmx member);
 # children/settings shift from 1/2 down to 0/1.
 fn: bt_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
-    @: LmxArrayDesc children
-    if: arena = 0 || graph = 0 || graph\len < 2
+    @: VoidArray children
+    if: arena = 0 || graph = 0 || graph\array.size < 2U
         return: 1
     ---
     children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
@@ -268,7 +268,7 @@ fn: main () int
     code: lmx_root_launch_tapped(@ root, 1, argv, bt_program, 2U, 0, 120000U, bt_before_turn, out, err)
     c.fflush(err)
     c.rewind(err)
-    c.array: [4096]: char err_buf
+    []: char err_buf 4096
     err_buf[0]: 0
     c.fread((cast: (@: void) err_buf), 1U, 4095U, err)
     c.printf("launch_err=<%s>\n", err_buf)

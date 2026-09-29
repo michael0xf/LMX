@@ -12,9 +12,9 @@ predef: "l2src/parser_alloc_port_l2.h.lm1"
 # (the Stage A shape for an L1-implemented LMX name, same as lm_own_
 # arena_new_zero). document\tree_arena field access was refused
 # entirely until d6's Stage B step 3 (f7390ded/fb7ab80c, c.LmP0Document
-# a foreign pointer type like LmP0Frame).
+# a foreign pointer type like c.LmP0Frame).
 #
-fn: p0_node_kind_class_name (LmP0NodeKind: kind) const: @: char
+fn: p0_node_kind_class_name (c.LmP0NodeKind: kind) const: @: char
     if: kind = c.LM_P0_NODE_STRUCTURE
         return: "structure"
     if: kind = c.LM_P0_NODE_FRAME
@@ -31,22 +31,22 @@ end: p0_node_kind_class_name
 # node), so any `@: T node` formal hits "incompatible entry signature"
 # regardless of T -- the type was never the problem (d6, 2026-09-14;
 # same porting rule as the oracle-local rename in history_owned).
-sub: p0_free_node (@: LmP0Node nd)
+sub: p0_free_node (@: c.LmP0Node nd)
     c.LM_UNUSED(nd)
 end: p0_free_node
 
-fn: p0_new_structure (@: c.LmP0Document document; size_t: line; size_t: column) @: LmP0Structure
-    @: LmP0Structure structure
-    structure: (cast: (@: LmP0Structure) lm_own_arena_new_zero(document\tree_arena, c.sizeof(structure[0])))
+fn: p0_new_structure (@: c.LmP0Document document; size_t: line; size_t: column) @: c.LmP0Structure
+    @: c.LmP0Structure structure
+    structure: (cast: (@: c.LmP0Structure) lm_own_arena_new_zero(document\tree_arena, c.sizeof(structure[0])))
     if: (structure = 0)
         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while allocating parser structure")
         return: 0
     return: structure
 end: p0_new_structure
 
-fn: p0_new_frame (@: c.LmP0Document document; size_t: line; size_t: column) @: LmP0Frame
-    @: LmP0Frame frame
-    frame: (cast: (@: LmP0Frame) lm_own_arena_new_zero(document\tree_arena, c.sizeof(frame[0])))
+fn: p0_new_frame (@: c.LmP0Document document; size_t: line; size_t: column) @: c.LmP0Frame
+    @: c.LmP0Frame frame
+    frame: (cast: (@: c.LmP0Frame) lm_own_arena_new_zero(document\tree_arena, c.sizeof(frame[0])))
     if: (frame = 0)
         lm_p0_set_diagnostic(document, 1, line, column, "out of memory while allocating parser frame")
         return: 0
@@ -59,17 +59,17 @@ fn: p0_new_frame (@: c.LmP0Document document; size_t: line; size_t: column) @: L
     return: frame
 end: p0_new_frame
 
-fn: p0_new_node (@: c.LmP0Document document; LmP0NodeKind: kind) @: LmP0Node
-    @: LmP0Node nd
-    nd: (cast: (@: LmP0Node) lm_own_arena_new_zero(document\tree_arena, c.sizeof(nd[0])))
+fn: p0_new_node (@: c.LmP0Document document; c.LmP0NodeKind: kind) @: c.LmP0Node
+    @: c.LmP0Node nd
+    nd: (cast: (@: c.LmP0Node) lm_own_arena_new_zero(document\tree_arena, c.sizeof(nd[0])))
     if: (nd = 0)
         lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while allocating parser node")
         return: 0
-    nd\span: (cast: (@: LmP0Span) lm_own_arena_new_zero(document\tree_arena, c.sizeof(nd\span[0])))
+    nd\span: (cast: (@: c.LmP0Span) lm_own_arena_new_zero(document\tree_arena, c.sizeof(nd\span[0])))
     if: (nd\span = 0)
         lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while allocating parser node span")
         return: 0
-    nd\as: (cast: (@: LmP0NodeAs) lm_own_arena_new_zero(document\tree_arena, c.sizeof(nd\as[0])))
+    nd\as: (cast: (@: c.LmP0NodeAs) lm_own_arena_new_zero(document\tree_arena, c.sizeof(nd\as[0])))
     if: (nd\as = 0)
         lm_p0_set_diagnostic(document, 1, 0U, 0U, "out of memory while allocating parser node payload")
         return: 0

@@ -1,0 +1,16 @@
+# slice 2: unit_s7_prim_same over its own primitive.lm2 whose table is named `primitive.other`
+# (tests/unit_s7_prim_table_nodesc_prim.lm2): "primitive.lm2 has no source table `primitive.description`".
+
+fn: go () int
+    int: a 1
+    int: b 7
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 7
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

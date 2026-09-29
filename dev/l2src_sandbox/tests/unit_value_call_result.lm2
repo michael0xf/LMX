@@ -1,12 +1,14 @@
 # A method named where a value is consumed gives its result (plan §3 native gate (в)): it runs
 # with no arguments, on the call path of `m()`.  (m's occurrence reference used to arrive as the
 # int.)  A declaration, an assignment, an operand, a condition and an argument each run m once:
-# a 7, b 80, c 7, hits 4.  Behind `&&` it runs only when the left side holds: the false test
-# `a = 0` leaves hits at 4.  7000 + 800 + 7 + 4 = 7811.
+# a 7, b 80, c 7, and m prints `m 1` four times.  Behind `&&` it runs only when the left side holds:
+# the false test `a = 0` runs no fifth m -- a fifth line would redden Says.  The unit's hits stays 0:
+# in m it is a hidden input, and the bare write changes only m's value (Q52).  7000 + 800 + 7 = 7807.
 int: hits 0
 
 fn: m () int
     hits: hits + 1
+    c.printf: "m %d\n" hits
     return: 7
 end: m
 

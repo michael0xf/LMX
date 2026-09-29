@@ -1,0 +1,16 @@
+# D-93, native twin of unit_make_adder_nested_plain_call.lm2 (whose row runs under --walk-methods,
+# where the host is walked and twice with it -- the native stub never runs there, so that row alone
+# cannot see a stubbed twice).  Natively the host calls twice's own native body: k = 6, add5(1) = 7.
+# Mutant: every nested method the stub -- k is 0, exit 1, RED by run.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: twice (int: y) int
+        return: y * 2
+    int: k (twice: n)
+    fn: addN (int: x) int
+        return: k + x
+    return: addN
+
+add5: makeAdder 3
+int: a (add5: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

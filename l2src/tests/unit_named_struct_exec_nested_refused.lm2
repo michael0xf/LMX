@@ -1,0 +1,17 @@
+# steps/named-struct-exec.md, slice 3: a unit-level method executes a named Structure; a callable
+# merge's nested method does not yet -- it runs only walked, as its host's constructor, and its native
+# function is a stub (l2_mad_host_of).  addN's bare `Counter` keeps the refusal.
+Counter:
+    size_t: n 0U
+    n: n + 1U
+return
+fn: makeAdder (int: k) fn: (int: x) int
+    fn: addN (int: x) int
+        Counter
+        return: k + x
+    return: addN
+
+add: makeAdder 5
+int: a (add: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

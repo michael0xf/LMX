@@ -1,0 +1,18 @@
+# 7b-3 (ticket OPUS-7B3-20260929-02; Q52: nothing but declared fields): a path to a field the for body does not declare.
+# The root `for` is the body (after `end: for`), and q is no field of it -- refused where the path stands; nothing makes
+# a field.
+fn: test () int
+    int: acc
+    acc: 0
+    for: int(i, 0) (i < 10) i++
+        int: j i
+        acc: j
+    end: for
+    int: k 0
+    k: for\q
+    return: k
+end: test
+int: r 0
+r: test()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

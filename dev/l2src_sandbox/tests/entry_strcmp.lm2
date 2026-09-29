@@ -1,9 +1,31 @@
 # An argument compared through the c.* door. The letter holds "ok" at exact
-# len 2, no NUL. c.strcmp still wants a C string; this row stays root-pending
-# because that call is outside a method (Q7). The door copy is not this slice.
+# len 2, no NUL. c.strcmp still wants a C string; argIsOk makes that copy
+# explicitly (c.calloc(1, n+1) is zero-init so the trailing byte is a real
+# NUL, then c.memcpy the n graph bytes in -- not a silent read past the
+# array's own bytes) and lives in a method, per the author's answer to Q31
+# (`LMX_blog/q/q31.md`): a method is a sufficient receiver, the door was
+# never the problem, only the interpreted root was (D-81). The three earlier
+# checks (letter shape, arg count, raw bytes) stay at the root -- they
+# already translate without L2.
+include: "<string.h>"
+
 MainLetter:
     char: []: []: mainArgs
 end: MainLetter
+
+fn: argIsOk (MainLetter: letter; size_t: n) int
+    @: void buf
+    buf: c.calloc(1U, n + 1U)
+    int: r
+    if: buf = 0
+        return: 1
+    c.memcpy(buf, @ letter\mainArgs[1][0], n)
+    r: c.strcmp(buf, "ok")
+    c.free(buf)
+    if: r != 0
+        return: 4
+    return: 7
+end: argIsOk
 
 MainLetter: m
 receiveMessage: m
@@ -16,8 +38,5 @@ if: length(m\mainArgs[1]) != 2
 if: m\mainArgs[1][0] != 111 || m\mainArgs[1][1] != 107
     sendMessage: exit(exit_code: 3; stdout: ""; stderr: "")
     return
-if: c.strcmp(@ m\mainArgs[1][0], "ok") != 0
-    sendMessage: exit(exit_code: 4; stdout: ""; stderr: "")
-    return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: argIsOk(m, length(m\mainArgs[1])); stdout: ""; stderr: "")
 return

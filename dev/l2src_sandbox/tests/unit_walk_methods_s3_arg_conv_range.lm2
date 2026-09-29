@@ -1,0 +1,14 @@
+# implements-port slice 3 under --walk-methods: unit_s3_arg_conv_range.lm2's exact shape, re-staged
+# under its own Name so this row runs WITH the knob.  An argument's edge makes `go` throwing (its
+# implicit `convert`), and a throwing method is outside the walkable subset (l2_rw_may) -- it stays
+# native under the knob, exactly as a store's edge does (unit_s7_conv_range), and the root
+# receives the same status 3.  `take` is walked.
+fn: take (size_t: n) int
+    return: 7
+end: take
+fn: go () int
+    int: x -1
+    return: take(x)
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

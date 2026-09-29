@@ -1,0 +1,11 @@
+# steps/table-receiver.md §10: the part unit_s7_part_forward_part.lm2 (harness Parts) declares later ahead of
+# its definition.  A part is read as the source is, each item against its own root, so the declaration binds
+# to the definition in the part (read against the source's root it binds nothing, and the definition is a
+# second one: "duplicate definition").  early(40) is 43.  Entry 7.
+int: r 0
+r: early(40)
+if: r != 43
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

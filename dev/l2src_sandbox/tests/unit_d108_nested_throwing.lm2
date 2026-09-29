@@ -1,0 +1,26 @@
+# D-108: a call inside the actual of a Structure-typed formal is checked as any actual is.  `mk` stores an
+# int into a size_t field -- a conversion, whose failure is the implicit throw `convert` -- so it is a
+# throwing method; `go` calls it only inside `rd(mk(5))`.  The check took the admission path for that
+# actual and never looked into it: no edge go -> mk, the throw closure left `go` non-throwing, and the
+# L1 called mk with a status `go` did not have (gcc: 'l2_msg' / 'l2_out_throw' undeclared).  An implicit
+# throw needs no catch (Q11): `go` becomes throwing, the root is its caller.  5 through the field; success
+# is 7.
+Model:
+    size_t: a 1U
+end: Model
+fn: mk (int: v) Model
+    Model: x
+    x\a: v
+    return: x
+fn: rd (Model: m) size_t
+return: m\a
+fn: go () size_t
+return: rd(mk(5))
+
+size_t: got 0U
+got: go()
+int: ok 1
+if: got = 5U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

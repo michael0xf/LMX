@@ -1,0 +1,31 @@
+# D-112 (steps/defects.md): a field path deeper than one field as the whole value of a `return:` --
+# `return: m\in\x` -- is one value, read by the general path walk; the single-hop read took `m\in` (a
+# Structure field) and failed without a word ("translation failed with no located diagnostic").  Through
+# `o: Outer` and through `p: Other` (Outer's fields in the other order, admitted by name, D-105): 5 and 5.
+# Success is 7.
+Inner:
+    size_t: x 5U
+end: Inner
+Outer:
+    Inner: in
+    size_t: a 1U
+end: Outer
+Other:
+    size_t: a 10U
+    Inner: in
+end: Other
+fn: rd (Outer: m) size_t
+    return: m\in\x
+fn: go () size_t
+    Outer: o
+    Other: p
+    size_t: u rd(o)
+    size_t: v rd(p)
+    return: u + v
+size_t: got 0U
+got: go()
+int: ok 3
+if: got = 10U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

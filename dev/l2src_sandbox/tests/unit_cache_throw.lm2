@@ -1,0 +1,31 @@
+# §7b witness (book §14: an exit publishes the dirty own fields, a throw included): boom's x is declared 1 and
+# published by the call to nop; `x: 5` is dirty when boom throws Oops(3), and the throw publishes it, so run's
+# explicit `boom\x` reads 5.  The program exits 3 * 10 + 5 = 35; without the throw's publication 31.
+fn: nop () int
+    return: 0
+end: nop
+
+fn: boom () int
+    throws: Oops
+    int: x 1
+    nop()
+    x: 5
+    if: 1 = 1
+        throw: Oops(3)
+    return: 0
+end: boom
+
+fn: run () int
+    int: got 0
+    ---
+        got: boom() + 0
+        catch: Oops (int: v)
+            got: v
+    ---
+    int: seen 0
+    seen: boom\x
+    return: got * 10 + seen
+end: run
+
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

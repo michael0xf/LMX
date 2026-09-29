@@ -1,0 +1,14 @@
+# implements-port slice 4, trailer form (fable_pc's own check on REVIEW 12195ef): unit_s4_ret_conv_
+# range.lm2's return is a body field (before `end: go`); this one is the method's own trailer (no
+# `end:`, matching unit_s4_ret_conv.lm2's `trailer()`), the shape l2_check_ret_tr checks, not the
+# ordinary body-return path. Same refusal: 3000000000U does not fit int, the row size_t -> int's
+# receiver throws range, the callable's implicit throw `convert` (status 3) reaches root uncaught.
+# Mutant (fable_pc's target): l2_check_ret_convert's own call removed specifically inside
+# l2_check_ret_tr -- today distinguishable only in generated L1 (the edge missing); this witness
+# makes it RED by run too (go completes instead of throwing).
+fn: go () int
+    size_t: b 3000000000U
+return: b
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

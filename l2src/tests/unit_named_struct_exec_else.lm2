@@ -1,0 +1,30 @@
+# REVIEW 99511ff (fable_pc's mutant M51 and probe P59): a named Structure of fields only, executed in an
+# `else:` of the root and of a method -- the scan that finds executions goes into `else:` bodies too, so its
+# procedure exists; each execution runs its declaration again: n back to 3 after the root wrote 8, and again
+# after the root wrote 8 and run executed it.  Entry 7.
+Counter:
+    size_t: n 3U
+return
+size_t: a 9U
+Counter\n: 8U
+if: a = 0U
+    a: 1U
+else:
+    Counter
+a: Counter\n
+fn: run () size_t
+    size_t: v 9U
+    if: 1 = 0
+        v: 0U
+    else:
+        Counter
+    v: Counter\n
+    return: v
+Counter\n: 8U
+size_t: b 9U
+b: run()
+int: ok 0
+if: a = 3U && b = 3U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

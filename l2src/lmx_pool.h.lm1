@@ -59,9 +59,9 @@ prototype:
     fn: lmx_pool_take_n (@: LmxArena arena; @: LmxPool pool; size_t: count) @: void
     fn: lmx_pool_count (@: LmxPool pool) size_t
     # An Array descriptor: logical length and a pointer to element storage --
-    # no node, no name, no tag. Its `len` is an element count, unlike the `len` in the Lmx header;
-    # the backing has exactly `len` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
-    fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: LmxArrayDesc
+    # no node, no name, no tag. Its `size` is an element count, unlike the `array.size` in the Lmx header;
+    # the backing has exactly `size` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
+    fn: lmx_array_desc_new (@: LmxArena arena; @: LmxPool pool; size_t: len; @: void data) @: VoidArray
     fn: lmx_pool_release (@: LmxArena arena; @: LmxPool pool) int
     # The first chunk of the array's chain: a walk that must see every cell the array handed
     # out (the collection pass) starts here and follows each chunk's own `next`.

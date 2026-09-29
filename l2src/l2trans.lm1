@@ -898,6 +898,7 @@ prototype:
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
+    fn: l2_own_self_typed (int: oi) int
     fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_model) int
     fn: l2_sender_text () @: LmP0Text
     fn: l2_payload_text () @: LmP0Text
@@ -1082,6 +1083,7 @@ prototype:
     fn: l2_type_inst (int: ni; @: char dest) int
     fn: l2_admit_site (int: mi) int
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
+    fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
     fn: l2_throws_frame (int: mi) @: LmP0Node
     fn: l2_throws_declared (int: mi) int
@@ -8515,6 +8517,23 @@ fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
 return: 1
 
+# Whether own field oi is typed by its own declaration: `f()`, `f: ()` or the closed empty vertical -- one P0 Frame,
+# the name with an empty Structure body (l2_empty_struct_decl_shape) -- declared it, so its declared type is that
+# empty Structure (book §9 :561-:563: the Structure on the right gives the new variable its type).  A later `f()` on
+# it is the assignment with admission to that type, wherever the Frame stands, as a named Structure's `S()` is at the
+# root.  Read from the declaration itself, not from the state of resolution: only that declaration registers an own
+# field at a Frame of the field's own name with no body field.
+fn: l2_own_self_typed (int: oi) int
+    @: LmP0Node d
+    if: oi < 0 || oi >= l2_own_n
+        return: 0
+    d: l2_own_decl[oi]
+    if: d = 0 || d\kind != c.LM_P0_NODE_FRAME || d\as = 0 || d\as\frame = 0 || d\as\frame\head = 0 || d\as\frame\body = 0
+        return: 0
+    if: d\as\frame\trailer != 0 || d\as\frame\body\trailer != 0 || l2_count_active(d\as\frame\body) != 0
+        return: 0
+return: (cast: (int) (l2_text_same(d\as\frame\head, l2_own_name[oi]) != 0))
+
 # receiveMessage: m / receiveMessage: m Model (author, Q10, 2026-09-23; the
 # two-name form, FABLE-SONNET-SEND-REF-20260925-172 commit 2) -- the general
 # mail receiver: m is bound to the graph of the next admitted letter of the
@@ -14584,6 +14603,22 @@ fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) i
         return: 1
 return: l2_emit_implicit_throw(mi, "implements", ind)
 
+# Own field oi typed by its own declaration (l2_own_self_typed): the value admitted to the Structure at the field's
+# place -- its working value when it has one (l2_q<oi>), else its slot -- as a declared named Structure is admitted to
+# the Structure at its place, its unit child (l2_type_inst).  NO or UNKNOWN throws `implements`, as l2_emit_admit's.
+fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind)) int
+    []: char at 256
+    []: char inst 320
+    if: mi < 0 || l2_m_throws = 0 || l2_m_throws[mi] = 0
+        return: l2_error(l2_src, 0, "internal: an admission site was not checked")
+    if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && c.sprintf(inst, "(cast: (@: Lmx) l2_q%d)", oi) < 0
+        return: 1
+    if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, at) != 0 || c.sprintf(inst, "lmx_arena_ref_struct(%s)", at) < 0)
+        return: 1
+    if: c.fprintf(l2_out, "%sif: %s != 0 && lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) %s), %s, %s) != c.LMX_IMPLEMENTS_YES\n", ind, value, value, inst, inst) < 0
+        return: 1
+return: l2_emit_implicit_throw(mi, "implements", ind)
+
 # `T: []: []: x` (author, Q15, 2026-09-23): `[]:` applied twice makes two levels
 # of independent one-dimensional Arrays -- the outer one holds references to
 # the descriptors of the inner T Arrays, each with its own length.  It is not
@@ -19248,10 +19283,11 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         # The same Frame when f already binds an ordinary Structure (l2_empty_struct_assign_shape;
         # the book §12): ordinary assignment of the empty Structure, with admission to f's declared
-        # Structure type when it has one -- the S3 path, whose refusal is the implicit throw
+        # Structure type when it has one -- a named Structure's, a model's, or, declared by `f()`
+        # itself, its own (l2_own_self_typed) -- the S3 path, whose refusal is the implicit throw
         # implements.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_empty_struct_assign_shape(stmt, mi) != 0
-            if: (l2_empty_struct_assign_shape(stmt, mi) = 2 || l2_graph_nsty(mi, stmt\as\frame\head) >= 0) && l2_admit_site(mi) != 0
+            if: (l2_empty_struct_assign_shape(stmt, mi) = 2 || l2_graph_nsty(mi, stmt\as\frame\head) >= 0 || l2_own_self_typed(l2_own_find_last(mi, stmt\as\frame\head)) != 0) && l2_admit_site(mi) != 0
                 return: l2_error(path, stmt, "internal: admission outside a method")
             field: l2_next_active(field\next)
             continue
@@ -31169,6 +31205,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: oi < 0
                 return: l2_error(l2_src, stmt, "unresolved name")
             if: l2_graph_nsty(mi, stmt\as\frame\head) >= 0 && l2_emit_admit(mi, l2_graph_nsty(mi, stmt\as\frame\head), l2_esd_tok, ind) != 0
+                return: 1
+            # Declared by `f()` itself: admitted to the Structure at its place (l2_own_self_typed).
+            if: l2_graph_nsty(mi, stmt\as\frame\head) < 0 && l2_own_self_typed(oi) != 0 && l2_emit_admit_own(mi, oi, l2_esd_tok, ind) != 0
                 return: 1
             if: l2_own_store(mi, oi, ind, l2_esd_tok) != 0
                 return: 1

@@ -2389,6 +2389,21 @@ $fixtures = @(
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_decl_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_decl_literal_refused.lm2:4:1: unresolved name'; Absent = @(); Debt = @() },
+    # OPUS-Q54-CONTINUE-20260929-14 slice 1: the empty Structure head `f()` resolves alike wherever it stands.  In a
+    # method, f declared by `f()` is typed by that declaration, and a later `f()` / `f: ()` is admitted to it -- to the
+    # Structure at f's place, its working value (pinned) -- 7; an admission to S's type would be refused and caught: 64.
+    # A typed binding's `f()` in a method is refused by admission as at the root: 74.  An admitting method takes the
+    # throw channel, and the knob walks no method that throws (l2_rw_may): the walk twins are pinned native.
+    [pscustomobject]@{ Name = 'unit_empty_self_admit_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('(cast: (@: Lmx) l2_q3), (cast: (@: Lmx) l2_q3)) != c.LMX_IMPLEMENTS_YES') },
+    [pscustomobject]@{ Name = 'unit_walk_empty_self_admit_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('(cast: (@: Lmx) l2_q3), (cast: (@: Lmx) l2_q3)) != c.LMX_IMPLEMENTS_YES', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    [pscustomobject]@{ Name = 'unit_empty_self_admit_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('(cast: (@: Lmx) l2_q3), (cast: (@: Lmx) l2_q3)) != c.LMX_IMPLEMENTS_YES') },
+    [pscustomobject]@{ Name = 'unit_empty_admit_typed_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_empty_admit_typed_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

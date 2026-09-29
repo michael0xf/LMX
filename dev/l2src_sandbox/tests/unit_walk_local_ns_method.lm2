@@ -1,0 +1,16 @@
+# unit_local_ns_method under --walk-methods (OPUS-Q54-CONTINUE-20260929-14 2b): a method's own named Structure is built
+# natively in this slice, so the walk refuses it and the method stays native -- pinned: 7 as natively.
+fn: m () int
+    S:
+        size_t: v 4U
+        size_t: w 5U
+    S\w: S\v + 3U
+    int: r 0
+    if: S\w = 7U
+        r: 7
+    return: r
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

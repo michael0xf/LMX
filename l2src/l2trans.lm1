@@ -333,6 +333,10 @@ int: l2_nsf_n 0
 # -1 for a unit-level declaration; otherwise the l2_ns index of the
 # containing Structure, which is also its node.
 @: int l2_ns_parent 0
+# The method whose body declares entry i -- a method's own named Structure (OPUS-Q54-CONTINUE-20260929-14 2b): the
+# metadata of its type only -- fields, kinds, slots -- never a unit child and never found by name; at run time only the
+# Structure its declaration builds exists, at that method's own slot (l2_local_ns_declare).  -1 for every other entry.
+@: int l2_ns_local 0
 # 1 once a declaration's body is fully read. A reference field may only name a
 # COMPLETED earlier unit-level declaration: without this an entry could name
 # itself or an enclosing one and close a cycle through the unit graph.
@@ -902,6 +906,12 @@ prototype:
     fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
     fn: l2_lit_admits (int: t; const: @(LmP0Structure body)) int
     fn: l2_value_admits (int: t; const: @(LmP0Structure body); int: mi) int
+    fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
+    fn: l2_tail_decl_first (const: @(LmP0Frame fr)) int
+    fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    fn: l2_emit_local_ns (int: mi; int: oi; int: ni; const: @(char ind)) int
+    fn: l2_own_of_local_ns (int: mi; int: ni) int
     fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_model) int
     fn: l2_sender_text () @: LmP0Text
     fn: l2_payload_text () @: LmP0Text
@@ -1451,7 +1461,7 @@ fn: l2_ns_rank (int: ni) int
     int: i 0
     int: r 0
     while: i < ni
-        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0
+        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_local[i] < 0
             r: r + 1
         i: i + 1
     ---
@@ -1461,7 +1471,7 @@ fn: l2_ns_top_count () int
     int: i 0
     int: r 0
     while: i < l2_ns_n
-        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0
+        if: l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_local[i] < 0
             r: r + 1
         i: i + 1
     ---
@@ -3920,7 +3930,7 @@ fn: l2_ns_procs (const: @(char path)) int
         more: 0
         i: 0
         while: i < l2_ns_n
-            if: l2_ns_proc[i] < 0 && l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && (l2_ns_exec[i] != 0 || l2_ns_stmt[i] != 0 || l2_ns_part(i) >= 0)
+            if: l2_ns_proc[i] < 0 && l2_ns_parent[i] < 0 && l2_ns_eternal[i] < 0 && l2_ns_local[i] < 0 && (l2_ns_exec[i] != 0 || l2_ns_stmt[i] != 0 || l2_ns_part(i) >= 0)
                 if: l2_ns_part(i) < 0 && l2_ns_proc_add(i, path) != 0
                     return: 1
                 if: l2_ns_part(i) >= 0 && l2_ns_proc_add(i, l2_part_path[l2_ns_part(i)]) != 0
@@ -8608,6 +8618,124 @@ fn: l2_value_admits (int: t; const: @(LmP0Structure body); int: mi) int
         return: 1
 return: 0
 
+# Whether frame fr's tail begins with the declaration of a number or char field with its initializer -- a type word
+# (l2_lit_field_kind), a name, a value: `size_t: v 4U`.  A conversion named by that type word takes one value, so this
+# is a declaration, never that call, whatever the program's parts name (l2_tail_is_structure asks l2_is_known).
+fn: l2_tail_decl_first (const: @(LmP0Frame fr)) int
+    @: LmP0Field f
+    @: LmP0Field g
+    if: fr = 0 || fr\body = 0
+        return: 0
+    f: l2_next_active(fr\body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_FRAME || f\value\as = 0 || f\value\as\frame = 0 || f\value\as\frame\body = 0 || l2_lit_field_kind(f\value) < 0 || l2_count_active(f\value\as\frame\body) != 2
+        return: 0
+    g: l2_next_active(f\value\as\frame\body\first_field)
+return: (cast: (int) (g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_ident(g\value\as\atom) != 0))
+
+# A method's own named Structure (OPUS-Q54-CONTINUE-20260929-14 2b): `S:` + a Structure in a method body -- the tail
+# a Structure of fields -- its first item declares a number or char field with a name and an initializer
+# (l2_tail_decl_first) --, closed by nothing or by `end:`, no declaration of another form (l2_is_char_decl:
+# a type word's, a C type's, an array's, a pointer's; a nested `fn:`) -- whose head resolves to nothing there: no
+# formal or dynamic input, no field of the method but the one this statement declares, no slot, merge result,
+# method, C door or declared function, primitive type word, receiver of the language, named Structure or field of
+# the unit.  The general declaration route (book §9 :559-:563), as at the root (l2_unit_role 5) and as `f()` (-132):
+# the Structure on the right gives S its type.  The same answer in every pass: the row this statement declares does
+# not count.
+fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
+    @: LmP0Frame fr
+    @: LmP0Text h
+    int: oi
+    if: mi < 0 || mi = l2_e || stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
+        return: 0
+    fr: stmt\as\frame
+    h: fr\head
+    if: h = 0 || l2_ident(h) = 0 || l2_is_asgn(stmt) = 0 || fr\body = 0 || l2_count_active(fr\body) = 0 || fr\body\trailer != 0
+        return: 0
+    if: l2_is_char_decl(stmt) != 0 || l2_frame_head(stmt, "fn") != 0 || l2_frame_head(stmt, "const") != 0 || l2_frame_head(stmt, "immutable") != 0 || l2_frame_head(stmt, "independent") != 0
+        return: 0
+    if: fr\trailer != 0 && (fr\trailer\spelling = 0 || l2_text_eq(fr\trailer\spelling, "end") = 0)
+        return: 0
+    if: l2_tail_decl_first(fr) = 0
+        return: 0
+    if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_find_method(h) >= 0 || l2_is_known(h) != 0
+        return: 0
+    if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_receiver_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h) != 0
+        return: 0
+    oi: l2_own_find(mi, h)
+    if: oi >= 0 && l2_own_decl[oi] != stmt
+        return: 0
+return: 1
+
+# The check's half of a method's own named Structure (l2_local_ns_shape): its type -- an entry of the named-Structure
+# table local to mi (l2_ns_local), with every entry its body made (a nested one too), metadata only -- found again by
+# its declaration in a later pass; and S, an own Structure field of mi typed by it, whose value the statement builds at
+# run time (l2_emit_local_ns).  A statement in the body and a field of another kind than a number stay out, located:
+# executing a method's named Structure, and its other fields, are the next steps.
+fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    int: ni
+    int: k 0
+    int: cj
+    @: LmP0Text h
+    h: stmt\as\frame\head
+    ni: l2_local_ns_entry(stmt, mi, path)
+    if: ni < 0
+        return: 1
+    if: l2_ns_stmt[ni] != 0
+        return: l2_error(path, l2_ns_stmt[ni], "a statement in a named Structure declared in a method is not executed yet")
+    while: k < l2_nsf_n
+        if: l2_nsf_owner[k] = ni && l2_nsf_kind[k] != 0 && l2_nsf_kind[k] != 7 && l2_nsf_kind[k] != 8 && l2_nsf_kind[k] != 9
+            return: l2_error(path, stmt, "a field of this kind in a named Structure declared in a method is not built yet")
+        k: k + 1
+    ---
+    cj: l2_own_add(mi, h, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+    if: cj < 0
+        return: 1
+    if: l2_own_off(mi, cj) = (cast: (size_t) -1)
+        return: l2_error(path, stmt, "size overflow")
+    l2_m_uses[l2_own_off(mi, cj)]: 1
+    l2_m_own[mi]: l2_m_own[mi] + 1
+    if: l2_bind_own(mi, cj, path, stmt) != 0
+        return: 1
+return: l2_own_nsty_set(cj, ni)
+
+# The entry of a method's own named Structure declared by stmt in mi: found by its declaration, or made -- the body
+# read as a named Structure's (l2_take_ns_body), every entry it makes (a nested one too) local to mi.  -1 with the
+# body's own diagnostic.
+fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    int: ni 0 - 1
+    int: i 0
+    while: i < l2_ns_n
+        if: l2_ns_local[i] = mi && l2_ns_at[i] = stmt
+            ni: i
+        i: i + 1
+    ---
+    if: ni >= 0
+        return: ni
+    ni: l2_ns_n
+    if: l2_take_ns_body(stmt\as\frame\head, 0 - 1, stmt\as\frame\body, stmt, path) != 0
+        return: 0 - 1
+    if: ni >= l2_ns_n
+        l2_error(path, stmt, "internal: a method's named Structure made no entry")
+        return: 0 - 1
+    i: ni
+    while: i < l2_ns_n
+        l2_ns_local[i]: mi
+        i: i + 1
+    ---
+return: ni
+
+# The own field of mi that a method's own named Structure ni types: the one its declaration declares.  -1 if none.
+fn: l2_own_of_local_ns (int: mi; int: ni) int
+    int: oi 0
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_local[ni] != mi
+        return: 0 - 1
+    while: oi < l2_own_n
+        if: l2_own_mi[oi] = mi && l2_own_decl[oi] = l2_ns_at[ni] && l2_own_nsty_get(oi) = ni
+            return: oi
+        oi: oi + 1
+    ---
+return: 0 - 1
+
 # receiveMessage: m / receiveMessage: m Model (author, Q10, 2026-09-23; the
 # two-name form, FABLE-SONNET-SEND-REF-20260925-172 commit 2) -- the general
 # mail receiver: m is bound to the graph of the next admitted letter of the
@@ -9320,6 +9448,19 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # called early below, mirrors l2_merge_scan's existing precedent for
         # merge result names) -- recording the type here closes the gap with
         # no second mechanism.
+        # A method's own named Structure (OPUS-Q54-CONTINUE-20260929-14 2b): its type, local to mi, and S, its own
+        # field typed by it -- here, before the method's names are read (l2_dyn_local), so that a later read of S
+        # finds the field and never makes S a dynamic input.
+        if: l2_local_ns_shape(stmt, mi) != 0
+            if: l2_local_ns_entry(stmt, mi, path) < 0
+                return: 1
+            cj: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            if: cj < 0
+                return: 1
+            if: l2_own_nsty_set(cj, l2_local_ns_entry(stmt, mi, path)) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         if: l2_colon_decl_shape(stmt, @ cmodel, @ fa) = 0
             cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
             if: cj < 0
@@ -10130,9 +10271,11 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             # A target this method does not declare -- nothing binds it, or it names a field of a Structure the method
             # sees, the unit or a part's root -- is read as any name is: l2_scan_ident makes such a unit field a hidden
             # input (Q52: «0 -- меняется лишь скрытый вход s»), so the write is the activation's, not the field's.
-            if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0 && l2_own_find_decl(mi, stmt\as\frame\head, stmt) < 0 && (l2_own_find_last(mi, stmt\as\frame\head) < 0 || l2_own_mi[l2_own_find_last(mi, stmt\as\frame\head)] != mi) && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
+            # A method's own named Structure (l2_local_ns_shape) declares its head, as `f()` does, and its fields are
+            # declarations: neither is read.
+            if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0 && l2_own_find_decl(mi, stmt\as\frame\head, stmt) < 0 && (l2_own_find_last(mi, stmt\as\frame\head) < 0 || l2_own_mi[l2_own_find_last(mi, stmt\as\frame\head)] != mi) && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
                 return: 1
-            if: stmt\as\frame\body != 0 && l2_scan_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, seen) != 0
+            if: stmt\as\frame\body != 0 && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, seen) != 0
                 return: 1
             oi: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
             # A target that became an argument's name (a formal or a hidden input) marks no field.
@@ -12794,7 +12937,7 @@ return: 0 - 1
 fn: l2_ns_find (const: @(LmP0Text t)) int
     int: i 0
     while: i < l2_ns_n
-        if: l2_text_same(l2_ns_name[i], t) && l2_vis_ok(l2_ns_at[i])
+        if: l2_text_same(l2_ns_name[i], t) && l2_vis_ok(l2_ns_at[i]) && l2_ns_local[i] < 0
             return: i
         i: i + 1
     ---
@@ -12828,7 +12971,7 @@ fn: l2_ns_find_payload (const: @(LmP0Text t)) int
         data: data + 1U
         n: n - 2U
     while: i < l2_ns_n
-        if: l2_ns_name[i] != 0 && l2_ns_name[i]\data != 0 && l2_ns_name[i]\length = n && memcmp(l2_ns_name[i]\data, data, n) = 0 && l2_vis_ok(l2_ns_at[i])
+        if: l2_ns_name[i] != 0 && l2_ns_name[i]\data != 0 && l2_ns_name[i]\length = n && memcmp(l2_ns_name[i]\data, data, n) = 0 && l2_vis_ok(l2_ns_at[i]) && l2_ns_local[i] < 0
             return: i
         i: i + 1
     ---
@@ -13565,6 +13708,10 @@ fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     if: ga = 0
         return: 0 - 1
     l2_ns_stmt: ga
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_ns_local), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_ns_local: gi
     l2_ns_exec[l2_ns_n]: 0
     l2_ns_proc[l2_ns_n]: 0 - 1
     l2_ns_stmt[l2_ns_n]: 0
@@ -13574,6 +13721,7 @@ fn: l2_ns_push (const: @(LmP0Text name); int: parent; const: @(LmP0Node at)) int
     l2_ns_count[l2_ns_n]: 0
     l2_ns_parent[l2_ns_n]: parent
     l2_ns_eternal[l2_ns_n]: 0 - 1
+    l2_ns_local[l2_ns_n]: 0 - 1
     l2_ns_n: l2_ns_n + 1
 return: l2_ns_n - 1
 
@@ -14671,6 +14819,11 @@ fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) i
     []: char inst 128
     if: mi < 0 || l2_m_throws = 0 || l2_m_throws[mi] = 0
         return: l2_error(l2_src, 0, "internal: an admission site was not checked")
+    # A method's own named Structure has no unit child: its type is the Structure at its place (l2_emit_admit_own).
+    if: ni >= 0 && ni < l2_ns_n && l2_ns_local[ni] >= 0 && l2_own_of_local_ns(mi, ni) < 0
+        return: l2_error(l2_src, 0, "internal: an admission to a method's named Structure outside its method")
+    if: ni >= 0 && ni < l2_ns_n && l2_ns_local[ni] >= 0
+        return: l2_emit_admit_own(mi, l2_own_of_local_ns(mi, ni), value, ind)
     if: l2_type_inst(ni, inst) != 0
         return: l2_error(l2_src, 0, "internal: admission to a type with no shape")
     if: c.fprintf(l2_out, "%sif: %s != 0 && lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) %s), %s, %s) != c.LMX_IMPLEMENTS_YES\n", ind, value, value, inst, inst) < 0
@@ -14692,6 +14845,79 @@ fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind
     if: c.fprintf(l2_out, "%sif: %s != 0 && lmx_runtime_implements(l2_program_arena, (cast: (@: Lmx) %s), %s, %s) != c.LMX_IMPLEMENTS_YES\n", ind, value, value, inst, inst) < 0
         return: 1
 return: l2_emit_implicit_throw(mi, "implements", ind)
+
+# The run-time half of a method's own named Structure (l2_local_ns_declare): the statement builds its Structure -- a
+# child of the activation's Structure, `self`, its lexical parent -- with a cell per number field holding its literal,
+# as the unit builds a named Structure's (l2_emit_ns_num_cell), and binds it at the field's place, its own slot
+# (l2_own_store).  Each execution builds a new one: a structural expression constructs its value when execution
+# reaches it (book §9).
+fn: l2_emit_local_ns (int: mi; int: oi; int: ni; const: @(char ind)) int
+    int: fx 0
+    int: j 0
+    int: t
+    const: @(char newf) 0
+    const: @(char store) 0
+    []: char lit 48
+    []: char val 48
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s@: Lmx l2_t%d lmx_struct_new_owned(self, l2_program_arena)\n%sif: l2_t%d = 0\n", ind, t, ind, t) < 0
+        return: 1
+    if: l2_emit_invariant(ind, "a method's named Structure did not allocate") != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sif: lmx_arena_refs_open_owned(l2_program_arena, l2_t%d, %uU) != 0\n", ind, t, (cast: (unsigned) l2_ns_count[ni])) < 0
+        return: 1
+    if: l2_emit_invariant(ind, "a method's named Structure did not open its fields") != 0
+        return: 1
+    if: c.fprintf(l2_out, "%s@@: void l2_ls%d 0\n", ind, t) < 0
+        return: 1
+    while: fx < l2_nsf_n
+        newf: 0
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 0
+            newf: "lmx_size_new_owned"
+            store: "lmx_size_store_known"
+            if: c.sprintf(lit, "%zuU", l2_nsf_val[fx]) < 0
+                return: 1
+            ---
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 7
+            newf: "lmx_int_new_owned"
+            store: "lmx_int_store_known"
+            if: c.sprintf(lit, "%d", (cast: (int) l2_nsf_val[fx])) < 0
+                return: 1
+            ---
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 8
+            newf: "lmx_unsigned_new_owned"
+            store: "lmx_unsigned_store_known"
+            if: c.sprintf(lit, "%uU", (cast: (unsigned) l2_nsf_val[fx])) < 0
+                return: 1
+            ---
+        if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 9
+            newf: "lmx_ulong_new_owned"
+            store: "lmx_ulong_store_known"
+            if: c.sprintf(lit, "%zuU", l2_nsf_val[fx]) < 0
+                return: 1
+            ---
+        if: l2_nsf_owner[fx] = ni && newf = 0
+            return: l2_error(l2_src, l2_ns_at[ni], "internal: a method's named Structure has a field it does not build")
+        if: newf != 0 && c.fprintf(l2_out, "%sl2_ls%d: lmx_arena_ref_cell(l2_t%d, %uU)\n%sif: l2_ls%d = 0\n", ind, t, t, (cast: (unsigned) j), ind, t) < 0
+            return: 1
+        if: newf != 0 && l2_emit_invariant(ind, "a method's named Structure has no field cell") != 0
+            return: 1
+        if: newf != 0 && c.fprintf(l2_out, "%sl2_ls%d[0]: %s(l2_program_arena)\n%sif: l2_ls%d[0] = 0\n", ind, t, newf, ind, t) < 0
+            return: 1
+        if: newf != 0 && l2_emit_invariant(ind, "a method's named Structure field did not allocate") != 0
+            return: 1
+        if: newf != 0 && c.fprintf(l2_out, "%sif: %s(l2_ls%d[0], %s) != 0\n", ind, store, t, lit) < 0
+            return: 1
+        if: newf != 0 && l2_emit_invariant(ind, "a method's named Structure field refused its value") != 0
+            return: 1
+        if: newf != 0
+            j: j + 1
+        fx: fx + 1
+    ---
+    if: c.sprintf(val, "(cast: (@: void) l2_t%d)", t) < 0
+        return: 1
+return: l2_own_store(mi, oi, ind, val)
 
 # `T: []: []: x` (author, Q15, 2026-09-23): `[]:` applied twice makes two levels
 # of independent one-dimensional Arrays -- the outer one holds references to
@@ -15826,7 +16052,7 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
         return: 0
     i: 0
     while: i < l2_ns_n
-        if: l2_ns_parent[i] < 0 && l2_name_is_seg(l2_ns_name[i], pd, off, len) != 0
+        if: l2_ns_parent[i] < 0 && l2_ns_local[i] < 0 && l2_name_is_seg(l2_ns_name[i], pd, off, len) != 0
             \out_ni: i
         i: i + 1
     ---
@@ -16842,7 +17068,7 @@ fn: l2_ns_count_named (const: @(LmP0Text t)) int
     int: i 0
     int: r 0
     while: i < l2_ns_n
-        if: l2_text_same(l2_ns_name[i], t)
+        if: l2_text_same(l2_ns_name[i], t) && l2_ns_local[i] < 0
             r: r + 1
         i: i + 1
     ---
@@ -19355,6 +19581,17 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: 1
             field: l2_next_active(field\next)
             continue
+        # A method's own named Structure, `S:` + number fields (l2_local_ns_shape, l2_local_ns_declare).
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_local_ns_shape(stmt, mi) != 0
+            if: l2_local_ns_declare(stmt, mi, path) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
+        # `S()` on a method's own named Structure is its nullary call (book §9, 55c1abc: a callable -- an ordinary
+        # named Structure included -- is called, never assigned); executing a method's named Structure is not
+        # built yet: refused where it stands, not the empty Structure's admission below.
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_empty_struct_assign_shape(stmt, mi) = 1 && l2_graph_nsty(mi, stmt\as\frame\head) >= 0 && l2_ns_local[l2_graph_nsty(mi, stmt\as\frame\head)] >= 0
+            return: l2_error(path, stmt, "a call of a named Structure declared in a method is not built yet")
         # The same Frame when f already binds an ordinary Structure (l2_empty_struct_assign_shape;
         # the book §12): ordinary assignment of the empty Structure, with admission to f's declared
         # Structure type when it has one -- a named Structure's, a model's, or, declared by `f()`
@@ -26165,6 +26402,9 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
             return: 1
         return: 0
+    # A method's own named Structure (l2_local_ns_shape) is built natively in this slice: its method stays native.
+    if: l2_local_ns_shape(stmt, l2_rw_mi) != 0
+        return: l2_rw_refuse(stmt, "a named Structure declared in a method")
     # A declaration by an empty frame (`f()`, `f: ()`): the root's own field it declares is a
     # field of the unit, and nothing runs.
     oi: 0
@@ -31264,6 +31504,15 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
+        # A method's own named Structure: its declaration builds its Structure (l2_emit_local_ns).
+        if: l2_local_ns_shape(stmt, mi) != 0
+            oi: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
+            if: oi < 0 || l2_own_nsty_get(oi) < 0
+                return: l2_error(l2_src, stmt, "internal: a method's named Structure was not declared")
+            if: l2_emit_local_ns(mi, oi, l2_own_nsty_get(oi), ind) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # `f()` when f already binds an ordinary Structure (l2_empty_struct_assign_shape): a fresh
         # empty Structure, admitted to f's declared Structure type when it has one -- the S3
         # admission, whose refusal is the implicit throw implements -- then bound as any graph
@@ -32395,9 +32644,12 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Leaf fields
     # are filled as they are met; references are wired in a second pass, so a
     # reference can only name an EARLIER unit-level declaration, which the
-    # collector already guarantees.
+    # collector already guarantees.  A method's own named Structure is none of them (l2_ns_local).
     k: 0
     while: k < l2_ns_n
+        if: l2_ns_local[k] >= 0
+            k: k + 1
+            continue
         if: l2_ns_parent[k] < 0 && l2_ns_eternal[k] < 0 && c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_nsp[%d] != 0 && lmx_range_profile(l2_program_arena, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", k, k, k) < 0
             fclose(l2_out)
             return: 1
@@ -32581,6 +32833,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # shared by address (no reparent); their parent checks keep today's meaning.
     k: 0
     while: k < l2_ns_n
+        if: l2_ns_local[k] >= 0
+            k: k + 1
+            continue
         oi: 0
         fx: 0
         while: fx < l2_nsf_n

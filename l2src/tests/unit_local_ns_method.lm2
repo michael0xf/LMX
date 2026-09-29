@@ -1,0 +1,19 @@
+# A method's own named Structure (OPUS-Q54-CONTINUE-20260929-14 2b): `S:` + fields in a method body, S resolving to
+# nothing there, declares S by the general route (book §9: an absent target with an explicit Structure value), its type
+# the Structure on the right.  At run time only that source-declared Structure exists: the statement builds it, a
+# child of the method's own Structure, and binds it at S's own slot; S\v and S\w go through that slot.  7 when the
+# write w: v + 3 reads back.  (It was refused: "unknown method" at its first field.)
+fn: m () int
+    S:
+        size_t: v 4U
+        size_t: w 5U
+    S\w: S\v + 3U
+    int: r 0
+    if: S\w = 7U
+        r: 7
+    return: r
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

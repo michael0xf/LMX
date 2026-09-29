@@ -1,0 +1,17 @@
+# A method's own named Structure is built each time its declaration runs (OPUS-Q54-CONTINUE-20260929-14 2b; book §9:
+# a structural expression constructs its value when execution reaches it): the first call writes S\v 9 and returns
+# it, the second call's S is a new one, v 4 -- 94.  A Structure built once and kept in the method's slot would give 99.
+fn: m (int: k) int
+    S:
+        int: v 4
+    if: k = 1
+        S\v: 9
+    int: out 0
+    out: S\v
+    return: out
+end: m
+int: a (m: 1)
+int: b (m: 0)
+int: r (a * 10 + b)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

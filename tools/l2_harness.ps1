@@ -2416,6 +2416,26 @@ $fixtures = @(
         Needle = 'unit_assign_named_not_rebound.lm2:7:1: a Structure assigned to a named Structure is not rebound yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_assign_named_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_assign_named_number_refused.lm2:5:1: assignment value has incompatible type'; Absent = @(); Debt = @() },
+    # OPUS-Q54-CONTINUE-20260929-14 slice 2b-1: a method's own named Structure -- `S:` + number fields, S resolving to
+    # nothing there -- declared by the general route (book §9: an absent target with an explicit Structure value).  At
+    # run time only its Structure exists: built at its statement, a child of the method's own Structure (pinned), bound
+    # at S's slot -- no unit child (Absent) -- and each execution builds a new one (94; one kept would give 99).  The
+    # walk takes no method with one (pinned native).  A statement in its body, a field that is no number, and `S()` --
+    # its nullary call (book §9: a named Structure is called, never assigned) -- are refused where they stand.
+    [pscustomobject]@{ Name = 'unit_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
+    [pscustomobject]@{ Name = 'unit_walk_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    [pscustomobject]@{ Name = 'unit_local_ns_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
+    [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 94;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_call_refused.lm2:7:5: a call of a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_stmt_refused.lm2:7:9: a statement in a named Structure declared in a method is not executed yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_kind_refused.lm2:4:5: a field of this kind in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

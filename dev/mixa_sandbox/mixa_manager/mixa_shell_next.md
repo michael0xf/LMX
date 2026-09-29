@@ -100,6 +100,7 @@
 | `mixa_help.lm1` | помощь |
 | `mixa_cmdline.lm1` | строка, которую набрал пользователь |
 | `mixa_shell_start.lm1` | единственный вход порта, `Mixa\start` |
+| `mixa_shell_start_main.lm1` | `fn: main` продукта `mixa_shell_start.exe` |
 | `mixa_shell_native.lm1` | слово `native`: Win32 или headless |
 
 `mixa_backend_win32.lm1`, `mixa_backend_headless.lm1` и обе `*_ctors_*`
@@ -351,8 +352,24 @@ Shell он не читает. Повторное удаление отказыв
 ответ `shell\show_rows`, отказ `shell\note_refused`. Внутри Files вызов прямой,
 `mixa_shell_files_list`. Снимок переносится на Shell. Чужой путь увеличивает
 отказ и не подменяет уже отданные строки. `mixa_app_main*` не вызывается.
-Общий линк всех `.lm1` не собирался, `build_mixa.ps1` на всех единицах
-не запускался.
+Общий линк всех `.lm1` одним телом не есть критерий шага.
+
+На `main` лежал другой набросок того же шага: `mixa_shell_main.lm1`,
+`MixaShellHost`, `mixa_shell_bind_native`, `mixa_shell_run` и свидетель
+`tests/mixa_shell_entry_selftest.lm1`. Он вшивал таблицу headless внутрь
+bind и не очищал слово при закрытии. Письмо, один ход и закрытие уже есть:
+`mixa_shell_start`, `mixa_shell_turn`, `mixa_shell_native_close`. Слово
+принимает ту таблицу, которую передал вызывающий. Имена наброска сняты.
+
+Продукт этого входа — отдельный бинарник `mixa_shell_start.exe`. Его
+`fn: main` лежит в `mixa_shell_start_main.lm1`. Он вызывает
+`mixa_shell_start`, затем не больше заданного числа `mixa_shell_turn`,
+затем закрывает слово и Files. Это не `mixa_app_main.exe`, не самотест
+модуля и не цикл `mixa_app_controller`. `build_mixa.ps1` линкует его
+строкой `exe:mixa_shell_start` из `mixa_shell_start_main.o` через
+`Resolve-Link`. Если в замыкание попали `mixa_app_main.o`,
+`mixa_app_main_msg.o`, `mixa_app_controller.o` или `mixa_shell_main.o`,
+скрипт этот линк отвергает.
 
 Свидетель `tests/mixa_shell_start_selftest.lm1`: 8 проверок. Он вклеивает
 тела Files, ход и этот вход один раз. Здесь он только переведён: шов
@@ -363,6 +380,26 @@ Shell он не читает. Повторное удаление отказыв
 `predef` положить как `mixa_manager/*.lm1.h`, собрать `gcc -std=c99` и
 запустить. Успех — строка `shell-start: 8 checks, 0 failures` и код 0.
 Ноль проверок или ненулевой код — отказ.
+
+Сборка продукта, на машине с Win32:
+
+`powershell -NoProfile -ExecutionPolicy Bypass -File dev\mixa_sandbox\tools\build_mixa.ps1`
+
+Успех этой цели — строка `OK exe:mixa_shell_start` и файл
+`dev\mixa_sandbox\build\<stamp>\bin\mixa_shell_start.exe`. Повторный линк
+готового пула объектов, без перевода:
+
+`powershell -NoProfile -ExecutionPolicy Bypass -File dev\mixa_sandbox\tools\build_mixa.ps1 -StartLinkOnly -ReuseStamp dev\mixa_sandbox\build\<stamp>`
+
+Запуск headless, граница шагов положительная и обязательная. Каталог
+должен существовать. Здесь бинарник не собирался и не запускался:
+
+`dev\mixa_sandbox\build\<stamp>\bin\mixa_shell_start.exe --headless <существующий каталог> 4`
+
+Успех — код 0 и одна строка
+`MIXA_START status=OK steps=4 bound=4 shown=1 refused=0 events=0`.
+Нет флага `--headless` или граница не положительное число — код 2,
+`reason=usage` или `reason=bad-bound`.
 
 ### Шаг I, как он был поставлен
 
@@ -400,11 +437,13 @@ Headless, без окна и без `GetMessage`. Пустой ход по-пр�
 - `Files\list` помечен первым телом и запретом тащить за собой selection.
 
 Шаги B–D, copy/remove из E, F, G, пустой ход H, вход I и слово `native`
-J закрыты отдельными свидетелями. `find` без FSync не написан.
+J закрыты. Набросок `mixa_shell_main` снят. `find` без FSync не написан.
 `mixa_app_main*` остаются прежними входами продукта и не являются корнями
-графа. Граф `mixa_shell.lm2` по-прежнему не транслируется: в нём записан
-`post`, а транспорт ядра этим портом не пишется. Свидетель входа I на этой
-машине не запускался: ему нужен Win32.
+графа. Продукт входа порта — `mixa_shell_start.exe`. Граф `mixa_shell.lm2`
+по-прежнему не транслируется: в нём записан `post`, а транспорт ядра этим
+портом не пишется. Свидетель входа I и сборка `mixa_shell_start.exe` на
+этой машине не выполнялись: шов каталога тянет `<windows.h>`. Свидетель
+слова `native` здесь: 14 проверок, 0 отказов.
 
 ## 7. Как сажать
 

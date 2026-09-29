@@ -1,0 +1,12 @@
+# The same through a free name: peek reads the caller's int k in `(k + j) * 1U` with a size_t j.  The check waits for
+# k's type -- l2_waits descends into the group (fable_pc's M56) -- and then refuses the group as mixed, as the flat
+# `k + j` is (unit_free_mixed_refused).  Before, the group was untyped: accepted.
+fn: peek () size_t
+    size_t: j 3U
+    return: (k + j) * 1U
+fn: m () size_t
+    int: k 5
+    return: peek()
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -4001,6 +4001,28 @@ $fixtures = @(
         Needle = 'unit_free_assign_mixed_refused.lm2:5:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_free_assign_mixed_refused.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_walk_free_assign_mixed_refused.lm2:5:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    # Class A inside a parenthesized group with neighbours (next_core_tasks.md :374): the native composite typer types
+    # the group by its fields, as the walk does (l2_native_group_ty; l2_rw_fields_ty) -- it was untyped, and the value
+    # accepted.  A local k, a free k (the check waits: l2_waits' descent into the group, M56), two groups deep in an
+    # assignment, in a declaration's initializer; one type in a group, and a cast in a group, still 7.
+    [pscustomobject]@{ Name = 'unit_group_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_group_mixed_refused.lm2:8:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_group_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_group_mixed_refused.lm2:8:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_group_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_group_mixed_refused.lm2:6:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_group_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_free_group_mixed_refused.lm2:6:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_group_assign_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_group_assign_mixed_refused.lm2:8:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_group_assign_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_group_assign_mixed_refused.lm2:8:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_group_decl_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_group_decl_mixed_refused.lm2:6:16: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_group_decl_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_group_decl_mixed_refused.lm2:6:16: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_group_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A held callable called from a method (steps/merge-callable-r48.md S1): add5, a root own holding makeAdder's merged
     # node, called from go natively through the same l2_mad_call helper the root's walk calls -- before, l2_prep's frame
     # tail returned without a word (exit 3, "a refusal said nothing"); walked, go calls it through the walk's PRIM.

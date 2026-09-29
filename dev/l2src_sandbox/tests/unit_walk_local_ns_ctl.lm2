@@ -1,0 +1,26 @@
+# unit_local_ns_ctl under --walk-methods: the method stays native (pinned) and S's procedure, with its control bodies,
+# is never walked -- its occurrence and bodies are built natively at S's statement.  w 0, then 10: 7.
+fn: m () int
+    S:
+        size_t: v 4U
+        size_t: w 0U
+        if: v = 4U
+            size_t: t 3U
+            w: v + t
+        while: w < 10U
+            w: w + 1U
+        v: v + 0U
+    int: r 0
+    if: S\w = 0U
+        r: r + 1
+    S\v: 9U
+    S()
+    if: S\v = 4U && S\w = 10U
+        r: r + 6
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

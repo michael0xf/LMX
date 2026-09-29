@@ -2458,16 +2458,26 @@ $fixtures = @(
     # Slice 2c-2: S's statements run at its calls, in its procedure, never at its declaration (book :928) -- w 0 after
     # it, then 14 and, after `k: 20`, 24: k is a hidden input the method passes (§12).  Under the knob the method stays
     # native and the procedure unwalked (pinned).  S's statements are checked whether or not S runs (a free name nobody
-    # binds, refused where it stands).  A control body in S's body and `node` there are not built yet: refused where
-    # they stand (the `node` row was unit_local_ns_stmt_refused, refused as any statement by 2b-1).
+    # binds, refused where it stands).  `node` in S's body is not built yet: refused where it stands (the write row was
+    # unit_local_ns_stmt_refused, refused as any statement by 2b-1).  Control bodies: 2c-3, below.
     [pscustomobject]@{ Name = 'unit_local_ns_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
     [pscustomobject]@{ Name = 'unit_local_ns_stmt_unresolved.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_stmt_unresolved.lm2:7:12: unresolved name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_ns_ctl_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_ctl_refused.lm2:7:9: a control body in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
+    # Slice 2c-3: S's control bodies are Structures of its occurrence, built with S at its statement (R9) -- the `if:`
+    # body with a cell for its field t: w 0 after the declaration, 10 after `S()` (was unit_local_ns_ctl_refused);
+    # under the knob the method stays native (pinned); S declared in the method's `while:` gets new bodies each pass:
+    # 15.  A char field in S's control body is not built yet (its cell needs the unit's character table): refused.
+    [pscustomobject]@{ Name = 'unit_local_ns_ctl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_local_ns_ctl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    [pscustomobject]@{ Name = 'unit_local_ns_ctl_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_ctl_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_ctl_char_refused.lm2:7:13: a char field in a control body of a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_node_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_node_refused.lm2:9:9: `node` in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_node_read_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

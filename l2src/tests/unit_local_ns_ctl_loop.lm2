@@ -1,0 +1,26 @@
+# S declared in the body of the method's `while:` (slice 2c-3): each pass builds a new S with its control bodies -- the
+# `if:` body and its field t -- and `S()` runs its procedure over that S: v 4 + 1 each time, 15 over three passes.
+# Entry 7.
+fn: m () int
+    int: i 0
+    size_t: total 0U
+    while: i < 3
+        S:
+            size_t: v 4U
+            if: v = 4U
+                size_t: t 1U
+                v: v + t
+            v: v + 0U
+        S()
+        total: total + S\v
+        i: i + 1
+    int: r 0
+    if: total = 15U
+        r: 7
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -917,6 +917,7 @@ prototype:
     fn: l2_local_ns_proc (int: ni; const: @(char path)) int
     fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
     fn: l2_names_node (const: @(LmP0Node n)) int
+    fn: l2_emit_local_bodies (int: pr; int: t; const: @(char ind)) int
     fn: l2_local_ns_callee (const: @(LmP0Text t); int: mi) int
     fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
     fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
@@ -8826,26 +8827,29 @@ fn: l2_local_ns_proc (int: ni; const: @(char path)) int
 return: 0
 
 # Slice 2c-2: the statements of a method's own named Structure ni run at S's calls, in S's procedure -- never at its
-# declaration (book :928) -- and a free name of them is a hidden input its caller passes (§12).  Two kinds stay out,
-# refused where they stand: a control body (`if`, `else`, `while`, `for`, `catch`, a block) -- its Structure would be
-# a child of S's occurrence, which the method builds at run time, and nothing builds it there yet -- and `node` -- in
-# S's body it names S's parent, the method's occurrence, and the translator resolves `node` as a file-level method's,
-# the unit.  0, or 1 said.
+# declaration (book :928) -- and a free name of them is a hidden input its caller passes (§12).  Slice 2c-3: a control
+# body among them (`if`, `else`, `while`, `for`, `catch`, a block) is a child of S's occurrence, built with S at its
+# statement (l2_emit_local_bodies).  Two kinds stay out, refused where they stand: `node` -- in S's body it names S's
+# parent, the method's occurrence, and the translator resolves `node` as a file-level method's, the unit -- and a char
+# field declared in a control body -- its cell needs the process's character table, which only the unit build holds.
+# 0, or 1 said.
 fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
     @: LmP0Field f
     @: LmP0Node v
+    int: oi 0
     if: ni < 0 || ni >= l2_ns_n || l2_ns_at[ni] = 0 || l2_ns_at[ni]\as = 0 || l2_ns_at[ni]\as\frame = 0 || l2_ns_at[ni]\as\frame\body = 0
         return: 0
     f: l2_next_active(l2_ns_at[ni]\as\frame\body\first_field)
     while: f != 0
         v: f\value
-        if: v != 0 && (l2_ns_body_stmt(v, ni) != 0 || v\kind != c.LM_P0_NODE_FRAME)
-            if: v\kind = c.LM_P0_NODE_STRUCTURE || l2_frame_head(v, "if") != 0 || l2_frame_head(v, "else") != 0 || l2_frame_head(v, "while") != 0 || l2_frame_head(v, "for") != 0 || l2_frame_head(v, "catch") != 0
-                return: l2_error(path, v, "a control body in a named Structure declared in a method is not built yet")
-            if: l2_names_node(v) != 0
-                return: l2_error(path, v, "`node` in a named Structure declared in a method is not built yet")
-        ---
+        if: v != 0 && (l2_ns_body_stmt(v, ni) != 0 || v\kind != c.LM_P0_NODE_FRAME) && l2_names_node(v) != 0
+            return: l2_error(path, v, "`node` in a named Structure declared in a method is not built yet")
         f: l2_next_active(f\next)
+    ---
+    while: l2_ns_proc[ni] >= 0 && oi < l2_own_n
+        if: l2_own_mi[oi] = l2_ns_proc[ni] && l2_own_host[oi] != 0 && l2_own_ty[oi] = 1
+            return: l2_error(path, l2_own_decl[oi], "a char field in a control body of a named Structure declared in a method is not built yet")
+        oi: oi + 1
     ---
 return: 0
 
@@ -15096,9 +15100,56 @@ fn: l2_emit_local_ns (int: mi; int: oi; int: ni; const: @(char ind)) int
             j: j + 1
         fx: fx + 1
     ---
+    # Slice 2c-3: with a procedure, S's control bodies are built with it (l2_emit_local_bodies).
+    if: l2_ns_proc[ni] >= 0 && l2_emit_local_bodies(l2_ns_proc[ni], t, ind) != 0
+        return: 1
     if: c.sprintf(val, "(cast: (@: void) l2_t%d)", t) < 0
         return: 1
 return: l2_own_store(mi, oi, ind, val)
+
+# The control bodies of a method's own named Structure's procedure pr, built with S (temporary l2_t<t>) at its statement
+# (slice 2c-3), as the unit builds a procedure's (R9): in preorder, each a child of S or of its enclosing body at its
+# slot (l2_for_uchild), opened to its width (l2_for_nkid), with a cell for every field declared in it (l2_own_fid) --
+# the Structures the procedure's native code finds in its occurrence (l2_h<k>).  Each temporary is l2_lb<t>_<k>.
+fn: l2_emit_local_bodies (int: pr; int: t; const: @(char ind)) int
+    int: k 0
+    int: oi
+    []: char par 48
+    []: char slot 32
+    while: k < l2_for_n
+        if: l2_for_owner(k) = pr
+            if: l2_for_parent[k] >= 0 && c.sprintf(par, "l2_lb%d_%d", t, l2_for_parent[k]) < 0
+                return: 1
+            if: l2_for_parent[k] < 0 && c.sprintf(par, "l2_t%d", t) < 0
+                return: 1
+            if: c.fprintf(l2_out, "%s@: Lmx l2_lb%d_%d lmx_struct_new_owned(%s, l2_program_arena)\n%sif: l2_lb%d_%d = 0\n", ind, t, k, par, ind, t, k) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "a control body of a method's named Structure did not allocate") != 0
+                return: 1
+            if: l2_for_nkid[k] > 0 && c.fprintf(l2_out, "%sif: lmx_arena_refs_open_owned(l2_program_arena, l2_lb%d_%d, %uU) != 0\n", ind, t, k, (cast: (unsigned) l2_for_nkid[k])) < 0
+                return: 1
+            if: l2_for_nkid[k] > 0 && l2_emit_invariant(ind, "a control body of a method's named Structure did not open its fields") != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sif: lmx_arena_ref_store(%s, %uU, (cast: (@: void) l2_lb%d_%d)) != 0\n", ind, par, (cast: (unsigned) l2_for_uchild[k]), t, k) < 0
+                return: 1
+            if: l2_emit_invariant(ind, "a control body of a method's named Structure did not take its place") != 0
+                return: 1
+            oi: 0
+            while: oi < l2_own_n
+                if: l2_own_fid[oi] = k && l2_own_is_slot(oi) = 0 && c.fprintf(l2_out, "%sl2_ls%d: lmx_arena_ref_cell(l2_lb%d_%d, %uU)\n%sif: l2_ls%d = 0\n", ind, t, t, k, (cast: (unsigned) l2_own_fchild[oi]), ind, t) < 0
+                    return: 1
+                if: l2_own_fid[oi] = k && l2_own_is_slot(oi) = 0 && l2_emit_invariant(ind, "a control body of a method's named Structure has no field cell") != 0
+                    return: 1
+                if: l2_own_fid[oi] = k && c.sprintf(slot, "l2_ls%d", t) < 0
+                    return: 1
+                if: l2_own_fid[oi] = k && l2_emit_cell_new(oi, ind, slot, "0", "c.fprintf(c.stderr, \"lmx: invariant: a field of a control body of a method's named Structure did not allocate\\n\")", "c.abort()") != 0
+                    return: 1
+                oi: oi + 1
+            ---
+        ---
+        k: k + 1
+    ---
+return: 0
 
 # `T: []: []: x` (author, Q15, 2026-09-23): `[]:` applied twice makes two levels
 # of independent one-dimensional Arrays -- the outer one holds references to
@@ -32922,6 +32973,11 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # R9: the control bodies, now that every named Structure exists -- a procedure's go into its Structure.
     k: 0
     while: k < l2_for_n
+        # A method's own named Structure's procedure (slice 2c-3): its bodies are built with S, at S's statement in the
+        # method (l2_emit_local_bodies).
+        if: l2_m_nsof(l2_for_owner(k)) >= 0 && l2_ns_local[l2_m_nsof(l2_for_owner(k))] >= 0
+            k: k + 1
+            continue
         # Every executable control body is a graph Structure, including an
         # empty body. Top-level bodies use their callable/unit parent; nested
         # bodies use the already-created containing body (preorder invariant).

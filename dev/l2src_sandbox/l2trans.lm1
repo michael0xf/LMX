@@ -915,6 +915,8 @@ prototype:
     fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_body_calls_name (@: LmP0Field first; const: @(LmP0Text h)) int
     fn: l2_local_ns_proc (int: ni; const: @(char path)) int
+    fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
+    fn: l2_names_node (const: @(LmP0Node n)) int
     fn: l2_local_ns_callee (const: @(LmP0Text t); int: mi) int
     fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
     fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
@@ -8696,8 +8698,8 @@ fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
     ni: l2_local_ns_entry(stmt, mi, path)
     if: ni < 0
         return: 1
-    if: l2_ns_stmt[ni] != 0
-        return: l2_error(path, l2_ns_stmt[ni], "a statement in a named Structure declared in a method is not executed yet")
+    if: l2_local_ns_stmts_ok(ni, path) != 0
+        return: 1
     while: k < l2_nsf_n
         if: l2_nsf_owner[k] = ni && l2_nsf_kind[k] != 0 && l2_nsf_kind[k] != 7 && l2_nsf_kind[k] != 8 && l2_nsf_kind[k] != 9
             return: l2_error(path, stmt, "a field of this kind in a named Structure declared in a method is not built yet")
@@ -8738,9 +8740,10 @@ fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) in
         l2_ns_local[i]: mi
         i: i + 1
     ---
-    # Slice 2c: a method that executes its own named Structure -- `S` or `S()` -- gets S's procedure (§12), as a unit
-    # named Structure has one (l2_local_ns_proc).
-    if: l2_m_body[mi] != 0 && l2_m_body[mi]\as != 0 && l2_m_body[mi]\as\structure != 0 && l2_body_calls_name(l2_m_body[mi]\as\structure\first_field, stmt\as\frame\head) != 0 && l2_local_ns_proc(ni, path) != 0
+    # Slice 2c: a method's own named Structure the method executes -- `S` or `S()` -- or whose body has a statement
+    # gets S's procedure (§12), as a unit named Structure has one (l2_local_ns_proc, l2_ns_procs): its statements are
+    # checked whether or not S runs.
+    if: l2_m_body[mi] != 0 && l2_m_body[mi]\as != 0 && l2_m_body[mi]\as\structure != 0 && (l2_ns_stmt[ni] != 0 || l2_body_calls_name(l2_m_body[mi]\as\structure\first_field, stmt\as\frame\head) != 0) && l2_local_ns_proc(ni, path) != 0
         return: 0 - 1
 return: ni
 
@@ -8819,6 +8822,54 @@ fn: l2_local_ns_proc (int: ni; const: @(char path)) int
             l2_m_value_used[k]: 0
             k: k + 1
         ---
+    ---
+return: 0
+
+# Slice 2c-2: the statements of a method's own named Structure ni run at S's calls, in S's procedure -- never at its
+# declaration (book :928) -- and a free name of them is a hidden input its caller passes (§12).  Two kinds stay out,
+# refused where they stand: a control body (`if`, `else`, `while`, `for`, `catch`, a block) -- its Structure would be
+# a child of S's occurrence, which the method builds at run time, and nothing builds it there yet -- and `node` -- in
+# S's body it names S's parent, the method's occurrence, and the translator resolves `node` as a file-level method's,
+# the unit.  0, or 1 said.
+fn: l2_local_ns_stmts_ok (int: ni; const: @(char path)) int
+    @: LmP0Field f
+    @: LmP0Node v
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_at[ni] = 0 || l2_ns_at[ni]\as = 0 || l2_ns_at[ni]\as\frame = 0 || l2_ns_at[ni]\as\frame\body = 0
+        return: 0
+    f: l2_next_active(l2_ns_at[ni]\as\frame\body\first_field)
+    while: f != 0
+        v: f\value
+        if: v != 0 && (l2_ns_body_stmt(v, ni) != 0 || v\kind != c.LM_P0_NODE_FRAME)
+            if: v\kind = c.LM_P0_NODE_STRUCTURE || l2_frame_head(v, "if") != 0 || l2_frame_head(v, "else") != 0 || l2_frame_head(v, "while") != 0 || l2_frame_head(v, "for") != 0 || l2_frame_head(v, "catch") != 0
+                return: l2_error(path, v, "a control body in a named Structure declared in a method is not built yet")
+            if: l2_names_node(v) != 0
+                return: l2_error(path, v, "`node` in a named Structure declared in a method is not built yet")
+        ---
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
+# Whether node n -- an atom, a Frame's head or any item under it -- names `node`: the word, or a path from it.
+fn: l2_names_node (const: @(LmP0Node n)) int
+    @: LmP0Field g
+    @: LmP0Text t 0
+    if: n = 0 || n\as = 0
+        return: 0
+    if: n\kind = c.LM_P0_NODE_ATOM
+        t: n\as\atom
+    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0
+        t: n\as\frame\head
+    if: t != 0 && t\data != 0 && t\length >= 4U && memcmp(t\data, "node", 4U) = 0 && (t\length = 4U || t\data[4] = 92)
+        return: 1
+    g: 0
+    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0 && n\as\frame\body != 0
+        g: l2_next_active(n\as\frame\body\first_field)
+    if: n\kind = c.LM_P0_NODE_STRUCTURE && n\as\structure != 0
+        g: l2_next_active(n\as\structure\first_field)
+    while: g != 0
+        if: l2_names_node(g\value) != 0
+            return: 1
+        g: l2_next_active(g\next)
     ---
 return: 0
 

@@ -2432,8 +2432,8 @@ $fixtures = @(
     # nothing there -- declared by the general route (book §9: an absent target with an explicit Structure value).  At
     # run time only its Structure exists: built at its statement, a child of the method's own Structure (pinned), bound
     # at S's slot -- no unit child (Absent) -- and each execution builds a new one (94; one kept would give 99).  The
-    # walk takes no method with one (pinned native).  A statement in its body and a field that is no number are refused
-    # where they stand.
+    # walk takes no method with one (pinned native).  A field that is no number is refused where it stands (its
+    # statements run since 2c-2, below).
     [pscustomobject]@{ Name = 'unit_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_nsp[0]: lmx_struct_new_owned'); Debt = @('lmx_struct_new_owned(self, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -2455,8 +2455,23 @@ $fixtures = @(
         Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_t0\native: (cast: (LmxEntry) l2_m2_tr)') },
     [pscustomobject]@{ Name = 'unit_local_ns_call_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_ns_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_stmt_refused.lm2:7:9: a statement in a named Structure declared in a method is not executed yet'; Absent = @(); Debt = @() },
+    # Slice 2c-2: S's statements run at its calls, in its procedure, never at its declaration (book :928) -- w 0 after
+    # it, then 14 and, after `k: 20`, 24: k is a hidden input the method passes (§12).  Under the knob the method stays
+    # native and the procedure unwalked (pinned).  S's statements are checked whether or not S runs (a free name nobody
+    # binds, refused where it stands).  A control body in S's body and `node` there are not built yet: refused where
+    # they stand (the `node` row was unit_local_ns_stmt_refused, refused as any statement by 2b-1).
+    [pscustomobject]@{ Name = 'unit_local_ns_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_local_ns_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    [pscustomobject]@{ Name = 'unit_local_ns_stmt_unresolved.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_stmt_unresolved.lm2:7:12: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_ctl_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_ctl_refused.lm2:7:9: a control body in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_node_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_node_refused.lm2:9:9: `node` in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_node_read_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_ns_node_read_refused.lm2:6:9: `node` in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_kind_refused.lm2:4:5: a field of this kind in a named Structure declared in a method is not built yet'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).

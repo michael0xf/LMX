@@ -1,0 +1,26 @@
+# unit_local_ns_stmt under --walk-methods: the method stays native (pinned) and S's procedure, whose body now has a
+# statement, is still never walked -- its occurrence is built natively at S's statement.  0, 14, 24 as natively: 7.
+fn: m () int
+    int: k 10
+    S:
+        size_t: v 4U
+        size_t: w 0U
+        w: v + (cast: (size_t) k)
+    int: r 0
+    if: S\w = 0U
+        r: r + 1
+    S\v: 9U
+    S()
+    if: S\v = 4U && S\w = 14U
+        r: r + 2
+    k: 20
+    S
+    if: S\w = 24U
+        r: r + 4
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

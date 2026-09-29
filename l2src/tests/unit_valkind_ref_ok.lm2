@@ -1,0 +1,31 @@
+# What the kind rule leaves standing: a reference compared with another reference and with 0, a callable formal in
+# arithmetic (its call, callable-first), a char literal as a number.  b = b: 1; b != 0 (b is a Box): 10; calc(seven) is
+# seven() + 1 = 8 and 'A' is 65: 100.  n 111 -> success 7; any other value 64.
+fn: seven () int
+    return: 7
+end: seven
+fn: calc (seven: f) int
+    return: f + 1
+end: calc
+Box:
+    int: v 0
+end: Box
+fn: peek () int
+    Box: b
+    int: ok 64
+    int: n 0
+    char: ch 'A'
+    if: b = b
+        n: n + 1
+    if: b != 0
+        n: n + 10
+    if: calc(seven) = 8 && ch = 65
+        n: n + 100
+    if: n = 111
+        ok: 7
+    return: ok
+end: peek
+int: r 0
+r: peek()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

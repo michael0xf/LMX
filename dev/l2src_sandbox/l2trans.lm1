@@ -604,6 +604,8 @@ int: l2_tbx_n 0
 @: LmP0Document l2_tb_sig 0
 # Q33 (§8): a row's receiver -- the name its `receiver` cell gives, a method of the program.
 @: char l2_cv_recv 0
+# The operand the kind check refuses (l2_native_expr_ty, l2_check_value_kinds).
+@: LmP0Node l2_kind_at 0
 # §8 (Q46): the program is the translated source and the files named after it at the call (l2trans main.lm2
 # part.lm2 ... out.lm1) -- its parts: their paths, their documents (kept for the translation: their tables
 # and methods hold their nodes), and the methods each gave, from l2_part_m0 to l2_part_m1 (l2_m_part).  The
@@ -855,6 +857,9 @@ prototype:
     fn: l2_colon_ret_ty (int: m; @: int out_ty) int
     fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_check_ret_kind (int: mi; const: @(LmP0Structure body); const: @(char path)) int
+    fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_native_zero (@@: LmP0Node tok; int: lo; int: hi) int
+    fn: l2_cf_named (int: mi; const: @(LmP0Node value)) int
     fn: l2_prim_code_name (int: ty) @: char
     fn: l2_convert_load () int
     fn: l2_m_nsof (int: mi) int
@@ -7789,18 +7794,48 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
             return: 0 - 99
         if: l2_colon_simple_ty(node, mi, @ ty) != 0
             return: 0 - 99
-        if: ty = 0 - 10 || ty = 0 - 11
+        # A text is no number (-11; -10 is a number literal or a char), and a Structure is a reference: their own
+        # kinds, -6 and -5, for the kind rule (l2_native_expr_ty).
+        if: ty = 0 - 11
+            l2_kind_at: (cast: (@: LmP0Node) node)
+            return: 0 - 6
+        if: ty = 0 - 10
             return: 0 - 1
+        # A callable formal is typed as the formal; used here it is called (callable-first) -- untyped, as before.
+        if: mi >= 0 && l2_param_find(mi, t) >= 0 && l2_param_find(mi, t) < l2_m_arity[mi] && l2_cf_get(mi, l2_param_find(mi, t)) >= 0
+            return: 0 - 99
+        if: l2_colon_is_graph_ty(ty) != 0
+            l2_kind_at: (cast: (@: LmP0Node) node)
+            return: 0 - 5
         if: l2_prim_code_name(ty) = 0
             return: 0 - 99
         return: ty
     if: node\kind = c.LM_P0_NODE_FRAME
         if: l2_colon_simple_ty(node, mi, @ ty) != 0
             return: 0 - 99
+        if: l2_colon_is_graph_ty(ty) != 0
+            l2_kind_at: (cast: (@: LmP0Node) node)
+            return: 0 - 5
         if: l2_prim_code_name(ty) = 0
             return: 0 - 99
         return: ty
 return: 0 - 99
+
+# Is value the bare name of a callable formal of method mi -- named where a value is consumed, its call?
+fn: l2_cf_named (int: mi; const: @(LmP0Node value)) int
+    int: k
+    if: mi < 0 || value = 0 || value\kind != c.LM_P0_NODE_ATOM || value\as = 0 || value\as\atom = 0
+        return: 0
+    k: l2_param_find(mi, value\as\atom)
+    if: k >= 0 && k < l2_m_arity[mi] && l2_cf_get(mi, k) >= 0
+        return: 1
+return: 0
+
+# Is tok[lo..hi] the one literal 0 -- all that stands beside a reference (the walk's l2_rw_tlit)?
+fn: l2_native_zero (@@: LmP0Node tok; int: lo; int: hi) int
+    if: lo != hi || tok[lo] = 0 || tok[lo]\kind != c.LM_P0_NODE_ATOM || tok[lo]\as = 0 || tok[lo]\as\atom = 0
+        return: 0
+return: l2_text_eq(tok[lo]\as\atom, "0")
 
 fn: l2_native_expr_ty (@@: LmP0Node tok; int: lo; int: hi; int: mi) int
     int: best
@@ -7814,6 +7849,38 @@ fn: l2_native_expr_ty (@@: LmP0Node tok; int: lo; int: hi; int: mi) int
     p: l2_rw_prec(tok[best]\as\atom)
     a: l2_native_expr_ty(tok, lo, best - 1, mi)
     b: l2_native_expr_ty(tok, best + 1, hi, mi)
+    # The kind rule (the walk's -179; a text is no number).  A refusal found below goes up as it is: -15 a reference
+    # where a number is asked, -16 a text where a number is asked, -17 a reference compared with a number other than 0.
+    if: a <= 0 - 15 && a >= 0 - 17
+        return: a
+    if: b <= 0 - 15 && b >= 0 - 17
+        return: b
+    # A text in a comparison or in arithmetic; a reference in arithmetic.
+    if: p >= 3 && (a = 0 - 6 || b = 0 - 6)
+        return: 0 - 16
+    if: p >= 5 && (a = 0 - 5 || b = 0 - 5)
+        return: 0 - 15
+    # A reference compared: with a reference, or with the literal 0 (beside a reference only 0 stands); a literal
+    # other than 0 is refused as the walk refuses it, a typed number is a reference where a number is asked.
+    if: (p = 3 || p = 4) && (a = 0 - 5 || b = 0 - 5)
+        if: a = 0 - 5 && b = 0 - 5
+            return: 0
+        if: (a = 0 - 5 && l2_native_zero(tok, best + 1, hi) != 0) || (b = 0 - 5 && l2_native_zero(tok, lo, best - 1) != 0)
+            return: 0
+        if: a = 0 - 5 && (b = 0 - 1 || b = 0 - 2) && best + 1 = hi
+            l2_kind_at: tok[hi]
+            return: 0 - 17
+        if: b = 0 - 5 && (a = 0 - 1 || a = 0 - 2) && lo = best - 1
+            l2_kind_at: tok[lo]
+            return: 0 - 17
+        # A typed number beside a reference; an operand the typer does not know is not this rule's.
+        if: (a = 0 - 5 && b >= 0 && l2_prim_code_name(b) != 0) || (b = 0 - 5 && a >= 0 && l2_prim_code_name(a) != 0)
+            return: 0 - 15
+        return: 0 - 99
+    ---
+    # A logical operation keeps a text or a reference operand untyped, as before.
+    if: a = 0 - 5 || b = 0 - 5 || a = 0 - 6 || b = 0 - 6
+        return: 0 - 99
     if: a = 0 - 99 || b = 0 - 99
         return: 0 - 99
     if: p = 1 || p = 2
@@ -7842,7 +7909,8 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     ty: l2_native_expr_ty(tok, 0, m - 1, mi)
     if: ty = 0 - 3
         return: 0 - 3
-    if: ty = 0 - 99
+    # A kind refusal is said by the field check (l2_check_value_kinds); to these callers the value stays untyped.
+    if: ty = 0 - 99 || ty = 0 - 5 || ty = 0 - 6 || (ty <= 0 - 15 && ty >= 0 - 17)
         return: 0 - 1
     if: ty = 0 - 1
         ty: 0
@@ -7860,6 +7928,12 @@ return: ty
 # 1: error.
 fn: l2_check_value_convert_core (const: @(LmP0Node value); int: from_ft; int: to_ft; int: mi; const: @(char path)) int
     int: cok
+    # A text or a Structure given to a number place (a formal, a declaration): the kind rule (-179), in the walk's words.
+    # A callable formal named here is its call (callable-first), not the formal: not typed here, as before.
+    if: from_ft = 0 - 11
+        return: l2_error(path, value, "a text where a number is asked")
+    if: l2_colon_is_graph_ty(from_ft) != 0 && l2_cf_named(mi, value) = 0
+        return: l2_error(path, value, "a reference where a number is asked")
     if: from_ft = 8 || l2_prim_code_name(from_ft) = 0
         return: 0
     if: c.strcmp(l2_prim_code_name(from_ft), l2_prim_code_name(to_ft)) = 0
@@ -18163,6 +18237,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: nty 0
     if: n <= 0
         return: l2_error(path, at, "unsupported body")
+    if: l2_check_value_kinds(field, n, mi, path, at) != 0
+        return: 1
     cpn: l2_join_path(field, n, cpbuf, 255U)
     if: cpn != 0U
         cpraw: l2_raw_path(cpbuf, cpn, mi, @ cpraw_j)
@@ -18399,6 +18475,33 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             num_prev: 1
         i: i + 1
         f: l2_next_active(f\next)
+return: 0
+
+# THE KIND OF A VALUE IN AN OPERATION (the walk's rule -179, natively; OPUS-VALKIND-20260929-08): an operation of n >= 3
+# fields typed by the native expression typer with its leaf kinds -- a text in a comparison or arithmetic, a Structure
+# (a reference) in arithmetic, or compared with anything but the literal 0 or another reference, is refused at the
+# operand, in the walk's words.  It went out as C converting a pointer into a number.
+fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
+    []: @(LmP0Node) tok 64
+    int: m
+    int: ty
+    @: LmP0Node where
+    if: field = 0 || n < 3 || n > 63
+        return: 0
+    m: l2_rw_tokens(field, n, tok)
+    if: m < 3
+        return: 0
+    l2_kind_at: 0
+    ty: l2_native_expr_ty(tok, 0, m - 1, mi)
+    where: l2_kind_at
+    if: where = 0
+        where: (cast: (@: LmP0Node) at)
+    if: ty = 0 - 15
+        return: l2_error(path, where, "a reference where a number is asked")
+    if: ty = 0 - 16
+        return: l2_error(path, where, "a text where a number is asked")
+    if: ty = 0 - 17
+        return: l2_error(path, where, "a reference compared with a number other than 0")
 return: 0
 
 # THE CALLABLE A BARE ATOM NAMES (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139), resolved as the head

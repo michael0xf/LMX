@@ -2277,6 +2277,26 @@ $fixtures = @(
         Needle = 'unit_index_num_refused.lm2:8:9: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_index_num_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_index_num_return_refused.lm2:4:14: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
+    # OPUS-VALKIND-20260929-08: a text or a Structure where a number is consumed is refused where it stands, natively as
+    # the walk already refuses it (its rule -179: a reference stands only where its own type is asked -- beside it only 0;
+    # "a reference where a number is asked", "a reference compared with a number other than 0"; a text is no number).
+    # Each of these compiled and RAN, the launch exiting with a pointer's value (`if: b = 3` without even a warning):
+    # an operand, a condition, a formal's actual, a declaration.  unit_valkind_ref_ok: what stands -- a reference
+    # compared with a reference and with 0, a callable formal in arithmetic (its call), a char literal.
+    [pscustomobject]@{ Name = 'unit_valkind_op_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_valkind_op_ref_refused.lm2:12:8: a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_valkind_cond_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_valkind_cond_ref_refused.lm2:11:13: a reference compared with a number other than 0'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_valkind_op_text_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_valkind_op_text_refused.lm2:11:8: a text where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_valkind_arg_text_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_valkind_arg_text_refused.lm2:10:18: a text where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_valkind_arg_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_valkind_arg_ref_refused.lm2:11:18: a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_valkind_decl_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_valkind_decl_ref_refused.lm2:11:12: a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_valkind_ref_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

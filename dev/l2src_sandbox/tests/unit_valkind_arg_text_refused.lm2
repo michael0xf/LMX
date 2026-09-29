@@ -1,0 +1,15 @@
+# A text given to a number formal is refused at the actual (the one-value conversion core): `take("x")` went out as
+# C passing the text's pointer as the int.
+Box:
+    int: v 0
+end: Box
+fn: take (int: x) int
+    return: x
+end: take
+fn: peek () int
+    return: take("x")
+end: peek
+int: r 0
+r: peek()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

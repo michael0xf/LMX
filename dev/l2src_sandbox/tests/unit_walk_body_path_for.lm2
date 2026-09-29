@@ -1,0 +1,37 @@
+# The walked twin of unit_body_path_for (OPUS-WALKLOOP-20260929-11): the book's program (§12, the order among cache,
+# explicit graph read and actual arguments) with pair and test walked -- the walker's FOR; the counter i and j are
+# fields of the for frame (class 3), for\j its body path.  The same values: pair receives 9 0, 900; a later for\j 9;
+# `for\j: 42` writes the cell, read back 42.  Success 7; the actuals taken after the publication (9 9) 65; the later
+# read not 9 66; the written cell not 42 67.
+fn: pair (int: a; int: b) int
+    return: a * 100 + b
+end: pair
+fn: test () int
+    int: acc
+    acc: 0
+    for: int(i, 0) (i < 10) i++
+        int: j i
+        acc: j
+    end: for
+    int: p 0
+    p: pair(acc for\j)
+    int: later 0
+    later: for\j
+    for\j: 42
+    int: w 0
+    w: for\j
+    int: ok 64
+    if: p = 909
+        ok: 65
+    if: later != 9
+        ok: 66
+    if: w != 42
+        ok: 67
+    if: p = 900 && later = 9 && w = 42
+        ok: 7
+    return: ok
+end: test
+int: r 0
+r: test()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

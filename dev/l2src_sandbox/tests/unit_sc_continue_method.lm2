@@ -1,0 +1,21 @@
+# unit_walk_sc_continue in a method, native: the loop stops at i 5.  Success 7; 10 is 65; any other value 64.  Its
+# walked twin is unit_walk_sc_continue_method (the walk gave 10 before OPUS-WALKLOOP-20260929-11).
+fn: peek () int
+    int: i 0
+    int: n 0
+    while: i < 5 && n < 100
+        i: i + 1
+        if: i > 50
+            break
+        if: i < 10
+            continue
+        n: n + 1
+    int: r 64
+    if: i = 5
+        r: 7
+    if: i = 10
+        r: 65
+    return: r
+end: peek
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

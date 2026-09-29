@@ -1,0 +1,21 @@
+# unit_sc_continue_method walked (peek is not native: the Absent pin): the walker's AND is asked afresh before each
+# turn, after a `continue` too -- i 5, success 7 (the walk's flag step gave 10, 65).
+fn: peek () int
+    int: i 0
+    int: n 0
+    while: i < 5 && n < 100
+        i: i + 1
+        if: i > 50
+            break
+        if: i < 10
+            continue
+        n: n + 1
+    int: r 64
+    if: i = 5
+        r: 7
+    if: i = 10
+        r: 65
+    return: r
+end: peek
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

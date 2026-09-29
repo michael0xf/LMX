@@ -1665,8 +1665,10 @@ $fixtures = @(
         Absent = @(); Debt = @('lmx_arena_ref_struct(node, 10U), lmx_arena_ref_struct(node, 10U), l2_nsr0, 1U, 0, @ l2_nso0)') },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('c.LMX_WALK_OP_EXEC, 6U)') },
+    # OPUS-WALKLOOP-20260929-11: Counter's procedure has a `for` -- it stayed native under the knob until the walker's FOR,
+    # though the fixture says it is walked; now it is (the Absent pins).
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
-        Absent = @(); Debt = @() },
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_block_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_block_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -1904,16 +1906,18 @@ $fixtures = @(
     # unit_walk_trailer: acc's own `mine` is SET / OWN of its working value; y is s's and acc's hidden input, and
     # their writes are SET_ARG -- the root's y stays 0 (Q52, the author 2026-09-28; 7b, re-expected by name: was 6
     # after s() twice and 16 after acc(10), which is now 10).  The pins: s's write is SET_ARG 0; acc's `mine: y + by`
-    # is its first step, SET of its working value (slot 2), reading y as ARG 1; `y: mine` is SET_ARG 1.
+    # is its first step, SET of its working value (slot 2), reading y as ARG 1; `y: mine` is SET_ARG 1.  The node
+    # numbers are 18 lower since OPUS-WALKLOOP-20260929-11: the root's `if: r != 10 || y != 0` is one OR node, no longer
+    # a flag cell and its steps (in the count pass and the emission alike); the shapes pinned are the same.
     [pscustomobject]@{ Name = 'unit_walk_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('if: lmx_arena_ref_store(l2_rw77, 3U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0',
-                 '@: Lmx l2_rw86 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw85, c.LMX_WALK_OP_RET, 2U)',
-                 '@: Lmx l2_rw78 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw77, c.LMX_WALK_OP_SET_ARG, 3U)',
-                 '@: Lmx l2_rw94 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw93, c.LMX_WALK_OP_SET, 3U)',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw95, 2U, 2U) != c.LMX_WALK_OK',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw97, 1U, 1U) != c.LMX_WALK_OK',
-                 '@: Lmx l2_rw99 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw93, c.LMX_WALK_OP_SET_ARG, 3U)') },
+        Debt = @('if: lmx_arena_ref_store(l2_rw59, 3U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0',
+                 '@: Lmx l2_rw68 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw67, c.LMX_WALK_OP_RET, 2U)',
+                 '@: Lmx l2_rw60 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw59, c.LMX_WALK_OP_SET_ARG, 3U)',
+                 '@: Lmx l2_rw76 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw75, c.LMX_WALK_OP_SET, 3U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw77, 2U, 2U) != c.LMX_WALK_OK',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw79, 1U, 1U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw81 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw75, c.LMX_WALK_OP_SET_ARG, 3U)') },
     # T4b class 2 walks bind and native_caller too.  bafca4c / Q52 (an argument is its parameter): bind's
     # `n: n + 100` is the activation's write of its input n (SET_ARG), and its return reads that input (ARG) -- no
     # field is written.
@@ -2167,9 +2171,12 @@ $fixtures = @(
     # a control body -- the field of its enclosing body named by its statement's head; a path root naming one is the
     # last such body visible where the path stands (inside it, or after its `end:`).  unit_body_path_for: the book's
     # program -- pair receives 9 0 (the actuals before the call's checkpoint), a later for\j 9, `for\j: 42` the cell;
-    # native only (the walk runs no `for`).  Pins: the root is the prologue's handle of the body.
+    # walked too (OPUS-WALKLOOP-20260929-11: the walker's FOR; pair and test walked, the Absent pins).  Pins: the root is
+    # the prologue's handle of the body.
     [pscustomobject]@{ Name = 'unit_body_path_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('l2_pst: l2_h0') },
+    [pscustomobject]@{ Name = 'unit_walk_body_path_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
     # unit_body_path_while: the same order walked too (test walked: the Absent pin), plus position (loop B written
     # later is not visible before it) and depth (a loop inside an `if` body).  The walked actuals are typed temporaries
     # before the call's checkpoint (lmx_walk_arg_value): the walk printed 9 9 before 7b-3.
@@ -2323,6 +2330,27 @@ $fixtures = @(
         Needle = 'unit_pathconv_norow_refused.lm2:9:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_pathwrite_cell_kept.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # OPUS-WALKLOOP-20260929-11: loops in the walk.  `a && b` / `a || b` are the walker's AND / OR, one value,
+    # short-circuit: the flag cell and its flag steps are gone -- a loop ran the flag step again at the end of its body,
+    # so a `continue` left the condition stale (the root and a walked method gave 10, 65; natively 5).  unit_walk_sc_short
+    # pins the short-circuit: boom is called twice, no more.  And the core `for` is the walker's FOR, the step after each
+    # turn, a `continue` too: a method with a `for` is walked under the knob (it stayed native; the Absent pins), the
+    # book's for\j program walked (above); the root's `for` stops at its counter, a field declared in a nested body.
+    [pscustomobject]@{ Name = 'unit_walk_sc_continue.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_sc_continue_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_sc_continue_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_sc_short.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('boom', 'boom');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_for_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_for_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m3_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m4_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_for_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_root_for_refused.lm2:4:6: root operation not walkable yet: a field declared in a nested body'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates
@@ -3843,12 +3871,13 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     # THE WORKING STATE (steps/working-state-7b.md, 7b-1; book §12, §14; Lingvamyxa spec 21.5, 21.6): each witness twice,
     # natively and walked; the value is the exit code.  In walk mode the methods the walk takes are walked (a method
-    # with a self path, a `for` body, throw/catch, a Box field or c.* stays native), the root always.
+    # with a self path, throw/catch, a Box field or c.* stays native; a `for` is walked since OPUS-WALKLOOP-20260929-11,
+    # before it test stayed native here), the root always.
     # unit_cache_for_call: the book's for/print trace: take gets the working acc 9 and the published for\j 0 -- in place 99.
     [pscustomobject]@{ Name = 'unit_cache_for_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 90;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_cache_for_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 90; WalkMethods = $true;
-        Absent = @(); Debt = @() },
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
     # unit_cache_addr_graph: `\p: 9` through `p: @x` changes the cell, not the working x 5; the clean x is not written back -- in place 99, clean published 55.
     [pscustomobject]@{ Name = 'unit_cache_addr_graph.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 59;
         Absent = @(); Debt = @() },

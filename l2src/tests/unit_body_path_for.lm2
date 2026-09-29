@@ -3,8 +3,8 @@
 # book's program.  After the loop the working acc is 9 and j's working value 9 is unpublished -- `end: for` is no
 # checkpoint.  `pair(acc for\j)` evaluates its actuals first: acc 9 from the cache, for\j 0 from j's place of
 # declaration in the for body the statement left in test's Structure; the call's checkpoint then publishes 9, and pair
-# receives 9 0: 900.  A later explicit for\j reads 9; `for\j: 42` writes the cell, read back 42.  Native only: the walk
-# runs no `for` (unit_body_path_while is the rule walked).  Success 7; actuals taken after the publication (9 9) 65;
+# receives 9 0: 900.  A later explicit for\j reads 9; `for\j: 42` writes the cell, read back 42.  Walked too: its twin
+# unit_walk_body_path_for (OPUS-WALKLOOP-20260929-11).  Success 7; actuals taken after the publication (9 9) 65;
 # the later read not 9 66; the written cell not 42 67.
 fn: pair (int: a; int: b) int
     return: a * 100 + b

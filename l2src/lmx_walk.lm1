@@ -1894,6 +1894,26 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         ---
         \out: dest
         return: c.LMX_WALK_OK
+    # `a && b`, `a || b`: a decides alone when it is 0 for AND, not 0 for OR; else the value is whether b is not 0.
+    if: op = c.LMX_WALK_OP_AND || op = c.LMX_WALK_OP_OR
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: value = 0 || lmx_walk_load_operand(f\arena, value, @ ua, @ aty) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        if: (op = c.LMX_WALK_OP_AND && ua = 0U) || (op = c.LMX_WALK_OP_OR && ua != 0U)
+            lmx_int_store_known(dest, (cast: (int) (op = c.LMX_WALK_OP_OR)))
+            \out: dest
+            return: c.LMX_WALK_OK
+        ---
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), (cast: (@: void) (@ b)), @ other)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: other = 0 || lmx_walk_load_operand(f\arena, other, @ ub, @ aty) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        lmx_int_store_known(dest, (cast: (int) (ub != 0U)))
+        \out: dest
+        return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
         if: status != c.LMX_WALK_OK
@@ -2041,7 +2061,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         return: c.LMX_WALK_BREAK
     if: op = c.LMX_WALK_OP_CONTINUE
         return: c.LMX_WALK_CONTINUE
-    if: op = c.LMX_WALK_OP_WHILE
+    # [while, cond, body] and [for, cond, body, step]: the condition before each turn, the step after it.
+    if: op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_FOR
         while: going != 0
             wv: 0U
             status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
@@ -2063,6 +2084,12 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
                     status: c.LMX_WALK_OK
                     going: 0
                 ---
+                if: status != c.LMX_WALK_OK || f\returned != 0
+                    going: 0
+                ---
+            ---
+            if: going != 0 && op = c.LMX_WALK_OP_FOR
+                status: lmx_walk_body(f, lmx_arena_ref_struct(code, 3U), 0U)
                 if: status != c.LMX_WALK_OK || f\returned != 0
                     going: 0
                 ---
@@ -2311,9 +2338,9 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
         step_op: lmx_walk_op(f, child)
         if: step_op != c.LMX_WALK_OP_NONE
             status: lmx_walk_eval(f, child, step_dest, @ dropped)
-            # Activation value = last evaluated expression. SET/PUT/IF/WHILE are
+            # Activation value = last evaluated expression. SET/PUT/IF/WHILE/FOR are
             # statements (void fall-off). LIT/arith/CALL/OWN/... count. RET sets valued itself.
-            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_SET_OF && step_op != c.LMX_WALK_OP_SET_ARG && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_ELEMPUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE && step_op != c.LMX_WALK_OP_PAD
+            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_SET_OF && step_op != c.LMX_WALK_OP_SET_ARG && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_ELEMPUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE && step_op != c.LMX_WALK_OP_FOR && step_op != c.LMX_WALK_OP_PAD
                 f\result: dropped
                 f\valued: 1
             ---

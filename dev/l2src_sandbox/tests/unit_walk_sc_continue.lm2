@@ -1,0 +1,20 @@
+# `a && b` in a loop condition is one value, asked afresh before each turn (OPUS-WALKLOOP-20260929-11).  The root is
+# walked, and the walk built `a && b` as a flag cell written by a flag step, which the loop ran again at the end of
+# its body: a `continue` skipped it, the condition stayed 1 and the loop ran on to i 10.  Now it is the walker's AND:
+# the loop stops at i 5, as natively.  Success 7; the stale condition's 10 is 65; any other value 64.
+int: i 0
+int: n 0
+while: i < 5 && n < 100
+    i: i + 1
+    if: i > 50
+        break
+    if: i < 10
+        continue
+    n: n + 1
+int: r 64
+if: i = 5
+    r: 7
+if: i = 10
+    r: 65
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

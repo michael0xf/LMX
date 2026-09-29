@@ -1,0 +1,23 @@
+# The walker's AND / OR are short-circuit (OPUS-WALKLOOP-20260929-11): b is evaluated only when a does not decide.
+# boom prints a line each time it is called: `i = 1 && boom()` and `i = 0 || boom()` do not call it, `i = 0 && boom()`
+# does (k 110 in all), and `while: i < 3 || boom() = 0` calls it once, when i is 3 -- two lines in all.  Success 7;
+# any other k or i 64.
+fn: boom () int
+    c.printf: "boom\n"
+    return: 1
+end: boom
+int: i 0
+int: k 0
+if: i = 1 && boom() = 1
+    k: k + 1
+if: i = 0 || boom() = 1
+    k: k + 10
+if: i = 0 && boom() = 1
+    k: k + 100
+while: i < 3 || boom() = 0
+    i: i + 1
+int: r 64
+if: k = 110 && i = 3
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

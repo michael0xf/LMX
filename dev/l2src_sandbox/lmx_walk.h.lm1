@@ -283,10 +283,10 @@ define: LMX_WALK_OP_ELEMPUT 26
 define: LMX_WALK_OP_LENGTH 27
 # -201: [pad, param_ref_0 .. param_ref_P-1, body]. Catch landing. Count was 28.
 define: LMX_WALK_OP_PAD 28
-# User break and continue. A body propagates them. WHILE consumes them:
-# break ends the loop as success, continue starts the next turn. They are
-# not walker errors (1..7) and not throws (>= THROWN). A jump that escapes
-# the walk is an unknown status.
+# User break and continue. A body propagates them. WHILE and FOR consume them:
+# break ends the loop as success, continue starts the next turn (FOR runs its
+# step first). They are not walker errors (1..7) and not throws (>= THROWN).
+# A jump that escapes the walk is an unknown status.
 define: LMX_WALK_BREAK -2
 define: LMX_WALK_CONTINUE -3
 define: LMX_WALK_OP_BREAK 29
@@ -309,7 +309,16 @@ define: LMX_WALK_OP_NODE 36
 # cells from slot 5, cell j the value's slot of model's field j; the record keeps the frame and the offset), or as
 # the model's own (no cells).  A null value passes unadmitted; a refusal is the implicit throw `implements`.
 define: LMX_WALK_OP_ADMIT_AS 37
-define: LMX_WALK_OP_COUNT 38
+# [and, a, b] / [or, a, b]: `a && b` / `a || b` as one value, short-circuit -- b is evaluated only when a does not decide
+# -- an int, 1 or 0.  A condition is then one value however it is built, and a loop asks it afresh in full each turn,
+# after a `continue` too.
+define: LMX_WALK_OP_AND 38
+define: LMX_WALK_OP_OR 39
+# [for, cond, body, step]: the core `for` (book, branches and loops: the initialization once, then condition, body and
+# step).  The initialization is the step before this node; `step` -- a plain Structure of steps -- runs after each turn
+# of the body, a `continue` too, and a `break` ends the loop as success.
+define: LMX_WALK_OP_FOR 40
+define: LMX_WALK_OP_COUNT 41
 # -174 c4: method.sig = MARK | LMX_TYPE_* names the trampoline result class for CALL dest.
 define: LMX_WALK_RESULT_SIG_MARK 0x57000000
 

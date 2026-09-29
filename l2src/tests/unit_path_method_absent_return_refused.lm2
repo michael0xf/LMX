@@ -1,0 +1,16 @@
+# `M\zz` as a `return:` value, zz no field of M: the emitter's method-root branch says it at the name, as the check says
+# it elsewhere ("unresolved name").  It said it at a pointer that branch never sets, and the translator died
+# (0xC0000005) inside the diagnostic.
+fn: M () int
+    int: k 0
+    k: 3
+    return: 0
+end: M
+fn: peek () int
+    M()
+    return: M\zz
+end: peek
+int: r 0
+r: peek()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

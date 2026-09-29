@@ -1,0 +1,29 @@
+# A path of more than one name rooted at a method is one path in every value position (l2_path_chain_check): M\b\v
+# is v of the Box in M's field b.  As a `return:` value and as a call's actual -- positions the check does not look
+# at -- it used to be the call of M with `\b\v` written out raw after it, C that did not compile.  M sets b\v 5 and
+# returns; peek gives M\b\v, and take(M\b\v) + 1.  5 * 10 + 6 = 56 -> success 7; any other value 64.
+Box:
+    int: v 0
+end: Box
+fn: M () int
+    Box: b
+    b\v: 5
+    return: 0
+end: M
+fn: take (int: x) int
+    return: x + 1
+end: take
+fn: peek () int
+    return: M\b\v
+end: peek
+fn: peek2 () int
+    return: take(M\b\v)
+end: peek2
+M()
+int: r 0
+r: peek() * 10 + peek2()
+int: ok 64
+if: r = 56
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

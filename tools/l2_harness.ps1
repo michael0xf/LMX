@@ -2228,6 +2228,32 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_init_graph_place_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_init_graph_place_refused.lm2:14:5: graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # OPUS-BODYSEG-20260929-05 (the 7b-3 path rule one level down; L2 §10 `M\for\y`; Q51): after a method's name, and
+    # after a body root, the names go on through bodies, each named by its statement's head (l2_body_seg) -- natively
+    # one hop into the body's Structure at its child slot, walked an OF.  unit_body_seg_method + walk twin: M\while\j
+    # read from outside after M (20, at the root and from another method), written from outside (77), `if\while\j` in N
+    # after the if's `end` -- the place before a boundary publishes j (0), after it (21).  The walk twin pins that M,
+    # peek and N are walked (no native word).
+    [pscustomobject]@{ Name = 'unit_body_seg_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_body_seg_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_m0_tr)', 'l2_m1_tr)', 'l2_m3_tr)'); Debt = @() },
+    # A later body declares no such field: refused where it stands, the walked root in the check's words.  A body not
+    # yet written where the path stands (forward and down, as a root body): refused.
+    [pscustomobject]@{ Name = 'unit_body_seg_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_body_seg_absent_refused.lm2:13:4: unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_body_seg_position_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_body_seg_position_refused.lm2:7:9: unknown field path segment'; Absent = @(); Debt = @() },
+    # A method-rooted path of more than one name is one path in every value position (l2_path_chain_check): M\b\v as a
+    # `return:` value and a call's actual read the Box field -- it was the call of M with `\b\v` written out raw after
+    # it, C that did not compile.  The emitter refuses a path the check would refuse (M\k\q, as a `return:` value), and
+    # the method-root branch says an absent field at its name (it read a pointer it never set: the translator died).
+    [pscustomobject]@{ Name = 'unit_path_chain_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_chain_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_chain_return_refused.lm2:11:13: unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_method_absent_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_method_absent_return_refused.lm2:11:15: unresolved name'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

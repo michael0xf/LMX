@@ -1,0 +1,53 @@
+# The 7b-3 path rule one level down (L2 §10: nested bodies are nested field-only Structures, `M\for\y` the same path;
+# Q51: a path from outside reads the place of declaration): after a method's name the path goes on through its
+# bodies, each named by its statement's head -- M\while\j is j declared in M's while body -- and after a body root
+# through that body's bodies -- `if\while\j` in N, after the if's `end`.
+# - From outside, after M returned (its end published j's working value into the place): 20, read at the root and
+#   from another method (peek).  Written through the path from outside, `M\while\j: 77`, the place reads 77.
+# - In N, the explicit read is the place, not the working value: before a boundary publishes it, 0 (the book's
+#   `9 0`); after the call of nop, 21.  N gives 0 * 100 + 21.
+# a 20, b 20, c 77, d 21.  Success 7; any other value 64.
+fn: M () int
+    int: k 0
+    while: k < 3
+        int: j 0
+        j: k * 10
+        k: k + 1
+    return: 0
+end: M
+fn: peek () int
+    return: M\while\j
+end: peek
+fn: nop () int
+    return: 0
+end: nop
+fn: N () int
+    int: r0 0
+    int: r1 0
+    if: 1 = 1
+        int: k 0
+        while: k < 3
+            int: j 0
+            j: k * 10 + 1
+            k: k + 1
+        ---
+    r0: if\while\j
+    nop()
+    r1: if\while\j
+    return: r0 * 100 + r1
+end: N
+M()
+int: a 0
+a: M\while\j
+int: b 0
+b: peek()
+M\while\j: 77
+int: c 0
+c: M\while\j
+int: d 0
+d: N()
+int: ok 64
+if: a = 20 && b = 20 && c = 77 && d = 21
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

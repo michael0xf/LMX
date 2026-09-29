@@ -1136,6 +1136,8 @@ prototype:
     fn: l2_for_add (const: @(LmP0Node node); int: mi; int: parent; const: @(LmP0Node owner)) int
     fn: l2_here_at (const: @(LmP0Node n)) int
     fn: l2_body_root (int: mi; const: @(char pd); size_t: off; size_t: len) int
+    fn: l2_body_seg (int: mi; int: pk; const: @(char pd); size_t: off; size_t: len; int: here_mi) int
+    fn: l2_rw_path_bodies (const: @(LmP0Node node); const: @(LmP0Text t); size_t: b; int: mi; int: say; @: int path) int
     fn: l2_body_named (int: mi; const: @(LmP0Text t)) int
     fn: l2_body_head_word (const: @(LmP0Text t)) int
     fn: l2_for_find (const: @(LmP0Node node)) int
@@ -15368,6 +15370,25 @@ fn: l2_body_named (int: mi; const: @(LmP0Text t)) int
         return: 0 - 1
 return: l2_body_root(mi, t\data, 0U, t\length)
 
+# A CONTROL BODY AS A LATER PATH SEGMENT (the 7b-3 rule one level down; L2 §10 `M\for\y`): after a method root a name is
+# of that method's level, after a body of that body -- a declared field, or a body of that host named by its statement's
+# head.  The body: the last one of method mi whose enclosing body is pk (-1: the method's own level) and whose head is
+# the segment; where the path stands in mi itself (here_mi), one visible there -- on the scope stack, or written before
+# the statement being read -- as for a root (l2_body_root).  -1 when none.
+fn: l2_body_seg (int: mi; int: pk; const: @(char pd); size_t: off; size_t: len; int: here_mi) int
+    int: k 0
+    int: best 0 - 1
+    const: @: LmP0Node st
+    if: mi < 0 || pd = 0 || len = 0U
+        return: 0 - 1
+    while: k < l2_for_n
+        st: l2_for_stmt[k]
+        if: l2_for_mi[k] = mi && l2_for_parent[k] = pk && st != 0 && st\kind = c.LM_P0_NODE_FRAME && st\as != 0 && st\as\frame != 0 && st\as\frame\head != 0 && l2_name_is_seg(st\as\frame\head, pd, off, len) != 0 && (mi != here_mi || l2_scope_has(l2_for_node[k]) != 0 || l2_here_on = 0 || st\span = 0 || st\span\offset < l2_here)
+            best: k
+        k: k + 1
+    ---
+return: best
+
 # Does `t` head some control body of the program -- a word a path may start with, as `node` is (l2_path_chain)?  Which
 # body it names is l2_body_root's to say where the path stands.
 fn: l2_body_head_word (const: @(LmP0Text t)) int
@@ -15707,9 +15728,17 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     int: ent 0 - 1
     int: root 0 - 1
     int: fi 0 - 1
+    int: bh 0 - 1
+    int: bm 0 - 1
+    int: nb
     \out_mi: 0 - 1
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
         return: 0 - 1
+    # The host the next name is resolved in (l2_body_seg): a body root's body, a method root's own level.
+    if: root >= 0
+        bh: root
+    if: root <= 0 - 1000
+        bm: 0 - 1000 - root
     # An own-rooted path (FABLE-SONNET-FIELD-PATHS-20260923-113): walk it
     # like a namespace root once seeded with the own field's Structure type,
     # if known. Unknown (ni stays -1) refuses at segment 1 below, the same
@@ -15739,16 +15768,29 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
                     slot: 0
                 ---
             ---
-        if: i = 1 && root >= 0
-            slot: l2_for_own_seg(root, pd, off, len, @ kind, @ ent)
-        if: i = 1 && root <= 0 - 1000
-            slot: l2_own_seg_scan(0 - 1000 - root, 0, pd, off, len, @ kind, @ ent)
-        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni < 0
+        nb: 0 - 1
+        if: bh >= 0
+            slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
+        if: bm >= 0
+            slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
+        # A body of the host: an inline nested Structure (kind 2), the next name that body's.
+        if: slot < 0 && bh >= 0
+            nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
+        if: slot < 0 && bm >= 0
+            nb: l2_body_seg(bm, 0 - 1, pd, off, len, l2_cur_mi)
+        if: nb >= 0
+            slot: nb
+            kind: 2
+            ent: 0 - 1
+        ---
+        if: ((i > 1 && bh < 0 && bm < 0) || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni < 0
             return: 0 - 1
-        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni >= 0
+        if: ((i > 1 && bh < 0 && bm < 0) || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni >= 0
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
         if: slot < 0
             return: 0 - 1
+        bh: nb
+        bm: 0 - 1
         # Through a reference field `@: T q` (D-76): on into its pointee T.
         if: i + 1 < segs && kind = 10 && res < 0
             ent: l2_ns_ref_pointee(ni, pd, off, len)
@@ -15794,10 +15836,18 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     int: ent 0 - 1
     int: root 0 - 1
     int: fi 0 - 1
+    int: bh 0 - 1
+    int: bm 0 - 1
+    int: nb
     []: char l2_proot 64
     []: char sl 40
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
         return: l2_error(l2_src, at, "unknown field path root")
+    # The host the next name is resolved in, as l2_path_kind: a body root's body, a method root's own level.
+    if: oi < 0 && root >= 0
+        bh: root
+    if: oi < 0 && root <= 0 - 1000
+        bm: 0 - 1000 - root
     segs: l2_seg_count(pd, pn)
     # An own-rooted path (FABLE-SONNET-FIELD-PATHS-20260923-113): seed l2_pst
     # from a genuine load of the own field -- l2_emit_path_load already does
@@ -15876,19 +15926,32 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
         if: i = 1 && root = 0 - 2 && l2_node_seg(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent) != 0
             slot: 0 - 1
-        if: i = 1 && root >= 0
-            slot: l2_for_own_seg(root, pd, off, len, @ kind, @ ent)
+        nb: 0 - 1
+        if: bh >= 0
+            slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
             if: slot >= 0
                 slot: l2_own_fchild[slot]
             ---
-        if: i = 1 && root <= 0 - 1000
-            slot: l2_own_seg_scan(0 - 1000 - root, 0, pd, off, len, @ kind, @ ent)
+        if: bm >= 0
+            slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
             if: slot >= 0
                 slot: l2_own_uchild[slot]
             ---
-        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni < 0
+        # A body of the host: its Structure is the host's child at the body's slot (the prologue's l2_h<k>).
+        if: slot < 0 && bh >= 0
+            nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
+        if: slot < 0 && bm >= 0
+            nb: l2_body_seg(bm, 0 - 1, pd, off, len, l2_cur_mi)
+        if: nb >= 0 && l2_for_uchild[nb] < 0
+            return: l2_error(l2_src, at, "internal: a control body has no slot")
+        if: nb >= 0
+            slot: l2_for_uchild[nb]
+            kind: 2
+            ent: 0 - 1
+        ---
+        if: ((i > 1 && bh < 0 && bm < 0) || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni < 0
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
-        if: (i > 1 || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni >= 0
+        if: ((i > 1 && bh < 0 && bm < 0) || (res < 0 && (root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)))) && ni >= 0
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
         if: slot = 0 - 2
             return: l2_error(l2_src, at, "ambiguous field path segment")
@@ -15921,6 +15984,8 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             ni: ent
             res: 0 - 1
         ---
+        bh: nb
+        bm: 0 - 1
         if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && (arr_ok = 0 || (kind != 5 && kind != 6))
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
         if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
@@ -16064,7 +16129,8 @@ fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) in
     s: l2_next_active(f\next)
     while: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
         g: l2_next_active(s\next)
-        if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || g\value\as\atom = 0 || l2_ident(g\value\as\atom) = 0
+        # A later name may head a control body too (l2_path_kind: a body of the host).
+        if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || g\value\as\atom = 0 || (l2_ident(g\value\as\atom) = 0 && l2_body_head_word(g\value\as\atom) = 0)
             break
         if: n + 1U + g\value\as\atom\length + 1U > cap
             return: 0
@@ -16089,7 +16155,7 @@ fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); s
     \out_kind: 0 - 1
     if: mi < 0 || root = 0 || root\data = 0 || buf = 0
         return: 0 - 1
-    if: l2_own_find(mi, root) < 0 && l2_nsty_of_name(mi, root) < 0 && l2_mres_find(root) < 0 && l2_text_eq(root, "node") = 0 && l2_body_named(mi, root) < 0
+    if: l2_own_find(mi, root) < 0 && l2_nsty_of_name(mi, root) < 0 && l2_mres_find(root) < 0 && l2_text_eq(root, "node") = 0 && l2_body_named(mi, root) < 0 && l2_find_method(root) < 0
         return: 0 - 1
     \out_kind: l2_path_kind(buf, n, @ leaf_mi)
     if: \out_kind < 0
@@ -20350,6 +20416,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     size_t: chn 0U
     int: chain
     int: chk
+    int: cck
     int: ck
     int: have_value 0
     size_t: array_index
@@ -20415,7 +20482,16 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         # (l2_path_text_read); its first hop alone is a Structure field, and the single-hop read below
         # failed on it without a word.
         chain: l2_path_chain(f, chbuf, 255U, @ chn)
-        if: chain > 0 && l2_path_chain_check(mi, f\value\as\atom, chbuf, chn, @ chk) = 0
+        cck: 0 - 1
+        if: chain > 0
+            cck: l2_path_chain_check(mi, f\value\as\atom, chbuf, chn, @ chk)
+        # A value the check does not see (a `return:` value, a call's actual) is refused here as the check refuses it --
+        # never the single-hop read with the rest written out raw (it gave `l2_t1\while\j`).
+        if: cck = 1
+            return: l2_error(l2_src, f\value, "a field path must end at a primitive field")
+        if: cck = 2
+            return: l2_error(l2_src, f\value, "unknown field path segment")
+        if: cck = 0
             if: l2_path_text_read(mi, chbuf, chn, ind, at, piece) != 0
                 return: 1
             if: l2_cat(buf, piece) != 0
@@ -20515,8 +20591,10 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         # copy of this comment.
         if: f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_find_method(f\value\as\atom) >= 0 && p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && l2_ident(p2\value\as\atom) != 0
             po: l2_own_find_last(l2_find_method(f\value\as\atom), p2\value\as\atom)
-            if: po < 0 || l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
-                return: l2_error(l2_src, p5\value, "no such occurrence")
+            if: po < 0
+                return: l2_error(l2_src, p2\value, "unresolved name")
+            if: l2_m_uses[l2_own_off(l2_find_method(f\value\as\atom), po)] = 0
+                return: l2_error(l2_src, p2\value, "no such occurrence")
             if: l2_own_from_expr(po, occx) != 0
                 return: 1
             if: c.fprintf(l2_out, "%sl2_xp: %s\n", ind, occx) < 0
@@ -21932,7 +22010,7 @@ fn: l2_rw_path_occ (const: @(LmP0Node node); const: @(LmP0Text t); size_t: i; in
     while: i < t\length && t\data[i] != 92
         i: i + 1U
     ---
-    if: i = b || i != t\length
+    if: i = b
         if: say != 0
             l2_rw_refuse(node, "a field path")
         return: 1
@@ -21942,6 +22020,13 @@ fn: l2_rw_path_occ (const: @(LmP0Node node); const: @(LmP0Text t); size_t: i; in
         if: say != 0
             l2_rw_refuse(node, "a field path")
         return: 1
+    # More names (the 7b-3 rule one level down): bodies of M's level, then a number field of the last (l2_rw_path_bodies).
+    if: i != t\length
+        if: ixed != 0
+            if: say != 0
+                l2_rw_refuse(node, "a field path")
+            return: 1
+        return: l2_rw_path_bodies(node, t, b, mi, say, path)
     l2_rw_seg\data: t\data + b
     l2_rw_seg\length: i - b
     po: l2_own_find_last(mi, l2_rw_seg)
@@ -21963,6 +22048,78 @@ fn: l2_rw_path_occ (const: @(LmP0Node node); const: @(LmP0Text t); size_t: i; in
     path[5]: 0
     path[6]: l2_own_mslot(po)
     path[7]: 0
+return: 0
+
+# `M\while\j` at the walked root: method M's occurrence (path kind 3), then bodies -- each a body of the one before, the
+# first of M's own level (l2_body_seg), OF(host, its child slot) -- and last a number field declared in the last body,
+# OF(that body, its child).  `b` stands on the first name after M.
+fn: l2_rw_path_bodies (const: @(LmP0Node node); const: @(LmP0Text t); size_t: b; int: mi; int: say; @: int path) int
+    size_t: i b
+    int: n 0
+    int: bh 0 - 1
+    int: nb
+    int: slot
+    int: kind 0
+    int: ent 0
+    int: last
+    int: oi
+    int: fld
+    int: bod
+    path[0]: 3
+    path[1]: mi
+    path[3]: 0 - 1
+    path[4]: 0 - 1
+    # The Structure holding the last field is reached at run time (OF from the occurrence): a write is PUT_OF over it.
+    path[5]: 1
+    while: i < t\length
+        if: n > 0
+            i: i + 1U
+        b: i
+        while: i < t\length && t\data[i] != 92
+            i: i + 1U
+        ---
+        if: n >= 12 || i = b || t\data[b] = 91
+            if: say != 0
+                l2_rw_refuse(node, "a field path")
+            return: 1
+        last: (cast: (int) (i >= t\length))
+        slot: 0 - 1
+        nb: 0 - 1
+        oi: 0 - 1
+        if: bh >= 0
+            oi: l2_for_own_seg(bh, t\data, b, i - b, @ kind, @ ent)
+        if: last != 0 && oi >= 0 && l2_rw_num_ty(l2_own_ty[oi]) != 0
+            slot: l2_own_fchild[oi]
+            path[3]: l2_own_ty[oi]
+        ---
+        if: last = 0
+            nb: l2_body_seg(mi, bh, t\data, b, i - b, l2_rw_mi)
+        if: nb >= 0 && l2_for_uchild[nb] >= 0
+            slot: l2_for_uchild[nb]
+            kind: 2
+        ---
+        # Said as the check says it: a name that is no field and no body there; a leaf that is a field of another kind,
+        # or a body.  A field on the way (`M\b\v`) is a shape the walk does not build.
+        if: slot < 0 && say != 0
+            fld: (cast: (int) (oi >= 0 || (bh < 0 && l2_own_seg_scan(mi, 0, t\data, b, i - b, @ kind, @ ent) >= 0)))
+            bod: (cast: (int) (l2_body_seg(mi, bh, t\data, b, i - b, l2_rw_mi) >= 0))
+            if: last != 0 && (fld != 0 || bod != 0)
+                l2_error(l2_src, node, "a field path must end at a primitive field")
+                return: 1
+            if: fld = 0 && bod = 0
+                l2_error(l2_src, node, "unknown field path segment")
+                return: 1
+            ---
+        if: slot < 0
+            if: say != 0
+                l2_rw_refuse(node, "a field path")
+            return: 1
+        path[6 + 2 * n]: slot
+        path[7 + 2 * n]: kind
+        n: n + 1
+        bh: nb
+    ---
+    path[2]: n
 return: 0
 
 # A path at the walked root, `a\b...` (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 2), resolved
@@ -21997,6 +22154,8 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
     int: res 0 - 1
     int: fi 0 - 1
     int: rooted 0
+    int: bh 0 - 1
+    int: nb
     if: t = 0 || t\data = 0 || path = 0
         return: 1
     while: i < t\length && t\data[i] != 92
@@ -22091,10 +22250,22 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
             if: say != 0
                 l2_rw_refuse(node, "a field path")
             return: 1
+        # The host the name is resolved in (l2_body_seg): a body root's body, then any body a name hops into -- a
+        # field declared there, or a body of it, OF(host, its child slot), the next name that body's.
         if: n = 0 && path[0] = 9
-            slot: l2_for_own_seg(path[1], t\data, b, i - b, @ kind, @ ent)
+            bh: path[1]
+        nb: 0 - 1
+        if: bh >= 0
+            slot: l2_for_own_seg(bh, t\data, b, i - b, @ kind, @ ent)
             if: slot >= 0
                 slot: l2_own_fchild[slot]
+            ---
+            if: slot < 0
+                nb: l2_body_seg(l2_for_mi[bh], bh, t\data, b, i - b, l2_rw_mi)
+            if: nb >= 0
+                slot: l2_for_uchild[nb]
+                kind: 2
+                ent: 0 - 1
             ---
         else:
             if: n = 0 && path[0] = 8
@@ -22124,6 +22295,7 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
         if: n > 0 || res < 0
             path[4]: ni
         n: n + 1
+        bh: nb
         if: last = 0
             if: kind = 3
                 path[5]: 1
@@ -22276,7 +22448,7 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
         return: l2_rw_refuse(stmt, "this assignment")
     if: path[0] = 4
         return: l2_error(l2_src, stmt, "a qualified immutable branch is not written")
-    if: path[0] = 3
+    if: path[0] = 3 && path[2] = 1
         if: l2_rw_frame(into, "LMX_WALK_OP_PUT", 4, out) != 0
             return: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + path[1])), \out, path[6]) < 0

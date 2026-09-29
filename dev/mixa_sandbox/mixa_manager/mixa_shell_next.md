@@ -101,6 +101,7 @@
 | `mixa_cmdline.lm1` | строка, которую набрал пользователь |
 | `mixa_shell_start.lm1` | единственный вход порта, `Mixa\start` |
 | `mixa_shell_native.lm1` | слово `native`: Win32 или headless |
+| `mixa_shell_main.lm1` | product `fn: main` -> `bin/mixa_shell_start.exe` (not mixa_app_main) |
 
 `mixa_backend_win32.lm1`, `mixa_backend_headless.lm1` и обе `*_ctors_*`
 дают таблицу, которую `mixa_shell_native_bind` кладёт в слово `native`.
@@ -351,6 +352,7 @@ Shell он не читает. Повторное удаление отказыв
 ответ `shell\show_rows`, отказ `shell\note_refused`. Внутри Files вызов прямой,
 `mixa_shell_files_list`. Снимок переносится на Shell. Чужой путь увеличивает
 отказ и не подменяет уже отданные строки. `mixa_app_main*` не вызывается.
+Host sketch MixaShellHost/bind_native/run retired: product mixa_shell_main.lm1 is fn: main over mixa_shell_start/native_bind; build wires exe:mixa_shell_start -> bin/mixa_shell_start.exe.
 Общий линк всех `.lm1` не собирался, `build_mixa.ps1` на всех единицах
 не запускался.
 

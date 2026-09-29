@@ -854,6 +854,7 @@ prototype:
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_colon_ret_ty (int: m; @: int out_ty) int
     fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+    fn: l2_check_ret_kind (int: mi; const: @(LmP0Structure body); const: @(char path)) int
     fn: l2_prim_code_name (int: ty) @: char
     fn: l2_convert_load () int
     fn: l2_m_nsof (int: mi) int
@@ -8036,11 +8037,33 @@ fn: l2_ret_ft (int: mi) int
         return: 34
 return: l2_m_ret[mi]
 
+# The kind of a `return:` value where the result is a number or a char: one value whose type is known and is no number
+# -- a text, a Structure, a pointer -- is refused, as an assignment's value of its place's type is
+# (l2_colon_check_assignment, "incompatible type"); it went out as C converting a pointer into the result.  A result of
+# another type (a pointer, a Structure, a callable) is not this check's.
+fn: l2_check_ret_kind (int: mi; const: @(LmP0Structure body); const: @(char path)) int
+    int: to_ft
+    int: vt 0
+    @: LmP0Field only
+    if: body = 0 || l2_m_ret[mi] = 8 || l2_nsty_get(mi, 0 - 1) >= 0 || l2_count_active(body) != 1
+        return: 0
+    to_ft: l2_ret_ft(mi)
+    if: to_ft = 8 || l2_prim_code_name(to_ft) = 0
+        return: 0
+    only: l2_next_active(body\first_field)
+    if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
+        return: 0
+    if: vt = 0 - 10 || vt = 8 || l2_prim_code_name(vt) != 0
+        return: 0
+return: l2_error(path, only\value, "return value has incompatible type")
+
 # Slice 4: `return: v` with one value or a composite, in a body or a trailer.  A Structure result
 # is admitted (l2_admit_return), never converted.
 fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
     if: body = 0 || l2_m_ret[mi] = 8 || l2_nsty_get(mi, 0 - 1) >= 0
         return: 0
+    if: l2_check_ret_kind(mi, body, path) != 0
+        return: 1
 return: l2_check_value_convert_field(body\first_field, l2_count_active(body), l2_ret_ft(mi), mi, path)
 
 # Its emission: 0 emitted into dest, 1 error, 2 none.
@@ -16052,6 +16075,12 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
     if: dest = 0
         return: 1
     fpc: l2_field_path_check(mi, left, right, @ kind)
+    # A refusal is said here too: the check's own words (l2_check_fields), where a position the check does not see
+    # would otherwise leave a bare 1.
+    if: fpc = 1 && kind < 0
+        return: l2_error(l2_src, at, "unknown field path segment")
+    if: fpc = 1
+        return: l2_error(l2_src, at, "a field path must end at a primitive field")
     if: fpc != 0
         return: fpc
     if: left\length + right\length + 2U > 256U
@@ -18101,6 +18130,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     []: char cpbuf 1024
     int: cpraw
     int: cpraw_j 0
+    int: cpleaf 0
     @: LmP0Field p1
     @: LmP0Field p2
     @: LmP0Field p3
@@ -18144,6 +18174,13 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         # as C member access.
         if: cpfi >= 0 && cpni < 0 && cpoi < 0
             return: l2_error(path, at, "unknown field path root")
+        # The root resolves; so must every name after it (l2_path_kind, the walk the emitter makes) -- a name that
+        # names nothing is refused where the path stands, not left to the emitter, whose read fails without a word; in
+        # this check's own words and places: a single hop at its name, a deeper path at its start.
+        if: l2_seg_count(cpbuf, cpn) = 2 && l2_path_kind(cpbuf, cpn, @ cpleaf) < 0
+            return: l2_error(path, l2_next_active(l2_next_active(l2_next_active(field)\next)\next)\value, "unresolved name")
+        if: l2_seg_count(cpbuf, cpn) > 2 && l2_path_kind(cpbuf, cpn, @ cpleaf) < 0
+            return: l2_error(path, l2_next_active(field)\value, "unknown field path segment")
         return: 0
     f: l2_next_active(field)
     i: 0

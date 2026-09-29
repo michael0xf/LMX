@@ -1,0 +1,15 @@
+# A value that is one whole path is checked to its last name (l2_check_fields): once the root resolved, the names after
+# it were never looked at, so `return: b\q` -- b a Box, q no field of it -- went on to the emitter, whose read failed
+# without a word (exit 3).  Refused at the name it cannot find, the field check's words for a single hop.  (The same in
+# a statement `return:` inside a body: unit_ret_path_segment_stmt_refused.)
+Box:
+    int: v 0
+end: Box
+fn: peek () int
+    Box: b
+    return: b\q
+end: peek
+int: r 0
+r: peek()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

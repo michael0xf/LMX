@@ -2297,6 +2297,15 @@ $fixtures = @(
         Needle = 'unit_valkind_decl_ref_refused.lm2:11:12: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_valkind_ref_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # OPUS-PATHWRITE-20260929-09: a write through a path to a number field checks its one value's kind as any number
+    # place does (l2_check_path_write) -- nothing typed a path write's value, and `b\v: "x"`, `M\x: b` RAN, storing a
+    # pointer into the int.  unit_pathwrite_ok: numbers through a Box field and a method's field from outside.
+    [pscustomobject]@{ Name = 'unit_pathwrite_text_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_pathwrite_text_refused.lm2:9:10: a text where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pathwrite_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_pathwrite_ref_refused.lm2:14:10: a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pathwrite_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

@@ -860,6 +860,7 @@ prototype:
     fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_native_zero (@@: LmP0Node tok; int: lo; int: hi) int
     fn: l2_cf_named (int: mi; const: @(LmP0Node value)) int
+    fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_prim_code_name (int: ty) @: char
     fn: l2_convert_load () int
     fn: l2_m_nsof (int: mi) int
@@ -18477,6 +18478,37 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         f: l2_next_active(f\next)
 return: 0
 
+# A WRITE THROUGH A PATH TO A NUMBER FIELD (OPUS-PATHWRITE-20260929-09): `b\v: value`, `M\x: value` -- the one value's
+# kind, as any number place's (l2_check_value_convert_core): a text, a Structure (a reference), a callable without a
+# result is refused at the value.  An operation is the field check's (l2_check_value_kinds).  A number of another type is
+# not this check's: the path store makes no conversion edge (recorded, steps/working-state-7b.md §10).
+fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    int: kind
+    int: leaf_mi 0
+    int: vt 0
+    @: LmP0Field only
+    const: @: LmP0Text h
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
+        return: 0
+    h: stmt\as\frame\head
+    if: h\data = 0 || h\length = 0U || h\length >= 1024U || l2_seg_count(h\data, h\length) < 2 || l2_count_active(stmt\as\frame\body) != 1
+        return: 0
+    if: l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) != 0
+        return: 0
+    kind: l2_path_kind(h\data, h\length, @ leaf_mi)
+    if: kind != 0 && kind != 1 && kind != 7 && kind != 8 && kind != 9
+        return: 0
+    only: l2_next_active(stmt\as\frame\body\first_field)
+    if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
+        return: 0
+    if: vt = 0 - 11
+        return: l2_error(path, only\value, "a text where a number is asked")
+    if: l2_colon_is_graph_ty(vt) != 0 && l2_cf_named(mi, only\value) = 0
+        return: l2_error(path, only\value, "a reference where a number is asked")
+    if: vt = 8
+        return: l2_error(path, only\value, "a callable without a result has no value")
+return: 0
+
 # THE KIND OF A VALUE IN AN OPERATION (the walk's rule -179, natively; OPUS-VALKIND-20260929-08): an operation of n >= 3
 # fields typed by the native expression typer with its leaf kinds -- a text in a comparison or arithmetic, a Structure
 # (a reference) in arithmetic, or compared with anything but the literal 0 or another reference, is refused at the
@@ -19069,6 +19101,8 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0
             return: l2_error(path, stmt, "assignment target must be a declared typed mutable value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_colon_check_assignment(stmt, mi, path) != 0
+            return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_check_path_write(stmt, mi, path) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj < l2_m_arity[mi] && (l2_ft(mi, rj) >= 100 && l2_ft(mi, rj) - 100 < l2_foreign_n && l2_foreign_const[l2_ft(mi, rj) - 100] != 0)
             return: l2_error(path, stmt, "const write")

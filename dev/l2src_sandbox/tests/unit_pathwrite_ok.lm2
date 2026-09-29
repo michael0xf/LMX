@@ -1,0 +1,24 @@
+# What a path write keeps: a number through a Box field (`b\v: 7`) and through a method's field from outside
+# (`M\x: 5`), read back through the same paths: 7 and 5 -> 75.  Success 7; any other value 64.
+Box:
+    int: v 0
+end: Box
+fn: M () int
+    int: x 0
+    x: 1
+    return: 0
+end: M
+fn: peek () int
+    Box: b
+    b\v: 7
+    M()
+    M\x: 5
+    int: ok 64
+    if: b\v * 10 + M\x = 75
+        ok: 7
+    return: ok
+end: peek
+int: r 0
+r: peek()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

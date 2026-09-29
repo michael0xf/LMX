@@ -917,6 +917,7 @@ prototype:
     fn: l2_local_ns_proc (int: ni; const: @(char path)) int
     fn: l2_emit_local_bodies (int: pr; int: t; const: @(char ind)) int
     fn: l2_run_chars () int
+    fn: l2_cast_prim_ty (const: @(LmP0Node node)) int
     fn: l2_local_ns_callee (const: @(LmP0Text t); int: mi) int
     fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char ind); const: @(char at)) int
     fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
@@ -6863,6 +6864,11 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     # sizeof: / length are operators whose result is size_t (storage bytes / element count).
     if: l2_text_eq(value\as\frame\head, "sizeof") || l2_text_eq(value\as\frame\head, "length")
         \out_ty: 2
+        return: 0
+    ---
+    # A cast to a primitive type is a value of that type (l2_cast_prim_ty); a cast to another type stays untyped here.
+    if: l2_text_eq(value\as\frame\head, "cast") && value\as\frame\body != 0 && l2_count_active(value\as\frame\body) >= 2 && l2_cast_prim_ty(l2_next_active(value\as\frame\body\first_field)\value) >= 0
+        \out_ty: l2_cast_prim_ty(l2_next_active(value\as\frame\body\first_field)\value)
         return: 0
     ---
     # A call by name or through a callable field path (`Holder\viaPath(4U)`).
@@ -20272,6 +20278,27 @@ return: 0
 # A word of a multi-word C type name in a cast: `unsigned long`, `long long`.
 fn: l2_ctype_word (const: @(LmP0Text t)) int
 return: l2_text_eq(t, "unsigned") || l2_text_eq(t, "signed") || l2_text_eq(t, "long") || l2_text_eq(t, "short") || l2_text_eq(t, "int") || l2_text_eq(t, "char") || l2_text_eq(t, "double")
+
+# The primitive type code a cast's type Structure names -- `(int)` 0, `(char)` 1, `(size_t)` 2, `(unsigned)` 34,
+# `(ulong)` 36 (l2_prim_code_name) -- or -1 for any other type.
+fn: l2_cast_prim_ty (const: @(LmP0Node node)) int
+    @: LmP0Field f
+    if: node = 0 || node\kind != c.LM_P0_NODE_STRUCTURE || node\as = 0 || node\as\structure = 0 || l2_count_active(node\as\structure) != 1
+        return: 0 - 1
+    f: l2_next_active(node\as\structure\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0
+        return: 0 - 1
+    if: l2_text_eq(f\value\as\atom, "int")
+        return: 0
+    if: l2_text_eq(f\value\as\atom, "char")
+        return: 1
+    if: l2_text_eq(f\value\as\atom, "size_t")
+        return: 2
+    if: l2_text_eq(f\value\as\atom, "unsigned")
+        return: 34
+    if: l2_text_eq(f\value\as\atom, "ulong")
+        return: 36
+return: 0 - 1
 
 fn: l2_cast_type (const: @(LmP0Node node); @: char dest) int
     @: LmP0Field f

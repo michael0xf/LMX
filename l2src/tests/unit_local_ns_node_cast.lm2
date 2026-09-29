@@ -1,0 +1,22 @@
+# A method's own named Structure casts the method's field it reads through `node` (slice 2c-4): `v: (cast: (size_t)
+# node\k)` -- 5 after the method's `k: 5` is published, then 6 after S's own write.  Entry 7.
+fn: m () int
+    int: k 5
+    S:
+        size_t: v 0U
+        v: (cast: (size_t) node\k)
+        node\k: node\k + 1
+    S()
+    int: r 0
+    if: S\v = 5U
+        r: r + 1
+    S()
+    if: S\v = 6U
+        r: r + 6
+    int: out r
+    return: out
+end: m
+int: r 0
+r: m()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

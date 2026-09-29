@@ -2495,6 +2495,15 @@ $fixtures = @(
         Absent = @(); Debt = @('lmx_struct_new_owned(l2_h0, l2_program_arena)') },
     [pscustomobject]@{ Name = 'unit_local_ns_node_outer_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_node_outer_refused.lm2:9:21: unresolved name'; Absent = @(); Debt = @() },
+    # A cast to a primitive type is a value of that type for an assignment's single value (l2_colon_simple_ty): it was
+    # refused "assignment value has unknown type" in any method.  In a method, through `node`, and in a method's own
+    # named Structure through `node`: 7 each.
+    [pscustomobject]@{ Name = 'unit_cast_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cast_node_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_ns_node_cast.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_node_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_ns_node_formal_refused.lm2:6:17: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

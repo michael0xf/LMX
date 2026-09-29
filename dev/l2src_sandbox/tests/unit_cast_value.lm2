@@ -1,0 +1,16 @@
+# A cast to a primitive type is a value of that type: `v: (cast: (size_t) k)` in a method assigns k's 5 to the size_t v.
+# It was refused "assignment value has unknown type" -- the single value's typer (l2_colon_simple_ty) knew no cast --
+# though the check and the emission take it and `0U + (cast: (size_t) k)` passed.  Entry 7.
+fn: m () size_t
+    int: k 5
+    size_t: v 0U
+    v: (cast: (size_t) k)
+    return: v
+end: m
+size_t: r 0U
+r: m()
+int: code 0
+if: r = 5U
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

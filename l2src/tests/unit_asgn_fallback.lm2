@@ -1,3 +1,10 @@
+# inc assigns x, which it does not declare: x is its hidden input (book §12; bafca4c, the author 2026-09-28:
+# an assignment is not a declaration -- it changes the value an argument, explicit or hidden, has in this
+# activation).  with_caller binds it by its formal x; the root binds none, and inc's lexical space, the unit,
+# has no x either (first_x's is a local of first_x, not visible outward -- Q51): the root's call inc() is
+# refused where it stands, "unbound dynamic input x" (book, admission recipes, case 7: every dynamic input must
+# be available at the call; a known case is rejected during translation).
+# Before bafca4c the assignment fell back to making x a field of inc, and the program ran.
 fn: first_x () int
     char: x
     x: 20

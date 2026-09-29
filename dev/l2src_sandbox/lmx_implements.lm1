@@ -162,19 +162,36 @@ return: lmx_implements_walk(arena, varA, varB, consumer, 0)
 # таблицу преобразований индексов. ОЧевидное место длятакой таблице -- сам implements. Все равно
 # там тяжелеовесный только первый implements должен быть а в дальнейших проверках он должен брать
 # соответствие адресов из своей таблицы").  The table is the arena's (LmxArena.impl): the arena
-# is the context of every question in this unit, and its values are what the records name.
+# is the context of every question in this unit, and its values are what the records name.  A record is a view of
+# its correspondence (LmxImplEntry), never a Structure made for it (Codex, 2026-09-28).
 
-# Cell j of a correspondence table: a size_t cell of the arena.  0 and *out, or 1.
-fn: lmx_implements_cell (@: LmxArena arena; @: Lmx table; size_t: j; @: size_t out) int
+# Slot j of view e: the place of req's field j in the value -- the admitting frame's size cell frame[at + j], the
+# static map's map[j], or j itself (the value's own layout; with holes, an empty slot is not carried).  0 and *out
+# (SIZE_MAX: not carried), or 1 when the view has no slot j.
+fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int
     @: void cell
     @: size_t at
-    if: arena = 0 || table = 0 || out = 0 || j >= table\array.size
+    if: e = 0 || out = 0
         return: 1
-    cell: lmx_arena_ref_value(table, j)
-    if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
-        return: 1
-    at: (cast: (@: size_t) cell)
-    \out: at[0]
+    if: e\frame != 0
+        if: j >= e\n
+            return: 1
+        cell: lmx_arena_ref_value(e\frame, e\at + j)
+        if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+            return: 1
+        at: (cast: (@: size_t) cell)
+        \out: at[0]
+        return: 0
+    ---
+    if: e\map != 0
+        if: j >= e\n
+            return: 1
+        \out: e\map[j]
+        return: 0
+    ---
+    \out: j
+    if: e\holes != 0 && (e\value = 0 || j >= e\value\array.size || lmx_arena_ref_value(e\value, j) = 0)
+        \out: (cast: (size_t) -1)
 return: 0
 
 # The record of (value, req), or null.
@@ -191,17 +208,13 @@ fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImpl
     ---
 return: 0
 
-# Two correspondences to req (n fields) give every field the same slot -- null is the identity.
-fn: lmx_implements_same_map (@: LmxArena arena; @: Lmx a; @: Lmx b; size_t: n) int
+# Two views give req's fields (width of them) the same places.
+fn: lmx_implements_same_map (@: LmxArena arena; @: LmxImplEntry a; @: LmxImplEntry b; size_t: width) int
     size_t: j 0U
-    size_t: sa
-    size_t: sb
-    while: j < n
-        sa: j
-        sb: j
-        if: a != 0 && lmx_implements_cell(arena, a, j, @ sa) != 0
-            return: 0
-        if: b != 0 && lmx_implements_cell(arena, b, j, @ sb) != 0
+    size_t: sa 0U
+    size_t: sb 0U
+    while: j < width
+        if: lmx_implements_at(arena, a, j, @ sa) != 0 || lmx_implements_at(arena, b, j, @ sb) != 0
             return: 0
         if: sa != sb
             return: 0
@@ -209,10 +222,22 @@ fn: lmx_implements_same_map (@: LmxArena arena; @: Lmx a; @: Lmx b; size_t: n) i
     ---
 return: 1
 
-# The heavy check of the first admission: every field of req through the table -- the value's
-# slot T[j] present, of req's field's domain and type, a Structure field by the ordinary walk.
-# A null table is the ordinary check (lmx_implements_walk, index paths): the value is req's own.
-fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx table) int
+# Native D-105: does record e give req's fields (width of them) the places the static map does (null: the identity)?
+fn: lmx_implements_is_map (@: LmxArena arena; @: LmxImplEntry e; @: size_t map; size_t: width) int
+    LmxImplEntry: view
+    @: LmxImplEntry v 0
+    if: e = 0
+        return: 0
+    v: @ view
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\map: map
+    v\n: width
+return: lmx_implements_same_map(arena, e, v, width)
+
+# The heavy check of the first admission: every field of req through the view -- the value's
+# slot for it present, of req's field's domain and type, a Structure field by the ordinary walk.
+# The bare identity is the ordinary check (lmx_implements_walk, index paths): the value is req's own.
+fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     size_t: j 0U
     size_t: k
     @: void a
@@ -224,16 +249,14 @@ fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx 
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) req)) != c.LMX_KIND_STRUCT
         return: c.LMX_IMPLEMENTS_NO
-    if: table = 0
+    if: view = 0 || (view\frame = 0 && view\map = 0 && view\holes = 0)
         return: lmx_implements_walk(arena, value, value, req, 0)
-    if: lmx_domain_kind(arena, (cast: (@: void) table)) != c.LMX_KIND_STRUCT || table\array.size != req\array.size
-        return: c.LMX_IMPLEMENTS_NO
     while: j < req\array.size
         c: lmx_arena_ref_value(req, j)
-        if: c != 0 && lmx_implements_cell(arena, table, j, @ k) != 0
+        if: c != 0 && lmx_implements_at(arena, view, j, @ k) != 0
             return: c.LMX_IMPLEMENTS_NO
-        # A cell of "not carried" (SIZE_MAX) -- the value holds no copy of req's field j: a capture's
-        # table (item 738) or a D-105 pair table for a formal that never reads it (see the prototype);
+        # A slot "not carried" (SIZE_MAX) -- the value holds no copy of req's field j: a capture's copy
+        # (item 738) or a D-105 pair map for a formal that never reads it (see the prototype);
         # lmx_implements_slot refuses to read through it.
         if: c != 0 && k != (cast: (size_t) -1)
             if: k >= value\array.size
@@ -262,20 +285,24 @@ fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx 
     ---
 return: c.LMX_IMPLEMENTS_YES
 
-fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx table) int
+fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     @: LmxImplEntry e
     int: answer
-    if: arena = 0 || value = 0 || req = 0
+    if: arena = 0 || value = 0 || req = 0 || view = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
+    view\value: value
+    view\req: req
+    if: (view\frame != 0 || view\map != 0) && view\n != req\array.size
+        return: c.LMX_IMPLEMENTS_NO
     e: lmx_implements_find(arena, value, req)
     if: e != 0
         # A later admission: the record answers.  One value has one own type, so a different
         # correspondence to the same req is a broken promise of the caller, refused.
-        if: lmx_implements_same_map(arena, e\table, table, (req\array.size)) != 0
+        if: lmx_implements_same_map(arena, e, view, (req\array.size)) != 0
             return: c.LMX_IMPLEMENTS_YES
         return: c.LMX_IMPLEMENTS_NO
     ---
-    answer: lmx_implements_through(arena, value, req, table)
+    answer: lmx_implements_through(arena, value, req, view)
     if: answer != c.LMX_IMPLEMENTS_YES
         return: answer
     if: lmx_arena_impl_room(arena, arena\impl_len + 1U) != 0
@@ -283,23 +310,38 @@ fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx
     e: arena\impl + arena\impl_len
     e\value: value
     e\req: req
-    e\table: table
+    e\frame: view\frame
+    e\at: view\at
+    e\map: view\map
+    e\n: view\n
+    e\holes: view\holes
     arena\impl_len: arena\impl_len + 1U
 return: c.LMX_IMPLEMENTS_YES
 
+# Native D-105: the value admitted to req through the translator's static map of its pair of types (n slots), or
+# as req's own (map null).
+fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n) int
+    LmxImplEntry: view
+    @: LmxImplEntry v 0
+    v: @ view
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\map: map
+    if: map != 0
+        v\n: n
+return: lmx_implements_register(arena, value, req, v)
+
 fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out) int
     @: LmxImplEntry e
+    size_t: k 0U
     if: out = 0
         return: 1
     e: lmx_implements_find(arena, value, req)
     if: e = 0
         return: 1
-    if: e\table = 0
-        \out: j
-        return: 0
-    if: lmx_implements_cell(arena, e\table, j, out) != 0
+    if: lmx_implements_at(arena, e, j, @ k) != 0
         return: 1
     # Item 738: req's field j is not carried by this value (a capture copies only what is read).
-    if: \out = (cast: (size_t) -1)
+    if: k = (cast: (size_t) -1)
         return: 1
+    \out: k
 return: 0

@@ -1,10 +1,13 @@
 # A bare atom in an executable body is an expression statement (plan §3, "Expression statement
 # и discard"): m resolves to a callable, so it is called with no arguments, on the call path of
-# `m()`, and its result is discarded.  Two calls: 2.
+# `m()`, and its result is discarded.  Two calls: m prints `m 1` twice.  The unit's hits stays 0: in
+# m, hits is a hidden input, and the bare write changes only that value of m's activation (Q52; the
+# author, 2026-09-28: «это независимое действие»).  Entry 0.
 int: hits 0
 
 fn: m () int
     hits: hits + 1
+    c.printf: "m %d\n" hits
     return: 7
 end: m
 

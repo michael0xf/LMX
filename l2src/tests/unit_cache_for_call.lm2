@@ -1,0 +1,29 @@
+# §7b witness (book §12, the for/print trace; a call in print's place, made in the last iteration because `for\j`
+# after `end: for` is not resolved yet): the working acc is 9 and the for body's working j is 9, both dirty, and
+# nothing has published them.  `for\j` is an explicit graph read, not a checkpoint: it reads the published 0.  The
+# actual arguments are evaluated before the pre-call publication, so take gets 9 and 0 -- 90.  After the call
+# `for\j` reads the published 9.  Under writes in place take would get 9 and 9 -- 99.
+fn: take (int: a; int: b) int
+    return: a * 10 + b
+end: take
+
+fn: test () int
+    int: acc
+    acc: 0
+    int: r 0
+    int: after 0
+    for: int(i, 0) (i < 10) i++
+        int: j i
+        acc: j
+        if: i = 9
+            r: take(acc; for\j)
+            after: for\j
+        ---
+    end: for
+    if: after != 9
+        return: 1
+    return: r
+end: test
+
+sendMessage: exit(exit_code: test(); stdout: ""; stderr: "")
+return

@@ -1,11 +1,15 @@
-# steps/named-struct-exec.md §12 (Q45 and its additions): a unit-level method executes Counter natively --
-# a call of its procedure, the pair (its occurrence, Counter) through lmx_call_prim -- and Counter's body
-# runs as a method's: while counts 5, the if adds 2, the for 3, put adds 4 to seen, and the return in a
-# block ends it before `n: 100U`.  run executes it twice and reads n: 10 (its declaration runs again);
-# seen 8.  Entry 7.
+# steps/named-struct-exec.md §12 (Q45 and its additions), R9: a unit-level method executes Counter natively --
+# Counter over itself through lmx_call_prim, its native word the procedure's trampoline -- and Counter's body
+# runs as a method's: while counts 5, the if adds 2, the for 3, put is called with 4, and the return in a block
+# ends it before `n: 100U`.  run executes it twice and reads n: 10 (its declaration runs again).  seen is a
+# hidden input of put, of Counter and of run (a procedure without arguments is one with hidden arguments -- the
+# author, 2026-09-28): each call hands put the root's 0, so put's own field got is 4 after either (seen + 4),
+# and the root's seen stays 0 (Q52).  Entry 7.
 size_t: seen 0U
 fn: put (size_t: a) int
-    seen: seen + a
+    size_t: got 0U
+    got: seen + a
+    seen: got
 return: 0
 Counter:
     size_t: n 0U
@@ -33,8 +37,10 @@ fn: run () size_t
 return: v
 size_t: got 9U
 got: run()
+size_t: pg 9U
+pg: put\got
 int: ok 0
-if: got = 10U && seen = 8U
+if: got = 10U && pg = 4U && seen = 0U
     ok: 7
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

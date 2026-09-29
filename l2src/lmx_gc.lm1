@@ -149,40 +149,6 @@ fn: lmx_gc_mark_pool (@: LmxArena arena; @: LmxPool pool; unsigned: gen) int
     ---
 return: status
 
-# D-105 / item 738: is the value at p reached by the pass `gen` -- its chunk stamped?  A sealed range
-# is kept by its owner, so it answers yes.
-fn: lmx_gc_value_marked (@: LmxArena arena; @: void p; unsigned: gen) int
-    @: LmxPool pool
-    @: LmxChunk chunk
-    if: arena = 0 || p = 0
-        return: 0
-    pool: lmx_range_pool(arena, p)
-    if: pool = 0
-        return: 0
-    if: lmx_pool_is_sealed(pool) != 0
-        return: 1
-    chunk: lmx_pool_chunk_at(pool, p)
-return: (cast: (int) (chunk != 0 && chunk\mark = gen))
-
-# D-105 / item 738: a record of the arena's `implements` table holds its value weakly and its table
-# strongly -- the table lives as long as the value does (a capture's table is referenced by nothing
-# else).  A table is a Structure of size_t cells and reaches nothing, so one pass after the roots is
-# the whole fixpoint.
-fn: lmx_gc_mark_impl (@: LmxArena arena; unsigned: gen) int
-    size_t: i 0U
-    @: LmxImplEntry e
-    int: status c.LMX_GC_OK
-    if: arena = 0 || arena\impl = 0
-        return: c.LMX_GC_OK
-    while: i < arena\impl_len
-        e: arena\impl + i
-        if: e\table != 0 && lmx_gc_value_marked(arena, (cast: (@: void) e\value), gen) != 0
-            status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) e\table), gen, 0))
-        ---
-        i: i + 1U
-    ---
-return: status
-
 fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
     @: LmxMsg message
     @: LmxThread child
@@ -243,8 +209,6 @@ fn: lmx_gc_mark (@: LmxArena arena; @: LmxThread t) unsigned
         status: lmx_gc_note(status, lmx_gc_mark_value(arena, (cast: (@: void) child), gen, 0))
         child_index: child_index + 1U
     ---
-    # D-105 / item 738: the tables of the records whose values were reached.
-    status: lmx_gc_note(status, lmx_gc_mark_impl(arena, gen))
     if: status != c.LMX_GC_OK
         return: 0U
     ---

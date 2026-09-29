@@ -2,6 +2,8 @@
 # reserved `node` path inside a NESTED body must resolve through host-less own fields
 # (l2_path_own requires l2_own_host[i] = 0 for node-path). for-path uses host-attached fields.
 # unit_node_formal.lm2 is intentionally untouched (next-stage negative fixture per K1).
+# The write is read back through an explicit path, read_shared's node\shared: the root's bare shared
+# keeps its working value after the call (book §12, not reloaded).
 
 int: shared
 
@@ -15,13 +17,18 @@ fn: write_nested_node_path () int
     return: 0
 end: write_nested_node_path
 
+fn: read_shared () int
+    return: node\shared
+end: read_shared
+
 int: ignored
 shared: 3
 ignored: write_nested_node_path()
 if: ignored != 0
     sendMessage: exit(exit_code: ignored; stdout: ""; stderr: "")
     return
-if: shared != 11
+ignored: read_shared()
+if: ignored != 11
     sendMessage: exit(exit_code: 72; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

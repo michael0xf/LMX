@@ -19,21 +19,31 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# D-105 (the author's Q39, 2026-09-27; steps/d105-index-table.md): the `implements` table of
-# address correspondences.  What this file pins:
+# D-105 (the author's Q39, 2026-09-27; steps/d105-index-table.md; Codex, 2026-09-28): the `implements`
+# table of address correspondences -- a record is a view of its correspondence, never a Structure made
+# for it: a static map (the native admission), an admitting frame's own size cells (the walk's
+# ADMIT_AS), or the identity (with holes: a capture's copy in the type's own layout).  What this file
+# pins:
 #
 #   * the first admission of a value to a named Structure it is not an instance of is the heavy
-#     one: `Other` (b: int, a: size_t) admitted to `Model` (a: size_t, b: int) through the table
+#     one: `Other` (b: int, a: size_t) admitted to `Model` (a: size_t, b: int) through the map
 #     [1, 0] is recorded, and a field of Model is then read at the value's own slot for it;
 #   * a later admission finds the record -- the same correspondence answers YES, another one
 #     (the identity) NO: one value, one own type;
-#   * a table that does not match the value field by field is refused and records nothing;
+#   * a map that does not match the value field by field is refused and records nothing, and so
+#     is a map of another width;
 #   * a value with no record has no slot for Model -- never "slot j" by default;
-#   * the identity (a null table) is an instance of Model, read at Model's own slots;
-#   * a record never outlives its value: a revert takes back the value and its record, and a
-#     collection pass that frees the storage drops the record in the same pass, while one that
-#     keeps the storage keeps it;
-#   * attach carries the donor's records.
+#   * the identity (no map) is an instance of Model, read at Model's own slots;
+#   * a frame's own size cells are a correspondence read in place: the record keeps the frame
+#     and the offset, and answers what the cells hold;
+#   * a capture's copy in Model's own layout with holes: a carried field is read at its slot, an
+#     empty slot is never readable (item 738);
+#   * a record never outlives its value or its frame: a revert takes back the value and its
+#     record, and a collection pass that frees the storage drops the record in the same pass,
+#     while one that keeps the storage keeps it;
+#   * attach carries the donor's records;
+#   * a copy -- a merge's graph copy of an admitted value, a clone of the admitting frame, a clone of a capture's copy --
+#     brings no record: the copy is admitted where it is used, the original's record stays as it was.
 
 sub: it_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -65,13 +75,13 @@ fn: it_pair (@: LmxArena arena; int: first; int: second) @: Lmx
     ---
 return: s
 
-# A correspondence table of two size_t cells.
-fn: it_table (@: LmxArena arena; size_t: t0; size_t: t1) @: Lmx
+# A frame of three children: a filler, then two size cells t0 and t1 -- a correspondence at offset 1.
+fn: it_frame (@: LmxArena arena; size_t: t0; size_t: t1) @: Lmx
     @: Lmx s
     @: void x
     @: void y
     s: lmx_node_new_owned(arena)
-    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 2U) != 0
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 3U) != 0
         return: 0
     ---
     x: lmx_size_new_owned(arena)
@@ -79,7 +89,7 @@ fn: it_table (@: LmxArena arena; size_t: t0; size_t: t1) @: Lmx
     if: x = 0 || y = 0 || lmx_size_store_known(x, t0) != 0 || lmx_size_store_known(y, t1) != 0
         return: 0
     ---
-    if: lmx_arena_ref_store(s, 0U, x) != 0 || lmx_arena_ref_store(s, 1U, y) != 0
+    if: lmx_arena_ref_store(s, 0U, lmx_int_new_owned(arena)) != 0 || lmx_arena_ref_store(s, 1U, x) != 0 || lmx_arena_ref_store(s, 2U, y) != 0
         return: 0
     ---
 return: s
@@ -89,13 +99,22 @@ fn: main () int
     LmxArena: arena
     LmxArena: donor
     LmxArena: fresh_arena
+    LmxImplEntry: view
+    @: LmxImplEntry v 0
     @: LmxArena ea 0
     @: Lmx hmodel 0
     @: Lmx half 0
-    @: Lmx htable 0
-    @: Lmx emodel 0
-    @: Lmx evalue 0
-    @: Lmx etable 0
+    @: Lmx fmodel 0
+    @: Lmx fvalue 0
+    @: Lmx frame 0
+    @: Lmx ocopy 0
+    @: Lmx cloned 0
+    @: Lmx fclone 0
+    @: Lmx hclone 0
+    @: Lmx filler 0
+    @: LmxPool fpool 0
+    @: LmxChunk fchunk 0
+    int: fill_n 0
     unsigned: egen
     @: LmxArena at 0
     @: LmxArena dn 0
@@ -106,10 +125,10 @@ fn: main () int
     @: Lmx late 0
     @: Lmx lent 0
     @: Lmx dmodel 0
-    @: Lmx dtable 0
-    @: Lmx perm 0
-    @: Lmx wrong 0
-    @: Lmx wide 0
+    []: size_t perm 2
+    []: size_t wrong 2
+    []: size_t wide 3
+    []: size_t dmap 2
     @: LmxArenaBlock mark 0
     size_t: slot 99U
     size_t: kept 0U
@@ -126,47 +145,54 @@ fn: main () int
     ---
     at: @ arena
     dn: @ donor
+    perm[0]: 1U
+    perm[1]: 0U
+    wrong[0]: 0U
+    wrong[1]: 1U
+    wide[0]: 1U
+    wide[1]: 0U
+    wide[2]: 0U
+    dmap[0]: 1U
+    dmap[1]: 0U
     # Model (a: size_t, b: int); Other permutes them (b: int, a: size_t).
     model: it_pair(at, 0, 1)
     other: it_pair(at, 1, 0)
     other2: it_pair(at, 1, 0)
     own: it_pair(at, 0, 1)
-    perm: it_table(at, 1U, 0U)
-    wrong: it_table(at, 0U, 1U)
-    wide: lmx_node_new_owned(at)
-    if: model = 0 || other = 0 || other2 = 0 || own = 0 || perm = 0 || wrong = 0 || wide = 0 || lmx_arena_refs_open_owned(at, wide, 3U) != 0
+    if: model = 0 || other = 0 || other2 = 0 || own = 0
         free(counts)
         return: 2
     ---
 
     # The heavy first admission, then a read through the record.
-    it_check(counts, lmx_implements_register(at, other, model, perm) = c.LMX_IMPLEMENTS_YES, "Other through [1, 0] was not admitted to Model")
+    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U) = c.LMX_IMPLEMENTS_YES, "Other through [1, 0] was not admitted to Model")
     it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) = 0 && slot = 1U, "Model's field a is not read at Other's slot 1")
     it_check(counts, lmx_implements_slot(at, other, model, 1U, @ slot) = 0 && slot = 0U, "Model's field b is not read at Other's slot 0")
     it_check(counts, lmx_implements_slot(at, other, model, 2U, @ slot) != 0, "a field Model does not have got a slot")
     # A later admission takes the record: the same correspondence answers, another is refused.
-    it_check(counts, lmx_implements_register(at, other, model, perm) = c.LMX_IMPLEMENTS_YES, "a later admission with the same correspondence was refused")
-    it_check(counts, lmx_implements_register(at, other, model, 0) = c.LMX_IMPLEMENTS_NO, "the same value answered Model through a second correspondence")
+    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U) = c.LMX_IMPLEMENTS_YES, "a later admission with the same correspondence was refused")
+    it_check(counts, lmx_implements_register_map(at, other, model, 0, 0U) = c.LMX_IMPLEMENTS_NO, "the same value answered Model through a second correspondence")
     it_check(counts, at\impl_len = 1U, "a later admission added a record")
-    # A table that does not match field by field: refused, nothing recorded.
-    it_check(counts, lmx_implements_register(at, other2, model, wrong) = c.LMX_IMPLEMENTS_NO, "a table that reads an int as a size_t was admitted")
+    # A map that does not match field by field: refused, nothing recorded.
+    it_check(counts, lmx_implements_register_map(at, other2, model, wrong, 2U) = c.LMX_IMPLEMENTS_NO, "a map that reads an int as a size_t was admitted")
     it_check(counts, lmx_implements_find(at, other2, model) = 0, "a refused admission left a record")
-    it_check(counts, lmx_implements_register(at, other2, model, wide) = c.LMX_IMPLEMENTS_NO, "a table of another width was admitted")
+    it_check(counts, lmx_implements_register_map(at, other2, model, wide, 3U) = c.LMX_IMPLEMENTS_NO, "a map of another width was admitted")
     # The identity reads Other2 at Model's own slots only if it IS Model -- it is not.
-    it_check(counts, lmx_implements_register(at, other2, model, 0) = c.LMX_IMPLEMENTS_NO, "Other admitted to Model as its own type")
+    it_check(counts, lmx_implements_register_map(at, other2, model, 0, 0U) = c.LMX_IMPLEMENTS_NO, "Other admitted to Model as its own type")
     # No record, no slot: never "slot j" by default.
     slot: 99U
     it_check(counts, lmx_implements_slot(at, other2, model, 0U, @ slot) != 0 && slot = 99U, "a value with no record was given a slot")
     # The identity: an instance of Model, read at Model's own slots.
-    it_check(counts, lmx_implements_register(at, own, model, 0) = c.LMX_IMPLEMENTS_YES, "an instance of Model was not admitted to Model")
+    it_check(counts, lmx_implements_register_map(at, own, model, 0, 0U) = c.LMX_IMPLEMENTS_YES, "an instance of Model was not admitted to Model")
     it_check(counts, lmx_implements_slot(at, own, model, 1U, @ slot) = 0 && slot = 1U, "an instance of Model is not read at Model's slots")
-    it_check(counts, lmx_implements_register(at, own, model, perm) = c.LMX_IMPLEMENTS_NO, "an instance of Model answered Model through a permutation")
+    it_check(counts, lmx_implements_register_map(at, own, model, perm, 2U) = c.LMX_IMPLEMENTS_NO, "an instance of Model answered Model through a permutation")
+    it_check(counts, lmx_implements_is_map(at, lmx_implements_find(at, other, model), perm, 2U) != 0 && lmx_implements_is_map(at, lmx_implements_find(at, other, model), 0, 2U) = 0, "a record does not compare with the static map it was made with")
 
     # A revert takes back the value built after the mark, and its record with it.
     kept: at\impl_len
     mark: lmx_arena_mark(at)
     late: it_pair(at, 1, 0)
-    it_check(counts, late != 0 && lmx_implements_register(at, late, model, perm) = c.LMX_IMPLEMENTS_YES, "a value built after the mark was not admitted")
+    it_check(counts, late != 0 && lmx_implements_register_map(at, late, model, perm, 2U) = c.LMX_IMPLEMENTS_YES, "a value built after the mark was not admitted")
     it_check(counts, at\impl_len = kept + 1U, "the admission after the mark was not recorded")
     lmx_arena_revert(at, mark)
     it_check(counts, lmx_implements_find(at, late, model) = 0, "a record outlived the revert of its value")
@@ -175,13 +201,12 @@ fn: main () int
     # Attach carries the donor's records.
     dmodel: it_pair(dn, 0, 1)
     lent: it_pair(dn, 1, 0)
-    dtable: it_table(dn, 1U, 0U)
-    if: dmodel = 0 || lent = 0 || dtable = 0
+    if: dmodel = 0 || lent = 0
         free(counts)
         return: 2
     ---
-    it_check(counts, lmx_implements_register(dn, lent, dmodel, 0) = c.LMX_IMPLEMENTS_NO, "the donor admitted Other to Model as its own type")
-    it_check(counts, lmx_implements_register(dn, lent, dmodel, dtable) = c.LMX_IMPLEMENTS_YES, "the donor did not admit Other through [1, 0]")
+    it_check(counts, lmx_implements_register_map(dn, lent, dmodel, 0, 0U) = c.LMX_IMPLEMENTS_NO, "the donor admitted Other to Model as its own type")
+    it_check(counts, lmx_implements_register_map(dn, lent, dmodel, dmap, 2U) = c.LMX_IMPLEMENTS_YES, "the donor did not admit Other through [1, 0]")
     kept: at\impl_len
     it_check(counts, lmx_arena_attach(at, dn) = 0, "attach refused")
     it_check(counts, at\impl_len = kept + 1U && dn\impl_len = 0U && dn\impl = 0, "attach did not carry the donor's record")
@@ -193,68 +218,129 @@ fn: main () int
     lmx_gc_mark_value(at, (cast: (@: void) model), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) other), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) own), gen, 0)
-    lmx_gc_mark_value(at, (cast: (@: void) perm), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) lent), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) dmodel), gen, 0)
-    lmx_gc_mark_value(at, (cast: (@: void) dtable), gen, 0)
     it_check(counts, lmx_gc_sweep(at, gen) = c.LMX_GC_OK, "the keeping sweep failed")
     it_check(counts, at\impl_len = kept && lmx_implements_find(at, other, model) != 0, "a record of a kept value left in the sweep")
+    it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) = 0 && slot = 1U, "a kept record does not read its static map after the sweep")
     # ... and one that frees it drops them in the same pass.
     gen: lmx_arena_generation_next(at)
     it_check(counts, lmx_gc_sweep(at, gen) = c.LMX_GC_OK, "the freeing sweep failed")
     it_check(counts, at\impl_len = 0U, "a record outlived the sweep that freed its value")
     # The table is keyed by address alone: a Structure made later at a freed address must find
     # nothing there -- asked with the freed addresses themselves, which is exactly what such a
-    # Structure would ask with (a lookup reads no cell of the value).  The identity record is the
-    # one that would answer: it has no table whose freed cells could refuse.
+    # Structure would ask with (a lookup reads no cell of the value).
     slot: 99U
     it_check(counts, lmx_implements_slot(at, own, model, 1U, @ slot) != 0 && slot = 99U, "a freed address still answers Model as Model's own")
-    it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) != 0 && slot = 99U, "a freed address still answers Model through the old table")
+    it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) != 0 && slot = 99U, "a freed address still answers Model through the old map")
 
-    # Item 738: a table with a "not carried" cell (SIZE_MAX) -- a capture's copy holds only the fields
-    # its model reads.  Model (a: size_t, b: int); half holds b alone, the table [not carried, 0].  The
-    # heavy check passes; b is read at the copy's slot 0; a read of a is refused.
+    # A frame's own size cells, read in place: Other admitted to Model through the cells [1, 0] of a
+    # frame at offset 1.  The record keeps the frame: a later change of a cell is what it answers.
     memset((cast: (@: void) (@ fresh_arena)), 0, c.sizeof(c.LmxArena))
     ea: @ fresh_arena
     if: lmx_arena_open(ea) != 0
         free(counts)
         return: 2
     ---
-    hmodel: it_pair(ea, 0, 1)
-    half: lmx_node_new_owned(ea)
-    htable: it_table(ea, (cast: (size_t) -1), 0U)
-    if: hmodel = 0 || half = 0 || htable = 0 || lmx_arena_refs_open_owned(ea, half, 1U) != 0 || lmx_arena_ref_store(half, 0U, lmx_int_new_owned(ea)) != 0
+    v: @ view
+    fmodel: it_pair(ea, 0, 1)
+    fvalue: it_pair(ea, 1, 0)
+    # The frame in a chunk of its own, after the value's: fillers close the value's chunk, so a pass that
+    # reaches the value and not the frame frees the frame alone.
+    fpool: lmx_range_pool(ea, (cast: (@: void) fvalue))
+    fchunk: lmx_pool_chunk_at(fpool, (cast: (@: void) fvalue))
+    filler: fvalue
+    fill_n: 0
+    while: fill_n < 100000 && filler != 0 && lmx_pool_chunk_at(fpool, (cast: (@: void) filler)) = fchunk
+        filler: lmx_node_new_owned(ea)
+        fill_n: fill_n + 1
+    ---
+    frame: it_frame(ea, 1U, 0U)
+    if: fmodel = 0 || fvalue = 0 || frame = 0 || filler = 0
         free(counts)
         return: 2
     ---
-    it_check(counts, lmx_implements_register(ea, half, hmodel, htable) = c.LMX_IMPLEMENTS_YES, "a copy of the read fields alone was not admitted through its table")
-    slot: 99U
-    it_check(counts, lmx_implements_slot(ea, half, hmodel, 1U, @ slot) = 0 && slot = 0U, "a carried field is not read at the copy's slot")
-    slot: 99U
-    it_check(counts, lmx_implements_slot(ea, half, hmodel, 0U, @ slot) != 0, "a field the copy does not carry was given a slot")
-    it_check(counts, lmx_implements_register(ea, lmx_node_new_owned(ea), hmodel, htable) != c.LMX_IMPLEMENTS_YES, "a value without the carried field was admitted through a table with a hole")
-
-    # The table lives as long as its value: a record holds its value weakly and its table strongly
-    # (lmx_gc_mark_impl).  In a fresh arena the table's header lands in a chunk of its own, after the
-    # value's; the pass marks the model and the value and then the tables of the reached records.
-    emodel: it_pair(ea, 0, 1)
-    evalue: it_pair(ea, 1, 0)
-    etable: it_table(ea, 1U, 0U)
-    it_check(counts, emodel != 0 && evalue != 0 && etable != 0 && lmx_implements_register(ea, evalue, emodel, etable) = c.LMX_IMPLEMENTS_YES, "the record for the table pass was not admitted")
+    it_check(counts, lmx_pool_chunk_at(fpool, (cast: (@: void) frame)) != fchunk, "the frame shares a chunk with its value -- the frame's pass cannot be seen here")
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\frame: frame
+    v\at: 1U
+    v\n: 2U
+    it_check(counts, lmx_implements_register(ea, fvalue, fmodel, v) = c.LMX_IMPLEMENTS_YES, "Other through a frame's cells [1, 0] was not admitted to Model")
+    it_check(counts, lmx_implements_slot(ea, fvalue, fmodel, 0U, @ slot) = 0 && slot = 1U, "Model's field a is not read through the frame's cell")
+    it_check(counts, lmx_implements_is_map(ea, lmx_implements_find(ea, fvalue, fmodel), perm, 2U) != 0, "a frame's cells and the equal static map are not one correspondence")
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\frame: frame
+    v\at: 1U
+    v\n: 3U
+    it_check(counts, lmx_implements_register(ea, it_pair(ea, 1, 0), fmodel, v) = c.LMX_IMPLEMENTS_NO, "a frame view of another width was admitted")
+    # A keeping pass keeps the frame's record; a pass that frees the frame drops it with the frame.
     egen: lmx_arena_generation_next(ea)
-    lmx_gc_mark_value(ea, (cast: (@: void) hmodel), egen, 0)
-    lmx_gc_mark_value(ea, (cast: (@: void) half), egen, 0)
-    lmx_gc_mark_value(ea, (cast: (@: void) htable), egen, 0)
-    lmx_gc_mark_value(ea, (cast: (@: void) emodel), egen, 0)
-    lmx_gc_mark_value(ea, (cast: (@: void) evalue), egen, 0)
-    # The check can only see the pass when the table is not already kept by its chunk.
-    it_check(counts, lmx_gc_value_marked(ea, (cast: (@: void) etable), egen) = 0, "the table shares a chunk with its value -- the table pass cannot be seen here")
-    it_check(counts, lmx_gc_mark_impl(ea, egen) = c.LMX_GC_OK, "the table pass failed")
-    it_check(counts, lmx_gc_value_marked(ea, (cast: (@: void) etable), egen) != 0, "the table of a reached value was not marked")
-    it_check(counts, lmx_gc_sweep(ea, egen) = c.LMX_GC_OK, "the sweep after the table pass failed")
-    it_check(counts, lmx_implements_find(ea, evalue, emodel) != 0, "a record whose value lives lost its table in the sweep")
+    lmx_gc_mark_value(ea, (cast: (@: void) fmodel), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) fvalue), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) frame), egen, 0)
+    it_check(counts, lmx_gc_sweep(ea, egen) = c.LMX_GC_OK && lmx_implements_find(ea, fvalue, fmodel) != 0, "a record whose value and frame live left in the sweep")
+    egen: lmx_arena_generation_next(ea)
+    lmx_gc_mark_value(ea, (cast: (@: void) fmodel), egen, 0)
+    lmx_gc_mark_value(ea, (cast: (@: void) fvalue), egen, 0)
+    it_check(counts, lmx_gc_sweep(ea, egen) = c.LMX_GC_OK && lmx_implements_find(ea, fvalue, fmodel) = 0, "a record outlived the sweep that freed its frame")
+
+    # Item 738: a capture's copy in Model's own layout with holes -- half holds b alone, at Model's
+    # slot 1, slot 0 empty.  The heavy check passes; b is read at slot 1; a read of the empty slot a is
+    # refused, never taken as present.
+    hmodel: it_pair(ea, 0, 1)
+    half: lmx_node_new_owned(ea)
+    if: hmodel = 0 || half = 0 || lmx_arena_refs_open_owned(ea, half, 2U) != 0 || lmx_arena_ref_store(half, 1U, lmx_int_new_owned(ea)) != 0
+        free(counts)
+        return: 2
+    ---
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\holes: 1
+    it_check(counts, lmx_implements_register(ea, half, hmodel, v) = c.LMX_IMPLEMENTS_YES, "a copy of the read fields alone was not admitted in its type's layout")
     slot: 99U
-    it_check(counts, lmx_implements_slot(ea, evalue, emodel, 0U, @ slot) = 0 && slot = 1U, "the kept table is not read")
+    it_check(counts, lmx_implements_slot(ea, half, hmodel, 1U, @ slot) = 0 && slot = 1U, "a carried field is not read at its type's slot")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, half, hmodel, 0U, @ slot) != 0 && slot = 99U, "an empty slot of a copy was readable")
+    it_check(counts, lmx_implements_register_map(ea, half, hmodel, 0, 0U) = c.LMX_IMPLEMENTS_NO, "a copy with holes answered its type as the plain identity")
+
+    # Merge / clone copying: the graph copy of an admitted value is another value -- no record comes with it, so it is
+    # never read at "slot j" by default, and its own admission is the heavy one again; the original keeps its record.
+    ocopy: it_pair(ea, 1, 0)
+    it_check(counts, ocopy != 0 && lmx_implements_register_map(ea, ocopy, fmodel, perm, 2U) = c.LMX_IMPLEMENTS_YES, "the value to copy was not admitted")
+    it_check(counts, lmx_graph_copy_owned(ocopy, 0, ea, ea, @ cloned) = 0 && cloned != 0 && cloned != ocopy, "the graph copy of an admitted value failed")
+    slot: 99U
+    it_check(counts, lmx_implements_find(ea, cloned, fmodel) = 0 && lmx_implements_slot(ea, cloned, fmodel, 0U, @ slot) != 0 && slot = 99U, "a copy of an admitted value carried its record")
+    it_check(counts, lmx_implements_slot(ea, ocopy, fmodel, 0U, @ slot) = 0 && slot = 1U, "copying a value disturbed the original's record")
+    it_check(counts, lmx_implements_register_map(ea, cloned, fmodel, perm, 2U) = c.LMX_IMPLEMENTS_YES && lmx_implements_slot(ea, cloned, fmodel, 0U, @ slot) = 0 && slot = 1U, "a copy was not admitted on its own")
+    # A clone of the admitting frame.  The sweep above freed the first frame with its record, so Other is admitted
+    # again through a new one.  The clone's equal cells are the same correspondence (same_map through the accessor):
+    # an admission through them answers.  The record reads the frame it was made with: a different correspondence
+    # written into the clone's cell does not reach it.
+    frame: it_frame(ea, 1U, 0U)
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\frame: frame
+    v\at: 1U
+    v\n: 2U
+    it_check(counts, frame != 0 && lmx_implements_register(ea, fvalue, fmodel, v) = c.LMX_IMPLEMENTS_YES, "Other was not admitted again through a new frame")
+    it_check(counts, lmx_graph_copy_owned(frame, 0, ea, ea, @ fclone) = 0 && fclone != 0 && fclone != frame, "the admitting frame could not be cloned")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, fvalue, fmodel, 0U, @ slot) = 0 && slot = 1U, "cloning the frame changed the record's reading")
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\frame: fclone
+    v\at: 1U
+    v\n: 2U
+    it_check(counts, lmx_implements_register(ea, fvalue, fmodel, v) = c.LMX_IMPLEMENTS_YES, "the clone's equal cells were not the same correspondence")
+    it_check(counts, lmx_size_store_known(lmx_arena_ref_value(fclone, 1U), 0U) = 0 && lmx_size_store_known(lmx_arena_ref_value(fclone, 2U), 1U) = 0, "the clone's cells could not be written")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, fvalue, fmodel, 0U, @ slot) = 0 && slot = 1U, "a write into the clone's cell reached the original frame's record")
+    it_check(counts, lmx_implements_register(ea, fvalue, fmodel, v) = c.LMX_IMPLEMENTS_NO, "the clone's changed cells were taken as the recorded correspondence")
+    # A clone of a capture's copy: no holes record -- its empty slot stays unreadable, and its carried one too until
+    # it is admitted itself.
+    it_check(counts, lmx_graph_copy_owned(half, 0, ea, ea, @ hclone) = 0 && hclone != 0 && hclone != half, "the capture's copy could not be cloned")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, hclone, hmodel, 1U, @ slot) != 0 && lmx_implements_slot(ea, hclone, hmodel, 0U, @ slot) != 0 && slot = 99U, "a clone of a capture's copy was readable without an admission")
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\holes: 1
+    it_check(counts, lmx_implements_register(ea, hclone, hmodel, v) = c.LMX_IMPLEMENTS_YES && lmx_implements_slot(ea, hclone, hmodel, 1U, @ slot) = 0 && slot = 1U && lmx_implements_slot(ea, hclone, hmodel, 0U, @ slot) != 0, "the clone admitted with holes does not read as the copy")
     lmx_arena_release(ea)
 
     lmx_arena_release(at)

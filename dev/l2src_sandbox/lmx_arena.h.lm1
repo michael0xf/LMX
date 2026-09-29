@@ -16,16 +16,23 @@ predef: "lmx_arena_blocks.h.lm1"
 # entry names.  Nothing outside this module writes the index, and nothing at all gates
 # writing into the cells themselves -- code that holds a reference and has determined
 # its type once writes straight into the cell, because a cell's address never changes.
-# D-105 (the author's Q39, 2026-09-27; steps/d105-index-table.md): one address correspondence
-# of the `implements` table.  `value` was admitted to the named Structure `req`; `table` is a
-# Structure of size_t cells, cell j the value's slot of req's field j, or null when the value's
-# own type is req (read at req's own slots).  The entry holds `value` weakly: it never keeps
-# the value alive, and it leaves in the pass that frees it (lmx_arena_impl_prune) -- an address
-# that comes back must not inherit another value's table.
+# D-105 (the author's Q39, 2026-09-27; steps/d105-index-table.md; Codex, 2026-09-28): one address
+# correspondence of the `implements` table.  `value` was admitted to the named Structure `req`; the entry is a
+# view of where req's field j is in the value (lmx_implements_at) -- never a Structure made for it:
+#   frame, at, n: the size cells frame[at .. at + n) of the admitting walk frame (ADMIT_AS), read in place;
+#   map, n:       the translator's static map of that pair of types (a native admission), compiled metadata;
+#   neither:      the value's own type is req (read at req's own slots) -- with `holes`, a capture's copy in
+#                 req's own layout, whose empty slot is not carried (item 738).
+# The entry holds `value` weakly: it never keeps the value alive, and it leaves in the pass that frees it
+# (lmx_arena_impl_prune) -- an address that comes back must not inherit another value's correspondence.
 struct: LmxImplEntry
     @: Lmx value
     @: Lmx req
-    @: Lmx table
+    @: Lmx frame
+    size_t: at
+    @: size_t map
+    size_t: n
+    int: holes
 end: LmxImplEntry
 
 struct: LmxArena

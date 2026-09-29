@@ -1,9 +1,8 @@
-# D-93 with item 739: the host calls its capturing model, whose result is size_t, before its return,
-# and the root calls the returned node -- natively the host's call is lmx_call_prim with a size_t
-# temp; under the knob (unit_walk_make_adder_model_call_size_t) it is l2_mad_call's size_t
-# variant over the node the model's PRIM builds, and the host is walked.  makeAdder 4294967296:
-# q = addN(1) = 2^32 + 1; n: q + 1; add(1) = 2^32 + 3.  Mutant: the walked call through l2_mad_call
-# (int) -- walk error: INVALID under the knob.  Entry 7.
+# D-93 with item 739 and A3: the host calls its capturing model, whose result is size_t, before its return, and
+# the root calls the returned node -- natively the host's call is lmx_call_prim over the model's occurrence with
+# a size_t temp, n its hidden input; under the knob (unit_walk_make_adder_model_call_size_t) a CALL of the walked
+# host.  The root's call of the node goes through l2_mad_call's size_t variant.  makeAdder 4294967296:
+# q = addN(1) = 2^32 + 1; n: q + 1; add(1) = 2^32 + 3.  Entry 7.
 fn: makeAdder (size_t: n) fn: (size_t: x) size_t
     fn: addN (size_t: x) size_t
         return: n + x

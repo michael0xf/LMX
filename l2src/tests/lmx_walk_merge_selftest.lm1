@@ -13,8 +13,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 # -194 к.6 (K2): merge in the interpreted root as a walker PRIM step with a map, and
 # merge-into (Q26.1) as a prim of the same family. Node shape agreed with Opus (T3's own
-# emitter): [prim, record, op0, ..., opN-1, body_or_0, pairs_or_0] for the fresh
-# multi-operand merge (lmx_walk_merge_map), [prim, record, target, op, pairs] for
+# emitter; D1 2026-09-28: the pairs inline): [prim, record, catch, P, op0, ..., opN-1, body_or_0, 3P pair cells]
+# for the fresh multi-operand merge (lmx_walk_merge_map), [prim, record, catch, target, op, P, 3P pair cells] for
 # merge-into (lmx_walk_merge_into_map). Exercised directly against the kernel (T3's own
 # emission is not built yet).
 
@@ -32,20 +32,18 @@ fn: mw_fr (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: op
         return: 0
 return: n
 
-# A pairs Structure: 3 direct size_t children per pair (model_slot, operand, field).
-# Parentless (lmx_node_new_owned), like the operand Structures below: nothing reads the
-# pairs Structure's own \parent, so it carries none.
-fn: mw_pairs (@: LmxArena arena; size_t: p0_slot; size_t: p0_op; size_t: p0_field) @: Lmx
-    @: Lmx s lmx_node_new_owned(arena)
-    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 3U) != 0
-        return: 0
-    if: lmx_walk_store_size(arena, s, 0U, p0_slot) != c.LMX_WALK_OK
-        return: 0
-    if: lmx_walk_store_size(arena, s, 1U, p0_op) != c.LMX_WALK_OK
-        return: 0
-    if: lmx_walk_store_size(arena, s, 2U, p0_field) != c.LMX_WALK_OK
-        return: 0
-return: s
+# D1: one pair, inline in the PRIM `s` from slot `at` -- three size cells (model_slot, operand, field) -- and the
+# pair count 1 in slot `pslot`.  0 on success.
+fn: mw_pairs (@: LmxArena arena; @: Lmx s; size_t: pslot; size_t: at; size_t: p0_slot; size_t: p0_op; size_t: p0_field) int
+    if: s = 0 || lmx_walk_store_size(arena, s, pslot, 1U) != c.LMX_WALK_OK
+        return: 1
+    if: lmx_walk_store_size(arena, s, at, p0_slot) != c.LMX_WALK_OK
+        return: 1
+    if: lmx_walk_store_size(arena, s, at + 1U, p0_op) != c.LMX_WALK_OK
+        return: 1
+    if: lmx_walk_store_size(arena, s, at + 2U, p0_field) != c.LMX_WALK_OK
+        return: 1
+return: 0
 
 fn: mw_prim_record (@: LmxArena arena; LmxPrimitiveEntry: fn) @: LmxPrimitive
     @: LmxPrimitive rec (cast: (@: LmxPrimitive) lmx_arena_take(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
@@ -124,20 +122,19 @@ fn: main () int
     mw_check(counts, operand != 0 && lmx_arena_refs_open_owned(@ arena, operand, 1U) = 0, "operand opened {x'}")
     lmx_arena_ref_store(operand, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
     lmx_int_store_known(lmx_arena_ref_value(operand, 0U), 99)
-    pairs_a: mw_pairs(@ arena, 0U, 1U, 0U)
-    mw_check(counts, pairs_a != 0, "pairs_a built: model slot 0 <- operand(1) field 0")
+    pairs_a: 0
     rec_a: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map))
     mw_check(counts, rec_a != 0, "merge-map primitive record built")
 
     caller_a: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_a != 0 && lmx_arena_refs_open_owned(@ arena, caller_a, 1U) = 0, "caller_a opened")
     prim_a: mw_fr(@ arena, roles, caller_a, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 7U)
+    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 10U)
     lmx_arena_ref_store(prim_a, 1U, (cast: (@: void) rec_a))
-    lmx_arena_ref_store(prim_a, 3U, (cast: (@: void) model))
-    lmx_arena_ref_store(prim_a, 4U, (cast: (@: void) operand))
-    # slot 5 (body) left 0: no body operand. slot 2 is catch.
-    lmx_arena_ref_store(prim_a, 6U, (cast: (@: void) pairs_a))
+    lmx_arena_ref_store(prim_a, 4U, (cast: (@: void) model))
+    lmx_arena_ref_store(prim_a, 5U, (cast: (@: void) operand))
+    # slot 6 (body) left 0: no body operand. slot 2 is catch.  D1: the pair count at 3, the pair at 7..9.
+    mw_check(counts, mw_pairs(@ arena, prim_a, 3U, 7U, 0U, 1U, 0U) = 0, "pairs_a inline: model slot 0 <- operand(1) field 0")
     mw_check(counts, prim_a != 0, "caller_a graph built")
 
     st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, (cast: (@: void) (@ r_a)), @ out_a, @ present_a)
@@ -156,18 +153,18 @@ fn: main () int
     mw_check(counts, op_b != 0 && lmx_arena_refs_open_owned(@ arena, op_b, 1U) = 0, "op_b opened {a}")
     lmx_arena_ref_store(op_b, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
     lmx_int_store_known(lmx_arena_ref_value(op_b, 0U), 42)
-    pairs_b: mw_pairs(@ arena, 0U, 0U, 0U)
-    mw_check(counts, pairs_b != 0, "pairs_b built: target slot 0 <- op field 0")
+    pairs_b: 0
     rec_b: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_into_map))
     mw_check(counts, rec_b != 0, "merge-into primitive record built")
 
     caller_b: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_b != 0 && lmx_arena_refs_open_owned(@ arena, caller_b, 1U) = 0, "caller_b opened")
-    prim_b: mw_fr(@ arena, roles, caller_b, 0U, c.LMX_WALK_OP_PRIM, 6U)
+    prim_b: mw_fr(@ arena, roles, caller_b, 0U, c.LMX_WALK_OP_PRIM, 9U)
     lmx_arena_ref_store(prim_b, 1U, (cast: (@: void) rec_b))
     lmx_arena_ref_store(prim_b, 3U, (cast: (@: void) target_b))
     lmx_arena_ref_store(prim_b, 4U, (cast: (@: void) op_b))
-    lmx_arena_ref_store(prim_b, 5U, (cast: (@: void) pairs_b))
+    # D1: the pair count at 5, the pair at 6..8.
+    mw_check(counts, mw_pairs(@ arena, prim_b, 5U, 6U, 0U, 0U, 0U) = 0, "pairs_b inline: target slot 0 <- op field 0")
     mw_check(counts, prim_b != 0, "caller_b graph built (bare PRIM statement, no RET)")
 
     st: lmx_walk_activate(@ ctx, caller_b, caller_b, 0, 0U, (cast: (@: void) (@ r_b)), @ out_b, @ present_b)
@@ -251,9 +248,10 @@ fn: main () int
     mw_check(counts, seal_pool != 0 && lmx_pool_seal(seal_pool) = 0, "leaf_c's profiled PRIMITIVE pool sealed")
 
     lmx_arena_ref_store(prim_c, 1U, (cast: (@: void) rec_c))
-    lmx_arena_ref_store(prim_c, 3U, (cast: (@: void) model_c))
-    lmx_arena_ref_store(prim_c, 4U, (cast: (@: void) operand_c))
-    # slot 2 is catch. slot 5 (body) and slot 6 (pairs) left 0.
+    lmx_arena_ref_store(prim_c, 4U, (cast: (@: void) model_c))
+    lmx_arena_ref_store(prim_c, 5U, (cast: (@: void) operand_c))
+    # slot 2 is catch; D1: the pair count at 3 is 0 (no pairs); slot 6 (body) left 0.
+    mw_check(counts, lmx_walk_store_size(@ arena, prim_c, 3U, 0U) = c.LMX_WALK_OK, "prim_c pair count 0")
 
     st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, (cast: (@: void) (@ r_c)), @ out_c, @ present_c)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-map (retained-leaf) PRIM walked OK")

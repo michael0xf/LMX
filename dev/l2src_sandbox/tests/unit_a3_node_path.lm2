@@ -1,0 +1,40 @@
+# Gate 3 (book, "Returned nested methods" and "Dynamic sources and the lexical fallback"; Codex, 2026-09-28): in a
+# returned method `node\name` reads the node's copied lexical context -- its `node` is that context, the node's
+# parent -- while a bare name takes the caller's binding first.  read's node copied k 42 (40 + n) and n 2 at the
+# return; the root, with its own n 100, calls it: node\k 42, node\n 2 (the host's formal, the body field the merge
+# appends for it), bare n 100: 42000 + 20 + 100 + 1.  val's node copied m\value 7; the root then writes left\value 9;
+# node\m\value is still 7.  Success is 7; otherwise 64 plus a bit per failed reading.
+Model:
+    int: value 0
+end: Model
+
+fn: makeReader (int: n) fn: (int: x) int
+    int: k 40
+    k: k + n
+    fn: read (int: x) int
+        return: node\k * 1000 + node\n * 10 + n + x
+    return: read
+
+fn: makeValue (Model: m) fn: (int: x) int
+    fn: val (int: x) int
+        return: node\m\value + x
+    return: val
+
+r: makeReader 2
+Model: left
+left\value: 7
+v: makeValue left
+left\value: 9
+int: n 100
+int: a (r: 1)
+int: b (v: 0)
+int: bad 0
+if: a != 42121
+    bad: bad + 1
+if: b != 7
+    bad: bad + 2
+int: ok 7
+if: bad != 0
+    ok: 64 + bad
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

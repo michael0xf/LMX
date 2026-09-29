@@ -1,0 +1,19 @@
+# §7b witness (book §12: publication before a foreign boundary; Lingvamyxa spec 21.6: every uncertain external
+# call is treated as one): x is published 1 by the call to nop, `x: 5` makes it dirty, and the c.* call publishes
+# it, so the explicit `test\x` after it reads 5.  The program exits 5; without the foreign boundary's publication 1.
+fn: nop () int
+    return: 0
+end: nop
+
+fn: test () int
+    int: x 1
+    nop()
+    x: 5
+    c.printf: ""
+    int: seen 0
+    seen: test\x
+    return: seen
+end: test
+
+sendMessage: exit(exit_code: test(); stdout: ""; stderr: "")
+return

@@ -597,9 +597,10 @@ $fixtures = @(
     # qualified branch named by a method body.  An empty entry is an empty program (EmptyEntry).
     # A stray trailer after a closed frame is an item since the P0 change of -114 and is refused
     # by name.
+    # §7b (7b-1): wrap's own n is a declared field with a working value, so the actual is l2_q0.
     [pscustomobject]@{ Name = 'unit_s2_vis_dynamic.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @();
-        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int', 'l2_t1: l2_m0(l2_c0\parent, l2_c0, lmx_int_value_known(l2_q0_from[0]))') },
+        Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int', 'l2_t1: l2_m0(l2_c0\parent, l2_c0, l2_q0)') },
     [pscustomobject]@{ Name = 'unit_s2_vis_structure_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_structure_below_refused.lm2:3:1: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -819,8 +820,10 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
-        Absent = @(); Debt = @() },
+    # bafca4c (the author, 2026-09-28; 7b, by name): inc's x is its hidden input, and the root binds none -- refused
+    # at the root's call.  (Was eternal-runs: the assignment made x a field of inc.)
+    [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_asgn_fallback.lm2:21:1: unbound dynamic input x'; Absent = @(); Debt = @() },
     # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: sendMessage: X inside a method body --
     # a method called from the root sends exit(exit_code: 7; ...) directly (l2_msend<k>).
     [pscustomobject]@{ Name = 'unit_send_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
@@ -957,18 +960,20 @@ $fixtures = @(
                  'if: l2_mresult\array.size != 3U') },
     # -193 T3 (over Sonnet's K2): merge at the walked root.  The result slot of the unit takes the
     # walker's merge primitive by reference, PUT_REF(0, slot, PRIM [prim, lmx_walk_merge_map, ops,
-    # body | 0, pairs | 0]); the pairs are the translator's map, a plain Structure of 3·P size cells
-    # made once with the graph.  No native merge is emitted for the root.  Success is 7.
+    # body | 0, pairs...]); the pairs are the translator's map inline (D1, Codex 2026-09-28: no helper Structure) --
+    # their count P in slot 3, 3·P size cells after the body.  No native merge is emitted for the root.  Success is 7.
+    # §7b (7b-1): merge is a publication boundary (book §12), so its primitive is PRIM_PUB; the root
+    # holds its fields in the graph (Q52), so at the root there is nothing to publish.
     # unit_root_merge_three_operands: two pairs on Model's x (C's last), B's z appended, a write
     # `R\x: 6U` through the result, and S merging the result R (read in the turn) with a body field.
     [pscustomobject]@{ Name = 'unit_root_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_mops', 'lmx_merge_owned(');
-        Debt = @('\fn: lmx_walk_merge_map', 'c.LMX_WALK_OP_PUT_REF, 4U)', 'c.LMX_WALK_OP_PRIM, 8U)', 'c.LMX_WALK_OP_PRIM, 6U)', 'c.LMX_WALK_OP_PUT_OF, 4U)') },
+        Debt = @('\fn: lmx_walk_merge_map', 'c.LMX_WALK_OP_PUT_REF, 4U)', 'c.LMX_WALK_OP_PRIM_PUB, 14U)', 'c.LMX_WALK_OP_PRIM_PUB, 6U)', 'c.LMX_WALK_OP_PUT_OF, 4U)') },
     # unit_root_merge_body: the body as the map's operand n -- R's x into Model's x, S's z into B's
-    # appended z, S's w new.
+    # appended z, S's w new.  D1: each merge's pair is inline, its count in slot 3 -- one pair: 3 wider.
     [pscustomobject]@{ Name = 'unit_root_merge_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('l2_mops', 'lmx_merge_owned(');
-        Debt = @('\fn: lmx_walk_merge_map', 'c.LMX_WALK_OP_PRIM, 6U)', 'c.LMX_WALK_OP_PRIM, 7U)') },
+        Debt = @('\fn: lmx_walk_merge_map', 'c.LMX_WALK_OP_PRIM_PUB, 9U)', 'c.LMX_WALK_OP_PRIM_PUB, 10U)') },
     # D-75: a call through a path at the walked root is typed by its method; the int result stored into
     # a size_t own takes the root's conversion edge (slice 13 -- before it, a located refusal of the mix;
     # before D-75, walk error INVALID at run time), and its running twin.
@@ -1017,12 +1022,14 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_make_adder.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('lmx_fresh('); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
     # T6b: the node is built from the host's activation at the return -- n changed before it, k a
-    # field the host declares -- and carries only what addN names, not u: 5 slots, args, return,
-    # n, k, one frame. add7(1)=7, add100(1)=100, add7(1)=7; the base translator refused k.
+    # field the host declares -- and carries only what addN names, not u.  The node is addN's occurrence copied (3:
+    # args, return, one frame) under its copied lexical context C -- the host's layout (6) and a body field per formal
+    # (2): k at its slot 2, n in formal 0's field 6, u's field 7 left empty (book, "Returned nested methods"; Codex,
+    # 2026-09-28). add7(1)=7, add100(1)=100, add7(1)=7; the base translator refused k.
     # Mutants: the host's statements dropped (D-92) -- exit 0; the formal as the machine argument
     # -- add7(1)=6, exit 0. Every int formal carried is the 6U pin, not a behavior.
     [pscustomobject]@{ Name = 'unit_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('lmx_fresh('); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 5U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
+        Absent = @('lmx_arena_ref_store(l2_madc, 7U,', 'lmx_fresh('); Debt = @('lmx_arena_ref_store(l2_madc, 2U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 6U, l2_mad_cell)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 3U)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 8U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
     # T6b: a model that names nothing of the activation: no captured slot (3 = args, return, one
     # frame); the base translator carried the unused z. inc7(1)=7.
     [pscustomobject]@{ Name = 'unit_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -1097,11 +1104,10 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t6_root_held_results.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # D-93 with item 739: the host calls its size_t model before the return -- natively with the
-    # arguments as cells of their types (the walked node reads an unclassified address as an int),
-    # under the knob through l2_mad_call's size_t variant; the host is walked.  2^32 + 3.  Mutants:
-    # the native arguments as addresses of locals -- INVALID natively; the walked call through
-    # l2_mad_call (int) -- INVALID under the knob.
+    # A3 with item 739: the host calls its size_t model before the return -- over the model's occurrence, n its hidden
+    # input: natively through lmx_call_prim with the arguments as cells of their types (the walked model reads an
+    # unclassified address as an int), under the knob a CALL of the walked host.  The root calls the returned node
+    # through l2_mad_call's size_t variant.  2^32 + 3.
     [pscustomobject]@{ Name = 'unit_make_adder_model_call_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_make_adder_model_call_size_t.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -1146,45 +1152,75 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_make_adder_after_return_call_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
         Absent = @(); Debt = @() },
-    # D-93, the rest: the host calls its capturing model before the return -- the call builds the
-    # node the return would build, with the host's values at the call, and calls it: natively
-    # through lmx_call_prim (node as code and data), under the knob through l2_mad_call over the
-    # model's PRIM (l2_rw_mad_build).  q 6, r 16, n 22, add(1) = 23; the base translator refused.
-    # Mutants: natively the call through the model's stub -- 1, exit 1; the call's node without
-    # its capture -- "walk error: INVALID", exit 3; under the knob the call as an ordinary call of
-    # the model (its occurrence, no node) -- INVALID, exit 3.  Each is red in its own mode only.
+    # A3 (Codex, 2026-09-28): the host calls its capturing model before the return -- an ordinary (M, M) call over the
+    # model's occurrence, its capture n the hidden input the host supplies (the host's current value): natively
+    # through lmx_call_prim (the model is walked), under the knob a CALL.  No node is built for the call.  q 6, r 16,
+    # n 22; the returned node carries n 22: add(1) = 23; the base translator refused.
     [pscustomobject]@{ Name = 'unit_make_adder_model_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_make_adder_model_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('l2_mad_construct_') },
-    # D-93, the rest: a capturing nested method that is not the model is called like the model -- the
-    # call builds ITS node (two captured fields here, the model's one) and calls it; under the knob
-    # through its own constructor, l2_mad_construct_<host>_<helper>.  add(1) = 54; the base
-    # translator refused.  Mutants: natively the helper's call built as the model's node -- gcc
-    # refuses (q undeclared there); only the model called so -- refused; the walked helper's node
-    # built by the model's constructor -- "construct was called outside its header", exit 3.
+    # A3: a capturing nested method that is not the model is called like the model -- over its own occurrence, its two
+    # captures (n and m) the hidden inputs the host supplies; the model captures q only.  add(1) = 54; the base
+    # translator refused.
     [pscustomobject]@{ Name = 'unit_make_adder_helper_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_make_adder_helper_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
-    # REVIEW ba92461 (fable_pc's probe and its M32): a helper of two formals -- its node's args part
-    # has the helper's own arity, 2U (l2_mad_node_arity), not the host header's 1.  h2(1, 2) = 8 = q,
-    # add(1) = 9.  The width is a text pin, not a behavior: the call's arguments come through refs,
-    # so M32 (the header's arity) runs green in both modes -- measured; the pin goes red on it.
-    # Under the knob the host stays native (a walked call carries one input) and l2trans notes it.
+    # REVIEW ba92461, A3: a helper of two formals, called by its host over its own occurrence with its two actuals and
+    # its capture n -- three inputs (lmx_call_prim, the pin).  h2(1, 2) = 8 = q, add(1) = 9.  Under the knob the host
+    # is walked now (a CALL carries any number of inputs; it stayed native and l2trans noted it): no native word for
+    # it (the Absent pin).
     [pscustomobject]@{ Name = 'unit_make_adder_helper_arity2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part_c0, 2U)') },
+        Absent = @(); Debt = @('lmx_call_prim(l2_program_arena, l2_c0, l2_c0, l2_cfr1, 3U') },
     [pscustomobject]@{ Name = 'unit_walk_make_adder_helper_arity2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
-        Notes = @('the callable merge host makeAdder stays native under --walk-methods: root operation not walkable yet: a call of the model with other than one number');
-        Absent = @(); Debt = @('lmx_arena_refs_open_owned(l2_program_arena, l2_mad_part_c0, 2U)') },
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
     # D-93: a nested method that captures nothing of its host has its own native body; the host calls
-    # it before its return (it was refused).  A capturing one is called by building its node
-    # (_model_call and _helper_call above).  Mutant:
+    # it before its return (it was refused).  A capturing one is called over its own occurrence, walked,
+    # its captures its hidden inputs (A3: _model_call and _helper_call above).  Mutant:
     # every nested method the stub -- the native twin gives k = 0, RED by run (under the knob the
     # host and twice are walked, the stub never runs).
     [pscustomobject]@{ Name = 'unit_make_adder_nested_plain_call.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_make_adder_nested_plain_call_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # A3 (Codex, 2026-09-28): a capture is a hidden input of the nested method.  The host's direct call passes its
+    # current values -- a Structure by reference, admitted as the capture's type itself (the pins), so the nested
+    # method's write through it is the host's, the root's left -- and the node its return builds carries its own
+    # copies, which later writes of left do not reach and the node's own writes do not leave.  41 and 1141 by the
+    # direct calls, left\other 7; 1141 twice by the node, left\other 7000.  Success is 7, else 64 plus a bit per
+    # failed reading.
+    [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_implements_register_map(l2_program_arena, (cast: (@: Lmx) l2_p0_0), lmx_arena_ref_struct(node, 19U), 0, 0U)') },
+    [pscustomobject]@{ Name = 'unit_walk_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @('c.LMX_WALK_OP_ADMIT_AS, 5U)') },
+    # Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28): a free name of a returned
+    # method takes the caller's own binding first, the node's copied context only as the fallback -- the root's n
+    # 100: 101; go's formal n 7: 8; plain, with none: the copy, 6.  A held call passes the caller's binding per hidden
+    # input, or nothing; the model's ARG falls back to the graph through `node`.
+    [pscustomobject]@{ Name = 'unit_a3_caller_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_a3_caller_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # Gate 3 (Codex, 2026-09-28): `node\name` in a returned method reads its copied lexical context (the node's
+    # parent) -- the host's own field as it was at the return, the host's formal as the body field the merge appends,
+    # a field of a Structure formal from its copy -- while a bare name takes the caller's binding: 42121 and 7.
+    [pscustomobject]@{ Name = 'unit_a3_node_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_a3_node_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # Gate 3, a direct call: a nested method's `node` is its host's occurrence (book §3), `node\k` the declaration
+    # cell of the host's own field, never its working value -- 40, then 42 once the host's write is published before
+    # the next call; the returned node, its copy -- 4104243.
+    [pscustomobject]@{ Name = 'unit_a3_node_direct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_a3_node_direct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # Gate 3, absence (option (2)): `node\n` of the host's formal in a direct call reads no value -- the formal is no
+    # body field of the host's occurrence, and the args part is the signature, never read as a value: X1.
+    [pscustomobject]@{ Name = 'unit_a3_node_direct_absent.lm2'; Expect = 'walk-x1'; Exit = 0; Needle = ''; Args = @('0');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_a3_node_direct_absent.lm2'; Expect = 'walk-x1'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true;
         Absent = @(); Debt = @() },
     # D-94: `return: 0` from a method whose result is a callable is the result's type error, said so
     # (l2_mad_returns_number), not a limit of the callable merge.  Mutant: no number check -- the old
@@ -1336,11 +1372,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_throwing_callable.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0');
         Absent = @(); Debt = @() },
+    # §7b (7b-1): rmerge's own `next` is its working value l2_q7 as the recursive call's actual.
     [pscustomobject]@{ Name = 'unit_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('0');
         Absent = @('Lmx node; @: Lmx node', 'l2_p2_0; @: Lmx node', 'l2_out_throw[0]: node', 'return: 71');
         Debt = @('fn: l2_m2 (@: Lmx node; @: Lmx self; size_t: l2_p2_0; @: Lmx l2_msg; @: size_t l2_out_result; @@: Lmx l2_out_throw) int',
-                 'l2_ts1: l2_m2(l2_c0\parent, l2_c0, lmx_size_value_known(l2_q7_from[0]), l2_msg, @ l2_t1, @ l2_te1)',
+                 'l2_ts1: l2_m2(l2_c0\parent, l2_c0, l2_q7, l2_msg, @ l2_t1, @ l2_te1)',
                  'l2_out_throw[0]: 0',
                  'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # S1.1, THE STATUS DISCIPLINE OF THE IMPLICIT CHANNEL (FABLE-OPUS-S1-STATUS-20260923-133).  One
@@ -1452,6 +1489,8 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_merge_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 50; MergeFail = 1;
         Absent = @(); Debt = @() },
+    # Q52 (rewritten by name, 7b): the published field is m's own, declared in its body, read at its place of
+    # declaration m\x after the catch -- a bare write of the unit's x from m would be m's hidden input's only.
     [pscustomobject]@{ Name = 'unit_s1_catch_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # User break and continue inside the while, not the pad's. continue skips k = 2,
@@ -1478,11 +1517,17 @@ $fixtures = @(
     # (a unit method, a callable formal) is called with no arguments on the call path of `m()`, its
     # result discarded; a Structure is refused until the author settles executing one (Q19.2); any
     # other value is discarded, never called.  Every one of these crashed the translator before.
-    [pscustomobject]@{ Name = 'unit_bare_fn_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
+    # Q52 (the author, 2026-09-28; re-expected by name, 7b): the counter a method writes bare is its hidden input,
+    # so each call starts from the unit's 0 and the unit's field stays 0 -- the calls are what the methods print.
+    # (Were Entry 2, 3 and 25: the unit's field written from the method.)  unit_bare_sub_stmt is the author's example.
+    [pscustomobject]@{ Name = 'unit_bare_fn_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Says = @('m 1', 'm 1');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_sub_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
+    [pscustomobject]@{ Name = 'unit_bare_sub_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Says = @('s 1', 's 1', 's 1');
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 25;
+    [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Says = @('m 1', 'm 1');
         Absent = @(); Debt = @() },
     # -196: a string literal alone at the root makes no step, as natively; the numeric ones are LIT steps.
     [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
@@ -1600,12 +1645,26 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_return_in_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # The author, 2026-09-28 (OPUS-CODEX-20260928-08; 7b, re-expected by name): a named Structure is a procedure
+    # without arguments -- that is, with hidden arguments.  Counter's free names (seen, last, total) are its hidden
+    # inputs, from the root's 0 at each execution; their bare writes stay its own (Q52).  _call: the calls are put's
+    # and later's lines, the root's fields stay 0 (were 10 and 2); _for: `total 3` twice, the root's total 0 at its
+    # place of declaration (was 6); _ctl_method: put\got 4 after either call (seen was 8).  Walked twin below.
     [pscustomobject]@{ Name = 'unit_named_struct_exec_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('put 5 5', 'later 1 1', 'put 5 5', 'later 1 1');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('total 3', 'total 3');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # The decision's own example: Counter executed from run takes run's local total 100, from the root the root's 0;
+    # the root's total stays 0 at its place of declaration.  Native (lmx_call_prim(S, S) with the hidden input in
+    # refs) and walked (EXEC with it after its five slots).
+    [pscustomobject]@{ Name = 'unit_named_struct_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_arena_ref_struct(node, 10U), lmx_arena_ref_struct(node, 10U), l2_nsr0, 1U, 0, @ l2_nso0)') },
+    [pscustomobject]@{ Name = 'unit_walk_named_struct_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('c.LMX_WALK_OP_EXEC, 6U)') },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_block_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -1722,7 +1781,10 @@ $fixtures = @(
     # callable without a result has no value and is refused.  A callable formal of the callee takes
     # the occurrence itself.  `f()` on an existing ordinary Structure assigns the empty Structure,
     # with admission to its declared type (the book §12; refused admission is implements).
-    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7811;
+    # Q52 (re-expected by name, 7b): m's hits is its hidden input -- the four runs are the four `m 1` lines (a fifth,
+    # behind the false `&&`, would redden Says) and the unit's hits stays 0: 7807 (was 7811).
+    [pscustomobject]@{ Name = 'unit_value_call_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7807;
+        Says = @('m 1', 'm 1', 'm 1', 'm 1');
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_call_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
@@ -1744,24 +1806,28 @@ $fixtures = @(
     # anywhere it is consumed as a value), one diagnostic, now that this fixture's own case is fixed.
     [pscustomobject]@{ Name = 'unit_void_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
-    # No declared type: E() / E: () / m() store FRESH of an empty node, not an admission.
+    # No declared type: E() / E: () / m() store an EMPTY node -- a new empty Structure, one per execution -- not an
+    # admission.
     # The driver letter is not null. m() stores over it and does not throw. Success is 4.
     [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
         Absent = @('lmx_walk_admit');
-        Debt = @('c.LMX_WALK_OP_FRESH, 2U') },
+        Debt = @('c.LMX_WALK_OP_EMPTY, 1U)') },
     # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
-    # Empty Structure assigned to a typed binding (book §12): FRESH of an empty node, admitted by
+    # Empty Structure assigned to a typed binding (book §12): an EMPTY node, admitted by
     # lmx_walk_admit.  () does not implement Model / S, so implements is caught and the previous
     # binding stays: 421 and 74.  A store of the empty node without admission would not.
     [pscustomobject]@{ Name = 'unit_empty_assign_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 421;
         Absent = @('lmx_msg_poll_abort', 'lmx: rebinding');
-        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_FRESH, 2U)') },
+        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)') },
     [pscustomobject]@{ Name = 'unit_empty_assign_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74;
         Absent = @('lmx_msg_poll_abort');
-        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_FRESH, 2U)', 'c.LMX_WALK_OP_PUT_REF, 4U)') },
+        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)', 'c.LMX_WALK_OP_PUT_REF, 4U)') },
     # A BARE `return` CLOSES A SUB (P0, FABLE-OPUS-RECEIVER-CONTRACT-20260924-139 commit 3; author
-    # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it.
-    [pscustomobject]@{ Name = 'unit_sub_return_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
+    # 2026-09-24 Q19.1/Q19.3): the trailer ends the body of s, and each call runs it -- `s 3` twice.  This is the
+    # author's Q52 example (2026-09-28; re-expected by name, 7b): y is s's hidden input, and the unit's y stays 0
+    # («это независимое действие»; was Entry 6).
+    [pscustomobject]@{ Name = 'unit_sub_return_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Says = @('s 3', 's 3');
         Absent = @(); Debt = @() },
     # THE EXPRESSION STATEMENT (plan §3 "Expression statement и discard"; FABLE-OPUS-DISCARD-20260924-147).
     # One consumer, l2_eval_discard: a bare atom, a run of fields l2_expr_span groups into one
@@ -1771,7 +1837,10 @@ $fixtures = @(
     # nothing to run emit nothing.  A sub cannot be an operand.
     [pscustomobject]@{ Name = 'unit_discard_codex.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_discard_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
+    # Q52 (re-expected by name, 7b): f's hits is its hidden input -- its three calls are three `f 1` lines, and the
+    # unit's hits stays 0 (was Entry 3).
+    [pscustomobject]@{ Name = 'unit_discard_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Says = @('f 1', 'f 1', 'f 1');
         Absent = @(); Debt = @() },
     # TYPED NUMBERS AT THE WALKED ROOT (FABLE-OPUS-ROOT-TYPED-20260925-175): size_t, unsigned, ulong
     # and char root fields; a literal takes its place's type -- the pin is `got != 41U`'s LIT size_t --
@@ -1783,14 +1852,14 @@ $fixtures = @(
     # walk hands a size_t trampoline a size_t cell.  The second row: two size_t methods with
     # different inputs, each CALL referring to its own callee's return cell.
     [pscustomobject]@{ Name = 'unit_root_call_wide.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1;
-        Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @('if: lmx_arena_ref_store(l2_rw1, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 3U), 1U), 0U)) != 0') },
+        Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @('if: lmx_arena_ref_store(l2_rw2, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 3U), 1U), 0U)) != 0') },
     [pscustomobject]@{ Name = 'unit_method_sig_distinct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 3;
-        Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @('lmx_arena_ref_store(l2_rw2, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 3U), 1U), 0U))', 'lmx_arena_ref_store(l2_rw4, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 4U), 1U), 0U))') },
+        Absent = @('LMX_WALK_RESULT_SIG_MARK'); Debt = @('lmx_arena_ref_store(l2_rw3, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 3U), 1U), 0U))', 'lmx_arena_ref_store(l2_rw5, 3U, lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(l2_entry_unit, 4U), 1U), 0U))') },
     # D-03 (-189 c4): a callable named at the walked root is an explicit CALL the translator emits --
     # the walker calls nothing on its own; a bare statement drops the result, a value takes it.
     [pscustomobject]@{ Name = 'unit_root_bare_callable_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @('"<string.h>"'); Debt = @('l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 5U)',
-                 'l2_rw2 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw1, c.LMX_WALK_OP_CALL, 5U)',
+                 'l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw1, c.LMX_WALK_OP_CALL, 5U)',
                  'include: "<stdio.h>" "<stdlib.h>"') },
     # -197 (b): the preamble's C headers are the program's own mechanics' -- <stdio.h> and
     # <stdlib.h> always (X1 is fprintf(stderr) + abort, the launch hands the host stdout/stderr),
@@ -1803,63 +1872,86 @@ $fixtures = @(
     # frames too, M's own children after its fields (steps/merge-parts-193.md §9).  These rows run with
     # WalkMethods: l2trans's test knob gives every method with frames native 0, so the root's CALL walks
     # it.  A formal is [arg, j]; an own field is the activation's data, holder 0 (K-OT2: no holder
-    # stored); `return: V` is [ret, V] (and a trailer the last step); a call that can re-enter its
-    # caller passes [fresh, code]; a unit field keeps its holder, the unit.  The pins are the form.
+    # stored); `return: V` is [ret, V] (and a trailer the last step); every call runs its callee over the callee's own
+    # occurrence, [call, M, M, ...] -- a re-entry too (the author, 2026-09-28: no per-call instance); a unit field keeps
+    # its holder, the unit.  The pins are the form: add's `s: a + b` is its first step (slot 3), its return the second.
+    # §7b: the walker loads the used own fields at the activation's entry (lmx_walk_load_code) -- no step does -- and a
+    # bare read or write is OWN / SET of its working value -- still no holder stored; a formal is ARG.
     [pscustomobject]@{ Name = 'unit_walk_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
-        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'if: lmx_arena_ref_store(l2_rw76, 1U, (cast: (@: void) l2_entry_unit))');
-        Debt = @('if: lmx_walk_store_size(l2_program_arena, l2_rw76, 2U, 2U) != c.LMX_WALK_OK',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw79, 1U, 1U) != c.LMX_WALK_OK',
-                 '@: Lmx l2_rw80 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw75, c.LMX_WALK_OP_RET, 2U)',
-                 'if: lmx_arena_ref_store(l2_rw75, 4U, (cast: (@: void) l2_rw80)) != 0') },
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'if: lmx_arena_ref_store(l2_rw82, 1U, (cast: (@: void) l2_entry_unit))');
+        Debt = @('@: Lmx l2_rw81 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw80, c.LMX_WALK_OP_SET, 3U)',
+                 'if: lmx_arena_ref_store(l2_rw80, 3U, (cast: (@: void) l2_rw81)) != 0',
+                 '@: Lmx l2_rw84 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw83, c.LMX_WALK_OP_ARG, 2U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw82, 2U, 2U) != c.LMX_WALK_OK',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw85, 1U, 1U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw86 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw80, c.LMX_WALK_OP_RET, 2U)',
+                 'if: lmx_arena_ref_store(l2_rw80, 4U, (cast: (@: void) l2_rw86)) != 0') },
     [pscustomobject]@{ Name = 'unit_walk_recursion.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_FRESH, 2U)',
-                 'if: lmx_arena_ref_store(l2_rw62, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0',
-                 'if: lmx_arena_ref_store(l2_rw61, 2U, (cast: (@: void) l2_rw62)) != 0') },
+        Debt = @('@: Lmx l2_rw67 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw65, c.LMX_WALK_OP_CALL, 6U)',
+                 'if: lmx_arena_ref_store(l2_rw67, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0',
+                 'if: lmx_arena_ref_store(l2_rw67, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 4U))) != 0') },
     # clamp(..) + clamp(..) + clamp(..) is 13 walked too: a walked callee's number result is copied into
     # the caller's destination by its rtype (D-72, K-RET, Sonnet -194 k.5b); as a reference into the
-    # callee's data the next call overwrote the cell before the sum read it.
+    # callee's data the next call overwrote the cell before the sum read it.  §7b: tri's first step is its first
+    # statement (`i: 0`, SET at slot 5) -- the walker loads the used own fields at the entry, no step -- and its loop
+    # is a WHILE step.
     [pscustomobject]@{ Name = 'unit_walk_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)');
-        Debt = @('@: Lmx l2_rw65 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw60, c.LMX_WALK_OP_WHILE, 3U)') },
+        Debt = @('@: Lmx l2_rw64 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw63, c.LMX_WALK_OP_SET, 3U)',
+                 'if: lmx_arena_ref_store(l2_rw63, 5U, (cast: (@: void) l2_rw64)) != 0',
+                 '@: Lmx l2_rw70 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw63, c.LMX_WALK_OP_WHILE, 3U)') },
+    # unit_walk_trailer: acc's own `mine` is SET / OWN of its working value; y is s's and acc's hidden input, and
+    # their writes are SET_ARG -- the root's y stays 0 (Q52, the author 2026-09-28; 7b, re-expected by name: was 6
+    # after s() twice and 16 after acc(10), which is now 10).  The pins: s's write is SET_ARG 0; acc's `mine: y + by`
+    # is its first step, SET of its working value (slot 2), reading y as ARG 1; `y: mine` is SET_ARG 1.
     [pscustomobject]@{ Name = 'unit_walk_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('if: lmx_arena_ref_store(l2_rw71, 3U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0',
-                 '@: Lmx l2_rw80 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw79, c.LMX_WALK_OP_RET, 2U)',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw88, 2U, 2U) != c.LMX_WALK_OK',
-                 'if: lmx_arena_ref_store(l2_rw90, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw90, 2U, 0U) != c.LMX_WALK_OK') },
-    # T4b class 2 walks bind and native_caller too. bind's first store is ARG + 100 into the field;
-    # the return reads that field (AT), not the argument.
+        Debt = @('if: lmx_arena_ref_store(l2_rw77, 3U, lmx_arena_ref_value(l2_rw_roles, (cast: (size_t) c.LMX_WALK_OP_RET))) != 0',
+                 '@: Lmx l2_rw86 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw85, c.LMX_WALK_OP_RET, 2U)',
+                 '@: Lmx l2_rw78 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw77, c.LMX_WALK_OP_SET_ARG, 3U)',
+                 '@: Lmx l2_rw94 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw93, c.LMX_WALK_OP_SET, 3U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw95, 2U, 2U) != c.LMX_WALK_OK',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw97, 1U, 1U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw99 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw93, c.LMX_WALK_OP_SET_ARG, 3U)') },
+    # T4b class 2 walks bind and native_caller too.  bafca4c / Q52 (an argument is its parameter): bind's
+    # `n: n + 100` is the activation's write of its input n (SET_ARG), and its return reads that input (ARG) -- no
+    # field is written.
     [pscustomobject]@{ Name = 'unit_walk_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m3_tr)');
-        Debt = @('@: Lmx l2_rw33 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw32, c.LMX_WALK_OP_ARG, 2U)',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw36, 2U, 2U) != c.LMX_WALK_OK') },
+        Debt = @('@: Lmx l2_rw33 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw32, c.LMX_WALK_OP_SET_ARG, 3U)',
+                 '@: Lmx l2_rw38 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw37, c.LMX_WALK_OP_ARG, 2U)') },
     # T4b class 1: a Structure formal is ARG j, the caller's Structure. peek reads OF(ARG 0, slot 0);
     # poke writes PUT_OF of that ARG; sum reads ARG 0 and ARG 1. The three methods are walked.
     [pscustomobject]@{ Name = 'unit_walk_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('@: Lmx l2_rw60 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw59, c.LMX_WALK_OP_ARG, 2U)',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw60, 1U, 0U) != c.LMX_WALK_OK',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw59, 2U, 0U) != c.LMX_WALK_OK',
-                 '@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_PUT_OF, 4U)',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw73, 1U, 1U) != c.LMX_WALK_OK') },
+        Debt = @('@: Lmx l2_rw69 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw68, c.LMX_WALK_OP_ARG, 2U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw69, 1U, 0U) != c.LMX_WALK_OK',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw68, 2U, 0U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw71 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw70, c.LMX_WALK_OP_PUT_OF, 4U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw82, 1U, 1U) != c.LMX_WALK_OK') },
     # T4b class 2: a numeric field named like a formal is ARG until its binding line, then the
     # field. bump carries ARG 0 into its cell and then reads that cell. see reads ARG before the line.
+    # §7b (7b-1): see's `a` is a declared field with a working value (SET; the walker loads it at the entry); `n` is an argument's
+    # row and stays its cell until 7b-2 (bafca4c).
     [pscustomobject]@{ Name = 'unit_walk_formal_bind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
-        Debt = @('@: Lmx l2_rw48 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw47, c.LMX_WALK_OP_ARG, 2U)',
-                 'if: lmx_walk_store_size(l2_program_arena, l2_rw51, 2U, 2U) != c.LMX_WALK_OK',
-                 '@: Lmx l2_rw57 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw56, c.LMX_WALK_OP_ARG, 2U)',
-                 '@: Lmx l2_rw62 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw61, c.LMX_WALK_OP_AT, 3U)') },
+        Debt = @('@: Lmx l2_rw55 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw54, c.LMX_WALK_OP_ARG, 2U)',
+                 'if: lmx_walk_store_size(l2_program_arena, l2_rw58, 2U, 2U) != c.LMX_WALK_OK',
+                 '@: Lmx l2_rw63 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw62, c.LMX_WALK_OP_SET, 3U)',
+                 '@: Lmx l2_rw65 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw63, c.LMX_WALK_OP_ARG, 2U)',
+                 '@: Lmx l2_rw70 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw69, c.LMX_WALK_OP_AT, 3U)') },
     # D-79: a field declared in if/else/while is OF/PUT_OF of that body. A bare
-    # write of a formal inside if is PUT of the method cell (l2_rw125), and
+    # write of a formal inside if is PUT of the method cell (l2_rw142), and
     # keep's return reads that cell (AT), not a field of the if.
     [pscustomobject]@{ Name = 'unit_walk_nested_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
         Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)',
                  'c.LMX_WALK_OP_OF, 3U)',
                  'c.LMX_WALK_OP_ARG, 2U)',
-                 '@: Lmx l2_rw125 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw124, c.LMX_WALK_OP_PUT, 4U)') },
+                 '@: Lmx l2_rw142 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw141, c.LMX_WALK_OP_PUT, 4U)',
+                 'c.LMX_WALK_OP_OWN_OF, 3U)',
+                 'c.LMX_WALK_OP_SET_OF, 4U)') },
     # Side fixes (-193 T4a): a root `M\x` of a method after the first, in a unit with no named Structure
     # (l2trans crashed); a repeated declaration's initializer reads the occurrence before it
     # (l2_own_excl, as natively); the root names its own fields by no holder (K-OT2).
@@ -1889,11 +1981,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_c_empty_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @('(c.rand())', 'if: c.rand() < 0') },
     # STRUCTURE-TYPED ROOT FIELDS (-178 commit 2): `Model: m` is the walker's merge primitive (-174 c3)
-    # stored by reference into m's pointer cell (-174 c2); `m\value` opens the reference (DEREF, -174 c1)
-    # and takes the field (OF); `Model\value: 7U` writes the named Structure itself (PUT, its node
+    # held by reference as m's working value (§7b: SET, published into m's cell at a boundary); `m\value` takes the
+    # field of that Structure (OF), no DEREF; `Model\value: 7U` writes the named Structure itself (PUT, its node
     # fixed when the graph is built).  n, merged after the write, sees 7; m keeps its own 41.
     [pscustomobject]@{ Name = 'unit_root_model_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
-        Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('\fn: lmx_walk_merge_model', 'c.LMX_WALK_OP_PUT_REF, 4U)') },
+        Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('@: Lmx l2_rw2 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_PRIM_PUB, 4U)', '\fn: lmx_walk_merge_model', '@: Lmx l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_SET, 3U)') },
     # A WRITE THROUGH A REFERENCE (FABLE-OPUS-ROOT-PUTOF-MUL-20260925-183 commit 1): `m\value: 42U` is
     # PUT_OF (-177 c4), its holder DEREF(AT(m)) evaluated in R0's turn; read back through m and through
     # a method's formal (the same Structure, by reference), Model itself untouched: 7.
@@ -1931,10 +2023,13 @@ $fixtures = @(
     #   C  bound, then the address: the cell is poked (C2 9 9), then written through M\x: C3 100 100.
     #   D  either order, decided at run time: the field shows the graph write in both: D1/D0 100 100.
     #   E  declared, address after: E 100 100.
+    # §7b (7b-1): the `_g` fields are plain declared fields with working values; an argument's row has
+    # none, and 7b-2 revisits these rows by name (bafca4c).  Absent names the argument rows' flags (na, nb,
+    # nc, nd, ne) -- the L1 header names `_dirty` in every file now.
     [pscustomobject]@{ Name = 'unit_arg_addr_sticky.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('A1 6 6', 'A2 100 100', 'A3 9 9', 'A4 200 200', 'B 5 100', 'B 5 100', 'B+ 200 200', 'B 5 100', 'C1 4 4', 'C2 9 9', 'C3 100 100', 'D1 100 100', 'D0 100 100', 'E 100 100');
-        Absent = @('_sticky', '_active', '_dirty');
+        Absent = @('_sticky', '_active', 'l2_q1_dirty', 'l2_q3_dirty', 'l2_q5_dirty', 'l2_q7_dirty', 'l2_q9_dirty');
         Debt = @('if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0',
                  'l2_t3: l2_m0(l2_c2\parent, l2_c2, @ l2_p3_0)',
                  'l2_t13: l2_m1(l2_c12\parent, l2_c12, (cast: (@: int) l2_q1_from[0]))') },
@@ -1946,7 +2041,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_arg_addr_types.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('U 100 100', 'Z local 100', 'Z graph 100', 'L local 100', 'L graph 100');
-        Absent = @('_sticky', '_dirty');
+        Absent = @('_sticky', 'l2_q1_dirty', 'l2_q3_dirty', 'l2_q5_dirty');
         Debt = @('if: lmx_unsigned_store_known(l2_q1_from[0], (l2_p4_0)) != 0', 'if: lmx_size_store_known(l2_q3_from[0], (l2_p5_0)) != 0',
                  'if: lmx_ulong_store_known(l2_q5_from[0], (l2_p6_0)) != 0') },
     [pscustomobject]@{ Name = 'unit_arg_addr_pointer.lm2'; Expect = 'root-pending'; Exit = 0; Needle = 'root operation not walkable yet: a call with an input that is not a number';
@@ -1998,11 +2093,11 @@ $fixtures = @(
         Args = @('0');
         Says = @('W 3', 'U1 6 6', 'U2 100 100', 'L1 6 6', 'L2 100 100', 'F1 6 6', 'F2 100 100', 'DP local is null', 'DP caller keeps its pointer', 'FC 3', 'TC 3 3 3');
         Absent = @();
-        Debt = @('fn: l2_m4 (@: Lmx node; @: Lmx self; int: l2_p4_0) int',
+        Debt = @('l2_p8_0: l2_p8_0', 'fn: l2_m4 (@: Lmx node; @: Lmx self; int: l2_p4_0) int',
                  'fn: l2_m5 (@: Lmx node; @: Lmx self; unsigned: l2_p5_0) int',
                  'fn: l2_m6 (@: Lmx node; @: Lmx self; ulong: l2_p6_0) int',
                  'fn: l2_m8 (@: Lmx node; @: Lmx self; @: int l2_p8_0) int',
-                 'lmx_pointer_store_known(l2_q') },
+                 'l2_t1: l2_m2(l2_c0\parent, l2_c0, @ l2_p8_0)') },
     # THE ORDINARY CASES ALONE.  Every address here is taken after the binding line, so it is the
     # field's cell (-189 c3b-2): the poke is the field (OC2 9 9), and the later graph write of 100 is
     # what the bare name reads (OC3 / OE / OD3 100 100).
@@ -2096,14 +2191,14 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'merge');
         Debt = @('l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw1, 1U, 7)', 'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     # GROK-UNIVERSAL-RESOLUTION-PARTA-20260922-03. Three call forms must share one
-    # physical METHOD op; an existing int is assigned. Debt/Absent distinguish that.
+    # physical METHOD op; an existing int is assigned (§7b: SET of its working value). Debt/Absent distinguish that.
     [pscustomobject]@{ Name = 'unit_universal_head_resolution.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'merge');
-        Debt = @('l2_rw7 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw6, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw8, 1U, 7)',
-                 'l2_rw10 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw9, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw11, 1U, 7)',
-                 'l2_rw12 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw13, 1U, 7)',
-                 'lmx_walk_store_int(l2_program_arena, l2_rw37, 1U, 2)') },
+        Debt = @('@: Lmx l2_rw41 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_SET, 3U)', 'l2_rw11 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw9, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw12, 1U, 7)',
+                 'l2_rw15 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw13, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw16, 1U, 7)',
+                 'l2_rw17 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_CALL, 6U)', 'lmx_walk_store_int(l2_program_arena, l2_rw18, 1U, 7)',
+                 'lmx_walk_store_int(l2_program_arena, l2_rw43, 1U, 2)') },
     # One logical negative fixture, three TUs: l2trans reports only the first
     # diagnostic. Needle is the converged class for every representable form.
     [pscustomobject]@{ Name = 'unit_universal_absent_paren.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2116,6 +2211,8 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
+    # Book §12, L2 §18.2 (re-expected by name, 7b): after the call the root's bare shared keeps its working value 4 --
+    # the caller is not reloaded -- and read_parent's node\shared sees the 9 (was: the bare read saw 9).
     [pscustomobject]@{ Name = 'unit_colon_explicit_parent_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -2126,6 +2223,8 @@ $fixtures = @(
     # arms host ordinary child Structures; node\shared stays host-less. Absent forbids the
     # obsolete unit-form branch helper. Debt pins per-arm host selection so dropping that
     # layout/discovery arm fails the row.
+    # Book §12 (7b, by name): these four read the written value back through read_shared's node\shared -- the root's
+    # bare shared keeps its working value after the call, not reloaded.
     [pscustomobject]@{ Name = 'unit_node_path_nested_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,');
@@ -2146,16 +2245,21 @@ $fixtures = @(
                  'while: l2_t0',
                  '# const: @(char l2_own1) "hosted"',
                  'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
+    # §7b (7b-1): `hosted` is the for body's field with a working value -- `int: hosted 4` writes l2_q1 and
+    # marks it, and the exit publishes it into the host's cell 1; c3b-1's in-place store is Absent.
     [pscustomobject]@{ Name = 'unit_nested_body_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,', 'int: l2_q1_dirty');
+        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'lmx_branch_struct_known(unit,', 'lmx_int_store_known(l2_q1_from[0], (4))');
         Debt = @('l2_h0: lmx_arena_ref_struct(self, 2U)',
                  'lmx_arena_ref_cell(l2_h0, 1U)',
-                 'if: lmx_int_store_known(l2_q1_from[0], (4)) != 0',
+                 'l2_q1: (4)',
+                 'if: lmx_int_store_known(l2_q1_from[0], (l2_q1)) != 0',
                  '# const: @(char l2_own1) "hosted"',
                  'l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
     [pscustomobject]@{ Name = 'unit_nested_body_own_not_node.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
+    # Book §12 (7b, by name): peek reads bump's write through node\shared; E's own bare shared keeps its working
+    # value 3 after the call (97 if it were reloaded).
     [pscustomobject]@{ Name = 'unit_node_root_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -2186,12 +2290,13 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    # -189 c3b-1: `j` has no working copy -- it IS its cell -- so after `for\j: 42` the bare `j` reads 42
-    # too.  The old «a bare working x may keep its previous value while the path sees the new one» (L3
-    # §12) was removed by the author (061d753, «for example (9 9)»); it printed `9 42` here.
+    # §7b (7b-1; book §12: «a same-activation `for\j: 42` writes the graph cell, not the cache»): `j` has
+    # a working value, so after `for\j: 42` the bare `j` still reads 9 while the path reads 42 -- the first
+    # c.printf published j = 9 and a clean j is not written back.  c3b-1's `42 42` (no working copies,
+    # 2649ee7a) is withdrawn with the model it stood on.
     [pscustomobject]@{ Name = 'unit_forj_stale.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('9', '42 42');
+        Says = @('9', '9 42');
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
@@ -2283,30 +2388,31 @@ $fixtures = @(
     # Former 'unsupported body' refuse was the empty-Structure stand-in; now translates as f().
     [pscustomobject]@{ Name = 'unit_fnptr_call_sig_refuse.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         Absent = @('unsupported body'); Debt = @('f()') },
+    # §7b (7b-1): `x: 7` writes the working value and marks it; c3b-1's in-place store is Absent.
     [pscustomobject]@{ Name = 'unit_fnptr_noncallable_assign.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
-        Absent = @();
-        Debt = @('if: lmx_int_store_known(l2_q0_from[0], (7)) != 0') },
+        Absent = @('lmx_int_store_known(l2_q0_from[0], (7))');
+        Debt = @('l2_q0: (7)', 'l2_q0_dirty: 1') },
     # FABLE-GROKBOT-CALL-ARGS-20260922-92: paren-group call args via l2_call_args
     [pscustomobject]@{ Name = 'unit_call_args_empty_paren.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 5U)') },
+        Debt = @('l2_rw5 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw3, c.LMX_WALK_OP_CALL, 5U)') },
     [pscustomobject]@{ Name = 'unit_call_args_empty_vertical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 5U)') },
+        Debt = @('l2_rw5 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw3, c.LMX_WALK_OP_CALL, 5U)') },
     [pscustomobject]@{ Name = 'unit_call_args_paren_seq.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw4, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw5, 1U, 2)') },
+        Debt = @('l2_rw5 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw3, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw6, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw7, 1U, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw14 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw13, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw15, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw16, 1U, 2)', 'l2_rw29 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw28, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw30, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw31, 1U, 2)') },
+        Debt = @('l2_rw16 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw14, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw17, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw18, 1U, 2)', 'l2_rw32 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw30, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw33, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw34, 1U, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_control_split.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
-        Debt = @('l2_rw3 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw2, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw4, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw5, 1U, 2)') },
+        Debt = @('l2_rw5 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw3, c.LMX_WALK_OP_CALL, 7U)', 'lmx_walk_store_int(l2_program_arena, l2_rw6, 1U, 1)', 'lmx_walk_store_int(l2_program_arena, l2_rw7, 1U, 2)') },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:7:4: add has no argument b'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_call_args_refuse_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -2388,7 +2494,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 5U)', 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 2U))) != 0',
+        Debt = @('l2_rw2 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 5U)', 'if: lmx_arena_ref_store(l2_rw2, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 2U))) != 0',
                  'lmx_merge_owned(l2_mops, 1U, l2_mbody, node, 0, l2_program_arena, l2_program_arena, 0, 0U, @ l2_mresult)',
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_colon_method_dynamic_precedence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -2426,7 +2532,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');
-        Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)', 'c.LMX_WALK_OP_PUT_REF, 4U)', 'l2_entry_unit: graph') },
+        Debt = @('c.LMX_WALK_OP_PUT_OF, 4U)', '@: Lmx l2_rw0 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_entry_unit, c.LMX_WALK_OP_SET, 3U)', 'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_field_path_unit_qualified.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
         Args = @('1');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -2574,13 +2680,16 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_entry_unit: graph') },
+    # Q52 cancels this row's Q9 reading (7b, by name): the unit fields a method writes bare stay 5 at their place of
+    # declaration, read through gx, gy, gz (node\x); within bump_and_read the activation reads its own 8.
     [pscustomobject]@{ Name = 'unit_field_write_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @();
         Debt = @() },
     # steps/free-names.md §7 (REVIEW 7124005): a method above a unit field's declaration does not see the field
     # (backward visibility), so the name is free: the root's field at the call is its hidden argument, and a bare
-    # write makes it the method's own field (book :1188) -- the unit field stays 5.  The read mirror reads it the same
+    # write changes its value in the method's activation, declaring nothing (bafca4c; 7b, re-read by name, value
+    # unchanged) -- the unit field stays 5.  The read mirror reads it the same
     # way.  (Before: unit_field_write_below_refused, "assignment target must be a declared typed mutable value".)
     [pscustomobject]@{ Name = 'unit_field_write_below_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Absent = @(); Debt = @() },
@@ -2590,8 +2699,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_field_read_below.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # Q52 (7b, by name): foo's hits and last are its hidden inputs -- each call form is observed in what foo prints,
+    # `foo 1 5`, `foo 1 6`, `foo 1 7` (the unit's fields cached in foo and published back would print 1, 2, 3).
     [pscustomobject]@{ Name = 'unit_callable_priority.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
+        Says = @('foo 1 5', 'foo 1 6', 'foo 1 7');
         Absent = @();
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_priority_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3096,6 +3208,10 @@ $fixtures = @(
     # accepted, a reference said at the source's first statement, a diagnostic said in its pass's file, a
     # library taking a part's root, a part read against the source's root, a duplicate without the other's
     # place -- each its own row red.
+    # Q52 (7b, by name): k is a hidden input of the part's methods, bound at the root's call by the callee's lexical
+    # source, the part root's 5 (a walk that named it in the unit read the unit's field 0 -- fixed); bump's write
+    # stays its own, so peek reads 5 after it (was 6).  unit_s7_part_root_two: peekA and peekB take the source's k,
+    # 1 -- the caller's binding comes first (book §12) -- while nodeA and nodeB read their roots' 5 and 8 explicitly.
     [pscustomobject]@{ Name = 'unit_s7_part_root_field.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_s7_part_root_field.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -3257,13 +3373,10 @@ $fixtures = @(
         Needle = 'unknown consumer descriptor'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_invalid_implements_used_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
-    # Q29 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 c3c): the two bare assignments of `arg` are one cell,
-    # \[0]arg is 2, and there is no second slot; \[1]arg is refused where it stands.
-    [pscustomobject]@{ Name = 'unit_occ_arg_slots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_q1_from');
-        Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ',
-                 'l2_q0_from: lmx_arena_ref_cell(self, 2U)') },
+    # bafca4c (the author, 2026-09-28; 7b, by name): the bare assignments of the argument `arg` declare nothing, and
+    # `\[N]` numbers declarations -- \[0]arg is refused where it stands.  (Q29 made them one cell, \[0]arg = 2.)
+    [pscustomobject]@{ Name = 'unit_occ_arg_slots.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_occ_arg_slots.lm2:9:13: no such occurrence'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_arg_second_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'no such occurrence'; Absent = @(); Debt = @() },
     # D-27: \[N] numbers declarations. One `int: x`, then two bare stores, is still one cell;
@@ -3277,36 +3390,41 @@ $fixtures = @(
     # FABLE-SONNET-OCC-ROOT-20260924-146 commit 1: a named (method) root's
     # occurrence index, test\[N]arg, resolved through l2_own_find_occ --
     # the same lookup the rootless \[N]arg form already uses, no second
-    # scanner.
-    [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
-        Args = @('0');
-        Absent = @();
-        Debt = @() },
+    # scanner.  bafca4c (7b, by name): an argument has no place of declaration, so test\[0]arg is refused at the
+    # walked root (was eternal-runs, Q29's one cell); declared occurrences: unit_q24_repeated_decl.lm2.
+    [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_occ_root_named.lm2:18:13: no such occurrence'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_out_of_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'no such occurrence'; Absent = @(); Debt = @() },
     # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: unqualified test\arg is the
     # LAST occurrence of a repeated plain own field (not argument-bound, so
     # first-vs-last is the only thing deciding the read) -- test\[N]arg still
     # counts in declaration order; a write through the unqualified name lands
-    # on the last occurrence too.
-    [pscustomobject]@{ Name = 'unit_own_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
-        Args = @('0');
-        Absent = @();
-        Debt = @() },
+    # on the last occurrence too.  bafca4c (7b, by name): the argument's bare assignments declare nothing, and
+    # test\[0]arg from check is refused where it stands (was eternal-runs, Q29's one cell); declared occurrences
+    # through a method root, read and written: unit_q24_repeated_decl.lm2.
+    [pscustomobject]@{ Name = 'unit_own_last_occurrence.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_own_last_occurrence.lm2:28:20: no such occurrence'; Absent = @(); Debt = @() },
+    # §7b (7b-1): Absent names the argument rows' flags (ba, af, nn; bt, al) -- the `_g` fields are plain
+    # declared fields with working values, and the L1 header names `_dirty` in every file now.
     [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('BEFORE 100 100', 'AFTER 100 100', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');
-        Absent = @('_sticky', '_active', '_dirty');
+        Absent = @('_sticky', '_active', 'l2_q1_dirty', 'l2_q3_dirty', 'l2_q5_dirty');
         Debt = @('if: lmx_int_store_known(l2_q1_from[0], (l2_p3_0)) != 0', 'l2_t3: l2_m1(l2_c2\parent, l2_c2, (cast: (@: int) l2_q3_from[0]))') },
+    # bafca4c (7b, by name): bt and al are declared fields now (an argument has no place of declaration).  poke's
+    # pointer is the place of declaration (Debt: l2_qN_from[0], the author 2026-09-28); after poke9 the bare al keeps
+    # its working value 2 -- `LAST 2`, was 9 -- and the root reads after_last\al 9 at the place of declaration.
     [pscustomobject]@{ Name = 'unit_occ_snapshot_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
-        Says = @('BETWEEN 2', 'LAST 9');
-        Absent = @('_sticky', '_active', '_dirty');
-        Debt = @('if: lmx_int_value_known(l2_q0_from[0]) != 2', 'if: lmx_int_value_known(l2_q1_from[0]) != 9') },
+        Says = @('BETWEEN 2', 'LAST 2');
+        Absent = @('_sticky', '_active');
+        Debt = @('l2_t3: l2_m0(l2_c2\parent, l2_c2, (cast: (@: int) l2_q0_from[0]))', 'l2_t1: l2_m1(l2_c0\parent, l2_c0, (cast: (@: int) l2_q1_from[0]))', 'if: l2_q0 != 2') },
     # D-79: a bare assignment binds the formal's method cell, including from inside
     # `if`. scoped(3, 1) is 77; nested(3) is 1414. Success is exit 7.
+    # §7b (7b-1): x and y are argument rows, no working value until 7b-2; inner, in2, a, b, r are cached.
     [pscustomobject]@{ Name = 'unit_arg_bind_body_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('_sticky', '_dirty'); Debt = @() },
+        Absent = @('_sticky', 'l2_q2_dirty', 'l2_q6_dirty'); Debt = @() },
     # THE EXECUTION PAIR (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2): every activation runs over a
     # fresh instance of the method's data prototype in the unit's slot answering it, and the slot shows
     # the latest.  After keep(1) the slot shows its 7; keep(0) does not reach the declaration, so its
@@ -3314,13 +3432,18 @@ $fixtures = @(
     # 77; an activation that writes an instance other than the one its slot shows gives 0.
     [pscustomobject]@{ Name = 'unit_fresh_instance_skipped_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 77;
         Absent = @('lmx_fresh(', 'l2_new0'); Debt = @('@: Lmx l2_c0 lmx_arena_ref_struct(node, 0U)') },
-    # -189 c3a (Q28): a call inside a cycle of calls, and a call by reference, run over a fresh instance
-    # (lmx_fresh); the walked root's CALL, outside any cycle, over the callee itself -- its data operand
-    # is the occurrence.  The trampoline makes nothing.
-    [pscustomobject]@{ Name = 'unit_recursive_fresh_instance.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
-        Absent = @('l2_new0', 'l2_self: '); Debt = @('l2_c0: lmx_fresh(l2_program_arena, l2_c0)', 'l2_rw1 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 6U)',
-                 'if: lmx_arena_ref_store(l2_rw1, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0', 'if: lmx_arena_ref_store(l2_rw1, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 3U))) != 0',
-                 '@: Lmx l2_d1 lmx_fresh(l2_program_arena, l2_c0)', 'if: lmx_call_prim(l2_program_arena, l2_c0, l2_d1, 0, 0U, ') },
+    # A re-entrant activation publishes nothing (book §12, the S/I2 trace; Codex's reading of the author's norm,
+    # accepted 2026-09-28, OPUS-CODEX-20260928-10 #1; 7b, re-expected by name).  The row pinned the fresh instance a
+    # re-entry and a call by reference ran over (-189 c3a, Q28) -- gone with lmx_fresh (R2: no per-call instance in the
+    # graph).  Now: down's inner activations keep their working values to themselves -- r 123, down\x 3 and down\y 12
+    # the outermost's -- and seven, called by reference over its own occurrence, publishes s 7 (was Entry 0 over a
+    # formula).  Debt: down's count read at entry, the counted recursive call, the guarded publication, the walked
+    # root's CALL over down itself, the call by reference over the occurrence itself.
+    [pscustomobject]@{ Name = 'unit_recursive_fresh_instance.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('lmx_fresh(', 'l2_new0', 'l2_self: '); Debt = @('int: l2_reent (cast: (int) (l2_m0_act > 1))', 'l2_m0_act: l2_m0_act + 1',
+                 'if: l2_q0_dirty != 0 && l2_reent = 0', 'l2_rw2 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw0, c.LMX_WALK_OP_CALL, 6U)',
+                 'if: lmx_arena_ref_store(l2_rw2, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 7U))) != 0', 'if: lmx_arena_ref_store(l2_rw2, 2U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, 7U))) != 0',
+                 'if: lmx_call_prim(l2_program_arena, l2_c0, l2_c0, 0, 0U, ') },
     # -189 c3b-3: an own Structure field is a direct slot of its activation's data.  `nest` recurses (each
     # re-entry over a fresh instance whose slot starts empty) and binds `Box: b` in its own slot, so
     # the outer activation still reads its own Box after the inner calls: nest(3) = 123.
@@ -3342,13 +3465,14 @@ $fixtures = @(
         Needle = 'unsupported body'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_noncall_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # Q52 (7b, by name): as unit_callable_priority -- the three spellings are observed in foo's lines.
     [pscustomobject]@{ Name = 'unit_matrix_callable_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0'); Absent = @(); Debt = @() },
+        Args = @('0'); Says = @('foo 1 5', 'foo 1 6', 'foo 1 7'); Absent = @(); Debt = @() },
     # -179 commit 2: a Structure argument of the formal's own type goes BY REFERENCE -- the CALL's
-    # input is DEREF(AT(m)), the Structure m holds -- so bump's three writes through x are m's own:
+    # input is m's working value, OWN (§7b), the Structure m holds -- so bump's three writes through x are m's own:
     # 4U after them.  Passed as a fresh merge copy instead, the writes are lost and the row exits 90.
     [pscustomobject]@{ Name = 'unit_matrix_callable_struct_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0'); Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('c.LMX_WALK_OP_PUT_REF, 4U)') },
+        Args = @('0'); Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('@: Lmx l2_rw4 lmx_walk_frame(l2_program_arena, l2_rw_roles, l2_rw3, c.LMX_WALK_OP_OWN, 3U)') },
     [pscustomobject]@{ Name = 'unit_matrix_callable_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     [pscustomobject]@{ Name = 'unit_matrix_callable_callable_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -3367,7 +3491,7 @@ $fixtures = @(
     # (steps/named-actuals.md), `x: ()` is bound like any named argument: the empty Structure in x's place.
     # Mutant: treat the named frame as a call again -- unknown method, this row RED.
     [pscustomobject]@{ Name = 'unit_matrix_empty_named_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0'); Entry = 7; Absent = @(); Debt = @('lmx_walk_admit', 'LMX_WALK_OP_FRESH') },
+        Args = @('0'); Entry = 7; Absent = @(); Debt = @('lmx_walk_admit', 'LMX_WALK_OP_EMPTY') },
     [pscustomobject]@{ Name = 'unit_matrix_empty_arglist.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
     # Named actuals of an ordinary call (book :1060; steps/named-actuals.md): every call's actuals are bound to
@@ -3418,6 +3542,8 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_actual_trailer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # Q52 (7b, by name): add keeps a - b in its own declared field d, read at its place of declaration, add\d -- a
+    # bare write of the unit's y would be add's hidden input's only.  Walked too: its ARG, SUB and SET are the walk's.
     [pscustomobject]@{ Name = 'unit_named_actual_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_actual_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -3505,9 +3631,90 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_pap_add5_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # THE WORKING STATE (steps/working-state-7b.md, 7b-1; book §12, §14; Lingvamyxa spec 21.5, 21.6): each witness twice,
+    # natively and walked; the value is the exit code.  In walk mode the methods the walk takes are walked (a method
+    # with a self path, a `for` body, throw/catch, a Box field or c.* stays native), the root always.
+    # unit_cache_for_call: the book's for/print trace: take gets the working acc 9 and the published for\j 0 -- in place 99.
+    [pscustomobject]@{ Name = 'unit_cache_for_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 90;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_for_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 90; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_addr_graph: `\p: 9` through `p: @x` changes the cell, not the working x 5; the clean x is not written back -- in place 99, clean published 55.
+    [pscustomobject]@{ Name = 'unit_cache_addr_graph.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 59;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_addr_graph.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 59; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_no_reload: a nested `test\x: 7`: no reload (bare x stays 1), the clean x not written back (cell 7) -- in place or reloaded 77, clean published 11.
+    [pscustomobject]@{ Name = 'unit_cache_no_reload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 17;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_no_reload.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 17; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_precall: an explicit read before the call sees the published 1; the call publishes 2; the exit 3 -- in place 223, no pre-call publication 113, no exit publication 122.
+    [pscustomobject]@{ Name = 'unit_cache_precall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 123;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_precall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 123; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_reentry: the S/I2 trace: the re-entrant instance ends at 9, the outer keeps its 2 and publishes 3.
+    [pscustomobject]@{ Name = 'unit_cache_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_throw: the throw publishes the dirty x 5 -- without it 31.
+    [pscustomobject]@{ Name = 'unit_cache_throw.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 35;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_throw.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 35; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_ccall: a c.* call publishes the dirty x 5 -- without it 1 (the walk keeps the c.* method native).
+    [pscustomobject]@{ Name = 'unit_cache_ccall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_ccall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_branch_dirty: the untaken branch marks nothing: the clean x is not written over poke's 7 -- a mark by presence 1.
+    [pscustomobject]@{ Name = 'unit_cache_branch_dirty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_branch_dirty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_failed_store: a refused conversion keeps the pending 6 and marks nothing (F49-04) -- erased 57, marked 65.
+    [pscustomobject]@{ Name = 'unit_cache_failed_store.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 67;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_failed_store.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 67; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_struct_ref: a Box field's working value is the reference, published as the reference -- a copy of the Box 22.
+    [pscustomobject]@{ Name = 'unit_cache_struct_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 25;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_struct_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 25; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_helper_not_boundary: an explicit path write is no boundary: test\x still reads the published 1 -- in place, or a helper that publishes, 5.
+    [pscustomobject]@{ Name = 'unit_cache_helper_not_boundary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_helper_not_boundary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 1; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_precall_bare: the pre-call and exit publications with bare names only, walked whole -- no pre-call publication 13, no exit publication 22.
+    [pscustomobject]@{ Name = 'unit_cache_precall_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_precall_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_reentry_bare: the S/I2 trace with bare names only, walked whole -- no exit publication 22, one shared instance 93.
+    [pscustomobject]@{ Name = 'unit_cache_reentry_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_reentry_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # unit_cache_reentry_peek: the S/I2 trace observed from another method, so M is walked under the knob -- peek reads
+    # the place of declaration after the re-entrant call: 2, the re-entrant activation's 9 unpublished.  A re-entrant
+    # activation that publishes: 293 (natively the counted guard l2_reent, walked the frame's reent).
+    [pscustomobject]@{ Name = 'unit_cache_reentry_peek.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_reentry_peek.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    # unit_cache_root_precall: the root publishes its dirty x before calling peek, whose node\x reads 5 -- without it 11.
+    [pscustomobject]@{ Name = 'unit_cache_root_precall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_root_precall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     # The write-only assignment to a free name (steps/free-names.md §7): the scan reads a bare assignment's target
-    # like a read, so `k: 1` in peek, with k bound by the caller, makes k peek's field typed by that binding (the
-    # assignment waits for the closure, M2) and m's k stays 5; `k: 1U` against the caller's int k is refused at the
+    # like a read, so `k: 1` in peek, with k bound by the caller, changes peek's hidden argument k, typed by that
+    # binding, and declares nothing (bafca4c; 7b, re-read by name, value unchanged; the assignment waits for the
+    # closure, M2) and m's k stays 5; `k: 1U` against the caller's int k is refused at the
     # write, as the same int declared in peek is.  Mutant: the target not read -- the write refused again.
     [pscustomobject]@{ Name = 'unit_free_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
@@ -3652,7 +3859,7 @@ foreach ($fx in $fixtures) {
         $noteGone = @($fx.Notes | Where-Object { $noteLog -notmatch [regex]::Escape($_) })
         if ($noteGone.Count -gt 0) { Add-Row 'FAIL' ('fixture:' + $stem) ('l2trans did not note "' + $noteGone[0] + '"'); continue }
     }
-    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1') {
         $entryLine = [regex]::Match((Get-Content -LiteralPath $genLm1 -Raw), '(?m)^# entry statements: (\d+)\s*$')
         if (-not $entryLine.Success) { Add-Row 'FAIL' ('fixture:' + $stem) 'the generated L1 does not state `# entry statements: N`'; continue }
         $emptyOk = $fx.PSObject.Properties['EmptyEntry'] -and $fx.EmptyEntry
@@ -3773,7 +3980,7 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ($units.Count.ToString() + ' library units in one relocatable link, own cells ' + ($cells -join ' ') + ', no unhashed external name; LINK and SYMBOLS only, nothing was run'); continue
     }
 
-    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1') {
         $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
         $why = ''
         foreach ($a in $fx.Absent) {
@@ -3820,6 +4027,17 @@ foreach ($fx in $fixtures) {
                 continue
             }
             Add-Row 'OK' ('fixture:' + $stem) 'abort exit 3, invariant sendMessage failed, no PRIMITIVE'
+            continue
+        }
+        # 'walk-x1' (Codex, 2026-09-28): the program stops on the walker's X1 -- a read the graph has no value for
+        # (`node\n` in a direct call: the host's formal is no body field) -- never a made-up 0.
+        if ($fx.Expect -eq 'walk-x1') {
+            $xlog = Log-Text ('fixture.' + $stem + '.run')
+            if ($ran -ne 3 -or $xlog -notmatch 'lmx: walk error: INVALID') {
+                Add-Row 'FAIL' ('fixture:' + $stem) ('the walker''s X1 expected (exit 3, walk error INVALID), got exit ' + $ran)
+                continue
+            }
+            Add-Row 'OK' ('fixture:' + $stem) 'X1 exit 3, walk error INVALID'
             continue
         }
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)

@@ -1,9 +1,12 @@
-# steps/named-struct-exec.md §12: unit_named_struct_exec_ctl_method under the knob --walk-methods: run and
-# Counter's procedure walked -- run's bare `Counter` is a CALL of the procedure over Counter, whose while,
-# if, for, call and return in a block run as a walked method's: n 10, seen 8.  Entry 7.
+# steps/named-struct-exec.md §12, R9: unit_named_struct_exec_ctl_method under the knob --walk-methods: run and
+# Counter's procedure walked -- run's bare `Counter` is EXEC of Counter over itself, its hidden input seen passed
+# as a call passes one (the author, 2026-09-28: a procedure without arguments is one with hidden arguments), whose
+# while, if, for, call and return in a block run as a walked method's: n 10, put\got 4, the root's seen 0.  Entry 7.
 size_t: seen 0U
 fn: put (size_t: a) int
-    seen: seen + a
+    size_t: got 0U
+    got: seen + a
+    seen: got
 return: 0
 Counter:
     size_t: n 0U
@@ -31,8 +34,10 @@ fn: run () size_t
 return: v
 size_t: got 9U
 got: run()
+size_t: pg 9U
+pg: put\got
 int: ok 0
-if: got = 10U && seen = 8U
+if: got = 10U && pg = 4U && seen = 0U
     ok: 7
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

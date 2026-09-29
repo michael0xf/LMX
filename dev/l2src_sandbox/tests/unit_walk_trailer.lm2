@@ -1,7 +1,9 @@
 # -193 T4a: a walked method's return trailer (WalkMethods) is one more step at the end of its
 # frames: `return: V` a value, [ret, V] -- a method's name there a call --, a sub's bare `return`
-# the RET record.  A walked method reads and writes a unit field through the unit (its holder
-# named), and its own field through its data (holder 0).
+# the RET record.  A walked method's own field is its working value (holder 0); a name it does not
+# declare is its hidden input -- Q52 (the author, 2026-09-28): s's `y: y + 3` and acc's `y: mine`
+# change only their activations' values (SET_ARG), and the root's y stays 0 (was 6, then 16).  acc
+# takes the root's 0: mine is 10.
 int: y 0
 
 sub: s ()
@@ -28,7 +30,7 @@ end: acc
 int: r
 s()
 s()
-if: y != 6
+if: y != 0
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
 r: inc(4) + w()
@@ -36,7 +38,7 @@ if: r != 6
     sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
     return
 r: acc(10)
-if: r != 16 || y != 16
+if: r != 10 || y != 0
     sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

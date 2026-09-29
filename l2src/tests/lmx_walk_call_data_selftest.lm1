@@ -1,5 +1,4 @@
 predef: "l2src/lmx_walk.lm1"
-predef: "l2src/lmx_fresh.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -12,8 +11,10 @@ predef: "l2src/lmx_scratch.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -188 k.3c: FRESH + CALL data operand. Recursion gets its own instance; after return
-# outside M\x reads M's fields (not the frame instance). Mutant: CALL without data -> INVALID.
+# The CALL's data operand is the callee itself, (M, M), at every call -- a re-entry too: no instance of M is made
+# (the author, 2026-09-28: no auxiliary structures in the graph; what one activation keeps apart from another is its
+# arguments and its working values, §7b).  The callee's exit publishes its dirty own field into M's own cell.
+# Mutant: CALL without data -> INVALID.
 
 @: LmxArena ga 0
 @: Lmx groles 0
@@ -115,8 +116,6 @@ fn: main () int
     @: Lmx caller 0
     @: Lmx bad 0
     @: Lmx n 0
-    @: Lmx e 0
-    @: Lmx fresh_alone 0
     @: void xcell 0
     int: r 0
     int: v 0
@@ -152,8 +151,8 @@ fn: main () int
     ---
 
     # writer: own x 1;  x: 99;  return: x
-    # Called with data = FRESH(writer): frame writes 99 on the fresh instance.
-    # After return, writer\x must still be 1 (M fields, not frame). Mutant: data=writer -> 99 RED.
+    # Called with data = writer itself: the SET writes x's working value (its row, loaded at entry from the code's
+    # own nodes), and the exit publishes 99 into writer's own cell.
     # k.4: no descriptor slot -- own field x at slot 0, SET at slot 1, RET at slot 2.
     writer: mk_m(unit, 1U, 3U)
     xcell: icell(writer, 0U, 1)
@@ -165,20 +164,14 @@ fn: main () int
 
     # k.4: caller's CALL step at slot 0 (no descriptor); CALL gains a 4th leading child
     # (rtype, left 0 -- writer is walked, not native, so lmx_walk_call never reads it on
-    # that path); data (FRESH) stays at child 2, unaffected by rtype's insertion after it.
+    # that path); data is writer itself at child 2, (M, M).
     caller: mk_m(unit, 2U, 1U)
     n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 5U)
     ref(n, 1U, writer)
-    e: fr(n, 2U, c.LMX_WALK_OP_FRESH, 2U)
-    ref(e, 1U, writer)
+    ref(n, 2U, writer)
     st: go(caller, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && v = 1 && r = 99, "CALL data=FRESH: frame return 99")
-    check(lmx_int_value_known(xcell) = 1, "after return M\\x = M fields (mutant data=M wrote 99 -> RED)")
-
-    fresh_alone: lmx_fresh(ga, writer)
-    check(fresh_alone != 0 && fresh_alone != writer, "lmx_fresh alone: new Structure")
-    check(fresh_alone\parent = writer\parent, "fresh.parent = code.parent")
-    check(fresh_alone\native = writer\native, "fresh copies native verbatim (k.4: sibling member, not child0)")
+    check(st = c.LMX_WALK_OK && v = 1 && r = 99, "CALL data=M: the callee returns its working 99")
+    check(lmx_int_value_known(xcell) = 99, "after return M\\x is 99: the exit published into M's own cell (a per-call instance, or no publication -> RED)")
 
     # Mutant: CALL with only code child (no data, no rtype) -> INVALID (k.4 floor is 4
     # children: role+code+data+rtype, was 3; 2 is still short either way).
@@ -190,7 +183,7 @@ fn: main () int
 
     check(broken = 0, "fixture construction")
     if: failures != 0
-        c.printf("lmx_walk_fresh_call_selftest %d/%d FAILED\n", failures, checks)
+        c.printf("lmx_walk_call_data_selftest %d/%d FAILED\n", failures, checks)
         return: 1
     ---
     c.printf("OK %d checks\n", checks)

@@ -1,12 +1,15 @@
 # REVIEW 394f6a9 (fable_pc's P62 d): a sub called as a statement binds its named arguments like any call --
-# add(b: 1; a: 8) gives a 8, b 1, and y is a - b = 7 (by position it would be -7).  Before the named actuals:
-# "unknown method".  Entry 7.
-int: y 0
-
+# add(b: 1; a: 8) gives a 8, b 1, and a - b is 7 (by position it would be -7).  Before the named actuals:
+# "unknown method".  add keeps the difference in d, a field declared in its body -- the method's state,
+# published when it returns (book §12) -- and the root reads it at the place of declaration, add\d.  (It used
+# to write the unit's y bare: that changes only add's hidden input -- Q52, the author 2026-09-28.)  Entry 7.
 sub: add (int: a; int: b)
-    y: a - b
+    int: d 0
+    d: a - b
 end: add
 
 add(b: 1; a: 8)
-sendMessage: exit(exit_code: y; stdout: ""; stderr: "")
+int: got 0
+got: add\d
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
 return

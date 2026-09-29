@@ -1,0 +1,27 @@
+# §7b witness in a walked shape (book §12, the S/I2 trace): the outer activation of M works over its occurrence S;
+# `x: 2` is published before the re-entrant call, whose fresh instance I2 ends with x 9.  The outer bare x keeps its own
+# working 2 -- nothing is reloaded.  `x: x + 1` is a new outer write published at the exit: check reads S's 3.  The
+# program exits 2 * 10 + 3 = 23.
+fn: M (int: n) int
+    int: x 1
+    if: n = 0
+        x: 9
+        return: 0
+    x: 2
+    M(0)
+    int: seen 0
+    seen: x
+    x: x + 1
+    return: seen
+end: M
+
+fn: check () int
+    return: M\x
+end: check
+
+int: v 0
+v: M(1)
+int: w 0
+w: check()
+sendMessage: exit(exit_code: v * 10 + w; stdout: ""; stderr: "")
+return

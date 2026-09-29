@@ -75,11 +75,13 @@ _POSIX_ABI = 0 if os.name == 'nt' else 9
 _WIN32_ABI = 1 if os.name == 'nt' else 0
 # 70 after D-105 slice 1 (Q39, steps/d105-index-table.md §5): struct LmxImplEntry in lmx_arena.h.lm1
 # -- one record of the arena's `implements` table of address correspondences (LmxArena.impl).
+# 71 after §7b (steps/working-state-7b.md, 7b-1): struct LmxWalkWork in lmx_walk.h.lm1 -- one row of an
+# activation's working table (an own field's working value and its dirty mark), LmxWalkFrame.work.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 70 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

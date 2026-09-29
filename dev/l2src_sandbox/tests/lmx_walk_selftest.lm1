@@ -409,12 +409,14 @@ fn: main () int
     # what that path means. This is the counterpart to counter's own own0 frames above
     # (holder = 0, "this activation's data") -- the two are the whole of what a holder
     # can mean; there is no third form and no "explicit holder rebinds per copy" case.
+    # §7b: a path write is PUT, the graph -- SET is the activation's own working value.
     explicit_target: mk_m(unit, 40U, 2U)
     icell(explicit_target, 1U, 0)
     explicit_writer: mk_m(unit, 41U, 2U)
-    n: fr(explicit_writer, 1U, c.LMX_WALK_OP_SET, 3U)
-    own(n, 1U, explicit_target, 1U)
-    lit(n, 2U, 42)
+    n: fr(explicit_writer, 1U, c.LMX_WALK_OP_PUT, 4U)
+    ref(n, 1U, explicit_target)
+    sz(n, 2U, 1U)
+    lit(n, 3U, 42)
 
     # counter:   own n 0;  n: n + 1;  return: n
     # K-OT2 (-194 к.5): counter's own frames name NO holder (own0, holder = 0) --
@@ -473,8 +475,7 @@ fn: main () int
     argn(e, 1U, 0U)
     n: fr(e, 2U, c.LMX_WALK_OP_CALL, 6U)
     ref(n, 1U, summer)
-    e: fr(n, 2U, c.LMX_WALK_OP_FRESH, 2U)
-    ref(e, 1U, summer)
+    ref(n, 2U, summer)
     e: fr(n, 5U, c.LMX_WALK_OP_SUB, 3U)
     argn(e, 1U, 0U)
     lit(e, 2U, 1)
@@ -491,6 +492,7 @@ fn: main () int
     argn(e, 2U, 0U)
     b: pl(n, 2U, 4U)
     icell(b, 0U, 0)
+    # §7b: acc, i and the loop body's t are the working table's rows, loaded at entry from these OWN/SET nodes.
     n: fr(b, 1U, c.LMX_WALK_OP_SET, 3U)
     own(n, 1U, b, 0U)
     e: fr(n, 2U, c.LMX_WALK_OP_ADD, 3U)
@@ -703,15 +705,12 @@ fn: main () int
     st: go(impostor, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
 
-    # An own node naming ANOTHER occurrence's field is not an error at all under k.4: it
-    # is exactly M\x read from outside (§3 item 3, "M\x снаружи читает поля самого M"),
-    # an ordinary path read of the graph -- the old plan-membership check refused it only
-    # because that model drew a line between "this occurrence's own scan" and everything
-    # else, a line the translator itself never needed (it emits a path, not an own node,
-    # for a genuinely cross-occurrence read; this hand-built fixture only ever used OWN's
-    # shape as a stand-in for one). Legitimate path read, expected OK.
+    # §7b: an own node is this activation's working value, a row the entry load made.  One naming ANOTHER
+    # occurrence's field has no row -- M\x read from outside is a path, AT, which the translator emits
+    # for it -- so it is the translator's broken promise, said as "lmx: invariant: an own field used but
+    # not loaded", never a silent read of the graph (fable_pc's condition (a) to steps/working-state-7b.md).
     st: go(stranger, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = lmx_int_value_known(cell), "k.4: a cross-occurrence own node is an ordinary M\\x path read, not a refusal")
+    check(st = c.LMX_WALK_INVALID, "an own node with no row of the working table is refused, not read from the graph")
     # H (k.4): entry no longer asks a fixed, named pair of questions ("is M a Structure,
     # is child[0] a CALLABLE") -- there is no child[0] to ask about.  lmx_walk_enter now
     # classifies code and data (2 questions when they are the same occurrence, as go()
@@ -736,24 +735,26 @@ fn: main () int
     check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) = lmx_arena_ref_value(lmx_arena_ref_struct(outer, 3U), 0U), "two returns share one role record")
     check(lmx_arena_ref_value(lmx_arena_ref_struct(counter, 3U), 0U) != lmx_arena_ref_value(lmx_arena_ref_struct(counter, 2U), 0U), "different roles are different records")
 
-    # counter: SET writes the cell; the next activation reads that cell.
+    # counter: SET writes the working value; the exit publishes it; the next activation loads it.
     r: -1
     st: go(counter, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 1 && v = 1, "counter first run returns 1, and says it returned a value")
-    check(lmx_int_value_known(cell) = 1, "counter cell n = 1 after SET")
+    check(lmx_int_value_known(cell) = 1, "counter cell n = 1: the exit published the dirty SET")
     st: go(counter, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 2, "counter second run returns 2")
 
-    # -188: cells are the graph — outer RET OWN after CALL sees inner's PUT (no snapshot).
+    # §7b, 21.6's worked case: outer's x is loaded 1 and clean; inner writes outer\x: 2 through a
+    # path; outer's bare x keeps its working 1 -- nothing is reloaded after a call -- and outer's exit
+    # does not write the clean 1 back, so the cell keeps inner's 2.
     r: -1
     st: go(outer, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = 2, "outer RET OWN sees callee PUT (mutant snapshot -> RED)")
-    check(lmx_int_value_known(xcell) = 2, "callee write visible in cell immediately")
+    check(st = c.LMX_WALK_OK && r = 1, "outer's bare x keeps its working 1 after the call (a reload after the call -> RED)")
+    check(lmx_int_value_known(xcell) = 2, "the clean x is not written back: the cell keeps the callee's 2 (flush-all -> RED)")
 
-    # -188: SET writes the cell before the outbound call; reader sees it.
+    # §7b: the dirty SET is published before the outbound call; reader's path read sees it.
     r: -1
     st: go(publisher, 0, 0U, @ r, @ v)
-    check(st = c.LMX_WALK_OK && r = 5, "SET cell visible to callee before the call")
+    check(st = c.LMX_WALK_OK && r = 5, "the dirty y is published before the call: the callee reads 5 (no pre-call publication -> RED)")
 
     # Recursion is recursion of the C stack on one published M; an early return inside
     # a nested body ends the activation, the last return is never reached then.
@@ -798,9 +799,9 @@ fn: main () int
     st: go(impostor, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_UNSUPPORTED, "a private op record with the number of `ret` is not the role `ret`")
 
-    # -188 k.3c: summer recurses with data=FRESH(summer), so each go allocates instances
-    # in the graph arena (mutant: data=code in-place -> allocate-nothing greened wrongly).
-    # Scratch/context still rewind: once warm, no new context blocks; store empty after.
+    # summer recurses over itself, (M, M) -- no instance of M is made at a re-entry (the author, 2026-09-28: no
+    # auxiliary structures in the graph), so once warm the fifty runs allocate nothing in the graph arena and change
+    # nothing there (summer has no own field to publish).  Scratch/context rewind: no new context blocks; store empty.
     lmx_int_store_known(abox, 20)
     go(summer, argv, 1U, @ r, @ v)
     before: handed(ga)
@@ -813,8 +814,8 @@ fn: main () int
         i: i + 1
     ---
     check(st = c.LMX_WALK_OK && r = 210, "summer(20) = 210, fifty times")
-    check(handed(ga) > before, "FRESH recursion allocates instances in the graph arena")
-    check(digest(ga) != sum_before, "and those instances change the arena digest")
+    check(handed(ga) = before, "recursion allocates nothing in the graph arena: no per-call instance (a companion per re-entry -> RED)")
+    check(digest(ga) = sum_before, "and the graph arena is byte for byte the same")
     check(lmx_arena_mark(pca) = blocks && lmx_pool_count(@ context_cells) = warm, "and, once warm, nothing in the context's arena")
     check(ps\used = 0U && ps\top = 0U, "every activation rewound what it took")
 
@@ -942,7 +943,7 @@ fn: main () int
     st: lmx_graph_copy_owned(explicit_writer, 0, ga, ga, @ explicit_writer_copy)
     check(st = c.LMX_GRAPH_COPY_OK && explicit_writer_copy != 0 && explicit_writer_copy != explicit_writer, "explicit_writer copied")
     if: explicit_writer_copy != 0
-        check(lmx_arena_ref_struct(explicit_writer_copy, 1U) = lmx_arena_ref_struct(explicit_writer, 1U), "K-OT1: the copy shares explicit_writer's own SET frame by address")
+        check(lmx_arena_ref_struct(explicit_writer_copy, 1U) = lmx_arena_ref_struct(explicit_writer, 1U), "K-OT1: the copy shares explicit_writer's own PUT frame by address")
         check(lmx_int_value_known(lmx_arena_ref_value(explicit_target, 1U)) = 0, "explicit_target starts at 0, untouched")
         r: -1
         st: go(explicit_writer_copy, 0, 0U, @ r, @ v)

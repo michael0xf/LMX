@@ -1,11 +1,8 @@
-# D-93. The host calls its own capturing model before the return: the call builds the node the
-# return would build, with the host's values at the call, and calls it (a capture is read-only in
-# the model, so that node is exactly what the host sees there).  makeAdder 5: q = addN(1) with
-# n 5 = 6; n becomes 15; r = addN(1) with n 15 = 16; n becomes q + r = 22; the returned node
-# captures n 22: add(1) = 23.  The base translator refused ("a callable merge host names a nested
-# method outside the return").  Mutants: the call through the model's own native function (its
-# stub returns 0) -- 1, not 23, exit 1; the call's node without its capture -- "walk error:
-# INVALID", exit 3.  Entry 7.
+# D-93 with A3 (Codex, 2026-09-28).  The host calls its own capturing model before the return: an ordinary
+# (M, M) call over the model's occurrence, its capture n the hidden input the host supplies -- the host's value
+# at the call; no node is built for the call.  makeAdder 5: q = addN(1) with n 5 = 6; n becomes 15; r = addN(1)
+# with n 15 = 16; n becomes q + r = 22; the returned node carries n 22: add(1) = 23.  The base translator
+# refused ("a callable merge host names a nested method outside the return").  Entry 7.
 fn: makeAdder (int: n) fn: (int: x) int
     fn: addN (int: x) int
         return: n + x

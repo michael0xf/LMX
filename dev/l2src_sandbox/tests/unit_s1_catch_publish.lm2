@@ -1,9 +1,12 @@
-# The exit checkpoint (§13; the witness S1.1 deferred): m writes the unit field x, then throws.
-# What the activation wrote is published before the throw leaves, so E, after catching, reads 7.
-int: x 0
-
+# The exit checkpoint (§13; the witness S1.1 deferred): m's own field x -- declared in its body, the
+# method's state (book §12) -- is written 7, then m throws.  What the activation wrote is published before
+# the throw leaves, so E, after catching, reads 7 at the place of declaration, m\x; unpublished, the place
+# would still hold the declaration's 0.  (Before Q52 the row wrote the unit's x from m: a bare write to a
+# name m does not declare is its hidden input's -- the author, 2026-09-28 -- and publishes nothing.)
+# Entry 7.
 fn: m () int
     throws: Oops
+    int: x 0
     x: 7
     throw: Oops()
 return: 0
@@ -11,6 +14,6 @@ return: 0
 int: seen 0
 m()
 catch: Oops ()
-    seen: x
+    seen: m\x
 sendMessage: exit(exit_code: seen; stdout: ""; stderr: "")
 return

@@ -12,4 +12,4 @@
 
 Thread: `l3_thread_dispatch` больше не зовёт `l3_exec_run`. На такт открывается L2 scratch/context (отдельная арена, не Message). `lmx_interp_apply(ctx, graph, args, 1)` с `args[0] = subject = message.graph`, `out = 0`. Граф/Message/method не копируются. `l3_thread_bind` 14/0.
 
-**Снято (Opus, 2026-09-27, ответ автора q40, `LMX_blog/2026-09-27.md`):** аргумента-субъекта нет — такт зовёт `lmx_interp_apply(ctx, graph, 0, 0U)`: execute(code data), у корня data = code — принцип исполнения, не аргумент. Значение графа нигде не хранится (E1 отменён; выход — письмо выхода R0 или его `success`), `l3_thread_result` снят.
+**Снято (Opus, 2026-09-27, ответ автора q40, `LMX_blog/2026-09-27.md`):** аргумента-субъекта нет — такт зовёт `lmx_interp_apply(ctx, graph, 0, 0U)`: это исполнение полного графа корня без аргумента-субъекта. Значение графа нигде не хранится (E1 отменён; выход — письмо выхода R0 или его `success`), `l3_thread_result` снят.

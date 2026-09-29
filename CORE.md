@@ -194,57 +194,47 @@ method's children are its `args` and `return` parts followed by its fields,
 while the file root and a named Structure hold their fields from slot 0.
 
 [`lmx_call`](dev/l2src_sandbox/lmx_call.h.lm1) reads `Lmx.native`. The native
-entry is entered with
-`(node, self, ...)`, where `node = M.parent` and `self = M`. The transitional
-direct-METHOD ABI enters with `(node, ...)`. The `sig` word currently selects
-a dispatch contract; `lmx_call0` is not the full semantic signature checker.
+entry receives the lexical parent `node`, active Structure `self`, and the
+declared arguments of `fn`/`fm`/`sub`. Neither `node` nor `self` denotes
+a permanent companion data graph. `lmx_call0` is not the full semantic
+signature checker.
 Static checking, admission, and generated typed calls belong in the translator
 and broader language model, not in a fabricated per-node tag.
 
-**Execution pair.** An execution consists of exactly two Structure roots: the
-Structure selected as the code graph and the Structure supplied as its data
-graph. `code` and `data` name roles in one execution, not kinds, qualifiers,
-storage classes, or persistent properties of a Structure: in `f(a b)` the head
-`f` is code and `(a b)` is data, while the same `f` in `merge: f other` or
-`send: f` is data. Code is immutable during execution and holds the descriptor,
-the argument and return parts, and the body operators with literals at the
-leaves. Data is an ordinary Structure holding the declared fields of the body in
-lexical order, nested bodies as nested field-only Structures (`M\for\y` keeps
-its path); a body declaration such as `int: i 5` names a slot of the data
-prototype and, as an operator, writes into the passed data. Formal arguments,
-locals, and the returned value belong to the ordinary machine activation; an
-argument becomes a data field only by the assignment rule of L3 §12 or by
-binding through merge.
-One graph may stand in both positions: an ordinary call runs `M` over its own
-fields, and the host runs the file root the same way; execution never writes
-operator nodes, literals, or the `native` word, only declared fields. See L2 §10. A fresh
-instance of the data prototype is created only on re-entry (recursion in the
-static call graph, a dynamic call) or when data is passed explicitly; it lives
-in the activation frame and is not visible from outside. Hence `node` is the
-parent's data and `node\x` follows the parent chain only; there is no third
-context graph. `M\x` from outside reads the fields of `M` itself; results are
-not read through them. Arguments, locals, and the activation result
-live in the ordinary machine activation: `fn` returns a value, `fm` a reference
-to its result Structure. The native entry `(node, self)` therefore means
-`(data.parent, data)`.
-Merging callables follows the accepted rule: the signature is derived (a bound
-formal leaves it), bound fields merge pairwise into the model's data slots, the
-last operand's body operators replace the model's, the result's `native` word
-is empty (interpreted), and nested methods keep their words. The representation described
-in this section and in §3.1 (descriptor, body, and own fields in one Structure;
-activation-local cells, dirty flags, checkpoints) is the transitional
-implementation of this pair; see §9.
+**Execution of a Structure.** One complete Structure contains declarations,
+value storage and executable operators in source order. Execution uses that
+Structure and an ordinary machine activation. An ordinary named Structure executes without arguments;
+only `fn`, `fm` and `sub` receive declared actual arguments. Using a Structure
+as a value in `merge` or `send` does not execute it.
+Source code may arrange declarations and executable bodies separately through
+ordinary language constructs; that choice does not require a second runtime graph.
+The distinction still matters inside one Structure: declaration nodes establish
+typed storage, while executable nodes control when values are computed and
+assigned. For example, `int: a` establishes `a`; `a: get_a()` is a later
+operation. A conventional `int a = get_a()` spelling obscures that separation.
+The graph's mixed layout does not make storage and instructions interchangeable.
 
-[`lmx_plan`](dev/l2src_sandbox/lmx_plan.h.lm1) records positional paths to
-own fields. Its producer scans the body in lexical order; a plan entry is a
-path of child indexes **relative to an occurrence**, never an address into
-the original occurrence. This permits copied occurrences to share one plan.
-Preparation validates paths and publishes the plan at the same true owner as
-the descriptor; activation uses trusted positional paths without repeated
-arena classification. The plan's two role identities are physical role-record
-addresses, not text names or numeric role tags. Changing one occurrence's
-executable shape requires a fresh descriptor/plan relationship rather than
-mutating the shared one.
+Execution preserves operator nodes, literals and the `native` word. A declaration
+establishes value storage where it appears; assignment updates a resolved value
+and creates neither another declaration nor an implicit field. The complete
+operator graph remains available to the interpreter after execution. Used
+declared values may have activation-local working copies under the
+`load/cache/dirty` and checkpoint rules; those copies are not permanent graph
+nodes. A re-entrant call may need independent temporary value state, but must
+not attach a hidden sibling Structure to the persistent graph. The file root
+obeys the same structural rule. See L2 §10 and L3 §12.
+
+`node` is the lexical parent's Structure and `self` is the active Structure of
+the invocation; neither denotes a second permanent data graph. An external
+path such as `M\x` opens the value at its declaration, not an activation's
+working copy or an initializer operator. `fn` returns a value, `fm` returns
+its result Structure, and a plain named Structure has no returned value.
+There is no third environment graph.
+
+There is no persistent `lmx_plan` descriptor beside a callable Structure.
+The interpreter follows the retained operator graph; the translator may keep
+temporary positional metadata while lowering it. Execution does not add
+another Structure beside the one written by the program.
 
 [`lmx_walk`](dev/l2src_sandbox/lmx_walk.h.lm1) supplies the interpreter-side
 body traversal and Stage-C preparation. Its operator nodes are identified by
@@ -267,22 +257,16 @@ collapse repeated same-name fields into one own slot and does not completely
 lower the selector. This is an [open core task](next_core_tasks.md),
 not a license to add a second runtime name table or journal.
 
-An activation-local variable has one stable canonical physical cell. In the
-accepted address rule, **every executed `@local` makes that logical local
-sticky until activation end** and returns the real address of that same cell.
-The active occurrence is only the current publication destination; changing
-it does not retarget an already issued pointer. Before switching from one
-occurrence to another, a pending snapshot must be refreshed from the canonical
-cell. Graph publication happens at a checkpoint, not at every machine write.
-Sticky state makes later checkpoints conservative; it does not invent an
-occurrence before the corresponding binding executes. The current `lmx_own`
-and `lmx_dirty` implementation is a partial precursor to this full rule, so
-do not describe repeated-occurrence/sticky behavior as fully landed. Under the
-accepted execution pair (§3) working copies, dirty flags, and checkpoints are
-replaced by direct writes into the declared fields of the executed Structure; a
-fresh instance exists only on re-entry or with explicitly passed data, lives in
-the activation frame and is not visible from outside; the canonical-cell
-mechanism is transitional.
+An activation-local variable has a stable physical cell for its activation.
+Taking its L2 address does not create a graph field. A declared value, by
+contrast, has storage at its declaration in the complete Structure; used
+declared values may be loaded into working values and published only when
+dirty at the specified checkpoints. Repeated declarations remain distinct
+occurrences, whereas repeated assignments update the resolved value without
+creating an occurrence. The translator and interpreter must agree on the
+source graph and on the applicable address/publication rules. See the
+normative L2 §18.2–18.3 and L3 §12 and the open implementation work in §7b
+of `next_core_tasks.md`.
 
 `@x`, `\p`, and `\p: value` in L2 are machine address, load, and store
 operations. For a Structure binding, `@fresh` is the address of the Structure
@@ -574,7 +558,7 @@ this architectural description.
 | --- | --- |
 | Physical graph, ranges, pools, Array/METHOD/callable records | [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1), [`lmx_pool.h.lm1`](dev/l2src_sandbox/lmx_pool.h.lm1) |
 | Arena, blocks, reference slots, collection | [`lmx_arena.h.lm1`](dev/l2src_sandbox/lmx_arena.h.lm1), [`lmx_arena_blocks.h.lm1`](dev/l2src_sandbox/lmx_arena_blocks.h.lm1), [`lmx_arena_refs.h.lm1`](dev/l2src_sandbox/lmx_arena_refs.h.lm1), [`lmx_gc.h.lm1`](dev/l2src_sandbox/lmx_gc.h.lm1) |
-| Call and activation | [`lmx_call.h.lm1`](dev/l2src_sandbox/lmx_call.h.lm1), [`lmx_plan.h.lm1`](dev/l2src_sandbox/lmx_plan.h.lm1), [`lmx_own.h.lm1`](dev/l2src_sandbox/lmx_own.h.lm1), [`lmx_dirty.h.lm1`](dev/l2src_sandbox/lmx_dirty.h.lm1), [`lmx_walk.h.lm1`](dev/l2src_sandbox/lmx_walk.h.lm1) |
+| Call and activation | [`lmx_call.h.lm1`](dev/l2src_sandbox/lmx_call.h.lm1), [`lmx_fresh.h.lm1`](dev/l2src_sandbox/lmx_fresh.h.lm1), [`lmx_walk.h.lm1`](dev/l2src_sandbox/lmx_walk.h.lm1) (the re-entry helper and two-reference ABI are under cleanup) |
 | Message, Thread, turn and root | [`lmx_message.h.lm1`](dev/l2src_sandbox/lmx_message.h.lm1), [`lmx_thread.h.lm1`](dev/l2src_sandbox/lmx_thread.h.lm1), [`lmx_turn.lm1`](dev/l2src_sandbox/lmx_turn.lm1), [`lmx_root.h.lm1`](dev/l2src_sandbox/lmx_root.h.lm1) |
 | Mail, children, scheduling, route | [`lmx_post.h.lm1`](dev/l2src_sandbox/lmx_post.h.lm1), [`lmx_child.h.lm1`](dev/l2src_sandbox/lmx_child.h.lm1), [`lmx_list_owned.h.lm1`](dev/l2src_sandbox/lmx_list_owned.h.lm1), [`lmx_manager.h.lm1`](dev/l2src_sandbox/lmx_manager.h.lm1), [`lmx_service.h.lm1`](dev/l2src_sandbox/lmx_service.h.lm1) |
 | Copy, merge, admission | [`lmx_graph_copy_owned.h.lm1`](dev/l2src_sandbox/lmx_graph_copy_owned.h.lm1), [`lmx_merge_owned.h.lm1`](dev/l2src_sandbox/lmx_merge_owned.h.lm1), [`lmx_implements.h.lm1`](dev/l2src_sandbox/lmx_implements.h.lm1) |

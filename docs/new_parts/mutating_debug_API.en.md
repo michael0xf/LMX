@@ -359,7 +359,7 @@ The word “insert” is a user action, not permission to resize a fixed Structu
 
 ### 10.2 A paused execution is still an existing execution
 
-Suspension permits controlled observation and owner-side operations; it does not invalidate the active code/data relationships or release them. Do not edit the operators, literals, layout, or saved instruction reference of an active activation by ad hoc memory writes.
+Suspension permits controlled observation and owner-side operations; it does not release the active Structure or its machine activation. Do not edit the operators, literals, layout, or saved instruction reference of an active activation by ad hoc memory writes.
 
 Ordinary mutations of permitted data and construction of replacement branches remain available. A new version can be connected where normal structural rules allow it. Existing activations and other aliases retain whatever references normal LMX gives them. Replacing a binding does not globally retarget every pre-resolved call site or shared alias. Any larger rewiring is an explicit graph operation performed by the program.
 
@@ -445,7 +445,7 @@ A graph value alone may not reveal that a step progressed: testing a condition c
 | `previous` | Executed/visited position when the existing driver exposes it |
 | `value` | An actually produced value, when this advancement produced one |
 | `execution` | Accessible interpreter/activation state relevant to continuing this target |
-| `graph` | The requested application code/data observation |
+| `graph` | The requested application Structure observation |
 | `diagnostic` | Actual phase/location/payload where an error occurred, when present |
 
 Do not manufacture absent fields as numeric zero. Use the normal result description and absence rules. These field names are a draft readable projection of existing state; they must not become a second permanent execution-state store.

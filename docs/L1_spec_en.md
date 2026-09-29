@@ -68,7 +68,7 @@ Rule: [L2 §9](L2_spec_en.md#mailbox). Language `post` is an ordinary call over 
 <a id="own"></a>
 ## 11. Own in L1
 
-Rule: [L2 §10](L2_spec_en.md#own) — the execution pair: writes go directly into the declared fields of the executed Structure; there are no working copies, dirty marks or checkpoints. The former `lmx_own` and `lmx_dirty` modules are deleted (2026-09-26); no generated code, walker or L3 interpreter path publishes or reloads.
+Rule: [L2 §10](L2_spec_en.md#own) — execution uses the complete Structure with declarations and operators in source order; assignment creates no field. Used declared values may have activation-local working copies, dirty marks and publication checkpoints. Native lowering and the walker implement the same working-state semantics while retaining the complete source Structure.
 
 <a id="call"></a>
 ## 12. Call in L1

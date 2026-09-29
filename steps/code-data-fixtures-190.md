@@ -1,5 +1,7 @@
 # FABLE-SONNET-FIXTURE-INVENTORY-20260925-190: harness fixtures asserting the old working-copy/checkpoint model
 
+> Historical audit only. Its 2026-09-25 execution-model references were superseded on 2026-09-28; current semantics are in `docs/LMX_semantics.*.md` and the active cleanup in `next_core_tasks.md` §7b. Do not cite this note as a language contract.
+
 Read-only. Base origin/main `14472de`. Re-read `next_core_tasks.md` §3 "Пара исполнения code/data"
 (current text, Q27.1 resolved), `docs/LMX_semantics.ru.md` §11–12, `docs/L2_spec_ru.md` §10 before
 this pass. No fixture, `l2trans.lm1`, or kernel file touched; no gate run.

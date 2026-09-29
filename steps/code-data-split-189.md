@@ -1,5 +1,7 @@
 # The code/data split in the native translator: commit 1, read-only (-189)
 
+> Historical implementation record only. The mandatory split and its auxiliary graph were rejected on 2026-09-28. Current execution uses the complete source Structure and ordinary machine activation; see `next_core_tasks.md` §7b. This file does not define language semantics.
+
 FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 (Opus), commit 1.  Base: origin/main 14472de.
 
 The model is in next_core_tasks.md §3 «Пара исполнения code/data», q27.md, L2 §10-§11,

@@ -1,0 +1,20 @@
+# A number of another type written through a path has the store's conversion edge, as a write to an own field has
+# (l2_convert_on_store): `b\z: n` with n an int and z a size_t calls the receiver (lm_stg_convert_int_size_t) and
+# stores its result -- 5 fits, back is 5U.  Success 7; any other value 64.
+Box:
+    int: v 0
+    size_t: z 0U
+end: Box
+fn: peek () int
+    Box: b
+    int: n 5
+    b\z: n
+    size_t: back 0U
+    back: b\z
+    int: ok 64
+    if: back = 5U
+        ok: 7
+    return: ok
+end: peek
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

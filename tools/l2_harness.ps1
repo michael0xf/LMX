@@ -1075,7 +1075,7 @@ $fixtures = @(
     # a call inside it records its edge, so the throw closure makes the caller throwing (_throwing: 5 through
     # mk's converted field; before, gcc: 'l2_msg' / 'l2_out_throw' undeclared), and meets the static rule of
     # §14 (_declared_refused; before, only the internal backstop at 1:1).
-    [pscustomobject]@{ Name = 'unit_d108_nested_throwing.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_d108_nested_throwing.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_d108_nested_declared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':15:12: unhandled throw: Oops'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_model_decl_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':11:5: a callable merge binds a name that is not a formal'; Args = @('0'); Absent = @(); Debt = @() },
@@ -2305,6 +2305,23 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_pathwrite_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_pathwrite_ref_refused.lm2:14:10: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_pathwrite_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # OPUS-PATHCONV-20260929-10: a write through a path, natively -- a number of another type has the store's conversion
+    # edge, as a write to an own field has (l2_convert_value_to; the check notes the edge, a pair with no row is refused
+    # as an assignment's): -1 into a size_t through `b\z` or `M\s` stored SIZE_MAX and went on, now the receiver refuses,
+    # the method's convert, R0 stopped -- as the walked root already did (unit_pathconv_root_range pins it); and the
+    # target's cell is kept while the value is evaluated (`b\v: c\v` stored into c's cell).
+    [pscustomobject]@{ Name = 'unit_pathconv_ok.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pathconv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pathconv_method_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pathconv_root_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pathconv_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_pathconv_norow_refused.lm2:9:5: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pathwrite_cell_kept.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that

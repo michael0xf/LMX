@@ -1,0 +1,22 @@
+# A write through a path keeps its target's cell while the value is evaluated: `b\v: c\v` read c\v through the same
+# l2_pxp the target had set, and stored into c's cell -- b kept 0, peek gave 5.  Now b is 5: 5 * 10 + 5 = 55 ->
+# success 7; 5 is 65; any other value 64.  (The walked root kept its cell: PUT_OF.)
+Box:
+    int: v 0
+end: Box
+fn: peek () int
+    Box: b
+    Box: c
+    c\v: 5
+    b\v: c\v
+    int: r 0
+    r: b\v * 10 + c\v
+    int: ok 64
+    if: r = 55
+        ok: 7
+    if: r = 5
+        ok: 65
+    return: ok
+end: peek
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

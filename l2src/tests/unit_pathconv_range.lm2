@@ -1,0 +1,15 @@
+# The edge's refusal: -1 does not fit size_t, so the receiver refuses `b\z: n` -- peek's implicit throw `convert`,
+# uncaught: R0 stops with status 3.  Natively the path store took no edge and stored SIZE_MAX (peek went on to 7).
+Box:
+    int: v 0
+    size_t: z 0U
+end: Box
+fn: peek () int
+    Box: b
+    int: n 0
+    n: 0 - 1
+    b\z: n
+    return: 7
+end: peek
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

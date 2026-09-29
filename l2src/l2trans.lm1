@@ -38,6 +38,8 @@ int: l2_own_cap 0
 # its own initialiser, every other lookup is unaffected.
 int: l2_own_excl -1
 int: l2_tn 0
+# The cells a path write keeps while its value is evaluated (l2_pw<n>, l2_emit_stmts).
+int: l2_pw_n 0
 int: l2_loop_depth 0
 int: l2_scope_n 0
 int: l2_scope_cap 0
@@ -861,6 +863,8 @@ prototype:
     fn: l2_native_zero (@@: LmP0Node tok; int: lo; int: hi) int
     fn: l2_cf_named (int: mi; const: @(LmP0Node value)) int
     fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    fn: l2_path_kind_ft (int: kind) int
+    fn: l2_convert_value_to (int: mi; int: to_ft; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_prim_code_name (int: ty) @: char
     fn: l2_convert_load () int
     fn: l2_m_nsof (int: mi) int
@@ -7720,15 +7724,21 @@ return: path
 # holds exactly the store's own value fields and nothing else consumes them
 # when this returns 3 (the caller skips its own plain l2_eval_fields then).
 fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
+    if: oi < 0
+        return: 0
+return: l2_convert_value_to(mi, l2_ft_of_own(l2_own_ty[oi]), stmt, fr, ind)
+
+# The same edge into a place of type to_ft (a formal code): an own field's (l2_convert_on_store), a field written
+# through a path (l2_emit_stmts, OPUS-PATHCONV-20260929-10).  Its codes are l2_convert_on_store's.
+fn: l2_convert_value_to (int: mi; int: to_ft; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     int: from_ft 0
-    int: to_ft
     int: idx
     int: rc
     int: n
     @: LmP0Field only
     const: @(char from_n)
     const: @(char to_n)
-    if: oi < 0 || fr = 0 || fr\body = 0
+    if: to_ft < 0 || fr = 0 || fr\body = 0
         return: 0
     n: l2_count_active(fr\body)
     if: n < 1
@@ -7745,7 +7755,6 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP
         if: from_ft = 0 - 1
             return: 0
     ---
-    to_ft: l2_ft_of_own(l2_own_ty[oi])
     from_n: l2_prim_code_name(from_ft)
     to_n: l2_prim_code_name(to_ft)
     if: from_n = 0 || to_n = 0 || c.strcmp(from_n, to_n) = 0
@@ -18478,6 +18487,20 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         f: l2_next_active(f\next)
 return: 0
 
+# The formal code of a number path kind (l2_path_kind: 0 size_t, 1 char, 7 int, 8 unsigned, 9 ulong), or -1.
+fn: l2_path_kind_ft (int: kind) int
+    if: kind = 0
+        return: 2
+    if: kind = 1
+        return: 1
+    if: kind = 7
+        return: 0
+    if: kind = 8
+        return: 34
+    if: kind = 9
+        return: 36
+return: 0 - 1
+
 # A WRITE THROUGH A PATH TO A NUMBER FIELD (OPUS-PATHWRITE-20260929-09): `b\v: value`, `M\x: value` -- the one value's
 # kind, as any number place's (l2_check_value_convert_core): a text, a Structure (a reference), a callable without a
 # result is refused at the value.  An operation is the field check's (l2_check_value_kinds).  A number of another type is
@@ -18486,27 +18509,56 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
     int: kind
     int: leaf_mi 0
     int: vt 0
+    int: to_ft
+    int: n
+    int: cok
     @: LmP0Field only
     const: @: LmP0Text h
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: 0
     h: stmt\as\frame\head
-    if: h\data = 0 || h\length = 0U || h\length >= 1024U || l2_seg_count(h\data, h\length) < 2 || l2_count_active(stmt\as\frame\body) != 1
+    n: l2_count_active(stmt\as\frame\body)
+    if: h\data = 0 || h\length = 0U || h\length >= 1024U || l2_seg_count(h\data, h\length) < 2 || n < 1
         return: 0
     if: l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) != 0
         return: 0
     kind: l2_path_kind(h\data, h\length, @ leaf_mi)
-    if: kind != 0 && kind != 1 && kind != 7 && kind != 8 && kind != 9
+    to_ft: l2_path_kind_ft(kind)
+    if: to_ft < 0
         return: 0
-    only: l2_next_active(stmt\as\frame\body\first_field)
-    if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
+    if: n = 1
+        only: l2_next_active(stmt\as\frame\body\first_field)
+        if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
+            return: 0
+        if: vt = 0 - 11
+            return: l2_error(path, only\value, "a text where a number is asked")
+        if: l2_colon_is_graph_ty(vt) != 0 && l2_cf_named(mi, only\value) = 0
+            return: l2_error(path, only\value, "a reference where a number is asked")
+        if: vt = 8
+            return: l2_error(path, only\value, "a callable without a result has no value")
+    ---
+    if: n > 1
+        vt: l2_native_composite_ty(stmt\as\frame\body\first_field, n, mi)
+        if: vt = 0 - 3
+            return: l2_error(path, stmt, "mixed numeric types (a conversion)")
+    ---
+    # A number of another type (OPUS-PATHCONV-20260929-10): the store's conversion edge, as an assignment's
+    # (l2_colon_check_assignment) -- a converter is a receiver (Q33), the edge a call of it; a pair with no row is refused.
+    if: vt < 0 || l2_prim_code_name(vt) = 0 || c.strcmp(l2_prim_code_name(vt), l2_prim_code_name(to_ft)) = 0
         return: 0
-    if: vt = 0 - 11
-        return: l2_error(path, only\value, "a text where a number is asked")
-    if: l2_colon_is_graph_ty(vt) != 0 && l2_cf_named(mi, only\value) = 0
-        return: l2_error(path, only\value, "a reference where a number is asked")
-    if: vt = 8
-        return: l2_error(path, only\value, "a callable without a result has no value")
+    cok: l2_colon_types_compatible(to_ft, vt)
+    if: cok = 0 && l2_cv_gap = 3
+        return: l2_cv_refused(path, stmt, "internal: a conversion refused without its reason")
+    if: cok = 0 && l2_cv_gap = 5
+        return: l2_error(path, stmt, "the program has no source table `primitive.convert`")
+    if: cok = 0 && l2_cv_gap = 2
+        return: l2_convert_norecv(path, stmt)
+    if: cok = 0 && l2_cv_gap = 1
+        return: l2_error(path, stmt, "mixed numeric types (a conversion)")
+    if: cok = 0
+        return: l2_error(path, stmt, "assignment value has incompatible type")
+    if: l2_cv_used != 0 && l2_convert_edge(mi, path, stmt) != 0
+        return: 1
 return: 0
 
 # THE KIND OF A VALUE IN AN OPERATION (the walk's rule -179, natively; OPUS-VALKIND-20260929-08): an operation of n >= 3
@@ -30137,6 +30189,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     int: l2_pfi 0
     int: l2_pown 0
     int: l2_prhs_lit 0
+    int: l2_pw 0 - 1
     []: char l2_pbuf 1024
     []: char l2_pnm 1024
     []: char l2_pval 160
@@ -30503,7 +30556,27 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: l2_path_rhs_range(stmt\as\frame\body, l2_pkind, stmt) != 0
                 return: 1
             l2_prhs_lit: l2_path_rhs(stmt\as\frame\body, l2_pkind, @ l2_pv) = 0
-            if: l2_prhs_lit = 0 && l2_eval_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, ind, l2_tok) != 0
+            # The target's cell is kept in a variable of its own while the value is evaluated -- a value that reads a path
+            # moves l2_pxp itself (`b\v: c\v` stored into c's cell) -- and put back for the store below.
+            l2_pw: 0 - 1
+            if: l2_prhs_lit = 0
+                l2_pw: l2_pw_n
+                l2_pw_n: l2_pw_n + 1
+                if: c.fprintf(l2_out, "%s@@: void l2_pw%d l2_pxp\n", ind, l2_pw) < 0
+                    return: 1
+                ---
+            # A number of another type has the store's conversion edge (OPUS-PATHCONV-20260929-10), as a write to an
+            # own field has: the receiver is called on the value and its result is stored (3: the call is emitted).
+            cst: 0
+            if: l2_prhs_lit = 0
+                cst: l2_convert_value_to(mi, l2_path_kind_ft(l2_pkind), stmt, stmt\as\frame, ind)
+            if: cst = 1
+                return: 1
+            if: cst = 2
+                return: l2_error(l2_src, stmt, "mixed numeric types (a conversion)")
+            if: l2_prhs_lit = 0 && cst != 3 && l2_eval_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, ind, l2_tok) != 0
+                return: 1
+            if: l2_pw >= 0 && c.fprintf(l2_out, "%sl2_pxp: l2_pw%d\n", ind, l2_pw) < 0
                 return: 1
             # A size_t assignment writes the addressed cell IN PLACE. A char
             # assignment REBINDS the field pointer cell to the cell of the new

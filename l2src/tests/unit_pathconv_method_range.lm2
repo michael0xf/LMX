@@ -1,0 +1,16 @@
+# The same through a method's field from outside, `M\s: n` (s a size_t of M, n -1): the receiver refuses, peek's
+# `convert`, uncaught -- R0 stops with status 3.
+fn: M () int
+    size_t: s 0U
+    s: 1U
+    return: 0
+end: M
+fn: peek () int
+    int: n 0
+    n: 0 - 1
+    M()
+    M\s: n
+    return: 7
+end: peek
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

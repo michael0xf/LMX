@@ -68,6 +68,12 @@ int: l2_for_cap 0
 @: int l2_for_nkid 0
 @: int l2_for_mi 0
 @: int l2_for_parent 0
+# 7b-3: the statement whose body entry k is -- its head names the body (`for`, `while`, `if`, `else`, `catch`); 0 for an
+# anonymous block, which has no name (l2_body_root).
+@@: LmP0Node l2_for_stmt 0
+# 7b-3: the source place of the statement being read, when one is (l2_here_at): what a body root sees before it.
+size_t: l2_here 0U
+int: l2_here_on 0
 int: l2_unit_base 0
 const: @: char l2_call_node 0
 # Set while one call is being written: 1 when a field path selected the exact
@@ -1125,7 +1131,11 @@ prototype:
     fn: l2_indent_reserve (int: need) int
     fn: l2_pub_free () int
     fn: l2_pub_prepare (const: @(char out_path)) int
-    fn: l2_for_add (const: @(LmP0Node node); int: mi; int: parent) int
+    fn: l2_for_add (const: @(LmP0Node node); int: mi; int: parent; const: @(LmP0Node owner)) int
+    fn: l2_here_at (const: @(LmP0Node n)) int
+    fn: l2_body_root (int: mi; const: @(char pd); size_t: off; size_t: len) int
+    fn: l2_body_named (int: mi; const: @(LmP0Text t)) int
+    fn: l2_body_head_word (const: @(LmP0Text t)) int
     fn: l2_for_find (const: @(LmP0Node node)) int
     fn: l2_for_reserve (int: need) int
     fn: l2_for_free () int
@@ -9153,7 +9163,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             field: l2_next_active(field\next)
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
-            if: l2_for_add(stmt, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(stmt) != 0
+            if: l2_for_add(stmt, mi, l2_for_find(l2_scope_host()), 0) < 0 || l2_scope_push(stmt) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
             if: l2_collect_decls(stmt\as\structure, mi, path, depth + 1, sn) != 0
                 l2_scope_pop()
@@ -9172,7 +9182,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
                 j: j + 1
             if: last = 0 || last\value = 0 || last\value\kind != c.LM_P0_NODE_STRUCTURE || last\value\as = 0
                 return: l2_error(path, stmt, "unsupported body")
-            if: l2_for_add(last\value, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(last\value) != 0
+            if: l2_for_add(last\value, mi, l2_for_find(l2_scope_host()), stmt) < 0 || l2_scope_push(last\value) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
             if: l2_collect_decls(last\value\as\structure, mi, path, depth + 1, sn) != 0
                 l2_scope_pop()
@@ -9182,7 +9192,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             if: nxt != 0 && l2_frame_head(nxt\value, "else")
                 if: nxt\value\as\frame\body = 0
                     return: l2_error(path, nxt\value, "unsupported body")
-                if: l2_for_add(nxt\value, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(nxt\value) != 0
+                if: l2_for_add(nxt\value, mi, l2_for_find(l2_scope_host()), nxt\value) < 0 || l2_scope_push(nxt\value) != 0
                     return: l2_alloc_or(path, nxt\value, "out of memory")
                 if: l2_collect_decls(nxt\value\as\frame\body, mi, path, depth + 1, sn) != 0
                     l2_scope_pop()
@@ -9204,7 +9214,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
                 j: j + 1
             if: last = 0 || last\value = 0 || last\value\kind != c.LM_P0_NODE_STRUCTURE || last\value\as = 0
                 return: l2_error(path, stmt, "unsupported body")
-            if: l2_for_add(last\value, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(last\value) != 0
+            if: l2_for_add(last\value, mi, l2_for_find(l2_scope_host()), stmt) < 0 || l2_scope_push(last\value) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
             if: l2_collect_decls(last\value\as\structure, mi, path, depth + 1, sn) != 0
                 l2_scope_pop()
@@ -9216,7 +9226,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             if: l2_for_cstyle(stmt) = 0
                 field: l2_next_active(field\next)
                 continue
-            if: l2_for_add(stmt, mi, l2_for_find(l2_scope_host())) < 0
+            if: l2_for_add(stmt, mi, l2_for_find(l2_scope_host()), stmt) < 0
                 return: l2_error(path, stmt, "out of memory")
             if: l2_scope_push(stmt) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
@@ -11663,7 +11673,10 @@ fn: l2_for_free () int
         l2_xfree((cast: (@: void) l2_for_mi))
     if: l2_for_parent != 0
         l2_xfree((cast: (@: void) l2_for_parent))
+    if: l2_for_stmt != 0
+        l2_xfree((cast: (@: void) l2_for_stmt))
     l2_for_node: 0
+    l2_for_stmt: 0
     l2_for_uchild: 0
     l2_for_nkid: 0
     l2_for_mi: 0
@@ -11683,6 +11696,7 @@ fn: l2_for_reserve (int: need) int
     @: int nk 0
     @: int nm 0
     @: int np 0
+    @@: LmP0Node ns 0
     int: i
     if: need < 0
         return: 1
@@ -11715,7 +11729,8 @@ fn: l2_for_reserve (int: need) int
     nk: (cast: (@: int) l2_xmalloc(ni))
     nm: (cast: (@: int) l2_xmalloc(ni))
     np: (cast: (@: int) l2_xmalloc(ni))
-    if: nn = 0 || nu = 0 || nk = 0 || nm = 0 || np = 0
+    ns: (cast: (@@: LmP0Node) l2_xmalloc(nb))
+    if: nn = 0 || nu = 0 || nk = 0 || nm = 0 || np = 0 || ns = 0
         if: nn != 0
             l2_xfree((cast: (@: void) nn))
         if: nu != 0
@@ -11726,8 +11741,11 @@ fn: l2_for_reserve (int: need) int
             l2_xfree((cast: (@: void) nm))
         if: np != 0
             l2_xfree((cast: (@: void) np))
+        if: ns != 0
+            l2_xfree((cast: (@: void) ns))
         return: 1
     memset((cast: (@: void) nn), 0, nb)
+    memset((cast: (@: void) ns), 0, nb)
     i: 0
     while: i < (cast: (int) cap)
         nu[i]: -1
@@ -11742,7 +11760,10 @@ fn: l2_for_reserve (int: need) int
         nk[i]: l2_for_nkid[i]
         nm[i]: l2_for_mi[i]
         np[i]: l2_for_parent[i]
+        ns[i]: l2_for_stmt[i]
         i: i + 1
+    if: l2_for_stmt != 0
+        l2_xfree((cast: (@: void) l2_for_stmt))
     if: l2_for_node != 0
         l2_xfree((cast: (@: void) l2_for_node))
         l2_xfree((cast: (@: void) l2_for_uchild))
@@ -11754,6 +11775,7 @@ fn: l2_for_reserve (int: need) int
     l2_for_nkid: nk
     l2_for_mi: nm
     l2_for_parent: np
+    l2_for_stmt: ns
     l2_for_cap: (cast: (int) cap)
 return: 0
 
@@ -11767,7 +11789,7 @@ fn: l2_for_find (const: @(LmP0Node node)) int
         i: i + 1
 return: -1
 
-fn: l2_for_add (const: @(LmP0Node node); int: mi; int: parent) int
+fn: l2_for_add (const: @(LmP0Node node); int: mi; int: parent; const: @(LmP0Node owner)) int
     int: i
     if: node = 0
         return: -1
@@ -11783,6 +11805,7 @@ fn: l2_for_add (const: @(LmP0Node node); int: mi; int: parent) int
     l2_for_nkid[l2_for_n]: 0
     l2_for_mi[l2_for_n]: mi
     l2_for_parent[l2_for_n]: parent
+    l2_for_stmt[l2_for_n]: (cast: (@: LmP0Node) owner)
     l2_for_n: l2_for_n + 1
 return: l2_for_n - 1
 
@@ -13778,7 +13801,7 @@ fn: l2_collect_catch (const: @(LmP0Node cf); int: mi; const: @(char path); int: 
     int: j
     ps: l2_catch_params(cf)
     hb: l2_catch_body(cf)
-    if: l2_for_add(cf, mi, l2_for_find(l2_scope_host())) < 0 || l2_scope_push(cf) != 0
+    if: l2_for_add(cf, mi, l2_for_find(l2_scope_host()), cf) < 0 || l2_scope_push(cf) != 0
         return: l2_alloc_or(path, cf, "out of memory")
     p: 0
     if: ps != 0
@@ -15274,6 +15297,58 @@ return: 0 - 1
 # from ni treated as an ordinary unit-level declaration (that read the
 # static declaration child, not the passed value: a formal root is a
 # value like an own field's load, not a name in the unit's own scope).
+# The statement being read (7b-3): its source place, for what a body root sees before it (l2_body_root).
+fn: l2_here_at (const: @(LmP0Node n)) int
+    if: n != 0 && n\span != 0
+        l2_here: n\span\offset
+        l2_here_on: 1
+    ---
+return: 0
+
+# A CONTROL BODY AS A PATH ROOT (7b-3; L2 §10: nested bodies are nested field-only Structures, `M\for\y` is the same
+# path; book "names": an unqualified name is the last occurrence; Q51: ordinary visibility is forward and down, access
+# from outside is to the place of declaration; Q52: nothing but declared fields).  A body is the field of its enclosing
+# body named by the head of its statement -- `for`, `while`, `if`, `else`, `catch` -- and a path root naming one is the
+# last such body of method mi visible here: its enclosing body is in scope (the method's own level, or a body on the
+# scope stack), and it is either on the scope stack itself (down: inside it) or written before the statement being read
+# (forward: after its `end:`).  An anonymous block has no head and so no name.  -1 when none.
+fn: l2_body_root (int: mi; const: @(char pd); size_t: off; size_t: len) int
+    int: k 0
+    int: best 0 - 1
+    int: pk
+    const: @: LmP0Node st
+    if: mi < 0 || pd = 0 || len = 0U
+        return: 0 - 1
+    while: k < l2_for_n
+        st: l2_for_stmt[k]
+        pk: l2_for_parent[k]
+        if: l2_for_mi[k] = mi && st != 0 && st\kind = c.LM_P0_NODE_FRAME && st\as != 0 && st\as\frame != 0 && st\as\frame\head != 0 && l2_name_is_seg(st\as\frame\head, pd, off, len) != 0 && (pk < 0 || l2_scope_has(l2_for_node[pk]) != 0) && (l2_scope_has(l2_for_node[k]) != 0 || l2_here_on = 0 || st\span = 0 || st\span\offset < l2_here)
+            best: k
+        k: k + 1
+    ---
+return: best
+
+# The body a path root `t` names in method mi here, or -1 (l2_body_root).
+fn: l2_body_named (int: mi; const: @(LmP0Text t)) int
+    if: t = 0 || t\data = 0
+        return: 0 - 1
+return: l2_body_root(mi, t\data, 0U, t\length)
+
+# Does `t` head some control body of the program -- a word a path may start with, as `node` is (l2_path_chain)?  Which
+# body it names is l2_body_root's to say where the path stands.
+fn: l2_body_head_word (const: @(LmP0Text t)) int
+    int: k 0
+    const: @: LmP0Node st
+    if: t = 0 || t\data = 0
+        return: 0
+    while: k < l2_for_n
+        st: l2_for_stmt[k]
+        if: st != 0 && st\kind = c.LM_P0_NODE_FRAME && st\as != 0 && st\as\frame != 0 && st\as\frame\head != 0 && l2_name_is_seg(st\as\frame\head, t\data, 0U, t\length) != 0
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
 fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     size_t: off 0U
     size_t: len 0U
@@ -15336,18 +15411,12 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
         \out_root: 0 - 2
         l2_uses_node_for_root: 1
         return: 0
-    if: len = 3U && memcmp(pd + off, "for", 3U) = 0
-        i: 0
-        fid: 0 - 1
-        while: i < l2_scope_n
-            if: l2_frame_head(l2_scope_at[i], "for") != 0
-                fid: l2_for_find(l2_scope_at[i])
-            i: i + 1
-        if: fid >= 0
-            \out_root: fid
-            l2_uses_node_for_root: 1
-            return: 0
-        ---
+    # A control body (7b-3, l2_body_root): `for`, `while`, `if`, `else`, `catch` -- inside it, or after its `end:`.
+    fid: l2_body_root(l2_cur_mi, pd, off, len)
+    if: fid >= 0
+        \out_root: fid
+        l2_uses_node_for_root: 1
+        return: 0
     # D-28 (steps/defects.md, author's reading A): a formal parameter is
     # the nearest lexical binding for its own name and must shadow a
     # unit-level named Structure sharing that spelling -- tried and
@@ -15743,7 +15812,9 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     # layout pass that fills it, never at check time).
     if: oi < 0 && root = 0 - 2 && c.fprintf(l2_out, "%sl2_pst: node\n", ind) < 0
         return: 1
-    if: oi < 0 && root >= 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(self, %uU)\n%sif: l2_pst = 0\n", ind, (cast: (unsigned) l2_for_uchild[root]), ind) < 0
+    # 7b-3: a control body root is the prologue's handle of that body (l2_h<k>: self, then each enclosing body) -- at any
+    # depth, inside the body or after its `end:`.
+    if: oi < 0 && root >= 0 && c.fprintf(l2_out, "%sl2_pst: l2_h%d\n%sif: l2_pst = 0\n", ind, root, ind) < 0
         return: 1
     if: oi < 0 && root >= 0 && l2_emit_path_bail(mi, ind) != 0
         return: 1
@@ -15861,7 +15932,7 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
     # A segment is a name: `merged\[N]x` is the occurrence branch's, not this one's.
     if: mi < 0 || left = 0 || right = 0 || left\data = 0 || right\data = 0 || l2_ident(right) = 0
         return: 0 - 1
-    if: l2_own_find(mi, left) < 0 && l2_nsty_of_name(mi, left) < 0 && l2_mres_find(left) < 0 && l2_text_eq(left, "node") = 0 && l2_text_eq(left, "for") = 0
+    if: l2_own_find(mi, left) < 0 && l2_nsty_of_name(mi, left) < 0 && l2_mres_find(left) < 0 && l2_text_eq(left, "node") = 0 && l2_body_named(mi, left) < 0
         return: 0 - 1
     if: left\length + right\length + 2U > 256U
         return: 1
@@ -15948,8 +16019,9 @@ fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) in
     \out_n: 0U
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0
         return: 0
-    # `node` and `for` are reserved -- no identifiers -- and roots of a path all the same (l2_path_chain_check).
-    if: l2_ident(f\value\as\atom) = 0 && l2_text_eq(f\value\as\atom, "node") = 0 && l2_text_eq(f\value\as\atom, "for") = 0
+    # `node` and a control body's head (`for`, `while`, `if`, `else`, `catch`) are reserved -- no identifiers -- and roots
+    # of a path all the same (l2_path_chain_check; which body, l2_body_root).
+    if: l2_ident(f\value\as\atom) = 0 && l2_text_eq(f\value\as\atom, "node") = 0 && l2_body_head_word(f\value\as\atom) = 0
         return: 0
     if: f\value\as\atom\length + 1U > cap
         return: 0
@@ -15983,7 +16055,7 @@ fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); s
     \out_kind: 0 - 1
     if: mi < 0 || root = 0 || root\data = 0 || buf = 0
         return: 0 - 1
-    if: l2_own_find(mi, root) < 0 && l2_nsty_of_name(mi, root) < 0 && l2_mres_find(root) < 0 && l2_text_eq(root, "node") = 0 && l2_text_eq(root, "for") = 0
+    if: l2_own_find(mi, root) < 0 && l2_nsty_of_name(mi, root) < 0 && l2_mres_find(root) < 0 && l2_text_eq(root, "node") = 0 && l2_body_named(mi, root) < 0
         return: 0 - 1
     \out_kind: l2_path_kind(buf, n, @ leaf_mi)
     if: \out_kind < 0
@@ -18350,6 +18422,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         stmt: field\value
         l2_vis_stmt(mi, stmt)
         l2_q_at: stmt
+        l2_here_at(stmt)
         l2_q_path: path
         # A `table:` with no `source` first builds a table when the program runs (REVIEW 7dad13b, answer 1):
         # that receiver's run-time body is not built yet (§8; it was refused in an assignment's words).
@@ -21942,6 +22015,15 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
         path[4]: 0 - 1
         path[5]: 1
         rooted: 1
+    # A control body (7b-3, l2_body_root): the body its statement left in this activation's data (l2_rw_host_at); its
+    # first name is a field declared there, read OF and written PUT_OF -- the graph, never its working value.
+    if: rooted = 0 && l2_rw_mi >= 0 && l2_body_root(l2_rw_mi, l2_rw_seg\data, 0U, l2_rw_seg\length) >= 0
+        path[0]: 9
+        path[1]: l2_body_root(l2_rw_mi, l2_rw_seg\data, 0U, l2_rw_seg\length)
+        path[4]: 0 - 1
+        path[5]: 1
+        rooted: 1
+        ni: 0 - 1
     if: rooted = 0
         ni: l2_ns_find(l2_rw_seg)
         if: ni < 0 && l2_find_method(l2_rw_seg) >= 0 && l2_find_method(l2_rw_seg) != l2_e
@@ -21975,15 +22057,22 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
             if: say != 0
                 l2_rw_refuse(node, "a field path")
             return: 1
-        if: n = 0 && path[0] = 8
-            if: l2_node_seg(l2_rw_mi, t\data, b, i - b, @ slot, @ kind, @ ent) != 0
-                slot: 0 - 1
+        if: n = 0 && path[0] = 9
+            slot: l2_for_own_seg(path[1], t\data, b, i - b, @ kind, @ ent)
+            if: slot >= 0
+                slot: l2_own_fchild[slot]
             ---
         else:
-            if: n = 0 && res >= 0
-                slot: l2_mrs_slot_named(res, t\data, b, i - b, @ kind, @ ent)
+            if: n = 0 && path[0] = 8
+                if: l2_node_seg(l2_rw_mi, t\data, b, i - b, @ slot, @ kind, @ ent) != 0
+                    slot: 0 - 1
+                ---
             else:
-                slot: l2_ns_slot_named(ni, t\data, b, i - b, @ kind, @ ent)
+                if: n = 0 && res >= 0
+                    slot: l2_mrs_slot_named(res, t\data, b, i - b, @ kind, @ ent)
+                else:
+                    slot: l2_ns_slot_named(ni, t\data, b, i - b, @ kind, @ ent)
+                ---
             ---
         ---
         last: (cast: (int) (i >= t\length))
@@ -22066,6 +22155,9 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # `node`: the walker's NODE.
     if: level = 0 && path[0] = 8
         return: l2_rw_frame(parent, "LMX_WALK_OP_NODE", 1, out)
+    # A control body (7b-3): the body in this activation's data.
+    if: level = 0 && path[0] = 9
+        return: l2_rw_host_at(parent, path[1], out)
     # A named Structure, a method's occurrence (-196) or a qualified branch (-196) is a unit child:
     # AT(unit, its child).
     if: level = 0
@@ -25487,6 +25579,7 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: int made) int
             next: l2_next_active(field\next)
             field: next
             continue
+        l2_here_at(field\value)
         if: l2_rw_stmt(field, @ next, into, base + \made, @ one) != 0
             return: 1
         if: l2_rw_pre_n > pbase && l2_rw_pre_place(into, base + \made, one, pbase, l2_rw_pre_n - pbase) != 0
@@ -29686,6 +29779,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     while: field != 0 && field != stop
         stmt: field\value
         l2_vis_stmt(mi, stmt)
+        l2_here_at(stmt)
         pd: 1
         if: l2_frame_head(stmt, "return") && need_cut != 0 && c.fprintf(l2_out, "%s---\n", ind) < 0
             return: 1

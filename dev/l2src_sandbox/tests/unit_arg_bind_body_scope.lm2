@@ -1,12 +1,10 @@
-# D-79 (author): a bare assignment does not create a field of the body it sits in.
-# The first write binds the formal as the method's cell (L3 §12), and a later write
-# from inside `if` writes that same cell. A declaration in the body is the only
-# thing that creates the body's field. CORE.md §3.
-# - scoped(3, 1): `x: 7` binds the method cell. inner is 7, and after the body x
-#   is still that cell: 7. 77.
-# - nested(3): `int: y` carries 3 and `y: y + 1` makes the method cell 4. Inside
-#   the if `y: y + 10` writes that same cell, so in2 is 14 and y after the body
-#   is 14. 1414.
+# D-79 (author): a bare assignment does not create a field of the body it sits in -- nor of any body (bafca4c: an
+# assignment is not a declaration); only a declaration makes a field.  CORE.md §3.
+# - scoped(3, 1): `x: 7` inside `if` writes the argument's own value, the parameter -- no field.  inner is 7, and
+#   after the body x is still that parameter: 7.  77.
+# - nested(3): `int: y` is the declaration that makes y a field: it takes the argument's 3 into y's working value
+#   (7b-2), and `y: y + 1` makes it 4.  Inside the if `y: y + 10` writes that same field, so in2 is 14 and y after
+#   the body is 14.  1414.
 # Success is 7 when both hold.
 fn: scoped (int: x; int: c) int
     int: inner 0

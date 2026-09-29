@@ -447,6 +447,27 @@ fn: lmx_walk_head (@: LmxWalkFrame f; @: Lmx s) int
         return: c.LMX_WALK_OP_UNKNOWN
 return: c.LMX_WALK_OP_NONE
 
+# §7b, book §12 (the `9 0` order): an actual argument is a typed temporary, evaluated before the publication that
+# precedes the transfer (CALL, PRIM_PUB).  An explicit graph read -- AT, OF, DEREF -- gives a reference to the cell
+# itself, which that publication may write; the number it reads is taken now into the operand's own temporary `dest`,
+# as an arithmetic result is (lmx_walk_arith_out: an int destination-passing, a wider number a fresh cell).  Anything
+# else -- a working value, a literal, a result, a Structure, a reference -- stays what it is.
+fn: lmx_walk_arg_value (@: LmxWalkFrame f; @: void node; @: void dest; @@: void ref) int
+    int: op
+    int: ty
+    size_t: v 0U
+    if: f = 0 || node = 0 || dest = 0 || ref = 0 || ref[0] = 0
+        return: c.LMX_WALK_OK
+    op: lmx_walk_op(f, node)
+    if: op != c.LMX_WALK_OP_AT && op != c.LMX_WALK_OP_OF && op != c.LMX_WALK_OP_DEREF
+        return: c.LMX_WALK_OK
+    ty: lmx_walk_numeric_type(f\arena, ref[0])
+    if: ty = 0
+        return: c.LMX_WALK_OK
+    if: lmx_walk_load_numeric(f\arena, ref[0], @ v) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+return: lmx_walk_arith_out(f, dest, ty, v, ref)
+
 fn: lmx_walk_node (@: LmxWalkFrame f; @: void node) int
     int: k
     if: f = 0 || node = 0
@@ -1343,6 +1364,9 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
             refs[i]: (cast: (@: void) child)
         else:
             status: lmx_walk_eval(f, (cast: (@: void) child), (cast: (@: void) (cells + i)), refs + i)
+            if: status = c.LMX_WALK_OK
+                status: lmx_walk_arg_value(f, (cast: (@: void) child), (cast: (@: void) (cells + i)), refs + i)
+            ---
         ---
         i: i + 1U
     ---
@@ -1486,6 +1510,9 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
         else:
             if: child != 0
                 status: lmx_walk_eval(f, child, (cast: (@: void) (cells + i)), refs + i)
+                if: status = c.LMX_WALK_OK && lmx_walk_node(f, (cast: (@: void) code)) = c.LMX_WALK_OP_PRIM_PUB
+                    status: lmx_walk_arg_value(f, child, (cast: (@: void) (cells + i)), refs + i)
+                ---
             ---
         ---
         i: i + 1U

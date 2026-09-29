@@ -2163,6 +2163,35 @@ $fixtures = @(
         Absent = @(); Debt = @('l2_q0: (l2_p0_0)') },
     [pscustomobject]@{ Name = 'unit_walk_arg_decl_publish.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    # 7b-3 WITNESSES (ticket OPUS-7B3-20260929-02; book §12 and "names"; L2 §10 `M\for\y`; Q51; Q52): one path rule for
+    # a control body -- the field of its enclosing body named by its statement's head; a path root naming one is the
+    # last such body visible where the path stands (inside it, or after its `end:`).  unit_body_path_for: the book's
+    # program -- pair receives 9 0 (the actuals before the call's checkpoint), a later for\j 9, `for\j: 42` the cell;
+    # native only (the walk runs no `for`).  Pins: the root is the prologue's handle of the body.
+    [pscustomobject]@{ Name = 'unit_body_path_for.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('l2_pst: l2_h0') },
+    # unit_body_path_while: the same order walked too (test walked: the Absent pin), plus position (loop B written
+    # later is not visible before it) and depth (a loop inside an `if` body).  The walked actuals are typed temporaries
+    # before the call's checkpoint (lmx_walk_arg_value): the walk printed 9 9 before 7b-3.
+    [pscustomobject]@{ Name = 'unit_body_path_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_body_path_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)'); Debt = @() },
+    # unit_body_path_deep: a body root under a deeper path -- while\pt\x as a value and as a call's argument, where P0
+    # gives the atoms and l2_path_chain admits a body head as it admits `node`.  Native only (a Structure field in a
+    # nested body keeps a method out of the walk).
+    [pscustomobject]@{ Name = 'unit_body_path_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # The negatives: the bare j after `end: for` is not j outside its body (Q51) -- refused where it stands; a path to a
+    # field the body does not declare is refused -- nothing makes one (Q52).  Both modes.
+    [pscustomobject]@{ Name = 'unit_body_path_bare_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_body_path_bare_refused.lm2:11:13: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_body_path_bare_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_body_path_bare_refused.lm2:11:13: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_body_path_absent_refused.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_body_path_absent_refused.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates
@@ -3455,8 +3484,7 @@ $fixtures = @(
     # 7b-2 (by name; ticket OPUS-7B2-20260929-01): the declaration makes the argument's same-name field a declared
     # field with a working value -- BEFORE: poked parameter 7 carried, `ba: 1` published, the graph write 100 changes
     # the cell only: BEFORE 1 100; AFTER: `@af` is the cell, the working value 1 stays: AFTER 1 100 (both were
-    # 100 100 in place); NONE lines unchanged.  The fixture's header still states the c3b-2 model (outside this
-    # ticket's file scope).  Pins: the carry into the working value, and `@af` after it is the cell.
+    # 100 100 in place); NONE lines unchanged.  Pins: the carry into the working value, and `@af` after it is the cell.
     [pscustomobject]@{ Name = 'unit_occ_sticky_selector.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Says = @('BEFORE 1 100', 'AFTER 1 100', 'NONE 7 100', 'NONE 7 100', 'NONE+ 1 1');
@@ -3472,9 +3500,8 @@ $fixtures = @(
         Debt = @('l2_t3: l2_m0(l2_c2\parent, l2_c2, (cast: (@: int) l2_q0_from[0]))', 'l2_t1: l2_m1(l2_c0\parent, l2_c0, (cast: (@: int) l2_q1_from[0]))', 'if: l2_q0 != 2') },
     # D-79, read under bafca4c: a bare assignment creates no field -- scoped's `x: 7` inside `if` writes the parameter,
     # so after the body x is 7: 77.  nested's `int: y` is the declaration that makes y a field (7b-2: carried into the
-    # working value); `y: y + 10` inside `if` writes that same field: 1414.  Success is exit 7.  The fixture's header
-    # still states the c3b-2 binding by a first write (outside this ticket's file scope).  7b-2: y's field has a working
-    # value now (the dirty flags exist; Absent keeps _sticky only).
+    # working value); `y: y + 10` inside `if` writes that same field: 1414.  Success is exit 7.  7b-2: y's field has a
+    # working value now (the dirty flags exist; Absent keeps _sticky only).
     [pscustomobject]@{ Name = 'unit_arg_bind_body_scope.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('_sticky'); Debt = @('l2_q2: (l2_p1_0)') },
     # THE EXECUTION PAIR (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit 2): every activation runs over a

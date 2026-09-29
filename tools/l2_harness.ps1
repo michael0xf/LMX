@@ -2404,6 +2404,18 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_empty_admit_typed_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 74; WalkMethods = $true;
         Absent = @(); Debt = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)') },
+    # OPUS-Q54-CONTINUE-20260929-14 slice 2a: an assignment to an existing named Structure is the assignment with
+    # admission, by name (Q39, D-105), in a method as at the root -- a field missing by name or kind is refused by
+    # admission; a number is a value of another type; a Structure Model admits is not rebound yet (the reads through
+    # the correspondence, D-105): a located gap, pinned.
+    [pscustomobject]@{ Name = 'unit_assign_named_lacks_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_assign_named_lacks_method.lm2:7:5: the assigned Structure lacks a field of the named Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_assign_named_kind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_assign_named_kind_refused.lm2:5:1: the assigned Structure lacks a field of the named Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_assign_named_not_rebound.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_assign_named_not_rebound.lm2:7:1: a Structure assigned to a named Structure is not rebound yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_assign_named_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_assign_named_number_refused.lm2:5:1: assignment value has incompatible type'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates
@@ -2777,10 +2789,11 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
-    # OPUS-Q54-TRAILER-20260929-13, re-expected by name: a second `Model:` meets the binding the first declared -- by
-    # general resolution the assignment, refused as one (was "duplicate named Structure", the end:-closed shape).
+    # OPUS-Q54-CONTINUE-20260929-14, re-expected by the rule: a second `Model:` meets the binding the first declared --
+    # the assignment of that Structure with admission, by name (Q39, D-105) -- and Model's field value has none of that
+    # name in it: refused by admission (was "duplicate named Structure", then "assignment target must be...").
     [pscustomobject]@{ Name = 'unit_duplicate_named_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+        Needle = 'unit_duplicate_named_struct_refused.lm2:9:1: the assigned Structure lacks a field of the named Structure'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

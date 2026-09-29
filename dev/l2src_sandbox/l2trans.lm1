@@ -899,6 +899,9 @@ prototype:
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_own_self_typed (int: oi) int
+    fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
+    fn: l2_lit_admits (int: t; const: @(LmP0Structure body)) int
+    fn: l2_value_admits (int: t; const: @(LmP0Structure body); int: mi) int
     fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: LmP0Text out_model) int
     fn: l2_sender_text () @: LmP0Text
     fn: l2_payload_text () @: LmP0Text
@@ -8533,6 +8536,77 @@ fn: l2_own_self_typed (int: oi) int
     if: d\as\frame\trailer != 0 || d\as\frame\body\trailer != 0 || l2_count_active(d\as\frame\body) != 0
         return: 0
 return: (cast: (int) (l2_text_same(d\as\frame\head, l2_own_name[oi]) != 0))
+
+# The kind a field declaration of a Structure literal gives its field, in l2_take_ns_body's codes for the number
+# leaves -- size_t 0, char 1, int 7, unsigned 8, ulong 9 -- or -1 for any other declaration.
+fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
+    if: l2_frame_head(fld, "size_t")
+        return: 0
+    if: l2_frame_head(fld, "char")
+        return: 1
+    if: l2_frame_head(fld, "int")
+        return: 7
+    if: l2_frame_head(fld, "unsigned")
+        return: 8
+    if: l2_frame_head(fld, "ulong")
+        return: 9
+return: 0 - 1
+
+# A Structure literal -- the field declarations of `body` -- assigned to the named Structure t is admitted to t by
+# name (book §9 :561; the author's Q39, D-105: the first, heavy admission is by name): 0 when every field of t has
+# exactly one field of that name and kind in the literal, 1 when one has none or two -- the admission refuses -- and
+# 2 when a field of t is of a kind the literal's number declarations do not name (a Structure, an Array, a
+# reference): not decided here.
+fn: l2_lit_admits (int: t; const: @(LmP0Structure body)) int
+    int: k 0
+    int: hits
+    @: LmP0Field f
+    @: LmP0Field g
+    if: t < 0 || body = 0
+        return: 2
+    while: k < l2_nsf_n
+        if: l2_nsf_owner[k] = t && l2_nsf_kind[k] != 0 && l2_nsf_kind[k] != 1 && l2_nsf_kind[k] != 7 && l2_nsf_kind[k] != 8 && l2_nsf_kind[k] != 9
+            return: 2
+        hits: 0
+        f: l2_next_active(body\first_field)
+        while: l2_nsf_owner[k] = t && f != 0
+            g: 0
+            if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\body != 0 && l2_lit_field_kind(f\value) = l2_nsf_kind[k]
+                g: l2_next_active(f\value\as\frame\body\first_field)
+            if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_nsf_fname[k] != 0 && l2_text_same(g\value\as\atom, l2_nsf_fname[k]) != 0
+                hits: hits + 1
+            f: l2_next_active(f\next)
+        ---
+        if: l2_nsf_owner[k] = t && hits != 1
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
+# One value -- the tail is one value (l2_tail_is_structure = 0) -- assigned to the named Structure t: 3 when it is no
+# Structure (its type is not a graph's: a number, a text), 1 when it is a Structure of a declared named type a field
+# of t has no field of that name and kind in (the admission by name refuses: l2_d105_table), else 0.
+fn: l2_value_admits (int: t; const: @(LmP0Structure body); int: mi) int
+    @: LmP0Field f
+    int: vty 0
+    int: cand 0 - 1
+    int: n 0
+    []: int map 64
+    if: body = 0
+        return: 0
+    f: l2_next_active(body\first_field)
+    if: f = 0 || f\value = 0
+        return: 0
+    if: l2_colon_value_ty(f\value, mi, @ vty) = 0 && l2_colon_is_graph_ty(vty) = 0
+        return: 3
+    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
+        cand: l2_graph_nsty(mi, f\value\as\atom)
+        if: cand < 0 && l2_ns_find(f\value\as\atom) >= 0 && l2_ns_parent[l2_ns_find(f\value\as\atom)] < 0 && l2_ns_eternal[l2_ns_find(f\value\as\atom)] < 0
+            cand: l2_ns_find(f\value\as\atom)
+    ---
+    if: cand >= 0 && cand != t && l2_d105_table(cand, t, map, 64, @ n, 0) = 1
+        return: 1
+return: 0
 
 # receiveMessage: m / receiveMessage: m Model (author, Q10, 2026-09-23; the
 # two-name form, FABLE-SONNET-SEND-REF-20260925-172 commit 2) -- the general
@@ -19295,6 +19369,21 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # that head already has a typed mutable binding.  In particular,
         # `arg: 7` must not silently invent arg; the graph-construction role was
         # normalized to an explicit merge before reaching this check.
+        # An assignment to an existing named Structure T -- `T: value`, `T:` + fields -- is the assignment with
+        # admission (book §9 :561), by name (Q39, D-105).  A value that is no Structure is one of another type; a
+        # Structure a field of T has no field of that name and kind in is refused by admission (a literal:
+        # l2_lit_admits; a value typed by a named Structure: l2_value_admits).  A Structure T admits is not
+        # rebound yet: T's field reads would have to go through the correspondence (D-105), which a named
+        # Structure's reads do not do -- a located gap, not the claim that T is no assignable binding.  (`T()` is
+        # the empty Structure's, above.)
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
+            if: l2_tail_is_structure(stmt\as\frame) != 0 && l2_ns_parent[l2_ns_find(stmt\as\frame\head)] < 0 && l2_ns_eternal[l2_ns_find(stmt\as\frame\head)] < 0 && l2_lit_admits(l2_ns_find(stmt\as\frame\head), stmt\as\frame\body) = 1
+                return: l2_error(path, stmt, "the assigned Structure lacks a field of the named Structure")
+            if: l2_tail_is_structure(stmt\as\frame) = 0 && l2_value_admits(l2_ns_find(stmt\as\frame\head), stmt\as\frame\body, mi) = 3
+                return: l2_error(path, stmt, "assignment value has incompatible type")
+            if: l2_tail_is_structure(stmt\as\frame) = 0 && l2_ns_parent[l2_ns_find(stmt\as\frame\head)] < 0 && l2_ns_eternal[l2_ns_find(stmt\as\frame\head)] < 0 && l2_value_admits(l2_ns_find(stmt\as\frame\head), stmt\as\frame\body, mi) = 1
+                return: l2_error(path, stmt, "the assigned Structure lacks a field of the named Structure")
+            return: l2_error(path, stmt, "a Structure assigned to a named Structure is not rebound yet")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0
             return: l2_error(path, stmt, "assignment target must be a declared typed mutable value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_colon_check_assignment(stmt, mi, path) != 0

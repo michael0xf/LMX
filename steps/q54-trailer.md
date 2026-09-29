@@ -195,3 +195,45 @@ names lmx_walk_admit»; пины проверяются до запуска, п�
 Остаётся (срез 2): присваивание Structure с полями и объявление `S:` + поля в методе. Второе `Model:` + `other` в
 `unit_duplicate_named_struct_refused` — присваивание с допуском, а не «assignment target must be…»; `(): result` из
 книги — «unsupported body». Обоим нужно построение Structure с полями в операторе.
+
+## 7. Срез 2a: присваивание существующей именованной Structure — по правилу
+
+Замер (`4d8860c`): существующая именованная Structure — не цель присваивания ни для какого значения, кроме пустой
+Structure. `Model:` + поля, `Model: (поля)`, `Model: R` (R — результат merge) и `Model: 5` отказаны одинаково:
+«assignment target must be a declared typed mutable value». Это утверждение ложно: по правилу существующая
+не-callable привязка получает присваивание с допуском (книга §9 :561).
+
+Правило в трансляторе:
+- допуск — по имени (Q39, D-105: первый, тяжёлый `implements` — по имени). Позиционный `lmx_runtime_implements`
+  («the legacy positional RuntimeImplements walk is not that operation», `l2_colon_check_assignment`) не годится:
+  `{other}` прошёл бы как `{value}`;
+- литерал Structure (`l2_lit_admits`): у каждого поля Model — ровно одно поле того же имени и вида (size_t, char,
+  int, unsigned, ulong); иначе допуск отказывает — «the assigned Structure lacks a field of the named Structure»;
+- одно значение (`l2_value_admits`): не Structure — «assignment value has incompatible type»; Structure
+  объявленного именованного типа — по той же таблице D-105 (`l2_d105_table`);
+- допущенная Structure ещё не перепривязывается — «a Structure assigned to a named Structure is not rebound
+  yet». Причина: чтения полей Model (`Model\value` в обходе корня — `OF` без типа, прямой слот) должны идти через
+  соответствие допущенного значения (D-105), а у именованной Structure они так не идут. Это названный пробел, а не
+  утверждение, что Model — не привязка.
+
+Одно правило в корне и в методе (проверка общая). Свидетели (отказ транслятора, оба режима):
+- `unit_duplicate_named_struct_refused` (переожидан по правилу), `unit_assign_named_lacks_method` — нет поля value:
+  отказ допуска;
+- `unit_assign_named_kind_refused` — поле value, но int: отказ допуска;
+- `unit_assign_named_number_refused` — число: значение другого типа;
+- `unit_assign_named_not_rebound` — `{value 5U}`: допущено, пробел назван.
+
+Корпус `4d8860c` → срез 2a: 1133 файла, 2266 трансляций, 2264 тождественны; исход изменился только у
+`unit_duplicate_named_struct_refused`.
+
+Мутанты:
+- A1 — допуск без имени: два отказа допуска стали «not rebound yet»;
+- A2 — без вида: `int value` прошёл;
+- A3 — ветка правила выключена: все пять — прежнее «assignment target must be…»;
+- A4 — число не отказано: «not rebound yet».
+
+Вопрос автору (не решён правилами). `Model: X` при существующем X: книга §9 делает `Model: fresh` объявлением
+только при отсутствующем fresh, а после объявления — присваиванием с допуском. Q24 допускает повторное
+типизированное объявление. Транслятор читает `Model: X` как объявление X типа Model всегда
+(`l2_colon_decl_shape` не спрашивает, есть ли X). А `l2_unit_declares` засчитывает это позднее объявление и
+раннему `X:` + поля: оно перестаёт быть объявлением и отказано («assignment value has unknown type» в строке `X:`).

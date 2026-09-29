@@ -3177,6 +3177,16 @@ fn: l2_check_return_literal (int: mi; const: @(LmP0Structure body); const: @(cha
         return: 0
 return: l2_check_literal_kind(arg\value\as\atom, kind, path, at)
 
+# The condition of the postcondition loop an anonymous block is -- its `until:` trailer's Structure -- or 0.  Book §13:
+# «Закрывающий `until` задаёт проверку после тела»: the body at least once, then the condition, the loop ending when it
+# holds; the block is an ordinary control body of the enclosing activation (the author, Q54; OPUS-Q54-TRAILER).
+fn: l2_block_until (const: @(LmP0Node stmt)) @: LmP0Structure
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_STRUCTURE || stmt\as = 0 || stmt\as\structure = 0 || stmt\as\structure\trailer = 0
+        return: 0
+    if: stmt\as\structure\trailer\spelling = 0 || l2_text_eq(stmt\as\structure\trailer\spelling, "until") = 0
+        return: 0
+return: stmt\as\structure\trailer\body
+
 fn: l2_end_named (const: @(LmP0Frame frame); const: @(char name)) int
     @: LmP0Field field
     if: frame = 0 || frame\trailer = 0
@@ -9722,11 +9732,15 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: l2_mad_on(mi) != 0 && l2_frame_head(stmt, "fn") != 0
             field: l2_next_active(field\next)
             continue
-        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K).
+        # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K); a closing `until` reads
+        # its condition in the block's scope, after the body (l2_block_until).
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
             if: l2_scope_push(stmt) != 0
                 return: 1
             if: l2_scan_body(stmt\as\structure, mi, seen) != 0
+                l2_scope_pop()
+                return: 1
+            if: l2_block_until(stmt) != 0 && l2_scan_fields(l2_block_until(stmt)\first_field, l2_count_active(l2_block_until(stmt)), mi, seen) != 0
                 l2_scope_pop()
                 return: 1
             l2_scope_pop()
@@ -18785,16 +18799,27 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_skip_span(field, n)
             continue
         # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K);
-        # `()` is an empty one, with nothing to run.
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_count_active(stmt\as\structure) = 0
+        # `()` is an empty one, with nothing to run.  One closed by `until` is a loop: its body may break and
+        # continue, and its condition is checked in its scope (l2_block_until).
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_count_active(stmt\as\structure) = 0 && l2_block_until(stmt) = 0
             field: l2_next_active(field\next)
             continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0
             if: l2_scope_push(stmt) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
+            if: l2_block_until(stmt) != 0
+                l2_loop_depth: l2_loop_depth + 1
             if: l2_check_body(stmt\as\structure, mi, path, depth + 1) != 0
+                if: l2_block_until(stmt) != 0
+                    l2_loop_depth: l2_loop_depth - 1
                 l2_scope_pop()
                 return: 1
+            if: l2_block_until(stmt) != 0
+                l2_loop_depth: l2_loop_depth - 1
+                if: l2_check_fields(l2_block_until(stmt)\first_field, l2_count_active(l2_block_until(stmt)), mi, path, stmt) != 0
+                    l2_scope_pop()
+                    return: 1
+                ---
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
@@ -25554,6 +25579,26 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # l2_emit_stmts): a step IF(LIT 1, body), the if role running a plain body.  One with nothing
     # to run (l2_body_inert) makes no step.
     if: stmt\kind = c.LM_P0_NODE_STRUCTURE
+        # One closed by `until` (l2_block_until) is the walker's UNTIL: the body first, then the condition, in the block's
+        # scope; its body may break and continue.
+        if: l2_block_until(stmt) != 0
+            if: l2_rw_frame(into, "LMX_WALK_OP_UNTIL", 3, @ node) != 0 || l2_rw_enter(stmt, @ bsave) != 0
+                return: 1
+            l2_rw_loops: l2_rw_loops + 1
+            if: l2_rw_body(stmt\as\structure\first_field, node, 2) != 0
+                l2_rw_loops: l2_rw_loops - 1
+                l2_rw_leave(bsave)
+                return: 1
+            l2_rw_loops: l2_rw_loops - 1
+            if: l2_rw_expr(l2_block_until(stmt)\first_field, l2_count_active(l2_block_until(stmt)), node, @ t) != 0 || l2_rw_put(node, 1, t) != 0
+                l2_rw_leave(bsave)
+                return: 1
+            if: l2_rw_leave(bsave) != 0
+                return: 1
+            \made: 1
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+                return: 1
+            return: 0
         if: stmt\as = 0 || stmt\as\structure = 0 || l2_body_inert(stmt\as\structure, l2_rw_mi) != 0
             return: 0
         if: l2_rw_frame(into, "LMX_WALK_OP_IF", 3, @ node) != 0 || l2_rw_lit(node, 1, @ t) != 0 || l2_rw_put(node, 1, t) != 0
@@ -30183,6 +30228,48 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K); one
         # with nothing to run (`()`, `(2 + 2)`: l2_body_inert) emits nothing -- its graph
         # Structure is built like every control body's, and an L1 `if:` needs a body.
+        # A block closed by `until` (l2_block_until) is a postcondition loop: `while: keep` whose later turns begin with
+        # the condition -- the first turn skips it (first), so the body runs at least once and a `continue` goes to the
+        # condition -- and whose body runs while keep holds; the condition sees the block's fields (its scope).
+        if: l2_block_until(stmt) != 0
+            wkeep[0]: 0
+            wcond[0]: 0
+            wfirst[0]: 0
+            if: l2_bump_ind(deep, @ wdeep) != 0
+                return: 1
+            if: l2_new_temp(ind, wkeep) != 0 || c.fprintf(l2_out, "%s%s: 1\n", ind, wkeep) < 0
+                return: 1
+            if: l2_new_temp(ind, wfirst) != 0 || c.fprintf(l2_out, "%s%s: 1\n", ind, wfirst) < 0
+                return: 1
+            if: l2_new_temp(ind, wcond) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%swhile: %s\n%sif: %s = 0\n", ind, wkeep, deep, wfirst) < 0
+                return: 1
+            if: l2_scope_push(stmt) != 0
+                return: 1
+            if: l2_eval_cond(l2_block_until(stmt)\first_field, l2_count_active(l2_block_until(stmt)), mi, wdeep, wcond) != 0
+                l2_scope_pop()
+                return: 1
+            if: c.fprintf(l2_out, "%sif: %s != 0\n%s    %s: 0\n%s---\n%s%s: 0\n%sif: %s\n", wdeep, wcond, wdeep, wkeep, wdeep, deep, wfirst, deep, wkeep) < 0
+                l2_scope_pop()
+                return: 1
+            if: l2_emit_poll(mi, wdeep) != 0
+                l2_scope_pop()
+                return: 1
+            l2_loop_depth: l2_loop_depth + 1
+            if: l2_lp_push(0, 0 - 1) != 0 || l2_emit_body(stmt\as\structure, mi, wdeep) != 0
+                l2_loop_depth: l2_loop_depth - 1
+                l2_scope_pop()
+                return: 1
+            l2_lp_pop()
+            l2_loop_depth: l2_loop_depth - 1
+            l2_scope_pop()
+            if: c.fprintf(l2_out, "%send: while\n", ind) < 0
+                return: 1
+            if: l2_emit_loop_exit(0 - 1, ind) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_STRUCTURE && stmt\as != 0 && stmt\as\structure != 0 && l2_body_inert(stmt\as\structure, mi) != 0
             field: l2_next_active(field\next)
             continue

@@ -2061,6 +2061,36 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         return: c.LMX_WALK_BREAK
     if: op = c.LMX_WALK_OP_CONTINUE
         return: c.LMX_WALK_CONTINUE
+    # [until, cond, body]: the body first, then the condition; the loop ends when it holds.
+    if: op = c.LMX_WALK_OP_UNTIL
+        while: going != 0
+            status: lmx_walk_body(f, lmx_arena_ref_struct(code, 2U), 0U)
+            if: status = c.LMX_WALK_CONTINUE
+                status: c.LMX_WALK_OK
+            ---
+            if: status = c.LMX_WALK_BREAK
+                status: c.LMX_WALK_OK
+                going: 0
+            ---
+            if: status != c.LMX_WALK_OK || f\returned != 0
+                going: 0
+            ---
+            if: going != 0
+                wv: 0U
+                status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), (cast: (@: void) (@ a)), @ value)
+                if: status = c.LMX_WALK_OK && value = 0
+                    status: c.LMX_WALK_INVALID
+                if: status = c.LMX_WALK_OK
+                    if: lmx_walk_load_operand(f\arena, value, @ wv, @ a) != c.LMX_WALK_OK
+                        status: c.LMX_WALK_INVALID
+                    ---
+                ---
+                if: status != c.LMX_WALK_OK || wv != 0U
+                    going: 0
+                ---
+            ---
+        ---
+        return: status
     # [while, cond, body] and [for, cond, body, step]: the condition before each turn, the step after it.
     if: op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_FOR
         while: going != 0
@@ -2340,7 +2370,7 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
             status: lmx_walk_eval(f, child, step_dest, @ dropped)
             # Activation value = last evaluated expression. SET/PUT/IF/WHILE/FOR are
             # statements (void fall-off). LIT/arith/CALL/OWN/... count. RET sets valued itself.
-            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_SET_OF && step_op != c.LMX_WALK_OP_SET_ARG && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_ELEMPUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE && step_op != c.LMX_WALK_OP_FOR && step_op != c.LMX_WALK_OP_PAD
+            if: status = c.LMX_WALK_OK && dropped != 0 && step_op != c.LMX_WALK_OP_SET && step_op != c.LMX_WALK_OP_SET_OF && step_op != c.LMX_WALK_OP_SET_ARG && step_op != c.LMX_WALK_OP_PUT && step_op != c.LMX_WALK_OP_PUT_REF && step_op != c.LMX_WALK_OP_PUT_OF && step_op != c.LMX_WALK_OP_ELEMPUT && step_op != c.LMX_WALK_OP_IF && step_op != c.LMX_WALK_OP_WHILE && step_op != c.LMX_WALK_OP_FOR && step_op != c.LMX_WALK_OP_UNTIL && step_op != c.LMX_WALK_OP_PAD
                 f\result: dropped
                 f\valued: 1
             ---

@@ -2351,6 +2351,17 @@ $fixtures = @(
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m3_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m4_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_for_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_root_for_refused.lm2:4:6: root operation not walkable yet: a field declared in a nested body'; Absent = @(); Debt = @() },
+    # OPUS-Q54-TRAILER-20260929-13 (the author, Q54): an anonymous block closed by `until` is a postcondition loop in
+    # the enclosing activation -- natively a `while` whose later turns begin with the condition (a first-turn flag),
+    # walked the walker's UNTIL.  The block ran once before (its `until:` was read nowhere) and a break or continue in
+    # it was refused.  Each witness: the count, a body that runs once though the condition holds, a continue that goes
+    # to the condition, a break.
+    [pscustomobject]@{ Name = 'unit_until_block_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_until_block_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_until_block_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

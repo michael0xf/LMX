@@ -1,0 +1,51 @@
+# An anonymous block closed by `until` is a postcondition loop in the enclosing activation (book §13; the author, Q54;
+# OPUS-Q54-TRAILER-20260929-13): the body runs, then the condition, and the loop ends when it holds.  x counts to 3
+# (3 turns); y > 0 already holds, yet the body ran once; a `continue` goes to the condition -- z 1 continues and is
+# checked, z 2 continues and stops the loop, so c stays 0 (a continue that skipped the condition gave z 4, c 1);
+# a `break` at b 2 ends the loop.  Each counter past 50 breaks its loop, so a broken loop ends (a mutant).  The block
+# ran once before -- its `until:` was read nowhere (x 1).  Success 7; x or turns 65, once 66, z or c 67, b 68.
+# At the root, walked in both modes: the walker's UNTIL.
+int: x 0
+int: turns 0
+---
+    x: x + 1
+    turns: turns + 1
+    if: x > 50
+        break
+until: x >= 3
+int: y 5
+int: once 0
+---
+    once: once + 1
+    if: once > 50
+        break
+until: y > 0
+int: z 0
+int: c 0
+---
+    z: z + 1
+    if: z > 50
+        break
+    if: z < 4
+        continue
+    c: c + 1
+until: z >= 2
+int: b 0
+---
+    b: b + 1
+    if: b > 50
+        break
+    if: b = 2
+        break
+until: b >= 10
+int: r 7
+if: x != 3 || turns != 3
+    r: 65
+if: once != 1
+    r: 66
+if: z != 2 || c != 0
+    r: 67
+if: b != 2
+    r: 68
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -18158,6 +18158,9 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     @: LmP0Field aidx_f
     int: pty 0
     int: tty 0
+    int: num_prev 0
+    int: nprev 0
+    int: nty 0
     if: n <= 0
         return: l2_error(path, at, "unsupported body")
     cpn: l2_join_path(field, n, cpbuf, 255U)
@@ -18187,6 +18190,9 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     while: i < n
         if: f = 0 || f\value = 0
             return: l2_error(path, at, "unsupported body")
+        # Whether the field just before this one was a name bound to a number (below).
+        nprev: num_prev
+        num_prev: 0
         # An indexed field path (S3 part 2b): an element of a declared Array field.
         ast: l2_arr_operand(f, 0, apd, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
         if: ast = 2
@@ -18342,6 +18348,10 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             i: i + 2
             f: p2
             continue
+        # An index after a number (`r[0]`, r an int): only an Array field is indexed, and its element is taken above; the
+        # bracket was skipped here and C got an int indexed.
+        if: nprev != 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_text_eq(f\value\as\atom, "[") != 0
+            return: l2_error(path, f\value, "an index on a number: only an Array field is indexed")
         if: f\value\kind = c.LM_P0_NODE_ATOM && (l2_is_binop(f\value\as\atom) || l2_is_brack(f\value\as\atom) || l2_is_slash(f\value\as\atom) || l2_num(f\value\as\atom))
             skip: 1
         # An address prefix in flat-field position. What it addresses is checked
@@ -18384,6 +18394,9 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             return: l2_error(path, f\value, "a callable without a result has no value")
         if: skip = 0
             have_value: 1
+        # A name bound to a number -- int, char, size_t, unsigned, ulong; not a pointer, an Array, a Structure.
+        if: skip = 0 && f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_colon_bound_ty(mi, f\value\as\atom, @ nty) = 0 && nty != 8 && l2_prim_code_name(nty) != 0
+            num_prev: 1
         i: i + 1
         f: l2_next_active(f\next)
 return: 0

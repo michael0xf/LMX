@@ -2269,6 +2269,14 @@ $fixtures = @(
         Needle = 'unit_ret_text_refused.lm2:5:13: return value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ret_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_ret_struct_refused.lm2:10:17: return value has incompatible type'; Absent = @(); Debt = @() },
+    # OPUS-INDEXNUM-20260929-07: an index after a name bound to a number (int, char, size_t, unsigned, ulong) is refused at
+    # the bracket -- the field check skipped every bracket atom, and `x: q[0]` / `return: q[0]` went out as C indexing an
+    # int (l2trans exit 0, gcc "subscripted value is neither array nor pointer").  An Array field's element is taken
+    # before (unit_array_*); a pointer's and the c.* door's index are not this check's.
+    [pscustomobject]@{ Name = 'unit_index_num_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_index_num_refused.lm2:8:9: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_index_num_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_index_num_return_refused.lm2:4:14: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

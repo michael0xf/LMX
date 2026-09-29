@@ -1,0 +1,14 @@
+# An index after a number is refused where it stands (l2_check_fields): only an Array field is indexed, and its element
+# is taken as one (unit_array_*).  The field check skipped every bracket atom, so `x: q[0]` with q an int went out as C
+# indexing an int ("subscripted value is neither array nor pointer"): l2trans exit 0, gcc refused.  The same after a
+# char, a size_t, a formal, in a return, an operand, an actual, a condition (the probe; the rows: this and _return_).
+fn: peek () int
+    int: q 3
+    int: x 0
+    x: q[0]
+    return: x
+end: peek
+int: r 0
+r: peek()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

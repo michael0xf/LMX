@@ -1,0 +1,12 @@
+# Plan §7b, computed initialization at the root with a callable of another numeric type: `int: i` / `i: big`, big a
+# size_t callable -- typed as its call, the value has the walked root's edge (row size_t -> int, receiver
+# lm_stg_convert_size_t_int; l2_rw_convert) as `i: big()` has.  3000000000 does not fit int: the receiver's `range` is
+# the root's `convert`, uncaught -- R0 stops with status 3 and sends no exit.  Without the edge C converts it and the
+# root sends exit 7.  (In a native method: unit_local_init_conv_range.)
+fn: big () size_t
+    return: 3000000000U
+end: big
+int: i
+i: big
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,16 @@
+# Plan §7b, computed initialization (`int: i` / `i: findValue`) with a callable of another numeric type: big gives a
+# size_t, so the assignment `i: big` has the store's edge of that type (row size_t -> int, receiver
+# lm_stg_convert_size_t_int) exactly as `i: big()` has -- the value is the callable's result, typed as its call gives it.
+# 3000000000 does not fit int: the receiver's `range` is go's implicit throw `convert`, uncaught -- R0 stops with status
+# 3.  The value typed without the callable's result (no edge): C converts it and go completes with 7.  Native: a method
+# that can throw stays native under the knob (the walked root: unit_local_init_conv_root).
+fn: big () size_t
+    return: 3000000000U
+end: big
+fn: go () int
+    int: i
+    i: big
+    return: 7
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

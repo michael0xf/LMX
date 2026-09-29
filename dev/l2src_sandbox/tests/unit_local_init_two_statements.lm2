@@ -1,0 +1,51 @@
+# Plan §7b "Локальные объявления и явная инициализация" (the author, docs/new_parts/local_declarations_and_explicit_
+# initialization.to_fable.en.md §2, §3, §5 items 1-3; Q51): computed initialization is two ordinary statements, `int: i`
+# then `i: findValue` -- a callable named where a value is consumed gives its result, so the assignment calls findValue
+# when control reaches it and only then.  M(0) skips the line: no call.  M(2) reaches it twice: each time one call, and
+# the same local i takes the new result (41, then 42) -- no second declaration, no snapshot.  A path from outside, M\i,
+# reads the place of declaration: during M (peek, after the call's checkpoint published i) and after it -- and reading
+# it executes nothing.  findValue and count reach the unit's calls by an explicit path (Q52: a bare write would be the
+# callee's hidden input; the root's bare calls is its own working value).  The root's own `int: z` / `z: findValue` is
+# the same statement pair at the root: 43.  a 0, c0 0, b 424142 (i 42, peek saw 41 then 42), after 42, z 43, calls 3.
+# Success 7; a call on the skipped line 65; a read that runs the call 66; any other value 64.
+int: calls 0
+fn: findValue () int
+    node\calls: node\calls + 1
+    return: 40 + node\calls
+end: findValue
+fn: count () int
+    return: node\calls
+end: count
+fn: peek () int
+    return: M\i
+end: peek
+fn: M (int: go) int
+    int: i
+    int: seen 0
+    while: go > 0
+        i: findValue
+        seen: seen * 100 + peek()
+        go: go - 1
+    return: i * 10000 + seen
+end: M
+int: a 0
+a: M(0)
+int: c0 0
+c0: count()
+int: b 0
+b: M(2)
+int: after 0
+after: M\i
+int: z
+z: findValue
+int: n 0
+n: count()
+int: ok 64
+if: c0 != 0
+    ok: 65
+if: n > 3
+    ok: 66
+if: a = 0 && c0 = 0 && b = 424142 && after = 42 && z = 43 && n = 3
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

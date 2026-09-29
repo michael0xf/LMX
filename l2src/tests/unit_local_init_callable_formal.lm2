@@ -1,0 +1,22 @@
+# Plan §7b, computed initialization through a callable formal (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): f holds the
+# occurrence of seven, so `i: f` -- named where a value is consumed, it runs with no arguments -- and `j: f()` both give
+# its result, typed by the formal's contract (seven: an int).  i 7, j 7: w returns 77.  (Bare, the assignment's check
+# typed f as the formal itself, a Structure: "incompatible type"; called, not at all: "unknown type".)  Native: a method
+# with a callable formal is outside the walkable subset.  Success 7; any other value 64.
+fn: seven () int
+    return: 7
+end: seven
+fn: w (seven: f) int
+    int: i
+    i: f
+    int: j
+    j: f()
+    return: i * 10 + j
+end: w
+int: r 0
+r: w(seven)
+int: ok 64
+if: r = 77
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

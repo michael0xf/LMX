@@ -2205,6 +2205,29 @@ $fixtures = @(
         Needle = 'unit_q52_no_sub_field_refused.lm2:10:4: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_q52_no_sub_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_walk_q52_no_sub_field_refused.lm2:10:4: unresolved name'; Absent = @(); Debt = @() },
+    # OPUS-LOCALINIT-20260929-04 (plan §7b "Локальные объявления и явная инициализация": the author's computed
+    # initialization `int: i` / `i: findValue`; FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): a callable named as the whole
+    # value of an assignment gives its result, typed as its call gives it (l2_colon_value_ty) -- the assignment's check
+    # refused it, "assignment value has unknown type".  unit_local_init_two_statements + walk twin (M native, walked):
+    # the call only when the line runs (a skipped line calls nothing), one call per reached assignment into the same
+    # local, M\i from outside reads the place during and after and runs nothing; the walked root's own pair too.
+    [pscustomobject]@{ Name = 'unit_local_init_two_statements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_local_init_two_statements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # Typed as its call, a callable of another numeric type has the store's edge: size_t 3000000000 into an int refuses
+    # (receiver lm_stg_convert_size_t_int) -- in a native method (l2_convert_on_store) and at the walked root
+    # (l2_rw_convert); without the edge C converts and the program sends 7.
+    [pscustomobject]@{ Name = 'unit_local_init_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_init_conv_root.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
+    # Through a callable formal, bare and called, by its contract (native: a callable formal keeps a method out of the
+    # walk).  A Structure-typed place: the bare name is its call there too, refused exactly as `b: mk()`.
+    [pscustomobject]@{ Name = 'unit_local_init_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_init_graph_place_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_init_graph_place_refused.lm2:14:5: graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

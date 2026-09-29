@@ -852,6 +852,8 @@ prototype:
     fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop); int: mi; const: @(LmP0Text name)) int
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
     fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+    fn: l2_colon_ret_ty (int: m; @: int out_ty) int
+    fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     fn: l2_prim_code_name (int: ty) @: char
     fn: l2_convert_load () int
     fn: l2_m_nsof (int: mi) int
@@ -6686,7 +6688,6 @@ return: 1
 
 fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     int: m
-    int: sty
     const: @: LmP0Text atom
     if: value = 0 || out_ty = 0 || value\as = 0
         return: 1
@@ -6743,6 +6744,11 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         return: 0
     if: m < 0
         return: 1
+return: l2_colon_ret_ty(m, out_ty)
+
+# The type method m's call gives as a value, in the codes an assignment's check compares.
+fn: l2_colon_ret_ty (int: m; @: int out_ty) int
+    int: sty
     \out_ty: l2_m_ret[m]
     # A named-Structure return is stored dt_of_own(1000+foreign)
     # (l2_colon_graph_ty), the same recovery l2_colon_bound_ty's own-field
@@ -6765,6 +6771,34 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
     if: \out_ty = 32
         \out_ty: 17
 return: 0
+
+# THE WHOLE VALUE OF AN ASSIGNMENT, TYPED (plan §7b "Локальные объявления и явная инициализация": the author's computed
+# initialization `int: i` / `i: findValue`).  A callable named where a value is consumed gives its result -- bare, it
+# runs with no arguments; the binding's kind decides, not the place (callable-first, FABLE-OPUS-RECEIVER-CONTRACT-
+# 20260924-139; l2_check_primary) -- so its type is the result's, as its call gives it: a callable formal of this
+# method, bare or called, by its contract (l2_colon_simple_ty types it bare as the formal, @: Lmx, and called not at
+# all -- D-106), else a bare name bound to nothing by the unit method of that name.  Any other value:
+# l2_colon_simple_ty's type.  A callable without a result gives 8, which the check refuses as no value.  The
+# assignment's check (l2_colon_check_assignment) and its store's conversion (l2_convert_on_store) type the value alike.
+fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
+    const: @: LmP0Text t 0
+    int: k
+    if: value = 0 || value\as = 0 || out_ty = 0
+        return: 1
+    if: value\kind = c.LM_P0_NODE_ATOM
+        t: value\as\atom
+    if: value\kind = c.LM_P0_NODE_FRAME && value\as\frame != 0
+        t: value\as\frame\head
+    if: t != 0 && mi >= 0
+        k: l2_param_find(mi, t)
+        if: k >= 0 && k < l2_m_arity[mi] && l2_cf_get(mi, k) >= 0
+            return: l2_colon_ret_ty(l2_cf_get(mi, k), out_ty)
+        ---
+    if: l2_colon_simple_ty(value, mi, out_ty) = 0
+        return: 0
+    if: value\kind != c.LM_P0_NODE_ATOM || t = 0 || l2_find_method(t) < 0
+        return: 1
+return: l2_colon_ret_ty(l2_find_method(t), out_ty)
 
 # Formal/value codes that name a primitive leaf. Pointer codes are not these
 # names: mapping them would make `@: int` implement `@: char`.
@@ -7692,7 +7726,7 @@ fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP
         return: 0
     if: n = 1
         only: l2_next_active(fr\body\first_field)
-        if: only = 0 || l2_colon_simple_ty(only\value, mi, @ from_ft) != 0
+        if: only = 0 || l2_colon_value_ty(only\value, mi, @ from_ft) != 0
             return: 0
     ---
     if: n > 1
@@ -8131,7 +8165,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_error(path, stmt, "const write")
     only: l2_next_active(stmt\as\frame\body\first_field)
     if: n = 1
-        if: only = 0 || l2_colon_simple_ty(only\value, mi, @ value_ty) != 0
+        if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
             return: l2_error(path, stmt, "assignment value has unknown type")
     ---
     if: n > 1

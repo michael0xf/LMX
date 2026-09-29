@@ -1,0 +1,18 @@
+# Plan §7b, computed initialization into a Structure-typed place: the bare name of a callable is its call there too --
+# the binding's kind decides, not the place (callable-first) -- so `b: mk` is refused exactly as `b: mk()` is: the
+# rebinding of an own Box needs the receiving expression's tests.  (Typed by the place, the bare name had no type:
+# "assignment value has unknown type".)
+Box:
+    int: v 0
+end: Box
+fn: mk () Box
+    Box: t
+    return: t
+end: mk
+fn: w () int
+    Box: b
+    b: mk
+    return: b\v
+end: w
+sendMessage: exit(exit_code: w(); stdout: ""; stderr: "")
+return

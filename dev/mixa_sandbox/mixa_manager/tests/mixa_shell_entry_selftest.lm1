@@ -1,0 +1,129 @@
+predef: "mixa_manager/mixa_selection.lm1"
+predef: "mixa_manager/mixa_dir_win32.lm1"
+predef: "mixa_manager/mixa_fileio_win32.lm1"
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+predef: "mixa_manager/mixa_file_manager.lm1"
+predef: "mixa_manager/mixa_shell_files.lm1"
+predef: "mixa_manager/mixa_event_fifo.lm1"
+predef: "mixa_manager/mixa_pump.lm1"
+predef: "mixa_manager/mixa_backend_headless.lm1"
+predef: "mixa_manager/mixa_backend_table.lm1"
+predef: "mixa_manager/mixa_shell_turn.lm1"
+predef: "mixa_manager/mixa_shell_native.lm1"
+predef: "mixa_manager/mixa_shell_start.lm1"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+# Host sketch retired. Canonical entry is mixa_shell_start / MixaShellOwner.
+# This witness keeps the shell-entry label for old runners and calls the
+# same letter the product uses. Full coverage is mixa_shell_start_selftest.
+
+fn: mixa_backend_ctors_count () size_t
+return: 1U
+
+fn: mixa_backend_ctors_get (size_t: i) const: @(MixaBackendVTable)
+    if: i = 0U
+        return: mixa_backend_headless_table()
+    ---
+return: 0
+
+int: g_alloc_live
+
+fn: t_alloc (size_t: n) @: void
+    @: void p
+    p: c.malloc(n)
+    if: p != 0
+        g_alloc_live: g_alloc_live + 1
+    ---
+return: p
+
+sub: t_free (@: void p)
+    if: p = 0
+        return
+    ---
+    g_alloc_live: g_alloc_live - 1
+    c.free(p)
+end: t_free
+
+fn: main (int: argc; @: @(char) argv) int
+    []: char base 520
+    []: char root 1040
+    []: char file 1200
+    []: char cmd 2400
+    []: (@: void) fh 1
+    @: MixaCellMetrics metrics
+    @: MixaShellOwner shell
+    @: MixaFmAllocVTable av
+    MixaFm: fm
+    const: @(MixaBackendVTable vt)
+    int: events
+    int: checks
+    int: failures
+    int: rc
+    checks: 0
+    failures: 0
+    g_alloc_live: 0
+    if: argc >= 2
+        c.snprintf(base, 520U, "%s", argv[1])
+    ---
+    if: argc < 2
+        c.snprintf(base, 520U, "build/mixa/tmp_shell_entry")
+    ---
+    c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul & mkdir \"%s\" 2>nul", base, base)
+    c.system(cmd)
+    c.snprintf(root, 1040U, "%s\\root", base)
+    c.snprintf(cmd, 2400U, "cmd /c mkdir \"%s\" 2>nul", root)
+    c.system(cmd)
+    c.snprintf(file, 1200U, "%s\\a.txt", root)
+    fh[0]: c.fopen(file, "wb")
+    if: fh[0] != 0
+        c.fputs("x", fh[0])
+        c.fclose(fh[0])
+    ---
+    metrics: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
+    metrics\text_cell_width: 8U
+    metrics\text_cell_height: 8U
+    metrics\upper_cell_width: 8U
+    metrics\upper_cell_height: 8U
+    metrics\pointer_cell_width: 8U
+    metrics\pointer_cell_height: 8U
+    vt: mixa_backend_headless_table()
+    shell: (cast: (@: MixaShellOwner) c.calloc(1U, c.sizeof(c.MixaShellOwner)))
+    av: (cast: (@: MixaFmAllocVTable) c.calloc(1U, c.sizeof(c.MixaFmAllocVTable)))
+    av\alloc: t_alloc
+    av\free: t_free
+    c.memset(@ fm, 0, c.sizeof(c.MixaFm))
+    rc: mixa_fm_init(@ fm, root, 0, av)
+    checks: checks + 1
+    if: rc != MIXA_FM_OK
+        failures: failures + 1
+        c.printf("shell-entry: init %d\n", rc)
+    ---
+    rc: mixa_shell_start(shell, @ fm, vt, root, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc != 0 || shell\shown != 1 || shell\rows = 0 || shell\native != vt
+        failures: failures + 1
+        c.printf("shell-entry: start rc %d shown %d\n", rc, shell\shown)
+    ---
+    events: -1
+    rc: mixa_shell_turn(shell\pump, shell\surface, @ events)
+    checks: checks + 1
+    if: rc != 0 || events != 0
+        failures: failures + 1
+        c.printf("shell-entry: turn rc %d events %d\n", rc, events)
+    ---
+    mixa_shell_drop_rows(shell, @ fm)
+    mixa_shell_native_close(shell)
+    mixa_fm_release(@ fm)
+    checks: checks + 1
+    if: shell\native != 0 || shell\surface != 0 || g_alloc_live != 0
+        failures: failures + 1
+        c.printf("shell-entry: close left native/surface/live=%d\n", g_alloc_live)
+    ---
+    c.free(shell)
+    c.free(av)
+    c.free(metrics)
+    c.printf("shell-entry: %d checks, %d failures\n", checks, failures)
+    if: failures != 0
+        return: 1
+    ---
+return: 0

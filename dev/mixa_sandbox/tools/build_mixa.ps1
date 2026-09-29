@@ -23,12 +23,6 @@ param(
     # behind, and defaulting to it would have failed in a way that looked like a defect in the
     # manager target rather than in the choice of evidence.
     [switch]$ManagerLinkOnly,
-    # -StartLinkOnly -ReuseStamp <exact dir>: re-link the port entry
-    # exe:mixa_shell_start from an EXISTING stamp's object pool, read-only,
-    # into a private output, and launch nothing. The first build of that
-    # executable is section 2f of a normal run, which writes
-    # bin\mixa_shell_start.exe. This switch does not invent a second entry.
-    [switch]$StartLinkOnly,
     [string]$ReuseStamp,
     # -KernelEvidenceDir <exact stamp dir>: consume THAT directory's headers\l2src only.
     # No newest-stamp fallback when supplied (GROK-BOT-BUILD-MIXA-EXACT-CHAIN-20260921-128).
@@ -376,40 +370,6 @@ function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {
     }
     return $chosen
 }
-# Port entry link. The root object is mixa_shell_start_main.o (fn: main
-# of Mixa\start). Resolve-Link may pull the letter, Files, the pump and
-# the headless table. It must not pull the previous product mains or the
-# controller: those are other programs. A selected banned object is a
-# refusal, not a link. The function writes nothing to the success stream.
-function Link-MixaShellStart([string]$Label, [string]$FromObj, [string]$OutExe, [string[]]$Pool) {
-    $script:portLinkDetail = ''
-    $script:portLinkSelected = @()
-    if (-not (Test-Path -LiteralPath $FromObj)) {
-        $script:portLinkDetail = "object never built: $FromObj"
-        return $false
-    }
-    $fromDir = Split-Path -Parent $FromObj
-    $sel = @(Resolve-Link $FromObj $Pool | Where-Object { $_ -ne $FromObj })
-    $script:portLinkSelected = @($sel)
-    foreach ($leaf in @('mixa_app_main.o', 'mixa_app_main_msg.o', 'mixa_app_controller.o', 'mixa_shell_main.o')) {
-        $banned = Join-Path $fromDir $leaf
-        if ($sel -contains $banned) {
-            $script:portLinkDetail = "REFUSED -- $leaf was selected. exe:mixa_shell_start is the port entry Mixa\start, not that unit."
-            return $false
-        }
-    }
-    $parent = Split-Path -Parent $OutExe
-    if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
-    $link = $flags + @('-o', $OutExe, $FromObj) + $sel
-    $link += @('-lkernel32', '-luser32', '-lgdi32', '-lwinmm', '-lole32', '-luuid', '-lshell32')
-    $code = Invoke-Captured $Label $gcc $link $Label
-    if ($code -ne 0 -or -not (Test-Path -LiteralPath $OutExe)) {
-        $script:portLinkDetail = "link exit $code; log $logDir\$(Get-SafeName $Label).log"
-        return $false
-    }
-    $script:portLinkDetail = 'linked, build-only: NOT launched (Win32 file seams; headless run is --headless <dir> <positive-steps>)'
-    return $true
-}
 
 Write-Output "build_mixa: translator $Translator ($pinChecked)"
 Write-Output "build_mixa: gcc $gcc"
@@ -541,41 +501,6 @@ if ($ManagerLinkOnly) {
     exit 0
 }
 
-# -StartLinkOnly: the same focused shape as ManagerLinkOnly, for the port
-# entry rather than mixa_app_main. The reused pool is read-only. The
-# executable lands under %TEMP% and is not launched.
-if ($StartLinkOnly) {
-    if (-not $ReuseStamp) {
-        Write-Output 'build_mixa: -StartLinkOnly requires -ReuseStamp <exact directory>. There is no default.'
-        exit 2
-    }
-    if (-not (Test-Path -LiteralPath $ReuseStamp)) { Write-Output "build_mixa: -ReuseStamp does not exist: $ReuseStamp"; exit 2 }
-    $reuseFull = (Resolve-Path -LiteralPath $ReuseStamp).Path
-    $buildRoot = (Resolve-Path -LiteralPath (Join-Path $migRoot 'build')).Path
-    if (-not $reuseFull.StartsWith($buildRoot, [StringComparison]::OrdinalIgnoreCase)) {
-        Write-Output "build_mixa: -ReuseStamp must live under $buildRoot; got $reuseFull"; exit 2
-    }
-    $poolObjDir = Join-Path $reuseFull 'obj'
-    $poolStart = Join-Path $poolObjDir 'mixa_shell_start_main.o'
-    if (-not (Test-Path -LiteralPath $poolStart)) { Write-Output "build_mixa: the reused pool has no mixa_shell_start_main.o: $poolStart"; exit 3 }
-    $poolObjects = @(Get-ChildItem -LiteralPath $poolObjDir -Filter '*.o' -File | Sort-Object Name | ForEach-Object { $_.FullName })
-    $outExe = Join-Path $env:TEMP ('mixa_shell_start.linkonly.' + $PID + '.exe')
-    Write-Output ('build_mixa: StartLinkOnly; HEAD ' + ((git rev-parse HEAD) -join '').Substring(0,8) + '; pin ' + $pinChecked)
-    Write-Output ('build_mixa: reused pool ' + $reuseFull + ' (' + $poolObjects.Count + ' objects)')
-    $ok = Link-MixaShellStart 'exe:mixa_shell_start' $poolStart $outExe $poolObjects
-    foreach ($o in $script:portLinkSelected) { Write-Output ('  selected ' + (Split-Path -Leaf $o)) }
-    if (-not $ok -or -not (Test-Path -LiteralPath $outExe)) {
-        Write-Output ('build_mixa: StartLinkOnly LINK FAILED ' + $script:portLinkDetail)
-        exit 5
-    }
-    $outItem = Get-Item -LiteralPath $outExe
-    Write-Output ('build_mixa: linked ' + $outExe + ' (' + $outItem.Length + ' bytes, sha256 ' + (Get-FileHash -LiteralPath $outExe -Algorithm SHA256).Hash.Substring(0,16) + '...)')
-    Write-Output 'build_mixa: NOT launched. Headless, bounded: mixa_shell_start.exe --headless <existing-directory> <positive-steps>'
-    Write-Output 'build_mixa: expect exit 0 and one line MIXA_START status=OK steps=<n> bound=<n> shown=1 refused=0 events=0'
-    Write-Output ('build_mixa: the stamp directory this run created (' + $OutDir + ') holds THIS LINK''S LOG ONLY; the measurement above is the reused pool ' + $reuseFull)
-    exit 0
-}
-
 # 1) headers
 $hdrFiles = @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.h.lm1' -File -Recurse |
     Where-Object { $_.FullName -notmatch '\\vendor\\|\\recovery_' } | Sort-Object FullName)
@@ -614,6 +539,7 @@ $objects = @()
 $unitFiles = @(Get-ChildItem -LiteralPath $sourceDir -Filter '*.lm1' -File -Recurse |
     Where-Object {
         $_.Name -notlike '*.h.lm1' -and $_.Name -notlike '*_selftest.lm1' -and
+        $_.Name -ne 'mixa_shell_main.lm1' -and
         $_.FullName -notmatch '\\vendor\\|\\recovery_'
     } | Sort-Object FullName)
 foreach ($u in $unitFiles) {
@@ -727,11 +653,11 @@ if (-not (Test-Path -LiteralPath (Join-Path $vendorRoot 'l2src\lmx_message.lm1')
 # (mixa_app_controller.h.lm1 -> the controller unit) is in the same pool.  Judged by the OUTPUT
 # FILE, exactly as the fixture section is.
 #
-# THE ENTRY IS CHOSEN HERE, DELIBERATELY: the port carries THREE files with `fn: main` --
-# mixa_app_main.lm1 (this target), mixa_app_main_msg.lm1 (the stepped driver), and
-# mixa_shell_start_main.lm1 (the shell port entry, linked below as exe:mixa_shell_start).
-# Each target names its own root object. A duplicate-main at link time is a defect of
-# that choice, not something to repair by dropping a file.
+# THE ENTRY IS CHOSEN HERE, DELIBERATELY: the port carries TWO files with `fn: main` --
+# mixa_app_main.lm1:36 and mixa_app_main_msg.lm1:512 (the stepped driver).  The manager is the
+# FIRST; the second is not linked into it.  Whoever later wants the stepped driver builds a
+# target for IT, rather than discovering a duplicate-main at link time and "fixing" it by
+# dropping one of the two.
 #
 # BUILD-ONLY, AND THAT IS A REQUIREMENT RATHER THAN A LIMITATION: this is an interactive Win32
 # program that opens a window (argv[1] selects a root), so a gate that ran it unattended would
@@ -752,19 +678,30 @@ if (-not (Test-Path -LiteralPath $mainObj)) {
     }
 }
 
-# 2f) THE PORT ENTRY (Mixa\start). Distinct from exe:mixa_app_main above.
-# mixa_shell_start_main.lm1 is an ordinary unit, so the unit pass has already
-# produced obj\mixa_shell_start_main.o. This step only links that object and
-# the closure Resolve-Link selects. It does not paste every .lm1 into one
-# translation unit, and it does not launch the binary: the file seams are
-# Win32, and the headless run is a separate bounded command
-# (--headless <existing-directory> <positive-steps>).
-$startObj = Join-Path $objDir 'mixa_shell_start_main.o'
-$startExe = Join-Path $binDir 'mixa_shell_start.exe'
-if (Link-MixaShellStart 'exe:mixa_shell_start' $startObj $startExe $objects) {
-    Add-Row 'OK' 'exe:mixa_shell_start' $script:portLinkDetail
+# 2e2) DISTINCT Mixa\start PRODUCT (GROK-BOT-MIXA-APP I/J). mixa_shell_main.lm1 is the
+# port's product main: it pastes start/native/files/turn bodies once and is excluded from
+# the ordinary unit pool so it cannot collide with mixa_app_main. The linked name is
+# mixa_shell_start.exe ? distinct from mixa_app_main.exe. Build-only here; bounded
+# headless is a separate act (--headless-smoke).
+$shellStartSrc = Join-Path $sourceDir 'mixa_shell_main.lm1'
+$shellStartC = Join-Path $objDir 'mixa_shell_main_product.c'
+$shellStartObj = Join-Path $objDir 'mixa_shell_main_product.o'
+$shellStartExe = Join-Path $binDir 'mixa_shell_start.exe'
+if (-not (Test-Path -LiteralPath $shellStartSrc)) {
+    Add-Row 'FAIL' 'exe:mixa_shell_start' "missing product entry: $shellStartSrc"
+} elseif (-not (Convert-Source 'exe:mixa_shell_start' 'mixa_manager/mixa_shell_main.lm1' $shellStartC)) {
+    # Convert-Source already recorded FAIL
+} elseif (-not (Compile-C 'exe:mixa_shell_start' $shellStartC $shellStartObj)) {
+    # Compile-C already recorded FAIL
 } else {
-    Add-Row 'FAIL' 'exe:mixa_shell_start' $script:portLinkDetail
+    $link = $flags + @('-o', $shellStartExe, $shellStartObj)
+    $link += @('-lkernel32', '-luser32', '-lgdi32', '-lwinmm', '-lole32', '-luuid', '-lshell32')
+    $code = Invoke-Captured 'exe:mixa_shell_start' $gcc $link 'exe:mixa_shell_start'
+    if ($code -ne 0 -or -not (Test-Path -LiteralPath $shellStartExe)) {
+        Add-Row 'FAIL' 'exe:mixa_shell_start' "link exit $code; log $logDir\$(Get-SafeName 'exe:mixa_shell_start').log"
+    } else {
+        Add-Row 'OK' 'exe:mixa_shell_start' 'linked distinct Mixa\start product (build-only; headless via --headless-smoke)'
+    }
 }
 
 # 3) conscious hand-written C kept on purpose

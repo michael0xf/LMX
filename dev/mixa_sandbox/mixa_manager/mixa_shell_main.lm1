@@ -1,0 +1,156 @@
+predef: "mixa_manager/mixa_shell_main.h.lm1"
+predef: "mixa_manager/mixa_selection.lm1"
+predef: "mixa_manager/mixa_dir_win32.lm1"
+predef: "mixa_manager/mixa_fileio_win32.lm1"
+predef: "mixa_manager/mixa_file_manager.h.lm1"
+predef: "mixa_manager/mixa_file_manager.lm1"
+predef: "mixa_manager/mixa_shell_files.lm1"
+predef: "mixa_manager/mixa_event_fifo.lm1"
+predef: "mixa_manager/mixa_pump.lm1"
+predef: "mixa_manager/mixa_backend_headless.lm1"
+predef: "mixa_manager/mixa_backend_table.lm1"
+predef: "mixa_manager/mixa_shell_turn.lm1"
+predef: "mixa_manager/mixa_shell_native.lm1"
+predef: "mixa_manager/mixa_shell_start.lm1"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+# Distinct product entry for Mixa\start. Not mixa_app_main and not
+# mixa_app_main_msg. native is Shell's headless word. --headless-smoke
+# lists the root once, then takes a bounded number of empty turns.
+# The Host sketch (MixaShellHost / mixa_shell_bind_native / mixa_shell_run)
+# is retired in favour of MixaShellOwner / mixa_shell_native_bind /
+# mixa_shell_start.
+
+define: MIXA_SHELL_START_HEADLESS_STEPS 8
+
+fn: mixa_backend_ctors_count () size_t
+return: 1U
+
+fn: mixa_backend_ctors_get (size_t: i) const: @(MixaBackendVTable)
+    if: i = 0U
+        return: mixa_backend_headless_table()
+    ---
+return: 0
+
+fn: t_alloc (size_t: n) @: void
+return: c.malloc(n)
+
+sub: t_free (@: void p)
+    if: p = 0
+        return
+    ---
+    c.free(p)
+end: t_free
+
+fn: main (int: argc; @: @(char) argv) int
+    const: @(char root_utf8)
+    const: @(MixaBackendVTable vt)
+    @: MixaCellMetrics metrics
+    @: MixaShellOwner shell
+    @: MixaFmAllocVTable av
+    MixaFm: fm
+    int: headless
+    int: bound
+    int: steps
+    int: events
+    int: rc
+    int: turn_rc
+    int: shown
+    int: refused
+    headless: 0
+    bound: 0
+    steps: 0
+    shown: 0
+    refused: 0
+    if: argc >= 2 && c.strcmp(argv[1], "--headless-smoke") = 0
+        headless: 1
+    ---
+    if: headless = 0
+        c.printf("mixa_shell_start: use --headless-smoke <root> [steps]\n")
+        return: 2
+    ---
+    if: argc >= 3
+        root_utf8: argv[2]
+    else:
+        root_utf8: "."
+    ---
+    if: argc >= 4
+        bound: c.atoi(argv[3])
+    else:
+        bound: MIXA_SHELL_START_HEADLESS_STEPS
+    ---
+    if: bound <= 0
+        c.printf("MIXA_SHELL_START_HEADLESS status=FAIL reason=bad-bound steps=0 bound=0 shown=0 refused=0\n")
+        return: 2
+    ---
+    vt: mixa_backend_headless_table()
+    if: vt = 0
+        c.printf("MIXA_SHELL_START_HEADLESS status=FAIL reason=no-backend steps=0 bound=%d shown=0 refused=0\n", bound)
+        return: 1
+    ---
+    metrics: (cast: (@: MixaCellMetrics) c.calloc(1U, c.sizeof(c.MixaCellMetrics)))
+    shell: (cast: (@: MixaShellOwner) c.calloc(1U, c.sizeof(c.MixaShellOwner)))
+    av: (cast: (@: MixaFmAllocVTable) c.calloc(1U, c.sizeof(c.MixaFmAllocVTable)))
+    if: metrics = 0 || shell = 0 || av = 0
+        if: metrics != 0
+            c.free(metrics)
+        ---
+        if: shell != 0
+            c.free(shell)
+        ---
+        if: av != 0
+            c.free(av)
+        ---
+        c.printf("MIXA_SHELL_START_HEADLESS status=FAIL reason=alloc steps=0 bound=%d shown=0 refused=0\n", bound)
+        return: 1
+    ---
+    metrics\text_cell_width: 8U
+    metrics\text_cell_height: 8U
+    metrics\upper_cell_width: 8U
+    metrics\upper_cell_height: 8U
+    metrics\pointer_cell_width: 8U
+    metrics\pointer_cell_height: 8U
+    av\alloc: t_alloc
+    av\free: t_free
+    c.memset(@ fm, 0, c.sizeof(c.MixaFm))
+    rc: mixa_fm_init(@ fm, root_utf8, 0, av)
+    if: rc != MIXA_FM_OK
+        c.free(shell)
+        c.free(av)
+        c.free(metrics)
+        c.printf("MIXA_SHELL_START_HEADLESS status=FAIL reason=fm-init rc=%d steps=0 bound=%d shown=0 refused=0\n", rc, bound)
+        return: 1
+    ---
+    rc: mixa_shell_start(shell, @ fm, vt, root_utf8, 4U, 4U, metrics)
+    shown: shell\shown
+    refused: shell\refused
+    if: rc != 0
+        mixa_shell_drop_rows(shell, @ fm)
+        mixa_shell_native_close(shell)
+        mixa_fm_release(@ fm)
+        c.free(shell)
+        c.free(av)
+        c.free(metrics)
+        c.printf("MIXA_SHELL_START_HEADLESS status=FAIL reason=start rc=%d steps=0 bound=%d shown=%d refused=%d\n", rc, bound, shown, refused)
+        return: 1
+    ---
+    turn_rc: 0
+    while: steps < bound && turn_rc = 0
+        events: -1
+        turn_rc: mixa_shell_turn(shell\pump, shell\surface, @ events)
+        steps: steps + 1
+    ---
+    shown: shell\shown
+    refused: shell\refused
+    mixa_shell_drop_rows(shell, @ fm)
+    mixa_shell_native_close(shell)
+    mixa_fm_release(@ fm)
+    c.free(shell)
+    c.free(av)
+    c.free(metrics)
+    if: turn_rc != 0
+        c.printf("MIXA_SHELL_START_HEADLESS status=FAIL reason=turn rc=%d steps=%d bound=%d shown=%d refused=%d\n", turn_rc, steps, bound, shown, refused)
+        return: 1
+    ---
+    c.printf("MIXA_SHELL_START_HEADLESS status=OK steps=%d bound=%d shown=%d refused=%d\n", steps, bound, shown, refused)
+return: 0

@@ -1034,7 +1034,6 @@ prototype:
     fn: l2_nsf_push (int: kind; size_t: value; int: ref; int: owner) int
     fn: l2_char_literal (const: @(LmP0Text t)) int
     fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
-    fn: l2_ns_ret_closed (const: @(LmP0Frame fr)) int
     fn: l2_ns_decl_first (const: @(LmP0Node node)) int
     fn: l2_unit_declares (const: @(LmP0Text name)) int
     fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
@@ -3534,11 +3533,70 @@ fn: l2_part_refused (const: @(char path); const: @(LmP0Node item); int: role) in
     c.snprintf(msg, 240U, "%s in a program part is not supported yet (%s)", what, why)
 return: l2_error(path, item, msg)
 
+# The language's receivers that head a statement (L2 spec, the statement forms): a found callable is invoked first
+# (book §9, :559), so a head that is one of them is never a declaration's.  The other words of the language -- `fn`,
+# `if`, `while`, `for`, `return`, `const`, `sizeof`, a type word, the C door -- are no name already (l2_ident,
+# l2_prim_type_word, l2_is_known).
+fn: l2_receiver_word (const: @(LmP0Text t)) int
+return: (cast: (int) (l2_text_eq(t, "sendMessage") || l2_text_eq(t, "receiveMessage") || l2_text_eq(t, "merge") || l2_text_eq(t, "table") || l2_text_eq(t, "catch") || l2_text_eq(t, "throw") || l2_text_eq(t, "throws") || l2_text_eq(t, "until") || l2_text_eq(t, "end") || l2_text_eq(t, "sub") || l2_text_eq(t, "fm") || l2_text_eq(t, "synchronized") || l2_text_eq(t, "length") || l2_text_eq(t, "cast")))
+
+# Whether frame fr's tail is a Structure, not one value (book §9 :563: an absent target whose value IS a Structure is
+# created a structural variable, its type that Structure; `target: ()` -- with or without `end: target` -- is the empty
+# one; a literal, `arg: 7`, never declares).  One value is one atom, one operator run, or a call: a tail whose first
+# item names a callable -- `makeAdder 5`, `merge: A B` and what the receiver takes after it -- is that call's value
+# (callable-first, :559).  Anything else -- the empty tail, several items, one statement or declaration -- is a
+# Structure.
+fn: l2_tail_is_structure (const: @(LmP0Frame fr)) int
+    @: LmP0Field f
+    int: n
+    if: fr = 0 || fr\body = 0
+        return: 0
+    n: l2_count_active(fr\body)
+    f: l2_next_active(fr\body\first_field)
+    if: n = 0
+        return: 1
+    if: f = 0 || f\value = 0
+        return: 0
+    if: l2_expr_span(f) = n && (n > 1 || f\value\kind = c.LM_P0_NODE_ATOM)
+        return: 0
+    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
+        if: l2_unit_names_method(f\value\as\atom) != 0 || l2_find_method(f\value\as\atom) >= 0 || l2_is_known(f\value\as\atom) != 0
+            return: 0
+        ---
+    if: f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0
+        if: l2_unit_names_method(f\value\as\frame\head) != 0 || l2_find_method(f\value\as\frame\head) >= 0 || l2_is_known(f\value\as\frame\head) != 0 || l2_receiver_word(f\value\as\frame\head) != 0
+            return: 0
+        ---
+return: 1
+
+# Whether head t, at unit item `item`, resolves to nothing (book §9 :559: the declaration route is the one left when
+# neither a callable nor a non-callable binding is found): no method -- visible both ways (l2_unit_names_method) --,
+# no field the unit declares, no C door or declared function, no primitive type word, no receiver of the language, and
+# no named Structure an earlier item of the unit declared -- that is a binding, whose `f()` or `f:` + Structure is the
+# assignment with admission (:561).  Read from the source's order, never from what is registered yet: every pass that
+# classifies the unit's items -- a count before the named Structures exist, a fill after -- gets one answer.
+fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
+    @: LmP0Field f
+    if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_find_method(t) >= 0
+        return: 0
+    if: l2_unit_declares(t) != 0 || l2_is_known(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_receiver_word(t) != 0
+        return: 0
+    if: l2_cur_unit = 0
+        return: 1
+    f: l2_next_active(l2_cur_unit\first_field)
+    while: f != 0 && f\value != item
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0 && l2_text_same(f\value\as\frame\head, t) != 0 && l2_tail_is_structure(f\value\as\frame) != 0
+            return: 0
+        f: l2_next_active(f\next)
+    ---
+return: 1
+
 # What one unit item is: 1 a method, 2 a qualified branch, 3 the os block, 4 a
-# directive, 5 a named Structure, 0 a statement of the entry E. A named
-# Structure is an identifier-headed frame closed by `end: Name` (the
-# declaration form); every other frame -- `Model: fresh`, `x: 5`, `f(1)`,
-# `R: merge: A B` -- is a statement. A head that names a method is a call.
+# directive, 5 a named Structure, 0 a statement of the entry E.  A named
+# Structure is a frame whose head resolves to nothing and whose tail is a
+# Structure (l2_head_absent, l2_tail_is_structure) -- however it is closed;
+# every other frame -- `Model: fresh` (a type), `x: 5` (a value), `f(1)` (a
+# call), `R: merge: A B` (a receiver's value) -- is a statement.
 fn: l2_unit_role (const: @(LmP0Node item)) int
     const: @: LmP0Frame fr
     if: l2_frame_head(item, "fn") != 0 || l2_frame_head(item, "sub") != 0
@@ -3556,32 +3614,14 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
         return: 0
     if: l2_frame_head(item, "const") != 0 || l2_frame_head(item, "immutable") != 0 || l2_frame_head(item, "merge") != 0 || l2_frame_head(item, "end") != 0
         return: 0
-    if: l2_end_text(fr, fr\head) != 0
-        return: 5
-    # steps/named-struct-exec.md, slice 1: a column-0 bare `return` closes a named Structure as
-    # `end: Name` does (Q19.1: a return trailer closes any callable Structure, the named one
-    # included).
-    if: l2_ns_ret_closed(fr) != 0
+    # General resolution (book §9, docs/LMX_semantics.ru.md :559-:565; the author, Q54): a head that resolves to
+    # nothing, with a Structure tail, declares a named Structure -- whatever closes the frame: `end: Name`, a bare
+    # `return`, `until:` and a dedent are P0's boundaries, never the declaration, and no return is required.
+    if: l2_unimpl_numeric(item) != 0
+        return: 0
+    if: l2_head_absent(fr\head, item) != 0 && l2_tail_is_structure(fr) != 0
         return: 5
 return: 0
-
-# Whether frame fr is a named Structure closed by a bare `return` trailer: P0 hangs a column-0
-# `return` on the frame whose indented block precedes it, so the trailer alone does not tell a
-# named Structure from a control block that ends the unit -- its first item must declare a field
-# (l2_ns_decl_first), as a named Structure's does.  The trailer carries no value: "У именнованной
-# структуры может быть только "return" без аргументов" (the author, Q19.2).
-fn: l2_ns_ret_closed (const: @(LmP0Frame fr)) int
-    @: LmP0Field f
-    if: fr = 0 || fr\trailer = 0 || fr\trailer\spelling = 0 || l2_text_eq(fr\trailer\spelling, "return") = 0
-        return: 0
-    if: fr\trailer\body != 0 && l2_count_active(fr\trailer\body) != 0
-        return: 0
-    if: fr\body = 0 || l2_unit_declares(fr\head) != 0
-        return: 0
-    f: l2_next_active(fr\body\first_field)
-    if: f = 0
-        return: 0
-return: l2_ns_decl_first(f\value)
 
 # Whether node, the first item of a body, declares a named Structure field: a number or char field,
 # an array, an inline nested Structure, a callable field, a reference field, or `Name: field` (one
@@ -3602,7 +3642,7 @@ return: 0
 # Whether the unit declares a field named name -- a frame whose first item is the atom name after a
 # type word, an address, or a Structure type (`Model: name`).  A frame headed by such a name is an
 # assignment to it, never a new named Structure, whatever its body looks like: `r:` / `show: r` has
-# the P0 shape of `Model: left` (l2_ns_ret_closed).  It errs only toward "not a named Structure".
+# the P0 shape of `Model: left` (l2_head_absent asks this).  It errs only toward "not a named Structure".
 fn: l2_unit_declares (const: @(LmP0Text name)) int
     @: LmP0Field field
     @: LmP0Node item
@@ -3615,8 +3655,11 @@ fn: l2_unit_declares (const: @(LmP0Text name)) int
         if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && item\as\frame\body != 0 && item\as\frame\head != 0 && l2_text_same(item\as\frame\head, name) = 0
             first: l2_next_active(item\as\frame\body\first_field)
             # A declaration's shape, not any frame whose first atom is the name: P0 splits a path
-            # `got: Counter\n` into the atoms Counter, \, n.  A type word or an address takes the name
-            # first; `Model: name` has the name as its one field.
+            # `got: Counter\n` into the atoms Counter, \, n.  A type word takes the name first; an address
+            # `@: Type name` takes it second (L2: `Type` and `var` are two separate tail fields); `Model: name`
+            # has the name as its one field.
+            if: l2_address_depth(item\as\frame\head) != 0 && first != 0
+                first: l2_next_active(first\next)
             if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0 && l2_text_same(first\value\as\atom, name) != 0
                 # `Model: name` needs a type for its head: a control receiver's (`else: Counter`, a bare execution
                 # in an else body; REVIEW 99511ff, P59) or a method's (`f: Counter`, a call) heads no declaration.
@@ -3694,6 +3737,41 @@ fn: l2_make_entry (const: @(char path)) int
     ---
 return: 0
 
+# The body of named Structure ni's procedure when a `until` closes it (l2_ns_proc_add): a Structure of one field, an
+# anonymous block whose Structure holds the named Structure's items and its `until:` trailer.  0, or 1 out of memory.
+fn: l2_ns_loop_body (int: ni; @: LmP0NodeAs nas) int
+    @: LmP0Structure blk_s
+    @: LmP0NodeAs blk_as
+    @: LmP0Node blk
+    @: LmP0Field fld
+    @: LmP0Structure outer
+    blk_s: (cast: (@: LmP0Structure) l2_xmalloc(c.sizeof(c.LmP0Structure)))
+    blk_as: (cast: (@: LmP0NodeAs) l2_xmalloc(c.sizeof(c.LmP0NodeAs)))
+    blk: (cast: (@: LmP0Node) l2_xmalloc(c.sizeof(c.LmP0Node)))
+    fld: (cast: (@: LmP0Field) l2_xmalloc(c.sizeof(c.LmP0Field)))
+    outer: (cast: (@: LmP0Structure) l2_xmalloc(c.sizeof(c.LmP0Structure)))
+    if: blk_s = 0 || blk_as = 0 || blk = 0 || fld = 0 || outer = 0
+        return: 1
+    memset((cast: (@: void) blk_s), 0, c.sizeof(c.LmP0Structure))
+    memset((cast: (@: void) blk_as), 0, c.sizeof(c.LmP0NodeAs))
+    memset((cast: (@: void) blk), 0, c.sizeof(c.LmP0Node))
+    memset((cast: (@: void) fld), 0, c.sizeof(c.LmP0Field))
+    memset((cast: (@: void) outer), 0, c.sizeof(c.LmP0Structure))
+    blk_s\first_field: l2_ns_at[ni]\as\frame\body\first_field
+    blk_s\last_field: l2_ns_at[ni]\as\frame\body\last_field
+    blk_s\field_count: l2_ns_at[ni]\as\frame\body\field_count
+    blk_s\trailer: l2_ns_at[ni]\as\frame\trailer
+    blk_as\structure: blk_s
+    blk\kind: c.LM_P0_NODE_STRUCTURE
+    blk\as: blk_as
+    blk\span: l2_ns_at[ni]\span
+    fld\value: blk
+    outer\first_field: fld
+    outer\last_field: fld
+    outer\field_count: 1U
+    nas\structure: outer
+return: 0
+
 # steps/named-struct-exec.md §12 (the author, Q45: "Это просто процедура без аргументов и возвращаемого
 # значения"): named Structure ni is a procedure without formals or result, as the entry E is
 # (l2_make_entry) -- a method whose body is the Structure's body, head 0 (l2_m_head), its own fields the
@@ -3722,6 +3800,14 @@ fn: l2_ns_proc_add (int: ni; const: @(char path)) int
     node\kind: c.LM_P0_NODE_STRUCTURE
     node\as: nas
     node\span: l2_ns_at[ni]\span
+    # Closed by `until` (the author, Q54): the Structure's executable body is that postcondition loop -- the procedure's
+    # body is one anonymous block over the Structure's items with the same `until` trailer, the general loop
+    # (l2_block_until); declaring the Structure runs nothing, a call runs the loop.  Its fields stay the Structure's
+    # (l2_collect_decls below reads the Structure's own body).
+    if: l2_ns_at[ni]\as\frame\trailer != 0 && l2_ns_at[ni]\as\frame\trailer\spelling != 0 && l2_text_eq(l2_ns_at[ni]\as\frame\trailer\spelling, "until") != 0
+        if: l2_ns_loop_body(ni, nas) != 0
+            return: l2_alloc_or(path, l2_ns_at[ni], "out of memory")
+        ---
     if: l2_formals_alloc(l2_m_n, 0) != 0
         return: l2_alloc_or(path, l2_ns_at[ni], "out of memory")
     me: l2_m_n
@@ -16703,7 +16789,9 @@ fn: l2_take_named (const: @(LmP0Node item); const: @(char path)) int
         return: l2_error(path, item, "unsupported body")
     if: l2_ident(item\as\frame\head) = 0
         return: l2_error(path, item, "unsupported body")
-    if: l2_fn_close(item\as\frame, item\as\frame\head, 0) != 0
+    # A `until:` closes a named Structure as its postcondition loop (the author, Q54; l2_ns_loop_body): it names no
+    # end target.
+    if: l2_fn_close(item\as\frame, item\as\frame\head, 0) != 0 && (item\as\frame\trailer = 0 || item\as\frame\trailer\spelling = 0 || l2_text_eq(item\as\frame\trailer\spelling, "until") = 0)
         return: l2_error(path, item, "end target does not match close target")
     if: l2_ns_find(item\as\frame\head) >= 0 && l2_ns_eternal[l2_ns_find(item\as\frame\head)] >= 0
         return: l2_error(path, item, "named Structure collides with a qualified branch")

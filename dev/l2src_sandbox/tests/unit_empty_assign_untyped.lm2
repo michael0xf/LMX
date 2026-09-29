@@ -1,8 +1,10 @@
 # `f()` when f already binds an ordinary Structure is ordinary assignment of the empty Structure
-# (the book §12), not a declaration and not a call. E, declared empty by `E()`, has no declared
-# Structure type, so `E()` and `E: ()` store a fresh empty node. `m()` does the same for the
-# untyped letter. The driver posts one letter, so m is not null. m() stores a
-# fresh empty node over it and does not throw. E() and E: () are the same store.
+# with admission (the book §9 :561), not a declaration and not a call. The first `E()` meets no E:
+# an absent head with the empty Structure declares the named Structure E, whose type is that empty
+# Structure -- one general route with `E: ()` and `end: E` (:563). The second `E()` and `E: ()`
+# assign a fresh empty Structure to E, admitted to E's own type, which () passes. `m()` stores a
+# fresh empty node over the untyped letter, without admission: the letter has no declared type.
+# The driver posts one letter, so m is not null; m() does not throw.
 # Success is 4. The root reports it through sendMessage.
 E()
 E()

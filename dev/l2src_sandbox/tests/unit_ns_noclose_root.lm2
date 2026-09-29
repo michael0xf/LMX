@@ -1,0 +1,23 @@
+# A named Structure needs no closer and no return (the author, Q54 and its clarification; book §9, :559: a head that
+# resolves to nothing, with a Structure tail, declares one): Counter's first item is an executable statement and
+# only the dedent ends it.  Declaring it runs nothing (hits 0), a call runs its body once (hits 1).  It was refused
+# (its items read as a statement's: "unknown field path root", in a method "a call path must end at a callable
+# field").
+# At the root, walked: a 0, b 1 -- success 7; any other 64.
+int: hits 0
+fn: peek () int
+    return: node\hits
+end: peek
+Counter:
+    node\hits: node\hits + 1
+    size_t: n 0U
+int: a 0
+a: peek()
+Counter
+int: b 0
+b: peek()
+int: r 64
+if: a = 0 && b = 1
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

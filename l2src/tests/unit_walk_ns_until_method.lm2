@@ -1,0 +1,26 @@
+# A named Structure closed by `until` is an ordinary named Structure whose executable body is that postcondition
+# loop (the author, Q54): declaring readLoop runs nothing (hits 0), a call runs the loop -- hits 1, 2, 3, then the
+# condition holds (hits 3).  It was refused ("unsupported trailer").
+# Called from a walked method (the Absent pins): 3 -- success 7; any other 64.
+int: hits 0
+fn: peek () int
+    return: node\hits
+end: peek
+readLoop:
+    node\hits: node\hits + 1
+until: node\hits >= 3
+fn: run () int
+    int: a 0
+    a: peek()
+    readLoop
+    int: b 0
+    b: peek()
+    return: a * 10 + b
+end: run
+int: r 64
+int: got 0
+got: run()
+if: got = 3
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

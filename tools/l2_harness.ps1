@@ -1808,12 +1808,14 @@ $fixtures = @(
     # anywhere it is consumed as a value), one diagnostic, now that this fixture's own case is fixed.
     [pscustomobject]@{ Name = 'unit_void_value.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable without a result has no value'; Absent = @(); Debt = @() },
-    # No declared type: E() / E: () / m() store an EMPTY node -- a new empty Structure, one per execution -- not an
-    # admission.
+    # OPUS-Q54-TRAILER-20260929-13, re-expected by name: the first E() declares the named Structure E by the general
+    # route (an absent head with the empty Structure, one route with `E: ()` and `end: E`), so the later E() / E: ()
+    # assign a new empty Structure with admission to E's own empty type, which () passes (was the -132 field route,
+    # an untyped store with no lmx_walk_admit).  m() stores an EMPTY node over the untyped letter, no admission.
     # The driver letter is not null. m() stores over it and does not throw. Success is 4.
     [pscustomobject]@{ Name = 'unit_empty_assign_untyped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
-        Absent = @('lmx_walk_admit');
-        Debt = @('c.LMX_WALK_OP_EMPTY, 1U)') },
+        Absent = @();
+        Debt = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)') },
     # D-06: the f() assignment's failed rebinding store is an invariant on the X1 route, not a printed line.
     # Empty Structure assigned to a typed binding (book §12): an EMPTY node, admitted by
     # lmx_walk_admit.  () does not implement Model / S, so implements is caught and the previous
@@ -2362,6 +2364,31 @@ $fixtures = @(
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_until_block_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # OPUS-Q54-TRAILER-20260929-13 checkpoint 2 (the author, Q54 and its clarification): a named Structure is declared by
+    # general head resolution (book §9, :559-:565) -- a head that resolves to nothing, with a Structure tail -- whatever
+    # closes it, and neither it nor a sub needs a closer or a return.  Declaring runs nothing (hits 0), a call runs the
+    # body (the unit's cell hits, written by an explicit path, read back by peek).  Counter (no closer, an executable
+    # first item) was refused ("unknown field path root"); readLoop closed by `until` -- a procedure whose body is the
+    # postcondition loop, hits 3 -- was refused ("unsupported trailer"); the sub with no return ran already (a positive
+    # witness).  A literal declares nothing: `x: 7` stays "unresolved name".  The walked twins: every method walked.
+    [pscustomobject]@{ Name = 'unit_ns_noclose_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_noclose_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_ns_noclose_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_sub_noreturn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_sub_noreturn.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_until_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns_until_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_ns_until_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_literal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_literal_refused.lm2:4:1: unresolved name'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates
@@ -2735,8 +2762,10 @@ $fixtures = @(
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
+    # OPUS-Q54-TRAILER-20260929-13, re-expected by name: a second `Model:` meets the binding the first declared -- by
+    # general resolution the assignment, refused as one (was "duplicate named Structure", the end:-closed shape).
     [pscustomobject]@{ Name = 'unit_duplicate_named_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'duplicate named Structure'; Absent = @(); Debt = @() },
+        Needle = 'assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

@@ -1,0 +1,23 @@
+# D-109 (steps/defects.md): a bound name of another named type handed to a Structure formal was admitted
+# by nothing -- l2_actual_ns resolves a type name or a path, l2_admit_consumer_uses a type NAME -- so
+# `o: Lacks` (no field `a`) went into `rd (Model: m)`, which reads m\a in its body, silently.  Now the
+# formal's uses are checked for every type that reaches it (l2_d105_close): refused at the call.  (The
+# read is in the body: a read in a hung `return:` is D-110's.)
+Model:
+    size_t: a 1U
+    size_t: b 2U
+end: Model
+Lacks:
+    size_t: b 20U
+end: Lacks
+fn: rd (Model: m) size_t
+    size_t: v 0U
+    v: m\a
+    return: v
+fn: go () size_t
+    Lacks: o
+    return: rd(o)
+size_t: got 0U
+got: go()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

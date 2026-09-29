@@ -1,0 +1,30 @@
+# steps/named-struct-exec.md §12 (Q45): a method's call in a named Structure's body is a statement of the
+# body, as in a method's body -- put, declared above, and later, declared below (methods are visible both
+# ways), each print what they got.  seen and last are hidden inputs of put and later, and so of Counter: a
+# procedure without arguments is one with hidden arguments (the author, 2026-09-28, OPUS-CODEX-20260928-08).
+# Each execution from the root hands them the root's 0: `put 5 5`, `later 1 1`, twice -- n's declaration runs
+# again, n 1.  Their bare writes change only their activations' values (Q52): the root's seen and last stay 0.
+# Entry 7.
+size_t: seen 0U
+size_t: last 0U
+fn: put (size_t: a) int
+    seen: seen + a
+    c.printf: "put %zu %zu\n" a seen
+return: 0
+Counter:
+    size_t: n 0U
+    put: 5U
+    n: n + 1U
+    later: n
+return
+fn: later (size_t: v) int
+    last: last + v
+    c.printf: "later %zu %zu\n" v last
+return: 0
+Counter
+Counter
+int: ok 0
+if: seen = 0U && Counter\n = 1U && last = 0U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

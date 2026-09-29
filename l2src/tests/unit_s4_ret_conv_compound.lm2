@@ -1,0 +1,17 @@
+# Slices 3/4 boundary: a composite value (`b + 1U`) returned from a callable whose result is
+# another named primitive type now gets the same edge a single value has
+# (l2_check_ret_convert/l2_emit_ret_convert now dispatch through l2_check_value_convert_field /
+# l2_emit_value_convert_field, which type and copy the whole n-field chain for n > 1).  b + 1U =
+# 5U fits int: the entry is 7.  The refusal is unit_s4_ret_conv_compound_range.
+fn: body () int
+    size_t: b 4U
+    return: b + 1U
+end: body
+fn: go () int
+    int: r 0
+    if: body() = 5
+        r: 7
+    return: r
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

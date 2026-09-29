@@ -1,0 +1,41 @@
+# An L2-only "puts" (next_core_tasks.md §7a: "L2-библиотека puts -- обычный
+# L2-код без c."): ordinary L2 code owns the byte loop. c.putchar is the raw
+# C door underneath -- same status as any other primitive I/O call, no
+# name-special c.puts handling anywhere in the translator (already true
+# since -155/122/126). Writing byte-by-byte also means no NUL-terminated
+# copy is needed at all (unlike D-81's printArg/argIsOk, which had to build
+# one because c.puts/c.strcmp are raw C string functions).
+#
+# NAMED BOUNDARY, not solved here: l2_puts cannot yet be a separately
+# predef'd/shared library across .lm2 units. l2_harness's generic
+# eternal-runs link step only links <fixture>.o with the driver and
+# l2_libc.o (tools/l2_harness.ps1, the `-o $exe $driverO $genO $l2libcO`
+# link); a second, separately-translated L2/L1 body has nowhere to join
+# that link. This is the same class of gap D-81 hit trying to link
+# l1src/own.h.lm1's lm_own_copy_bytes/lm_own_delete (steps/defects.md D-84's
+# neighbor finding: that predef family has never had an eternal-runs gate
+# row for exactly this reason). So l2_puts lives in this one unit for now.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: l2_puts (const: @(char data); size_t: n) int
+    size_t: i 0U
+    while: i < n
+        c.putchar((cast: (int) data[i]))
+        i: i + 1U
+    c.putchar(10)
+    return: 0
+end: l2_puts
+
+fn: printLetter (MainLetter: letter; size_t: n) int
+    return: l2_puts(@ letter\mainArgs[1][0], n)
+end: printLetter
+
+MainLetter: m
+receiveMessage: m
+if: length(m\mainArgs) != 2
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: printLetter(m, length(m\mainArgs[1])); stdout: ""; stderr: "")
+return

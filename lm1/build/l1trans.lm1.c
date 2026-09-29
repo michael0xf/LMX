@@ -9729,8 +9729,15 @@ int l1_emit_bracket_array(FILE * out, const LmP0Frame * frame, const char * path
     if (l1_ident_is_reserved(field->value->as->atom) != 0) {
     return l1_error(path, field->value, "reserved L1 name");
     }
+    if (l1_text_starts(field->value->as->atom, "c.") != 0 && field -> value -> as -> atom -> length > 2U) {
+    if (l1_write_span(out, field->value->as->atom->data + 2U, field->value->as->atom->length - 2U) != 0) {
+    return 1;
+    }
+    }
+    else {
     if (l1_write_text(out, field->value->as->atom) != 0) {
     return 1;
+    }
     }
     field = field -> next;
     while (field != 0 && l1_node_ignored(field->value)) {

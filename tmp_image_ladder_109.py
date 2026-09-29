@@ -173,7 +173,7 @@ def main() -> int:
             )
         report["dirty_crash_seen"] = crashed
         out = STAMP / "image_dirty_109.json"
-        out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        out.write_text(json.dumps(report, indent=2), encoding="utf-8", newline='\n')
         print("wrote", out)
         return 0
 
@@ -214,7 +214,7 @@ def main() -> int:
                 break
             if rec.get("timeout"):
                 break
-    OUT.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    OUT.write_text(json.dumps(report, indent=2), encoding="utf-8", newline='\n')
     print("wrote", OUT, "runs", len(report["runs"]))
     return 0
 

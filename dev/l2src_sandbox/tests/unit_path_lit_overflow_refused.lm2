@@ -1,0 +1,16 @@
+# D-89: a literal written through a field path must fit the field -- the same range check an
+# ordinary assignment makes.  Before D-89 the size_t field got the 0 that l2_literal_value leaves
+# for a literal that does not fit, and the program went on with it.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: go () int
+    Model: fresh
+    fresh\value: 999999999999999999999999U
+    if: fresh\value = 0U
+        return: 3
+    return: 7
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

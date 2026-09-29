@@ -1,0 +1,12 @@
+# Item 739: at the root a held callable's call goes through l2_mad_call, which carries one input;
+# a header of two formals called with one actual is refused, located, rather than run with a
+# missing argument.  Mutant: no header check -- l2trans accepts.
+fn: makePair (int: n) fn: (int: x; int: y) int
+    fn: pairN (int: x; int: y) int
+        return: x + y + n
+    return: pairN
+
+p5: makePair 5
+int: a (p5: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

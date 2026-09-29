@@ -1,0 +1,28 @@
+# Item 738 slice 2: a captured Structure used whole (`probe(loc)`) -- an admission to a Structure type,
+# which may throw, and a throwing method is not walked.  The model's reason (l2_rw_may_why) at its header;
+# before, the host's header alone.
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    Inner: box
+    int: count 0
+    int: value 0
+end: Model
+
+fn: probe (Model: q) int
+    return: q\value
+
+fn: makeReader (int: n) fn: (int: x) int
+    Model: loc
+    loc\value: n
+    fn: read (int: x) int
+        return: probe(loc) + x
+    return: read
+
+r40: makeReader 40
+int: a (r40: 2)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

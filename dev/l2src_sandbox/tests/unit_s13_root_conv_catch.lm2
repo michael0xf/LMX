@@ -1,0 +1,13 @@
+# implements-port slice 13: `catch: convert ()` after a root store takes its edge's refusal, as in a
+# method (unit_s7_conv_catch).  -1 does not fit size_t: s keeps 4, the handler sets r to 3, and the
+# entry is 3 + 4.  Mutant: the rows not written -- the refusal leaves the root uncaught.
+size_t: s 4U
+int: x -1
+int: r 0
+s: x
+catch: convert ()
+    r: 3
+if: s = 4U
+    r: r + 4
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

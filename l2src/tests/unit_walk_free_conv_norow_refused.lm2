@@ -1,0 +1,11 @@
+# steps/free-names.md (class C): char has no conversion to size_t -- the caller's char k where peek returns a size_t
+# is refused at the value as the same char declared in peek is.  Before M2: "internal: a conversion site was not
+# checked".
+fn: peek () size_t
+    return: k
+fn: m () size_t
+    char: k 'a'
+    return: peek()
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

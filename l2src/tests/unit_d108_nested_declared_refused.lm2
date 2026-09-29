@@ -1,0 +1,18 @@
+# D-108: `mk` declares Oops; `p` passes `mk()` as the actual of a Structure-typed formal, and neither
+# catches Oops nor lists it.  The static rule of §14 refuses `p` at the call, as it does when the same
+# call is the actual of a number formal; before, the actual was never checked and the rule never saw it.
+Model:
+    size_t: a 1U
+end: Model
+fn: mk () Model
+    throws: Oops
+    Model: x
+    throw: Oops()
+    return: x
+fn: rd (Model: m) size_t
+return: m\a
+fn: p () size_t
+return: rd(mk())
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

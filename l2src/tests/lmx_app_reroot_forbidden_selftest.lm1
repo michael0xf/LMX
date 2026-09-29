@@ -373,7 +373,7 @@ fn: rf_scenario (int: live; int: pending; @: int counts) int
     rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not published in R0's children Array")
     rf_check(counts, lmx_range_classify(@ arena_a, (cast: (@: void) msg_a)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "A not in own arena")
     rf_check(counts, lmx_thread_child_is(r0, t_a) != 0, "A not live child of R0")
-    rf_check(counts, graph_a != 0 && graph_a\len >= 1, "A graph has no slot for B")
+    rf_check(counts, graph_a != 0 && (graph_a\array.size) >= 1U, "A graph has no slot for B")
     rf_check(counts, lmx_schedule_wait(rf_sched_a, lmx_root_clock(@ root)) = c.LMX_SCHEDULE_OK, "A schedule wait failed")
     rf_check(counts, lmx_manager_add(manager, rf_sched_a) = c.LMX_MANAGER_OK, "A not in manager")
     rf_check(counts, lmx_service_find(service, (cast: (@: void) t_a)) = (cast: (@: void) t_a), "A not in service")

@@ -7,6 +7,8 @@ include: "<stdio.h>"
 # FABLE-134 layout gate (compositional REVIEW).
 # Every DynamicArray is { <T>Array array; size_t capacity } with offsetof(array)==0
 # and sizeof(array) equal to the standalone fixed descriptor.
+# L2_spec §2 (VoidArray migration): Lmx is { VoidArray array; Lmx *parent; LmxEntry native }
+# with array FIRST -- &node->array is the node's own address -- and no other field.
 
 fn: fail (@: int failures; @: char msg) void
     \failures: \failures + 1
@@ -15,38 +17,59 @@ return
 
 fn: main () int
     int: failures 0
-    LmxArrayDynamicArray: a
+    VoidDynamicArray: a
     LmxCharDynamicArray: b
     LmxRangeDynamicArray: r
     LmxServiceEntryDynamicArray: s
     LmxPostInboxSlotDynamicArray: i
     LmxChunk: ch
-    @: LmxArrayDynamicArray pa
+    @: VoidDynamicArray pa
     @: LmxCharDynamicArray pb
     @: LmxRangeDynamicArray pr
     @: LmxServiceEntryDynamicArray ps
     @: LmxPostInboxSlotDynamicArray pi
     @: LmxChunk pch
-    @: LmxArrayDesc a_base
+    @: VoidArray a_base
     @: LmxCharArray b_base
     @: LmxRangeArray r_base
     @: LmxServiceEntryArray s_base
     @: LmxPostInboxSlotArray i_base
     @: LmxCharDynamicArray ch_cells
+    Lmx: node
+    @: Lmx pn
     pa: @ a
     pb: @ b
     pr: @ r
     ps: @ s
     pi: @ i
     pch: @ ch
-    a_base: (cast: (@: LmxArrayDesc) pa)
+    a_base: (cast: (@: VoidArray) pa)
     b_base: (cast: (@: LmxCharArray) pb)
     r_base: (cast: (@: LmxRangeArray) pr)
     s_base: (cast: (@: LmxServiceEntryArray) ps)
     i_base: (cast: (@: LmxPostInboxSlotArray) pi)
     ch_cells: (cast: (@: LmxCharDynamicArray) pch)
+    pn: @ node
+    if: (cast: (size_t) @ pn\array) != (cast: (size_t) pn)
+        fail(@ failures, "Lmx offsetof(array) = 0")
+    ---
+    if: (cast: (size_t) @ pn\parent) != (cast: (size_t) pn) + c.sizeof(c.VoidArray)
+        fail(@ failures, "Lmx parent follows array")
+    ---
+    if: (cast: (size_t) @ pn\native) <= (cast: (size_t) @ pn\parent)
+        fail(@ failures, "Lmx native follows parent")
+    ---
+    if: c.sizeof(c.Lmx) != c.sizeof(c.VoidArray) + c.sizeof(@: void) + c.sizeof(c.LmxEntry)
+        fail(@ failures, "Lmx is array, parent, native and nothing else")
+    ---
+    # The count is a size_t (author 2026-09-23: "size_t логичней и в Lmx"); an int would pad to
+    # the same record size, so the field is measured on its own: it holds a count past 32 bits.
+    pn\array.size: 4294967296U
+    if: pn\array.size != 4294967296U
+        fail(@ failures, "Lmx.array.size is a size_t")
+    ---
     if: (cast: (size_t) a_base) != (cast: (size_t) pa)
-        fail(@ failures, "LmxArrayDynamicArray offsetof(array)")
+        fail(@ failures, "VoidDynamicArray offsetof(array)")
     ---
     if: (cast: (size_t) b_base) != (cast: (size_t) pb)
         fail(@ failures, "LmxCharDynamicArray offsetof(array)")
@@ -60,8 +83,8 @@ fn: main () int
     if: (cast: (size_t) i_base) != (cast: (size_t) pi)
         fail(@ failures, "LmxPostInboxSlotDynamicArray offsetof(array)")
     ---
-    if: c.sizeof(c.LmxArrayDesc) != c.sizeof(c.size_t) + c.sizeof(@: void)
-        fail(@ failures, "LmxArrayDesc has no capacity (base is len+data only)")
+    if: c.sizeof(c.VoidArray) != c.sizeof(c.size_t) + c.sizeof(@: void)
+        fail(@ failures, "VoidArray has no capacity (base is size+data only)")
     ---
     if: c.sizeof(c.LmxCharArray) != c.sizeof(c.size_t) + c.sizeof(@: char)
         fail(@ failures, "LmxCharArray sizeof")
@@ -75,8 +98,8 @@ fn: main () int
     if: c.sizeof(c.LmxPostInboxSlotArray) != c.sizeof(c.size_t) + c.sizeof(@: void)
         fail(@ failures, "LmxPostInboxSlotArray sizeof")
     ---
-    if: c.sizeof(c.LmxArrayDynamicArray) != c.sizeof(c.LmxArrayDesc) + c.sizeof(c.size_t)
-        fail(@ failures, "LmxArrayDynamicArray sizeof")
+    if: c.sizeof(c.VoidDynamicArray) != c.sizeof(c.VoidArray) + c.sizeof(c.size_t)
+        fail(@ failures, "VoidDynamicArray sizeof")
     ---
     if: c.sizeof(c.LmxCharDynamicArray) != c.sizeof(c.LmxCharArray) + c.sizeof(c.size_t)
         fail(@ failures, "LmxCharDynamicArray sizeof")

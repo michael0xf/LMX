@@ -1,0 +1,30 @@
+# THE WIN32 NAMES THE KERNEL CALLS, declared here instead of <windows.h> (next_core_tasks.md §0
+# «Память сборки», third measurement): the whole header costs cc1 244 MB of parsing in every unit
+# the kernel reaches through predef, for these eleven names.  Exactly the calls and constants the
+# four _win32 bodies use (lmx_clock, lmx_manager_running, lmx_manager_running_lane,
+# lmx_process_deadline), by their Win32 names, with mingw-w64's own types -- DWORD is unsigned
+# long (ulong), BOOL int, HANDLE and LPVOID void *, SIZE_T size_t, ULONGLONG unsigned long long
+# (uint64_t) -- and nothing else: no wrapper, no fallback.  On x64 WINAPI is the one calling
+# convention.  A unit must not also include <windows.h>: two declarations of one function would
+# meet (none of the kernel does).
+
+# size_t and uint64_t, the only standard types below: <windows.h> used to bring them.
+include: "<stddef.h>" "<stdint.h>"
+
+define: INFINITE 0xFFFFFFFFU
+define: WAIT_OBJECT_0 0U
+define: WAIT_TIMEOUT 258U
+
+# LPTHREAD_START_ROUTINE: a thread's body takes its argument and returns a DWORD.
+fnptr: LmxWin32ThreadStart (@: void arg) ulong
+
+prototype:
+    fn: GetTickCount64 () uint64_t
+    sub: Sleep (ulong: ms)
+    fn: WaitForSingleObject (@: void handle; ulong: ms) ulong
+    fn: CloseHandle (@: void handle) int
+    fn: CreateThread (@: void security; size_t: stack; LmxWin32ThreadStart: start; @: void arg; ulong: flags; @: ulong id) @: void
+    fn: GetCurrentThreadId () ulong
+    fn: CreateEventW (@: void security; int: manual; int: initial; @: void name) @: void
+    fn: SetEvent (@: void handle) int
+end: prototype

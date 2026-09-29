@@ -1,16 +1,31 @@
 # An argument read by index: m\mainArgs[1] is argv[1]'s char Array at exact
-# len, no NUL. c.puts wants a C string; that copy is the c.* door. This row
-# stays root-pending because the call is outside a method (Q7), not because
-# the graph stores a NUL.
+# len, no NUL. c.puts wants a C string; printArg makes that copy explicitly
+# (c.calloc(1, n+1) is zero-init so the trailing byte is a real NUL, then
+# c.memcpy the n graph bytes in -- not a silent read past the array's own
+# bytes) and lives in a method, per the author's answer to Q31
+# (`LMX_blog/q/q31.md`): a method is a sufficient receiver, the door was
+# never the problem, only the interpreted root was (D-81).
+include: "<string.h>"
+
 MainLetter:
     char: []: []: mainArgs
 end: MainLetter
+
+fn: printArg (MainLetter: letter; size_t: n) int
+    @: void buf
+    buf: c.calloc(1U, n + 1U)
+    if: buf = 0
+        return: 1
+    c.memcpy(buf, @ letter\mainArgs[1][0], n)
+    c.puts(buf)
+    c.free(buf)
+    return: 0
+end: printArg
 
 MainLetter: m
 receiveMessage: m
 if: length(m\mainArgs) != 2
     sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
     return
-c.puts: @ m\mainArgs[1][0]
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: printArg(m, length(m\mainArgs[1])); stdout: ""; stderr: "")
 return

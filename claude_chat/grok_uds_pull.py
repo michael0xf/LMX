@@ -47,7 +47,7 @@ def load_state():
 def save_state(state):
     STATE.parent.mkdir(parents=True, exist_ok=True)
     temporary = STATE.with_suffix('.tmp')
-    temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
     temporary.replace(STATE)
 
 
@@ -147,7 +147,7 @@ def dequeue_ids(ids):
             dropped += 1
             continue
         kept.append(line)
-    QUEUE.write_text((''.join(x + '\n' for x in kept)), encoding='utf-8')
+    QUEUE.write_text((''.join(x + '\n' for x in kept)), encoding='utf-8', newline='\n')
     return dropped
 
 
@@ -229,7 +229,7 @@ def main():
         'queue_dropped': dropped,
     }
     INBOX.parent.mkdir(parents=True, exist_ok=True)
-    INBOX.write_text(json.dumps(inbox, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    INBOX.write_text(json.dumps(inbox, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
     print(json.dumps({
         'session_id': sid,
         'cursor': latest,

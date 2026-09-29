@@ -1,0 +1,25 @@
+# Item 738 slice 2: the same past a field in update position (`m\box\c: x`), where the path is one
+# frame head text: the model that only writes through its capture recorded no capture at all, and its
+# check said "unknown field path root" (l2_scan_path_root).
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    Inner: box
+    int: count 0
+    int: value 0
+end: Model
+
+fn: makeCounter (Model: m) fn: (int: x) int
+    fn: bump (int: x) int
+        m\box\c: x
+        return: x
+    return: bump
+
+Model: left
+c: makeCounter left
+int: a (c: 1)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

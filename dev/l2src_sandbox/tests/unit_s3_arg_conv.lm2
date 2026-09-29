@@ -1,0 +1,42 @@
+# implements-port slice 3 (A3, arguments; steps/implements-port-plan.md): a value of one named
+# primitive type given to a formal of another is the conversion edge an assignment has -- the
+# row's receiver from convert.lm2 / convert_impl.lm2 is called on the value and its result is the
+# argument (l2_check_arg_convert, l2_emit_arg_convert).  Here: an int local and an int call result
+# into size_t (lm_stg_convert_int_size_t), a char into int (lm_stg_convert_char_int, which cannot
+# refuse), and the int -> size_t edge again through a callable formal (slice 1's dynamic call).
+# Every value fits, so the entry is 7.  The refusal is unit_s3_arg_conv_range / _catch.
+fn: take (size_t: n) int
+    if: n = 5
+        return: 7
+    return: 0
+end: take
+fn: code (int: v) int
+    return: v
+end: code
+fn: five () int
+    return: 5
+end: five
+fn: sizeTo (size_t: n) int
+end: sizeTo
+fn: applyS (sizeTo: op) int
+    int: x 5
+    return: op(x)
+end: applyS
+fn: go () int
+    int: x 5
+    char: ch 'a'
+    int: r 0
+    int: a 0
+    int: b 0
+    int: c3 0
+    int: d 0
+    a: take(x)
+    b: take(five())
+    c3: code(ch)
+    d: applyS(take)
+    if: a = 7 && b = 7 && c3 = 97 && d = 7
+        r: 7
+    return: r
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

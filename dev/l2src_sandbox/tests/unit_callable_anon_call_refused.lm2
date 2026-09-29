@@ -1,0 +1,16 @@
+# Implements port slice 2 (A2; q37): inside `apply`, `op` is called with two inputs where its header
+# written in place takes one -- refused at that call, "incompatible entry signature" (the needle pins
+# its place: before A2 the phrase was said at the header).
+fn: inc (int: x) int
+    return: x + 1
+end: inc
+
+fn: apply (op(fn: (int: x) int) int(value)) int
+    return: op(value value)
+end: apply
+
+int: ok 7
+if: apply(inc 10) != 11
+    ok: 1
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

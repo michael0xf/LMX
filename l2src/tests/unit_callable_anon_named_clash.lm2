@@ -1,0 +1,25 @@
+# D-106 (REVIEW eb60712, fable_pc's P42; implements port slice 2): a method `op` at the top level and the
+# callable formal `op(fn: (int: x) int)` of `apply` share a name.  The formal is the innermost name:
+# inside `apply`, `op(value)` calls what `apply` was given -- `apply(inc 10)` is 11 -- while `op(1 2)`
+# outside is the method of two inputs, 103.  Before, `op(value)` inside `apply` resolved to the method
+# (the unit's name was asked first), and a method of the formal's own signature was called silently.
+# Success is 7.
+fn: op (int: a; int: b) int
+    return: a + b + 100
+end: op
+
+fn: inc (int: x) int
+    return: x + 1
+end: inc
+
+fn: apply (op(fn: (int: x) int) int(value)) int
+    return: op(value)
+end: apply
+
+int: ok 7
+if: apply(inc 10) != 11
+    ok: 1
+if: op(1 2) != 103
+    ok: 2
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

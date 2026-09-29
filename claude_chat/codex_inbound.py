@@ -104,7 +104,7 @@ def main():
             parser.error('Bundled codex-app-tools MCP server not found.')
         server = max(servers, key=lambda p: p.stat().st_mtime)
         PROFILE.parent.mkdir(parents=True, exist_ok=True)
-        PROFILE.write_text(json.dumps({'thread_id': tid, 'pipe': pipe, 'server': str(server)}, indent=2), encoding='utf-8')
+        PROFILE.write_text(json.dumps({'thread_id': tid, 'pipe': pipe, 'server': str(server)}, indent=2), encoding='utf-8', newline='\n')
         print(json.dumps({'bound_thread_id': tid}))
         return
     config = json.loads(PROFILE.read_text(encoding='utf-8'))

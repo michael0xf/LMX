@@ -61,7 +61,7 @@ os:
         fn: lm_build_platform_tests_command_format () @: char
         return: "powershell -NoProfile -ExecutionPolicy Bypass -File \"%s\""
         fn: lm_build_setenv (const: @(char name); const: @(char value)) int
-            c.array: []: char assignment 256
+            []: char assignment 256
             if: name = 0
                 return: 1
             if: value = 0
@@ -72,7 +72,7 @@ os:
             ---
         return: c._putenv(assignment)
         fn: lm_build_unsetenv (const: @(char name)) int
-            c.array: []: char assignment 256
+            []: char assignment 256
             if: name = 0
                 return: 1
             c.snprintf(assignment, c.sizeof(assignment), "%s=", name)
@@ -280,7 +280,7 @@ fn: lm_build_trim_last_path_part (@: char path) int
 return: 0
 
 fn: lm_build_has_project_marker (const: @(char path)) int
-    c.array: []: char marker_path 2048
+    []: char marker_path 2048
     if: lm_build_join_path(marker_path, c.sizeof(marker_path), path, "l1src/buildCore.lm1") != 0
         return: 0
     if: lm_build_file_exists(marker_path)
@@ -288,9 +288,9 @@ fn: lm_build_has_project_marker (const: @(char path)) int
 return: 0
 
 fn: lm_build_enter_project_root (const: @(char program_path)) int
-    c.array: []: char search_path 1024
-    c.array: []: char executable_path 1024
-    c.array: []: char cwd 1024
+    []: char search_path 1024
+    []: char executable_path 1024
+    []: char cwd 1024
     int: depth
     if: lm_build_platform_getcwd(cwd, c.sizeof(cwd)) = 0
         c.fprintf(c.stderr, "buildCore.lm0: cannot read current directory\n")
@@ -455,7 +455,7 @@ fn: lm_build_append_arg (@: char buffer; size_t: size; size_t: used; const: @(ch
 return: lm_build_append(buffer, size, used, "\"")
 
 fn: lm_build_append_prefixed_arg (@: char buffer; size_t: size; size_t: used; const: @(char prefix); const: @(char value)) size_t
-    c.array: []: char arg 2048
+    []: char arg 2048
     if: c.strlen(prefix) + c.strlen(value) >= c.sizeof(arg)
         c.fprintf(c.stderr, "buildCore.lm0: CMake argument is too long\n")
         return: size
@@ -473,7 +473,7 @@ fn: lm_build_run (const: @(char command)) int
 return: 0
 
 fn: lm_build_make (const: @(char make_tool); const: @(char operation); const: @(char args)) int
-    c.array: []: char command 8192
+    []: char command 8192
     size_t: used 0U
     command[0]: 0
     used: lm_build_append(command, c.sizeof(command), used, make_tool)
@@ -494,7 +494,7 @@ fn: lm_build_make (const: @(char make_tool); const: @(char operation); const: @(
 return: lm_build_run(command)
 
 fn: lm_build_trans (const: @(char trans_tool); const: @(char source_path); const: @(char output_path)) int
-    c.array: []: char command 4096
+    []: char command 4096
     size_t: used 0U
     command[0]: 0
     used: lm_build_append(command, c.sizeof(command), used, trans_tool)
@@ -533,8 +533,8 @@ fn: lm_build_generate_all (const: @(char trans_tool)) int
 return: 0
 
 fn: lm_build_parser_library (const: @(char make_tool); const: @(char output_dir)) int
-    c.array: []: char library_path 512
-    c.array: []: char command 4096
+    []: char library_path 512
+    []: char command 4096
     c.snprintf(library_path, c.sizeof(library_path), "%s/libparser.lm0.a", output_dir)
     if: lm_build_make(make_tool, "cc", "-std=c99 -Wall -Wextra -Wpedantic -I. -I lm1/build -c \"lm1/build/parser.lm1.c\" -o \"build/obj/parser.lm1.o\"") != 0
         return: 1
@@ -546,8 +546,8 @@ fn: lm_build_parser_library (const: @(char make_tool); const: @(char output_dir)
 return: lm_build_make(make_tool, "ranlib", command)
 
 fn: lm_build_own_library (const: @(char make_tool); const: @(char output_dir)) int
-    c.array: []: char library_path 512
-    c.array: []: char command 4096
+    []: char library_path 512
+    []: char command 4096
     c.snprintf(library_path, c.sizeof(library_path), "%s/libown.lm0.a", output_dir)
     if: lm_build_make(make_tool, "cc", "-std=c99 -Wall -Wextra -Wpedantic -I. -I lm1/build -c \"lm1/build/own.lm1.c\" -o \"build/obj/own.lm1.o\"") != 0
         return: 1
@@ -559,12 +559,12 @@ fn: lm_build_own_library (const: @(char make_tool); const: @(char output_dir)) i
 return: lm_build_make(make_tool, "ranlib", command)
 
 fn: lm_build_compile_l1trans (const: @(char make_tool); const: @(char output_dir)) int
-    c.array: []: char command 4096
+    []: char command 4096
     c.snprintf(command, c.sizeof(command), "-std=c99 -Wall -Wextra -Wpedantic -I. -I lm1/build \"lm1/build/l1trans.lm1.c\" -o \"%s/l1trans.lm0%s\"", output_dir, lm_build_exe_suffix())
 return: lm_build_make(make_tool, "link", command)
 
 fn: lm_build_compile_generated_tools (const: @(char make_tool); const: @(char output_dir)) int
-    c.array: []: char command 4096
+    []: char command 4096
     c.snprintf(command, c.sizeof(command), "-std=c99 -Wall -Wextra -Wpedantic \"lm1/build/make.lm1.c\" -o \"%s/make.lm0%s\"", output_dir, lm_build_exe_suffix())
     if: lm_build_make(make_tool, "link", command) != 0
         return: 1
@@ -578,9 +578,9 @@ fn: lm_build_compile_generated_tools (const: @(char make_tool); const: @(char ou
 return: lm_build_make(make_tool, "link", command)
 
 fn: lm_build_run_canary () int
-    c.array: []: char canary_path 512
+    []: char canary_path 512
     @: char command_path
-    c.array: []: char command 4096
+    []: char command 4096
     c.snprintf(canary_path, c.sizeof(canary_path), "build/lm0/next/buildCore.lm0%s", lm_build_exe_suffix())
     if: lm_build_prepare_platform_canary(canary_path) != 0
         return: 1
@@ -603,7 +603,7 @@ fn: lm_build_write_staged_tests_script (const: @(char output_dir); const: @(char
 return: 0
 
 fn: lm_build_run_staged_tests (const: @(char make_tool); const: @(char output_dir); const: @(char parser_library); const: @(char own_library)) int
-    c.array: []: char command 512
+    []: char command 512
     if: lm_build_make(make_tool, "mkdir", "\"build/obj/tests\"") != 0
         return: 1
     if: lm_build_write_staged_tests_script(output_dir, parser_library, own_library) != 0
@@ -612,13 +612,13 @@ fn: lm_build_run_staged_tests (const: @(char make_tool); const: @(char output_di
 return: lm_build_run(command)
 
 fn: lm_build_defer_finalize () int
-    c.array: []: char command 256
+    []: char command 256
     c.snprintf(command, c.sizeof(command), "build%slm0%snext%sfinalize.lm0%s --defer", lm_build_path_sep(), lm_build_path_sep(), lm_build_path_sep(), lm_build_exe_suffix())
 return: lm_build_run(command)
 
 fn: lm_build_extract_third_party_zips () int
     @: char cmake_tool
-    c.array: []: char command 4096
+    []: char command 4096
     size_t: used 0U
     cmake_tool: lm_build_env_or_default("LM_CMAKE", lm_build_default_cmake())
     command[0]: 0
@@ -640,9 +640,9 @@ fn: lm_build_extract_third_party_zips () int
 return: lm_build_run(command)
 
 fn: lm_build_clear_full_cmake_cache (const: @(char cmake_tool); const: @(char build_dir)) int
-    c.array: []: char command 4096
-    c.array: []: char cache_path 2048
-    c.array: []: char files_path 2048
+    []: char command 4096
+    []: char cache_path 2048
+    []: char files_path 2048
     size_t: used
     if: c.strlen(build_dir) + 32U >= c.sizeof(cache_path)
         c.fprintf(c.stderr, "buildCore.lm0: full build directory is too long\n")
@@ -696,7 +696,7 @@ fn: lm_build_full_configure () int
     @: char cc
     @: char cxx
     @: char thread_provider
-    c.array: []: char command 8192
+    []: char command 8192
     size_t: used 0U
     cmake_tool: lm_build_env_or_default("LM_CMAKE", lm_build_default_cmake())
     build_dir: lm_build_env_or_default("LM_FULL_BUILD_DIR", "build/libs")
@@ -782,7 +782,7 @@ return: lm_build_run(command)
 fn: lm_build_full_build () int
     @: char cmake_tool
     @: char build_dir
-    c.array: []: char command 4096
+    []: char command 4096
     size_t: used 0U
     cmake_tool: lm_build_env_or_default("LM_CMAKE", lm_build_default_cmake())
     build_dir: lm_build_env_or_default("LM_FULL_BUILD_DIR", "build/libs")
@@ -813,8 +813,8 @@ return: lm_build_full_build()
 
 fn: lm_build_run_bootstrap (const: @(char trusted_make); const: @(char built_trans)) int
     @: char output_dir
-    c.array: []: char parser_library 512
-    c.array: []: char own_library 512
+    []: char parser_library 512
+    []: char own_library 512
     output_dir: lm_build_output_dir()
     c.snprintf(parser_library, c.sizeof(parser_library), "%s/libparser.lm0.a", output_dir)
     c.snprintf(own_library, c.sizeof(own_library), "%s/libown.lm0.a", output_dir)
@@ -860,8 +860,8 @@ return: lm_build_defer_finalize()
 external:
     fn: main (int: argc; @@: char argv) int
         @: char trusted_make
-        c.array: []: char trusted_make_buffer 128
-        c.array: []: char built_trans_buffer 128
+        []: char trusted_make_buffer 128
+        []: char built_trans_buffer 128
         int: parse_status
         parse_status: lm_build_parse_options(argc, argv)
         if: parse_status = 2

@@ -28,18 +28,24 @@ end: prototype
 # on 2026-09-12; `native` accepted by the author 2026-09-25 (next_core_tasks.md §3 item 8,
 # CORE.md §2, L2_spec_ru.md §2/§10/§11).  Field order is normative.
 #
+#   array   the node's actual array of immediate physical child references, by value and
+#         FIRST (offset 0): `&node\array` is the node's own address, yet range classification
+#         still answers LMX_KIND_STRUCT for it, never LMX_KIND_ARRAY (L2_spec §2).  The same
+#         physical type VoidArray as a standalone Array descriptor:
+#
+#           array.size  exclusively the number of immediate children.  Not bytes, not
+#                       characters, not an Array length of some child.
+#           array.data  points to an ordered array of array.size child pointers of type void *:
+#
+#             void **children = (void **)s->array.data;
+#             void *child = children[i];        0 <= i < s->array.size
+#
+#         Base VoidArray has no capacity and never grows or switches backing.
 #   parent  the immediate structural parent; NULL at a structural root.  Merge and new Message
 #         creation copy the used graph with the same traversal, rewriting
 #         destination parent links through the source-to-copy map.  This field is
 #         not the reserved source word / call parameter `node`: that parameter is
 #         the lexical space above the method and stays fixed for its activation.
-#   len   exclusively the number of immediate children.  Not bytes, not
-#         characters, not an Array length (that is LmxArrayDesc.len).
-#   data  points to an ordered array of len child pointers of type void *:
-#
-#             void **children = (void **)s->data;
-#             void *child = children[i];        0 <= i < s->len
-#
 #   native  a direct reference to this Structure's native body implementation (the C entry),
 #         or null when there is none -- any Structure can be interpreted, a native form is
 #         never required.  Not a lexical element and not a graph field/child slot: execution
@@ -52,8 +58,8 @@ end: prototype
 # A child VALUE is the address of that child in the typed array/range of its type
 # T: a Structure child points at another Lmx header; a primitive child points
 # directly at its cell (an interned char is &all_chars['!']); an Array child points
-# at its {len, data} record.  Children are never inline Lmx records, and only a target
-# classified as a Structure has parent/len/data/native.  A callable is an ordinary
+# at its VoidArray {size, data} record.  Children are never inline Lmx records, and only a
+# target classified as a Structure has array/parent/native.  A callable is an ordinary
 # Structure M: its own declared fields (args/return/body, in lexical order -- L2_spec_ru
 # §10) are its later slots from 0, no reserved slot.  M.parent
 # is its immediate structural parent.  At method entry the reserved `Lmx *node` argument is
@@ -64,10 +70,18 @@ end: prototype
 # The field count is fixed at construction (ABI 14.22).  Nested code may replace the
 # void * references in the slots; it never adds, moves or removes slots.  Nothing
 # else per node beyond `native` above -- no name, no type tag, no vtable.
-struct: Lmx
-    @: Lmx parent
-    int: len
+# The one physical Array descriptor (L2_spec §2, author 2026-09-23): a standalone Array
+# descriptor and the embedded Lmx.array.  `size` is the logical element count (child
+# slots for Lmx.array); the backing is exactly `size` cells.  No capacity, no growth:
+# dynamic membership is an L1 List (KIND_LIST), not Array.
+struct: VoidArray
+    size_t: size
     @: void data
+end: VoidArray
+
+struct: Lmx
+    VoidArray: array
+    @: Lmx parent
     LmxEntry: native
 end: Lmx
 
@@ -114,11 +128,11 @@ enum: LmxType
     # this T.  Graph / Array-descriptor / METHOD referents.
     # T = graph node (pointer to Lmx)
     LMX_TYPE_LMX 8
-    # T = Array descriptor (pointer to LmxArrayDesc)
+    # T = Array descriptor (pointer to VoidArray)
     LMX_TYPE_DESC 9
     # all_array_of_T for T = Lmx*
     LMX_TYPE_ARRAY_OF_LMX 10
-    # all_array_of_T for T = LmxArrayDesc*
+    # all_array_of_T for T = VoidArray*
     LMX_TYPE_ARRAY_OF_DESC 11
     # k.4 (2026-09-25): the LmxMethod pool/array is gone with LmxMethod itself; reserved.
     LMX_TYPE_RESERVED_12 12
@@ -144,6 +158,11 @@ enum: LmxType
     # type is encoded as LMX_TYPE_POINTER_BASE + a closed-unit type id, so @T and @@T
     # occupy distinct address domains.
     LMX_TYPE_POINTER_BASE 1024
+    # The Message reference -- a pointer cell holding a Message record's address, a letter's
+    # sender -- is LMX_TYPE_POINTER_BASE + 29 (29 is l2trans's l2_msg_ref_ty()).  Named once here:
+    # the kernel, the driver, the selftests and the cells the translator emits all say
+    # LMX_TYPE_MSG_REF.  (An L1 enum value is one literal; the sum is written out.)
+    LMX_TYPE_MSG_REF 1053
     # Array<@T> descriptors have their own exact address domain.  For the same
     # closed-unit T id, backing cells use POINTER_BASE + id and the descriptor uses
     # ARRAY_OF_POINTER_BASE + id.  Array length is dynamic; these values classify
@@ -158,15 +177,15 @@ enum: LmxKind
     LMX_KIND_PRIMITIVE 1
     # k.4 (2026-09-25): LmxMethod is gone (Lmx.native replaces it); reserved.
     LMX_KIND_RESERVED_2 2
-    # typed Array pool entry {len, data}
+    # typed Array pool entry {size, data}
     LMX_KIND_ARRAY 3
     # a Structure's void * child-pointer array: a storage location, not a value
     LMX_KIND_CHILDREN 4
     # pointer-valued array element; type is T
     LMX_KIND_REF 5
-    # an Lmx header {parent, len, data, native}
+    # an Lmx header {array, parent, native}
     LMX_KIND_STRUCT 6
-    # independent L1 dynamic container (LmxArrayDesc); not an Array.  lmx_range_classify
+    # independent L1 dynamic container (VoidArray); not an Array.  lmx_range_classify
     # answers LmxKind and the domain kinds (lmx_implements.h.lm1, 7..20) in ONE number space,
     # so this value follows the last domain kind: 7 was LMX_DOMAIN_KIND_MSG_RECORD, and a
     # Thread/Message record classified as a List.
@@ -187,22 +206,17 @@ struct: LmxOp
     int: code
 end: LmxOp
 
-# An Array descriptor has no Lmx node. `len` is the logical element count.
-# The backing is exactly `len` cells. Dynamic membership is an L1 list (KIND_LIST), not Array.
-struct: LmxArrayDesc
-    size_t: len
-    @: void data
-end: LmxArrayDesc
-
+# VoidArray (defined above Lmx, which embeds it) is the Array descriptor: it has no Lmx
+# node of its own.
 # Fixed void*-element array descriptor (sole void fixed form). Capacity never lives here.
-# Dynamic void* arrays compose LmxArrayDynamicArray over this type.
+# Dynamic void* arrays compose VoidDynamicArray over this type.
 
 # Dynamic array of void* cells: List public shape; copier map keys/vals.
-# offsetof(array) == 0 so a DynamicArray* may be read as LmxArrayDesc* for len/data.
-struct: LmxArrayDynamicArray
-    LmxArrayDesc: array
+# offsetof(array) == 0 so a DynamicArray* may be read as VoidArray* for size/data.
+struct: VoidDynamicArray
+    VoidArray: array
     size_t: capacity
-end: LmxArrayDynamicArray
+end: VoidDynamicArray
 
 
 
@@ -244,7 +258,7 @@ end: LmxRange
 
 
 # A typed service array.  2 lists them and 6.5 spells the Array one out: one per
-# primitive C type, one of {addr, sig} method records, one of {len, data} Array
+# primitive C type, one of {addr, sig} method records, one of {size, data} Array
 # descriptors per element type, and one of Lmx headers.
 #
 # This record IS the array's descriptor: the arena's index entry for an address

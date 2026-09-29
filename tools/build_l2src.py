@@ -60,7 +60,7 @@ def main():
         translator = out / 'b0' / 'l1trans'
         translator.parent.mkdir(parents=True)
         cmd = [args.cc] + FLAGS_BASE + ['-I', str(ROOT), '-I', str(ROOT / 'lm1' / 'build'), '-o', str(translator), str(seed)]
-        with open(logs / 'b0.gcc.log', 'w') as fh:
+        with open(logs / 'b0.gcc.log', 'w', newline='\n') as fh:
             r = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT)
         if r.returncode != 0 or not translator.exists():
             print(f'build_l2src.py RED: the translator did not build from {seed}; log {logs / "b0.gcc.log"}')
@@ -112,7 +112,7 @@ def main():
 
     def captured(exe, argv, logname):
         log = logs / (safe(logname) + '.log')
-        with open(log, 'w') as fh:
+        with open(log, 'w', newline='\n') as fh:
             fh.write(f'invoke: "{exe}" {" ".join(str(a) for a in argv)}\n')
             fh.flush()
             r = subprocess.run([str(exe)] + [str(a) for a in argv], stdout=fh, stderr=subprocess.STDOUT, cwd=str(source_base))
@@ -249,7 +249,7 @@ def main():
             continue
         stdout = r.stdout.decode(errors='replace')
         stderr = r.stderr.decode(errors='replace')
-        log.write_text(f'invoke: "{exe}"\nexit {r.returncode}\n--- stdout\n{stdout}\n--- stderr\n{stderr}')
+        log.write_text(f'invoke: "{exe}"\nexit {r.returncode}\n--- stdout\n{stdout}\n--- stderr\n{stderr}', newline='\n')
         if base == 'lmx_close_watchdog_running_selftest':
             # THE ONE TARGET ALLOWED TO BE FATAL ON PURPOSE (the .ps1's five-clause contract).
             # Both bodies end the process with abort(): exit 3 on Windows, SIGABRT (-6) under POSIX.
@@ -298,7 +298,7 @@ def main():
 
     print()
     sec = int(time.time() - t0)
-    (out / 'rows.txt').write_text('\n'.join(f'{s:<4} {l:<40} {n}' for s, l, n in rows) + '\n')
+    (out / 'rows.txt').write_text('\n'.join(f'{s:<4} {l:<40} {n}' for s, l, n in rows) + '\n', newline='\n')
     if failed:
         print(f'build_l2src.py RED: {len(failed)} of {len(rows)} targets failed ({", ".join(failed)}); {sec}s; evidence {out}')
         return 1

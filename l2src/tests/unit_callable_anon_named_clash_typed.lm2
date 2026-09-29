@@ -1,0 +1,25 @@
+# D-106's fifth site (REVIEW 59c74b3, fable_pc's M44/P44): the typing of `int: t op(value)` inside
+# `apply` -- a top-level `op` returning size_t beside the callable formal `op(fn: (int: x) int)`.  The
+# formal is meant: `t` takes its int result as an int, and `apply(neg 10)` is -1.  Typed by the method,
+# the int result would be taken for a size_t and converted to int -- -1 as a size_t does not fit an
+# int, and the conversion throws.  Success is 7.
+fn: op (int: p; int: q) size_t
+    return: 7U
+end: op
+
+fn: neg (int: x) int
+    return: x - 11
+end: neg
+
+fn: apply (op(fn: (int: x) int) int(value)) int
+    int: t op(value)
+    return: t
+end: apply
+
+int: r 0
+int: ok 7
+r: apply(neg 10)
+if: r + 1 != 0
+    ok: 1
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

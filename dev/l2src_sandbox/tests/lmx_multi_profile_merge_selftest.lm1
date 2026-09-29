@@ -32,10 +32,10 @@ fn: main () int
     LmxArena: dst
     LmxArena: blind
     Lmx: arbitrary_profile
-    c.array: [3]: @: Lmx profiles
-    c.array: [2]: @: Lmx operands
-    c.array: [2]: @: Lmx roots
-    c.array: [2]: @: Lmx copies
+    []: @(Lmx) profiles 3
+    []: @(Lmx) operands 2
+    []: @(Lmx) roots 2
+    []: @(Lmx) copies 2
     @: Lmx profile_a 0
     @: Lmx profile_b 0
     @: Lmx profile_bad 0
@@ -85,8 +85,8 @@ fn: main () int
     value_a: lmx_arena_take_profiled(@ src, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_a)
     if: a = 0 || refs = 0 || value_a = 0
         return: 2
-    a\data: refs
-    a\len: 1
+    a\array.data: refs
+    a\array.size: 1
     slots: (cast: (@@: void) refs)
     slots[0]: value_a
     if: lmx_size_store_known(value_a, 11U) != 0
@@ -97,8 +97,8 @@ fn: main () int
     value_b: lmx_arena_take_profiled(@ src, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_b)
     if: b = 0 || refs = 0 || value_b = 0
         return: 2
-    b\data: refs
-    b\len: 1
+    b\array.data: refs
+    b\array.size: 1
     slots: (cast: (@@: void) refs)
     slots[0]: value_b
     if: lmx_size_store_known(value_b, 22U) != 0
@@ -130,8 +130,8 @@ fn: main () int
     operands[0]: a
     operands[1]: b
     status: lmx_merge_profiles_owned(operands, 2U, 0, 0, 0, @ src, @ dst, profiles, 3U, 0, 0U, @ out)
-    mcheck(status = c.LMX_MERGE_OK && out != 0 && out != a && out != b && out\len = 2, "two-profile merge succeeds with an ordinary result root")
-    slots: (cast: (@@: void) out\data)
+    mcheck(status = c.LMX_MERGE_OK && out != 0 && out != a && out != b && (out\array.size) = 2U, "two-profile merge succeeds with an ordinary result root")
+    slots: (cast: (@@: void) out\array.data)
     mcheck(slots != 0 && slots[0] = value_a && slots[1] = value_b, "both exact profile leaves retain physical identity")
     mcheck(lmx_range_home(@ dst, value_a) = (@ src) && lmx_range_home(@ dst, value_b) = (@ src), "retained ranges preserve their true owner")
     mcheck(lmx_range_profile(@ dst, value_a) = profile_a && lmx_range_profile(@ dst, value_b) = profile_b, "retained addresses preserve distinct physical profiles")
@@ -160,8 +160,8 @@ fn: main () int
     value_bad: lmx_arena_take_profiled(@ src, c.sizeof(c.size_t), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile_bad)
     if: bad = 0 || refs = 0 || value_bad = 0
         return: 2
-    bad\data: refs
-    bad\len: 1
+    bad\array.data: refs
+    bad\array.size: 1
     slots: (cast: (@@: void) refs)
     slots[0]: value_bad
     profiles[0]: profile_bad

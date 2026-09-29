@@ -159,8 +159,12 @@ storage by `lmx_arena_refs`; typed pools by `lmx_pool`.
 The accepted base Array type is `VoidArray`, exactly
 `{size_t size, void *data}`; a separate `LmxArrayDesc` alias is unnecessary.
 Standalone Array backing has exactly `size` elements; embedded
-`Lmx.array.size` counts child-reference slots. The current
-code still uses `size_t len` for `LmxArrayDesc` and `int len` for `Lmx`.
+`Lmx.array.size` counts child-reference slots. The code carries this
+layout since `c955f24` (`steps/voidarray-migration.md`): `Lmx {VoidArray array;
+Lmx *parent; LmxEntry native}` with `array` at offset 0, `LmxArrayDesc` and
+`LmxArrayDynamicArray` renamed to `VoidArray` and `VoidDynamicArray`; the typed
+`<T>Array` descriptors (`LmxCharArray` and its kin) keep `len` by the author's
+word of 2026-09-24.
 The base Array has no `capacity`, reserve, resize, append, backing switch, or
 implicit growth. Changing its ABI to serve one dynamic consumer is a kernel
 defect.
@@ -175,7 +179,7 @@ base Array. Its current `LmxPost` record has its own `inbox_capacity`; this
 is not an Array descriptor field. The [L2 specification §9](docs/L2_spec_en.md#mailbox)
 describes capacity in a private backing prefix, whereas the current mail
 record exposes `inbox_capacity`: a second precise spec/implementation
-discrepancy, not permission to put capacity into `LmxArrayDesc`.
+discrepancy, not permission to put capacity into `VoidArray`.
 
 ## 3. Callable graph representation and activation
 

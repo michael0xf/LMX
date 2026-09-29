@@ -1,0 +1,15 @@
+# §7b witness at the root (always walked): the root's x is 1 and published by the call to peek; `x: 5` is dirty, and
+# the second call publishes it first, so peek's `node\x` -- the unit's field, the graph -- reads 5.  The program exits
+# 1 * 10 + 5 = 15; without the root's pre-call publication 11.
+fn: peek () int
+    return: node\x
+end: peek
+
+int: x 1
+int: a 0
+a: peek()
+x: 5
+int: b 0
+b: peek()
+sendMessage: exit(exit_code: a * 10 + b; stdout: ""; stderr: "")
+return

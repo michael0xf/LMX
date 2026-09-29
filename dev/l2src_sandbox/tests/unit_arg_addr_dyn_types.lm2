@@ -1,8 +1,9 @@
-# -189 c3b-2 (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189; L3 §12, R2 with carry, static by position):
-# the name is the machine argument until its binding line and its field's cell from then on; a
-# declaration without an initializer carries the argument's value into the field, and `@x` after
-# the line is the cell's address.  There is no working copy and no sticky republication, so a line
-# printed after `M\x: v` shows v (U2, L2, F2).  The sticky-rule text below is the old model's.
+# 7b-2 (ticket OPUS-7B2-20260929-01; L2 §10, §18.2, §18.3; book §12): the name is the argument -- the parameter --
+# until its same-name declaration executes, and a declared field from then on, under the working state: the
+# declaration takes the argument's current value into the working value and marks it; a graph write through `M\x` or
+# through `@x` (the cell) changes the cell and not the working value, and a marked value is published at the next
+# checkpoint. `@x` before the declaration is the parameter's stable address, never retargeted (U2, L2, F2: 6 100). The
+# sticky-rule text below is the old model's, and so is the c3b-2 in-place reading that replaced it.
 #
 # FABLE-L2-ARG-ADDRESS-PROOF-20260921-84.  TYPE IS AN INDEPENDENT AXIS for a dynamic input too.
 #
@@ -92,8 +93,9 @@ fn: dyn_from_formal () int
     return: 0
 end: dyn_from_formal
 
-# A pointer is bound by assignment (a pointer declared in a body is a local, not an own field);
-# it is published to the one generic pointer cell, and the caller keeps its own pointer.
+# A pointer is bound by assignment (a pointer declared in a body is a local, not an own field).  Q52: dp is
+# dyn_pointer's hidden input -- setnull(@: dp) and `dp: dp` write the activation's value; nothing is published, and
+# the caller keeps its own pointer.
 fn: dyn_pointer () int
     setnull(@: dp)
     dp: dp

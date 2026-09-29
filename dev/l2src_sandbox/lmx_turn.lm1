@@ -40,9 +40,9 @@ fn: lmx_turn_end (@: LmxThread t; ulong: now) int
 return: lmx_turn_end_status(t, now, c.LMX_TURN_BODY_OK)
 
 # An entered boundary may fail after it has already read a successful Message outcome: child
-# publication and GC marking are both later acts.  Such a failure is still a FAILED turn for mode
-# selection.  Resolve the request here before reporting the boundary failure so it cannot survive
-# and commit at some later successful endturn.  The execution mode itself never falls back or
+# publication and GC marking are both later acts.  Such a failure is still a FAILED turn --
+# LMX_TURN_INVALID, not the outcome already read -- so a later successful act cannot make a
+# broken boundary act look like it committed.
 fn: lmx_turn_boundary_fail (@: LmxThread t) int
 return: c.LMX_TURN_INVALID
 

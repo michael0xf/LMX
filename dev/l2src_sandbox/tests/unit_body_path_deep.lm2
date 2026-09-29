@@ -1,0 +1,36 @@
+# 7b-3 (ticket OPUS-7B3-20260929-02): a body root under a deeper path.  pt is a Point declared in the while body; after
+# `end: while` the path while\pt\x reads its place (the last iteration's pt: x 2) -- as an assignment's value, and as a
+# call's argument, where P0 gives the path as the atoms `while`, `\`, `pt`, `\`, `x` (l2_path_chain: a control body's
+# head starts a path as `node` does, not an identifier).  a * 10 + b = 22.  Native only: a Structure field declared in a
+# nested body keeps a method out of the walk.  Success 7, anything else 64.
+Point:
+    int: x 0
+    int: y 0
+end: Point
+fn: nop () int
+    return: 0
+end: nop
+fn: id (int: v) int
+    return: v
+end: id
+fn: test () int
+    int: i 0
+    while: i < 3
+        Point: pt
+        pt\x: i
+        i: i + 1
+    end: while
+    nop()
+    int: a 0
+    a: while\pt\x
+    int: b 0
+    b: id(while\pt\x)
+    int: ok 64
+    if: a * 10 + b = 22
+        ok: 7
+    return: ok
+end: test
+int: r 0
+r: test()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

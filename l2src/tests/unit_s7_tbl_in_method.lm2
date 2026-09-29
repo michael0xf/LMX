@@ -1,0 +1,23 @@
+# steps/table-receiver.md §8: the conversion table at depth in the source -- in the body of a method, before
+# the statement that needs it; a `table:` with `source` first is a projection done at translation (prev
+# :18194), wherever it stands, and the body runs without it.  Table = absent; Entry 7.
+fn: go () int
+    table:
+        source
+        name: `primitive.convert`
+        columns: (class: from) (class: to) (categoryFlag: forbidden) (@: char kind) (@: char receiver) (@: char impl)
+        rows:
+                 size_t    int        0  sign      lm_stg_convert_size_t_int    "convert_impl.lm2"
+    end: `primitive.convert`
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

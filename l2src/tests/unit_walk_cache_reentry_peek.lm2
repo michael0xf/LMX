@@ -1,0 +1,35 @@
+# §7b witness (book §12, the S/I2 trace; Codex, 2026-09-28: a re-entrant activation publishes nothing), observed from
+# another method so that M itself is walked under the knob: `x: 2` is published before the re-entrant call; the
+# re-entrant activation writes its own x 9 and publishes nothing.  The outer's x is clean after that publication, so
+# peek's call publishes nothing, and peek reads the place of declaration through `M\x`: 2.  The outer returns
+# seen * 10 + peeked = 22; `x: x + 1` is published at the exit and check reads 3.  The program exits 223; a re-entrant
+# activation that publishes lets peek read 9: 293.
+fn: M (int: n) int
+    int: x 1
+    if: n = 0
+        x: 9
+        return: 0
+    x: 2
+    M(0)
+    int: seen 0
+    seen: x
+    int: peeked 0
+    peeked: peek()
+    x: x + 1
+    return: seen * 10 + peeked
+end: M
+
+fn: peek () int
+    return: M\x
+end: peek
+
+fn: check () int
+    return: M\x
+end: check
+
+int: v 0
+v: M(1)
+int: w 0
+w: check()
+sendMessage: exit(exit_code: v * 10 + w; stdout: ""; stderr: "")
+return

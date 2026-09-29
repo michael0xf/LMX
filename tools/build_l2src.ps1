@@ -33,6 +33,9 @@ param(
     [string]$OutDir,
     [switch]$Run,
     [switch]$Strict,
+    # -KeepAll keeps a GREEN run's logs, objects and binaries (next_core_tasks.md §0, build memory,
+    # item 4): without it they are removed at the end, see below.
+    [switch]$KeepAll,
     # Required when -Translator names a non-default executable (same spelling as build_mixa).
     [string]$ExpectedTranslatorSha256
 )
@@ -89,6 +92,11 @@ Write-Output ("build_l2src: translator path=" + $Translator)
 Write-Output ("build_l2src: translator sha256=" + $translatorHash + " (" + $pinChecked + ")")
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 if (-not $OutDir) { $OutDir = Join-Path $root "build\l2src\$stamp" }
+# D-98: the staging block below moves the CWD into the staged root (Set-Location $sourceBase), and
+# every path derived from a RELATIVE -OutDir would then resolve against that new CWD -- the header
+# check found no lmx.h.lm1 and refused a build whose staging had worked.  Fix the evidence root to
+# an absolute path here, against the directory the script was called from.
+$OutDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine((Get-Location).Path, $OutDir))
 $headers = Join-Path $OutDir 'headers'
 $objDir = Join-Path $OutDir 'obj'
 $binDir = Join-Path $OutDir 'bin'
@@ -105,6 +113,11 @@ $nm = (Get-Command nm -ErrorAction Stop).Source
 $ps51Proc = Join-Path $root 'tools\ps51_proc.ps1'
 if (-not (Test-Path -LiteralPath $ps51Proc)) { throw "missing process helper: $ps51Proc" }
 . $ps51Proc
+# The peak memory of the steps (next_core_tasks.md §0, build memory, item 3), reported at the end.
+$peakMem = Join-Path $root 'tools\peak_mem.ps1'
+if (-not (Test-Path -LiteralPath $peakMem)) { throw "missing helper: $peakMem" }
+. $peakMem
+Start-PeakSampler
 
 # WHERE THE KERNEL SOURCES ARE, and why this is not a one-liner.  The sources reference each other
 # as "l2src/<name>.lm1" -- that segment is HARDCODED IN THEIR TEXT -- so the build needs them
@@ -185,9 +198,15 @@ $flags = @('-std=c99', '-Wall', '-Wextra', '-Wpedantic', '-I', $root, '-I', (Joi
            '-I', $decNumberDir,
            '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
            '-Werror=implicit-function-declaration', '-Werror=implicit-int')
+# §0 item 2 (build memory): cc1's garbage collector does not run while its heap is under 128 MB
+# (gcc 13.1: ggc-min-heapsize 131072 KB, ggc-min-expand 100), so a large unit keeps every dead tree.
+# A 16 MB threshold with 20 % growth: l2trans.c 155 -> 86 MB, measured, +0.1-0.4 s a unit.  The same
+# pair is in tools\l2_harness.ps1.
+$flags += @('--param', 'ggc-min-heapsize=16384', '--param', 'ggc-min-expand=20')
 if ($Strict) { $flags += @('-Werror', '-O2') }
 
 $rows = @()
+$rowTabs = @()
 $failed = @()
 function Add-Row([string]$State, [string]$Label, [string]$Note) {
     # THE DISPLAY LINE MUST NOT TRAVEL THE SUCCESS STREAM (DEEPSEEK-GATE-ROW-ACCOUNTING-20260921-30).
@@ -213,6 +232,8 @@ function Add-Row([string]$State, [string]$Label, [string]$Note) {
     # naive in-process experiment misleads about capture.
     $row = ('{0,-4} {1,-34} {2}' -f $State, $Label, $Note)
     $script:rows += $row
+    # summary.txt's form of the same row: state, label, note, tab-separated, as the harness writes.
+    $script:rowTabs += ($State + "`t" + $Label + "`t" + $Note)
     Write-Host $row
     if ($State -eq 'FAIL') { $script:failed += $Label }
 }
@@ -222,6 +243,7 @@ function Get-SafeName([string]$Name) {
     return ($Name -replace '[:/\\*?"<>|]', '_')
 }
 function Invoke-Captured([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$LogName) {
+    Set-PeakStep $Label $Exe
     # The parameter is NOT named $Args: that name is PowerShell's automatic
     # unbound-argument array, and it wins inside the body -- the tool was invoked
     # with no arguments at all and printed its usage line.
@@ -310,6 +332,7 @@ function Test-ExpectedFatal([string]$Label, [string]$Exe, [string]$ArgvJoined, [
 }
 
 function Invoke-Bounded([string]$Label, [string]$Exe, [string[]]$ArgList, [int]$Seconds) {
+    Set-PeakStep $Label $Exe
     # Started through the .NET process API, not Start-Process: with redirected streams PS 5.1's
     # -PassThru object does not report the child's exit code (measured: a passing test was reported
     # as a failure), and a bound whose verdict cannot be read is worse than no bound.  The .NET
@@ -436,6 +459,38 @@ function Resolve-Link([string]$SelftestObject, [string[]]$AllObjects) {
 # translator path/hash already printed after pin/ExpectedTranslatorSha256 check
 Write-Output "build_l2src: gcc $gcc"
 Write-Output "build_l2src: evidence $OutDir"
+
+# 0) next_core_tasks.md §1 (Q18): a capacity field only on a *DynamicArray type, and none of the
+# removed descriptor names -- tools\gate_dynarray_capacity.ps1 over the live kernel sources, one row
+# of this gate (it was run by hand only, so the rule it checks was not gated).  It runs in THIS host,
+# not as a child: a second PowerShell costs 65 MB before it reads a line (§0, build memory).  Its
+# output is captured into the log, never into this script's success stream.
+$capLog = Join-Path $logDir ((Get-SafeName 'gate:dynarray_capacity') + '.log')
+$capCode = 1
+try {
+    $capOut = @(& (Join-Path $PSScriptRoot 'gate_dynarray_capacity.ps1') -Root $root)
+    $capCode = $LASTEXITCODE
+} catch {
+    $capOut = @('gate_dynarray_capacity threw: ' + $_)
+}
+[System.IO.File]::WriteAllText($capLog, (($capOut -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+if ($capCode -eq 0) { Add-Row 'OK' 'gate:dynarray_capacity' '' }
+else { Add-Row 'FAIL' 'gate:dynarray_capacity' "exit $capCode; log $capLog" }
+
+# 0b) D-104: every P0 constant the sandbox's parser copy and l2trans spell is defined by the
+# sandbox's own l1src\p0.h.lm1 -- the translator's C takes the seed's generated header first, so a
+# missing one does not fail the build.  Same in-host shape as the row above.
+$p0Log = Join-Path $logDir ((Get-SafeName 'gate:p0_header') + '.log')
+$p0Code = 1
+try {
+    $p0Out = @(& (Join-Path $PSScriptRoot 'gate_p0_header.ps1') -Root $root)
+    $p0Code = $LASTEXITCODE
+} catch {
+    $p0Out = @('gate_p0_header threw: ' + $_)
+}
+[System.IO.File]::WriteAllText($p0Log, (($p0Out -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+if ($p0Code -eq 0) { Add-Row 'OK' 'gate:p0_header' '' }
+else { Add-Row 'FAIL' 'gate:p0_header' "exit $p0Code; log $p0Log" }
 
 # 1) predef headers of the units
 # $sourceDir was RESOLVED EARLIER (the staging block above chooses between the live sandbox and the
@@ -577,6 +632,37 @@ foreach ($c in @(Get-ChildItem -LiteralPath $sourceDir -Filter '*_selftest.c' -F
 }
 
 Write-Output ''
+$peakLines = @(Format-PeakReport (Stop-PeakSampler) 10)
+foreach ($l in $peakLines) { Write-Output ('build_l2src: ' + $l) }
+# §0 item 4 (build memory): the stamp keeps what is read after the run -- headers\l2src (build_mixa's
+# kernel evidence), the staged sources, and summary.txt: the translator's identity, EVERY row, the
+# peaks and the verdict line, so "N targets, 0 failed" and "103 selftests ran" stay provable from it.
+# A GREEN run's logs, objects and binaries (about 1 200 of its 1 500 files) are removed; a RED run
+# keeps everything, since its failure is read from them; -KeepAll keeps them always.
+$summaryPath = Join-Path $OutDir 'summary.txt'
+$verdictLine = ('verdict' + "`t" + $rows.Count + ' targets' + "`t" + $failed.Count + ' failed')
+# The staged sources' identity (REVIEW 6ca942f): the sha256 of the lines "<sha256 of a file>  <its
+# path under src/>", one per staged file, sorted by path in ordinal order, joined by LF with a final
+# LF -- recomputable from the stamp's src/ or from a checkout staged the same way.
+$srcRoot = Join-Path $OutDir 'src'
+$stagedFiles = @(Get-ChildItem -LiteralPath $srcRoot -File -Recurse | ForEach-Object { $_.FullName.Substring($srcRoot.Length + 1) -replace '\\', '/' })
+[Array]::Sort($stagedFiles, [StringComparer]::Ordinal)
+$stagedLines = @($stagedFiles | ForEach-Object { (Get-FileHash -LiteralPath (Join-Path $srcRoot $_) -Algorithm SHA256).Hash.ToLower() + '  ' + $_ })
+$stagedSha = [System.Security.Cryptography.SHA256]::Create()
+$stagedDigest = -join ($stagedSha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes((($stagedLines -join "`n") + "`n"))) | ForEach-Object { $_.ToString('x2') })
+$stagedLine = ('staged' + "`t" + 'src' + "`t" + $stagedFiles.Count + ' files' + "`t" + $stagedDigest)
+$translatorLine = ('translator' + "`t" + $Translator + "`t" + $translatorHash)
+[System.IO.File]::WriteAllText($summaryPath, ((@($translatorLine, $stagedLine) + $rowTabs + $peakLines + @($verdictLine) -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+if ($failed.Count -eq 0 -and -not $KeepAll) {
+    $pruned = 0
+    foreach ($d in @($objDir, $binDir, $logDir)) {
+        if (Test-Path -LiteralPath $d) {
+            $pruned += @(Get-ChildItem -LiteralPath $d -File -Recurse).Count
+            Remove-Item -LiteralPath $d -Recurse -Force
+        }
+    }
+    Write-Output ('build_l2src: ' + $pruned + ' files of a green run removed (logs, objects, binaries; -KeepAll keeps them); every row is in ' + $summaryPath)
+}
 if ($failed.Count -gt 0) {
     Write-Output ("build_l2src RED: {0} of {1} targets failed ({2}); evidence {3}" -f $failed.Count, $rows.Count, ($failed -join ', '), $OutDir)
     exit 1

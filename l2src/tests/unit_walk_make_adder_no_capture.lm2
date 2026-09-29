@@ -1,0 +1,14 @@
+# §6: unit_make_adder_no_capture.lm2 under --walk-methods. A model that names nothing of the
+# host's activation: no captured slot (width 3 = args, return, one frame). inc7(1)=7.
+fn: makeInc (int: z) fn: (int: x) int
+    fn: inc (int: x) int
+        return: x + 6
+    return: inc
+
+inc7: makeInc 5
+int: a (inc7: 1)
+int: ok 0
+if: a = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

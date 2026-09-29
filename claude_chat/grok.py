@@ -33,7 +33,7 @@ def exclusive(directory):
 
 def save(path, value):
     tmp = path.with_suffix('.tmp')
-    tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+    tmp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8', newline='\n')
     tmp.replace(path)
 
 
@@ -42,7 +42,7 @@ class ACP:
         exe = shutil.which('grok')
         if not exe:
             raise RuntimeError('grok executable not found in PATH')
-        self.errors = (directory / 'acp-stderr.log').open('a', encoding='utf-8')
+        self.errors = (directory / 'acp-stderr.log').open('a', encoding='utf-8', newline='\n')
         self.proc = subprocess.Popen(
             [exe, 'agent', '--no-leader', 'stdio'], cwd=ROOT,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self.errors,
@@ -144,7 +144,7 @@ def ask(directory, prompt, timeout):
             })
             answer = {'session_id': state['session_id'], 'model': state['model'],
                       'stop_reason': result.get('stopReason'), 'text': ''.join(client.messages)}
-            with (directory / 'grok-exchanges.jsonl').open('a', encoding='utf-8') as f:
+            with (directory / 'grok-exchanges.jsonl').open('a', encoding='utf-8', newline='\n') as f:
                 f.write(json.dumps({'prompt': prompt, 'answer': answer}, ensure_ascii=False)+'\n')
             state['pending'] = False
             save(path, state)

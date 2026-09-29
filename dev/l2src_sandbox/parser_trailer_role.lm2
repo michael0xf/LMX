@@ -16,7 +16,7 @@ fn: lm_p0_text_has_prefix_name (const: @(char text); size_t: length; const: @(ch
         return: 1
     return: ch = 58
 end: lm_p0_text_has_prefix_name
-fn: lm_p0_legacy_trailer_role (const: @(char text); size_t: length) LmP0TrailerRole
+fn: lm_p0_legacy_trailer_role (const: @(char text); size_t: length) c.LmP0TrailerRole
     if: lm_p0_text_has_prefix_name(text, length, "end", 0) != 0
         return: 2
     if: lm_p0_text_has_prefix_name(text, length, "return", 1) != 0
@@ -25,10 +25,10 @@ fn: lm_p0_legacy_trailer_role (const: @(char text); size_t: length) LmP0TrailerR
         return: 4
     return: 0
 end: lm_p0_legacy_trailer_role
-fn: lm_p0_trailer_role_is_tail_cutter (LmP0TrailerRole: role) int
+fn: lm_p0_trailer_role_is_tail_cutter (c.LmP0TrailerRole: role) int
     return: role != 0
 end: lm_p0_trailer_role_is_tail_cutter
-fn: lm_p0_trailer_role (const: @(char text); size_t: length) LmP0TrailerRole
+fn: lm_p0_trailer_role (const: @(char text); size_t: length) c.LmP0TrailerRole
     size_t: dash_count
     size_t: i
     char: ch

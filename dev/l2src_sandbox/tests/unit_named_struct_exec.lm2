@@ -1,0 +1,23 @@
+# steps/named-struct-exec.md, slice 2 (plan §3 :245 (а)): the author's example -- a bare `Counter` at
+# the root executes the named Structure, its whole body (Q19.2 = 2): the declaration stores its
+# initializer again, the statement runs.  Construction ran none of it (book :928): Counter\n reads 0
+# before the first execution, 1 after it and 1 after the second -- 2 if the declaration did not run
+# again.  The last state stays in the field (book :1094).  Was unit_bare_struct_refused ("executing a
+# named Structure is not supported yet").  Entry 7.
+Counter:
+    size_t: n 0U
+    n: n + 1U
+return
+size_t: before 9U
+before: Counter\n
+Counter
+size_t: once 9U
+once: Counter\n
+Counter
+size_t: twice 9U
+twice: Counter\n
+int: ok 0
+if: before = 0U && once = 1U && twice = 1U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

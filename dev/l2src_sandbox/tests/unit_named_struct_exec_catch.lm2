@@ -1,0 +1,30 @@
+# steps/named-struct-exec.md §12: Counter's body catches mk's Oops as a method's body does -- v is 5 + 2
+# = 7 after an execution from the root and again from a method.  A procedure lists no throws, so what
+# its body does not catch is refused at the call (unit_named_struct_throw_refused).  Entry 7.
+fn: mk () int
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(5)
+    return: 1
+end: mk
+Counter:
+    int: v 0
+    ---
+        v: mk()
+        catch: Oops (int: w)
+            v: w + 2
+    ---
+return
+fn: run () int
+    Counter
+    int: r 0
+    r: Counter\v
+return: r
+Counter
+int: a 0
+a: Counter\v
+int: ok 0
+if: a = 7 && run() = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

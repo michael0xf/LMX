@@ -1,0 +1,28 @@
+# steps/named-struct-exec.md, slice 2: a Structure only of fields is executed too -- its fields go back
+# to their initializers (Q19.2 = 2: the declarations run again).  Each field is written through its
+# path, the Structure is executed, and each reads its initial value -- an int, a char and a size_t.
+# A char field takes the reference to its character, so executing writes no character: `other`
+# still reads 'z'.  Entry 7.
+Point:
+    int: x 3
+    char: c 'a'
+    size_t: z 5U
+end: Point
+char: other 'z'
+Point\x: 8
+Point\c: 'z'
+Point\z: 6U
+int: gx 0
+gx: Point\x
+Point
+int: ax 0
+ax: Point\x
+char: ac 'q'
+ac: Point\c
+size_t: az 0U
+az: Point\z
+int: ok 0
+if: gx = 8 && ax = 3 && ac = 'a' && az = 5U && other = 'z'
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

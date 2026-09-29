@@ -73,7 +73,7 @@ fn: lm_build_join_dir_file (@: char dest; size_t: size; const: @(char dir); cons
 return: 0
 
 fn: lm_build_run (const: @(char command)) int
-    c.array: []: char wrapped 4112
+    []: char wrapped 4112
     size_t: used 0U
     int: status
     if: command = 0
@@ -97,7 +97,7 @@ fn: lm_build_run (const: @(char command)) int
 return: 0
 
 fn: lm_build_trans (const: @(char trans_tool); const: @(char source_path); const: @(char output_path)) int
-    c.array: []: char command 4096
+    []: char command 4096
     size_t: used 0U
     if: trans_tool = 0 || source_path = 0 || output_path = 0
         return: 1
@@ -114,7 +114,7 @@ fn: lm_build_trans (const: @(char trans_tool); const: @(char source_path); const
 return: lm_build_run(command)
 
 fn: lm_build_cc (const: @(char c_path); const: @(char exe_path)) int
-    c.array: []: char command 4096
+    []: char command 4096
     size_t: used 0U
     immutable:
         @: char cc "gcc"
@@ -184,7 +184,7 @@ fn: lm_build_cc (const: @(char c_path); const: @(char exe_path)) int
 return: lm_build_run(command)
 
 fn: lm_build_generate_all (const: @(char trans_tool); const: @(char obj_dir)) int
-    c.array: []: char outc 512
+    []: char outc 512
     if: trans_tool = 0 || obj_dir = 0
         return: 1
     if: lm_build_join_dir_file(outc, c.sizeof(outc), obj_dir, "l1trans.c") != 0
@@ -206,8 +206,8 @@ fn: lm_build_generate_all (const: @(char trans_tool); const: @(char obj_dir)) in
 return: 0
 
 fn: lm_build_compile_generated_tools (const: @(char obj_dir); const: @(char bin_dir)) int
-    c.array: []: char inc 512
-    c.array: []: char exe 512
+    []: char inc 512
+    []: char exe 512
     if: obj_dir = 0 || bin_dir = 0
         return: 1
     if: lm_build_join_dir_file(inc, c.sizeof(inc), obj_dir, "l1trans.c") != 0
@@ -237,7 +237,7 @@ fn: lm_build_compile_generated_tools (const: @(char obj_dir); const: @(char bin_
 return: 0
 
 fn: lm_build_run_bootstrap (const: @(char trans_tool); const: @(char obj_dir); const: @(char bin_dir)) int
-    c.array: []: char built 512
+    []: char built 512
     if: lm_build_mkdir(obj_dir) != 0
         return: 1
     if: lm_build_mkdir(bin_dir) != 0
@@ -255,9 +255,9 @@ fn: lm_build_run_bootstrap (const: @(char trans_tool); const: @(char obj_dir); c
 return: 0
 
 fn: lm_build_selftest_append () int
-    c.array: []: char buf 32
-    c.array: []: char tiny 8
-    c.array: []: char path 32
+    []: char buf 32
+    []: char tiny 8
+    []: char path 32
     size_t: used 0U
     buf[0]: 0
     used: lm_build_append(buf, c.sizeof(buf), used, "012345678901234567890123456789012")

@@ -162,7 +162,7 @@ def read_queue():
 def write_queue(items):
     QUEUE_DIR.mkdir(parents=True, exist_ok=True)
     temporary = QUEUE_FILE.with_suffix('.tmp')
-    temporary.write_text(''.join(json.dumps(item, ensure_ascii=False) + '\n' for item in items), encoding='utf-8')
+    temporary.write_text(''.join(json.dumps(item, ensure_ascii=False) + '\n' for item in items), encoding='utf-8', newline='\n')
     temporary.replace(QUEUE_FILE)
 
 
@@ -346,7 +346,7 @@ def deliver_one(record, path, text, deadline):
 
 def append_result(item_id, payload):
     QUEUE_DIR.mkdir(parents=True, exist_ok=True)
-    with RESULT_FILE.open('a', encoding='utf-8') as stream:
+    with RESULT_FILE.open('a', encoding='utf-8', newline='\n') as stream:
         stream.write(json.dumps({'id': item_id, 'payload': payload}, ensure_ascii=False) + '\n')
 
 

@@ -1,0 +1,18 @@
+# D-93, the rest, with A3, under --walk-methods: unit_make_adder_helper_call.lm2's text.  The host is walked; its
+# call of the capturing helper is a CALL over the helper's occurrence, n and m its hidden inputs.  add(1) = 54.
+# Entry 7.
+fn: makeAdder (int: n; int: m) fn: (int: x) int
+    fn: helper (int: y) int
+        return: n * 10 + m + y
+    int: q (helper: 1)
+    fn: addN (int: x) int
+        return: q + x
+    return: addN
+
+add: makeAdder 5 2
+int: a (add: 1)
+int: ok 0
+if: a = 54
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

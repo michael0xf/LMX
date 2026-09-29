@@ -1,0 +1,27 @@
+# steps/named-struct-exec.md §12 (Q45): a `for:` in a named Structure's body is a statement of the body,
+# as in a method's body.  Two executions from the root: n counts 3 at each (its declaration runs again).  total
+# is Counter's hidden input -- a procedure without arguments is one with hidden arguments (the author,
+# 2026-09-28, OPUS-CODEX-20260928-08) -- from the root's 0 at each execution: `total 3` twice; the bare write
+# changes only Counter's value (Q52), and the root's total at its place of declaration (gt's node\total) stays
+# 0.  Entry 7.
+size_t: total 0U
+Counter:
+    size_t: n 0U
+    for: int(i, 0) (i < 3) i++
+        n: n + 1U
+        total: total + 1U
+    end: for
+    c.printf: "total %zu\n" total
+return
+fn: gt () size_t
+    return: node\total
+end: gt
+Counter
+Counter
+size_t: t 9U
+t: gt()
+int: ok 0
+if: Counter\n = 3U && t = 0U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,28 @@
+# D-105 native, the result route (steps/d105-native.md §5): `id (Model: m)
+# Model` returns its formal, which `o: Other` reached: the formal's edge carries Other to id's result, id's
+# return records the value (already recorded -- the same pair), and `rd(id(o))` reads 10.  Before: 20.
+# Success is 7.
+Model:
+    size_t: a 1U
+    size_t: b 2U
+end: Model
+Other:
+    size_t: b 20U
+    size_t: a 10U
+end: Other
+fn: rd (Model: m) size_t
+return: m\a
+fn: id (Model: m) Model
+return: m
+fn: go () size_t
+    Other: o
+    return: rd(id(o))
+size_t: got 0U
+got: go()
+int: ok 3
+if: got = 10U
+    ok: 7
+if: got = 20U
+    ok: 5
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

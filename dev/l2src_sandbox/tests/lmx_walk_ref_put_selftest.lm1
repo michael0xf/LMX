@@ -158,7 +158,8 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 99)), "read after put model2")
 
-    # Own: pointer cell field of M; SET own := model; RET own; cell holds model (-188).
+    # Own: pointer cell field of M; SET own := model (its row: the declaration is the load point); RET own; the exit
+    # publishes the cell (§7b).
     # k.4: no descriptor slot -- own field at slot 0, SET at slot 1, RET at slot 2.
     m: mk_m(unit, 0U, 3U)
     pcell: lmx_pointer_new_owned(pty, ga)
@@ -175,7 +176,7 @@ fn: main () int
     ref(ownn, 1U, m)
     sz(ownn, 2U, 0U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) model) && lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "Own SET pointer cell immediate")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) model) && lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "Own SET pointer: the working value is model, and the exit published it into the cell")
 
     # Own.ref wrong type: SET int into pointer own -> INVALID
     # k.4: own field at slot 0, SET at slot 1.

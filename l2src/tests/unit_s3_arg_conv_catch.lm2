@@ -1,0 +1,17 @@
+# implements-port slice 3: `catch: convert ()` takes the refusal of an argument's edge like a
+# store's (unit_s7_conv_catch).  -1 does not fit size_t: `take` is not called, r keeps 3 and the
+# handler gives 7.  Mutant: the edge not emitted -- `take` gets the wrapped value and returns 1,
+# the handler does not run, and the entry is 1.
+fn: take (size_t: n) int
+    return: 1
+end: take
+fn: go () int
+    int: r 3
+    int: x -1
+    r: take(x)
+    catch: convert ()
+        r: 7
+return: r
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,12 @@
+# steps/named-struct-exec.md §12: a `sub:` returns nothing, so a `return` with a value in its body is
+# refused -- in a block as at its top, in the words a named Structure's body gets.  It was "unsupported
+# body".
+sub: s ()
+    int: n 0
+    if: n = 0
+        return: 5
+    n: 1
+end: s
+s()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

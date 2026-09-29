@@ -1,0 +1,15 @@
+# Walked twin of unit_a3_node_direct_absent.lm2 (--walk-methods: its methods are walked).
+# Gate 3, absence (Codex, 2026-09-28, option (2)): `node\name` is a value path into the lexical parent's BODY, never
+# into its args part (the signature's descriptors).  The host's formal n is no body field of the host's occurrence --
+# only a returned node's copied context carries it (the merge appends it) -- so in a direct call `node\n` reads no
+# value: X1 (walk error INVALID), never 0.  A mutant that reads the args part instead would see 0 and exit 0.
+fn: makeReader (int: n) fn: (int: x) int
+    fn: read (int: x) int
+        return: node\n + x
+    int: e (read: 0)
+    return: read
+
+r: makeReader 2
+int: a (r: 1)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

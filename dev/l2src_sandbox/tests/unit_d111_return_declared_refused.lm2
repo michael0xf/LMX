@@ -1,0 +1,17 @@
+# D-111 (steps/defects.md): the value of a `return:` in a method whose result is a Structure was admitted
+# (l2_admit_return) and never checked as a value -- a call in it recorded no edge and met no rule of §14.
+# `mk` declares Oops; `p` returns `mk()` and neither catches Oops nor lists it: refused at the return, as
+# the same call is when the result is a number.  Before, the internal backstop at 1:1 alone.
+Model:
+    size_t: a 1U
+end: Model
+fn: mk () Model
+    throws: Oops
+    Model: x
+    throw: Oops()
+    return: x
+fn: p () Model
+return: mk()
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,14 @@
+# implements-port slice 4: size_t returned from an unsigned method -- convert.lm2 has no such row,
+# so the return is refused, located at the value, with the phrase a store and an argument use
+# (unit_s3_arg_conv_norow).  Mutant: no return check -- C converts silently and l2trans accepts.
+fn: go () unsigned
+    size_t: b 2U
+    return: b
+end: go
+fn: run () int
+    unsigned: u 0U
+    u: go()
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

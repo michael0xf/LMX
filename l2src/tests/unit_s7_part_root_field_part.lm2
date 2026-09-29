@@ -1,0 +1,19 @@
+# A part of the programs unit_s7_part_root_field.lm2, unit_walk_s7_part_root_field.lm2,
+# unit_s7_part_root_hidden.lm2 and unit_s7_part_callable_field.lm2 (steps/table-receiver.md §10).  Its root
+# declares k, 5 -- a field of the part's root, a Structure of the program with no name, built with its
+# initializer -- and holds the statement `k: 7U`, the body of that root's procedure, which nothing executes.
+# get reads k; peek calls get (a call through the program's unit); bump writes its own value of k -- in these
+# methods k is a hidden input (Q52), so the root's k stays 5; viaNode reads it as node\k.
+size_t: k 5U
+k: 7U
+fn: get () size_t
+return: k
+fn: peek () size_t
+return: get()
+fn: bump () size_t
+    k: k + 1U
+    return: k
+fn: viaNode () size_t
+    size_t: r 0U
+    r: node\k
+    return: r

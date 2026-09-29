@@ -1,0 +1,13 @@
+predef: "l2src/tests/unit_predef_result_read.h.lm1"
+
+# D-88: a predef'd `fn` whose result type the translator cannot read has an unknown type -- the
+# value is refused where it is stored: "assignment value has unknown type".  The numeric-literal
+# stand-in D-88 removes is not reached on this path (measured): before D-88 the call itself was
+# refused less precisely, "unsupported body" at the call.
+fn: go () int
+    int: a 1
+    a: d88_opaque()
+    return: a
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

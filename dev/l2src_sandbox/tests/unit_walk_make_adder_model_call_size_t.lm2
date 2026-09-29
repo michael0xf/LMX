@@ -1,0 +1,17 @@
+# D-93 with item 739 and A3, under --walk-methods: unit_make_adder_model_call_size_t.lm2's text.  The host is
+# walked; its call of the size_t model is a CALL over the model's occurrence, n its hidden input; the root calls
+# the returned node through l2_mad_call's size_t variant.  add(1) = 2^32 + 3.  Entry 7.
+fn: makeAdder (size_t: n) fn: (size_t: x) size_t
+    fn: addN (size_t: x) size_t
+        return: n + x
+    size_t: q (addN: 1U)
+    n: q + 1U
+    return: addN
+
+add: makeAdder 4294967296U
+size_t: a (add: 1U)
+int: ok 0
+if: a = 4294967299U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

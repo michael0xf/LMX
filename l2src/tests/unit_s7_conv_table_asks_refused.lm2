@@ -1,0 +1,16 @@
+# steps/table-receiver.md §8: a program with no table `primitive.convert` among its source tables (harness
+# Table = absent) that converts: go's `a: b`, size_t to int, is refused where it needs the table.  A
+# program that converts nothing needs none (unit_s7_conv_table_absent).
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

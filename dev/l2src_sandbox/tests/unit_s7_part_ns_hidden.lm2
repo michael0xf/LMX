@@ -1,0 +1,11 @@
+# steps/table-receiver.md §8, §10 (REVIEW 70f869c, account 3): peekN, a method of the part
+# unit_s7_part_ns_hidden_part.lm2 (harness Parts), reads Counter\n -- Counter is the source's named Structure,
+# not in the part's scope: "unresolved name" at the read, in the part; bound by name to the source's Counter,
+# peekN would read 4.
+Counter:
+    size_t: n 4U
+end: Counter
+size_t: got 0U
+got: peekN()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

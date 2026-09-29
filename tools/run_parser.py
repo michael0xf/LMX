@@ -86,7 +86,9 @@ def main():
             (args.output/f'{i:04d}.stderr').write_bytes(run.stderr)
             ok=run.returncode==expect['exit']
             if 'stdout_file' in expect:
-                ok=ok and run.stdout==(ROOT/expect['stdout_file']).read_bytes()
+                # Line endings are not part of the golden: C stdout in text mode emits CRLF on Windows, the
+                # repository is LF everywhere (author, 2026-09-27); compare both sides normalised.
+                ok=ok and run.stdout.replace(b'\r\n',b'\n')==(ROOT/expect['stdout_file']).read_bytes().replace(b'\r\n',b'\n')
             if 'diagnostic' in expect:
                 match=re.search(rb'P0 parse error (\d+) at (\d+):(\d+)',run.stderr)
                 diagnostic=(match[1]+b'@'+match[2]+b':'+match[3]).decode() if match else ''

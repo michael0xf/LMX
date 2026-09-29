@@ -1,0 +1,11 @@
+# steps/named-struct-exec.md, slice 1, the guard: a column-0 bare `return` hangs on ANY frame whose
+# block precedes it, so it makes a named Structure only of a frame that could be one.  Here `r:` is
+# an assignment to the unit field r (its body `show: r` has the P0 shape of `Model: left`): the unit
+# declares r, so it is no named Structure, and the trailer is refused as before
+# (l2_unit_declares).  Mutant: no such check -- a different refusal.
+fn: show (int: v) int
+    return: v
+int: r 0
+r:
+    show: r
+return

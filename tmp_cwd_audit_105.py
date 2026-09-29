@@ -90,7 +90,7 @@ def main() -> int:
         "diverge": sum(1 for r in rows if r["class"] == "diverge"),
         "rows": rows,
     }
-    OUT.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    OUT.write_text(json.dumps(summary, indent=2), encoding="utf-8", newline='\n')
     print("wrote", OUT, "same", summary["same"], "diverge", summary["diverge"])
     return 0
 

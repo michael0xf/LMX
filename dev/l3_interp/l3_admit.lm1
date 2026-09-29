@@ -22,7 +22,7 @@ fn: l3_implements_paths (@: LmxArena arena; @: Lmx candidate; @: Lmx paths) int
     if: lmx_domain_kind(arena, (cast: (@: void) paths)) != c.LMX_KIND_STRUCT
         return: c.L3_UNSUPPORTED
     i: 0U
-    while: i < (cast: (size_t) paths\len)
+    while: i < paths\array.size
         item: lmx_arena_ref_value(paths, i)
         if: item = 0
             return: c.L3_ABSENT
@@ -47,10 +47,10 @@ fn: l3_run_tests (@: LmxArena arena; @: Lmx tests; @: Lmx candidate) int
         return: c.L3_INVALID
     if: lmx_domain_kind(arena, (cast: (@: void) tests)) != c.LMX_KIND_STRUCT
         return: c.L3_UNSUPPORTED
-    if: tests\len < 1
+    if: tests\array.size < 1U
         return: c.L3_UNSUPPORTED
     i: 0U
-    while: i < (cast: (size_t) tests\len)
+    while: i < tests\array.size
         item: lmx_arena_ref_value(tests, i)
         if: item = 0
             return: c.L3_ABSENT
@@ -74,7 +74,7 @@ fn: l3_admit (@: LmxArena arena; @: Lmx candidate; @: Lmx receiver) int
         return: c.L3_INVALID
     if: lmx_domain_kind(arena, (cast: (@: void) receiver)) != c.LMX_KIND_STRUCT
         return: c.L3_UNSUPPORTED
-    if: receiver\len < 2
+    if: receiver\array.size < 2U
         return: c.L3_INVALID
     p0: lmx_arena_ref_value(receiver, 0U)
     p1: lmx_arena_ref_value(receiver, 1U)

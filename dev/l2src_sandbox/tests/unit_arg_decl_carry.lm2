@@ -1,0 +1,38 @@
+# 7b-2 (ticket OPUS-7B2-20260929-01; L2 §10, §18.2; book §12 keep(3) = 4): a formal becomes graph-backed only by an
+# explicit same-name declaration, and from there the name is that declared field under the working state.  `int: n`
+# takes the argument's current value 3, `n: n + 1` makes the working value 4 and marks it; nop() publishes it.
+# poke() writes 100 into the place of declaration from another method; the second nop() publishes nothing (the working
+# value is clean); peek() reads 100 -- while the bare n keeps 4 (nothing is reloaded).  n * 1000 + peeked = 4100.
+# Observed from other methods only, so carry is walked under the knob.  In place (the name is the cell): 100100; a
+# carry into the cell alone (the working value keeps the entry load): 1100.  Success is 7.
+fn: nop () int
+    return: 0
+end: nop
+fn: carry (int: n) int
+    int: n
+    n: n + 1
+    nop()
+    poke()
+    nop()
+    int: g 0
+    g: peek()
+    return: n * 1000 + g
+end: carry
+fn: poke () int
+    carry\n: 100
+    return: 0
+end: poke
+fn: peek () int
+    return: carry\n
+end: peek
+int: r 0
+r: carry(3)
+int: ok 64
+if: r = 4100
+    ok: 7
+if: r = 100100
+    ok: 65
+if: r = 1100
+    ok: 66
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

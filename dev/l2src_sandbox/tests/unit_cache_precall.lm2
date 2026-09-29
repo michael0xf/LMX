@@ -1,0 +1,31 @@
+# §7b witness (book §12: before control passes to another callable the dirty own fields are published; an explicit
+# path read is not a checkpoint; the exit publishes): x is declared 1 and published by the first call to peek.
+# `x: 2` makes it dirty; `test\x` still reads the published 1.  The second call publishes 2 first, so peek reads 2.
+# `x: 3` is dirty again and the return publishes it: check reads 3.  The program exits 12 * 10 + 3 = 123; under
+# writes in place 223, without the pre-call publication 113, without the exit's publication 122.
+fn: peek () int
+    return: test\x
+end: peek
+
+fn: test () int
+    int: x 1
+    peek()
+    x: 2
+    int: before 0
+    before: test\x
+    int: seen 0
+    seen: peek()
+    x: 3
+    return: before * 10 + seen
+end: test
+
+fn: check () int
+    return: test\x
+end: check
+
+int: v 0
+v: test()
+int: w 0
+w: check()
+sendMessage: exit(exit_code: v * 10 + w; stdout: ""; stderr: "")
+return

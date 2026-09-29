@@ -16,18 +16,22 @@ predef: "l2src/lmx_arena.h.lm1"
 # child slot, all of its slots, mutable primitive cells, char * cells, Array
 # records with their backing and reference-valued elements.
 # Pointer cells (@: T): the cell is copied; the pointee is SHARED (-186 k3).
-# `independent` bounds the walk because its root already has parent = 0. Methods are shared:
-# a METHOD child keeps the very same {addr, sig} descriptor pointer. Interned
+# `independent` bounds the walk because its root already has parent = 0.  A method occurrence
+# is a Structure like any other and is copied; what stays shared is its implementation: the
+# `native` word, the C entry that receives the graph node, is carried verbatim (Q44, the
+# author, 2026-09-28: the shared reference is to the native implementation, "К структурам это
+# отношения не имеет").  Interned
 # characters map to the destination table `dst_chars` when one is given (a
 # cross-Message copy); with dst_chars = 0 the source cells are kept (a copy
 # inside the same Message).
 #
-# k.4: any Structure whose parent lies outside the copied operand subtree is a shared
-# reference (Q22 = II, generalized -- not only a method occurrence): kept by address, not
-# copied, parent not rewritten. A Structure whose parent is inside the operand is copied
-# as an ordinary Structure. There is no separate METHOD/CALLABLE domain any more; the
-# question is answered structurally (child\parent inside the copied set, or not), never by
-# a domain classification.
+# Q38/Q42/Q44 (the author, 2026-09-27/28; steps/copier-q42.md): every Structure the walk
+# reaches is copied, wherever its parent lies -- a method occurrence included.  The former k.4
+# rule ("a Structure whose parent lies outside the copied operand subtree is a shared
+# reference") is gone: nothing outside what is copied is visible, and no Structure is shared by
+# address.  Shared by address are only code frames (a frame headed by an op or role record --
+# code, never written by execution), exact retained profiles (eternal branches, below) and the
+# terminals of lmx_copy_is_terminal_profiles.
 #
 # A branch qualified `independent: const: immutable` is retained only when its
 # address resolves to one of the exact physical profiles supplied by the caller.  The
@@ -75,13 +79,13 @@ define: LMX_GRAPH_COPY_UNSUPPORTED 3
 
 
 struct: LmxCopyMap
-    LmxArrayDynamicArray: keys
-    LmxArrayDynamicArray: vals
+    VoidDynamicArray: keys
+    VoidDynamicArray: vals
     size_t: n
 end: LmxCopyMap
 
 struct: LmxCopyStack
-    LmxArrayDynamicArray: items
+    VoidDynamicArray: items
 end: LmxCopyStack
 
 prototype:

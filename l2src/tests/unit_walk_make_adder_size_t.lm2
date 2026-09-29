@@ -1,0 +1,20 @@
+# §6: unit_make_adder_size_t.lm2 under --walk-methods. A capture keeps its type: n is a size_t
+# formal, the node's field n is a size_t cell (l2_mcap_value_helper/l2_own_store_helper dispatch
+# by l2_mcap_ty, not always int). addBig(2^32)=101, addSmall(2^32-1)=2. Mutant: an int cell
+# instead -- 2^32 truncates to 0, addBig: 1 becomes 2, not 101 -- exit 0.
+fn: makeAdder (size_t: n) fn: (int: x) int
+    fn: addN (int: x) int
+        if: n > 4294967295U
+            return: x + 100
+        return: x + 1
+    return: addN
+
+addBig: makeAdder 4294967296U
+addSmall: makeAdder 4294967295U
+int: a (addBig: 1)
+int: b (addSmall: 1)
+int: ok 0
+if: a = 101 && b = 2
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

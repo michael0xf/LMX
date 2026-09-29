@@ -1,0 +1,17 @@
+# steps/table-receiver.md §8: peek, a method of the part unit_s7_part_free_bound_part.lm2 (harness Parts),
+# reads k, which it does not declare -- a free name of peek, bound by its caller's nearest binding (the book
+# :1178): m's own k, 9.  The source's field k (5) is not in the part's scope; bound by name to it, peek would
+# read 5.  Entry 7.
+size_t: k 5U
+fn: m () size_t
+    size_t: k 9U
+    size_t: r 0U
+    r: peek()
+    return: r
+size_t: got 0U
+got: m()
+int: ok 0
+if: got = 9U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

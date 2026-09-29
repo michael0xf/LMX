@@ -1,0 +1,14 @@
+# implements-port slice 3: -1 does not fit size_t, so the edge of the argument (row int -> size_t,
+# receiver lm_stg_convert_int_size_t) refuses: that is `go`'s implicit throw `convert` (g = 3), as
+# at a store (unit_s7_conv_range).  `take` is never called; uncaught, the root receives status 3,
+# the entry has no value and the Message is stopped.  Mutant: the edge not emitted -- C converts
+# -1 itself, `take` runs and the entry is 7.
+fn: take (size_t: n) int
+    return: 7
+end: take
+fn: go () int
+    int: x -1
+    return: take(x)
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

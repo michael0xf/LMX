@@ -17,9 +17,12 @@ fn: M () int
     return: hits
 end: M
 
-# Q22 = II: `A: fn: M` is a shared occurrence, so a merge keeps its address and its storage, and the
-# hits accumulate across A and R.  The merge is in a method: at the walked root a merge statement is
-# root-pending (FABLE-OPUS-MERGE-PARTS-20260926-193 T1).  Success is 5.
+# Q44 (the author, 2026-09-28): what `A: fn: M` shares under merge is M's native implementation, not
+# the occurrence -- merge copies the occurrence like any Structure it reaches (Q42), so R holds its own
+# M with its own `hits`, copied when R was made (0): A's calls count 1, 2, 3 and R's 1, 2, apart.
+# (Before Q44, Q22 = II kept the occurrence and its storage shared, and the hits ran 1..5 across A
+# and R.)  The merge is in a method: at the walked root a merge statement is root-pending
+# (FABLE-OPUS-MERGE-PARTS-20260926-193 T1).  Success is 5.
 fn: probe () int
     size_t: a1
     size_t: a2
@@ -36,11 +39,11 @@ fn: probe () int
         return: 81
     if: a2 != 2U
         return: 82
-    if: r1 != 3U
+    if: r1 != 1U
         return: 83
-    if: a3 != 4U
+    if: a3 != 3U
         return: 84
-    if: r2 != 5U
+    if: r2 != 2U
         return: 85
     return: 5
 end: probe

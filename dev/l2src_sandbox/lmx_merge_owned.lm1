@@ -8,17 +8,14 @@ include: "<stdlib.h>" "<string.h>" "<limits.h>"
 # anything else (a METHOD record, a primitive cell, an address no array of that
 # arena contains) is refused.
 
-# Direct child count of a live Structure. len counts child slots only.
+# Direct child count of a live Structure. array.size counts child slots only.
 fn: lmx_merge_width (@: Lmx x) size_t
     if: x = 0
         return: 0U
-    if: x\len <= 0
-        return: 0U
-return: (cast: (size_t) x\len)
+return: x\array.size
 
-# Checked accumulation of a direct child count. result\len is an int, so the
-# total must fit INT_MAX as well as SIZE_MAX; neither may wrap, and there is
-# no fixed cap anywhere.
+# Checked accumulation of a direct child count. result\array.size is a size_t:
+# the total must not wrap SIZE_MAX, and there is no fixed cap anywhere.
 fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     size_t: w lmx_merge_width(x)
     size_t: sum 0U
@@ -29,8 +26,6 @@ fn: lmx_merge_add_width (@: size_t total; @: Lmx x) int
     # Decide on a local and store only on success: a refused add must leave the
     # caller's total exactly as it was, or a later guard sees a poisoned value.
     sum: \total + w
-    if: sum > (cast: (size_t) c.INT_MAX)
-        return: 1
     \total: sum
 return: 0
 
@@ -185,7 +180,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                 j: j + 1U
             ---
         ---
-        if: unmatched > ((cast: (size_t) c.INT_MAX) - total)
+        if: unmatched > ((cast: (size_t) -1) - total)
             return: LMX_MERGE_INVALID
         total: total + unmatched
         # Pass 2 (1b): a pair's target must be a slot the merge places -- the model's own
@@ -648,32 +643,27 @@ fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void
     ---
     free((cast: (@: void) pairs))
 
-# Decode the translator's pair-map Structure (built once at program build, like l2_nsp
-# for named Structures -- Opus, -194 к.6) into the LmxMergePair** shape lmx_merge_owned
-# and lmx_merge_into_owned already take: 3 direct size_t children per pair, flattened
-# (model_slot, operand, field) in order, P = len / 3U. pairs_s = 0 (no map at all) or an
-# empty one (len = 0) both decode to \out_pairs = 0 / \out_count = 0U, not a refusal --
-# "no pairs" is the flat-append merge's own ordinary case; the caller (lmx_merge_owned
-# or lmx_merge_into_owned) decides whether zero pairs is valid for what it is doing.
-# Returns 0 OK, 1 a malformed pairs_s (not a Structure, or a length not a multiple of 3)
-# or NOMEM.
-fn: lmx_walk_merge_pairs_decode (@: LmxArena arena; @: Lmx pairs_s; @@@: LmxMergePair out_pairs; @: size_t out_count) int
-    size_t: n 0U
+# D1 (Codex, accepted 2026-09-28): the pairs are the PRIM's own operands, no map Structure -- `n` pairs of three size
+# cells, (model_slot, operand, field), from `cells`, decoded into the LmxMergePair** shape lmx_merge_owned and
+# lmx_merge_into_owned take.  n = 0 decodes to \out_pairs = 0 / \out_count = 0U, not a refusal -- "no pairs" is the
+# flat-append merge's own case; the caller decides whether zero pairs is valid for what it does.  Returns 0 OK, 1 a
+# cell that is not a size cell, or NOMEM.
+fn: lmx_walk_merge_pairs_cells (@: LmxArena arena; @@: void cells; size_t: n; @@@: LmxMergePair out_pairs; @: size_t out_count) int
     size_t: p 0U
+    size_t: i 0U
     @@: LmxMergePair pairs 0
     @: LmxMergePair one 0
     \out_pairs: 0
     \out_count: 0U
-    if: pairs_s = 0
-        return: 0
-    if: lmx_range_classify(arena, (cast: (@: void) pairs_s)) != c.LMX_KIND_STRUCT
-        return: 1
-    if: (cast: (size_t) pairs_s\len) % 3U != 0U
-        return: 1
-    ---
-    n: (cast: (size_t) pairs_s\len) / 3U
     if: n = 0U
         return: 0
+    if: cells = 0
+        return: 1
+    while: i < 3U * n
+        if: cells[i] = 0 || lmx_range_type_of(arena, cells[i]) != c.LMX_TYPE_SIZE_T
+            return: 1
+        i: i + 1U
+    ---
     pairs: (cast: (@@: LmxMergePair) calloc(n, c.sizeof(@: void)))
     if: pairs = 0
         return: 1
@@ -685,9 +675,9 @@ fn: lmx_walk_merge_pairs_decode (@: LmxArena arena; @: Lmx pairs_s; @@@: LmxMerg
             lmx_walk_merge_pairs_free(pairs, p)
             return: 1
         ---
-        one\model_slot: lmx_size_value_known(lmx_arena_ref_value(pairs_s, p * 3U))
-        one\operand: lmx_size_value_known(lmx_arena_ref_value(pairs_s, p * 3U + 1U))
-        one\field: lmx_size_value_known(lmx_arena_ref_value(pairs_s, p * 3U + 2U))
+        one\model_slot: lmx_size_value_known(cells[p * 3U])
+        one\operand: lmx_size_value_known(cells[p * 3U + 1U])
+        one\field: lmx_size_value_known(cells[p * 3U + 2U])
         pairs[p]: one
         p: p + 1U
     ---
@@ -696,10 +686,10 @@ fn: lmx_walk_merge_pairs_decode (@: LmxArena arena; @: Lmx pairs_s; @@@: LmxMerg
 return: 0
 
 # -194 к.6 (K2): merge in the interpreted root, `R: merge: A B ... [body]`, with T2's own
-# override map. Node (Opus/T3): generic PRIM [prim, record, op0, ..., opN-1, body_or_0,
-# pairs_or_0] -- nargs = N + 2 always (the trailing two slots are fixed; lmx_walk_prim's
-# own null-slot skip, above in lmx_walk.lm1, makes an absent body/map refs[i] = 0
-# without refusing the call). refs[0] is the model, matching Q21 = A / T1's own
+# override map. Node (Opus/T3; D1 2026-09-28: the map inline): generic PRIM [prim, record, catch, P, op0, ...,
+# opN-1, body_or_0, 3P pair cells] -- refs[0] the pair count P (a size cell), nargs = N + 2 + 3P (lmx_walk_prim's
+# own null-slot skip, above in lmx_walk.lm1, makes an absent body refs[i] = 0 without refusing the call).
+# refs[1] is the model, matching Q21 = A / T1's own
 # model-first rule; container = operands[0]'s own parent, the same rule
 # lmx_walk_merge_model already uses for the single-operand case. \out = the fresh
 # result. Status: 0 OK, 1 a malformed call (bad nargs, a non-Structure operand/body, a
@@ -711,7 +701,7 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     @@: Lmx operands 0
     size_t: op_count 0U
     @: Lmx body 0
-    @: Lmx pairs_s 0
+    size_t: np 0U
     @: Lmx container 0
     @@: LmxMergePair pairs 0
     size_t: pair_count 0U
@@ -722,28 +712,34 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     @: Lmx result 0
     int: status
     \out: 0
-    if: owner = 0 || refs = 0 || out = 0 || nargs < 2U
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 3U
         return: 1
     ---
     arena: (cast: (@: LmxArena) owner)
-    op_count: nargs - 2U
+    if: refs[0] = 0 || lmx_range_type_of(arena, refs[0]) != c.LMX_TYPE_SIZE_T
+        return: 1
+    ---
+    np: lmx_size_value_known(refs[0])
+    if: nargs < 3U + 3U * np
+        return: 1
+    ---
+    op_count: nargs - 2U - 3U * np
     if: op_count = 0U
         return: 1
     ---
     i: 0U
     while: i < op_count
-        if: refs[i] = 0 || lmx_range_classify(arena, refs[i]) != c.LMX_KIND_STRUCT
+        if: refs[1U + i] = 0 || lmx_range_classify(arena, refs[1U + i]) != c.LMX_KIND_STRUCT
             return: 1
         ---
         i: i + 1U
     ---
-    operands: (cast: (@@: Lmx) refs)
-    body: (cast: (@: Lmx) refs[op_count])
+    operands: (cast: (@@: Lmx) (refs + 1))
+    body: (cast: (@: Lmx) refs[1U + op_count])
     if: body != 0 && lmx_range_classify(arena, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
         return: 1
     ---
-    pairs_s: (cast: (@: Lmx) refs[op_count + 1U])
-    if: lmx_walk_merge_pairs_decode(arena, pairs_s, @ pairs, @ pair_count) != 0
+    if: lmx_walk_merge_pairs_cells(arena, refs + 2U + op_count, np, @ pairs, @ pair_count) != 0
         return: 1
     ---
     # K2b (-202): an operand's profile says whether the copier RETAINS it (shares by
@@ -778,8 +774,8 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     \out: (cast: (@: void) result)
 return: 0
 
-# -194 к.6 (K2): merge INTO an existing target, `o\inner: a` (Q26.1). Node (Opus/T3):
-# generic PRIM [prim, record, target, op, pairs] -- nargs = 3U always, pairs REQUIRED
+# -194 к.6 (K2): merge INTO an existing target, `o\inner: a` (Q26.1). Node (Opus/T3; D1 2026-09-28: the map inline):
+# generic PRIM [prim, record, catch, target, op, P, 3P pair cells] -- nargs = 3 + 3P, pairs REQUIRED
 # (K1 к.3's own bijection rule refuses an absent/empty map for anything but a
 # zero-field op, so there is no "flat merge-into" case to special-case here). \out is 0:
 # an own-field write is a statement (Q26.1), never a value. Status: 0 OK, 1 a malformed
@@ -790,24 +786,30 @@ fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: voi
     @: LmxArena arena 0
     @: Lmx target 0
     @: Lmx op 0
-    @: Lmx pairs_s 0
+    size_t: np 0U
     @@: LmxMergePair pairs 0
     size_t: pair_count 0U
     int: status
     \out: 0
-    if: owner = 0 || refs = 0 || out = 0 || nargs != 3U
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 3U
         return: 1
     ---
     arena: (cast: (@: LmxArena) owner)
     target: (cast: (@: Lmx) refs[0])
     op: (cast: (@: Lmx) refs[1])
-    pairs_s: (cast: (@: Lmx) refs[2])
+    if: refs[2] = 0 || lmx_range_type_of(arena, refs[2]) != c.LMX_TYPE_SIZE_T
+        return: 1
+    ---
+    np: lmx_size_value_known(refs[2])
+    if: nargs != 3U + 3U * np
+        return: 1
+    ---
     if: target = 0 || lmx_range_classify(arena, (cast: (@: void) target)) != c.LMX_KIND_STRUCT
         return: 1
     if: op = 0 || lmx_range_classify(arena, (cast: (@: void) op)) != c.LMX_KIND_STRUCT
         return: 1
     ---
-    if: lmx_walk_merge_pairs_decode(arena, pairs_s, @ pairs, @ pair_count) != 0 || pairs = 0
+    if: lmx_walk_merge_pairs_cells(arena, refs + 3U, np, @ pairs, @ pair_count) != 0 || pairs = 0
         return: 1
     ---
     status: lmx_merge_into_owned(target, op, 0, arena, arena, pairs, pair_count)

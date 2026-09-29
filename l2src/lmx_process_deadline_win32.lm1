@@ -1,10 +1,10 @@
-include: "<windows.h>"
+predef: "l2src/lmx_win32_api.h.lm1"
 predef: "l2src/lmx_process_deadline.h.lm1"
 predef: "l2src/lmx_clock.lm1"
 predef: "l1src/libc_abi.lm1"
 
 prototype:
-    fn: lmx_process_deadline_body (@: void arg) DWORD
+    fn: lmx_process_deadline_body (@: void arg) ulong
 end: prototype
 
 # The body of lmx_process_deadline.h.lm1's contract: the watchdog's algorithm, and the only place in
@@ -39,7 +39,7 @@ fn: lmx_process_deadline_arm (@: LmxProcessDeadline d; size_t: deadline) int
     # THE WAIT IS SET BEFORE THE THREAD EXISTS: the watchdog reads it as its own first act, so
     # writing it afterwards would be a race for a value that decides when the process dies.
     d\wait_ms: (cast: (unsigned) wait)
-    d\thread: c.CreateThread(0, 0, (cast: (LPTHREAD_START_ROUTINE) lmx_process_deadline_body), (cast: (@: void) d), 0, 0)
+    d\thread: c.CreateThread(0, 0, (cast: (LmxWin32ThreadStart) lmx_process_deadline_body), (cast: (@: void) d), 0, 0)
     if: d\thread = 0
         c.CloseHandle(d\event)
         d\event: 0
@@ -65,14 +65,14 @@ fn: lmx_process_deadline_disarm (@: LmxProcessDeadline d) int
     d\armed: 0
 return: 0
 
-fn: lmx_process_deadline_body (@: void arg) DWORD
+fn: lmx_process_deadline_body (@: void arg) ulong
     @: LmxProcessDeadline d
     ulong: code 0U
     if: arg = 0
         return: 0U
     ---
     d: (cast: (@: LmxProcessDeadline) arg)
-    code: c.WaitForSingleObject(d\event, (cast: (DWORD) d\wait_ms))
+    code: c.WaitForSingleObject(d\event, (cast: (ulong) d\wait_ms))
     if: code = c.WAIT_OBJECT_0
         return: 0U
     ---

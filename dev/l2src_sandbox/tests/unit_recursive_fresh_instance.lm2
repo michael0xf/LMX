@@ -1,17 +1,13 @@
-# The execution pair on a re-entry and on a call by reference (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189
-# commit c3a; Q28, fable's decision (i)): the caller passes the data.
-# - `down` calls itself, so every call of it from inside `down` is a re-entry and runs over a fresh
-#   instance of its prototype (lmx_fresh): each activation has its own x and y.  r = down(3) is
-#   3 + 10 * down(2) = 123: each activation reads back its own x after the inner calls.  Recursion
-#   over `down` itself (no fresh instance) gives 0: the innermost activation's x and y are what every
-#   outer one reads.
-# - The walked root's call of `down` is outside the cycle: its CALL's data is `down` itself,
-#   [call, down, down, 3], so down\x afterwards is that activation's 3.  A fresh instance for the
-#   root's call too gives 0, the prototype's.
-# - `apply` calls `seven` by reference (a callable formal), which runs over a fresh instance made
-#   from its code: d = 7, and seven\s stays the prototype's 0.  A call by reference over `seven`
-#   itself leaves 7 there.
-# q = peek() = down\x + 100 * seven\s = 3.  The exit code is r + 1000 * q - 3123 + (d - 7): 0.
+# A re-entrant activation (book §12, the S/I2 trace; Codex's reading of the author's norm, accepted 2026-09-28,
+# OPUS-CODEX-20260928-10): its occurrence already active on this thread, it keeps its declared fields' working
+# values to itself and publishes nothing.  (The row used to pin the fresh instance a re-entry and a call by
+# reference ran over -- lmx_fresh, removed by R2: the author, 2026-09-28, no per-call instance in the graph.)
+# - `down` calls itself: every inner call is re-entrant.  r = down(3) is 3 + 10 * down(2) = 123 -- each activation
+#   reads back its own x and y after the inner calls.  down\x is the outermost activation's 3, published at its
+#   first call, and down\y its 12, published at its exit: the inner ones published nothing.
+# - `apply` calls `seven` by reference (a callable formal): no activation of seven is active, so it runs over its
+#   own occurrence and publishes as any call does -- d = 7, seven\s = 7.
+# The exit is 7 when all hold.
 fn: down (int: n) int
     int: x n
     int: y 0
@@ -29,12 +25,16 @@ fn: apply (seven: g) int
     return: g + 0
 end: apply
 
-fn: peek () int
-    return: down\x + 100 * seven\s
-end: peek
-
 int: r down(3)
 int: d apply(seven)
-int: q peek()
-sendMessage: exit(exit_code: r + 1000 * q - 3123 + (d - 7); stdout: ""; stderr: "")
+int: dx 0
+dx: down\x
+int: dy 0
+dy: down\y
+int: ss 0
+ss: seven\s
+int: ok 0
+if: r = 123 && dx = 3 && dy = 12 && d = 7 && ss = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

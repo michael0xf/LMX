@@ -1,0 +1,13 @@
+# Q33: a row whose receiver has no fn: in its impl source refuses at the edge, located:
+# "no converter body ported".  The row size_t -> int of convert.lm2 names
+# lm_stg_convert_size_t_int.  The harness stages this fixture beside unit_s7_conv_nobody_impl.lm2
+# as its convert_impl.lm2, which has no such fn:.  Beside the shared convert_impl.lm2 the same
+# program translates and returns 2 (unit_s7_prim_cross).
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

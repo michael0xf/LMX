@@ -1,0 +1,18 @@
+# D-93 with A3, the two-formal helper under --walk-methods: the walked host's call of a nested method is a CALL of
+# any number of inputs -- two actuals and the capture n -- so the host is walked (it stayed native, noted, while
+# the call went through l2_mad_call's one input).  add(1) = 9.  Entry 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: h2 (int: y; int: z) int
+        return: n + y + z
+    int: q (h2: 1 2)
+    fn: addN (int: x) int
+        return: q + x
+    return: addN
+
+add: makeAdder 5
+int: a (add: 1)
+int: ok 0
+if: a = 9
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,11 @@
+# implements-port slice 4 under --walk-methods: unit_s4_ret_conv_range.lm2's exact shape, re-staged
+# under its own Name so this row runs WITH the knob.  A return's edge makes `go` throwing (its
+# implicit `convert`), and a throwing method is outside the walkable subset (l2_rw_may) -- it stays
+# native under the knob, as with a store's or an argument's edge, and the root receives the same
+# status 3.
+fn: go () int
+    size_t: b 3000000000U
+    return: b
+end: go
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,35 @@
+# Item 738 slice 2 (REVIEW 2032ca0, fable_pc's M46/P46): the model writes `m\count` and never reads it,
+# and reads `m\value`.  A written field is in the copy as a read one is (l2_cap_scan reads the frame
+# head text too): without it the model's PUT_OF lands on a "not carried" cell and the walk refuses at
+# run time.  42 and 43 from one node; the root's `count` stays 0.  Success is 7.
+Inner:
+    int: c 5
+end: Inner
+
+Model:
+    int: other 5
+    Inner: box
+    int: count 0
+    int: value 0
+end: Model
+
+fn: makeCounter (Model: m) fn: (int: x) int
+    fn: bump (int: x) int
+        m\count: x
+        return: m\value + x
+    return: bump
+
+Model: left
+left\value: 40
+c: makeCounter left
+int: a (c: 2)
+int: b (c: 3)
+int: ok 7
+if: a != 42
+    ok: 1
+if: b != 43
+    ok: 2
+if: left\count != 0
+    ok: 3
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

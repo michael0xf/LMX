@@ -1,0 +1,13 @@
+# implements-port slice 13: the root types a compound value itself (l2_rw_tyof), so `x + 1` of int
+# into a size_t own takes the edge like a single value.  No check before the walk names this
+# receiver: the root's count pass notes it (l2_rw_convert), l2_emit_unit stops before writing, and
+# l2_translate translates the unit again with the receiver (as for a store in a method).  Mutant:
+# no second translation -- the emit pass meets the receiver untaken and refuses.
+size_t: s 0U
+int: x 4
+int: r 0
+s: x + 1
+if: s = 5U
+    r: 7
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

@@ -1,0 +1,24 @@
+# steps/free-names.md M1 (class D): a declaration's initializer read from a free name -- its names are reads, so k
+# and n are dynamic inputs of their methods.  char: c n converts int 98 -> char 'b'.  Before M1: "unresolved name".
+fn: peek () size_t
+    size_t: r k
+    return: r
+fn: letter () int
+    char: c n
+    if: c = 'b'
+        return: 1
+    return: 0
+fn: m () int
+    size_t: k 9U
+    int: n 98
+    int: ok 0
+    size_t: a 0U
+    int: b 0
+    a: peek()
+    b: letter()
+    if: a = 9U && b = 1
+        ok: 7
+    return: ok
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

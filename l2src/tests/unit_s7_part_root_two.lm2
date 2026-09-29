@@ -1,0 +1,28 @@
+# steps/table-receiver.md §10: two parts (harness Parts) each declare k at its root -- two Structures of the
+# program with no name, one per part -- and the source declares its own k, 1.  nodeA reads its part's root's k
+# explicitly, 5, nodeB its own, 8, and the source's code its own, 1.  peekA and peekB read k bare: a hidden
+# input, which the caller binds first (book §12: the caller's local binding, then its inherited input, then the
+# callee's lexical lookup) -- the source's k is a field its code uses, so both read 1.  Entry 7.
+size_t: k 1U
+size_t: a 0U
+size_t: b 0U
+size_t: na 0U
+size_t: nb 0U
+a: peekA()
+b: peekB()
+na: nodeA()
+nb: nodeB()
+if: na != 5U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: nb != 8U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: k != 1U
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+if: a != 1U || b != 1U
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

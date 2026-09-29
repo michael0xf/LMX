@@ -46,10 +46,8 @@ fn: l3_eval_value (@: LmxArena arena; @: void v; @: LmxScratch scratch; @: L3See
     kind: lmx_domain_kind(arena, v)
     if: kind = c.LMX_KIND_STRUCT
         host: (cast: (@: Lmx) v)
-        if: host\len < 0
-            return: c.L3_INVALID
         i: 0U
-        while: i < (cast: (size_t) host\len)
+        while: i < host\array.size
             st: l3_eval_value(arena, lmx_arena_ref_value(host, i), scratch, node, depth + 1)
             if: st != c.L3_OK
                 return: st

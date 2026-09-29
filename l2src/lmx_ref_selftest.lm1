@@ -9,10 +9,10 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
 fn: main () int
     @: LmxPool arrays
-    @: LmxArrayDesc first
-    @: LmxArrayDesc second
-    @: LmxArrayDesc alias
-    @: LmxArrayDesc handed_back
+    @: VoidArray first
+    @: VoidArray second
+    @: VoidArray alias
+    @: VoidArray handed_back
     @: Lmx node
     @: Lmx other
     @: Lmx returned
@@ -32,7 +32,7 @@ fn: main () int
     if: lmx_arena_open(@ arena) != 0
         fputs("lmx: arena open failed\n", l1_stdout())
         return: 1
-    if: lmx_pool_open(@ arena, arrays, c.sizeof(c.LmxArrayDesc), 4U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
+    if: lmx_pool_open(@ arena, arrays, c.sizeof(c.VoidArray), 4U, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT) != 0
         fputs("lmx: array pool open failed\n", l1_stdout())
         return: 1
 
@@ -134,7 +134,7 @@ fn: main () int
     if: lmx_range_classify(@ arena, cast: (@: void) lmx_arena_ref_cell(node, 0U)) != c.LMX_KIND_CHILDREN
         fputs("lmx: a slot address is not classified as slot storage\n", l1_stdout())
         failures: failures + 1
-    if: node\len != 1
+    if: node\array.size != 1U
         fputs("lmx: rebinding a child changed the field count\n", l1_stdout())
         failures: failures + 1
 

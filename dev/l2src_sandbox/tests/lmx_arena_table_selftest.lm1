@@ -78,11 +78,11 @@ fn: main () int
     # local first is the spelling that works.
     @: LmxArena arena_at
     @: LmxArena other_at
-    @: LmxArrayDesc desc
-    @: LmxArrayDesc fits
-    @: LmxArrayDesc grown
-    @: LmxArrayDesc doomed
-    @: LmxArrayDesc renewed
+    @: VoidArray desc
+    @: VoidArray fits
+    @: VoidArray grown
+    @: VoidArray doomed
+    @: VoidArray renewed
     @: LmxPool pool_seen
     @: LmxPool stale_desc
     @: LmxPool stale_backing
@@ -111,7 +111,7 @@ fn: main () int
     table_check(counts, lmx_range_type_of(@ arena, (cast: (@: void) desc)) = c.LMX_TYPE_ARRAY_OF_INT, "descriptor type")
     table_check(counts, lmx_range_classify(@ arena, (cast: (@: void) (desc + 1))) = c.LMX_KIND_NONE, "descriptor interval is exact")
     backing: desc\data
-    table_check(counts, backing != 0 && desc\len = 3U, "descriptor publishes its backing")
+    table_check(counts, backing != 0 && desc\size = 3U, "descriptor publishes its backing")
     table_check(counts, lmx_range_classify(@ arena, backing) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ arena, backing) = c.LMX_TYPE_INT, "backing kind and type")
     table_check(counts, table_arrays(@ arena) = 2U, "one array of descriptors and one array of int cells")
     cells: (cast: (@: int) backing)
@@ -217,7 +217,7 @@ fn: main () int
     table_check(counts, pool_seen != 0 && pool_seen\kind = c.LMX_KIND_PRIMITIVE && pool_seen\type = c.LMX_TYPE_INT, "the entry names the array's own descriptor")
     fits: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 0U, @ other)
     table_check(counts, fits != 0 && lmx_arena_index_len(other_at) = 3U, "an empty array is one more entry")
-    table_check(counts, fits != 0 && fits\len = 0U && fits\data = 0, "empty array descriptor")
+    table_check(counts, fits != 0 && fits\size = 0U && fits\data = 0, "empty array descriptor")
     table_check(counts, lmx_range_classify(@ other, (cast: (@: void) fits)) = c.LMX_KIND_ARRAY && lmx_range_type_of(@ other, (cast: (@: void) fits)) = c.LMX_TYPE_ARRAY_OF_INT, "an empty array is still typed")
     table_check(counts, table_arrays(@ other) = 2U, "one array of descriptors and one array of int cells, again")
 

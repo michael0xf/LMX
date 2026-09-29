@@ -1,0 +1,22 @@
+# §6: unit_make_adder_activation.lm2 under --walk-methods. T6b builds the node from the host's
+# walked activation as it is at the return: n changed before it, k a field the host declares, u a
+# formal addN never names -- the node carries n and k, not u. add7(1)=7, add100(1)=100, add7(1)=7.
+# Mutants: the constructor's own capture store dropped (an Entry other than 7 or a crash) --
+# l2_emit_mad_construct_one's per-capture store call, not the count/emit passes themselves.
+fn: makeAdder (int: n; int: u) fn: (int: x) int
+    n: n + 1
+    int: k (n * 2)
+    fn: addN (int: x) int
+        return: n + k + x
+    return: addN
+
+add7: makeAdder 1 9
+add100: makeAdder 32 9
+int: a (add7: 1)
+int: b (add100: 1)
+int: c (add7: 1)
+int: ok 0
+if: a = 7 && b = 100 && c = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

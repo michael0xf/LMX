@@ -1,4 +1,4 @@
-include: "<windows.h>"
+predef: "l2src/lmx_win32_api.h.lm1"
 predef: "l2src/lmx_manager.h.lm1"
 predef: "l2src/lmx_manager_running.h.lm1"
 predef: "l2src/lmx_implements.h.lm1"
@@ -32,8 +32,8 @@ predef: "l2src/lmx_turn.lm1"
 # that, with no such question to ask.
 
 # The lane's own loop.  It is the thread entry, so its shape is the platform's: one
-# address in, the platform's own return type out (LmxULong is Win32's DWORD).
-fn: lmx_manager_running_body (@: void arg) DWORD
+# address in, the platform's own return type out (ulong is Win32's DWORD, lmx_win32_api.h.lm1).
+fn: lmx_manager_running_body (@: void arg) ulong
     @: LmxSchedule slot
     @: LmxThread t
     slot: (cast: (@: LmxSchedule) arg)
@@ -114,7 +114,7 @@ fn: lmx_manager_running_lane_start (@: LmxSchedule slot) int
     t: (cast: (@: LmxThread) slot\owner)
     if: lmx_thread_running(t) = 0
         return: c.LMX_MANAGER_OK
-    slot\lane: c.CreateThread(0, 0, (cast: (LPTHREAD_START_ROUTINE) lmx_manager_running_body), (cast: (@: void) slot), 0, 0)
+    slot\lane: c.CreateThread(0, 0, (cast: (LmxWin32ThreadStart) lmx_manager_running_body), (cast: (@: void) slot), 0, 0)
     if: slot\lane = 0
         return: c.LMX_MANAGER_INVALID
 return: c.LMX_MANAGER_OK

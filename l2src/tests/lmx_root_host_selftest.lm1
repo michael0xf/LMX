@@ -78,7 +78,7 @@ fn: host_make_child (@: LmxThread t) int
     @: LmxSchedule child_sched
     @: Lmx graph
     @: Lmx source
-    @: LmxArrayDesc source_children
+    @: VoidArray source_children
     @: void witness
     if: t = 0 || t\slot = 0 || host_child_arena = 0
         return: 0
@@ -137,8 +137,8 @@ fn: host_send_exit (@: LmxThread t) int
     @: Lmx lgraph
     @: Lmx payload
     @: void code
-    @: LmxArrayDesc out
-    @: LmxArrayDesc err
+    @: VoidArray out
+    @: VoidArray err
     @: void cell
     if: t = 0 || host_exit_arena = 0 || lmx_arena_open(host_exit_arena) != 0
         return: 0
@@ -165,7 +165,7 @@ fn: host_send_exit (@: LmxThread t) int
     # slot is a pointer cell holding R0's own Message, not the address directly (author's Q26.2
     # ruling) -- the same shape l2trans.lm1's sendMessage letter emission now uses, so
     # lmx_root_exit_admit's own defensive classify-then-deref accepts this exit letter.
-    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, host_exit_arena)
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, host_exit_arena)
     if: cell = 0 || lmx_pointer_store_known(cell, (cast: (@: void) lmx_thread_message(t))) != 0
         return: 0
     lmx_arena_ref_store(lgraph, 0U, cell)
@@ -179,15 +179,15 @@ return: (cast: (int) (lmx_service_post(lmx_child_service(t), (cast: (@: void) lm
 # (5): the settings R0 reads are the host's own branch -- the same address -- held in R0's arena as
 # a view owned by the host's arena, and their one char Array is the working directory.
 fn: host_settings_check (@: LmxThread t; @: Lmx graph) int
-    c.array: [4096]: char here
+    []: char here 4096
     @: LmxThread host
     @: LmxMsg host_message
     @: Lmx host_graph
     @: void settings
     @: void host_branch
-    @: LmxArrayDesc text
+    @: VoidArray text
     @: LmxArena arena
-    if: t = 0 || t\slot = 0 || graph = 0 || graph\len < 3
+    if: t = 0 || t\slot = 0 || graph = 0 || graph\array.size < 3U
         return: 0
     ---
     arena: t\slot\arena
@@ -198,7 +198,7 @@ fn: host_settings_check (@: LmxThread t; @: Lmx graph) int
     ---
     host_message: lmx_thread_message(host)
     host_graph: host_message\graph
-    if: host_graph = 0 || host_graph\len < 3
+    if: host_graph = 0 || host_graph\array.size < 3U
         return: 0
     ---
     host_branch: lmx_arena_ref_value(host_graph, 2U)
@@ -208,14 +208,14 @@ fn: host_settings_check (@: LmxThread t; @: Lmx graph) int
     if: lmx_range_classify(arena, settings) != c.LMX_KIND_STRUCT || lmx_range_home(arena, settings) != host\slot\arena
         return: 0
     ---
-    text: (cast: (@: LmxArrayDesc) lmx_arena_ref_value((cast: (@: Lmx) settings), 0U))
+    text: (cast: (@: VoidArray) lmx_arena_ref_value((cast: (@: Lmx) settings), 0U))
     if: text = 0 || lmx_root_os_cwd(here, 4096U) = 0
         return: 0
     ---
-    if: text\len != strlen(here) || text\len = 0U
+    if: text\size != strlen(here) || text\size = 0U
         return: 0
     ---
-return: (cast: (int) (memcmp(text\data, (cast: (@: void) here), text\len) = 0))
+return: (cast: (int) (memcmp(text\data, (cast: (@: void) here), text\size) = 0))
 
 # R0's body: user code.
 fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
@@ -224,8 +224,8 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
     @: LmxMsg letter
     @: LmxThread host 0
     @: Lmx payload 0
-    @: LmxArrayDesc args 0
-    @: LmxArrayDesc arg
+    @: VoidArray args 0
+    @: VoidArray arg
     @@: void slots
     @: void sender_cell 0
     host_turns: host_turns + 1
@@ -240,7 +240,7 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
         # The letter is (sender; payload): field 0 the host's Message, field 1 the payload whose
         # one field is mainArgs.
         letter: (cast: (@: LmxMsg) lmx_thread_mail_take(t, c.LMX_POST_INBOX))
-        if: letter != 0 && letter\graph != 0 && letter\graph\len = 2
+        if: letter != 0 && letter\graph != 0 && letter\graph\array.size = 2U
             host: lmx_thread_parent(t)
             # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the
             # sender slot is a pointer cell now (author's Q26.2 ruling) -- classified before it is
@@ -250,15 +250,15 @@ fn: host_r0_body (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@:
                 host_sender_ok: 1
             ---
             payload: (cast: (@: Lmx) lmx_arena_ref_value(letter\graph, 1U))
-            if: payload != 0 && payload\len = 1
-                args: (cast: (@: LmxArrayDesc) lmx_arena_ref_value(payload, 0U))
+            if: payload != 0 && payload\array.size = 1U
+                args: (cast: (@: VoidArray) lmx_arena_ref_value(payload, 0U))
             ---
             if: args != 0
-                host_args: (cast: (int) args\len)
+                host_args: (cast: (int) args\size)
                 slots: (cast: (@@: void) args\data)
-                if: args\len > 1U
-                    arg: (cast: (@: LmxArrayDesc) slots[1])
-                    if: arg != 0 && arg\len = 5U && memcmp(arg\data, (cast: (@: void) "probe"), 5U) = 0
+                if: args\size > 1U
+                    arg: (cast: (@: VoidArray) slots[1])
+                    if: arg != 0 && arg\size = 5U && memcmp(arg\data, (cast: (@: void) "probe"), 5U) = 0
                         host_arg_ok: 1
                     ---
                 ---
@@ -279,9 +279,9 @@ return: 0
 # and the witness 52525 -- 3 fields now (was 4: no reserved descriptor slot), so
 # children/settings/witness shift from 1/2/3 down to 0/1/2.
 fn: host_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
-    @: LmxArrayDesc children
+    @: VoidArray children
     @: void witness
-    if: arena = 0 || graph = 0 || graph\len < 3
+    if: arena = 0 || graph = 0 || graph\array.size < 3U
         return: 1
     ---
     children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, arena)
@@ -408,8 +408,8 @@ fn: main () int
     @: Lmx wrong_payload 0
     @: void code 0
     @: void wrong_code 0
-    @: LmxArrayDesc out_arr 0
-    @: LmxArrayDesc err_arr 0
+    @: VoidArray out_arr 0
+    @: VoidArray err_arr 0
     @: char got_text 0
     @: void got_sender 0
     @: void cell 0
@@ -469,7 +469,7 @@ fn: main () int
     memset((cast: (@: void) (@ slot_arena)), 0, c.sizeof(c.LmxArena))
     host_check(counts, lmx_arena_open(@ slot_arena) = 0, "the slot's arena opened")
     model: lmx_root_exit_model(@ slot_arena)
-    host_check(counts, model != 0 && model\len = 3, "the host model has three fields")
+    host_check(counts, model != 0 && (model\array.size) = 3U, "the host model has three fields")
     letter: lmx_node_new_owned(@ slot_arena)
     payload: lmx_node_new_owned(@ slot_arena)
     code: lmx_int_new_owned(@ slot_arena)
@@ -486,7 +486,7 @@ fn: main () int
     # FABLE-SONNET-SEND-REF-20260925-172 commit 4 (edited under fable's authorization): the sender
     # slot is a pointer cell holding `model`'s address, not `model` directly (author's Q26.2
     # ruling) -- the same shape every other letter builder in this file now uses.
-    cell: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 29, @ slot_arena)
+    cell: lmx_pointer_new_owned(c.LMX_TYPE_MSG_REF, @ slot_arena)
     host_check(counts, cell != 0 && lmx_pointer_store_known(cell, (cast: (@: void) model)) = 0, "the sender cell built")
     lmx_arena_ref_store(letter, 0U, cell)
     lmx_arena_ref_store(letter, 1U, (cast: (@: void) payload))

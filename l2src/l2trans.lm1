@@ -22947,14 +22947,15 @@ return: l2_rw_put(\out, vs, prim)
 # `R: merge: A B ... [body]` at the walked root (-193 T3, over Sonnet's K2): the result slot of the
 # unit, l2_mres_base + res, takes the result of the walker's merge primitive by reference,
 # PUT_REF(0, slot, PRIM) -- holder 0, the root's own data, (R0, R0).  The PRIM is
-# [prim, record(lmx_walk_merge_map), op0 .. opN-1, body | 0, pairs | 0]:
+# [prim, record(lmx_walk_merge_map), catch, P, op0 .. opN-1, body | 0, 3·P pair cells, catch rows] (D1):
 # - an operand is the Structure itself where the graph build made it (a named Structure, a qualified
 #   branch -- retained by its profile, -202), and the result slot of an earlier merge otherwise, read
 #   when the step runs (AT);
-# - the body is a plain Structure of the declared fields' cells, made once with the graph, which the
-#   merge copies as it copies an operand;
-# - the pairs are l2_mrs_build's own map, one plain Structure of 3·P size cells (model_slot,
-#   operand, field), made once with the graph; operand n is the body (T2).
+# - the body is a plain Structure of the declared fields' cells -- the source's body block, made once with the
+#   graph -- which the merge copies as it copies an operand;
+# - the pairs are the frame's own cells after the body, P triples of size cells (model_slot, operand, field)
+#   written from l2_mrs_build's map, the translator's own table -- no pair map Structure in the graph (D1);
+#   operand n is the body (T2).
 # The widths and values the native emission checks (71-91) are the map's; a merge the kernel
 # refuses is the implicit throw `merge` (THROWN + 1 at the walked root).
 fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
@@ -25496,7 +25497,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: l2_rw_refuse_ty(stmt, oi)
     # `f()` when f already binds an ordinary Structure (l2_empty_struct_assign_shape = 1;
     # the book §12). A declared type admits through l2_rw_admit. No declared type stores the
-    # fresh empty node itself (PUT / PUT_REF of FRESH).
+    # new empty node itself (PUT / PUT_REF of EMPTY).
     if: l2_empty_struct_assign_shape(stmt, l2_rw_mi) = 1
         if: l2_rw_empty_assign(stmt, into, @ node) != 0
             return: 1

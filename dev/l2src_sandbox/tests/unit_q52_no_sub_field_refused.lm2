@@ -1,0 +1,12 @@
+# OPUS-NODATA-20260929-03 (Q52, the author: "у s нет поля y, оно у ROOT"; GATE: `ROOT\y = 0`, `s\y` does not exist): s
+# writes its hidden input y bare -- the declaration of y is the root's, s has no field y, so the path s\y names nothing
+# and is refused where it stands.  (ROOT\y = 0 after the call: unit_sub_return_trailer.)
+int: y 0
+sub: s ()
+    y: y + 3
+    return
+s
+int: v 0
+v: s\y
+sendMessage: exit(exit_code: v; stdout: ""; stderr: "")
+return

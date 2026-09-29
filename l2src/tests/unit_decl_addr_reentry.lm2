@@ -1,0 +1,30 @@
+# OPUS-NODATA-20260929-03 (plan §7b "Повторный вход без data-двойника", "Сохранить правильную адресацию при удалении
+# lmx_fresh"; L2 §18.2): `@x` of a declared field is the address of its typed cell in M's occurrence -- one cell for
+# every activation of M, the outer and a re-entrant one; no per-call instance, no address of a working copy.  The
+# outer takes p: @x and calls M again; the re-entrant activation takes its own @x and writes 55 through it; the outer
+# reads \p: 55 -- the same cell.  A per-call instance, or `@x` lowered to the working value's address (the old C-cache
+# lowering the author rejected), reads the outer's own 0.  Native only: the walk takes no address (the walked single
+# place: unit_walk_cache_reentry_peek).  Success 7; 0 is 65.
+fn: M (int: n) int
+    int: x 0
+    @: int p
+    p: @x
+    if: n > 0
+        M(n - 1)
+        int: seen 0
+        seen: \p
+        return: seen
+    @: int q
+    q: @x
+    \q: 55
+    return: 0
+end: M
+int: r 0
+r: M(1)
+int: ok 64
+if: r = 55
+    ok: 7
+if: r = 0
+    ok: 65
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

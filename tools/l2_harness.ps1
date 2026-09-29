@@ -2192,6 +2192,19 @@ $fixtures = @(
         Needle = 'unit_body_path_absent_refused.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_walk_body_path_absent_refused.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
+    # OPUS-NODATA-20260929-03 (plan §7b and GATE: no auxiliary data Structure, no hidden data twin in the persistent
+    # graph).  unit_decl_addr_reentry: `@x` of a declared field is its cell in M's occurrence -- one cell for every
+    # activation, the outer and a re-entrant one (the re-entrant activation's write through its own @x is what the
+    # outer reads through its p: 55); a per-call instance, or @x lowered to the working value's address, reads 0 (65).
+    # Native only: the walk takes no address.  Pins: both activations take the cell's address.
+    [pscustomobject]@{ Name = 'unit_decl_addr_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('p: (cast: (@: int) l2_q0_from[0])', 'q: (cast: (@: int) l2_q0_from[0])') },
+    # Q52 (the author: "у s нет поля y, оно у ROOT"; GATE: `s\y` does not exist): s writes its hidden input y bare and
+    # declares no y, so the path s\y is refused where it stands.  ROOT\y = 0: unit_sub_return_trailer.  Both modes.
+    [pscustomobject]@{ Name = 'unit_q52_no_sub_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_q52_no_sub_field_refused.lm2:10:4: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_q52_no_sub_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_q52_no_sub_field_refused.lm2:10:4: unresolved name'; Absent = @(); Debt = @() },
     # A CHAR OWN FIELD IS PUBLISHED, AND THE PROGRAM COMPILES (FABLE-L2TRANS-CHAR-UCHAR-20260921-86).
     # Three emitters spelled the byte handed to lmx_char_rebind_known through `uchar` -- a type that
     # is defined where the TRANSLATOR is built (l1src/p0.h.lm1) and in no program it generates

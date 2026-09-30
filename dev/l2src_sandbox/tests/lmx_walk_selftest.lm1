@@ -962,7 +962,7 @@ fn: main () int
     # verbatim copy of that 0, a weak but true check; there is no fixture elsewhere in
     # this file with a real native word to copy for a stronger one.
     before: handed(ga)
-    st: lmx_graph_copy_owned(counter, 0, ga, ga, @ copy)
+    st: lmx_graph_copy_owned(counter, ga, ga, @ copy)
     check(st = c.LMX_GRAPH_COPY_OK && copy != 0 && copy != counter, "counter copied")
     check(handed(ga) > before, "an explicit copy DOES allocate in the graph's arena; an invocation never did")
     if: copy != 0
@@ -993,7 +993,7 @@ fn: main () int
     # expected behavior an explicit holder gives, not a regression of counter's own
     # independence above -- the two fixtures together are the whole of what a holder can
     # mean (0 = this activation's data, non-zero = that Structure, always).
-    st: lmx_graph_copy_owned(explicit_writer, 0, ga, ga, @ explicit_writer_copy)
+    st: lmx_graph_copy_owned(explicit_writer, ga, ga, @ explicit_writer_copy)
     check(st = c.LMX_GRAPH_COPY_OK && explicit_writer_copy != 0 && explicit_writer_copy != explicit_writer, "explicit_writer copied")
     if: explicit_writer_copy != 0
         check(lmx_arena_ref_struct(explicit_writer_copy, 1U) = lmx_arena_ref_struct(explicit_writer, 1U), "K-OT1: the copy shares explicit_writer's own PUT frame by address")

@@ -86,6 +86,78 @@ fn: g1_wide (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void
     \out: dest
 return: 0
 
+fn: g1_char (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    lmx_char_store_known(dest, 200)
+    \out: dest
+return: 0
+
+sub: char_cells (@: Lmx unit)
+    LmxWalkFrame: frame
+    @: void a lmx_char_new_owned(ga)
+    @: void b lmx_char_new_owned(ga)
+    @: void result 0
+    @: void saved 0
+    @: void actual 0
+    @: void dest 0
+    @: void repeated 0
+    @: Lmx callee 0
+    @: Lmx caller 0
+    @: Lmx ret 0
+    @: Lmx own 0
+    @: Lmx call 0
+    @: Lmx copied 0
+    size_t: field 0U
+    int: spare 0
+    int: st 0
+    memset(@ frame, 0, c.sizeof(c.LmxWalkFrame))
+    frame.arena: ga
+    frame.context: gctx
+    actual: lmx_char_cell(ga, 65)
+    frame.args: @ actual
+    frame.nargs: 1U
+    if: a = 0 || b = 0 || actual = 0
+        c.abort()
+    lmx_char_store_known(a, 65)
+    saved: a
+    check(lmx_walk_store_slot(ga, @ a, 66U) = c.LMX_WALK_OK && a = saved && lmx_char_value_known(a) = 66, "published char mutates existing slot cell")
+    check(lmx_walk_store_numeric_into(ga, actual, 66U) = c.LMX_WALK_INVALID && lmx_char_value_known(actual) = 65, "an arbitrary char operand is not a mutable destination")
+    st: lmx_walk_arg_write(@ frame, 0U, lmx_char_cell(ga, 66), @ spare, @ result)
+    saved: result
+    check(st = c.LMX_WALK_OK && result != actual && result != lmx_char_cell(ga, 66) && lmx_char_value_known(actual) = 65, "formal char assignment owns its cell without mutating actual")
+    st: lmx_walk_arg_write(@ frame, 0U, lmx_char_cell(ga, 67), @ spare, @ result)
+    check(st = c.LMX_WALK_OK && result = saved && lmx_char_value_known(result) = 67 && lmx_char_value_known(lmx_char_cell(ga, 66)) = 66, "repeated char formal assignment preserves local cell")
+    st: lmx_walk_arith_out(@ frame, a, c.LMX_TYPE_CHAR, 68U, @ result)
+    check(st = c.LMX_WALK_OK && result = lmx_char_cell(ga, 68) && lmx_char_value_known(a) = 66, "char expression temporary is interned, not written into arbitrary destination")
+    st: lmx_walk_call_dest(@ frame, actual, c.LMX_TYPE_CHAR, @ dest)
+    check(st = c.LMX_WALK_OK && dest != actual && dest != lmx_char_cell(ga, 0), "char call result never borrows an interned destination")
+    callee: mk_m(unit, 2U, 2U)
+    lmx_arena_ref_store(callee, 0U, a)
+    ret: fr(callee, 1U, c.LMX_WALK_OP_RET, 2U)
+    own: fr(ret, 1U, c.LMX_WALK_OP_OWN, 3U)
+    ref(own, 1U, callee)
+    sz(own, 2U, 0U)
+    caller: mk_m(unit, 3U, 1U)
+    call: fr(caller, 0U, c.LMX_WALK_OP_CALL, 5U)
+    ref(call, 1U, callee)
+    ref(call, 2U, callee)
+    ref(call, 3U, (cast: (@: Lmx) b))
+    st: go(caller)
+    saved: gv\ref
+    check(st = c.LMX_WALK_OK && saved != a && lmx_char_value_known(saved) = 66, "walked own char return is copied to caller result cell")
+    lmx_char_store_known(a, 67)
+    st: go(caller)
+    repeated: gv\ref
+    check(st = c.LMX_WALK_OK && repeated != saved && lmx_char_value_known(repeated) = 67 && lmx_char_value_known(saved) = 66, "two walked char results retain independent values")
+    callee\native: (cast: (LmxEntry) g1_char)
+    st: go(caller)
+    check(st = c.LMX_WALK_OK && lmx_char_value_known(gv\ref) = (cast: (int) (cast: (char) 200)) && lmx_char_value_known(lmx_char_cell(ga, 0)) = 0, "native char trampoline receives mutable typed destination")
+    copied: lmx_walk_capture(ga, unit, callee, callee, @ field, 1U)
+    result: lmx_arena_ref_value(copied, 0U)
+    check(copied != 0 && result != a && lmx_char_value_known(result) = 67, "char capture owns independent cell")
+    lmx_char_store_known(a, 68)
+    check(lmx_char_value_known(result) = 67, "source char mutation leaves capture unchanged")
+end: char_cells
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -150,6 +222,7 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_OK && got = want)), "size_t trampoline dest holds full 2^32+7")
     check((cast: (int) (gv\ref != 0 && lmx_walk_numeric_type(ga, gv\ref) = c.LMX_TYPE_SIZE_T)), "dest cell type is SIZE_T")
 
+    char_cells(unit)
     c.printf("lmx_walk_call_dest_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0
         return: 1

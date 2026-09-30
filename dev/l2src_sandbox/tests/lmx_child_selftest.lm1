@@ -219,9 +219,8 @@ fn: main () int
     child_check(counts, lmx_range_classify(@ child, (cast: (@: void) message)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "the child's record is a Message record of its own arena")
     child_check(counts, lmx_range_classify(@ src, (cast: (@: void) message)) = c.LMX_KIND_NONE, "the child's record answers in the parent's arena")
 
-    # 3. The copy carries the used graph: the interned character is shared by address (it
-    #    is immutable), and the mutable cell is a COPY -- a different cell with the value.
-    child_check(counts, lmx_arena_ref_value(message\graph, 0U) = lmx_char_cell_known(table, 33), "an immutable child stays by address")
+    # 3. Unqualified primitive children are copied to independent cells of their type.
+    child_check(counts, lmx_arena_ref_value(message\graph, 0U) != lmx_char_cell_known(table, 33) && lmx_char_value_known(lmx_arena_ref_value(message\graph, 0U)) = 33, "a character child is copied by value")
     bad_child: lmx_arena_ref_value(message\graph, 1U)
     child_check(counts, bad_child != 0 && bad_child != int_cell, "a mutable cell is copied")
     child_check(counts, lmx_int_value_known(bad_child) = 4242, "the copied cell carries the value")

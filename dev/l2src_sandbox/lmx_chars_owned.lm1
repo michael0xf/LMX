@@ -3,9 +3,9 @@ predef: "l2src/lmx_pool.h.lm1"
 include: "<stdlib.h>"
 
 # The character table of a Message: 256 consecutive cells of the arena's array of char
-# primitives, filled with 0..255.  Its cells are laid out once and addressed by value
-# (14.7's settled half -- two fields holding the same character hold the same address, and
-# assigning such a field changes the REFERENCE, never the cell).  The array is the arena's:
+# primitives, filled with byte encodings 0..255. Immutable literals and temporary
+# values may share these cells; mutable declared fields instead use fresh typed
+# cells allocated and stored by lmx_value_owned. The array is the arena's:
 # the first table makes it with exactly the 256 cells asked for, and every later table
 # takes 256 more cells of the SAME array -- one more interval of it, one more entry naming
 # the same descriptor, never an array of its own.  The storage is the arena's, the
@@ -29,11 +29,3 @@ fn: lmx_char_cell_known (@: char table; int: value) @: void
     if: table = 0 || value < 0 || value > 255
         return: 0
     return: (cast: (@: void) (table + value))
-
-fn: lmx_char_rebind_known (@: void cell; int: value) @: void
-    @: char byte (cast: (@: char) cell)
-    int: previous
-    if: cell = 0 || value < 0 || value > 255
-        return: 0
-    previous: (cast: (int) byte[0]) & 255
-    return: (cast: (@: void) (byte - previous + value))

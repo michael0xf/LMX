@@ -1,0 +1,24 @@
+# Address acquisition preserves occurrence identity without invoking the body.
+# Equal results from distinct methods do not make their descriptors identical.
+fn: target () int
+return: 1
+
+fn: other () int
+return: 1
+
+fn: same (target: left; target: right) int
+    if: @ left != @ right
+        return: 0
+    if: (@: left) != (@: right)
+        return: 0
+return: 7
+
+fn: check () int
+    int: equal same(target, target)
+    int: different same(target, other)
+    if: equal != 7 || different != 0
+        return: 0
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

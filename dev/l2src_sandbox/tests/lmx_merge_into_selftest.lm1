@@ -112,7 +112,7 @@ fn: main () int
     mi_check(counts, pair_a != 0, "basic pair allocated")
     pair_a\model_slot: 0U
     pair_a\field: 0U
-    status_a: lmx_merge_into_owned(target_a, op_a, 0, @ arena, @ arena, @ pair_a, 1U)
+    status_a: lmx_merge_into_owned(target_a, op_a, @ arena, @ arena, @ pair_a, 1U)
     mi_check(counts, status_a = LMX_MERGE_OK, "basic merge-into OK")
     mi_check(counts, (cast: (@: void) target_a) = target_a_before, "basic target's own address unchanged (nothing built fresh)")
     mi_check(counts, (target_a\array.size) = 2U, "basic target's layout unchanged (no growth)")
@@ -140,7 +140,7 @@ fn: main () int
     mi_check(counts, pair_b != 0, "unmatched pair allocated")
     pair_b\model_slot: 0U
     pair_b\field: 0U
-    status_b: lmx_merge_into_owned(target_b, op_b, 0, @ arena, @ arena, @ pair_b, 1U)
+    status_b: lmx_merge_into_owned(target_b, op_b, @ arena, @ arena, @ pair_b, 1U)
     mi_check(counts, status_b = LMX_MERGE_INVALID, "unmatched op field (b) refused -- pair_count != op's width (mutant: width check off -> OK, RED)")
     free((cast: (@: void) pair_b))
 
@@ -173,7 +173,7 @@ fn: main () int
     mi_check(counts, pairs_c != 0, "dup-target pair array allocated")
     pairs_c[0]: pair_c0
     pairs_c[1]: pair_c1
-    status_c: lmx_merge_into_owned(target_c, op_c, 0, @ arena, @ arena, pairs_c, 2U)
+    status_c: lmx_merge_into_owned(target_c, op_c, @ arena, @ arena, pairs_c, 2U)
     mi_check(counts, status_c = LMX_MERGE_INVALID, "dup-target refused (mutant: duplicate-target guard off -> OK, last write wins silently, RED)")
     free((cast: (@: void) pairs_c))
     free((cast: (@: void) pair_c0))
@@ -201,7 +201,7 @@ fn: main () int
     mi_check(counts, pair_d != 0, "nested pair allocated")
     pair_d\model_slot: 0U
     pair_d\field: 0U
-    status_d: lmx_merge_into_owned(target_d, op_d, 0, @ arena, @ arena, @ pair_d, 1U)
+    status_d: lmx_merge_into_owned(target_d, op_d, @ arena, @ arena, @ pair_d, 1U)
     mi_check(counts, status_d = LMX_MERGE_OK, "nested merge-into OK")
     slot0_after: lmx_arena_ref_value(target_d, 0U)
     mi_check(counts, slot0_after != 0 && lmx_range_classify(@ arena, slot0_after) = c.LMX_KIND_STRUCT, "nested target's slot 0 is now a Structure copy")
@@ -209,7 +209,7 @@ fn: main () int
     op_d2: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: void)))
     mi_check(counts, op_d2 != 0, "nested second-merge operand array allocated")
     op_d2[0]: target_d
-    status_d2: lmx_merge_owned(op_d2, 1U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result_d2)
+    status_d2: lmx_merge_owned(op_d2, 1U, 0, 0, @ arena, @ dst, 0, 0U, @ result_d2)
     mi_check(counts, status_d2 = LMX_MERGE_OK && result_d2 != 0, "nested second merge OK")
     inner2: lmx_arena_ref_value(result_d2, 0U)
     mi_check(counts, inner2 != 0 && inner2 != slot0_after, "nested second merge deep-copies target's slot 0 (fresh address, not shared) -- proves the re-parent, not the bug")

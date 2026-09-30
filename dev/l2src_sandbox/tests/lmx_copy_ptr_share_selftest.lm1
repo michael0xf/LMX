@@ -23,6 +23,61 @@ sub: check (int: ok; const: @(char label))
     ---
 end: check
 
+sub: char_identity ()
+    LmxArena: src
+    LmxArena: dst
+    @: Lmx source 0
+    @: Lmx copy 0
+    @: VoidArray array 0
+    @: void a 0
+    @: void b 0
+    @: void ca 0
+    @: void cb 0
+    @: char bytes 0
+    int: i 0
+    memset(@ src, 0, c.sizeof(c.LmxArena))
+    memset(@ dst, 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ src) != 0 || lmx_arena_open(@ dst) != 0
+        c.abort()
+    # Constructor-first: this must bootstrap the literal table before taking
+    # any mutable CHAR cell from its pool.
+    a: lmx_char_new_owned(@ src)
+    b: lmx_char_new_owned(@ src)
+    check(a != 0 && b != 0 && a != b, "equal zero char declarations have distinct cells")
+    if: a = 0 || b = 0
+        c.abort()
+    lmx_char_store_known(a, 200)
+    lmx_char_store_known(b, 200)
+    while: i < 256
+        check(lmx_char_cell(@ src, i) != a && lmx_char_cell(@ src, i) != b && lmx_char_value_known(lmx_char_cell(@ src, i)) = (cast: (int) (cast: (char) i)), "constructor-first preserves each literal byte")
+        i: i + 1
+    array: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, 2U, @ src)
+    if: array = 0
+        c.abort()
+    bytes: (cast: (@: char) array\data)
+    bytes[0]: 7
+    check(lmx_char_value_known(a) = (cast: (int) (cast: (char) 200)) && lmx_char_value_known(lmx_char_cell(@ src, 7)) = 7, "char array is independent of owned cells and literals")
+    source: lmx_node_new_owned(@ src)
+    if: source = 0 || lmx_arena_refs_open_owned(@ src, source, 3U) != 0
+        c.abort()
+    lmx_arena_ref_store(source, 0U, a)
+    lmx_arena_ref_store(source, 1U, b)
+    lmx_arena_ref_store(source, 2U, a)
+    check(lmx_graph_copy_owned(source, @ src, @ dst, @ copy) = c.LMX_GRAPH_COPY_OK && copy != 0, "char copy into initially empty destination arena")
+    if: copy = 0
+        c.abort()
+    ca: lmx_arena_ref_value(copy, 0U)
+    cb: lmx_arena_ref_value(copy, 1U)
+    check(ca != a && cb != b && ca != cb, "copy does not collapse equal distinct char cells")
+    check(ca = lmx_arena_ref_value(copy, 2U), "copy map preserves repeated char reference identity")
+    check(lmx_range_type_of(@ dst, ca) = c.LMX_TYPE_CHAR && lmx_char_value_known(ca) = (cast: (int) (cast: (char) 200)), "copied char has target C99 value and domain")
+    lmx_char_store_known(ca, 65)
+    check(lmx_char_value_known(cb) = (cast: (int) (cast: (char) 200)) && lmx_char_value_known(a) = (cast: (int) (cast: (char) 200)), "copy mutation does not affect distinct cell or source")
+    check(lmx_char_value_known(lmx_arena_ref_value(copy, 2U)) = 65 && lmx_char_value_known(lmx_char_cell(@ dst, 65)) = 65 && ca != lmx_char_cell(@ dst, 65), "alias mutation preserves destination literal table")
+    lmx_arena_release(@ src)
+    lmx_arena_release(@ dst)
+end: char_identity
+
 fn: main () int
     LmxArena: src_arena
     LmxArena: dst_arena
@@ -69,7 +124,7 @@ fn: main () int
         return: 2
     ---
 
-    status: lmx_graph_copy_owned(holder, 0, @ src_arena, @ dst_arena, @ copied)
+    status: lmx_graph_copy_owned(holder, @ src_arena, @ dst_arena, @ copied)
     check((cast: (int) (status = LMX_GRAPH_COPY_OK && copied != 0 && copied != holder)), "copy holder OK")
 
     pcopy: lmx_arena_ref_value(copied, 1U)
@@ -83,6 +138,7 @@ fn: main () int
     icopy: lmx_arena_ref_value((cast: (@: Lmx) shared), 1U)
     check((cast: (int) (icopy = icell && lmx_int_value_known(icopy) = 77)), "shared pointee int cell unchanged (mutant deep copy -> new cell RED)")
 
+    char_identity()
     if: failures != 0
         c.printf("lmx_copy_ptr_share_selftest %d/%d FAILED\n", failures, checks)
         return: 1

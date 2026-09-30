@@ -1,0 +1,13 @@
+# The same lexical scope finds a catch inside a root control body.
+size_t: s 4U
+int: x -1
+int: r 0
+if: 1
+    s: x
+    catch: convert ()
+        r: 3
+    if: s = 4U
+        r: r + 4
+---
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

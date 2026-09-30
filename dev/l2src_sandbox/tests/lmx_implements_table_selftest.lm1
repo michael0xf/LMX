@@ -306,7 +306,7 @@ fn: main () int
     # never read at "slot j" by default, and its own admission is the heavy one again; the original keeps its record.
     ocopy: it_pair(ea, 1, 0)
     it_check(counts, ocopy != 0 && lmx_implements_register_map(ea, ocopy, fmodel, perm, 2U) = c.LMX_IMPLEMENTS_YES, "the value to copy was not admitted")
-    it_check(counts, lmx_graph_copy_owned(ocopy, 0, ea, ea, @ cloned) = 0 && cloned != 0 && cloned != ocopy, "the graph copy of an admitted value failed")
+    it_check(counts, lmx_graph_copy_owned(ocopy, ea, ea, @ cloned) = 0 && cloned != 0 && cloned != ocopy, "the graph copy of an admitted value failed")
     slot: 99U
     it_check(counts, lmx_implements_find(ea, cloned, fmodel) = 0 && lmx_implements_slot(ea, cloned, fmodel, 0U, @ slot) != 0 && slot = 99U, "a copy of an admitted value carried its record")
     it_check(counts, lmx_implements_slot(ea, ocopy, fmodel, 0U, @ slot) = 0 && slot = 1U, "copying a value disturbed the original's record")
@@ -321,7 +321,7 @@ fn: main () int
     v\at: 1U
     v\n: 2U
     it_check(counts, frame != 0 && lmx_implements_register(ea, fvalue, fmodel, v) = c.LMX_IMPLEMENTS_YES, "Other was not admitted again through a new frame")
-    it_check(counts, lmx_graph_copy_owned(frame, 0, ea, ea, @ fclone) = 0 && fclone != 0 && fclone != frame, "the admitting frame could not be cloned")
+    it_check(counts, lmx_graph_copy_owned(frame, ea, ea, @ fclone) = 0 && fclone != 0 && fclone != frame, "the admitting frame could not be cloned")
     slot: 99U
     it_check(counts, lmx_implements_slot(ea, fvalue, fmodel, 0U, @ slot) = 0 && slot = 1U, "cloning the frame changed the record's reading")
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
@@ -335,7 +335,7 @@ fn: main () int
     it_check(counts, lmx_implements_register(ea, fvalue, fmodel, v) = c.LMX_IMPLEMENTS_NO, "the clone's changed cells were taken as the recorded correspondence")
     # A clone of a capture's copy: no holes record -- its empty slot stays unreadable, and its carried one too until
     # it is admitted itself.
-    it_check(counts, lmx_graph_copy_owned(half, 0, ea, ea, @ hclone) = 0 && hclone != 0 && hclone != half, "the capture's copy could not be cloned")
+    it_check(counts, lmx_graph_copy_owned(half, ea, ea, @ hclone) = 0 && hclone != 0 && hclone != half, "the capture's copy could not be cloned")
     slot: 99U
     it_check(counts, lmx_implements_slot(ea, hclone, hmodel, 1U, @ slot) != 0 && lmx_implements_slot(ea, hclone, hmodel, 0U, @ slot) != 0 && slot = 99U, "a clone of a capture's copy was readable without an admission")
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))

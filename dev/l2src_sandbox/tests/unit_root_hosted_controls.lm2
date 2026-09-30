@@ -1,0 +1,67 @@
+# The same source and binary run natively and through the root graph.
+# Ordinary calls publish working values before physical path observations.
+sub: checkpoint ()
+return
+
+int: result 7
+int: sum 0
+int: guard 0
+for: int(i, 1) (i <= 2) i++
+    for: int(j, 1) (j <= 3) j++
+        guard: guard + 1
+        if: guard > 30
+            break
+        sum: sum + i * j
+    ---
+---
+if: sum != 18
+    result: 0
+sum: 0
+for: int(i, 0) (i < 20) i++
+    if: i = 7
+        break
+    if: i % 2 = 0
+        continue
+    sum: sum + i
+---
+if: sum != 9
+    result: 0
+int: outer 11
+if: 1
+    int: branch 3
+    if: branch != 3
+        result: 0
+    ---
+else:
+    int: branch 99
+    result: 0
+if: 0
+    result: 0
+else:
+    int: branch 5
+    if: branch != 5
+        result: 0
+---
+int: turns 0
+while: turns < 2
+    int: local 4
+    size_t: wide 4294967296U
+    if: local != 4
+        result: 0
+    if: wide != 4294967296U
+        result: 0
+    turns: turns + 1
+---
+if: turns != 2 || outer != 11
+    result: 0
+for: int(k, 0) (k < 1) k++
+    int: hosted 13
+    checkpoint
+    if: for\hosted != 13
+        result: 0
+    for\hosted: 17
+    if: for\hosted != 17
+        result: 0
+---
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

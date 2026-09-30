@@ -1,0 +1,34 @@
+predef: "l1src/p0.h.lm1"
+
+# Translation-owned contracts. These records are not runtime graph objects.
+# A constructor has one ordinary operand contract; no Array rank/depth table.
+struct: L2TypeContract
+    int: kind
+    int: depth
+    @: LmP0Text word
+    @: L2TypeContract operand
+    @: L2TypeContract allocated_next
+end: L2TypeContract
+
+# A receiver may derive this contract from an application. Name visibility is
+# resolved at the source position, never cached from allocated storage.
+struct: L2Declaration
+    @: LmP0Node source
+    @: L2TypeContract contract
+    @: LmP0Text name
+    @: LmP0Field candidate
+    int: candidate_count
+    @: LmP0Text extent
+    @: L2Declaration allocated_next
+end: L2Declaration
+
+# A resolved source location, not another binding table. kind selects the
+# existing own/argument/local-slot/machine-local/namespace entry; descriptor
+# distinguishes the actual Structure from a cell holding a reference to it.
+struct: L2Address
+    int: kind
+    int: index
+    int: descriptor
+    int: model
+    int: type
+end: L2Address

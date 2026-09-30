@@ -1,0 +1,33 @@
+# A real Structure and an explicit reference have different address depths.
+Model:
+    int: value 7
+end: Model
+
+fn: read (Model: item) int
+return: item\value
+
+fn: takeCell (@@: Model cell) int
+    \cell: 0
+return: 7
+
+fn: check () int
+    @: Model ref
+    ref: @ Model
+    int: value read(ref)
+    int: flat takeCell(@ ref)
+    if: ref != 0
+        return: 0
+    ref: @ Model
+    int: frame takeCell(@: ref)
+    if: ref != 0 || Model\value != 7
+        return: 0
+    int: n 7
+    @: int p
+    p: @ n
+    \p: 9
+    if: value != 7 || flat != 7 || frame != 7 || \p != 9
+        return: 0
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

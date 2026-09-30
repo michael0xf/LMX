@@ -477,6 +477,20 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7 && lmx_int_value_known(cell) = 41)), "walked callee payload is bound")
 
+    # The same catch route binds a CHAR payload into a fresh declared parameter,
+    # without modifying the payload literal or replacing that parameter's address.
+    cell_b: lmx_char_new_owned(ga)
+    if: cell_b = 0
+        return: 2
+    ref(pad, 1U, cell_b)
+    ref(payload, 0U, lmx_char_cell(ga, 200))
+    st: go(m)
+    check(st = c.LMX_WALK_OK && lmx_arena_ref_value(pad, 1U) = cell_b && lmx_char_value_known(cell_b) = (cast: (int) (cast: (char) 200)), "char catch parameter uses its stable typed cell")
+    ref(payload, 0U, lmx_char_cell(ga, 66))
+    st: go(m)
+    check(st = c.LMX_WALK_OK && lmx_arena_ref_value(pad, 1U) = cell_b && lmx_char_value_known(cell_b) = 66, "repeated char catch delivery preserves address")
+    check(lmx_char_value_known(lmx_char_cell(ga, 200)) = (cast: (int) (cast: (char) 200)), "catch delivery leaves character literals unchanged")
+
     c.printf("lmx_walk_catch_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0
         return: 1

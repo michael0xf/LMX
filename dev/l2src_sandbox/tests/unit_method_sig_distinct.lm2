@@ -1,9 +1,6 @@
-# Two methods with one result type and different inputs keep different sigs
-# (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit 1).  A method record's sig is
-# LMX_WALK_RESULT_SIG_MARK | (signature id << 8) | the result's type: runtime implements compares
-# sigs as signatures (lmx_implements_signature), and the walk's CALL reads the mark and the type.
-# a and b both return a size_t, so a sig of the mark and the type alone would make them equal.
-# The pins name both ids: a is 1 (256), b is 2 (512).  a(5) + b() is 3: Entry 3.
+# Two methods with one result type and different inputs retain distinct callable occurrences.
+# The graph CALLs reference their own native-bound descriptors and physical return cells, with
+# arities 1 and 0; no packed signature mark is used. Native a(5) + b() is 3: Entry 3.
 fn: a (int: x) size_t
 return: 1U
 

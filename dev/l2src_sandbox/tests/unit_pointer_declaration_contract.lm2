@@ -1,0 +1,39 @@
+# Declaration storage must retain the shared pointer contract, including depth.
+fn: boundary () int
+return: 0
+fn: check () int
+    char: a 'A'
+    int: n 11
+    size_t: size 13
+    boundary()
+    @: char p
+    p: @ a
+    @: char q
+    q: (@: a)
+    if: p != q || \p != 'A'
+        return: 81
+    @@: char cell
+    cell: @ p
+    \cell: 0
+    if: p != 0 || q != @ a || \q != 'A'
+        return: 82
+    p: (@: a)
+    cell: (@: p)
+    \cell: 0
+    if: p != 0 || a != 'A'
+        return: 83
+    @: int ip
+    ip: @ n
+    @: size_t sp
+    sp: (@: size)
+    if: \ip != 11 || \sp != 13
+        return: 84
+    p: 0
+    ip: 0U
+    sp: (0)
+    cell: -0
+    if: p != 0 || ip != 0 || sp != 0 || cell != 0
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

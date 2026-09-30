@@ -1,0 +1,18 @@
+# Both address spellings denote the actual Structure, not its containing slot.
+Model:
+    int: value 7
+end: Model
+
+fn: read (Model: item) int
+return: item\value
+
+fn: check () int
+    int: plain read(Model)
+    int: flat read(@ Model)
+    int: frame read(@: Model)
+    if: plain != 7 || flat != 7 || frame != 7
+        return: 0
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

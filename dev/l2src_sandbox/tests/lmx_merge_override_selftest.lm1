@@ -70,7 +70,7 @@ fn: main () int
     operands[1]: operand
 
     # Null map: flat append -> len 3.
-    status: lmx_merge_owned(operands, 2U, 0, 0, 0, @ arena, @ dst, 0, 0U, @ result_flat)
+    status: lmx_merge_owned(operands, 2U, 0, 0, @ arena, @ dst, 0, 0U, @ result_flat)
     ov_check(counts, status = LMX_MERGE_OK && result_flat != 0, "null-map merge OK")
     ov_check(counts, (result_flat\array.size) = 3U, "null map -> len 3 (append)")
 
@@ -80,7 +80,7 @@ fn: main () int
     one\model_slot: 0U
     one\operand: 1U
     one\field: 0U
-    status: lmx_merge_owned(operands, 2U, 0, 0, 0, @ arena, @ dst, @ one, 1U, @ result)
+    status: lmx_merge_owned(operands, 2U, 0, 0, @ arena, @ dst, @ one, 1U, @ result)
     ov_check(counts, status = LMX_MERGE_OK && result != 0, "mapped merge OK")
     ov_check(counts, (result\array.size) = 2U, "map (0 <- 1.0) -> len 2 (mutant: map ignored -> 3 RED)")
     got: lmx_arena_ref_value(result, 0U)

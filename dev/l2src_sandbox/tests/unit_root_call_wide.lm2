@@ -1,6 +1,6 @@
-# A size_t call result above 2^32 at the walked root (FABLE-OPUS-ROOT-STRUCTS-20260925-178 commit
-# 1; -174 c4).  wide's record carries the result mark, so the walk's CALL hands its trampoline a
-# size_t cell, not the evaluator's int temp.  wide() is 2^32 + 7, so r is 1: Entry 1.
+# A size_t result above 2^32 survives native root execution. The retained graph CALL references
+# wide's own return cell, not an int temporary or a packed signature mark. Entry is 1 only for
+# the complete wide value; the harness checks the graph link and the typed native trampoline.
 fn: wide () size_t
 return: 4294967303U
 

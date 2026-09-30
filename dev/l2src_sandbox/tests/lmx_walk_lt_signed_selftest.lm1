@@ -177,12 +177,12 @@ fn: main () int
     lmx_arena_ref_store(chars_source, 0U, lmx_char_cell(ga, 128))
     lmx_arena_ref_store(chars_source, 1U, lmx_char_cell(ga, 200))
     lmx_arena_ref_store(chars_source, 2U, lmx_char_cell(ga, 255))
-    st: lmx_graph_copy_owned(chars_source, copy_table, ga, @ context_arena, @ chars_copy)
+    st: lmx_graph_copy_owned(chars_source, ga, @ context_arena, @ chars_copy)
     check((cast: (int) (st = 0 && chars_copy != 0)), "char graph copy")
     if: chars_copy != 0
         check((cast: (int) (lmx_char_value_known(lmx_arena_ref_value(chars_copy, 0U)) = (cast: (int) (cast: (char) 128)))), "copied char 128")
         check((cast: (int) (lmx_char_value_known(lmx_arena_ref_value(chars_copy, 1U)) = (cast: (int) (cast: (char) 200)))), "copied char 200")
-        check((cast: (int) (lmx_char_value_known(lmx_arena_ref_value(chars_copy, 2U)) = (cast: (int) (cast: (char) 255)) && lmx_arena_ref_value(chars_copy, 2U) = lmx_char_cell_known(copy_table, 255))), "copied char 255 is a real interned cell")
+        check((cast: (int) (lmx_char_value_known(lmx_arena_ref_value(chars_copy, 2U)) = (cast: (int) (cast: (char) 255)) && lmx_arena_ref_value(chars_copy, 2U) != lmx_char_cell_known(copy_table, 255))), "copied char 255 is an independent typed cell")
     ---
 
 

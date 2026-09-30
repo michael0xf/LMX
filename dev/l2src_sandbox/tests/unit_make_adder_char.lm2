@@ -1,37 +1,42 @@
-# Item 738. A char capture: the node's field is a cell of the program's byte table
-# (l2_program_chars), not a fresh cell.  makeTag captures its char formal c: tagA carries 'A',
-# tagB 200 (above 127 -- the host's C char is signed there, and the table refuses a negative
-# byte), tagZ 'Z'; tagOf tells them apart: 101, 201, 1.  makeHi captures h, a char field the host
+# Item 738. A char capture is a fresh typed cell preserving the target C99 value.
+# makeTag captures its char formal c: tagA carries 'A', tagB carries (char)200,
+# tagZ 'Z'; tagOf tells them apart: 101, 201, 1. makeHi captures h, a char field the host
 # declares and changes before the return: hi1 carries 250, hi0 'B'; hiOf gives 251 and 67.
 # The base translator refused ("a callable merge needs a walkable body").  Mutants: the capture
-# not written -- the slot stays empty; the byte taken as the signed C char -- makeTag 200 aborts.
+# not written -- the slot stays empty; shared mutable captures would lose their independence.
 # Entry 7.
-fn: makeTag (char: c) fn: (int: x) int
+fn: makeTag (char: c; int: expected) fn: (int: x) int
     fn: tagOf (int: x) int
         if: c = 'A'
             return: x + 100
-        if: c = 200
+        if: c = expected
             return: x + 200
         return: x
     return: tagOf
 
-fn: makeHi (int: n) fn: (int: x) int
+fn: makeHi (int: n; char: hi; int: expected) fn: (int: x) int
     char: h 'B'
     if: n > 0
-        h: 250
+        h: hi
     fn: hiOf (int: x) int
-        if: h = 250
+        if: h = expected
             return: x + 250
         if: h = 'B'
             return: x + 66
         return: x
     return: hiOf
 
-tagA: makeTag 'A'
-tagB: makeTag 200
-tagZ: makeTag 'Z'
-hi1: makeHi 1
-hi0: makeHi 0
+# Explicit C99 casts create high-byte char values. Numeric expectations follow
+# that same target C char, not an invented 0..255 char domain.
+char: high200 (cast: (char) 200)
+char: high250 (cast: (char) 250)
+int: numeric200 (cast: (int) high200)
+int: numeric250 (cast: (int) high250)
+tagA: makeTag 'A' numeric200
+tagB: makeTag high200 numeric200
+tagZ: makeTag 'Z' numeric200
+hi1: makeHi 1 high250 numeric250
+hi0: makeHi 0 high250 numeric250
 int: a (tagA: 1)
 int: b (tagB: 1)
 int: z (tagZ: 1)

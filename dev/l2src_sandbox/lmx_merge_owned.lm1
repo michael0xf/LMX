@@ -46,7 +46,7 @@ fn: lmx_merge_apply_pair (@: Lmx src; size_t: field; @: Lmx dst; size_t: target_
 return: LMX_MERGE_OK
 
 
-fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     @: LmxArenaBlock mark 0
     @@: Lmx roots 0
     @@: Lmx copies 0
@@ -240,7 +240,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
         roots[nroots]: body
         nroots: nroots + 1U
     if: nroots != 0U
-        cst: lmx_graph_copy_many_profiles_owned(roots, nroots, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, copies)
+        cst: lmx_graph_copy_many_profiles_owned(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, copies)
         if: cst = LMX_GRAPH_COPY_NOMEM
             status: LMX_MERGE_NOMEM
         if: cst = LMX_GRAPH_COPY_UNSUPPORTED
@@ -475,13 +475,13 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
     free((cast: (@: void) copies))
 return: status
 
-fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
-return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
+fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+return: lmx_merge_profiles_owned(operands, count, body, container, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
 
-fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     if: retain_profile = 0
-        return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
-return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, src_arena, dst_arena, @ retain_profile, 1U, overrides, override_count, out)
+        return: lmx_merge_profiles_owned(operands, count, body, container, src_arena, dst_arena, 0, 0U, overrides, override_count, out)
+return: lmx_merge_profiles_owned(operands, count, body, container, src_arena, dst_arena, @ retain_profile, 1U, overrides, override_count, out)
 
 # -194 к.3, Q26.1 / Q1 ("merge into an existing target" -- the flat primitive T5's part-
 # recursion will call once per part, and the own-field write `o\inner: a`'s own form):
@@ -493,7 +493,7 @@ return: lmx_merge_profiles_owned(operands, count, body, container, dst_chars, sr
 # `target` (fable: unmatched is INVALID, not appended) and no two pairs may share a
 # source field or a target slot. A slot of `target` no pair names is simply untouched --
 # this is a specialization of some of `target`'s fields, not a replacement of the whole.
-fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int
+fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int
     @: LmxArenaBlock mark 0
     @@: Lmx roots 0
     @@: Lmx copies 0
@@ -549,7 +549,7 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: char dst_chars; 
         lmx_arena_revert(dst_arena, mark)
         return: LMX_MERGE_NOMEM
     roots[0]: op
-    cst: lmx_graph_copy_many_profiles_owned(roots, 1U, dst_chars, src_arena, dst_arena, retain_profiles, retain_count, copies)
+    cst: lmx_graph_copy_many_profiles_owned(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, copies)
     if: cst = LMX_GRAPH_COPY_NOMEM
         status: LMX_MERGE_NOMEM
     if: cst = LMX_GRAPH_COPY_UNSUPPORTED
@@ -592,8 +592,8 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: char dst_chars; 
     free((cast: (@: void) copies))
 return: status
 
-fn: lmx_merge_into_owned (@: Lmx target; @: Lmx op; @: char dst_chars; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair pairs; size_t: pair_count) int
-return: lmx_merge_into_profiles_owned(target, op, dst_chars, src_arena, dst_arena, 0, 0U, pairs, pair_count)
+fn: lmx_merge_into_owned (@: Lmx target; @: Lmx op; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair pairs; size_t: pair_count) int
+return: lmx_merge_into_profiles_owned(target, op, src_arena, dst_arena, 0, 0U, pairs, pair_count)
 
 # -174 c3: Model: m = merge(Model, empty) as one kernel PRIM over lmx_merge_owned.
 # Lives here (not walk.lm1) so walk selftests do not link merge.o. Declared in lmx_walk.h.lm1.
@@ -620,7 +620,7 @@ fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void d
     ---
     container: model\parent
     op0: model
-    status: lmx_merge_owned(@ op0, 1U, 0, container, 0, arena, arena, 0, 0U, @ result)
+    status: lmx_merge_owned(@ op0, 1U, 0, container, arena, arena, 0, 0U, @ result)
     if: status != c.LMX_MERGE_OK || result = 0
         return: 2
     ---
@@ -765,7 +765,7 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
         i: i + 1U
     ---
     container: operands[0]\parent
-    status: lmx_merge_profiles_owned(operands, op_count, body, container, 0, arena, arena, retain_profiles, retain_count, pairs, pair_count, @ result)
+    status: lmx_merge_profiles_owned(operands, op_count, body, container, arena, arena, retain_profiles, retain_count, pairs, pair_count, @ result)
     free((cast: (@: void) retain_profiles))
     lmx_walk_merge_pairs_free(pairs, pair_count)
     if: status != c.LMX_MERGE_OK || result = 0
@@ -812,7 +812,7 @@ fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: voi
     if: lmx_walk_merge_pairs_cells(arena, refs + 3U, np, @ pairs, @ pair_count) != 0 || pairs = 0
         return: 1
     ---
-    status: lmx_merge_into_owned(target, op, 0, arena, arena, pairs, pair_count)
+    status: lmx_merge_into_owned(target, op, arena, arena, pairs, pair_count)
     lmx_walk_merge_pairs_free(pairs, pair_count)
     if: status != c.LMX_MERGE_OK
         return: 2

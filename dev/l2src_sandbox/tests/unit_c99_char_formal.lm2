@@ -1,0 +1,15 @@
+# A dynamically invoked char-returning callable returns its actual interned cell,
+# not the old destination cell. Numeric meaning is that of the target C99 char.
+fn: identity (char: value) char
+    return: value
+
+fn: invoke (identity: f; char: value) char
+    return: f(value)
+
+char: high (cast: (char) 200)
+char: received (invoke: identity high)
+int: ok 0
+if: received = high
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,90 @@
+# Source-void returns must follow their resolved ABI, including a return inside
+# the root handler. Every early return must publish its own field and skip 99.
+sub: plainBare ()
+    int: seen 0
+    seen: 1
+    return
+    seen: 99
+end: plainBare
+sub: plainEmpty ()
+    int: seen 0
+    seen: 2
+    return: ()
+    seen: 99
+end: plainEmpty
+sub: plainTrailer ()
+    int: seen 0
+    seen: 3
+return
+sub: plainFall ()
+    int: seen 0
+    seen: 4
+end: plainFall
+sub: statusBare (int: fail)
+    throws: Oops
+    int: seen 0
+    seen: 5
+    if: fail
+        throw: Oops()
+    return
+    seen: 99
+end: statusBare
+sub: statusEmpty (int: fail)
+    throws: Oops
+    int: seen 0
+    seen: 6
+    if: fail
+        throw: Oops()
+    return: ()
+    seen: 99
+end: statusEmpty
+sub: statusTrailer (int: fail)
+    throws: Oops
+    int: seen 0
+    seen: 7
+    if: fail
+        throw: Oops()
+    ---
+return
+sub: statusFall (int: fail)
+    throws: Oops
+    int: seen 0
+    seen: 8
+    if: fail
+        throw: Oops()
+end: statusFall
+sub: handlerReturn ()
+    int: seen 0
+    statusBare(1)
+    seen: 99
+    catch: Oops ()
+        seen: 9
+        return: ()
+    seen: 98
+end: handlerReturn
+
+plainBare()
+plainEmpty()
+plainTrailer()
+plainFall()
+statusBare(0)
+statusEmpty(0)
+statusTrailer(0)
+statusFall(0)
+handlerReturn()
+if: plainBare\seen != 1 || plainEmpty\seen != 2 || plainTrailer\seen != 3 || plainFall\seen != 4
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: statusBare\seen != 5 || statusEmpty\seen != 6 || statusTrailer\seen != 7 || statusFall\seen != 8 || handlerReturn\seen != 9
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+statusBare(1)
+sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+catch: Oops ()
+    if: statusBare\seen != 5
+        sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+        return
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+return

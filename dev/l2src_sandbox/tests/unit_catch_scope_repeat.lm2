@@ -1,0 +1,27 @@
+# Repeated payloads use the same uncached catch cell; the handler's local a
+# must not leak beyond its scope and shadow the enclosing method's formal.
+fn: raise (int: value) int
+    throws: Oops
+    throw: Oops(value)
+return: 0
+
+fn: run (int: a) int
+    int: result 0
+    int: k 0
+    while: k < 2
+        k: k + 1
+        result: result + raise(k * 2 + 1)
+        catch: Oops (int: x)
+            x: x + 4
+            int: a 9
+            if: a != 9
+                return: 82
+            result: result + x
+        ---
+        if: a != 4
+            return: 83
+    ---
+return: result + a
+
+sendMessage: exit(exit_code: run(4); stdout: ""; stderr: "")
+return

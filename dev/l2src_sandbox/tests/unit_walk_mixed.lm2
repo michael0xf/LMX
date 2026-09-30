@@ -1,6 +1,6 @@
 # -193 T4a, widened by T4b class 2. `bind` and `native_caller` assign a formal: that first store
 # reads the argument and writes the field, and the return reads the field. Both are walked.
-# wrap calls bind; native_caller calls leaf. Success is 0 (102 then 10).
+# wrap calls bind; native_caller calls leaf. Success is 7 after the 102 and 10 checks.
 fn: bind (int: n) int
     n: n + 100
     return: n
@@ -30,5 +30,5 @@ r: native_caller(5)
 if: r != 10
     sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

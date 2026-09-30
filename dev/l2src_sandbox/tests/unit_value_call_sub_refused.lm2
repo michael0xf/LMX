@@ -1,6 +1,6 @@
-# A sub has no result, so naming it where a value is consumed is refused (plan §3 native gate
-# (б)): it is neither called nor passed as a reference.  (Its occurrence reference used to arrive
-# as the int.)
+# A sub occurrence may be transported as a callable reference, but that reference is not an int
+# result and cannot satisfy g's int formal.  This pins actual/formal compatibility, not a blanket
+# ban on passing non-returning callables by reference.
 int: y 0
 
 sub: s ()
@@ -11,4 +11,5 @@ fn: g (int: x) int
     return: x
 end: g
 
-return: g(s)
+g(s)
+return

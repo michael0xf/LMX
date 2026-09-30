@@ -118,11 +118,11 @@ fn: main () int
     ---
 
     operands[0]: model
-    status: lmx_merge_owned(operands, 1U, 0, container, 0, @ arena_a, @ dst, 0, 0U, @ result)
+    status: lmx_merge_owned(operands, 1U, 0, container, @ arena_a, @ dst, 0, 0U, @ result)
     check(counts, status = LMX_MERGE_OK && result != 0, "merge OK with MSG sender in letter")
     check(counts, result != 0 && result\parent = container, "result parent is container")
 
-    status: lmx_graph_copy_owned(unit, 0, @ arena_a, @ dst, @ unit_copy)
+    status: lmx_graph_copy_owned(unit, @ arena_a, @ dst, @ unit_copy)
     check(counts, status = LMX_GRAPH_COPY_OK && unit_copy != 0 && unit_copy != unit, "unit copy OK (direct OWN)")
     if: unit_copy != 0
         copied_letter: (cast: (@: Lmx) lmx_arena_ref_value(unit_copy, 0U))
@@ -140,7 +140,7 @@ fn: main () int
     pcell: lmx_pointer_new_owned(pty, @ arena_a)
     check(counts, pcell != 0 && lmx_pointer_store_known(pcell, (cast: (@: void) letter)) = 0, "pointer -> letter")
     lmx_arena_ref_store(unit_ptr, 0U, pcell)
-    status: lmx_graph_copy_owned(unit_ptr, 0, @ arena_a, @ dst, @ unit_ptr_copy)
+    status: lmx_graph_copy_owned(unit_ptr, @ arena_a, @ dst, @ unit_ptr_copy)
     check(counts, status = LMX_GRAPH_COPY_OK && unit_ptr_copy != 0 && unit_ptr_copy != unit_ptr, "unit_ptr copy OK")
     if: unit_ptr_copy != 0
         pcopy: lmx_arena_ref_value(unit_ptr_copy, 0U)

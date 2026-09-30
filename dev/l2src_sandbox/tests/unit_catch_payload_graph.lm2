@@ -1,0 +1,19 @@
+# PAD aliases the canonical catch cell read and mutated by the handler.
+fn: raise (int: value) int
+    throws: Oops
+    throw: Oops(value)
+return: 0
+
+fn: once () int
+    int: got 0
+    got: raise(3)
+    catch: Oops (int: x)
+        x: x + 4
+        got: x
+    ---
+    if: got != 7
+        return: 81
+return: 7
+
+sendMessage: exit(exit_code: once(); stdout: ""; stderr: "")
+return

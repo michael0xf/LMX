@@ -1,5 +1,6 @@
 predef: "lmx_value_owned.h.lm1"
 predef: "lmx_implements.h.lm1"
+predef: "l2src/lmx_chars.lm1"
 include: "<stdlib.h>"
 
 # A cell of one of the arena's arrays (Lingvamyxa_spec.txt 2, 6.5): the arena hands it out
@@ -55,6 +56,26 @@ fn: lmx_int_new_owned (@: LmxArena arena) @: void
         \value: 0
     ---
     return: (cast: (@: void) value)
+
+# The first CHAR interval remains the immutable literal table. Mutable cells
+# follow it in the same typed arena pool and have independent stable addresses.
+fn: lmx_char_new_owned (@: LmxArena arena) @: void
+    @: char value
+    if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+        return: 0
+    value: (cast: (@: char) lmx_value_allocate_owned(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR))
+    if: value != 0
+        \value: 0
+    ---
+return: (cast: (@: void) value)
+
+fn: lmx_char_store_known (@: void cell; int: value) int
+    @: char p
+    if: cell = 0
+        return: 1
+    p: (cast: (@: char) cell)
+    \p: (cast: (char) value)
+return: 0
 
 fn: lmx_size_new_owned (@: LmxArena arena) @: void
     size_t: zero 0U

@@ -1,0 +1,31 @@
+# Clearing native method/root addresses must retain the same early-return,
+# fallthrough and publication behavior in the existing physical graph.
+sub: plainBare ()
+    int: seen 0
+    seen: 1
+    return
+    seen: 99
+end: plainBare
+sub: plainEmpty ()
+    int: seen 0
+    seen: 2
+    return: ()
+    seen: 99
+end: plainEmpty
+sub: plainTrailer ()
+    int: seen 0
+    seen: 3
+return
+sub: plainFall ()
+    int: seen 0
+    seen: 4
+end: plainFall
+plainBare()
+plainEmpty()
+plainTrailer()
+plainFall()
+if: plainBare\seen != 1 || plainEmpty\seen != 2 || plainTrailer\seen != 3 || plainFall\seen != 4
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

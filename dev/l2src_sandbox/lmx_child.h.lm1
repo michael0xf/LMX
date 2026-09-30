@@ -58,9 +58,8 @@ prototype:
     # The source graph is classified by `src_arena` (where its addresses answer) and the
     # child is built in `child_arena`. `result` is either null or the exact physical ordinary
     # application-graph cell that receives the Message at publication; it must belong to
-    # `src_arena`. `dst_chars` is always 0 here, meaning the source's interned
-    # characters are kept by address -- a Message's own character table is a later step, and
-    # keeping them shares immutable cells, which is what they are for.
+    # `src_arena`. Primitive fields, including char, are copied into the child's
+    # typed arena cells; the destination character constructor bootstraps literals.
     #
     # This is the bare constructor: it builds the child and publishes NOTHING.  A turn
     # reserves through lmx_child_reserve, which remembers what the boundary must publish.

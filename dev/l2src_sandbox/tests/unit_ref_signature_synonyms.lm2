@@ -1,0 +1,37 @@
+# Nonexecuting nonprimitive signature spellings transmit the same descriptor.
+# This witness does not choose a formal's body call or rebinding operation.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    size_t: value 7U
+end: Other
+
+fn: first (Model: v; @: Model w) int
+    if: (@: v) != (@: w)
+        return: 0
+    if: v\value != 7U || w\value != 7U
+        return: 0
+    return: 7
+end: first
+
+fn: second (@: Model v; Model: w) int
+    if: @ v != @ w
+        return: 0
+    if: v\value != 7U || w\value != 7U
+        return: 0
+    return: 7
+end: second
+
+fn: check () int
+    int: a first(Other, Other)
+    int: b second(@ Other, @: Other)
+    if: a != 7 || b != 7
+        return: 0
+    if: Model\value != 1U
+        return: 0
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

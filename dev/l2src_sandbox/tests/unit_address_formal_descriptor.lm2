@@ -1,0 +1,35 @@
+# A nonprimitive formal denotes its descriptor, not a hidden pointer parameter.
+Model:
+    int: value 7
+end: Model
+
+fn: read (Model: item) int
+return: item\value
+
+fn: first (Model: item) int
+    if: (@: item) != (@: Model)
+        return: 0
+    int: flat read(@ item)
+    int: frame read(@: item)
+    if: flat != 7 || frame != 7
+        return: 0
+return: 7
+
+fn: second (@: Model item) int
+    if: @ item != @ Model
+        return: 0
+    int: flat read(@ item)
+    int: frame read(@: item)
+    if: flat != 7 || frame != 7
+        return: 0
+return: 7
+
+fn: check () int
+    int: a first(Model)
+    int: b second(Model)
+    if: a != 7 || b != 7
+        return: 0
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -19,17 +19,18 @@ size_t: a1
 size_t: r1
 size_t: a2
 R: merge: A
-# Q22 = II: A: fn: M is a shared occurrence; hits accumulate across A and R.
+# Q44 supersedes Q22: merge copies M and its mutable cells; only the native
+# implementation is shared. A and R accumulate hits independently.
 a1: A\M()
 r1: R\M()
 a2: A\M()
 if: a1 != 1U
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
-if: r1 != 2U
+if: r1 != 1U
     sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
     return
-if: a2 != 3U
+if: a2 != 2U
     sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")

@@ -1,18 +1,10 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
 
-# The interned character array. Lingvamyxa_spec.txt 2, 21.4; ABI 14.7.
-#
-# 2 works the example out in full: a primitive field
-#
-#     char: '!'
-#
-# may hold data == &all_chars_array['!']. Assigning that field changes its
-# REFERENCE; it does not mutate the shared immutable character cell.
-#
-# 14.7 settles exactly this case - "interned immutable leaves naturally share
-# their primitive address" - and leaves mutable cells, large numbers, byte
-# buffers and foreign handles open. This unit implements only the settled half.
+# The interned character table for immutable literals and temporary values.
+# Equal byte encodings may share a table cell. Mutable declared CHAR fields use
+# fresh typed cells and in-place stores from lmx_value_owned instead; their
+# identity does not depend on the value currently stored in them.
 #
 # The table is 256 consecutive cells of the ARENA's array of char primitives: the
 # arena allocates it, the arena owns it and the arena's index classifies it (KIND
@@ -21,8 +13,9 @@ predef: "l2src/lmx_pool.h.lm1"
 # в арене"), and two Messages must not share one table.
 #
 # The discipline is the interned one and it is the point of the contrast with the
-# mutable arrays: all 256 cells exist from init and are addressed by the character
-# value itself, so this array is never grown by this unit -- the first table makes
+# mutable arrays: all 256 cells exist from init and are selected by byte index
+# 0..255, while reading a cell has the target C char value. This table is never
+# grown by this unit -- the first table makes
 # the array with exactly 256 cells, and a second table in the same arena would be
 # another interval of that same array (that is lmx_chars_new_owned's constructor).
 # Immutability is enforced by construction: taken once at init, filled once, no
@@ -39,9 +32,9 @@ predef: "l2src/lmx_pool.h.lm1"
 # TYPE_CHAR).  lmx_char_cell only ever reads the pool's FIRST chunk (its head, which
 # never moves once set), so the table MUST be that pool's first chunk or it cannot be
 # found at all.  This module does not enforce that order itself: the invariant is the
-# constructor's to keep (lmx_array_owned.lm1's ARRAY_OF_CHAR branch lays the table out
-# before it ever takes a char array's own backing, so this init call here is always
-# either the FIRST claim on the pool or a harmless no-op on an already-laid-out one).
+# constructors' to keep: lmx_array_owned's ARRAY_OF_CHAR branch and
+# lmx_value_owned's fresh CHAR allocation initialize the table before taking
+# mutable CHAR storage. An existing initialized pool needs no second init call.
 
 
 fn: lmx_chars_init (@: LmxArena arena) int
@@ -63,9 +56,8 @@ fn: lmx_chars_init (@: LmxArena arena) int
     ---
 return: 0
 
-# The shared cell for a character value. Two fields holding the same character
-# hold the same address; that sharing is the whole content of 14.7's settled
-# half. The array is found among the arena's N arrays -- there is no global to
+# The shared immutable cell selected by a byte encoding, not a mutable field's
+# storage. The array is found among the arena's N arrays -- there is no global to
 # consult -- and the table of this arena must be the interned one: the first chunk
 # of the array holds all 256 cells. Out of range, or without a laid-out table,
 # yields nothing rather than a wrong cell.

@@ -1,0 +1,53 @@
+# Empty and fully elided handler bodies still have a real empty L1 Structure.
+# Both throws skip their following sentinel, then continue after the handler.
+# A wholly elided source body follows the native prelude, not a fresh L1 body.
+fn: pureValue () int
+    2 * 2
+return: 5
+sub: pureVoid ()
+    ()
+end: pureVoid
+
+fn: boom () int
+    throws: Oops
+    throw: Oops()
+return: 0
+
+fn: emptyHandler () int
+    int: seen 0
+    boom()
+    seen: 99
+    catch: Oops ()
+        ()
+    seen: seen + 3
+return: seen
+
+fn: discardHandler () int
+    int: seen 0
+    boom()
+    seen: 99
+    catch: Oops ()
+        2 * 2
+    seen: seen + 4
+return: seen
+
+int: seen 0
+pureVoid()
+if: pureValue() != 5
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: emptyHandler() != 3 || discardHandler() != 4
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: emptyHandler() = 3
+    2
+else:
+    ()
+---
+boom()
+seen: 99
+catch: Oops ()
+    2 * 2
+seen: seen + 7
+sendMessage: exit(exit_code: seen; stdout: ""; stderr: "")
+return: ()

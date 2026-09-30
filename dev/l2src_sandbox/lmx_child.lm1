@@ -42,7 +42,7 @@ fn: lmx_child_create_profiled (@: LmxArena src_arena; @: LmxArena child_arena; @
     ---
     # The used graph, into the CHILD's arena, classified by the source's.  The copier is
     # all-or-nothing over its own mark, and its blocks are the child arena's.
-    status: lmx_graph_copy_profiled_owned(source, 0, src_arena, child_arena, retain_profile, @ graph)
+    status: lmx_graph_copy_profiled_owned(source, src_arena, child_arena, retain_profile, @ graph)
     if: status != c.LMX_GRAPH_COPY_OK || graph = 0
         lmx_arena_revert(child_arena, mark)
         return: 0

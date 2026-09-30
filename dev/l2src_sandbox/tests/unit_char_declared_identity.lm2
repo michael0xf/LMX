@@ -1,0 +1,17 @@
+# Equal values do not merge the physical cells of two declarations.
+fn: boundary () int
+return: 0
+fn: check () int
+    char: a 'A'
+    char: b 'A'
+    boundary()
+    @: char pa (cast: (@: char) @ a)
+    @: char pb (cast: (@: char) @ b)
+    if: pa = pb
+        return: 81
+    \pa: 'B'
+    if: check\a != 'B' || check\b != 'A' || a != 'A'
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

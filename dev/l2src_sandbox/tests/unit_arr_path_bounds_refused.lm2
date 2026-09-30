@@ -1,10 +1,10 @@
-# A fixed Array field declares its count, so a literal index is proven against
-# it at translation, as an own array's is: 3 is past `[]: int buf 3`.
+# Q55: L2 field-array access likewise has no bounds check.
+# Translation-only witness; the out-of-range element must never be read.
 Holder:
     []: int buf 3
 end: Holder
 
 Holder: a
 if: a\buf[3] != 0
-    return: 1
-return: 0
+    return
+return

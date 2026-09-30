@@ -261,7 +261,8 @@ fn: lmx_walk_load_operand (@: LmxArena arena; @: void cell; @: size_t out; @: in
     \out_ty: lmx_walk_numeric_type(arena, cell)
 return: c.LMX_WALK_OK
 
-# Mutate an existing mutable numeric cell by its arena type. Interned CHAR is not mutable.
+# Mutate an existing numeric cell by its arena type. CHAR can be interned, so
+# its mutation requires a caller-proven mutable destination instead.
 fn: lmx_walk_store_numeric_into (@: LmxArena arena; @: void cell; size_t: value) int
     int: ty lmx_walk_numeric_type(arena, cell)
     if: ty = 0
@@ -297,12 +298,16 @@ return: c.LMX_WALK_INVALID
 # dest). Shared by lmx_walk_call_prim_dispatch (G-call, -194 к.4) and lmx_walk_call's
 # own addr = 0 branch (K-RET, -194 к.5b) -- both copy a walked callee's numeric result
 # out of whatever reference lmx_walk_activate handed back and into the caller's own
-# destination, the same way the native path already does by construction. CHAR is
-# refused here (interned/shared cells; never meant to be mutated in place) -- the two
-# callers keep the reference instead in that case, never calling this for it.
+# destination, the same way the native path already does by construction.
+# The caller proves this destination mutable; unlike a numeric operand it is not
+# an interned literal, including when its declared type is CHAR.
 fn: lmx_walk_store_numeric_raw (@: void cell; int: ty; size_t: value) int
-    if: cell = 0 || ty = 0 || ty = c.LMX_TYPE_CHAR
+    if: cell = 0 || ty = 0
         return: c.LMX_WALK_INVALID
+    if: ty = c.LMX_TYPE_CHAR
+        if: lmx_char_store_known(cell, (cast: (int) value)) != 0
+            return: c.LMX_WALK_INVALID
+        return: c.LMX_WALK_OK
     if: ty = c.LMX_TYPE_INT
         if: lmx_int_store_known(cell, (cast: (int) value)) != 0
             return: c.LMX_WALK_INVALID
@@ -338,7 +343,7 @@ fn: lmx_walk_is_pointer_cell (@: LmxArena arena; @: void cell) int
 return: 1
 
 # -188 k.2: immediate typed store into a Structure slot (was publish_slot at checkpoint).
-# CHAR replaces the interned reference; other numerics mutate the cell.
+# Every declared primitive slot has its own mutable cell.
 fn: lmx_walk_store_slot (@: LmxArena arena; @@: void slot; size_t: value) int
     @: void cell 0
     int: ty
@@ -349,13 +354,8 @@ fn: lmx_walk_store_slot (@: LmxArena arena; @@: void slot; size_t: value) int
     if: ty = 0
         return: c.LMX_WALK_INVALID
     if: ty = c.LMX_TYPE_CHAR
-        if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
-            return: c.LMX_WALK_NOMEM
-        ---
-        cell: lmx_char_cell(arena, (cast: (int) (value & (cast: (size_t) 255))))
-        if: cell = 0
+        if: lmx_char_store_known(cell, (cast: (int) value)) != 0
             return: c.LMX_WALK_INVALID
-        slot[0]: cell
         return: c.LMX_WALK_OK
 return: lmx_walk_store_numeric_into(arena, cell, value)
 
@@ -369,6 +369,14 @@ fn: lmx_walk_arith_out (@: LmxWalkFrame f; @: void dest; int: ty; size_t: value;
     if: ty = c.LMX_TYPE_INT
         lmx_int_store_known(dest, (cast: (int) value))
         \out: dest
+        return: c.LMX_WALK_OK
+    if: ty = c.LMX_TYPE_CHAR
+        if: lmx_chars_init(f\arena) != 0 && lmx_arena_find(f\arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+            return: c.LMX_WALK_NOMEM
+        cell: lmx_char_cell(f\arena, (cast: (int) (value & (cast: (size_t) 255))))
+        if: cell = 0
+            return: c.LMX_WALK_INVALID
+        \out: cell
         return: c.LMX_WALK_OK
     if: lmx_walk_numeric_type(f\arena, dest) = ty
         if: lmx_walk_store_numeric_into(f\arena, dest, value) != c.LMX_WALK_OK
@@ -392,15 +400,6 @@ fn: lmx_walk_arith_out (@: LmxWalkFrame f; @: void dest; int: ty; size_t: value;
         cell: lmx_ulong_new_owned(f\arena)
         if: cell = 0 || lmx_ulong_store_known(cell, (cast: (ulong) value)) != 0
             return: c.LMX_WALK_NOMEM
-        \out: cell
-        return: c.LMX_WALK_OK
-    if: ty = c.LMX_TYPE_CHAR
-        if: lmx_chars_init(f\arena) != 0 && lmx_arena_find(f\arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
-            return: c.LMX_WALK_NOMEM
-        ---
-        cell: lmx_char_cell(f\arena, (cast: (int) (value & (cast: (size_t) 255))))
-        if: cell = 0
-            return: c.LMX_WALK_INVALID
         \out: cell
         return: c.LMX_WALK_OK
     if: ty = c.LMX_TYPE_UNSIGNED_CHAR
@@ -774,7 +773,7 @@ return: c.LMX_WALK_OK
 # value; Q52: only the hidden input changes).  The first write takes the activation's own copy of the input array from
 # its scratch slice (the caller's array and the cells it names stay as they are), with one owned-cell slot per input.
 # A Structure (or null) input takes the reference itself.  A number keeps its input's type: an int lives in a cell of
-# the scratch slice, a char is its interned cell, any other number a cell of its type (lmx_walk_arith_out, as a
+# the scratch slice, a char gets an owned typed cell, any other number a cell of its type (lmx_walk_arith_out, as a
 # computed value's); the first write makes the owned cell and later ones store into it.
 fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; @: void value; @: void dest; @@: void out) int
     @: void room 0
@@ -815,11 +814,13 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; @: void value; @: void des
     if: f\args[k] != 0 && lmx_walk_kind(f, f\args[k]) != c.LMX_KIND_STRUCT && lmx_walk_load_operand(f\arena, f\args[k], @ cv, @ had) = c.LMX_WALK_OK && had != ty
         return: c.LMX_WALK_INVALID
     if: ty = c.LMX_TYPE_CHAR
-        status: lmx_walk_arith_out(f, (cast: (@: void) (@ spare)), ty, wv, @ cell)
-        if: status != c.LMX_WALK_OK
-            return: status
+        cell: f\argown[k]
+        if: cell = 0
+            cell: lmx_char_new_owned(f\arena)
+        if: cell = 0 || lmx_char_store_known(cell, (cast: (int) wv)) != 0
+            return: c.LMX_WALK_NOMEM
         f\args[k]: cell
-        f\argown[k]: 0
+        f\argown[k]: cell
         \out: cell
         return: c.LMX_WALK_OK
     ---
@@ -1052,15 +1053,13 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
     # `dest` here is the CALLER's own destination -- generated code's own local, not
     # necessarily an arena-classified cell -- so lmx_walk_store_numeric_raw (the raw,
     # unclassified store the native path already uses by construction), keyed by
-    # RESULT's own type, not dest's, is the right door. CHAR is excluded (its cells are
-    # interned/shared; a mutating store into dest would not mean what it means for the
-    # other numerics) -- handed back as a reference instead, same as any non-numeric
-    # value.
+    # RESULT's own type, not dest's, is the right door. All primitive results,
+    # including CHAR, are copied into this caller-owned destination.
     rty: 0
     if: result != 0
         rty: lmx_walk_numeric_type(arena, result)
     ---
-    if: rty != 0 && rty != c.LMX_TYPE_CHAR && lmx_walk_load_numeric(arena, result, @ wv) = c.LMX_WALK_OK
+    if: rty != 0 && lmx_walk_load_numeric(arena, result, @ wv) = c.LMX_WALK_OK
         if: lmx_walk_store_numeric_raw(dest, rty, wv) != c.LMX_WALK_OK
             return: c.LMX_CALL_NOT_CALLABLE
         ---
@@ -1080,7 +1079,8 @@ fn: lmx_walk_call_dest (@: LmxWalkFrame f; @: void dest; int: ty; @@: void call_
         \call_dest: dest
         return: c.LMX_WALK_OK
     ---
-    if: lmx_walk_numeric_type(f\arena, dest) = ty
+    # CHAR operands can be interned; only a fresh call-result destination is mutable.
+    if: ty != c.LMX_TYPE_CHAR && lmx_walk_numeric_type(f\arena, dest) = ty
         \call_dest: dest
         return: c.LMX_WALK_OK
     ---
@@ -1107,10 +1107,7 @@ fn: lmx_walk_call_dest (@: LmxWalkFrame f; @: void dest; int: ty; @@: void call_
         return: c.LMX_WALK_OK
     ---
     if: ty = c.LMX_TYPE_CHAR
-        if: lmx_chars_init(f\arena) != 0 && lmx_arena_find(f\arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
-            return: c.LMX_WALK_NOMEM
-        ---
-        cell: lmx_char_cell(f\arena, 0)
+        cell: lmx_char_new_owned(f\arena)
         if: cell = 0
             return: c.LMX_WALK_INVALID
         \call_dest: cell
@@ -1232,7 +1229,7 @@ fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
                 c.fprintf(l1_stderr(), "lmx: invariant: catch parameter type\n")
                 c.abort()
             ---
-            if: lmx_walk_store_numeric_into(f\arena, cell, wv) != c.LMX_WALK_OK
+            if: lmx_walk_store_numeric_raw(cell, lmx_walk_numeric_type(f\arena, cell), wv) != c.LMX_WALK_OK
                 status: c.LMX_WALK_INVALID
             ---
         else:
@@ -1413,7 +1410,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) i
             if: status = c.LMX_WALK_OK
                 status: lmx_walk_activate(f\context, callee, data, refs, n, call_dest, @ result, @ present)
             ---
-            if: status = c.LMX_WALK_OK && present != 0 && result != 0 && result != call_dest && rtype_ref != 0 && ty != c.LMX_TYPE_CHAR
+            if: status = c.LMX_WALK_OK && present != 0 && result != 0 && result != call_dest && rtype_ref != 0
                 if: lmx_walk_load_numeric(f\arena, result, @ wv) != c.LMX_WALK_OK
                     status: c.LMX_WALK_INVALID
                 else:
@@ -1883,6 +1880,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
             return: c.LMX_WALK_INVALID
         work\num: wv
         work\dirty: 1
+        if: work\ty != c.LMX_TYPE_INT
+            return: lmx_walk_arith_out(f, dest, work\ty, wv, out)
         if: lmx_walk_numeric_type(f\arena, dest) != 0
             if: lmx_walk_store_numeric_into(f\arena, dest, wv) != c.LMX_WALK_OK
                 return: c.LMX_WALK_INVALID
@@ -2722,14 +2721,19 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void ou
 return: status
 
 # A copy of what a slot holds, as a merge copies data: a value cell -- a number -- is a fresh cell of its own type
-# holding its value now; a char cell is the byte table's, shared as those cells always are; anything else (a
-# Structure, a reference) is itself.  0 on no room.
+# holding its value now, including char; anything else (a Structure, a reference)
+# is itself. 0 on no room.
 fn: lmx_walk_cell_copy (@: LmxArena arena; @: void cell) @: void
     @: void fresh 0
     int: ty
     if: arena = 0 || cell = 0 || lmx_range_classify(arena, cell) != c.LMX_KIND_PRIMITIVE
         return: cell
     ty: lmx_range_type_of(arena, cell)
+    if: ty = c.LMX_TYPE_CHAR
+        fresh: lmx_char_new_owned(arena)
+        if: fresh = 0 || lmx_char_store_known(fresh, lmx_char_value_known(cell)) != 0
+            return: 0
+        return: fresh
     if: ty = c.LMX_TYPE_INT
         fresh: lmx_int_new_owned(arena)
         if: fresh = 0 || lmx_int_store_known(fresh, lmx_int_value_known(cell)) != 0
@@ -2758,7 +2762,7 @@ return: cell
 
 # Item 738 (Q38/Q42/Q44, the author: a capture is a copy of the fields the model reads; steps/capture-
 # 738.md): a Structure in req's own layout -- req's width, each field fields[0..n) names a fresh cell at req's
-# own slot holding src's value now (a char cell is the byte table's, shared as those cells always are), every
+# own slot holding src's value now in an independent typed cell, every
 # other slot empty.  It is recorded in the arena's `implements` table as req's own layout with holes (D-105; Codex,
 # 2026-09-28): the model reads the fields at req's slots, and an empty slot is not carried -- a read of it is
 # refused, never read as present.  No correspondence Structure is made.  The copy hangs under `parent` (no slot
@@ -2797,7 +2801,7 @@ fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; 
         if: cell = 0 || lmx_range_classify(arena, cell) != c.LMX_KIND_PRIMITIVE
             return: 0
         fresh: lmx_walk_cell_copy(arena, cell)
-        if: fresh = 0 || fresh = cell && lmx_range_type_of(arena, cell) != c.LMX_TYPE_CHAR
+        if: fresh = 0 || fresh = cell
             return: 0
         if: lmx_arena_ref_store(copy, j, fresh) != 0
             return: 0

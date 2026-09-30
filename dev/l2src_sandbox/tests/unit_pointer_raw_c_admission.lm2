@@ -1,0 +1,16 @@
+include: "<string.h>"
+Model:
+    int: value 7
+end: Model
+fn: read (Model: item) int
+return: item\value
+fn: check () int
+    @: Model ref
+    ref: c.memmove(@ Model, @ Model, 0U)
+    if: ref != @ Model
+        return: 81
+    if: read(ref) != 7
+        return: 81
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

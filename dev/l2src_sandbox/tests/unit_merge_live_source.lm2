@@ -1,0 +1,20 @@
+# Merge reads current cells, not their declaration literals. Copies remain independent.
+Source:
+    size_t: x 1U
+    char: letter 'A'
+end: Source
+
+fn: probe () int
+    Source\x: 9U
+    Source\letter: 'B'
+    R: merge: Source
+    if: R\x != 9U || R\letter != 'B'
+        return: 81
+    R\x: 12U
+    R\letter: 'C'
+    if: Source\x != 9U || Source\letter != 'B'
+        return: 82
+return: 7
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

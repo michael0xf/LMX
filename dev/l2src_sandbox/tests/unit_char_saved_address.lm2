@@ -1,0 +1,20 @@
+# Assignment and publication preserve @a; the address names real typed data.
+fn: boundary () int
+return: 0
+fn: check () int
+    char: a 'A'
+    boundary()
+    @: char p (cast: (@: char) @ a)
+    a: 'B'
+    boundary()
+    if: p != @ a || \p != 'B'
+        return: 81
+    \p: 'C'
+    if: check\a != 'C' || a != 'B'
+        return: 82
+    check\a: 'D'
+    if: p != @ a || \p != 'D'
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

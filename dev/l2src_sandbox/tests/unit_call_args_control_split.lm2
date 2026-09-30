@@ -4,5 +4,8 @@ fn: add (int: a; int: b) int
 end: add
 int: r 0
 r: add: (1) 2
-sendMessage: exit(exit_code: r != 3; stdout: ""; stderr: "")
+if: r != 3
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

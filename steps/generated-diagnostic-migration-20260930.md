@@ -1,6 +1,52 @@
 # Generated diagnostic migration: frozen 43-row inventory
 
-Date: 2026-09-30. Status: read-only classification; implementation and counterfactual gates remain pending.
+Date: 2026-09-30. Status: section A's fourteen fixture/expectation migrations are verified WIP (thirteen pass, one production defect remains); sections B–D remain a read-only worklist. The frozen inventory below records the original failure, not the current result.
+
+<a id="diagnostic14-results"></a>
+
+## First fourteen: measured migration result
+
+`build/l2_harness/diagnostic14_20260930_final/summary.txt` reports **17 targets,
+one failure**: thirteen of the fourteen selected fixtures pass, plus three
+build/scope targets. Thirteen source files and their harness rows changed;
+the send-reference source already had a bare root return and needed only its
+diagnostic expectation corrected. Translator/runtime bytes did not change.
+
+The remaining failure is `unit_value_call_sub_refused`: `g(s)` still rejects
+the non-returning callable as having no value before checking the receiving
+int formal. The row expects the common incompatible-argument diagnostic, not
+the withdrawn blanket ban on sub references. Read-only inspection confirmed
+that ordinary reference-formal transport also reaches the wrong value-call
+route. This is recorded as SUB-ACTUAL-REFERENCE-CLASSIFICATION in
+[the defect list](defects.md); neither production code nor the expected rule
+was weakened to obtain a green fixture count.
+
+Counterfactual evidence:
+
+- `diagnostic14_counterfactual_20260930_01/summary.txt`: eleven corrected
+  negatives translate; both inverted positive readback/sizeof comparisons
+  fail at runtime. These failures prove the positive witnesses execute their
+  assertions; the unmodified witnesses both return success 7.
+- All eleven corrected negatives subsequently pass L1 translation and C99
+  compilation individually, including all four `2147483647` overflow controls
+  and raw `c.sizeof(c.int)`. No invalid program was executed.
+- The original untyped sender-path control exposed an unrelated pre-layout
+  limitation; it is not positive evidence. The final typed MainLetter sender
+  control separately passes both translators and C99 compilation in
+  `diagnostic14_counterfactual_send_20260930_01`.
+- Commands, per-case logs and object paths are in
+  `diagnostic14_counterfactual_20260930_01/counterfactual-results.txt`
+  (SHA256 `46021382CDEACF62316403E54AF2BBDDA470DA7B886E046C90CFFCD72E5728E0`).
+
+All fourteen positive/negative fixture files were restored before the final
+focused gate and match its staged bytes. Scoped diffcheck passes. Final
+translator source SHA256 is unchanged
+`0D25E51BA38B077989168BA3202FB3F9A3DD2E2A45D30BC10D5B4F8C041B4C78`;
+harness SHA256 is
+`E5403BDE151CD1D73897B0C4FEFAB24BD92062C16D33A4DD1C67B98B8B591CBA`.
+The pinned L1 executable is bootstrap evidence only, not an L2 self-build.
+These focused results do not certify the full generated corpus or close
+sections B–D.
 
 <a id="scope-evidence"></a>
 

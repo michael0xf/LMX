@@ -43,6 +43,10 @@ Focused evidence under build/l2_harness:
 | s7b106 | 9 graph/native/reference/capture fixtures passed; 12 targets |
 | s7b107 | Dynamic index and T7 constructor passed; held char exposes Q55 |
 | s7b108 | Full harness: 959 targets, 105 failed; stale root-only expectations and genuine remaining gaps must be separated |
+| s7b110 | 6 focused fixtures, 9 targets passed: C99 char capture/results and range checks, signed int/size_t controls |
+| s7b112 | 4 focused fixtures, 7 targets passed: char callable formal, dynamic index, two L2 OOB translation-only witnesses |
+| s7b113 | Full Windows runtime kernel gate: 278 targets, 103 self-tests, no failures |
+| s7b114 | Full L3 runner: 11 suites and 4-unit type budget passed |
 
 OnlyFixture is labelled diagnostic scope and cannot certify a full gate.
 The full generated/kernel/L3/docs/diff gates remain mandatory.
@@ -83,6 +87,19 @@ L3 checks. Rectangular flattening is absent; two nested ELEM nodes currently
 mean two separate Array descriptors. l2_array_literal and l2_arr_operand also
 reject static OOB indices in L2. Translation-only witnesses must not execute
 undefined C accesses. Do not remove Structure-slot validation as an Array fix.
+
+### Unbounded constructor/path composition (Q56)
+
+The author removed shape/rank promises, not deferred them to a future library.
+The Array constructor composes recursively at any finite depth. The fixed
+outer/inner pair in l2_ns_arrarr_field and two-index API in l2_arr_operand,
+l2_emit_arr_operand, l2_arr_len_shape and l2_rw_index_ty violate this norm.
+Replace the coupled path by a shared walk of declared element types and source
+indices. Intermediate values remain actual Array descriptor references.
+Do not add an i2 argument, a 3d branch or a runtime dimension table.
+Audit analogous fixed path/name/nesting/argument limits across the pipeline;
+actual C99 representation limits and allocation failures remain distinct.
+See next_core_tasks.md §0 and ARRAY-COMPOSITION-DEPTH in steps/defects.md.
 
 ### One complete lexical graph
 

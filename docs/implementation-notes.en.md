@@ -63,7 +63,6 @@ This document is not a language specification. It contains state of concrete tra
 
 - Failure representation for the unit-test set and its exact relation to declared `throw`.
 - Unload contract for a later DLL-like module: when retention of its immutable independent branches ends, what happens to outstanding physical references retained in consumers by `merge`, and how unload relates to stopping Messages that use them. Until decided, module branches have an explicit owner and never become hidden R0 storage. Do not design a separate runtime import operation.
-- A broadcasting profile for zero extents; the core specification defines positive extents only.
 - Final cryptographic receiver names, normalized AlgorithmId/Verifier/Policy Structures, mandatory initial profiles, exact error subtrees, and provider registration.
 - Streaming, secret streams, HSM/TPM, KEM/PQC, remote key services, and protected envelopes require separate profiles.
 

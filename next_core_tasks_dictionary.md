@@ -683,6 +683,10 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 
 ## `array`
 
+**Recursive constructor, not a 2d case:** each `[]:` applies the same Array constructor to the preceding element type; any finite composition depth is legal. Follow the declared type and index chain one step at a time; an intermediate result is an ordinary Array descriptor reference. Current defect: `l2_ns_arrarr_field` spells exactly two Frames, `l2_arr_operand` has only `out_i0/out_i1`, `l2_emit_arr_operand` has one outer/inner pair, `l2_arr_len_shape` admits at most one intermediate index, and `l2_rw_index_ty` recognizes exactly two indices for kind 6. Replace this whole coupled path, not just the parser helper. No new `i2`/3d branch or base-descriptor dimension vector. Witness construction and accesses at 1, 2, 3 and larger depths; independently sized inner Arrays; length at each level; terminal element admission; identical native/walker meaning. Declaring the norm is not a passed implementation gate.
+
+**Author clarification 2026-09-30 (Q56):** no `shape`/`rank` contract or promised future dimension-aware numeric profile. Remove the stale promise instead of deferring it to a library. `T: []: []: x` is ordinary composition: an outer one-dimensional Array holds references to independently sized inner Arrays. It differs from the single rectangular `T: [][]: x`. Norm: [values](docs/LMX_semantics.en.md#values), [L2 Array](docs/L2_spec_en.md#method-array). Implementation evidence: `l2_ns_arrarr_field` recognizes the declaration; field kind 6 constructs an outer `LMX_TYPE_ARRAY_OF_DESC`; `unit_arrarr_field` covers int and char declarations. This is not full conformance: the §7 admission gap for the inner element type remains open (`unit_admit_letter_coarse`). [Author's answer](LMX_blog/q/q56.md).
+
 - **level:** L2/kernel
 - **Norm:** accepted
 - **Implementation:** pending ABI migration; current base descriptor exists with old member names

@@ -97,6 +97,44 @@ and walker consume that same resolved path; `length` simply uses its result.
 
 ## Acceptance and landing
 
+### Path implementation boundaries (read-only audit, 2026-09-30)
+
+P0 already retains value-position paths as ordinary fields: the root, brackets,
+their expression operands and backslashes. Update-position paths arrive in a
+Frame head. Normalize both inputs into one source-linked, dynamically sized
+path representation; do not introduce another Array-only parser. Reuse the
+general expression machinery for index operands, including calls, rather than
+inventing a restricted integer-expression scanner for compact heads.
+
+- `l2_expr_span`, `l2_path_chain`, `l2_join_path`, `l2_rw_path_run` currently
+  expect a name after a backslash. Distinguish a named occurrence step from
+  an unnamed Array index by the following name, not by whether the index is
+  a literal. Retain the index expression and its source position.
+- `l2_path_kind` and `l2_emit_path_to` are the shared resolution boundary:
+  current typed value plus the next field/occurrence/index step yields the
+  next typed value. Read, write, address-taking, return and `length` must use
+  this result. Do not make each consumer rediscover the path.
+- Retire `l2_path_arr_leaf`, `l2_arr_operand`, `l2_emit_arr_operand`,
+  `l2_arr_len_shape`, `l2_rw_indexed_path` and `l2_rw_index_ty` as their
+  consumers migrate. Their fixed two-index/literal assumptions are not a
+  language contract. Remove the walker path's fixed buffer/depth rejection.
+- The runtime already has `LMX_WALK_OP_ELEM` and `LMX_WALK_OP_ELEMPUT`:
+  descriptor and index are evaluated, and the descriptor's element type
+  determines the result. Use these general operations for interpreted paths;
+  native lowering emits the corresponding typed access with one evaluation
+  of each index. No second index algorithm is needed for `length`.
+- Tests need mixed field/index paths, reference and primitive elements,
+  dynamic indices with observable call counters, address/write/read parity,
+  non-Array intermediate values and malformed paths. Keep adjacent rectangular
+  suffixes distinct from backslash-separated steps.
+
+Use independently constructed Arrays for the first path witnesses if this
+avoids unrelated mail dependencies. If using `mainArgs`, follow the later
+string contract: `ok` has length 2 with no NUL in the Array (D-20,
+[evidence](d20-mainargs.md)), not the superseded NUL-inclusive Q15 wording.
+
+### Gates
+
 - Positive witnesses must exercise the same implementation at unit, method,
   named-Structure and nested-body positions; check actual typed values and
   physical reference storage, not only translation success.

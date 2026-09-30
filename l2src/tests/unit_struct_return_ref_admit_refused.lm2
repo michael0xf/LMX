@@ -1,0 +1,28 @@
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 2 into an explicit reference (the sibling of
+# unit_struct_return_assign_refused, whose `Model: b` is callable): `@: Model b` is a typed reference, and
+# `b: other(a)` binds it only after the admission of the call's result to Model (OPUS-CALLABLE-STRUCT-BINDING-
+# 20260929-16).  other returns an Other of another shape (two ints, no size_t in value's place): the admission refuses
+# it, the method's implicit throw `implements`, uncaught, stops R0.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: other (Model: x) Other
+    Other: t
+    return: t
+end: other
+
+fn: probe () int
+    Model: a
+    @: Model b
+    b: other(a)
+    return: 7
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

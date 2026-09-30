@@ -1,13 +1,13 @@
-# Rebinding a MainLetter own field from the untyped letter is admitted at run
-# time and binds like receiveMessage: a path through the field right after it --
-# before any checkpoint -- reads the letter, not the empty MainLetter the
-# declaration constructed.
+# Rebinding a typed reference to the untyped letter admits it at run time and binds it like receiveMessage: a path
+# through the reference right after it -- before any checkpoint -- reads the letter.  (A MainLetter value is callable,
+# so `m: raw` on one is its call; the rebinding is `@: MainLetter m` / `m: @raw`, OPUS-CALLABLE-STRUCT-BINDING-
+# 20260929-16.)
 MainLetter:
     char: []: []: mainArgs
 end: MainLetter
 
-MainLetter: m
+@: MainLetter m
 receiveMessage: raw
-m: raw
+m: @raw
 sendMessage: exit(exit_code: length(m\mainArgs); stdout: ""; stderr: "")
 return

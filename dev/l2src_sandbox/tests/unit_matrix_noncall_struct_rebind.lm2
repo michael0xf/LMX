@@ -1,0 +1,24 @@
+# FABLE-GROKBOT-MATRIX-20260924-143 cell: an existing non-callable Structure binding x a Structure reference.  A
+# non-callable binding is an explicit reference, `@: Model b` -- a `Model: b` value is callable, `b: a` its call
+# (OPUS-CALLABLE-STRUCT-BINDING-20260929-16) -- and its rebinding `b: @a` runs the admission first (implements(a, Model,
+# Model), the interim structural admission) and binds a Model: a's 5 read through b.  Entry 7.  (Was
+# unit_matrix_noncall_struct_rebind_refused: the typed-typed rebinding was fail-closed.)
+Model:
+    size_t: value 1U
+end: Model
+
+fn: probe () int
+    Model: a
+    @: Model b
+    size_t: v 0U
+    int: out 0
+    a\value: 5U
+    b: @a
+    v: b\value
+    if: v = 5U
+        out: 7
+    return: out
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

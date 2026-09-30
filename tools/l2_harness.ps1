@@ -2236,7 +2236,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_init_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_init_graph_place_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_init_graph_place_refused.lm2:14:5: graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+        Needle = 'unit_local_init_graph_place_refused.lm2:15:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    # Its explicit-reference sibling (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): `@: Box b; b: mk` binds after the
+    # admission of mk's result to Box; an Other of another shape is refused -- the implicit throw `implements` stops R0.
+    [pscustomobject]@{ Name = 'unit_local_init_graph_ref_admit_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
     # OPUS-BODYSEG-20260929-05 (the 7b-3 path rule one level down; L2 §10 `M\for\y`; Q51): after a method's name, and
     # after a body root, the names go on through bodies, each named by its statement's head (l2_body_seg) -- natively
     # one hop into the body's Structure at its child slot, walked an OF.  unit_body_seg_method + walk twin: M\while\j
@@ -2944,6 +2948,16 @@ $fixtures = @(
         Absent = @(); Debt = @('lmx_runtime_implements(') },
     [pscustomobject]@{ Name = 'unit_ref_rebind_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
+    # A reference formal `@: Model v` is rebound the same way (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): a Model is
+    # admitted, no shortcut (pinned), read through v: 7; an Other is refused, the implicit throw stops R0.  It was a plain
+    # store.  A value formal `Model: v` is callable: `v: w` its call, refused where it stands -- told apart by the
+    # declaration; the row also holds the const test's bound (it read heap garbage for this formal's code).
+    [pscustomobject]@{ Name = 'unit_ref_formal_rebind_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_runtime_implements(') },
+    [pscustomobject]@{ Name = 'unit_ref_formal_rebind_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_value_formal_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_value_formal_call_refused.lm2:12:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');
@@ -2971,7 +2985,11 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_struct_return_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+        Needle = 'a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    # Its explicit-reference sibling (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): `@: Model b; b: other(a)` binds after the
+    # admission of the call's result to Model; an Other of another shape is refused -- the implicit throw stops R0.
+    [pscustomobject]@{ Name = 'unit_struct_return_ref_admit_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
     # FABLE-SONNET-DEFECTS-20260924-141 D-15: an int: field in a named
     # Structure goes through the same field-kind table as size_t (kind 7) --
     # own declaration, a nested path, a formal parameter and a merge copy
@@ -3881,8 +3899,10 @@ $fixtures = @(
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_noncall_empty_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported body'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_matrix_noncall_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # The matrix cell restated by the call rule (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): the non-callable binding is
+    # an explicit reference, and its rebinding runs the admission and binds a Model -- was _refused, fail-closed.
+    [pscustomobject]@{ Name = 'unit_matrix_noncall_struct_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_runtime_implements(') },
     # Q52 (7b, by name): as unit_callable_priority -- the three spellings are observed in foo's lines.
     [pscustomobject]@{ Name = 'unit_matrix_callable_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Says = @('foo 1 5', 'foo 1 6', 'foo 1 7'); Absent = @(); Debt = @() },

@@ -803,7 +803,6 @@ prototype:
     fn: l2_root_ref_ns (int: mi; const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
     fn: l2_rw_ref_bind (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
-    fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_d105_sub (int: mi; int: k) int
     fn: l2_d105_mark (int: mi; int: k) int
@@ -1089,6 +1088,8 @@ prototype:
     fn: l2_kind_cell_ty (int: kind) int
     fn: l2_mrs_occ_read (int: res; const: @(LmP0Text name); int: occ; int: mi; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
     fn: l2_ref_formal_ns (const: @(LmP0Node decl)) int
+    fn: l2_value_formal_ns (const: @(LmP0Node decl)) int
+    fn: l2_formal_decl (int: mi; const: @(LmP0Text t)) @: LmP0Node
     fn: l2_ns_ref_pointee (int: ni; const: @(char pd); size_t: off; size_t: len) int
     fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
@@ -8516,8 +8517,16 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_wait_add(1, mi, (cast: (@: void) stmt), n, 0, path)
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         return: 0
-    if: target_ty >= 100 && l2_foreign_const[target_ty - 100] != 0
+    if: target_ty >= 100 && target_ty - 100 < l2_foreign_n && l2_foreign_const[target_ty - 100] != 0
         return: l2_error(path, stmt, "const write")
+    # A named Structure value is callable (OPUS-CALLABLE-STRUCT-BINDING-20260929-16; the call rule, ea5b24a): `v: value`
+    # on one -- an own Structure slot (`Model: v`, a letter, `v()`) or a value formal `T: v` -- is v's call with the value
+    # as its argument, never an assignment; only an explicit `@`-declared reference (`@: T r`, a pointer cell; a
+    # reference formal `@: T v`) is rebound, after admission.  The formal's declaration tells the two formals apart.
+    if: l2_colon_is_graph_ty(target_ty) != 0 && l2_formal_find(mi, stmt\as\frame\head) < 0 && l2_own_find_last(mi, stmt\as\frame\head) >= 0 && l2_own_is_slot(l2_own_find_last(mi, stmt\as\frame\head)) != 0
+        return: l2_error(path, stmt, "a call of a named Structure with an argument is not built yet")
+    if: l2_colon_is_graph_ty(target_ty) != 0 && l2_value_formal_ns(l2_formal_decl(mi, stmt\as\frame\head)) >= 0
+        return: l2_error(path, stmt, "a call of a named Structure with an argument is not built yet")
     only: l2_next_active(stmt\as\frame\body\first_field)
     if: n = 1
         if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
@@ -17904,6 +17913,37 @@ fn: l2_bind_same_unit_forward (const: @(LmP0Node fn_node); const: @(LmP0Text nam
     \out_bound: 1
 return: 0
 
+# The named Structure T of a value formal's declaration `T: name` -- the formal's type for a path through it, as
+# l2_collect_method registers it -- or -1.  A reference formal `@: T name` is l2_ref_formal_ns.
+fn: l2_value_formal_ns (const: @(LmP0Node decl)) int
+    if: decl = 0 || decl\kind != c.LM_P0_NODE_FRAME || decl\as = 0 || decl\as\frame = 0
+        return: 0 - 1
+return: l2_ns_find(decl\as\frame\head)
+
+# The declaration node of method mi's formal named t -- its input in the header, `T: v`, `@: T v`, ..., the fields
+# l2_collect_method read -- or 0.
+fn: l2_formal_decl (int: mi; const: @(LmP0Text t)) @: LmP0Node
+    @: LmP0Field f
+    int: k
+    int: j 0
+    k: l2_formal_find(mi, t)
+    if: k < 0 || mi >= l2_m_n || l2_m_node = 0 || l2_m_node[mi] = 0 || l2_m_node[mi]\as = 0 || l2_m_node[mi]\as\frame = 0 || l2_m_node[mi]\as\frame\body = 0
+        return: 0
+    f: l2_next_active(l2_m_node[mi]\as\frame\body\first_field)
+    # A named method's header starts with its name; an anonymous header's first field is its inputs.
+    if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
+        f: l2_next_active(f\next)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0 || f\value\as\structure = 0
+        return: 0
+    f: l2_next_active(f\value\as\structure\first_field)
+    while: f != 0 && j < k
+        f: l2_next_active(f\next)
+        j: j + 1
+    ---
+    if: f = 0
+        return: 0
+return: f\value
+
 # The named Structure a reference declaration `@: T name` points at, or -1 (D-76).
 fn: l2_ref_formal_ns (const: @(LmP0Node decl)) int
     @: LmP0Field f
@@ -18080,8 +18120,8 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
             cf_n: cf_n + 1
             l2_last_cf_anon: 0
         ---
-        if: p\value != 0 && p\value\kind = c.LM_P0_NODE_FRAME && p\value\as != 0 && p\value\as\frame != 0 && l2_ns_find(p\value\as\frame\head) >= 0
-            if: l2_nsty_set(l2_m_n, j, l2_ns_find(p\value\as\frame\head)) != 0
+        if: l2_value_formal_ns(p\value) >= 0
+            if: l2_nsty_set(l2_m_n, j, l2_value_formal_ns(p\value)) != 0
                 l2_free_method(l2_m_n)
                 return: l2_error(path, fn_node, "out of memory")
             ---
@@ -19995,6 +20035,11 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_find(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0
             return: l2_error(path, stmt, "assignment target must be a declared typed mutable value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_colon_check_assignment(stmt, mi, path) != 0
+            return: 1
+        # A reference formal `@: T v` to a named Structure is rebound after the admission of its value to T, as a typed
+        # reference local is (the ml branch above): the emission's l2_emit_admit before the formal's store; the site puts
+        # the method on the throw channel.  Its declaration tells it from a value formal `T: v` (l2_formal_decl).
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && l2_ref_formal_ns(l2_formal_decl(mi, stmt\as\frame\head)) >= 0 && l2_admit_site(mi) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_check_path_write(stmt, mi, path) != 0
             return: 1
@@ -24083,30 +24128,6 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
         return: 1
 return: l2_rw_catch_fixed(\out, 5, 2, "implements", @ nc)
 
-# `m: raw` at the walked root, m of a declared Structure type T and raw an untyped reference field
-# (a letter, or another untyped graph): raw is admitted to T at this binding point, a refusal the
-# implicit throw `implements` (-178 commit 3): PUT(m, admit(AT(raw), T)), admit_letter for a
-# letter.  Another typed field, or anything but a field's name, is not built here.
-fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
-    @: LmP0Field f
-    int: src
-    int: adm
-    int: raw
-    int: vs
-    if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 1
-        return: l2_rw_refuse(stmt, "an admission to a Structure type")
-    f: l2_next_active(stmt\as\frame\body\first_field)
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
-        return: l2_rw_refuse(stmt, "an admission to a Structure type")
-    src: l2_rw_find(f\value\as\atom)
-    if: l2_rw_seen(src) = 0 || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_pointer(l2_own_ty[src]) = 0 || l2_own_nsty_get(src) >= 0
-        return: l2_rw_refuse(stmt, "an admission to a Structure type")
-    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
-        return: 1
-    if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 3, raw) != 0
-        return: 1
-return: l2_rw_put(\out, vs, adm)
-
 # The named Structure T of the walked root's typed reference `@: T r` (l2_ref_formal_ns), its name into out_name -- or
 # -1 for any other statement, and in any other body: a method's `@: T r` is its local (D-76).
 fn: l2_root_ref_ns (int: mi; const: @(LmP0Node stmt); @@: LmP0Text out_name) int
@@ -26820,8 +26841,9 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # A declaration of a root field that is not a number (`Model: m`): what it is.
     if: oi < l2_own_n && l2_rw_num_ty(l2_own_ty[oi]) = 0
         return: l2_rw_refuse_ty(stmt, oi)
-    # An assignment into a reference field (-179): of a declared Structure type it admits the value
-    # first -- the caller's implicit `implements` (D-55); an untyped one takes the reference.
+    # An assignment into a reference field (-179): only a typed reference's `r: @v` is built, the value admitted first --
+    # the caller's implicit `implements` (D-55).  An own Structure slot's `m: value` is m's call, refused by the check
+    # before the walk (the call rule, OPUS-CALLABLE-STRUCT-BINDING-20260929-16).
     oi: l2_rw_find(h)
     # `r: @v` into a typed reference (l2_rw_ref_bind): v's Structure admitted to r's type, then r's cell.
     if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0 && l2_own_nsty_get(oi) >= 0
@@ -26833,16 +26855,7 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: 0
     ---
     if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
-        if: l2_own_nsty_get(oi) >= 0
-            if: l2_rw_admit_assign(stmt, oi, into, @ node) != 0
-                return: 1
-            \made: 1
-            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
-                return: 1
-            return: 0
-        ---
         return: l2_rw_refuse(stmt, "a reference assignment")
-    ---
     # An assignment of the root's own numeric field. A field declared in the
     # nested body is still that body's cell (class 3). A bare write of a formal
     # is the method's cell, including from inside the body (D-79).
@@ -32181,6 +32194,10 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si >= 0
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
+            return: 1
+        # A reference formal `@: T v` to a named Structure takes its value after the admission to T (the check marked the
+        # site), as a typed reference local does (l2_emit_loc_stmt).
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0 && l2_ref_formal_ns(l2_formal_decl(mi, fr\head)) >= 0 && l2_emit_admit(mi, l2_ref_formal_ns(l2_formal_decl(mi, fr\head)), l2_tok, ind) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0 && c.fprintf(l2_out, "%sl2_p%d_%d: %s\n", ind, mi, fi, l2_tok) < 0
             return: 1

@@ -1,0 +1,23 @@
+# Plan §7b's computed initialization into an explicit reference place (the sibling of
+# unit_local_init_graph_place_refused, whose `Box: b` is callable): `@: Box b` is a typed reference, and `b: mk` -- mk's
+# call, callable-first -- binds it only after the admission of mk's result to Box (OPUS-CALLABLE-STRUCT-BINDING-
+# 20260929-16).  mk returns an Other of another shape (two size_t, no int in v's place): the admission refuses it, the
+# method's implicit throw `implements`, uncaught, stops R0.
+Box:
+    int: v 0
+end: Box
+Other:
+    size_t: p 1U
+    size_t: q 2U
+end: Other
+fn: mk () Other
+    Other: t
+    return: t
+end: mk
+fn: w () int
+    @: Box b
+    b: mk
+    return: 7
+end: w
+sendMessage: exit(exit_code: w(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,26 @@
+# A reference formal `@: Model v` (D-76: one level, typed Model for a path through it) is rebound only after the
+# admission of the value to Model, as a typed reference local is (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): `v: @w`
+# with w a Model is admitted -- no shortcut for a value of v's own type (pinned: the admission is emitted) -- and a path
+# through v then reads w: 7.  It was a plain store.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: m (@: Model v) int
+    Model: w
+    size_t: got 0U
+    int: out 0
+    w\value: 7U
+    v: @w
+    got: v\value
+    if: got = 7U
+        out: 7
+    return: out
+end: m
+
+fn: check () int
+    Model: mo
+return: m(@mo)
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

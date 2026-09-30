@@ -1,12 +1,8 @@
-# FABLE-SONNET-DECL-PREPASS-20260923-137 part 2: assigning a Structure-
-# returning call's result into an EXISTING Structure variable now correctly
-# reaches the pre-existing, deliberate "graph assignment admission requires
-# receiving-expression tests" fail-closed boundary (typed-typed graph
-# rebind, unrelated to this ticket and not changed by it) -- before the
-# l2_colon_simple_ty fix, the call result's dt-space return-type number was
-# compared raw against the target's already-recovered foreign code, so this
-# refused one step earlier and for the wrong reason: "assignment value has
-# incompatible type".
+# FABLE-SONNET-DECL-PREPASS-20260923-137 part 2, restated by the call rule (OPUS-CALLABLE-STRUCT-BINDING-20260929-16):
+# b is an EXISTING Model value, and a named Structure value is callable, so `b: same(a)` is b's call with same(a)'s
+# result as its argument -- refused where it stands until a named Structure's call with an argument is built.  (It
+# reached the typed-typed graph rebinding's fail-closed "graph assignment admission requires receiving-expression
+# tests".)  The explicit reference place is unit_struct_return_ref_admit_refused.
 Model:
     size_t: value 1U
 end: Model

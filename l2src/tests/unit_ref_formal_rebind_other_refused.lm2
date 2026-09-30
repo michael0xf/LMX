@@ -1,0 +1,30 @@
+# A reference formal `@: Model v` rebound to an Other of another shape (two ints, no size_t `value` in its place): the
+# admission of o to Model refuses it -- the method's implicit throw `implements`, uncaught, stops R0
+# (OPUS-CALLABLE-STRUCT-BINDING-20260929-16).  It was a plain store, and the path through v read the Other's cell.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: m (@: Model v) int
+    Other: o
+    size_t: got 0U
+    int: out 0
+    o\p: 41
+    v: @o
+    got: v\value
+    if: got = 41U
+        out: 7
+    return: out
+end: m
+
+fn: check () int
+    Model: mo
+return: m(@mo)
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

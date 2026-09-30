@@ -1,11 +1,12 @@
-# Rebinding a Model own field from the untyped letter is admitted at run time,
-# and refused: the letter is not a Model.
+# Rebinding a typed reference to the untyped letter admits it at run time, and refuses it: the letter is not a Model.
+# (OPUS-CALLABLE-STRUCT-BINDING-20260929-16: a Model value is callable, so `m: raw` on one is its call; the rebinding
+# is an explicit reference, `@: Model m` / `m: @raw`.)
 Model:
     size_t: value 1U
 end: Model
 
-Model: m
+@: Model m
 receiveMessage: raw
-m: raw
+m: @raw
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
 return

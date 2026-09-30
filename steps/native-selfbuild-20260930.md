@@ -1,9 +1,79 @@
 # Native compilation and the route to §§8–8a
 
 Status: 2026-09-30, development checkpoint `6be1235` contains the verified
-common-assignment repair; next is whole-Array descriptor addressing.
+common-assignment repair. Checkpoint `e7935be` adds whole-Array descriptor
+addressing and the shared lexical lookup repair; callable-actual
+projection is next.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
+
+<a id="whole-array-address-repair"></a>
+## Whole-Array descriptor addressing and lexical indexed lookup
+
+The eleven-file source checkpoint is `e7935be`.
+`build/l2_harness/whole_array_address_20260930_final` passes **92/92 targets
+(89 fixtures)**: the preceding 58-fixture reference/assignment set, eight new
+fixtures, and 23 adjacent Array/formal/path/hosted controls. This is a focused
+gate, not a new full-corpus or kernel/L3 run. The last full result remains
+949/1003 on the earlier source slice below; no inferred updated total is a
+measured verdict.
+
+The common `L2Address` route now resolves an own Array to its existing
+`VoidArray` descriptor through the actual owner slot. It does not return the
+slot address, backing storage, first element, temporary copy or a new runtime
+allocation. The descriptor ABI type uses the existing compiler type interner;
+its borrowed spelling has translation lifetime and is freed/reset with that
+interner. An empty Array still has its own descriptor, with zero size and
+null backing. Addressing an explicit pointer cell adds one level as before.
+
+The original runtime witness also exposed a distinct old defect: indexed
+write selected the first same-named Array, while read/address selected the
+nearer hosted binding. `_03/gen/unit_address_array_descriptor.c:114–149`
+writes an inner char value into the outer int Array. Both literal and dynamic
+index lookup now use `l2_resolved_own`, factored from existing formal/own
+resolution. Resolve the nearest visible binding first, then test its category:
+a nearer scalar or formal must not reveal an outer Array. Read, write,
+address and own-Array length use that same selection. Dynamic index-name
+lookup also reuses it, replacing a temporary heap allocation with a borrowed
+source-text view. No new name index or Array syntax was introduced.
+
+The new test-only observer independently traverses actual owner fields,
+classifies their arena range, finds the expected descriptor, and compares
+identity before dereferencing the candidate. Six counted observations cover
+root, method and hosted int/char Arrays including empty cases. Additional
+fixtures cover same-type literal/dynamic writes, scope restoration, a pointer
+formal shadowing a root Array, nearer-scalar refusals and incompatible
+descriptor pointer types/depth. Success is a checked result 7.
+
+Mutation evidence: three assertion inversions fail at runtime with 91/81/83;
+descriptor-to-slot and descriptor-to-backing substitutions compile and fail
+the observer with 87; first-match lookup causes wrong-storage results 92/81,
+wrong acceptance of two scalar-shadow negatives, and a translation failure
+of the formal-shadow control. That last observation is not runtime evidence.
+The malformed preliminary backing mutant failed C compilation and is excluded;
+the corrected `backing2` mutant supplies the runtime result. All mutations
+were restored before the final gate.
+
+Independent peer and coordinator hashing matched all eleven scoped files
+and all 89 selected fixture identities. `source_manifest.json` and
+`run_evidence.json` preserve exact commands, paths, hashes and failed attempts.
+Final translator SHA256:
+`18FF13A82374814922DE6EB3A3C860CD51BF52C6E9B61995258C1C8E4AC4A0F9`;
+Git blob `4e62d5666dad5f2bed2f89f106a03fb724efb26e`.
+Harness SHA256:
+`90693C3F76CADBADB0C157F2674F5748171F883013C977C04293C8A814EE73D5`.
+
+Remaining boundaries are explicit. Generated-walker whole-Array addressing
+and Array formals are not implemented by this patch; traversing owner fields
+in the test helper does not prove the canonical single-body graph. Three
+pre-existing source-expression refusals remain in preserved attempts:
+`_06` dynamic indexing inside OR (`unit_array_index_shadow`, 13:56), `_07`
+dynamic-index declaration initializer (13:9), and `_06` direct `@element`
+in a multi-argument L2 call (`unit_array_index_formal_shadow`, 13:23).
+The final controls isolate the indexed-write/formal-shadow behavior with
+supported expressions and an explicit pointer intermediate; those controls
+do not certify the refused forms. Their general expression/actual-span
+repair remains in the queue, not a newly imposed language restriction.
 
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair

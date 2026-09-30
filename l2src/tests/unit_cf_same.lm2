@@ -1,0 +1,27 @@
+# A callable formal of one type with other operands: `op(1U) + k` over a size_t result and a size_t k is 7, and a
+# nullary one named bare, `op + k`, runs and gives its size_t 5.  Entry 7.
+fn: inc (size_t: x) size_t
+    return: x + 1U
+end: inc
+
+fn: five () size_t
+    return: 5U
+end: five
+
+fn: apply (op(fn: (size_t: x) size_t) size_t(k)) size_t
+    return: op(1U) + k
+end: apply
+
+fn: applyBare (op(fn: () size_t) size_t(k)) size_t
+    return: op + k
+end: applyBare
+
+size_t: r 0U
+r: apply(inc 5U)
+size_t: s 0U
+s: applyBare(five 0U)
+int: code 0
+if: r = 7U && s = 5U
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

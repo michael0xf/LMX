@@ -1,0 +1,15 @@
+# A callable formal's call is a value of its contract's result type (l2_native_cf_ty, as l2_colon_value_ty types a
+# whole value): `op(1) + k` with an int result and a size_t k is two types -- a conversion.  The native typer left the
+# call untyped, which leaves the whole value untyped: it translated, and C converted.
+fn: inc (int: x) int
+    return: x + 1
+end: inc
+
+fn: apply (op(fn: (int: x) int) size_t(k)) size_t
+    return: op(1) + k
+end: apply
+
+size_t: r 0U
+r: apply(inc 5U)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

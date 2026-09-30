@@ -1,0 +1,14 @@
+# A callable formal named bare runs (callable-first) and is a value of its contract's result: `op + k` with an int
+# result and a size_t k is two types.  Refused at the formal.
+fn: five () int
+    return: 5
+end: five
+
+fn: apply (op(fn: () int) size_t(k)) size_t
+    return: op + k
+end: apply
+
+size_t: r 0U
+r: apply(five 2U)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

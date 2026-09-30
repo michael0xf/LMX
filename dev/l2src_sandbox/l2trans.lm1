@@ -901,6 +901,7 @@ prototype:
     fn: l2_native_expr_ty (@@: LmP0Node tok; int: lo; int: hi; int: mi) int
     fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
     fn: l2_native_path_ty (const: @(LmP0Text t)) int
+    fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
     fn: l2_path_store_converts (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
@@ -7934,9 +7935,9 @@ return: 3
 # local-variable composites like `keep - 1U` as "incompatible type" across two dozen unrelated
 # fixtures).  A path atom's glued text (`a\value`, l2_rw_path_atom) is typed by the number field
 # it reaches (l2_native_path_ty; l2_colon_bound_ty looks up a plain declared name, not a path).
-# Two shapes do not resolve as a plain numeric value -- a path that reaches no number field and a
-# non-numeric bound name (a callable formal used bare, a dynamic call) -- and must poison the
-# WHOLE composite (a distinct code, -99, that a leaf's own
+# A callable formal, bare or called, is typed by its contract's result (l2_native_cf_ty).  Two shapes
+# do not resolve as a plain numeric value -- a path that reaches no number field and a non-numeric
+# bound name (a dynamic call) -- and must poison the WHOLE composite (a distinct code, -99, that a leaf's own
 # unify-permissive -1/-2 must never be confused with: unify(-1, -1) already means "two untyped
 # literals," not "two things I could not resolve," and defaulting the latter to unsigned produced
 # the same false "incompatible type" refusal one level up).  Returns a plain primitive type code
@@ -7967,6 +7968,9 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
             if: l2_rw_elem_ty(eoi) >= 0
                 return: l2_rw_elem_ty(eoi)
             return: 0 - 99
+        # A callable formal named bare runs (callable-first): its value is its contract's result (l2_native_cf_ty).
+        if: l2_native_cf_ty(mi, t) != 0 - 100
+            return: l2_native_cf_ty(mi, t)
         if: l2_colon_simple_ty(node, mi, @ ty) != 0
             return: 0 - 99
         # A text is no number (-11; -10 is a number literal or a char), and a Structure is a reference: their own
@@ -7976,9 +7980,6 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
             return: 0 - 6
         if: ty = 0 - 10
             return: 0 - 1
-        # A callable formal is typed as the formal; used here it is called (callable-first) -- untyped, as before.
-        if: mi >= 0 && l2_param_find(mi, t) >= 0 && l2_param_find(mi, t) < l2_m_arity[mi] && l2_cf_get(mi, l2_param_find(mi, t)) >= 0
-            return: 0 - 99
         if: l2_colon_is_graph_ty(ty) != 0
             l2_kind_at: (cast: (@: LmP0Node) node)
             return: 0 - 5
@@ -7986,6 +7987,9 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
             return: 0 - 99
         return: ty
     if: node\kind = c.LM_P0_NODE_FRAME
+        # A callable formal's call: its contract's result (l2_native_cf_ty).
+        if: node\as\frame != 0 && l2_native_cf_ty(mi, node\as\frame\head) != 0 - 100
+            return: l2_native_cf_ty(mi, node\as\frame\head)
         if: l2_colon_simple_ty(node, mi, @ ty) != 0
             return: 0 - 99
         if: l2_colon_is_graph_ty(ty) != 0
@@ -8108,6 +8112,21 @@ fn: l2_native_path_ty (const: @(LmP0Text t)) int
     if: ft < 0
         return: 0 - 99
 return: ft
+
+# A callable formal of method mi named t -- bare (it runs, callable-first) or called -- is a value of its contract's
+# result (l2_colon_ret_ty of the contract, as l2_colon_value_ty types a whole value): that number type, or -99 for any
+# other result.  -100: t is no callable formal of mi.
+fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
+    int: k
+    int: ty 0
+    if: mi < 0 || t = 0
+        return: 0 - 100
+    k: l2_param_find(mi, t)
+    if: k < 0 || k >= l2_m_arity[mi] || l2_cf_get(mi, k) < 0
+        return: 0 - 100
+    if: l2_colon_ret_ty(l2_cf_get(mi, k), @ ty) != 0 || l2_prim_code_name(ty) = 0
+        return: 0 - 99
+return: ty
 
 # Does the path pd..pn reach a number field of another type than own field `head` of method mi?  Its store is then a
 # conversion (the general store, l2_convert_on_store), not the path branch's plain read.  0 for any other path or place.

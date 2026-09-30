@@ -4087,6 +4087,15 @@ $fixtures = @(
         Needle = 'unit_walk_elem_return_norow_refused.lm2:6:13: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_elem_same.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # A callable formal, bare or called, is a value of its contract's result type (l2_native_cf_ty): it was untyped,
+    # which leaves the whole value untyped -- class A with one translated.  No walked twins: a method with a callable
+    # formal is outside the walkable subset, refused before this check.  One type, bare and called, still 7.
+    [pscustomobject]@{ Name = 'unit_cf_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_cf_mixed_refused.lm2:9:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cf_bare_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_cf_bare_mixed_refused.lm2:8:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cf_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A held callable called from a method (steps/merge-callable-r48.md S1): add5, a root own holding makeAdder's merged
     # node, called from go natively through the same l2_mad_call helper the root's walk calls -- before, l2_prep's frame
     # tail returned without a word (exit 3, "a refusal said nothing"); walked, go calls it through the walk's PRIM.

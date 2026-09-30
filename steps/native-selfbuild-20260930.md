@@ -239,7 +239,14 @@ terminal result recorded above; it remains red for the remaining dependencies.
 - `unit_s1_catch_user_break` instead has no retained operator graph at all:
   shared walkability classification rejects supported catch-parameter
   storage. See CATCH-FORMAL-RETAINED-GRAPH in defects.md; preserve its
-  failing graph observation until the common path is repaired.
+  failing graph observation until the common path is repaired. This is an
+  independent prerequisite, not a reason to wait for canonical-body merging:
+  numeric catch fields already use the same PAD/canonical cells, and the
+  common cache policy already makes them direct OF/PUT_OF accesses. Remove
+  the eligibility exclusion and restore catch scope with the existing
+  enter/leave mechanism; require native/actual-walker payload mutation,
+  repeated delivery and scope-restoration witnesses. Graph-copy identity
+  is still a separate dependency.
 - `unit_make_adder` needs a captured-cell identity witness: an ARG/OF/NODE
   graph and a correct numeric result alone cannot replace its former AT
   claim. Tie this to the capture/copy repair rather than substituting one

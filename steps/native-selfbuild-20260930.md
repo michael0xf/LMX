@@ -4,6 +4,54 @@ Status: 2026-09-30, exact development checkpoint `661735a` pushed to main;
 common-assignment repair continues in `build/opus_wt`. Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
+<a id="assignment-rhs-repair"></a>
+## Shared assignment and reference-initializer repair
+
+The source repair after `661735a` is verified by the focused run
+`build/l2_harness/assignment_rhs_20260930_final01`: **59/59 targets**,
+comprising 56 fixtures and three infrastructure/scope targets. All twelve
+previously green assignment regressions pass without weakening their
+expectations, as do fifteen new witnesses and twenty-nine pointer, address,
+CHAR, catch, merge and Array-element controls. Catch and root-merge twins
+retain actual native and driver-cleared walker execution. The full generated
+run `assignment_rhs_full_20260930_01` is still in progress; the focused
+result does not supersede the full-corpus count below.
+
+One `L2TypeContract` projection now supplies cast checking and emission.
+Known L2 values, opaque raw-C results/atoms and unresolved L2 names remain
+distinct. C function-pointer results without an L2 result contract remain
+opaque C ABI values, not invented integers. Object-pointer compatibility
+uses immediate pointed-to types and qualification: `void*` can convert to
+an object pointer such as `char**`, but `void**` is not generic and
+`char**` cannot silently become `const char**`. Pointee const does not make
+the pointer binding itself immutable.
+
+Reference declaration initializers and subsequent assignment use one
+receiving-value check. Receiving-model admission survives machine conversion,
+including `void*`, a compound opaque-C expression and a returned Structure
+model. Emission evaluates the candidate once into a correctly rendered
+receiving-type temporary, performs `implements`, then binds the destination.
+An omitted reference initializer remains zero. Function-pointer calls in
+expressions now publish pending values at the same checkpoint as other
+external calls, before the helper dereferences a real declared cell.
+
+Independent source/generated-code review covered the compound-admission
+registration, quoted low-level pointer type, const-qualified temporary,
+raw `c.*` atom and function-pointer checkpoint paths. Deliberate faults were
+detected: four runtime assertion inversions; six pointer type/depth/const
+compatibility failures; one removed function-pointer checkpoint; and four
+runtime admission bypasses that retained the emitted `implements` call text.
+Thus admission evidence is not merely a required-text pin. All mutants were
+restored before the final focused gate. Frozen translator SHA256:
+`AB8BE43D95FD42FF0D09505CC4652657373E5E44770C7CC4B6375F3B852A3777`.
+
+This slice does not establish whole-Array descriptor-address identity:
+the retained Array witnesses address elements, not the whole descriptor.
+Nor does it close general C99 compound typing, all model-bearing local field
+paths, callable-actual projection or canonical-body/copy debt. The raw-C helper
+used by the new runtime witnesses is test-only and is included in staged
+source evidence; no C-name registry or production helper was introduced.
+
 <a id="api-cleanup-full-checkpoint"></a>
 ## Current frozen source checkpoint: API cleanup and full regression inventory
 
@@ -881,12 +929,18 @@ after code replacement.
 
 ## Concrete §8 route after clean-kernel
 
-1. Make separately compiled L2 libraries actually executable: current
-   l2_emit_library_wrappers sets l2_library_unit=0 and fails open.
-   unit_lib_pair_a/b prove LINK/SYMBOLS only; require actual 41/42 results.
-2. Fix the common runtime construction ABI: library open currently opens a
-   root, root needs List, and a ported List would open another root.
-   profile:runtime only suppresses polling. No List-name exception.
+1. Make separately compiled L2 libraries actually executable. The generated
+   `l2_program_graph()` getter now exists, but `l2_emit_library_wrappers` still
+   nulls `l2_library_unit` and fails open; merely assigning the getter would
+   also leave `l2_program_arena`/the unit backed by an automatic
+   `LmxRoot l2_library_root` whose lifetime ends with the wrapper. The current
+   `unit_lib_pair_a/b` gate proves LINK/SYMBOLS only, not the required runtime
+   41/42 results.
+2. Fix the common runtime construction ABI: propose explicit owner-supplied
+   arena/unit construction, with no nested `lmx_root_open` and no replacement
+   of `current.message.graph`. Library open currently opens a root, root needs
+   List, and a ported List would open another root; `profile:runtime` only
+   suppresses polling. No List-name exception and no persistent parallel graph.
 3. Replace lmx_list_owned and declarations with L2; link without its old body;
    run growth/removal and child/root/mail consumers.
 4. Port dependency-closed runtime groups: storage/arenas/pools →
@@ -898,3 +952,42 @@ after code replacement.
 7. Port buildCore/make/finalize and gate logic, not old shell-script generation.
 8. Prove two self-replacements from the tracked generated-C bootstrap.
 9. Implement §8a on ported ordinary call/mail/admission layers, T01–T26.
+
+<a id="proposed-owner-supplied-library-construction"></a>
+### Proposed owner-supplied library construction ABI (pending)
+
+This is an implementation route to validate, not an accepted new language
+mechanism. `l2_emit_program_globals` currently emits the per-unit singleton
+`l2_program_arena` and `l2_program_unit` and the existing
+`l2_program_graph()` returns that singleton. `l2_emit_library_wrappers` keeps
+separate singleton `l2_library_message`, `l2_library_unit` and
+`l2_library_opened`; its exported invocation helper calls the generated native
+method with `l2_library_unit` and its selected occurrence. A getter therefore
+fixes neither wrapper lifetime nor instance ownership.
+
+The proposed construction boundary takes an arena owned by the caller and
+constructs/returns one ordinary library unit in that arena. It does not open or
+turn a root, borrow a temporary root arena, publish the unit as
+`current.message.graph`, or create a companion graph. The owner retains the
+arena and closes it once after all library instances. Exported invocation must
+take the selected unit instance (and the required owner context) explicitly.
+
+That boundary is not multi-instance-safe until generated bodies also stop
+consulting singleton module state. In current `l2trans.lm1`, emitted allocation,
+call and retained-graph paths read `l2_program_arena`; method emission chooses
+`l2_program_unit` through `l2_unit_ref` for program-part/nested methods; and the
+library invocation helper reads `l2_library_unit`. Thread the explicit instance
+arena/unit through those generated methods, trampolines and helpers before
+claiming that a passed handle permits two live instances. Do not disguise the
+same singleton behind a new accessor.
+
+The acceptance witness must extend the existing link/symbol gate with one
+owner, two independently constructed instances of the same library (`A1`,
+`A2`), and one instance of another library (`B1`). Give each an observable
+mutable field and interleave calls so the results are, for example,
+`A1=41, A2=41, B1=42, A1=42, B1=43, A2=42`. Require three distinct nonzero
+units in the owner's arena, persistence across calls, unchanged owner graph
+identity, no library-side root open/turn, and one final owner close. Mutants
+must reject restored singleton arena/unit state, shared `A1`/`A2` mutation,
+constant-only 41/42 stubs, a nested root, `current.message.graph` replacement,
+and premature owner storage release.

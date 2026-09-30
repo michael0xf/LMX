@@ -1,0 +1,23 @@
+# Literal and dynamic writes resolve the same nearest own binding as reads,
+# length, whole-descriptor address and element address, then restore scope.
+fn: check () int
+    []: int values 3
+    size_t: i 1U
+    values[0]: 11
+    values[i]: 17
+    @: c.VoidArray outer @ values
+    if: 1
+        []: int values 4
+        values[0]: 23
+        values[i]: 29
+        if: length(values) != 4U || values[0] != 23 || values[1] != 29
+            return: 81
+        @: int first @values[0]
+        if: (@: values) = outer || \first != 23
+            return: 82
+    ---
+    if: length(values) != 3U || values[0] != 11 || values[1] != 17 || (@: values) != outer
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

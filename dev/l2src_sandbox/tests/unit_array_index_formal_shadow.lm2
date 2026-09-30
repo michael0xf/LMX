@@ -1,0 +1,23 @@
+# A pointer formal must not select the root Array with the same spelling.
+[]: int values 3
+values[0]: 11
+values[1]: 17
+fn: write (@: int values; size_t: i) int
+    values[0]: 23
+    values[i]: 29
+    if: values[0] != 23 || values[i] != 29
+        return: 81
+return: 7
+fn: check () int
+    []: int other 2
+    @: int actual @other[0]
+    int: result write(actual, 1U)
+    if: result != 7 || other[0] != 23 || other[1] != 29
+        return: 82
+return: 7
+int: result check()
+if: result != 7 || values[0] != 11 || values[1] != 17
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

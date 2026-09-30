@@ -3309,6 +3309,23 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_structure_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # Whole own Arrays address their actual descriptor, independently observed before dereference.
+    [pscustomobject]@{ Name = 'unit_address_array_descriptor.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_index_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_index_formal_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_index_scalar_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported index'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_index_dynamic_scalar_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported index'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_address_array_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_address_array_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_address_array_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_reference_cell.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lmx_runtime_implements(') },
     [pscustomobject]@{ Name = 'unit_address_reference_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

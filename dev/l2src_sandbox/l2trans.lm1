@@ -454,6 +454,8 @@ int: l2_foreign_cap 0
 @: int l2_foreign_const 0
 # Colon declarations normalized to merge retain their source identity here.
 @: LmP0Text l2_colon_lmx_name 0
+# The interner borrows this translation-lifetime descriptor ABI spelling.
+@: LmP0Text l2_array_desc_word 0
 const: @: LmP0Node l2_os_node 0
 const: @: LmP0Structure l2_cur_unit 0
 
@@ -953,8 +955,10 @@ prototype:
     fn: l2_formal_row (int: mi; int: pk) int
     fn: l2_own_formal (int: mi; int: k) int
     fn: l2_name_cell (int: mi; const: @(LmP0Text t)) int
+    fn: l2_resolved_own (int: mi; const: @(LmP0Text t)) int
     fn: l2_own_load (int: k; @: char dest) int
     fn: l2_own_addr (int: k; @: char dest) int
+    fn: l2_array_desc_ty () int
     fn: l2_own_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
     fn: l2_own_cell_store (int: mi; int: k; const: @(char ind); const: @(char val)) int
     fn: l2_own_cell_load (int: k; @: char dest) int
@@ -5349,6 +5353,9 @@ fn: l2_foreign_free () int
         l2_xfree((cast: (@: void) l2_foreign_depth))
     if: l2_foreign_const != 0
         l2_xfree((cast: (@: void) l2_foreign_const))
+    if: l2_array_desc_word != 0
+        l2_xfree((cast: (@: void) l2_array_desc_word))
+    l2_array_desc_word: 0
     l2_foreign_name: 0
     l2_foreign_depth: 0
     l2_foreign_const: 0
@@ -9671,6 +9678,15 @@ fn: l2_name_cell (int: mi; const: @(LmP0Text t)) int
         return: k
 return: 0 - 1
 
+# Resolve the binding before asking its storage category. A formal with no
+# bound own row must not reveal an outer same-name field. Arrays use the same
+# source-visible own selection as direct-cell values, without requiring a cache.
+fn: l2_resolved_own (int: mi; const: @(LmP0Text t)) int
+    int: k l2_name_cell(mi, t)
+    if: k < 0 && l2_param_find(mi, t) < 0
+        k: l2_own_find_last(mi, t)
+return: k
+
 # THE WORKING STATE (steps/working-state-7b.md; book §12 `#dynamic`, §14; `docs/new_parts/dirty.md`; Lingvamyxa
 # spec 21.5, 21.6).  Own field k has a working value in the activation of method mi -- the root's too, an ordinary
 # activation (Q52) -- when it is mi's own, used by a bare name (l2_m_uses), has a cell (l2_own_direct) and is no
@@ -9891,6 +9907,10 @@ return: 1
 fn: l2_own_addr (int: k; @: char dest) int
     int: ty l2_own_ty[k]
     []: char txt 1024
+    if: l2_own_is_array(ty) != 0
+        if: l2_own_from_expr(k, txt) != 0
+            return: 1
+        return: (cast: (int) (c.sprintf(dest, "(cast: (@: VoidArray) %s[0])", txt) < 0))
     if: ty = 0
         return: (cast: (int) (c.sprintf(dest, "(cast: (@: int) l2_q%d_from[0])", k) < 0))
     if: ty = 1
@@ -12055,11 +12075,11 @@ fn: l2_dyn_own_index (int: mi; const: @(LmP0Text t); @: int out_arr; @: int out_
     size_t: lb
     size_t: ilen
     int: dep 0
-    int: k
     int: arr
     int: oi
     int: digits 1
-    @: LmP0Text slice
+    LmP0Text: slice_value
+    @: LmP0Text slice @ slice_value
     if: mi < 0 || t = 0 || t\data = 0 || out_arr = 0 || out_field = 0
         return: 0
     n: t\length
@@ -12079,14 +12099,10 @@ fn: l2_dyn_own_index (int: mi; const: @(LmP0Text t); @: int out_arr; @: int out_
     ---
     if: lb = n || lb = 0U || lb + 1U >= n - 1U
         return: 0
-    arr: 0 - 1
-    k: 0
-    while: k < l2_own_n && arr < 0
-        if: ((l2_own_mi[k] = mi && (l2_own_host[k] = 0 || l2_scope_has(l2_own_host[k]))) || l2_own_unit_seen(k, mi) != 0) && l2_own_is_array(l2_own_ty[k]) != 0 && l2_own_name[k] != 0 && l2_own_name[k]\length = lb && memcmp(l2_own_name[k]\data, t\data, lb) = 0
-            arr: k
-        k: k + 1
-    ---
-    if: arr < 0
+    slice\data: t\data
+    slice\length: lb
+    arr: l2_resolved_own(mi, slice)
+    if: arr < 0 || l2_own_is_array(l2_own_ty[arr]) = 0
         return: 0
     ilen: n - lb - 2U
     i: lb + 1U
@@ -12105,13 +12121,9 @@ fn: l2_dyn_own_index (int: mi; const: @(LmP0Text t); @: int out_arr; @: int out_
             return: 0
         i: i + 1U
     ---
-    slice: (cast: (@: LmP0Text) calloc(1U, c.sizeof(c.LmP0Text)))
-    if: slice = 0
-        return: 0
     slice\data: t\data + lb + 1U
     slice\length: ilen
-    oi: l2_own_find_last(mi, slice)
-    free((cast: (@: void) slice))
+    oi: l2_resolved_own(mi, slice)
     if: oi < 0
         return: 0
     if: l2_own_ty[oi] != 2
@@ -12158,6 +12170,8 @@ return: 1
 fn: l2_own_index_head (const: @(LmP0Text t); int: mi; @: int out_own; @: size_t out_index) int
     int: oi 0
     size_t: lb 0U
+    LmP0Text: name_value
+    @: LmP0Text name @ name_value
     if: mi < 0 || t = 0 || t\data = 0 || out_own = 0 || out_index = 0
         return: 1
     while: lb < t\length && t\data[lb] != 91
@@ -12178,15 +12192,15 @@ fn: l2_own_index_head (const: @(LmP0Text t); int: mi; @: int out_own; @: size_t 
             return: 2
         \out_own: oi
         return: 0
-    oi: 0
-    while: oi < l2_own_n
-        if: ((l2_own_mi[oi] = mi && (l2_own_host[oi] = 0 || l2_scope_has(l2_own_host[oi]))) || l2_own_unit_seen(oi, mi) != 0) && l2_own_is_array(l2_own_ty[oi]) != 0 && l2_own_name[oi]\length = lb && memcmp(l2_own_name[oi]\data, t\data, lb) = 0
-            if: t\data[t\length - 1U] != 93 || l2_array_literal(oi, t, lb + 1U, t\length - 1U, out_index) != 0
-                return: 2
-            \out_own: oi
-            return: 0
-        oi: oi + 1
-return: 1
+    name\data: t\data
+    name\length: lb
+    oi: l2_resolved_own(mi, name)
+    if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0
+        return: 1
+    if: t\data[t\length - 1U] != 93 || l2_array_literal(oi, t, lb + 1U, t\length - 1U, out_index) != 0
+        return: 2
+    \out_own: oi
+return: 0
 
 fn: l2_own_index_tail (@: LmP0Field f; int: mi; @: int out_own; @: size_t out_index; @@: LmP0Field out_after; @: int out_count) int
     int: oi
@@ -12198,7 +12212,7 @@ fn: l2_own_index_tail (@: LmP0Field f; int: mi; @: int out_own; @: size_t out_in
     if: mi < 0 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || out_own = 0 || out_index = 0 || out_after = 0 || out_count = 0
         return: 1
     \out_count: 4
-    oi: l2_own_find_last(mi, f\value\as\atom)
+    oi: l2_resolved_own(mi, f\value\as\atom)
     if: l2_text_eq(f\value\as\atom, "for") || l2_text_eq(f\value\as\atom, "node") || l2_own_find(mi, f\value\as\atom) >= 0 || l2_formal_find(mi, f\value\as\atom) >= 0
         slash: l2_next_active(f\next)
         if: slash != 0 && slash\value != 0 && slash\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(slash\value\as\atom)
@@ -12255,7 +12269,7 @@ fn: l2_array_length_own (const: @(LmP0Node node); int: mi) int
     count: l2_count_active(node\as\frame\body)
     oi: -1
     if: count = 1
-        oi: l2_own_find_last(mi, arg\value\as\atom)
+        oi: l2_resolved_own(mi, arg\value\as\atom)
     if: count = 3 && (l2_text_eq(arg\value\as\atom, "for") || l2_text_eq(arg\value\as\atom, "node") || l2_own_find(mi, arg\value\as\atom) >= 0 || l2_formal_find(mi, arg\value\as\atom) >= 0)
         slash: l2_next_active(arg\next)
         name: l2_next_active(slash\next)
@@ -20557,6 +20571,18 @@ fn: l2_input_is_descriptor (int: mi; int: k) int
         return: 1
 return: (cast: (int) (l2_declaration_model(l2_formal_decl(mi, l2_fn(mi, k)), 1) >= 0))
 
+# An Array value is its existing kernel descriptor, not its element backing.
+# This projects the descriptor's actual C ABI through the ordinary type interner.
+fn: l2_array_desc_ty () int
+    if: l2_array_desc_word = 0
+        l2_array_desc_word: (cast: (@: LmP0Text) l2_xmalloc(c.sizeof(c.LmP0Text)))
+        if: l2_array_desc_word = 0
+            return: -1
+        l2_array_desc_word\data: "VoidArray"
+        l2_array_desc_word\length: 9U
+    ---
+return: l2_foreign_intern(l2_array_desc_word, 1, 0)
+
 # Resolve a name's existing storage once. Its category, not the spelling of
 # an enclosing @ expression, determines whether addressing adds indirection.
 fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
@@ -20570,17 +20596,18 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
     if: name = 0 || l2_ident(name) = 0
         return: 1
     i: l2_param_find(mi, name)
-    own: l2_name_cell(mi, name)
-    if: own < 0 && i < 0
-        own: l2_own_find_last(mi, name)
+    own: l2_resolved_own(mi, name)
     if: own >= 0 && l2_m_uses[l2_own_off(mi, own)] != 0
-        if: l2_own_is_array(l2_own_ty[own]) != 0
-            return: 1
         out\kind: 1
         out\index: own
         out\descriptor: l2_own_is_slot(own)
         out\model: l2_own_nsty_get(own)
         out\type: l2_ft_of_own(l2_own_ty[own])
+        if: l2_own_is_array(l2_own_ty[own]) != 0
+            out\descriptor: 1
+            out\model: -1
+            out\type: l2_array_desc_ty()
+        ---
     else:
         if: i >= 0
             out\kind: 2

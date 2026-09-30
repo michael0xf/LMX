@@ -1,0 +1,62 @@
+# c.self and the arena are test instrumentation over the actual activation.
+# Empty arrays are unique by owner/type; no address of empty[0] is formed.
+include: "l2src/tests/array_address_observer.h"
+fn: check () int
+    []: int values 4
+    values[0]: 17
+    @: c.VoidArray before @ values
+    if: c.l2_test_array_address(c.l2_program_arena, c.self, before, c.LMX_TYPE_ARRAY_OF_INT, 4U, @ values[0]) = 0
+        return: 81
+    if: 1
+        []: char values 5
+        values[0]: 'B'
+        @: c.VoidArray inner (@: values)
+        if: inner = before
+            return: 82
+        if: c.l2_test_array_address(c.l2_program_arena, c.self, inner, c.LMX_TYPE_ARRAY_OF_CHAR, 5U, @ values[0]) = 0
+            return: 83
+        if: values[0] != 'B'
+            return: 92
+    ---
+    if: (@: values) != before || values[0] != 17
+        return: 84
+    []: char empty 0
+    @: void emptyAddress @ empty
+    if: c.l2_test_array_address(c.l2_program_arena, c.self, emptyAddress, c.LMX_TYPE_ARRAY_OF_CHAR, 0U, 0) = 0
+        return: 85
+return: 7
+
+[]: int numbers 3
+[]: char chars 2
+[]: int empty 0
+numbers[0]: 9
+chars[0]: 'A'
+@: c.VoidArray p @ numbers
+const: @(c.VoidArray readonly (@: numbers))
+if: p != readonly
+    sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+    return
+if: c.l2_test_array_address(c.l2_program_arena, c.self, p, c.LMX_TYPE_ARRAY_OF_INT, 3U, @ numbers[0]) = 0
+    sendMessage: exit(exit_code: 87; stdout: ""; stderr: "")
+    return
+@@: c.VoidArray cell @ p
+\cell: @ chars
+if: p != (@: chars) || numbers[0] != 9 || chars[0] != 'A'
+    sendMessage: exit(exit_code: 88; stdout: ""; stderr: "")
+    return
+if: c.l2_test_array_address(c.l2_program_arena, c.self, p, c.LMX_TYPE_ARRAY_OF_CHAR, 2U, @ chars[0]) = 0
+    sendMessage: exit(exit_code: 89; stdout: ""; stderr: "")
+    return
+@: void emptyAddress (@: empty)
+if: c.l2_test_array_address(c.l2_program_arena, c.self, emptyAddress, c.LMX_TYPE_ARRAY_OF_INT, 0U, 0) = 0
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+int: got check()
+if: got != 7
+    sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+    return
+if: c.l2_test_array_address_count(6) = 0
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

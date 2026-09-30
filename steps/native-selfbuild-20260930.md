@@ -75,6 +75,31 @@ WIP in build/opus_wt, not a main/stable-source promotion. The last full
 generated run predates this final address correction and remains red; no
 clean-kernel, §8 or §8a completion is implied by the focused and L3 successes.
 
+### Latest full generated diagnostic (before char-storage repair)
+
+`build/l2_harness/after_return_full_20260930_01`: **973 targets,
+882 OK, 91 FAIL**, exit 1. Compared by row identity with
+`resumed_full_20260930_01`, 21 formerly failing rows now pass; no formerly
+green row regresses and no new row fails. Eight new rows pass; the former
+incorrect negative formal-address row was removed/replaced, so the total
+grows by seven, not eight. The repaired rows cover the twelve native/graph
+witnesses, eight diagnostic migrations and the restored root FOR graph.
+
+Remaining failures group by their observed harness reason: 43 mismatched
+diagnostics, 29 generated-text assertions, 12 former refusals now accepted,
+six missing-L1 rows, one missing native-note assertion. These are categories
+for investigation, not a claim that every failure is a stale test: the six
+missing-L1 rows retain real admission/construction dependencies described
+below; graph observers must not be weakened to hide missing operations.
+
+Frozen source is translator blob `9d5fc38fed49153379a3718493cf0d2a5f6cc79e`,
+SHA256 `7A4A380C00FB2F55750329C1CC32BDE6E85818696ACE26AD9C635860712A14D1`;
+harness SHA256 `4BD1F5CAE3E9A43ECA89E728EB4DBC3AF5A12F4A429548BA8998B4B6EC07DF20`.
+The source hashes still matched after the terminal verdict, before the next
+writer started. Source editing/build ownership then passed to the bounded
+CHAR-DECLARED-CELL-IDENTITY repair. This result is not a clean-kernel gate,
+a source promotion to stable, or a §8/§8a completion claim.
+
 ### Bounded runtime checkpoint ca2f1cd
 
 The independently verified runtime slice is separated from translator WIP:
@@ -198,7 +223,8 @@ pre-existing missing-text assertion from `resumed_full_20260930_01:244`.
 That row was not relaxed; the final bounded run excludes this unrelated
 text-observer debt. Empty `sub` trailer attachment is also still OPEN in
 defects.md; the final tests do not claim to exercise that parser behavior.
-The new full generated diagnostic is `after_return_full_20260930_01`.
+The new full generated diagnostic `after_return_full_20260930_01` has the
+terminal result recorded above; it remains red for the remaining dependencies.
 
 ### Remaining regression migration
 

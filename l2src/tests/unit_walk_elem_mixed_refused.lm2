@@ -1,0 +1,11 @@
+# An element of an own Array at a literal index is a value of the element's type (l2_rw_elem_ty, as the walk types
+# it): `k + a[1]` with an int k and a size_t element is two types -- a conversion.  The native typer left the element
+# untyped, which leaves the whole value untyped: it translated, and C converted.
+fn: m () size_t
+    int: k 5
+    []: size_t a 2
+    a[1]: 2U
+    return: k + a[1]
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

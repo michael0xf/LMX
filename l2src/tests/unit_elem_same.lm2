@@ -1,0 +1,23 @@
+# Elements of one type beside other operands: `k + a[1]` and `if: a[0] = k` over size_t; with the program's receivers
+# (convert_impl) `int: w (a[1])` converts the size_t element into an int.  5 + 2, w 2: Entry 7.
+fn: m () size_t
+    size_t: k 5U
+    []: size_t a 2
+    a[0]: 5U
+    a[1]: 2U
+    size_t: r 0U
+    r: k + a[1]
+    if: a[0] = k
+        r: r + 0U
+    int: w (a[1])
+    if: w != 2
+        r: 0U
+    return: r
+end: m
+size_t: s 0U
+s: m()
+int: code 0
+if: s = 7U
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

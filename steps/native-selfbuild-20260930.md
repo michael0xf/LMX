@@ -1105,10 +1105,43 @@ That boundary is not multi-instance-safe until generated bodies also stop
 consulting singleton module state. In current `l2trans.lm1`, emitted allocation,
 call and retained-graph paths read `l2_program_arena`; method emission chooses
 `l2_program_unit` through `l2_unit_ref` for program-part/nested methods; and the
-library invocation helper reads `l2_library_unit`. Thread the explicit instance
-arena/unit through those generated methods, trampolines and helpers before
-claiming that a passed handle permits two live instances. Do not disguise the
-same singleton behind a new accessor.
+library invocation helper reads `l2_library_unit`. Removing those reads must
+not introduce a hidden module object/field or disguise the same singleton
+behind a new accessor. The following source audit refines the proposal;
+these repairs are not implemented or runtime-verified yet.
+
+Ordinary unit-level native methods already obtain their lexical space as
+`node`; the upper body's occurrence is `self`. `l2_occ_expr` and
+`l2_tok_method_occ` merely project known child slots. Named/type Structures,
+merge results and qualified roots also have existing physical references in
+unit children. A qualified root's `parent=0` does not remove that reference.
+The parallel `l2_program_qualified_roots[]` is therefore not a new source of
+language identity: an instance-taking host accessor can use the unit's
+ordinary child reference.
+
+For a nested/part/copied callable, neither its immediate parent nor its
+topmost ancestor identifies a module instance. Copy preserves/remaps the
+ordinary parent/reference graph; merge and capture can attach the result to
+another container. A native body that calls sibling S after its own occurrence
+was copied under C must use the appropriate ordinary free/captured physical
+reference, not singleton `l2_program_unit[slot(S)]` or an inferred top parent.
+The existing `l2_hidden_from`/call hidden-actual and capture routes provide
+the mechanism to generalize beyond their present numeric/partial-Structure
+coverage. Extend that resolved reference projection to callable/named/qualified
+values while preserving caller-supplied input priority, lexical fallback and
+normal copy remapping. Do not add a companion context graph or a hidden unit
+field to compensate for incomplete free-reference lowering.
+
+Arena ownership is separate invocation data. The ordinary call dispatcher
+already receives the arena but the native trampoline ABI drops it. Carry that
+existing arena through the ordinary native invocation path uniformly, not a
+library-only or upper-body-only execution class. The literal table need not
+be a persistent instance payload: `lmx_char_cell(arena, value)` already obtains
+immutable character cells from the arena; mutable declared cells remain
+distinct. Construction receives the owner's arena and returns the unit;
+the public adapter selects its exported occurrence and uses ordinary dispatch.
+The remaining prerequisites are complete free-reference/capture lowering and
+arena propagation, not a newly asserted language-level module context.
 
 The acceptance witness must extend the existing link/symbol gate with one
 owner, two independently constructed instances of the same library (`A1`,
@@ -1119,4 +1152,6 @@ units in the owner's arena, persistence across calls, unchanged owner graph
 identity, no library-side root open/turn, and one final owner close. Mutants
 must reject restored singleton arena/unit state, shared `A1`/`A2` mutation,
 constant-only 41/42 stubs, a nested root, `current.message.graph` replacement,
-and premature owner storage release.
+and premature owner storage release. Add a copied/merged callable that reads
+a free sibling or qualified-root reference; its result must follow ordinary
+reference/copy topology, not the singleton original or the structural top.

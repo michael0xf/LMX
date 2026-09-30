@@ -50,6 +50,13 @@ Current duplicated semantic entry points in dev/l2src_sandbox/l2trans.lm1:
 1. Resolve existing P0 nodes directly. Retain the actual argument subtree;
    do not parse emitted strings or rewrite one exceptional spelling into
    another. Receiver identity/contract and current bindings determine the act.
+   The common application representation must accept any head with its ordered
+   operands, not only recognized declarations. Declaration/type metadata is a
+   semantic result derived from that representation. For example, `int: b: 5`
+   is an outer int application containing a b application; `int: b 5` has two
+   operands. Do not collapse these different trees or decide their equivalence
+   by a spelling-specific rewrite. Receiver resolution, not syntactic nesting
+   alone, determines whether an inner node is a declaration operand or executed.
 2. Record the resolved act, explicit value/type description, binding/location,
    initializer/operands and source location once in compiler-owned metadata.
    This is not a hidden runtime data graph, type-name registry or new payload

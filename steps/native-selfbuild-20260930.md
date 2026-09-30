@@ -1,6 +1,6 @@
 # Native compilation and the route to §§8–8a
 
-Status: 2026-09-30, Codex WIP over 0c09a1d in build/opus_wt.
+Status: 2026-09-30, Codex WIP over documentation checkpoint 6538898 in build/opus_wt.
 Implementation evidence and remaining work, not a language specification.
 
 ## Resumed after Q56/Q57 documentation correction
@@ -14,15 +14,56 @@ nonexecuting signatures, and Q57 as definition containing an empty named
 Structure rather than an immediate or delayed call. Earlier typed-binding
 and empty-reference experiments are not the accepted declaration contract.
 
-The preserved worktree is detached at 6a3ac8d. Its current mixed WIP has not
-passed one exact-byte full gate. The old full harness s7b108 had 105 failures;
-s7b117 kernel had one failure in lmx_walk_selftest. The standalone holder-fix
-probe is not a replacement kernel gate. A mistakenly started audit harness
-under build/l2_harness/20260930_144410 was stopped; it has no verdict and is
-not evidence. Preserve existing code WIP, integrate the documentation-only
-descendant without discarding files, and obtain fresh diagnostics before
-claiming any dependency complete. No build/translator process remains from
-that stopped audit at the coordinator's process check.
+The preserved worktree was fast-forwarded to 6538898 without discarding its
+code WIP. That documentation checkpoint is on main and origin/main. Current
+code has not passed one exact-byte full generated/kernel/L3 gate. The old
+full harness s7b108 had 105 failures; those include obsolete root-only text
+expectations and real defects, not permission to weaken the harness.
+
+Fresh diagnostics after the documentation checkpoint:
+
+| Run | Scope and result |
+| --- | --- |
+| `build/l2src/resume_q57_20260930_01` | Optional `-Strict` run: 280 targets, 136 failures, primarily warnings promoted to errors; not the standard runtime gate |
+| `build/l2src/resume_q57_20260930_02` | Standard `build_l2src.ps1 -Run -KeepAll`: **280 targets, zero failures**; includes the corrected deep-holder witness |
+| `build/l2_harness/resume_ref_20260930_01` | Focused signature run: 8 targets, one failure exposed inconsistent raw/encoded formal types |
+| `build/l2_harness/resume_ref_20260930_02` | Focused signature run after normalization: **8 targets, zero failures**, including existing primitive/reference controls |
+
+The kernel run predates the subsequent reference-translator edits. The
+focused harness does not replace a full gate. The stopped audit run
+`build/l2_harness/20260930_144410` has no verdict and is not evidence.
+
+The new signature witness uses existing Model and Other, not the withdrawn
+implicit `Model: fresh` construction. Both nonprimitive formal spellings
+use the same reference type and permit admitted local rebinding without
+changing the caller's reference. General address acquisition is the next
+bounded slice: actual Structure descriptor versus an explicit reference's
+cell; flat and Frame forms must agree, and an extra level must not disappear.
+Interpreted portable-reference support remains separately unproved.
+
+## Pending regression migrations and runtime defects
+
+- Remove the old callable-versus-reference distinction in
+  `unit_value_formal_call_refused`; `(Model: v)` and `(@: Model v)` are
+  reference-transport synonyms in signatures only.
+- Migrate executable implicit-copy setup `Model: fresh` to explicit
+  `fresh: merge Model`, retaining copy independence and per-activation tests.
+  Do not mechanically change the identical spelling inside signatures.
+- Old `A: b c` alias/admission fixtures must use explicit `@: A b c`, not
+  merge: a copy would destroy the identity property those fixtures test.
+  Keep known-head calls with unknown arguments as call errors, not fallback
+  declarations. Add Q57 graph-and-effect witnesses at multiple positions.
+- `lmx_implements_through` currently loses its pending field correspondence
+  when descending to a Structure and starting a fresh positional walk.
+  A permuted self-cycle can therefore fail despite matching. Reuse one
+  operation-local DFS for mapped and positional admission; retain per-pair
+  correspondence on back-edges and publish a cache record only after success.
+  A visited edge must not skip checking a later mismatching/unknown sibling.
+- Built-in mixed machine arithmetic must follow target C99 promotions and
+  operations. The walker still rejects some different promoted types. Fix
+  common operand typing separately from receiving-place conversion/admission;
+  do not silently use host widths or the Message conversion table as an
+  arithmetic operator dispatcher. Native/interpreted parity is required.
 
 ## Acceptance
 

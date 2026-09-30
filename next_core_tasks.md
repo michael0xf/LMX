@@ -71,7 +71,7 @@ gate — 61/61. После этих двух fixture-only правок полн�
    Итог 92/92; подмены на backing/slot и неверную внешнюю привязку
    обнаружены тестами. [Точные границы](steps/native-selfbuild-20260930.md#whole-array-address-repair):
    generated walker для `@Array` и Array-формалы этим не закрыты. Bare whole
-   Array ещё требует общей проекции descriptor-типа/значения вместо backing;
+   Array ещё требует [общей проекции descriptor-типа/значения](steps/native-selfbuild-20260930.md#whole-array-value-projection) вместо backing;
    typed void*/descriptor actual и raw-C actual должны сохранять его identity.
    Старую фикстуру с неявным Array→int* decay исправлять явным адресом
    элемента, не возвращать противоречащую норме конверсию.
@@ -82,8 +82,12 @@ gate — 61/61. После этих двух fixture-only правок полн�
    нельзя читать за её концом или дублировать Array-разбор в каждом потребителе.
    Общие фактические аргументы должны также закрыть найденный
    [скрытый pointer-input из локальной привязки](steps/callable-actual-projection-20260930.md#site-aware-hidden-source):
-   type closure и эмиссия используют одно место вызова/область/предшествующее
-   объявление, а не таблицу всех имён метода. Не добавлять context-граф.
+   сначала единая identity локального объявления/visible-binding и native
+   имя для всех type/address/value потребителей, затем источник скрытого
+   входа в точном месте вызова. Первая одноимённая строка общего списка
+   метода не является идентичностью переменной; повторные объявления
+   и затенение должны сохраняться. Type closure и эмиссия используют
+   одну выбранную привязку. Не добавлять context-граф.
    Затем исправление общей
    [проекции callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
    и отдельные 13 raw-C/string строк;

@@ -2,8 +2,10 @@
 
 Status: 2026-09-30, development checkpoint `6be1235` contains the verified
 common-assignment repair. Checkpoint `e7935be` adds whole-Array descriptor
-addressing and the shared lexical lookup repair; callable-actual
-projection is next.
+addressing and the shared lexical lookup repair. The current writer closes
+bounded expression/actual spans and the shared pointer-actual checker;
+whole-Array value projection and shared lexical-local identity precede the
+remaining callable-actual work.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
@@ -101,6 +103,60 @@ index semantics and receiving contracts; no Array declaration mini-language,
 root exception, extra evaluation, L2 bounds check or Q58 decision belongs in
 this repair. The forthcoming callable-actual projection consumes this result
 rather than adding another index/address recognizer.
+
+<a id="whole-array-value-projection"></a>
+## Pending shared whole-Array value projection
+
+Read-only preflight on the bounded indexed-expression source, SHA256
+`97022323EC4DBC28A459FCA5B1F6C70DBD72687EF19B59321415CC814C996270`,
+Git blob `c1788be8c12b90c847b58a575a1d5484fc8965c7`. This is a proposed
+dependency-closed implementation, not a passed gate or a new language rule.
+
+The own-storage codes for Arrays must remain unchanged. The missing step is
+their ordinary value projection: `l2_colon_bound_ty` currently returns the
+storage code through `l2_ft_of_own`, while the bare-own branch of `l2_prep`
+emits backing through `l2_emit_array_ptr`. Explicit `@Array` already obtains
+the correct existing descriptor. The active
+[L2 argument contract](../docs/L2_spec_en.md#copy-merge) requires the same
+descriptor reference for the nonprimitive Array value, not implicit C decay.
+
+Factor the common descriptor load from `l2_emit_array_ptr` and
+`l2_emit_array_length`: select the actual own cell with `l2_own_from_expr`,
+read its reference and project `VoidArray*`. Bare-value emission returns
+that descriptor. Element-address/read/write consumers deliberately continue
+through `descriptor.data`; length continues through `descriptor.size`.
+There must be no allocation, copying, descriptor rebinding, or call-only
+special case. The complete current backing-helper consumers are the wrong
+bare-value branch of `l2_prep` and the legitimate `l2_emit_indexed`,
+`l2_emit_array_load_at`, and indexed-store branches.
+
+Add one value-type projection above `l2_ft_of_own`: Array storage contributes
+the existing `l2_array_desc_ty`, other storage retains its ordinary value
+type. Both host/current-own branches of `l2_colon_bound_ty` consume it.
+Do not modify storage/layout codes, element types, constructors, or the
+separate dynamic-input ABI to obtain a passing call. `@: c.VoidArray` and
+`l2_array_desc_ty` already use the same existing foreign type interner;
+normal C99 pointer compatibility then admits `void*` and refuses `int*` or
+an extra level. No C-name allowlist is involved.
+
+Acceptance must observe the same descriptor in declaration initialization,
+later assignment, return, typed L2 actuals and raw-C actuals. Compare with an
+independently located arena descriptor before dereferencing the candidate;
+then verify length, backing identity and an empty Array's nonnull descriptor
+with zero length. Retain explicit element-address operations, scalar/formal
+shadowing, dynamic-index once-only evaluation and pointer-depth/const
+negatives. A bare Array passed to int* remains incompatible; the migrated
+element-address fixture must write a distinct value and check caller storage.
+Mutants returning backing, repairing only call emission, retaining the old
+storage type as the value type, changing reference depth, or selecting an
+outer Array through a nearer binding must fail.
+
+Array formals, general hidden Array inputs and genuinely walked descriptor
+expressions are separate implementation boundaries. Native receipt by an
+ordinary descriptor-pointer formal does not prove any of them. The current
+indexed-expression emitter also has obsolete generated-comment text saying
+pure logical RHSs stay unguarded C expressions; remove that text in the next
+tested source slice, without changing already frozen gate bytes.
 
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair

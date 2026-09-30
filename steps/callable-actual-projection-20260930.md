@@ -127,44 +127,82 @@ incompatible depth and qualification. The machine-local path may remain
 native-only until a genuine walker representation exists; do not claim walked
 receiver coverage from a walked caller invoking a native method.
 
-The implementation preflight against the indexed-expression work in progress
-narrows the compiler-only route further:
+#### First prerequisite: shared lexical-local identity
 
-1. Keep `l2_m_edge` for reachability and failure propagation. Record the actual
-   source site and active scopes beside each real edge producer in
-   `l2_check_call`, `l2_convert_edge`, and `l2_check_struct_call`. Existing
-   `l2_wait_add` scope snapshots and `l2_wait_free` lifecycle are reusable;
-   ordinary delayed-check replay must neither duplicate these records nor
-   execute them as checks. A graph-only edge and an accidentally unrecorded
-   source call are not interchangeable: do not invent a lexical source from
-   the aggregate matrix when a concrete call requires one.
-2. Resolve locals by replaying only preceding declarations in the method body
-   and the site's saved active scope chain. Reuse the classifiers used by
-   `l2_ml_collect` and the existing `l2_scope_block` traversal. Select the
-   nearest active, latest preceding declaration; never descend into a sibling
-   body, see a later declaration, or let an initializer see the declaration
-   it is still creating. This returns the declaration identity and its exact
-   existing type, not merely a name-wide type from `l2_ml_find`.
-3. During `l2_dyn_step`, inspect every recorded site supplying the same hidden
-   input. Preserve established formal/own precedence. Convert a selected
-   local's existing formal type through `l2_own_ty_of_param` and
-   `l2_dt_of_source`; do not strip reference depth or qualification. A site
-   without a local may require ordinary caller-input forwarding even if
-   another call between the same two methods does have a local. Check all
-   sites for compatible receiving types.
-4. `l2_hidden_from` must use the same site selection. After the existing
-   formal/visible-own routes, emit the selected machine-local token in its
-   actual lexical scope. Native body emission traverses the same source
-   scopes, so C selects that declaration without a new runtime cell or name
-   registry. Method visibility in both directions remains independent of
-   variable visibility only after declaration.
-5. Include two calls between the same caller and callee on opposite sides of
-   a declaration, plus calls before/inside/after a nested shadow. These
-   distinguish site resolution from a seemingly successful whole-method
-   lookup. Mutants selecting a later local, leaking an inner local after
-   scope exit, flattening repeated declarations, or replacing a pointer with
-   its pointee must fail. `l2_rw_dyn_arg` still needs a separate genuine
-   walker representation; native success does not close that boundary.
+The follow-up source audit establishes why a hidden-input-only lookup is
+insufficient. `l2_emit_reference_declaration` prints the original source name
+for every declaration, but `l2_ml_collect` retains only the first same-named
+row in the whole method. Repeated pointer declarations in one emitted scope
+therefore produce indistinguishable/repeated C declarations. Nested scopes
+do have real emitted blocks, but passing a nested-shadow test alone does not
+fix repeated identities or type checking that sees a future declaration.
+
+The reusable pattern already exists for own fields: declaration identity,
+method, lexical host, binding order, exact-declaration lookup and latest
+visible lookup (`l2_own_decl`, `l2_own_host`, `l2_own_bseq`, `l2_own_excl`,
+`l2_own_find_decl`, `l2_own_find_last`). Apply that pattern to the existing
+machine-local metadata, without a second runtime index:
+
+1. Keep one dynamically reserved compiler table of all local declarations,
+   with the existing name/type/model plus method, host and exact source node.
+   Do not deduplicate names. Collect after methods are known and before free
+   input analysis/checking; release at translation reset/end. The four
+   current per-method `l2_ml_rebuild` sites must reset replay state rather
+   than destroy the declaration identities. Collection must follow actual
+   executable body scopes, not descend into every Structure-valued operand.
+2. Distinguish exact declaration lookup from visible-value lookup. Check an
+   initializer in the preceding environment, then bind that exact row.
+   Select the latest preceding active row of the same method and host chain;
+   never a later or sibling declaration. Reuse the existing scope stack and
+   binding-order replay. Saved `l2_wait_add` sites also retain the local
+   binding cutoff and restore it with their scopes during waited checks.
+3. Derive a unique native spelling from the declaration row, using one helper
+   for declaration, read, assignment, call, address, sizeof and raw-C root.
+   This is compiler symbol generation, not a language name or runtime lookup.
+   Two declarations in the same source scope then have distinct storage;
+   the second initializer can read the first before the second is bound.
+4. Migrate all ordinary consumers together: `l2_colon_bound_ty`/callable-result
+   typing, `l2_graph_nsty`/binding admission, `l2_scan_ident`, empty/named-
+   Structure classification, primary/field/path/sizeof checking,
+   `l2_address_name`, statement targets, and local value/call emission.
+   Path/index helpers currently scanning `l2_ml_n` must resolve the root row
+   and use its physical spelling. Declaration-self checks use the exact
+   source node; ordinary values use the visible binding. Preserve established
+   formal/dynamic, own and slot precedence and method visibility rules.
+
+This first slice must check repeated same-scope pointer declarations, an
+initializer reading the previous binding, real outer/inner/outer shadowing,
+and a read before the only later declaration. Retain function-pointer,
+raw-C-root, address, sizeof, path, depth and qualification controls. Mutants
+binding before the initializer, selecting the first row, dropping the host
+filter or reusing the source spelling must fail. Type checking, free-name
+scanning and emission must bind rows at the same semantic point; otherwise
+an apparently stable cutoff merely preserves their disagreement.
+
+#### Second prerequisite: hidden sources at exact call sites
+
+Keep `l2_m_edge` for reachability and failure propagation. All its current
+producers (`l2_check_call`, `l2_convert_edge`, `l2_check_struct_call`) have
+a concrete source node; capture/host relationships use other tables. Retain
+the site/scopes/binding cutoff and selected local row, or explicit absence,
+alongside those calls. Reuse the existing deferred-site lifecycle where
+appropriate; delayed-check replay must not duplicate records or execute
+call-site metadata as a check. An edge missing its required site is incomplete
+compiler bookkeeping, not permission for a method-wide lookup fallback.
+
+`l2_dyn_step` must check every actual site between a caller/callee pair.
+Convert the selected row's existing type through `l2_own_ty_of_param` and
+`l2_dt_of_source`, retaining qualification and reference depth. A site with
+no local may require ordinary caller-input forwarding even if another site
+has one. `l2_hidden_from` emits the same selected row's native symbol, after
+the established formal/own routes. No copied pointee, new context graph or
+model inferred from the desired target belongs here.
+
+Check direct and multi-hop forwarding, two calls on opposite sides of a
+declaration, and calls before/inside/after a nested shadow. Mutants erasing
+site identity, selecting a later/sibling row or reducing pointer depth must
+fail. `l2_rw_dyn_arg` still requires a genuine walker representation;
+neither compiler-only slice claims interpreted receiver coverage.
 
 <a id="witnesses"></a>
 ## Minimal witness matrix: pending implementation and execution

@@ -260,7 +260,13 @@ terminal result recorded above; it remains red for the remaining dependencies.
 - Nineteen text-observer rows have matching operators/roles/typed inputs
   under different temporary or slot identifiers. Replace literal `l2_rwN`
   and slot pins with opcode/arity/edge relationships plus their runtime
-  results. The make-adder native-note exists, but its reason changed;
+  results. Require attachment to the tested executable sequence, not merely
+  the presence of an orphan frame. The legacy `unit_walk_inputs`,
+  `unit_walk_recursion`, `unit_walk_loop`, `unit_walk_trailer` and
+  `unit_walk_mixed` still use success exit 0: their migration must also change
+  the success witness to a nonzero result/explicit marker while preserving
+  failure branches, so a skipped body cannot pass. This extends the necessary
+  scope beyond harness text alone. The make-adder native-note exists, but its reason changed;
   assert a stable located boundary plus the actual native word, not the
   transient mixed-arithmetic refusal as a language requirement.
 - Raw-C bad argument/arity/nested-call fixtures must not run. Preserve their

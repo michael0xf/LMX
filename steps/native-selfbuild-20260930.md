@@ -244,13 +244,65 @@ hash `601D350E…2196` is the pinned **L1 bootstrap translator**, not a freshly
 self-built L2 executable. Parent verified terminal summaries/hashes and clean
 diff before handing source/build ownership to the merge-emission repair.
 
-Next repair removes the unconditional merge post-success self-tests and their
+The subsequent repair below removes the unconditional merge post-success self-tests and their
 dead declaration-literal metadata, while preserving real merge failure,
 admission and result binding. Nine existing result-check pins need actual
 runtime identity/value observations. Reading live value 6 in the unchanged
 root witness after removal is required; the static audit alone does not prove
 the native merge result correct. Full generated and clean-kernel gates remain
 pending.
+
+<a id="merge-live-verified-wip"></a>
+### Merge: live values, test-only result observations
+
+The translator no longer emits unconditional post-success `merge result check
+71…91`. Seven dead helpers and declaration-literal value metadata were removed
+(bounded translator delta +10/-249 lines). Actual operand preparation,
+construction, admission, status-to-throw handling and result binding remain.
+Nine harness rows now obtain result facts from the test-only merge taps:
+width, current value, copied storage, callable native/own identity and qualified
+retention. Configured facts are counted; skipping a successful call does not
+satisfy them. The taps observe generated native calls, not walker primitives
+inside the independently compiled kernel closure.
+
+Evidence under `build/l2_harness/`:
+
+- `merge_live_20260930_03`: **17/17** (14 fixtures and build/scope targets).
+- `merge_live_20260930_final`: **43/44**. The only failure is the existing
+  `unit_a3_capture_direct_vs_copy` absolute `19U` pin versus emitted `45U`,
+  already present in `after_return_full_20260930_01`. It remains pending
+  observer migration, not an expected language refusal. The saved
+  `observe_a3_runtime.ps1` independently compiled and ran its frozen generated
+  C with the normal driver: **13 checks, expected result 7, exit 0**.
+- Both unchanged root-merge witnesses pass native and actual driver-cleared
+  root traversal. The second merge reads live 6 after the first result was
+  changed; original operands retain their values.
+- `unit_merge_live_source` changes size_t 1→9 and CHAR A→B before merging,
+  then changes the copy and checks that the source is unchanged. Empty and
+  nonempty Array descriptor/backing identities have separate tap observations;
+  this is not a new mutable-array-before-merge witness. Existing kernel tests
+  retain alias/cycle coverage.
+- `_03/observer_mutants.ps1`: **8/8** deliberately wrong property expectations
+  rejected. `merge_live_20260930_mutants`: **5/5** deliberately modified
+  fixture/driver cases fail, including copied native-word/own-cell/backing
+  corruption and inverted live-value assertions. The root assertion fails
+  in both native and walker execution. All mutations were restored before
+  the final gate.
+
+Final exact bytes (parent rechecked hashes and terminal evidence):
+
+```text
+translator blob e19c599184993d79ff6c42e15619b39b08b12d33
+translator SHA256 0D25E51BA38B077989168BA3202FB3F9A3DD2E2A45D30BC10D5B4F8C041B4C78
+harness SHA256 44774037313B028B2C6B051944F06EB5D8D96CCD374FC0EA4F2FE5AEF6050238
+driver SHA256 5A1182DBE4C2CB8A47C50A723C88608230DC0CDF2BD1005A7E8E0DBF7A846CA3
+```
+
+Translator, driver and three changed fixture files match the final staged
+snapshot. Scoped diffcheck passes; no mutants or active build remained at
+RELEASE. The next writer owns only the fourteen diagnostic fixtures and their
+harness rows. Runtime API cleanup, the full generated gate, source publication
+and clean-kernel acceptance remain outstanding.
 
 ### Bounded runtime checkpoint ca2f1cd
 

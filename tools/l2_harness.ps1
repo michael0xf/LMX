@@ -4055,6 +4055,20 @@ $fixtures = @(
         Needle = 'unit_walk_path_conv_norow_refused.lm2:7:5: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_path_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # A value that is only a path (P0: the fields `P`, `\`, `v` -- one token) is a value of its field's type: the
+    # composite typer typed nothing below three tokens, so a result, an initializer, an argument took no conversion,
+    # and the emitter's path branch refused a store of another type.  Without a receiver: refused at the conversion;
+    # with the program's receivers (convert_impl): four int places, 8.
+    [pscustomobject]@{ Name = 'unit_path_return_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_return_norow_refused.lm2:7:13: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_path_return_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_path_return_norow_refused.lm2:7:13: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_store_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_store_norow_refused.lm2:8:5: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_path_store_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_path_store_norow_refused.lm2:8:5: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_value_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A held callable called from a method (steps/merge-callable-r48.md S1): add5, a root own holding makeAdder's merged
     # node, called from go natively through the same l2_mad_call helper the root's walk calls -- before, l2_prep's frame
     # tail returned without a word (exit 3, "a refusal said nothing"); walked, go calls it through the walk's PRIM.

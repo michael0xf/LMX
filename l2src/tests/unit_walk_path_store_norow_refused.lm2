@@ -1,0 +1,12 @@
+# A path stored into an own field of another number type is a conversion, as any value of another type: `w: P\v`
+# gives P's size_t v to an int w, and this program has no receiver row.  It was refused by the emitter's path branch
+# ("a size_t field needs a size_t local"), which took no conversion even with a receiver.
+P:
+    size_t: v 2U
+fn: m () int
+    int: w 0
+    w: P\v
+    return: w
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

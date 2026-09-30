@@ -901,6 +901,7 @@ prototype:
     fn: l2_native_expr_ty (@@: LmP0Node tok; int: lo; int: hi; int: mi) int
     fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
     fn: l2_native_path_ty (const: @(LmP0Text t)) int
+    fn: l2_path_store_converts (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
     fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: char dest) int
@@ -8100,6 +8101,22 @@ fn: l2_native_path_ty (const: @(LmP0Text t)) int
         return: 0 - 99
 return: ft
 
+# Does the path pd..pn reach a number field of another type than own field `head` of method mi?  Its store is then a
+# conversion (the general store, l2_convert_on_store), not the path branch's plain read.  0 for any other path or place.
+fn: l2_path_store_converts (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
+    int: leaf 0
+    int: pft
+    int: oft
+    int: oi
+    oi: l2_own_find_last(mi, head)
+    if: oi < 0 || pd = 0 || pn = 0U
+        return: 0
+    pft: l2_path_kind_ft(l2_path_kind(pd, pn, @ leaf))
+    oft: l2_ft_of_own(l2_own_ty[oi])
+    if: pft < 0 || l2_prim_code_name(pft) = 0 || l2_prim_code_name(oft) = 0 || pft = oft
+        return: 0
+return: 1
+
 fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     []: @(LmP0Node) tok 64
     int: m
@@ -8107,7 +8124,8 @@ fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     if: field = 0 || n < 2 || n > 63
         return: 0 - 1
     m: l2_rw_tokens(field, n, tok)
-    if: m < 3
+    # One token of several fields is a path (P0 gives `P\v` as `P`, `\`, `v`): the value's one operand, typed as a leaf.
+    if: m < 1
         return: 0 - 1
     ty: l2_native_expr_ty(tok, 0, m - 1, mi)
     if: ty = 0 - 3
@@ -31432,7 +31450,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # field). Any other head (return, a call argument, ...) falls through
         # to the general expression-value handling below -- a field path used
         # there resolves and reads through l2_eval_fields like any other value.
-        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot, @ l2_pfi) = 0 && l2_own_find(mi, stmt\as\frame\head) >= 0
+        # A path to a number field stored into an own field of another number type is a conversion: the general store
+        # below makes it (l2_convert_on_store), as for any value of another type (l2_path_store_converts).
+        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot, @ l2_pfi) = 0 && l2_own_find(mi, stmt\as\frame\head) >= 0 && l2_path_store_converts(mi, stmt\as\frame\head, l2_pbuf, l2_pn) = 0
             if: l2_emit_path(l2_pbuf, l2_pn, mi, ind, stmt, @ l2_pkind) != 0
                 return: 1
             # The destination is an OWN field, stored into its cell like any

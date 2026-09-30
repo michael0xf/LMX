@@ -1,0 +1,28 @@
+# With the program's receivers (convert_impl) a path of P's size_t v reaches four int places through the conversion
+# edge: a store `w: P\v`, an initializer `int: d (P\v)`, an argument `id(P\v)`, a result `return: P\v`.  2 + 2 + 2 + 2
+# is 8: Entry 7.
+P:
+    size_t: v 2U
+fn: id (int: x) int
+    return: x
+end: id
+fn: back () int
+    return: P\v
+end: back
+fn: m () int
+    int: w 0
+    w: P\v
+    int: d (P\v)
+    int: r 0
+    r: w + d
+    r: r + id(P\v)
+    r: r + back()
+    return: r
+end: m
+int: s 0
+s: m()
+int: code 0
+if: s = 8
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

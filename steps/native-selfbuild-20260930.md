@@ -92,6 +92,14 @@ for investigation, not a claim that every failure is a stale test: the six
 missing-L1 rows retain real admission/construction dependencies described
 below; graph observers must not be weakened to hide missing operations.
 
+The [43-row diagnostic inventory](generated-diagnostic-migration-20260930.md#scope-evidence)
+now distinguishes 34 masking void-root returns from nine other refusals.
+Its bounded implementation groups are 14 current-contract fixture repairs,
+13 raw-C/string witnesses, ten withdrawn unknown-head assumptions and six
+production/construction dependencies. In particular, the Message addressee
+test exposes a pre-layout semantic type check incorrectly using walker-layout
+metadata; changing its expected text would hide the defect.
+
 Frozen source is translator blob `9d5fc38fed49153379a3718493cf0d2a5f6cc79e`,
 SHA256 `7A4A380C00FB2F55750329C1CC32BDE6E85818696ACE26AD9C635860712A14D1`;
 harness SHA256 `4BD1F5CAE3E9A43ECA89E728EB4DBC3AF5A12F4A429548BA8998B4B6EC07DF20`.

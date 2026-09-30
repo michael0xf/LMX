@@ -420,7 +420,7 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 - **Verification:** none for the complete current address/reference-level contract
 - **definition:** `@` obtains the address/reference appropriate to the resolved operand's actual typed storage. An actual Structure yields its descriptor reference; an explicit reference variable yields the address of its pointer-holding cell.
 - **invariants:** No graph-slot address substituted for the Structure descriptor, no address of a temporary copy, and no implicit indirection adjustment. Declaration-backed values and ordinary activation locals retain their respective storage/lifetime rules.
-- **not-confused-with:** l2-address-slot; sticky
+- **not-confused-with:** l2-address-slot; dirty
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
 - **authoritative sources:** closed [Q56](LMX_blog/q/q56.md); normative L2 §18 / L3 reference rules; `next_core_tasks.md`.
 - **implementation (files/functions):** Historical audit anchors: `l2_check_addr` at `:12333-12374`, `l2_prep_addr` at `:12376-12485`, `l2_mres_find` at `:14741`. The old proposal to make `@fresh` of an actual Structure return `lmx_arena_ref_cell(...)` as `Lmx **` is withdrawn. These paths must consume resolved operand/storage identity; a pointer-holding graph slot is not the Structure descriptor it references. The historical own-pointer temporary-address arm remains an audit target, not a justified substitute.
@@ -522,11 +522,11 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** fixture
-- **definition:** One stable physical cell per logical activation-local name.
-- **invariants:** An ordinary activation-local value has stable storage for that activation; taking its address does not create a graph field. This is not a rule that `@` of every source binding addresses a working cache: declared values retain declaration storage, actual Structures yield descriptor references, and explicit pointer variables add a level when their cell is addressed. See `l2-address-of` and the normative storage rules.
-- **not-confused-with:** sticky; dirty
+- **definition:** Stable addressable storage for an activation-local primitive or pointer value whose address is obtained; not a requirement to materialize every local.
+- **invariants:** The address lasts for that activation and does not create a graph field or publication destination. Declared graph values retain declaration storage; actual Structure/Array values, including reference-transmitted formals, yield descriptor references. An explicitly declared pointer/reference binding, or an input whose value is itself a primitive pointer, adds a level when its pointer-value cell is addressed. See `l2-address-of`.
+- **not-confused-with:** declaration storage; a nonprimitive formal's hidden transport parameter; dirty
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
+- **authoritative sources:** [L2 §18.2–18.3](docs/L2_spec_en.md#lowlevel-address); [L3 working values](docs/LMX_semantics.en.md#dynamic); next_core_tasks.md §5/§7b.
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
 - **witnesses:** UNKNOWN or see next_core_tasks fixture lists
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
@@ -536,14 +536,14 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 ## `selector`
 
 - **level:** L2
-- **Norm:** accepted
-- **Implementation:** partial
+- **Norm:** superseded publication mechanism; historical term only
+- **Implementation:** audit remaining uses against current declaration/argument rules
 - **Verification:** none
-- **definition:** Publication target selector for current occurrence.
-- **invariants:** Updates pending snapshot on switch
+- **definition:** Historical selector for publication from the old canonical-cell implementation. It is not the language's occurrence-selector and is not a current argument-publication rule.
+- **invariants:** Current repeated declarations have distinct physical occurrences. Argument assignment creates none. A backend may reuse working storage only while preserving each declared destination and pending dirty value; it cannot infer publication from address-taking.
 - **not-confused-with:** occurrence-selector; checkpoint
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
+- **authoritative sources:** Historical audit -142/-146, retained in Git before 17d3837; superseding contract: [L2 §18](docs/L2_spec_en.md#lowlevel-address), next_core_tasks.md §5/§7b.
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
 - **witnesses:** UNKNOWN or see next_core_tasks fixture lists
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
@@ -553,14 +553,14 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 ## `sticky`
 
 - **level:** L2
-- **Norm:** accepted
-- **Implementation:** partial
-- **Verification:** fixture
-- **definition:** Address-exposed activation-local working storage remains sticky for the activation under the applicable publication contract. This cache policy does not redefine the typed referent of `@`, redirect a declaration address to a cache, or turn an actual Structure descriptor reference into a pointer-cell address.
-- **invariants:** Independent of bind timing
+- **Norm:** superseded; not a current language requirement
+- **Implementation:** remove any surviving address-triggered publication of clean own caches
+- **Verification:** old fixtures are historical evidence, not conformance proof
+- **definition:** Historical policy that made taking a local address trigger conservative graph publication. The current address contract does not use this policy: declared addresses reach actual typed data, and activation-only arguments have no graph publication target.
+- **invariants:** Taking an address alone is not a write, does not dirty a working value and must not cause a clean cache to overwrite an explicit graph write. Dirty values still follow the ordinary checkpoint contract.
 - **not-confused-with:** dirty; canonical-local-cell
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
+- **authoritative sources:** Historical author discussion 2026-09-22; superseding [L2 §18.2–18.3](docs/L2_spec_en.md#lowlevel-address) and [assignment correction](docs/new_parts/assignment_is_not_declaration.en.md); next_core_tasks.md §5/§7b.
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
 - **witnesses:** UNKNOWN or see next_core_tasks fixture lists
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
@@ -573,11 +573,11 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** fixture
-- **definition:** Pending write state published at checkpoints when sticky.
-- **invariants:** Conservative publish when sticky
+- **definition:** An admitted assignment has changed an own-field working value that must be written back to its declared graph destination at the specified publication boundary.
+- **invariants:** Loading, reading or taking an address does not dirty the working value. A clean cache is never published merely because it exists. Explicit/hidden input assignment remains activation-local and creates no own destination. Explicit graph writes do not dirty an unchanged working copy. Failed admission commits no attempted write and does not erase an earlier accepted pending change.
 - **not-confused-with:** checkpoint
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
+- **authoritative sources:** [L3 working values](docs/LMX_semantics.en.md#dynamic), [L2 §18](docs/L2_spec_en.md#lowlevel-address); next_core_tasks.md §7b.
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
 - **witnesses:** UNKNOWN or see next_core_tasks fixture lists
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
@@ -590,11 +590,11 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** none
-- **definition:** Point where graph publication may occur from canonical cell.
-- **invariants:** Emit via checkpoint helpers
-- **not-confused-with:** dirty; sticky
+- **definition:** A specified control-transfer/publication boundary at which required dirty own-field working values are written to their declaration storage.
+- **invariants:** Native and interpreter preserve the same boundaries and observations. No argument publication, clean-cache write-back, automatic reload or new checkpoint is inferred from an address operation. Backend helpers and physical dirty bits are implementation choices, not language operators.
+- **not-confused-with:** dirty; Message publication; construction publication
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
+- **authoritative sources:** [L3 working values](docs/LMX_semantics.en.md#dynamic), [exits](docs/LMX_semantics.en.md#exits), [suspension](docs/LMX_semantics.en.md#suspension); next_core_tasks.md §7b.
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
 - **witnesses:** UNKNOWN or see next_core_tasks fixture lists
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md

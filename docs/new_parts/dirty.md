@@ -1,5 +1,7 @@
 # Revised follow-up to Fable — restore load/dirty caching at the author's request
 
+**Historical-note correction, 2026-09-30.** The author-approved restoration of load/cache/dirty and its publication boundaries remains active. The changelog below also mentions the former canonical-cell/sticky/selector implementation and an argument's prepared own field; those statements record the earlier revision, not the current contract. [Assignment is not declaration](assignment_is_not_declaration.en.md) and [L2 §18.2–18.3](../L2_spec_en.md#lowlevel-address) supersede them: explicit/hidden inputs remain activation-local with no field or publication target, declared `@x` addresses actual typed data, and address-taking alone never dirties or publishes a clean working cache. No persistent data-only companion is introduced. The historical changelog is retained rather than rewritten as evidence for the new rule.
+
 **To:** Fable / fable_pc  
 **Scope:** aligned documentation corrections in `docs/LMX_semantics.en.md` and `docs/LMX_semantics.ru.md`, following `response48.md`.  
 **Reviewed snapshots:** `LMX_semantics.en(5).md` and `LMX_semantics.ru(4).md`. Section numbers, anchors and exact phrases below are primary locators; line numbers refer only to these snapshots.  

@@ -14,8 +14,13 @@ invalid-type/path/arity diagnostics; test successful cases beyond old caps.
 
 ## Current source work
 
-Independent runtime work removes the implements depth cap and the walker
-holder-parent cap. The translator repair is broader than depth: replace its
+Runtime checkpoint `ca2f1cd` removes the implements depth cap and the walker
+holder-parent cap. Isolated kernel 278/278 (104 selftests) and L3 11/11 plus
+four inventory checks passed without the translator WIP. The root-hosted WIP
+also removes the separate `l2_rw_cblk[64]`: a 70-deep root-if witness passes
+both native and actual graph execution in the 30/30 focused gate
+`root_hosted_graph_20260930_final`; the remaining fixed control/expression
+arrays below are not thereby closed. The translator repair is broader than depth: replace its
 special source-shape recognizers with [general receiver resolution](receiver-resolution-20260930.md).
 An arbitrary-depth Array-only scanner is not the intended replacement. No new
 index-suffix semantics is chosen by this cap-removal task.
@@ -66,5 +71,7 @@ widths and decimal representation domains are not removed by this task.
 Each family requires targeted positive and negative witnesses, then the full
 parser/L1/kernel/generated/L3/docs gates affected by it. Regenerate seeds only
 through the checked bootstrap; synchronize stable/dev exact bytes before code
-checkpoint. The current 278-target kernel and 11-suite L3 successes precede
-these cap removals and do not certify them.
+checkpoint. The isolated 278-target kernel and 11-suite L3 successes certify
+only the runtime changes at `ca2f1cd`; they do not certify the remaining
+families. Focused root-control evidence also does not close the full generated
+harness or the unrelated parser/L1 limits.

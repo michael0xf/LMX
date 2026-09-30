@@ -309,16 +309,32 @@ native/walker witnesses, including unsigned wrap and signed/unsigned comparison.
 
 Common E graph emission restores the supported subset, NOT full acceptance.
 
-First bounded repair: `unit_root_for_refused` has a native loop but no graph
-FOR. The hosted numeric declaration in `l2_rw_stmt` rejects E specifically;
-`l2_rw_methods_count` then leaves its step count negative and emission drops
-the entire root body. Use the existing hosted-field and `l2_rw_enter/leave`
-paths for every executable occurrence, removing the duplicate root-only
-`l2_rw_cblk[64]` scope stack. Do not merely accept the old refusal fixture
-because its native result is correct. Require the same positive result with
-the root's native word cleared by the test driver, retained FOR/OWN_OF/SET_OF
-nodes, and nested control-scope witnesses. This removes one omission, not the
-separate duplicate-body/layout defects listed next.
+First bounded repair is now verified WIP: E uses the existing hosted numeric
+field and `l2_rw_enter/leave` paths, with the duplicate root-only
+`l2_rw_cblk[64]`, its catch search and comments removed. The previous
+`unit_root_for_refused` omission did not justify accepting a native-only
+success: the updated test requires retained FOR/OWN_OF/SET_OF frames.
+
+`build/l2_harness/root_hosted_graph_20260930_final`: 30/30 targets GREEN,
+27 fixtures including all twelve preceding native-gate migrations. Four
+fixtures (`unit_root_for_refused`, `unit_root_hosted_controls`,
+`unit_root_deepif70`, `unit_root_hosted_catch`) run the same generated binary
+twice. The test-only driver first asserts a nonzero compiled root native word
+and a nonempty physical operator graph, then clears only the native word for
+the second run; ordinary dispatch selects the walker. Observations cover sum6,
+nested counters/break/continue, sibling scopes, size_t 4294967296, actual
+hosted-field path reads/writes, nested catch and 70 nested if bodies.
+
+Four assertion inversions in `root_hosted_graph_20260930_mutants` failed with
+the intended value mismatch in both modes. All were restored before the final
+gate. Translator, driver and four source fixtures match the staged evidence
+byte-for-byte. Translator blob `1e2a3d4dbad948777a58cd4b3b5d0820a4a364ae`,
+SHA256 `691E7F9D74DEDB3AF26F91FFC214DDF6730AAA5ED32FD256375EF588E5BD2F0B`;
+driver blob `7fec045240d613ce05cfa16b6021ad8c2b22b32e`;
+harness at this run `919668593c4fe2e475918b0683286938ac97239a`.
+These are focused WIP results, not a full generated-suite verdict or a pushed
+translator checkpoint. Genuine root no-formal/no-lexical-parent distinctions
+remain. This repairs one omission, not the duplicate-body/layout defects below.
 
 1. l2_m_kids + l2_m_steps still puts data before an operator tail. Consolidate
    unit_base+i/ns_base+rank/mres_base+r formulas into physical location helpers,

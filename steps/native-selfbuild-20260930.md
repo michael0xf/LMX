@@ -1,6 +1,6 @@
 # Native compilation and the route to §§8–8a
 
-Status: 2026-09-30, Codex work over documentation checkpoint 5aafc6a in build/opus_wt.
+Status: 2026-09-30, runtime checkpoint ca2f1cd on main; translator WIP in build/opus_wt.
 Implementation evidence and remaining work, not a language specification.
 
 ## Resumed after Q56/Q57 documentation correction
@@ -34,6 +34,9 @@ Fresh diagnostics after the documentation checkpoint:
 | `build/l3/resumed_l3_20260930_01` | **11 runtime suites / 295 checks pass**; overall exit 1 because four header-inventory expectations still require 72 names instead of the measured 73 after adding the operation-local LmxImplementsFrame; capacity remains 128 names / 8192 bytes |
 | `build/l2_harness/formal_address_20260930_final` | Corrected static formal-address slice: **13 targets, zero failures**, ten fixtures; all three deliberately inverted positive controls fail at execution, then are restored before this final run |
 | `build/l3/formal_address_20260930_final` | **Full L3 gate exit 0**: 11 runtime suites / 295 checks; all four header inventories 73/128 names and 1043/8192 bytes. Updated only the expected count for LmxImplementsFrame, not the capacity |
+| `build/l2src/runtime_checkpoint_20260930_01` | **278 targets, zero failures**, 104 selftests, on isolated main ca2f1cd without translator WIP or its new metadata header; implements 55/55 and table 59/59 |
+| `build/l3/runtime_checkpoint_20260930_01` | Isolated ca2f1cd: **11 suites / 295 checks, exit 0**; four inventories 73/128 and 1043/8192. Full console, including inventory results: `build/l3/runtime_checkpoint_20260930_01.log` |
+| `build/l2_harness/native_gate_migration_20260930_02` | Translator WIP only: **15 targets, zero failures**, twelve migrated native/graph witnesses; separate 60-check graph-observer audit includes 40 negative mutations and eight valid temporary-renumbering cases. Not a full harness gate |
 
 The first kernel run predates the subsequent reference-translator edits. The
 focused harness does not replace a full gate. The stopped audit run
@@ -72,7 +75,7 @@ WIP in build/opus_wt, not a main/stable-source promotion. The last full
 generated run predates this final address correction and remains red; no
 clean-kernel, §8 or §8a completion is implied by the focused and L3 successes.
 
-### Bounded runtime checkpoint
+### Bounded runtime checkpoint ca2f1cd
 
 The independently verified runtime slice is separated from translator WIP:
 `lmx_chars`, `lmx_value_owned` and its corrected accessor-contract header,
@@ -81,13 +84,22 @@ The independently verified runtime slice is separated from translator WIP:
 `tools/l3_type_budget.py`. All nine kernel source/test files were rechecked
 byte-for-byte against `mapped_cycles_20260930_01` before staging. The final
 L3 run above uses the same executable runtime bytes; the corrected header
-comment is subsequently checked with the isolated published source tree.
+comment is included in both fresh isolated ca2f1cd gates above. The isolated
+kernel count is 278 rather than the WIP's 280 because the translator-only
+metadata header is absent; all 104 runtime selftests still run.
 The changes remove the admission
 depth-32 and holder-depth-256 cutoffs, retain mapped correspondences across
 cycles, and separate C99 numeric char reading from intern-table byte indices.
 This development checkpoint does not promote stable `l2src`, publish the
 unfinished translator, or certify the full generated harness. Mixed C99
 arithmetic and the representation repairs below remain open.
+
+The twelve migrated generated tests remain with translator WIP, not in this
+runtime commit. They replace obsolete root-only refusals/global temporary
+ordinals with actual output, argument/result/receiver graph relationships,
+and a non-null native root. In-memory mutants fail for the missing property;
+renumbering temporary variables remains valid. The root FOR row was expressly
+left red because it lacks the graph, despite its correct native result.
 
 The full harness's 112 failures split initially into 37 generated-text
 assertions, 51 diagnostic-text mismatches, 17 newly accepted former-refusal

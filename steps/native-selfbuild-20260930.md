@@ -1,21 +1,34 @@
 # Native compilation and the route to §§8–8a
 
-Status: 2026-09-30, exact development checkpoint `661735a` pushed to main;
-common-assignment repair continues in `build/opus_wt`. Stable is not promoted.
+Status: 2026-09-30, development checkpoint `6be1235` contains the verified
+common-assignment repair; next is whole-Array descriptor addressing.
+Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair
 
-The source repair after `661735a` is verified by the focused run
+The source repair after `661735a`, committed as `6be1235`, is verified by the focused run
 `build/l2_harness/assignment_rhs_20260930_final01`: **59/59 targets**,
 comprising 56 fixtures and three infrastructure/scope targets. All twelve
 previously green assignment regressions pass without weakening their
 expectations, as do fifteen new witnesses and twenty-nine pointer, address,
 CHAR, catch, merge and Array-element controls. Catch and root-merge twins
-retain actual native and driver-cleared walker execution. The full generated
-run `assignment_rhs_full_20260930_01` is still in progress; the focused
-result does not supersede the full-corpus count below.
+retain actual native and driver-cleared walker execution.
+
+The full generated run `assignment_rhs_full_20260930_01` reports
+**1003 targets: 949 OK, 54 FAIL**. Compared with the 988-target API-cleanup
+baseline, sixteen old failures pass (all twelve assignment regressions plus
+four existing admission rows), fifty-two old failures remain, all fifteen
+new fixtures pass, and none is removed. Two previously green diagnostic rows
+now fail: `unit_colon_graph_const_target_refused` expected pointer rebinding
+to be a const write; `unit_colon_graph_update_admission_blocked` expected the
+old unimplemented-admission refusal. Both now reach their unrelated invalid
+valued root return. They were then replaced by actual runtime witnesses of
+the accepted reference contract, not expectations for that root error.
+This bounded fixture-only migration did not change production bytes.
+`baseline_comparison.json` preserves all per-row outcomes; the complete suite
+is still red, and these results are not a clean-kernel gate.
 
 One `L2TypeContract` projection now supplies cast checking and emission.
 Known L2 values, opaque raw-C results/atoms and unresolved L2 names remain
@@ -44,6 +57,25 @@ runtime admission bypasses that retained the emitted `implements` call text.
 Thus admission evidence is not merely a required-text pin. All mutants were
 restored before the final focused gate. Frozen translator SHA256:
 `AB8BE43D95FD42FF0D09505CC4652657373E5E44770C7CC4B6375F3B852A3777`.
+The full run uses the same translator bytes. Its harness SHA256 is
+`C59BB45CD9987EC4D87EA6B1CD043848F0FB2160FA0001378503EAB09B3D8EBA`;
+`source_manifest.json` records the source and two test-helper identities.
+
+The restored final `assignment_rhs_observers_20260930_final` passes **61/61
+targets (58 fixtures)**, adding the two migrated rows to the previous focused
+set. The const witness preserves referent qualification while rebinding the
+pointer; the named-model witness catches refusal of an incompatible candidate
+and verifies that the old Good descriptor and value survive. Neither test
+assigns a made-up model to an untyped `@(Lmx)` formal. Their two deliberately
+inverted identity assertions fail at runtime with 81/83 instead of 7, then
+the original bytes were restored. Independent review and coordinator hashing
+matched all twenty-one committed source/helper/fixture/harness paths.
+Final harness SHA256:
+`F4FADCDFE5C2653422FEE8662124466EE43FD8D1D0CAD10870E0C8FE6C43756E`.
+The final directory contains `run_evidence.json` and `source_manifest.json`.
+There was **no new full run after the two-fixture delta**: 951/1003 is not an
+executed verdict. Kernel/L3 sources were unchanged; their preceding results
+below are inherited evidence, not new runs of those suites.
 
 This slice does not establish whole-Array descriptor-address identity:
 the retained Array witnesses address elements, not the whole descriptor.
@@ -53,7 +85,7 @@ used by the new runtime witnesses is test-only and is included in staged
 source evidence; no C-name registry or production helper was introduced.
 
 <a id="api-cleanup-full-checkpoint"></a>
-## Current frozen source checkpoint: API cleanup and full regression inventory
+## Previous source checkpoint: API cleanup and full regression inventory
 
 `dst_chars` is removed from all ten public copy/merge APIs, their twenty
 declarations/definitions, two driver signatures, 61 calls/templates and ten

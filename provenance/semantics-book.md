@@ -1,5 +1,7 @@
 @@ scope | Предмет языка и способы исполнения | Language scope and execution modes | 0; 0.0; 0.0.1; 0.0.3; 0.1.1; 1; 1.7
 [RU]
+При статической компиляции каждое тело Structure, явно исполняемое или предназначенное для исполнения, получает нативную реализацию, включая корневое тело файла. Корень не имеет отдельного правила генерации или вызова: выбор между нативным входом и интерпретатором определяется только наличием нативной реализации у вызываемого вхождения Structure. Построенная во время исполнения Structure без неё остаётся интерпретируемой, если её тело принадлежит L3.
+
 LMX одновременно представляет данные, исполняемые выражения, модели, запросы и сообщения. Исходная запись строит структуры; принимающее выражение задаёт их смысл. Записи, деревья, конфигурации, схемы, таблицы и программные тела используют одну структурную основу. Реестр, сервис, таблица и Mix — семейства данных и принимающих выражений, а не дополнительные уровни языка.
 
 Все правила языка универсальны в пределах своей объявленной области и применяются одинаково ко всем подходящим конструкциям. Имя, тип, форма записи, уровень вложенности, путь трансляции или удобство реализации не создают неявного исключения. Если реализация требует исключения либо исследование обнаруживает противоречие между правилами, это останавливает соответствующее решение до явного обсуждения; транслятор, интерпретатор и runtime не вправе самостоятельно вводить обходную семантику.
@@ -27,6 +29,8 @@ L3 сохраняет изменение графа, структурные вы
 print: "Hello World"
 ```
 [EN]
+Static compilation provides a native implementation for every Structure body explicitly executed or intended for execution by the source, including the file root. The root has no separate generation or call rule: dispatch between native entry and interpreter depends only on whether the callable Structure occurrence has a native implementation. A Structure constructed at run time without one remains interpretable if its body belongs to L3.
+
 LMX represents data, executable expressions, models, queries and messages. Source notation constructs Structures; a receiving expression assigns their meaning. Records, trees, configurations, schemas, tables and program bodies share the same structural basis. Registries, services, tables and Mix are families of data and receivers, not additional language levels.
 
 Every language rule is universal within its declared domain and applies uniformly to every matching construct. A name, type, source spelling, nesting level, lowering path, or implementation convenience creates no implicit exception. If an implementation appears to require an exception, or investigation finds a contradiction between rules, the affected decision is suspended for explicit discussion; translator, interpreter, and runtime must not invent workaround semantics.

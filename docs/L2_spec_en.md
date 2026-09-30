@@ -111,6 +111,8 @@ Execution runs the callable's complete Structure. An ordinary named Structure is
 <a id="call"></a>
 ## 11. Call
 
+A statically compiled executable body of any Structure, including the file root, receives a native implementation; there is no special interpreter-only root. At a call, only the concrete occurrence's native entry determines dispatch, not its name, nesting or source position.
+
 `lmx_call.h.lm1`: in the target form the execution of a Structure in head position is selected by the `Lmx.native` word ([§2](#lmx)): non-null enters the native entry, null runs the walker; in the transitional implementation callability is determined by the address range of the stored `child[0]` value. The Callable ABI supplies reserved `node`, the lexical parent Structure, and hidden `self`, the active Structure of this invocation ([§10](#own)); `self` is not a language word. These references do not create separate code and data objects. Transitional direct METHOD keeps the old one-argument entry only for legacy low-level targets. This stage performs **no** signature check (as in C; full typing is separate), and `sig` is not decoded. L1: [L1](L1_spec_en.md#call).
 
 <a id="child"></a>

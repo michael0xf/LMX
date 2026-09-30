@@ -85,6 +85,48 @@ The dependency-closed sequence is:
 
 This is a shared value-selection mechanism, not a rule that every context receives every callable by reference. Likewise, this slice does not decide body/formal rebinding or the unresolved classification of an unknown defining head.
 
+<a id="site-aware-hidden-source"></a>
+### Dependency: site-aware hidden reference inputs
+
+A later independent audit preserved a baseline failure in
+`build/l2_harness/bounded_indexed_expression_20260930_07/src/unit_pointer_actual_contract.lm2`:
+`check` declares local `@: int p @values[0]` and calls `hidden`; `hidden`
+passes its free input p to `read(p)`. Both the earlier frozen
+`whole_array_address_20260930_final` translator and the indexed-expression
+work in progress report `unresolved dynamic=p` at 13:14. Explicit parameters
+in the isolated pointer-actual controls do not repair that hidden input.
+
+`l2_ml_collect` already records the local's exact pointer type. However,
+`l2_dyn_step` and `l2_hidden_from` look for the caller source among formal/own
+bindings and omit machine locals. The existing type-code round trip preserves
+reference depth and qualification; the missing prerequisite is selecting the
+correct binding at the call site, not adding a pointer-specific conversion.
+
+Do not fix this by a whole-method `l2_ml_rebuild`/`l2_ml_find` lookup. That
+table includes later and nested declarations and deduplicates names without
+source/scope identity. The binary `l2_m_edge[caller,callee]` likewise retains
+no call-site identity. Neither can prove which preceding visible declaration
+supplies a particular call.
+
+Reuse source-ordered body traversal, `l2_here_at` and the existing scope stack.
+A compiler-only deferred-site record, following `l2_wait_add`, or an equivalent
+source replay can preserve the call node and active scopes. Resolve a hidden
+source to its exact preceding binding/category/type at each call site and
+use the same result for dynamic type closure and native actual emission.
+Keep ordinary call/failure edges separate from reference transport; a copied
+or passed callable is not implicitly executed just to establish its signature.
+No persistent name registry, data/context graph, copied pointee, or receiving
+model inferred from the desired target belongs in this repair.
+
+Required witnesses: direct and multi-hop hidden-pointer forwarding with actual
+identity; mutate the pointee before the call and observe the new value; call
+before a local declaration with no earlier binding (refused); the same case
+with an earlier formal/outer binding (that binding wins); nested same-name
+locals before/after declaration and after scope exit (11, then 22, then 11);
+incompatible depth and qualification. The machine-local path may remain
+native-only until a genuine walker representation exists; do not claim walked
+receiver coverage from a walked caller invoking a native method.
+
 <a id="witnesses"></a>
 ## Minimal witness matrix: pending implementation and execution
 

@@ -35,6 +35,52 @@ Native store идёт через `l2_emit_own_index` / `l2_own_index_head`; пр
 
 В ходе Array-свидетелей сохранены три прежних отказа общих потребителей: dynamic own-index внутри OR (`whole_array_address_20260930_06`, `unit_array_index_shadow`, 13:56: `own array index requires a supported integer expression`); `int: seen values[i]` (`_07`, 13:9: `unsupported body`); прямой `@element` в вызове с несколькими actual (`_06`, `unit_array_index_formal_shadow`, 13:23: `address arithmetic past an own-array element is not yet supported`). Поддерживаемые промежуточные выражения в итоговых тестах изолируют indexed write и formal shadow, а не исправляют эти отказы. Исследовать общий source-span/index projection для expression, declaration initializer и call actual; не вводить Array-specific синтаксис или новые ожидаемые запреты языка. [Артефакты и границы](native-selfbuild-20260930.md#whole-array-address-repair).
 
+### LOGICAL-RHS-EAGER-LOAD — 2026-09-30, Codex, IN WORK `BOUNDED-INDEXED-EXPRESSION-20260930`
+
+Read-only ревью общего expression-emitter обнаружило прежнюю ошибку:
+`l2_eval_fields` включает short-circuit splitting только при
+`l2_fields_has_call != 0`. Если правая часть не вызывает callable, но читает
+массив, `l2_emit_array_load_at` может выдать загрузку во временную ячейку
+до итогового `&&`/`||`; пропущенная по логике правая часть всё равно читается.
+Это наблюдается по исходнику ещё до нынешнего indexed-span среза для literal
+индексов и затрагивает новые dynamic operands. Вызовы в индексе уже проходят
+существующий call-aware short-circuit; это не доказывает отсутствие обычной
+загрузки в пропущенной ветви. Исправление — общий logical lowering независимо
+от наличия вызова, с прежним приоритетом операторов, не Array-specific ветка.
+Свидетель должен проверять положение загрузки относительно условной ветви
+на безопасном индексе; не выдавать исполнение undefined out-of-bounds доступа
+за положительный runtime-тест. Включено как зависимость текущего writer-среза.
+
+### POINTER-ACTUAL-CONTRACT-BYPASS — 2026-09-30, Codex, IN WORK `BOUNDED-INDEXED-EXPRESSION-20260930`
+
+Отрицательные контроли `bounded_indexed_expression_20260930_05` показали,
+что L2-вызов допускает `@` char-элемента к формалу int* и адрес int-элемента
+к int**. `l2_check_value_convert_field` рано возвращает успех для
+непримитивного принимающего типа, минуя уже существующий общий контракт
+указателей. Подключить `l2_check_receiving_value` для pointer actual:
+сохранить настоящую глубину, const, C99 void*/null/opaque-C различия и
+имеющийся последующий admission именованной Structure. Не вводить правило
+для массива, не назначать модель generic-указателю и не вычислять actual
+повторно. Эта проверка не заменяет следующую проекцию callable-аргументов.
+
+### HIDDEN-POINTER-LOCAL-SOURCE — 2026-09-30, Codex, OPEN
+
+Сохранённая `bounded_indexed_expression_20260930_07/src/unit_pointer_actual_contract.lm2`
+вызывает `hidden()` из `check`, где уже объявлен локальный `@: int p @values[0]`;
+`hidden` передаёт свободный p в `read(p)`. И прежний frozen binary
+`whole_array_address_20260930_final`, и новый дают `unresolved dynamic=p`
+в 13:14. `l2_ml_collect` уже сохраняет точный pointer-контракт, но
+`l2_dyn_step` и `l2_hidden_from` ищут источник скрытого входа среди
+formal/own, пропуская machine local. Нужен общий источник binding/category
+для замыкания типов и передачи actual. Нельзя просто видеть все locals
+метода: сохранить видимость только вперёд и точную область места вызова,
+затенение, const/глубину и идентичность указателя. Значение передаётся в
+обычную активацию по Q52, без нового постоянного data/context-графа.
+Прямой и многошаговый forwarding, изменение исходного pointee до вызова,
+позднее/внешнее объявление и depth/const-отказы нужны как свидетели.
+Исправление следует отдельным срезом; explicit-параметры текущих actual-тестов
+изолируют проверку pointer-контракта, но не закрывают этот скрытый вход.
+
 ### SUB-ACTUAL-REFERENCE-CLASSIFICATION — 2026-09-30, Codex, OPEN
 
 После исправления неправильного valued return корня `unit_value_call_sub_refused` сохраняет `sub: s ()`, `fn: g (int: n) int` и `g(s)`. Корректен отказ несовместимому int-аргументу, но текущий `l2_check_value_call` сначала запрещает любое callable без результата как значение. Это не только текст: обычный ссылочный формал тоже попадает в этот путь вместо передачи дескриптора; отдельный callable-formal fast path принимает лишь ATOM имени unit-метода, не общую разрешённую привязку или переданный дальше формал.

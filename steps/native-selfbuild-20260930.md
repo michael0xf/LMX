@@ -100,6 +100,59 @@ writer started. Source editing/build ownership then passed to the bounded
 CHAR-DECLARED-CELL-IDENTITY repair. This result is not a clean-kernel gate,
 a source promotion to stable, or a §8/§8a completion claim.
 
+<a id="char-declared-cell-identity-verified-wip"></a>
+### CHAR declared-cell identity: verified WIP
+
+Mutable CHAR declarations, captures, publication targets and result destinations
+now use fresh typed arena cells and in-place stores. Immutable literals and
+expression transport remain interned. Copy uses the ordinary source-address
+map: different equal-valued cells stay different, repeated references stay
+aliased. Explicit pointer-pointee sharing and retained profiles are unchanged.
+The first fresh CHAR constructor initializes the existing first-chunk literal
+table before taking a mutable cell from the same typed pool.
+
+Final exact-byte gates, all under repository `build/`:
+
+| Evidence directory | Terminal result |
+| --- | --- |
+| `l2src/char_identity_20260930_final2` | 280/280 targets; 104 executed selftests; copy 270, call destinations 14, catch 23 |
+| `l3/char_identity_20260930_final2` | 11 suites, 295 runtime checks; all four inventories pass at 73 types |
+| `l2_harness/char_identity_20260930_final3` | 19/19 targets, 16 fixtures |
+| `l2src/char_identity_mutants_20260930_02` | Six intended mutation failures; scripts `run.ps1`, `run_publication.ps1`, `run_held.ps1` |
+
+Old-byte `char_declared_old_20260930_03` compiled and ran both address witnesses
+red, exit 81 instead of 7. Earlier `_01/_02` were preempted by declaration/type
+refusals and are not storage-failure evidence. The six final mutants cover
+interned declarations, value-based copy collapse, missing copy memo, mutation
+of literal CHAR, publication rebinding, and a held-call result in stack scratch.
+For the last case, a generated-C observer proves both returned results belong
+to the owner arena's CHAR range; restoring the exact stack-spare branch fails
+86 while that stack object is still alive. The ordinary d/e fixture only proves
+copied result values; it does not alone prove returned-reference lifetime.
+
+The first L3 `char_identity_20260930_final` had six link failures for missing
+`lmx_chars_init`. The correction is the actual module dependency: value_owned
+imports existing `lmx_chars.lm1`, not a per-suite linker workaround. Every final
+gate above includes it. Eight changed implementation/header files match both
+final kernel and harness staging; 227 directly mapped kernel inputs match.
+
+Final SHA256:
+
+```text
+l2trans.lm1             C9E583C67D00A37319A441EB7227270BB825DF2907F9002A8E4E7DAFA1260D82
+lmx_value_owned.lm1     C0A37ABB9CE8B920D35382EECBBCF2EAEB5FE1C5530BEE720A4F31A690957A86
+lmx_walk.lm1            D11276E1CE2693E9E681A0C28B8C8425468C0B882FAFBBC0947363BED07C34D9
+lmx_graph_copy_owned.lm1 7CA9BF29625DBE97F8F3E33DBA98EF766FF67C7A4004CA8D7DA715CB436C008F
+tools/l2_harness.ps1    F6F3F34BD7B872103326982A481294D6ED70A2807E7DA5A4DAE51225BA368E7F
+```
+
+This is verified source WIP, not a published translator or clean-kernel gate.
+The full generated corpus still needs a fresh delta. No generated walker
+primitive-pointer or held-root walker coverage is claimed. Remove unused
+`dst_chars` from five public copier APIs and five forwarding merge APIs together
+with callers before clean-kernel; private threading is already gone. Correct
+the remaining old field-rebinding introduction in `lmx_chars.lm1` in that cleanup.
+
 ### Bounded runtime checkpoint ca2f1cd
 
 The independently verified runtime slice is separated from translator WIP:

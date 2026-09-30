@@ -24,10 +24,11 @@
 
 Ближайшая последовательность единственного writer/build:
 
-1. Закончить CHAR-DECLARED-CELL-IDENTITY: отдельные реальные char-ячейки,
-   стабильный адрес, общая карта копирования и независимые результаты
-   callable; литералы не становятся изменяемыми объявлениями.
-2. Устранить CATCH-FORMAL-RETAINED-GRAPH через общий допуск hosted-полей
+1. Сохранить проверенный CHAR-DECLARED-CELL-IDENTITY в следующем согласованном
+   исходниковом checkpoint: kernel 280/280, L3 11/11, focused generated 19/19,
+   шесть мутантов. Точные байты и ограничения приведены в рабочей записке;
+   полный generated gate ещё не перепроверен, это VERIFIED WIP.
+2. В работе: устранить CATCH-FORMAL-RETAINED-GRAPH через общий допуск hosted-полей
    и восстановление scope. Исправить CHAR-ADDRESS-ASSIGNMENT-TYPE:
    тип pointer-binding берётся из разрешённого declaration-contract,
    не из исторического способа размещения локала.

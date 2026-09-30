@@ -1,0 +1,11 @@
+# The element store's conversion is the receiver's: `a[1]: z` with z -1 into a size_t element is refused by it, and
+# the store's implicit throw `convert` passes through go to the root, which receives status 3 -- as a result's does
+# (unit_free_conv_range).  Before, the store had no edge and C wrapped -1 silently.
+fn: go () int
+    int: z -1
+    []: size_t a 2
+    a[1]: z
+    return: 7
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

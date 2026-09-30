@@ -1,0 +1,16 @@
+# With the program's receivers (convert_impl) an int reaches a size_t element through the conversion: `a[1]: z` (2) and
+# `a[0]: z + 3` (5), a single value and a composite.  2 + 5: Entry 7.
+fn: m () size_t
+    int: z 2
+    []: size_t a 2
+    a[1]: z
+    a[0]: z + 3
+    return: a[0] + a[1]
+end: m
+size_t: r 0U
+r: m()
+int: code 0
+if: r = 7U
+    code: 7
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

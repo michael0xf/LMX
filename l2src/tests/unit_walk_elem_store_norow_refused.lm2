@@ -1,0 +1,11 @@
+# A store into an own Array's element takes the conversion edge of a value of another number type, as a write through
+# a path does (OPUS-PATHCONV-20260929-10): `a[1]: z` gives an int to a size_t element, and this program has no receiver
+# row.  Before, the store had no edge and no refusal: C converted.
+fn: m () size_t
+    int: z 5
+    []: size_t a 2
+    a[1]: z
+    return: a[1]
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

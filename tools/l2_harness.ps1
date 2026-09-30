@@ -4096,6 +4096,18 @@ $fixtures = @(
         Needle = 'unit_cf_bare_mixed_refused.lm2:8:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # A store into an own Array's element takes the conversion edge of a value of another number type, as a write
+    # through a path does (OPUS-PATHCONV-20260929-10): checked as a result or a formal is, and the receiver called on
+    # the value before the store -- it had no edge and no refusal.  No receiver: refused at the value; with the
+    # program's receivers: a single value and a composite, 7; -1 into size_t: the receiver's throw reaches the root.
+    [pscustomobject]@{ Name = 'unit_elem_store_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_elem_store_norow_refused.lm2:7:11: the program has no method `lm_stg_convert_int_size_t`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_elem_store_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_elem_store_norow_refused.lm2:7:11: the program has no method `lm_stg_convert_int_size_t`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_elem_store_conv.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_elem_store_conv_range.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 3;
+        Absent = @(); Debt = @() },
     # A held callable called from a method (steps/merge-callable-r48.md S1): add5, a root own holding makeAdder's merged
     # node, called from go natively through the same l2_mad_call helper the root's walk calls -- before, l2_prep's frame
     # tail returned without a word (exit 3, "a refusal said nothing"); walked, go calls it through the walk's PRIM.

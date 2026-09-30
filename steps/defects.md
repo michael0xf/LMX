@@ -4,11 +4,13 @@
 
 ## Открытые / в работе
 
-### COMMON-ASSIGNMENT-RHS-TYPING — 2026-09-30, Codex, OPEN
+### COMMON-ASSIGNMENT-RHS-TYPING — 2026-09-30, Codex, IN WORK
 
 Полный `dst_chars_cleanup_full_20260930_01` выявил 12 регрессий прежде зелёных строк после подключения machine-local assignment к общему checker. Все текущие фикстуры принимаются прежним `after_return_full` binary, но уже отказываются pre-API `diagnostic14_final` binary: удаление `dst_chars` их не создало. Десять отказов — неизвестный тип RHS, `parser_text_heap` — несовместимость известного `void*` с типизированным C-указателем, `unit_local_init_graph_ref_admit_refused` — незавершённый маршрут структурного admission. В частности, `unit_sizeof_type_frame` и C-member строки падают на присваивании pointer-cast до sizeof/доступа к члену: `l2_colon_simple_ty` знает только скалярные cast, хотя эмиттер уже поддерживает указательные.
 
 Исправить общее получение типа/принимающего контракта и преобразование, не возвращать обход checker для machine locals. Сохранить raw-C door без знания имён C, const, реальную глубину ссылки, отказ несовместимым указателям и implements для Structure. Проверить прежние 12 строк и отрицательные контроли pointer/const/depth/admission; не менять их ожидания на отказ. [Полная таблица запуска, контрольная атрибуция и хэши](native-selfbuild-20260930.md#api-cleanup-full-checkpoint). Эта работа предшествует callable-actual и следующему clean-kernel gate.
+
+Development-checkpoint `661735a` опубликован с явным списком отказов. Следующий единственный writer/build — `root_graph_audit`, тикет `COMMON-ASSIGNMENT-RHS-TYPING-20260930`. Дополнительная зависимость: разрешив C99-преобразование void* в объектный указатель, нельзя пропустить implements структурной цели; admission определяется принимающей моделью, а не старым предикатом RHS `graph || opaque-C`. Инициализатор и последующее присваивание должны пользоваться одним решением о типе/допуске.
 
 ### SUB-ACTUAL-REFERENCE-CLASSIFICATION — 2026-09-30, Codex, OPEN
 

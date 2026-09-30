@@ -11,8 +11,10 @@
 Документационный checkpoint Q56/Q57 и явных ссылок опубликован: `6538898`;
 последующие уточнения адресуемого хранилища и снятие старых sticky-правил
 также находятся в main. Runtime-checkpoint `ca2f1cd` проверен отдельно
-(278/278, 104 selftests; L3 11/11). Транслятор и связанные исправления —
-ещё WIP в `build/opus_wt`; stable `l2src` не обновляется.
+(278/278, 104 selftests; L3 11/11). Транслятор и связанные исправления
+сохранены и опубликованы development-checkpoint `661735a`; дальнейшая
+правка общей типизации присваивания идёт в `build/opus_wt`.
+Stable `l2src` не обновляется.
 
 Последний полный generated gate `dst_chars_cleanup_full_20260930_01`:
 **920/988, 68 отказов**: 35 прежних отказов исправлены, 15 новых фикстур
@@ -28,11 +30,11 @@ machine-local assignment выявила неполную типизацию/admi
 
 Ближайшая последовательность единственного writer/build:
 
-1. Сохранить проверенный CHAR-DECLARED-CELL-IDENTITY в следующем согласованном
-   исходниковом checkpoint: kernel 280/280, L3 11/11, focused generated 19/19,
+1. CHAR-DECLARED-CELL-IDENTITY сохранён в согласованном development-checkpoint
+   `661735a`: kernel 280/280, L3 11/11, focused generated 19/19,
    шесть мутантов. Точные байты и ограничения приведены в рабочей записке;
    новый полный generated gate приведён выше; это не clean-kernel.
-2. CATCH-FORMAL-RETAINED-GRAPH и CHAR-ADDRESS-ASSIGNMENT-TYPE — VERIFIED WIP:
+2. CATCH-FORMAL-RETAINED-GRAPH и CHAR-ADDRESS-ASSIGNMENT-TYPE включены в `661735a`:
    итоговый focused gate 47/47 и три отрицательных мутации. Общий scope,
    точный declaration-contract, присваивание machine-local через общий checker;
    raw-C результат не маскируется целым, структурный admission сохранён.
@@ -42,7 +44,7 @@ machine-local assignment выявила неполную типизацию/admi
    20/21, единственный красный — реальное расхождение второго merge после
    изменения исходного поля, не наблюдатель. Прежние потребители — 14/14;
    observer-контроли — 15/15. Новый полный корпус приведён выше.
-4. MERGE-RESULT-STALE-LITERAL-CHECK — VERIFIED WIP: безусловные проверки
+4. MERGE-RESULT-STALE-LITERAL-CHECK включён в `661735a`: безусловные проверки
    71…91 и мёртвые литеральные метаданные удалены; настоящие отказ/admission
    и привязка сохранены. Девять строк используют тестовые наблюдения,
    оба root-merge прошли native и настоящий walker. Итог 43/44: один

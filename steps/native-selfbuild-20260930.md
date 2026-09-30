@@ -1,6 +1,7 @@
 # Native compilation and the route to §§8–8a
 
-Status: 2026-09-30, runtime checkpoint ca2f1cd on main; translator WIP in build/opus_wt.
+Status: 2026-09-30, exact development checkpoint `661735a` pushed to main;
+common-assignment repair continues in `build/opus_wt`. Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
 <a id="api-cleanup-full-checkpoint"></a>
@@ -57,7 +58,10 @@ files against staged evidence: 98 against the full generated run and 16
 kernel selftests against the kernel run. Harness API changes were separately
 reviewed and hashed. All processes are terminal and diff checks pass.
 
-This is a reproducible development checkpoint with disclosed failures, not a
+The source slice is committed and pushed as `661735a` (115 explicit source,
+header, driver, fixture and harness paths). Its preceding documentation
+checkpoint is `9c9c314`. Unrelated user work was excluded. This is a
+reproducible development checkpoint with disclosed failures, not a
 clean-kernel or stable promotion, and not completion of §8 or §8a. Earlier
 WIP/run statements below are historical records of their named slices;
 the current full result above supersedes earlier full-corpus counts.

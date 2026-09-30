@@ -28,6 +28,8 @@ Field definition: [L2 §2](L2_spec_en.md#lmx). The target L1 projection in `l2sr
 <a id="type-by-range"></a>
 ## 4. Type by range in L1
 
+Lowering preserves the common `Lmx` record type defined in [L2 §3](L2_spec_en.md#type-by-range): model names generate neither separate C types nor per-object storage arrays. Different chunks of that array have the same physical-type classification; compatibility of structural contents does not become a C-type conversion table.
+
 Rule: [L2 §3](L2_spec_en.md#type-by-range). Enumerations and `LmxRange` live in the same `lmx.h.lm1`. The index belongs to the arena; classification is `lmx_range_*` from `lmx_arena.h.lm1`, bodies in `lmx_range.lm1` / `lmx_arena.lm1`. Mechanism domains are `#define`s in `lmx_implements.h.lm1`, not fields of `LmxMsg`.
 
 <a id="pool"></a>

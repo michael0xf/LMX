@@ -134,6 +134,8 @@ Execution retains the physical reference to the active Structure (§12). This is
 
 A value description is an ordinary explicitly accessible Structure. A receiving expression obtains it through an argument or reference. It is not secretly attached to every primitive and is unnecessary for determining a physical type from an address. Names such as `class` and `class.range` denote a particular profile's data, not mandatory global language entities.
 
+The conversion table defines relations between primitive values and their descriptions, not between every pair of Structures or their names. Distinct Structures `A` and `B` share the physical `Lmx` representation in the arena's typed arrays ([L2 §3](L2_spec_en.md#type-by-range)); a name or field composition creates neither a separate physical type nor a one-element array. Whether `B` satisfies requirement `A` is determined by `implements` relative to the Consumer, not by a `B → A` conversion row. Obtaining or transferring a Structure reference likewise requires no converter for each model. Shared physical representation does not remove structural admission, qualifications, or the distinction between a Structure reference and a reference to a reference cell.
+
 A description separates its semantic contract from architecture binding. The contract defines meaning: count, integer, rational, profile-precision number, complex value, atom, address, opaque resource or absence of content. The binding defines width, signedness, range and target spelling. Equal representation does not imply equal contracts: `Boolean` and `int8` may share storage while admitting different values.
 
 Ordinary description fields include `cell`, `semantic`, flags such as `numeric`/`integer`/`floating`/`reference`/`opaque`, `width`, `signed`, `range`, `spelling` and `convert` keys. The profile chooses field names. A range declaration is contract data; satisfaction is established through the [single admission mechanism](#admission), not by the field's presence alone.
@@ -246,7 +248,7 @@ By contrast, an expression that merely consumes whatever fields and operations i
 
 ### Message-local conversion table
 
-The conversion table used by a Message is likewise explicit Message-local data.
+The primitive-value conversion table ([§5](#descriptions)) used by a Message is likewise explicit Message-local data. It is not a compatibility catalogue of individual Structures.
 
 It is not a hidden global registry and is not implicitly shared by all Messages.
 
@@ -259,8 +261,8 @@ Message M
         b -> String
 
     conversions:
-        int -> String
-        String -> int
+        int -> double
+        double -> int
         Meter -> Foot
         Foot -> Meter
         ...
@@ -274,7 +276,7 @@ Absence of a conversion from the Message context does not trigger a process-wide
 
 ### Conversion and candidate consumption
 
-When a Consumer requires a value of description T, a candidate need not originate with an identical primitive or semantic description if the Message-local conversion context explicitly provides a valid path accepted by the Consumer's rules.
+When a Consumer requires a primitive value of description T, a candidate need not originate with an identical primitive or semantic description if the Message-local conversion context explicitly provides a valid path accepted by the Consumer's rules.
 
 The ordinary sequence is:
 
@@ -358,14 +360,14 @@ int -> int
 while the selected callable has:
 
 ```text
-String -> decimal
+double -> double
 ```
 
 if this Message explicitly provides and admits:
 
 ```text
-int -> String
-decimal -> int
+int -> double
+double -> int
 ```
 
 The resulting call is still fully typed. The arguments presented to the selected callable must satisfy its actual descriptor after formation, and the value presented to the result Consumer must satisfy the Consumer's requirement after result conversion.
@@ -610,6 +612,8 @@ For example, a method inside independent Structure S can use S's field through i
 <a id="execution"></a>
 <a id="callables"></a>
 ## 11. Callable expressions and their interfaces
+
+A signature describes inputs and the result; it is not an executable body. A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. Synonymy between two descriptions in a signature concerns the parameter contract and does not extend to executable occurrences of those spellings. Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
 
 An executable body is a structural expression. Every named Structure may be executed through the bare atom of its name, but declaring or constructing it does not itself execute its body. `fn` defines an expression with one logical result; `sub` performs execution without a returned value; `fm` has one result Structure whose fields provide a multiple-return surface. The signature defines explicit arguments, required dynamic and lexical inputs, each value's pass mode, the result and declared `throws` exits. Bare `return` exits without a value; `return: value` supplies a value in a body admitting a result. An ordinary named Structure is a callable without a result: only bare `return` is admitted in it, and `return: value` is rejected; `sub` likewise admits bare `return` but does not acquire a result from it. At the opening level `return` -- bare, or with a value in a body admitting a result -- may also close any callable Structure (a method or a named Structure) as a trailer under the general grammar rule; `return` does not close a non-callable Structure. No construct requires a closer: `end: Name`, bare `return` and `until:` are boundaries of the notation, not a condition of declaration; a named Structure closed by a level cut alone is declared the same way -- by general resolution ([§9](#construction)) -- and reaching the end of its body, as of a `sub` body, completes the execution without a result, and no return node is synthesized there. A structural path through a Structure reads its field and does not execute it; a declaration in an executable body is a local variable of that body: visible forward and down (into nested bodies), lying in the Structure where it is written -- with no separate field or data container beside it, while the rest of the graph (the statements) is kept in the same place and order for the interpreter ([§12](#dynamic)); a named Structure is the same callable procedure without a result; a bare name passes no argument, whereas `Model: Other` with existing names passes `Other` under the general call contract; the path `M\i` from outside opens the place of declaration -- a declaration always establishes a value there -- but never the activation's working variable or the initializer node.
 

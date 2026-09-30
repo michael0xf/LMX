@@ -97,6 +97,15 @@ same representation. It means the graph stores heterogeneous physical
 references and classification is external to the node. An array of `void *`
 does not care what a slot holds.
 
+All ordinary Structure headers use the common typed `Lmx` service array,
+not a new physical type or a one-element pool for each model or instance.
+Multiple arena chunks may carry the same physical type. This pool is distinct
+from each Structure's child-reference backing. Model-specific compatibility
+belongs to structural `implements`; the conversion table concerns primitive
+values, not a catalogue of individual Structures. See
+[L2 §3](docs/L2_spec_en.md#type-by-range) and
+[semantics §5](docs/LMX_semantics.en.md#descriptions).
+
 There are three different relationships that must not be merged:
 
 | Relationship | Physical source | Meaning |

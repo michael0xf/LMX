@@ -136,6 +136,8 @@ Execution retains the physical reference to the active Structure (§12). This is
 [RU]
 Описание значения — обычная явно доступная структура. Принимающее выражение получает его через аргумент или ссылку. Описание не прикрепляется скрыто к каждому примитиву и не нужно для определения физического типа по адресу. Названия `class`, `class.range` и подобных таблиц обозначают данные конкретного профиля, а не обязательные глобальные сущности языка.
 
+Таблица преобразований задаёт соответствия примитивных значений и их описаний, а не всех пар Structure или их имён. Разные структуры `A` и `B` имеют общее физическое представление `Lmx` в типизированных массивах арены ([L2 §3](L2_spec_ru.md#type-by-range)); имя и состав полей не создают отдельный физический тип или массив из одного элемента. Структурная пригодность `B` требованию `A` определяется `implements` относительно Consumer, не строкой конверсии `B → A`. Получение или перенос ссылки на Structure также не требует отдельного конвертера для каждой модели. Общность физического представления не отменяет структурный допуск, квалификации и различие ссылки на Structure со ссылкой на ссылочную ячейку.
+
 Описание разделяет семантический контракт и архитектурное представление. Контракт задаёт смысл: счётное число, целое, рациональное, число с выбранной точностью, комплексное, атом, адрес, непрозрачный ресурс или отсутствие содержимого. Представление задаёт ширину, знаковость, диапазон и обозначение целевого типа. Одинаковое представление не делает контракты одинаковыми: `Boolean` и `int8` могут храниться одинаково, но иметь разные допустимые значения.
 
 Обычные поля описания включают `cell`, `semantic`, признаки `numeric`/`integer`/`floating`/`reference`/`opaque`, `width`, `signed`, `range`, `spelling` и ключи преобразований `convert`. Имена полей выбирает профиль. Указание диапазона является данными контракта; его выполнение проверяется [единым механизмом допуска](#admission), а не самим наличием поля.
@@ -149,6 +151,8 @@ Execution retains the physical reference to the active Structure (§12). This is
 Численное преобразование сохраняет контракт диапазона назначения: `u16(255) → u8` допустимо при наличии преобразователя, `u16(256) → u8` даёт ошибку диапазона, а не ноль. Округление `1.5 → i32` и потеря точности внутри диапазона требуют отдельного правила численного профиля. Доказанная включённость диапазонов может исключать избыточную машинную операцию, сохраняя семантическое требование. Ошибки формата, диапазона и поведения преобразователя не заменяются положительным ответом `implements`.
 [EN]
 A value description is an ordinary explicitly accessible Structure. A receiving expression obtains it through an argument or reference. It is not secretly attached to every primitive and is unnecessary for determining a physical type from an address. Names such as `class` and `class.range` denote a particular profile's data, not mandatory global language entities.
+
+The conversion table defines relations between primitive values and their descriptions, not between every pair of Structures or their names. Distinct Structures `A` and `B` share the physical `Lmx` representation in the arena's typed arrays ([L2 §3](L2_spec_en.md#type-by-range)); a name or field composition creates neither a separate physical type nor a one-element array. Whether `B` satisfies requirement `A` is determined by `implements` relative to the Consumer, not by a `B → A` conversion row. Obtaining or transferring a Structure reference likewise requires no converter for each model. Shared physical representation does not remove structural admission, qualifications, or the distinction between a Structure reference and a reference to a reference cell.
 
 A description separates its semantic contract from architecture binding. The contract defines meaning: count, integer, rational, profile-precision number, complex value, atom, address, opaque resource or absence of content. The binding defines width, signedness, range and target spelling. Equal representation does not imply equal contracts: `Boolean` and `int8` may share storage while admitting different values.
 
@@ -260,7 +264,7 @@ return: x
 
 ### Локальная для Message таблица преобразований
 
-Таблица преобразований, используемая Message, — такие же явные локальные для Message данные.
+Таблица преобразований примитивных значений ([§5](#descriptions)), используемая Message, — такие же явные локальные для Message данные. Она не является каталогом совместимости отдельных структур.
 
 Это не скрытый глобальный реестр, и она не разделяется неявно всеми Message.
 
@@ -273,8 +277,8 @@ Message M
         b -> String
 
     conversions:
-        int -> String
-        String -> int
+        int -> double
+        double -> int
         Meter -> Foot
         Foot -> Meter
         ...
@@ -288,7 +292,7 @@ Message M
 
 ### Преобразование и потребление кандидата
 
-Когда Consumer требует значение описания T, кандидат не обязан исходно иметь тождественное примитивное или семантическое описание, если локальный для Message контекст преобразований явно предоставляет допустимый путь, принимаемый правилами Consumer.
+Когда Consumer требует примитивное значение описания T, кандидат не обязан исходно иметь тождественное примитивное или семантическое описание, если локальный для Message контекст преобразований явно предоставляет допустимый путь, принимаемый правилами Consumer.
 
 Обычная последовательность:
 
@@ -372,14 +376,14 @@ int -> int
 тогда как выбранное вызываемое выражение имеет:
 
 ```text
-String -> decimal
+double -> double
 ```
 
 если этот Message явно предоставляет и допускает:
 
 ```text
-int -> String
-decimal -> int
+int -> double
+double -> int
 ```
 
 Получившийся вызов остаётся полностью типизированным. Аргументы, предъявленные выбранному вызываемому выражению, должны удовлетворять его фактическому дескриптору после формирования, а значение, предъявленное Consumer результата, — требованию Consumer после преобразования результата.
@@ -530,7 +534,7 @@ By contrast, an expression that merely consumes whatever fields and operations i
 
 ### Message-local conversion table
 
-The conversion table used by a Message is likewise explicit Message-local data.
+The primitive-value conversion table ([§5](#descriptions)) used by a Message is likewise explicit Message-local data. It is not a compatibility catalogue of individual Structures.
 
 It is not a hidden global registry and is not implicitly shared by all Messages.
 
@@ -543,8 +547,8 @@ Message M
         b -> String
 
     conversions:
-        int -> String
-        String -> int
+        int -> double
+        double -> int
         Meter -> Foot
         Foot -> Meter
         ...
@@ -558,7 +562,7 @@ Absence of a conversion from the Message context does not trigger a process-wide
 
 ### Conversion and candidate consumption
 
-When a Consumer requires a value of description T, a candidate need not originate with an identical primitive or semantic description if the Message-local conversion context explicitly provides a valid path accepted by the Consumer's rules.
+When a Consumer requires a primitive value of description T, a candidate need not originate with an identical primitive or semantic description if the Message-local conversion context explicitly provides a valid path accepted by the Consumer's rules.
 
 The ordinary sequence is:
 
@@ -642,14 +646,14 @@ int -> int
 while the selected callable has:
 
 ```text
-String -> decimal
+double -> double
 ```
 
 if this Message explicitly provides and admits:
 
 ```text
-int -> String
-decimal -> int
+int -> double
+double -> int
 ```
 
 The resulting call is still fully typed. The arguments presented to the selected callable must satisfy its actual descriptor after formation, and the value presented to the result Consumer must satisfy the Consumer's requirement after result conversion.
@@ -1035,6 +1039,8 @@ For example, a method inside independent Structure S can use S's field through i
 
 @@ callables | Вызываемые выражения и их интерфейсы | Callable expressions and their interfaces | 7–7.3; 7.5.1; 8.5–8.8; 19.21; 21.9
 [RU]
+Сигнатура описывает входы и результат; она не является исполняемым телом. Запись формала не выполняет вызов, объявление или присваивание, которое та же запись могла бы означать в теле. Синонимия двух описаний в сигнатуре относится к контракту параметра и не переносится на исполняемые записи. Подача фактического аргумента выполняет предусмотренные контрактом преобразования и допуск, но не исполняет описание формала как оператор тела. Использование полученного параметра в теле разрешается по его контракту и общим правилам выражений, а не исполнением текста сигнатуры.
+
 Исполняемое тело — структурное выражение. Всякая именованная Structure может исполняться голым атомом имени, но её объявление и построение сами по себе тело не исполняют. `fn` определяет выражение с одним логическим результатом; `sub` — выполнение без возвращаемого значения; `fm` — один результат-структуру, поля которой образуют поверхность множественного возврата. Сигнатура задаёт явные аргументы, требуемые динамические и лексические входы, способ передачи каждого значения, результат и объявленные выходы `throws`. Голый `return` завершает исполнение без значения; `return: value` передаёт значение в допускающем результат теле. Обычная именованная Structure — callable без результата: в ней допустим только голый `return`, а `return: value` отвергается; `sub` также допускает голый `return`, но не приобретает от него результат. На уровне открытия `return` — голый, а в допускающем результат теле и со значением — может также закрывать любую callable Structure (метод или именованную Structure) как trailer по общему правилу грамматики; не-callable Structure `return` не закрывает. Замыкатель не обязателен ни одной конструкции: `end: Name`, голый `return` и `until:` — границы записи, а не условие объявления; именованная Structure, закрытая одним срезом уровня, объявляется так же — общим разрешением ([§9](#construction)), — а конец её тела, как и тела `sub`, завершает исполнение без результата, и узел возврата там не синтезируется. Структурный путь через Structure читает её поле и не исполняет её; объявление в исполняемом теле — локальная переменная этого тела: видна вперёд и вниз (во вложенные тела), лежит в Structure там, где написана, — рядом с ней нет ни отдельного поля, ни контейнера данных, а остальной граф (операторы) хранится там же и в том же порядке для интерпретатора ([§12](#dynamic)); именованная Structure — та же вызываемая процедура без результата; голое имя не передаёт аргумент, а `Model: Other` при существующих именах передаёт `Other` по общему контракту вызова; путь `M\i` снаружи открывает место объявления — объявление в любом случае заводит там значение, — но не рабочую переменную активации и не узел инициализатора.
 
 Вызываемое вхождение имеет собственную структурную идентичность и поле `parent`, указывающее в его над-методное лексическое пространство. Несколько вхождений могут ссылаться на один неизменяемый метод. Копирование графа не создаёт новую реализацию метода и не меняет его сигнатуру; состояние принадлежит конкретным структурным вхождениям и активациям. Вложенное определение не захватывает кадр вызывающего выражения в скрытое окружение.
@@ -1071,6 +1077,8 @@ return: 10 20
 
 Возвращаемая ссылка сохраняет точную идентичность цели. Построение результата, если нужно, принадлежит вычислению возвращаемого выражения, а не операции перехода. Возврат вложенной функции завершает её активацию, а не автоматически весь актор. Порядок публикации и очистки задан в [выходах](#exits).
 [EN]
+A signature describes inputs and the result; it is not an executable body. A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. Synonymy between two descriptions in a signature concerns the parameter contract and does not extend to executable occurrences of those spellings. Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
+
 An executable body is a structural expression. Every named Structure may be executed through the bare atom of its name, but declaring or constructing it does not itself execute its body. `fn` defines an expression with one logical result; `sub` performs execution without a returned value; `fm` has one result Structure whose fields provide a multiple-return surface. The signature defines explicit arguments, required dynamic and lexical inputs, each value's pass mode, the result and declared `throws` exits. Bare `return` exits without a value; `return: value` supplies a value in a body admitting a result. An ordinary named Structure is a callable without a result: only bare `return` is admitted in it, and `return: value` is rejected; `sub` likewise admits bare `return` but does not acquire a result from it. At the opening level `return` -- bare, or with a value in a body admitting a result -- may also close any callable Structure (a method or a named Structure) as a trailer under the general grammar rule; `return` does not close a non-callable Structure. No construct requires a closer: `end: Name`, bare `return` and `until:` are boundaries of the notation, not a condition of declaration; a named Structure closed by a level cut alone is declared the same way -- by general resolution ([§9](#construction)) -- and reaching the end of its body, as of a `sub` body, completes the execution without a result, and no return node is synthesized there. A structural path through a Structure reads its field and does not execute it; a declaration in an executable body is a local variable of that body: visible forward and down (into nested bodies), lying in the Structure where it is written -- with no separate field or data container beside it, while the rest of the graph (the statements) is kept in the same place and order for the interpreter ([§12](#dynamic)); a named Structure is the same callable procedure without a result; a bare name passes no argument, whereas `Model: Other` with existing names passes `Other` under the general call contract; the path `M\i` from outside opens the place of declaration -- a declaration always establishes a value there -- but never the activation's working variable or the initializer node.
 
 A callable occurrence has its own structural identity and a `parent` link into its above-method lexical space. Multiple occurrences can reference one immutable method. Graph copying neither creates another method implementation nor changes its signature; state belongs to particular structural occurrences and activations. A nested definition does not capture a caller frame in a hidden environment.

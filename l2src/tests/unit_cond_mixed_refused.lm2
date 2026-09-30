@@ -1,0 +1,13 @@
+# Class A in a method's condition: `if: k = j` with an int k and a size_t j is two types -- a conversion (-175) -- as
+# the walk refuses it at the root.  The native kind check (l2_check_value_kinds) typed the condition but did not refuse
+# a mix, and nothing else checks a condition: it translated, and C compared.  Refused at the first operand.
+fn: m () int
+    int: k 5
+    size_t: j 5U
+    int: out 0
+    if: k = j
+        out: 7
+    return: out
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

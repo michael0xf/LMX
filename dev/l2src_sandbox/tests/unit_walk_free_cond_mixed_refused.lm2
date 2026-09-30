@@ -1,0 +1,14 @@
+# The same through a free name, in a loop's condition: peek's `while: j < k` reads the caller's int k.  The kind check
+# waits for k's type (kind 3, as the value checks wait: steps/free-names.md M2), then refuses the mix.
+fn: peek () int
+    size_t: j 0U
+    while: j < k
+        j: j + 1U
+    int: out 7
+    return: out
+fn: m () int
+    int: k 5
+    return: peek()
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

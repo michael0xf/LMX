@@ -4023,6 +4023,20 @@ $fixtures = @(
         Needle = 'unit_walk_group_decl_mixed_refused.lm2:6:16: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_group_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # Class A in a method's condition: the native kind check (l2_check_value_kinds) refuses a mix at the operation's
+    # first operand, and waits for a free name's type (kind 3) as the value checks do -- a condition was checked by
+    # nothing, and `if: k = j` / `while: j < k` with an int k and a size_t j translated (the walk refuses them at the
+    # root).  A local `if:`, a free name in `while:`; one type per condition, a waited one included, still 7.
+    [pscustomobject]@{ Name = 'unit_cond_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_cond_mixed_refused.lm2:8:9: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cond_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_cond_mixed_refused.lm2:8:9: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_cond_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_cond_mixed_refused.lm2:5:12: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_free_cond_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_free_cond_mixed_refused.lm2:5:12: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_cond_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A held callable called from a method (steps/merge-callable-r48.md S1): add5, a root own holding makeAdder's merged
     # node, called from go natively through the same l2_mad_call helper the root's walk calls -- before, l2_prep's frame
     # tail returned without a word (exit 3, "a refusal said nothing"); walked, go calls it through the walk's PRIM.

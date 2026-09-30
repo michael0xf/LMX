@@ -980,6 +980,7 @@ prototype:
     fn: l2_waits (@: LmP0Field field; int: n; int: mi) int
     fn: l2_wait_add (int: kind; int: mi; @: void site; int: n; int: to; const: @(char path)) int
     fn: l2_wait_run (const: @(char path)) int
+    fn: l2_wait_kinds (@: LmP0Field field; int: n; int: mi; const: @(char path)) int
     fn: l2_wait_free () int
     fn: l2_scan_fields (@: LmP0Field field; int: n; int: mi; @: int seen) int
     fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
@@ -10845,6 +10846,8 @@ fn: l2_wait_run (const: @(char path)) int
             rc: l2_colon_check_assignment((cast: (@: LmP0Node) l2_wait_site[w]), mi, l2_method_src(mi, path))
         if: rc = 0 && l2_wait_i[6 * w] = 2
             rc: l2_check_value_convert_field((cast: (@: LmP0Field) l2_wait_site[w]), l2_wait_i[6 * w + 2], l2_wait_i[6 * w + 3], mi, l2_method_src(mi, path))
+        if: rc = 0 && l2_wait_i[6 * w] = 3
+            rc: l2_wait_kinds((cast: (@: LmP0Field) l2_wait_site[w]), l2_wait_i[6 * w + 2], mi, l2_method_src(mi, path))
         while: l2_scope_n > base
             l2_scope_pop()
         w: w + 1
@@ -10856,6 +10859,15 @@ fn: l2_wait_run (const: @(char path)) int
     if: l2_throws_close() != 0
         return: 1
 return: l2_dyn_close(path)
+
+# A waited kind check (kind 3): l2_check_value_kinds at its span, located at the span's first value where the typer
+# names no operand.
+fn: l2_wait_kinds (@: LmP0Field field; int: n; int: mi; const: @(char path)) int
+    @: LmP0Field f
+    f: l2_next_active(field)
+    if: f = 0
+        return: 0
+return: l2_check_value_kinds(field, n, mi, path, f\value)
 
 fn: l2_wait_free () int
     if: l2_wait_i != 0
@@ -19252,6 +19264,10 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
     @: LmP0Node where
     if: field = 0 || n < 3 || n > 63
         return: 0
+    # steps/free-names.md M2: an operation reading a dynamic input the closure has not typed yet waits for its type
+    # (kind 3, l2_wait_kinds), as a consumed value does -- a condition has no other check that would.
+    if: l2_waits(field, n, mi) != 0
+        return: l2_wait_add(3, mi, (cast: (@: void) field), n, 0, path)
     m: l2_rw_tokens(field, n, tok)
     if: m < 3
         return: 0
@@ -19266,6 +19282,10 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
         return: l2_error(path, where, "a text where a number is asked")
     if: ty = 0 - 17
         return: l2_error(path, where, "a reference compared with a number other than 0")
+    # Class A: two numeric types in one operation are a conversion (-175), refused at the operation's first operand, as
+    # a consumed value is (l2_check_value_convert_field) -- a condition's operation too, which nothing else checks.
+    if: ty = 0 - 3
+        return: l2_error(path, tok[0], "mixed numeric types (a conversion)")
 return: 0
 
 # THE CALLABLE A BARE ATOM NAMES (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139), resolved as the head

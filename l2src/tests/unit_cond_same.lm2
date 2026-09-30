@@ -1,0 +1,19 @@
+# Conditions of one type each are no class A: in peek, `k = 5 && j = 5U` joins an int comparison and a size_t one (each
+# is its own condition; `&&` gives an int), and `(cast: (size_t) k) = j` is one type.  k is the caller's free name, so
+# the first condition waits for its type (kind 3) and passes.  3 + 4: Entry 7.
+fn: peek () int
+    size_t: j 5U
+    int: out 0
+    if: k = 5 && j = 5U
+        out: out + 3
+    if: (cast: (size_t) k) = j
+        out: out + 4
+    int: r out
+    return: r
+fn: m () int
+    int: k 5
+    return: peek()
+int: code 0
+code: m()
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

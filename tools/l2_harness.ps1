@@ -4037,6 +4037,24 @@ $fixtures = @(
         Needle = 'unit_walk_free_cond_mixed_refused.lm2:5:12: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cond_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # A path to a number field is a value of that field's type in a method's composite (l2_native_path_ty; the walk
+    # types a path operand by its field): it was untyped, which leaves the whole value untyped -- class A with a path
+    # translated, in a value and in a condition, and a composite holding a path took no conversion edge.  One type
+    # through P\v, node\k and a method's own S\w, a condition included, still 7.
+    [pscustomobject]@{ Name = 'unit_path_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_mixed_refused.lm2:8:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_path_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_path_mixed_refused.lm2:8:13: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_cond_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_cond_mixed_refused.lm2:8:9: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_path_cond_mixed_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_path_cond_mixed_refused.lm2:8:9: mixed numeric types (a conversion)'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_conv_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_conv_norow_refused.lm2:7:5: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_path_conv_norow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_walk_path_conv_norow_refused.lm2:7:5: the program has no method `lm_stg_convert_size_t_int`'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # A held callable called from a method (steps/merge-callable-r48.md S1): add5, a root own holding makeAdder's merged
     # node, called from go natively through the same l2_mad_call helper the root's walk calls -- before, l2_prep's frame
     # tail returned without a word (exit 3, "a refusal said nothing"); walked, go calls it through the walk's PRIM.

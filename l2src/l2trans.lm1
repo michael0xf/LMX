@@ -900,6 +900,7 @@ prototype:
     fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     fn: l2_native_expr_ty (@@: LmP0Node tok; int: lo; int: hi; int: mi) int
     fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
+    fn: l2_native_path_ty (const: @(LmP0Text t)) int
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
     fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: char dest) int
@@ -7930,10 +7931,11 @@ return: 3
 # l2_rw_seen, the walk's own count-pass bookkeeping, which is never populated for an ordinary
 # method's own fields outside a walk (measured: reusing l2_rw_tyof directly refused ordinary
 # local-variable composites like `keep - 1U` as "incompatible type" across two dozen unrelated
-# fixtures).  Two shapes l2_colon_bound_ty/l2_colon_simple_ty do not resolve as a plain numeric
-# value -- a path atom's glued text (`a\value`, l2_rw_path_atom; l2_colon_bound_ty looks up a
-# plain declared name, not a path) and a non-numeric bound name (a callable formal used bare, a
-# dynamic call) -- must poison the WHOLE composite (a distinct code, -99, that a leaf's own
+# fixtures).  A path atom's glued text (`a\value`, l2_rw_path_atom) is typed by the number field
+# it reaches (l2_native_path_ty; l2_colon_bound_ty looks up a plain declared name, not a path).
+# Two shapes do not resolve as a plain numeric value -- a path that reaches no number field and a
+# non-numeric bound name (a callable formal used bare, a dynamic call) -- and must poison the
+# WHOLE composite (a distinct code, -99, that a leaf's own
 # unify-permissive -1/-2 must never be confused with: unify(-1, -1) already means "two untyped
 # literals," not "two things I could not resolve," and defaulting the latter to unsigned produced
 # the same false "incompatible type" refusal one level up).  Returns a plain primitive type code
@@ -7955,7 +7957,7 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
                 return: 0 - 2
             return: 0 - 1
         if: l2_rw_has_slash(t) != 0
-            return: 0 - 99
+            return: l2_native_path_ty(t)
         if: l2_colon_simple_ty(node, mi, @ ty) != 0
             return: 0 - 99
         # A text is no number (-11; -10 is a number literal or a char), and a Structure is a reference: their own
@@ -8084,6 +8086,19 @@ fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
         k: k + 2
     ---
 return: l2_native_expr_ty(tok, 0, m - 1, mi)
+
+# The type of a path to a number field -- the field it reaches (l2_path_kind -> l2_path_kind_ft, as the path write's
+# check reads it; the walk types a path operand by its field, l2_rw_opty) -- or -99 for any other path, which leaves
+# the composite untyped.
+fn: l2_native_path_ty (const: @(LmP0Text t)) int
+    int: leaf 0
+    int: ft
+    if: t = 0 || t\data = 0 || t\length = 0U || t\length >= 1024U
+        return: 0 - 99
+    ft: l2_path_kind_ft(l2_path_kind(t\data, t\length, @ leaf))
+    if: ft < 0
+        return: 0 - 99
+return: ft
 
 fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     []: @(LmP0Node) tok 64

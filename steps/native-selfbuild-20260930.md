@@ -153,6 +153,60 @@ primitive-pointer or held-root walker coverage is claimed. Remove unused
 with callers before clean-kernel; private threading is already gone. Correct
 the remaining old field-rebinding introduction in `lmx_chars.lm1` in that cleanup.
 
+<a id="catch-pointer-verified-wip"></a>
+### Catch scope and pointer contracts: verified WIP
+
+`build/l2_harness/catch_pointer_20260930_final2`: **47/47**, 44 selected
+fixtures and three build/scope rows. Parent independently checked the terminal
+summary, source hashes and clean diff. All writer commands ended before the
+next source/build owner started. No production runtime or driver change in
+this slice; the earlier CHAR kernel/L3 results remain separate evidence,
+not a claim that the full generated corpus has passed.
+
+Hosted catch declarations now use the ordinary eligibility and formal binding
+paths. `l2_rw_catch_stmt` restores scope with common enter/leave; native scope
+recognizes direct P0 Structure operands without a catch-name branch. Numeric
+catch cells stay uncached. The original catch/break/continue witness gives 105;
+new payload and repeat witnesses prove 3→7, 3/5→7/9 and restored outer formal
+(final 20), with real walker execution and PAD aliasing its canonical cell.
+
+Legacy pointer slots retain the type from `L2Declaration/contract` and emit
+through `l2_pointer_decl_text`. Machine-local assignments use the common
+checker and existing model metadata. Opaque raw-C results no longer masquerade
+as integer literals; C checks their machine receiving type, while Structure
+targets still execute runtime admission. Compatible/incompatible `c.memmove`
+descriptor candidates and the old `entry_index`/`entry_strcmp` pass their
+positive/negative expectations. Ordinary numeric zero bindings, nonzero
+literals, wrong primitive pointer types, lost const and wrong depth refuse.
+
+Three deliberate source mutants fail: lost catch scope restores the wrong
+value (83 rather than 20); the old slot type refuses legal char* assignment;
+removing the shared checker accepts int*←char*. Mutations were restored before
+the final gate; evidence is in `catch_pointer_20260930_mutant`. The first
+`catch_pointer_20260930_final` stopped on an L1 nested-body cutter syntax error
+before building; it is not a successful gate. The final2 restart includes the
+correction. All twelve new fixtures match its staged bytes.
+
+```text
+translator blob 3c3dc506b53c0feec78f375b6f85d261560a1503
+translator SHA256 24ABDF253083192AC34DC0FEF9165FC4D1969FD45676EC9136B258174F23D0F5
+harness blob 3403e78cf6be0ef22e933aba0f63416814f11f6b
+harness SHA256 4474122C95A930B4E269C2EAC99A4C52FB97CED72D3BAFBFD3A00FEDD6AF0E5D
+```
+
+Still open: full canonical body/copy identity, explicit `once\catch\x` walker
+path, direct initializer `@: char p @a`, and complete C99 integer constant
+expressions/literal forms. The null witnesses cover `0`, `0U`, `(0)` and `-0`
+using the existing literal decoder, not a new constant-folding engine. Two old
+unregistered sources are not positive coverage: `unit_ptr_local_scope` still
+has a valued void-root return and `unit_unsigned_ptr` lacks its int→size_t
+receiver; `_04` records those independent diagnostics.
+
+The next owner is migrating the safe 19 stale graph observers and two root
+merge rows. Eight zero-success fixtures need a nonzero witness. Observers must
+follow executable sequence attachments, not merely find an allocated orphan
+frame. No production edit is authorized by a mismatched temporary name.
+
 ### Bounded runtime checkpoint ca2f1cd
 
 The independently verified runtime slice is separated from translator WIP:

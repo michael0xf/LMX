@@ -46,6 +46,18 @@ acec2a68ed3402c73bd72a4065e9057e2631a7fc. This does not yet prove unified
 field/index paths or interpreted portable references. The full generated
 harness and L3 runner must be repeated.
 
+Independent review found that the new `unit_address_formal_depth_refused`
+expectation is wrong under L2 §18.2–18.3: a reference-transmitted nonprimitive
+formal denotes its descriptor, not the machine parameter's address. The
+15/15 result is execution evidence, not proof of this expectation's validity.
+Fix the logical input category in the common address resolver; keep both
+signature spellings equivalent and retain the genuine explicit body-pointer
+depth refusals. Callable formals use the same descriptor rule. Array formals
+and dynamic-input category propagation still need real coverage; raw C pointer
+encoding is not enough to choose a logical storage category. Also separate
+the `unit_ref_signature_synonyms` rebinding assertion from the established
+fact of signature equivalence: a passing test is not a language decision.
+
 Mapped admission uses one operation-local traversal with pending/cached
 correspondences for both providers. Back-edges retain those correspondences;
 unvisited siblings still undergo admission, and failure does not publish a

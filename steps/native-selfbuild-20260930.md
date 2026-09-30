@@ -3,6 +3,27 @@
 Status: 2026-09-30, Codex WIP over 0c09a1d in build/opus_wt.
 Implementation evidence and remaining work, not a language specification.
 
+## Resumed after Q56/Q57 documentation correction
+
+The author has resumed implementation through §§8 and 8a after a separate
+documentation checkpoint. The earlier research HOLD is withdrawn. Use the
+current semantic book construction/dynamic chapters and next_core_tasks §3:
+no implicit Model:fresh clone, no unknown-argument declaration fallback,
+explicit reference binding with conversion before structural admission,
+nonexecuting signatures, and Q57 as definition containing an empty named
+Structure rather than an immediate or delayed call. Earlier typed-binding
+and empty-reference experiments are not the accepted declaration contract.
+
+The preserved worktree is detached at 6a3ac8d. Its current mixed WIP has not
+passed one exact-byte full gate. The old full harness s7b108 had 105 failures;
+s7b117 kernel had one failure in lmx_walk_selftest. The standalone holder-fix
+probe is not a replacement kernel gate. A mistakenly started audit harness
+under build/l2_harness/20260930_144410 was stopped; it has no verdict and is
+not evidence. Preserve existing code WIP, integrate the documentation-only
+descendant without discarding files, and obtain fresh diagnostics before
+claiming any dependency complete. No build/translator process remains from
+that stopped audit at the coordinator's process check.
+
 ## Acceptance
 
 §8 requires maintained L3/L2 sources for runtime, parser, both translators,
@@ -94,8 +115,9 @@ The author's clarification supersedes the proposed Array-specific residual-type
 scanner. Ordinary nested receiving expressions must share one resolution path;
 `[]: []:` is not a special grammar or another Array kind. Replace the existing
 shape recognizers, not just their depth limit. `length` consumes the ordinary
-resolved operand. Keep the separate repeated-index syntax question open;
-do not recover or infer rectangular shape. Detailed code boundaries and
+resolved operand. The author settled sequential paths as `a[i]\[j]\[k]`,
+distinct from flat C-like `a[i][j][k]`; do not recover or infer rectangular
+shape. Detailed code boundaries and
 acceptance: [general receiver resolution](receiver-resolution-20260930.md).
 
 ### One complete lexical graph

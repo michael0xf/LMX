@@ -4,7 +4,9 @@ Lead invariant: **ALL LANGUAGE RULES ARE UNIVERSAL.** Exceptions and contradicti
 
 This file is an implementation/semantic map, **not** a second schedule. Ownership and progress stay in `next_core_tasks.md` / `steps/`. Provenance of author rulings stays in each article.
 
-Current scope (author, 2026-09-30): perfect the existing overloaded forms, including `A: b c`, before full self-build and kernel verification. The shared resolver must distinguish calls, construction through merge, primitive assignment and the already accepted typed binding of an absent name. Do not substitute a new `:=` operator, syntax-based dispatch or a convenience exception for this work. Possible later cosmetic changes do not change the current kernel contract and are not a prerequisite. See [the author's exact statement](LMX_blog/2026-09-30.md) and the normative assignment/construction rules.
+Current scope (author, 2026-09-30): implement the accepted general application rules before full self-build and kernel verification. An unknown ordinary head defines a named Structure with its tail as body, without executing it; an existing Structure head calls; an existing primitive or explicit reference binding assigns. Receiver declarations and non-executing signature descriptions retain their respective contracts. There is no implicit `Model: fresh` clone and no implicit declaration of an unknown actual argument. Explicit expression `b: merge A C` remains available. See the normative construction rules and the closed [Q56](LMX_blog/q/q56.md) / [Q57](LMX_blog/q/q57.md), not the withdrawn empty-reference hypothesis.
+
+Evidence discipline: unless a current checkpoint is explicitly identified, the detailed symbol/line inventories and old fixture results below are historical measurements, not proof of the current contract. In particular, tests of implicit model cloning or an extra pointer level for an actual Structure must be corrected, not reused as acceptance. This documentation update does not mark the new implementation complete.
 
 Statuses (never collapse into ready):
 - **Norm:** `accepted` | `unresolved`
@@ -14,13 +16,15 @@ Statuses (never collapse into ready):
 ## Decision graph (universal resolved-binding priority)
 
 ```
-head resolution
-  -> if callable binding     => call   (call-first; no assignment fallback)
-  -> if non-callable binding => assignment (full admission/implements)
-  -> if absent name          => declaration ONLY when type is explicit in the construction; else error
+application in its receiving context
+  -> reserved language receiver => its declared operator contract
+  -> signature description     => describe, do not execute
+  -> existing Structure/callable head => call (no assignment fallback)
+  -> existing primitive/explicit reference head => assignment with admission
+  -> unknown ordinary head     => define named Structure; do not execute its body
 ```
 
-Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-BOT-CLEAN-PLAN-CORRECT-20260922-12`). No name/syntax exception.
+An unknown actual in an existing head's call is an error, not a declaration. For unknown `C`, `C: makeA()` defines `C` containing the named empty Structure `makeA`, neither an immediate nor a saved call. An explicit reference binding is assigned; dereference it to invoke its referent. Nonprimitive `(A: b)` and `(@: A b)` are synonymous descriptions only in a signature. Provenance: closed Q56/Q57 and `next_core_tasks.md`; these accepted clarifications supersede the old implicit model-cloning priority. No name/syntax exception.
 
 ## Dependency order (ending)
 
@@ -289,13 +293,14 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** none
-- **definition:** Resolved KIND: method/callable field invoke; typed fnptr value evaluate/discard without call.
+- **definition:** Resolve the actual binding: a named Structure/method is callable; an explicit reference binding is an assignable value even when its referent is callable. A typed fnptr value is not automatically promoted to a callable binding by its type.
 - **invariants:** KIND not COMPACT/COLON flags
-  - **The rule, exact:** a CALLABLE binding is a binding that has no value of its own — a unit method or a callable graph field (child[0] = `LmxCallable`, path kind 4). Every other binding is a VALUE binding — primitive, Structure reference, **and a function pointer held as a typed value** (`fnptr:`-typed local/formal/field). Evaluating a callable binding IS its invocation with zero consumed arguments; evaluating a value binding yields the value. Classification is by the KIND of the resolved binding, never by the binding's TYPE ("has a function type" is not "is callable") and never by surface form.
+  - **Current rule:** an actual named Structure is callable; physical transport by descriptor reference does not make it a non-callable binding. An explicit reference declared with `@:` is different: application to that binding assigns it, and invocation of its referent requires explicit dereference. Primitive and explicitly reference-valued bindings yield their values when evaluated. Do not define CALLABLE as “has no value of its own,” and do not classify every physical Structure reference as VALUE. Resolve the source binding and receiving context, not the backend pointer representation or COMPACT/COLON flags.
   - **Value-of-`fp` vs call-through-`fp`** is decided by P0 STRUCTURE — ATOM (a bare name: evaluate) vs FRAME (a head with an argument sequence: invoke what the head resolves to) — and by nothing else; the three Frame forms are one Frame after P0 ([`surface-form-equivalence`](#surface-form-equivalence)).
 - **not-confused-with:** call-first; fnptr-value-discard
 - **links:** requires=[head-resolution](#head-resolution); produces=the operation kind (`CALL` | value); consumes=resolved binding; selects=none. See also [`c-raw-door`](#c-raw-door) — a `c.` head is not a binding and is outside this rule.
 - **authoritative sources:** next_core_tasks.md — `### Вызов` ("Голый callable в statement position — частный случай expression statement / discard"), `## 2` ("Голый `f` в исполняемой позиции — одноатомное выражение"), `### Expression statement и discard`; AUTHOR tickets 20260922.
+- **historical inventory boundary:** The following `20911ad7`/`f559f9dd` measurements describe the then-existing method-only classification and fnptr routes. Their claim that only two binding kinds are callable is obsolete. Current acceptance must also cover actual named Structures and distinguish explicit reference bindings under closed Q56/Q57; the historical fnptr routes do not authorize calling an explicit Structure-reference binding without dereference.
 - **implementation (files/functions):** measured at `20911ad7` (`dev/l2src_sandbox/l2trans.lm1` blob `32617491db5b`; unchanged at `f559f9dd`). **Callable-head test today: `l2_head_is_call` `:10203-10217`** — TRUE for a unit method (`l2_find_method` `:10207-10208`), for a callable field reached by path (`l2_path_kind = 4`, `:10213-10214`), **and for any head whose Frame has NO BODY (`:10215-10216`, `body = 0 || count = 0 -> 1`)** — the third clause is form-derived (emptiness of the argument sequence), not kind-derived, and contradicts the invariant: a non-callable `x` with `x()` is classified "call" before `x` is resolved. **Function-pointer values today:** a method-local of type code 40 (`l2_fnptr_local` `:4761-4777`, declared with a predef `fnptr:` type; `l2_ml_find` / `l2_ml_ty`); a call THROUGH it is recognised **only when the Frame is COMPACT** — checker `:11553` (`l2_ml_ty[...] = 40 && (call\flags & LM_P0_FRAME_COMPACT) != 0U`) and emitter `:14531` (same test → `l2_emit_fnptr_call`), comment `:14529-14530` "the head names what is CALLED, not what is assigned to". So `fp(a b)` calls through the pointer, `fp: a b` takes the ASSIGNMENT path, and a bare `fp` is refused as a statement (see [`fnptr-value-discard`](#fnptr-value-discard)). These two sites are two of the seven COMPACT reads listed under [`surface-form-equivalence`](#surface-form-equivalence). **Resolution tables a bare identifier can reach**, in the checker's order: unit methods (`l2_find_method`), method locals incl. fnptr (`l2_ml_find`), formals (`l2_param_find` / `l2_formal_find`), own fields (`l2_own_find`), dynamic inputs (`l2_dyn_find`), slots (`l2_slot_find`), unit-level entries/locals (`l2_entry_find` / `l2_loc_find`), named Structures / eternal branches / method results (`l2_ns_find` / `l2_ebr_find` / `l2_mres_find`), C names (`l2_is_known`, `l2_c_door`). Exactly two of these kinds are callable bindings (unit method; callable graph field); all others are value bindings.
 - **witnesses:** none for the KIND rule as such; the two discriminating rows are the (c)-pair under [`discard-test-matrix`](#discard-test-matrix): bare `fp` → side-effect counter stays 0 (value, not called); `fp()` / `fp: ()` / `fp:`+`---` and `fp(a b)` / `fp: a b` / vertical → identical call count (invocation, form-independent). The colon rows are the regression rows for the COMPACT gate.
 - **open gap to next_core_tasks.md:** `## 2` "Аудировать COMPACT-ветки function-pointer …" — the two sites `:11553` / `:14531` must gate on "head resolves to a fnptr binding AND the statement is a Frame", not on COMPACT; and `l2_head_is_call` `:10215-10216` must drop the empty-body clause (a Frame with an empty argument sequence is a call only if its head resolves to a callable binding).
@@ -343,18 +348,18 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 
 - **level:** L2
 - **Norm:** accepted
-- **Implementation:** partial
-- **Verification:** fixture
-- **definition:** Declaration when type is explicit in the construction.
-- **invariants:** Absent name alone does not declare
+- **Implementation:** divergent — historical implicit model construction must not remain a second declaration rule
+- **Verification:** none for the complete current contract; old fixtures are historical evidence below
+- **definition:** A declaration receiver supplies its own explicit contract, for example `int: i` or `@: A ptr`. Ordinary Structure application is not a typed-declaration receiver.
+- **invariants:** Classify the resolved head in context. Unknown ordinary head defines that head's Structure; unknown actual argument in an existing Structure call is an error.
 - **not-confused-with:** structural-declaration
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** Route A: known TYPE on the head + unknown declared name — `int: ping 7` AND `Model: fresh`. `l2_colon_model` `:5468` (unit-level Structure, ns_find parent<0). `l2_colon_rewrite_decl` `:5718-5772`: `model: fr\head`, `declared: only\value\as\atom`, rewrite to `declared: merge(Model)` (`fr\head: declared`, `only\value: merge_node`). Not name-keyed. Must remain across parenthesized / short-colon / vertical forms (parser property; translator fixture is one normalized operation). Route B is [`structural-declaration`](#structural-declaration) (absent head + RHS Structure) and does not replace A. `l2_colon_rewrite_decl` is not deleted.
-- **witnesses:** `unit_colon_model_decl.lm2` (`Model: fresh_branch_xyz`, gated). Three-form equality of the declaration is a parser property, not three translator fixtures.
-- **open gap to next_core_tasks.md:** section 3 routes A/B; main-as-only-method still rejects `Model: fresh` as undeclared assignment (fixture keeps a preceding `keep()`).
-- **positive behavior:** `Model: fresh` declares `fresh` by merge-copy of Model; `int: ping 7` declares a primitive.
-- **forbidden / contrast:** FORBIDDEN: reversing `Model: fresh` to `fresh: Model` as if A were B; treating `Model`/`fresh` as special literal names.
+- **authoritative sources:** [Q56](LMX_blog/q/q56.md), [Q57](LMX_blog/q/q57.md); normative construction rules; `next_core_tasks.md`.
+- **implementation (files/functions):** Historical inventory: `l2_colon_model` at old `l2trans.lm1:5468` and `l2_colon_rewrite_decl` at `:5718-5772` rewrote `Model: fresh` to `fresh: merge(Model)`. That rewrite is cleanup debt, not a route to preserve. Migrate its consumers to common resolved application/declaration metadata; preserve genuine reserved-receiver declarations and explicit merge separately.
+- **witnesses:** Historical `unit_colon_model_decl.lm2` gated the withdrawn implicit clone. It cannot establish today's rule. Required current witnesses distinguish a primitive receiver declaration, explicit reference declaration, unknown ordinary head definition, existing Structure call with known actuals, and call refusal for an unknown actual, across all source positions.
+- **open gap to next_core_tasks.md:** remove the implicit-clone rewrite and stale expectations while retaining equivalent parser forms and the explicit merge expression.
+- **positive behavior:** `int: i` declares through the primitive receiver; `@: A ptr` declares an explicit typed reference initialized to 0; existing `Model: fresh` calls `Model` and rejects an unresolved actual `fresh`.
+- **forbidden / contrast:** FORBIDDEN: implicit clone, empty reference or by-value aggregate inferred from `Model: fresh`; deriving a primitive variable type from an unknown ordinary head's literal body.
 
 ## `structural-declaration`
 
@@ -362,15 +367,15 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** none
-- **definition:** Type given by Structure on the right (merge-normalize path).
-- **invariants:** One construction path
+- **definition:** An unknown ordinary head defines a named Structure whose tail is its body. Defining that Structure does not execute its body or require all free body names to be resolved already.
+- **invariants:** No implicit merge normalization. Existing Structure heads call; parentheses/colon/block form do not choose the semantic operation.
 - **not-confused-with:** merge-construction
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
+- **authoritative sources:** closed [Q56](LMX_blog/q/q56.md) and [Q57](LMX_blog/q/q57.md); normative construction rules; `next_core_tasks.md`.
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
 - **witnesses:** UNKNOWN or see next_core_tasks fixture lists
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
-- **positive behavior:** per definition
+- **positive behavior:** Unknown `A: b` defines `A` with body `b`, not a reference named `b`. Unknown `C: makeA()` defines `C` containing the named empty Structure `makeA`, with neither an immediate nor a saved call. Empty `f()` and `f: ()` define an empty named Structure when `f` is unknown; an existing Structure `f` is called.
 - **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
 
 ## `merge-construction`
@@ -379,8 +384,8 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** fixture
-- **definition:** merge builds/combines Structures.
-- **invariants:** No emitter-only shortcut
+- **definition:** Explicit merge builds/combines Structures. `b: merge A C` keeps `A` and `C` as merge operands and `b` as the external result recipient.
+- **invariants:** No implicit `Model: fresh` clone and no invented result-name-first merge receiver. The established composition on returning a nested callable is a separate return contract and is not removed by this declaration correction.
 - **not-confused-with:** structural-declaration; implements
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
 - **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
@@ -395,34 +400,34 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **level:** L2/L1
 - **Norm:** accepted
 - **Implementation:** partial
-- **Verification:** fixture
-- **definition:** Nonprimitives project as Lmx *; no C by-value aggregate.
-- **invariants:** @ adds address-of-cell level
+- **Verification:** historical fixtures only; current reference-level matrix still requires a fresh gate
+- **definition:** Structure values are references to their `Lmx` descriptors, not C by-value aggregates. Array values likewise retain their typed descriptor reference representation.
+- **invariants:** `@B` for actual Structure `B` identifies its descriptor itself; `@ptr` for an explicit reference variable identifies the pointer-holding cell and adds one indirection. Do not confuse those two operands.
 - **not-confused-with:** l2-address-of
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** Structure values already emit as `@: Lmx` / `Lmx *`. Graph type intern: `l2_colon_graph_ty` (`l2trans.lm1:5481`, foreign `Lmx` depth 1). Merge publication of `Model: fresh`: `lmx_arena_ref_store(l2_unit_ref, l2_mres_base+sl, (cast: (@: void) l2_mresult))` `:15280-15281`. Structure formals/returns: `@: Lmx` (e.g. `:13589`, `:16085`). Assignment/call/return copy that pointer. One `@` over a Structure cell is physically `Lmx **` — see [`l2-address-of`](#l2-address-of) / [`l2-address-slot`](#l2-address-slot). Do not promote ordinary Structure values to `Lmx **`.
-- **witnesses:** `unit_colon_model_decl.lm2` (gated) pins merge + `lmx_arena_ref_store`. STRUCT-ADDR three fixtures (`unit_struct_proj_lmx_star`, `unit_struct_addr_at_fresh`, `unit_struct_addr_model_slot`) are planned; not written. Goldens must Absent C aggregate `Model` and `@: Model`.
-- **open gap to next_core_tasks.md:** section 3 Structure address / `@fresh` / `@: Model slot` (P1–P3 held until writer slot is this CLI).
-- **positive behavior:** `Model: fresh` is an `Lmx *` cell; pass/return/assign copy the same address.
-- **forbidden / contrast:** FORBIDDEN: C by-value aggregate `Model`; smuggling capacity through `LmxArrayDesc`; declaring `LmxListDesc` as an L3 header type.
+- **authoritative sources:** closed [Q56](LMX_blog/q/q56.md); CORE §3.1/§4; normative reference/construction rules; `next_core_tasks.md`.
+- **implementation (files/functions):** Historical inventory: `l2_colon_graph_ty` (old `l2trans.lm1:5481`) and Structure formals/returns (`:13589`, `:16085`) already used `@: Lmx` / `Lmx *`. Old `Model: fresh` publication through `lmx_arena_ref_store` at `:15280-15281` belonged to the withdrawn implicit-clone route; it does not define address semantics. Audit current ordinary-value, address, explicit-reference and formal consumers against the same resolved type contract.
+- **witnesses:** Historical `unit_colon_model_decl.lm2` and the old STRUCT-ADDR fixture proposals are not current acceptance. Required: passing actual `B` and `@B` preserves descriptor identity and reference level; passing `@ptr` adds a level and is not silently dereferenced; no generated C aggregate `Model`.
+- **open gap to next_core_tasks.md:** shared resolved type/address representation and conversion-before-admission, across declaration, assignment, argument and return consumers.
+- **positive behavior:** A compatible Structure `B` is transmitted by descriptor reference; `(A: b)` and `(@: A b)` describe the same nonprimitive formal only in a signature.
+- **forbidden / contrast:** FORBIDDEN: aggregate copying, a model-pair conversion registry, extra pointer level for an actual Structure, or automatic removal of the level explicitly requested by `@ptr`.
 
 ## `l2-address-of`
 
 - **level:** L2
 - **Norm:** accepted
 - **Implementation:** partial
-- **Verification:** fixture
-- **definition:** L2 @name addresses canonical local cell; sticky dirty.
-- **invariants:** Address does not switch to graph slot
+- **Verification:** none for the complete current address/reference-level contract
+- **definition:** `@` obtains the address/reference appropriate to the resolved operand's actual typed storage. An actual Structure yields its descriptor reference; an explicit reference variable yields the address of its pointer-holding cell.
+- **invariants:** No graph-slot address substituted for the Structure descriptor, no address of a temporary copy, and no implicit indirection adjustment. Declaration-backed values and ordinary activation locals retain their respective storage/lifetime rules.
 - **not-confused-with:** l2-address-slot; sticky
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** `l2_check_addr` `:12333-12374` and `l2_prep_addr` `:12376-12485`. Lookup today: loc, entry, ml_ty==41, param (formals+dyn), own. **No `l2_mres_find`.** After `Model: fresh`, the name is an mres slot (`l2_mres_find` `:14741`); `dyn_add` at `:6099-6101` records the merge OPERAND (`Model`), not the result. So `@fresh` falls through `:12374` `unresolved name`. Required: resolve through mres and return the address of the SAME unit-child cell `:15281` stores into — `lmx_arena_ref_cell(l2_unit_ref, l2_mres_base+sl)`, type `@@: Lmx` / `Lmx **`. The own_is_pointer arm `:12473-12479` creates a TEMP `l2_tN` and takes the address of a cast of `l2_qN_from[0]` — forbidden temporary-referent; `@fresh` must not take that arm. Do not emit `@ l2_p%d_%d` for mres.
-- **witnesses:** none yet. Planned `unit_struct_addr_at_fresh.lm2`: Debt `@@: Lmx` + `lmx_arena_ref_cell(`; Absent `unresolved name`, `@: Model`, and the `l2_t`/`l2_q` temp pattern.
-- **open gap to next_core_tasks.md:** section 3 `@fresh` (P2).
-- **positive behavior:** `*@fresh` equals the original `Lmx *`; the cell is the mres unit child, not a new C local.
-- **forbidden / contrast:** FORBIDDEN: address of a temporary copy of the referent; extra C local holding `l2_mresult` then `@` of it.
+- **authoritative sources:** closed [Q56](LMX_blog/q/q56.md); normative L2 §18 / L3 reference rules; `next_core_tasks.md`.
+- **implementation (files/functions):** Historical audit anchors: `l2_check_addr` at `:12333-12374`, `l2_prep_addr` at `:12376-12485`, `l2_mres_find` at `:14741`. The old proposal to make `@fresh` of an actual Structure return `lmx_arena_ref_cell(...)` as `Lmx **` is withdrawn. These paths must consume resolved operand/storage identity; a pointer-holding graph slot is not the Structure descriptor it references. The historical own-pointer temporary-address arm remains an audit target, not a justified substitute.
+- **witnesses:** Required fresh runtime/native+interpreter matrix: actual Structure descriptor identity, explicit pointer cell address/one extra level, declared primitive storage, activation-local lifetime, and no temporary referent. Old STRUCT-ADDR double-pointer goldens are invalid for actual Structure operands.
+- **open gap to next_core_tasks.md:** migrate address consumers to the common typed operand path; retain the L2/L3 profile distinction without syntax/name branches.
+- **positive behavior:** `@B` for actual Structure `B` has physical `Lmx *`; `@ptr` where `@: A ptr B` was declared has physical `Lmx **`.
+- **forbidden / contrast:** FORBIDDEN: exposing a service/reference slot instead of actual typed data, addressing a copied temporary, or using sticky/cache policy to change the referent.
 
 ## `l2-address-slot`
 
@@ -430,30 +435,30 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** none
-- **definition:** @: Type slot lowers to pointer-to-cell consistent with reference projection.
-- **invariants:** Matches nonprimitive projection
+- **definition:** `@: A ptr` declares an explicit typed reference initialized to 0; `@: A ptr B` initializes it from `B`. The binding is an assignment target, not an automatic invocation of its referent.
+- **invariants:** For Structure `A`, the stored representation is `Lmx *`, not `Lmx **`. Structure-to-pointer conversion obtains the pointer first, then `implements(B, A, Consumer)` admits the typed referent. Dereference the binding to call that referent.
 - **not-confused-with:** l2-address-of
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** `l2_ptr_local_ty` `:4802-4878`. Head `@` (`l2_address_depth` `:4556` counts 0x40 bytes). Body `Model`, `slot`. After builtin char/int/void/FILE, `:4876` `l2_foreign_intern(Model, depth=1, 0)`. `l2_emit_foreign_named` `:4660-4688` then prints `@` * depth + foreign name → generated L1 is literally `@: Model slot`. Depth 0 of the same intern would print aggregate `Model: slot`. Both are forbidden goldens. Named Structure already projects as `Lmx *`, so one `@` over Model is physically `Lmx **`. Patch: if `l2_colon_model(type atom)`, intern `Lmx` at depth+1 (`@: Model` → `@@: Lmx`). Keep Model only as admission identity of the pointed-to Structure, not as a C type. Same guard in `l2_const_local_ty` `:4939` if that path can spell `@: Model`.
-- **witnesses:** none yet. Planned `unit_struct_addr_model_slot.lm2`: Debt `@@: Lmx slot`; Absent `@: Model slot`, `Model: slot`, aggregate Model. Deref slot yields the original `Lmx *`.
-- **open gap to next_core_tasks.md:** section 3 `@: Model slot` (P3).
-- **positive behavior:** `@: Model slot` lowers to the same physical type as `@fresh` (`Lmx **`).
-- **forbidden / contrast:** FORBIDDEN: intern Model as a C aggregate or as `@: Model`; logical identity Model must not become a generated C type name.
+- **authoritative sources:** closed [Q56](LMX_blog/q/q56.md); normative construction/reference rules; `next_core_tasks.md`.
+- **implementation (files/functions):** Historical audit anchors: `l2_ptr_local_ty` at `:4802-4878`, `l2_address_depth` at `:4556`, `l2_emit_foreign_named` at `:4660-4688`, `l2_const_local_ty` at `:4939`. The prior proposed `depth+1` lowering of `@: Model slot` is withdrawn. Resolve the explicit reference's referent identity and representation together, without generating a C aggregate named Model or a second declaration. Audit all consumers, not one foreign-type emission branch.
+- **witnesses:** Required: default 0; initialization/assignment from compatible actual Structure; incompatible referent refused after conversion; reassignment does not execute a callable referent; explicit dereference follows ordinary call rules; `@ptr` adds one level. Nonprimitive signature spellings `(A: b)` / `(@: A b)` agree, while primitive `(int: b)` / `(@: int b)` do not.
+- **open gap to next_core_tasks.md:** common reference declaration/assignment/formal contract; fresh gates must replace old double-pointer expectations.
+- **positive behavior:** `@: A ptr B` stores the descriptor reference of compatible `B`; `ptr: C` admits and stores compatible `C` without invoking it.
+- **forbidden / contrast:** FORBIDDEN: implicit `Model: fresh` construction, automatic callable execution through a reference binding, model-pair conversion tables, or a silently added/removed pointer level.
 
 ## `l3-reference-receiver`
 
 - **level:** L3
-- **Norm:** unresolved
-- **Implementation:** absent
+- **Norm:** accepted
+- **Implementation:** partial — exact coverage must be verified against the current reference contract
 - **Verification:** none
-- **definition:** L3 reference/receiver rules — detailed map UNKNOWN this baton.
-- **invariants:** Open for next writer vs LMX_semantics
+- **definition:** L3 permits typed reference declaration, acquisition, assignment and dereference under the shared reference rules, without numeric address arithmetic, raw-memory/backing access or machine casts. It is not restricted to declaration-only `@:` syntax.
+- **invariants:** Preserve typed referent identity and explicit indirection. Actual Structure `B` and `@B` provide the descriptor reference; `@ptr` of an explicit reference binding adds a level. A reference binding is assigned, not called; dereference it to invoke its referent.
 - **not-confused-with:** l2-address-of
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
+- **authoritative sources:** closed [Q56](LMX_blog/q/q56.md); normative L3 reference rules; `next_core_tasks.md`.
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
-- **witnesses:** UNKNOWN or see next_core_tasks fixture lists
+- **witnesses:** Required native/interpreter parity for typed reference binding, rebinding, referent admission, explicit dereference and argument indirection; negative witnesses for L2-only numeric/raw-memory operations. No new runtime result is claimed by this documentation edit.
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
 - **positive behavior:** per definition
 - **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
@@ -518,7 +523,7 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Implementation:** partial
 - **Verification:** fixture
 - **definition:** One stable physical cell per logical activation-local name.
-- **invariants:** Bare name and @name use this cell
+- **invariants:** An ordinary activation-local value has stable storage for that activation; taking its address does not create a graph field. This is not a rule that `@` of every source binding addresses a working cache: declared values retain declaration storage, actual Structures yield descriptor references, and explicit pointer variables add a level when their cell is addressed. See `l2-address-of` and the normative storage rules.
 - **not-confused-with:** sticky; dirty
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
 - **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
@@ -551,7 +556,7 @@ Provenance: `next_core_tasks.md` section 3 / universal binding priority (`GROK-B
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** fixture
-- **definition:** After any @name, logical local sticky to end of activation.
+- **definition:** Address-exposed activation-local working storage remains sticky for the activation under the applicable publication contract. This cache policy does not redefine the typed referent of `@`, redirect a declaration address to a cache, or turn an actual Structure descriptor reference into a pointer-cell address.
 - **invariants:** Independent of bind timing
 - **not-confused-with:** dirty; canonical-local-cell
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition

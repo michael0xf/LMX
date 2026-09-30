@@ -20,7 +20,9 @@ line-specific conclusion. This document introduces no new language rules.
 L2 is LMX plus the machine operations required by the kernel. L3 is the
 hermetic graph-level language and a subset of L2: a named or anonymous
 Structure is always L3, L2 operations are absent from an interpreted body
-because the interpreter executes only L3, and `@` of any depth in L3 is a reference-declaration receiver only.
+because the interpreter executes only L3. Typed reference declaration,
+reference acquisition and dereferencing in L3 preserve reference identity;
+numeric address arithmetic, raw memory access and machine casts remain L2.
 L1 is a technical
 lowering intermediate, and C99 is its current machine target. The **present** build paths are:
 
@@ -222,9 +224,11 @@ and broader language model, not in a fabricated per-node tag.
 
 **Execution of a Structure.** One complete Structure contains declarations,
 value storage and executable operators in source order. Execution uses that
-Structure and an ordinary machine activation. An ordinary named Structure executes without arguments;
-only `fn`, `fm` and `sub` receive declared actual arguments. Using a Structure
-as a value in `merge` or `send` does not execute it.
+Structure and an ordinary machine activation. An existing Structure in head
+position is called with its written arguments; an unknown actual argument
+does not turn that call into a declaration. `fn`, `fm` and `sub` describe
+formal signatures; those descriptions are not executable bodies. Using a
+Structure as a value in `merge` or `send` does not execute it.
 Source code may arrange declarations and executable bodies separately through
 ordinary language constructs; that choice does not require a second runtime graph.
 The distinction still matters inside one Structure: declaration nodes establish
@@ -287,35 +291,58 @@ source graph and on the applicable address/publication rules. See the
 normative L2 §18.2–18.3 and L3 §12 and the open implementation work in §7b
 of `next_core_tasks.md`.
 
-`@x`, `\p`, and `\p: value` in L2 are machine address, load, and store
-operations. For a Structure binding, `@fresh` is the address of the Structure
-itself (Q26.2), not of the slot holding its reference and not of a copy; a
-reference field `@: Model slot` is a pointer cell whose extra indirection is
-absorbed on read, so `@ slot` is again the Structure's address. Machine addresses do not extend the
-lifetime of activation locals. The same `@` spelling in L3 is a separate
-reference-declaration receiver with its own restricted contract; L2 pointer
-operations must not leak into pure L3.
+For an actual Structure value `A`, `@A` refers to the Structure descriptor
+itself, not the graph slot containing its reference and not a copy. An
+explicit reference binding `@: A ptr` is different: its ordinary value is
+the pointer it holds; `@ptr` addresses the pointer-holding cell and adds one
+indirection. That level is not silently removed to match a formal.
+Dereferencing an explicit reference yields its referent; when that referent
+is to be called, invocation uses the ordinary callable rule. Writing
+`ptr: value` assigns the reference binding rather than invoking its referent.
+In L2, address acquisition, load and store have their machine meanings;
+machine addresses do not extend the lifetime of activation locals. L3 keeps
+typed reference operations without numeric address arithmetic, raw-memory
+access, backing access or machine casts. See L2 §18 and L3 §12.
 
 ## 4. Declaration, assignment, call, and admission
 
 These are distinct semantic operations even when surface syntax looks similar.
-The accepted resolution order is: a resolved callable head is a **call**;
-otherwise an existing typed mutable target is an **assignment**; otherwise
-an explicit type/model construction may **declare** a new value; otherwise the
-program is erroneous. A failed callable argument/signature/admission check is
-an error in the call, not a fall-through to assignment. Direct assignment to
-a callable field is not a separate source operation; replacement can arise
-through the general merge/overload/argument mechanisms.
+Reserved language receivers retain their declared contracts. For an ordinary
+head, an existing Structure or other callable is **called**; an existing
+primitive or explicit reference binding is **assigned** through admission;
+an unknown head **defines a named Structure** whose tail is its body. The
+definition does not execute that body, and free names in it need not already
+be resolved at the definition. A failed call never falls through to assignment
+or declaration. Thus existing `Model: fresh` is a call of `Model`, and an
+unknown actual `fresh` is a call error, not an instruction to clone `Model`.
 
-For example, `ping: 7` calls an existing callable `ping`, assigns to an
-existing non-callable typed `ping` (subject to admission), or is an error if
-`ping` is absent and no type/model declaration is present. Literal `7` does
-**not** infer a new variable's type. `Model: fresh`, where `Model` is a
-non-callable type/model and `fresh` is absent, constructs a new Structure
-through the full `merge(Model, empty)` path; it is not reference rebinding.
-If `fresh` already exists, an applicable assignment rule is evaluated instead.
-Nonprimitive Structure values are physically passed and returned by reference
-to their descriptors, but new construction remains real allocation/copy.
+An unknown `A` in `A: b` defines Structure `A`; it does not declare an empty
+typed reference named `b` and does not run `b`. With unknown `C`,
+`C: makeA()` defines `C` containing the named empty Structure `makeA`:
+there is neither an immediate nor a saved call of `makeA` in this definition.
+The same rules apply to the equivalent short, parenthesized and block forms.
+A primitive declaration names its receiver, such as `int: i`; an unknown
+ordinary head does not acquire a primitive variable type from a literal body.
+
+There is no implicit `merge(Model, empty)` declaration route. Explicit
+`b: merge A C` retains the ordinary expression-merge contract, with `A` and
+`C` as operands and `b` as the external recipient. Nonprimitive values are
+passed and returned by reference to their descriptors, never by-value copies.
+The established composition needed when returning a nested callable remains
+a separate return contract; removing implicit declaration cloning does not
+remove that composition or change its captured values.
+
+`@: A ptr` declares an explicit reference with default initializer 0;
+`@: A ptr B` initializes it from `B`. On a Structure-to-pointer transfer,
+the primitive conversion first obtains the pointer, then
+`implements(B, A, Consumer)` checks its typed referent before storage.
+Conversion describes common primitive representations, not a table of every
+pair of user models; all Lmx Structures share the same physical descriptor
+domain. The non-executing formal descriptions `(A: b)` and `(@: A b)` are
+synonyms for nonprimitive `A` only in a signature. Passing a Structure `B`
+or `@B` supplies the same reference level; `@ptr` instead adds a level.
+Primitive `(int: b)` and `(@: int b)` are not synonyms, and signature
+synonymy does not turn either body spelling into an implicit construction.
 
 The parser's parenthesized, short-colon, and vertical forms must already
 produce the same normalized Frame/body, before semantic consumption. `f()`,

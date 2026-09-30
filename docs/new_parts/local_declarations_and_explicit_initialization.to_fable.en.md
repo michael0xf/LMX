@@ -1,8 +1,8 @@
 # To Fable — local declarations, explicit initialization, and the complete graph
 
-**Status:** the language author's latest request, not an interpretation of the previous specification. Apply it consistently to the EN/RU documentation and the implementation work that depends on it. Record unresolved consequences as questions to the author.
+**Status:** working instruction reconciled with the author's final Q51/Q52 answers and the accepted Q56/Q57 rules (2026-09-30). Apply the current clauses below consistently; the dated “Applied” section is historical evidence, not an instruction to restore its superseded visibility rules or execution-pair terminology. No implementation completion is claimed by this note.
 
-**Keep `(M, M)`.** The previous reviewer's suggestion that code and data must always have different roots is withdrawn. One universal Structure remains sufficient; `code` and `data` remain execution roles.
+**Keep the complete source Structure and ordinary activation.** Declarations, values and executable instructions remain in source order in the same graph. Do not introduce a persistent auxiliary data/context graph or an `execute(code, data)` object model. The author withdrew that explanatory abstraction; it does not require separate roots or a hidden sibling Structure.
 
 ## 1. Separate ordinary access to values from inspection of program structure
 
@@ -12,20 +12,20 @@ In the executable-body case discussed here, a declaration such as:
 int: i
 ```
 
-introduces a locally usable variable. Its presence in the complete graph must **not automatically expose `i` as an externally readable/writable field of the enclosing callable**.
+introduces a locally usable variable and establishes its value storage at the declaration in the complete Structure.
 
-Inside its permitted scope, ordinary reads and assignments to `i` work normally. Outside it, an ordinary field path such as `M\i` must not expose that local merely because the declaration occurs in M's stored body. Ordinary field access must not discover the declaration's initializer and treat it as a replaceable value slot either.
+Inside its permitted scope, ordinary reads and assignments to `i` work normally. Unqualified local visibility is forward and downward, not outward. An explicit external path such as `M\i` opens the value storage at that declaration (the final Q51 answer), not an activation's working copy and not a replaceable initializer or instruction node. There is no separate category of “external fields.”
 
-The declaration and the surrounding code remain present in the complete Structure. Deliberately examining that Structure as an abstract array/graph is still possible through the existing structural mechanisms. This is a different use of the same representation, not another object model.
+The declaration and surrounding code remain present in the complete Structure. A bare assignment to an externally declared `y` inside `s` creates no `s\y` field: it changes the hidden activation input under Q52, without writing back to the caller. Deliberate inspection of the complete Structure can still find the assignment instruction. These are different uses of one representation, not separate data and code objects.
 
 In particular:
 
-- Do not remove declaration or instruction nodes from the complete graph just to hide them from ordinary field lookup.
-- Do not introduce `private`, a mandatory `var` section, a special class, a third environment graph, or a new visibility registry to express this decision.
-- Do not describe this as cryptographic secrecy. It is the distinction between ordinary access to a variable and deliberate inspection/manipulation of program structure; existing permissions still apply.
-- Do not infer a new lifetime rule from the word “local.” The author is changing ordinary accessibility, not instructing you to erase all stored state after return or to remove declaration-backed storage.
+- Do not remove declarations or instructions from the complete graph or hide declared value storage behind a field-lookup filter.
+- Do not introduce `private`, a mandatory `var` section, a special class, a parallel environment graph, or a new visibility registry.
+- Do not confuse an unqualified name lookup with an explicit structural path or with inspection/manipulation of the instruction graph; existing permissions still apply.
+- Do not infer a new lifetime rule from the word “local,” erase declaration-backed state on return, or promote a hidden argument to a graph field on assignment.
 
-Apply the distinction through the general semantics of the declaration and its receiving context, not branches for the literal names `int`, `i`, or `findValue`. Do not silently generalize executable-body locality into a ban on explicitly constructed data records. If the current rules do not distinguish the required cases, identify that conflict and ask the author.
+Apply the distinction through general declaration, resolution and storage semantics, not branches for the literal names `int`, `i`, or `findValue`. Q51/Q52 are closed decisions, not reasons to stop their implementation or reopen whether a declared value is reachable by its explicit path.
 
 ## 2. Use ordinary adjacent statements for computed initialization
 
@@ -58,9 +58,9 @@ After executing the two-statement example, and after later assignments to `i`, t
 
 An ordinary assignment changes the resolved variable's working value. It does not replace the call, its operands, or the assignment instruction with the resulting integer. Assignment also creates no new declaration or additional field merely because it occurs.
 
-This invariant applies with `(M, M)` and through both native execution and the interpreter. It requires no separate fundamental Structure type. Keep the established `load/cache/dirty` mechanism for applicable declaration-backed state; a checkpoint may write back a changed value only to its proper value storage, never into an initializer's executable representation.
+This invariant applies through both native execution and the interpreter over the complete Structure and an ordinary activation. It requires no separate fundamental Structure type or persistent auxiliary graph. Keep the established `load/cache/dirty` mechanism for applicable declaration-backed state; a checkpoint may write back a changed value only to its proper value storage, never into an initializer's executable representation.
 
-Hiding a name from outside lookup alone is not evidence that this invariant holds. Verify the internal store/write-back destination as well. Do not conceal an unresolved representation conflict behind a lookup filter.
+Verify the internal store/write-back destination as well as the explicit external path to declaration storage. A lookup filter that hides all body declarations would contradict Q51 rather than prove this invariant.
 
 The existing distinction for `native` remains: changes to values do not invalidate an unchanged algorithm's implementation; an organized change to executable code requires a corresponding implementation or the applicable interpreted path. This task does not design arbitrary in-place editing of active machine code.
 
@@ -71,13 +71,13 @@ Use section titles and quoted wording to locate the passages; generated line num
 | Location | Required correction |
 | --- | --- |
 | LMX §4; §8 case 5; §9 | Remove assignment-driven creation/promotion of argument own-fields. Keep declaration, local assignment, ordinary exposed-data access, and structural inspection distinct. |
-| LMX §11, “Callable expressions and their interfaces” | Correct the blanket statement that `Counter\n` reads a published field even when Counter is a method. A local declaration must not automatically become such an ordinary external field. Preserve `(M, M)` and the ordinary activation. |
-| LMX §12, “Dynamic inputs and working state” | Replace the rule that assigning an argument creates a body field. Correct “reachable from outside through the path `M\x`” and the `remember` explanation. Do not equate graph presence with ordinary external visibility. |
-| LMX §12 examples | Revisit the external `S\x` observations and `for\j` example wherever they expose body-local declarations. Show explicit structural inspection where that is intended, or ask about the precise access contract. Do not leave an invalid ordinary path solely to retain an old expected output. |
+| LMX §11, “Callable expressions and their interfaces” | An explicit `Counter\n` path reaches n's value storage at its declaration. It does not expose the activation's working value or execute/replace an instruction. Preserve the complete graph and ordinary activation; no extra “external field” category. |
+| LMX §12, “Dynamic inputs and working state” | Assignment of an argument creates no body field and does not write back to the caller. An explicit `M\x` path exists when x is declared there, not merely because an assignment instruction mentions x. |
+| LMX §12 examples | Retain valid `S\x` and `for\j` paths to declaration-backed storage and distinguish them from hidden input/working values. Q51 resolved this access contract; do not replace those paths with a special inspection API. |
 | L2 §§10–11, §13 assignment discussion, §18.3 | Align storage, local resolution, ordinary field lookup and address rules with the decision. Remove the contradictory “no working copies / no dirty / no load” sentence in §10; do not restore argument promotion as part of caching. |
-| `next_core_tasks.md`, execution-pair discussion and §§5/7b | Update active work and witnesses. Clearly mark superseded historical instructions; do not reuse old checked boxes as proof that the new behavior is implemented. |
+| `next_core_tasks.md`, graph/storage discussion and §§5/7b | Remove execution-pair and auxiliary-data-graph instructions. Update active work and witnesses; do not reuse old checked boxes as proof that the new behavior is implemented. |
 
-Review related `merge`, dynamic-input and admission examples for dependence on automatic external exposure. Preserve the established mechanisms; when an example now needs an author decision, report the dependency instead of silently changing capture, defaults, dynamic precedence or `implements`.
+Review related `merge`, dynamic-input and admission examples against declaration-backed storage and the accepted construction rules. Unknown ordinary heads define named Structures without executing their bodies; existing Structure heads call, with unresolved actual arguments rejected. Do not restore implicit `Model: fresh` cloning or use a non-executing signature as a construction rule for bodies. Preserve explicit expression merge (`b: merge A C`) and the separate composition on returning a nested callable; neither is removed by the declaration correction. See closed [Q56](../../LMX_blog/q/q56.md) and [Q57](../../LMX_blog/q/q57.md).
 
 If these documents are generated, correct their authoritative source and regenerate both languages rather than editing only the rendered output.
 
@@ -92,7 +92,7 @@ Demonstrate the following in both native and interpreted execution where applica
 5. The same checks hold on repeated execution of the complete Structure; no additional Structure is created merely to execute it.
 6. Caching and dirty write-back never overwrite the saved call or other instruction nodes. Updating the local value alone leaves the matching `native` valid.
 
-**If any required distinction conflicts with an existing rule, show the exact passages and a minimal example to the author before choosing a resolution. Do not invent an exception, constructor phase, visibility flag, or hidden storage scheme to make the tests pass. Do not ask again whether `(M, M)` should remain or whether ordinary external access should expose these locals: the author has answered both.**
+**If a genuine unresolved distinction conflicts with an existing rule, show exact passages and a minimal example to the author. Do not invent an exception, constructor phase, visibility flag or hidden storage scheme. Do not reopen Q51/Q52: explicit paths reach declaration storage; assignments to hidden activation inputs create no fields or caller write-back. The obsolete execution-pair abstraction is not a prerequisite for either rule.**
 
 ## Source anchors for this correction
 
@@ -104,7 +104,9 @@ These are the prior passages being revised, not evidence that the author's new r
 
 **Deliverable:** a consistent EN/RU rule, updated implementation tasks, and focused evidence. Keep unresolved semantic choices as explicit questions, not undocumented behavior.
 
-## Applied (fable_pc, 2026-09-28)
+## Historical application report (fable_pc, 2026-09-28)
+
+The following records the earlier edit and the author's subsequent correction. Its initial outside-lookup prohibition, execution-pair terminology and then-open questions are superseded by the active sections above and the final Q51/Q52 answers below. Preserve the record as evidence, not a new ticket or acceptance result for the current contract.
 
 The note itself: committed and pushed (it entered `5c2933a`, being staged in the checkout at that commit; origin/main carries it). Text checks only; the implementation items are the lead's (below).
 

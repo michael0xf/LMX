@@ -263,5 +263,29 @@
     "exit": 1,
     "authority": "next_core_tasks.md §2 (the nested record): which field a line belongs to is decided by the common structure and indentation -- a field nested in the body of `ping` is an argument of `ping`, a field at the level of the outer `c` body is a neighbouring argument of `c`; the pair differs by the indentation of one line only (Opus, 2026-09-27); a bare `ping:` with its sibling at the same level is an empty colon Frame, refused (P0 error 32)",
     "diagnostic": "32@2:5"
+  },
+  {
+    "path": "tests/parser/current/empty_end_f.lmx",
+    "exit": 0,
+    "authority": "OPUS-P0-EMPTY-CLOSED-20260930-18: f: closed by end: f is the explicitly closed empty vertical body -- the one Frame f(), f: () and f: + --- give (an admitted end: target is equivalent to target: ()).",
+    "stdout_exact": "structure fields=1\n  frame head=\"f\" body=structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/empty_end_nested.lmx",
+    "exit": 0,
+    "authority": "OPUS-P0-EMPTY-CLOSED-20260930-18: the same closure at any level and for any head: receiver: closed by end: receiver inside outer (as empty_vertical_nested with ---).",
+    "stdout_exact": "structure fields=1\n  frame head=\"outer\" body=structure fields=1\n    frame head=\"receiver\" body=structure fields=0\n"
+  },
+  {
+    "path": "tests/parser/current/empty_end_other_target_refused.lmx",
+    "exit": 1,
+    "authority": "OPUS-P0-EMPTY-CLOSED-20260930-18: an end: naming another head does not close the empty f: -- REJECT 32 (the closure is end: <the Frame's own head>).",
+    "diagnostic": "32@1:1"
+  },
+  {
+    "path": "tests/parser/current/empty_colon_then_statement_refused.lmx",
+    "exit": 1,
+    "authority": "OPUS-P0-EMPTY-CLOSED-20260930-18: bare f: followed by another statement (a dedent, not an explicit closure) is still REJECT 32.",
+    "diagnostic": "32@1:1"
   }
 ]

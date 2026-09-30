@@ -621,6 +621,10 @@ int lm_p0_postprocess_node(LmP0Document * document, LmP0Node * node);
 int lm_p0_wrap_fields_from_line(LmP0Document * document, LmP0Structure * structure, size_t head_line, size_t inline_event_end_offset);
 int lm_p0_colon_frame_empty(const LmP0Frame * frame);
 int lm_p0_colon_trailer_empty(const LmP0Trailer * trailer);
+int lm_p0_atom_names(const LmP0Node * node, const LmP0Text * name);
+int lm_p0_end_closes_empty_colon(const LmP0Frame * frame);
+void lm_p0_close_empty_by_end_in_node(LmP0Node * node);
+void lm_p0_close_empty_by_end_in_structure(LmP0Structure * structure);
 int lm_p0_validate_nonempty_colon_frames_in_trailer(LmP0Document * document, const LmP0Trailer * trailer);
 int lm_p0_validate_nonempty_colon_frames_in_node(LmP0Document * document, const LmP0Node * node);
 int lm_p0_validate_nonempty_colon_frames_in_structure(LmP0Document * document, const LmP0Structure * structure);
@@ -2335,6 +2339,7 @@ int lm_p0_record_mix_mark(LmP0Document * document, LmP0Structure * structure, co
     lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset);
     }
     else {
+    lm_p0_close_empty_by_end_in_node(payload_document->root);
     if (lm_p0_validate_nonempty_colon_frames_in_node(payload_document, payload_document->root) == 0) {
     lm_p0_copy_payload_diagnostic(document, payload_document, payload_offset);
     }
@@ -5750,6 +5755,81 @@ int lm_p0_colon_trailer_empty(const LmP0Trailer * trailer)
     }
     return 1;
 }
+int lm_p0_atom_names(const LmP0Node * node, const LmP0Text * name)
+{
+    size_t i = 0U;
+    if (node == 0 || node -> kind != LM_P0_NODE_ATOM || node -> as == 0 || node -> as -> atom == 0 || name == 0) {
+    return 0;
+    }
+    if (node -> as -> atom -> length != name -> length) {
+    return 0;
+    }
+    while (i < name -> length) {
+    if (node -> as -> atom -> data[i] != name -> data[i]) {
+    return 0;
+    }
+    i = i + 1U;
+    }
+    return 1;
+}
+int lm_p0_end_closes_empty_colon(const LmP0Frame * frame)
+{
+    const LmP0Trailer * trailer;
+    const LmP0Field * only;
+    if (frame == 0 || lm_p0_colon_frame_empty(frame) == 0) {
+    return 0;
+    }
+    trailer = frame -> trailer;
+    if (trailer == 0 || trailer -> spelling == 0 || (trailer -> flags & LM_P0_TRAILER_TAIL_CUTTER) == 0U || (trailer -> flags & LM_P0_TRAILER_COLON) == 0U) {
+    return 0;
+    }
+    if (lm_p0_text_has_prefix_name(trailer->spelling->data, trailer->spelling->length, "end", 1) == 0) {
+    return 0;
+    }
+    if (trailer -> body == 0 || trailer -> body -> field_count != 1U) {
+    return 0;
+    }
+    only = trailer -> body -> first_field;
+    if (only == 0 || only -> value == 0) {
+    return 0;
+    }
+    return lm_p0_atom_names(only->value, frame->head);
+}
+void lm_p0_close_empty_by_end_in_node(LmP0Node * node)
+{
+    if (node == 0 || node -> as == 0) {
+    return;
+    }
+    if (node -> kind == LM_P0_NODE_FRAME && node -> as -> frame != 0) {
+    if (lm_p0_end_closes_empty_colon(node->as->frame) != 0) {
+    node->as->frame->trailer = 0;
+    node->as->frame->flags = node -> as -> frame -> flags | LM_P0_FRAME_DELIMITER_CLOSED;
+    }
+    lm_p0_close_empty_by_end_in_structure(node->as->frame->body);
+    if (node -> as -> frame -> trailer != 0) {
+    lm_p0_close_empty_by_end_in_structure(node->as->frame->trailer->body);
+    }
+    return;
+    }
+    if (node -> kind == LM_P0_NODE_STRUCTURE && node -> as -> structure != 0) {
+    lm_p0_close_empty_by_end_in_structure(node->as->structure);
+    if (node -> as -> structure -> trailer != 0) {
+    lm_p0_close_empty_by_end_in_structure(node->as->structure->trailer->body);
+    }
+    }
+}
+void lm_p0_close_empty_by_end_in_structure(LmP0Structure * structure)
+{
+    LmP0Field * field;
+    if (structure == 0) {
+    return;
+    }
+    field = structure -> first_field;
+    while (field != 0) {
+    lm_p0_close_empty_by_end_in_node(field->value);
+    field = field -> next;
+    }
+}
 int lm_p0_validate_nonempty_colon_frames_in_trailer(LmP0Document * document, const LmP0Trailer * trailer)
 {
     if ((trailer == 0)) {
@@ -5838,6 +5918,7 @@ int lm_p0_parse_bytes(const char * source, size_t source_length, LmP0Document **
     }
     if (lm_p0_parse_stream(document)) {
     if (lm_p0_postprocess_node(document, document->root)) {
+    lm_p0_close_empty_by_end_in_node(document->root);
     if (lm_p0_validate_nonempty_colon_frames_in_node(document, document->root)) {
     lm_p0_normalize_sole_anonymous_in_node(document->root);
     }

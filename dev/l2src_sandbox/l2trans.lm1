@@ -1069,7 +1069,7 @@ prototype:
     fn: l2_char_literal (const: @(LmP0Text t)) int
     fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char path)) int
     fn: l2_ns_decl_first (const: @(LmP0Node node)) int
-    fn: l2_unit_declares (const: @(LmP0Text name)) int
+    fn: l2_unit_declares (const: @(LmP0Text name); const: @(LmP0Node stop)) int
     fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
     fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; int: vk; size_t: val) int
     fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
@@ -3618,7 +3618,7 @@ fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     @: LmP0Field f
     if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_find_method(t) >= 0
         return: 0
-    if: l2_unit_declares(t) != 0 || l2_is_known(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_receiver_word(t) != 0
+    if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_receiver_word(t) != 0
         return: 0
     if: l2_cur_unit = 0
         return: 1
@@ -3678,18 +3678,23 @@ fn: l2_ns_decl_first (const: @(LmP0Node node)) int
         return: 1
 return: 0
 
-# Whether the unit declares a field named name -- a frame whose first item is the atom name after a
-# type word, an address, or a Structure type (`Model: name`).  A frame headed by such a name is an
-# assignment to it, never a new named Structure, whatever its body looks like: `r:` / `show: r` has
-# the P0 shape of `Model: left` (l2_head_absent asks this).  It errs only toward "not a named Structure".
-fn: l2_unit_declares (const: @(LmP0Text name)) int
+# Whether the unit declares a field named name above stop (the whole unit when stop is 0) -- a frame
+# whose first item is the atom name after a type word, an address, or a Structure type (`Model:
+# name`).  A frame headed by such a name is an assignment to it, never a new named Structure, whatever
+# its body looks like: `r:` / `show: r` has the P0 shape of `Model: left` (l2_head_absent asks this, with
+# the item it classifies as stop).  Read from the source's order, as l2_head_absent is: `Model: Other`
+# below a named Structure `Other:` is Model's call with it (OPUS-ROOT-CALL-20260930-17), and it declares
+# nothing that could unmake the Structure above it.  A type word is a primitive word or a c.* name,
+# never a named Structure -- l2_prim_type_word also answers for a registered one, and the answer must
+# not depend on what is registered yet: the lexical pass's count walk and fill walk ask the same.
+fn: l2_unit_declares (const: @(LmP0Text name); const: @(LmP0Node stop)) int
     @: LmP0Field field
     @: LmP0Node item
     @: LmP0Field first
     if: l2_cur_unit = 0 || name = 0
         return: 0
     field: l2_next_active(l2_cur_unit\first_field)
-    while: field != 0
+    while: field != 0 && (stop = 0 || field\value != stop)
         item: field\value
         if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && item\as\frame\body != 0 && item\as\frame\head != 0 && l2_text_same(item\as\frame\head, name) = 0
             first: l2_next_active(item\as\frame\body\first_field)
@@ -3702,7 +3707,7 @@ fn: l2_unit_declares (const: @(LmP0Text name)) int
             if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0 && l2_text_same(first\value\as\atom, name) != 0
                 # `Model: name` needs a type for its head: a control receiver's (`else: Counter`, a bare execution
                 # in an else body; REVIEW 99511ff, P59) or a method's (`f: Counter`, a call) heads no declaration.
-                if: l2_prim_type_word(item\as\frame\head) || l2_address_depth(item\as\frame\head) != 0 || (l2_count_active(item\as\frame\body) = 1 && l2_text_eq(item\as\frame\head, "if") = 0 && l2_text_eq(item\as\frame\head, "else") = 0 && l2_text_eq(item\as\frame\head, "while") = 0 && l2_text_eq(item\as\frame\head, "for") = 0 && l2_text_eq(item\as\frame\head, "return") = 0 && l2_unit_names_method(item\as\frame\head) = 0)
+                if: (l2_prim_type_word(item\as\frame\head) != 0 && l2_ns_find(item\as\frame\head) < 0) || l2_address_depth(item\as\frame\head) != 0 || (l2_count_active(item\as\frame\body) = 1 && l2_text_eq(item\as\frame\head, "if") = 0 && l2_text_eq(item\as\frame\head, "else") = 0 && l2_text_eq(item\as\frame\head, "while") = 0 && l2_text_eq(item\as\frame\head, "for") = 0 && l2_text_eq(item\as\frame\head, "return") = 0 && l2_unit_names_method(item\as\frame\head) = 0)
                     return: 1
                 ---
             ---
@@ -4091,6 +4096,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     @: LmP0Node first_stmt 0
     int: role
     int: i
+    int: en 0
     l2_library_mode: l2_library_flag
     # A unit may be translated twice (Q33, l2_translate): every registry of the
     # unit starts empty, as in the first translation.
@@ -4194,6 +4200,11 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
         if: role = 5 && l2_take_named(item, path) != 0
             return: 1
         if: role = 0
+            # The count walk above sized E's statements; a walk that classifies more (the two disagreeing) would
+            # write past them.
+            if: en >= l2_e_n || l2_e_fields = 0
+                return: l2_error(path, item, "internal: the unit's statements changed between the lexical pass's walks")
+            en: en + 1
             if: first_stmt = 0
                 first_stmt: item
             ef\value: item
@@ -8787,7 +8798,7 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
     if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_find_method(h) >= 0 || l2_is_known(h) != 0
         return: 0
-    if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_receiver_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h) != 0
+    if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_receiver_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h, 0) != 0
         return: 0
     oi: l2_own_find(mi, h)
     if: oi >= 0 && l2_own_decl[oi] != stmt

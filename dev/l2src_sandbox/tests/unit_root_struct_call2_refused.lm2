@@ -1,0 +1,17 @@
+# OPUS-ROOT-CALL-20260930-17: `Model: Other extra`, both arguments known, is Model's two-argument call -- refused at
+# its own line.  A named Structure is no type word: `Model: a b` declares nothing (a named Structure T declares only
+# by `T: name`, as in a method).  The classifier took the registered Model for one, so the lexical pass's count walk
+# (nothing registered) and fill walk (Model registered) disagreed about `Other:` and the fill wrote a statement past
+# E's counted fields: this program crashed the translator (STATUS_HEAP_CORRUPTION).
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    size_t: p 2U
+end: Other
+
+int: extra 1
+Model: Other extra
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

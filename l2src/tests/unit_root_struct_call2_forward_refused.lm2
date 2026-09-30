@@ -1,0 +1,15 @@
+# OPUS-ROOT-CALL-20260930-17: the two-argument call written above Other's declaration.  The type-word test does
+# not depend on what is registered, so both walks of the lexical pass take `Other:` below as a named Structure, and
+# the call is refused at its own line (with the registration-dependent test the walks disagree about it).
+Model:
+    size_t: value 1U
+end: Model
+
+int: extra 1
+Model: Other extra
+
+Other:
+    size_t: p 2U
+end: Other
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

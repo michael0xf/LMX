@@ -1550,6 +1550,21 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_guard_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported trailer'; Absent = @(); Debt = @() },
+    # OPUS-ROOT-CALL-20260930-17: at the root, `Model: Other` with Other declared above is Model's call (refused at its own
+    # line), and so is `Model: Other extra` -- above or below Other's declaration; the heap-corruption shape is the
+    # second.  `Model: fresh` still declares.  A `name:` block with nothing above declaring name is a named Structure, a
+    # later field of that name collides with it.  The unit classifier reads the source's order, and its answer does not
+    # depend on what is registered (the count and fill walks of the lexical pass agree).
+    [pscustomobject]@{ Name = 'unit_root_struct_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_root_struct_call_refused.lm2:14:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_struct_call2_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_root_struct_call2_refused.lm2:15:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_struct_call2_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_root_struct_call2_forward_refused.lm2:9:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_struct_decl_beside_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_root_block_before_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_root_block_before_field_refused.lm2:8:1: named Structure collides with a unit field'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_guard_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_struct_guard_call_refused.lm2:7:1: unsupported trailer'; Absent = @(); Debt = @() },
     # steps/named-struct-exec.md, slice 2: a bare `S` at the root executes the named Structure -- its

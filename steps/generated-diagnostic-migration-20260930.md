@@ -170,6 +170,50 @@ Replace the invalid returns, then assert exact stdout. Derive triple-string byte
 
 Leave the separate `entry_puts_triple_fence4` parser-debt row unchanged; it is not in this 43-row inventory.
 
+### B3. Pending harness mechanics and exact expectations
+
+The following is the prepared implementation design, not measured coverage. The fixture bytes to edit are the authoritative active-worktree inputs under
+`build/opus_wt/dev/l2src_sandbox/tests/`; `tools/l2_harness.ps1` stages those files for a run. Do not infer the pending fixture state from the stable/mirrored
+`l2src/tests/` tree. A final gate must name the staged source and translator bytes it actually used.
+
+For the three compilation negatives, add one generic product-step helper that removes a previous product, invokes the tool exactly once, and returns the
+actual process exit code together with whether a fresh nonempty product exists. Preserve `Step-Made` as the small compatibility adapter with its existing
+product-existence behavior for all current callers. Only the new compile-constraint expectation is strict: L2 translation and L1 translation must each exit
+zero and produce a nonempty output, then C99 `-fsyntax-only` compilation must exit nonzero and contain every row-specific diagnostic fragment. The
+bad-argument and nested-result rows add row-local `-Werror=int-conversion`; the extra-argument row relies on the prototype constraint. The harness facility
+knows no C function name and supplies no language fallback. The rows, not the translator, identify their intended diagnostics. No invalid program is linked
+or executed.
+
+For the ten positive rows, use the established nonempty root witness
+`sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")` followed by bare `return`. Require process exit zero, driver entry 7, native-root attachment, and a
+scoped exact-output property. This property must normalize only platform line endings (`CRLF`/`CR` to `LF`), remove the two positional harness header lines
+and the positional terminal `exit: N` line, require exactly one successful driver-completion line with no suffix, and compare the complete preceding program
+payload case-sensitively. It must not discard empty lines or filter lines by their text. Keep the older line-oriented `Says` behavior unchanged for its
+existing consumers.
+
+The grammar-derived exact payloads below include the newline written by `puts`; `x` repeated 100 times means exactly the 100 `x` bytes already present in
+that fixture's raw literal, followed by one `LF`:
+
+| Fixture | Exact normalized program payload |
+| --- | --- |
+| `entry_puts_triple` | `a"""b\n` |
+| `entry_puts_triple_lead` | `"hello\n` |
+| `entry_puts_triple_lead_sq` | `'hello\n` |
+| `entry_puts_triple_long` | `x` repeated 100 times, then `\n` |
+| `entry_puts_triple_runs` | `a"b""c"""d\n` |
+| `entry_puts_triple_seven` | `"""x\n` |
+| `entry_puts_triple_seven_sq` | `'''x\n` |
+| `entry_puts_triple_single` | `a'''b\n` |
+| `entry_ret_tr_puts` | `MUST PRINT\n` |
+| `entry_ret_tr_two` | `one\ntwo\n` |
+
+Pending counterfactuals are part of acceptance, not current evidence. Correct `puts(1)` to a string argument, remove the extra second argument, and replace
+the nested integer result used as the outer argument with a valid string argument; each corrected program must pass both translators and C99 compilation
+under the same row flags. Output mutants must change a decoded character, reverse or drop an output line, and inject an extra blank line. Harness mutants
+must remove and duplicate the driver-completion marker. Strict-product mutants must make either translator fail after leaving a product path, and the C
+negative must reject an unrelated compiler diagnostic that does not contain the row's intended constraint. Restore the exact positive and negative fixture
+bytes before the final focused run.
+
 <a id="unknown-head-10"></a>
 
 ## C. Withdrawn unknown-head assumptions: 10

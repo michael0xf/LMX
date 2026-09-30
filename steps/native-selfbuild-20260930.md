@@ -88,18 +88,15 @@ mean two separate Array descriptors. l2_array_literal and l2_arr_operand also
 reject static OOB indices in L2. Translation-only witnesses must not execute
 undefined C accesses. Do not remove Structure-slot validation as an Array fix.
 
-### Unbounded constructor/path composition (Q56)
+### General receiver composition (Q56)
 
-The author removed shape/rank promises, not deferred them to a future library.
-The Array constructor composes recursively at any finite depth. The fixed
-outer/inner pair in l2_ns_arrarr_field and two-index API in l2_arr_operand,
-l2_emit_arr_operand, l2_arr_len_shape and l2_rw_index_ty violate this norm.
-Replace the coupled path by a shared walk of declared element types and source
-indices. Intermediate values remain actual Array descriptor references.
-Do not add an i2 argument, a 3d branch or a runtime dimension table.
-Audit analogous fixed path/name/nesting/argument limits across the pipeline;
-actual C99 representation limits and allocation failures remain distinct.
-See next_core_tasks.md §0 and ARRAY-COMPOSITION-DEPTH in steps/defects.md.
+The author's clarification supersedes the proposed Array-specific residual-type
+scanner. Ordinary nested receiving expressions must share one resolution path;
+`[]: []:` is not a special grammar or another Array kind. Replace the existing
+shape recognizers, not just their depth limit. `length` consumes the ordinary
+resolved operand. Keep the separate repeated-index syntax question open;
+do not recover or infer rectangular shape. Detailed code boundaries and
+acceptance: [general receiver resolution](receiver-resolution-20260930.md).
 
 ### One complete lexical graph
 

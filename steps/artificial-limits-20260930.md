@@ -12,14 +12,13 @@ with a larger cap or add one more fixed-dimensional branch. Resource failure
 and C99 representability/overflow are not invented syntax limits. Preserve
 invalid-type/path/arity diagnostics; test successful cases beyond old caps.
 
-## Current source writer
+## Current source work
 
-Recursive Array composition in dev/l2src_sandbox/l2trans.lm1. The declared
-type AST must survive namespace and merge-result metadata. One residual-type
-walk must serve checking, native access, walker ELEM nesting and static
-admission. Every intermediate Array remains an ordinary descriptor reference.
-The former outer/inner and i0/i1 interface cannot represent this contract.
-Status: IN WORK; no completion or green-gate claim.
+Independent runtime work removes the implements depth cap and the walker
+holder-parent cap. The translator repair is broader than depth: replace its
+special source-shape recognizers with [general receiver resolution](receiver-resolution-20260930.md).
+An arbitrary-depth Array-only scanner is not the intended replacement. No new
+index-suffix semantics is chosen by this cap-removal task.
 
 ## Remaining families and repair order
 

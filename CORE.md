@@ -156,6 +156,16 @@ storage by `lmx_arena_refs`; typed pools by `lmx_pool`.
 
 ### 2.2 The base Array and the separate List
 
+Receiver composition and indexing are separate contracts. `[]: []:` is ordinary
+nested receiver application, without a special array-of-arrays form or depth
+limit. C-like `[][][]` describes one flat rectangular Array. In a path,
+`a[i]\[j]\[k]` explicitly follows each selected Array value; adjacent
+`a[i][j][k]` addresses the original flat Array. An unnamed `[i]` path step
+indexes an Array; `[i]name` selects a Structure field occurrence. `length`
+consumes the selected descriptor, not the source spelling or element shape.
+See the [normative path contract](docs/LMX_semantics.en.md#fields) and the
+[general resolver replacement](steps/receiver-resolution-20260930.md).
+
 The accepted base Array type is `VoidArray`, exactly
 `{size_t size, void *data}`; a separate `LmxArrayDesc` alias is unnecessary.
 Standalone Array backing has exactly `size` elements; embedded

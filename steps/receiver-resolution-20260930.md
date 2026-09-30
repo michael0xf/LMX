@@ -66,7 +66,7 @@ Current duplicated semantic entry points in dev/l2src_sandbox/l2trans.lm1:
    element is an ordinary reference; no array-of-arrays runtime type or depth
    registry is introduced. Construction/admission use the existing machinery.
 
-## Staged access, without a new shorthand
+## Staged access and the ordinary unnamed index step
 
 The author retains C-like `[][][]` for a flat rectangular Array, separately
 from ordinary nested receiver applications. For Array-valued elements, use
@@ -80,10 +80,20 @@ the author's ordinary staged bindings now:
 
 The witness must supply actual typed values for a, i and j and observe reference
 identity/value and lengths. These are ordinary bindings to the selected values,
-not a hidden Array-of-Arrays construct. Do not invent a shorthand `a[i][j]`
-that silently chooses between the original rectangular Array and the value
-selected by the first suffix. A new quick syntax is deferred and does not block
-this work. No dimension-recovery mechanism or shape/rank promise is introduced.
+not a hidden Array-of-Arrays construct.
+
+The author's next clarification defines direct access through the existing
+backslash path: `a[i]\[j]\[k]`. Each backslash explicitly continues from the
+selected value. `[i]name` remains a same-name Structure occurrence selector;
+an unnamed `[i]` step indexes a typed Array. Adjacent `a[i][j][k]` remains the
+C-like flat multidimensional form. No inference of rectangularity, separate
+Array-path resolver, index-count cap or dimension-recovery mechanism is used.
+
+Required lowering: resolve each path step against its current typed operand,
+then pass its ordinary typed result to the next step. Structure-field and
+Array-element access have different storage projections, not different source
+path algorithms. Preserve each index expression and evaluate it once. Native
+and walker consume that same resolved path; `length` simply uses its result.
 
 ## Acceptance and landing
 
@@ -93,6 +103,8 @@ this work. No dimension-recovery mechanism or shape/rank promise is introduced.
 - Cover primitives, Structure elements and repeated ordinary receiver
   composition beyond the old two-Frame boundary. Use unequal inner lengths.
   Include the author's staged b/c bindings above with actual selected values.
+  Compare them against direct backslash paths; include named-field/index mixtures,
+  unequal lengths, dynamic indices with observable effects and deep chains.
   Add non-Array receiver compositions so an Array-only dispatcher cannot pass.
 - Preserve unknown-name construction, existing callable invocation, primitive
   assignment, explicit-reference binding and admission failure diagnostics.

@@ -2063,6 +2063,8 @@ The two backslash positions are distinct: `\address` is L2 prefix load, while `v
 
 Field-follow and index chains bind tighter than prefix `@` and `\`. `*` remains multiplication, `&` is not address-of, and `^` is not dereference. `.` specifies a level only in the leading zone and is not ordinary field access; `->` is not an LMX field-follow operator.
 
+An unnamed path step is written `value\[index]`; a named occurrence selector is `value\[occurrence]field`. The chain `a[i]\[j]\[k]` contains index steps explicitly separated by backslashes. It differs from adjacent index suffixes `a[i][j][k]`. Each step's brackets contain an ordinary index expression; the step count has no fixed limit. This extends the ordinary path spelling, not a separate nested-Array form.
+
 **Source excerpt** — `Lingvamyxa_spec.txt`, 7458–7460.
 
 ````text

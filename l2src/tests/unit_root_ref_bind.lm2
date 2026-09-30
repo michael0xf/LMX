@@ -1,0 +1,22 @@
+# The walked root's typed reference (OPUS-CALLABLE-STRUCT-BINDING-20260929-16, step 1): `@: Model r` is an own field
+# of the unit, a pointer cell (q26), null until bound; `r: @m` admits m's Structure to Model -- implements(m, Model,
+# Model), a value of Model's own too, no shortcut -- and binds it.  A path through r is m's field: m's 7 is read through
+# r, and a write through r is m's.  3 (null before) + 4 (7 read through r), 9 written through r seen in m: Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+Model: m
+m\value: 7U
+@: Model r
+int: code 0
+if: r = 0
+    code: 3
+r: @m
+if: r\value = 7U
+    code: code + 4
+r\value: 9U
+if: m\value != 9U
+    code: 0
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

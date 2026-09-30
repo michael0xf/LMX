@@ -799,6 +799,10 @@ prototype:
     fn: l2_payload_expr (@: char val) int
     fn: l2_rw_admit (int: parent; int: ni; int: letter; @: int out) int
     fn: l2_rw_is_letter (int: oi) int
+    fn: l2_rw_ref_decl (const: @(LmP0Node stmt)) int
+    fn: l2_root_ref_ns (int: mi; const: @(LmP0Node stmt); @@: LmP0Text out_name) int
+    fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
+    fn: l2_rw_ref_bind (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
     fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_d105_sub (int: mi; int: k) int
@@ -5142,6 +5146,10 @@ fn: l2_ml_collect (const: @(LmP0Structure body); const: @(char path)) int
         # companions in a method body are the 11.2.1 slot form and are
         # declared by the method preamble, not by this table.
         nm: 0
+        # The walked root's typed reference is its own field (l2_root_ref_row), not a machine local.
+        if: l2_root_ref_row(stmt) >= 0
+            field: l2_next_active(field\next)
+            continue
         if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 2
             return: l2_error(path, l2_next_active(stmt\as\frame\body\first_field)\value, "unknown type")
         if: l2_slot_decl_ty(stmt) = 0 && l2_ptr_local_ty(stmt, @ nm, @ ty) = 0 && l2_ml_find(nm) < 0 && l2_ml_add(nm, ty, path, stmt) != 0
@@ -9658,6 +9666,17 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # A method's own named Structure (OPUS-Q54-CONTINUE-20260929-14 2b): its type, local to mi, and S, its own
         # field typed by it -- here, before the method's names are read (l2_dyn_local), so that a later read of S
         # finds the field and never makes S a dynamic input.
+        # The walked root's typed reference `@: T r`, T a named Structure (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): an own
+        # field of the unit typed by T -- declared by `@`, so a pointer cell, not a slot (q26) -- as the walked root has no
+        # machine locals.
+        if: l2_root_ref_ns(mi, stmt, @ fa) >= 0
+            cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            if: cj < 0
+                return: 1
+            if: l2_own_nsty_set(cj, l2_root_ref_ns(mi, stmt, @ fa)) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         if: l2_local_ns_shape(stmt, mi) != 0
             if: l2_local_ns_entry(stmt, mi, path) < 0
                 return: 1
@@ -19799,6 +19818,24 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && l2_struct_local(stmt, @ lnm) = 0 && l2_ml_find(lnm) >= 0
             field: l2_next_active(field\next)
             continue
+        # The walked root's typed reference `@: T r` (l2_root_ref_ns): its own field, counted and bound here as
+        # `Model: m`'s is.
+        if: l2_root_ref_ns(mi, stmt, @ cname) >= 0
+            cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            if: cj < 0
+                return: 1
+            if: l2_own_off(mi, cj) = (cast: (size_t) -1)
+                return: l2_error(path, stmt, "size overflow")
+            if: l2_own_decl[cj] = stmt
+                l2_m_uses[l2_own_off(mi, cj)]: 1
+                l2_m_own[mi]: l2_m_own[mi] + 1
+                if: l2_bind_own(mi, cj, path, stmt) != 0
+                    return: 1
+            ---
+            if: l2_own_nsty_set(cj, l2_root_ref_ns(mi, stmt, @ cname)) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         if: l2_frame_head(stmt, "if") = 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 2
             return: l2_error(path, l2_next_active(stmt\as\frame\body\first_field)\value, "unknown type")
         if: l2_frame_head(stmt, "if") = 0 && l2_ptr_local_ty(stmt, @ lnm, @ lty) = 0 && l2_ml_find(lnm) >= 0
@@ -24066,6 +24103,80 @@ fn: l2_rw_admit_assign (const: @(LmP0Node stmt); int: oi; int: into; @: int out)
         return: 1
 return: l2_rw_put(\out, vs, adm)
 
+# The named Structure T of the walked root's typed reference `@: T r` (l2_ref_formal_ns), its name into out_name -- or
+# -1 for any other statement, and in any other body: a method's `@: T r` is its local (D-76).
+fn: l2_root_ref_ns (int: mi; const: @(LmP0Node stmt); @@: LmP0Text out_name) int
+    int: ni
+    @: LmP0Field f
+    if: out_name != 0
+        \out_name: 0
+    if: mi < 0 || mi != l2_e || l2_library_mode != 0 || stmt = 0
+        return: 0 - 1
+    ni: l2_ref_formal_ns(stmt)
+    if: ni < 0
+        return: 0 - 1
+    f: l2_next_active(l2_next_active(stmt\as\frame\body\first_field)\next)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_ident(f\value\as\atom) = 0
+        return: 0 - 1
+    if: out_name != 0
+        \out_name: f\value\as\atom
+return: ni
+
+# The root's own field that `@: T r` at stmt declares (l2_root_ref_ns), or -1.
+fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
+    int: oi 0
+    if: stmt = 0 || l2_e < 0
+        return: 0 - 1
+    while: oi < l2_own_n
+        if: l2_own_decl[oi] = stmt && l2_own_mi[oi] = l2_e
+            return: oi
+        oi: oi + 1
+    ---
+return: 0 - 1
+
+# The own field a typed reference declaration `@: T r` declares in the body being built -- a pointer cell (not a slot,
+# q26) of a named Structure type T -- or -1 for any other statement.
+fn: l2_rw_ref_decl (const: @(LmP0Node stmt)) int
+    int: oi 0
+    if: stmt = 0 || l2_frame_head(stmt, "@") = 0
+        return: 0 - 1
+    while: oi < l2_own_n
+        if: l2_own_decl[oi] = stmt && l2_own_mi[oi] = l2_rw_mi && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0 && l2_own_nsty_get(oi) >= 0
+            return: oi
+        oi: oi + 1
+    ---
+return: 0 - 1
+
+# `r: @v` in the body being built, r a typed reference `@: T r` (l2_rw_ref_decl) and v a field of the body that holds a
+# Structure -- an own Structure slot, typed or not (a letter): `@v` is the reference to v's resolved data, the Structure
+# v holds, never v's slot address.  It is admitted to T at this binding point -- implements(v, T, T), the predicate the
+# native admission calls too, for every v, one of T's own included -- and a refusal is the implicit throw `implements`:
+# PUT(r, admit(OWN(v), T)), admit_letter for a letter.  Any other value is refused where it stands.
+fn: l2_rw_ref_bind (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
+    @: LmP0Field f
+    @: LmP0Field g
+    int: src
+    int: adm
+    int: raw
+    int: vs
+    # P0 gives `@v` as two fields, the atom `@` and v's name.
+    if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 2
+        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
+    f: l2_next_active(stmt\as\frame\body\first_field)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_text_eq(f\value\as\atom, "@") = 0
+        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
+    g: l2_next_active(f\next)
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || l2_ident(g\value\as\atom) = 0
+        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
+    src: l2_rw_find(g\value\as\atom)
+    if: src < 0 || l2_rw_seen(src) = 0 || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_slot(src) = 0
+        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
+    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
+        return: 1
+    if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 3, raw) != 0
+        return: 1
+return: l2_rw_put(\out, vs, adm)
+
 # Is the root own field oi a letter -- declared by `receiveMessage: oi`?
 fn: l2_rw_is_letter (int: oi) int
     @: LmP0Text name 0
@@ -26369,6 +26480,10 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: 0
     if: h != 0 && h\length > 2U && h\data[0] = 99 && h\data[1] = 46
         return: l2_rw_l2(stmt)
+    # A typed reference `@: T r`, T a named Structure: a pointer cell of the body, null until `r: @v` binds it
+    # (l2_rw_ref_bind) -- the walk passes over its declaration.  Any other `@` form stays an L2 operation.
+    if: l2_rw_ref_decl(stmt) >= 0
+        return: 0
     if: l2_text_eq(h, "sizeof") || l2_text_eq(h, "cast") || l2_text_eq(h, "L2") || (h != 0 && h\length > 0U && (h\data[0] = 64 || h\data[0] = 92))
         return: l2_rw_l2(stmt)
     if: l2_text_eq(h, "if")
@@ -26704,6 +26819,15 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # An assignment into a reference field (-179): of a declared Structure type it admits the value
     # first -- the caller's implicit `implements` (D-55); an untyped one takes the reference.
     oi: l2_rw_find(h)
+    # `r: @v` into a typed reference (l2_rw_ref_bind): v's Structure admitted to r's type, then r's cell.
+    if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0 && l2_own_nsty_get(oi) >= 0
+        if: l2_rw_ref_bind(stmt, oi, into, @ node) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
+        return: 0
+    ---
     if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
         if: l2_own_nsty_get(oi) >= 0
             if: l2_rw_admit_assign(stmt, oi, into, @ node) != 0

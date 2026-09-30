@@ -1,0 +1,15 @@
+# The walked root's typed reference bound to a Structure of another shape: `r: @o` with o an Other (two ints) is not a
+# Model (one size_t) -- the admission before binding refuses it and the implicit throw `implements` stops R0 (status 2).
+Model:
+    size_t: value 1U
+end: Model
+Other:
+    int: a 1
+    int: b 2
+end: Other
+
+Other: o
+@: Model r
+r: @o
+sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+return

@@ -1,6 +1,6 @@
 # Native compilation and the route to §§8–8a
 
-Status: 2026-09-30, Codex WIP over documentation checkpoint 6538898 in build/opus_wt.
+Status: 2026-09-30, Codex WIP over documentation checkpoint b8db6c8 in build/opus_wt.
 Implementation evidence and remaining work, not a language specification.
 
 ## Resumed after Q56/Q57 documentation correction
@@ -28,18 +28,41 @@ Fresh diagnostics after the documentation checkpoint:
 | `build/l2src/resume_q57_20260930_02` | Standard `build_l2src.ps1 -Run -KeepAll`: **280 targets, zero failures**; includes the corrected deep-holder witness |
 | `build/l2_harness/resume_ref_20260930_01` | Focused signature run: 8 targets, one failure exposed inconsistent raw/encoded formal types |
 | `build/l2_harness/resume_ref_20260930_02` | Focused signature run after normalization: **8 targets, zero failures**, including existing primitive/reference controls |
+| `build/l2_harness/address_name_20260930_09` | Common Structure/reference-cell address acquisition: **15 targets, zero failures**; 12 fixtures including depth refusals and existing controls; two deliberately inverted positive witnesses fail |
+| `build/l2src/mapped_cycles_20260930_01` | Standard kernel after mapped-cycle repair: **280 targets, zero failures**, 104 selftests; runtime implements 55 checks (25 new), table 59 checks, zero failures in both |
 
-The kernel run predates the subsequent reference-translator edits. The
+The first kernel run predates the subsequent reference-translator edits. The
 focused harness does not replace a full gate. The stopped audit run
 `build/l2_harness/20260930_144410` has no verdict and is not evidence.
 
 The new signature witness uses existing Model and Other, not the withdrawn
 implicit `Model: fresh` construction. Both nonprimitive formal spellings
 use the same reference type and permit admitted local rebinding without
-changing the caller's reference. General address acquisition is the next
-bounded slice: actual Structure descriptor versus an explicit reference's
-cell; flat and Frame forms must agree, and an extra level must not disappear.
-Interpreted portable-reference support remains separately unproved.
+changing the caller's reference. Native named-value address acquisition now
+distinguishes an actual Structure descriptor from an explicit reference's
+cell. Flat and Frame forms use the same classification; an extra reference
+level is not erased. Translator blob for the focused green run:
+acec2a68ed3402c73bd72a4065e9057e2631a7fc. This does not yet prove unified
+field/index paths or interpreted portable references. The full generated
+harness and L3 runner must be repeated.
+
+Mapped admission uses one operation-local traversal with pending/cached
+correspondences for both providers. Back-edges retain those correspondences;
+unvisited siblings still undergo admission, and failure does not publish a
+cache entry. All 231 staged kernel source files match the live bytes in the
+green runtime run. Aggregate staged-source SHA256:
+5475b1c099ed630510914065122925ced8dad2888e5b840b8bd8d23dd774ac3d.
+
+## Definition/body role clarification
+
+[Q58](../LMX_blog/q/current/q58.md) asks about an already known ordinary
+callable nested in a new named Structure. The earlier audit suggestion that
+a generic `definition contents` label alone resolves Q57 was insufficient:
+the rule deriving that role is the missing fact. Ignoring outer bindings
+would also destroy Q52 hidden-input assignment and ordinary saved calls.
+Do not decide using empty/nonempty tails, argument count or surface syntax.
+The author has been asked; no speculative resolver replacement is authorized
+by this note. Independent gates and repairs with settled semantics continue.
 
 ## Pending regression migrations and runtime defects
 
@@ -53,12 +76,9 @@ Interpreted portable-reference support remains separately unproved.
   merge: a copy would destroy the identity property those fixtures test.
   Keep known-head calls with unknown arguments as call errors, not fallback
   declarations. Add Q57 graph-and-effect witnesses at multiple positions.
-- `lmx_implements_through` currently loses its pending field correspondence
-  when descending to a Structure and starting a fresh positional walk.
-  A permuted self-cycle can therefore fail despite matching. Reuse one
-  operation-local DFS for mapped and positional admission; retain per-pair
-  correspondence on back-edges and publish a cache record only after success.
-  A visited edge must not skip checking a later mismatching/unknown sibling.
+- Mapped-cycle admission is repaired in WIP and runtime-gated above; it is not
+  yet a published clean-kernel checkpoint. Preserve the positive and negative
+  cycle/sibling/cache witnesses when integrating the remaining translator work.
 - Built-in mixed machine arithmetic must follow target C99 promotions and
   operations. The walker still rejects some different promoted types. Fix
   common operand typing separately from receiving-place conversion/admission;

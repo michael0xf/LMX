@@ -145,14 +145,26 @@ by this note. Independent gates and repairs with settled semantics continue.
 
 ## Pending regression migrations and runtime defects
 
-- Next independent negative-fixture batch: `entry_puts_after_return`,
+- Verified WIP negative-fixture batch: `entry_puts_after_return`,
   `unit_lit_range_arg_int_overflow`, `unit_s1_throws_entry_unhandled_refused`,
   `unit_bare_unknown_refused`, `unit_discard_unknown_refused`,
   `unit_callable_descriptor_direct_refused`, `unit_callable_formal_sig_refused`,
   `unit_colon_unknown_value_refused`. Only the first changes to the common
   void-callable diagnostic; the others discard the tested call/expression or
   remove the invalid valued root-return tail, retaining their own intended
-  rejection. A valid counterpart must stop producing that specific rejection.
+  rejection. `native_diagnostics_20260930_final` passed 11/11 targets; eight
+  valid counterparts in `native_diagnostics_20260930_mutants_03` passed the
+  same frozen L2 → L1 → C syntax/constraint pipeline. All eight negative
+  fixtures were restored exactly; 128 staged L2 source files match live bytes.
+  Translator SHA256 remains
+  `691E7F9D74DEDB3AF26F91FFC214DDF6730AAA5ED32FD256375EF588E5BD2F0B`;
+  harness SHA256 at this gate is
+  `9EFC527FA99EA015E487A68A24E58E5473327FAC7C22A46924BB2AACB667FC07`.
+  This is diagnostic specificity, not runtime acceptance of the positive
+  counterparts. The first catch-based positive attempt exposed separate
+  RETURN-ABI-EMPTY-HANDLER defects, recorded in defects.md; the final
+  unhandled-throw counterpart removes the callee's throw instead of asserting
+  catch correctness. Those generator defects are the immediate next repair.
 - Raw-C bad argument/arity/nested-call fixtures must not run. Preserve their
   emitted C and verify its constraint diagnostic with the target compiler
   (`-fsyntax-only -Werror=int-conversion`), not name-specific L2 validation.
@@ -178,8 +190,8 @@ by this note. Independent gates and repairs with settled semantics continue.
   merge: a copy would destroy the identity property those fixtures test.
   Keep known-head calls with unknown arguments as call errors, not fallback
   declarations. Add Q57 graph-and-effect witnesses at multiple positions.
-- Mapped-cycle admission is repaired in WIP and runtime-gated above; it is not
-  yet a published clean-kernel checkpoint. Preserve the positive and negative
+- Mapped-cycle admission is published at the intermediate runtime checkpoint
+  `ca2f1cd` and gated above; it is not a clean-kernel checkpoint. Preserve the positive and negative
   cycle/sibling/cache witnesses when integrating the remaining translator work.
 - Built-in mixed machine arithmetic must follow target C99 promotions and
   operations. The walker still rejects some different promoted types. Fix
@@ -354,6 +366,35 @@ Witnesses: lexical ordering, retained operator/literal graph after native
 execution, same L3 graph executed with its native word cleared in a test, and
 M\while\j resolving to the exact body executed by WHILE.
 
+#### Next dependency-closed identity slice
+
+Canonical body identity can precede lexical-order reallocation, but it cannot
+be a translator-only pointer substitution. Preserve current field slots while
+recording body-step counts in existing compiler body metadata; allocate the
+single `l2_for_node` body with space for its existing children and operators.
+Both `l2_emit_local_bodies` and unit-builder allocations must use that width.
+Replace `l2_rw_body`'s step-only `lmx_walk_plain` with population of, and a
+reference to, that exact source body. Top-level method/T7 bases need not move
+in this bounded slice; their eventual lexical-order migration remains open.
+
+The same slice must repair `lmx_walk_load_code/load_node`: preload only
+executable operator children and the body operands defined by IF/WHILE/UNTIL/
+FOR/PAD, plus ordinary owned expression operands. Do not walk arbitrary
+lexical descendants or preload an uncalled nested callable. A canonical
+body's structural parent is not the operator referencing it, so the old
+`child.parent == operator` test alone misses its working cells.
+
+`lmx_copy_value` currently retains a whole Structure whenever its head is an
+OP/ROLE record. Remove this extra terminal shortcut: ordinary frames use the
+existing operation-local copy map, while bare OP/ROLE records remain admitted
+terminals. Require copied operator.body == copied path-selected body, both
+different from the original, and a copied hosted cell; native implementation
+and bare role identity remain reusable. Update obsolete K-OT1 shared-frame
+expectations by name. Capture constructors (`l2_mad_emit`,
+`l2_emit_mad_construct_one`) and T7 frame-pack reconstruction are separate
+bypasses not certified by ordinary-copy tests; they must then use the same
+complete instance construction/copy contract before global graph acceptance.
+
 ### Every statically known executable body compiled
 
 Capturing nested methods are still stubbed by l2_emit_body_in and excluded
@@ -380,9 +421,10 @@ incompatible signature. Explicit y=25, y=0 and a later omitted y must give
 26, 1 and the original default result 6.
 
 lmx_graph_copy_owned preserves native, but lmx_merge_owned still clears the
-result root unconditionally. The L2 spec repeats that stale blanket claim,
-contrary to the semantics book/Q44. Preserve the matching unchanged body's
-implementation, never blindly the first operand's address after code replacement.
+result root unconditionally. Current L2 §13 and the semantics book/Q44 already
+require preserving the applicable implementation. Preserve the matching
+unchanged body's implementation, never blindly the first operand's address
+after code replacement.
 
 ## Concrete §8 route after clean-kernel
 

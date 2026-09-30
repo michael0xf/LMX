@@ -535,6 +535,11 @@ if (Test-Path -LiteralPath $testsHdr) {
     foreach ($f in @(Get-ChildItem -LiteralPath $testsHdr -File -Filter '*.h.lm1')) {
         Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $destTests $f.Name) -Force; $staged++
     }
+    # Foreign ABI witnesses are frozen alongside their L2 callers; generated
+    # C includes these staged headers, never a mutable live-checkout helper.
+    foreach ($f in @(Get-ChildItem -LiteralPath $testsHdr -File -Filter '*.h')) {
+        Copy-Item -LiteralPath $f.FullName -Destination (Join-Path $destTests $f.Name) -Force; $staged++
+    }
 }
 Copy-Item -LiteralPath (Join-Path $sandbox 'convert.lm2') -Destination (Join-Path $src 'convert.lm2') -Force
 $staged++
@@ -1756,6 +1761,22 @@ $fixtures = @(
         Absent = @(); Debt = @('lmx_runtime_implements(') },
     [pscustomobject]@{ Name = 'unit_pointer_raw_c_admission_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @('lmx_runtime_implements(') },
+    # Common RHS typing: explicit initializer and later store share conversion/admission.
+    [pscustomobject]@{ Name = 'unit_rhs_fnptr_checkpoint.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_compound_admission_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_runtime_implements(') },
+    [pscustomobject]@{ Name = 'unit_rhs_reference_admission.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_returned_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_pointer_contract.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_fnptr_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_void_admission_init_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_runtime_implements(') },
+    [pscustomobject]@{ Name = 'unit_rhs_void_admission_assign_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_runtime_implements(') },
+    [pscustomobject]@{ Name = 'unit_rhs_returned_model_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_runtime_implements(') },
+    [pscustomobject]@{ Name = 'unit_rhs_cast_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_cast_init_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_cast_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_cast_init_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_void_double_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rhs_nested_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     # -178 commit 3: the letter's admission to get's Model formal is built (it throws implements); pending on
     # the catch role (-171).
     [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 42;
@@ -3653,13 +3674,15 @@ $fixtures = @(
         Needle = 'unit_colon_unknown_value_refused.lm2:2:10: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_incompatible_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_colon_graph_const_target_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'const write'; Absent = @(); Debt = @() },
+    # Historical filename: const protects the referent, while its explicit pointer cell may rebind.
+    [pscustomobject]@{ Name = 'unit_colon_graph_const_target_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Needle = ''; Args = @('0'); Absent = @(); Debt = @('lmx_runtime_implements(') },
     # The same for a graph target: missing_graph is unresolved, said at the name (steps/free-names.md M2).
     [pscustomobject]@{ Name = 'unit_colon_graph_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_colon_graph_unknown_value_refused.lm2:2:12: unresolved name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_colon_graph_update_admission_blocked.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'graph assignment admission requires receiving-expression tests'; Absent = @(); Debt = @() },
+    # Historical filename: named-model admission succeeds before binding; a refusal preserves the old binding.
+    [pscustomobject]@{ Name = 'unit_colon_graph_update_admission_blocked.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7;
+        Needle = ''; Args = @('0'); Absent = @(); Debt = @('lmx_runtime_implements(') },
     # Two identical full qualifier occurrences get distinct physical profile identities.
     # Plain in the same file stays mutable/unprofiled and is not a qualified root.
     [pscustomobject]@{ Name = 'unit_eternal_physical_profiles.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -3687,10 +3710,8 @@ $fixtures = @(
                  'l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_eternal_profile_partial_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'independent branch requires const'; Absent = @(); Debt = @() },
-    # GROK-PORT-PREV-IMPLEMENTS-20260922-01. Compiler-side implements over named
-    # Structure field lists and hosted primitive leaves. Receiver-expression unit
-    # tests stay deferred; Lmx graph rebinding without a named-structure descriptor
-    # stays fail-closed (unit_colon_graph_update_admission_blocked).
+    # Compiler-side implements over named Structure field lists and hosted primitive leaves.
+    # Receiving-model runtime admission and reference rebinding have independent witnesses above.
     [pscustomobject]@{ Name = 'unit_implements_methods.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

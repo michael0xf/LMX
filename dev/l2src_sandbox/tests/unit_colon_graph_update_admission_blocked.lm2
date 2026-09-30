@@ -1,10 +1,38 @@
-# Existing typed mutable graph references take the assignment role, but the
-# assignment must not be admitted by the legacy positional RuntimeImplements
-# walk.  Until the kernel exposes receiving-expression test execution, the
-# translator must refuse this update without rebinding field.
-fn: replace (@(Lmx field); @(Lmx env2)) int
-    field: env2
-    return: 0
-end: replace
-
-return: 0
+# Historical filename: a named receiving model now admits before rebinding.
+# An incompatible opaque candidate throws and leaves the previous binding intact.
+Model:
+    size_t: value 1U
+end: Model
+Good:
+    size_t: value 7U
+end: Good
+Other:
+    int: a 1
+    int: b 2
+end: Other
+fn: good () @: void
+return: (cast: (@: void) @ Good)
+fn: bad () @: void
+return: (cast: (@: void) @ Other)
+fn: read (Model: ref) size_t
+return: ref\value
+fn: check () int
+    @: Model field @ Model
+    field: good()
+    if: field != @ Good || read(field) != 7U
+        return: 81
+    int: caught 0
+    ---
+        field: bad()
+        catch: implements ()
+            caught: 1
+    ---
+    if: caught != 1
+        return: 82
+    if: field != @ Good || read(field) != 7U
+        return: 83
+    if: Model\value != 1U || Good\value != 7U
+        return: 84
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

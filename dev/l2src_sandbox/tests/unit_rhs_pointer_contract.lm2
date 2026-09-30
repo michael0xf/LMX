@@ -1,0 +1,44 @@
+include: "<stdlib.h>"
+include: "<stddef.h>"
+include: "l1src/p0.lm1.h"
+fn: boundary () int
+return: 0
+fn: check () int
+    @: void empty c.NULL
+    if: empty != 0
+        return: 79
+    @: void literal "abc"
+    const: @(void readonly "abc")
+    readonly: literal
+    if: readonly != literal
+        return: 80
+    char: letter 'A'
+    int: number 11
+    size_t: size 13
+    boundary()
+    @: char p (cast: (@: char) @ letter)
+    @: char q
+    q: (cast: (@: char) @ letter)
+    @: int ip @ number
+    @: size_t sp (@: size)
+    @@: char cell @ p
+    @: void opaque (cast: (@: void) cell)
+    @@: char cell2 opaque
+    @@: char cell3
+    cell3: opaque
+    if: p != q || \p != 'A' || \ip != 11 || \sp != 13 || cell2 != cell || cell3 != cell
+        return: 81
+    \cell2: 0
+    if: p != 0 || q != @ letter
+        return: 82
+    @: c.LmP0Text text (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    if: text = 0
+        return: 83
+    const: @(c.LmP0Text view text)
+    view: text
+    if: view != text || view\length != 0U
+        return: 84
+    c.free(text)
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

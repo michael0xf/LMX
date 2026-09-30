@@ -1,0 +1,12 @@
+predef: "l2src/tests/rhs_probe.h.lm1"
+include: "l2src/tests/rhs_identity.h"
+fn: check () int
+    int: value 0
+    L2RhsProbeFn: probe c.l2_test_rhs_probe
+    value: 7
+    @: void observed probe(@ value)
+    if: observed != @ value
+        return: 81
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

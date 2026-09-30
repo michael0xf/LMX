@@ -1,0 +1,15 @@
+include: "l2src/tests/rhs_identity.h"
+Model:
+    size_t: value 1U
+end: Model
+Other:
+    int: a 1
+    int: b 2
+end: Other
+fn: raw () @: void
+return: (cast: (@: void) @ Other)
+fn: check () int
+    @: Model ref c.l2_test_rhs_identity(raw()) + 0U
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

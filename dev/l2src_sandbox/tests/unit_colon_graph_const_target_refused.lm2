@@ -1,6 +1,21 @@
-fn: broken (const: @(Lmx field); @(Lmx env2)) int
-    field: env2
-    return: 0
-end: broken
-
-return: 0
+# Historical filename: const qualifies the referent, not the reference cell.
+# Rebinding the explicit pointer preserves both existing Structure values.
+Model:
+    int: value 1
+end: Model
+Other:
+    int: value 7
+end: Other
+fn: check () int
+    const: @(Model field @ Model)
+    field: @ Other
+    if: field != @ Other
+        return: 81
+    field: @ Model
+    if: field != @ Model
+        return: 82
+    if: Model\value != 1 || Other\value != 7
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

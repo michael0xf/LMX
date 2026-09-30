@@ -1,0 +1,35 @@
+# Both receiving positions convert, admit, then bind exactly once.
+include: "<string.h>"
+include: "l2src/tests/rhs_identity.h"
+int: calls 0
+Model:
+    int: value 7
+end: Model
+fn: raw () @: void
+    node\calls: node\calls + 1
+return: (cast: (@: void) @ Model)
+fn: read (Model: ref) int
+return: ref\value
+fn: check () int
+    @: Model first raw()
+    @: Model second
+    if: second != 0
+        return: 80
+    second: raw()
+    @: Model third c.memmove(raw(), @ Model, 0U)
+    @: Model fourth
+    fourth: c.memmove(raw(), @ Model, 0U)
+    @: Model fifth c.l2_test_rhs_identity(raw()) + 0U
+    const: @(Model frozen @ Model)
+    frozen: raw()
+    if: frozen != @ Model
+        return: 84
+    if: node\calls != 6
+        return: 81
+    if: first != @ Model || second != @ Model || third != @ Model || fourth != @ Model || fifth != @ Model
+        return: 82
+    if: read(first) != 7 || read(second) != 7 || read(third) != 7 || read(fourth) != 7 || read(fifth) != 7
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

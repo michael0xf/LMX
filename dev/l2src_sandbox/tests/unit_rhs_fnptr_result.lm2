@@ -1,0 +1,19 @@
+predef: "l2src/tests/fnptr_local_forms.h.lm1"
+include: "<stdlib.h>"
+fn: check () int
+    L2TestAllocFn: allocate c.malloc
+    @: void first allocate(1U)
+    @: void second
+    second: allocate: 2U
+    @: void third
+    third: allocate: (3U)
+    if: first = 0 || second = 0 || third = 0
+        return: 81
+    if: first = second || first = third || second = third
+        return: 82
+    c.free(first)
+    c.free(second)
+    c.free(third)
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

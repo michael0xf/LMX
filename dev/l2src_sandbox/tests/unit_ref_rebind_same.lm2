@@ -1,0 +1,27 @@
+# A method's typed reference `@: Model r` (its local, D-76) is rebound only after the admission of the value to Model --
+# implements(mo, Model, Model), the interim structural admission the walked root's calls too, for a Model's own as well,
+# no shortcut (OPUS-CALLABLE-STRUCT-BINDING-20260929-16, step 2).  mo's 7 read through r, and a write through r is mo's.
+# Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: check () int
+    Model: mo
+    @: Model r
+    size_t: v 0U
+    int: out 0
+    mo\value: 7U
+    r: @mo
+    v: r\value
+    if: v = 7U
+        out: 3
+    r\value: 9U
+    v: mo\value
+    if: v = 9U
+        out: out + 4
+    return: out
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

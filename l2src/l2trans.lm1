@@ -19914,6 +19914,10 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\head != 0 && l2_ml_find(stmt\as\frame\head) >= 0
             if: stmt\as\frame\body = 0 || l2_check_fields(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), mi, path, stmt) != 0
                 return: 1
+            # A typed reference `@: T r` to a named Structure is rebound after the admission of its value to T (the
+            # emission's l2_emit_admit): the site puts the method on the throw channel.
+            if: l2_ml_ns[l2_ml_find(stmt\as\frame\head)] >= 0 && l2_admit_site(mi) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "if") = 0 && l2_unimpl_numeric(stmt) != 0
@@ -30672,6 +30676,10 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
             return: 2
         ---
     ---
+    # A typed reference `@: T r` to a named Structure (D-76) takes its value only after the admission to T -- the
+    # native admission (implements, consumer T), a refusal the implicit throw `implements`; a null passes.
+    if: l2_ml_ns[l2_ml_find(fr\head)] >= 0 && l2_emit_admit(mi, l2_ml_ns[l2_ml_find(fr\head)], l2_tok, ind) != 0
+        return: 2
     if: c.fprintf(l2_out, "%s", ind) < 0
         return: 2
     if: l2_write_text(l2_out, fr\head) != 0

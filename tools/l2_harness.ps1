@@ -2936,6 +2936,14 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_ref_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
+    # A method's typed reference `@: Model r` (its local, D-76) is rebound only after the native admission of the value to
+    # Model (l2_emit_admit: the interim structural lmx_runtime_implements, consumer Model -- the predicate the walked
+    # root's admission calls): a Model's own is admitted too, no shortcut (pinned: the admission is emitted), 7; an Other
+    # of another shape is refused -- the method's implicit throw `implements`, uncaught, stops R0.  It was a plain store.
+    [pscustomobject]@{ Name = 'unit_ref_rebind_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('lmx_runtime_implements(') },
+    [pscustomobject]@{ Name = 'unit_ref_rebind_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');

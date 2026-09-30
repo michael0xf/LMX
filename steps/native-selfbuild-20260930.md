@@ -106,7 +106,13 @@ assertions, 51 diagnostic-text mismatches, 17 newly accepted former-refusal
 rows, one missing expected note and six missing-L1 results. This is a failure
 classification, not permission to rewrite expectations wholesale. Of the
 51 diagnostic mismatches, 42 are preempted by a void-callable return-with-value
-diagnostic; resolve the source-role cause before updating the expected error.
+diagnostic. Read-only source review confirmed the root really has no result
+and the common guard is correct; this is not permission to replace all 42
+expectations. One is a genuine root-return negative, thirteen are raw-C/string
+tests with invalid legacy tails, four put a range check in a void root, ten
+involve unknown-head/withdrawn construction semantics, and fourteen require
+purpose-specific repairs. Remove invalid test scaffolding while retaining
+the original observation; do not weaken the common void-result guard.
 Four no-L1 cases reach the real `graph assignment admission requires
 receiving-expression tests` gap. The other two encounter static admission
 failure and also contain withdrawn implicit-copy setup.
@@ -138,6 +144,29 @@ The author has been asked; no speculative resolver replacement is authorized
 by this note. Independent gates and repairs with settled semantics continue.
 
 ## Pending regression migrations and runtime defects
+
+- Next independent negative-fixture batch: `entry_puts_after_return`,
+  `unit_lit_range_arg_int_overflow`, `unit_s1_throws_entry_unhandled_refused`,
+  `unit_bare_unknown_refused`, `unit_discard_unknown_refused`,
+  `unit_callable_descriptor_direct_refused`, `unit_callable_formal_sig_refused`,
+  `unit_colon_unknown_value_refused`. Only the first changes to the common
+  void-callable diagnostic; the others discard the tested call/expression or
+  remove the invalid valued root-return tail, retaining their own intended
+  rejection. A valid counterpart must stop producing that specific rejection.
+- Raw-C bad argument/arity/nested-call fixtures must not run. Preserve their
+  emitted C and verify its constraint diagnostic with the target compiler
+  (`-fsyntax-only -Werror=int-conversion`), not name-specific L2 validation.
+  Current generic `toolchain-refuses` flags can leave an object after an
+  integer-to-pointer warning, so they do not yet prove this property.
+- `unit_discard_calls` needs explicit `node\hits` writes and graph observation
+  to prove discarded-call side effects. Bare hidden-input writes correctly do
+  not update the root; do not change language semantics to satisfy its old
+  expected number. `unit_addr_slot_structure_projection` still demands obsolete
+  `Lmx**` semantics and is not eligible for a mechanical success flip.
+- `unit_value_call_sub_refused` asserts an obsolete no-result-callable argument
+  policy. Current semantics passes that occurrence by reference; receiving an
+  int still requires compatible conversion/admission. Do not retain the blanket
+  value-call rejection as proof of the current argument rule.
 
 - Remove the old callable-versus-reference distinction in
   `unit_value_formal_call_refused`; `(Model: v)` and `(@: Model v)` are

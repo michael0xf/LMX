@@ -1,0 +1,25 @@
+# OPUS-TYPED-BINDING-20260930-20, next_core_tasks.md §3 item 207: the pair's formal side: `test(o)` with an Other refused at
+# translation when test reads b\value -- the same admission `Model: b o` takes.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: test (Model: b) int
+    int: out 0
+    if: b\value = 1U
+        out: 7
+    return: out
+end: test
+
+fn: m () int
+    Other: o
+    return: test(o)
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

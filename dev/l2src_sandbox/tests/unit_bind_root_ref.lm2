@@ -1,0 +1,21 @@
+# OPUS-TYPED-BINDING-20260930-20, next_core_tasks.md §3 item 207: at the walked root `Model: b c` with b absent and c a Model
+# declares b bound to c's descriptor -- no merge, no copy: a write through b is read through c.  c of a named Structure
+# is admitted at translation by what b's body uses of it (the one admission a formal's actual takes).  Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+int: out 0
+Model: c
+c\value: 5U
+Model: b c
+b\value: 9U
+if: c\value = 9U
+    out: 7
+sendMessage: exit(exit_code: out; stdout: ""; stderr: "")
+return

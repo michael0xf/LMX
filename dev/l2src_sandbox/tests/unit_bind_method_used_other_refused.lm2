@@ -1,0 +1,20 @@
+# OPUS-TYPED-BINDING-20260930-20, next_core_tasks.md §3 item 207: in a method, an Other bound to a Model b whose body writes
+# b\value: refused at translation, located at the binding.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: m () int
+    Other: o
+    Model: b o
+    b\value: 9U
+    return: 7
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1551,8 +1551,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_struct_guard_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported trailer'; Absent = @(); Debt = @() },
     # OPUS-ROOT-CALL-20260930-17: at the root, `Model: Other` with Other declared above is Model's call (refused at its own
-    # line), and so is `Model: Other extra` -- above or below Other's declaration; the heap-corruption shape is the
-    # second.  `Model: fresh` still declares.  A `name:` block with nothing above declaring name is a named Structure, a
+    # line), and so is `Model: Other extra`; the heap-corruption shape is the second.  Written above Other's declaration,
+    # Other is absent there (source order), and since OPUS-TYPED-BINDING-20260930-20 the form is the typed binding of
+    # Other, its candidate an int, refused.  `Model: fresh` still declares.  A `name:` block with nothing above declaring name is a named Structure, a
     # later field of that name collides with it.  The unit classifier reads the source's order, and its answer does not
     # depend on what is registered (the count and fill walks of the lexical pass agree).
     [pscustomobject]@{ Name = 'unit_root_struct_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -1560,11 +1561,44 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_root_struct_call2_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_root_struct_call2_refused.lm2:15:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_call2_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_root_struct_call2_forward_refused.lm2:9:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_root_struct_call2_forward_refused.lm2:11:1: a typed binding''s candidate is not a Structure value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_decl_beside_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_block_before_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_root_block_before_field_refused.lm2:8:1: named Structure collides with a unit field'; Absent = @(); Debt = @() },
+    # OPUS-TYPED-BINDING-20260930-20 (next_core_tasks.md §3 item 207): `T: b c` with b absent declares b bound to c's
+    # descriptor after c's admission to T -- the one a formal's actual takes: c of a named Structure at translation by
+    # what b's activation uses (consumer-uses; a THIN Consumer admits an Other), a letter at run time (the interim
+    # structural admission, T's whole shape).  No merge, no copy: a write through b is read through c.  b bound: the
+    # two-argument call, refused.  The formal pair and the primitive control beside it.  Item 474 stays open.
+    [pscustomobject]@{ Name = 'unit_bind_root_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_method_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_method_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_root_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_method_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_bind_root_used_other_refused.lm2:14:1: implements is false in a typed binding'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_method_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_bind_method_used_other_refused.lm2:14:5: implements is false in a typed binding'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_root_letter.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('ok'); Entry = 2;
+        Absent = @(); Debt = @('\fn: lmx_walk_admit_letter') },
+    [pscustomobject]@{ Name = 'unit_bind_root_letter_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_known_b_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_bind_known_b_call_refused.lm2:16:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_candidate_not_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_bind_candidate_not_name_refused.lm2:18:5: a typed binding whose candidate is not a name is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_formal_used_other_refused.lm2:21:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_bind_prim_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_guard_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_struct_guard_call_refused.lm2:7:1: unsupported trailer'; Absent = @(); Debt = @() },
     # steps/named-struct-exec.md, slice 2: a bare `S` at the root executes the named Structure -- its

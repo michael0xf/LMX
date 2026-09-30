@@ -164,7 +164,44 @@ by this note. Independent gates and repairs with settled semantics continue.
   counterparts. The first catch-based positive attempt exposed separate
   RETURN-ABI-EMPTY-HANDLER defects, recorded in defects.md; the final
   unhandled-throw counterpart removes the callee's throw instead of asserting
-  catch correctness. Those generator defects are the immediate next repair.
+  catch correctness. Those generator defects were repaired in the next slice
+  below, independently of the negative-fixture migration.
+
+### Void return ABI and empty generated bodies
+
+`build/l2_harness/return_abi_empty_20260930_final2` is GREEN 27/27:
+24 fixtures plus build/scope rows; all 142 staged inputs and all fixture bytes
+match live. It includes the eight diagnostic rows and four root-hosted controls.
+The three new fixtures cover ordinary and status-ABI exits, publication,
+fallthrough, real throw/handler effects and empty or pure-discard bodies.
+They require `-Werror=return-type`, native attachment and native/walk-root
+execution; the plain sub witness also executes with method natives cleared.
+
+`l2_emit_empty_return` chooses the resolved ABI success return. Empty output
+ranges are materialized as an L1 empty Structure only when the generated
+control/handler scope needs a body. A native prelude already contains code;
+putting an extra `()` after its declaration instead triggers L1 repeated-
+declaration inheritance. The output-layout requirement is not source syntax
+or an E-specific language rule.
+
+Both old-emitter mutants fail the intended C/L1 constraints. Removing the
+early return or the actual throw gives exact exit 81 instead of 7 in both
+modes; requiring 81 in a control row then passes. Reproduction and logs:
+`return_abi_empty_20260930_runtime_mutants/run.ps1` and sibling mutant runs.
+Final translator SHA256
+`7A4A380C00FB2F55750329C1CC32BDE6E85818696ACE26AD9C635860712A14D1`,
+blob `9d5fc38fed49153379a3718493cf0d2a5f6cc79e`; harness SHA256
+`4BD1F5CAE3E9A43ECA89E728EB4DBC3AF5A12F4A429548BA8998B4B6EC07DF20`.
+
+The earlier expanded run was 27/28: `unit_s1_catch_user_break` repeats the
+pre-existing missing-text assertion from `resumed_full_20260930_01:244`.
+That row was not relaxed; the final bounded run excludes this unrelated
+text-observer debt. Empty `sub` trailer attachment is also still OPEN in
+defects.md; the final tests do not claim to exercise that parser behavior.
+The new full generated diagnostic is `after_return_full_20260930_01`.
+
+### Remaining regression migration
+
 - Raw-C bad argument/arity/nested-call fixtures must not run. Preserve their
   emitted C and verify its constraint diagnostic with the target compiler
   (`-fsyntax-only -Werror=int-conversion`), not name-specific L2 validation.

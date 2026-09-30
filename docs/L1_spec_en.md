@@ -103,6 +103,8 @@ One translator invocation yields one `.c`. Strict generation builds: `-std=c99 -
 <a id="lowlevel-scope"></a>
 ## 18. L1 machine surface and its relation to L2
 
+Machine types retain the target C99 type's representation and numeric semantics, including implementation-defined plain `char` signedness. Lowering introduces no alternative numeric domain for graph cells or Array elements; see [L2 machine types](L2_spec_en.md#lowlevel-scope).
+
 These sections define Translator-L1's direct machine operations. The corresponding full L2 family contract is [in L2](L2_spec_en.md#lowlevel-scope) and does not automatically apply to identical L1 spellings.
 
 The key distinction is that an L1 variable or C aggregate field is not an Lmx graph cell. L1 has no language own-cache, hidden `implements` admission or automatic arena. The L1 kernel explicitly calls the arena library to implement L2 mechanisms. Having that library does not change L1 address, array or assignment semantics.

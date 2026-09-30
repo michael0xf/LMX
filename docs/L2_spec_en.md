@@ -145,6 +145,8 @@ Low-level operations include address classification, taking an arena cell, arena
 <a id="lowlevel-scope"></a>
 ## 17. Machine operations: level boundary
 
+Built-in machine types have exactly their C99 target-platform meaning: representation, width, signedness, numeric range, promotions and machine operations. In particular, plain `char` follows C `char`; it is not implicitly `unsigned char` or a platform-independent 0–255 integer. A typed arena cell, graph reference or Array descriptor does not change the element type's numeric meaning. LMX defines its own types separately; native and interpreted execution preserve the same meaning of a given type.
+
 The following sections define L2 machine contracts separately from pure L3. L1 is a different profile with direct C semantics; the comparison is in [L1](L1_spec_en.md#lowlevel-scope).
 
 An ordinary Structure remains an `Lmx` graph, an Array a descriptor reference with backing, and a primitive a value in its domain. Machine addresses, raw C storage and foreign ABI do not replace these categories. L3 does not acquire machine operations merely because its reference implementation uses a pointer.

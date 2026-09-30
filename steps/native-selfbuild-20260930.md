@@ -524,6 +524,40 @@ terminal result recorded above; it remains red for the remaining dependencies.
   `unit_matrix_callable_struct_identity`. Migrate setup to explicit merge
   while retaining their capture, snapshot, formal and path invariants;
   coordinate with settled head resolution, not a mass expected-output edit.
+  The pending source changes are exact: replace `Model: left` with
+  `left: merge Model` in the A3 row; replace both `Model: left` and
+  `Model: right` likewise in the walked-formal row; replace `Model: m` and
+  `Model: n` in the root snapshot row; and replace respectively
+  `Model: fresh_branch_xyz`, `Model: fresh` and `Model: m` in the lexical,
+  field-path and callable-matrix rows. Keep the existing nonzero 7/15/7
+  results for A3/root/formal. The lexical and field-path rows must additionally
+  mutate and read the merged local while proving named `Model` unchanged, and
+  the matrix row must still prove that all three calls mutate one `m`; give
+  all three an unmistakable nonzero success result. Run the A3 native and
+  existing `WalkMethods` twin; the formal row is actual-walker method evidence.
+  The other four rows remain native evidence unless a deliberate walker twin
+  is added. The earlier A3 direct-runtime checks are useful evidence, but are
+  not acceptance of these unrun rewritten fixtures or of their new graph
+  shapes.
+- Extend the existing `Get-WalkGraphFacts`/`GraphShapes` observer for those
+  rows; do not add another generated-L1 parser. Resolve each frame owner
+  through the existing alias map and allow an owner tag to tie a method-body
+  shape to the exact callable descriptor used by a reachable `CALL`. Edge
+  tags must compare semantic occurrences, not `l2_rwN`: an `OWN` occurrence
+  is its resolved owner plus own index, an `ARG` is its resolved method owner
+  plus formal index, and `OF` is its holder occurrence plus field index.
+  This is sufficient to require: A3 direct calls use `left` while the returned
+  node uses a distinct captured copy; peek/poke/sum use ARG indices 0/0/(0,1)
+  and field zero and their calls receive the exact left/right occurrences;
+  the two root merges publish distinct snapshots around the named-Model write;
+  lexical and field-path PUT/OF operations address their merged local; and all
+  three matrix calls pass the same `m` to bump's PUT_OF(ARG 0, field 0).
+  Every match must remain reachable from the executable sequence. Mutants must
+  accept arbitrary temporary renumbering, but reject an orphan matching frame,
+  a detached edge, changed opcode/width/ARG or field index, a swapped callee,
+  and replacement of a same-occurrence actual by a fresh merge. Runtime
+  mutants must also reject skipped calls/writes/merges, aliased root snapshots,
+  escaped A3 returned-copy writes and a missing or incorrect success marker.
 - Nineteen text-observer rows have matching operators/roles/typed inputs
   under different temporary or slot identifiers. Replace literal `l2_rwN`
   and slot pins with opcode/arity/edge relationships plus their runtime

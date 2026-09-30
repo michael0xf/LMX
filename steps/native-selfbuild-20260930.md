@@ -75,6 +75,33 @@ supported expressions and an explicit pointer intermediate; those controls
 do not certify the refused forms. Their general expression/actual-span
 repair remains in the queue, not a newly imposed language restriction.
 
+<a id="bounded-indexed-expression"></a>
+### Next shared expression-span repair
+
+Read-only inspection of blob `4e62d5666dad5f2bed2f89f106a03fb724efb26e`
+locates a shared producer/consumer split. `l2_expr_span` already counts flat
+`values [ i ]` as four fields and `@ values [ i ]` as five, and the call
+checker passes the correct actual span. But `l2_own_index_tail` accepts only
+literal flat indices, whereas `l2_dyn_own_index` handles dynamic indices in
+joined atoms. The flat checker has a root-only dynamic fallback; the flat
+emitter retains the literal-only assumption. The address check mistakes a
+non-null next field beyond the supplied span for pointer arithmetic.
+
+The general declaration records the full candidate span, but
+`l2_own_decl_ty` rejects more than one candidate field, and initializer
+check/conversion/emission consumers hardcode a single field. Four fields
+that constitute one index expression are not four initializer arguments.
+
+The next source ticket must share bounded indexed-operand classification
+across these consumers, preserve the selected lexical binding and actual
+element type, and never consume the following expression or argument. An
+initializer must be exactly one expression and all its fields must reach
+ordinary checking, conversion and evaluation. Reuse existing parser nodes,
+index semantics and receiving contracts; no Array declaration mini-language,
+root exception, extra evaluation, L2 bounds check or Q58 decision belongs in
+this repair. The forthcoming callable-actual projection consumes this result
+rather than adding another index/address recognizer.
+
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair
 

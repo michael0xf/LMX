@@ -70,9 +70,11 @@ gate — 61/61. После этих двух fixture-only правок полн�
    операции/адрес/length берут ближайшую привязку до проверки её типа.
    Итог 92/92; подмены на backing/slot и неверную внешнюю привязку
    обнаружены тестами. [Точные границы](steps/native-selfbuild-20260930.md#whole-array-address-repair):
-   generated walker для `@Array`, Array-формалы и три выявленных ограничения
-   expression/actual-span этим не закрыты; исправить через общие потребители,
-   не объявлять их языковыми отказами.
+   generated walker для `@Array` и Array-формалы этим не закрыты. Следующий
+   dependency-closed срез — три выявленных ограничения expression/actual-span:
+   один bounded operand resolver и передача полного единственного initializer
+   через общий checker/emitter. Вызов уже передаёт правильную длину actual;
+   нельзя читать за её концом или дублировать Array-разбор в каждом потребителе.
    Далее исправление общей
    [проекции callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
    и отдельные 13 raw-C/string строк;

@@ -4,6 +4,8 @@ Lead invariant: **ALL LANGUAGE RULES ARE UNIVERSAL.** Exceptions and contradicti
 
 This file is an implementation/semantic map, **not** a second schedule. Ownership and progress stay in `next_core_tasks.md` / `steps/`. Provenance of author rulings stays in each article.
 
+Current scope (author, 2026-09-30): perfect the existing overloaded forms, including `A: b c`, before full self-build and kernel verification. The shared resolver must distinguish calls, construction through merge, primitive assignment and the already accepted typed binding of an absent name. Do not substitute a new `:=` operator, syntax-based dispatch or a convenience exception for this work. Possible later cosmetic changes do not change the current kernel contract and are not a prerequisite. See [the author's exact statement](LMX_blog/2026-09-30.md) and the normative assignment/construction rules.
+
 Statuses (never collapse into ready):
 - **Norm:** `accepted` | `unresolved`
 - **Implementation:** `absent` | `partial` | `present` | `divergent`

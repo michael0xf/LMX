@@ -70,7 +70,12 @@ gate — 61/61. После этих двух fixture-only правок полн�
    операции/адрес/length берут ближайшую привязку до проверки её типа.
    Итог 92/92; подмены на backing/slot и неверную внешнюю привязку
    обнаружены тестами. [Точные границы](steps/native-selfbuild-20260930.md#whole-array-address-repair):
-   generated walker для `@Array` и Array-формалы этим не закрыты. Следующий
+   generated walker для `@Array` и Array-формалы этим не закрыты. Bare whole
+   Array ещё требует общей проекции descriptor-типа/значения вместо backing;
+   typed void*/descriptor actual и raw-C actual должны сохранять его identity.
+   Старую фикстуру с неявным Array→int* decay исправлять явным адресом
+   элемента, не возвращать противоречащую норме конверсию.
+   Следующий
    dependency-closed срез — три выявленных ограничения expression/actual-span:
    один bounded operand resolver и передача полного единственного initializer
    через общий checker/emitter. Вызов уже передаёт правильную длину actual;

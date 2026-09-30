@@ -31,6 +31,31 @@ Read-only аудит актуального sandbox после исправле�
 
 Native store идёт через `l2_emit_own_index` / `l2_own_index_head`; прежний `l2_dyn_own_index` тоже сканировал первое подходящее Array-вхождение. Теперь `l2_resolved_own` использует существующий приоритет formal/own, выбирает ближайшую привязку и только затем проверяется Array-категория. Более близкий non-Array или формал не открывает внешнее имя. Общий lookup применяется к индексным чтению/записи, адресу и own-length, без нового индекса имён или особого shadow-правила. Исходный внутренний write восстановлен; однотипные literal/dynamic записи, scalar/formal shadow и восстановление внешней области проходят итоговый 92/92. Возврат first-match lookup даёт неверные runtime-результаты 92/81 и пропускает оба недопустимых scalar-index случая; formal-контроль ловит его на трансляции. Произвольные index expressions этим не реализованы.
 
+### WHOLE-ARRAY-VALUE-PROJECTION — 2026-09-30, Codex, OPEN
+
+Явный `@Array` исправлен в `e7935be`, но bare Array как значение ещё имеет
+прежнее понижение в backing: `l2_prep` вызывает `l2_emit_array_ptr`.
+`l2_colon_bound_ty` → `l2_ft_of_own` сохраняет own-коды массива вместо
+descriptor-pointer контракта. После подключения общего pointer-checker
+типизированный actual к void*/VoidArray* отказывается — это отсутствующая
+положительная возможность, не норма несовместимости. Raw-C actual обходит
+формал L2 и всё ещё может получить backing через тот же `l2_prep`.
+Общая норма L2 [передачи аргументов](../docs/L2_spec_en.md#copy-merge)
+требует ссылку на дескриптор массива; backing получают явно через адрес
+элемента. Нужна общая проекция типа и значения whole Array для обычного
+выражения/actual, а не специальный decay у места вызова. Проверить typed
+void*/descriptor-pointer и raw-C actual по реальной identity/kind/type;
+Array-формалы и generated walker остаются отдельными границами.
+
+Первый expanded indexed-span gate прошёл 111/112: единственная старая
+фикстура `unit_addr_own_array_element` передавала bare buf к int* и прямо
+называла это decay. Этот контракт противоречит норме, а formal-write
+проверка была пустой: до вызова и внутри него писалось одно значение 9.
+Согласована миграция в явный `@buf[0]`, distinct write 13 и проверку как
+результата, так и изменённого caller-элемента, плюс отдельный отрицательный
+контроль bare Array → int*. Это исправляет свидетель, но не whole-value
+проекцию; production indexed-span при этой миграции не меняется.
+
 ### INDEXED-EXPRESSION-SPAN — 2026-09-30, Codex, IN WORK `BOUNDED-INDEXED-EXPRESSION-20260930`
 
 В ходе Array-свидетелей сохранены три прежних отказа общих потребителей: dynamic own-index внутри OR (`whole_array_address_20260930_06`, `unit_array_index_shadow`, 13:56: `own array index requires a supported integer expression`); `int: seen values[i]` (`_07`, 13:9: `unsupported body`); прямой `@element` в вызове с несколькими actual (`_06`, `unit_array_index_formal_shadow`, 13:23: `address arithmetic past an own-array element is not yet supported`). Поддерживаемые промежуточные выражения в итоговых тестах изолируют indexed write и formal shadow, а не исправляют эти отказы. Исследовать общий source-span/index projection для expression, declaration initializer и call actual; не вводить Array-specific синтаксис или новые ожидаемые запреты языка. [Артефакты и границы](native-selfbuild-20260930.md#whole-array-address-repair).

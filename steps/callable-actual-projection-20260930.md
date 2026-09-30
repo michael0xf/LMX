@@ -127,6 +127,45 @@ incompatible depth and qualification. The machine-local path may remain
 native-only until a genuine walker representation exists; do not claim walked
 receiver coverage from a walked caller invoking a native method.
 
+The implementation preflight against the indexed-expression work in progress
+narrows the compiler-only route further:
+
+1. Keep `l2_m_edge` for reachability and failure propagation. Record the actual
+   source site and active scopes beside each real edge producer in
+   `l2_check_call`, `l2_convert_edge`, and `l2_check_struct_call`. Existing
+   `l2_wait_add` scope snapshots and `l2_wait_free` lifecycle are reusable;
+   ordinary delayed-check replay must neither duplicate these records nor
+   execute them as checks. A graph-only edge and an accidentally unrecorded
+   source call are not interchangeable: do not invent a lexical source from
+   the aggregate matrix when a concrete call requires one.
+2. Resolve locals by replaying only preceding declarations in the method body
+   and the site's saved active scope chain. Reuse the classifiers used by
+   `l2_ml_collect` and the existing `l2_scope_block` traversal. Select the
+   nearest active, latest preceding declaration; never descend into a sibling
+   body, see a later declaration, or let an initializer see the declaration
+   it is still creating. This returns the declaration identity and its exact
+   existing type, not merely a name-wide type from `l2_ml_find`.
+3. During `l2_dyn_step`, inspect every recorded site supplying the same hidden
+   input. Preserve established formal/own precedence. Convert a selected
+   local's existing formal type through `l2_own_ty_of_param` and
+   `l2_dt_of_source`; do not strip reference depth or qualification. A site
+   without a local may require ordinary caller-input forwarding even if
+   another call between the same two methods does have a local. Check all
+   sites for compatible receiving types.
+4. `l2_hidden_from` must use the same site selection. After the existing
+   formal/visible-own routes, emit the selected machine-local token in its
+   actual lexical scope. Native body emission traverses the same source
+   scopes, so C selects that declaration without a new runtime cell or name
+   registry. Method visibility in both directions remains independent of
+   variable visibility only after declaration.
+5. Include two calls between the same caller and callee on opposite sides of
+   a declaration, plus calls before/inside/after a nested shadow. These
+   distinguish site resolution from a seemingly successful whole-method
+   lookup. Mutants selecting a later local, leaking an inner local after
+   scope exit, flattening repeated declarations, or replacing a pointer with
+   its pointee must fail. `l2_rw_dyn_arg` still needs a separate genuine
+   walker representation; native success does not close that boundary.
+
 <a id="witnesses"></a>
 ## Minimal witness matrix: pending implementation and execution
 

@@ -210,10 +210,47 @@ unregistered sources are not positive coverage: `unit_ptr_local_scope` still
 has a valued void-root return and `unit_unsigned_ptr` lacks its int→size_t
 receiver; `_04` records those independent diagnostics.
 
-The next owner is migrating the safe 19 stale graph observers and two root
-merge rows. Eight zero-success fixtures need a nonzero witness. Observers must
-follow executable sequence attachments, not merely find an allocated orphan
-frame. No production edit is authorized by a mismatched temporary name.
+<a id="observer-migration-verified-boundary"></a>
+### Graph observers: migrated, one production failure exposed
+
+The safe 19 stale observer rows and two root-merge rows now check relations in
+the executable graph. Eight fixtures have success 7 rather than a zero that
+could also result from skipped execution; their negative checks remain.
+`Get-WalkGraphFacts` uses executable statements, final effective writes and
+opcode-directed operand/body traversal. A value stored inside LIT is not code;
+allocation parenthood does not prove attachment. CALL/EXEC use their respective
+runtime code-selection contracts. Void calls explicitly require no result;
+valued calls still require their real result-cell reference.
+
+Final evidence under `build/l2_harness/`:
+
+- `observer_migration_20260930_final02`: **24 targets, one failure**;
+  20 of 21 selected fixtures pass. `unit_root_merge_three_operands` remains red:
+  native exits 3 at stale generated check 72; the real walker half exits 0
+  after satisfying the expected language result 7. Do not turn this into an
+  expected failure or weaken parity.
+- `observer_consumers_20260930_01`: **14/14**, including eleven existing
+  GraphCalls/PadAliases/WalkedMethods consumers.
+- `observer_migration_20260930_04/observer_mutants.txt`: **15/15 observer
+  checks** (four baseline checks, valid ordinal renaming, ten negative
+  mutations). Detached/orphan, CALL-inside-LIT, commented attachment, late
+  overwrite, code/receiver/result/argument edge, opcode and next-role changes
+  are detected.
+
+Harness SHA256 `B0586F5141D02F22E043BFDA00A29AB7CEC70147501E37612FDB1C38D75B10C5`.
+Production translator remains blob `3c3dc506b53c0feec78f375b6f85d261560a1503`;
+no production edits were part of observer migration. The reported executable
+hash `601D350E…2196` is the pinned **L1 bootstrap translator**, not a freshly
+self-built L2 executable. Parent verified terminal summaries/hashes and clean
+diff before handing source/build ownership to the merge-emission repair.
+
+Next repair removes the unconditional merge post-success self-tests and their
+dead declaration-literal metadata, while preserving real merge failure,
+admission and result binding. Nine existing result-check pins need actual
+runtime identity/value observations. Reading live value 6 in the unchanged
+root witness after removal is required; the static audit alone does not prove
+the native merge result correct. Full generated and clean-kernel gates remain
+pending.
 
 ### Bounded runtime checkpoint ca2f1cd
 

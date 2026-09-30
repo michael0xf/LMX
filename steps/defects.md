@@ -4,6 +4,12 @@
 
 ## Открытые / в работе
 
+### COMMON-ASSIGNMENT-RHS-TYPING — 2026-09-30, Codex, OPEN
+
+Полный `dst_chars_cleanup_full_20260930_01` выявил 12 регрессий прежде зелёных строк после подключения machine-local assignment к общему checker. Все текущие фикстуры принимаются прежним `after_return_full` binary, но уже отказываются pre-API `diagnostic14_final` binary: удаление `dst_chars` их не создало. Десять отказов — неизвестный тип RHS, `parser_text_heap` — несовместимость известного `void*` с типизированным C-указателем, `unit_local_init_graph_ref_admit_refused` — незавершённый маршрут структурного admission. В частности, `unit_sizeof_type_frame` и C-member строки падают на присваивании pointer-cast до sizeof/доступа к члену: `l2_colon_simple_ty` знает только скалярные cast, хотя эмиттер уже поддерживает указательные.
+
+Исправить общее получение типа/принимающего контракта и преобразование, не возвращать обход checker для machine locals. Сохранить raw-C door без знания имён C, const, реальную глубину ссылки, отказ несовместимым указателям и implements для Structure. Проверить прежние 12 строк и отрицательные контроли pointer/const/depth/admission; не менять их ожидания на отказ. [Полная таблица запуска, контрольная атрибуция и хэши](native-selfbuild-20260930.md#api-cleanup-full-checkpoint). Эта работа предшествует callable-actual и следующему clean-kernel gate.
+
 ### SUB-ACTUAL-REFERENCE-CLASSIFICATION — 2026-09-30, Codex, OPEN
 
 После исправления неправильного valued return корня `unit_value_call_sub_refused` сохраняет `sub: s ()`, `fn: g (int: n) int` и `g(s)`. Корректен отказ несовместимому int-аргументу, но текущий `l2_check_value_call` сначала запрещает любое callable без результата как значение. Это не только текст: обычный ссылочный формал тоже попадает в этот путь вместо передачи дескриптора; отдельный callable-formal fast path принимает лишь ATOM имени unit-метода, не общую разрешённую привязку или переданный дальше формал.

@@ -3,6 +3,65 @@
 Status: 2026-09-30, runtime checkpoint ca2f1cd on main; translator WIP in build/opus_wt.
 Implementation evidence and remaining work, not a language specification.
 
+<a id="api-cleanup-full-checkpoint"></a>
+## Current frozen source checkpoint: API cleanup and full regression inventory
+
+`dst_chars` is removed from all ten public copy/merge APIs, their twenty
+declarations/definitions, two driver signatures, 61 calls/templates and ten
+harness expectations. The unused `lmx_char_rebind_known` is removed too.
+This is one API change, not a shim or a second copy algorithm. Independent
+review confirmed unchanged copy-map behavior, mutable CHAR identity, literal
+tables, the anti-intern witness, merge observers and failure propagation.
+
+The exact source slice has these results:
+
+- `build/l2src/dst_chars_cleanup_20260930_01`: 280/280, 104 selftests.
+- `build/l3/dst_chars_cleanup_20260930_01`: 11 suites / 295 checks and four
+  header inventories pass.
+- `build/l2_harness/dst_chars_cleanup_focused_20260930_01`: 33/33.
+- All ten obsolete API signatures fail C compilation specifically with
+  `too many arguments`; the corresponding new-signature probe compiles.
+- `build/l2_harness/dst_chars_cleanup_full_20260930_01`: **988 targets,
+  920 OK, 68 FAIL**. Compared by fixture identity with `after_return_full`,
+  35 old failures now pass, all 15 new fixtures pass, 56 old failures remain,
+  and **12 formerly green fixtures regress**. No fixture was removed.
+
+All twelve current fixtures translate with the old full-run binary, but fail
+identically with the pre-API `diagnostic14_final` binary and this binary.
+Thus they predate the API cleanup; they are not excused as stale expectations.
+The newly shared machine-local assignment check exposes incomplete RHS type
+classification: ten unknown-type refusals, `parser_text_heap` rejecting a
+known `void*` result at a typed C-pointer destination, and
+`unit_local_init_graph_ref_admit_refused` lacking its receiving-model admission
+route. The pointer-cast examples fail before the subsequent C member access
+or `sizeof` operation. Repair this common checking route before proceeding
+to the callable-actual projection; do not bypass checking for machine locals,
+add C-name knowledge, or erase const/reference-depth/Structure constraints.
+
+The twelve rows are `parser_alloc_port`, `parser_text_heap`,
+`unit_c_member_len`, `unit_c_member_twohop`, `unit_c_member_write`,
+`unit_fnptr_call_args_forms`, `unit_indent_stack_field_index`,
+`unit_local_init_graph_ref_admit_refused`, `unit_p0_with_include`,
+`unit_p0_without_include`, `unit_raw_root_c_control_compound`, and
+`unit_sizeof_type_frame`. Per-row results and controlled attribution are in
+the full-run directory's `cleanup_result.json`, `baseline_comparison.json`,
+`pre_api_regression_probe.json`, and `old_full_regression_probe.json`.
+
+Frozen SHA256: translator
+`0870A8F68B72BE22B61B40050155D16B0365DE79B4560411480E0E5553C3C92C`;
+harness `78FE5E64CA530E90ADAF7F7E1B7DA1BB78B31868BE543970E1ADA9494655A257`;
+driver `3ADC906743D67A671AD3193667A6D8DC44A82BC65119783CDF836E397DDDE089`.
+The kernel directory's `final_source_hashes.json` records the 24 API-slice
+files. Parent verification also matched all 114 modified/new sandbox source
+files against staged evidence: 98 against the full generated run and 16
+kernel selftests against the kernel run. Harness API changes were separately
+reviewed and hashed. All processes are terminal and diff checks pass.
+
+This is a reproducible development checkpoint with disclosed failures, not a
+clean-kernel or stable promotion, and not completion of §8 or §8a. Earlier
+WIP/run statements below are historical records of their named slices;
+the current full result above supersedes earlier full-corpus counts.
+
 ## Resumed after Q56/Q57 documentation correction
 
 The author has resumed implementation through §§8 and 8a after a separate
@@ -677,31 +736,79 @@ M\while\j resolving to the exact body executed by WHILE.
 #### Next dependency-closed identity slice
 
 Canonical body identity can precede lexical-order reallocation, but it cannot
-be a translator-only pointer substitution. Preserve current field slots while
-recording body-step counts in existing compiler body metadata; allocate the
-single `l2_for_node` body with space for its existing children and operators.
-Both `l2_emit_local_bodies` and unit-builder allocations must use that width.
-Replace `l2_rw_body`'s step-only `lmx_walk_plain` with population of, and a
-reference to, that exact source body. Top-level method/T7 bases need not move
-in this bounded slice; their eventual lexical-order migration remains open.
+be a translator-only pointer substitution. These anchors describe the active
+`build/opus_wt/dev/l2src_sandbox/l2trans.lm1` inspected at SHA256
+`0870A8F68B72BE22B61B40050155D16B0365DE79B4560411480E0E5553C3C92C`,
+not the stable mirror and not completed implementation.
 
-The same slice must repair `lmx_walk_load_code/load_node`: preload only
-executable operator children and the body operands defined by IF/WHILE/UNTIL/
-FOR/PAD, plus ordinary owned expression operands. Do not walk arbitrary
-lexical descendants or preload an uncalled nested callable. A canonical
-body's structural parent is not the operator referencing it, so the old
-`child.parent == operator` test alone misses its working cells.
+The existing producer is already split in two. `l2_for_node`,
+`l2_for_uchild`, `l2_for_nkid`, `l2_for_mi`, `l2_for_parent` and
+`l2_for_stmt` are allocated by `l2_for_reserve`, filled by `l2_for_add` and
+laid out by `l2_layout_owns`. Unit construction allocates `l2_b<fid>` in
+`l2_emit_unit`; runtime local named-Structure construction allocates
+`l2_lb<t>_<fid>` in `l2_emit_local_bodies`. Native method prologues recover
+the same lexical body as `l2_h<fid>`, and own/path addressing uses that handle
+with the already assigned `l2_own_fchild`. The duplicate consumer is
+`l2_rw_body`: it allocates a second step-only `lmx_walk_plain`, populates it
+from slot zero and gives that different Structure to the control operator.
+
+Add `l2_for_steps[fid]` to the same reserve/copy/free lifecycle. The quiet
+count pass resolves the active source body with
+`l2_for_find(l2_scope_host())`, records its direct operator count, and the
+emit pass must reject any changed count. Preserve every existing
+`l2_for_uchild`, `l2_own_fchild`, `l2_own_uchild` and `l2_m_kids` value:
+allocate the one lexical body to
+`l2_for_nkid[fid] + l2_for_steps[fid]`, and append its operators beginning at
+the old `l2_for_nkid[fid]`. Both `l2_emit_unit` and
+`l2_emit_local_bodies` use this width. Replace `l2_rw_body`'s allocation with
+population of, and a reference to, the exact body handle for that source
+entry. Runtime-local population must use the existing
+`lmx_walk_program_roles()` accessor rather than assuming that the builder's
+local `l2_rw_roles` name is in scope. It must not create a template,
+descriptor or other companion Structure.
+
+The same runnable slice repairs `lmx_walk_load_code/load_node`: preload only
+the expression operands actually evaluated by an opcode and the body operands
+defined by IF/WHILE/UNTIL/FOR/PAD. Traverse the mixed children of those
+canonical bodies so their OWN/OWN_OF/SET_OF rows are loaded, but do not treat
+LIT/AT/OWN metadata, a CALL's receiver/code, arbitrary lexical descendants or
+an uncalled nested callable as caller-owned executable state. A canonical
+body's structural parent is its lexical body, not the operator referencing it,
+so the old `child.parent == operator` test alone misses its working cells.
+`lmx_walk_body` already skips non-operator children and needs no parallel
+execution-order structure.
 
 `lmx_copy_value` currently retains a whole Structure whenever its head is an
-OP/ROLE record. Remove this extra terminal shortcut: ordinary frames use the
-existing operation-local copy map, while bare OP/ROLE records remain admitted
-terminals. Require copied operator.body == copied path-selected body, both
-different from the original, and a copied hosted cell; native implementation
-and bare role identity remain reusable. Update obsolete K-OT1 shared-frame
-expectations by name. Capture constructors (`l2_mad_emit`,
-`l2_emit_mad_construct_one`) and T7 frame-pack reconstruction are separate
-bypasses not certified by ordinary-copy tests; they must then use the same
-complete instance construction/copy contract before global graph acceptance.
+OP/ROLE record. Remove only this extra terminal shortcut: ordinary frames,
+their operands, canonical bodies and declared cells use the existing
+operation-local copy map. Bare OP/ROLE records remain terminals by address.
+Require copied `operator.body` to equal the copied path-selected body, both to
+differ from the originals, repeated source references to map to one
+destination, equal distinct cells to stay distinct, the hosted field cell to
+be copied once, and `native` to remain verbatim. Update the obsolete K-OT1
+shared-frame assertions in `lmx_walk_selftest`; retaining bare role identity
+is still a valid check.
+
+The minimal pending witnesses are: `unit_root_hosted_controls` on the same
+native and driver-cleared root artifact; the actual-walker
+`unit_walk_body_path_while` and `unit_walk_body_path_for`, with a structural
+observer tying WHILE/FOR's body edge to the lexical body that owns `j`; one
+uncalled nested method whose invalid entry-load operand must remain untouched;
+and a copier selftest for fresh frame/body/cell addresses, preserved alias
+topology, role identity and independent execution. Mutants must restore
+`lmx_walk_plain`, allocate only `l2_for_nkid`, shift field slots, omit
+canonical-body loading, preload the uncalled callee, retain the headed-frame
+terminal shortcut, bypass the map for one repeated body edge, duplicate the
+hosted cell, or copy a bare role record. Each mutation must fail its specific
+identity/runtime observation rather than an unrelated text pin.
+
+Top-level method/T7 bases need not move in this bounded slice; their eventual
+source-order reallocation remains open. Capture constructors (`l2_mad_emit`,
+`l2_emit_mad_construct_one`) and T7 frame-pack reconstruction remain separate
+manual-copy bypasses. Ordinary-copy success does not certify them: they must
+subsequently use the same complete instance construction/copy contract before
+global graph acceptance and the capture/T7 witnesses. This section chooses no
+Q58 head-resolution rule.
 
 ### Every statically known executable body compiled
 

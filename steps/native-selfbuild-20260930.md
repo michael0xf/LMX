@@ -30,6 +30,10 @@ Fresh diagnostics after the documentation checkpoint:
 | `build/l2_harness/resume_ref_20260930_02` | Focused signature run after normalization: **8 targets, zero failures**, including existing primitive/reference controls |
 | `build/l2_harness/address_name_20260930_09` | Common Structure/reference-cell address acquisition: **15 targets, zero failures**; 12 fixtures including depth refusals and existing controls; two deliberately inverted positive witnesses fail |
 | `build/l2src/mapped_cycles_20260930_01` | Standard kernel after mapped-cycle repair: **280 targets, zero failures**, 104 selftests; runtime implements 55 checks (25 new), table 59 checks, zero failures in both |
+| `build/l2_harness/resumed_full_20260930_01` | Full frozen WIP diagnostic: **966 targets, 854 OK, 112 failed**; not a clean-kernel certificate |
+| `build/l3/resumed_l3_20260930_01` | **11 runtime suites / 295 checks pass**; overall exit 1 because four header-inventory expectations still require 72 names instead of the measured 73 after adding the operation-local LmxImplementsFrame; capacity remains 128 names / 8192 bytes |
+| `build/l2_harness/formal_address_20260930_final` | Corrected static formal-address slice: **13 targets, zero failures**, ten fixtures; all three deliberately inverted positive controls fail at execution, then are restored before this final run |
+| `build/l3/formal_address_20260930_final` | **Full L3 gate exit 0**: 11 runtime suites / 295 checks; all four header inventories 73/128 names and 1043/8192 bytes. Updated only the expected count for LmxImplementsFrame, not the capacity |
 
 The first kernel run predates the subsequent reference-translator edits. The
 focused harness does not replace a full gate. The stopped audit run
@@ -47,16 +51,43 @@ field/index paths or interpreted portable references. The full generated
 harness and L3 runner must be repeated.
 
 Independent review found that the new `unit_address_formal_depth_refused`
-expectation is wrong under L2 §18.2–18.3: a reference-transmitted nonprimitive
+expectation was wrong under L2 §18.2–18.3: a reference-transmitted nonprimitive
 formal denotes its descriptor, not the machine parameter's address. The
-15/15 result is execution evidence, not proof of this expectation's validity.
-Fix the logical input category in the common address resolver; keep both
-signature spellings equivalent and retain the genuine explicit body-pointer
-depth refusals. Callable formals use the same descriptor rule. Array formals
-and dynamic-input category propagation still need real coverage; raw C pointer
-encoding is not enough to choose a logical storage category. Also separate
-the `unit_ref_signature_synonyms` rebinding assertion from the established
-fact of signature equivalence: a passing test is not a language decision.
+15/15 result remains execution evidence, not proof of that expectation.
+The corrected WIP uses a shared logical input category derived from existing
+signature/callable metadata, not the backend pointer spelling. The final
+13/13 run above proves descriptor identity for both Structure-formal spellings
+and callable formals, retaining primitive cell-address and genuine explicit
+body-reference depth controls. The wrong refusal fixture was replaced by
+positive descriptor witnesses. `unit_ref_signature_synonyms` now tests
+transmission/identity, not a new formal rebinding policy. Formal call/rebind
+classification has not been changed by this address fix. Array formals and
+dynamic-input category propagation remain implementation gaps; no guessed
+fallback category was added and no interpreted-reference coverage is claimed.
+Final translator SHA256:
+C2A8D284160E459FDE3A251F79B5DA1E6BFFA80962941CE6BD264711F8564D4B;
+Git blob aa03bb62d38c6b4cafdcba205706656133f33d6b. Code remains uncommitted
+WIP in build/opus_wt, not a main/stable-source promotion. The last full
+generated run predates this final address correction and remains red; no
+clean-kernel, §8 or §8a completion is implied by the focused and L3 successes.
+
+The full harness's 112 failures split initially into 37 generated-text
+assertions, 51 diagnostic-text mismatches, 17 newly accepted former-refusal
+rows, one missing expected note and six missing-L1 results. This is a failure
+classification, not permission to rewrite expectations wholesale. Of the
+51 diagnostic mismatches, 42 are preempted by a void-callable return-with-value
+diagnostic; resolve the source-role cause before updating the expected error.
+Four no-L1 cases reach the real `graph assignment admission requires
+receiving-expression tests` gap. The other two encounter static admission
+failure and also contain withdrawn implicit-copy setup.
+
+Even green old rows are not proof of current semantics: the `unit_bind_*`
+family still includes executable `Model: b c` / `Model: fresh` construction.
+Conversely, do not migrate by fixture name alone: the current
+`unit_fresh_instance_skipped_decl` and `unit_recursive_fresh_instance` exercise
+activation/reentry, not the withdrawn model constructor. Preserve their
+behavioral purpose. The 1503-source frozen diagnostic aggregate is
+cf124130a927ed68474da7462f3a904b45649509ee5aa015e965b122c8befa9f.
 
 Mapped admission uses one operation-local traversal with pending/cached
 correspondences for both providers. Back-edges retain those correspondences;

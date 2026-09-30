@@ -228,6 +228,34 @@ terminal result recorded above; it remains red for the remaining dependencies.
 
 ### Remaining regression migration
 
+- Frozen audit of the 29 generated-text failures distinguishes real graph
+  omissions from names that merely shifted. `unit_root_merge_three_operands`
+  and `unit_root_merge_body` each contain both ordinary native merge calls
+  and two retained PUT_REF(PRIM_PUB(`lmx_walk_merge_map`)) sites. Their
+  `l2_mops` is a native activation-local operands array, not a forbidden
+  permanent data graph; old Absents came from interpreter-only entry
+  lowering. Replace those Absents with relation-aware native/walker merge
+  site/order/result/identity checks, not a ban on ordinary native scratch.
+- `unit_s1_catch_user_break` instead has no retained operator graph at all:
+  shared walkability classification rejects supported catch-parameter
+  storage. See CATCH-FORMAL-RETAINED-GRAPH in defects.md; preserve its
+  failing graph observation until the common path is repaired.
+- `unit_make_adder` needs a captured-cell identity witness: an ARG/OF/NODE
+  graph and a correct numeric result alone cannot replace its former AT
+  claim. Tie this to the capture/copy repair rather than substituting one
+  observed opcode for another.
+- Six other rows still use withdrawn implicit-copy setup: `unit_a3_capture_direct_vs_copy`,
+  `unit_walk_struct_formal`, `unit_root_model_field`,
+  `unit_colon_method_lexical_model`, `unit_field_path_unit_colon`,
+  `unit_matrix_callable_struct_identity`. Migrate setup to explicit merge
+  while retaining their capture, snapshot, formal and path invariants;
+  coordinate with settled head resolution, not a mass expected-output edit.
+- Nineteen text-observer rows have matching operators/roles/typed inputs
+  under different temporary or slot identifiers. Replace literal `l2_rwN`
+  and slot pins with opcode/arity/edge relationships plus their runtime
+  results. The make-adder native-note exists, but its reason changed;
+  assert a stable located boundary plus the actual native word, not the
+  transient mixed-arithmetic refusal as a language requirement.
 - Raw-C bad argument/arity/nested-call fixtures must not run. Preserve their
   emitted C and verify its constraint diagnostic with the target compiler
   (`-fsyntax-only -Werror=int-conversion`), not name-specific L2 validation.

@@ -213,6 +213,59 @@ fn: digest (@: LmxArena a) size_t
     ---
 return: sum
 
+# The lexical parent chain is not limited by the old 256-hop holder lookup.
+# Load an OWN below 512 parents and verify its working row, not just the predicate.
+fn: deep_holder_test () int
+    LmxWalkFrame: frame
+    LmxScratchMark: mark
+    @: LmxWalkFrame pf (@ frame)
+    @: Lmx root lmx_node_new_owned(ga)
+    @: Lmx other lmx_node_new_owned(ga)
+    @: Lmx holder root
+    @: Lmx child 0
+    @: Lmx operand 0
+    @: LmxWalkWork work 0
+    @@: void slot 0
+    size_t: i 0U
+    int: status
+    if: root = 0 || other = 0
+        return: 2
+    if: lmx_arena_refs_open_owned(ga, root, 2U) != 0
+        return: 2
+    while: i < 512U
+        child: lmx_walk_plain(ga, holder, 1U)
+        if: child = 0 || lmx_arena_ref_store(holder, 0U, (cast: (@: void) child)) != 0
+            return: 2
+        holder: child
+        i: i + 1U
+    ---
+    if: lmx_walk_store_int(ga, holder, 0U, 73) != c.LMX_WALK_OK
+        return: 2
+    operand: own(root, 1U, holder, 0U)
+    slot: lmx_arena_ref_cell(holder, 0U)
+    if: operand = 0 || slot = 0
+        return: 2
+    memset((cast: (@: void) pf), 0, c.sizeof(c.LmxWalkFrame))
+    pf\context: gctx
+    pf\arena: ga
+    pf\roles: groles
+    pf\node: root
+    pf\code: root
+    check(lmx_walk_holder_here(pf, holder) = 1, "holder below 512 lexical parents belongs to this activation")
+    check(lmx_walk_holder_here(pf, root) = 1, "the running occurrence is its own holder")
+    check(lmx_walk_holder_here(pf, other) = 0 && lmx_walk_holder_here(pf, 0) = 0, "unrelated and absent holders stay outside the activation")
+    if: lmx_scratch_mark(gctx\scratch, @ mark) != c.LMX_SCRATCH_OK
+        return: 2
+    status: lmx_walk_load_node(pf, operand)
+    work: lmx_walk_work_find(pf, slot)
+    check(status = c.LMX_WALK_OK && pf\nwork = 1U && work != 0, "OWN below 512 lexical parents loads exactly one working row")
+    if: work != 0
+        check(work\holder = holder && work\index = 0U && work\slot = slot && work\kind = 1 && work\ty = c.LMX_TYPE_INT && work\num = 73U, "deep holder row keeps the real typed field value")
+    ---
+    if: lmx_scratch_rewind(gctx\scratch, @ mark) != c.LMX_SCRATCH_OK
+        return: 2
+return: 0
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -1081,6 +1134,8 @@ fn: main () int
     check(lmx_walk_store_int(ga, n, 1U, 7) = c.LMX_WALK_OK, "D-45 LIT 7")
     st: go(d45_body, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && v = 1 && r = 7, "D-45 body {eternal parent0, LIT 7} -> 7 (mutant: UNSUPPORTED)")
+
+    check(deep_holder_test() = 0, "deep holder fixture and scratch lifetime")
 
     free((cast: (@: void) argv))
     free((cast: (@: void) gv))

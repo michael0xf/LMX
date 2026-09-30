@@ -2,6 +2,18 @@ include: "<stddef.h>"
 predef: "l2src/lmx.h.lm1"
 predef: "l2src/lmx_arena.h.lm1"
 
+# Operation-local DFS bookkeeping, never a graph value or a completed admission.
+struct: LmxImplementsFrame
+    @: Lmx varA
+    @: Lmx varB
+    @: Lmx consumer
+    @: LmxImplEntry viewA
+    @: LmxImplEntry viewB
+    size_t: index
+    @: LmxImplementsFrame caller
+    @: LmxImplementsFrame seen_next
+end: LmxImplementsFrame
+
 # The object domains this level knows, and the compatibility primitive
 # `implements(varA, varB, Consumer)`.
 #
@@ -36,10 +48,6 @@ define: LMX_IMPLEMENTS_YES 1
 define: LMX_IMPLEMENTS_UNKNOWN 2
 define: LMX_DOMAIN_REGISTER_OK 0
 define: LMX_DOMAIN_REGISTER_FAIL 1
-
-# How deep the runtime walk follows a used tree.  A bound on the WORKING loop, not a claim about
-# the tree: a deeper path is answered UNKNOWN rather than certified either way.
-define: LMX_IMPLEMENTS_DEPTH 32
 
 # The object domains, appended after the lmx.h registry (LmxType 0..20 and the two
 # bases).  They are declared here rather than in lmx.h because that header and the
@@ -129,10 +137,15 @@ prototype:
     # nothing to use"), a missing path or a known mismatch is NO, and anything the walk cannot
     # inspect is UNKNOWN -- never YES.
     fn: lmx_runtime_implements (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
-    # The walk itself, declared here because it is recursive and L1 needs a name before its
-    # use.  k.4: a callable's signature is ordinary lexical Structure fields (args/return),
-    # so the used-tree walk alone covers it -- there is no separate signature comparison.
-    fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; int: depth) int
+    # The depth-first used-graph walk keeps operation-local visited triples and frames;
+    # neither graph depth nor a reference cycle is an admission refusal. A callable's
+    # signature is ordinary lexical Structure fields, checked by this same traversal.
+    fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
+    # The common operation walk: pending is not a completed admission. skip_unused is set only
+    # for through(), whose correspondence already proves SIZE_MAX fields unused; the runtime
+    # used-tree predicate instead requires every non-null Consumer child, including mapped ones.
+    fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int
+    fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending) @: LmxImplEntry
     # D-105 (the author's Q39, 2026-09-27): the `implements` table of address correspondences
     # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an
     # instance of carries a view of its correspondence -- slot j is the value's slot of req's field j,

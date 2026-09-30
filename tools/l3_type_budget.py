@@ -77,11 +77,14 @@ _WIN32_ABI = 1 if os.name == 'nt' else 0
 # -- one record of the arena's `implements` table of address correspondences (LmxArena.impl).
 # 71 after §7b (steps/working-state-7b.md, 7b-1): struct LmxWalkWork in lmx_walk.h.lm1 -- one row of an
 # activation's working table (an own field's working value and its dirty mark), LmxWalkFrame.work.
+# 72 after recursive admission cap removal: operation-local LmxImplementsFrame
+# in lmx_implements.h.lm1 supplies the DFS work record, not a runtime graph type.
+# The translator capacities above remain unchanged.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 71 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 72 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 72 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 72 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 72 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

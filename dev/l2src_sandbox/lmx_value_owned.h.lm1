@@ -31,7 +31,8 @@ prototype:
     fn: lmx_pointer_store_known (@: void cell; @: void value) int
     # Known accessors require a compiler-proven live cell of this exact type.
     # They guard null, not arbitrary untyped/raw addresses or owner membership.
-    # Character read: null => -1, live character => unsigned byte 0..255.
+    # Character read: null => -1; a live cell yields its C char value promoted to int.
+    # Target char signedness is preserved; an intern-table byte index is a separate use.
     fn: lmx_char_value_known (@: void cell) int
     fn: lmx_int_value_known (@: void cell) int
     fn: lmx_int_store_known (@: void cell; int: value) int

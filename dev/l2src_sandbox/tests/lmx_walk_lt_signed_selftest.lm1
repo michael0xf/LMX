@@ -12,9 +12,9 @@ predef: "l2src/lmx_value_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# D-50 / D-51 / -174 c0: INT-only signed LT; working width size_t (not ulong).
+# C99 numeric promotion and D-51 working width size_t (not ulong).
 # Mutants: unsigned int compare -> negative int LT RED; width back to ulong -> size_t 2^32 EQ RED.
-# Char stays unsigned (0..255).
+# Char numeric values follow the target C char; intern-table indices are unsigned bytes.
 
 @: LmxArena ga 0
 @: Lmx groles 0
@@ -59,6 +59,26 @@ fn: go (@: Lmx m) int
         return: c.LMX_WALK_INVALID
 return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
+sub: char_op (@: Lmx unit; int: op; int: a; int: b; int: char_rhs; int: expected; const: @(char label))
+    @: Lmx m mk_m(unit, 0U, 1U)
+    @: Lmx ret fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    @: Lmx expr fr(ret, 1U, op, 3U)
+    @: Lmx lhs fr(expr, 1U, c.LMX_WALK_OP_LIT, 2U)
+    @: Lmx rhs fr(expr, 2U, c.LMX_WALK_OP_LIT, 2U)
+    int: st
+    if: lmx_walk_store_char(ga, lhs, 1U, a & 255) != c.LMX_WALK_OK
+        broken: broken + 1
+    if: char_rhs != 0
+        st: lmx_walk_store_char(ga, rhs, 1U, b & 255)
+    else:
+        st: lmx_walk_store_int(ga, rhs, 1U, b)
+    ---
+    if: st != c.LMX_WALK_OK
+        broken: broken + 1
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = expected)), label)
+end: char_op
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -74,6 +94,12 @@ fn: main () int
     ulong: uzero 0U
     size_t: szero 0U
     int: st 0
+    int: byte 0
+    char: actual 0
+    @: Lmx chars_source 0
+    @: Lmx chars_copy 0
+    @: char copy_table 0
+    @: void char_cell 0
 
     c.printf("D-51 measure: sizeof(ulong)=%u sizeof(size_t)=%u\n", (cast: (unsigned) c.sizeof(uzero)), (cast: (unsigned) c.sizeof(szero)))
 
@@ -116,7 +142,7 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 1)), "int -1 < 0")
 
-    # char 200 > char 100: lt(100, 200) = 1 (unsigned order correct for char)
+    # Numeric ordering must match C char on the actual target.
     m: mk_m(unit, 0U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     lt: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
@@ -129,7 +155,35 @@ fn: main () int
         broken: broken + 1
     ---
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 1)), "char 100 < 200 (200 > 100)")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = ((cast: (char) 100) < (cast: (char) 200)))), "char ordering follows C99")
+
+    char_op(unit, c.LMX_WALK_OP_ADD, 100, 100, 1, 200, "char addition produces promoted int")
+    char_op(unit, c.LMX_WALK_OP_EQ, 200, 200, 0, (cast: (int) ((cast: (char) 200) = 200)), "char versus int keeps integer literal")
+    char_op(unit, c.LMX_WALK_OP_DIV, 249, 2, 0, (cast: (char) 249) / 2, "char division follows C99")
+    char_op(unit, c.LMX_WALK_OP_MOD, 249, 2, 0, (cast: (char) 249) % 2, "char remainder follows C99")
+
+    # All interned byte encodings read as C char, through both getter APIs.
+    while: byte < 256
+        actual: (cast: (char) byte)
+        char_cell: lmx_char_cell(ga, byte)
+        check((cast: (int) (lmx_char_value(char_cell) = (cast: (int) actual) && lmx_char_value_known(char_cell) = (cast: (int) actual))), "interned char equals C99 value")
+        byte: byte + 1
+    ---
+    chars_source: lmx_node_new_owned(ga)
+    copy_table: lmx_chars_new_owned(@ context_arena)
+    if: chars_source = 0 || copy_table = 0 || lmx_arena_refs_open_owned(ga, chars_source, 3U) != 0
+        return: 2
+    ---
+    lmx_arena_ref_store(chars_source, 0U, lmx_char_cell(ga, 128))
+    lmx_arena_ref_store(chars_source, 1U, lmx_char_cell(ga, 200))
+    lmx_arena_ref_store(chars_source, 2U, lmx_char_cell(ga, 255))
+    st: lmx_graph_copy_owned(chars_source, copy_table, ga, @ context_arena, @ chars_copy)
+    check((cast: (int) (st = 0 && chars_copy != 0)), "char graph copy")
+    if: chars_copy != 0
+        check((cast: (int) (lmx_char_value_known(lmx_arena_ref_value(chars_copy, 0U)) = (cast: (int) (cast: (char) 128)))), "copied char 128")
+        check((cast: (int) (lmx_char_value_known(lmx_arena_ref_value(chars_copy, 1U)) = (cast: (int) (cast: (char) 200)))), "copied char 200")
+        check((cast: (int) (lmx_char_value_known(lmx_arena_ref_value(chars_copy, 2U)) = (cast: (int) (cast: (char) 255)) && lmx_arena_ref_value(chars_copy, 2U) = lmx_char_cell_known(copy_table, 255))), "copied char 255 is a real interned cell")
+    ---
 
 
     # D-51: size_t 2^32 equals itself (full width); not equal to 0

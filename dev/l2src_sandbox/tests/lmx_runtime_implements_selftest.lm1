@@ -82,6 +82,204 @@ fn: ri_callable (@: LmxArena arena; int: char_arg) @: Lmx
     ---
 return: callable
 
+# Each link is a distinct ordinary Structure. The final leaf remains observable to admission.
+fn: ri_chain (@: LmxArena arena; @: void leaf; size_t: levels) @: Lmx
+    @: Lmx node 0
+    @: void value leaf
+    size_t: i 0U
+    while: i < levels
+        node: ri_struct(arena, 1U)
+        if: node = 0 || lmx_arena_ref_store(node, 0U, value) != 0
+            return: 0
+        value: (cast: (@: void) node)
+        i: i + 1U
+    ---
+return: node
+
+fn: ri_unbounded_graphs (@: LmxArena arena; @: void int_cell; @: void char_cell; @: void raw; @: int counts) int
+    @: Lmx da ri_chain(arena, int_cell, 1024U)
+    @: Lmx db ri_chain(arena, int_cell, 1024U)
+    @: Lmx dc ri_chain(arena, int_cell, 1024U)
+    @: Lmx bad ri_chain(arena, char_cell, 1024U)
+    @: Lmx a 0
+    @: Lmx b 0
+    @: Lmx c 0
+    @: Lmx na 0
+    @: Lmx nb 0
+    @: Lmx nc 0
+    @: Lmx wrong 0
+    size_t: before
+    size_t: admitted
+    LmxImplEntry: view
+    @: LmxImplEntry v (@ view)
+    []: size_t map 2
+    if: da = 0 || db = 0 || dc = 0 || bad = 0
+        return: 2
+    before: lmx_arena_index_len(arena)
+    admitted: arena\impl_len
+    ri_check(counts, lmx_runtime_implements(arena, da, db, dc) = c.LMX_IMPLEMENTS_YES, "1024 distinct levels were refused")
+    ri_check(counts, lmx_runtime_implements(arena, bad, db, dc) = c.LMX_IMPLEMENTS_NO, "a mismatch after 1024 levels was not NO")
+    ri_check(counts, lmx_arena_index_len(arena) = before && arena\impl_len = admitted, "temporary traversal entered the graph arena or admission cache")
+
+    a: ri_struct(arena, 2U)
+    b: ri_struct(arena, 2U)
+    c: ri_struct(arena, 2U)
+    na: ri_struct(arena, 2U)
+    nb: ri_struct(arena, 2U)
+    nc: ri_struct(arena, 2U)
+    wrong: ri_chain(arena, char_cell, 1U)
+    if: a = 0 || b = 0 || c = 0 || na = 0 || nb = 0 || nc = 0 || wrong = 0
+        return: 2
+    lmx_arena_ref_store(a, 0U, a)
+    lmx_arena_ref_store(b, 0U, b)
+    lmx_arena_ref_store(c, 0U, c)
+    lmx_arena_ref_store(a, 1U, int_cell)
+    lmx_arena_ref_store(b, 1U, int_cell)
+    lmx_arena_ref_store(c, 1U, int_cell)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_YES, "matching self-cycles were refused")
+    lmx_arena_ref_store(a, 1U, char_cell)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_NO, "a back-edge hid its mismatching sibling")
+    lmx_arena_ref_store(a, 1U, raw)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_UNKNOWN, "a back-edge certified an unknown sibling")
+    lmx_arena_ref_store(a, 1U, int_cell)
+
+    lmx_arena_ref_store(a, 0U, na)
+    lmx_arena_ref_store(b, 0U, nb)
+    lmx_arena_ref_store(c, 0U, nc)
+    lmx_arena_ref_store(na, 0U, a)
+    lmx_arena_ref_store(nb, 0U, b)
+    lmx_arena_ref_store(nc, 0U, c)
+    lmx_arena_ref_store(na, 1U, int_cell)
+    lmx_arena_ref_store(nb, 1U, int_cell)
+    lmx_arena_ref_store(nc, 1U, int_cell)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_YES, "matching two-node cycles were refused")
+    lmx_arena_ref_store(nb, 1U, char_cell)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_NO, "varB's mismatch after a two-node back-edge was lost")
+
+    # The memo key is the WHOLE triple, not a provider, a pair, or Consumer alone.
+    lmx_arena_ref_store(a, 0U, da)
+    lmx_arena_ref_store(a, 1U, da)
+    lmx_arena_ref_store(b, 0U, db)
+    lmx_arena_ref_store(b, 1U, db)
+    lmx_arena_ref_store(c, 0U, dc)
+    lmx_arena_ref_store(c, 1U, dc)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_YES, "a shared deep subgraph was refused")
+    lmx_arena_ref_store(c, 1U, bad)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_NO, "memo ignored a different Consumer for shared providers")
+    lmx_arena_ref_store(c, 1U, dc)
+    lmx_arena_ref_store(b, 1U, bad)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_NO, "memo ignored a different varB")
+    lmx_arena_ref_store(b, 1U, db)
+    lmx_arena_ref_store(a, 1U, bad)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_NO, "memo ignored a different varA")
+
+    # Depth first: finish slot 0 before inspecting slot 1, including NO versus UNKNOWN.
+    lmx_arena_ref_store(a, 0U, wrong)
+    lmx_arena_ref_store(a, 1U, raw)
+    lmx_arena_ref_store(b, 0U, nc)
+    lmx_arena_ref_store(b, 1U, int_cell)
+    lmx_arena_ref_store(c, 0U, nc)
+    lmx_arena_ref_store(c, 1U, int_cell)
+    lmx_arena_ref_store(nc, 0U, int_cell)
+    lmx_arena_ref_store(nc, 1U, 0)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_NO, "later UNKNOWN replaced depth-first NO")
+    lmx_arena_ref_store(wrong, 0U, raw)
+    lmx_arena_ref_store(a, 1U, char_cell)
+    ri_check(counts, lmx_runtime_implements(arena, a, b, c) = c.LMX_IMPLEMENTS_UNKNOWN, "later NO replaced depth-first UNKNOWN")
+
+    # A mapped first admission still descends into the same unbounded graph walk.
+    map[0]: 1U
+    map[1]: 0U
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\map: map
+    v\n: 2U
+    lmx_arena_ref_store(a, 0U, int_cell)
+    lmx_arena_ref_store(a, 1U, da)
+    lmx_arena_ref_store(c, 0U, dc)
+    lmx_arena_ref_store(c, 1U, int_cell)
+    ri_check(counts, lmx_implements_through(arena, a, c, v) = c.LMX_IMPLEMENTS_YES, "mapped deep admission was refused")
+    lmx_arena_ref_store(a, 1U, bad)
+    ri_check(counts, lmx_implements_through(arena, a, c, v) = c.LMX_IMPLEMENTS_NO, "mapped deep mismatch was not NO")
+return: 0
+
+# Maps live in main through arena release: successful admission records retain their addresses.
+fn: ri_mapped_cycles (@: LmxArena arena; @: void int_cell; @: void char_cell; @: void raw; @: size_t map; @: size_t unused; @: int counts) int
+    @: Lmx value ri_struct(arena, 2U)
+    @: Lmx other ri_struct(arena, 2U)
+    @: Lmx req ri_struct(arena, 2U)
+    @: Lmx bad ri_struct(arena, 2U)
+    @: Lmx outer_value ri_struct(arena, 1U)
+    @: Lmx outer_req ri_struct(arena, 1U)
+    @: Lmx partial ri_struct(arena, 1U)
+    @: Lmx full ri_struct(arena, 2U)
+    @: Lmx outer_partial ri_struct(arena, 1U)
+    @: Lmx outer_full ri_struct(arena, 1U)
+    LmxImplEntry: view
+    @: LmxImplEntry v (@ view)
+    size_t: admitted
+    size_t: indexed
+    size_t: slot
+    if: value = 0 || other = 0 || req = 0 || bad = 0 || outer_value = 0 || outer_req = 0 || partial = 0 || full = 0 || outer_partial = 0 || outer_full = 0
+        return: 2
+    map[0]: 1U
+    map[1]: 0U
+    unused[0]: 0U
+    unused[1]: (cast: (size_t) -1)
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\map: map
+    v\n: 2U
+    lmx_arena_ref_store(value, 0U, int_cell)
+    lmx_arena_ref_store(value, 1U, value)
+    lmx_arena_ref_store(other, 0U, int_cell)
+    lmx_arena_ref_store(other, 1U, other)
+    lmx_arena_ref_store(req, 0U, req)
+    lmx_arena_ref_store(req, 1U, int_cell)
+    admitted: arena\impl_len
+    indexed: lmx_arena_index_len(arena)
+    ri_check(counts, lmx_implements_through(arena, value, req, v) = c.LMX_IMPLEMENTS_YES, "pending correspondence was lost on a mapped self-cycle")
+    ri_check(counts, arena\impl_len = admitted && lmx_arena_index_len(arena) = indexed, "mapped DFS published its pending view or scratch in the checked arena")
+    ri_check(counts, lmx_implements_register_map(arena, value, req, map, 2U) = c.LMX_IMPLEMENTS_YES, "mapped self-cycle registration was refused")
+    ri_check(counts, arena\impl_len = admitted + 1U, "successful mapped cycle did not publish exactly one admission")
+    ri_check(counts, lmx_implements_slot(arena, value, req, 0U, @ slot) = 0 && slot = 1U, "mapped cycle's recursive slot was lost")
+    ri_check(counts, lmx_implements_slot(arena, value, req, 1U, @ slot) = 0 && slot = 0U, "mapped cycle's leaf slot was lost")
+    ri_check(counts, lmx_implements_register_map(arena, other, req, map, 2U) = c.LMX_IMPLEMENTS_YES, "second mapped provider was refused")
+    ri_check(counts, lmx_runtime_implements(arena, value, other, req) = c.LMX_IMPLEMENTS_YES, "runtime walk lost one provider's cached correspondence")
+    ri_check(counts, lmx_runtime_implements(arena, req, value, req) = c.LMX_IMPLEMENTS_YES, "varB's mapped layout was mistaken for varA's identity layout")
+    lmx_arena_ref_store(outer_value, 0U, value)
+    lmx_arena_ref_store(outer_req, 0U, req)
+    ri_check(counts, lmx_implements_register_map(arena, outer_value, outer_req, 0, 0U) = c.LMX_IMPLEMENTS_YES, "identity outer admission lost a cached nested permutation")
+    ri_check(counts, lmx_runtime_implements(arena, outer_value, outer_value, outer_req) = c.LMX_IMPLEMENTS_YES, "runtime nested mapped cycle was refused")
+
+    # The cycle is visited before its sibling; neither NO nor UNKNOWN may become cached success.
+    lmx_arena_ref_store(bad, 0U, char_cell)
+    lmx_arena_ref_store(bad, 1U, bad)
+    admitted: arena\impl_len
+    ri_check(counts, lmx_implements_through(arena, bad, req, v) = c.LMX_IMPLEMENTS_NO, "mapped back-edge hid a mismatching sibling")
+    ri_check(counts, lmx_implements_register(arena, bad, req, v) = c.LMX_IMPLEMENTS_NO, "mapped mismatch was admitted")
+    ri_check(counts, arena\impl_len = admitted && lmx_implements_find(arena, bad, req) = 0, "failed mapped admission entered the cache")
+    lmx_arena_ref_store(bad, 0U, 0)
+    ri_check(counts, lmx_implements_through(arena, bad, req, v) = c.LMX_IMPLEMENTS_NO, "mapped back-edge hid a missing sibling")
+    lmx_arena_ref_store(bad, 0U, raw)
+    ri_check(counts, lmx_implements_through(arena, bad, req, v) = c.LMX_IMPLEMENTS_UNKNOWN, "mapped back-edge certified an unknown sibling")
+    ri_check(counts, lmx_implements_register(arena, bad, req, v) = c.LMX_IMPLEMENTS_UNKNOWN, "unknown mapped admission became success")
+    ri_check(counts, arena\impl_len = admitted && lmx_implements_find(arena, bad, req) = 0, "unknown mapped admission entered the cache")
+    lmx_arena_ref_store(bad, 0U, int_cell)
+    ri_check(counts, lmx_implements_register(arena, bad, req, v) = c.LMX_IMPLEMENTS_YES, "repaired mapped cycle retained a failed pending admission")
+    ri_check(counts, arena\impl_len = admitted + 1U && lmx_implements_find(arena, bad, req) != 0, "repaired mapped cycle did not publish exactly one admission")
+
+    # A correspondence's proved-unused field is not permission to omit a runtime Consumer use.
+    lmx_arena_ref_store(partial, 0U, int_cell)
+    lmx_arena_ref_store(full, 0U, int_cell)
+    lmx_arena_ref_store(full, 1U, int_cell)
+    ri_check(counts, lmx_implements_register_map(arena, partial, full, unused, 2U) = c.LMX_IMPLEMENTS_YES, "proved-unused mapped field was required by admission")
+    ri_check(counts, lmx_implements_slot(arena, partial, full, 1U, @ slot) != 0, "proved-unused mapped field became readable")
+    ri_check(counts, lmx_runtime_implements(arena, partial, partial, full) = c.LMX_IMPLEMENTS_NO, "cached hole hid an explicit runtime Consumer use")
+    lmx_arena_ref_store(outer_partial, 0U, partial)
+    lmx_arena_ref_store(outer_full, 0U, full)
+    ri_check(counts, lmx_implements_through(arena, outer_partial, outer_full, 0) = c.LMX_IMPLEMENTS_YES, "nested admission ignored cached proved-unused fields")
+    ri_check(counts, lmx_runtime_implements(arena, outer_partial, outer_partial, outer_full) = c.LMX_IMPLEMENTS_NO, "nested cached hole hid an explicit runtime Consumer use")
+return: 0
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -108,12 +306,11 @@ fn: main () int
     @: Lmx nested_b 0
     @: Lmx nested_c 0
     @: Lmx raw 0
-    @: Lmx deep 0
-    @: Lmx walk 0
     @: char table 0
-    int: level 0
     int: raw_value 7
     int: failures
+    []: size_t mapped_slots 2
+    []: size_t unused_slots 2
     if: counts = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -245,20 +442,17 @@ fn: main () int
     ri_check(counts, lmx_runtime_implements(arena_at, metro, metro, int_cell) = c.LMX_IMPLEMENTS_UNKNOWN, "a consumer that is not a used tree was certified")
     ri_check(counts, lmx_runtime_implements(0, metro, metro, consumer) = c.LMX_IMPLEMENTS_UNKNOWN, "a walk without an arena was certified")
 
-    # A path deeper than the working bound is UNKNOWN: the walk never invents the rest.
-    deep: 0
-    level: 0
-    while: level < 40
-        deep: ri_struct(@ arena, 1U)
-        if: deep = 0 || lmx_arena_ref_store(deep, 0U, (cast: (@: void) walk)) != 0
-            fputs("lmx_runtime_implements: the deep chain was not built\n", l1_stdout())
-            free(counts)
-            return: 2
-        ---
-        walk: deep
-        level: level + 1
+    if: ri_unbounded_graphs(arena_at, int_cell, char_cell, raw, counts) != 0
+        fputs("lmx_runtime_implements: unbounded graph witnesses could not be built\n", l1_stdout())
+        free(counts)
+        return: 2
     ---
-    ri_check(counts, lmx_runtime_implements(arena_at, walk, walk, walk) = c.LMX_IMPLEMENTS_UNKNOWN, "a path deeper than the working bound was certified")
+
+    if: ri_mapped_cycles(arena_at, int_cell, char_cell, raw, mapped_slots, unused_slots, counts) != 0
+        fputs("lmx_runtime_implements: mapped graph witnesses could not be built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
 
     failures: counts[1]
     c.printf("lmx_runtime_implements checks=%d failures=%d\n", counts[0], failures)

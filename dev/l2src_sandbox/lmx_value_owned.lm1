@@ -144,8 +144,8 @@ fn: lmx_char_value_known (@: void cell) int
     if: cell = 0
         return: -1
     p: (cast: (@: char) cell)
-    # Preserve unsigned-byte semantics even when the host char is signed.
-    return: ((cast: (int) \p) & 255)
+    # Numeric value follows C char promotion; byte-table indices are a storage detail.
+    return: (cast: (int) \p)
 
 fn: lmx_ulong_value_known (@: void cell) ulong
     @: ulong p

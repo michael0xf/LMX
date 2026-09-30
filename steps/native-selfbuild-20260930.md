@@ -1,6 +1,6 @@
 # Native compilation and the route to §§8–8a
 
-Status: 2026-09-30, Codex WIP over documentation checkpoint b8db6c8 in build/opus_wt.
+Status: 2026-09-30, Codex work over documentation checkpoint 5aafc6a in build/opus_wt.
 Implementation evidence and remaining work, not a language specification.
 
 ## Resumed after Q56/Q57 documentation correction
@@ -39,10 +39,11 @@ The first kernel run predates the subsequent reference-translator edits. The
 focused harness does not replace a full gate. The stopped audit run
 `build/l2_harness/20260930_144410` has no verdict and is not evidence.
 
-The new signature witness uses existing Model and Other, not the withdrawn
-implicit `Model: fresh` construction. Both nonprimitive formal spellings
-use the same reference type and permit admitted local rebinding without
-changing the caller's reference. Native named-value address acquisition now
+The first signature experiment used existing Model and Other, not the withdrawn
+implicit `Model: fresh` construction. Its claim that signature synonymy also
+proved a local rebinding policy was not justified and has been withdrawn.
+The current witness proves only reference transmission and descriptor identity.
+Native named-value address acquisition now
 distinguishes an actual Structure descriptor from an explicit reference's
 cell. Flat and Frame forms use the same classification; an extra reference
 level is not erased. Translator blob for the focused green run:
@@ -70,6 +71,23 @@ Git blob aa03bb62d38c6b4cafdcba205706656133f33d6b. Code remains uncommitted
 WIP in build/opus_wt, not a main/stable-source promotion. The last full
 generated run predates this final address correction and remains red; no
 clean-kernel, §8 or §8a completion is implied by the focused and L3 successes.
+
+### Bounded runtime checkpoint
+
+The independently verified runtime slice is separated from translator WIP:
+`lmx_chars`, `lmx_value_owned` and its corrected accessor-contract header,
+`lmx_graph_copy_owned`, `lmx_walk`,
+`lmx_implements` and its header; the three affected runtime selftests;
+`tools/l3_type_budget.py`. All nine kernel source/test files were rechecked
+byte-for-byte against `mapped_cycles_20260930_01` before staging. The final
+L3 run above uses the same executable runtime bytes; the corrected header
+comment is subsequently checked with the isolated published source tree.
+The changes remove the admission
+depth-32 and holder-depth-256 cutoffs, retain mapped correspondences across
+cycles, and separate C99 numeric char reading from intern-table byte indices.
+This development checkpoint does not promote stable `l2src`, publish the
+unfinished translator, or certify the full generated harness. Mixed C99
+arithmetic and the representation repairs below remain open.
 
 The full harness's 112 failures split initially into 37 generated-text
 assertions, 51 diagnostic-text mismatches, 17 newly accepted former-refusal
@@ -224,9 +242,42 @@ distinct from flat C-like `a[i][j][k]`; do not recover or infer rectangular
 shape. Detailed code boundaries and
 acceptance: [general receiver resolution](receiver-resolution-20260930.md).
 
+<a id="c99-expression-types-versus-arena-storage-domains"></a>
+### C99 expression types versus arena storage domains
+
+Q55 already determines machine-type semantics; distinct arena pools do not
+introduce distinct C types. In particular, `size_t` must resolve to its target
+C-compatible base type for integer promotions and usual arithmetic conversions,
+while a declared size_t cell can retain the `LMX_TYPE_SIZE_T` storage domain.
+Canonical-equal C types take compatible assignment, before consulting the
+primitive conversion table. Do not use equal widths as proof of type identity.
+
+The current profile has widths/spellings, not a verified alias/rank relation.
+The implementation route is target-compiler compatibility probes over the
+ordinary C99 integer declarations, consumed by one arithmetic type resolver
+shared by translator and walker. No header scanner or C-name registry. A target
+using an extended integer type needs corresponding toolchain metadata, not
+a guessed standard rank. This is implementation work, not a request to change
+the author's rule. The already determined int/unsigned/ulong and char promotions
+can be repaired independently; evaluate after casting both operands to the
+resolved C type, not in a size_t scratch type. Pin result domain and value in
+native/walker witnesses, including unsigned wrap and signed/unsigned comparison.
+
+<a id="one-complete-lexical-graph"></a>
 ### One complete lexical graph
 
 Common E graph emission restores the supported subset, NOT full acceptance.
+
+First bounded repair: `unit_root_for_refused` has a native loop but no graph
+FOR. The hosted numeric declaration in `l2_rw_stmt` rejects E specifically;
+`l2_rw_methods_count` then leaves its step count negative and emission drops
+the entire root body. Use the existing hosted-field and `l2_rw_enter/leave`
+paths for every executable occurrence, removing the duplicate root-only
+`l2_rw_cblk[64]` scope stack. Do not merely accept the old refusal fixture
+because its native result is correct. Require the same positive result with
+the root's native word cleared by the test driver, retained FOR/OWN_OF/SET_OF
+nodes, and nested control-scope witnesses. This removes one omission, not the
+separate duplicate-body/layout defects listed next.
 
 1. l2_m_kids + l2_m_steps still puts data before an operator tail. Consolidate
    unit_base+i/ns_base+rank/mres_base+r formulas into physical location helpers,

@@ -2,6 +2,8 @@ predef: "l2src/lmx_implements.h.lm1"
 predef: "l2src/lmx_range.lm1"
 predef: "l2src/lmx_arena_refs.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_scratch.lm1"
+include: "<string.h>"
 
 # lmx_implements.lm1 - the domain questions, answered from the address alone.
 #
@@ -89,20 +91,36 @@ return: c.LMX_IMPLEMENTS_YES
 #     on a used path is taken as invoked: that reading can only refuse a substitution it might have
 #     allowed, never accept one whose generated typed call would be invalid.
 #
-# Everything the walk cannot inspect -- an address of no known domain, a signature that is not
-# there, a path deeper than the working bound -- is UNKNOWN, and UNKNOWN is never YES: "Unavailable
-# information is not invented and is not certified by success" (2.5.1).  A KNOWN mismatch is NO.
-fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; int: depth) int
+# One operation's DFS frame and visited triple. These records live only in temporary scratch,
+# never in the checked graph or the arena's cache of completed admissions. Keeping a frame
+# after its DFS return lets shared targets and back-edges reuse the same expansion.
+# An address of no known domain is UNKNOWN, never YES. A known mismatch is NO.
+# Frames preserve the recursive walk's depth-first sibling order without a depth bound.
+fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending) @: LmxImplEntry
+    if: pending != 0 && pending\value = value && pending\req = req
+        return: pending
+return: lmx_implements_find(arena, value, req)
+
+fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int
+    LmxArena: temporary
+    LmxPool: cells
+    LmxScratch: scratch
+    LmxImplementsFrame: root
+    @: LmxImplementsFrame current (@ root)
+    @: LmxImplementsFrame seen (@ root)
+    @: LmxImplementsFrame found 0
+    @: LmxImplementsFrame child 0
+    @: void room 0
     size_t: index
+    size_t: indexA
+    size_t: indexB
     @: void a
     @: void b
     @: void c
     int: kindA
     int: kindB
     int: kindC
-    int: answer
-    if: depth > c.LMX_IMPLEMENTS_DEPTH
-        return: c.LMX_IMPLEMENTS_UNKNOWN
+    int: answer c.LMX_IMPLEMENTS_YES
     if: consumer = 0
         return: c.LMX_IMPLEMENTS_YES
     if: varA = 0 || varB = 0
@@ -116,46 +134,108 @@ fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx con
     if: lmx_domain_kind(arena, (cast: (@: void) varA)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) varB)) != c.LMX_KIND_STRUCT
         return: c.LMX_IMPLEMENTS_NO
     ---
-    index: 0U
-    while: index < consumer\array.size
-        c: lmx_arena_ref_value(consumer, index)
+    if: consumer\array.size = 0U
+        return: c.LMX_IMPLEMENTS_YES
+    memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    if: lmx_arena_open(@ temporary) != 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    if: lmx_scratch_open(@ scratch, @ temporary, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ temporary)
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    ---
+    current\varA: varA
+    current\varB: varB
+    current\consumer: consumer
+    current\viewA: lmx_implements_view(arena, varA, consumer, pending)
+    current\viewB: lmx_implements_view(arena, varB, consumer, pending)
+    current\index: 0U
+    current\caller: 0
+    current\seen_next: 0
+    while: current != 0
+        if: current\index = current\consumer\array.size
+            current: current\caller
+            continue
+        ---
+        index: current\index
+        current\index: index + 1U
+        c: lmx_arena_ref_value(current\consumer, index)
         if: c != 0
-            a: lmx_arena_ref_value(varA, index)
-            b: lmx_arena_ref_value(varB, index)
+            indexA: index
+            indexB: index
+            if: current\viewA != 0 && lmx_implements_at(arena, current\viewA, index, @ indexA) != 0
+                answer: c.LMX_IMPLEMENTS_NO
+                break
+            if: current\viewB != 0 && lmx_implements_at(arena, current\viewB, index, @ indexB) != 0
+                answer: c.LMX_IMPLEMENTS_NO
+                break
+            if: indexA = (cast: (size_t) -1) || indexB = (cast: (size_t) -1)
+                if: skip_unused != 0
+                    continue
+                answer: c.LMX_IMPLEMENTS_NO
+                break
+            ---
+            a: lmx_arena_ref_value(current\varA, indexA)
+            b: lmx_arena_ref_value(current\varB, indexB)
             if: a = 0 || b = 0
-                return: c.LMX_IMPLEMENTS_NO
+                answer: c.LMX_IMPLEMENTS_NO
+                break
             ---
             kindA: lmx_domain_kind(arena, a)
             kindB: lmx_domain_kind(arena, b)
             kindC: lmx_domain_kind(arena, c)
             if: kindA = c.LMX_KIND_NONE || kindB = c.LMX_KIND_NONE || kindC = c.LMX_KIND_NONE
-                return: c.LMX_IMPLEMENTS_UNKNOWN
+                answer: c.LMX_IMPLEMENTS_UNKNOWN
+                break
             ---
             if: kindA != kindC || kindB != kindC
-                return: c.LMX_IMPLEMENTS_NO
+                answer: c.LMX_IMPLEMENTS_NO
+                break
             ---
-            # k.4: no separate METHOD/CALLABLE domain any more -- a callable's signature
-            # (args/return) is ordinary lexical Structure fields, handled by the same
-            # recursion every other Structure-typed field already gets.
             if: kindC = c.LMX_KIND_STRUCT
-                answer: lmx_implements_walk(arena, (cast: (@: Lmx) a), (cast: (@: Lmx) b), (cast: (@: Lmx) c), depth + 1)
-                if: answer != c.LMX_IMPLEMENTS_YES
-                    return: answer
+                found: seen
+                while: found != 0
+                    if: found\varA = (cast: (@: Lmx) a) && found\varB = (cast: (@: Lmx) b) && found\consumer = (cast: (@: Lmx) c)
+                        break
+                    found: found\seen_next
+                ---
+                if: found = 0
+                    if: lmx_scratch_take(@ scratch, c.sizeof(c.LmxImplementsFrame), @ room) != c.LMX_SCRATCH_OK
+                        answer: c.LMX_IMPLEMENTS_UNKNOWN
+                        break
+                    ---
+                    child: (cast: (@: LmxImplementsFrame) room)
+                    child\varA: (cast: (@: Lmx) a)
+                    child\varB: (cast: (@: Lmx) b)
+                    child\consumer: (cast: (@: Lmx) c)
+                    child\viewA: lmx_implements_view(arena, child\varA, child\consumer, pending)
+                    child\viewB: lmx_implements_view(arena, child\varB, child\consumer, pending)
+                    child\index: 0U
+                    child\caller: current
+                    child\seen_next: seen
+                    seen: child
+                    current: child
                 ---
             else:
                 if: lmx_domain_type(arena, a) != lmx_domain_type(arena, c) || lmx_domain_type(arena, b) != lmx_domain_type(arena, c)
-                    return: c.LMX_IMPLEMENTS_NO
+                    answer: c.LMX_IMPLEMENTS_NO
+                    break
                 ---
             ---
         ---
-        index: index + 1U
     ---
-return: c.LMX_IMPLEMENTS_YES
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ temporary)
+return: answer
+
+fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
+return: lmx_implements_walk_view(arena, varA, varB, consumer, 0, 0)
 
 fn: lmx_runtime_implements (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
     if: arena = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
-return: lmx_implements_walk(arena, varA, varB, consumer, 0)
+return: lmx_implements_walk(arena, varA, varB, consumer)
 
 # D-105 (the author's Q39, 2026-09-27, LMX_blog/2026-09-27.md: "если поставляется исходная
 # структура то берется прямо по смещению исходной. Если подставляется другая то надо ей прикрепить
@@ -234,56 +314,24 @@ fn: lmx_implements_is_map (@: LmxArena arena; @: LmxImplEntry e; @: size_t map; 
     v\n: width
 return: lmx_implements_same_map(arena, e, v, width)
 
-# The heavy check of the first admission: every field of req through the view -- the value's
-# slot for it present, of req's field's domain and type, a Structure field by the ordinary walk.
-# The bare identity is the ordinary check (lmx_implements_walk, index paths): the value is req's own.
+# The heavy check uses the same operation DFS. Its pending view remains available on back-edges,
+# and nested pairs use their already admitted correspondence. SIZE_MAX is proved unused here;
+# unlike the runtime used-tree predicate, req describes the whole declared layout, not just uses.
 fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
-    size_t: j 0U
-    size_t: k
-    @: void a
-    @: void c
-    int: kindA
-    int: kindC
-    int: answer
+    LmxImplEntry: selected
+    @: LmxImplEntry pending (@ selected)
     if: arena = 0 || value = 0 || req = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
     if: lmx_domain_kind(arena, (cast: (@: void) value)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) req)) != c.LMX_KIND_STRUCT
         return: c.LMX_IMPLEMENTS_NO
-    if: view = 0 || (view\frame = 0 && view\map = 0 && view\holes = 0)
-        return: lmx_implements_walk(arena, value, value, req, 0)
-    while: j < req\array.size
-        c: lmx_arena_ref_value(req, j)
-        if: c != 0 && lmx_implements_at(arena, view, j, @ k) != 0
-            return: c.LMX_IMPLEMENTS_NO
-        # A slot "not carried" (SIZE_MAX) -- the value holds no copy of req's field j: a capture's copy
-        # (item 738) or a D-105 pair map for a formal that never reads it (see the prototype);
-        # lmx_implements_slot refuses to read through it.
-        if: c != 0 && k != (cast: (size_t) -1)
-            if: k >= value\array.size
-                return: c.LMX_IMPLEMENTS_NO
-            a: lmx_arena_ref_value(value, k)
-            if: a = 0
-                return: c.LMX_IMPLEMENTS_NO
-            kindA: lmx_domain_kind(arena, a)
-            kindC: lmx_domain_kind(arena, c)
-            if: kindA = c.LMX_KIND_NONE || kindC = c.LMX_KIND_NONE
-                return: c.LMX_IMPLEMENTS_UNKNOWN
-            if: kindA != kindC
-                return: c.LMX_IMPLEMENTS_NO
-            if: kindC = c.LMX_KIND_STRUCT
-                answer: lmx_implements_walk(arena, (cast: (@: Lmx) a), (cast: (@: Lmx) a), (cast: (@: Lmx) c), 1)
-                if: answer != c.LMX_IMPLEMENTS_YES
-                    return: answer
-                ---
-            else:
-                if: lmx_domain_type(arena, a) != lmx_domain_type(arena, c)
-                    return: c.LMX_IMPLEMENTS_NO
-                ---
-            ---
-        ---
-        j: j + 1U
+    if: view = 0
+        memset((cast: (@: void) pending), 0, c.sizeof(c.LmxImplEntry))
+    else:
+        memcpy((cast: (@: void) pending), (cast: (@: void) view), c.sizeof(c.LmxImplEntry))
     ---
-return: c.LMX_IMPLEMENTS_YES
+    pending\value: value
+    pending\req: req
+return: lmx_implements_walk_view(arena, value, value, req, pending, 1)
 
 fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     @: LmxImplEntry e

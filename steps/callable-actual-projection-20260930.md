@@ -249,19 +249,24 @@ is not a stable declaration identity. Use module-lifetime compiler metadata
 identity uniformly for known source schemas. This is not a new value type
 or runtime name/type catalogue. Unknown remains unknown; an identity map
 does not establish the source schema.
-The witness is published only with successful admission at the reached
-receiving operation, never by anticipating a later consumer's admission.
+The witness is published with a reached successful construction or admission,
+never by anticipating a later consumer's admission. A constructor records
+the schema of its freshly produced value before binding that value; this
+does not prove that value's admission to any later required model.
 
-Resolve the candidate's provenance once before evaluation, using the same
-source-site binding and value projection as its type and address. A direct
-named/local Structure has its declaration's schema key, not a new key per
-instance. A pointer binding, formal or
-returned value obtains evidence from its existing correspondence; its
+Resolve the candidate's provenance source using the same source-site binding
+and value projection as its type and address, then evaluate the candidate
+once. A genuinely known produced schema has its declaration's key, not a
+new key per instance. Later uses of an own binding, pointer binding, formal or
+returned value obtain evidence for the actual held value from its existing correspondence; its
 declared receiving model is not evidence of its original layout. Ordinary
 reference initialization, reassignment, return and D-105 call reception
 must use this same projection in native and walked lowering. Reassignment
 records the new candidate before storing it; a later read cannot recover
-its origin by rescanning the original initializer.
+its origin by rescanning the original initializer. In particular,
+`receiveMessage` can replace a constructed value in the same own row without
+changing that row's declaration identity. Constructor metadata can enumerate
+possible source layouts, but cannot stamp whichever value the row now holds.
 
 Preserve these boundaries together:
 

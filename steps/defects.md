@@ -372,6 +372,28 @@ descriptor модели. Удаление `req < 0` не устраняет эт
 и обычного допуска в другой receiving model. Поэтому в очереди общая
 проекция selectors/uses предшествует закрытию этого случая.
 
+<a id="merge-hidden-input-projection"></a>
+### MERGE-HIDDEN-INPUT-PROJECTION — 2026-10-01, Codex, OPEN
+
+`build/l2_harness/merge_hidden_source_20261001_01`: unit объявляет
+`copy: merge: Model` с value=1; метод read читает свободное `copy\value`;
+caller объявляет своё `copy: merge: Other` с value=22 и вызывает read.
+По общему приоритету hidden-входов результат должен быть 22. Оба запуска
+артефакта (native root и cleared-root walk) завершаются 81 вместо 7;
+проверка не прошла. Это не свидетельство исполнения обоих helper-методов
+обходчиком и не новая норма захвата глобального merge-имени.
+
+Source trace: ранний `l2_mres_find` в сканировании имени обходит обычную
+регистрацию hidden-входа. Простого удаления раннего return недостаточно:
+input-model и receiving-потребители пока требуют named ns, а схема этого
+значения — tagged mrs. Использовать общее разрешённое значение/контракт
+и приоритет caller-local → inherited input → lexical fallback; не
+подменять вход глобальным result-slot и не создавать hidden schema/data
+Structure. Ремонт зависит от общей проекции используемых полей составных
+схем. Проверить настоящий native и walker helper, два caller-значения,
+лексический fallback без caller-источника и явный физический путь,
+который по правилам не становится динамическим входом.
+
 <a id="admission-occurrence-selector-collapse"></a>
 ### ADMISSION-OCCURRENCE-SELECTOR-COLLAPSE — 2026-10-01, Codex, OPEN
 

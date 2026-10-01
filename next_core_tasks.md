@@ -75,6 +75,8 @@ SITE-срез выпущен: общее разрешение существую
    статически известные операнды и удержание identity этого не доказывают.
    Для нескольких возможных раскладок нужен общий путь проекции использований,
    а не скрытый required-descriptor специально для merge.
+   Тем же механизмом закрыть [merge-значение как обычный hidden-вход](steps/defects.md#merge-hidden-input-projection):
+   caller-local сохраняет приоритет над одноимённым unit-результатом.
    Исправить [общую проекцию callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
    и убрать живые `Model: fresh` / `T: b c` fallback-ветви через
    [общую классификацию известной головы как вызова](steps/native-selfbuild-20260930.md#known-structure-call-classification).

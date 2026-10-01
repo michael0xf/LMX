@@ -1919,8 +1919,6 @@ pre-call publication, throwing conversion and pointer/formal controls. This
 is the next bounded dispatch repair, not an expansion of the current ABI
 writer's active source slice; Q58's later answer does not merge these implementation tasks.
 
-**Prepared observer migration, read-only on the final SITE harness.**
-
 **Implementation in progress, not a release (2026-10-01).** The dedicated
 `unit_uniform_dispatch` test tap preserves a native root/caller, replaces
 the selected `Holder\target` occurrence with a distinct copy carrying a
@@ -1943,13 +1941,49 @@ and conversion/ordinary-throw controls also pass. This is focused evidence,
 not full-corpus acceptance. Probe03's ten old direct-C text pins await the
 migration below; its additional foreign-value fixture first failed because
 of a missing colon in the formal declaration, before emission. No foreign
-runtime claim follows from that failed fixture. Expanded gates, exact
-foreign results and independent dispatch mutants remain outstanding.
+runtime claim follows from that failed fixture. The subsequent measurements
+below supersede that intermediate acceptance boundary, not its history.
 
-Exactly ten fixture rows pin direct `l2_mN(l2_c...)` call text. Replace each
-incidental spelling with a relationship that observes the same property;
-do not remove the only assertion or turn an unexecuted helper into runtime
-evidence. This inventory is preparation, not a completed dispatch test.
+**Pre-stop full-corpus snapshot.** Focus02
+(`build/l2_harness/uniform_dispatch_focus_20261001_02`) passes **33/33**.
+The ordinary copied-native probe has41 checks; its throwing counterpart
+has40 and deliberately supplies result999 together with status1/payload91.
+Three catches total273 while preserving receiving values11/22/33. Exact
+foreign pointer depth, qualifiers and typed-null returns pass. A C99 Pair
+value crosses typed argument/result storage through ordinary C helpers:
+the received copy changes to99, the source remains41. Both foreign fixtures
+pass native13/root-walk17 checks; their foreign bodies remain native.
+This does not verify C-aggregate member lowering or nonthrowing aggregate
+stop completion. The unread `l2_msg` private parameter and the dead t7
+dynamic-call tracking/cap were removed with their complete consumer closure.
+
+Full01 (`build/l2_harness/uniform_dispatch_full_20261001_01`) finishes
+**1050/1099, 49 FAIL**, with twelve owned paths in its start manifest.
+Frozen translator SHA256:
+`0EE039AF513F0268D2516FC7CA0D6A18A928559159AA38B33570FD3E9EE81988`.
+Two independent exact-ID comparisons against SITE full03 confirm four added
+rows, all green; all48 old failures retained; no removed or duplicate rows.
+The sole formerly green row is `unit_cf_call_pointer_refused`: it now
+translates, whereas the old test demanded the deliberately removed numeric-only
+callable-formal allowlist. Its body never called `applyP`. Replace that
+obsolete refusal with an executed real-pointee pointer-formal witness and
+retain genuine depth/const/signature negatives; do not restore the allowlist.
+The full-run harness adds three exact transport-width observations after
+focus02; source and harness evidence must not be conflated.
+
+This remains an intermediate snapshot. Review found
+[stopped-call result consumption](defects.md#stopped-call-result-consumption)
+at native and walker boundaries. The real-stop witness and repair follow
+full01 without changing its frozen inputs. Fresh final gates and the
+independent mutation set remain required before release; none of this
+closes clean-kernel or self-build.
+
+**Observer migration and retained requirements.** The SITE harness had exactly
+ten rows pinning direct `l2_mN(l2_c...)` call text. Focus02 replaces them with
+method-scoped selected-occurrence, ordered typed-storage and result/status
+relationships, retaining runtime, stdout, graph and admission checks. The
+table records the properties, not permission to weaken a formerly unique
+assertion or count an unexecuted helper as runtime evidence.
 
 | Fixture | Property to preserve during dispatch migration |
 | --- | --- |
@@ -1958,7 +1992,7 @@ evidence. This inventory is preparation, not a completed dispatch test.
 | `unit_recursion` | Direct/path recursion and throwing merge recursion retain results 3/4/2, selected self and exact size_t transport. |
 | `unit_s1_return_callable_throw_abi` | Evaluating the bare callable tail returns 5; status remains separate from the value. |
 | `unit_arg_addr_sticky`, `unit_arg_addr_dyn_types` | Preserve exact output and actual address before/after declaration; canonical pointer boxes carry those addresses, not another box's address. No sticky flags. |
-| `unit_struct_decl_opp_call` | Its probe is currently translation-only and not executed. Add an actual `probe() == 2`/nonzero witness, or retain a precise selected add occurrence + literal 1 + dispatch relationship without claiming execution. |
+| `unit_struct_decl_opp_call` | The formerly unexecuted probe now runs, requires `probe() == 2` and returns nonzero success7. Its selected add occurrence and literal1 remain observed. |
 | `unit_colon_method_dynamic_precedence` | This is legacy `Model: fresh` setup with an unexecuted forward helper. Preserve a bounded regression observer, but do not count it as dispatch/hidden-precedence runtime proof; known-head cleanup is separate. |
 | `unit_occ_sticky_selector`, `unit_occ_snapshot_selector` | Keep complete stdout and actual `between\bt == 2` / `after_last\al == 9` checks; trace the exact addressed cell through the pointer box and refs. |
 

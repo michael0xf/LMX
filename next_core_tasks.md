@@ -66,6 +66,9 @@ SITE-срез выпущен: общее разрешение существую
 1. Для миграции setup-копий закрыть [приём цельного результата явного merge](steps/defects.md#merge-result-value-projection):
    `copy: merge Model` / `@: Model b copy`, без подмены копирования
    ссылкой на Model и без ограничения merge верхним телом в walker.
+   Закрыть [фактическую раскладку merge через типизированную ссылку](steps/defects.md#merge-held-operand-layout):
+   receiving model операнда не заменяет схему копируемого descriptor;
+   статически известные операнды и удержание identity этого не доказывают.
    Затем закрыть [потерю вида occurrence-селектора в admission](steps/defects.md#admission-occurrence-selector-collapse):
    bare-last и явный `[N]` нельзя свести к одной позиции required,
    если у candidate другое число повторов. Это общий путь проекции,

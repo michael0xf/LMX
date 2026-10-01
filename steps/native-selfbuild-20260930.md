@@ -301,6 +301,80 @@ admission or duplicating evaluation must fail. Add direct named-model null
 controls beside the existing machine-local and primitive-pointer controls.
 Canonical-body/copy and Q58 classification remain separate work.
 
+<a id="portable-reference-value-projection"></a>
+### Follow-on: portable reference values in the walker
+
+Read-only audit of the current sandbox distinguishes existing storage from
+missing expression projection. Pointer cells already use
+`LMX_TYPE_POINTER_BASE + closed-unit type id`; working-value load/publication
+and graph copy preserve their pointer payloads generically. `LIT`, `AT`,
+`ARG` and `OWN` already return physical values or cells. This does not mean
+all portable reference expressions are implemented: `DEREF`, pointer
+`PUT`/`PUT_OF`, catch binding and pointer-element `ELEMPUT` still contain
+Structure-only operand tests; `lmx_walk_arg_write` chooses reference versus
+numeric behavior from the candidate's category rather than the input contract.
+Translator reference-own construction and binding are also limited to named
+Structure models. These are implementation gaps, not new language restrictions.
+
+The named-Structure/null initialization repair above is dependency-closed.
+Its null literal is a real typed pointer cell holding zero: existing `LIT`
+returns that cell, structural `ADMIT` unwraps it to null, and `SET`/`PUT`
+stores null. A missing LIT child or the numeric cell made by `l2_rw_lit(0)`
+is not that representation. No new null opcode or context graph is needed.
+
+Generalization must simplify the existing value route, not add a defensive
+type-validation layer:
+
+- `DEREF` obtains the pointer word from its operand and returns the nonnull
+  held address. A held value need not be a Structure. Its numeric, Array or
+  field consumer performs the category dispatch that its operation requires.
+- `PUT`/`PUT_OF` still distinguish a pointer-value destination from a numeric
+  destination. A pointer destination stores the already converted/admitted
+  reference, including null; it does not re-run structural admission or
+  restrict the referent to Structure. Pointer-element `ELEMPUT` follows the
+  same rule after ordinary element representation selection.
+- Keep `lmx_walk_admit_resolve` Structure-specific: that helper belongs to
+  structural implements, not to generic reference loading. Keep `PUT_REF`
+  separate: it writes a direct Structure child slot, not an explicit pointer
+  cell. Array descriptor and numeric-domain dispatch remain their ordinary
+  operations; do not replace them with unchecked reinterpretation.
+- Use the existing resolved receiving contract and closed type for static
+  pointer compatibility, depth and qualifiers. Do not create a C-name registry,
+  runtime name table or repeated checks of facts already established by the
+  translator. `l2_type_parts`, `l2_address_type`, `l2_pointer_compatible` and
+  `l2_check_receiving_value` are the common source-side mechanisms.
+
+Formal reference storage needs a separate identity step. The existing
+signature args-part already holds each input's type witness, and
+`LmxWalkFrame.argown` has activation lifetime under the existing scratch mark.
+Extend that mechanism rather than allocating a persistent graph companion:
+`f.args[k]` is the logical reference value; an address-taken explicit pointer
+formal needs its own stable pointer-value cell, initialized from that value
+and retained until activation return. Loads, reassignment and `@p` must use
+one identity. The current numeric scratch-cell precedent does not make scratch
+an arena pointer domain: carry the already-known formal operand type where
+needed rather than pretending range lookup can recover it. A permanent arena
+cell is not a substitute for activation lifetime. This path remains unbuilt.
+
+Semantic Array formals likewise need their declared descriptor/element
+contract projected through the existing input witness. `l2_input_is_descriptor`
+explicitly lacks that case today. The raw ABI spelling `c.VoidArray*` alone
+does not establish an Array element contract. No C-name-specific inference
+may fill the gap.
+
+Suggested sequence after named references: remove the generic operator
+restrictions with runtime witnesses; lower declared primitive/pointer-depth
+references through the shared receiving checker; complete formal-cell identity;
+then Array formal/descriptor and pointer-element value projection. Prove each
+source witness natively and by actually walking the same retained program.
+Tests must distinguish pointee writes from cached bare values and normal
+checkpoint publication, pointer-cell rebinding from pointee mutation, exact
+depth/const rules, and unchanged descriptor identity. Negative source tests
+exercise real receiving contracts, not corrupted internal graphs requiring
+new defensive validation. L2 address arithmetic is outside these portable
+L3 tests. This work is required before clean-kernel; the earlier native
+descriptor tests do not claim to cover it.
+
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair
 

@@ -80,6 +80,10 @@ gate — 131/131 (128 фикстур), все 16 scoped файлов прове�
    а retained-graph binder принимает только `@ v`, не последующее `p: 0`.
    Устранить это общим declaration/receiving/admission механизмом, не
    исключением для верхнего тела; native и настоящий walker обязательны.
+   Следом закрыть [общую проекцию portable-ссылок в walker](steps/native-selfbuild-20260930.md#portable-reference-value-projection):
+   убрать Structure-only ограничения общего чтения/записи указателя,
+   сохранить структурный implements на своём месте и единое хранилище
+   адресуемого формала. Не добавлять слой защитных проверок или скрытый граф.
    Три ограничения expression/actual-span закрыты в `c8167af`: один bounded
    operand resolver, полный единственный initializer через общий checker/emitter,
    guarded logical RHS и общий pointer-actual receiving check. Общая адресная

@@ -1,4 +1,18 @@
-# LMX documentation-first restart
+# LMX: текущие рабочие инструкции
+
+## Действующее поручение — 2026-09-30
+
+Codex ведёт исправления ядра по [next_core_tasks.md](../next_core_tasks.md)
+до §§8 и 8a включительно. Цель — самосборка L3/L2 без рукописного L1;
+генерируемый L1 остаётся промежуточным этапом. Текущая очередь — §0 плана,
+точные границы и свидетельства — [native-selfbuild-20260930.md](native-selfbuild-20260930.md).
+Это уже работа над кодом, не прежний документационный restart.
+Один writer/build; независимое ревью читает исходники и результаты без
+конкурирующих сборок. Завершённые изменения кода и документации сохраняются
+в main и публикуются. Чужие незавершённые изменения не включать в коммит.
+
+Ниже сохранены исторические сведения о ранних этапах и внешних каналах.
+Они не возобновляют отменённый watcher, почтовый dispatch или старые тикеты.
 
 ## Аварийная коррекция ядра от 2026-09-21
 
@@ -11,9 +25,9 @@
 - Start from `docs/LMX_semantics.ru.md` / `docs/LMX_semantics.en.md` and the user's current instructions. Do not import old Message/arena/runtime designs as new requirements.
 - Keep RU/EN documents synchronized in meaning, order, examples, and cross-references. Preserve the author's Russian semantic opening verbatim.
 - Grammar source: `provenance/grammar.json`; render using `python tools/build_docs.py`. Preserve copied examples and their source ranges.
-- Author correction 2026-09-23: `f()`, `f: ()`, and explicitly closed `f:` + `---` must already be one P0 Frame/body shape (zero fields); the sole anonymous argument-container is transparent generally, including nonempty bodies. Bare `f:` remains invalid; bare `f` is an executable atom and has the same nullary effect when callable. The 9c166ff/current goldens encode the superseded unequal shapes. See `next_parser_fix.md` for code audit and correction route; do not apply CALL-only transparency or a special declaration exception.
+- Author correction 2026-09-23: `f()`, `f: ()`, and explicitly closed `f:` + `---` have one semantic P0 Frame/body shape (zero fields); the sole anonymous argument-container is transparent generally, including nonempty bodies. Bare `f:` remains invalid; bare `f` is an executable atom and has the same nullary effect when callable. The historical 9c166ff goldens encoded unequal shapes; subsequent fixes and evidence are recorded in `next_core_tasks.md` §2. `next_parser_fix.md` preserves the original audit. Do not reintroduce CALL-only transparency or a special declaration exception.
 - Imported tests and goldens are historical evidence. Do not rewrite them to hide a disagreement. Current language expectations are separate under `tests/parser/current`.
-- Work only in this LMX repository unless the user explicitly requests edits to another project. The initial work is documentation and parser-test migration, not kernel implementation.
+- Work only in this LMX repository unless the user explicitly requests edits to another project. The current kernel/self-build scope is stated above; the initial documentation/parser phase is historical.
 - Before committing, run `python tools/check_docs.py`. Report parser conformance separately from historical-regression agreement.
 
 ## Текущий план и состояние
@@ -24,7 +38,7 @@
 - Для наполнения L1 изучить прежнюю `L1_spec.txt`, текущий проект L1 и все разделы «реализация на Си» прежней `Lingvamyxa_spec.txt`. Код сопоставлять с решениями автора: расхождения фиксировать, не превращать случайное поведение реализации в норму.
 - Описание каждого механизма ядра вести симметрично в L2 и L1, со стабильными якорями и взаимными ссылками на соответствующие параграфы. Существенные детали не оставлять только в L1. Эти пары служат руководством для транслятора L2 и порта L1 → L2; при изменении механизма обновлять обе пары RU/EN. Наличие и соответствие текущего транслятора DeepSeek проверить по исходникам, не считать установленным.
 - Корпус тестов парсера перенесён: 615 исходных файлов. Исторические прогоны: 131 случай на каждом из двух прежних парсеров. Это не подтверждение соответствия новой грамматике.
-- Пустое вертикальное тело: текущая `lm_p0_validate_nonempty_colon_frames*` ошибочно отвергает пустой Frame. Исправление должно восстановить прозрачность sole anonymous argument-container из `lingvamyxa_prev/Lingvamyxa_spec.txt` §4.0.1 и одинаковое нульарное поведение скобочной, короткой и вертикальной форм.
+- Пустое вертикальное тело: сохранять общую прозрачность sole anonymous argument-container и одинаковое представление скобочной, короткой и явно закрытой вертикальной форм. Исходный дефект валидатора и его исправление — история §2 плана; не переоткрывать его по старому описанию без нового свидетельства. Незавершённое голое `f:` остаётся ошибкой.
 - При дальнейшей работе с P0 сверять детальное поведение Mix-меток, `{#...}` и границ строк с исторической реализацией и тестами; не выдумывать отсутствующие правила.
 - После завершённых изменений проверять документацию, делать коммит и push в публичный репозиторий `michael0xf/LMX`.
 
@@ -76,9 +90,13 @@ fable, Opus и Sonnet работают в облачных сессиях; на 
 - Раздел о флагах рукопожатия удалён из L1/L2 как преждевременно внесённый без исследования кода. Исходная реплика сохранена в `LMX_blog/2026-09-19.md`. При исследовании проверить размещение флагов, реальные операции и порядок памяти, значение слов «без синхронизации»; не выбирать эти детали самостоятельно.
 - Сохраняется требование симметричных описаний ядра L1/L2 с взаимными ссылками. Заполнять их по результатам исследования, а не добавлением разрозненных цитат.
 
-## Codex закрыт (2026-09-26)
+## История отключения внешнего канала Codex (2026-09-26)
 
-Codex нет. `codex_inbound.py`, пайп `codex-browser-use` и поручения «вести Codex» не используются. D-17 отменён. Откроем заново, когда Codex снова будет. Ниже по файлу — прежние проверки канала; это не действующая инструкция.
+На 2026-09-26 Codex был закрыт; D-17 отменён. Сейчас Codex ведёт работу,
+но это само по себе не возобновляет `codex_inbound.py`, пайп
+`codex-browser-use` или прежнюю внешнюю диспетчеризацию. Ниже — исторические
+проверки каналов, не свидетельства их нынешней доступности и не поручение
+отправлять сообщения.
 
 ## Единая инструкция по общению агентов
 

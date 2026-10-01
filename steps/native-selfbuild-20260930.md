@@ -649,8 +649,12 @@ reference; a typed evaluator cannot reconstruct presence after that loss.
 The selected repair uses one value-storage convention for native trampolines
 and primitive callbacks: `refs[k] == 0` means absent; otherwise `refs[k]`
 points to storage of the declared argument value. That storage can itself
-contain a null pointer. Scalars use their declared C99 width; descriptor and
-pointer arguments load their held value exactly once. No sentinel, parallel
+contain a null pointer. Scalars use their declared C99 width. Object-reference
+values use a canonical `void *` transport box: convert the pointer value into
+that box and take the box's address, rather than treating the address of an
+`Lmx *` or `int *` variable as `void **`. The receiver loads the canonical
+box once and converts the held value to its resolved pointer type. This does
+not change the actual language storage selected by `@p`. No sentinel, parallel
 presence registry, old unboxed-reference branch or pointer-domain guessing
 is added. This is internal transport, not by-value copying of an LMX graph.
 

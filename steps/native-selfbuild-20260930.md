@@ -1836,6 +1836,51 @@ pre-call publication, throwing conversion and pointer/formal controls. This
 is the next bounded dispatch repair, not an expansion of the current ABI
 writer's active source slice; Q58's later answer does not merge these implementation tasks.
 
+**Prepared observer migration, read-only on the final SITE harness.**
+Exactly ten fixture rows pin direct `l2_mN(l2_c...)` call text. Replace each
+incidental spelling with a relationship that observes the same property;
+do not remove the only assertion or turn an unexecuted helper into runtime
+evidence. This inventory is preparation, not a completed dispatch test.
+
+| Fixture | Property to preserve during dispatch migration |
+| --- | --- |
+| `unit_s2_vis_dynamic` | Hidden n comes from the caller's visible 7, not unit 3 or later 5; select the intended occurrence and typed input storage. |
+| `unit_merge_in_method` | Distinct throwing/nonthrowing contracts, live merge, graph-call contract and result/status propagation. |
+| `unit_recursion` | Direct/path recursion and throwing merge recursion retain results 3/4/2, selected self and exact size_t transport. |
+| `unit_s1_return_callable_throw_abi` | Evaluating the bare callable tail returns 5; status remains separate from the value. |
+| `unit_arg_addr_sticky`, `unit_arg_addr_dyn_types` | Preserve exact output and actual address before/after declaration; canonical pointer boxes carry those addresses, not another box's address. No sticky flags. |
+| `unit_struct_decl_opp_call` | Its probe is currently translation-only and not executed. Add an actual `probe() == 2`/nonzero witness, or retain a precise selected add occurrence + literal 1 + dispatch relationship without claiming execution. |
+| `unit_colon_method_dynamic_precedence` | This is legacy `Model: fresh` setup with an unexecuted forward helper. Preserve a bounded regression observer, but do not count it as dispatch/hidden-precedence runtime proof; known-head cleanup is separate. |
+| `unit_occ_sticky_selector`, `unit_occ_snapshot_selector` | Keep complete stdout and actual `between\bt == 2` / `after_last\al == 9` checks; trace the exact addressed cell through the pointer box and refs. |
+
+Keep the `unit_root_call_wide` / `unit_method_sig_distinct` calls inside
+trampolines: these select the already chosen typed body, not a dispatcher
+bypass. Keep `NativeMethods`, `WalkedMethods`, native-word absence checks
+and the existing `GraphCalls` relationships. A common native-dispatch
+observer should bind the selected occurrence, typed temporaries/pointer
+boxes, ordered refs, identical code/owner arguments and result/status
+handling without hardcoding scratch ordinals. The actual side-effect
+counter proves evaluation once. The nearby `unit_make_adder_helper_arity2` input-count
+pin and `unit_local_ns_call` scratch-number pin can use that relationship
+without changing their original argument/self requirements.
+
+The existing test-only seam is `l2_driver_program` after `l2_program_build`
+and inspection, before launch through `lmx_root_launch_tapped`. Extend that
+tap, not production lowering, to validate and replace a real selected
+callee's native word with an ABI-compatible counted probe. Preserve the
+native caller/root; clear a second genuinely walkable callee. Check owner
+identity, explicit/hidden inputs, distinct results and one evaluation.
+A copied/path-selected callable must use the copy's descriptor, not the
+original namespace descriptor. Foreign by-value input is a native-only
+probe, not an assertion of walker support.
+
+Retain `unit_callable_descriptor_direct_refused` as a bodiless-contract
+negative. `unit_forward_import_refused` is an unresolved-import negative
+with an additional obsolete valued-root tail; neither establishes a refusal
+for a supported executable graph whose native word is empty. Existing
+callable-formal/captured-whole walker gaps are separate work, not automatically
+closed by changing the call instruction.
+
 **Separate callable-formal hidden-input debt, source-traced at `71c4743`.**
 The static selectors' explicit-then-hidden order agrees across
 `l2_input_ft`, `l2_emit_parts`, trampoline and call contracts. The existing

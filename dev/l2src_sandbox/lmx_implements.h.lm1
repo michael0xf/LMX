@@ -150,15 +150,21 @@ prototype:
     # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an
     # instance of carries a view of its correspondence -- slot j is the value's slot of req's field j,
     # matched by name when the program was translated: the admitting walk frame's own size cells, or
-    # the translator's static map; no view records a value whose own type IS req (with holes: a
-    # capture's copy in req's layout).  No Structure is made for a correspondence (Codex, 2026-09-28).
+    # the translator's static map. An absent explicit map is positional identity,
+    # not evidence that layout=req; holes may describe a capture's physical slots.
+    # No Structure is made for a correspondence.
     # Register: the first admission is the heavy one -- each field of req is checked through the
     # table (present, same domain and type, a Structure field by the ordinary walk) -- and later
-    # ones find the record.  YES: recorded, now or before with the same correspondence; NO: a
+    # ones find the record. A caller must separately establish the current
+    # Consumer requirement; this table never caches approval for every Consumer.
+    # YES: recorded, now or before with the same correspondence; NO: a
     # field does not match through it, or the value already answers req through another one;
     # UNKNOWN: no room, or nothing to inspect.
     fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
-    fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n) int
+    fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int
+    # Opaque non-owning module schema token from this value's completed
+    # admissions, never inferred from req/map. No map or Consumer proof transfers.
+    fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
     fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
     # The value's slot of req's field j, through its record: 0 and *out, or 1 when the value has
     # no record for req -- a value that reached a place of type req unadmitted is an invariant

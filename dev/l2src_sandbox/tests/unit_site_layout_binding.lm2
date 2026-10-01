@@ -1,0 +1,22 @@
+# Declared A is a receiving contract, not evidence that p physically has A's
+# layout. Rebinding must retain the new admitted candidate's actual layout.
+A: (int: x 1)
+B: (int: y 2)
+C: (int: x 11; int: y 22; int: pad 33)
+D: (int: x 11; int: pad 55; int: y 44)
+@: B shared @B
+fn: observe () int
+return: shared\y
+@: A shared @A
+fn: relay () int
+return: observe()
+fn: caller () int
+    @: A shared @C
+    int: first relay()
+    shared: @D
+    int: second relay()
+    if: first != 22 || second != 44
+        return: 81
+return: 7
+sendMessage: exit(exit_code: caller(); stdout: ""; stderr: "")
+return

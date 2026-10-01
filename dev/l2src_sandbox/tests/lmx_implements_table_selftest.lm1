@@ -45,6 +45,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * a copy -- a merge's graph copy of an admitted value, a clone of the admitting frame, a clone of a capture's copy --
 #     brings no record: the copy is admitted where it is used, the original's record stays as it was.
 
+[]: char schema_tokens 4
+
 sub: it_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
     if: ok = 0
@@ -165,38 +167,53 @@ fn: main () int
     ---
 
     # The heavy first admission, then a read through the record.
-    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U) = c.LMX_IMPLEMENTS_YES, "Other through [1, 0] was not admitted to Model")
+    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES, "Other through [1, 0] was not admitted to Model")
     it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) = 0 && slot = 1U, "Model's field a is not read at Other's slot 1")
     it_check(counts, lmx_implements_slot(at, other, model, 1U, @ slot) = 0 && slot = 0U, "Model's field b is not read at Other's slot 0")
     it_check(counts, lmx_implements_slot(at, other, model, 2U, @ slot) != 0, "a field Model does not have got a slot")
     # A later admission takes the record: the same correspondence answers, another is refused.
-    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U) = c.LMX_IMPLEMENTS_YES, "a later admission with the same correspondence was refused")
-    it_check(counts, lmx_implements_register_map(at, other, model, 0, 0U) = c.LMX_IMPLEMENTS_NO, "the same value answered Model through a second correspondence")
+    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES, "a later admission with the same correspondence was refused")
+    it_check(counts, lmx_implements_register_map(at, other, model, 0, 0U, 0) = c.LMX_IMPLEMENTS_NO, "the same value answered Model through a second correspondence")
     it_check(counts, at\impl_len = 1U, "a later admission added a record")
+    it_check(counts, lmx_implements_layout(at, other) = 0, "unknown layout was inferred from the required model or permutation")
+    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES && lmx_implements_layout(at, other) = (cast: (@: void) (schema_tokens + 1)), "genuine layout evidence did not enrich the same completed map")
+    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_layout(at, other) = (cast: (@: void) (schema_tokens + 1)), "unknown evidence erased a known layout")
+    it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U, (cast: (@: void) (schema_tokens + 0))) = c.LMX_IMPLEMENTS_NO && lmx_implements_layout(at, other) = (cast: (@: void) (schema_tokens + 1)) && at\impl_len = 1U, "contradictory layout evidence changed a completed proof")
+    it_check(counts, lmx_implements_register_map(at, other, other, 0, 0U, (cast: (@: void) (schema_tokens + 0))) = c.LMX_IMPLEMENTS_NO && lmx_implements_find(at, other, other) = 0 && at\impl_len = 1U, "a different required model admitted contradictory schema evidence")
+    it_check(counts, lmx_implements_register_map(at, other, other, 0, 0U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES && lmx_implements_layout(at, other) = (cast: (@: void) (schema_tokens + 1)), "a second correspondence lost the held value's schema identity")
     # A map that does not match field by field: refused, nothing recorded.
-    it_check(counts, lmx_implements_register_map(at, other2, model, wrong, 2U) = c.LMX_IMPLEMENTS_NO, "a map that reads an int as a size_t was admitted")
+    it_check(counts, lmx_implements_register_map(at, other2, model, wrong, 2U, 0) = c.LMX_IMPLEMENTS_NO, "a map that reads an int as a size_t was admitted")
     it_check(counts, lmx_implements_find(at, other2, model) = 0, "a refused admission left a record")
-    it_check(counts, lmx_implements_register_map(at, other2, model, wide, 3U) = c.LMX_IMPLEMENTS_NO, "a map of another width was admitted")
+    it_check(counts, lmx_implements_register_map(at, other2, model, wide, 3U, 0) = c.LMX_IMPLEMENTS_NO, "a map of another width was admitted")
     # The identity reads Other2 at Model's own slots only if it IS Model -- it is not.
-    it_check(counts, lmx_implements_register_map(at, other2, model, 0, 0U) = c.LMX_IMPLEMENTS_NO, "Other admitted to Model as its own type")
+    it_check(counts, lmx_implements_register_map(at, other2, model, 0, 0U, 0) = c.LMX_IMPLEMENTS_NO, "Other admitted to Model as its own type")
     # No record, no slot: never "slot j" by default.
     slot: 99U
     it_check(counts, lmx_implements_slot(at, other2, model, 0U, @ slot) != 0 && slot = 99U, "a value with no record was given a slot")
     # The identity: an instance of Model, read at Model's own slots.
-    it_check(counts, lmx_implements_register_map(at, own, model, 0, 0U) = c.LMX_IMPLEMENTS_YES, "an instance of Model was not admitted to Model")
+    it_check(counts, lmx_implements_register_map(at, own, model, 0, 0U, (cast: (@: void) (schema_tokens + 2))) = c.LMX_IMPLEMENTS_YES, "an instance of Model was not admitted to Model")
+    it_check(counts, lmx_implements_layout(at, own) = (cast: (@: void) (schema_tokens + 2)) && lmx_implements_layout(at, own) != (cast: (@: void) (schema_tokens + 0)), "identity correspondence replaced the true layout with req")
     it_check(counts, lmx_implements_slot(at, own, model, 1U, @ slot) = 0 && slot = 1U, "an instance of Model is not read at Model's slots")
-    it_check(counts, lmx_implements_register_map(at, own, model, perm, 2U) = c.LMX_IMPLEMENTS_NO, "an instance of Model answered Model through a permutation")
+    it_check(counts, lmx_implements_register_map(at, own, model, perm, 2U, 0) = c.LMX_IMPLEMENTS_NO, "an instance of Model answered Model through a permutation")
     it_check(counts, lmx_implements_is_map(at, lmx_implements_find(at, other, model), perm, 2U) != 0 && lmx_implements_is_map(at, lmx_implements_find(at, other, model), 0, 2U) = 0, "a record does not compare with the static map it was made with")
 
     # A revert takes back the value built after the mark, and its record with it.
     kept: at\impl_len
     mark: lmx_arena_mark(at)
     late: it_pair(at, 1, 0)
-    it_check(counts, late != 0 && lmx_implements_register_map(at, late, model, perm, 2U) = c.LMX_IMPLEMENTS_YES, "a value built after the mark was not admitted")
+    it_check(counts, late != 0 && lmx_implements_register_map(at, late, model, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES, "a value built after the mark was not admitted")
     it_check(counts, at\impl_len = kept + 1U, "the admission after the mark was not recorded")
     lmx_arena_revert(at, mark)
     it_check(counts, lmx_implements_find(at, late, model) = 0, "a record outlived the revert of its value")
     it_check(counts, at\impl_len = kept && lmx_implements_find(at, other, model) != 0 && lmx_implements_find(at, own, model) != 0, "a revert dropped a record of a value it did not take back")
+
+    # Module metadata is not graph-owned: reverting an unrelated descriptor
+    # must not classify the token or discard a live value's correspondence.
+    mark: lmx_arena_mark(at)
+    late: it_pair(at, 1, 0)
+    it_check(counts, lmx_implements_register_map(at, other2, model, perm, 2U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES, "token-bearing record was not admitted")
+    lmx_arena_revert(at, mark)
+    it_check(counts, lmx_implements_find(at, other2, model) != 0 && lmx_implements_layout(at, other2) = (cast: (@: void) (schema_tokens + 1)) && at\impl_len = kept + 1U, "revert classified or freed module schema metadata")
 
     # Attach carries the donor's records.
     dmodel: it_pair(dn, 0, 1)
@@ -205,18 +222,20 @@ fn: main () int
         free(counts)
         return: 2
     ---
-    it_check(counts, lmx_implements_register_map(dn, lent, dmodel, 0, 0U) = c.LMX_IMPLEMENTS_NO, "the donor admitted Other to Model as its own type")
-    it_check(counts, lmx_implements_register_map(dn, lent, dmodel, dmap, 2U) = c.LMX_IMPLEMENTS_YES, "the donor did not admit Other through [1, 0]")
+    it_check(counts, lmx_implements_register_map(dn, lent, dmodel, 0, 0U, 0) = c.LMX_IMPLEMENTS_NO, "the donor admitted Other to Model as its own type")
+    it_check(counts, lmx_implements_register_map(dn, lent, dmodel, dmap, 2U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES, "the donor did not admit Other through [1, 0]")
     kept: at\impl_len
     it_check(counts, lmx_arena_attach(at, dn) = 0, "attach refused")
     it_check(counts, at\impl_len = kept + 1U && dn\impl_len = 0U && dn\impl = 0, "attach did not carry the donor's record")
     it_check(counts, lmx_implements_slot(at, lent, dmodel, 0U, @ slot) = 0 && slot = 1U, "the carried record does not answer in the receiving arena")
+    it_check(counts, lmx_implements_layout(at, lent) = (cast: (@: void) (schema_tokens + 1)), "attach lost the exact layout witness")
 
     # A collection pass that keeps the storage keeps the records ...
     kept: at\impl_len
     gen: lmx_arena_generation_next(at)
     lmx_gc_mark_value(at, (cast: (@: void) model), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) other), gen, 0)
+    lmx_gc_mark_value(at, (cast: (@: void) other2), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) own), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) lent), gen, 0)
     lmx_gc_mark_value(at, (cast: (@: void) dmodel), gen, 0)
@@ -295,22 +314,25 @@ fn: main () int
     ---
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
     v\holes: 1
+    v\layout: (cast: (@: void) (schema_tokens + 3))
     it_check(counts, lmx_implements_register(ea, half, hmodel, v) = c.LMX_IMPLEMENTS_YES, "a copy of the read fields alone was not admitted in its type's layout")
+    it_check(counts, lmx_implements_layout(ea, half) = (cast: (@: void) (schema_tokens + 3)), "fresh capture did not retain its explicit schema token")
     slot: 99U
     it_check(counts, lmx_implements_slot(ea, half, hmodel, 1U, @ slot) = 0 && slot = 1U, "a carried field is not read at its type's slot")
     slot: 99U
     it_check(counts, lmx_implements_slot(ea, half, hmodel, 0U, @ slot) != 0 && slot = 99U, "an empty slot of a copy was readable")
-    it_check(counts, lmx_implements_register_map(ea, half, hmodel, 0, 0U) = c.LMX_IMPLEMENTS_NO, "a copy with holes answered its type as the plain identity")
+    it_check(counts, lmx_implements_register_map(ea, half, hmodel, 0, 0U, 0) = c.LMX_IMPLEMENTS_NO, "a copy with holes answered its type as the plain identity")
 
     # Merge / clone copying: the graph copy of an admitted value is another value -- no record comes with it, so it is
     # never read at "slot j" by default, and its own admission is the heavy one again; the original keeps its record.
     ocopy: it_pair(ea, 1, 0)
-    it_check(counts, ocopy != 0 && lmx_implements_register_map(ea, ocopy, fmodel, perm, 2U) = c.LMX_IMPLEMENTS_YES, "the value to copy was not admitted")
+    it_check(counts, ocopy != 0 && lmx_implements_register_map(ea, ocopy, fmodel, perm, 2U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES, "the value to copy was not admitted")
     it_check(counts, lmx_graph_copy_owned(ocopy, ea, ea, @ cloned) = 0 && cloned != 0 && cloned != ocopy, "the graph copy of an admitted value failed")
     slot: 99U
     it_check(counts, lmx_implements_find(ea, cloned, fmodel) = 0 && lmx_implements_slot(ea, cloned, fmodel, 0U, @ slot) != 0 && slot = 99U, "a copy of an admitted value carried its record")
+    it_check(counts, lmx_implements_layout(ea, cloned) = 0 && lmx_implements_layout(ea, ocopy) = (cast: (@: void) (schema_tokens + 1)), "copy inherited or changed source provenance")
     it_check(counts, lmx_implements_slot(ea, ocopy, fmodel, 0U, @ slot) = 0 && slot = 1U, "copying a value disturbed the original's record")
-    it_check(counts, lmx_implements_register_map(ea, cloned, fmodel, perm, 2U) = c.LMX_IMPLEMENTS_YES && lmx_implements_slot(ea, cloned, fmodel, 0U, @ slot) = 0 && slot = 1U, "a copy was not admitted on its own")
+    it_check(counts, lmx_implements_register_map(ea, cloned, fmodel, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_slot(ea, cloned, fmodel, 0U, @ slot) = 0 && slot = 1U, "a copy was not admitted on its own")
     # A clone of the admitting frame.  The sweep above freed the first frame with its record, so Other is admitted
     # again through a new one.  The clone's equal cells are the same correspondence (same_map through the accessor):
     # an admission through them answers.  The record reads the frame it was made with: a different correspondence

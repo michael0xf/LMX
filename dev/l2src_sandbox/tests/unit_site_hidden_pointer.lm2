@@ -1,0 +1,20 @@
+fn: read (@: int value) int
+return: \value
+fn: hidden () @: int
+return: p
+fn: middle () @: int
+return: hidden()
+fn: check () int
+    []: int values 1
+    values[0]: 11
+    @: int p @values[0]
+    @: int direct hidden()
+    @: int forwarded middle()
+    if: direct != p || forwarded != p || read(forwarded) != 11
+        return: 81
+    values[0]: 22
+    if: read(middle()) != 22
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

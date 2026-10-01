@@ -1,0 +1,14 @@
+# A local receiving model is its reached descriptor, never a unit slot or token.
+# Local construction remains native; the root also dispatches it from the walker.
+fn: check () int
+    Model: (int: value 1)
+    Other: (int: spare 22; int: value 11)
+    @: Model ref @Other
+    if: ref\value != 11 || @ref\value != @Other\value || ref != @Other
+        return: 81
+    ref\value: 19
+    if: Other\value != 19 || Other\spare != 22 || Model\value != 1
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

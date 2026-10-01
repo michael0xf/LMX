@@ -1,0 +1,32 @@
+# Numeric input materialization carries the preceding binding. Pointer body
+# declarations instead have their specified null default (L2 sections 10/18.3).
+fn: keep (int: n) int
+    int: n
+    n: n + 1
+return: n
+fn: nested (int: n) int
+    int: n
+    n: 11
+    if: 1 = 1
+        int: n
+        if: n != 11
+            return: 81
+        n: 22
+    end: if
+    if: n != 11
+        return: 82
+return: 7
+fn: empty (@: int p) int
+    if: p = 0
+        return: 83
+    @: int p
+    if: p != 0
+        return: 84
+return: 7
+[]: int cell 1
+cell[0]: 11
+int: result 7
+if: keep(3) != 4 || nested(3) != 7 || empty(@cell[0]) != 7
+    result: 85
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

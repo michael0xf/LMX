@@ -36,6 +36,16 @@ struct: L2Address
     int: immutable
 end: L2Address
 
+# Translation-only source projection, made before candidate evaluation. model
+# is a declared lookup key; layout is nonnegative only for a real descriptor
+# producer. A held own/input/result uses the existing D105 source place.
+struct: L2ReferenceSource
+    int: model
+    int: layout
+    int: method
+    int: place
+end: L2ReferenceSource
+
 # A bounded source operand view. All source pointers are borrowed; no AST or
 # runtime graph is copied. The index is either a literal, an existing joined
 # own-name projection, or the original P0 index expression.
@@ -57,3 +67,23 @@ struct: L2ValueSpan
     int: count
     @: LmP0Node node
 end: L2ValueSpan
+
+# A borrowed source environment for deferred checks and actual call sites.
+# Names still resolve through the existing own/formal rows; this is not a
+# binding table. source_method records the source owner separately when a
+# partial callable borrows its model's body; unrelated offsets are not compared.
+struct: L2SourceSite
+    int: kind
+    int: method
+    int: current_method
+    int: source_method
+    int: count
+    int: target
+    int: scope_count
+    @@: LmP0Node scopes
+    int: excluded
+    int: visibility
+    size_t: visible_at
+    @: void site
+    @: LmP0Node source
+end: L2SourceSite

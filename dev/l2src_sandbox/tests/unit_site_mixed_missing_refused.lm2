@@ -1,0 +1,16 @@
+# A valid site supplies the type, not a binding for the invalid root site.
+fn: observe () int
+    int: value \p
+    @: int p
+return: value
+fn: relay () int
+return: observe()
+fn: provider () int
+    []: int cell 1
+    cell[0]: 11
+    @: int p @cell[0]
+return: relay()
+int: valid provider()
+int: invalid relay()
+sendMessage: exit(exit_code: invalid; stdout: ""; stderr: "")
+return

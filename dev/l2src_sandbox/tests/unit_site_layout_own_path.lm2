@@ -1,0 +1,14 @@
+# A typed own binding retains the actual descriptor and its name correspondence.
+# Both read and write must use Model's x, not Other's first physical field.
+Model: (int: x 1)
+Other: (int: y 22; int: x 11)
+fn: run () int
+    @: Model p @Other
+    int: first p\x
+    p\x: 41
+    @: int address @p\x
+    if: first != 11 || Other\x != 41 || Other\y != 22 || address != @Other\x
+        return: 81
+return: 7
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

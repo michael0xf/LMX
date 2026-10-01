@@ -1,0 +1,25 @@
+# Native pointer indexing: both the base and index select the binding at
+# this source site. The retained walker does not claim pointer arithmetic.
+fn: write (@: int p; @: int other) int
+    int: i 0
+    p[i]: 11
+    if: 1 = 1
+        p[i]: 12
+        int: i 1
+        p[i]: 22
+        @: int p other
+        p[i]: 44
+    end: if
+    p[i]: 11
+return: 7
+[]: int first 2
+[]: int second 2
+first[0]: 1
+first[1]: 2
+second[0]: 3
+second[1]: 4
+int: result write(@first[0], @second[0])
+if: result != 7 || first[0] != 11 || first[1] != 22 || second[0] != 3 || second[1] != 44
+    result: 81
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

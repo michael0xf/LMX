@@ -1,0 +1,39 @@
+# The lexical declaration supplies the receiving model, not the actual value.
+# Other has the same consumed fields in a different order; relay must preserve
+# the admission map and observe/write the caller's descriptor, not Model.
+Model:
+    int: value 11
+    int: spare 99
+end: Model
+Other:
+    int: spare 88
+    int: value 22
+end: Other
+@: Model shared @Model
+fn: observe () int
+    int: prior shared\value
+    shared\value: 23
+return: prior
+fn: relay () int
+return: observe()
+fn: caller () int
+    @: Other shared @Other
+return: relay()
+fn: bridge (Model: shared) int
+return: relay()
+fn: read_explicit (Model: item) int
+return: item\value
+fn: relay_explicit (Model: item) int
+return: read_explicit(item)
+int: result caller()
+if: result != 22 || Other\value != 23 || Other\spare != 88 || Model\value != 11
+    result: 81
+else:
+    result: 7
+int: forwarded bridge(Other)
+if: forwarded != 23 || Other\value != 23 || Other\spare != 88 || Model\value != 11
+    result: 82
+if: relay_explicit(Other) != 23
+    result: 83
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

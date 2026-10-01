@@ -1,0 +1,14 @@
+# Type-frame syntax must not contaminate ordinary sizeof(value) discovery.
+# A hidden value closes from its actual caller; sizeof bodies remain native.
+fn: width () size_t
+return: sizeof(value)
+fn: check () int
+    char: value 'A'
+    @: int pointer
+    if: width() != sizeof(char) || sizeof(@: int) != sizeof(pointer)
+        return: 81
+    if: value != 'A'
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

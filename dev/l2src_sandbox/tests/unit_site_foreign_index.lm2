@@ -1,0 +1,26 @@
+include: "l1src/p0.lm1.h" "<stdlib.h>"
+# The entire index is a foreign path; its root must use the same selected
+# own/formal binding as ordinary member access (native-only foreign ABI).
+fn: write (@: int p; @: c.LmP0Text doc; @: c.LmP0Text next) int
+    p[doc\length]: 11
+    @: c.LmP0Text doc next
+    p[doc\length]: 22
+return: 7
+fn: check () int
+    @: c.LmP0Text first (cast: (@: LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    @: c.LmP0Text second (cast: (@: LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
+    if: first = 0 || second = 0
+        return: 81
+    first\length: 0U
+    second\length: 1U
+    []: int cells 2
+    cells[0]: 1
+    cells[1]: 2
+    int: result write(@cells[0], first, second)
+    if: result != 7 || cells[0] != 11 || cells[1] != 22
+        result: 82
+    c.free(first)
+    c.free(second)
+return: result
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

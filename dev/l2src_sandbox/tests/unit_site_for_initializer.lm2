@@ -1,0 +1,22 @@
+# The loop declaration is excluded while its hidden-input call runs.
+int: calls 0
+fn: read () int
+    node\calls: node\calls + 1
+return: \i
+fn: check () int
+    int: seed 2
+    @: int i @seed
+    int: sum 0
+    for: int(i, read()) (i < 4) i++
+        sum: sum + i
+    end: for
+    if: sum != 5 || i != @seed
+        return: 81
+return: 7
+fn: count () int
+return: node\calls
+int: result check()
+if: result != 7 || count() != 1
+    result: 82
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -1,0 +1,16 @@
+# No caller shared: use each method's independently visible parent row,
+# from the other source part, not its last row or the caller's offset.
+int: result 7
+if: earliest() != 11 || middle() != 22
+    result: 81
+# Repeated root declarations also select distinct reached occurrences.
+int: value 11
+@: int first @value
+if: value != 11
+    result: 82
+int: value 22
+@: int second @value
+if: value != 22 || first = second
+    result: 83
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

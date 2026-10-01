@@ -1,0 +1,23 @@
+# Joined, flat and grouped prefix operands discover the same hidden input.
+fn: joined () int
+return: \p
+fn: flat () int
+return: \ p
+fn: grouped () int
+return: (\ p)
+fn: check () int
+    int: first 11
+    int: second 22
+    @: int p @first
+    if: joined() != 11 || flat() != 11 || grouped() != 11
+        return: 81
+    if: 1 = 1
+        @: int p @second
+        if: joined() != 22 || flat() != 22 || grouped() != 22
+            return: 82
+    end: if
+    if: joined() != 11 || flat() != 11 || grouped() != 11
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,24 @@
+# Bare and parenthesized callable values use the same return provenance route.
+A: (int: x 1)
+B: (int: y 2)
+C: (int: x 11; int: y 22; int: pad 33)
+D: (int: x 11; int: pad 55; int: y 44)
+Stats: (int: calls 0)
+fn: make () A
+    Stats\calls: Stats\calls + 1
+    if: Stats\calls = 1
+        return: @C
+return: @D
+@: B shared @B
+fn: observe () int
+return: shared\y
+fn: caller () int
+    @: A shared make
+    int: first observe()
+    shared: make
+    int: second observe()
+    if: first != 22 || second != 44 || Stats\calls != 2
+        return: 81
+return: 7
+sendMessage: exit(exit_code: caller(); stdout: ""; stderr: "")
+return

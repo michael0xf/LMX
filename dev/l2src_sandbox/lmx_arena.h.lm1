@@ -21,13 +21,16 @@ predef: "lmx_arena_blocks.h.lm1"
 # view of where req's field j is in the value (lmx_implements_at) -- never a Structure made for it:
 #   frame, at, n: the size cells frame[at .. at + n) of the admitting walk frame (ADMIT_AS), read in place;
 #   map, n:       the translator's static map of that pair of types (a native admission), compiled metadata;
-#   neither:      the value's own type is req (read at req's own slots) -- with `holes`, a capture's copy in
-#                 req's own layout, whose empty slot is not carried (item 738).
+#   neither:      positional identity correspondence, not physical-layout evidence;
+#                 with `holes`, an empty physical slot is not carried (item 738).
 # The entry holds `value` weakly: it never keeps the value alive, and it leaves in the pass that frees it
 # (lmx_arena_impl_prune) -- an address that comes back must not inherit another value's correspondence.
 struct: LmxImplEntry
     @: Lmx value
     @: Lmx req
+    # Non-owning module-lifetime schema identity, never dereferenced or classified.
+    # Required models and identity maps do not establish this token; zero is unknown.
+    @: void layout
     @: Lmx frame
     size_t: at
     @: size_t map

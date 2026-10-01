@@ -1,0 +1,25 @@
+# Equal projections onto A do not identify the original layout: C.y is slot1,
+# D.y is slot2. Both hidden forwarding chains must preserve the actual source.
+A: (int: x 1)
+B: (int: y 2)
+C: (int: x 11; int: y 22; int: pad 33)
+D: (int: x 11; int: pad 55; int: y 44)
+@: B shared @B
+fn: observe () int
+return: shared\y
+@: A shared @A
+fn: relay () int
+return: observe()
+fn: callerC () int
+    @: C shared @C
+return: relay()
+fn: callerD () int
+    @: D shared @D
+return: relay()
+int: first callerC()
+int: second callerD()
+int: result 7
+if: first != 22 || second != 44
+    result: 81
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

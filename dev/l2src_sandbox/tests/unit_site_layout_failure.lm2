@@ -1,0 +1,30 @@
+# A known candidate layout supplies correspondence, not full-receiver approval.
+# Observe failed store and dirty state before any checkpoint can mask either.
+Model: (int: value 1)
+Good: (int: value 7)
+OtherGood: (int: value 19)
+Bad: (char: wrong 'x')
+Stats: (int: calls 0)
+fn: bad () Bad
+    Stats\calls: Stats\calls + 1
+return: @Bad
+sub: checkpoint ()
+return
+fn: check () int
+    @: Model ref @Good
+    @@: Model place @ref
+    checkpoint
+    int: caught 0
+    ref: bad()
+    catch: implements ()
+        caught: caught + 1
+    ---
+    if: caught != 1 || Stats\calls != 1 || ref != @Good || \place != @Good
+        return: 81
+    \place: @OtherGood
+    checkpoint
+    if: ref != @Good || \place != @OtherGood
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

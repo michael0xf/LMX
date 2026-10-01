@@ -1,0 +1,26 @@
+# A physical hosted path crosses the same typed binding as the bare working root.
+# The inner binding shadows p only in its host; correspondence follows the value.
+Model: (int: x 1)
+Other: (int: y 22; int: x 11)
+Outer: (int: x 33)
+fn: checkpoint () int
+return: 0
+fn: run () int
+    @: Model p @Outer
+    int: result 7
+    while: 1
+        @: Model p @Other
+        int: ignored checkpoint()
+        if: p\x != 11 || while\p\x != 11
+            result: 81
+        while\p\x: 41
+        @: int physical @while\p\x
+        if: physical != @Other\x || p\x != 41 || Other\y != 22
+            result: 82
+        break
+    end: while
+    if: p\x != 33 || Outer\x != 33
+        result: 83
+return: result
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

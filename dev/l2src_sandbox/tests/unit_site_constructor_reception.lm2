@@ -1,0 +1,24 @@
+# A reached copy establishes its own token. Reception reuses the same declared
+# slot but replaces its value with the host payload, whose layout is unknown.
+# Forwarding must consult that held value, never the slot's old constructor.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+fn: layout (@: void value) @: void
+return: c.lmx_implements_layout(c.l2_program_arena, value)
+fn: inspect (MainLetter: item) int
+    if: layout(item) != 0
+        return: 81
+return: 7
+MainLetter: received
+@: MainLetter original received
+int: result 7
+if: layout(original) = 0
+    result: 82
+receiveMessage: received
+if: received = 0 || received = original
+    result: 83
+if: inspect(received) != 7 || layout(original) = 0
+    result: 84
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

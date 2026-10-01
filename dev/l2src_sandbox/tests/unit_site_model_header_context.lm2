@@ -1,0 +1,16 @@
+# The previous method's local Model cannot type the next method's header.
+Model: (int: value 1)
+Other: (int: value 7)
+fn: first () int
+    int: Model 3
+return: Model
+fn: second (Model: Model) int
+    Model: @Other
+    if: Model != @Other
+        return: 82
+return: Model\value
+int: result second(Model)
+if: first() != 3 || Model\value != 1
+    result: 81
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

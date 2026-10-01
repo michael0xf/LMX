@@ -1,0 +1,22 @@
+# Same chosen field for value, store, address, and sizeof (native sizeof).
+fn: check (int: x) int
+    if: x != 11 || sizeof(x) != sizeof(int)
+        return: 81
+    []: char value 1
+    value[0]: 'B'
+    if: 1 = 1
+        if: x != 11
+            return: 82
+        char: x 'A'
+        @: char address @x
+        if: x != 'A' || sizeof(x) != sizeof(char)
+            return: 83
+        x: 'B'
+        if: x != value[0] || address != @x
+            return: 84
+    end: if
+    if: x != 11 || sizeof(x) != sizeof(int)
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(11); stdout: ""; stderr: "")
+return

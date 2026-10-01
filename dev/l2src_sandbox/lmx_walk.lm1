@@ -166,6 +166,14 @@ fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value
         return: c.LMX_WALK_INVALID
 return: c.LMX_WALK_OK
 
+fn: lmx_walk_store_charptr (@: LmxArena arena; @: Lmx code; size_t: slot; @: char value) int
+    @: void cell lmx_charptr_new_owned(arena)
+    if: cell = 0
+        return: c.LMX_WALK_NOMEM
+    if: lmx_charptr_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
+        return: c.LMX_WALK_INVALID
+return: c.LMX_WALK_OK
+
 
 fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
     @: void cell 0
@@ -1947,6 +1955,8 @@ fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: v
         return: 1
     ---
     admit: lmx_runtime_implements(arena, value, model, model)
+    if: admit = c.LMX_IMPLEMENTS_YES && lmx_implements_find(arena, value, model) = 0
+        admit: lmx_implements_register_map(arena, value, model, 0, 0U, 0)
     if: admit = c.LMX_IMPLEMENTS_YES
         \out: (cast: (@: void) value)
         return: 0
@@ -2008,33 +2018,67 @@ fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void 
     ---
 return: lmx_walk_admit_against(arena, (cast: (@: Lmx) payload), model, out)
 
-# D-105 (the author's Q39, 2026-09-27; Codex, 2026-09-28): [admit_as, 0, catch, value, model, map cells...,
-# rows...] -- the value admitted to the named Structure `model` and recorded in the arena's `implements` table, where
-# every later admission and every OF/PUT_OF typed with the model finds it: through the correspondence this frame
-# carries in place (its size cells from slot 5, cell j the value's slot of model's field j), or as the model's own
-# (no cells).  The record keeps the frame and the offset -- the map is read from the frame, the interpretable graph,
-# never copied out.  A null value passes unadmitted; NO is the implicit throw `implements` (THROWN + 2, its catch
-# rows the frame's last operands, as a PRIM's).
+# ADMIT_AS carries one flat immutable instruction: source schema token/target model,
+# default target map, alternatives keyed by exact physical layout, then catches.
+# Existing ImplEntry views borrow this instruction and an offset; there is no
+# correspondence-only Structure or allocated/composed map. Candidate once;
+# null passes before source-view lookup. NO is the implicit implements throw.
 fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     LmxImplEntry: view
     @: LmxImplEntry v 0
+    @: LmxImplEntry known 0
     @: Lmx model 0
+    @: void source_layout 0
+    @: void layout 0
+    @: void token_cell 0
+    int: selected 0
+    size_t: choice 0U
+    size_t: choices 0U
+    size_t: at 9U
+    size_t: full_receiver 0U
+    size_t: default_n 0U
+    size_t: width
+    size_t: stride
+    size_t: catch_at
     size_t: catch_n 0U
     size_t: n
     int: status
     int: answer
     lmx_walk_value_clear(out)
-    if: code\array.size < 5U
+    if: code\array.size < 9U
         return: c.LMX_WALK_INVALID
     ---
-    if: lmx_walk_catch_count(f, lmx_arena_ref_value(code, 2U), @ catch_n) != c.LMX_WALK_OK || code\array.size < 5U + 3U * catch_n
+    if: lmx_walk_catch_count(f, lmx_arena_ref_value(code, 2U), @ catch_n) != c.LMX_WALK_OK || catch_n > (code\array.size - 9U) / 3U
         return: c.LMX_WALK_INVALID
     ---
-    n: code\array.size - 5U - 3U * catch_n
+    catch_at: code\array.size - 3U * catch_n
     model: (cast: (@: Lmx) lmx_arena_ref_value(code, 4U))
+    token_cell: lmx_arena_ref_value(code, 1U)
+    if: token_cell != 0
+        if: lmx_domain_kind(f\arena, token_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, token_cell) != c.LMX_TYPE_CHAR_PTR
+            return: c.LMX_WALK_INVALID
+        source_layout: (cast: (@: void) lmx_charptr_value_known(token_cell))
+    ---
+    token_cell: lmx_arena_ref_value(code, 7U)
+    if: token_cell != 0
+        if: lmx_domain_kind(f\arena, token_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, token_cell) != c.LMX_TYPE_CHAR_PTR
+            return: c.LMX_WALK_INVALID
+        layout: (cast: (@: void) lmx_charptr_value_known(token_cell))
+    ---
     if: model = 0 || lmx_walk_kind(f, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
         return: c.LMX_WALK_INVALID
     ---
+    width: model\array.size
+    if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 5U), @ choices) != c.LMX_WALK_OK || lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 6U), @ default_n) != c.LMX_WALK_OK
+        return: c.LMX_WALK_INVALID
+    if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 8U), @ full_receiver) != c.LMX_WALK_OK || full_receiver > 1U
+        return: c.LMX_WALK_INVALID
+    if: (default_n != 0U && default_n != width) || default_n > catch_at - 9U || width = (cast: (size_t) -1)
+        return: c.LMX_WALK_INVALID
+    stride: width + 1U
+    n: catch_at - 9U - default_n
+    if: n / stride != choices || n % stride != 0U
+        return: c.LMX_WALK_INVALID
     status: lmx_walk_eval(f, lmx_arena_ref_value(code, 3U), out)
     if: status != c.LMX_WALK_OK
         return: status
@@ -2045,14 +2089,61 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: out\ref = 0
         return: c.LMX_WALK_OK
     ---
+    if: layout = 0
+        layout: lmx_implements_layout(f\arena, (cast: (@: Lmx) out\ref))
     v: @ view
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
-    if: n != 0U
+    v\layout: layout
+    if: layout != 0 && layout = source_layout
+        selected: 1
+    if: default_n != 0U
         v\frame: code
-        v\at: 5U
-        v\n: n
+        v\at: at
+        v\n: default_n
     ---
-    answer: lmx_implements_register(f\arena, (cast: (@: Lmx) out\ref), model, v)
+    at: at + default_n
+    while: layout != 0 && choice < choices
+        token_cell: lmx_arena_ref_value(code, at)
+        if: lmx_domain_kind(f\arena, token_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, token_cell) != c.LMX_TYPE_CHAR_PTR
+            return: c.LMX_WALK_INVALID
+        if: layout = (cast: (@: void) lmx_charptr_value_known(token_cell))
+            v\frame: code
+            v\at: at + 1U
+            v\n: width
+            selected: 1
+        at: at + stride
+        choice: choice + 1U
+    ---
+    answer: c.LMX_IMPLEMENTS_UNKNOWN
+    if: selected != 0
+        answer: c.LMX_IMPLEMENTS_YES
+        if: full_receiver != 0U
+            v\value: (cast: (@: Lmx) out\ref)
+            v\req: model
+            answer: lmx_implements_walk_view(f\arena, (cast: (@: Lmx) out\ref), model, model, v, 0)
+        if: answer = c.LMX_IMPLEMENTS_YES
+            answer: lmx_implements_register(f\arena, (cast: (@: Lmx) out\ref), model, v)
+    ---
+    if: selected = 0
+        known: lmx_implements_find(f\arena, (cast: (@: Lmx) out\ref), model)
+        if: known != 0
+            # An old correspondence is not proof for a new consumer. Without
+            # a selected compile-proved map, check this full receiver first.
+            answer: lmx_runtime_implements(f\arena, (cast: (@: Lmx) out\ref), model, model)
+            if: answer = c.LMX_IMPLEMENTS_YES
+                memcpy((cast: (@: void) v), (cast: (@: void) known), c.sizeof(c.LmxImplEntry))
+                v\layout: layout
+                answer: lmx_implements_register(f\arena, (cast: (@: Lmx) out\ref), model, v)
+        ---
+        else:
+            if: layout = 0
+                # A successful full positional check establishes identity,
+                # never physical-layout evidence. Nested unused holes still
+                # fail this current-receiver check before any publication.
+                answer: lmx_runtime_implements(f\arena, (cast: (@: Lmx) out\ref), model, model)
+                if: answer = c.LMX_IMPLEMENTS_YES
+                    answer: lmx_implements_register_map(f\arena, (cast: (@: Lmx) out\ref), model, 0, 0U, 0)
+    ---
     if: answer = c.LMX_IMPLEMENTS_YES
         return: c.LMX_WALK_OK
     ---
@@ -2062,7 +2153,7 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     status: c.LMX_WALK_THROWN + 2
     f\payload: 0
     if: catch_n != 0U
-        status: lmx_walk_catch_scan(f, code, 5U + n, catch_n, status)
+        status: lmx_walk_catch_scan(f, code, catch_at, catch_n, status)
     ---
 return: status
 
@@ -2114,7 +2205,7 @@ return: cell
 # refused, never read as present.  No correspondence Structure is made.  The copy hangs under `parent` (no slot
 # of it).  0 when a field is not a value cell, or on no room.  The translator names value fields only
 # (l2_cap_add), so its host's abort on 0 is a guard and an out-of-memory stop.
-fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n) @: Lmx
+fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n; @: void layout) @: Lmx
     LmxImplEntry: view
     @: LmxImplEntry v 0
     @: Lmx copy 0
@@ -2156,6 +2247,7 @@ fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; 
     v: @ view
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
     v\holes: 1
+    v\layout: layout
     if: lmx_implements_register(arena, copy, req, v) != c.LMX_IMPLEMENTS_YES
         return: 0
 return: copy

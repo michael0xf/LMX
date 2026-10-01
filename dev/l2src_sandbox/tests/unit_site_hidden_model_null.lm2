@@ -1,0 +1,20 @@
+Model: (int: value 11; int: spare 99)
+Other: (int: spare 88; int: value 22)
+@: Model shared @Model
+fn: observe () int
+    if: shared = 0
+        return: 7
+    if: shared\value != 22
+        return: 81
+return: 7
+fn: nonnull () int
+    @: Other shared @Other
+return: observe()
+fn: empty () int
+    @: Model shared
+return: observe()
+int: result nonnull()
+if: result != 7 || empty() != 7
+    result: 82
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -1,0 +1,31 @@
+# The preceding own binding, not the original formal, supplies carry's value
+# and type. A nonidentity converter must execute exactly once.
+int: calls 0
+fn: changed (size_t: value) int
+    node\calls: node\calls + 1
+return: 73
+fn: converted (int: n) int
+    size_t: n 3U
+    if: 1 = 1
+        int: n
+        if: n != 73
+            return: 81
+    end: if
+    if: n != 3U
+        return: 82
+return: 7
+fn: exact (size_t: n) int
+    int: n 11
+    if: 1 = 1
+        int: n
+        if: n != 11
+            return: 83
+    end: if
+return: 7
+fn: count () int
+return: node\calls
+int: result 7
+if: converted(5) != 7 || exact(9U) != 7 || count() != 1
+    result: 84
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

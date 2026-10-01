@@ -288,6 +288,22 @@ fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImpl
     ---
 return: 0
 
+# Genuine schema evidence is a property of the held value. Looking across its
+# completed correspondences supplies only that identity, never another receiver's
+# map or Consumer proof. Register keeps all known evidence for one value consistent.
+fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
+    size_t: i 0U
+    @: LmxImplEntry entry
+    if: arena = 0 || value = 0
+        return: 0
+    while: i < arena\impl_len
+        entry: arena\impl + i
+        if: entry\value = value && entry\layout != 0
+            return: entry\layout
+        i: i + 1U
+    ---
+return: 0
+
 # Two views give req's fields (width of them) the same places.
 fn: lmx_implements_same_map (@: LmxArena arena; @: LmxImplEntry a; @: LmxImplEntry b; size_t: width) int
     size_t: j 0U
@@ -335,6 +351,7 @@ return: lmx_implements_walk_view(arena, value, value, req, pending, 1)
 
 fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     @: LmxImplEntry e
+    @: void layout
     int: answer
     if: arena = 0 || value = 0 || req = 0 || view = 0
         return: c.LMX_IMPLEMENTS_UNKNOWN
@@ -342,11 +359,18 @@ fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx
     view\req: req
     if: (view\frame != 0 || view\map != 0) && view\n != req\array.size
         return: c.LMX_IMPLEMENTS_NO
+    layout: lmx_implements_layout(arena, value)
+    if: layout != 0 && view\layout != 0 && layout != view\layout
+        return: c.LMX_IMPLEMENTS_NO
     e: lmx_implements_find(arena, value, req)
     if: e != 0
         # A later admission: the record answers.  One value has one own type, so a different
         # correspondence to the same req is a broken promise of the caller, refused.
         if: lmx_implements_same_map(arena, e, view, (req\array.size)) != 0
+            if: e\layout != 0 && view\layout != 0 && e\layout != view\layout
+                return: c.LMX_IMPLEMENTS_NO
+            if: e\layout = 0 && view\layout != 0
+                e\layout: view\layout
             return: c.LMX_IMPLEMENTS_YES
         return: c.LMX_IMPLEMENTS_NO
     ---
@@ -358,6 +382,7 @@ fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: Lmx
     e: arena\impl + arena\impl_len
     e\value: value
     e\req: req
+    e\layout: view\layout
     e\frame: view\frame
     e\at: view\at
     e\map: view\map
@@ -368,12 +393,13 @@ return: c.LMX_IMPLEMENTS_YES
 
 # Native D-105: the value admitted to req through the translator's static map of its pair of types (n slots), or
 # as req's own (map null).
-fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n) int
+fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @: size_t map; size_t: n; @: void layout) int
     LmxImplEntry: view
     @: LmxImplEntry v 0
     v: @ view
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
     v\map: map
+    v\layout: layout
     if: map != 0
         v\n: n
 return: lmx_implements_register(arena, value, req, v)

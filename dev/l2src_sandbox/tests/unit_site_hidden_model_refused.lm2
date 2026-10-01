@@ -1,0 +1,12 @@
+Model: (int: value 11)
+Other: (int: unrelated 22)
+@: Model shared @Model
+fn: observe () int
+return: shared\value
+fn: relay () int
+return: observe()
+fn: caller () int
+    @: Other shared @Other
+return: relay()
+sendMessage: exit(exit_code: caller(); stdout: ""; stderr: "")
+return

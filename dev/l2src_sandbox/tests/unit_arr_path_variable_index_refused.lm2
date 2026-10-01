@@ -4,9 +4,11 @@ MainLetter:
     char: []: []: mainArgs
 end: MainLetter
 
-MainLetter: m
+@: MainLetter m
 int: k 1
 receiveMessage: m
 if: m\mainArgs[k][0] != 0
-    return: 1
-return: 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,12 @@
+# Both calls are standalone sites with the same host and initializer exclusion.
+# Collapsing them to one caller/callee edge must not hide the later depth change.
+fn: value () @: int
+return: p
+fn: check (@: int p) int
+    value()
+    @@: int p @p
+    value()
+return: 7
+int: cell 11
+sendMessage: exit(exit_code: check(@cell); stdout: ""; stderr: "")
+return

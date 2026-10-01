@@ -1,0 +1,23 @@
+fn: observe () int
+    if: p = 0
+        return: 99
+return: \p
+fn: check () int
+    []: int values 2
+    values[0]: 11
+    values[1]: 22
+    @: int p @values[0]
+    if: observe() != 11
+        return: 81
+    if: 1 = 1
+        if: observe() != 11
+            return: 82
+        @: int p @values[1]
+        if: observe() != 22
+            return: 83
+    end: if
+    if: observe() != 11
+        return: 84
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -25,6 +25,14 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 int: broken 0
 int: checks 0
 int: failures 0
+int: producer_calls 0
+@: void produced_value 0
+[]: char schema_tokens 3
+
+fn: produce (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    producer_calls: producer_calls + 1
+    \out: produced_value
+return: 0
 
 sub: check (int: ok; const: @(char label))
     checks: checks + 1
@@ -55,6 +63,12 @@ sub: ref (@: Lmx code; size_t: slot; @: Lmx target)
         broken: broken + 1
     ---
 end: ref
+
+sub: token (@: Lmx code; size_t: slot; size_t: index)
+    if: lmx_walk_store_charptr(ga, code, slot, schema_tokens + index) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+end: token
 
 sub: sz (@: Lmx code; size_t: slot; size_t: value)
     if: code = 0 || lmx_walk_store_size(ga, code, slot, value) != c.LMX_WALK_OK
@@ -106,6 +120,25 @@ fn: main () int
     @@: void nrefs 0
     int: st 0
     int: pty c.LMX_TYPE_POINTER_BASE + 1
+    @: Lmx source_model 0
+    @: Lmx target_model 0
+    @: Lmx mapped_value 0
+    @: Lmx unmapped_value 0
+    @: Lmx admitted 0
+    @: Lmx cloned_admit 0
+    @: Lmx cached 0
+    @: Lmx partial 0
+    @: Lmx outer_partial 0
+    @: Lmx outer_model 0
+    @: Lmx captured 0
+    @: LmxImplEntry proof 0
+    @: Lmx place 0
+    @: Lmx pad 0
+    @: LmxPrimitive producer 0
+    []: size_t source_map 2
+    []: size_t partial_map 2
+    size_t: selected_slot 0U
+    size_t: copy_slot 1U
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     if: lmx_arena_open(@ arena) != 0
@@ -275,6 +308,188 @@ fn: main () int
     ref(pn, 4U, model_y)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2)), "admit_letter mismatch -> THROWN+2")
+
+    # A single flat ADMIT_AS borrows its maps at offsets in the instruction.
+    # Source view is reversed; exact physical layout is target_model. Unknown
+    # origin is NOT inferred from the declared source model or an identity map.
+    source_model: pl(unit, 15U, 2U)
+    target_model: pl(unit, 16U, 2U)
+    mapped_value: pl(unit, 17U, 2U)
+    unmapped_value: pl(unit, 18U, 2U)
+    lmx_walk_store_int(ga, source_model, 0U, 11)
+    lmx_walk_store_int(ga, source_model, 1U, 99)
+    lmx_walk_store_int(ga, target_model, 0U, 99)
+    lmx_walk_store_int(ga, target_model, 1U, 11)
+    lmx_walk_store_int(ga, mapped_value, 0U, 88)
+    lmx_walk_store_int(ga, mapped_value, 1U, 22)
+    lmx_walk_store_int(ga, unmapped_value, 0U, 88)
+    lmx_walk_store_int(ga, unmapped_value, 1U, 22)
+    source_map[0]: 1U
+    source_map[1]: 0U
+    check((cast: (int) (lmx_implements_register_map(ga, mapped_value, source_model, source_map, 2U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES)), "source correspondence retains actual layout")
+    producer: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: producer = 0
+        return: 2
+    producer\fn: produce
+    producer\signature: wt_contract_same(ga, 0U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
+    producer\owner: (cast: (@: Lmx) ga)
+    m: mk_m(unit, 19U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    admitted: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 14U)
+    token(admitted, 1U, 0U)
+    ref(admitted, 4U, target_model)
+    sz(admitted, 5U, 1U)
+    sz(admitted, 6U, 2U)
+    sz(admitted, 8U, 1U)
+    sz(admitted, 9U, 1U)
+    sz(admitted, 10U, 0U)
+    token(admitted, 11U, 1U)
+    sz(admitted, 12U, 0U)
+    sz(admitted, 13U, 1U)
+    pn: fr(admitted, 3U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(pn, 1U, (cast: (@: Lmx) producer))
+    produced_value: (cast: (@: void) mapped_value)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = produced_value && producer_calls = 1)), "mapped candidate evaluated once, identity preserved")
+    check((cast: (int) (lmx_implements_slot(ga, mapped_value, target_model, 1U, @ selected_slot) = 0 && selected_slot = 1U)), "target map selected through actual source view")
+    produced_value: 0
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = 0 && producer_calls = 2)), "typed null passes before correspondence lookup")
+    produced_value: (cast: (@: void) unmapped_value)
+    check((cast: (int) (lmx_implements_find(ga, unmapped_value, target_model) = 0)), "unknown candidate has no target correspondence before reception")
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && producer_calls = 3 && lmx_implements_find(ga, unmapped_value, target_model) != 0 && lmx_implements_layout(ga, unmapped_value) = 0 && lmx_implements_slot(ga, unmapped_value, target_model, 1U, @ selected_slot) = 0 && selected_slot = 1U)), "unknown layout records checked identity without inventing an origin")
+    check((cast: (int) (lmx_size_value_known(lmx_arena_ref_value(admitted, 9U)) = 1U && lmx_size_value_known(lmx_arena_ref_value(admitted, 12U)) = 0U)), "admissions do not mutate inline instruction maps")
+    check((cast: (int) (lmx_graph_copy_owned(admitted, ga, ga, @ cloned_admit) = 0 && cloned_admit != 0 && lmx_arena_ref_value(cloned_admit, 1U) != lmx_arena_ref_value(admitted, 1U) && lmx_charptr_value_known(lmx_arena_ref_value(cloned_admit, 1U)) = schema_tokens && lmx_charptr_value_known(lmx_arena_ref_value(cloned_admit, 11U)) = schema_tokens + 1)), "copy owns fresh token cells while preserving non-owning module identities")
+
+    # Catch rows follow BOTH the default and alternative maps. The refused
+    # one-field candidate must reach this pad and the following literal.
+    m: mk_m(unit, 20U, 3U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_ADMIT_AS, 17U)
+    while: copy_slot < 14U
+        if: lmx_arena_ref_store(pn, copy_slot, lmx_arena_ref_value(admitted, copy_slot)) != 0
+            broken: broken + 1
+        copy_slot: copy_slot + 1U
+    ---
+    sz(pn, 2U, 1U)
+    sz(pn, 14U, 2U)
+    sz(pn, 16U, 0U)
+    pad: fr(m, 1U, c.LMX_WALK_OP_PAD, 2U)
+    n: pl(pad, 1U, 0U)
+    ref(pn, 15U, pad)
+    n: fr(m, 2U, c.LMX_WALK_OP_RET, 2U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(ga, litn, 1U, 7)
+    produced_value: (cast: (@: void) value)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7 && producer_calls = 4)), "caught ADMIT_AS NO resumes after all inline maps")
+    check((cast: (int) (lmx_implements_find(ga, value, target_model) = 0)), "failed mapped admission records no target correspondence")
+
+    # Same reached candidate, but this instruction carries no matching layout
+    # alternative. Its cached correspondence remains usable after admission
+    # for the current receiver succeeds.
+    m: mk_m(unit, 21U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 9U)
+    token(pn, 1U, 0U)
+    ref(pn, 3U, mapped_value)
+    ref(pn, 4U, target_model)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 0U)
+    sz(pn, 8U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) mapped_value) && lmx_implements_slot(ga, mapped_value, target_model, 1U, @ selected_slot) = 0 && selected_slot = 1U)), "unlisted known layout reuses exact completed target proof")
+
+    # A cached target may have unknown layout even after its correspondence is
+    # complete. Genuine later source evidence may enrich it, never replace it.
+    cached: pl(unit, 22U, 2U)
+    lmx_walk_store_int(ga, cached, 0U, 5)
+    lmx_walk_store_int(ga, cached, 1U, 6)
+    check((cast: (int) (lmx_implements_register_map(ga, cached, target_model, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_layout(ga, cached) = 0)), "target proof starts with unknown layout")
+    check((cast: (int) (lmx_implements_register_map(ga, cached, source_model, source_map, 2U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES)), "independent source proof supplies real layout")
+    ref(pn, 3U, cached)
+    st: go(m)
+    proof: lmx_implements_find(ga, cached, target_model)
+    check((cast: (int) (st = c.LMX_WALK_OK && proof != 0 && proof\layout = (cast: (@: void) (schema_tokens + 1)))), "cached target enriches genuine layout after current receiver admission")
+
+    # A proof with an unused field is not a proof of the full receiver. Failure
+    # must retain both correspondence and unknown provenance, without upgrade.
+    partial: pl(unit, 23U, 1U)
+    lmx_walk_store_int(ga, partial, 0U, 41)
+    partial_map[0]: 0U
+    partial_map[1]: (cast: (size_t) -1)
+    check((cast: (int) (lmx_implements_register_map(ga, partial, target_model, partial_map, 2U, 0) = c.LMX_IMPLEMENTS_YES)), "partial target proof established for its used field")
+    ref(pn, 3U, partial)
+    token(pn, 7U, 2U)
+    token(pn, 1U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_layout(ga, partial) = 0 && lmx_implements_slot(ga, partial, target_model, 0U, @ selected_slot) = 0 && selected_slot = 0U)), "cached partial proof cannot admit a new full receiver or mutate provenance")
+
+    # The newly checked, still-unknown layout supports ordinary mapped places.
+    m: mk_m(unit, 24U, 2U)
+    pn: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    place: fr(pn, 1U, c.LMX_WALK_OP_OF, 4U)
+    ref(place, 1U, unmapped_value)
+    sz(place, 2U, 1U)
+    ref(place, 3U, target_model)
+    litn: fr(pn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(ga, litn, 1U, 41)
+    n: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    ref(n, 1U, place)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\number = 41 && lmx_int_value_known(lmx_arena_ref_value(unmapped_value, 0U)) = 88)), "unknown reception mapped read/write keeps the other field")
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADDRESS, 3U)
+    ref(pn, 1U, place)
+    lmx_arena_ref_store(pn, 2U, wt_witness(ga, c.LMX_TYPE_POINTER_BASE + 1))
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = lmx_arena_ref_value(unmapped_value, 1U))), "unknown reception address selects the real field cell")
+
+    # Fresh outer identity must not hide an already-admitted nested hole.
+    outer_partial: pl(unit, 25U, 1U)
+    outer_model: pl(unit, 26U, 1U)
+    ref(outer_partial, 0U, partial)
+    ref(outer_model, 0U, target_model)
+    m: mk_m(unit, 27U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 9U)
+    ref(pn, 3U, outer_partial)
+    ref(pn, 4U, outer_model)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 0U)
+    sz(pn, 8U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, outer_partial, outer_model) = 0)), "unknown full reception refuses nested cached holes before publishing identity")
+
+    # An actual capture constructs req's physical slots but only carries slot1.
+    # A selected current Consumer using slot1 supplies [unused,1], not full identity.
+    copy_slot: 1U
+    captured: lmx_walk_capture(ga, unit, cached, target_model, @ copy_slot, 1U, (cast: (@: void) (schema_tokens + 1)))
+    check((cast: (int) (captured != 0 && lmx_implements_layout(ga, captured) = (cast: (@: void) (schema_tokens + 1)) && lmx_arena_ref_value(captured, 0U) = 0)), "actual capture retains its genuine layout and uncaptured hole")
+    m: mk_m(unit, 28U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 11U)
+    token(pn, 1U, 1U)
+    ref(pn, 3U, captured)
+    ref(pn, 4U, target_model)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 2U)
+    sz(pn, 8U, 0U)
+    sz(pn, 9U, (cast: (size_t) -1))
+    sz(pn, 10U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) captured) && lmx_implements_slot(ga, captured, target_model, 0U, @ selected_slot) != 0 && lmx_implements_slot(ga, captured, target_model, 1U, @ selected_slot) = 0 && selected_slot = 1U)), "selected used view preserves capture holes and carried field")
+    sz(pn, 8U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_slot(ga, captured, target_model, 0U, @ selected_slot) != 0 && lmx_implements_layout(ga, captured) = (cast: (@: void) (schema_tokens + 1)))), "same selected map refuses a full receiver without changing its proof")
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 9U)
+    token(pn, 1U, 1U)
+    ref(pn, 3U, captured)
+    ref(pn, 4U, target_model)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 0U)
+    sz(pn, 8U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_slot(ga, captured, target_model, 0U, @ selected_slot) != 0)), "capture cannot promise full identity for a newly required field")
 
     c.printf("lmx_walk_admit_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

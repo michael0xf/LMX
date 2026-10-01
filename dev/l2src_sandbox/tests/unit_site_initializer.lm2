@@ -1,0 +1,21 @@
+# Each initializer reads the preceding occurrence, including hidden calls.
+fn: read () int
+return: \p
+fn: copy () @: int
+return: p
+fn: check () int
+    []: int cells 2
+    cells[0]: 11
+    cells[1]: 22
+    @: int p @cells[0]
+    @: int original p
+    @: int p copy()
+    if: p != original || read() != 11
+        return: 81
+    @: int p @cells[1]
+    int: p read()
+    if: p != 22
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

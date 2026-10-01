@@ -1,0 +1,29 @@
+# Repeated lexical receivers select different declared layouts at each header.
+# The held descriptor remains C across C -> relay(A) -> observe(B).
+A: (int: value 11; int: spare 99)
+B: (int: spare 77; int: value 33)
+C: (int: spare 88; int: value 22)
+@: B shared @B
+fn: observe () int
+return: shared\value
+@: A shared @A
+fn: relay () int
+return: observe()
+fn: caller () int
+    @: C shared @C
+return: relay()
+fn: observe_reverse () int
+return: shared\value
+@: B shared @B
+fn: relay_reverse () int
+return: observe_reverse()
+fn: caller_reverse () int
+    @: C shared @C
+return: relay_reverse()
+int: value caller()
+int: reverse caller_reverse()
+int: result 7
+if: value != 22 || reverse != 22 || C\spare != 88 || A\value != 11 || B\value != 33
+    result: 81
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -1,0 +1,39 @@
+# Local schemas have no unit model descriptor. Distinct module schema tokens
+# survive narrowing and returns; recursive C instances share schema, not identity.
+# Local construction bodies remain native; the caller/relay/observer also walk.
+A: (int: x 1)
+B: (int: y 2)
+Stats: (int: calls 0; int: failed 0)
+fn: makeC (int: depth) A
+    C: (int: x 11; int: y 22; int: pad 33)
+    Stats\calls: Stats\calls + 1
+    if: depth != 0
+        @: A inner makeC(0)
+        if: inner = @C || inner\x != 11 || C\y != 22
+            Stats\failed: 1
+        inner\x: 17
+        if: inner\x != 17 || C\x != 11
+            Stats\failed: 1
+    ---
+return: @C
+fn: makeD () A
+    D: (int: x 11; int: pad 55; int: y 44)
+    Stats\calls: Stats\calls + 1
+return: @D
+@: B shared @B
+fn: observe () int
+return: shared\y
+@: A shared @A
+fn: relay () int
+return: observe()
+fn: caller () int
+    @: A shared makeC(1)
+    int: first relay()
+    @: A previous shared
+    shared: makeD()
+    int: second relay()
+    if: first != 22 || second != 44 || shared = previous || Stats\calls != 3 || Stats\failed != 0
+        return: 81
+return: 7
+sendMessage: exit(exit_code: caller(); stdout: ""; stderr: "")
+return

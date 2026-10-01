@@ -1,0 +1,31 @@
+fn: observe () int
+return: \p
+fn: change () int
+    \p: \p + 1
+return: \p
+fn: check () int
+    []: int cells 2
+    cells[0]: 11
+    cells[1]: 22
+    @: int p @cells[0]
+    for: int(i, 0) (i < 2) i++
+        if: observe() != 11
+            return: 81
+        @: int p @cells[1]
+        if: observe() != 22
+            return: 82
+    end: for
+    if: observe() != 11
+        return: 83
+    if: 1 = 0
+        @: int p @cells[1]
+        int: unused observe()
+    else:
+        if: observe() != 11
+            return: 84
+    ---
+    if: change() != 12 || cells[0] != 12 || cells[1] != 22
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

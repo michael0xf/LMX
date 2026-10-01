@@ -1,0 +1,21 @@
+# Q8 U2: beta's parent field precedes its lexical definition, while the
+# first root call precedes that declaration's execution. Establish physical
+# zero explicitly; do not rely on an arena initialization guarantee.
+fn: alpha () int
+    int: shared 111
+return: shared
+int: unrelated alpha()
+prime()
+int: first beta()
+int: shared 222
+fn: beta () int
+return: shared
+sub: prime ()
+    node\shared: 0
+return
+int: second beta()
+int: result 7
+if: first != 0 || second != 222 || unrelated != 111
+    result: 81
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -201,10 +201,26 @@ define: LMX_WALK_OP_EXEC 35
 # unit for a file-level method, the host's occurrence for a nested one, the copied lexical context under which a
 # returned node was made (a merge result's parent).  OF / PUT_OF go on from it by the slots of that space's body.
 define: LMX_WALK_OP_NODE 36
-# [admit_as, 0, catch, value, model, map cells..., rows...] (D-105): the value admitted to the named Structure `model`
-# and recorded in the arena's `implements` table -- through the correspondence this frame carries in place (size
-# cells from slot 5, cell j the value's slot of model's field j; the record keeps the frame and the offset), or as
-# the model's own (no cells).  A null value passes unadmitted; a refusal is the implicit throw `implements`.
+# [admit_as, sourceToken, catchCount, value, targetModel, alternativesCount,
+# defaultMapCount, directLayout, fullReceiver, defaultTargetMap[defaultMapCount],
+# (layoutToken, targetMap[targetWidth]) * alternativesCount, catchRows...].
+# Counts/map entries are inline SIZE_T constants; targetModel is a descriptor.
+# Tokens are CHAR_PTR cells holding module-lifetime metadata addresses, never
+# raw foreign graph children. Missing source/direct cells mean unknown tokens.
+# directLayout is genuine producer evidence; otherwise any completed admission
+# of this held value may supply schema identity only, not a map or Consumer proof.
+# The default (0 cells = identity, otherwise targetWidth cells) is selected ONLY
+# when the held value's known token equals sourceToken.
+# Alternatives select by exact layout identity, never by equal partial maps.
+# fullReceiver is 1 for ordinary reference/return reception, which checks the
+# selected pending map with every receiving field required before publication.
+# It is 0 only when the compiler proved this Consumer's used fields. This
+# operation-local requirement is not cached as a global Consumer approval.
+# Unknown layout uses ordinary admission. An existing target correspondence
+# may be reused only after admission for the current receiver; this also applies
+# to known unlisted layouts, which cannot guess a map. ImplEntry
+# borrows this frame+offset: no correspondence Structure or composed allocation.
+# Candidate once; null passes before lookup; NO is the implements throw.
 define: LMX_WALK_OP_ADMIT_AS 37
 # [and, a, b] / [or, a, b]: `a && b` / `a || b` as one value, short-circuit -- b is evaluated only when a does not decide
 # -- an int, 1 or 0.  A condition is then one value however it is built, and a loop asks it afresh in full each turn,
@@ -329,8 +345,9 @@ prototype:
     # Item 738 (steps/capture-738.md): the capture of a Structure -- a copy of src's fields fields[0..n) names
     # (req's slots), fresh value cells at req's own slots, the other slots empty, hung under `parent`; recorded in
     # the arena's `implements` table as req's own layout with holes (an empty slot is not carried).  0 on a field
-    # that is not a value cell, or on no room.
-    fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n) @: Lmx
+    # that is not a value cell, or on no room. layout is the compiler's schema
+    # token for the freshly constructed req-slot layout, or zero when unknown.
+    fn: lmx_walk_capture (@: LmxArena arena; @: Lmx parent; @: Lmx src; @: Lmx req; @: size_t fields; size_t: n; @: void layout) @: Lmx
     # A copy of what a slot holds, as a merge copies data: a number a fresh cell of its type holding its value now, a
     # char included; anything nonnumeric itself. 0 on no room.
     fn: lmx_walk_cell_copy (@: LmxArena arena; @: void cell) @: void
@@ -361,6 +378,7 @@ prototype:
     fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
     fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
     fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
+    fn: lmx_walk_store_charptr (@: LmxArena arena; @: Lmx code; size_t: slot; @: char value) int
     fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsigned: value) int
     fn: lmx_walk_store_ulong (@: LmxArena arena; @: Lmx code; size_t: slot; ulong: value) int
 

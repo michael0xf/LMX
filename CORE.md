@@ -278,8 +278,10 @@ language operations, but a green test in one is not evidence for the other.
 
 ### 3.1 Body fields, occurrences, and own-state
 
-A callable's body after `child[0]` preserves lexical fields and nested Frame
-Structures. Repeated declarations are distinct occurrences, not one name-keyed
+A callable's complete Structure preserves its declared signature parts,
+lexical fields and nested Frame Structures. A method's signature parts are
+not a universal reserved `child[0]`: a file root or ordinary named Structure
+has no implicit signature prefix. Repeated declarations are distinct occurrences, not one name-keyed
 runtime slot; a repeated bare assignment writes the same declared cell and is
 not an occurrence. The intended path selector `[N]field` identifies an occurrence;
 an unqualified path selects the last occurrence (`[lastIndex]`); `merge`

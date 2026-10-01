@@ -1,0 +1,22 @@
+# K02 witness (next_core_tasks_v2.md K02, bullet 3; defects.md MERGE-HIDDEN-INPUT-PROJECTION):
+# a merge result reaching a callee as an ordinary hidden input, with caller priority.
+# `copy` is a unit-level merge result (value 1).  `read` names the free `copy\value`; `caller`
+# declares its OWN `copy: merge: Other` (value 22) and calls read.  By the general hidden-input
+# priority the caller's local must win: the answer is 22, not the unit-level 1.
+# Today both runs exit 81 -- the global result-name lookup bypasses the dynamic input.
+# Success is 7.
+Model: (int: value 1)
+Other: (int: value 22)
+copy: merge: Model
+fn: read () int
+return: copy\value
+fn: caller () int
+    copy: merge: Other
+    return: read()
+end: caller
+int: result caller()
+if: result != 22
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

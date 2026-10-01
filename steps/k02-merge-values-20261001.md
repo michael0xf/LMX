@@ -137,3 +137,36 @@ definition and a `merge` frame as a CALLABLE merge (`l2_t7_from_return`), which 
 mechanism expecting a callable operand. A structural merge there would have to register a result
 without a destination own field — plan bullet 4's "a destination name is not a first operand, and
 a `return` receiver is not an own-field declaration".
+
+## 4. K02c reproduction — the exact site (MERGE-HIDDEN-INPUT-PROJECTION)
+
+Witness `unit_merge_hidden_input.lm2` (the defect's own source, registered as a row): a
+unit-level `copy: merge: Model` (value 1), `read` naming the free `copy\value`, and a `caller`
+whose OWN `copy: merge: Other` (value 22) calls `read`.  Measured on the K02b bytes
+(`build/l2_harness/k02c_repro_20261001_01`): **the program exits 81, not 7** — the free name
+took the unit-level result.
+
+The site is the free-name scan's early return, `l2_scan_uses`-region:
+
+```
+    # A unit-level declaration or a bound merge result is a name IN SCOPE,
+    # reached through the program unit. It is not a free name, so it must
+    # not become an untyped dynamic input.
+    if: l2_ns_find(t) >= 0 && l2_ns_parent[l2_ns_find(t)] < 0
+        return: 0
+    if: l2_mres_find(mi, t) >= 0
+        return: 0
+```
+
+`l2_mres_find(mi, t)` is `l2_mres_of_own(l2_resolved_own(mi, t))`: for `read` the name resolves
+to the unit-level own field `copy` (visible through the unit) whose schema IS a merge result, so
+the scan classifies it as "in scope, not free" and the caller's own `copy` never becomes a
+caller source.  The caller-local priority the plan asks for lives one branch below, where a name
+that IS free becomes a dynamic input with `l2_dyn_add(mi, t, ty)`.
+
+Deleting the early return is not the repair: `ty` there is a translator type code, while this
+value's schema is a compiler-side tagged merge schema (`l2_schema_merge(res)`), and the
+receiving consumers that ask `l2_input_model` want a named namespace.  So the slice needs a
+decision on the dynamic-input type space, which is what the design question to Codex
+(DS-CODEX-004) asks; until then the slice stays open and the witness is registered red-by-design
+in the row above.

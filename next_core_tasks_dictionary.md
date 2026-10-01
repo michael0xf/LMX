@@ -24,7 +24,7 @@ application in its receiving context
   -> unknown ordinary head     => define named Structure; do not execute its body
 ```
 
-An unknown actual in an existing head's call is an error, not a declaration. For unknown `C`, `C: makeA()` defines `C` containing the named empty Structure `makeA`, neither an immediate nor a saved call. An explicit reference binding is assigned; dereference it to invoke its referent. Nonprimitive `(A: b)` and `(@: A b)` are synonymous descriptions only in a signature. Provenance: closed Q56/Q57 and `next_core_tasks.md`; these accepted clarifications supersede the old implicit model-cloning priority. No name/syntax exception.
+An unknown actual in an existing head's call is an error, not a declaration. When both `C` and nested `makeA` are unknown, `C: makeA()` defines that empty nested Structure. A known nested callable remains an ordinary operator in the retained body; defining the outer Structure executes none of its operators. There is no separate saved-call object. An explicit reference binding is assigned; dereference it to invoke its referent. Nonprimitive `(A: b)` and `(@: A b)` are synonymous descriptions only in a signature. Provenance: closed Q56/Q57 and `next_core_tasks.md`; these accepted clarifications supersede the old implicit model-cloning priority. No name/syntax exception.
 
 ## Dependency order (ending)
 
@@ -375,7 +375,7 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 - **implementation (files/functions):** UNKNOWN exact symbol set unless noted in c-raw-door / nearby articles — label for audit
 - **witnesses:** UNKNOWN or see next_core_tasks fixture lists
 - **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
-- **positive behavior:** Unknown `A: b` defines `A` with body `b`, not a reference named `b`. Unknown `C: makeA()` defines `C` containing the named empty Structure `makeA`, with neither an immediate nor a saved call. Empty `f()` and `f: ()` define an empty named Structure when `f` is unknown; an existing Structure `f` is called.
+- **positive behavior:** Unknown `A: b` defines `A` with body `b`, not a reference named `b`. With both heads unknown, `C: makeA()` defines `C` with the empty named Structure `makeA`. With known callable `put`, `Batch: (put: 7)` instead retains the ordinary application in its body without executing it on definition (closed [Q58](LMX_blog/q/q58.md)). Empty `f()` and `f: ()` define an empty named Structure when `f` is unknown; an existing Structure `f` is called.
 - **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
 
 ## `merge-construction`

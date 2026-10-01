@@ -233,7 +233,7 @@ The following fixtures all have a masking void-root return, but their intended r
 
 Examples include `idle: 1`, `Nope: x`, `arg: 7`, and absent `buf(3)`. Do not repair these by pinning the observed void-return diagnostic or by preserving a withdrawn unknown-head refusal as a language rule.
 
-Re-author the intended visibility/form-equivalence/no-special-receiver witnesses in the declaration/resolution slice, respecting [Q57](../LMX_blog/q/q57.md). The known nested-head definition/body-role discriminator in [Q58](../LMX_blog/q/current/q58.md) is unresolved at the time of this inventory; this note chooses no answer. Not every unknown-head row itself requires a new author decision, but none belongs to a mechanical tail-only migration.
+Re-author the intended visibility/form-equivalence/no-special-receiver witnesses in the declaration/resolution slice, respecting [Q57](../LMX_blog/q/q57.md). The later answer [Q58](../LMX_blog/q/q58.md) preserves a known nested callable's ordinary operator in the complete tree without executing the outer definition; no separate saved-call object is introduced. Not every unknown-head row itself requires a new author decision, but none belongs to a mechanical tail-only migration.
 
 `unit_next_message_word_refused` can eventually become a positive ordinary-binding witness that `nextMessage` is not reserved. Failure of its present absent-head form is not proof of that property.
 

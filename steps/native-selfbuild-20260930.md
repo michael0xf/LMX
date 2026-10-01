@@ -515,7 +515,7 @@ dereference. The runtime's DEREF/place descriptor branch already returns the
 held descriptor, but source lowering cannot supply that semantic contract.
 The ordinary call-head paths likewise do not yet invoke an explicit
 reference's referent. This is distinct from the already recorded `ref\field`
-path gap and from open Q58.
+path gap and from the separate definition-resolution work clarified by Q58.
 
 Close this through the same semantic-contract/category projection as Array
 formals and general receiving/call resolution. A graph descriptor remains a
@@ -1372,14 +1372,17 @@ green runtime run. Aggregate staged-source SHA256:
 
 ## Definition/body role clarification
 
-[Q58](../LMX_blog/q/current/q58.md) asks about an already known ordinary
-callable nested in a new named Structure. The earlier audit suggestion that
-a generic `definition contents` label alone resolves Q57 was insufficient:
-the rule deriving that role is the missing fact. Ignoring outer bindings
-would also destroy Q52 hidden-input assignment and ordinary saved calls.
-Do not decide using empty/nonempty tails, argument count or surface syntax.
-The author has been asked; no speculative resolver replacement is authorized
-by this note. Independent gates and repairs with settled semantics continue.
+[Q58](../LMX_blog/q/q58.md) was answered on 2026-10-01. After a callable put
+is defined, `Batch: (put: 7)` retains the ordinary application in its complete
+structural body; the definition executes nothing. No separate saved-call
+object, closure wrapper or data graph is created. Resolve each nested head
+in its ordinary lexical/receiving context; neither tail emptiness, argument
+count nor surface form changes that rule. Q57's empty nested makeA example
+must not be generalized to redefine a known callable. Preserve the full
+binary tree, comment text and the nonexecuting address-to-name information.
+The ordinary native word selects compiled execution or walking; missing
+native code alone is not evidence that the preserved L3 body cannot execute.
+The current ABI gate continues before the bounded resolver implementation.
 
 ## Pending regression migrations and runtime defects
 
@@ -1690,7 +1693,7 @@ results and nonzero success. A direct-symbol mutant must fail independently
 of a mutant breaking native-null walker dispatch. Preserve admission,
 pre-call publication, throwing conversion and pointer/formal controls. This
 is the next bounded dispatch repair, not an expansion of the current ABI
-writer's active source slice and not an answer to Q58.
+writer's active source slice; Q58's later answer does not merge these implementation tasks.
 
 <a id="known-structure-call-classification"></a>
 ### Remove known-head construction fallbacks through common call classification
@@ -1702,7 +1705,7 @@ absence selects construction in collection/checking and native/walker emission.
 That contradicts the accepted [construction rule](../docs/LMX_semantics.en.md#construction):
 a known ordinary Structure head is a call, and an invalid/unknown actual never
 turns the call into declaration or merge. This known-head correction does not
-decide Q58's unknown/nested-head definition boundary.
+implement the separate unknown/nested-head resolution clarified by Q58.
 
 Use one resolved executable-call classification in collection, scan, checking
 and both emissions. Extend the existing `l2_bind_node`/`l2_bind_actuals` route
@@ -1745,7 +1748,7 @@ Migrate tests by their actual subject, never by text replacement:
   witnesses only after [own-reference reception](#own-reference-cell-reception)
   works. Replacing an alias with merge would destroy the tested identity.
 - Primitive copy tests and `(T: b)` / `(@: T b)` signature tests remain unchanged.
-  Q58-dependent unknown/nested-head tests stay outside this bounded repair.
+  Unknown/nested-head tests clarified by Q58 stay outside this bounded repair.
 
 Acceptance preserves nullary body effects, explicit merge copy and explicit
 reference identity/nonexecution. A known head plus an unknown actual creates

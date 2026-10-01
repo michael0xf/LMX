@@ -512,7 +512,7 @@ Source: §4.10.
 
 Outside a shielded literal, `#` starts a comment through physical line end; preceding code is parsed normally. `%` at the start of an item after its indentation zone disables that item and its vertical body. Space after `%` is optional; the marker does not affect the level. P0 retains an inactive placeholder rather than the body's ordinary subtree. Lightweight validation still checks levels, admitted closers, balanced bounded forms, and literal closure. Ordinary semantic processing and definition registration are not performed for the disabled body.
 
-A raw file-comment fence is a column-0 line of 3–80 `*` characters with only optional trailing spaces/tabs. Its closing fence must have the same length. Interior lines are ignored completely, including malformed syntax; levels and closers are not checked. Fences do not nest; a different-length run is content. A missing closing fence is a file error. A title or `#` comment cannot be added to such a fence.
+A raw file-comment fence is a column-0 line of 3–80 `*` characters with only optional trailing spaces/tabs. Its closing fence must have the same length. Interior lines are not parsed as code, including malformed syntax; levels and closers are not checked. Ignoring a comment during parsing does not discard its text from the retained representation; a comment is not an executable operator. Fences do not nest; a different-length run is content. A missing closing fence is a file error. A title or `#` comment cannot be added to such a fence.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 4016–4017.
 

@@ -288,7 +288,10 @@ an unqualified path selects the last occurrence (`[lastIndex]`); `merge`
 creates no repeats, it overrides the model's slot in place. A current translator path can still
 collapse repeated same-name fields into one own slot and does not completely
 lower the selector. This is an [open core task](next_core_tasks.md),
-not a license to add a second runtime name table or journal.
+not a license to add a second semantic binding table or journal. A diagnostic
+address-to-name table is compatible with physical occurrence identity and
+does not participate in execution. The binary source representation retains
+comment text; comments are not executable operators.
 
 An activation-local variable has a stable physical cell for its activation.
 Taking its L2 address does not create a graph field. A declared value, by
@@ -327,9 +330,14 @@ or declaration. Thus existing `Model: fresh` is a call of `Model`, and an
 unknown actual `fresh` is a call error, not an instruction to clone `Model`.
 
 An unknown `A` in `A: b` defines Structure `A`; it does not declare an empty
-typed reference named `b` and does not run `b`. With unknown `C`,
-`C: makeA()` defines `C` containing the named empty Structure `makeA`:
-there is neither an immediate nor a saved call of `makeA` in this definition.
+typed reference named `b` and does not run `b`. If both `C` and the nested
+head `makeA` are unknown, `C: makeA()` defines `C` with the named empty
+Structure `makeA`. A known nested callable remains an ordinary application
+in the same complete tree: after defining `fn: put (int: n) int`,
+`Batch: (put: 7)` retains that body without executing it on definition.
+There is no separate saved-call value, closure wrapper or second graph.
+When Batch executes, its ordinary native word selects native code or the
+walker over the retained body; head resolution is unchanged by that choice.
 The same rules apply to the equivalent short, parenthesized and block forms.
 A primitive declaration names its receiver, such as `int: i`; an unknown
 ordinary head does not acquire a primitive variable type from a literal body.

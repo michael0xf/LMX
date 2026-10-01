@@ -5,7 +5,7 @@ Status: read-only source audit and proposed implementation, 2026-09-30. This not
 <a id="scope-evidence"></a>
 ## Scope, accepted norm, and evidence
 
-The narrow problem is selecting the value transmitted by an actual argument after its binding and receiving contract have been resolved. It is not the unresolved definition-content/head-resolution question, and it does not change declarations, assignment, callable rebinding, or implicit construction.
+The narrow problem is selecting the value transmitted by an actual argument after its binding and receiving contract have been resolved. It is separate from the definition-content/head-resolution implementation clarified by the answered [Q58](../LMX_blog/q/q58.md), and it does not change declarations, assignment, callable rebinding, or implicit construction.
 
 Accepted normative sources:
 

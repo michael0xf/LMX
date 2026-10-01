@@ -943,7 +943,7 @@ A foreign handle requires a checked high-level wrapper and explicit resource and
 
 @@ construction | Построение значений | Value construction | 9.1–9.2; 19.20
 [RU]
-Исходная запись строит полный граф Structure: значения, объявления и исполняемые выражения остаются в том же графе. Построить описание тела не означает исполнить это тело. Именованная Structure не исполняется при объявлении; безымянное тело в позиции исполнения выполняется по контракту принимающего выражения. Не создаются отдельный граф данных, скрытая процедура-обёртка или постоянный вспомогательный контекст. Лексический родитель определяется местом объявления; у корня independent он отсутствует (parent = 0).
+Исходная запись строит полный граф Structure: значения, объявления и исполняемые выражения остаются в том же графе. Построить описание тела не означает исполнить это тело. Именованная Structure не исполняется при объявлении; безымянное тело в позиции исполнения выполняется по контракту принимающего выражения. Не создаются отдельный граф данных, скрытая процедура-обёртка или постоянный вспомогательный контекст. Лексический родитель определяется местом объявления; у корня independent он отсутствует (parent = 0). Бинарное представление сохраняет текст комментариев; имена доступны через таблицу, описанную в [правилах имён](#fields). Комментарии и таблица имён не заменяют разрешённые ссылки и не участвуют в диспетчеризации.
 
 ### Разрешение головы и роль хвоста
 
@@ -951,7 +951,19 @@ A foreign handle requires a checked high-level wrapper and explicit resource and
 
 Неизвестное имя аргумента не превращает существующую Structure-голову в ресивер объявления по модели. При существующем A запись A: b в исполняемом теле вызывает A; неизвестный фактический b не объявляется и не клонируется. Неявного merge(A, empty) здесь нет. Ресивер примитивного типа int, напротив, объявляет по своему контракту: int: i 5 передаёт ему имя i и значение 5. Произвольная вложенность ресиверов не означает равенства цепочки применений списку аргументов; каждую вложенную форму потребляет её принимающее выражение.
 
-При неизвестном C запись C: makeA() объявляет C, в которую входит именованная пустая Structure makeA. Здесь не вычисляется результат makeA и не сохраняется вызов makeA для последующего исполнения. Скобки не являются признаком вызова. Записанное содержимое определения не следует заранее выполнять как выражение-инициализатор только из-за его внешнего сходства с вызовом.
+Разрешение вложенной головы следует тем же правилам в её лексическом и принимающем контексте. Неизвестная вложенная голова определяет Structure; известная callable-голова задаёт обычное применение в том же дереве. Определение внешней Structure не исполняет вложенные операторы и не превращает известные имена в новые определения. Пустота, число аргументов и скобочная, короткая или блочная запись не меняют этого правила.
+
+Если put уже определён как callable, следующее определение Batch сохраняет структурное тело `(put: 7)`, не исполняя его:
+
+```text
+fn: put (int: n) int
+return: n
+Batch: (put: 7)
+```
+
+Это обычный оператор в полном бинарном дереве, не отдельное значение «сохранённый вызов», скрытое замыкание или второй граф. При исполнении Batch достижение оператора put подчиняется обычному вызову. Наличие нативной реализации Batch выбирает её, отсутствие — обход сохранённого тела в допустимом профиле; само отсутствие нативной реализации не делает дерево потерянным или неисполняемым.
+
+Если C и вложенное имя makeA неизвестны, C: makeA() объявляет C с именованной пустой Structure makeA. Скобки сами по себе не являются признаком вызова; определение не вычисляет результат makeA.
 
 ```text
 C: makeA()
@@ -997,7 +1009,7 @@ end: result
 
 Здесь result\[0]count даёт 3, result\[1]count даёт 4. Именование не добавляет отдельный класс или особую раскладку. Ссылочное поле может хранить уже существующий объект без копирования и без смены его лексического родителя. Правила копирования, переназначения внутренних ссылок и сохранения нативной реализации находятся в [композиции](#composition).
 [EN]
-Source notation constructs the complete Structure graph: values, declarations and executable expressions remain in the same graph. Constructing a body description does not execute that body. A named Structure is not executed on declaration; an anonymous body in execution position runs under its receiving expression's contract. No separate data graph, hidden wrapper procedure or persistent auxiliary context is created. The declaration site determines the lexical parent; an independent root has none (parent = 0).
+Source notation constructs the complete Structure graph: values, declarations and executable expressions remain in the same graph. Constructing a body description does not execute that body. A named Structure is not executed on declaration; an anonymous body in execution position runs under its receiving expression's contract. No separate data graph, hidden wrapper procedure or persistent auxiliary context is created. The declaration site determines the lexical parent; an independent root has none (parent = 0). The binary representation retains comment text; names remain available through the table described under [name rules](#fields). Comments and the name table do not replace resolved references or participate in dispatch.
 
 ### Head resolution and the role of the tail
 
@@ -1005,7 +1017,19 @@ Block, short and parenthesized spellings express one application, “the head co
 
 An unknown argument name does not turn an existing Structure head into a model-declaration receiver. With existing A, A: b in an executable body invokes A; an unknown actual b is neither declared nor cloned. There is no implicit merge(A, empty). A primitive type receiver such as int instead declares under its own contract: int: i 5 supplies the name i and value 5. Arbitrary receiver nesting does not equate an application chain with an argument list; each nested form is consumed by its receiving expression.
 
-With unknown C, C: makeA() declares C containing a named empty Structure makeA. It neither evaluates a makeA result nor stores a makeA call for later execution. Parentheses are not a call marker. The written contents of a definition must not be pre-executed as an initializer merely because they resemble a call.
+A nested head follows the same resolution rules in its lexical and receiving context. An unknown nested head defines a Structure; a known callable head denotes an ordinary application in that same tree. Defining the containing Structure executes none of its nested operators and does not turn known names into new definitions. Emptiness, argument count, and parenthesized, short or block spelling do not change this rule.
+
+If put is already defined as callable, the following definition of Batch retains the structural body `(put: 7)` without executing it:
+
+```text
+fn: put (int: n) int
+return: n
+Batch: (put: 7)
+```
+
+This is an ordinary operator in the complete binary tree, not a separate “saved call” value, hidden closure or second graph. When execution of Batch reaches the put operator, the ordinary call rules apply. An available native implementation of Batch is selected; otherwise its retained body is walked in the admissible profile. Absence of a native implementation alone does not mean the tree is lost or unexecutable.
+
+If both C and the nested name makeA are unknown, C: makeA() declares C with a named empty Structure makeA. Parentheses alone are not a call marker; the definition does not compute a makeA result.
 
 ```text
 C: makeA()

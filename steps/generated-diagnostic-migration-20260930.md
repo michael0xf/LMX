@@ -1,13 +1,18 @@
 # Generated diagnostic migration: frozen 43-row inventory
 
-Date: 2026-09-30. Status: section A's fourteen fixture/expectation migrations are verified WIP (thirteen pass, one production defect remains); sections B–D remain a read-only worklist. The frozen inventory below records the original failure, not the current result.
+Date: 2026-09-30; current reconciliation updated 2026-10-01. Section A's
+thirteen passing migrations have landed; its common callable-actual defect
+remains. The frozen 43-row inventory below records original failures, not
+current results. The current pending set is tracked separately first.
 
 <a id="full02-dependency-map"></a>
-## Current dependency map: released 71c4743, 2026-10-01
+## Current dependency map: released e70689c, 2026-10-01
 
-Read-only reconciliation of the **52** retained failures in
-`build/l2_harness/portable_reference_typed_eval_full_20261001_02` partitions
-them as **15 + 10 + 8 + 7 + 12** below. This newer set is not the historical
+Read-only reconciliation of the **48** retained failures in
+`build/l2_harness/site_visibility_full_20261001_03` partitions
+them as **15 + 10 + 7 + 6 + 10** below. The preceding `71c4743` gate had
+52 failures (15 + 10 + 8 + 7 + 12); four fixes are accounted for below.
+This current set is not the historical
 43-row diagnostic inventory, and an obsolete expectation is not permission
 to weaken a witness. No extra translator/build run was used for this map.
 
@@ -22,22 +27,22 @@ to weaken a witness. No extra translator/build run was used for this map.
    against ordinary construction/resolution. `unit_s2_vis_structure_below_refused`
    also uses withdrawn `Model: fresh` construction: its name does not make
    it evidence of the active source-site visibility defect.
-3. **8 graph/copy observers.** `unit_make_adder` and
+3. **7 graph/copy observers.** `unit_make_adder` and
    `unit_walk_make_adder_native_note` require actual capture/copy identity
    and execution eligibility, not a renamed AT or diagnostic pin. The other
-   six (`unit_a3_capture_direct_vs_copy`, `unit_walk_struct_formal`,
+   five (`unit_walk_struct_formal`,
    `unit_root_model_field`, `unit_colon_method_lexical_model`,
    `unit_field_path_unit_colon`, `unit_matrix_callable_struct_identity`)
    require explicit merge setup and relational graph observers as planned
    in [the implementation note](native-selfbuild-20260930.md).
-4. **7 receiving/semantic gaps.** `unit_value_call_sub_refused` remains
-   the common callable-actual reference projection defect. Section D's six
-   cases retain their specific dependencies: pre-layout Message/Thread
-   admission; whole capture; nested correspondence; nonprimitive formal
+4. **6 receiving/semantic gaps.** `unit_value_call_sub_refused` remains
+   the common callable-actual reference projection defect. Five of section D's
+   cases retain their specific dependencies: whole capture; nested
+   correspondence; nonprimitive formal
    synonym/known-Structure call; and two terminal nonprimitive path/rebinding
    cases. Repair obsolete construction before certifying the intended
    positive and negative properties. Do not bless a diagnostic-only change.
-5. **12 other rows**, requiring the distinct treatment below.
+5. **10 other rows**, requiring the distinct treatment below.
 
 | Remaining fixture | Next dependency and acceptance |
 | --- | --- |
@@ -51,12 +56,19 @@ to weaken a witness. No extra translator/build run was used for this map.
 | `unit_addr_entry_name_collision` | Replace withdrawn `Model: fresh` with merge; retain nonzero runtime proof of compiler-name collision handling. |
 | `unit_ptr_grow` | Keep its existing `Entry == 7`; observe pointer actual/null, size and allocation/runtime contract. The stale refusal does not establish a resolver defect. |
 | `unit_native_activation` | Replace zero success with seven; retain Array buffer and `sizeof == 32` failure branch. |
-| `unit_root_ref_other_refused`, `unit_ref_formal_rebind_other_refused` | Current static admission refusal is plausible, but both setups use withdrawn implicit construction. First use explicit merge; then prove incompatible rejection and compatible control. |
 
-None of these 52 rows directly tests the current source-site selection
+The four released fixes are `unit_send_ref_root_fail` (the actual source
+Message/Thread refusal), `unit_a3_capture_direct_vs_copy` (relational observer
+with native runtime), and `unit_root_ref_other_refused` /
+`unit_ref_formal_rebind_other_refused` (reached runtime admission failure with
+the original status contract). No fixture was removed or excused. Remaining
+legacy implicit-construction setup is compatibility coverage, not restored
+language semantics. [Exact release evidence and limits](native-selfbuild-20260930.md#site-visibility-release).
+
+None of these 48 remaining rows directly tests the released source-site selection
 repair. Dedicated before/after, repeated-declaration and initializer-hidden
 call witnesses are required. `unit_asgn_fallback` was already migrated and
-is green outside this failure set. The full 52 remain failures until the
+is green outside this failure set. These 48 remain failures until the
 appropriate owner executes each repaired witness; this map changes no
 gate result or expected diagnostic.
 

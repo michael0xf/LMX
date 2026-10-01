@@ -75,6 +75,7 @@ Walker имеет `l2_rw_write` / `l2_rw_own` и Structure-capable working rows
 жизни результата. Корень и метод используют обычные source-declared own
 места; запрета хранить результат метода в собственном графе нет.
 
+<a id="site-binding-category-regressions"></a>
 ### SITE-BINDING-CATEGORY-REGRESSIONS — 2026-10-01, Codex, IN WORK `SITE-AWARE-VISIBILITY-20261001`
 
 **Текущий блокирующий свидетель — потеря происхождения раскладки.**

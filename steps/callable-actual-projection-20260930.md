@@ -230,6 +230,56 @@ Their existence is not permission to restore a duplicate source-pointer
 path or to make this separate machine-ABI debt a prerequisite for every
 portable hidden reference.
 
+<a id="admission-layout-provenance"></a>
+#### Required admission-layout provenance repair
+
+The measured two-origin collision is recorded under
+[SITE-BINDING-CATEGORY-REGRESSIONS](defects.md#site-binding-category-regressions).
+Equal projections into a required model do not identify the original
+layout. Native D-105 and walked ADMIT_AS must not reconstruct it by choosing
+the first or last equal source map.
+
+The approved implementation boundary is the existing `LmxImplEntry`, not
+`Lmx`, Array, a second graph or a new registry. A nullable weak `layout`
+witness records the compiler-known physical schema of the admitted value;
+it is independent of the required model and the map into that model.
+Unknown remains unknown. An identity map does not establish `layout=req`.
+The witness is published only with successful admission at the reached
+receiving operation, never by anticipating a later consumer's admission.
+
+Resolve the candidate's provenance once before evaluation, using the same
+source-site binding and value projection as its type and address. A direct
+named/local Structure has its actual schema. A pointer binding, formal or
+returned value obtains evidence from its existing correspondence; its
+declared receiving model is not evidence of its original layout. Ordinary
+reference initialization, reassignment, return and D-105 call reception
+must use this same projection in native and walked lowering. Reassignment
+records the new candidate before storing it; a later read cannot recover
+its origin by rescanning the original initializer.
+
+Preserve these boundaries together:
+
+- Null needs no entry. Failure publishes neither an entry nor provenance
+  and does not store the candidate or dirty the destination.
+- A cached same-map success preserves a known layout. Unknown-to-known
+  enrichment needs genuine producer evidence, not the current requirement
+  or a map-shape inference.
+- A fresh capture is in its required model's physical slots, with the
+  existing holes semantics; it does not retain the original source layout.
+- Graph copy/merge produces a fresh value and does not inherit the source's
+  admission entries. A known copy producer may supply its actual resulting
+  schema; missing whole-merge projection remains the separate recorded debt.
+- The witness is weak, like the existing value/model/frame links. Pruning
+  must remove stale witness references; attach and realloc preserve the
+  complete entry. No temporary activation pointer is retained.
+
+Acceptance includes both colliding layouts, typed-reference initialization
+and rebinding from another model, forwarding and returned inputs, actual
+walked bodies, null/unknown, candidate-once, failure-no-store, capture holes,
+fresh copies and prune/attach lifetimes. All registration producers and
+manual selftest constructors migrate together; no legacy-format fallback.
+This section is a bounded repair plan, not completed runtime evidence.
+
 <a id="witnesses"></a>
 ## Minimal witness matrix: pending implementation and execution
 

@@ -1464,6 +1464,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_path_call_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # K02 witness (next_core_tasks_v2.md K02, first bullet): `@: A p B` binds a reference whose
+    # declared model is A and whose candidate is B; a merge over p must project the ACTUAL
+    # operand's fields (B's pad and x), so `R\pad` resolves and C's later x lands in the x slot.
+    [pscustomobject]@{ Name = 'unit_merge_actual_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_live_source.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '0', 'size', '9', 'merge_fresh', '1', '0', '0', '0', 'merge_fresh', '1', '1', '0', '1');
         Absent = @('merge result check'); Debt = @() },

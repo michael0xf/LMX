@@ -1,0 +1,33 @@
+# K02 witness (next_core_tasks_v2.md K02, first bullet): a merge operand is an explicit reference
+# whose DECLARED model is A while its referent is a B.  The merge must project the ACTUAL
+# operand's fields -- B's pad and x -- not the declared A's.  C's later x goes INTO the model's
+# x slot (merge makes no repeated names).  So pad = 9 and x = 3, and a bare `R\x` is C's value.
+# Success is 7.
+A:
+    size_t: x 1U
+end: A
+
+B:
+    size_t: pad 9U
+    size_t: x 2U
+end: B
+
+C:
+    size_t: x 3U
+end: C
+
+fn: m () int
+    @: A p B
+    R: merge: p C
+    size_t: pad
+    size_t: x
+    pad: R\pad
+    x: R\x
+    if: pad != 9U
+        return: 81
+    if: x != 3U
+        return: 82
+return: 7
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

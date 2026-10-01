@@ -825,6 +825,7 @@ prototype:
     fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out) int
     fn: l2_rw_is_letter (int: oi) int
     fn: l2_own_ref_decl (const: @(LmP0Node stmt); int: mi) int
+    fn: l2_own_ref_candidate (int: own) int
     fn: l2_root_ref_ns (int: mi; const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
     fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @: int out) int
@@ -32761,6 +32762,33 @@ fn: l2_throws_close () int
     ---
 return: 0
 
+# K02: the model the value of this reference binding actually has, when the declaration names
+# one -- `@: A p B` is the `@` frame's body [declared model, name, candidate], so the third
+# atom is the candidate's model.  -1 when the binding names no candidate or names something
+# other than a unit Structure: the declared model then stands.
+fn: l2_own_ref_candidate (int: own) int
+    @: LmP0Node stmt
+    @: LmP0Frame fr
+    @: LmP0Field a0
+    @: LmP0Field a1
+    @: LmP0Field a2
+    if: own < 0 || own >= l2_own_n
+        return: 0 - 1
+    stmt: l2_own_decl[own]
+    if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+        return: 0 - 1
+    fr: stmt\as\frame
+    a0: l2_next_active(fr\body\first_field)
+    if: a0 = 0
+        return: 0 - 1
+    a1: l2_next_active(a0\next)
+    if: a1 = 0
+        return: 0 - 1
+    a2: l2_next_active(a1\next)
+    if: a2 = 0 || a2\value = 0 || a2\value\kind != c.LM_P0_NODE_ATOM || a2\value\as = 0 || a2\value\as\atom = 0
+        return: 0 - 1
+    return: l2_ns_find(a2\value\as\atom)
+
 # Build the result-slot map for one merge statement by the author's rule (plan §4): the
 # model's fields, then each later operand's and the body's -- INTO the placed slot of the
 # same name, or a slot of their own. Runs in the PRE-SCAN, because a method
@@ -32782,6 +32810,7 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     int: bj 0
     int: pairs 0
     int: q 0
+    int: cand 0 - 1
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: 0
     fr: mf\as\frame
@@ -32809,6 +32838,12 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         sl: l2_mres_of_own(own)
         if: own >= 0
             ni: l2_own_nsty_get(own)
+            # K02: an explicit reference binding contributes the model of the value it
+            # actually holds; the declared model is only the fallback.
+            cand: l2_own_ref_candidate(own)
+            if: cand >= 0
+                ni: cand
+            ---
         else:
             oi: l2_ebr_find(last\value\as\atom)
             ni: l2_ns_find(last\value\as\atom)

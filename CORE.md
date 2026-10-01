@@ -390,8 +390,10 @@ There is no form-specific call or discard branch: the existing typed generated
 `l2_tN` is the destination for an unused non-void result and is dead after the
 complete expression. This describes the required route, not a claim that the
 current translator already lowers every case.
-The current P0 goldens and native/interpreter CALL-only unwrapping conflict
-with this rule; see `next_parser_fix.md`. Structural declaration such as
+Unequal P0 goldens and CALL-only unwrapping were historical defects described
+in `next_parser_fix.md`; normalization was landed in the checkpoints recorded
+in `next_core_tasks.md` §2. This does not establish complete later head resolution.
+Structural declaration such as
 `mystruct: ()` must use the same normalized body as `mystruct()` and the
 general declaration rule, not recover a discarded wrapper.
 
@@ -402,11 +404,32 @@ representation, **not** that a value satisfies a receiving expression. The
 complete intended mechanism combines analytical `uses(Consumer, bVar)` with
 runtime validation of the receiving expression and directed primitive
 conversions. The current
-[`lmx_implements`](dev/l2src_sandbox/lmx_implements.h.lm1) exposes a coarse
-physical compatibility path; its runtime walk is not yet the complete
-Consumer/uses model. The prior project's full conversion table and L2 table
-construction mechanism are to be ported only after the urgent kernel fixes
-and their checkpoint, as [planned](next_core_tasks.md).
+[`lmx_implements`](dev/l2src_sandbox/lmx_implements.h.lm1) has both physical
+compatibility operations and a Consumer-driven structural walk; their
+existence does not prove complete compiler `uses`/capture closure or every
+primitive conversion. The prior project's full conversion table and L2 table
+construction mechanism remain governed by [the implementation plan](next_core_tasks.md).
+
+At source checkpoint `e70689c`, `LmxArena.impl` stores ordinary
+`LmxImplEntry` correspondences: weak `value`/`req`/optional `frame`, a
+borrowed static map or frame offset/length, capture-hole information, and
+an optional `void *layout` token. The token is an opaque module-lifetime
+identity compared by address, never dereferenced or classified as a graph
+descriptor. It is not a language type or a registry attached to every
+Structure. A missing map means positional correspondence, not proof that
+the value originated from the receiving model. Equal maps through one
+model cannot determine the original layout for a different model.
+
+Admission checks the current receiving requirement before registering
+correspondence or storing the candidate. A cached map is not cached
+permission for all Consumers. A successful genuine producer may establish
+known layout; a later read of that producer's mutable binding may not
+stamp a replacement value with it. Copies do not inherit proof records.
+GC pruning and arena transfer preserve the existing entry lifecycle; the
+opaque module token is not another GC root. Native and walked admission
+use the same correspondence rules, but local constructor execution and
+transitive capture analysis are not thereby complete. Exact tests and
+remaining boundaries are in [the release record](steps/native-selfbuild-20260930.md#site-visibility-release).
 
 The `c.*` prefix is one raw door to C. A token spelled `c.name` is a raw C
 name; other arguments in the same construct remain ordinary L2 expressions.
@@ -613,7 +636,7 @@ an implementation's current behavior, an accepted rule, and a planned fix.
 | P0 argument-container normal form | The unequal shapes and CALL-only unwrapping were historical defects; landed normalization evidence is recorded in `next_core_tasks.md` §2. | Preserve the common normalized tree for every head; parser equality does not itself prove correct head resolution or execution. |
 | General application and declaration | Legacy `Model: fresh` / `A: b c` recognizers and stale tests still compete with current resolution. | Unknown head defines the written Structure without execution; known Structure calls; existing primitive or explicit non-callable reference bindings assign. Remove implicit cloning and use the shared resolved act; see plan §3 and Q56/Q57. |
 | Repeated fields, publication and addresses | Verify `[N]field` and own-value publication against the current address contract: `@` selects actual typed graph data or the descriptor, not an activation working copy. Address-taking alone is not a dirty write. | One occurrence-to-physical-path algorithm shared by native and interpreter; L2 §18.2–18.3 controls the addressed storage category. |
-| Admission | Coarse address compatibility and some fast paths are not the complete Consumer/uses plus runtime-test model or full directed conversion table. | Urgent kernel fixes first; then bounded port from the prior implementation. |
+| Admission | Current-Consumer checking and source-layout correspondence landed in `e70689c`; complete compiler uses/capture closure and the full directed conversion table are not established by that slice. | Preserve reached admission and physical correspondence while closing the separately recorded projection/conversion gaps. |
 | Raw C door | Raw-C type provenance and legacy generated/test assumptions remain cleanup debt; `sizeof:` already has native lowering with incomplete operand support. | One raw `c.*` door; keep the language receiver separate and resolve its operands through the shared type/value contracts. |
 | Call ABI and execution selection | Typed value/presence transport landed in `71c4743`; direct generated-symbol calls still bypass the selected occurrence's native word. | Preserve observable results and failure status while moving those calls to the common dispatcher; see the [bounded dispatch repair](steps/native-selfbuild-20260930.md#native-call-dispatch). |
 | Range/mail documentation | `LmxRange.owner` and current `LmxPost.inbox_capacity` are more specific than the corresponding brief specification descriptions. | Reconcile the paired L1/L2 specifications with the accepted ABI. |

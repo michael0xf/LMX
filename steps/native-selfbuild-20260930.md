@@ -1384,6 +1384,33 @@ The ordinary native word selects compiled execution or walking; missing
 native code alone is not evidence that the preserved L3 body cannot execute.
 The current ABI gate continues before the bounded resolver implementation.
 
+Read-only implementation recheck (2026-10-01), sandbox translator Git blob
+`e0f7028a943b90d9d4bebab1c5221bf38745b4d6`:
+
+- A root Batch with a known fn head already passes through `l2_ns_body_stmt`
+  and the original body retained by `l2_ns_proc_add`; `l2_bind_node` binds
+  the method. `unit_named_struct_exec_call` is a nearby native witness, not
+  an exact Q58 native/walker proof and not part of expanded02's 228 targets.
+- An unknown nested empty head is still missing from `l2_ns_decl_first` /
+  `l2_take_ns_body`. Method-local definitions have a separate
+  `l2_local_ns_shape` recognizer, and walker construction is refused.
+  The method-only check in `l2_ns_body_stmt` is not general resolution of a
+  known ordinary Structure head. Deleting the old `Model: fresh` recognizer
+  alone will not close these gaps.
+- `l2_ignored` / `l2_next_active` skip comment/disabled nodes; preservation
+  of comment text in emitted metadata is not established. Do not claim it
+  from the executable body tests.
+
+After common known-head call classification, consume the same resolved role
+recursively in root, named-body and method-body construction, checking and
+both emissions. Witness exact Batch/put with no definition-time effect and
+an attached application node; both-unknown C/makeA with an attached empty
+child and no call; repeat in method-local and nested named contexts; retain
+comments and diagnostic names without using either for dispatch. Native
+and actual walked execution must be distinguished. Mutants must expose
+known-head-to-definition, unknown-head-to-call, premature execution,
+dropped/detached children, and role changes based on context or punctuation.
+
 ## Pending regression migrations and runtime defects
 
 - Verified WIP negative-fixture batch: `entry_puts_after_return`,

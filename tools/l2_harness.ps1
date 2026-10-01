@@ -3787,8 +3787,18 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ref_formal_rebind_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_value_formal_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_value_formal_call_refused.lm2:12:5: more arguments than '; Absent = @(); Debt = @() },
+    # Both signature spellings of a nonprimitive formal, `(Model: v)` and `(@: Model v)`, are ONE reference transport
+    # (the book, "A signature is not executed"; next_core_tasks_v2.md K03; generated-diagnostic-migration-20260930.md
+    # D4): in the body v is a reference binding, and `v: w` is its rebinding after w's admission to Model -- the same
+    # operation for both spellings, the caller's Structure untouched.  Success is 7.  Formerly
+    # unit_value_formal_call_refused, which asserted that `(Model: v)` made v a callable value and `v: w` its refused
+    # call: the obsolete distinction between the spellings, withdrawn with the K03b slice.
+    [pscustomobject]@{ Name = 'unit_formal_spelling_rebind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # Its negative: the `(Model: v)` spelling rebound to an Other of another shape -- the admission refuses it, and the
+    # method's implicit throw `implements`, uncaught, stops R0 (the `@: Model v` sibling: unit_ref_formal_rebind_other_refused).
+    [pscustomobject]@{ Name = 'unit_formal_spelling_rebind_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');

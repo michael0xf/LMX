@@ -1,0 +1,46 @@
+# The two signature spellings of a nonprimitive formal, `(Model: v)` and `(@: Model v)`, are ONE reference transport
+# (the book, "A signature is not executed": for nonprimitive A, formals (A: b) and (@: A b) describe the same reference
+# transport with candidate admission to A; next_core_tasks_v2.md K03; steps/generated-diagnostic-migration-20260930.md
+# D4).  In the body v is therefore a reference binding whichever way the header spelled it, and `v: w` is the same
+# operation for both: v's rebinding to w after w's admission to Model -- not a call of v (a reference binding does not
+# auto-call its referent), and never a copy.  Reading through v afterwards reads w's cell; the caller's Structure is
+# untouched.  Success is 7.
+#
+# Formerly unit_value_formal_call_refused, which asserted the opposite: that `(Model: v)` made v a callable VALUE and
+# `v: w` its call, refused for the argument -- the obsolete distinction between the spellings.  Its refusal is now
+# unit_formal_spelling_rebind_other_refused: the SAME rebinding, refused by the admission, not by an arity check.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: byColon (Model: v) size_t
+    Model: w
+    w\value: 41U
+    v: w
+    return: v\value
+end: byColon
+
+fn: byAt (@: Model v) size_t
+    Model: w
+    w\value: 43U
+    v: w
+    return: v\value
+end: byAt
+
+fn: check () int
+    Model: mo
+    size_t: a
+    size_t: b
+    mo\value: 9U
+    a: byColon(mo)
+    if: a != 41U
+        return: 1
+    b: byAt(@mo)
+    if: b != 43U
+        return: 2
+    if: mo\value != 9U
+        return: 3
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

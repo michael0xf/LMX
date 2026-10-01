@@ -1,0 +1,32 @@
+# The `(Model: v)` spelling of a nonprimitive formal rebound to an Other of another shape (two ints, no size_t `value`
+# in its place): `v: o` is v's rebinding after o's admission to Model, exactly as for `(@: Model v)`
+# (unit_ref_formal_rebind_other_refused), and the admission refuses it -- the method's implicit throw `implements`,
+# uncaught, stops R0.  Were the store plain, the path through v would read the Other's cell (41) and the entry would
+# be 7.  The positive sibling: unit_formal_spelling_rebind.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: m (Model: v) int
+    Other: o
+    size_t: got 0U
+    int: out 0
+    o\p: 41
+    v: o
+    got: v\value
+    if: got = 41U
+        out: 7
+    return: out
+end: m
+
+fn: check () int
+    Model: mo
+return: m(mo)
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -170,3 +170,44 @@ receiving consumers that ask `l2_input_model` want a named namespace.  So the sl
 decision on the dynamic-input type space, which is what the design question to Codex
 (DS-CODEX-004) asks; until then the slice stays open and the witness is registered red-by-design
 in the row above.
+
+### DS-CODEX-004 — the reply (2026-10-01, received by fable continuing deepseek's queue)
+
+Codex answered through lmx_uds (read-only consultation, no code changed). The substance, for the
+K02c writer:
+
+1. **No new language decision and no invented named model.** A merge result is an ordinary
+   Structure value; passing it as a hidden input passes the ordinary Structure reference. A tagged
+   composed schema is permitted as TRANSLATOR METADATA only (dictionary v2 §10: absent, named and
+   tagged composed schema handles are compiler metadata; consumers assuming every schema is named
+   must be generalized). Do NOT store `l2_schema_merge(res)` in the existing `l2_dyn_add(..., ty)`
+   slot: its consumers read `ty` as a type code. Keep the transport type, the receiving requirement
+   and the known source schema/layout distinct; their representation is an implementation choice.
+2. **Resolve the value source first by the universal priority** (semantics §12 "A free name's
+   sources have this priority"; plan K02 bullet 3; dictionary §8): caller's nearest current local
+   binding → already inherited dynamic input → callee's permitted lexical fallback. In the witness
+   the caller's `copy` supplies 22; with no caller/inherited source the eligible lexical copy
+   supplies 1. The root `copy` is selected this way; the member `value` is then selected on THAT
+   Structure. One valid caller must not establish a universal source layout for every caller.
+3. **The seam is the shared source/input projection, not a merge-input route.** The
+   `l2_scan_ident` early return on `l2_mres_find` is not sufficient evidence of a local binding,
+   and deleting it alone is not the repair. `l2_own_schema` already returns named or tagged
+   composed metadata; `l2_input_schema` handles own keys but delegates to named-only
+   `l2_input_model`; `l2_hidden_model_source` loses composed information through `l2_input_model`.
+   Repair these consistently with downstream path/receiving consumers, native and walker. Keep the
+   source evidence attached to the selected input/call site; do not substitute the lexical
+   fallback's schema as every caller's actual layout.
+4. **K01 does not turn the hidden argument into an individual field target.** The transported
+   value stays the selected Structure reference; per-used-access targets are the address lowering
+   for paths into the candidate. A requested field is selected by NAME (with its occurrence index
+   if present) on the actual candidate; a cached map may implement that but adds no structural
+   equivalence requirement. Compiler schema handles must not escape as runtime graph pointers.
+5. **Sources and limits:** q52 (hidden-input mutation changes the activation's input, no field);
+   `LMX_blog/2026-09-27.md` "Свободное имя при вызове именованной Structure" (same rule for a nullary
+   named Structure); q24/q39/q44 do not mandate an integer encoding for dynamic-input schema
+   metadata. Do not ask the author to choose tag values or a model name.
+
+Suggested focused acceptance: caller-local override; forwarding through an intermediate caller
+with no local copy; lexical fallback when no dynamic source exists; a compatible candidate whose
+requested field sits at a different position; native and walker. For a genuinely new contradiction,
+send a minimal example back under DS-CODEX-004; otherwise no author decision is needed.

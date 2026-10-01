@@ -1552,6 +1552,33 @@ Read-only причина: `l2_slot_decl_ty` помечает `@: char p` код�
 | D-112 | 2026-09-28, Opus, замер границы вложенного пути (учёт REVIEW fa47449; `steps/d105-native.md` §5) | Вложенный путь от формала как всё значение `return:` метода с результатом-числом (`fn: rd (Outer: m) size_t` / `    return: m\in\x`) отказывается без места: «translation failed with no located diagnostic» — на `9e0cee2` и на срезе 2b одинаково; то же чтение в присваивание (`v: m\in\x`) переводится и исполняется, в выражении (`m\in\x + m\a`) — located-отказ «unresolved name». | Opus | FIXED. Причина: в позиции значения P0 даёт путь атомами (`m`, `\`, `in`, `\`, `x`), а выражение (`l2_emit_fields` → `l2_field_path_read`) читало один шаг — `m\in`, поле-Structure: проверка шага отвечала «не значение», и чтение возвращало 1 без слова. Путь глубже одного поля — одно значение: `l2_path_chain` собирает цепочку, `l2_path_chain_check` проверяет корень и лист общей прогулкой (`l2_path_kind`), `l2_path_text_read` читает (общий хвост с одношаговым чтением); через отмеченный формал — первый сегмент по записи (D-105). И инвариант класса (по fable_pc): отказ без диагностики — «internal: a refusal said nothing», выход 3 (верхний уровень транслятора; прежде — «translation failed with no located diagnostic», выход 1). Свидетели GATED: `unit_d112_nested_return` (5 + 5 через Outer и Other; до — отказ без места), `unit_d112_nested_leaf_refused` (15:13 «unknown field path segment»; до — «unresolved name»). Мутанты: чтение одним шагом (s2) — «internal: a refusal said nothing», выход 3; цепочка с глубины 3 (s3) — то же. Перепись класса: инструментированный l2trans (метка у каждого голого `return: 1`, 2161 место — большая часть «нет» предикатов) нашёл цепочку `l2_field_path_check` → `l2_emit_fields`; прогон корпуса (843 файла × 2 режима) — на `8cb4870` ровно два молчаливых отказа (этот свидетель, оба режима), после правки — ни одного. |
 | D-113 | 2026-09-28, Opus, замер границы вложенного пути (учёт REVIEW fa47449, строка — по fable_pc) | Вложенный путь от формала внутри выражения (`fn: rd (Outer: m) size_t` / `    return: m\in\x + m\a`) отказывается «unresolved name» (13:15) — а имя разрешимо: то же `m\in\x` в присваивании (`v: m\in\x`) переводится и исполняется. Сообщение называет не ту причину: либо форма «путь через поле-Structure формала в выражении» не поддержана и должна отказываться своими словами, либо это дефект разрешения путей в выражениях. Проба — скретчпад Opus `d105n/nested/read_expr_*.lm2`; на `9e0cee2` и на срезе 2b одинаково. | Opus | FIXED тем же механизмом, что D-112: проверка выражения (`l2_check_fields`) берёт путь глубже одного поля целиком (`l2_path_chain_check`), не первый шаг — лист-значение принимается, лист-не-поле — «unknown field path segment», лист-Structure — «a field path must end at a primitive field», на месте. Свидетель GATED — `unit_d113_nested_expr` (`m\in\x + m\a` через Outer и Other: 6 + 15; до — «unresolved name» 17:15). Мутант — проверка одним шагом (s1): снова «unresolved name». |
 
+<a id="unknown-nested-head-definition-internal"></a>
+### UNKNOWN-NESTED-HEAD-DEFINITION-INTERNAL — 2026-10-01, deepseek (проба), fable (подтверждено на HEAD `7f54dfb`), OPEN
+
+Форма приёмки K03 (`next_core_tasks_v2.md` §3; `L2_L3_CODING_INSTRUCTION.md` §3.3): `C: makeA()` при обоих
+неизвестных именах определяет C с пустой вложенной именованной Structure makeA. Транслятор вместо
+определения даёт внутреннюю ошибку — не диагностику языка:
+
+```text
+Known:
+    size_t: x 1U
+end: Known
+C: makeA()
+fn: main2 () int
+return: 7
+sendMessage: exit(exit_code: main2(); stdout: ""; stderr: "")
+return
+```
+
+`l2trans error: p6_def_nested_unknown.lm2:4:4: internal: an own declaration has no physical field` /
+`detail: frame=makeA` (`build/fable_k03b/src/p6_def_nested_unknown.lm2`, транслятор гейта
+`k03a_full_20261001_01`, байты `l2trans.lm1` = HEAD). Корневые `newthing()` и `Known()` без C тот же
+транслятор принимает. Место сообщения — `l2_layout_owns`: для own-строки `makeA` (собранной как
+объявление пустой Structure `name()`) `l2_own_mslot(oi) < 0` — у вхождения объявления нет физического
+поля в раскладке единицы. Почему вложенное в неизвестную голову C объявление попадает в own-строки
+единицы без слота — не исследовано. Это пункт K03 «unknown `C: makeA()` with both names unknown», не K03b;
+чинить общим разрешением головы в позиции определения, без ветки по форме скобок.
+
 <a id="capture-carries-the-ordinal-target"></a>
 ### CAPTURE-CARRIES-THE-ORDINAL-TARGET — 2026-10-01, deepseek, OPEN
 

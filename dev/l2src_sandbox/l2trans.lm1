@@ -9006,6 +9006,10 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_wait_add(1, mi, (cast: (@: void) stmt), n, 0, stmt, path)
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         return: 0
+    # A head holding a constructed named Structure (an own slot) is that Structure: `v: w` is its call, and an ordinary
+    # named Structure has no arguments (Q59) -- the arity refusal.  A formal is not: a nonprimitive formal is a
+    # reference binding whichever way its signature spells it, and `v: w` is its rebinding (l2_check_receiving_value;
+    # the admission at emission).
     if: l2_colon_is_graph_ty(target_ty) != 0 && l2_formal_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && l2_own_is_slot(l2_own_visible(mi, stmt\as\frame\head)) != 0
         return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
 return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, target_ty, l2_graph_nsty(mi, stmt\as\frame\head), stmt\as\frame\head, mi, path)
@@ -21160,9 +21164,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         # `T: value` -- a value, a Structure of fields, a name bound before -- with T an existing named Structure: T is
         # called with the value (book §9 after 55c1abc: a callable, an ordinary named Structure included, is called,
-        # never assigned).  A named Structure's call with an argument is not built yet: refused where it stands -- the
-        # implementation's status, not a rule of the language.  (`T()` is its nullary call, above; `T: fresh`, fresh
-        # bound nowhere before, declares fresh: l2_colon_decl_shape.)
+        # never assigned), and an ordinary named Structure has no arguments (Q59): the argument is the arity refusal
+        # of the resolved value, l2_struct_arity_error.  (`T()` is its nullary call, above; `T: fresh`, fresh bound
+        # nowhere before, declares fresh: l2_colon_decl_shape.)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
             return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
         # A bare colon frame whose head is not a call is an update only when
@@ -21173,9 +21177,11 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             return: l2_error(path, stmt, "assignment target must be a declared typed mutable value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_colon_check_assignment(stmt, mi, path) != 0
             return: 1
-        # A reference formal `@: T v` to a named Structure is rebound after the admission of its value to T, as a typed
-        # reference local is (the ml branch above): the emission's l2_emit_admit before the formal's store; the site puts
-        # the method on the throw channel.  Its declaration tells it from a value formal `T: v` (l2_formal_decl).
+        # A nonprimitive formal -- `(@: T v)` or `(T: v)`, ONE reference transport in a signature (the book, "A signature
+        # is not executed"; K03) -- is a reference binding in the body, rebound after the admission of its value to T, as
+        # a typed reference local is (the ml branch above): the emission's l2_emit_admit before the formal's store; the
+        # site puts the method on the throw channel.  The condition keys on the formal's model, the same for both
+        # spellings; `v: w` is not v's call (a reference binding does not auto-call its referent).
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && l2_formal_find(mi, stmt\as\frame\head) >= 0 && l2_input_model(mi, l2_formal_find(mi, stmt\as\frame\head)) >= 0 && l2_admit_site(mi) != 0
             return: 1
         if: l2_is_asgn(stmt) != 0
@@ -34246,8 +34252,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             field: l2_next_active(field\next)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
-        # A reference formal `@: T v` to a named Structure takes its value after the admission to T (the check marked the
-        # site), as a typed reference local does (l2_emit_loc_stmt).
+        # A nonprimitive formal -- `(@: T v)` or `(T: v)`, one reference transport -- takes its value after the admission
+        # to T (the check marked the site), as a typed reference local does (l2_emit_loc_stmt).
         if: oi < 0 && si < 0 && fi >= 0 && fi < l2_m_arity[mi] && l2_input_model(mi, fi) >= 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(l2_tok) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi < 0 && si < 0 && fi >= 0 && fi < l2_m_arity[mi] && l2_input_model(mi, fi) >= 0 && l2_emit_admit(mi, l2_input_model(mi, fi), l2_tok, ind) != 0

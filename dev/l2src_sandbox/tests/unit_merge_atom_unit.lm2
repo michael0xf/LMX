@@ -1,0 +1,18 @@
+# K03d: the book's spelling at the unit's root -- `copy: merge Model` declares the merge result at the
+# unit's top level, and `read` names the free `copy\value`.  By the general priority of a free name's
+# sources the method's hidden input is that result (K02c, MERGE-HIDDEN-INPUT-PROJECTION), so read
+# returns 1.  This is the shape steps/k03-head-roles-20261001.md recorded as blocking K03's last item
+# ("`w: merge Model` inside a method is still unresolved name"): before this slice a unit-level atom
+# tail was silently read as a NAMED STRUCTURE named copy, and its atoms never became a merge.
+# Success is 7.
+Model: (int: value 1)
+copy: merge Model
+fn: read () int
+return: copy\value
+
+int: result read()
+if: result != 1
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

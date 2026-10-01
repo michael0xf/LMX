@@ -1,0 +1,27 @@
+# K03d (next_core_tasks_v2.md K02 bullet 4; docs, "Явное копирование": `b: merge A C` -- the operands
+# are A and C, the outer b receives the result, and the destination name is not the first operand of
+# merge).  The receiver `merge` written as an ATOM with its operands after it is the book's own spelling
+# of one statement; the frame spelling `R: merge: Source` is the other surface form of the same
+# statement, and both settle into one form before any later pass.  This is the method-local twin of
+# unit_merge_live_source: the copy reads the CURRENT cells.  Before this slice the atom tail was read as
+# a Structure in a method's body (the atoms became statements: `unresolved name`, atom=merge).
+# Success is 7.
+Source:
+    size_t: x 1U
+    char: letter 'A'
+end: Source
+
+fn: probe () int
+    Source\x: 9U
+    Source\letter: 'B'
+    R: merge Source
+    if: R\x != 9U || R\letter != 'B'
+        return: 81
+    R\x: 12U
+    R\letter: 'C'
+    if: Source\x != 9U || Source\letter != 'B'
+        return: 82
+return: 7
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

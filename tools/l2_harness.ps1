@@ -2386,6 +2386,24 @@ $fixtures = @(
     # the call at translation (the source does not carry a field the Consumer reads; K01's used-edge check).
     [pscustomobject]@{ Name = 'unit_merge_hidden_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_hidden_refused.lm2:11:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # K03d (next_core_tasks_v2.md K02 bullet 4; docs, "Явное копирование": `b: merge A C` -- the operands are A
+    # and C, the outer b receives the result, the destination name is not a first operand).  The receiver `merge`
+    # written as an ATOM with its operands after it is the book's own spelling of one statement -- the same
+    # statement as `b: merge: A C`, settled into that one frame form in the tree before any later pass reads it
+    # (arity, mrs, native emission, walker), so both spellings emit the same L1.  A method-local result reading
+    # the CURRENT cells, a three-operand result whose later operand joins an appended slot, and a unit-level
+    # result a method reads as its hidden input (the shape K03b/K03c recorded as still "unresolved name merge").
+    [pscustomobject]@{ Name = 'unit_merge_atom_receiver.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_atom_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_atom_unit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # The same statement with the destination name ALREADY bound is an assignment of a merge value to an existing
+    # binding, not a declaration; it is refused by the same receiving-context path, with the same diagnostic at
+    # the same site as its frame-spelling twin `w: merge: Model`.  The message is that path's current one.
+    [pscustomobject]@{ Name = 'unit_merge_atom_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_atom_assign_refused.lm2:10:5: assignment value has unknown type'; Absent = @(); Debt = @() },
     # OPUS-WALKLOOP-20260929-11: Counter's procedure has a `for` -- it stayed native under the knob until the walker's FOR,
     # though the fixture says it is walked; now it is (the Absent pins).
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;

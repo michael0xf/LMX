@@ -307,3 +307,101 @@ untouched by this slice. The runtime-selected operand (B at one call, C at anoth
 open. A method reading ANOTHER method's marked own by an own-rooted path would emit the by-name
 read without its `l2_dslot` local (declared only where `l2_d105_any(mi)`); no real program reached
 it (the unit's fields are hidden inputs from a method, `node\…` is a different root), only M1 did.
+
+<a id="merge-atom-spelling"></a>
+## 6. K02d — the book's own spelling `b: merge A C`
+
+Status 2026-10-01 (deepseek, continuing fable's queue). Reproductions first, as the plan's §1 asks.
+
+**The norm.** The semantics book spells an explicit merge with the receiver as an ATOM and its
+operands after it: `b: merge A C` — "операнды — A и C, внешний b получает результат; имя результата
+не является первым операндом merge" (`provenance/semantics-book.md` :980 =
+`docs/LMX_semantics.ru.md#composition`, and the English twin :1046). The plan asks for it by that
+spelling: K02 bullet 4, "Support the existing `b: merge A C` form … A destination name is not a
+first operand". The frame spelling `b: merge: A C` is the other surface form of the same statement,
+and it worked; only the book's own spelling did not.
+
+**Reproduction** (K03c's bytes, `build/fable_k02c/stage/bin/l2trans.exe`, source blob `4f612450`;
+probes `build/deepseek_k03d/src/`):
+
+| source | HEAD said | P0 shape (printTree) |
+| --- | --- | --- |
+| `w: merge Model` in a method | `7:8: unresolved name`, `detail: atom=merge` | `frame{head=w, body=[atom merge, atom Model]}` |
+| `copy: merge Model` at the unit root | translated, and `copy\x` then `unresolved name atom=x` | the same shape |
+| `copy: merge: Model` / `w: merge: Model` | accepted (L1 produced) | `frame{head=copy, body=[frame{head=merge, body=[Model]}]}` |
+
+The unit-level row is the worse of the two: nothing refused. `l2_tail_is_structure` counted the two
+atoms as "several items", so the tail was a Structure, `l2_unit_role` made `copy` a **named
+Structure**, and the merge never existed at all. In a method the atoms became statements of the new
+nested body, and the first one — `merge` — was then an unresolved name. This is also the exact shape
+`steps/k03-head-roles-20261001.md` recorded as blocking K03's last item ("`w: merge Model` inside a
+method is still `unresolved name`").
+
+**Repair** (two halves, both needed; `dev/l2src_sandbox/l2trans.lm1`):
+
+1. `l2_tail_is_structure`: a tail whose first item is a reserved **receiver written as an atom** is
+   that receiver's application — the head's VALUE, exactly as a receiver FRAME already is one branch
+   below (`l2_receiver_word`). One rule for the whole receiver list, no branch on a name. Without
+   this half the unit-role walk still makes `copy` a named Structure (mutant M2 below).
+2. `l2_merge_atom_settle` (new) + `l2_merge_frame`: the atom spelling is settled into the ONE frame
+   form `R: merge: A B` — in the tree, once, at the same place the frame spelling is recognized — so
+   arity, `l2_mrs_build`, native emission and the walker read one form and no second merge route
+   exists. The operand fields keep their own nodes and spans (the new inner frame's body is a
+   structure over them); a trailing Structure stays the result-body sibling the frame form carries.
+   The statement must be an ordinary binding's (`l2_is_asgn`), so a call of a method, a C door or
+   another receiver frame is not this spelling.
+
+Both spellings now settle to the same tree: on the probes the generated L1 is **byte-identical**
+(`cmp` on `p_recv`/`p_recv2`, on `p_unitread`/`p_unitread2`, and on the `unit_merge_live_source`
+twin with its `merge: Source` line replaced by `merge Source`).
+
+**Witnesses** (rows in `tools/l2_harness.ps1`, all `Entry 7` unless said):
+
+- `unit_merge_atom_receiver` — the method-local atom twin of `unit_merge_live_source`: the copy reads
+  the CURRENT cells (`Source\x: 9U` before the merge, 9 in `R`, then `R\x: 12U` leaving Source at 9).
+- `unit_merge_atom_operands` (`Entry 4`) — three operands, `R: merge Model B C`: B adds `z`, C's `z`
+  joins the appended slot, so `R\[0]z` is C's 3 (the atom twin of `unit_merge_added_repeat`).
+- `unit_merge_atom_unit` — the unit-level `copy: merge Model`, read by a method as the free name's
+  hidden input (K02c's priority: caller-local → inherited input → lexical fallback; the lexical
+  source is the unit's own result, value 1): the shape that was still unresolved.
+- `unit_merge_atom_assign_refused` — the destination name already bound (`int: w 5` then
+  `w: merge Model`): refused at `10:5`, "assignment value has unknown type", the SAME diagnostic at
+  the SAME site as its frame-spelling twin `w: merge: Model`. The row pins that the atom spelling is
+  not a new way around the receiving-context refusal; it is not a claim about that message.
+
+**Evidence.**
+
+- Focused `build/l2_harness/dk_atom_focus_02` (22 targets: the four new rows and the merge neighbours
+  `unit_merge_live_source`, `_added_repeat`, `_actual_operand`, `_hidden_input`, `_hidden_forward`,
+  `_hidden_lexical`, `_hidden_position`, `_hidden_refused`, `_value_failure`, `_in_method`,
+  `_last_occurrence`, `_body_repeat`, `_eternal_pair`, `unit_named_struct_hidden_input`): **0 failed**;
+  staged `l2trans.lm1` blob `2e4131dd` = the committed bytes.
+- M1, only the receiver rule, no settle (`l2trans.lm1` blob printed in the log,
+  `build/l2_harness/dk_atom_m1`): all four new rows RED for the intended reason — the three positives
+  `l2trans produced no L1` with `unresolved dynamic=R` / `unresolved dynamic=copy` (the result never
+  exists, so its field read is unresolved), the refusal row red on its needle (the old refusal,
+  `unresolved name`, is not the one the patched bytes give). The seven neighbours stayed green.
+- M2, only the settle, no receiver rule (`build/l2_harness/dk_atom_m2`): the method-local rows stay
+  GREEN and the unit-level `unit_merge_atom_unit` goes RED (`11:14: unresolved name` — `copy` is a
+  named Structure again). This is why BOTH halves are in the slice, and it is the executed contrast
+  between them.
+- Full gate `build/l2_harness/dk_atom_full_01` (K03c's committed result: 37 of 1132): **37 of 1136**
+  targets failed — the four new rows OK, no newly failing target, and the 37 retained failures
+  unchanged by exact ID and diagnostic (`build/fable_k03b/compare_full.py` against
+  `k03c_full_20261001_01`; the only name-level difference is fable's own K03c re-authoring,
+  `unit_named_struct_guard_call_refused` → `unit_named_struct_call_body_retained`, which the
+  pre-commit K03c run still carried). Staged `l2trans.lm1` blob `2e4131dd` = the committed bytes.
+  Kernel and L3 sources are untouched by this slice (the translator build is the only changed
+  input), so those gates are not re-run here.
+- `python tools/check_docs.py` OK, `tools/gate_p0_header.ps1 -Root .` OK (47 P0 defines, 7 files),
+  `git diff --check` clean.
+
+**Residuals (not this slice).** A merge in a value position — `return: merge: A B` and a `return`
+receiver as a destination (the plan's "a `return` receiver is not an own-field declaration") — is
+still refused by the receiving-context path; the atom spelling is not a way to write those. The
+runtime-selected operand of §2 and the `l2_dslot` gap above are untouched. `b: merge` with no
+operands is not the frame spelling's parse shape (the frame spelling `b: merge:` is a P0 parse error,
+"tail-cutter target is not valid for this receiver"), so the two spellings cannot be compared there.
+Other receivers written as atoms (`cast x`, `sizeof T`) now classify as their application like
+`merge` does, but their atom-spelling LOWERING is each receiver's own contract and was not measured
+here.

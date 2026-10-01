@@ -3657,6 +3657,13 @@ fn: l2_tail_is_structure (const: @(LmP0Frame fr)) int
     if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
         if: l2_unit_names_method(f\value\as\atom) != 0 || l2_find_method(f\value\as\atom) >= 0 || l2_is_known(f\value\as\atom) != 0
             return: 0
+        # The same, for a receiver written as an atom: `merge A C` is the receiver's application, the
+        # head's VALUE, exactly as the receiver frame at the check below is.  The book's own spelling
+        # of an explicit merge is `b: merge A C` (docs, "Явное копирование": the operands are A and C,
+        # the outer b receives the result; the destination name is not the first operand), and the
+        # receiver words are the language's, not a callable a binding could name.
+        if: l2_receiver_word(f\value\as\atom) != 0
+            return: 0
         ---
     # Q58 (the author, 2026-10-01): `Batch: (put: 7)` with put a method of the unit -- Batch, absent, holds the one
     # Structure (put: 7): the known call is a STATEMENT of its body, retained, not executed at the definition and
@@ -32606,6 +32613,86 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
         return: 2
 return: 0
 
+# The book's own spelling of the same statement: `b: merge A C`.  The receiver `merge` is written as an
+# ATOM with its operands after it; P0 gives it no frame of its own.  Settle it HERE, in the tree, once --
+# the statement's tail becomes the one frame form every later consumer already reads (arity, mrs, native
+# emission, walker) -- so there is no second merge route.  0 when the statement is not that spelling.
+fn: l2_merge_atom_settle (const: @(LmP0Node stmt)) @: LmP0Node
+    @: LmP0Frame fr
+    @: LmP0Structure rest 0
+    @: LmP0Frame inner 0
+    @: LmP0NodeAs as 0
+    @: LmP0Node node 0
+    @: LmP0Field f0
+    @: LmP0Field f
+    @: LmP0Field last 0
+    @: LmP0Field sib 0
+    int: n 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
+        return: 0
+    fr: stmt\as\frame
+    if: fr\body = 0
+        return: 0
+    f0: l2_next_active(fr\body\first_field)
+    if: f0 = 0 || f0\value = 0 || f0\value\kind != c.LM_P0_NODE_ATOM || f0\value\as = 0 || f0\value\as\atom = 0
+        return: 0
+    if: l2_text_eq(f0\value\as\atom, "merge") = 0
+        return: 0
+    # The statement must be an ordinary binding's (`l2_is_asgn`): a call of a method, a C door or another
+    # receiver frame is not this spelling.
+    if: l2_is_asgn(stmt) = 0
+        return: 0
+    # The operands are the atoms after the receiver; a trailing Structure is the result body, the same
+    # sibling the frame spelling carries, and it may come only last.
+    f: l2_next_active(f0\next)
+    while: f != 0
+        if: f\value = 0
+            return: 0
+        if: f\value\kind = c.LM_P0_NODE_ATOM && sib != 0
+            return: 0
+        if: f\value\kind = c.LM_P0_NODE_ATOM
+            n: n + 1
+            last: f
+        if: f\value\kind = c.LM_P0_NODE_STRUCTURE && sib != 0
+            return: 0
+        if: f\value\kind = c.LM_P0_NODE_STRUCTURE
+            sib: f
+        if: f\value\kind != c.LM_P0_NODE_ATOM && f\value\kind != c.LM_P0_NODE_STRUCTURE
+            return: 0
+        f: l2_next_active(f\next)
+    as: (cast: (@: LmP0NodeAs) calloc(1U, c.sizeof(c.LmP0NodeAs)))
+    node: (cast: (@: LmP0Node) calloc(1U, c.sizeof(c.LmP0Node)))
+    inner: (cast: (@: LmP0Frame) calloc(1U, c.sizeof(c.LmP0Frame)))
+    rest: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(c.LmP0Structure)))
+    if: as = 0 || node = 0 || inner = 0 || rest = 0
+        return: 0
+    # The operand fields move into the inner merge frame, in their source order and with their own
+    # spans; its head is the receiver's own text.  Nothing is copied but the one node that now holds them.
+    rest\first_field: l2_next_active(f0\next)
+    rest\last_field: last
+    rest\field_count: (cast: (size_t) n)
+    if: last != 0
+        last\next: 0
+    if: last != 0 && sib != 0
+        last\next: sib
+    inner\head: f0\value\as\atom
+    inner\body: rest
+    as\frame: inner
+    node\kind: c.LM_P0_NODE_FRAME
+    node\as: as
+    if: f0\value\span != 0
+        node\span: f0\value\span
+    f0\value: node
+    f0\next: sib
+    fr\body\first_field: f0
+    fr\body\last_field: f0
+    fr\body\field_count: 1U
+    if: sib != 0
+        fr\body\last_field: sib
+        fr\body\field_count: 2U
+        sib\next: 0
+return: node
+
     # Widest merge in a body, found before the entry preamble is written, because
 # the operand array is a local of that preamble. Recurses through the frames
 # that carry nested bodies.
@@ -32631,12 +32718,12 @@ fn: l2_merge_frame (const: @(LmP0Node stmt)) @: LmP0Node
     if: stmt\as\frame\body = 0
         return: 0
     n: l2_count_active(stmt\as\frame\body)
-    if: n != 1 && n != 2
-        return: 0
-    f: l2_next_active(stmt\as\frame\body\first_field)
-    if: f = 0 || l2_frame_head(f\value, "merge") = 0
-        return: 0
-return: f\value
+    if: n = 1 || n = 2
+        f: l2_next_active(stmt\as\frame\body\first_field)
+        if: f != 0 && l2_frame_head(f\value, "merge") != 0
+            return: f\value
+    # Not the settled frame form: the book's own atom spelling, settled here exactly once.
+return: l2_merge_atom_settle(stmt)
 
 # Inner merge syntax does not determine the outer statement's role. Reuse the
 # ordinary head/binding classifier before reserving an own declaration. Once

@@ -503,6 +503,30 @@ and incompatible element/depth/qualifier contracts. A bare raw-C `VoidArray*`
 cannot acquire these semantic properties by name inference. This Array-formal
 closure is queued separately from the initial portable-reference witness.
 
+<a id="descriptor-reference-follow"></a>
+#### Remaining descriptor-reference following boundary
+
+The typed pointer repair does not yet make an explicit reference to a
+Structure or Array a complete source-level referent expression. Read-only
+inspection of its working translator found `l2_ptr_type_word` lowering the
+physical representation to `Lmx*` / `VoidArray*`, then `l2_indirect_type`
+attempting a forbidden foreign aggregate-by-value type at the final
+dereference. The runtime's DEREF/place descriptor branch already returns the
+held descriptor, but source lowering cannot supply that semantic contract.
+The ordinary call-head paths likewise do not yet invoke an explicit
+reference's referent. This is distinct from the already recorded `ref\field`
+path gap and from open Q58.
+
+Close this through the same semantic-contract/category projection as Array
+formals and general receiving/call resolution. A graph descriptor remains a
+reference value; do not repair it by inferring semantics from the C names
+`Lmx` / `VoidArray`, copying a C aggregate, or adding a special prefix parser.
+The legacy native prefix fallback can still spell a raw dereference after
+typed projection refuses; audit and remove that bypass as the shared route
+lands. No positive source/runtime witness of this descriptor-follow route is
+claimed here. It remains required before clean-kernel, even if the initial
+primitive/pointer-cell value-transport slice lands separately.
+
 Sequence after named references: resolve the value/address representation
 dependency below before lifting the generic operator restrictions; lower
 declared primitive/pointer-depth references through the shared receiving
@@ -705,6 +729,24 @@ references losing the receiving model. Both repairs belong to the same
 resolved receiving/place path: conversion and structural admission before
 store, evaluated once, with failure leaving the previous value untouched.
 They are implementation defects, not a request for new reference semantics.
+
+`portable_reference_typed_eval_20261001_16` passes 7/7 targets, adding a true
+`@: int` formal/return witness to the previous three. Translator source blob:
+`7c351403c9236172a47278d4ba7606699af0bb47`; executable SHA-256 prefix:
+`2C9506999E66FE56`. The common return-contract projection replaces the old
+separate return-form recognizers; closed type interning no longer confuses
+lexical type spelling with binding-name keyword rejection. The fixture checks
+first-use forwarding, stable callee-owned pointer-formal storage distinct from
+the caller cell, reassignment, and null return/forwarding.
+
+Its first run reaches generated typed native bodies directly; its second
+clears the actual root native word and asserts all three helper method words
+are empty before walking. This proves those two body routes, not every ABI
+crossing. A walked caller entering native pointer trampolines still needs an
+additional run with method native words retained. `_13` already added the
+post-checkpoint controls missing from `_11`; independent review confirms the
+dirty publication and clean/address-alone non-overwrite observations. Fresh
+full gates, direct runtime-test migration and mutation checks remain pending.
 
 <a id="reentry-publication-repair"></a>
 ### Re-entry publication and path calls: checkpoint 0c5dd61

@@ -96,6 +96,12 @@ The rule is already defined in [L2 §13](L2_spec_en.md#copy-merge) and [L3 §9](
 
 The admission mechanism is defined in [L3 §7](LMX_semantics.en.md#admission); its L2 role is described in [L2 §14](L2_spec_en.md#implements). Address-classification functions serve the common arena index used by mail and calls; classification by itself is not `implements`.
 
+The arena table stores correspondences in `LmxImplEntry`, keyed by the physical references `value`, `req`. A map comes from static native-admission metadata or the admitting graph Frame's numeric fields (`frame`, `at`, `n`). Without an explicit map, positions are mapped identically; `holes` denotes fields absent from a partial capture. Neither a map nor an entry requires a separate Structure in the executable graph.
+
+The optional `layout` reference retains the value's genuinely known physical schema independently of `req`. A null `layout` means that this evidence is unavailable. An entry with the same correspondence preserves previously known provenance; enriching unknown provenance requires actual evidence from the value's producer. A fresh capture placed in the required model's positions with holes has that layout, not the captured value's original layout.
+
+An entry's references to its value, model, graph Frame and layout witness are weak: they do not retain objects during collection. Retiring the corresponding storage removes the entry; attach and reallocation of the table itself preserve all its fields. No temporary activation address is retained. The table representation extends neither base `Lmx` nor Array and introduces no catalogue of names or model pairs.
+
 <a id="gc"></a>
 ## 16. Collection in L1
 

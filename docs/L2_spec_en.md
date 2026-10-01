@@ -144,6 +144,12 @@ A method signature describes inputs and is not executed. For a nonprimitive stru
 
 L2 supports the [L3 admission mechanism](LMX_semantics.en.md#admission): analytical checking of the tree's used named paths and execution of the receiving expression's unit tests by the graph interpreter. Physical address classification remains a separate value-representation operation.
 
+A field correspondence relates a particular admitted value to a receiving model: model positions map to physical positions in that value. Reading, writing and taking a field's address through a typed reference use the same correspondence. This applies at every such reference crossing in a structural path, not only its first segment. Other segments remain ordinary structural paths; the correspondence table is not another name lookup.
+
+The declared receiving model and the value's physical layout are distinct information. Equal maps into one model, including identity maps, do not establish equal source layouts. When its provenance is known, the existing correspondence entry retains that witness separately; unknown provenance is not replaced with the receiving model. Subsequent reception uses the actual transmitted value, not a rescan of the reference binding's original initializer.
+
+A cached map does not replace the current Consumer's requirements and mandatory checks. A field not carried because the previous Consumer did not use it does not become available to the next Consumer through the earlier positive answer. Failed reception publishes neither a new correspondence nor layout evidence and leaves the receiving binding unchanged. Graph copying creates a fresh value and does not transfer the source value's admission entries to it. Entry representation and lifetime: [L1 §15](L1_spec_en.md#implements).
+
 <a id="gc"></a>
 ## 15. Collection
 

@@ -1,0 +1,15 @@
+# K01 witness (steps/k01-selector-identity-20261001.md §6), negative: the same candidate
+# as unit_occ_selector_unused_first, but the Consumer's use is `[0]x` -- its required
+# occurrence-0 x is a size_t and the candidate's is an int, so the admission must be
+# refused even though the bare-last Consumer of this candidate is legal.  This is a
+# compile-time refusal at the call site, not a resolution refusal.
+Pair: (size_t: x 10U; size_t: x 20U)
+Tri: (int: x 7; size_t: x 20U; size_t: x 30U)
+fn: firstToo (Pair: v) int
+    size_t: got
+    got: v\[0]x
+    return: (cast: (int) (got))
+end: firstToo
+Tri: t
+sendMessage: exit(exit_code: firstToo(t); stdout: ""; stderr: "")
+return

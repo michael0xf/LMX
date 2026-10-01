@@ -459,6 +459,30 @@ required содержит два одноимённых поля x, candidate �
 если его required-поле имеет тип int. Проверить оба порядка допусков:
 кэш соответствия не означает разрешения любого последующего Consumer.
 
+**Проба на замороженном срезе (deepseek, 2026-10-01; `steps/k01-selector-identity-20261001.md`).**
+Оба селектора сегодня до соответствия не доходят: bare-чтение по повторяющемуся имени
+(refused, `unresolved name`, и через формал, и от корневого значения); `[N]` через формал
+(refused, `unknown field path root` на стадии эмиттера); `[N]` от корневого значения
+(check проходит, но эмитится невалидный C — отдельный дефект
+[NAMED-MODEL-OCCURRENCE-PATH-LOWERING](#named-model-occurrence-path-lowering)). Работающий
+сегодня случай — bare-last через admitted-формал при requirement с одним именем
+(`unit_merge_value_repeat`: `read (Last: value)` читает `value\x` merged-`copy{x,x}` и
+получает 33 = LAST факта); это половина LAST↔LAST, ordinal-половина покрытия не имеет,
+т.к. запись не компилируется. Свидетели-фикстуры добавлены: `unit_occ_selector_read`,
+`unit_occ_selector_unused_first`, `unit_occ_selector_first_refused` (красные до ремонта;
+строки harness добавляются вместе с фиксом). План срезов K01a–K01e — в записке.
+
+<a id="named-model-occurrence-path-lowering"></a>
+### NAMED-MODEL-OCCURRENCE-PATH-LOWERING — 2026-10-01, deepseek, OPEN
+
+`m\[0]x` по значению именованной модели с повторяющимся именем проходит проверку, но
+понижается как цепь C-членов: в сгенерированном C стоит `l2_q0 = l2_q2 ->[0] x;`
+(gcc: `expected identifier before '[' token`). Общая форма (`s\[N]name` — селектор
+вхождения) либо должна понижаться корректно, либо получать локализованный отказ; сейчас
+нет ни того, ни другого. Минимальный свидетель — `build/l2_harness/occsel_probe_20261001_01`
+(проба `unit_occ_sel_g4`; там же `v\[0]x` через формал отвергается «unknown field path
+root»). Закрывается срезом K01a ([K01](k01-selector-identity-20261001.md)).
+
 <a id="site-binding-category-regressions"></a>
 ### SITE-BINDING-CATEGORY-REGRESSIONS — 2026-10-01, Codex, FIXED `e70689c`
 

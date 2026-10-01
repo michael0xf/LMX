@@ -1,0 +1,23 @@
+# K01 witness (steps/k01-selector-identity-20261001.md §6): occurrence selectors through an
+# admitted formal.  Pair carries two x, Triple three.  A value admitted by name must give
+# ITS last x for bare `v\x` and ITS second occurrence for `v\[1]x`; both uses resolve to
+# the requirement's field 1, which is why one slot map per requirement field cannot serve
+# them.  `off(p)` = 20 - 20 = 0 (Pair's own layout); `off(t)` = 30 - 20 = 10.  Success is 7.
+Pair: (size_t: x 10U; size_t: x 20U)
+Triple: (size_t: x 10U; size_t: x 20U; size_t: x 30U)
+fn: off (Pair: v) int
+    size_t: last
+    size_t: second
+    last: v\x
+    second: v\[1]x
+    return: (cast: (int) (last - second))
+end: off
+Pair: p
+Triple: t
+int: ok 7
+if: off(p) != 0
+    ok: 81
+if: off(t) != 10
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

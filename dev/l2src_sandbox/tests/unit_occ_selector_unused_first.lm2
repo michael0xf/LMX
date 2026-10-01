@@ -1,0 +1,17 @@
+# K01 witness (steps/k01-selector-identity-20261001.md §6): the candidate's unused
+# incompatible first field must not reject a Consumer that only reads the LAST x --
+# admission is by the Consumer's used edges.  The candidate's last x is a size_t like the
+# requirement's, so bare `v\x` = 30 is legal; nothing reads occurrence 0.  Success is 7.
+Pair: (size_t: x 10U; size_t: x 20U)
+Tri: (int: x 7; size_t: x 20U; size_t: x 30U)
+fn: lastOnly (Pair: v) int
+    size_t: got
+    got: v\x
+    return: (cast: (int) (got))
+end: lastOnly
+Tri: t
+int: ok 7
+if: lastOnly(t) != 30
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

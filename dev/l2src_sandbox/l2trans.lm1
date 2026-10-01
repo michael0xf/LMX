@@ -951,6 +951,7 @@ prototype:
     fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_own_ty_of_param (int: ft) int
     fn: l2_ft_of_own (int: oty) int
+    fn: l2_value_ft_of_own (int: oty) int
     fn: l2_dt_of_own (int: oty) int
     fn: l2_own_of_dt (int: dt) int
     fn: l2_dt_of_source (int: oty; const: @(char path); const: @(LmP0Node at); @: int dt) int
@@ -1281,6 +1282,7 @@ prototype:
     fn: l2_raw_index_head (const: @(LmP0Text t); int: mi) int
     fn: l2_own_index_head (const: @(LmP0Text t); int: mi; @: int out_own; @: size_t out_index) int
     fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
+    fn: l2_emit_array_desc (int: oi; const: @(char ind); @: char dest) int
     fn: l2_emit_array_load (int: oi; size_t: index; const: @(char ind); @: char dest) int
     fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @: char dest) int
     fn: l2_emit_own_index (const: @(LmP0Text name); int: mi; const: @(char ind); @: int own; @: char index) int
@@ -7075,7 +7077,7 @@ fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
         # T6b: a field the host declares at method level is its activation too.
         i: l2_mad_host_own(l2_mad_host_of(mi), name)
         if: i >= 0
-            \out_ty: l2_ft_of_own(l2_own_ty[i])
+            \out_ty: l2_value_ft_of_own(l2_own_ty[i])
             return: 0
         ---
     i: l2_dyn_find(mi, name)
@@ -7086,7 +7088,7 @@ fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
         return: 1
     i: l2_own_find_last(mi, name)
     if: i >= 0
-        \out_ty: l2_ft_of_own(l2_own_ty[i])
+        \out_ty: l2_value_ft_of_own(l2_own_ty[i])
         return: 0
     i: l2_slot_find(mi, name)
     if: i >= 0
@@ -9585,6 +9587,14 @@ fn: l2_ft_of_own (int: oty) int
     if: oty >= 1000 && oty < 2000
         return: oty - 1000
 return: oty
+
+# Storage/layout codes describe the existing cell; ordinary expression typing
+# projects the value it holds. An Array contributes its descriptor reference,
+# while element and hidden-input storage keep their separate existing contracts.
+fn: l2_value_ft_of_own (int: oty) int
+    if: l2_own_is_array(oty) != 0
+        return: l2_array_desc_ty()
+return: l2_ft_of_own(oty)
 
 # THE TYPE CODE OF A HIDDEN/DYNAMIC INPUT (FABLE-L2-ARG-ADDRESS-PROOF-20260921-84).  It used to be the
 # own storage code itself with 0 for "not typed yet" -- and int's storage code IS 0.  So an int
@@ -18528,13 +18538,10 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: node\as\atom\length >= 2U && node\as\atom\data[0] = 99 && node\as\atom\data[1] = 46
             return: 0
         idx: l2_own_find_last(mi, node\as\atom)
-        # In expression position a primitive array is its backing pointer,
-        # matching ordinary C array decay. Indexed graph access remains a
-        # separate checked operation above.
+        # An Array expression is its existing descriptor reference. The
+        # receiving contract checks that value; elements require indexing.
         if: idx >= 0 && l2_own_is_array(l2_own_ty[idx]) != 0
             return: 0
-        if: idx >= 0 && l2_own_is_array(l2_own_ty[idx]) != 0
-            return: l2_error(path, node, "own array use not yet supported")
         if: idx >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0
             return: 0
         ---
@@ -19070,21 +19077,6 @@ return: l2_m_ret[idx] = 8
 
 fn: l2_check_expr (const: @(LmP0Node node); int: mi; const: @(char path)) int
 return: l2_check_primary(node, mi, path)
-
-# D-24 (L2 spec 18.2). Address of a primitive own-array element is that
-# element's pointer (the same codes as `@: int` and its siblings). `+` / `-`
-# of a number keeps the pointer. Other element kinds have no code here and
-# stay on the D-22 refusal rather than a guessed depth.
-fn: l2_elem_ptr_ty (int: oty) int
-    if: oty = 4
-        return: 11
-    if: oty = 5
-        return: 12
-    if: oty = 7
-        return: 9
-    if: oty = 37
-        return: 38
-    return: 0 - 1
 
 fn: l2_ty_number (int: ty) int
     if: ty = -10 || ty = 0 || ty = 1 || ty = 2 || ty = 34 || ty = 36
@@ -20732,13 +20724,22 @@ return: 0
 
 fn: l2_indexed_type (@: L2IndexedOperand out) int
     int: ty l2_own_ty[out\own]
+    @: L2Declaration declaration
+    # Address the declared element, not any numeric promotion of a read.
+    # The ordinary type contract retains pointer depth and qualifications.
+    if: out\address != 0
+        declaration: l2_declaration(l2_own_decl[out\own])
+        if: declaration = 0 || declaration\contract = 0 || declaration\contract\kind != 1 || l2_contract_formal(declaration\contract\operand, @ out\type) != 0
+            return: 2
+        out\type: l2_address_type(out\type)
+        if: out\type < 0
+            return: 2
+        return: 0
     out\type: l2_rw_elem_ty(out\own)
     if: ty = 8
         out\type: 34
     if: ty >= 2000
         out\type: ty - 2000
-    if: out\address != 0
-        out\type: l2_elem_ptr_ty(ty)
     if: out\type < 0
         return: 2
 return: 0
@@ -21432,7 +21433,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         # see l2_check_sizeof's copy of this reasoning above.
         idx: l2_own_find_last(mi, node\as\atom)
         if: idx >= 0 && l2_own_is_array(l2_own_ty[idx]) != 0
-            return: l2_emit_array_ptr(idx, ind, dest)
+            return: l2_emit_array_desc(idx, ind, dest)
         if: idx >= 0 && l2_m_uses[l2_own_off(mi, idx)] != 0
             if: l2_own_load(idx, dest) != 0
                 return: 1
@@ -21926,13 +21927,32 @@ return: 0
 
 # Follow the admitted unit-child/descriptor/backing contract, without allocation,
 # scalar dirty caches, intern lookup, or descriptor rebinding.
-fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
+fn: l2_emit_array_desc (int: oi; const: @(char ind); @: char dest) int
     int: t
-    const: @(char element) "int"
-    @: LmP0Field type_field
     []: char l2_eap_expr 128
     if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0 || (l2_own_fid[oi] < 0 && l2_own_uchild[oi] < 0) || dest = 0
-        c.fprintf(l1_stderr(), "l2trans detail: array pointer unavailable oi=%d\n", oi)
+        c.fprintf(l1_stderr(), "l2trans detail: array descriptor unavailable oi=%d\n", oi)
+        return: 1
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: VoidArray l2_a%d_desc\n", ind, t, ind, t) < 0
+        return: 1
+    if: l2_own_from_expr(oi, l2_eap_expr) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eap_expr) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: VoidArray) l2_a%d_leaf[0])\n", ind, t, t) < 0
+        return: 1
+return: (cast: (int) (c.sprintf(dest, "l2_a%d_desc", t) < 0))
+
+# Backing is selected only by element operations; a whole Array is the
+# descriptor above. Length and elements share that same physical selection.
+fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
+    int: t l2_tn
+    const: @(char element) "int"
+    @: LmP0Field type_field
+    []: char descriptor 128
+    if: l2_emit_array_desc(oi, ind, descriptor) != 0
         return: 1
     if: l2_own_ty[oi] = 5
         element: "char"
@@ -21946,10 +21966,6 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
             c.fprintf(l1_stderr(), "l2trans detail: imported array type spelling unavailable oi=%d\n", oi)
             return: 1
         ---
-    t: l2_tn
-    l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: VoidArray l2_a%d_desc\n", ind, t, ind, t) < 0
-        return: 1
     if: l2_own_ty[oi] != 8 && l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
         return: 1
     if: l2_own_ty[oi] = 8
@@ -21960,20 +21976,14 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
         if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
     ---
-    if: l2_own_from_expr(oi, l2_eap_expr) != 0
-        return: 1
-    if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eap_expr) < 0
-        return: 1
-    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: VoidArray) l2_a%d_leaf[0])\n", ind, t, t) < 0
-        return: 1
-    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) l2_a%d_desc\\data)\n", ind, t, element, t) < 0
+    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor) < 0
         return: 1
     if: l2_own_ty[oi] = 8
-        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: ", ind, t) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, ") l2_a%d_desc\\data)\n", t) < 0
+        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: ", ind, t) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor) < 0
             return: 1
         ---
     if: l2_own_ty[oi] >= 2000
-        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (", ind, t) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, ") l2_a%d_desc\\data)\n", t) < 0
+        if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (", ind, t) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor) < 0
             return: 1
         ---
     if: c.sprintf(dest, "l2_a%d_data", t) < 0
@@ -21981,19 +21991,11 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: char dest) int
 return: 0
 
 fn: l2_emit_array_length (int: oi; const: @(char ind); @: char dest) int
-    int: t
-    []: char l2_eal_expr 128
-    if: oi < 0 || l2_own_is_array(l2_own_ty[oi]) = 0 || (l2_own_fid[oi] < 0 && l2_own_uchild[oi] < 0) || dest = 0
+    int: t l2_tn
+    []: char descriptor 128
+    if: l2_emit_array_desc(oi, ind, descriptor) != 0
         return: 1
-    t: l2_tn
-    l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@@: void l2_a%d_leaf\n%s@: VoidArray l2_a%d_desc\n%ssize_t: l2_t%d\n", ind, t, ind, t, ind, t) < 0
-        return: 1
-    if: l2_own_from_expr(oi, l2_eal_expr) != 0
-        return: 1
-    if: c.fprintf(l2_out, "%sl2_a%d_leaf: %s\n", ind, t, l2_eal_expr) < 0
-        return: 1
-    if: c.fprintf(l2_out, "%sl2_a%d_desc: (cast: (@: VoidArray) l2_a%d_leaf[0])\n%sl2_t%d: l2_a%d_desc\\size\n", ind, t, t, ind, t, t) < 0
+    if: c.fprintf(l2_out, "%ssize_t: l2_t%d %s\\size\n", ind, t, descriptor) < 0
         return: 1
 return: l2_tok_temp(t, dest)
 

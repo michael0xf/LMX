@@ -3329,7 +3329,21 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_structure_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # Whole own Arrays address their actual descriptor, independently observed before dereference.
+    # Whole Array values and addresses retain their independently observed descriptor.
+    [pscustomobject]@{ Name = 'unit_array_value_projection.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_value_pointer_elements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_element_pointer_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_element_pointer_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_value_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_value_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_value_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_indexed_expression_span.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_path_actual_span.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

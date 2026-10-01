@@ -1,0 +1,28 @@
+include: "l2src/tests/array_value_observer.h"
+fn: check () int
+    int: number 41
+    @: int pointer @number
+    []: (@: int) values 2
+    values[0]: pointer
+    values[1]: 0
+    @: c.VoidArray descriptor values
+    if: c.l2_test_pointer_array(c.l2_program_arena, c.self, descriptor, pointer, 2U) = 0
+        return: 81
+    @: int readback values[0]
+    if: readback != pointer || values[1] != 0 || length(values) != 2U || \readback != 41
+        return: 82
+    @@: int element @values[0]
+    if: \element != pointer
+        return: 85
+    \element: 0
+    if: values[0] != 0
+        return: 86
+    \element: pointer
+    \readback: 53
+    if: \pointer != 53 || values != descriptor
+        return: 83
+    if: c.l2_test_array_address_count(1) = 0
+        return: 84
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

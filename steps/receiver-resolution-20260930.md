@@ -33,6 +33,16 @@ It then refuses line 2 with `unsupported own array declaration`. The temporary
 probe is under build/array_receiver_probe_20260930 in the main checkout. This
 is not evidence that a special parser extension is needed.
 
+An independent source-form gap was isolated on 2026-10-01: the documented
+`copy: merge Model` does not enter `l2_merge_frame`, which currently requires
+a nested `merge` Frame such as `copy: merge: Model`. Keep both observations:
+the documented form is not invalid user input, while the established Frame
+form independently exposes whole-result projection failures on `621e8af`.
+The ordinary merge-result repair does not prove common receiver resolution;
+do not fix the documented form with another merge-specific string rewrite.
+Exact corrected attribution is in
+[the defect record](defects.md#merge-result-value-projection).
+
 Current duplicated semantic entry points in dev/l2src_sandbox/l2trans.lm1:
 
 - `l2_own_array_count`, `l2_own_array_pointer_ty`, `l2_own_decl_ty`,

@@ -18,15 +18,14 @@
 восстановительный focused gate — 92/92 (89 фикстур). Это не новый полный gate.
 Stable `l2src` не обновляется.
 
-Последний полный generated gate `assignment_rhs_full_20260930_01`:
-**949/1003, 54 отказа**. Относительно `dst_chars_cleanup_full` (920/988)
-исправлены 16 прежних отказов, включая все 12 регрессий RHS; 15 новых
-фикстур прошли, 52 прежних отказа остаются. Две прежде зелёные строки
-ожидали снятый const-write запрет и отказ ещё не реализованного admission;
-сейчас они доходят до собственного неверного valued return корня.
-Они затем заменены реальными runtime-свидетелями; восстановительный focused
-gate — 61/61. После этих двух fixture-only правок полного прогона ещё не было;
-951/1003 не выдавать за измеренный результат. Общий checker сохранён.
+Последний полный generated gate `bounded_indexed_expression_full_20260930_02`:
+**970/1022, 52 отказа**, точный источниковый checkpoint `c8167af`.
+Относительно `assignment_rhs_full_20260930_01` (949/1003) новых регрессий нет:
+остались те же 52 отказа, две прежние observer-фикстуры после миграции прошли,
+все 19 добавленных строк зелёные, удалённых строк нет. Промежуточные две
+регрессии адресов исправлены без изменения положительных ожиданий; снятый
+P47-отказ заменён ненулевым runtime-свидетелем. Восстановительный focused
+gate — 131/131 (128 фикстур), все 16 scoped файлов проверены по хэшам.
 Целевые проверки адреса формалов, общего верхнего тела и return-ABI
 не заменяют полный gate. Clean-kernel, §8 и §8a ещё не достигнуты.
 История запусков, хэши, контрольные поломки и классификация отказов —
@@ -63,7 +62,7 @@ gate — 61/61. После этих двух fixture-only правок полн�
    обнаружены. Удаление `dst_chars` проверено kernel/L3/focused и полным
    generated gate; 12 выявленных регрессий общей проверки присваивания
    теперь устранены (`6be1235`): итоговый целевой срез прошёл 61/61,
-   полный до последних двух fixture-only правок — 949/1003 выше;
+   полный на том срезе — 949/1003; новый измеренный итог — 970/1022 выше;
    [проверки и границы](steps/native-selfbuild-20260930.md#assignment-rhs-repair).
    WHOLE-ARRAY-DESCRIPTOR-ADDRESS и ARRAY-INDEX-LEXICAL-SHADOW исправлены в
    `e7935be`: `@Array` возвращает существующий дескриптор, а индексные
@@ -73,13 +72,20 @@ gate — 61/61. После этих двух fixture-only правок полн�
    generated walker для `@Array` и Array-формалы этим не закрыты. Bare whole
    Array ещё требует [общей проекции descriptor-типа/значения](steps/native-selfbuild-20260930.md#whole-array-value-projection) вместо backing;
    typed void*/descriptor actual и raw-C actual должны сохранять его identity.
-   Старую фикстуру с неявным Array→int* decay исправлять явным адресом
-   элемента, не возвращать противоречащую норме конверсию.
-   Следующий
-   dependency-closed срез — три выявленных ограничения expression/actual-span:
-   один bounded operand resolver и передача полного единственного initializer
-   через общий checker/emitter. Вызов уже передаёт правильную длину actual;
-   нельзя читать за её концом или дублировать Array-разбор в каждом потребителе.
+   Старая фикстура с неявным Array→int* decay уже исправлена в `c8167af`:
+   явный адрес элемента, distinct write 13 вместо исходного 9 и проверка
+   caller-ячейки. Отдельный negative сохраняет отказ bare Array→int*.
+   [Общий own pointer-cell путь](steps/native-selfbuild-20260930.md#own-reference-cell-reception) также должен потреблять initializer `@:`
+   и общее reference-присваивание: сейчас initial candidate пропускается,
+   а retained-graph binder принимает только `@ v`, не последующее `p: 0`.
+   Устранить это общим declaration/receiving/admission механизмом, не
+   исключением для верхнего тела; native и настоящий walker обязательны.
+   Три ограничения expression/actual-span закрыты в `c8167af`: один bounded
+   operand resolver, полный единственный initializer через общий checker/emitter,
+   guarded logical RHS и общий pointer-actual receiving check. Общая адресная
+   проекция сохраняет path/count и identity между соседними actual; hidden-type
+   waiting учитывает receiver-операнд. Следующий writer-срез — обычное значение
+   whole Array, затем own pointer-cell reception и общая lexical-local identity.
    Общие фактические аргументы должны также закрыть найденный
    [скрытый pointer-input из локальной привязки](steps/callable-actual-projection-20260930.md#site-aware-hidden-source):
    сначала единая identity локального объявления/visible-binding и native

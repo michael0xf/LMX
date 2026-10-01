@@ -2,12 +2,90 @@
 
 Status: 2026-09-30, development checkpoint `6be1235` contains the verified
 common-assignment repair. Checkpoint `e7935be` adds whole-Array descriptor
-addressing and the shared lexical lookup repair. The current writer closes
-bounded expression/actual spans and the shared pointer-actual checker;
-whole-Array value projection and shared lexical-local identity precede the
-remaining callable-actual work.
+addressing and the shared lexical lookup repair. Checkpoint `c8167af` closes
+bounded expression/actual spans and the shared pointer-actual checker.
+Next are whole-Array value projection, own-reference candidate reception,
+and shared lexical-local identity before the remaining callable-actual work.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
+
+<a id="bounded-indexed-expressions"></a>
+## Shared bounded expressions and pointer actuals: checkpoint c8167af
+
+The source writer's restored
+`build/l2_harness/bounded_indexed_expression_corrective_final_20260930`
+passes **131/131 targets, 128 unique fixtures**. Peer hashing matches all
+128 fixture snapshots and all sixteen scoped source/header/harness/test
+paths. The second full corpus, `bounded_indexed_expression_full_20260930_02`,
+finished **970/1022, 52 FAIL**. Independent target-identity comparisons with
+`assignment_rhs_full_20260930_01` confirm zero formerly green regressions,
+the same 52 prior failures, both prior observer-fixture migrations green,
+all nineteen added rows green, and zero removed rows. All three differences
+from the intermediate full attempt below are repaired. Source checkpoint
+`c8167af` contains the exact sixteen verified paths. `final_owned_manifest.json`,
+`baseline_comparison.json`, `mutation_evidence.json` and `release_report.json`
+in the full-run directory retain the bytes, commands and comparisons.
+This is a completed development slice, not a green clean-kernel checkpoint.
+
+Frozen translator SHA256:
+`ED72B1CB8DFAA0D35AC1059A7C0A34E5FB02A962820599C78516AE16E450B430`;
+compiler helper header:
+`B29A607A837BE479312BF536F77CAAEFA93D2D8534EAF89A62E04235EB93C790`;
+harness:
+`3FCF195C4A136805000A755456796A2D0F0C05E416B69FEFC53515E2CC4BF7E4`.
+No runtime implementation files changed. Earlier kernel/L3 results are
+inherited evidence, not newly executed suites for this source slice.
+
+The checker, type projection and emitter consume one borrowed, bounded
+indexed-operand view over the existing source tree. Declaration initializers
+carry exactly one complete expression span. Index operands are evaluated
+once; a following call argument is outside the supplied span. Logical
+lowering guards RHS preparation even when it contains no call, so an Array
+load cannot be hoisted out of a short-circuited branch. The ordinary pointer
+receiving contract now also checks call actuals, preserving type/depth/const,
+null and opaque raw-C distinctions and subsequent structural admission.
+
+The first full attempt, on the earlier `97022323…996270` source, finished
+**964/1019, 55 FAIL**. Against `assignment_rhs_full_20260930_01`, two already
+migrated fixtures became green, 52 previous failures remained, all sixteen
+new rows passed, and no fixture disappeared. Three formerly green rows
+turned red: two genuine address-checking regressions and an obsolete
+initializer refusal. Their correction is part of the current focused slice:
+
+- Existing graph-path addressing now shares one source/type projection
+  between checking and emission. `l2_join_path` respects its existing count.
+  Each computed address is captured into an ordinary typed temporary before
+  a later actual can reuse path scratch; two distinct same-typed fields test
+  this identity, not merely a path followed by a constant.
+- Receiver operands participate in ordinary hidden-type dependency waiting;
+  actual call results retain their own call boundary. Thus `@: dp` is checked
+  after its hidden pointer type is established, without guessing a pointee
+  or skipping the receiving contract. Reference-initializer name scanning
+  likewise consumes the complete span through `l2_scan_fields`.
+- The former P47 fixture now verifies a nested `int: q m\value` initializer
+  with an existing Model and checked results 8 and 9. It does not revive
+  implicit `Model: left` cloning. Its current held/walked callable route is
+  not proof of complete native compilation; the separate explicit-merge
+  actual/capture refusal remains recorded, not reclassified as a language rule.
+- The old Array-decay fixture passes explicit `@buf[0]`, writes 13 after
+  starting with 9 and checks the caller's changed cell. A separate negative
+  keeps bare Array incompatible with int*. This does not implement ordinary
+  whole-Array descriptor-value projection, described below.
+
+Mutation checks cover wrong dynamic index, dropped multi-field initializer,
+bypassed pointer-actual checking, eager pure logical loads, and actual-span
+overrun, plus independent positive assertions. The pure-load observer checks
+executed load placement; callable side-effect counters are separate evidence.
+The corrective mutations remove receiver waiting, reuse shared path scratch,
+ignore the path's count, or invert the P47 result. They all fail their intended
+controls; the path identity failures compile and produce wrong results rather
+than relying on an invalid access or compiler failure. All mutations were
+restored before the 131-target run and the new full run.
+
+Remaining independent work includes whole-Array value/Array-formal/walker
+projection, own-reference candidate consumption, shared lexical-local
+identity and hidden sources, callable actuals, C99 arithmetic and canonical
+body/copy/native completeness. Focused success does not close those boundaries.
 
 <a id="whole-array-address-repair"></a>
 ## Whole-Array descriptor addressing and lexical indexed lookup
@@ -16,9 +94,9 @@ The eleven-file source checkpoint is `e7935be`.
 `build/l2_harness/whole_array_address_20260930_final` passes **92/92 targets
 (89 fixtures)**: the preceding 58-fixture reference/assignment set, eight new
 fixtures, and 23 adjacent Array/formal/path/hosted controls. This is a focused
-gate, not a new full-corpus or kernel/L3 run. The last full result remains
-949/1003 on the earlier source slice below; no inferred updated total is a
-measured verdict.
+gate, not a new full-corpus or kernel/L3 run. At this checkpoint the last full
+result was 949/1003 on the earlier source slice below; the later measured
+970/1022 result belongs to `c8167af`, not to these earlier bytes.
 
 The common `L2Address` route now resolves an own Array to its existing
 `VoidArray` descriptor through the actual owner slot. It does not return the
@@ -68,17 +146,18 @@ Harness SHA256:
 Remaining boundaries are explicit. Generated-walker whole-Array addressing
 and Array formals are not implemented by this patch; traversing owner fields
 in the test helper does not prove the canonical single-body graph. Three
-pre-existing source-expression refusals remain in preserved attempts:
+pre-existing source-expression refusals are preserved in the earlier attempts:
 `_06` dynamic indexing inside OR (`unit_array_index_shadow`, 13:56), `_07`
 dynamic-index declaration initializer (13:9), and `_06` direct `@element`
 in a multi-argument L2 call (`unit_array_index_formal_shadow`, 13:23).
 The final controls isolate the indexed-write/formal-shadow behavior with
 supported expressions and an explicit pointer intermediate; those controls
 do not certify the refused forms. Their general expression/actual-span
-repair remains in the queue, not a newly imposed language restriction.
+repair was subsequently verified in `c8167af` above; the old attempts remain
+evidence of the defect, not newly imposed language restrictions.
 
 <a id="bounded-indexed-expression"></a>
-### Next shared expression-span repair
+### Shared expression-span repair: original preflight, completed in c8167af
 
 Read-only inspection of blob `4e62d5666dad5f2bed2f89f106a03fb724efb26e`
 locates a shared producer/consumer split. `l2_expr_span` already counts flat
@@ -94,7 +173,7 @@ The general declaration records the full candidate span, but
 check/conversion/emission consumers hardcode a single field. Four fields
 that constitute one index expression are not four initializer arguments.
 
-The next source ticket must share bounded indexed-operand classification
+The resulting source ticket shares bounded indexed-operand classification
 across these consumers, preserve the selected lexical binding and actual
 element type, and never consume the following expression or argument. An
 initializer must be exactly one expression and all its fields must reach
@@ -153,10 +232,63 @@ outer Array through a nearer binding must fail.
 
 Array formals, general hidden Array inputs and genuinely walked descriptor
 expressions are separate implementation boundaries. Native receipt by an
-ordinary descriptor-pointer formal does not prove any of them. The current
-indexed-expression emitter also has obsolete generated-comment text saying
-pure logical RHSs stay unguarded C expressions; remove that text in the next
-tested source slice, without changing already frozen gate bytes.
+ordinary descriptor-pointer formal does not prove any of them. The obsolete
+generated comment claiming pure logical RHSs remain unguarded was corrected
+in the tested `c8167af` slice; it is no longer pending work here.
+
+<a id="own-reference-cell-reception"></a>
+## Pending common reference-cell initialization and rebinding
+
+Read-only audit of `OWN-REFERENCE-CANDIDATE-LOSS`: method-local null
+initialization/rebinding already uses the shared contract correctly, but
+the own-cell declaration branches discard the candidate and the retained
+graph's `l2_rw_ref_bind` accepts only the spelling `@ v`. This is an
+implementation divergence, not a root-specific language rule.
+
+Reuse the existing declaration, receiving-value and cell machinery:
+
+1. `l2_check_body` must apply `l2_check_reference_init` to an own reference
+   declaration too. Resolve its initializer in the preceding environment
+   and bind the new occurrence afterward, as for ordinary declarations;
+   early registration must not make the new binding visible to itself.
+   The current generic `l2_scan_reference_init` already consumes candidate
+   spans, so do not introduce another initializer scanner.
+2. Factor candidate normalization, single evaluation, letter payload handling
+   and `l2_emit_receiving_admit` from `l2_emit_reference_declaration`.
+   Ordinary native local declarations and own-cell stores use that same
+   result. Store only after successful admission. An absent initializer
+   retains the preallocated null cell; an explicit zero is a real store and
+   cannot be discarded because re-entry/rebinding may be observable.
+3. Replace the shape-specific `l2_rw_ref_bind` with one reference-value store
+   builder used by declaration candidates and later assignments. Existing
+   `l2_rw_write`, `l2_rw_bind_op`, `l2_rw_admit` and value nodes provide
+   `PUT -> ADMIT -> candidate`; a pointer-value cell is not a direct
+   Structure slot and must not receive `PUT_REF`. Use the same helper in
+   count and emission passes.
+4. Existing walker PUT accepts a Structure reference or null in a pointer
+   cell; admission resolves/unwraps pointer cells and null. No new opcode
+   is needed for a null reference literal: an ordinary `LIT` can hold a
+   typed null pointer cell allocated through the existing cell constructor.
+   This is a typed literal operand, not a hidden context Structure. Preserve
+   the current integer-zero representation in unrelated numeric/reference
+   comparison expressions.
+5. Project a named Structure candidate to its existing physical occurrence
+   through the ordinary `AT`/path/reference machinery. Do not execute it to
+   obtain a reference. Typed-pointer inputs and paths use their existing
+   value nodes. General callable-method/formal projection remains the
+   separate callable-actual dependency; this slice must not claim it solved.
+
+Acceptance must run the same retained program both natively and with its
+actual native word cleared. Initialize from a compatible existing B, compare
+identity with B and verify that B's body marker did not run; then clear to
+zero and rebind to A. Test incompatible candidates at declaration and later
+assignment, preserving the prior pointer after a caught refusal. Require
+an attached executable store/admission/candidate chain, not token presence,
+and exactly one candidate evaluation. Mutants dropping the declaration step,
+executing B, bypassing admission, choosing direct-slot storage, storing before
+admission or duplicating evaluation must fail. Add direct named-model null
+controls beside the existing machine-local and primitive-pointer controls.
+Canonical-body/copy and Q58 classification remain separate work.
 
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair

@@ -56,11 +56,11 @@ Array-формалы и generated walker остаются отдельными �
 контроль bare Array → int*. Это исправляет свидетель, но не whole-value
 проекцию; production indexed-span при этой миграции не меняется.
 
-### INDEXED-EXPRESSION-SPAN — 2026-09-30, Codex, IN WORK `BOUNDED-INDEXED-EXPRESSION-20260930`
+### INDEXED-EXPRESSION-SPAN — 2026-09-30, Codex, FIXED `c8167af`
 
 В ходе Array-свидетелей сохранены три прежних отказа общих потребителей: dynamic own-index внутри OR (`whole_array_address_20260930_06`, `unit_array_index_shadow`, 13:56: `own array index requires a supported integer expression`); `int: seen values[i]` (`_07`, 13:9: `unsupported body`); прямой `@element` в вызове с несколькими actual (`_06`, `unit_array_index_formal_shadow`, 13:23: `address arithmetic past an own-array element is not yet supported`). Поддерживаемые промежуточные выражения в итоговых тестах изолируют indexed write и formal shadow, а не исправляют эти отказы. Исследовать общий source-span/index projection для expression, declaration initializer и call actual; не вводить Array-specific синтаксис или новые ожидаемые запреты языка. [Артефакты и границы](native-selfbuild-20260930.md#whole-array-address-repair).
 
-### LOGICAL-RHS-EAGER-LOAD — 2026-09-30, Codex, IN WORK `BOUNDED-INDEXED-EXPRESSION-20260930`
+### LOGICAL-RHS-EAGER-LOAD — 2026-09-30, Codex, FIXED `c8167af`
 
 Read-only ревью общего expression-emitter обнаружило прежнюю ошибку:
 `l2_eval_fields` включает short-circuit splitting только при
@@ -76,7 +76,7 @@ Read-only ревью общего expression-emitter обнаружило пре
 на безопасном индексе; не выдавать исполнение undefined out-of-bounds доступа
 за положительный runtime-тест. Включено как зависимость текущего writer-среза.
 
-### POINTER-ACTUAL-CONTRACT-BYPASS — 2026-09-30, Codex, IN WORK `BOUNDED-INDEXED-EXPRESSION-20260930`
+### POINTER-ACTUAL-CONTRACT-BYPASS — 2026-09-30, Codex, FIXED `c8167af`
 
 Отрицательные контроли `bounded_indexed_expression_20260930_05` показали,
 что L2-вызов допускает `@` char-элемента к формалу int* и адрес int-элемента
@@ -118,6 +118,45 @@ graph-path; общий тип/категорию надо получить те�
 отдельным долгом. Попытка заменить setup на явный merge выявила ещё
 неподдержанный транспорт merge-result в захват формала; сохранить этот
 отказ отдельно, а не возвращать неявное клонирование ради теста.
+
+Итог перечисленных трёх исправлений — `c8167af`: восстановительный focused
+gate 131/131 (128 фикстур); полный `bounded_indexed_expression_full_20260930_02`
+— 970/1022, те же 52 прежних отказа, новых регрессий и удалённых строк нет.
+Обе промежуточные адресные регрессии устранены, P47 проверяет результаты 8/9,
+все 19 добавленных строк прошли. Контрольные поломки обнаруживают чтение
+за actual-span, потерю initializer, eager RHS, неверные pointer-контракты,
+раннюю проверку hidden-операнда и перезапись адреса соседним actual.
+Описания выше сохраняют ход обнаружения и не означают, что эти исправления
+ещё ожидаются. [Точные байты, результаты и оставшиеся границы](native-selfbuild-20260930.md#bounded-indexed-expressions).
+
+### OWN-REFERENCE-CANDIDATE-LOSS — 2026-09-30, Codex, OPEN
+
+Read-only проверка общего контракта `@:` подтвердила различие реализации,
+не неоднозначность нормы. Machine-local `@: A p`, `@: A p 0` и `p: 0`
+используют общий receiving-checker; native admission имеет условие
+`candidate != 0`, поэтому ноль не проверяется как Structure и не порождает
+её экземпляр. Omitted Model-ссылка реально проверена в
+`assignment_rhs_observers_20260930_final`, `unit_rhs_reference_admission`;
+явный ноль Model-ссылки здесь установлен чтением кода, не отдельным новым
+runtime-свидетелем.
+
+У own/root pointer-cell маршрута есть другой дефект: ветви
+`l2_own_ref_decl` в native statement emission и retained-graph construction
+пропускают объявление целиком, полагаясь на заранее нулевую ячейку.
+Начальный ненулевой candidate также пропускается. Позднее `p: 0`
+не представлено общим присваиванием: `l2_rw_ref_bind` принимает только
+двухпольное `@ v` и отказывает до обычного receiving/admission маршрута.
+Это не отказ `implements(null,A)` и не разрешённое различие root/method.
+
+Нужна общая инициализация/перепривязка существующей pointer-cell через
+тот же declaration/value/receiving контракт: ноль, существующая ссылка,
+Structure-кандидат после преобразования и admission, однократное вычисление.
+Отрицательные type/depth/const/admission проверки сохраняются. Проверить
+нулевое начало, ненулевой candidate, последующую смену/обнуление и сохранение
+старого значения при отказе, как native, так и реально интерпретируемым
+телом. Не добавлять отдельную семантику верхнего тела или второй data-граф.
+Новый исполняемый свидетель пока не запускался; текущий frozen indexed-span
+срез этим наблюдением не расширяется.
 
 ### HIDDEN-POINTER-LOCAL-SOURCE — 2026-09-30, Codex, OPEN
 

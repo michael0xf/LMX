@@ -266,6 +266,44 @@ f возвращает `@: Model`, выражение `ref\value` отказыв
 исправлении. Пока это измеренный пробел: сравнение с исходным baseline
 не выполнено, поэтому он не помечен доказанно старым или регрессией.
 
+### MERGE-RESULT-PHANTOM-NAMESPACE — 2026-09-30, Codex, OPEN
+
+Диагностика `build/l2_harness/reentry_publication_20260930_04`,
+`unit_named_self_path_copy`: после явного `R: merge: Counter` последующее
+`R()` ошибочно собирается как новая статическая namespace R. Порожденный
+L1 сохраняет merge-result в слоте 4, но читает `R\hits` через пустой слот 6;
+вызов R не порождается. Native и walked строка останавливаются с
+`a field path met no Structure`, exit 3. Это не основание менять правила
+вызова: R уже объявлено явным merge. Проверить identity существующей
+привязки в общей предварительной классификации и её потребителях;
+не добавлять исключение для написания `R()` или имени результата.
+Срез повторного входа исследует минимальную общую зависимость; широкая
+переделка относится к [классификации известной головы](native-selfbuild-20260930.md#known-structure-call-classification).
+Прямое сравнение этой новой фикстуры с исходным baseline пока не проведено.
+
+### NESTED-CALLABLE-OWN-FIELD-PATH — 2026-09-30, Codex, OPEN
+
+`reentry_publication_20260930_03/src/unit_self_path_copy.lm2:18:9`:
+`A\M\hits` отказывает с `unknown field path segment`, хотя вызовы
+`A\M()` и `R\M()` в следующем diagnostic `_04` исполняются и возвращают
+независимые значения явного self-пути `M\hits`. Поддержка вызова не
+доказывает поддержку последующего шага к объявленному полю callable.
+Сохранить исходный внешний path-свидетель для общего обхода разрешённой
+Structure/метода и его own-layout; возвращаемый self-path не закрывает
+этот пробел. Связанный маршрут — [canonical body/copy и общая identity](native-selfbuild-20260930.md#one-complete-lexical-graph).
+
+### NAMED-PRIMITIVE-OMITTED-INITIALIZER — 2026-09-30, Codex, OPEN
+
+`reentry_publication_20260930_03/src/unit_named_self_path_copy.lm2:2:1`:
+поле `size_t: hits` в именованной Counter отвергнуто как
+`a named Structure field needs a name`; имя hits при этом явно есть.
+В диагностике `_04` явное `size_t: hits 0U` проходит трансляцию.
+Отсутствие initializer не означает отсутствие имени и не разрешает
+требовать особую форму объявления внутри named Structure. Исправление
+должно использовать общий declaration/receiver contract, не отдельную
+ветку для size_t или неявное обнуление всех примитивов. Пока зафиксированы
+эти два конкретных входа; остальные типы и baseline отдельно не проверены.
+
 ### OWN-REFERENCE-CANDIDATE-LOSS — 2026-09-30, Codex, FIXED `74df17d`
 
 Исходный дефект описан ниже. В итоговом срезе общий declaration/receiving

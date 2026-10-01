@@ -14,7 +14,6 @@ prototype:
     fn: lmx_walk_arg_arity (@: LmxWalkFrame f; @: Lmx node) size_t
     fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
-    fn: lmx_walk_active_over (@: LmxWalkFrame f; @: Lmx data) int
     fn: lmx_walk_catch_count (@: LmxWalkFrame f; @: void cell; @: size_t out) int
     fn: lmx_walk_callable_addr (@: LmxArena arena; @: Lmx node) LmxEntry
     fn: lmx_walk_empty (@: LmxWalkFrame f; @: Lmx code; @: void dest; @@: void out) int
@@ -766,9 +765,6 @@ return: c.LMX_WALK_OK
 fn: lmx_walk_publish (@: LmxWalkFrame f) int
     @: LmxWalkWork e 0
     if: f = 0
-        return: c.LMX_WALK_OK
-    # A re-entrant activation publishes nothing: its working values are its own (book §12, the S/I2 trace).
-    if: f\reent != 0
         return: c.LMX_WALK_OK
     e: f\work
     while: e != 0
@@ -2413,20 +2409,6 @@ fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @
         return: c.LMX_WALK_INVALID
 return: c.LMX_WALK_OK
 
-# The walked activations running on this thread, top first, linked through LmxWalkFrame.up (lmx_walk_activate): frames
-# on the C stack, ordinary activation state -- nothing of it is in the graph.
-thread_local: @: LmxWalkFrame lmx_walk_active_top 0
-
-# Is `data` the data of an activation from `f` down?  A re-entrant activation is one whose data is (book §12).
-fn: lmx_walk_active_over (@: LmxWalkFrame f; @: Lmx data) int
-    @: LmxWalkFrame g f
-    while: g != 0
-        if: g\node = data
-            return: 1
-        g: g\up
-    ---
-return: 0
-
 fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: void dest; @@: void result; @: int present) int
     LmxWalkFrame: frame
     LmxScratchMark: mark
@@ -2434,7 +2416,6 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
     @: LmxScratchMark pm 0
     int: status
     int: a 0
-    int: linked 0
     if: result != 0
         \result: 0
     if: present != 0
@@ -2448,14 +2429,6 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
     if: lmx_scratch_mark(context\scratch, pm) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
     status: lmx_walk_enter(f, context, code, data, args, nargs)
-    # Re-entrant: an activation over the same data runs below this one on this thread (Codex's reading of the author's
-    # norm, 2026-09-28: «Inner changes do not publish into outer occurrence S»).
-    if: status = c.LMX_WALK_OK
-        f\up: lmx_walk_active_top
-        f\reent: lmx_walk_active_over(f\up, data)
-        lmx_walk_active_top: f
-        linked: 1
-    ---
     # §7b: the entry load (Lingvamyxa spec 21.5): the working table of the own fields the code uses, from the code.
     if: status = c.LMX_WALK_OK
         status: lmx_walk_load_code(f)
@@ -2480,9 +2453,6 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
     # payload crosses. The caller reads it from this out-parameter.
     if: status >= c.LMX_WALK_THROWN && result != 0
         \result: f\payload
-    ---
-    if: linked != 0
-        lmx_walk_active_top: f\up
     ---
     if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
         status: c.LMX_WALK_INVALID

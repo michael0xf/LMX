@@ -1,7 +1,6 @@
-# §7b witness (book §12, the S/I2 trace): the outer activation of M works over its occurrence S; `x: 2` is
-# published before the re-entrant call, which gets a fresh instance I2 whose x ends at 9.  The outer bare x reads its
-# own working 2 and `M\x` (S) reads 2: the re-entrant instance is not visible.  `x: x + 1` is a new outer write
-# published at the exit: check reads 3.  The program exits 22 * 10 + 3 = 223.
+# Reentry uses one declared occurrence and independent working values.
+# Inner x9 is published; outer bare x stays2 and explicit M\x reads9.
+# The final outer write publishes3: observable result293.
 fn: M (int: n) int
     int: x 1
     if: n = 0

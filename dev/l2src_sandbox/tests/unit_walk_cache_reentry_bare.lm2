@@ -1,7 +1,6 @@
-# §7b witness in a walked shape (book §12, the S/I2 trace): the outer activation of M works over its occurrence S;
-# `x: 2` is published before the re-entrant call, whose fresh instance I2 ends with x 9.  The outer bare x keeps its own
-# working 2 -- nothing is reloaded.  `x: x + 1` is a new outer write published at the exit: check reads S's 3.  The
-# program exits 2 * 10 + 3 = 23.
+# Reentry shares the declared graph; each activation keeps its working value.
+# Outer x2 is not reloaded after inner publication9. The final outer write3
+# publishes normally, so the observable result remains23.
 fn: M (int: n) int
     int: x 1
     if: n = 0

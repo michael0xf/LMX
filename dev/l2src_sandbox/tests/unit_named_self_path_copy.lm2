@@ -1,0 +1,24 @@
+# Runtime merged-named self identity. Source R() classification remains OPEN;
+# the raw C test door invokes ordinary dispatch on the real merge result.
+include: "l2src/tests/reentry_copy_observer.h"
+Counter:
+    size_t: hits 0U
+    checkpoint()
+    Counter\hits: Counter\hits + 1U
+return
+fn: checkpoint () int
+return: 0
+R: merge: Counter
+Counter
+if: Counter\hits != 1U || R\hits != 0U
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+int: status c.l2_test_reentry_dispatch(0)
+if: status != 0
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+if: Counter\hits != 1U || R\hits != 1U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

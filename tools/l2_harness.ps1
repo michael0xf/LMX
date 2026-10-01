@@ -4325,20 +4325,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_fresh_instance_skipped_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 77;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 1; Count = 2 }, [pscustomobject]@{ Method = 1; Arity = 0; Count = 1 });
         Absent = @('lmx_fresh(', 'l2_new0'); Debt = @() },
-    # A re-entrant activation publishes nothing (book §12, the S/I2 trace; Codex's reading of the author's norm,
-    # accepted 2026-09-28, OPUS-CODEX-20260928-10 #1; 7b, re-expected by name).  The row pinned the fresh instance a
-    # re-entry and a call by reference ran over (-189 c3a, Q28) -- gone with lmx_fresh (R2: no per-call instance in the
-    # graph).  Now: down's inner activations keep their working values to themselves -- r 123, down\x 3 and down\y 12
-    # the outermost's -- and seven, called by reference over its own occurrence, publishes s 7 (was Entry 0 over a
-    # formula).  Debt: down's count read at entry, the counted recursive call, the guarded publication, the walked
-    # root's CALL over down itself, the call by reference over the occurrence itself.
+    # Universal publication: local result123, innermost published x0, outer y12;
+    # callable-formal seven publishes s7. No recursion tracking or fresh graph.
     [pscustomobject]@{ Name = 'unit_recursive_fresh_instance.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 1; Count = 2 }, [pscustomobject]@{ Method = 2; Arity = 1; Count = 1 });
-        Absent = @('lmx_fresh(', 'l2_new0', 'l2_self: '); Debt = @('int: l2_reent (cast: (int) (l2_m0_act > 1))', 'l2_m0_act: l2_m0_act + 1',
-                 'if: l2_q0_dirty != 0 && l2_reent = 0', 'if: lmx_call_prim(l2_program_arena, l2_c0, l2_c0, 0, 0U, ') },
-    # -189 c3b-3: an own Structure field is a direct slot of its activation's data.  `nest` recurses (each
-    # re-entry over a fresh instance whose slot starts empty) and binds `Box: b` in its own slot, so
-    # the outer activation still reads its own Box after the inner calls: nest(3) = 123.
+        Absent = @('lmx_fresh(', 'l2_new0', 'l2_self: ', 'l2_reent', '_act:'); Debt = @('if: lmx_call_prim(l2_program_arena, l2_c0, l2_c0, 0, 0U, ') },
+    # Legacy implicit Model:b compatibility witness, pending known-head call cleanup;
+    # not a current declaration/copy contract or a fresh-per-entry graph witness.
     [pscustomobject]@{ Name = 'unit_recursive_model_slot.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @('[0]: lmx_pointer_new_owned('); Debt = @('lmx_arena_ref_store(self, ') },
     # FABLE-GROKBOT-MATRIX-20260924-143 -- B2 semantic matrix (fixtures only).
@@ -4656,11 +4649,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_cache_precall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 123; WalkMethods = $true;
         Absent = @(); Debt = @() },
-    # unit_cache_reentry: the S/I2 trace: the re-entrant instance ends at 9, the outer keeps its 2 and publishes 3.
-    [pscustomobject]@{ Name = 'unit_cache_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223;
+    # Inner publication9, outer working2, final outer publication3:293.
+    [pscustomobject]@{ Name = 'unit_cache_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 293;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_cache_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223; WalkMethods = $true;
-        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_cache_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 293; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
     # unit_cache_throw: the throw publishes the dirty x 5 -- without it 31.
     [pscustomobject]@{ Name = 'unit_cache_throw.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 35;
         Absent = @(); Debt = @() },
@@ -4696,18 +4689,28 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_cache_precall_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkMethods = $true;
         Absent = @(); Debt = @() },
-    # unit_cache_reentry_bare: the S/I2 trace with bare names only, walked whole -- no exit publication 22, one shared instance 93.
+    # Bare working values remain private despite ordinary inner publication; result23.
     [pscustomobject]@{ Name = 'unit_cache_reentry_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_cache_reentry_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_walk_cache_reentry_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 23; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
-    # unit_cache_reentry_peek: the S/I2 trace observed from another method, so M is walked under the knob -- peek reads
-    # the place of declaration after the re-entrant call: 2, the re-entrant activation's 9 unpublished.  A re-entrant
-    # activation that publishes: 293 (natively the counted guard l2_reent, walked the frame's reent).
-    [pscustomobject]@{ Name = 'unit_cache_reentry_peek.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223;
+    # External peek observes the same inner-published9 as the current self path.
+    [pscustomobject]@{ Name = 'unit_cache_reentry_peek.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 293;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_cache_reentry_peek.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 223; WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_walk_cache_reentry_peek.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 293; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reentry_clean_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @('l2_reent', '_act:'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_reentry_clean_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @('l2_reent', '_act:'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_self_path_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_self_path_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_self_path_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_self_path_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(1);
+        Absent = @(); Debt = @() },
     # unit_cache_root_precall: the root publishes its dirty x before calling peek, whose node\x reads 5 -- without it 11.
     [pscustomobject]@{ Name = 'unit_cache_root_precall.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
         Absent = @(); Debt = @() },

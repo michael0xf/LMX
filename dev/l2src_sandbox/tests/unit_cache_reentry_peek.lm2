@@ -1,9 +1,6 @@
-# §7b witness (book §12, the S/I2 trace; Codex, 2026-09-28: a re-entrant activation publishes nothing), observed from
-# another method so that M itself is walked under the knob: `x: 2` is published before the re-entrant call; the
-# re-entrant activation writes its own x 9 and publishes nothing.  The outer's x is clean after that publication, so
-# peek's call publishes nothing, and peek reads the place of declaration through `M\x`: 2.  The outer returns
-# seen * 10 + peeked = 22; `x: x + 1` is published at the exit and check reads 3.  The program exits 223; a re-entrant
-# activation that publishes lets peek read 9: 293.
+# Reentry uses one declared occurrence and independent working values.
+# Inner x9 is published; outer bare x stays2. External peek reads graph9,
+# then the final outer write publishes3: observable result293.
 fn: M (int: n) int
     int: x 1
     if: n = 0

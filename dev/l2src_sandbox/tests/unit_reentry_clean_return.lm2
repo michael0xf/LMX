@@ -1,0 +1,20 @@
+# Inner publication changes the same graph, not the clean outer working value.
+fn: M (int: n) int
+    int: x 1
+    if: n = 0
+        x: 9
+        return: 0
+    x: 2
+    M(0)
+    if: x != 2
+        return: 81
+    if: M\x != 9
+        return: 82
+return: 29
+
+int: result M(1)
+int: ok 83
+if: result = 29 && M\x = 9
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

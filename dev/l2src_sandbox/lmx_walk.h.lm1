@@ -397,11 +397,6 @@ struct: LmxWalkFrame
     # scratch slice.
     @: LmxWalkWork work
     size_t: nwork
-    # A re-entrant activation (book §12, the S/I2 trace): its data is already active on this thread, below it --
-    # its working values are its own and transient, and it publishes nothing.  up links the walked activations of
-    # the thread while they run (lmx_walk_activate).
-    @: LmxWalkFrame up
-    int: reent
 end: LmxWalkFrame
 
 prototype:
@@ -438,13 +433,13 @@ prototype:
     fn: lmx_walk_call_dest (@: LmxWalkFrame f; @: void dest; int: ty; @@: void call_dest) int
     fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     # The same activation for a caller INSIDE this unit: the inputs are values it produced
-    # itself and are not asked about; an integer result goes into `dest`.  `code` and `data`
-    # are the activation's two graphs (LmxWalkFrame.code/.node); a direct/root caller passes
-    # the same Structure for both.
+    # itself and are not asked about; an integer result goes into `dest`. The existing
+    # code/node parameters identify the executed body and occurrence; ordinary calls
+    # pass the same complete Structure for both, not a separate data graph.
     fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs; @: void dest; @@: void result; @: int present) int
     # Entry (k.4: no plan, no descriptor -- next_core_tasks.md §3 item 9).  Opens the frame
-    # over `code`/`data` and asks the arena whether `code` is a Structure with any body
-    # steps at all; NO_GRAPH when it has none.  Nothing else is looked at or cached; a body
+    # over `code`/`data` and asks the arena whether both identify Structures. An empty
+    # body remains a valid Structure. Nothing else is looked at or cached; a body
     # node this slice does not read is refused when the body actually runs, not here.
     fn: lmx_walk_enter (@: LmxWalkFrame f; @: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: void args; size_t: nargs) int
 

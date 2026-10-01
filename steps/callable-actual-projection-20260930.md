@@ -152,6 +152,18 @@ Delayed checks must replay their saved environment without duplicating
 records or choosing a later row. Pointer depth/qualification use the existing
 type projection; no pointee is copied and no receiving model is guessed.
 
+The 2026-10-01 preflight identifies `l2_wait_add` as reusable site/scope
+storage, not a complete saved environment yet: its six-int record does not
+save `l2_own_excl`, and `l2_wait_run` restores the method without restoring
+the exact visibility position. Deferred initializer checks must preserve or
+derive the new declaration's exclusion as well as scope and site. Measure
+an initializer containing a hidden-input call, not only a bare preceding
+name. Retain every relevant call site, rather than just calls whose value
+check happened to wait. Do not globally apply a caller-site cutoff to
+`l2_own_find_last`: callee lexical fallback and fields of other source parts
+require their own declaration context. Path segments after a resolved root
+are structural selection, not lexical bindings subject to that cutoff.
+
 Apply any required visibility correction to the common binding resolver,
 not only to hidden-pointer calls. Ordinary read, assignment, address, path,
 `sizeof`, type checking and emission must agree on the same preceding

@@ -22393,20 +22393,41 @@ return: 0
 fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
     @: LmP0Text t
     int: fi
+    int: cand
     \out_kind: 0
     \out_fi: 0 - 1
-    if: actual_span != 1 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+    if: actual_span != 1 || a0 = 0 || a0\value = 0 || a0\value\as = 0
         return: 0 - 1
-    t: a0\value\as\atom
-    fi: l2_formal_find(mi, t)
-    if: fi >= 0 && l2_cf_get(mi, fi) >= 0
-        \out_kind: 2
-        \out_fi: fi
-        return: l2_cf_get(mi, fi)
-    if: fi >= 0
-        return: 0 - 1
-    \out_kind: 1
-return: l2_find_method(t)
+    if: a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0 && a0\value\as\atom != 0
+        t: a0\value\as\atom
+        fi: l2_formal_find(mi, t)
+        if: fi >= 0 && l2_cf_get(mi, fi) >= 0
+            \out_kind: 2
+            \out_fi: fi
+            return: l2_cf_get(mi, fi)
+        if: fi >= 0
+            return: 0 - 1
+        \out_kind: 1
+        return: l2_find_method(t)
+    # A NULLARY call Frame -- `f()`, `f: ()`, the closed vertical form -- is the same occurrence the
+    # bare atom is: one P0 shape for those spellings (the author's correction), and the receiving
+    # contract here is a callable formal, which receives the occurrence and does not execute.  A Frame
+    # with any active field is a call with arguments, i.e. a value or a statement, not this.
+    if: a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as != 0 && a0\value\as\frame != 0
+        if: a0\value\as\frame\head = 0 || a0\value\as\frame\body = 0 || l2_count_active(a0\value\as\frame\body) != 0
+            return: 0 - 1
+        fi: l2_formal_find(mi, a0\value\as\frame\head)
+        if: fi >= 0 && l2_cf_get(mi, fi) >= 0
+            \out_kind: 2
+            \out_fi: fi
+            return: l2_cf_get(mi, fi)
+        if: fi >= 0
+            return: 0 - 1
+        cand: l2_find_method(a0\value\as\frame\head)
+        if: cand >= 0
+            \out_kind: 1
+        return: cand
+return: 0 - 1
 
 # The same resolution, for the native emitter: the occurrence expression of the actual, in the
 # caller's code.  A unit method's occurrence is its descriptor in the unit; a forwarded formal is

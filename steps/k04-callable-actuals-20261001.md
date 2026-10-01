@@ -88,6 +88,56 @@ decision is made once:
 - `python tools/check_docs.py` OK, `tools/gate_p0_header.ps1 -Root .` OK (47 P0 defines, 7 files),
   `git diff --check` clean.
 
+<a id="k04b"></a>
+## K04b — the equivalent nullary forms are one receiving contract
+
+**Reproduction** on K04a's bytes (`980971e`, `l2trans.lm1` blob `ab2519c0`): `recv(task())` — the
+canonical nullary call Frame as an actual of a callable formal — is refused,
+`19:8: incompatible entry signature`, `detail: frame=recv`; the bare atom `recv(task)` was accepted.
+P0 keeps the two spellings apart and collapses the other two: printTree gives `recv (task)` as
+`structure[atom "task"]`, while `recv (task())` and `recv (task: ())` are both
+`structure[frame head="task" body=empty]`.
+
+**Repair.** `l2_cf_actual` resolves a nullary call Frame — an empty body, a head that resolves to a
+callable — by the same rule the atom takes, and the emitter needed nothing: the occurrence it emits is
+the same one. A Frame with any active field is a call with arguments (a value or a statement), not
+this, so it keeps its located refusal.
+
+**Witnesses.**
+
+- `unit_callable_nullary_forms` — all three spellings in ONE program: `recv(task)`, `recv(task())`,
+  `recv(task: ())`; the counter is 0 after each of the three and 1 after the explicit `task()`.
+  Entry 7.
+- `unit_callable_returning_two_contracts` — matrix row 4: a RETURNING callable received once by a
+  callable formal (no execution: the counter stays 0) and once by a result-receiving primitive formal
+  (executes exactly once — the counter is 1 and the received value is the callable's own result, 41).
+  This row was already green before this slice's repair (measured on the K04a-only bytes below), so it
+  is a standing guard for the receiving-contract distinction, not evidence of the new resolution.
+
+**Evidence.**
+
+- Focused `build/l2_harness/dk_k04b_focus_01` (the new row, the K04a rows and the callable neighbours):
+  **1 failed** — only the retained `unit_value_call_sub_refused`; staged blob `d87307f5` = the
+  committed bytes. `build/l2_harness/dk_k04b_focus_02` (the row-4 witness with the same rows):
+  **0 failed**.
+- M-K04a-only (`build/l2_harness/dk_k04b_m0`, the K04a bytes with the new rows): `unit_callable_nullary_forms`
+  RED — `l2trans produced no L1`, `…: incompatible entry signature` (`detail: frame=recv`), i.e. the
+  reproduction; `unit_callable_returning_two_contracts` and the K04a rows stayed green.
+- Full gate `build/l2_harness/dk_k04b_full_01`: **37 of 1141** targets failed (K04a's committed result:
+  37 of 1139) — the two new rows OK, no newly failing target, no newly passing one, and the 37 retained
+  failures unchanged by exact ID and diagnostic. Staged `l2trans.lm1` blob `d87307f5` = the committed
+  bytes. Kernel and L3 sources are untouched by this slice.
+- `python tools/check_docs.py` OK, `tools/gate_p0_header.ps1 -Root .` OK (47 P0 defines, 7 files),
+  `git diff --check` clean.
+
+**Observed divergence, recorded not claimed as equivalence.** With the Frame actual the generated L1
+is NOT byte-identical to the atom form's: the atom form emits walker IR for the receiving method
+(`l2_rw…` frames) and the Frame form does not, because the walker's own callable-actual branch
+(`l2_rw_call`) still accepts only an atom (`a callable input that is not a method's name` otherwise),
+so the method stops being walk-eligible. Both run natively to the same observable (the rows above are
+native runs). The walker half of this decision is the residual below; no walked route is claimed for
+any row of this slice.
+
 **Residuals (not this slice).** Matrix rows 3–8: the equivalent nullary forms (row 3), the returning
 callable received as a reference and as a result (row 4), the two nonprimitive spellings (row 5), the
 own-binding/path actual and the shadowing formal (row 6 — the resolver's next category), the ordinary

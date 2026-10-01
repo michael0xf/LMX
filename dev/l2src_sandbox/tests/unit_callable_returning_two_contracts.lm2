@@ -1,0 +1,35 @@
+# K04 matrix row 4: a RETURNING callable, received once by a callable formal (reference reception:
+# no execution) and once by a result-receiving primitive formal (executes once, its result received).
+int: hits 0
+
+fn: mk () int
+    node\hits: node\hits + 1U
+    return: 41
+end: mk
+
+fn: count () int
+    return: node\hits
+end: count
+
+fn: byref (mk: f) int
+    return: count()
+end: byref
+
+fn: byval (int: x) int
+    return: x
+end: byval
+
+int: a byref(mk)
+int: b byval(mk)
+int: after count()
+if: a != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: b != 41
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: after != 1
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,38 @@
+# K04b (steps/callable-actual-projection-20260930.md, witness matrix row 3): the equivalent nullary
+# actual FORMS in an argument position -- bare `task`, `task()`, `task: ()` -- carry the SAME receiving
+# contract, the same descriptor, and the same absence of execution.  P0 keeps the atom and the nullary
+# Frame apart (printTree: `recv (task)` is structure[atom "task"], `recv (task())` and `recv (task: ())`
+# are one shape, structure[frame head="task" body=empty]); the receiving contract here is a callable
+# formal, which receives the occurrence and does not execute it.  hits stays 0 through all three
+# transports and becomes 1 only at the explicit invocation.  Success is 7.
+int: hits 0
+
+sub: task ()
+    node\hits: node\hits + 1U
+end: task
+
+fn: count () int
+    return: node\hits
+end: count
+
+fn: recv (task: f) int
+    return: count()
+end: recv
+
+int: a recv(task)
+int: b recv(task())
+int: c recv(task: ())
+int: after count()
+if: a != 0 || b != 0 || c != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: after != 0
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+task()
+int: once count()
+if: once != 1
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

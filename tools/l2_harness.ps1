@@ -2418,6 +2418,16 @@ $fixtures = @(
     # incompatible with the receiving formal's is refused at the call.
     [pscustomobject]@{ Name = 'unit_callable_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_callable_forward_refused.lm2:20:13: incompatible entry signature'; Absent = @(); Debt = @() },
+    # K04b (steps/callable-actual-projection-20260930.md, matrix row 3): the equivalent nullary actual forms --
+    # bare `task`, `task()`, `task: ()` -- carry one receiving contract to a callable formal: the same descriptor,
+    # no execution, hits 0 through all three and 1 only at the explicit invocation.
+    [pscustomobject]@{ Name = 'unit_callable_nullary_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # K04b, matrix row 4: a RETURNING callable received once by a callable formal (reference reception -- the
+    # callable does not execute: hits stays 0) and once by a result-receiving primitive formal (executes exactly
+    # once -- hits becomes 1 and the value is the callable's result, 41).
+    [pscustomobject]@{ Name = 'unit_callable_returning_two_contracts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # OPUS-WALKLOOP-20260929-11: Counter's procedure has a `for` -- it stayed native under the knob until the walker's FOR,
     # though the fixture says it is walked; now it is (the Absent pins).
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;

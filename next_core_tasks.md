@@ -66,6 +66,9 @@ Stable `l2src` не обновляется.
    через общий call/ABI, сохранив прямой вход только внутри уже выбранного
    нативного адаптера. Проверить заменённое и пустое слово native при
    нативном вызывающем; обычное сравнение двух режимов это не доказывает.
+   Для миграции setup-копий закрыть [приём цельного результата явного merge](steps/defects.md#merge-result-value-projection):
+   `copy: merge Model` / `@: Model b copy`, без подмены копирования
+   ссылкой на Model и без ограничения merge верхним телом в walker.
    Исправить [общую проекцию callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
    и убрать живые `Model: fresh` / `T: b c` fallback-ветви через
    [общую классификацию известной головы как вызова](steps/native-selfbuild-20260930.md#known-structure-call-classification).

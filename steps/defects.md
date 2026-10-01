@@ -9,6 +9,35 @@
 `661735a` включил перечисленные ниже исправления прежнего VERIFIED WIP.
 Оставшиеся границы каждого исправления не считаются закрытыми вместе с ним.
 
+<a id="merge-result-value-projection"></a>
+### MERGE-RESULT-VALUE-PROJECTION — 2026-10-01, Codex, OPEN
+
+На frozen binary `site_visibility_20261001_expanded02` минимальный
+`copy: merge Model` / `@: Model b copy` отвергается в корне на 5:1
+«implements is false in assignment», а внутри `fn make` на 6:5
+«assignment value has unknown type». Источники и логи:
+`build/l2_harness/site_visibility_merge_value_probe.lm2` / `.log`,
+`site_visibility_merge_method_probe.lm2` / `.log` и `_walk.log`.
+Второй отказ одинаков с `--walk-methods`; L1 не выдан, runtime ещё
+не проверялся. Model имеет `int: value 1`; принимающее объявление должно
+сохранить физический результат копирования, а не ссылку на исходный Model.
+
+Source trace: связанные merge-results уже имеют физические ссылки и карту
+полей для путей, но цельное значение не проходит через общий
+`l2_colon_bound_ty` / `l2_actual_ns` / `l2_reference_descriptor` /
+`l2_address_name`. Кроме того, `l2_rw_stmt` разрешает обычный merge лишь
+при `l2_rw_mi == l2_e`. Это пробел проекции существующего результата,
+не новый синтаксис, не новая разновидность Structure и не вопрос Q58.
+
+Нужна общая value/model/address-проекция результата с обычным admission
+и однократным вычислением, в корне и в методе, native и в действительно
+интерпретируемом теле. Сохранить новое копирование при каждом достижении
+merge, независимость исходника и копии, равенство ссылок на один результат
+и правильную глубину `@copy`. Не заменять копию alias на Model ради
+зелёного теста. Удаление старых `Model: fresh` setup-форм зависит от этого
+ремонта там, где тест доказывает копирование/повторный вход; проверки
+адреса обычной исходной Structure могут использовать явное её определение.
+
 ### SITE-BINDING-CATEGORY-REGRESSIONS — 2026-10-01, Codex, IN WORK `SITE-AWARE-VISIBILITY-20261001`
 
 Расширенный промежуточный прогон `site_visibility_20261001_expanded02`:

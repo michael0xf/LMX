@@ -1,0 +1,44 @@
+Data:
+    int: number 3
+    int: other 5
+    size_t: count 7U
+    char: letter 'A'
+end: Data
+fn: put (@: int target; int: value) int
+    \target: value
+return: \target
+fn: sized (@: size_t target; size_t: value) int
+    \target: value
+return: 7
+fn: byte (@: char target; char: value) int
+    \target: value
+return: 7
+fn: clear (@@: int target; int: value) int
+    \target: 0
+return: value
+fn: pair (@: int first; @: int second) int
+    \first: 29
+    \second: 31
+return: 7
+fn: check () int
+    int: a put(@ Data\number, 11)
+    int: b put((@: Data\number), 13)
+    int: c put((@ Data\number), 17)
+    sized(@ Data\count, 19U)
+    byte((@: Data\letter), 'B')
+    @: int p @ Data\number
+    int: d clear(@p, 23)
+    if: a != 11 || b != 13 || c != 17 || d != 23 || p != 0
+        return: 81
+    if: Data\number != 17 || Data\count != 19U || Data\letter != 'B'
+        return: 82
+    pair(@ Data\number, @ Data\other)
+    if: Data\number != 29 || Data\other != 31
+        return: 84
+return: 7
+int: got check()
+if: got != 7
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

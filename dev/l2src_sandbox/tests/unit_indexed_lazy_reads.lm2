@@ -1,0 +1,27 @@
+# Safe in-range reads: generated-load dominance proves skipped reads stay lazy.
+include: "<stdlib.h>"
+Data:
+    int: value 37
+end: Data
+fn: check () int
+    []: int values 2
+    size_t: i 1U
+    values[0]: 17
+    values[1]: 29
+    int: skipOr (1 = 1 || values[i] != 29)
+    int: skipAnd (1 = 0 && values[0] != 17)
+    int: takeOr (1 = 0 || values[i] = 29)
+    int: takeAnd (1 = 1 && values[0] = 17)
+    int: raw c.abs(1 = 1 || values[i] != 29)
+    @: int p @values[0]
+    int: pointer (1 = 1 || \p != 17)
+    int: field (1 = 0 || Data\value = 37)
+    if: skipOr != 1 || skipAnd != 0 || takeOr != 1 || takeAnd != 1 || raw != 1 || pointer != 1 || field != 1
+        return: 81
+return: 7
+int: got check()
+if: got != 7
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

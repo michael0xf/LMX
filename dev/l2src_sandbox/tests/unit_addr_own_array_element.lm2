@@ -1,11 +1,12 @@
 # D-21 (steps/defects.md): `@` on a bare own-array element must address the
 # real backing (l2_emit_array_ptr), not the value a plain read would have
 # copied into a temp -- a write through the address must reach the array,
-# both directly on the own-array and through a formal pointer it decays to.
+# both directly on the own-array and through an explicitly passed element
+# address. An Array argument itself remains a descriptor, not its backing.
 fn: poke (@: int p) int
     @: int q
     q: @ p[1]
-    \q: 9
+    \q: 13
     return: p[1]
 end: poke
 
@@ -16,13 +17,16 @@ fn: build () int
     \p: 9
     if: buf[1] != 9
         return: 81
-    return: poke(buf)
+    int: changed poke(@buf[0])
+    if: changed != 13 || buf[1] != 13
+        return: 83
+    return: 7
 end: build
 
 int: got
 got: build()
-if: got != 9
+if: got != 7
     sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

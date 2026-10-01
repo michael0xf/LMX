@@ -1,0 +1,24 @@
+include: "<stddef.h>"
+fn: opaque (@: void p) @: void
+return: p
+fn: readonly (const: @(char p)) int
+return: 7
+fn: empty (@: int p) int
+    if: p != 0
+        return: 81
+return: 7
+fn: check () int
+    []: int values 1
+    values[0]: 19
+    @: int p @values[0]
+    @: void raw opaque(p)
+    if: raw != p
+        return: 82
+    @: int restored opaque(p)
+    if: restored != p || \restored != 19
+        return: 83
+    if: empty(0U) != 7 || empty((0)) != 7 || empty(c.NULL) != 7 || readonly("ok") != 7
+        return: 84
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

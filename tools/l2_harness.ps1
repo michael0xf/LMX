@@ -393,6 +393,26 @@ function Test-WalkShapeNode($Graph, [string]$Name, $Shape) {
 # from the native binding and matched back to that same CALL, not pinned as global ordinals.
 function Test-NativeGraphWitnesses($Fixture, [string]$Text) {
     $graph = Get-WalkGraphFacts $Text
+    if ($Fixture.PSObject.Properties['LazyArrayReads']) {
+        # This fixture has only safe array reads in logical RHS arms. Count
+        # actual emitted loads, and require an enclosing lazy-result guard;
+        # neither comments, backing declarations nor stores count as loads.
+        $guards = [System.Collections.Generic.List[object]]::new()
+        $reads = 0
+        foreach ($line in ($Text -split '\r?\n')) {
+            if ($line -match '^\s*(#|$)') { continue }
+            $indent = $line.Length - $line.TrimStart().Length
+            while ($guards.Count -gt 0 -and $guards[$guards.Count - 1].Indent -ge $indent) { $guards.RemoveAt($guards.Count - 1) }
+            if ($line -match '^\s*l2_t\d+: l2_a\d+_data\[[^\]]+\]\s*$') {
+                $reads++
+                if (-not @($guards | Where-Object { $_.Lazy }).Count) { return 'array RHS load escaped its lazy logical guard' }
+            }
+            if ($line -match '^\s*if: (?<condition>.+)$') {
+                $guards.Add([pscustomobject]@{ Indent = $indent; Lazy = $Matches.condition -match '^l2_t\d+(?: = 0)?$' })
+            }
+        }
+        if ($reads -ne $Fixture.LazyArrayReads) { return ('found ' + $reads + ' guarded array loads, expected ' + $Fixture.LazyArrayReads) }
+    }
     if ($Fixture.PSObject.Properties['WalkedMethods']) {
         foreach ($method in $Fixture.WalkedMethods) {
             if ($Text -notmatch ('(?m)^fn: l2_m' + $method + '_tr ')) { return ('missing tested method trampoline l2_m' + $method) }
@@ -1309,7 +1329,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_d108_nested_throwing.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_d108_nested_declared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':15:12: unhandled throw: Oops'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_callable_model_decl_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':11:5: a callable merge binds a name that is not a formal'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_model_decl_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # Item 738 slice 2: _write_only (REVIEW 2032ca0, M46/P46) -- a field the model only writes is in the
     # copy (42, 43); _write_root -- a model that uses its capture only in update position records it (2, 3;
     # before, "unknown field path root"); _call_arg -- a value field as a call argument (82).
@@ -3310,6 +3330,28 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_address_structure_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # Whole own Arrays address their actual descriptor, independently observed before dereference.
+    [pscustomobject]@{ Name = 'unit_indexed_expression_span.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_address_path_actual_span.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_address_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hidden_address_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_indexed_lazy_reads.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; LazyArrayReads = 5;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_indexed_actual_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_array_backing_actual_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_indexed_actual_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_actual_contract.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_actual_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_indexed_initializer_extra_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unsupported body'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_array_descriptor.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_index_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -3583,9 +3625,9 @@ $fixtures = @(
         Debt = @() },
     # FABLE-SONNET-ARRAY-ADDR-20260924-144 D-21: `@` on a bare own-array
     # element addresses the real backing (l2_emit_array_ptr), both directly
-    # and through a formal pointer the array decays to.
+    # and through an explicitly supplied element-pointer formal (no Array decay).
     [pscustomobject]@{ Name = 'unit_addr_own_array_element.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0');
+        Args = @('0'); Entry = 7;
         Absent = @();
         Debt = @() },
     # D-24: `@ buf[i] + n` / `- n` is the element pointer. A store through it

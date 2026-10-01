@@ -1,0 +1,84 @@
+# One bounded indexed operand in an OR, declaration and inline actual.
+include: "<stdlib.h>"
+int: calls 0
+fn: index () size_t
+    node\calls: node\calls + 1
+return: 1U
+fn: write (@: int target; int: value) int
+    \target: value
+return: \target
+fn: sized (@: int target; size_t: value) int
+    \target: cast(int value)
+return: \target
+fn: indexedReturn () int
+    []: int local 2
+    local[0]: 5
+    local[1]: 47
+    size_t: i 1U
+return: local[i]
+fn: check () int
+    []: int values 3
+    size_t: i 1U
+    values[0]: 11
+    values[i]: 17
+    if: length(values) != 3U || values[0] != 11 || values[i] != 17
+        return: 81
+    int: seen values[i]
+    if: seen != 17
+        return: 82
+    int: first write(@values[0], 23)
+    @: int prebound @values[0]
+    int: second write(prebound, 29)
+    if: first != 23 || second != 29 || values[0] != 29
+        return: 83
+    int: third write((@: values[i]), 31)
+    if: third != 31 || values[i] != 31
+        return: 84
+    int: counted values[index()]
+    if: counted != 31
+        return: 85
+    int: fourth write(@values[index()], 37)
+    if: fourth != 37 || values[i] != 37
+        return: 86
+    if: node\calls != 2
+        return: 89
+    if: 1 = 1 || values[index()] != 37
+        int: skippedOr 1
+    if: 1 = 0 && values[index()] != 37
+        return: 90
+    if: node\calls != 2
+        return: 91
+    if: 1 = 0 || values[index()] != 37
+        return: 92
+    if: 1 = 1 && values[index()] != 37
+        return: 93
+    if: node\calls != 4
+        return: 94
+    int: compound c.abs(values[i] + 1)
+    if: compound != 38
+        return: 95
+    int: sizeActual sized(@values[0], 29U)
+    int: returned indexedReturn()
+    if: sizeActual != 29 || returned != 47
+        return: 97
+    int: steps 0
+    for: int(j, values[0]) (j < 31) j++
+        steps: steps + 1
+    end: for
+    if: steps != 2
+        return: 96
+return: 7
+int: got check()
+if: got != 7
+    sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+    return
+[]: int rootValues 2
+size_t: rootIndex 1U
+rootValues[0]: 41
+rootValues[rootIndex]: 43
+int: rootSeen rootValues[rootIndex]
+if: rootSeen != 43 || rootValues[rootIndex] != 43 || rootValues[0] != 41
+    sendMessage: exit(exit_code: 88; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

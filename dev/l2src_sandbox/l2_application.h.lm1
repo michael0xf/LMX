@@ -31,4 +31,21 @@ struct: L2Address
     int: descriptor
     int: model
     int: type
+    @: LmP0Field target
+    int: target_count
+    int: immutable
 end: L2Address
+
+# A bounded source operand view. All source pointers are borrowed; no AST or
+# runtime graph is copied. The index is either a literal, an existing joined
+# own-name projection, or the original P0 index expression.
+struct: L2IndexedOperand
+    int: own
+    int: type
+    int: count
+    int: address
+    int: dynamic
+    size_t: literal
+    @: LmP0Node index
+    @: LmP0Field after
+end: L2IndexedOperand

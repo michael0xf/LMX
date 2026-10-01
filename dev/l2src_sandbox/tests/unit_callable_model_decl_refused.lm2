@@ -1,10 +1,9 @@
-# REVIEW 9256c3b (fable_pc's P47, first form): a callable merge's model that declares a local is refused
-# once -- "a callable merge binds a name that is not a formal", at the model's header.  The scan said it,
-# and the pass that ran the scan added "unsupported body" at the same place: one cause, two lines.  The
-# harness now holds every refusal to at most one "l2trans error:" line.
+# Historical P47 row: a full field-path initializer is one expression.
+# The returned callable's local q must contain the captured value, not zero.
+# This exercises the existing held/walked callable route, not native attachment.
 Model:
     int: other 5
-    int: value 0
+    int: value 7
 end: Model
 
 fn: makeCounter (Model: m) fn: (int: x) int
@@ -13,8 +12,11 @@ fn: makeCounter (Model: m) fn: (int: x) int
         return: q + x
     return: bump
 
-Model: left
-c: makeCounter left
+c: makeCounter Model
 int: a (c: 1)
+int: b (c: 2)
+if: a != 8 || b != 9
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

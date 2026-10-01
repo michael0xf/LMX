@@ -7,7 +7,7 @@ Each core mechanism is defined primarily in L2; this document defines only a con
 <a id="scope"></a>
 ## 1. Scope
 
-Translator-L1 (`l1src/l1trans.lm1`) is a syntax-directed lowerer from wrapperless `.lm1` to one ANSI C99 translation unit per invocation. It is not L2: the L1 profile has no `Lmx` ontology, Message arena, or `implements` as language forms. The L2 core may be written in L1 and supplied to the same translator.
+Translator-L1 (`l1src/l1trans.lm1`) is a syntax-directed lowerer from wrapperless `.lm1` to one ANSI C99 translation unit per invocation. It is not L2: the L1 profile has no `Lmx` ontology, Message arena, or `implements` as language forms. L1 is the generated intermediate of the target L3-with-L2-inserts kernel. The existing handwritten `.lm1` implementation is transitional, not an alternative target source language or evidence of completed L2 self-build; see [the repository's self-build requirement](../READ.ME).
 
 <a id="translator"></a>
 ## 2. Translator
@@ -151,7 +151,7 @@ The result is contiguous C storage with no `LmxArrayDesc`, arena metadata or hid
 
 The distinction from a graph-backed L2 Array is how storage is located, not the presence of checks: L2 access likewise checks neither index nor descriptor. L2 `@array[i]` addresses the actual backing element, after which lowering uses an ordinary machine address. Checked access belongs to L3; the [L2 contract](L2_spec_en.md#lowlevel-address) is defined separately.
 
-After lowering, extents, lifetime, initialization and array-to-pointer conversion follow C99. Successful parsing does not establish that every C restriction was checked: some errors are detected by the next compiler. The L2 `c.array` contract is defined [separately](L2_spec_en.md#lowlevel-array).
+After lowering, extents, lifetime, initialization and array-to-pointer conversion follow C99. Successful parsing does not establish that every C restriction was checked: some errors are detected by the next compiler. The corresponding [L2 raw-C storage boundary](L2_spec_en.md#lowlevel-array) does not introduce a separate L2 language entity named `c.array`.
 
 Retaining an automatic array's address after return does not extend its lifetime. Kernel code explicitly allocates long-lived storage through the [arena](#arena) or a foreign API with defined release. Raw C arrays used as translator scratch buffers do not prove support for ordinary graph Arrays in source L2.
 

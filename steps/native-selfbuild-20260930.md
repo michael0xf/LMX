@@ -11,9 +11,166 @@ re-entry publication suppression and fixes current-occurrence path calls.
 Checkpoint `71c4743` lands typed portable reference values and the common
 argument/result transport ABI. Checkpoint `e70689c` closes source-site visibility
 over existing declaration rows and reached admission-layout provenance.
-Next is uniform native-word dispatch and remaining callable work.
+Checkpoint `621e8af` closes ordinary native-word dispatch and common stop
+propagation. Checkpoint `8359a59` lands the bounded ordinary merge-result repair;
+general selector/use-edge projection and callable work remain open. Code work
+is paused after this checkpoint and the v2 documentation handoff at the author's
+request. No next code/build stage is authorized by this record.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
+
+<a id="merge-result-value-release"></a>
+## Ordinary merge-result projection: checkpoint 8359a59
+
+The corrected frozen source is based on `f980dce`, with 25 explicitly owned paths.
+Translator SHA256:
+`25BEE8EB02491BD3934BBC923F0C51FE57069AA86E4A2D729B8187085B80048E`;
+harness SHA256:
+`B74EF589FFE38C3FB79A00A798CAE5C08D5B8F9D78DF6F84ED6D0A7129AC7009`.
+The exact 25 owned files were committed as
+`8359a59f67b87382c55eb402e9f09f9a4b1ce954` and fast-forwarded into main.
+This is a bounded release, not full clean-kernel approval.
+
+The bounded implementation removes the unit-global result slots and the
+merge-name binding index. A merge declaration resolves through its ordinary
+own row, keyed by source declaration, method and host; operands resolve before
+that new binding becomes visible. Existing `mrs/msrc` records describe the
+complete composed schema, including added and repeated fields, rather than
+another runtime store. A translation-only schema view serves named schemas
+and composed result schemas. Value, address and admission consumers use that
+view; the first operand's model is not substituted for the complete result.
+
+Native and walker construction store the successful result once in the ordinary
+own place. The walker uses an internal SELF leaf for its already existing
+executing occurrence: this adds neither a source receiver nor a context graph.
+The expression's actual host supplies the parent. Both paths collect actual
+operand profiles. If merge retains an existing qualified descriptor, its
+identity, parent and genuine layout provenance remain unchanged; a fresh result
+gets its own declaration token only after construction succeeds. Failed merge
+does not publish a result or replace the receiving reference.
+
+Earlier focused evidence, under `C:/Nyasha_Planet/LMX/build`:
+
+- `l2_harness/merge_value_final_focus_20261001_01`: 38/38 targets. All 16
+  live owned files and 14 available staged copies independently match the
+  start manifest. Generated relationships confirm ordinary SET destinations
+  and PRIM_PUB's actual SELF operand, including the four preserved legacy pins.
+- `l2_harness/merge_value_native_{schema,host,failure,repeat,retained}_20261001_01`:
+  the five rich fixtures also execute with native helper methods. Each has
+  successful native-root and cleared-root runs (13/17 checks, or 19/23 for
+  retained). These use the earlier `_14` production binary; their fixture
+  bytes matched focus01. The hosted fixture is subsequently corrected as
+  described below. These runs do not replace the corrected frozen gates.
+  Cleared root alone is not evidence of walked helpers.
+- `merge_value_self_20261001_04`: 54/54 checks, including distinct executing
+  data versus code occurrence and retained parent/provenance. Final kernel
+  acceptance must repeat this on the frozen source.
+
+The first full run, `l2_harness/merge_value_full_20261001_01`, is red:
+1056/1108, 52 failures. Exact-ID comparison retains the previous 48 failures;
+all eight added rows pass, with no removed or duplicate rows. Four regressions
+remain: `unit_t7_from_int`, `unit_walk_self_path_copy`,
+`unit_named_self_path_copy`, and `unit_walk_named_self_path_copy`.
+The two named-copy rows stop before dispatch because their test-only observer
+still hooks the unprofiled constructor, while the emitter now calls the profiled
+one. Its successful-result observation must move with that API, preserving all
+identity/execution assertions. The walked self-path case has an empty root
+operator graph despite successful native execution: the quiet walker-count
+pass enters the common own resolver without the current method context.
+The old global merge-name lookup had masked this defect. Restore the common
+source/method context, not that global lookup. The diagnostic case is also a
+production classification error: shape-only merge detection registers
+`return: merge(...)` as a result-own declaration named `return`, preempting
+the expression's operand check. Repair must use the common outer statement
+role, not a special exception for `return`. Further inspection showed the old
+T7 "no operands" message also came from that outer-shape route, counting only
+leading atoms of the legacy data-first expression. Restoring that text would
+not prove correct merge-expression or integer-result admission. These results
+are not a new accepted baseline.
+
+The first kernel run, `l2src/merge_value_kernel_20261001_01`, is also red:
+280/286. Six selftests fail at link time (`lmx_copy_msg_terminal`,
+`lmx_merge_into`, `lmx_merge_override`, `lmx_merge_parts`, `lmx_merge`,
+`lmx_multi_profile_merge`, each with `_selftest` suffix). Their embedded arena
+code collides with the newly linked implements object's dependency closure.
+These six programs have not executed; fixing the closure must not suppress
+tests or allow duplicate definitions.
+
+`l2_harness/merge_value_repair_20261001_01` then passes 40/42 targets.
+All three self-path regressions recover: the copied-method root again contains
+four real EXEC nodes and passes native/root-walk runs (13/17 checks); both
+named-copy observers capture the actual profiled result and retain the original
+identity and dispatch assertions. The remaining T7 error is an inner receiving-
+context limitation, not the original bogus result declaration.
+The other red is our new host fixture: its inner destination reuses an already
+visible outer `copy`. This is not a new declaration under the current general
+head rule. The fixture must use a distinct inner name while retaining parent,
+physical-path, address and per-iteration independence checks; the classifier
+must not gain a host-specific shadow exception.
+
+`l2src/merge_value_closure_preflight_20261001_01/results.json` independently
+records all six corrected dependency closures translating, compiling, linking
+and running successfully: 174 total checks, zero failures. This direct-entry
+preflight does not replace the next full kernel run.
+
+`l2_harness/merge_value_repair_20261001_02` passes 47/47 targets with the
+distinct inner destination and preserved host/copy checks. The old T7 source
+now has an explicitly identified implementation-boundary diagnostic, not a
+claimed language prohibition or evidence of integer-result admission. A
+separate `unit_merge_value_int_return_refused` constructs a real merge result
+and tests its rejection by an int result contract; the schema fixture tests
+successful reception by a Structure result contract. The frozen final chain
+uses those witnesses together.
+
+Final frozen-source evidence (all paths beneath `C:/Nyasha_Planet/LMX/build`):
+
+| Run | Result |
+| --- | --- |
+| `l2_harness/merge_value_final_focus_20261001_02` | 48/48 |
+| Restored final focus, recorded in `end_owned_manifest.json` | 48/48 after mutations |
+| `l2_harness/merge_value_full_20261001_02` | 1110 targets; 1062 OK; exact same 48 baseline failures |
+| `l2src/merge_value_kernel_20261001_02` | 286/286, including all six corrected link closures |
+| `l3_interp/merge_value_final_20261001_02` | 11 suites, 295 checks; four type-budget controls green |
+
+Exact comparison against `uniform_dispatch_full_20261001_02`: ten added rows,
+all OK; zero regressions, fixes, removed rows or duplicate IDs. The four
+intermediate full01 regressions are closed. This comparison was independently
+recomputed; it does not excuse the retained 48 failures or claim stage 8.
+
+The final directory contains `baseline_comparison.json`,
+`final_verification.json`, `end_owned_manifest.json`, `commit_verification.json`
+and `mutant_verification.json`. All 25 committed blobs equal the gated manifest.
+Live source and 91 staged owned copies match; the broader 1218 staged LM2 inputs,
+44 L3 sources and four gate-start manifests have no recorded mismatch. Parent
+independently rehashed the 25 owned sources and their listed staged copies.
+
+Five rich native-helper variants pass on the final production bytes. Their
+cleared-root runs are not falsely called walked-helper coverage. The separate
+walked-helper witnesses, parent taps and controls identify their actual route.
+Observer mutations (12) are reported separately. Qualified controls/mutations
+also cover generated runtime relationships, five kernel mutations over the
+54-check merge selftest, source/checker classification, actual method/while
+parentage and method-context restoration. Translation-only counterfactuals are
+not runtime evidence; unrelated setup failures and intermediate red runs are
+retained but not counted as successful detections. Exact outputs and scopes
+are in `mutant_verification.json`.
+
+After this frozen release, the author clarified [Q59](../LMX_blog/q/q59.md):
+an ordinary named Structure has no explicit arguments. Thus the current
+known-head negative row's text “not built yet” is stale diagnostic wording,
+not an authorization to add arguments. The common resolved-call contract must
+eventually produce the ordinary arity refusal. No code was changed after the
+freeze to fold this documentation clarification into already measured gates.
+
+Scope limits remain explicit: the accepted spelling `copy: merge Model` has
+a separate receiver-resolution gap; the focused inputs use the currently
+recognized nested Frame form. Arbitrary held-reference layouts, formal merge
+operands, merge results as hidden inputs and cross-count occurrence selectors
+are not closed here. In particular, a declared receiving model does not prove
+the held descriptor's physical layout. These cases continue through the common
+selector/use-edge projection, not a merge-only registry or hidden schema
+Structure. See the [defect inventory](defects.md#merge-held-operand-layout)
+and [next dependency](defects.md#admission-occurrence-selector-collapse).
 
 <a id="site-visibility-release"></a>
 ## Source-site visibility and admission provenance: checkpoint e70689c

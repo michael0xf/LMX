@@ -1,5 +1,11 @@
 # NEXT — Fable task: resolve the remaining documentation contradictions with the author
 
+**Completed historical editing task.** The problem statements and questions
+preceding the Applied report describe that earlier review. Its recorded author
+answers and subsequent [assignment correction](assignment_is_not_declaration.en.md)
+and [canonical semantics](../LMX_semantics.en.md) supersede withdrawn proposals;
+those old questions are not reopened by this file.
+
 **Scope:** a focused follow-up to `merge_documentation_corrections.en.md`, covering all outstanding findings from the review of the edited English and Russian semantics specifications.
 
 **Targets:** the canonical `LMX_semantics.en.md` and `LMX_semantics.ru.md` in the working repository. The reviewed attachment snapshots are identified in §2.

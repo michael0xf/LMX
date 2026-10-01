@@ -897,7 +897,9 @@ This document is a specification and self-reminder. It is not evidence that this
 
 **[A] Conversation decisions:** the author's final clarifications about plain text AI exchange; complete accessible graph/source/state; comments in the tree and generated linked documents; the fundamental insert/copy distinction; four minimal actions; interpreter request by target/debug/next; no IDE, buttons, or line-oriented execution. These are design inputs, not external implementation evidence.
 
-**[S1]** [Updated English LMX semantics](updated/LMX_semantics.en.md) and [updated Russian LMX semantics](updated/LMX_semantics.ru.md), including the earlier protection amendments. Relevant sections: §§1–4 source/identity; §6 context and conversions; §§7–8 admission; §§9–12 construction/call/state; §§13–16 control/exits/suspension; §20 composition; §21 codecs/providers; §§22–28 lifetime, execution and transport; §29 source/Mix relations; §§30–32 cursors/transport; §§33–35 protection. The amendments establish the same protection for inspection/copy/export through ordinary graph branches.
+**[S1]** [Updated English LMX semantics](../LMX_semantics.en.md) and [updated Russian LMX semantics](../LMX_semantics.ru.md), including the earlier protection amendments. Relevant sections: §§1–4 source/identity; §6 context and conversions; §§7–8 admission; §§9–12 construction/call/state; §§13–16 control/exits/suspension; §20 composition; §21 codecs/providers; §§22–28 lifetime, execution and transport; §29 source/Mix relations; §§30–32 cursors/transport; §§33–35 protection. The amendments establish the same protection for inspection/copy/export through ordinary graph branches.
+
+The links above lead to the current canonical files. The `updated/...` paths and SHA-256 values below identify the historical input snapshots, not the current file bytes.
 
 **[S2]** [threadMessageAPI.en.md](threadMessageAPI.en.md): the corrected ordinary-call-over-transport design. It explicitly removes the external API dictionary, hidden multi-method dispatch, and reply registration as public methods.
 

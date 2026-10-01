@@ -1,5 +1,11 @@
 # Fable task: correct `merge` documentation without removing the eternal-branch exception
 
+**Completed historical editing task.** The questions and proposed edits below
+record the reviewed revision, not a new open assignment. Later decisions and
+supersessions are recorded in [the follow-up](merge_documentation_corrections_next.en.md)
+and the current [canonical semantics](../LMX_semantics.en.md#composition).
+Preserve quoted evidence; do not reapply withdrawn proposals.
+
 **Scope:** documentation changes in the English and Russian LMX semantics specifications. This task does not request a runtime refactor, a new copying algorithm, or a new binding mechanism.
 
 **Controlling decision:** `merge` copies the locally used lexical tree and does not perform argument binding or change dynamic-input precedence. Native implementation references remain reusable. The author explicitly confirms one exception for retaining an original **graph branch**: the full qualification `independent: const: immutable`.

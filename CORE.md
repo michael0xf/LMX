@@ -255,10 +255,11 @@ a numeric signature registry. See [L2 §11](docs/L2_spec_en.md#call) and
 
 **Execution of a Structure.** One complete Structure contains declarations,
 value storage and executable operators in source order. Execution uses that
-Structure and an ordinary machine activation. An existing Structure in head
-position is called with its written arguments; an unknown actual argument
-does not turn that call into a declaration. `fn`, `fm` and `sub` describe
-formal signatures; those descriptions are not executable bodies. Using a
+Structure and an ordinary machine activation. An existing ordinary named
+Structure is callable without arguments: it has a body, not a formal argument
+list. Applying it as `A: B` is a call error even when `B` is known; it never
+falls through to assignment or declaration. `fn`, `fm` and `sub` retain their
+declared formal argument contracts; those descriptions are not executable bodies. Using a
 Structure as a value in `merge` or `send` does not execute it.
 Source code may arrange declarations and executable bodies separately through
 ordinary language constructs; that choice does not require a second runtime graph.
@@ -313,8 +314,13 @@ collapse repeated same-name fields into one own slot and does not completely
 lower the selector. This is an [open core task](next_core_tasks.md),
 not a license to add a second semantic binding table or journal. A diagnostic
 address-to-name table is compatible with physical occurrence identity and
-does not participate in execution. The binary source representation retains
-comment text; comments are not executable operators.
+does not participate in execution. Retention of names, comment text and the
+complete binary source/operator tree is a language requirement; comments
+are not executable operators. This requirement is not a certificate that
+every generated executable currently retains all such material. The current
+translator's P0/name/occurrence metadata and the executable operator graph
+must be audited separately; a general retained runtime address-to-source-name
+or comment facility has not been established by the cited gates.
 
 An activation-local variable has a stable physical cell for its activation.
 Taking its L2 address does not create a graph field. A declared value, by
@@ -349,8 +355,10 @@ primitive or explicit reference binding is **assigned** through admission;
 an unknown head **defines a named Structure** whose tail is its body. The
 definition does not execute that body, and free names in it need not already
 be resolved at the definition. A failed call never falls through to assignment
-or declaration. Thus existing `Model: fresh` is a call of `Model`, and an
-unknown actual `fresh` is a call error, not an instruction to clone `Model`.
+or declaration. An ordinary named Structure accepts no actual arguments, so
+existing `Model: fresh` is an erroneous application of `Model`, whether or
+not `fresh` is known, not an instruction to clone it. Its nullary invocation
+remains valid. This does not remove the declared formals of `fn`/`fm`/`sub`.
 
 An unknown `A` in `A: b` defines Structure `A`; it does not declare an empty
 typed reference named `b` and does not run `b`. If both `C` and the nested
@@ -478,7 +486,7 @@ An executable [`LmxThread`](dev/l2src_sandbox/lmx_thread.h.lm1) starts with
 prefix are equal. The exact Thread range, however, is distinct from a
 standalone Message range: prefix address equality never licenses reading a
 Thread tail from a plain Message. Thread-only state includes mail, schedule,
-turn number/state, current/requested mode, interpreter dispatcher, prepared
+turn number/state, prepared
 children, supervision up-link, route-service link, cached reference to the
 single graph children List, liveness/close/orphan data, result cell, manager,
 and separate `LmxThreadApi` and `LmxThreadMailApi` tables. These fields are
@@ -490,8 +498,8 @@ execution mode (author, 2026-09-24): each call's path follows the callable
 occurrence's descriptor -- a native address is a native entry, none means the
 body's op tree is walked by the interpreter (L3 only); the dispatcher never
 infers a path from the body or retries through the other path on failure. The
-kernel's `request_mode` field and its end-boundary commit are scheduled for
-removal (plan §3).
+former `request_mode` field and its end-boundary commit have been removed;
+neither is part of the current Thread record or turn protocol.
 
 The turn has a simple causal order:
 
@@ -503,15 +511,19 @@ enter boundary → native or interpreted body → leave/end boundary
 
 [`lmx_turn`](dev/l2src_sandbox/lmx_turn.lm1) reads the turn outcome once at
 the end, runs the corresponding post/child action, performs liveness and
-stop-cascade work, collects the owning band when applicable, and finalizes
-the mode request. Child preparation is not visible to ordinary incoming
+stop-cascade work, and collects the owning band when applicable. Child
+preparation is not visible to ordinary incoming
 execution before publication. A failed turn is not a rollback of graph
 mutations already made; it specifically drops unpublished outgoing mail and
-child reservations. The code has a known observability gap: the native
-external-entry adapter can ignore the entry's return status, so a process
-exit of zero or a green generated harness row does **not** necessarily prove
-the body succeeded. This must be closed before treating such rows as runtime
-evidence.
+child reservations. Earlier snapshots had an observability defect in which
+an external-entry adapter discarded the entry's status. The supported
+common-dispatch path now propagates status and prevents result consumption
+after a real stop (checkpoint `621e8af`); that old observation is not a
+description of the current adapter. A zero process exit alone still does
+not prove an intended path executed: current gates require non-vacuous
+runtime and dispatch observations. The separately measured nonthrowing
+foreign-aggregate return boundary remains implementation debt, not a reason
+to restore the obsolete ignored-status claim.
 
 ### 5.1 Child identity and supervision
 
@@ -584,8 +596,11 @@ inferred from that gap.
 
 [`lmx_graph_copy_owned`](dev/l2src_sandbox/lmx_graph_copy_owned.h.lm1)
 copies the used graph closure into a destination arena. One source-to-copy
-map preserves sharing and remaps structural parents and internal references;
-method records and immutable shared descriptors remain physical terminals.
+map preserves sharing and remaps structural parents and internal references.
+A callable Structure is copied through that same map, including its native
+word; it is not a terminal merely because it is callable. Terminal service
+records and branches retained by an explicit qualified-profile policy follow
+`lmx_copy_is_terminal_profiles`, not a separate METHOD-record rule.
 [`lmx_merge_owned`](dev/l2src_sandbox/lmx_merge_owned.h.lm1) composes
 operands through the same ownership discipline and can use arena mark/revert
 to avoid leaving a half-built result. An `independent: const: immutable`
@@ -597,9 +612,11 @@ Copy/merge is also the construction route for a new typed Structure, not a
 mere pointer assignment. Conversely, assigning an already constructed
 Structure reference to an already typed variable rebinds a physical
 reference after admission; it does not allocate a C by-value Structure.
-Do not infer merge success from a wrapper's process exit alone: a generated
-program path has been observed to return merge status `70` while its outer
-native entry discards that status and the harness still records exit zero.
+Do not infer merge success from a wrapper's process exit alone. The earlier
+observation of merge status `70` being discarded by an outer native entry
+belongs to the superseded adapter defect described in §5. Current evidence
+must observe the reached constructor's status, result identity and subsequent
+use; historical green process exits are not retroactively such evidence.
 
 ## 8. Translation and verification surfaces
 
@@ -649,7 +666,7 @@ an implementation's current behavior, an accepted rule, and a planned fix.
 | Boundary | Current evidence / consequence | Owner of the next decision |
 | --- | --- | --- |
 | P0 argument-container normal form | The unequal shapes and CALL-only unwrapping were historical defects; landed normalization evidence is recorded in `next_core_tasks.md` §2. | Preserve the common normalized tree for every head; parser equality does not itself prove correct head resolution or execution. |
-| General application and declaration | Legacy `Model: fresh` / `A: b c` recognizers and stale tests still compete with current resolution. | Unknown head defines the written Structure without execution; known Structure calls; existing primitive or explicit non-callable reference bindings assign. Remove implicit cloning and use the shared resolved act; see plan §3 and Q56/Q57. |
+| General application and declaration | Legacy `Model: fresh` / `A: b c` recognizers and stale tests still compete with current resolution. | Unknown head defines the written Structure without execution; an existing ordinary named Structure permits only nullary invocation, and written actuals are a call error without fallback. `fn`/`fm`/`sub` retain declared formals; existing primitive or explicit non-callable reference bindings assign. Remove implicit cloning and use the shared resolved act; see plan §3 and Q56/Q57. |
 | Repeated fields, publication and addresses | Verify `[N]field` and own-value publication against the current address contract: `@` selects actual typed graph data or the descriptor, not an activation working copy. Address-taking alone is not a dirty write. | One occurrence-to-physical-path algorithm shared by native and interpreter; L2 §18.2–18.3 controls the addressed storage category. |
 | Admission | Current-Consumer checking and source-layout correspondence landed in `e70689c`; complete compiler uses/capture closure and the full directed conversion table are not established by that slice. | Preserve reached admission and physical correspondence while closing the separately recorded projection/conversion gaps. |
 | Raw C door | Raw-C type provenance and legacy generated/test assumptions remain cleanup debt; `sizeof:` already has native lowering with incomplete operand support. | One raw `c.*` door; keep the language receiver separate and resolve its operands through the shared type/value contracts. |

@@ -2057,7 +2057,7 @@ The `@ⁿ:` head family is written `@:`, `@@:`, `@@@:`, and so on; no arbitrary 
 
 `@x` is a prefix form, distinct from the `@:` head. Further levels use the corresponding heads and expressions over declared values, not special flattening of nested applications. Permitted L3 reference operations and L2 machine operations are defined by the respective semantic profile; this grammar does not reject a form merely because it shares another profile's address spelling.
 
-The two backslash positions are distinct: `\address` is prefix dereferencing, while `value\field` is field follow. `value\[occurrence]field` specifies the matching-name ordinal, whereas `value\field[index]` indexes the selected value. These are different bracket positions. In the previous profile, an omitted ordinal means `[0]`.
+The two backslash positions are distinct: `\address` is prefix dereferencing, while `value\field` is field follow. `value\[occurrence]field` specifies the matching-name ordinal, whereas `value\field[index]` indexes the selected value. These are different bracket positions. In the current semantic profile, omitting an explicit ordinal from a name selects its last occurrence; `[0]` explicitly selects the first.
 
 `target[index]` differs from heads `[]:`, `[][]:`, and `[n][m]:`. Expression parentheses and bounded index arguments use the same structural mechanism. Ordinary LMX paths do not acquire C `.` or `->` spelling; the explicit `c.` door is separate. Concrete address, type, and operation mappings belong to the semantic profile.
 

@@ -1,0 +1,500 @@
+# Kernel implementation dictionary for the v2 plan
+
+This companion explains the concepts, current mechanisms, failure modes and
+repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
+chronological plan or a replacement specification. For the source map read
+[CORE_L2_L3_v2.md](CORE_L2_L3_v2.md); for worked migration examples read
+[L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md).
+
+Evidence baseline: 2026-10-01, main `f980dce` plus the current bounded merge
+slice identified in [the release ledger](steps/native-selfbuild-20260930.md#merge-result-value-release).
+Use that ledger for the final commit, source hashes and gates. “Required” below
+means a documented contract, not an assertion that the current compiler supports
+every example. Source symbols are search anchors; their line numbers change.
+
+Every entry separates **Norm**, **Mechanism/debt**, and **Verification**. Where
+the implementation design is not settled, a route is labelled proposed rather
+than silently promoted to a language rule. A new logical contradiction goes to
+the author in Russian; already decided semantics are implemented, not re-asked.
+
+<a id="levels"></a>
+## 1. L1, L2, L3 and self-build
+
+**Norm.** L3 is the structural language subset interpretable as a constructed
+graph. L2 includes L3 and the necessary machine operations. L1 is the generated
+intermediate before C99, not a maintained second kernel. The C compiler/linker
+and operating system remain platform tools. Machine address arithmetic/raw
+memory/C-door operations are L2; portable reference acquisition, following,
+assignment and arbitrary reference depth are not excluded from L3 merely
+because their spelling contains `@`.
+
+**Mechanism/debt.** The current runtime, parser and translators still include
+handwritten `.lm1` bodies/headers. `tools/l2_harness.ps1` compiles those and then
+translates `.lm2` fixtures; it proves generated-program behavior, not self-hosting.
+`tools/build_l2src.ps1` does not rebuild the translator. Existing L1 self-build
+scripts do not prove the required L3/L2 source migration.
+
+**Verification.** Inventory every maintained source dependency, including headers
+and orchestration. A language-built binary must build itself from L3/L2, test,
+replace itself, then repeat using its successor. Generated L1 is allowed. A
+tracked C bootstrap is only the first platform migration, not a hidden stage
+inside every rebuild. Artifact equality is additional evidence, not the sole
+criterion. See plan [stage 8](next_core_tasks_v2.md#stage8).
+
+<a id="structure"></a>
+## 2. Structure, source graph, occurrence and physical slot
+
+**Norm.** A Structure is an ordered collection of physical references. Its one
+complete graph contains declarations, values and executable operators in lexical
+order; it is neither a pure-data object nor a separate saved-call object.
+Additional references can share targets or form cycles; lexical parentage is a
+forest. A field exists where a declaration establishes it. Assigning a formal
+or hidden input creates no persistent field.
+
+**Mechanism/debt.** The C representation is a common `Lmx`, not a generated C
+aggregate type per named model. `VoidArray array` is its real child-reference
+array; `parent` is a structural link and `native` an implementation address.
+The compiler's P0 nodes, schemas, declaration-site keys and use plans describe
+that graph but are not additional runtime objects. Current walker operator
+graphs demonstrate selected executable coverage; preserving the whole source
+binary tree and name/comment mapping must be verified separately.
+
+**Occurrence** is an actual lexical declaration/appearance, not just a name.
+**Physical slot** is an index among all direct graph fields. `[N]name` counts
+only occurrences of that name. The two indices need not be equal. Current
+unqualified named paths select the last occurrence; old first-occurrence
+wording is superseded. An assignment is not a new occurrence.
+
+**Verification.** Interleave distinct/repeated names and executable Frames;
+inspect lexical placement and addresses before/after calls and merge. A test
+that only returns the right integer cannot establish complete graph retention.
+Source-name/comment tables are diagnostic metadata, never a runtime resolver.
+
+<a id="head"></a>
+## 3. Head resolution, receiver, body and signature
+
+**Norm.** Surface punctuation alone does not decide call versus definition.
+P0 normalizes completed block/short/parenthesized forms. The sole anonymous
+argument container is generally transparent, not only for calls or emptiness.
+`f()`, `f: ()` and explicitly closed empty vertical f have the same empty body;
+dangling `f:` is invalid. Bare f is an expression evaluated by its resolved role.
+
+A reserved language receiver applies its defined contract and cannot be shadowed.
+An unknown ordinary head in definition position defines a named Structure and
+retains its tail without executing it. An existing callable Structure is called;
+an existing primitive or explicit reference binding is assigned after admission.
+An invalid call does not fall back to declaration. A reference binding is not
+automatically callable: explicitly dereference it to operate on the referent.
+
+**Body versus signature.** `(A: b)` in a signature describes a structural
+reference parameter, synonymous there with `(@: A b)`. It does not execute A.
+In an executable body, existing `A: b` selects the general call route and checks
+the resolved A's contract. An ordinary named Structure has no arguments, only
+a body; supplying b is a call error, not a missing feature to add. A fn/fm/sub
+with a suitable declared signature is different. An unknown actual b is not
+`merge(A, empty)`. The signature's reference transport does not turn body
+forms into declarations. Primitive `(int: b)` is not `(@: int b)`.
+
+**Mechanism/debt.** Common head/receiver classification must feed declaration
+collection, type checking, native emission and graph emission. Legacy
+`Model: fresh` and named-model shortcut recognizers cannot stay alongside the
+new classifier. The current merge slice's `l2_merge_declaration` demonstrates
+declaration-role filtering; it is not a replacement second resolver.
+
+**Verification.** Repeat the same role across source positions, empty/nonempty
+forms and both engines. Q58's Batch holds the known `put: 7` operator without
+executing it at definition time. Unknown C containing unknown makeA() defines
+empty named makeA. No native address does not imply that the retained L3 tree
+cannot be interpreted. See [construction](docs/LMX_semantics.en.md#construction).
+
+<a id="receiver-composition"></a>
+## 4. Receiver composition is not argument flattening
+
+**Norm.** `a: b: c: d: ...` is arbitrary ordinary nesting. Each receiver consumes
+its actual tail according to its contract. A receiver can consume several
+arguments: `int: i 5` supplies name i and initializer 5. It is not a blanket
+rule that `int: i: 5` means the same thing. Do not turn nested applications into
+a flat list merely because a particular declaration example looked convenient.
+
+**Mechanism/debt.** `l2_ns_arrarr_field` and other positional own/named/formal
+scanners encode special depths and element sets. Replace their result with one
+general typed application result and use it consistently. Do not extend one
+two-level recognizer to three levels or introduce a special array-of-arrays AST.
+Intermediate compiler metadata may be recursive; runtime Array descriptors
+remain minimal and carry no nesting-depth counter.
+
+**Verification.** Use unrelated receivers as well as `[]:`, varied depths and
+argument counts, nested named wrappers and formal descriptions. `length` and
+addressing consume the selected value's type, not the original text pattern.
+
+<a id="arrays"></a>
+## 5. Array, VoidArray, DynamicArray and rectangular indexing
+
+**Norm.** Base Array is a fixed typed descriptor and backing. Typed descriptors
+use `{size_t len; T *data}`; `VoidArray` uses `{size_t size; void *data}`. Lmx
+embeds the VoidArray first. There is no `LmxArrayDesc` duplicate alias, no base
+capacity and no growth-induced replacement of base backing. A distinct dynamic
+container owns its fixed Array and capacity/growth policy.
+
+Array contents can be primitive cells or references, including references to
+other Arrays. The latter follows general receiver composition; it is not a new
+fundamental kind. Every independent Array has its own length and identity. A
+flat rectangular Array is one contiguous block with a total element count.
+
+| Notation/concept | Operation |
+| --- | --- |
+| `[]: []:` | Two nested applications of the ordinary receiver, generalizable without a fixed depth |
+| `[][][]` | C-like flat rectangular constructor head |
+| `a[i][j]` | One rectangle, linearized with source-known strides |
+| `a[i]\[j]` | Select a[i], then index that selected Array value |
+| `a\[i]` | Unnamed Array index path step |
+| `s\[N]name` | Named Structure occurrence, not Array dimension |
+| `length(a)` | Selected descriptor's total element count |
+
+Neither rank nor shape is recovered from `{len,data}`. The lengths 6, `[2,3]`
+and `[3,2]` cannot be distinguished from that descriptor alone, and the kernel
+does not promise an operation that does so. Do not add a vector of dimension
+lengths or per-coordinate checking to solve a different problem.
+
+**L2/L3 distinction.** L2 Array access is unchecked. L3 computes the final flat
+element and checks it against the selected descriptor; `[0,3]` in a `[2,3]`
+rectangle reaches the same flat element as `[1,0]`. A `\` transition selects
+another value, so the next Array step uses that descriptor's length. Final-index
+overflow must not make an invalid L3 mathematical index appear in range.
+
+**Mechanism/debt.** Whole-descriptor addressing/projection repairs are bounded
+successes, not proof of arbitrary receiver/index depth. Track the remaining
+composition/path consumers in plan K06/K07. Real primitive typing, dynamic
+container allocation and graph child Arrays must not be conflated.
+
+**Verification.** Observe descriptor identity, backing, selected element type,
+separate reference rows, total flat length, dynamic container independence and
+both engine paths. Do not test undefined L2 memory access as a success criterion.
+
+<a id="strings"></a>
+## 6. Char Array, string and process arguments
+
+**Norm.** A string is the ordinary `LmxCharArray {size_t len; char *data}` with
+exact logical characters, no hidden trailing NUL. Main arguments are an ordinary
+Array of references to those Arrays, within an explicitly described letter.
+No contextual Message type or special declaration table belongs in the compiler.
+Plain char has target C99 signedness; its storage descriptor does not redefine
+its arithmetic as unsigned.
+
+**Mechanism/debt.** Old Q15 text promising NUL-terminated char Arrays is history,
+not the current contract. The pool also uses the char-element descriptor; that
+does not make every backing chunk a language string. Converting to a C string
+must provide an explicit terminated representation at the C boundary.
+
+**Verification.** Exact bytes and length including empty input; no implicit NUL
+read; selected outer/inner descriptor lengths; explicit conversion before C APIs
+that require termination. `@a[0]` alone never adds a terminator.
+
+<a id="references"></a>
+## 7. Value reference, address of storage and typed reference cell
+
+**Norm.** A Structure/Array value travels by descriptor reference, not C aggregate
+copy. `@Structure` obtains the actual typed descriptor address. `@primitive`
+selects its actual typed cell. A declared explicit reference variable has its
+own pointer-value cell; `@p` addresses that cell and adds depth. Dereference
+`\p` obtains the referenced value. Pointer arithmetic and raw machine casts
+remain L2, while portable typed references are available in L3.
+
+`@: A p` creates pointer-value storage, with the default null value, not an A
+instance. `@: A p B` converts the candidate reference, checks implements against
+the requirement and Consumer, and commits only after success. `p: B` can use the
+general Structure-to-pointer primitive conversion; it is not a converter row
+invented for each pair of named Structures. `p: @B` names that candidate directly.
+
+**Mechanism/debt.** Use the common resolved value/address category and schema,
+not a parameter's C spelling. A machine parameter carrying an Array descriptor
+reference is not a graph slot whose address should be returned. Typed pointer
+value conversion does not permit aliased differently typed pointer cells.
+See `L2ReferenceSource` and `C99-POINTER-CELL-ALIASING`.
+
+**Verification.** Compare real addresses, mutate through them and observe the
+proper storage; distinguish @p from p, primitive locals from graph cells and
+backing elements from descriptor cells. Preserve exact depth in formals/results.
+Do not silently strip @ to make a call fit or copy a value to repair lifetime.
+
+<a id="activation"></a>
+## 8. Activation, own field, hidden input, node and publication
+
+**Norm.** A call executes an occurrence with an ordinary temporary activation:
+explicit inputs, hidden inputs, results and cached own values. This is not a
+persistent data Structure beside the callable. Recursive activations have
+separate working values while using the ordinary declared graph storage.
+
+`node` is the above-method lexical space and remains fixed throughout the
+activation. Each control body's ordinary `parent` may differ; it does not
+rebind node. `self` is an internal occurrence context, not a new language name.
+Named Structure definitions are inert. If/while/for/until bodies control execution
+within the current activation; they do not automatically become procedures.
+
+Free inputs use caller sources before the permitted lexical fallback. Assigning
+such an input changes the local value, not its source, and creates no own field.
+Q52's procedure incrementing hidden y leaves the caller's y unchanged. An explicit
+`node\y` or other resolved path deliberately accesses the graph.
+
+An own field is backed by its declaration's real storage. Bare access may use a
+working cache. An admitted bare write marks the applicable field dirty; reading
+or taking an address does not. Explicit path/pointer writes change actual storage,
+not the cache. There is no implicit reload on return from a call.
+
+**Three publications:**
+
+1. Working-field write-back commits an already admitted pending cached value.
+2. Construction exposes a fully built result.
+3. Message publication makes outgoing mail deliverable under turn-success rules.
+
+The first does not make a failed turn successful; the second does not copy on
+every call; the third does not roll back already published graph writes. A
+checkpoint is not another implements invocation on an unvalidated candidate.
+
+**Mechanism/debt.** Native cached own variables and typed walker state must share
+the same boundaries. Current `dev/l3_interp/l3_exec.lm1` and generated
+`lmx_walk` routes are separately implemented surfaces; a green suite for one does
+not certify the other's working-state semantics. Inventory before porting.
+
+**Verification.** Dirty/clean distinction, argument evaluation before pre-call
+publication, re-entry, recursion, explicit path writes without reload, finally
+ordering, return/throw/diagnostic/yield, and transfers that are not checkpoints.
+An early success return cannot stand in for any of these observations.
+
+<a id="admission"></a>
+## 9. implements, Consumer, uses and correspondence cache
+
+**Norm.** `implements(candidate, requirement, Consumer)` reasons about the
+candidate as used by the Consumer. Requirement/exemplar supplies described paths;
+it is not a demand to compare every unused field. Primitive conversion and
+structural admission are distinct cooperating stages. Consumer tests follow the
+analytical stage; execution of tests cannot repair an analytical failure.
+
+`uses` is the set of actual semantic accesses/calls made by the Consumer, not
+the entire required Structure and not an arity alone. For callable leaves,
+supplied arguments, default formation, permitted sources, actual descriptor,
+result, exits and modes must fit the use. Do not equate distinct unprepared
+signatures just because mandatory argument counts happen to match.
+
+**Mechanism/debt.** D105 correspondence and `LmxImplEntry` can cache resolved
+locations; they must not turn a once-accepted candidate into unconditional
+permission for every future Consumer. A required-slot-only map collapses LAST
+and explicit occurrence selectors; plan K01 fixes their identity through the
+common use edge. Storing Consumer in a cache key alone does not solve two
+different accesses by the same Consumer.
+
+**Verification.** Different layouts, repeated names, only-used-edge checks,
+both admission orders, read/write/@ through the same admitted edge, callable
+defaults and hidden inputs, conversion failures before store, full Consumer test
+execution. Distinguish manual physical maps from source semantic paths.
+
+<a id="schema"></a>
+## 10. Declared model versus actual schema/layout
+
+**Norm.** A reference constrained by A may refer to suitable B with additional
+or reordered fields. Its constraint does not replace B's physical layout, trim
+B into A or invent a new arena type. All ordinary Structures still share Lmx
+storage; layout information and structural admission are different from primitive
+range classification.
+
+**Mechanism/debt.** The bounded merge compiler uses a schema handle: absent,
+named schema, or tagged composed schema, projected through `L2SchemaField` and
+`L2ReferenceSource`. These are translation metadata, not hidden runtime schema
+Structures. Current receiving consumers that still assume every schema is a
+named model must be generalized. Removing a sign check without updating those
+consumers is not a repair.
+
+**Verification.** Reference declared as A{x} holds B{pad,x}; a new copy must read
+B.x, not B.pad. Select B/C at runtime, preserve all copied fields, then perform
+another admission, address access and merge. A token is valid only if it denotes
+the genuine result layout/origin, not whichever requirement made a test pass.
+
+<a id="merge"></a>
+## 11. merge result, copy map, parent and native retention
+
+**Norm.** Explicit merge evaluates live operands once, left to right, and builds
+a new composed value. The first operand supplies model slots; matching later
+fields update those positions and new fields append under the common rule.
+Structural parts compose under the documented args/return/body contract. One
+source-to-copy map preserves sharing and cycles and rewrites internal references
+and lexical chains. The fresh result's parent comes from its expression location.
+Operand roots/needed ancestors are not extra visible result fields.
+
+The qualified `independent: const: immutable` branch is retained by physical
+reference under its lifetime contract. Reusable machine implementation addresses
+are retained independently of mutable callable occurrence identity. Copy ordinary
+mutable occurrences; sharing native code is not sharing their state.
+
+Unchanged executed code keeps its matching native implementation even when data
+changes. Selecting another ready body selects its implementation. Changed code
+without a matching implementation uses its L3 graph; there is no unconditional
+“merge clears native” rule. Returning a nested callable composes required lexical
+fallback data through the ordinary rule, without a second closure graph or
+overriding caller-supplied dynamic inputs.
+
+**Mechanism/debt.** `l2_mrs_build` describes composed fields; `lmx_merge_result_layout`
+preserves actual retained/fresh provenance in the current slice. Merge result
+storage is an ordinary own/declaration place, not a unit-global mres namespace.
+Current static-operand support does not prove held/formal/dynamic operands or all
+expression destinations. `l2_merge_declaration` prevents an existing receiver
+such as return from being allocated as a result field.
+
+**Verification.** Result identity, physical parent, source immutability, shared
+targets/cycles, repeated fields, qualifiers, previous results as operands, native
+retention versus real body change, failure without receiving store, declared
+result admission and native/walker parity. A missing lowering path is debt, not
+a rule that a legal merge expression is forbidden.
+
+<a id="dispatch"></a>
+## 12. Native dispatch, interpreter and stop/result ABI
+
+**Norm.** The selected occurrence's `native` word chooses native entry or its
+L3 interpreter path. Root, named Structure, method, copied callable and explicit
+path call do not have separate language execution classes. All statically known
+executable bodies should compile; a runtime-created L3 body without native can
+still execute. A Thread has no requested/current interpretation mode switch.
+
+**Mechanism/debt.** `lmx_call`/`lmx_interp_apply`/typed `lmx_walk` and generated
+adapters carry ordinary context and results. `621e8af` repairs stop/status
+consumption across tested routes. A caller must not use a stale output after
+its callee has stopped. Foreign nonthrow aggregate return remains a distinct ABI
+debt, not permission to invent a zero aggregate or a language throw declaration.
+
+**Verification.** Inspect actual nested method native words and entry observers.
+Clearing root native alone can still call native helpers. Runtime/walker result,
+effects, throw and stop behavior must agree. Keep translation failure, runtime
+failure, observer failure and bounded not-yet-lowered diagnostics separate.
+
+<a id="machine"></a>
+## 13. C99 types, raw C door and sizeof
+
+**Norm.** Copy the target C99 primitive semantics; add only genuinely LMX types.
+Storage range classification tells where typed values live, not a replacement
+numeric conversion algebra. C typedef compatibility comes from the target type,
+not width guesses. Normal C expression promotions differ from explicit LMX
+description conversions and their Consumer admission.
+
+Every `c.*` token is a raw C identifier. Other operands are normal L2 expressions.
+There is no list of permitted C names, header-derived semantic C-name registry
+or special puts/array/sizeof
+recognizer. `c.sizeof(c.T)` is raw C; the language's `sizeof:` receiver has its own
+ordinary operator contract. Receiver names are reserved by definition, not
+discovered from C headers.
+
+This does not remove ordinary processing of explicitly authored `.h.lm1` ABI
+declarations or import dependencies. Those declared lowering inputs are distinct
+from scanning platform headers to authorize raw C names or discover receivers.
+
+**Mechanism/debt.** Common expression type/value/address projection must feed
+native and walker paths. `int *`→`void *` value conversion does not authorize
+viewing the same cell as both `int **` and `void **`. Foreign C aggregates retain
+C member-access categories; Lmx descriptor transport does not turn them all into
+pointers. Remove source-name-specific classifications, not the generic C door.
+
+**Verification.** Mixed primitive operations, char signedness, size_t actual base,
+qualifiers, pointer depth/cell mutation, foreign struct member access and arbitrary
+C names. No runtime undefined-behavior test should be described as a language
+conformance witness.
+
+<a id="ownership"></a>
+## 14. Arena, address range, Message, Thread and service
+
+**Norm.** An arena owns storage and registers typed address ranges. Range identity
+is not the source name, a dimension registry or a global type-per-model catalogue.
+Lexical parent and storage owner are separate. Attaching a donor arena preserves
+physical pointers and does not reparent every Structure to the recipient.
+
+Message is the minimal record; Thread contains it first by value and adds the
+execution/scheduling/mail tail. A standalone Message cannot be treated as a full
+Thread merely because the addresses share a prefix convention. The sole child
+membership is the ordinary List of physical Thread references; service is a
+routing lookup, not another source of tree membership. R0 is an ordinary child
+of its preparation/stub parent, not a different close state machine.
+
+**Mechanism/debt.** Existing mail holds target/source-arena pairs, adopts the
+donor at the receiving boundary and publishes under normal turn success. Preserve
+failed-attach queue contents and terminal close witnesses when porting. GC and
+legacy interpreter fixed recursion constants remain implementation limits to
+audit, not a justified maximum depth of a language graph.
+
+**Verification.** Physical identity across delivery, no double take, failed attach
+retains the pending pair, one child traversal source, mailbox-first closure of
+each record, parent removal before storage release, and correct application/UI
+separation. Native code portability does not excuse importing a second mail or
+membership implementation.
+
+<a id="library"></a>
+## 15. Library construction and per-instance native context
+
+**Norm.** A library instance is an ordinary constructed unit owned by an explicit
+arena. Invocation uses the chosen occurrence and the general lexical/dynamic
+rules. Copies/merges can relocate occurrences; a callable's topmost parent need
+not identify the original module. No hidden companion module graph is required.
+
+**Proposed implementation route.** Construct in a caller-owned arena; return the
+ordinary unit; export invocation taking that instance. Carry the existing arena
+through native invocation instead of globals. Resolve sibling/qualified/captured
+references by the normal mechanism. Replace singleton `l2_program_arena`,
+`l2_program_unit` and `l2_library_unit` dependencies, not just their getters.
+
+**Verification.** A1/A2/B1 independent mutable instances; calls survive wrapper
+return; no nested root or current-message graph replacement; copied callable
+uses its real references; one owner close. LINK/SYMBOLS alone cannot establish
+this. It is the dependency that permits the List port without recursive root
+construction.
+
+<a id="post"></a>
+## 16. post, answer, wait state and explicit multiplicity
+
+**Norm.** `post` changes transport, not ordinary call semantics. It uses the
+existing Message queue and call/admission/conversion machinery. `answer` adds
+sender-owned pending-reply data and routes, not a published method or a second
+API dictionary. Correlation uses the original physical letter, not invented
+request IDs, reply ordinals or counts of signature-matching methods.
+
+One source call and three answer destinations mean one execution, one original
+result and three deliveries. Three calls mean three original results and nine
+deliveries. No-result sub creates no synthetic user reply. Timeout starts at
+sending, and a handler that logs a timeout does not cancel the call or discard
+its late result. Declared failures use ordinary catch.
+
+**Mechanism/debt.** Stage 8a must use the ported L3/L2 body and common lower mail
+operations. Preserve explicit send/receive and their iterator/terminal-0 behavior.
+Dependencies go downward; send→post→send is a cycle, not reuse. Handlers run in
+the sender's existing turn/lane, using the existing clock and ownership rules.
+Wait records are explicit protocol state, not the forbidden persistent auxiliary
+data graph secretly created for every callable activation.
+
+**Verification.** Exact T01–T26 matrix, old direct-mail regressions, distinct
+execution/reply/delivery/wait counters, two post instances, out-of-order replies,
+timeouts and late answers, one queue take, ordinary nested formal conversion,
+and source-name-independent timeout/units examples. See plan
+[stage 8a](next_core_tasks_v2.md#stage8a).
+
+<a id="evidence"></a>
+## 17. Evidence vocabulary and release hygiene
+
+| Term | What it proves / does not prove |
+| --- | --- |
+| Source trace | A code path was inspected; not necessarily executed |
+| Parser acceptance | P0 formed a tree; no promise of type checking or execution |
+| Translation/link success | Artifacts exist; not a runtime result |
+| Focused green | Listed witnesses pass; not a full harness or new feature closure |
+| Root-walk run | Root native was bypassed; helper methods may remain native |
+| Observer mutant | The test detects a falsified observation; not necessarily a repaired runtime mechanism |
+| Runtime mutant | A specific mechanism change makes the witness fail as intended |
+| Exact baseline | Same fixture IDs/stages/diagnostics compared, not just equal fail counts |
+| Frozen manifest | Exact owned source bytes enumerated; not by itself a completed gate |
+| Pushed checkpoint | Commit and remote agree; not automatically stable promotion or self-build |
+| Self-build | Successor executable builds/tests/replaces itself from maintained language sources |
+
+No active ticket should conclude “working” from a delivery ACK, stale ownership
+marker or dirty diff. For this handoff no external watcher or ticket dispatcher
+is being restarted. Code work pauses after the current slice and document push.
+
+Plans record remaining work; specifications describe current accepted semantics;
+historical notes preserve past evidence without commanding a rollback. When
+correcting a generated bilingual specification, edit its provenance source and
+regenerate both languages. Keep historical imported source excerpts verbatim.
+Validate links in these root v2 documents separately: the existing docs checker
+does not automatically cover every new root Markdown file or `docs/new_parts`.

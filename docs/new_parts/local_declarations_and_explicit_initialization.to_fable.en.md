@@ -48,7 +48,7 @@ The motivating problematic form was:
 int: i findValue()
 ```
 
-Do not implement it by letting the same replaceable location stand both for the saved `findValue()` computation and for the current result of that computation. Use the two-statement form as the normative example for computed initialization. Do not silently invent a new normalization, prohibition, or initializer category for every existing compact declaration; ask the author where its treatment needs a further decision. This request does not by itself ban simple literal declarations such as `int: i 5`.
+Do not implement it by letting the same replaceable location stand both for the retained `findValue()` call operator and for the current result of that computation. Use the two-statement form as the normative example for computed initialization. Do not silently invent a new normalization, prohibition, or initializer category for every existing compact declaration; ask the author where its treatment needs a further decision. This request does not by itself ban simple literal declarations such as `int: i 5`.
 
 The contrast with the object-initialization approach discussed in the conversation is architectural: executable preparation need not be moved to a separate constructor or an implicit initialized-object phase. It is ordinary program code next to the declaration. Do not turn this motivation into a claim about every object-oriented language.
 
@@ -90,7 +90,7 @@ Demonstrate the following in both native and interpreted execution where applica
 3. An external path `M\i` reads the declaration's value, not the activation's working copy or the initializer operator (author's Q51 clarification).
 4. Deliberate abstract-array/graph inspection still finds the declaration and executable assignment after execution. Compare executable structure, not whole-state equality: values are allowed to change.
 5. The same checks hold on repeated execution of the complete Structure; no additional Structure is created merely to execute it.
-6. Caching and dirty write-back never overwrite the saved call or other instruction nodes. Updating the local value alone leaves the matching `native` valid.
+6. Caching and dirty write-back never overwrite the retained call operator or other instruction nodes. Updating the local value alone leaves the matching `native` valid.
 
 **If a genuine unresolved distinction conflicts with an existing rule, show exact passages and a minimal example to the author. Do not invent an exception, constructor phase, visibility flag or hidden storage scheme. Do not reopen Q51/Q52: explicit paths reach declaration storage; assignments to hidden activation inputs create no fields or caller write-back. The obsolete execution-pair abstraction is not a prerequisite for either rule.**
 

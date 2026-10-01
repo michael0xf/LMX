@@ -262,9 +262,12 @@ Reuse the existing declaration, receiving-value and cell machinery:
 3. Replace the shape-specific `l2_rw_ref_bind` with one reference-value store
    builder used by declaration candidates and later assignments. Existing
    `l2_rw_write`, `l2_rw_bind_op`, `l2_rw_admit` and value nodes provide
-   `PUT -> ADMIT -> candidate`; a pointer-value cell is not a direct
-   Structure slot and must not receive `PUT_REF`. Use the same helper in
-   count and emission passes.
+   `store -> ADMIT -> candidate`. Keep `l2_rw_write`'s existing storage choice:
+   `SET`/`SET_OF` updates a cached working value and ordinary checkpoints
+   publish it; `PUT` writes an uncached pointer-value cell. Native emission
+   similarly uses `l2_own_store`, not an unconditional direct-cell write.
+   Neither route may use `PUT_REF`, which belongs to a direct Structure slot.
+   Use the same helper in count and emission passes, preserving §7b.
 4. Existing walker PUT accepts a Structure reference or null in a pointer
    cell; admission resolves/unwraps pointer cells and null. No new opcode
    is needed for a null reference literal: an ordinary `LIT` can hold a
@@ -284,7 +287,9 @@ identity with B and verify that B's body marker did not run; then clear to
 zero and rebind to A. Test incompatible candidates at declaration and later
 assignment, preserving the prior pointer after a caught refusal. Require
 an attached executable store/admission/candidate chain, not token presence,
-and exactly one candidate evaluation. Mutants dropping the declaration step,
+and exactly one candidate evaluation. Observe working values during execution
+and graph-cell values after the existing publication checkpoint separately;
+do not demand immediate graph mutation for a cached bare assignment. Mutants dropping the declaration step,
 executing B, bypassing admission, choosing direct-slot storage, storing before
 admission or duplicating evaluation must fail. Add direct named-model null
 controls beside the existing machine-local and primitive-pointer controls.

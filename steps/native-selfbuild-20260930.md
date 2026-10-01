@@ -404,6 +404,53 @@ new defensive validation. L2 address arithmetic is outside these portable
 L3 tests. This work is required before clean-kernel; the earlier native
 descriptor tests do not claim to cover it.
 
+<a id="reentry-publication-repair"></a>
+### Follow-on: remove the re-entry publication exception
+
+The live code still implements an earlier Codex interpretation, not a primary
+author exception. [The historical implementation record](working-state-7b.md)
+§3 explicitly attributes "a re-entered activation publishes nothing" to Codex;
+commit `cf7dd58b` and the fixture comments repeat that attribution. The author's
+load/dirty request and the publication boundaries restored from origins 21.5
+and 21.6 require the normal dirty write-back at calls and exits. Removing the
+former fresh I2 graph does not authorize dropping the inner activation's writes.
+The current [recursive trace](../docs/LMX_semantics.en.md#activation-history)
+therefore uses one S with separate working values and ordinary publication.
+
+After the current reference-reception checkpoint, close this bounded §7b
+dependency before the wider portable-reference and lexical-local work:
+
+- Native `l2_emit_publish` must use the ordinary dirty condition, not
+  `l2_reent = 0`. Remove the now-unused `l2_m_tracked`/`l2_emit_act` machinery,
+  generated thread-local activation counters, call-site increments/decrements
+  and entry flags together; do not leave an always-false compatibility guard.
+- Walker `lmx_walk_publish` must not return early for `f.reent`. Remove the
+  exclusively supporting `lmx_walk_active_over`, `lmx_walk_active_top` and
+  frame `up/reent` state after confirming all consumers. The ordinary call
+  stack, scratch lifetime, working values, result and dirty marks remain.
+  Do not replace the exception with graph cloning or a new activation registry.
+- Migrate the old `unit_cache_reentry`, `unit_cache_reentry_peek` and
+  `unit_walk_cache_reentry_peek` expectations by name: their existing arithmetic
+  trace gives 293 rather than 223 under common publication. Preserve the
+  measured outer-working/inner-published/final-outer-write observations, not
+  just the final number. `unit_recursive_fresh_instance` keeps local return
+  123 and outer final y 12, but the last published x is the innermost 0, not 3.
+  These are intentional correction of old Codex-derived expectations.
+- Add a clean-outer-return witness without the final outer write: graph x
+  remains inner 9, outer bare x remains 2. Preserve real declared-cell address
+  identity across entry, including the existing `unit_decl_addr_reentry`
+  native control. Run actual walked callable bodies, not only a walked root
+  that still invokes every relevant method natively. Keep any unsupported
+  direct self-path explicit rather than silently routing around it; the old
+  `l2_rw_path_occ` self refusal cites the removed fresh-instance premise.
+- Mutants restoring suppression in each backend, publishing a clean cache,
+  reloading outer working values, or substituting a fresh cell must fail.
+  Rerun restored focused, kernel, L3 and full generated gates on exact bytes;
+  compare target identities and list expectation changes explicitly.
+
+The old positive native address test and the old green suppression tests
+do not certify this repair. No implementation change is claimed here.
+
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair
 

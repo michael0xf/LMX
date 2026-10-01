@@ -50,8 +50,11 @@ predef: "l2src/lmx_scratch.h.lm1"
 # MUL/DIV/MOD: [mul|div|mod, a, b]; typed numeric result; div/mod 0 -> INVALID.
 # PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.
 # D-105 (Q39): OF [of, struct-expr, slot, req] and PUT_OF [put_of, struct-expr, slot, value, req] --
-# a non-null req is the named Structure the place is typed with: the slot is req's field, read at the
-# value's own slot for it from the `implements` table (lmx_implements_slot); no record = INVALID.
+# a non-null req is the named Structure the place is typed with: the slot is an EDGE into the
+# `implements` table's correspondence (K01): below req's width it is req's own field (an explicit
+# `[N]name` use), from width to 2*width-1 the LAST half of field slot - width (a bare `name` use,
+# the value's last occurrence of it).  lmx_implements_slot resolves the edge to the value's own
+# slot; no record = INVALID.
 # lmx_walk_slot refuses an OP-node holder (X1). receiveMessage take (-177 c1): PRIM record whose fn is lmx_walk_mail_take (nargs 0);
 # Empty inbox yields a present null reference under its declared result contract.
 # lmx_walk_admit / lmx_walk_admit_letter consume two reference-value storage inputs;

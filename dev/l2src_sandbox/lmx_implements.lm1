@@ -248,6 +248,11 @@ return: lmx_implements_walk(arena, varA, varB, consumer)
 # Slot j of view e: the place of req's field j in the value -- the admitting frame's size cell frame[at + j], the
 # static map's map[j], or j itself (the value's own layout; with holes, an empty slot is not carried).  0 and *out
 # (SIZE_MAX: not carried), or 1 when the view has no slot j.
+#
+# This is the ORDINAL half: the value's field NAMED as req's field j, at j's own occurrence
+# among the required same-named fields.  A bare path names the value's LAST occurrence of the
+# name instead, and reads the second half (lmx_implements_at_last, K01); the two halves are
+# one entry, two cells per required field, never two correspondences.
 fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int
     @: void cell
     @: size_t at
@@ -273,6 +278,33 @@ fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_
     if: e\holes != 0 && (e\value = 0 || j >= e\value\array.size || lmx_arena_ref_value(e\value, j) = 0)
         \out: (cast: (size_t) -1)
 return: 0
+
+# The LAST half of a view: the place of req's field j for a BARE path, whose name selects
+# the value's last occurrence of it (K01).  The admitting frame's second half of cells, the
+# static map's second half, or -- an entry with neither, whose proof is positional equality
+# with req -- the same slot as the ordinal half.
+fn: lmx_implements_at_last (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int
+    @: void cell
+    @: size_t at
+    if: e = 0 || out = 0
+        return: 1
+    if: e\frame != 0
+        if: j >= e\n
+            return: 1
+        cell: lmx_arena_ref_value(e\frame, e\at + e\n + j)
+        if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+            return: 1
+        at: (cast: (@: size_t) cell)
+        \out: at[0]
+        return: 0
+    ---
+    if: e\map != 0
+        if: j >= e\n
+            return: 1
+        \out: e\map[e\n + j]
+        return: 0
+    ---
+return: lmx_implements_at(arena, e, j, out)
 
 # The record of (value, req), or null.
 fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
@@ -304,13 +336,18 @@ fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
     ---
 return: 0
 
-# Two views give req's fields (width of them) the same places.
+# Two views give req's fields (width of them) the same places -- BOTH halves, so a bare use
+# and an explicit occurrence use agree as well as the ordinal ones (K01).
 fn: lmx_implements_same_map (@: LmxArena arena; @: LmxImplEntry a; @: LmxImplEntry b; size_t: width) int
     size_t: j 0U
     size_t: sa 0U
     size_t: sb 0U
     while: j < width
         if: lmx_implements_at(arena, a, j, @ sa) != 0 || lmx_implements_at(arena, b, j, @ sb) != 0
+            return: 0
+        if: sa != sb
+            return: 0
+        if: lmx_implements_at_last(arena, a, j, @ sa) != 0 || lmx_implements_at_last(arena, b, j, @ sb) != 0
             return: 0
         if: sa != sb
             return: 0
@@ -404,16 +441,32 @@ fn: lmx_implements_register_map (@: LmxArena arena; @: Lmx value; @: Lmx req; @:
         v\n: n
 return: lmx_implements_register(arena, value, req, v)
 
+# The value's physical slot for EDGE j (K01): an edge below the width is req's field j through the
+# ordinal half -- an explicit `[N]name` use -- and an edge from width to 2*width-1 is the LAST half
+# of field j - width, which is what a bare `name` use names.  The width is req's own (a view with
+# neither frame nor map is positional identity, where both halves are the same slot).
 fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out) int
     @: LmxImplEntry e
     size_t: k 0U
-    if: out = 0
+    size_t: w
+    if: out = 0 || req = 0
         return: 1
     e: lmx_implements_find(arena, value, req)
     if: e = 0
         return: 1
-    if: lmx_implements_at(arena, e, j, @ k) != 0
-        return: 1
+    w: req\array.size
+    if: j < w
+        if: lmx_implements_at(arena, e, j, @ k) != 0
+            return: 1
+        ---
+    else:
+        if: j >= w * 2U
+            return: 1
+        ---
+        if: lmx_implements_at_last(arena, e, j - w, @ k) != 0
+            return: 1
+        ---
+    ---
     # Item 738: req's field j is not carried by this value (a capture copies only what is read).
     if: k = (cast: (size_t) -1)
         return: 1

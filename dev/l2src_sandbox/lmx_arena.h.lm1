@@ -23,6 +23,10 @@ predef: "lmx_arena_blocks.h.lm1"
 #   map, n:       the translator's static map of that pair of types (a native admission), compiled metadata;
 #   neither:      positional identity correspondence, not physical-layout evidence;
 #                 with `holes`, an empty physical slot is not carried (item 738).
+# The frame cells and the map carry TWO targets per required field (K01): the ordinal half at
+# [j] -- the value's field named as req's field j, at its own occurrence -- and the last half at
+# [n + j], which is what a bare `name` reaches (the value's last occurrence of that name,
+# lmx_implements_at_last).  `n` stays the semantic width of req in both halves' indexing.
 # The entry holds `value` weakly: it never keeps the value alive, and it leaves in the pass that frees it
 # (lmx_arena_impl_prune) -- an address that comes back must not inherit another value's correspondence.
 struct: LmxImplEntry

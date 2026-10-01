@@ -140,7 +140,9 @@ fn: main () int
     @: Lmx impl_pair 0
     @: Lmx impl_model 0
     @: Lmx impl_value 0
-    []: size_t impl_map 1
+    # A correspondence map carries 2 * width cells (K01): the ordinal half, then the
+    # last half a bare name reads.  Width 1 here: one cell each.
+    []: size_t impl_map 2
     size_t: impl_slot 99U
     @: void taken 0
     @: LmxArenaBlock counted_block 0
@@ -302,6 +304,7 @@ fn: main () int
     lmx_arena_ref_store(impl_pair, 1U, (cast: (@: void) impl_value))
     lmx_arena_ref_store(graph, 3U, (cast: (@: void) impl_pair))
     impl_map[0]: 0U
+    impl_map[1]: 0U
     gc_check(counts, lmx_implements_register_map(@ arena, impl_value, impl_model, impl_map, 1U, 0) = c.LMX_IMPLEMENTS_YES, "the record for the collection was not admitted")
     gc_check(counts, lmx_gc_collect(@ arena, thread) = c.LMX_GC_OK, "the collection with a record did not run")
     gc_check(counts, lmx_implements_find(@ arena, impl_value, impl_model) != 0, "the collection dropped a record whose value lives")

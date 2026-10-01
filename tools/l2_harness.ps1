@@ -2076,18 +2076,22 @@ $fixtures = @(
         ) }); Debt = @(); Note = 'higher-depth receiving model survives dereference; refusal leaves physical and working binding unchanged' },
     [pscustomobject]@{ Name = 'unit_portable_reference_store_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2);
         Debt = @('LMX_WALK_OP_PUT, 3U)'); Note = 'physical target selected once before RHS mutates its pointer binding' },
+    # K01b: the ADMIT_AS instruction carries TWO map cells per required field, so a frame that
+    # writes an explicit map is one child wider (a width-1 model: 10 -> 11, 11 -> 12); the
+    # unmapped identity frames (Width 9) are unchanged.  Measured in the generated L1 of
+    # build/l2_harness/k01b_full_20261001_01, not derived from the emitter's arithmetic.
     [pscustomobject]@{ Name = 'unit_own_reference_reception.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 7;
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 3; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }) } }) },
-            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 2; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 10; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }) } }) },
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 2; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 11; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }) } }) },
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 2; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 12; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }) } }) },
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 5; CallLink = $true; ResultKind = 'pointer' } }) } }) },
-            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 2; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 11; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 5; CallLink = $true; ResultKind = 'pointer' } }) } }) }
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 2; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 12; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 5; CallLink = $true; ResultKind = 'pointer' } }) } }) }
         ); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_reference_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 1;
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET_OF'; Width = 4; Count = 2; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'LIT'; Width = 2 } }) } }) },
-            [pscustomobject]@{ Op = 'SET_OF'; Width = 4; Count = 2; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 10; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'AT'; Width = 3 } }) } }) }
+            [pscustomobject]@{ Op = 'SET_OF'; Width = 4; Count = 2; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 11; Sizes = @([pscustomobject]@{ Slot = 8; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'AT'; Width = 3 } }) } }) }
         ); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_reference_failure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 4;
         GraphShapes = @(
@@ -2406,6 +2410,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_occ_selector_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_selector_ident_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # K01b witness (steps/k01-selector-identity-20261001.md §5): the correspondence carries one
+    # target per selector.  Pair reads its own two x (0), and through the admitted Triple the SAME
+    # required field 1 must give 30 for bare `v\x` (the value's last occurrence) and 20 for
+    # `v\[1]x` (its occurrence 1).  Red before K01b: exit 82, both selectors one target.
+    [pscustomobject]@{ Name = 'unit_occ_selector_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_d105_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'lm2:25:6: root operation not walkable yet: an admission to a Structure type through a Structure field of another type'; Absent = @(); Debt = @() },

@@ -166,9 +166,10 @@ prototype:
     # admissions, never inferred from req/map. No map or Consumer proof transfers.
     fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
     fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
-    # The value's slot of req's field j, through its record: 0 and *out, or 1 when the value has
-    # no record for req -- a value that reached a place of type req unadmitted is an invariant
-    # break, never a read of slot j.
+    # The value's slot for EDGE j through its record (K01): j < width is req's field j through
+    # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).
+    # 0 and *out, or 1 when the value has no record for req -- a value that reached a place of
+    # type req unadmitted is an invariant break, never a read of slot j.
     fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j; @: size_t out) int
     # A view's slot SIZE_MAX is "not carried": the value holds no such field -- a capture's copy of the
     # fields its model reads (item 738), or a value admitted by name to a formal whose method never reads
@@ -179,5 +180,10 @@ prototype:
     fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     fn: lmx_implements_same_map (@: LmxArena arena; @: LmxImplEntry a; @: LmxImplEntry b; size_t: width) int
     fn: lmx_implements_is_map (@: LmxArena arena; @: LmxImplEntry e; @: size_t map; size_t: width) int
+    # The two halves of a view's correspondence, one cell pair per required field: at is the
+    # ORDINAL half (the value's field named as req's field j, at its own occurrence), at_last the
+    # half a bare name reads.  An entry with neither frame nor map is positional identity: both
+    # halves are slot j.
     fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int
+    fn: lmx_implements_at_last (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int
 end: prototype

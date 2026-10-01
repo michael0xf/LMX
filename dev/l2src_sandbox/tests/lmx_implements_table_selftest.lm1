@@ -78,20 +78,27 @@ fn: it_pair (@: LmxArena arena; int: first; int: second) @: Lmx
 return: s
 
 # A frame of three children: a filler, then two size cells t0 and t1 -- a correspondence at offset 1.
-fn: it_frame (@: LmxArena arena; size_t: t0; size_t: t1) @: Lmx
+# The admitting frame of a width-2 model: slot 0 a placeholder, then the map's
+# 2 * width cells -- the ORDINAL half (t0, t1) then the LAST half (t2, t3), the
+# same flat layout the walker's ADMIT_AS carries (K01).
+fn: it_frame (@: LmxArena arena; size_t: t0; size_t: t1; size_t: t2; size_t: t3) @: Lmx
     @: Lmx s
     @: void x
     @: void y
+    @: void z
+    @: void w
     s: lmx_node_new_owned(arena)
-    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 3U) != 0
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, 5U) != 0
         return: 0
     ---
     x: lmx_size_new_owned(arena)
     y: lmx_size_new_owned(arena)
-    if: x = 0 || y = 0 || lmx_size_store_known(x, t0) != 0 || lmx_size_store_known(y, t1) != 0
+    z: lmx_size_new_owned(arena)
+    w: lmx_size_new_owned(arena)
+    if: x = 0 || y = 0 || z = 0 || w = 0 || lmx_size_store_known(x, t0) != 0 || lmx_size_store_known(y, t1) != 0 || lmx_size_store_known(z, t2) != 0 || lmx_size_store_known(w, t3) != 0
         return: 0
     ---
-    if: lmx_arena_ref_store(s, 0U, lmx_int_new_owned(arena)) != 0 || lmx_arena_ref_store(s, 1U, x) != 0 || lmx_arena_ref_store(s, 2U, y) != 0
+    if: lmx_arena_ref_store(s, 0U, lmx_int_new_owned(arena)) != 0 || lmx_arena_ref_store(s, 1U, x) != 0 || lmx_arena_ref_store(s, 2U, y) != 0 || lmx_arena_ref_store(s, 3U, z) != 0 || lmx_arena_ref_store(s, 4U, w) != 0
         return: 0
     ---
 return: s
@@ -127,10 +134,13 @@ fn: main () int
     @: Lmx late 0
     @: Lmx lent 0
     @: Lmx dmodel 0
-    []: size_t perm 2
-    []: size_t wrong 2
+    # A correspondence map carries 2 * width cells (K01): the ORDINAL half (the value's
+    # field named as the required model's field j), then the LAST half (what a bare name
+    # reads).  `wide` stays a map of another width, which registration refuses.
+    []: size_t perm 4
+    []: size_t wrong 4
     []: size_t wide 3
-    []: size_t dmap 2
+    []: size_t dmap 4
     @: LmxArenaBlock mark 0
     size_t: slot 99U
     size_t: kept 0U
@@ -149,13 +159,19 @@ fn: main () int
     dn: @ donor
     perm[0]: 1U
     perm[1]: 0U
+    perm[2]: 1U
+    perm[3]: 0U
     wrong[0]: 0U
     wrong[1]: 1U
+    wrong[2]: 0U
+    wrong[3]: 1U
     wide[0]: 1U
     wide[1]: 0U
     wide[2]: 0U
     dmap[0]: 1U
     dmap[1]: 0U
+    dmap[2]: 1U
+    dmap[3]: 0U
     # Model (a: size_t, b: int); Other permutes them (b: int, a: size_t).
     model: it_pair(at, 0, 1)
     other: it_pair(at, 1, 0)
@@ -170,7 +186,10 @@ fn: main () int
     it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES, "Other through [1, 0] was not admitted to Model")
     it_check(counts, lmx_implements_slot(at, other, model, 0U, @ slot) = 0 && slot = 1U, "Model's field a is not read at Other's slot 1")
     it_check(counts, lmx_implements_slot(at, other, model, 1U, @ slot) = 0 && slot = 0U, "Model's field b is not read at Other's slot 0")
-    it_check(counts, lmx_implements_slot(at, other, model, 2U, @ slot) != 0, "a field Model does not have got a slot")
+    # The LAST half: edge width + j is the bare-name read of field j (K01).
+    it_check(counts, lmx_implements_slot(at, other, model, 2U, @ slot) = 0 && slot = 1U, "Model's field a is not read at Other's slot 1 as its last occurrence")
+    it_check(counts, lmx_implements_slot(at, other, model, 3U, @ slot) = 0 && slot = 0U, "Model's field b is not read at Other's slot 0 as its last occurrence")
+    it_check(counts, lmx_implements_slot(at, other, model, 4U, @ slot) != 0, "an edge past 2 * Model's width got a slot")
     # A later admission takes the record: the same correspondence answers, another is refused.
     it_check(counts, lmx_implements_register_map(at, other, model, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES, "a later admission with the same correspondence was refused")
     it_check(counts, lmx_implements_register_map(at, other, model, 0, 0U, 0) = c.LMX_IMPLEMENTS_NO, "the same value answered Model through a second correspondence")
@@ -274,7 +293,7 @@ fn: main () int
         filler: lmx_node_new_owned(ea)
         fill_n: fill_n + 1
     ---
-    frame: it_frame(ea, 1U, 0U)
+    frame: it_frame(ea, 1U, 0U, 1U, 0U)
     if: fmodel = 0 || fvalue = 0 || frame = 0 || filler = 0
         free(counts)
         return: 2
@@ -337,7 +356,7 @@ fn: main () int
     # again through a new one.  The clone's equal cells are the same correspondence (same_map through the accessor):
     # an admission through them answers.  The record reads the frame it was made with: a different correspondence
     # written into the clone's cell does not reach it.
-    frame: it_frame(ea, 1U, 0U)
+    frame: it_frame(ea, 1U, 0U, 1U, 0U)
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
     v\frame: frame
     v\at: 1U

@@ -326,3 +326,155 @@ final admission additionally requires the Consumer's own graph unit tests. So:
   admission law: what is fixed is that a bare use and an explicit `[N]` use of the same name
   must reach the targets the value's own model gives them, and that read, write, address and
   capture use that same edge.
+
+## 9. K01b implemented — the correspondence carries one target per used access
+
+**Decision (author, 2026-10-01, chat, after the two-part question in
+`LMX_blog/q/current/k01-interface-and-access.md`):** option A — two targets per required
+field. The author's own words on the semantics of the access:
+"как после допуска обратиться именно к нужному полю … ну очевидно же что по имени! Если в
+имени есть индекс -- то же самое", worked out with Codex as "`v\x` — последнее вхождение
+имени x в кандидате v; `v\[1]x` — второе вхождение имени x в том же кандидате. Не «поле на
+месте соответствующего поля модели»". So the table is only the implementation of access by
+name; no additional interface requirement follows from it.
+
+**Scope kept:** addressing of an already admitted value. The analytical predicate is
+untouched (it still reads the ordinal half through `l2_descriptor_used` /
+`lmx_implements_walk_view`); no extra validation was added at access time; a compile-time
+proof for a used edge is not re-run; the capture keeps its present layout (one cell per
+required field, identity with holes) — a bare read inside a copy reads that cell, which is
+the pre-existing limit of item 738, not part of this slice.
+
+**Changed** (all in this slice, one ABI migration):
+
+- `l2_d105_table`: `2 * width` cells — ordinal half `t[j]`, last half `t[w + j]`; the new
+  `l2_d105_cell` resolves one cell with one selector on cand (holes: absent or
+  differently-typed field; 2 the plain refusal; 3 the nested crossing).
+- `l2_d105_declare_maps` / `l2_d105_emit_tables` / `l2_rw_map_inline`: `2 * width` cells.
+- `l2_rw_admit_project`: `default_n = 2 * width`, `extent = 9 + default_n + count * (1 + 2w)`,
+  alternative stride `1 + 2w`.
+- The translator's own scratch tables for a pair are 128 cells and the callers pass `cap = 128`,
+  since one table cell per required field became two: the pair capacity stays the previous 64
+  required fields instead of halving to 32 (a narrowing refusal of a general form would be a
+  defect, not a limit).
+- `l2_seg_occurrence` (new) + `l2_d105_emit_slot(mi, fi, slot, last, ind)`: the native use
+  site emits the edge `slot` or `slot + width`.
+- `l2_rw_path` records the level's selector and stores the edge in `path[6 + 3n]`, which the
+  OF/PUT_OF index emission already used — the walker needs no new operand.
+- `lmx_implements_at_last` (new), `lmx_implements_slot` takes EDGES (`j < width` ordinal,
+  `width <= j < 2*width` last), `lmx_implements_same_map` compares both halves;
+  `lmx_walk_admit_op` validates `default_n = 0` or `2 * width`, `stride = 2 * width + 1`, and
+  registers the entry's `n` as the semantic width.
+- Clients migrated with the ABI: `lmx_implements.h` / `lmx_walk.h` comments,
+  `tests/lmx_implements_table_selftest.lm1` (4-cell maps, the frame helper, the `2 * width`
+  edge boundary and two new last-half reads), `tests/lmx_gc_selftest.lm1` (2-cell map).
+- `unit_occ_selector_read.lm2`: `off` returns `size_t` directly — a `(cast: (int) …)` return
+  keeps the method outside the walkable subset, and the witness must reach both readings. Its
+  harness row is added with this slice (WalkRoot + WalkMethods + WalkedMethods 0).
+
+**Evidence:** `build/l2_harness/k01b_focus_20261001_01/02/03` (the first two stopped at build
+errors: `int model` without its colon, and an unparenthesized dotted call argument — the
+L1 call-argument rule); the probe chain on the third run's staged bytes reads the two edges in
+the generated L1's native body (`lmx_implements_slot(…, 3U, …)` for bare, `…, 1U, …` for
+`[1]`). Full gate, mutants, kernel and L3 gates recorded in §9a.
+
+**Two corrections of claims in this section's first draft, both forced by the mutation probes
+(§9a).** First, I wrote that the two edges appear "in the walked OF frames" of the fixture's
+*body*: they do not — the method's trampoline `l2_m0_tr` calls the native body `l2_m0`
+directly, the D-105 native-slice rule in `l2_rw_d105_need`'s comment ("a method's walk is
+refused and stays native"), which is why the native site needs the native mode. Second, I then
+concluded that the walked use site has no fixture reaching it — that is also wrong: the
+fixture's walked *root* code (the generated dispatch/admission sequence in `l2_msend0`) does
+carry an `OF` with the model operand and the edge, `no_last_edge_walked` moves that index from
+3 to 1, and the witness goes red. Both sites are therefore witnessed; the leaf method is not
+walked, and that is the fixture's business, not the edge's.
+
+## 10. Documentation updated with this clarification
+
+- `provenance/semantics-book.md` (source of `docs/LMX_semantics.*.md`, regenerated with
+  `tools/build_semantics.py`): a paragraph in the admission chapter — admitting a value to a
+  named model establishes the correspondence; access follows it and reaches the field its own
+  spelling names (bare = the value's last occurrence, `[N]` = occurrence N); distinct
+  selectors may name one model field and reach different positions, so the correspondence
+  carries a target per used access; it is the carrier of an admission already decided by the
+  analytical check and the Consumer's unit tests, not an extra requirement, a copy of the
+  value, a registry, or an algorithmic-suitability claim. The occurrence paragraph gains the
+  one-clause rule that through an admitted reference occurrences are counted in the value.
+- `docs/L2_spec_en.md` / `docs/L2_spec_ru.md` §14 and `docs/L1_spec_en.md` /
+  `docs/L1_spec_ru.md` §15: the same rule in the two specs that describe the crossing and the
+  runtime carrier (a map and an explicit frame carry two targets per required field).
+- `tools/check_docs.py` and `tools/build_semantics.py --check` pass on the regenerated docs.
+
+## 9a. K01b evidence
+
+**Instruction shape.** The first full run of the slice (`k01b_full_20261001_01`, 1115
+targets) reported exactly two new reds beyond the 48 retained baseline failures, both
+instruction-shape pins that legitimately move with the ABI:
+
+```
+FAIL fixture:unit_own_reference_reception  SET/3 has 0 reachable matching shapes, expected 2
+FAIL fixture:unit_own_reference_reentry    SET_OF/4 has 0 reachable matching shapes, expected 2
+```
+
+Measured in the generated L1, ADMIT_AS instruction widths `reception`:
+`9 x3, 10 x4, 11 x2` → `9 x3, 11 x4, 12 x2`; `reentry`: `9 x2, 10 x3` → `9 x2, 11 x3`;
+`failure` (whose two pins survived): `9-only/12` unchanged for the unmapped frames. The
+delta is the one cell per mapped required field (`extent = 9 + default_n + choices * (1 +
+2 * width)`), and the frames that are unmapped identity keep their width. The rows' pins were
+updated to the measured values (harness lines 2082-2090) with the reason recorded above them;
+the fixtures themselves still build and run green through the probe chain, so this is a pin
+update, not a behaviour change.
+
+**A third ABI client the first census missed.** The kernel gate on the slice
+(`build/l2src/k01b_kernel_20261001_01`) reported exactly one red,
+`selftest:lmx_walk_admit_selftest`, 10 of its 32 checks failing. It builds the flat ADMIT_AS
+instruction by hand — maps at offsets inside the frame — so it is a client of the same ABI
+change, not a behaviour regression. Migrated with the same arithmetic as the emitter:
+`admitted` 14 → 18 children (default map at 9..12 with both halves, alternative token at 13,
+alternative map at 14..17), `default_n` 2 → 4, the catch row 17 → 21 with its three catch
+cells moved to 18..20, and the captured-hole row 11 → 13 with its map at 9..12. The two cells
+its checks pin moved with the maps (9 and 14; the clone's alternative token 11 → 13). 32
+checks, 0 failures (`build/k01_mutants/one_selftest.sh lmx_walk_admit_selftest`).
+`lmx_implements_table_selftest` (73 checks, +2 for the new last-half reads) and
+`lmx_gc_selftest` (42 checks) also pass through the same single-selftest chain.
+
+**The first pin edit was itself wrong, and a focused row set caught it.** The first update
+rewrote `10 -> 11` and then `11 -> 12` in the same pass, so a line that started as 10 ended as
+12: the reception row happened to satisfy the matcher (its 12-shaped frames exist), while the
+reentry row's AT-edge pin no longer described any frame and the row stayed red. The rows were
+rebuilt from `HEAD` with a single-pass mapping (10→11, 11→12, 9 unchanged; measured values
+from the generated L1: reception `9 x3, 11 x4, 12 x2`, reentry `9 x2, 11 x3`), and a focused
+run confirmed it: `build/l2_harness/k01b_pins_20261001_01` — **GREEN, 6 targets**
+(`unit_own_reference_reception`, `unit_own_reference_reentry`, `unit_own_reference_failure`).
+A green row set after the fact is not evidence that a pin was right before; this one is
+evidence about the pins as they now read.
+
+**Final gates on the slice's own bytes.** Harness `build/l2_harness/k01b_full_20261001_03`:
+**48 of 1115 targets failed — the baseline 48 by exact identity, zero new, zero formerly green
+regressions** (its staged `src/l2src/l2trans.lm1` blob `04ddaacd9c0fbc04dc33153cd1612a2c9310bd1b`
+equals the live file, so the gate measured the committed bytes). Kernel
+`build/l2src/k01b_kernel_20261001_02`: **286 targets, no failures**, including the three
+migrated selftests. L3 `tools/run_l3_selftest.py`: **all 11 suites ok, 295 checks**, plus the
+type budget (4 units, 74/128 names, 1056/8192 bytes) — the same totals as the released
+checkpoint. `tools/gate_p0_header.ps1`, `tools/gate_dynarray_capacity.ps1` and
+`tools/check_docs.py` pass.
+
+**Mutation probes (one semantic edit per run, applied to the live tree, restored and
+hash-verified each time; the witness is `unit_occ_selector_read` through the probe chain).**
+
+| probe | edit | observed |
+| --- | --- | --- |
+| `same_halves` | the pair table writes the LAST half as the ordinal target | red — the driver exits 82 (`off(t)` = 0, not 10): the two selectors collapse onto one target again |
+| `no_last_edge_native` | the native use site never takes the LAST half (`l2_d105_emit_slot(..., 0, ...)`) | red in the native mode; in `--walk-methods` mode this site is not executed, so it is run without that flag |
+| `no_last_edge_walked` | the walked use site never takes it (`segocc < 0` → `< 0 - 1` in `l2_rw_path`) | red; the emitted walked `OF` index moves 3 → 1 |
+| `at_last_ordinal` | the runtime FRAME half answers the ordinal cell | red — the witness's correspondence is the admitting frame |
+| `slot_ignores_edge` | `lmx_implements_slot` resolves every edge through the ordinal half | red |
+| `at_last_map_ordinal` | the runtime MAP half answers the ordinal cell | **not reached by this witness** (its entry is a frame, so `lmx_implements_slot` never takes the map branch), and the permutation fixtures have equal halves by construction. Reported as a coverage gap, not as a dead mutant: the map half is exercised only by a static-map registration with differing halves, which no fixture of this slice has. |
+
+The probes also caught two flaws in the *probe tooling itself*, recorded because a red
+produced by the wrong mechanism is not evidence: the first attempt passed the compiler's
+include flags as one quoted argument, so `l2trans` was never rebuilt and every mutant read
+green; the second put `same_halves` (a translator edit) in the kernel-edit branch, so only the
+driver was rebuilt. After both fixes, and with the kernel probes rebuilding a *pristine*
+translator first (otherwise they inherit the previous probe's L1), the table above is what the
+runs show.

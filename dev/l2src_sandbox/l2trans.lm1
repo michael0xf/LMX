@@ -844,7 +844,7 @@ prototype:
     fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind)) int
     fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw) int
     fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
-    fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; const: @(char ind)) int
+    fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
     fn: l2_d105_emit_tables () int
     fn: l2_d105_width (int: req) int
     fn: l2_d105_declare_maps () int
@@ -1142,6 +1142,7 @@ prototype:
     fn: l2_seg_count (const: @(char pd); size_t: pn) int
     fn: l2_name_is_seg (const: @(LmP0Text name); const: @(char pd); size_t: off; size_t: len) int
     fn: l2_seg_split (const: @(char pd); size_t: off; size_t: len; @: int out_occ; @: size_t out_off; @: size_t out_len) int
+    fn: l2_seg_occurrence (const: @(char pd); size_t: off; size_t: len; @: int out) int
     fn: l2_after_bracket (@: LmP0Field at) @: LmP0Field
     fn: l2_mrs_slot_nth (int: res; const: @(LmP0Text name); int: occ; @: int out_kind; @: int out_ent) int
     fn: l2_kind_cell_ty (int: kind) int
@@ -17078,6 +17079,15 @@ fn: l2_seg_split (const: @(char pd); size_t: off; size_t: len; @: int out_occ; @
     \out_len: off + len - (j + 1U)
 return: 0
 
+# The occurrence a path segment SELECTS: 0 - 1 for a bare `name` (the name's LAST
+# occurrence), N for `[N]name`.  A malformed segment is 1; the caller reports it.
+fn: l2_seg_occurrence (const: @(char pd); size_t: off; size_t: len; @: int out) int
+    size_t: o off
+    size_t: l len
+    if: l2_seg_split(pd, off, len, out, @ o, @ l) != 0
+        return: 1
+return: 0
+
 # The name atom after the bracket group whose `[` is `at` (value-position path
 # runs carry `[`, the digits, `]` and the name as separate atoms).
 fn: l2_after_bracket (@: LmP0Field at) @: LmP0Field
@@ -17801,6 +17811,7 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     int: current 0
     int: view_mi mi
     int: view_key -1
+    int: segocc
     []: char l2_proot 64
     []: char sl 40
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
@@ -17927,9 +17938,16 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             return: l2_error(l2_src, at, "unknown field path segment")
         # The first field of an admitted input or own reference uses the same
         # completed correspondence. Later segments retain their structural path.
+        # K01: the EDGE is the required field plus the half this use's own
+        # selector names -- bare `name` is the value's LAST occurrence (the map's
+        # second half), `[N]name` its occurrence N (the ordinal half).  Both
+        # resolve to one required slot here; they are different candidate slots.
         c.sprintf(sl, "%uU", (cast: (unsigned) slot))
         if: view_key != -1 && l2_d105_sub(view_mi, view_key) != 0
-            if: l2_d105_emit_slot(view_mi, view_key, slot, ind) != 0
+            segocc: 0 - 1
+            if: l2_seg_occurrence(pd, off, len, @ segocc) != 0
+                return: l2_error(l2_src, at, "malformed field path segment")
+            if: l2_d105_emit_slot(view_mi, view_key, slot, segocc < 0, ind) != 0
                 return: 1
             c.sprintf(sl, "l2_dslot")
         ---
@@ -24686,6 +24704,7 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
     int: field_own
     int: model
     int: view_model -1
+    int: segocc
     if: t = 0 || t\data = 0 || path = 0
         return: 1
     while: i < t\length && t\data[i] != 92
@@ -24845,7 +24864,22 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
             if: say != 0
                 l2_rw_refuse(node, "a field path")
             return: 1
+        # K01: where this level reads through a correspondence, the OF/PUT_OF index is
+        # the EDGE -- the required field plus the half this use's own selector names.
+        # A bare `name` is the value's LAST occurrence (the map's second half); an
+        # explicit `[N]name` its occurrence N (the ordinal half).  Where no
+        # correspondence is carried (view_model < 0) the model IS the value's layout
+        # and the resolved slot is already the physical one.
+        segocc: 0 - 1
+        if: l2_seg_occurrence(t\data, b, i - b, @ segocc) != 0
+            if: say != 0
+                l2_rw_refuse(node, "a field path")
+            return: 1
+        ---
         path[6 + 3 * n]: slot
+        if: view_model >= 0 && segocc < 0
+            path[6 + 3 * n]: slot + l2_d105_width(view_model)
+        ---
         path[7 + 3 * n]: kind
         path[8 + 3 * n]: view_model
         view_model: -1
@@ -25045,76 +25079,87 @@ fn: l2_d105_mark (int: mi; int: k) int
     l2_d105_n: l2_d105_n + 1
 return: 0
 
-# D-105 (Q39): the first, heavy `implements` of named Structure cand admitted to req is by NAME:
-# t[j] is the slot of cand's field named as req's field j (l2_ns_slot_named -- slots are the
-# declaration order).  The final required occurrence of a name is its bare-name view and takes
-# cand's final occurrence; earlier explicit occurrences keep their ordinal.  With holes (every
-# current caller builds the pair MAP), a field of req cand has not, or one of another kind, is
-# -1, "not carried": the used-edge check (l2_descriptor_used, via l2_admit_consumer_ix) refuses
-# the Consumer that actually reads such a field, and an unused incompatible field must not
-# reject the candidate (K01).  Without holes the old strict result stays: 1 when a field of req
-# has no field of that name in cand (or another kind), 2 when a Structure field -- nested or a
-# reference -- is of another named type (a translation boundary: slice 1 does not translate
-# reading that type's slots through).
+# One cell of the pair table: the slot of cand's field that req's field `name` reaches
+# under one occurrence SELECTOR (0 - 1 = the name's LAST occurrence, else the explicit N).
+# The selector is resolved on cand exactly as l2_descriptor_used resolves it on both
+# schemas -- one selector, two schemas -- so `[N]name` and bare `name` can name different
+# candidate fields even when both name one required field (K01).
+# 0 and *out filled (-1: a hole, "not carried"); 2 a plain refusal; 3 the nested crossing
+# the slice-1 translation boundary owns.
+fn: l2_d105_cell (int: cand; const: @(LmP0Text name); int: kind; int: model; const: @(LmP0Text type_word); int: occurrence; int: holes; @: int out) int
+    L2SchemaField: actual
+    int: hit
+    \out: 0 - 1
+    if: name = 0
+        return: 0
+    hit: l2_schema_named(cand, name, occurrence, @ actual)
+    if: hit < 0 || actual.kind != kind
+        # The map records correspondence, not permission: an absent field, or one
+        # of another kind, is a hole where the used-edge check (l2_descriptor_used)
+        # owns the refusal for a Consumer that actually reads it.
+        if: holes != 0
+            return: 0
+        return: 2
+    ---
+    # A nested Structure field, or a reference field, of another named type stays the
+    # translation boundary: slice 1 does not translate reading that type's slots through.
+    if: (kind = 2 || kind = 3) && actual.model != model
+        return: 3
+    if: kind = 10 && (actual.type_word = 0 || type_word = 0 || l2_text_same((actual.type_word), type_word) = 0)
+        return: 3
+    \out: hit
+return: 0
+
+# D-105 (Q39): the first, heavy `implements` of named Structure cand admitted to req is by NAME.
+# The table carries TWO targets per required field: t[j] is the ORDINAL half -- the slot of
+# cand's field named as req's field j, its own occurrence r_j among the required same-named
+# fields -- and t[width + j] is the LAST half, cand's LAST occurrence of that name, which is
+# what a bare path names.  Both halves come from the same selector applied to cand; a use is
+# executed at the edge its own selector chose, so the two coincide only when the value's own
+# layout makes them coincide (K01; the layout itself is an implementation decision).
+# With holes (every current caller builds the pair MAP), a field of req cand has not, or one
+# of another kind, is -1, "not carried": the used-edge check (l2_descriptor_used, via
+# l2_admit_consumer_ix) refuses the Consumer that actually reads such a field, and an unused
+# incompatible field must not reject the candidate.  Without holes the old strict result
+# stays: 1 when a field of req has no field of that name in cand (or another kind), 2 when a
+# Structure field -- nested or a reference -- is of another named type.
 fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
     L2SchemaField: needed
-    L2SchemaField: actual
     L2SchemaField: other
+    int: w l2_schema_width(req)
     int: j 0
     int: k
     int: occurrence
-    int: later
     int: hit
     \out_n: 0
-    if: cand = -1 || req < 0
+    if: cand = -1 || req < 0 || w * 2 > cap
         return: 1
-    while: j < l2_schema_width(req)
-        if: j >= cap || l2_schema_field(req, j, @ needed) != 0
+    while: j < w
+        if: l2_schema_field(req, j, @ needed) != 0
             return: 1
-        if: needed.name = 0
-            t[j]: -1
-            j: j + 1
-            continue
-        # Preserve physical occurrences. The final required occurrence is the
-        # bare-name view; earlier explicit occurrences keep their ordinal.
         occurrence: 0
-        later: 0
         k: 0
-        while: k < l2_schema_width(req)
+        while: k < j
             if: l2_schema_field(req, k, @ other) != 0
                 return: 1
             if: l2_text_same((needed.name), (other.name)) != 0
-                if: k < j
-                    occurrence: occurrence + 1
-                if: k > j
-                    later: 1
+                occurrence: occurrence + 1
             ---
             k: k + 1
         ---
-        if: later = 0
-            occurrence: -1
-        hit: l2_schema_named(cand, (needed.name), occurrence, @ actual)
-        if: holes != 0 && (hit < 0 || actual.kind != needed.kind)
-            # The map records correspondence, not permission: an absent field,
-            # or one of another kind, is a hole where the used-edge check
-            # (l2_descriptor_used) owns the refusal for a Consumer that
-            # actually reads it.  A nested crossing of another named type
-            # stays the translation boundary below, not a hole: slice 1 does
-            # not translate reading that type's slots through.
-            t[j]: -1
-            j: j + 1
-            continue
-        ---
-        if: hit < 0 || actual.kind != needed.kind
+        hit: l2_d105_cell(cand, (needed.name), (needed.kind), (needed.model), (needed.type_word), occurrence, holes, @ t[j])
+        if: hit = 2
             return: 1
-        if: (needed.kind = 2 || needed.kind = 3) && actual.model != needed.model
+        if: hit = 3
             return: 2
-        if: needed.kind = 10 && (actual.type_word = 0 || needed.type_word = 0 || l2_text_same((actual.type_word), (needed.type_word)) = 0)
+        hit: l2_d105_cell(cand, (needed.name), (needed.kind), (needed.model), (needed.type_word), 0 - 1, holes, @ t[w + j])
+        if: hit = 2
+            return: 1
+        if: hit = 3
             return: 2
-        t[j]: hit
         j: j + 1
     ---
-    \out_n: j
+    \out_n: w * 2
 return: 0
 
 # D-105 native (steps/d105-native.md): the native slice's state starts empty with each translation's
@@ -25275,7 +25320,7 @@ fn: l2_d105_close () int
     int: ty
     int: why
     int: tn 0
-    []: int t 64
+    []: int t 128
     i: 0
     while: i < l2_own_n
         ty: l2_own_source_layout(i)
@@ -25348,7 +25393,7 @@ fn: l2_d105_close () int
             # An ordinary reference binding checks its full receiver only
             # when reached, after evaluating the candidate. Recording layout
             # alternatives must not turn that runtime refusal into a check here.
-            why: l2_d105_table(ty, req, t, 64, @ tn, 1)
+            why: l2_d105_table(ty, req, t, 128, @ tn, 1)
             if: why = 2
                 return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type through a Structure field of another type")
             if: why != 0
@@ -25369,7 +25414,7 @@ fn: l2_d105_close () int
         ty: l2_input_schema(l2_d105e_fmi[e], l2_d105e_fk[e])
         req: l2_input_model(l2_d105e_tmi[e], l2_d105e_tk[e])
         if: ty != -1 && req >= 0 && ty != req
-            why: l2_d105_table(ty, req, t, 64, @ tn, 1)
+            why: l2_d105_table(ty, req, t, 128, @ tn, 1)
             if: why = 2
                 return: l2_error(l2_src, l2_d105e_at[e], "an admission to a Structure type through a Structure field of another type")
             if: why != 0
@@ -25408,7 +25453,8 @@ fn: l2_d105_width (int: req) int
 return: l2_ns_width(req)
 
 # The pair maps at module scope, one static size_t array per pair (a library unit's names are unit-hashed, as its
-# module cells are); the builder fills them (l2_d105_emit_tables).
+# module cells are); the builder fills them (l2_d105_emit_tables).  A pair map carries 2*width cells: the ORDINAL
+# half then the LAST half (K01) -- the entry's registered width stays the semantic width of req.
 fn: l2_d105_declare_maps () int
     int: q 0
     int: count l2_ns_n + l2_mres_n
@@ -25421,7 +25467,7 @@ fn: l2_d105_declare_maps () int
     while: q < l2_d105t_n
         if: l2_library_mode != 0 && c.fprintf(l2_out, "define: l2_d105m%d l2_u%08X%08X_d105m%d\n", q, l2_module_hash_a, l2_module_hash_b, q) < 0
             return: 1
-        if: c.fprintf(l2_out, "[]: size_t l2_d105m%d %d\n", q, l2_d105_width(l2_d105t_req[q])) < 0
+        if: c.fprintf(l2_out, "[]: size_t l2_d105m%d %d\n", q, l2_d105_width(l2_d105t_req[q]) * 2) < 0
             return: 1
         q: q + 1
     ---
@@ -25532,29 +25578,37 @@ return: 0
 # gives -- into l2_dslot.  No record, or a hole, is a guard: every call site into the formal records its
 # value (l2_d105_emit_admit, and the walked root's ADMIT_AS), and the translator emits no read
 # of a field a source does not carry -- the formal's uses are checked for every source (l2_d105_close).
-fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; const: @(char ind)) int
+# The edge read: `last` selects bare `name` (the map's second half, the value's LAST
+# occurrence of it); otherwise the ordinal half -- the slot this use already resolved
+# on the required model (K01).
+fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
     []: char rinst 320
+    int: edge slot
     if: l2_model_inst(mi, l2_input_model(mi, fi), rinst) != 0
         return: l2_error(l2_src, 0, "internal: a formal admitted by name has no shape")
-    if: c.fprintf(l2_out, "%sif: lmx_implements_slot(l2_program_arena, l2_pst, %s, %uU, @ l2_dslot) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a field of a formal admitted by name is not carried by its value (no record, or a hole)\\n\")\n%s    c.abort()\n", ind, rinst, (cast: (unsigned) slot), ind, ind) < 0
+    if: last != 0
+        edge: slot + l2_d105_width(l2_input_model(mi, fi))
+    if: c.fprintf(l2_out, "%sif: lmx_implements_slot(l2_program_arena, l2_pst, %s, %uU, @ l2_dslot) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a field of a formal admitted by name is not carried by its value (no record, or a hole)\\n\")\n%s    c.abort()\n", ind, rinst, (cast: (unsigned) edge), ind, ind) < 0
         return: 1
 return: 0
 
-# D-105 native: the builder fills the program's pair maps -- slot j the slot of the source type's field named as the
-# formal type's field j, "not carried" (SIZE_MAX) where the source has none or where req's child is no field (a
-# procedure's bodies and steps, R9).
+# D-105 native: the builder fills the program's pair maps -- the ORDINAL half then the
+# LAST half per required field (K01), "not carried" (SIZE_MAX) where the source has none
+# or where req's child is no field (a procedure's bodies and steps, R9).
 fn: l2_d105_emit_tables () int
     int: p 0
     int: j
     int: n 0
     int: w
-    []: int t 64
+    int: cells
+    []: int t 128
     while: p < l2_d105t_n
-        if: l2_d105_table(l2_d105t_cand[p], l2_d105t_req[p], t, 64, @ n, 1) != 0
+        if: l2_d105_table(l2_d105t_cand[p], l2_d105t_req[p], t, 128, @ n, 1) != 0
             return: l2_error(l2_src, 0, "internal: a pair table of D-105 could not be built")
         w: l2_d105_width(l2_d105t_req[p])
+        cells: w * 2
         j: 0
-        while: j < w
+        while: j < cells
             if: j < n && t[j] >= 0 && c.fprintf(l2_out, "        l2_d105m%d[%d]: %dU\n", p, j, t[j]) < 0
                 return: 1
             if: (j >= n || t[j] < 0) && c.fprintf(l2_out, "        l2_d105m%d[%d]: (cast: (size_t) -1)\n", p, j) < 0
@@ -25587,14 +25641,16 @@ fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
 return: l2_rw_admit_project(parent, ni, @ source, 0, out)
 
 # D105 map constants are ordinary instruction operands with the same lifetime
-# as the admitting frame. They are never executable source-level values.
+# as the admitting frame. They are never executable source-level values.  The
+# frame carries the pair map's 2*width cells: the ordinal half then the last
+# half (K01); an identity admission writes the same slot on both halves.
 fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
-    []: int slots 64
+    []: int slots 128
     int: n 0
     int: width l2_d105_width(req)
     int: j 0
     int: slot
-    if: cand != req && l2_d105_table(cand, req, slots, 64, @ n, 1) != 0
+    if: cand != req && l2_d105_table(cand, req, slots, 128, @ n, 1) != 0
         return: 1
     while: j < width
         slot: -1
@@ -25603,6 +25659,13 @@ fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
         if: cand = req
             slot: j
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, (cast: (size_t) %d)) != c.LMX_WALK_OK\n            return: 1\n", frame, at + j, slot) < 0
+            return: 1
+        slot: -1
+        if: width + j < n
+            slot: slots[width + j]
+        if: cand = req
+            slot: j
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, (cast: (size_t) %d)) != c.LMX_WALK_OK\n            return: 1\n", frame, at + width + j, slot) < 0
             return: 1
         j: j + 1
     ---
@@ -25631,13 +25694,16 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     if: req < 0 || l2_ns_local[req] >= 0
         return: 1
     if: source\schema != -1 && source\schema != req
-        default_n: width
+        # An explicit pair map: two cells per required field -- the ordinal half and
+        # the last half (K01).  The entry's registered width stays `width`; only the
+        # physical cell count doubles, so the walker's `default_n` is read as cells.
+        default_n: width * 2
     while: i < l2_d105s_n
         if: source\method >= 0 && l2_d105s_mi[i] = source\method && l2_d105s_k[i] = source\place && l2_d105s_ty[i] != source\schema
             count: count + 1
         i: i + 1
     ---
-    extent: 9 + default_n + count * (1 + width)
+    extent: 9 + default_n + count * (1 + width * 2)
     if: l2_rw_catch_fixed(-1, 0, 2, "implements", @ nc) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_ADMIT_AS", extent + 3 * nc, out) != 0
         return: 1
     if: l2_rw_emit != 0 && source\schema != -1 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 1U, l2_layout_tokens + %d) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_schema_token_slot(source\schema)) < 0
@@ -25658,7 +25724,7 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
                 return: 1
             if: l2_rw_map_inline(\out, slot + 1, l2_d105s_ty[i], req) != 0
                 return: 1
-            slot: slot + 1 + width
+            slot: slot + 1 + width * 2
         i: i + 1
     ---
 return: l2_rw_catch_fixed(\out, extent, 2, "implements", @ nc)

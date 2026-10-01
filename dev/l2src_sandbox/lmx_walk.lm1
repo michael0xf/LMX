@@ -2100,9 +2100,12 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         return: c.LMX_WALK_INVALID
     if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 8U), @ full_receiver) != c.LMX_WALK_OK || full_receiver > 1U
         return: c.LMX_WALK_INVALID
-    if: (default_n != 0U && default_n != width) || default_n > catch_at - 9U || width = (cast: (size_t) -1)
+    # default_n is the PHYSICAL cell count of an explicit map: two per required field (K01,
+    # the ordinal half then the LAST half), or zero for the compact identity case.  The
+    # registered entry's n stays the semantic width.
+    if: (default_n != 0U && default_n != width * 2U) || default_n > catch_at - 9U || width = (cast: (size_t) -1)
         return: c.LMX_WALK_INVALID
-    stride: width + 1U
+    stride: width * 2U + 1U
     n: catch_at - 9U - default_n
     if: n / stride != choices || n % stride != 0U
         return: c.LMX_WALK_INVALID
@@ -2126,7 +2129,7 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: default_n != 0U
         v\frame: code
         v\at: at
-        v\n: default_n
+        v\n: width
     ---
     at: at + default_n
     while: layout != 0 && choice < choices

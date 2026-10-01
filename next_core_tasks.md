@@ -81,6 +81,10 @@ Stable `l2src` не обновляется.
    а retained-graph binder принимает только `@ v`, не последующее `p: 0`.
    Устранить это общим declaration/receiving/admission механизмом, не
    исключением для верхнего тела; native и настоящий walker обязательны.
+   Проверка повторного объявления выявила также смешение direct Structure
+   slot и pointer cell в общем шаге пути: исправить их проекцию, сохранив
+   точный тип ссылки, модель и уже выбранную identity поля; не удалять
+   наблюдения `while\ref` / `for\ref` ради зелёного теста.
    Следом закрыть [общую проекцию portable-ссылок в walker](steps/native-selfbuild-20260930.md#portable-reference-value-projection):
    убрать Structure-only ограничения общего чтения/записи указателя,
    сохранить структурный implements на своём месте и единое хранилище

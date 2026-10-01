@@ -318,6 +318,18 @@ admission or duplicating evaluation must fail. Add direct named-model null
 controls beside the existing machine-local and primitive-pointer controls.
 Canonical-body/copy and Q58 classification remain separate work.
 
+The hosted reset witnesses exposed a shared field-path representation gap
+in diagnostic `own_reference_reception_20260930_06`: `while\ref` and
+`for\ref` refuse before execution. Own direct Structure slots and explicit
+pointer cells were collapsed to kind 3, although native and walked paths
+interpret that representation differently. This dependency is part of the
+same repair, not a reason to remove physical-cell observations. Carry the
+already-resolved own row through the ordinary segment dispatcher, preserving
+both its closed pointer contract and its pointee model. Direct slots stay
+direct; only an actual intermediate pointer cell is dereferenced. Keep a
+deeper hosted `while\ref\value` control and a direct nested Structure path.
+See [OWN-REFERENCE-PATH-REPRESENTATION](defects.md) for the measured defect.
+
 <a id="portable-reference-value-projection"></a>
 ### Follow-on: portable reference values in the walker
 

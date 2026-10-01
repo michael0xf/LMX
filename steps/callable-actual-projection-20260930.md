@@ -264,6 +264,12 @@ Preserve these boundaries together:
 - A cached same-map success preserves a known layout. Unknown-to-known
   enrichment needs genuine producer evidence, not the current requirement
   or a map-shape inference.
+- Reusing a correspondence is not a proof for a new consumer. In particular,
+  holes admitted because earlier code did not use those fields cannot
+  satisfy a later full-model receiver by an unconditional cached YES.
+  Preserve the current receiving check before enriching a cached view;
+  compile-proved current uses and ordinary full-model reception must not
+  be conflated merely to make native and walked branches agree.
 - A fresh capture is in its required model's physical slots, with the
   existing holes semantics; it does not retain the original source layout.
 - Graph copy/merge produces a fresh value and does not inherit the source's

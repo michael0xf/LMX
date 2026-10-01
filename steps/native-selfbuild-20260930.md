@@ -1,6 +1,6 @@
 # Native compilation and the route to §§8–8a
 
-Status: 2026-09-30, development checkpoint `6be1235` contains the verified
+Status: 2026-10-01, development checkpoint `6be1235` contains the verified
 common-assignment repair. Checkpoint `e7935be` adds whole-Array descriptor
 addressing and the shared lexical lookup repair. Checkpoint `c8167af` closes
 bounded expression/actual spans and the shared pointer-actual checker.
@@ -8,8 +8,9 @@ Checkpoint `5f11b50` adds ordinary whole-Array descriptor values and the
 shared declared-element address type. Checkpoint `74df17d` closes the bounded
 own-reference reception/path-admission repair. Checkpoint `0c5dd61` removes
 re-entry publication suppression and fixes current-occurrence path calls.
-Next are typed portable reference values and shared lexical-local identity
-before remaining callable work.
+Checkpoint `71c4743` lands typed portable reference values and the common
+argument/result transport ABI. Next is source-site visibility over existing
+declaration rows, then uniform native-word dispatch and remaining callable work.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
@@ -752,7 +753,7 @@ post-checkpoint controls missing from `_11`; independent review confirms the
 dirty publication and clean/address-alone non-overwrite observations. Fresh
 full gates, direct runtime-test migration and mutation checks remain pending.
 
-#### Broad ABI migration diagnostics, 2026-10-01
+#### Broad ABI migration diagnostics, 2026-10-01 (historical intermediate runs)
 
 The following runs test the mutable portable-reference working slice, not a
 released checkpoint. They do not replace the last full `0c5dd61` baseline.
@@ -794,7 +795,76 @@ not a new rule selected for this migration. Both witnesses must instead
 assert the changed physical cell **and** the retained bare working value,
 while preserving pointer-depth checks. Do not restore address-taken cache
 disabling, add an implicit reload, or remove the physical-write observation.
-Fresh focused/kernel/L3/full gates and mechanism mutants remain required.
+These intermediate requirements are discharged by the release below;
+the original failing artifacts remain as diagnostic history.
+
+<a id="portable-reference-release"></a>
+#### Typed-reference/ABI release: checkpoint 71c4743
+
+The exact 63-path source slice was committed as
+`71c4743d89e39160450e9de37dde6bea68bad4f8`, after independent verification
+and a documentation-only fast-forward. All released live SHA256 values and
+staged Git blobs match `owned_manifest` in
+`build/l2_harness/portable_reference_typed_eval_full_20261001_02/release_report.json`.
+The report also retains explicit paths, commands, comparisons and remaining
+boundaries. This is a development release, **not** a clean-kernel checkpoint.
+
+- Full02: **1052 targets, 1000 OK, 52 FAIL**. The failure identities are exactly
+  the old 52 from `reentry_publication_full_20260930_01`; all twelve new rows
+  pass, with no removed/duplicate rows or formerly-green regressions.
+- Corrective focus: `portable_reference_typed_eval_20261001_corrective_final`,
+  **249/249 targets, 246 fixtures**.
+- Kernel: `build/l2src/portable_reference_typed_eval_20261001_kernel_final01`,
+  **284/284, 105 executed selftests**; call-destination 14/14, reference PUT
+  22/22 and value transport 16/16.
+- L3: `build/l3/portable_reference_typed_eval_20261001_final01`, **eleven
+  suites / 295 checks plus four inventories**. Type-budget limits unchanged.
+- Independent audit rehashed all 63 owned paths, 188 staged source references
+  and 1111 staged LM2 inputs; no source drift. All gate processes terminated.
+  Documentation and staged whitespace checks pass.
+
+Frozen translator SHA256:
+`70DD98E2658FEFFAB820C92D1A415400F912884E1B28908C51CEBB65D60B81DA`;
+walker:
+`726B99640DC967997BD6312A501AEEB3B261206591364FDB18215435980B0514`;
+harness:
+`70258F24A33C5068AE24686D62128E24A4651A6BC78279A86023D54D1EE4AB66`.
+
+The common typed value retains presence, numeric width and held references;
+physical place selection is shared by address, dereference, element and PUT.
+SET working-cache state is distinct from physical PUT. Explicit pointer
+declarations reuse own rows; addressable inputs have callee-owned activation
+storage. All primitive/native/mail/capture consumers use the actual callee
+input/result contract, exact-width numerical cells and canonical `void*`
+transport boxes. No-result calls no longer expose incidental body-last values.
+Borrowed P0 value spans replace the touched synthetic span/token rescanning.
+The paired L1/L2 ABI norm was synchronized in `c3ea28e` before this landing.
+
+Mutation evidence is deliberately separated: **19 generated-C runtime
+mechanism detections**, **nine assertion inversions causing 18 runtime
+failures**, and **30 observer-only rejections**. Files are retained under
+`portable_reference_typed_eval_mutants_20261001` and
+`portable_reference_typed_eval_corrective_observers_20261001`. The initial
+ADDRESS mutation survived; its artifact remains. Adding a non-null address
+assertion made the same generated-C mutation fail with walked exit 82 while
+the native control passed. Do not retroactively claim the original fixture
+detected it. The owner-guard mutant independently fails its foreign-owner /
+no-publication checks. Observer rejection is not executable proof.
+
+Full01 remains preserved: **984/1052, 68 failures**, comprising old 52 plus
+16 transient failures. Ten were precise generated-representation observers;
+six were diagnostic expectations after earlier capture validation or real
+own-pointer root resolution. Only the harness changed between full01 and
+full02. Replacements retain admission, identity, payload/consumer linkage,
+negative refusal causes and explicit native/walker controls; 24 targeted
+observer mutants reject. The earlier 35 expanded diagnostic failures also
+pass on the final frozen source. Neither set is silently labelled old debt.
+
+Still open: source-site visibility/hidden-input selection; native-word
+dispatch for static calls; general callable actual projection; Array-formal
+and descriptor-follow paths; recursive Q58 head resolution; actual pointer
+cell C99 aliasing; the existing 52 full-gate failures. No stable promotion,
+List migration, self-build, §§8/8a or application completion is claimed.
 
 <a id="reentry-publication-repair"></a>
 ### Re-entry publication and path calls: checkpoint 0c5dd61

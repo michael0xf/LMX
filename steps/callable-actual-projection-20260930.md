@@ -91,9 +91,9 @@ This is a shared value-selection mechanism, not a rule that every context receiv
 **Rebaseline before implementation, 2026-10-01.** The historical pointer
 machine-local premise below has been superseded by the active
 [portable-reference migration](native-selfbuild-20260930.md#portable-reference-value-projection).
-Its source is not yet released. Rerun the witnesses on the exact released
-ABI source before marking anything complete or starting another metadata
-migration.
+Its exact source is now released as `71c4743` with the common transport ABI.
+Rerun the witnesses on that source before marking anything complete or
+starting another metadata migration.
 
 The original failure is retained in
 `build/l2_harness/bounded_indexed_expression_20260930_07/src/unit_pointer_actual_contract.lm2`:

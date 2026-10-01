@@ -2391,6 +2391,22 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_d105_perm_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # K01 (steps/k01-selector-identity-20261001.md): occurrence selectors through an admitted
+    # formal.  _unused_first: the candidate's occurrence-0 x is an int no Consumer edge reads;
+    # bare v\x is its LAST x -- a size_t like the requirement's -- 30, and the unused mismatch
+    # must not reject the candidate (native and walked).  _first_refused: the same candidate
+    # with a Consumer that reads `[0]x` -- refused at the call site by the used edge.
+    [pscustomobject]@{ Name = 'unit_occ_selector_unused_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_selector_first_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    # K01a identity-layout witnesses (same note): a root value and a same-type formal whose model
+    # repeats x -- reads, writes and `@` per selector; native and walked.  _root closes the
+    # NAMED-MODEL-OCCURRENCE-PATH-LOWERING witness (`r\[0]x` used to lower as C members).
+    [pscustomobject]@{ Name = 'unit_occ_selector_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_selector_ident_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_d105_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'lm2:25:6: root operation not walkable yet: an admission to a Structure type through a Structure field of another type'; Absent = @(); Debt = @() },
     # D-105 native (the author's Q39: the interpreter first, then native; steps/d105-native.md §4, REVIEW

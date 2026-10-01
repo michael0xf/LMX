@@ -4,14 +4,14 @@
 # requirement's, so bare `v\x` = 30 is legal; nothing reads occurrence 0.  Success is 7.
 Pair: (size_t: x 10U; size_t: x 20U)
 Tri: (int: x 7; size_t: x 20U; size_t: x 30U)
-fn: lastOnly (Pair: v) int
+fn: lastOnly (Pair: v) size_t
     size_t: got
     got: v\x
-    return: (cast: (int) (got))
+    return: got
 end: lastOnly
 Tri: t
 int: ok 7
-if: lastOnly(t) != 30
+if: lastOnly(t) != 30U
     ok: 81
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

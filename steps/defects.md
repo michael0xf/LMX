@@ -472,8 +472,25 @@ required содержит два одноимённых поля x, candidate �
 `unit_occ_selector_unused_first`, `unit_occ_selector_first_refused` (красные до ремонта;
 строки harness добавляются вместе с фиксом). План срезов K01a–K01e — в записке.
 
+**K01a выпущен — дефект ОТКРЫТ наполовину (deepseek, 2026-10-01; там же §5a, §8).**
+Разрешение имени и понижение пути теперь occurrence-exact на всех общих путях
+(`l2_seg_split`/`l2_after_bracket`: `l2_ns_slot_named`, `l2_mrs_slot_named`,
+`l2_own_seg_scan`; сборка `[N]name` в `l2_join_path`/`l2_uses_scan_follow`; общий
+joined-path в `l2_emit_fields`), поэтому bare = LAST и `[N]` = вхождение N работают и в
+identity-раскладке (root-значение, формал того же типа) — свидетели
+`unit_occ_selector_root`, `unit_occ_selector_ident_formal` (native + walked),
+и закрыт `NAMED-MODEL-OCCURRENCE-PATH-LOWERING`. Дыра в таблице соответствия
+(`l2_d105_table`, holes=1) больше не отвергает candidate из-за неиспользуемого
+несовместимого поля: `unit_occ_selector_unused_first` зелёный, а потребитель `[0]x`
+по-прежнему отвергается — `unit_occ_selector_first_refused`. Полный гейт
+(`build/l2_harness/k01a_full_20261001_03`): 48 отказов из 1114 — ровно базовые 48,
+ноль регрессий. **Остаток — сам коллапс соответствия**: `unit_occ_selector_read`
+транслируется, но красный на runtime (exit 82), потому что обе записи всё ещё идут
+через одну позицию requirement; карта `2n` (ordinal-половина / LAST-половина) и её
+потребители — срез K01b, обязательства ревью — §8 записки.
+
 <a id="named-model-occurrence-path-lowering"></a>
-### NAMED-MODEL-OCCURRENCE-PATH-LOWERING — 2026-10-01, deepseek, OPEN
+### NAMED-MODEL-OCCURRENCE-PATH-LOWERING — 2026-10-01, deepseek, FIXED срезом K01a
 
 `m\[0]x` по значению именованной модели с повторяющимся именем проходит проверку, но
 понижается как цепь C-членов: в сгенерированном C стоит `l2_q0 = l2_q2 ->[0] x;`
@@ -482,6 +499,20 @@ required содержит два одноимённых поля x, candidate �
 нет ни того, ни другого. Минимальный свидетель — `build/l2_harness/occsel_probe_20261001_01`
 (проба `unit_occ_sel_g4`; там же `v\[0]x` через формал отвергается «unknown field path
 root»). Закрывается срезом K01a ([K01](k01-selector-identity-20261001.md)).
+
+**Ремонт (K01a, 2026-10-01).** Значение позиции пути понижается общим
+joined-path маршрутом в `l2_emit_fields`: `l2_join_path` собирает `[N]name` в один
+сегмент, `l2_path_root`/`l2_path_kind` разрешают его тем же occurrence-exact поиском, и
+числовой лист (`size_t`/`char`/`int`/`unsigned`/`ulong`) загружается через
+`lmx_*_value_known(l2_pxp[0])`. Тот же маршрут обслуживает return-значения, фактические
+аргументы вызова и прочие позиции значения. Свидетели: `unit_occ_selector_root`
+(`r\x`, `r\[0]x`, `r\[1]x`, `r\[2]x`; записи и `@`) и `unit_occ_selector_ident_formal`
+(то же через формал того же типа) — native и walked, полный гейт
+`build/l2_harness/k01a_full_20261001_03`. Порядок материализации: чтение пути в
+аргументе вызова обязано попасть в типизированный temp в точке вычисления пути, а не
+инлайниться в список аргументов после публикации checkpoint (иначе четыре строки
+`unit_body_path_for`, `unit_body_path_while`, `unit_pathwrite_cell_kept`,
+`unit_cache_for_call` краснеют — проверено мутантом `inline_actual`).
 
 <a id="site-binding-category-regressions"></a>
 ### SITE-BINDING-CATEGORY-REGRESSIONS — 2026-10-01, Codex, FIXED `e70689c`

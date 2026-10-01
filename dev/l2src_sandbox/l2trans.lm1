@@ -1141,6 +1141,8 @@ prototype:
     fn: l2_seg_at (const: @(char pd); size_t: pn; int: i; @: size_t off; @: size_t len) int
     fn: l2_seg_count (const: @(char pd); size_t: pn) int
     fn: l2_name_is_seg (const: @(LmP0Text name); const: @(char pd); size_t: off; size_t: len) int
+    fn: l2_seg_split (const: @(char pd); size_t: off; size_t: len; @: int out_occ; @: size_t out_off; @: size_t out_len) int
+    fn: l2_after_bracket (@: LmP0Field at) @: LmP0Field
     fn: l2_mrs_slot_nth (int: res; const: @(LmP0Text name); int: occ; @: int out_kind; @: int out_ent) int
     fn: l2_kind_cell_ty (int: kind) int
     fn: l2_mrs_occ_read (int: res; const: @(LmP0Text name); int: occ; int: mi; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
@@ -14548,6 +14550,8 @@ fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: char paths; @: size_t count
     []: char path 128
     size_t: used 0U
     int: tracked
+    int: closed
+    int: digits
     if: start = 0 || start\value = 0 || start\value\kind != c.LM_P0_NODE_ATOM
         return: start
     name: start\value\as\atom
@@ -14564,9 +14568,45 @@ fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: char paths; @: size_t count
             if: used != 0U && used + 1U < 128U
                 path[used]: 92
                 used: used + 1U
-            if: used + name\length < 128U
-                memcpy(path + used, name\data, name\length)
-                used: used + name\length
+            # `[N]name` arrives as separate atoms; one segment `[N]name` is what
+            # the used-edge check parses (the occurrence selector is part of it).
+            if: name\length = 1U && name\data[0] = 91
+                closed: 0
+                if: used + 1U < 128U
+                    path[used]: 91
+                    used: used + 1U
+                else:
+                    closed: 1
+                ---
+                digits: 0
+                field: field\next
+                while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && field\value\as\atom != 0 && closed = 0
+                    name: field\value\as\atom
+                    if: used + name\length < 128U
+                        memcpy(path + used, name\data, name\length)
+                        used: used + name\length
+                    else:
+                        closed: 1
+                    ---
+                    if: name\length = 1U && name\data[0] = 93
+                        closed: 1
+                    ---
+                    digits: digits + 1
+                    field: field\next
+                ---
+                if: closed = 0 || field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as\atom = 0 || digits < 2
+                    return: start
+                ---
+                name: field\value\as\atom
+                if: used + name\length < 128U
+                    memcpy(path + used, name\data, name\length)
+                    used: used + name\length
+                ---
+            else:
+                if: used + name\length < 128U
+                    memcpy(path + used, name\data, name\length)
+                    used: used + name\length
+                ---
             ---
         ---
         field: field\next
@@ -16720,12 +16760,16 @@ return: 0
 # Join a value-position path, which arrives as atoms around separator atoms,
 # into one byte span. Returns the length, or 0 when the field list is not a
 # path. The buffer is caller supplied; a path longer than it is not a path.
+# A member written `[N]name` arrives as separate atoms (`[`, the digits, `]`,
+# the name); they are joined into the one segment `[N]name` the lookup parses
+# (K01: the occurrence selector is part of the segment text).
 fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
     @: LmP0Field f
     const: @: LmP0Text t
     size_t: n 0U
     int: want_name 1
     int: i 0
+    int: closed
     if: field = 0 || buf = 0 || cnt < 3
         return: 0U
     f: l2_next_active(field)
@@ -16739,6 +16783,43 @@ fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
             return: 0U
         if: want_name = 0 && (t\length != 1U || t\data[0] != 92)
             return: 0U
+        if: want_name != 0 && t\length = 1U && t\data[0] = 91
+            # `[N]name`: zeros or more digits, the closing bracket, the name.
+            if: n + 1U > cap
+                return: 0U
+            buf[n]: 91
+            n: n + 1U
+            closed: 0
+            i: i + 1
+            f: l2_next_active(f\next)
+            while: f != 0 && i < cnt && closed = 0
+                if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
+                    return: 0U
+                t: f\value\as\atom
+                if: t = 0 || t\data = 0 || t\length = 0U || n + t\length > cap
+                    return: 0U
+                memcpy(buf + n, t\data, t\length)
+                n: n + t\length
+                if: t\length = 1U && t\data[0] = 93
+                    closed: 1
+                ---
+                f: l2_next_active(f\next)
+                i: i + 1
+            ---
+            if: closed = 0 || f = 0 || i >= cnt
+                return: 0U
+            if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+                return: 0U
+            t: f\value\as\atom
+            if: t = 0 || t\data = 0 || t\length = 0U || (t\length = 1U && (t\data[0] = 92 || t\data[0] = 93)) || n + t\length > cap
+                return: 0U
+            memcpy(buf + n, t\data, t\length)
+            n: n + t\length
+            want_name: 0
+            f: l2_next_active(f\next)
+            i: i + 1
+            continue
+        ---
         if: n + t\length > cap
             return: 0U
         memcpy(buf + n, t\data, t\length)
@@ -16970,20 +17051,73 @@ fn: l2_name_is_seg (const: @(LmP0Text name); const: @(char pd); size_t: off; siz
         return: 0
 return: memcmp(name\data, pd + off, len) = 0
 
+# Split one path segment `[N]name` or `name`: \out_occ is -1 for the bare name
+# (the LAST occurrence view, K01) or N for the explicit occurrence; \out_off and
+# \out_len are the name's span.  1 when the segment is a malformed bracket group.
+fn: l2_seg_split (const: @(char pd); size_t: off; size_t: len; @: int out_occ; @: size_t out_off; @: size_t out_len) int
+    size_t: j
+    int: occ 0
+    int: digits 0
+    \out_occ: 0 - 1
+    \out_off: off
+    \out_len: len
+    if: pd = 0 || len = 0U || off + len < off
+        return: 1
+    if: pd[off] != 91
+        return: 0
+    j: off + 1U
+    while: j < off + len && pd[j] >= 48 && pd[j] <= 57
+        occ: occ * 10 + (cast: (int) (pd[j] - 48))
+        j: j + 1U
+        digits: digits + 1
+    ---
+    if: digits = 0 || j + 1U >= off + len || pd[j] != 93
+        return: 1
+    \out_occ: occ
+    \out_off: j + 1U
+    \out_len: off + len - (j + 1U)
+return: 0
+
+# The name atom after the bracket group whose `[` is `at` (value-position path
+# runs carry `[`, the digits, `]` and the name as separate atoms).
+fn: l2_after_bracket (@: LmP0Field at) @: LmP0Field
+    @: LmP0Field f at
+    while: f != 0
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0 && f\value\as\atom\data != 0 && f\value\as\atom\length = 1U && f\value\as\atom\data[0] = 93
+            return: l2_next_active(f\next)
+        f: l2_next_active(f\next)
+    ---
+return: at
+
 # A field of one declaration, by name: returns its SLOT index and reports the
-# field kind and the entry a nested or reference field names. -1 when unknown,
-# -2 when more than one field of that declaration carries the name.
+# field kind and the entry a nested or reference field names.  The name's LAST
+# occurrence is the bare-name view (the general path rule, K01); a leading
+# `[N]` in the segment itself selects occurrence N explicitly.  -1 when the
+# declaration has no such occurrence.
 fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     int: k 0
     int: slotix 0
     int: hit 0 - 1
+    int: occurrence 0 - 1
+    int: seen 0
+    size_t: noff off
+    size_t: nlen len
+    if: ni < 0 || l2_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
+        return: 0 - 1
     while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = ni && l2_name_is_seg(l2_nsf_fname[k], pd, off, len) != 0 && hit >= 0
-            return: 0 - 2
-        if: l2_nsf_owner[k] = ni && l2_name_is_seg(l2_nsf_fname[k], pd, off, len) != 0
-            hit: slotix
-            \out_kind: l2_nsf_kind[k]
-            \out_ent: l2_nsf_ref[k]
+        if: l2_nsf_owner[k] = ni && l2_nsf_fname[k] != 0 && l2_nsf_fname[k]\data != 0 && l2_nsf_fname[k]\length > 0U && l2_nsf_fname[k]\length = nlen && memcmp(l2_nsf_fname[k]\data, pd + noff, nlen) = 0
+            if: occurrence < 0
+                hit: slotix
+                \out_kind: l2_nsf_kind[k]
+                \out_ent: l2_nsf_ref[k]
+            else:
+                if: seen = occurrence
+                    \out_kind: l2_nsf_kind[k]
+                    \out_ent: l2_nsf_ref[k]
+                    return: slotix
+                seen: seen + 1
+            ---
+        ---
         if: l2_nsf_owner[k] = ni
             slotix: slotix + 1
         k: k + 1
@@ -17011,17 +17145,33 @@ return: l2_ns_ref_pointee(ns, pd, off, len)
 # The same for a bound merge result, whose slots carry the names of the fields
 # that CONTRIBUTED them.  merge makes no repeated names (the author's merge rule, plan §4):
 # a later operand's field of a model name went INTO the model's slot, so a name has one
-# slot -- or the model's own repeats, of which `merged\x` is the last; an explicit
-# `merged\[N]x` is l2_mrs_slot_nth.
+# slot -- or the model's own repeats, of which bare `merged\x` is the last and an explicit
+# `merged\[N]x` the occurrence N (K01: the segment carries the selector; the -1/-2 split
+# with l2_mrs_slot_nth is the older spelling of the same rule).
 fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     int: k 0
     int: slotix 0
     int: hit 0 - 1
+    int: occurrence 0 - 1
+    int: seen 0
+    size_t: noff off
+    size_t: nlen len
+    if: l2_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
+        return: 0 - 1
     while: k < l2_mrs_n
-        if: l2_mrs_res[k] = res && l2_name_is_seg(l2_mrs_name[k], pd, off, len) != 0
-            hit: slotix
-            \out_kind: l2_mrs_kind[k]
-            \out_ent: l2_mrs_ent[k]
+        if: l2_mrs_res[k] = res && l2_name_is_seg(l2_mrs_name[k], pd, noff, nlen) != 0
+            if: occurrence < 0
+                hit: slotix
+                \out_kind: l2_mrs_kind[k]
+                \out_ent: l2_mrs_ent[k]
+            else:
+                if: seen = occurrence
+                    \out_kind: l2_mrs_kind[k]
+                    \out_ent: l2_mrs_ent[k]
+                    return: slotix
+                seen: seen + 1
+            ---
+        ---
         if: l2_mrs_res[k] = res
             slotix: slotix + 1
         k: k + 1
@@ -17295,11 +17445,25 @@ return: 0
 fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     int: i 0
     int: hit 0 - 1
+    int: occurrence 0 - 1
+    int: seen 0
+    size_t: noff off
+    size_t: nlen len
     \out_kind: 0 - 1
     \out_ent: 0 - 1
+    if: l2_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
+        return: 0 - 1
     while: i < l2_own_n
-        if: l2_own_mi[i] = mi && l2_own_host[i] = (cast: (@: LmP0Node) host) && l2_name_is_seg(l2_own_name[i], pd, off, len) != 0
-            hit: i
+        if: l2_own_mi[i] = mi && l2_own_host[i] = (cast: (@: LmP0Node) host) && l2_own_name[i] != 0 && l2_own_name[i]\data != 0 && l2_own_name[i]\length = nlen && memcmp(l2_own_name[i]\data, pd + noff, nlen) = 0
+            if: occurrence < 0
+                hit: i
+            else:
+                if: seen = occurrence
+                    hit: i
+                ---
+                seen: seen + 1
+            ---
+        ---
         i: i + 1
     if: hit < 0
         return: 0 - 1
@@ -17759,8 +17923,6 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
         if: res < 0 && ((i > 1 && bh < 0 && bm < 0) || root = 0 - 1 || (root <= 0 - 3 && root > 0 - 1000)) && ni >= 0
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
-        if: slot = 0 - 2
-            return: l2_error(l2_src, at, "ambiguous field path segment")
         if: slot < 0
             return: l2_error(l2_src, at, "unknown field path segment")
         # The first field of an admitted input or own reference uses the same
@@ -19807,6 +19969,12 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: cpraw
     int: cpraw_j 0
     int: cpleaf 0
+    int: segocc 0 - 1
+    size_t: sego 0U
+    size_t: segl 0U
+    size_t: segno 0U
+    size_t: segnl 0U
+    @: LmP0Field cpos
     @: LmP0Field p1
     @: LmP0Field p2
     @: LmP0Field p3
@@ -19883,6 +20051,22 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         # names nothing is refused where the path stands, not left to the emitter, whose read fails without a word; in
         # this check's own words and places: a single hop at its name, a deeper path at its start.
         if: l2_seg_count(cpbuf, cpn) = 2 && l2_path_kind(cpbuf, cpn, @ cpleaf) < 0
+            # A named explicit occurrence that resolves to nothing keeps the
+            # occurrence's own located refusal: the name atom after the bracket
+            # group a merge result's index, or the occurrence a declaration
+            # place does not have (an argument; unit_own_last_occurrence).
+            sego: 0U
+            segl: 0U
+            segocc: 0 - 1
+            if: l2_seg_at(cpbuf, cpn, 1, @ sego, @ segl) = 0 && l2_seg_split(cpbuf, sego, segl, @ segocc, @ segno, @ segnl) = 0 && segocc >= 0
+                cpos: l2_next_active(l2_next_active(l2_next_active(field)\next)\next)
+                if: cpos != 0 && cpos\value != 0 && cpos\value\kind = c.LM_P0_NODE_ATOM && cpos\value\as != 0 && cpos\value\as\atom != 0 && cpos\value\as\atom\data != 0 && cpos\value\as\atom\length = 1U && cpos\value\as\atom\data[0] = 91
+                    cpos: l2_after_bracket(cpos)
+                ---
+                if: cpres >= 0
+                    return: l2_error(path, cpos\value, "merge occurrence index out of range")
+                return: l2_error(path, cpos\value, "no such occurrence")
+            ---
             return: l2_error(path, l2_next_active(l2_next_active(l2_next_active(field)\next)\next)\value, "unresolved name")
         if: l2_seg_count(cpbuf, cpn) > 2 && l2_path_kind(cpbuf, cpn, @ cpleaf) < 0
             return: l2_error(path, l2_next_active(field)\value, "unknown field path segment")
@@ -22714,6 +22898,16 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     []: char aptr 1024
     []: char occx 128
     int: occt
+    []: char pbuf 256
+    size_t: l2_pn2 0U
+    int: pni2 0
+    int: pres2 0
+    int: poi2 0
+    int: proot2 0
+    int: pfi2 0
+    int: pkind2 0
+    int: pmi2 0
+    int: pnt 0
     L2Address: address_value
     @: L2Address address @ address_value
     L2IndexedOperand: indexed_value
@@ -22727,6 +22921,40 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         return: l2_eval_fields(field, n, mi, ind, dest)
     if: l2_address_operand(field, n, mi, address) = 0
         return: l2_emit_address(mi, address, ind, dest)
+    # K01: a value-position field path whose member carries an occurrence
+    # selector (`v\x`, `v\[N]x`) is one joined path, resolved by the common
+    # path machinery and loaded as a number -- the same route a statement
+    # initializer takes.  The atom-splitting walk below would otherwise emit
+    # its atoms as an L1 member chain (NAMED-MODEL-OCCURRENCE-PATH-LOWERING);
+    # a non-number leaf keeps the walk below.
+    pbuf[0]: 0
+    l2_pn2: l2_join_path(field, n, pbuf, 255U)
+    if: l2_pn2 != 0U && l2_path_root(pbuf, l2_pn2, @ pni2, @ pres2, @ poi2, @ proot2, @ pfi2) = 0
+        pkind2: l2_path_kind(pbuf, l2_pn2, @ pmi2)
+        if: pkind2 = 0 || pkind2 = 1 || pkind2 = 7 || pkind2 = 8 || pkind2 = 9
+            if: l2_emit_path(pbuf, l2_pn2, mi, ind, l2_next_active(field)\value, @ pkind2) != 0
+                return: 1
+            # The read is materialized into a typed temp where the path is
+            # evaluated -- an explicit path read of a call actual must capture
+            # its cell before the call's checkpoint publishes a working value
+            # (book §12: unit_body_path_for's `pair(acc for\j)`).
+            pnt: l2_tn
+            l2_tn: l2_tn + 1
+            if: pkind2 = 0 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n%sl2_t%d: lmx_size_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+                return: 1
+            if: pkind2 = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n%sl2_t%d: (cast: (char) lmx_char_value_known(l2_pxp[0]))\n", ind, pnt, ind, pnt) < 0
+                return: 1
+            if: pkind2 = 7 && c.fprintf(l2_out, "%sint: l2_t%d\n%sl2_t%d: lmx_int_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+                return: 1
+            if: pkind2 = 8 && c.fprintf(l2_out, "%sunsigned: l2_t%d\n%sl2_t%d: lmx_unsigned_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+                return: 1
+            if: pkind2 = 9 && c.fprintf(l2_out, "%sulong: l2_t%d\n%sl2_t%d: lmx_ulong_value_known(l2_pxp[0])\n", ind, pnt, ind, pnt) < 0
+                return: 1
+            if: c.sprintf(dest, "l2_t%d", pnt) < 0
+                return: 1
+            return: 0
+        ---
+    ---
     buf[0]: 0
     if: n = 1
         return: l2_prep(l2_next_active(field)\value, mi, ind, dest)
@@ -24556,7 +24784,11 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
         if: t\data[b] = 91
             segment.data: t\data + b - 1U
             segment.length: i - b + 1U
-            if: res < 0 || l2_occ_head(@ segment, @ occurrence, @ occurrence_name) != 0
+            # A merge result's `[N]` is its compiler schema's occurrence (l2_occ_head, l2_mrs_slot_nth);
+            # every other root's `[N]name` is resolved by the same occurrence-exact lookup the bare
+            # name is (l2_ns_slot_named reads the segment itself, K01), so a malformed or absent
+            # occurrence is refused below, at the slot -- not refused as a shape here.
+            if: res >= 0 && l2_occ_head(@ segment, @ occurrence, @ occurrence_name) != 0
                 if: say != 0
                     l2_rw_refuse(node, "a field path")
                 return: 1
@@ -24815,11 +25047,15 @@ return: 0
 
 # D-105 (Q39): the first, heavy `implements` of named Structure cand admitted to req is by NAME:
 # t[j] is the slot of cand's field named as req's field j (l2_ns_slot_named -- slots are the
-# declaration order).  0 and t[0..n), or 1 when a field of req has no one field of that name in
-# cand, or 2 when a Structure field -- nested or a reference -- is of another named type: a way
-# through it would read that type's slots again, which slice 1 does not translate.  With holes, a
-# field of req cand has not is -1, "not carried" (D-105 native: admission is by the consumer's uses,
-# and l2_d105_close refuses a source whose consumer reads such a field).
+# declaration order).  The final required occurrence of a name is its bare-name view and takes
+# cand's final occurrence; earlier explicit occurrences keep their ordinal.  With holes (every
+# current caller builds the pair MAP), a field of req cand has not, or one of another kind, is
+# -1, "not carried": the used-edge check (l2_descriptor_used, via l2_admit_consumer_ix) refuses
+# the Consumer that actually reads such a field, and an unused incompatible field must not
+# reject the candidate (K01).  Without holes the old strict result stays: 1 when a field of req
+# has no field of that name in cand (or another kind), 2 when a Structure field -- nested or a
+# reference -- is of another named type (a translation boundary: slice 1 does not translate
+# reading that type's slots through).
 fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: holes) int
     L2SchemaField: needed
     L2SchemaField: actual
@@ -24858,10 +25094,17 @@ fn: l2_d105_table (int: cand; int: req; @: int t; int: cap; @: int out_n; int: h
         if: later = 0
             occurrence: -1
         hit: l2_schema_named(cand, (needed.name), occurrence, @ actual)
-        if: hit < 0 && holes != 0
+        if: holes != 0 && (hit < 0 || actual.kind != needed.kind)
+            # The map records correspondence, not permission: an absent field,
+            # or one of another kind, is a hole where the used-edge check
+            # (l2_descriptor_used) owns the refusal for a Consumer that
+            # actually reads it.  A nested crossing of another named type
+            # stays the translation boundary below, not a hole: slice 1 does
+            # not translate reading that type's slots through.
             t[j]: -1
             j: j + 1
             continue
+        ---
         if: hit < 0 || actual.kind != needed.kind
             return: 1
         if: (needed.kind = 2 || needed.kind = 3) && actual.model != needed.model

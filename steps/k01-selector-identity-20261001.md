@@ -105,10 +105,14 @@ whose target cell is absent/empty gives SIZE_MAX — identical to today's tail f
 entries, and now usable by captures with explicit maps. `lmx_implements_same_map` compares
 both halves.
 
-**ADMIT_AS.** Blocks grow to `2n` cells (ord then last), stride `2n+1`; the instruction's
-`default_n` field keeps the semantic `n` and the runtime doubles when advancing/measuring;
-compiler extent math (`l2_rw_admit_project`, `l2_rw_map_inline`, `l2_d105_emit_tables`,
-`l2_d105_declare_maps`) is updated on both sides in the same slice.
+**ADMIT_AS.** Blocks grow to `2n` cells, laid out as `[ordinal n][last n]`, stride `2n+1`.
+The instruction's `default_n` operand becomes the PHYSICAL cell count (`2n`): the walker's
+validation (`default_n == 2*width`), `at += default_n`, and `stride = 2*width+1`, while the
+entry's `n` for registration stays the semantic `width` (`v\n: width`). The compiler side
+(`l2_rw_admit_project`: `default_n: 2*width`, `extent = 9 + default_n + count*(1 + 2*width)`;
+`l2_rw_map_inline` writes `t[j]` at `j` and `t[width+j]` at `width+j`) is updated in the same
+slice. `lmx_implements_at`'s frame read keeps `cell = e\at + j` (ordinal, first half) and the
+new `lmx_implements_at_last` reads `e\at + e\n + j` / `e\map[e\n + j]`, identity `j`.
 
 **Capture.** `lmx_walk_capture` copies up to `2n` cells — for each edge the nested body
 uses, the cell at that edge, read from src through the same edge — and registers the copy
@@ -145,6 +149,65 @@ counts are not language limits.
   located refusal" row with 65-plus-use success plus a failure on an actually used
   incompatible edge (not by deleting the witness).
 
+## 5a. K01a implemented — occurrence-exact resolution and lowering
+
+In the tree (uncommitted at the time of writing; the full harness gate is running):
+
+- `l2_seg_split` + `l2_after_bracket` (near `l2_name_is_seg`): one parser for a
+  path segment `[N]name` / `name`; `l2_ns_slot_named`, `l2_mrs_slot_named` and
+  `l2_own_seg_scan` all resolve occurrence-exact through it — bare is the name's
+  LAST occurrence, `[N]` its occurrence N, absent -1 (the `-2` ambiguity reply is
+  gone). This one change serves the checker (`l2_path_contract`, `l2_path_kind`),
+  the native emitter (`l2_emit_path_to`), the walker's namespace step
+  (`l2_rw_path`) and the capture scan (`l2_cap_add`) because they share these
+  lookups.
+- `l2_join_path` assembles the `[` digits `]` name atom run into one segment
+  `[N]name`; `l2_uses_scan_follow` records the same segment text for the
+  used-edge list; the fixed-size uses grid is untouched (K01e).
+- `unit_own_last_occurrence` and `unit_merge_occurrence_range_refused` keep their
+  located refusals: the joined-path check branch reports `no such occurrence`
+  (at the name atom) when an explicit occurrence resolves to nothing, and
+  `merge occurrence index out of range` for a bound merge result
+  (`l2_check_fields`); the messages and positions match the existing rows.
+- `l2_d105_table` with holes: an absent field or one of ANOTHER KIND is a hole
+  (`-1`, not carried) — the used-edge check owns refusing a Consumer that reads
+  it (`unit_occ_selector_first_refused`: "implements is false in function
+  argument"). A nested crossing of another named type stays the slice-1
+  translation boundary (`why = 2`), unchanged.
+- Probes (frozen chain, rebuilt translator): bare `v\x` on a two-`x` model
+  through a formal and at the root = 20 (LAST); `v\[0]x` = 10; `v\[1]x` = 20;
+  the root-value `m\[0]x` case that used to emit invalid C now lowers correctly;
+  `unit_occ_selector_unused_first` runs green native and walked (30);
+  `unit_occ_selector_read` translates but is RED at runtime (exit 82): both
+  selectors still map through the one slot — the K01b remnant.
+- A method whose body returns `(cast: (int) ...)` stays outside the walkable
+  subset (`l2_rw_may`), so under `--walk-methods` its native word remains; K01
+  witnesses return their number directly.
+
+Follow-up inside K01a — the value-position walking emitter. `unit_occ_selector_ident_formal`
+(a same-type formal, `return: v\[0]x`) first failed in gcc: the generated C held
+`l2_p0_0 ->[0] x`. The trailer/return value of a number result goes
+`l2_emit_ret_tr` → `l2_emit_ret_convert` → `l2_eval_fields` → `l2_emit_fields`, and
+that emitter's atom-splitting walk appends an unrecognized run atom by atom into an
+L1 expression — the raw member chain (instrumented trace: `l2_prep` saw `v`, `0`,
+`x`). Fix: `l2_emit_fields` now tries the common joined path first — `l2_join_path`
++ `l2_path_root` + `l2_path_kind`; a number leaf (kinds 0/1/7/8/9) is emitted by
+`l2_emit_path` and loaded (`lmx_*_value_known(l2_pxp[0])`), any other leaf keeps the
+walk below. One general route, so returns, call actuals and value positions share
+it. With that, `unit_occ_selector_root` and `unit_occ_selector_ident_formal` run
+green native and walked (the walks move, writes and `@` per selector).
+
+Ordering rule the first full gate caught (4 new reds: `unit_body_path_for`,
+`unit_body_path_while`, `unit_pathwrite_cell_kept`, `unit_cache_for_call`): a path
+read used as a CALL ACTUAL must be materialized into a typed temp where the path
+is evaluated, not inlined into the marshalling. The book's program
+(`pair(acc for\j)`) reads `for\j` from its published cell BEFORE the call's
+pre-call publication; an inlined `lmx_int_value_known(l2_pxp[0])` in the actual
+list read it after the checkpoint had published the working value (9 instead of
+0 — exit 65/99 where 7/90 was required). The branch now emits
+`<type>: l2_tN` + `l2_tN: lmx_*_value_known(l2_pxp[0])` and uses the temp. With
+that all four rows are green again (focused re-run `k01a_regress4`).
+
 ## 6. Witness fixtures added (red until their slice)
 
 `dev/l2src_sandbox/tests/unit_occ_selector_read.lm2` — Pair{10,20} / Triple{10,20,30};
@@ -169,3 +232,97 @@ P=build/l2_harness/occsel_probe_20261001_01
 $P/bin/<fixture>.exe 0 entry 7
 ```
 P0 dump: `build/fable127_part1b/printTree.exe <file.lm2>`.
+
+## 8. DS-CODEX-003 review — what it changes in the K01b design
+
+A document check (relay `lmx_uds`, 2026-10-01) returned four obligations. Its own
+framing: it fixes implementation obligations the documents already state; it is not
+approval of the design, and it explicitly does not accept the capture proposal (§4
+"Capture") as written. Claims below were re-checked in the tree, not taken on report.
+
+**Verified independently before use.**
+
+- Dictionary §2: "`[N]name` counts only occurrences of that name … Current unqualified
+  named paths select the last occurrence; old first-occurrence wording is superseded."
+  `LMX_blog/q/q24.md` (author, closed state dated 2026-09-25): "мы только недавно поменяли
+  на lastIndex по умолчанию (было 0)" — the LAST reading is the author's, not a reading of
+  the code.
+- `l2_descriptor_used` (l2trans.lm1:14683) resolves the source segment on **both** schemas
+  with the *same* occurrence selector — `l2_schema_named(ri, @name, occurrence, …)` and
+  `l2_schema_named(ci, @name, occurrence, …)`. Slice 1 already had the semantic rule right;
+  what the collapse loses is that the correspondence map is keyed by the req field alone.
+  So the edge must be chosen by the **source use's selector**, not by "the req's last field
+  ordinal" — the map's ordinal half answers `[N]name`, its last half answers bare.
+- `lmx_implements_walk_view` (lmx_implements.lm1:156-173) iterates the CONSUMER's fields and
+  resolves each through `lmx_implements_at(view, index)`. With a doubled map this loop still
+  visits edges `[0, n)`; that is correct for what it is — the declared-layout check — and is
+  **not** the used-edge check.
+- `docs/L1_spec_en.md` §15: "A fresh capture occupies the required model's positions with
+  holes: when its schema is known, its producer supplies that schema's key, not the source
+  value's key; without such evidence the key remains null."
+- `docs/L2_spec_en.md` §13-14: a cached map does not replace the current Consumer's
+  requirements; failed reception publishes neither correspondence nor layout evidence.
+- Runtime selftests are clients of the same API and carry `n`-cell maps:
+  `tests/lmx_implements_table_selftest.lm1:170-181` (`perm` two cells; :173 asserts
+  `lmx_implements_slot(..., 2U, …) != 0`, i.e. `j = n` has no slot),
+  `:198`/`:289` (`lmx_implements_is_map(…, perm, 2U)`), `tests/lmx_gc_selftest.lm1:305`
+  (one-cell map for a one-field model).
+
+**Obligations that amend §4.**
+
+1. `default_n` stays "0 **or** 2·width": zero is the justified compact identity case (no
+   static map, no frame), not an error. `stride = 2·width + 1`; the registered entry's `n`
+   remains the semantic width.
+2. Edge IDs are metadata, not physical child indices. A raw/manual physical path keeps using
+   the supplied permutation unchanged; only a *semantic* use (bare or `[N]`) carries the
+   selector end to end. LAST = identity `j` is valid only for an entry with neither frame nor
+   map — where the layout proved positional equality — not as a general answer for a LAST
+   edge on a non-last `j`. In the translator the rule has exactly two sites: **edge =
+   `slot + width` only when the crossing carries a correspondence and the written segment is
+   bare**, `slot` otherwise — the native formal read/write (l2trans:17932, width already in
+   hand as `l2_d105_width(l2_input_model(view_mi, view_key))`) and the walked OF/PUT_OF index
+   (l2trans:24967, `req = path[8 + 3·(level−1)] ≥ 0` marks the correspondence crossing). Where
+   no correspondence is carried (`req < 0`: a same-type formal, a local, a root value) the
+   model IS the value's layout and K01a's occurrence-exact lookup already gives the right
+   physical slot — no edge is involved.
+3. Migrate **every** producer and consumer in one ABI slice, not `l2_d105_*` alone: static
+   maps (`l2_d105_declare_maps`, `l2_d105_emit_tables`), inline frames (`l2_rw_map_inline`,
+   `l2_rw_admit_project` extent), `lmx_implements_register`/`same_map`/`is_map`/`at`/`slot`,
+   walker `lmx_walk_admit_op`, the native use site (`l2_d105_emit_slot`, l2trans:17932), the
+   walked use site (`l2_rw_path` level selector → the OF index, l2trans:24967), capture
+   (`lmx_walk.lm1:2260`), `lmx_implements.h`/`lmx_walk.h` comments, and the two selftests
+   (the `:173` boundary moves to `2·width`, and the maps double — the physical-permutation
+   rows stay, they are not deleted).
+4. Capture (K01c) is **not** a per-edge fresh cell. Two edges may name the same source
+   target (req `x` / source `x`: ORDINAL(0) and LAST are one cell), and the copy must keep
+   them one cell — equal source targets map to one copied target, different targets stay
+   distinct. Sharing is a property of the source relation, not of the number of spellings.
+   A 2n physical copy is not req's layout: it must not carry req's schema token as
+   provenance (L1 §15). Witnesses: one-`x`-each aliasing (address equality, a write through
+   one selector seen through the other); req two `x` / actual three `x` staying distinct.
+5. The used-edge check and execution must use the **same** edges, on every route (native,
+   walker, full receiver, nested crossing). Compile side that is `l2_descriptor_used`; the
+   runtime `lmx_implements_walk_view` remains the declared-layout check it is today, and a
+   client-supplied permutation's second half is that client's contract exactly as its first
+   half is today. The hole test moves after target resolution; a present-but-null reference
+   cell must stay distinguishable from an absent cell (K01c witness).
+
+**Scope of the analytical stage, as relayed (lmx_uds, 2026-10-01).** The author's words, as
+the relay reports them: "Мы проверяем на данном этапе *вероятность* того что varA подходит на
+место varB в Consumer"; "фактически мы проверяем только что кандидат не упадет при
+потреблении и имеет все поля -- этого достаточно"; the second stage, Consumer unit tests, "в
+плане работ еще нет". I read the passages myself before using them: `docs/LMX_semantics.en.md`
+§7 states the predicate is Consumer-relative over `uses(Consumer, bVar)`, that unused fields
+and unselected occurrences are not compared, that the analysis executes nothing, and that
+final admission additionally requires the Consumer's own graph unit tests. So:
+
+- K01's obligation is *the same used edge selected and checked as the one executed* — nothing
+  wider. No exhaustive runtime revalidation, no checking of unused fields or of both halves
+  "just in case", no universal proof engine, no implementation of the future Consumer-test
+  stage.
+- A compile-time proof for a used edge need not be re-run at every access; the compiler's
+  table (holes) is that proof for a static correspondence, on both halves.
+- The two halves of the map are one possible encoding of selector identity, not a strong
+  admission law: what is fixed is that a bare use and an explicit `[N]` use of the same name
+  must reach the targets the value's own model gives them, and that read, write, address and
+  capture use that same edge.

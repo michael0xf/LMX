@@ -1,0 +1,62 @@
+# K01a witness (steps/k01-selector-identity-20261001.md §5, §5a): selector identity through a
+# formal of the SAME type (identity layout, no correspondence): reads, writes and `@` reach the
+# occurrence the selector names -- bare is LAST, `[N]` is occurrence N.  Before K01a these paths
+# were "unresolved name" (bare) or "unknown field path root" ([N], emitter stage).  Success is 7.
+Tri: (size_t: x 10U; size_t: x 20U; size_t: x 30U)
+fn: rdLast (Tri: v) size_t
+return: v\x
+fn: rdFirst (Tri: v) size_t
+return: v\[0]x
+fn: rdSecond (Tri: v) size_t
+return: v\[1]x
+fn: wrLast (Tri: v) int
+    v\x: 99U
+    return: 0
+end: wrLast
+fn: wrFirst (Tri: v) int
+    v\[0]x: 40U
+    return: 0
+end: wrFirst
+fn: pokeFirst (Tri: v) int
+    poke(@: v\[0]x)
+    return: 0
+end: pokeFirst
+fn: poke (@: size_t p) int
+    \p: 77U
+    return: 0
+end: poke
+Tri: m
+size_t: got 0U
+int: ok 7
+got: rdLast(m)
+if: got != 30U
+    ok: 81
+got: rdFirst(m)
+if: got != 10U
+    ok: 82
+got: rdSecond(m)
+if: got != 20U
+    ok: 83
+wrLast(m)
+got: rdLast(m)
+if: got != 99U
+    ok: 84
+got: rdSecond(m)
+if: got != 20U
+    ok: 85
+wrFirst(m)
+got: rdFirst(m)
+if: got != 40U
+    ok: 86
+got: rdLast(m)
+if: got != 99U
+    ok: 87
+pokeFirst(m)
+got: rdFirst(m)
+if: got != 77U
+    ok: 88
+got: rdLast(m)
+if: got != 99U
+    ok: 89
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

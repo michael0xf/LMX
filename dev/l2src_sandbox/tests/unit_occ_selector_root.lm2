@@ -1,0 +1,52 @@
+# K01a witness (steps/k01-selector-identity-20261001.md §5, §5a): selector identity on an
+# IDENTITY layout -- a root value whose model repeats x (no correspondence is involved).
+# Bare `r\x` is the LAST occurrence, `r\[N]x` occurrence N; reads, writes and `@` resolve
+# through the same occurrence-exact lookup.  Before K01a the bare read was "unresolved name"
+# and `r\[0]x` lowered as C members (`l2_q2 ->[0] x`), defect
+# NAMED-MODEL-OCCURRENCE-PATH-LOWERING.  Success is 7.
+Tri: (size_t: x 10U; size_t: x 20U; size_t: x 30U)
+fn: poke (@: size_t p) int
+    \p: 77U
+    return: 0
+end: poke
+Tri: r
+size_t: got 0U
+int: ok 7
+got: r\x
+if: got != 30U
+    ok: 81
+got: r\[0]x
+if: got != 10U
+    ok: 82
+got: r\[1]x
+if: got != 20U
+    ok: 83
+got: r\[2]x
+if: got != 30U
+    ok: 84
+r\x: 99U
+got: r\x
+if: got != 99U
+    ok: 85
+got: r\[1]x
+if: got != 20U
+    ok: 86
+got: r\[2]x
+if: got != 99U
+    ok: 87
+r\[0]x: 40U
+got: r\[0]x
+if: got != 40U
+    ok: 88
+got: r\x
+if: got != 99U
+    ok: 89
+poke(@: r\[0]x)
+got: r\[0]x
+if: got != 77U
+    ok: 90
+got: r\x
+if: got != 99U
+    ok: 91
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

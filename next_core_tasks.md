@@ -72,7 +72,7 @@ Stable `l2src` не обновляется.
    Фактические аргументы проверяются по настоящему контракту получателя;
    поля тела и hidden-входы нельзя объявлять явными формалами по догадке.
    Q58 закрыт; общее разрешение вложенных голов реализуется отдельно от этой ABI-правки.
-3. Мигрировать [13 raw-C/string строк](steps/generated-diagnostic-migration-20260930.md#writer-boundaries)
+3. Мигрировать [15 raw-C/string строк](steps/generated-diagnostic-migration-20260930.md#full02-dependency-map)
    по их настоящему контракту; реальные дефекты не превращать в ожидаемые
    отказы. Закрыть [общую C99-типизацию выражений](steps/native-selfbuild-20260930.md#c99-expression-types-versus-arena-storage-domains)
    и [C99-корректное хранилище указательных ячеек](steps/native-selfbuild-20260930.md#c99-pointer-cell-storage):

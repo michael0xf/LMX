@@ -2,6 +2,64 @@
 
 Date: 2026-09-30. Status: section A's fourteen fixture/expectation migrations are verified WIP (thirteen pass, one production defect remains); sections B–D remain a read-only worklist. The frozen inventory below records the original failure, not the current result.
 
+<a id="full02-dependency-map"></a>
+## Current dependency map: released 71c4743, 2026-10-01
+
+Read-only reconciliation of the **52** retained failures in
+`build/l2_harness/portable_reference_typed_eval_full_20261001_02` partitions
+them as **15 + 10 + 8 + 7 + 12** below. This newer set is not the historical
+43-row diagnostic inventory, and an obsolete expectation is not permission
+to weaken a witness. No extra translator/build run was used for this map.
+
+1. **15 raw-C/output migrations.** The thirteen B rows below plus
+   `entry_puts_empty` (valid empty string: observe exactly one blank output
+   line) and `unit_puts_main_beside_method` (observe `beside-method` and
+   nonzero completion). The three invalid C-call cases still require both
+   translators to succeed and then the intended C constraint rejection;
+   never execute them. No name-specific translator changes belong here.
+2. **10 unknown-head/Q58 migrations.** Exact section C set below. Remove
+   obsolete valued root tails and rewrite withdrawn absent-head assumptions
+   against ordinary construction/resolution. `unit_s2_vis_structure_below_refused`
+   also uses withdrawn `Model: fresh` construction: its name does not make
+   it evidence of the active source-site visibility defect.
+3. **8 graph/copy observers.** `unit_make_adder` and
+   `unit_walk_make_adder_native_note` require actual capture/copy identity
+   and execution eligibility, not a renamed AT or diagnostic pin. The other
+   six (`unit_a3_capture_direct_vs_copy`, `unit_walk_struct_formal`,
+   `unit_root_model_field`, `unit_colon_method_lexical_model`,
+   `unit_field_path_unit_colon`, `unit_matrix_callable_struct_identity`)
+   require explicit merge setup and relational graph observers as planned
+   in [the implementation note](native-selfbuild-20260930.md).
+4. **7 receiving/semantic gaps.** `unit_value_call_sub_refused` remains
+   the common callable-actual reference projection defect. Section D's six
+   cases retain their specific dependencies: pre-layout Message/Thread
+   admission; whole capture; nested correspondence; nonprimitive formal
+   synonym/known-Structure call; and two terminal nonprimitive path/rebinding
+   cases. Repair obsolete construction before certifying the intended
+   positive and negative properties. Do not bless a diagnostic-only change.
+5. **12 other rows**, requiring the distinct treatment below.
+
+| Remaining fixture | Next dependency and acceptance |
+| --- | --- |
+| `unit_root_div_zero_refused` | Historical walker-specific refusal, not a proven native-checker defect. Current L1/L2 arithmetic and Q55 defer division to the machine profile; no primary rule requires this translator diagnostic. Integer `7 / 0` is not a valid portable runtime oracle. Do not register successful execution or impose unconditional checked-L3 arithmetic on native L2 merely to preserve the old test. |
+| `unit_lm_own_actual_span` | Real receiving projection gap: assignment from predeclared `lm_own_copy_bytes` (`@: char` result) into `@: char copy` is incompatible. Preserve whole-actual-span proof; fix pointer-result reception, not raw-C names. |
+| `unit_arr_path_read` | Old refusal is stale, but `Holder: a` setup is withdrawn. Use explicit merge and retain Array-path address/length/formal runtime observations. |
+| `entry_parse_min` | Old refusal is stale. Replace obsolete sequential `m\mainArgs[1][0]` with `m\mainArgs[1]\[0]`; then prove parser linkage/runtime. Adjacent indexes remain flat rectangular indexing. |
+| `unit_discard_calls` | Execute and observe `Entry == 11112`, call order and effects. Mere translation acceptance does not prove discard semantics. |
+| `unit_arg_addr_pointer` | Old pending-root refusal and `pp: pp` comment are obsolete; zero success is vacuous. Re-author a nonzero witness of `setnull(@: pp)` changing the actual pointer-formal cell, without invented field/publication. |
+| `unit_addr_slot_structure_projection` | Default-null references are now accepted; prove depth and distinct physical cells at runtime, not only translation. |
+| `unit_addr_entry_name_collision` | Replace withdrawn `Model: fresh` with merge; retain nonzero runtime proof of compiler-name collision handling. |
+| `unit_ptr_grow` | Keep its existing `Entry == 7`; observe pointer actual/null, size and allocation/runtime contract. The stale refusal does not establish a resolver defect. |
+| `unit_native_activation` | Replace zero success with seven; retain Array buffer and `sizeof == 32` failure branch. |
+| `unit_root_ref_other_refused`, `unit_ref_formal_rebind_other_refused` | Current static admission refusal is plausible, but both setups use withdrawn implicit construction. First use explicit merge; then prove incompatible rejection and compatible control. |
+
+None of these 52 rows directly tests the current source-site selection
+repair. Dedicated before/after, repeated-declaration and initializer-hidden
+call witnesses are required. `unit_asgn_fallback` was already migrated and
+is green outside this failure set. The full 52 remain failures until the
+appropriate owner executes each repaired witness; this map changes no
+gate result or expected diagnostic.
+
 <a id="diagnostic14-results"></a>
 
 ## First fourteen: measured migration result

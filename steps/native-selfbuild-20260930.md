@@ -1775,6 +1775,28 @@ existing foreign-value emitter and that temporary's address, not a new direct
 call fallback. This concerns explicit machine ABI values, not by-value LMX
 Structures. Do not add an entry-name fast path or infer signatures at runtime.
 
+Released-source preflight (`71c4743`) found two additional dependencies:
+the old selector-2 loop in `l2_emit_call` admits only
+`l2_prim_code_name` inputs, excluding otherwise supported pointer transport;
+replace that gate with the resolved transport contract, not another whitelist.
+Its early return also always uses `l2_emit_propagate`, whereas the later
+static branch maps a throwing conversion edge (`edge != 0`) to the caller's
+implicit `convert` throw. Factor common post-call status handling after the
+shared dispatch, preserving that distinction. Merely routing static calls
+into the old selector-2 branch would change conversion failure semantics.
+Include a throwing-conversion witness, ordinary throw control and pointer
+actuals in the dispatch acceptance set.
+
+Do not confuse a missing native word with a descriptor-only contract that
+has no executable body: retain the checker property exercised by
+`unit_callable_descriptor_direct_refused`. Exact foreign-result storage also
+needs inspection before expanding use of its adapter: the current throwing
+signature and temporary use `Lmx**` / `Lmx*` for every foreign return code,
+while a nonthrowing foreign by-value return has an exact typed destination.
+Prove the supported pointer result with its actual declared C type; do not
+claim throwing foreign aggregates or their interpretation work merely
+because the ordinary dispatcher now accepts their call site.
+
 The rebaseline audit also found per-call arena allocation in
 `l2_emit_call_ref`: numeric inputs allocate persistent primitive cells and
 char inputs use the interner. Before expanding this path to all selectors,
@@ -1790,6 +1812,12 @@ addresses. No supported scalar consumer requires arena provenance here.
 This does not implement arbitrary foreign by-value execution in the walker.
 Add a witness that repeated scalar calls do not grow arena storage solely
 for transport; preserve scalar width, char bytes, and formal-address lifetime.
+Measure occupied cells with the existing pool count, not merely the number
+of ranges: allocating inside an already reserved pool may add no range.
+The unregistered `unit_byvalue_foreign` has an obsolete valued root tail;
+it is only a spelling reference until replaced by a valid nonzero witness.
+Named-Structure and held-call sites already use this transport helper and
+must also be included in its focused regression set.
 
 The trampoline's internal call to its selected typed body is intentional;
 routing that back to the dispatcher would recurse. Separately,
@@ -1807,6 +1835,24 @@ of a mutant breaking native-null walker dispatch. Preserve admission,
 pre-call publication, throwing conversion and pointer/formal controls. This
 is the next bounded dispatch repair, not an expansion of the current ABI
 writer's active source slice; Q58's later answer does not merge these implementation tasks.
+
+**Separate callable-formal hidden-input debt, source-traced at `71c4743`.**
+The static selectors' explicit-then-hidden order agrees across
+`l2_input_ft`, `l2_emit_parts`, trampoline and call contracts. The existing
+formal selector, however, uses its required signature's hidden list;
+`l2_method_sig_compatible` compares explicit types/result/throws without
+forming the actual selected callable's hidden inputs. A descriptor requiring
+only `int x` can therefore admit an implementation using free `delta`, but
+the call through the formal passes one physical input to a two-input adapter.
+The stronger same-arity witness uses free `a = 7` in the required callable
+and `b = 11` in the actual implementation: calling with explicit 1 must
+yield 12, not silently pass `a` into the actual `b` slot and yield 8.
+These examples are **not executed evidence yet**. They belong to receiving
+projection/call formation, not a reason to keep static C-name dispatch or
+to demand equality of hidden-name lists as a new compatibility rule.
+Use the selected actual's ordinary required inputs and the source priority
+in [semantics §12](../docs/LMX_semantics.en.md#dynamic); keep distinct arity
+and same-arity/wrong-name witnesses. No author decision is currently needed.
 
 <a id="known-structure-call-classification"></a>
 ### Remove known-head construction fallbacks through common call classification

@@ -1832,6 +1832,88 @@ acceptance: [general receiver resolution](receiver-resolution-20260930.md).
 <a id="native-call-dispatch"></a>
 ### Select every call by the actual occurrence's native word
 
+**Released source checkpoint `621e8af7bd9e14b8c80951d880dfa77ab68c5e82`.** The final frozen
+translator is `6F3F4EC9D04A281FDDAF28C1438981AB48F29C32B773AD3704880BA02D962640`;
+the owned set has 44 paths. All ordinary call selectors now enter the
+selected occurrence through `lmx_call_prim`; the selected adapter retains
+the direct typed-body call. Exact automatic transport replaces per-call
+arena boxes. The removed numeric-only callable-formal restriction is
+covered by an executed pointer-formal test, retaining its historical ID
+`unit_cf_call_pointer_refused` and checking pointee values 41 then 73.
+
+The shared stop repair checks the existing Message escape condition before
+an adapter stores a result and before the caller consumes it or evaluates
+the next actual. Walker propagates internal `STOPPED = -4`, publishes dirty
+working values and rewinds scratch, then normalizes only at the public
+boundary to success with no result. Array extraction preserves the status;
+catch handling does not treat stop as a throw. No new graph, result value
+or persistent state is introduced. This does not close the separate
+[nonthrowing C-aggregate completion ABI](defects.md#nonthrow-aggregate-stop-abi)
+or [C-value member projection](defects.md#foreign-value-member-projection).
+
+Final kernel03 (`build/l2src/uniform_dispatch_kernel_20261001_03`) is
+**286/286, 106 executed selftests**. Its standalone stop witness runs 37
+checks across CALL/ADD, PRIM, LENGTH and ELEM, including actual Thread stop,
+publication, unchanged receiving storage and scratch restoration. All 44
+owned live hashes and all 33 kernel-staged owned inputs match the manifest.
+Final focus01 (`build/l2_harness/uniform_dispatch_final_focus_20261001_01`)
+is **35/35**: stop 47 native/48 caller-walk, ordinary dispatch 41, throw 40,
+pointer-formal 13, foreign and Pair 13 native/17 root-walk. The foreign
+bodies stay native. Fresh L3 runs have **11 suites / 295 checks**; their 990
+staged L2-source comparisons and 55 scoped runtime comparisons match.
+Full02 (`build/l2_harness/uniform_dispatch_full_20261001_02`) completes
+**1052/1100, 48 FAIL**. Exact-ID comparison against released SITE full03
+retains all 48 old failures; five added rows are green; there are no new
+regressions, fixes, removals or duplicates. Against pre-stop full01, the
+pointer-formal row is green again under its executed positive contract,
+and the added stop row is green. This is not a clean-kernel checkpoint;
+the 48 outstanding failures still block self-build.
+
+Kernel01/02 were intermediate red setup runs, not runtime regressions:
+kernel01 had 26 incomplete standalone link closures plus one new fixture
+translation error; kernel02 retained the 26 link failures. The final 26
+test entries add the real Thread and Schedule implementations through
+existing source deduplication, not poll stubs or linker suppression. All 26
+were independently translated, compiled, linked and executed successfully
+with exact live hashes before the fresh kernel03 run. Those earlier
+artifacts remain unchanged.
+
+Mechanism mutation group01 (`uniform_dispatch_mechanism_mutants_20261001_01`)
+has 12 runtime mutant cases / 14 qualifying executions and four controls /
+five executions. The two aggregate mutations run in both native-root and
+walked-root modes; the foreign bodies remain native. One additional
+foreign-pointer ABI mutant is a compile-constraint check, not runtime
+evidence. Observer group04 has 17 relationship rejections on final generated
+L1; eleven are single-match and six deliberately change grouped equivalent
+occurrences. These are observer-only checks, not compiler/runtime detections.
+All original/changed artifact hashes in these groups were independently
+verified. The stop/kernel mutation reconciliation is recorded below.
+
+Stop mutation group01 has four cases / five runtime executions: four
+completed assertion-failure runs and one detected runtime invariant failure
+(`walk_call_stop_lost`, exit 3, `walk error: INVALID`). Its unchanged control
+runs in both caller modes. Kernel mutation group01 has five cases / five
+completed assertion-failure runs, each still reaching all 37 checks; its
+control is 37/0. They separately test Array status, PRIM status, publication,
+scratch rewind and public normalization. These mutants compile/link
+successfully and change mechanisms, not assertions. Original/changed
+hashes and actual failure logs were independently checked. The combined
+record has 45 entries including controls and observer-only cases; this is
+not 45 runtime mutant detections.
+
+The release's `final_verification.json`, `baseline_comparison.json`,
+`mutant_verification.json` and `release_checkpoint.json` are under full02.
+The exact 44 committed blobs match the gated set; independent checks cover
+122 staged owned copies, 176 gate-start hashes, 1195 staged LM2 inputs and
+55 scoped L3 records, with no mismatches. The eleven L3 suites separately
+have 990 exact staged L2-source comparisons. The persisted budget log
+`build/l3_interp/uniform_dispatch_budget_20261001_01.log` records four
+GREEN checks, using 74/128 names and 1056/8192 bytes. Both independent
+reviewers approved the bounded release. Staged docs and whitespace checks
+passed. No claim here closes the remaining 48 failures or §§8–8a.
+
+**Historical preparation and intermediate evidence.**
+
 Read-only preparation after the typed argument-transport slice:
 `l2_emit_call` already selects the physical occurrence, evaluates/converts
 actuals, admits them, resolves hidden inputs and publishes. Yet only the

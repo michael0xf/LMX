@@ -11,7 +11,9 @@ its [dictionary](next_core_tasks_dictionary.md) defines the disputed terms.
 
 This map originated at `744f759` (22 September 2026); subsequently revised
 sections supersede that snapshot. The physical records and dispatch descriptions
-in §§1–3 have been rechecked against source checkpoint `0c5dd61`. The tree
+in §§1–3 have been rechecked against source checkpoint `0c5dd61`; the ordinary
+call dispatch and stop-unwind paths below were rechecked at `621e8af`.
+This later bounded check is not a re-audit of the entire document. The tree
 changes rapidly: a green fixture or an existing code path is evidence of that
 version, **not** proof that the intended contract is complete. Current release
 evidence and unresolved boundaries are in
@@ -229,6 +231,19 @@ a permanent companion data graph. `lmx_call0` is not the full semantic
 signature checker.
 Static checking, admission, and generated typed calls belong in the translator
 and broader language model, not in a fabricated per-node tag.
+
+At `621e8af`, ordinary generated call selectors capture the actual occurrence
+once and use `lmx_call_prim`; its native word, not a C symbol chosen by the
+caller, determines execution. The selected native adapter still calls its
+typed body directly. Conversion, admission, hidden-input resolution and
+publication keep their shared pre-call order. Stop uses the existing Message
+escape state: adapters and callers do not consume an absent result, and the
+walker carries an internal stop status through evaluation, publication and
+scratch cleanup before public normalization. It does not manufacture a value
+or turn stop into a language throw. See the
+[bounded release evidence](steps/native-selfbuild-20260930.md#native-call-dispatch).
+Library-wrapper ownership, full graph coverage and the separately recorded
+nonthrowing C-aggregate completion ABI are not closed by this repair.
 
 The internal value-storage ABI keeps absent inputs distinct from present null
 references and preserves numeric widths. Pointer transport cells contain

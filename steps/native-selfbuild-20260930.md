@@ -4,8 +4,9 @@ Status: 2026-09-30, development checkpoint `6be1235` contains the verified
 common-assignment repair. Checkpoint `e7935be` adds whole-Array descriptor
 addressing and the shared lexical lookup repair. Checkpoint `c8167af` closes
 bounded expression/actual spans and the shared pointer-actual checker.
-Next are whole-Array value projection, own-reference candidate reception,
-and shared lexical-local identity before the remaining callable-actual work.
+Checkpoint `5f11b50` adds ordinary whole-Array descriptor values and the
+shared declared-element address type. Next are own-reference candidate
+reception and shared lexical-local identity before remaining callable work.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
@@ -82,8 +83,9 @@ controls; the path identity failures compile and produce wrong results rather
 than relying on an invalid access or compiler failure. All mutations were
 restored before the 131-target run and the new full run.
 
-Remaining independent work includes whole-Array value/Array-formal/walker
-projection, own-reference candidate consumption, shared lexical-local
+At that checkpoint, remaining work included whole-Array value projection
+(subsequently repaired below), Array-formal/walker projection,
+own-reference candidate consumption, shared lexical-local
 identity and hidden sources, callable actuals, C99 arithmetic and canonical
 body/copy/native completeness. Focused success does not close those boundaries.
 
@@ -184,55 +186,70 @@ this repair. The forthcoming callable-actual projection consumes this result
 rather than adding another index/address recognizer.
 
 <a id="whole-array-value-projection"></a>
-## Pending shared whole-Array value projection
+## Shared whole-Array value projection: checkpoint 5f11b50
 
-Read-only preflight on the bounded indexed-expression source, SHA256
-`97022323EC4DBC28A459FCA5B1F6C70DBD72687EF19B59321415CC814C996270`,
-Git blob `c1788be8c12b90c847b58a575a1d5484fc8965c7`. This is a proposed
-dependency-closed implementation, not a passed gate or a new language rule.
+The ten-file source checkpoint `5f11b50` is published. Restored focused run
+`build/l2_harness/whole_array_value_20260930_final` passes **140/140 targets,
+137 unique fixtures**. Full `whole_array_value_full_20260930_01` finishes
+**977/1029, 52 FAIL**: exactly the same 52 inherited failures as
+`bounded_indexed_expression_full_20260930_02`, seven new passing rows, zero
+regressions and zero removed rows. Parent and independent peer recomputed
+all ten live-file hashes, nine staged owned source/header/fixture hashes,
+and the target-identity comparison. The harness is hash-recorded rather
+than copied into the fixture snapshot. This is not a green clean-kernel gate.
 
-The own-storage codes for Arrays must remain unchanged. The missing step is
-their ordinary value projection: `l2_colon_bound_ty` currently returns the
-storage code through `l2_ft_of_own`, while the bare-own branch of `l2_prep`
-emits backing through `l2_emit_array_ptr`. Explicit `@Array` already obtains
-the correct existing descriptor. The active
+Translator SHA256:
+`C3E4535F6070F83FB44492BDA904E6675892416943E6E1BE4462228E0A0AB0ED`;
+harness:
+`13CC514EEDBD368A0B11F5FE7BD390AB3EB48BDBAE6A1E0212202E085FF8D4FB`.
+The full directory contains `final_owned_manifest.json`,
+`baseline_comparison.json` and `release_report.json`; the focused directory
+contains `mutation_evidence.json`. Runtime sources did not change;
+kernel/L3 evidence is inherited, not a newly executed run for this slice.
+
+The ordinary value type now comes from `l2_value_ft_of_own`, while own-storage
+codes remain unchanged. Previously `l2_colon_bound_ty` returned the storage
+code through `l2_ft_of_own`, and the bare-own branch of `l2_prep` emitted
+backing through `l2_emit_array_ptr`. The active
 [L2 argument contract](../docs/L2_spec_en.md#copy-merge) requires the same
 descriptor reference for the nonprimitive Array value, not implicit C decay.
 
-Factor the common descriptor load from `l2_emit_array_ptr` and
-`l2_emit_array_length`: select the actual own cell with `l2_own_from_expr`,
-read its reference and project `VoidArray*`. Bare-value emission returns
-that descriptor. Element-address/read/write consumers deliberately continue
+`l2_emit_array_desc` factors the common descriptor load from
+`l2_emit_array_ptr` and `l2_emit_array_length`: it selects the actual own cell
+with `l2_own_from_expr`, reads its reference and projects `VoidArray*`.
+Bare-value emission returns that descriptor. Element consumers continue
 through `descriptor.data`; length continues through `descriptor.size`.
-There must be no allocation, copying, descriptor rebinding, or call-only
-special case. The complete current backing-helper consumers are the wrong
-bare-value branch of `l2_prep` and the legitimate `l2_emit_indexed`,
-`l2_emit_array_load_at`, and indexed-store branches.
-
-Add one value-type projection above `l2_ft_of_own`: Array storage contributes
-the existing `l2_array_desc_ty`, other storage retains its ordinary value
-type. Both host/current-own branches of `l2_colon_bound_ty` consume it.
-Do not modify storage/layout codes, element types, constructors, or the
-separate dynamic-input ABI to obtain a passing call. `@: c.VoidArray` and
+No allocation, copying, descriptor rebinding or call-only special case was
+added. Both host/current-own branches of `l2_colon_bound_ty` use the value
+projection. Element types, constructors and the separate dynamic-input ABI
+remain unchanged. `@: c.VoidArray` and
 `l2_array_desc_ty` already use the same existing foreign type interner;
 normal C99 pointer compatibility then admits `void*` and refuses `int*` or
 an extra level. No C-name allowlist is involved.
 
-Acceptance must observe the same descriptor in declaration initialization,
-later assignment, return, typed L2 actuals and raw-C actuals. Compare with an
-independently located arena descriptor before dereferencing the candidate;
-then verify length, backing identity and an empty Array's nonnull descriptor
-with zero length. Retain explicit element-address operations, scalar/formal
-shadowing, dynamic-index once-only evaluation and pointer-depth/const
-negatives. A bare Array passed to int* remains incompatible; the migrated
-element-address fixture must write a distinct value and check caller storage.
-Mutants returning backing, repairing only call emission, retaining the old
-storage type as the value type, changing reference depth, or selecting an
-outer Array through a nearer binding must fail.
+The pointer-element witness also exposed the separate fixed four-type list
+in `l2_elem_ptr_ty`. It is removed. `l2_indexed_type` now obtains an addressed
+element's exact type from `L2Declaration.contract.operand` through
+`l2_contract_formal`, then uses `l2_address_type` to add one level while
+preserving qualifiers. It does not derive an address from a promoted numeric
+read type. No syntax, dimensionality, index or runtime-layout rule changed.
 
-Array formals, general hidden Array inputs and genuinely walked descriptor
-expressions are separate implementation boundaries. Native receipt by an
-ordinary descriptor-pointer formal does not prove any of them. The obsolete
+Runtime witnesses observe descriptor identity in initialization, assignment,
+return, typed actuals and raw-C actuals; the observer locates the arena
+descriptor independently before dereferencing the candidate. They check
+empty/nonempty descriptors, backing identity, hosted/scalar/formal shadowing,
+once-only index evaluation, and write-through of an addressed pointer element.
+Depth/const/no-decay negatives remain checked. Seven deliberate mutations in
+six runs produced ten intended detections: six runtime failures, two positive
+type refusals and two wrongly accepted negatives. They cover assertion
+inversion, backing substitution, dropped initialization, old storage-as-value
+typing, extra pointer depth and wrong outer binding. All were restored before
+the final focused/full runs.
+
+Array formals, general hidden Array inputs, explicit occurrence/whole graph
+paths and genuinely walked descriptor expressions remain separate boundaries.
+Native receipt by an ordinary descriptor-pointer formal does not prove them.
+Imported UCHAR/unsupported element contracts were not expanded. The obsolete
 generated comment claiming pure logical RHSs remain unguarded was corrected
 in the tested `c8167af` slice; it is no longer pending work here.
 

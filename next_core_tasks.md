@@ -18,14 +18,13 @@
 восстановительный focused gate — 92/92 (89 фикстур). Это не новый полный gate.
 Stable `l2src` не обновляется.
 
-Последний полный generated gate `bounded_indexed_expression_full_20260930_02`:
-**970/1022, 52 отказа**, точный источниковый checkpoint `c8167af`.
-Относительно `assignment_rhs_full_20260930_01` (949/1003) новых регрессий нет:
-остались те же 52 отказа, две прежние observer-фикстуры после миграции прошли,
-все 19 добавленных строк зелёные, удалённых строк нет. Промежуточные две
-регрессии адресов исправлены без изменения положительных ожиданий; снятый
-P47-отказ заменён ненулевым runtime-свидетелем. Восстановительный focused
-gate — 131/131 (128 фикстур), все 16 scoped файлов проверены по хэшам.
+Последний полный generated gate `whole_array_value_full_20260930_01`:
+**977/1029, 52 отказа**, точный источниковый checkpoint `5f11b50`.
+Относительно `bounded_indexed_expression_full_20260930_02` (970/1022)
+сохраняются те же 52 отказа, все семь новых строк зелёные, новых регрессий
+и удалённых строк нет. Восстановительный focused gate — 140/140
+(137 фикстур), все десять scoped файлов сверены по хэшам;
+семь контрольных поломок обнаружены и восстановлены.
 Целевые проверки адреса формалов, общего верхнего тела и return-ABI
 не заменяют полный gate. Clean-kernel, §8 и §8a ещё не достигнуты.
 История запусков, хэши, контрольные поломки и классификация отказов —
@@ -62,7 +61,7 @@ gate — 131/131 (128 фикстур), все 16 scoped файлов прове�
    обнаружены. Удаление `dst_chars` проверено kernel/L3/focused и полным
    generated gate; 12 выявленных регрессий общей проверки присваивания
    теперь устранены (`6be1235`): итоговый целевой срез прошёл 61/61,
-   полный на том срезе — 949/1003; новый измеренный итог — 970/1022 выше;
+   полный на том срезе — 949/1003; новый измеренный итог — 977/1029 выше;
    [проверки и границы](steps/native-selfbuild-20260930.md#assignment-rhs-repair).
    WHOLE-ARRAY-DESCRIPTOR-ADDRESS и ARRAY-INDEX-LEXICAL-SHADOW исправлены в
    `e7935be`: `@Array` возвращает существующий дескриптор, а индексные
@@ -70,8 +69,10 @@ gate — 131/131 (128 фикстур), все 16 scoped файлов прове�
    Итог 92/92; подмены на backing/slot и неверную внешнюю привязку
    обнаружены тестами. [Точные границы](steps/native-selfbuild-20260930.md#whole-array-address-repair):
    generated walker для `@Array` и Array-формалы этим не закрыты. Bare whole
-   Array ещё требует [общей проекции descriptor-типа/значения](steps/native-selfbuild-20260930.md#whole-array-value-projection) вместо backing;
-   typed void*/descriptor actual и raw-C actual должны сохранять его identity.
+   Array исправлен в `5f11b50` через [общую проекцию descriptor-типа/значения](steps/native-selfbuild-20260930.md#whole-array-value-projection) вместо backing;
+   инициализация, присваивание, return, typed и raw-C actual сохраняют identity.
+   Адрес элемента использует общий контракт типа и глубины; отдельный список
+   четырёх разрешённых элементных типов удалён. Полный результат — выше.
    Старая фикстура с неявным Array→int* decay уже исправлена в `c8167af`:
    явный адрес элемента, distinct write 13 вместо исходного 9 и проверка
    caller-ячейки. Отдельный negative сохраняет отказ bare Array→int*.
@@ -88,8 +89,8 @@ gate — 131/131 (128 фикстур), все 16 scoped файлов прове�
    operand resolver, полный единственный initializer через общий checker/emitter,
    guarded logical RHS и общий pointer-actual receiving check. Общая адресная
    проекция сохраняет path/count и identity между соседними actual; hidden-type
-   waiting учитывает receiver-операнд. Следующий writer-срез — обычное значение
-   whole Array, затем own pointer-cell reception и общая lexical-local identity.
+   waiting учитывает receiver-операнд. Текущий writer-срез — own pointer-cell
+   reception, затем общая lexical-local identity.
    Отдельно снять ещё живые `Model: fresh` / `T: b c` fallback-ветви через
    [общую классификацию известной головы как вызова](steps/native-selfbuild-20260930.md#known-structure-call-classification),
    не через очередной специальный отказ. Формирование аргументов проверяется

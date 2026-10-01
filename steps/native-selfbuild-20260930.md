@@ -1920,6 +1920,32 @@ is the next bounded dispatch repair, not an expansion of the current ABI
 writer's active source slice; Q58's later answer does not merge these implementation tasks.
 
 **Prepared observer migration, read-only on the final SITE harness.**
+
+**Implementation in progress, not a release (2026-10-01).** The dedicated
+`unit_uniform_dispatch` test tap preserves a native root/caller, replaces
+the selected `Holder\target` occurrence with a distinct copy carrying a
+counted typed probe, and leaves the original native word intact. A second
+callee keeps its graph, loses its native word, and has its retained return
+literal changed from 37 to 73. The source evaluates both routes before
+reporting independent error bits. Released-source baseline retest returns83
+and never reaches the counted native probe; the original first probe had
+returned81 before reaching the second check. Those are distinct recorded
+measurements, not interchangeable evidence.
+
+`build/l2_harness/uniform_dispatch_probe_20261001_02` passes 12/12 targets
+(nine fixtures). Its translator hash is
+`757E0D3460787444049B1B1AF7B377DA434DD4496EC2AB536433617B276C999C`.
+The dedicated fixture passes41 driver checks: three copied-occurrence probe
+calls, exact scalar/char/pointer/hidden inputs, effectful-actual count,
+unchanged occupied pool cells between calls2/3, and actual walked result73
+under the native caller. Pointer/descriptor trampoline twins, held results
+and conversion/ordinary-throw controls also pass. This is focused evidence,
+not full-corpus acceptance. Probe03's ten old direct-C text pins await the
+migration below; its additional foreign-value fixture first failed because
+of a missing colon in the formal declaration, before emission. No foreign
+runtime claim follows from that failed fixture. Expanded gates, exact
+foreign results and independent dispatch mutants remain outstanding.
+
 Exactly ten fixture rows pin direct `l2_mN(l2_c...)` call text. Replace each
 incidental spelling with a relationship that observes the same property;
 do not remove the only assertion or turn an unexecuted helper into runtime

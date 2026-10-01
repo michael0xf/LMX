@@ -1705,6 +1705,22 @@ existing foreign-value emitter and that temporary's address, not a new direct
 call fallback. This concerns explicit machine ABI values, not by-value LMX
 Structures. Do not add an entry-name fast path or infer signatures at runtime.
 
+The rebaseline audit also found per-call arena allocation in
+`l2_emit_call_ref`: numeric inputs allocate persistent primitive cells and
+char inputs use the interner. Before expanding this path to all selectors,
+replace those transport cells with exact typed machine temporaries whose
+addresses remain live through the synchronous call. Char transport is a
+char cell, not an int box. Retain canonical void-pointer boxes for pointer
+payloads. This follows the existing ABI: `lmx_call_prim` forwards storage,
+the native adapter uses declared-width getters, and walker `value_load` /
+`arg_place` copy from declared-type storage into the callee's own input cell.
+Walker actuals already use scratch member addresses. Capture and mail copy
+the payload into their own persistent cells; they do not retain transport
+addresses. No supported scalar consumer requires arena provenance here.
+This does not implement arbitrary foreign by-value execution in the walker.
+Add a witness that repeated scalar calls do not grow arena storage solely
+for transport; preserve scalar width, char bytes, and formal-address lifetime.
+
 The trampoline's internal call to its selected typed body is intentional;
 routing that back to the dispatcher would recurse. Separately,
 `l2_emit_library_wrappers` still calls a generated body directly and has the

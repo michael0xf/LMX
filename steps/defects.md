@@ -239,6 +239,23 @@ TM10/KM5, а не как самостоятельное новое правил�
 счётчики/связи, сохраняет ordinary frames и добавляет настоящий native/walker
 контроль чистого внешнего возврата. [Точные границы и приёмка](native-selfbuild-20260930.md#reentry-publication-repair).
 
+### LOCAL-REFERENCE-PATH-ROOT — 2026-09-30, Codex, OPEN
+
+Diagnostic `build/l2_harness/own_reference_reception_20260930_13` сохраняет
+`unit_reference_callable_result.lm2`: после `@: Model ref f()`, где формал
+f возвращает `@: Model`, выражение `ref\value` отказывает на 12:27
+с `unknown field path root`. У Model есть `size_t: value 7U`.
+Отдельный `_14` доказывает вызов формала, identity результата и счётчики
+1/2 при инициализации и перепривязке, но не чтение поля через локальную
+ссылку; дополнительное чтение не объявлено поддержанным.
+
+Сопоставить общий resolved local binding, его model metadata и контекст
+`l2_path_root` с [единой lexical-local identity](callable-actual-projection-20260930.md#site-aware-hidden-source).
+Не создавать новый поиск по имени для одной записи `ref\value`. Сохранить
+положительный свидетель с обоими чтениями поля и настоящий walker при
+исправлении. Пока это измеренный пробел: сравнение с исходным baseline
+не выполнено, поэтому он не помечен доказанно старым или регрессией.
+
 ### OWN-REFERENCE-CANDIDATE-LOSS — 2026-09-30, Codex, IN WORK `OWN-REFERENCE-CELL-RECEPTION-20260930`
 
 Read-only проверка общего контракта `@:` подтвердила различие реализации,

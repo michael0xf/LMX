@@ -119,6 +119,10 @@ A statically compiled executable body of any Structure, including the file root,
 
 Execution of a Structure in head position is selected by `Lmx.native` ([§2](#lmx)): non-null enters native code, null runs the walker over the same body. The call ABI supplies reserved `node`, the lexical parent, and hidden `self`, the active Structure of this invocation ([§10](#own)), along with the resolved arguments. `self` is not a language word, and these references do not create separate code and data objects. Call-argument checking and admission use the common language contract; native dispatch is not a second admission algorithm. The method's args/return parts describe its inputs and result without a separate METHOD record or `sig` word. L1: [L1](L1_spec_en.md#call).
 
+Internal call transport preserves both the resolved value type and whether an input is present. A zero argument-storage address denotes absence; a nonzero address may hold a present null reference. Numeric values use storage of their declared machine width. Object references use a canonical pointer-value transport cell and are loaded exactly once; this cell is not the language storage addressed by `@`. Neither a descriptor nor its graph is copied by value for transport. Addressable formals retain their own activation storage, while nonprimitive descriptor formals retain the descriptor-reference meaning of [§13](#copy-merge).
+
+The physical call contract consists of ordered input type witnesses and a result part: empty for no result, otherwise containing the result witness. This contract comes from the resolved callee interface, including prepared hidden inputs, not from the actual values supplied or the inputs used by the body. An ordinary root or named Structure does not acquire a source-level signature prefix from this transport metadata. Callback status is separate from the returned value. In particular, a successful reference result is present even when null; null cannot stand in for the absence of a result.
+
 <a id="child"></a>
 ## 12. Child reservation
 

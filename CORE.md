@@ -230,6 +230,14 @@ signature checker.
 Static checking, admission, and generated typed calls belong in the translator
 and broader language model, not in a fabricated per-node tag.
 
+The internal value-storage ABI keeps absent inputs distinct from present null
+references and preserves numeric widths. Pointer transport cells contain
+canonical `void *` values; they are not the real language cells returned by
+`@p`. Native adapters and primitive callbacks share this convention and use
+the ordinary physical input/result contract, not payload-address guessing or
+a numeric signature registry. See [L2 §11](docs/L2_spec_en.md#call) and
+[L1 §12](docs/L1_spec_en.md#call) for the exact transport/result rules.
+
 **Execution of a Structure.** One complete Structure contains declarations,
 value storage and executable operators in source order. Execution uses that
 Structure and an ordinary machine activation. An existing Structure in head

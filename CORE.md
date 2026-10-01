@@ -411,11 +411,14 @@ and their checkpoint, as [planned](next_core_tasks.md).
 The `c.*` prefix is one raw door to C. A token spelled `c.name` is a raw C
 name; other arguments in the same construct remain ordinary L2 expressions.
 No L2 whitelist, header-scanned dictionary, or name-specific semantics for
-`c.puts`, `c.array`, or `c.sizeof` belong in the language. Existing special
-paths and scanner remnants are cleanup debt. A future ordinary `sizeof:`
-receiver-operator is planned for Lmx-side size operations; it is not yet a
-landed requirement. Raw `c.sizeof(...)` remains C `sizeof` through the same
-door, with unevaluated behavior supplied by C rather than a special L2
+`c.puts`, `c.array`, or `c.sizeof` belong in the language. Remaining raw-C
+type-provenance problems and legacy generated/test assumptions are recorded
+cleanup debt. The separate language receiver `sizeof:` already has native
+checking and lowering in `l2_check_sizeof` / `l2_emit_sizeof`; it is not merely
+a proposed operator. Its current type-frame support is incomplete: the
+primitive-word gate in `l2_sizeof_type_frame` is an implementation boundary,
+not a restriction on the language's general type rules. Raw `c.sizeof(...)`
+remains C `sizeof` through the same door, with unevaluated behavior supplied by C rather than a special L2
 `sizeof` parser branch.
 
 ## 5. Message, Thread, and one turn
@@ -579,9 +582,10 @@ colon, or a vertical body. Source-level `()` is not automatically an
 existing empty Structure variable: head resolution and semantic role still
 matter. Receiver-operators such as `fn:` are language operators, not user
 callables. Operator names are reserved; a user method named `length` cannot
-shadow the `length` receiver. `sizeof:` is a proposed operator in that
-class, not a currently implemented arbitrary method or a special `c.sizeof`
-entity.
+shadow the `length` receiver. `sizeof:` belongs to that operator class,
+not to arbitrary user methods or a special `c.sizeof` entity. Recognition
+of a type operand must not turn its unresolved type name into a free value
+input; ordinary value operands retain the common source-site lookup.
 
 [`tools/build_l2src.ps1`](tools/build_l2src.ps1) uses the pinned L1
 translator to generate and compile the live runtime units, then executes
@@ -610,8 +614,8 @@ an implementation's current behavior, an accepted rule, and a planned fix.
 | General application and declaration | Legacy `Model: fresh` / `A: b c` recognizers and stale tests still compete with current resolution. | Unknown head defines the written Structure without execution; known Structure calls; existing primitive or explicit non-callable reference bindings assign. Remove implicit cloning and use the shared resolved act; see plan §3 and Q56/Q57. |
 | Repeated fields, publication and addresses | Verify `[N]field` and own-value publication against the current address contract: `@` selects actual typed graph data or the descriptor, not an activation working copy. Address-taking alone is not a dirty write. | One occurrence-to-physical-path algorithm shared by native and interpreter; L2 §18.2–18.3 controls the addressed storage category. |
 | Admission | Coarse address compatibility and some fast paths are not the complete Consumer/uses plus runtime-test model or full directed conversion table. | Urgent kernel fixes first; then bounded port from the prior implementation. |
-| Raw C door | Name-specific `c.puts`/`c.array`/`c.sizeof` handling and header-derived C-name machinery remain cleanup debt. | One raw `c.*` door; separately introduce ordinary `sizeof:` if needed. |
-| Native entry result | The adapter can lose a failing entry return and produce false-green program exits. | Make the body result observable before relying on generated runtime rows. |
+| Raw C door | Raw-C type provenance and legacy generated/test assumptions remain cleanup debt; `sizeof:` already has native lowering with incomplete operand support. | One raw `c.*` door; keep the language receiver separate and resolve its operands through the shared type/value contracts. |
+| Call ABI and execution selection | Typed value/presence transport landed in `71c4743`; direct generated-symbol calls still bypass the selected occurrence's native word. | Preserve observable results and failure status while moving those calls to the common dispatcher; see the [bounded dispatch repair](steps/native-selfbuild-20260930.md#native-call-dispatch). |
 | Range/mail documentation | `LmxRange.owner` and current `LmxPost.inbox_capacity` are more specific than the corresponding brief specification descriptions. | Reconcile the paired L1/L2 specifications with the accepted ABI. |
 | Full self-build | Live runtime largely `.lm1`, partial `.lm2` ports, L1 self-build only; L2 library-link rows are not execution proof. | Close the clean-kernel gate, port supported L1 to L2, then prove L2 and L3+L2 self-build. |
 

@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -49,6 +50,7 @@ fn: main () int
     @: Lmx caller 0
     @: Lmx call 0
     @: void rtype 0
+    LmxWalkValue: result
     int: got 0
     @: void outv 0
     int: present 0
@@ -80,8 +82,9 @@ fn: main () int
     if: sig = 0 || lmx_arena_refs_open_owned(@ arena, sig, 2U) != 0
         return: 2
     lmx_arena_ref_store(sig, 0U, (cast: (@: void) lmx_walk_plain(@ arena, sig, 2U)))
-    if: fr(@ arena, roles, sig, 1U, c.LMX_WALK_OP_ARG, 2U) = 0 || lmx_walk_store_size(@ arena, lmx_arena_ref_struct(sig, 1U), 1U, 1U) != c.LMX_WALK_OK
+    if: fr(@ arena, roles, sig, 1U, c.LMX_WALK_OP_ARG, 4U) = 0 || lmx_walk_store_size(@ arena, lmx_arena_ref_struct(sig, 1U), 1U, 1U) != c.LMX_WALK_OK
         return: 2
+    lmx_arena_ref_store(lmx_arena_ref_struct(sig, 1U), 3U, wt_witness(@ arena, c.LMX_TYPE_INT))
     caller: lmx_node_new_owned(@ arena)
     if: caller = 0 || lmx_arena_refs_open_owned(@ arena, caller, 1U) != 0
         return: 2
@@ -90,12 +93,13 @@ fn: main () int
         return: 2
     lmx_arena_ref_store(call, 1U, (cast: (@: void) sig))
     lmx_arena_ref_store(call, 2U, (cast: (@: void) sig))
-    lmx_arena_ref_store(call, 3U, rtype)
+    lmx_arena_ref_store(call, 3U, (cast: (@: void) wt_contract_same(@ arena, 2U, c.LMX_TYPE_INT, c.LMX_TYPE_INT)))
     if: lit(@ arena, roles, call, 5U, 1) != 0 || lit(@ arena, roles, call, 6U, 4) != 0
         return: 2
     got: 0
-    st: lmx_walk_activate(@ ctx, caller, caller, 0, 0U, (cast: (@: void) (@ got)), @ outv, @ present)
-    check(st = c.LMX_WALK_OK && got = 4, "signature width 2, dynamic ARG 1 is 4")
+    st: lmx_walk_activate(@ ctx, caller, caller, 0, 0U, @ result)
+    got: (result.number)
+    check(st = c.LMX_WALK_OK && (result.present) != 0 && (result.type) = c.LMX_TYPE_INT && got = 4, "signature width 2, dynamic ARG 1 is 4")
 
     # One extra argument. Same refusal as D-04.
     caller: lmx_node_new_owned(@ arena)
@@ -106,11 +110,12 @@ fn: main () int
         return: 2
     lmx_arena_ref_store(call, 1U, (cast: (@: void) sig))
     lmx_arena_ref_store(call, 2U, (cast: (@: void) sig))
-    lmx_arena_ref_store(call, 3U, rtype)
+    lmx_arena_ref_store(call, 3U, (cast: (@: void) wt_contract_same(@ arena, 2U, c.LMX_TYPE_INT, c.LMX_TYPE_INT)))
     if: lit(@ arena, roles, call, 5U, 1) != 0 || lit(@ arena, roles, call, 6U, 4) != 0 || lit(@ arena, roles, call, 7U, 9) != 0
         return: 2
     got: 0
-    st: lmx_walk_activate(@ ctx, caller, caller, 0, 0U, (cast: (@: void) (@ got)), @ outv, @ present)
+    st: lmx_walk_activate(@ ctx, caller, caller, 0, 0U, @ result)
+    got: (result.number)
     check(st = c.LMX_WALK_INVALID, "one extra argument is INVALID")
 
     # The dynamic input omitted: n = 1, width = 2.
@@ -122,11 +127,12 @@ fn: main () int
         return: 2
     lmx_arena_ref_store(call, 1U, (cast: (@: void) sig))
     lmx_arena_ref_store(call, 2U, (cast: (@: void) sig))
-    lmx_arena_ref_store(call, 3U, rtype)
+    lmx_arena_ref_store(call, 3U, (cast: (@: void) wt_contract_same(@ arena, 2U, c.LMX_TYPE_INT, c.LMX_TYPE_INT)))
     if: lit(@ arena, roles, call, 5U, 1) != 0
         return: 2
     got: 0
-    st: lmx_walk_activate(@ ctx, caller, caller, 0, 0U, (cast: (@: void) (@ got)), @ outv, @ present)
+    st: lmx_walk_activate(@ ctx, caller, caller, 0, 0U, @ result)
+    got: (result.number)
     check(st = c.LMX_WALK_INVALID, "dynamic input omitted is INVALID")
 
     c.printf("lmx_walk_dyn_selftest checks=%d failures=%d\n", checks, failures)

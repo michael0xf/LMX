@@ -29,7 +29,8 @@ fn: check () int
     if: p != q || \p != 'A' || \ip != 11 || \sp != 13 || cell2 != cell || cell3 != cell
         return: 81
     \cell2: 0
-    if: p != 0 || q != @ letter
+    # An indirect write changes the declared cell, not the caller's working value.
+    if: \cell2 != 0 || p != @ letter || q != @ letter
         return: 82
     @: c.LmP0Text text (cast: (@: c.LmP0Text) c.calloc(1U, c.sizeof(c.LmP0Text)))
     if: text = 0

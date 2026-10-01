@@ -96,19 +96,19 @@ fn: main () int
     check(m7 != 0 && m0 != 0, "two int entries are built")
     memset((cast: (@: void) (@ value)), 0, c.sizeof(c.LmxWalkValue))
     status: lmx_interp_apply_value(@ context, m7, 0, 0U, @ value)
-    got: value.ref
-    present: value.present
-    check(status = c.LMX_INTERP_OK && present != 0 && got != 0 && lmx_int_value_known(got) = 7, "an entry returning 7 is observed as 7")
+    got: (value.ref)
+    present: (value.present)
+    check(status = c.LMX_INTERP_OK && present != 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 7, "an entry returning 7 is observed as 7")
     status: lmx_interp_apply_value(@ context, m0, 0, 0U, @ value)
-    got: value.ref
-    present: value.present
-    check(status = c.LMX_INTERP_OK && present != 0 && got != 0 && lmx_int_value_known(got) = 0, "an entry returning 0 is observed as 0")
+    got: (value.ref)
+    present: (value.present)
+    check(status = c.LMX_INTERP_OK && present != 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 0, "an entry returning 0 is observed as 0")
     status: lmx_interp_apply_value(@ context, m, 0, 0U, @ value)
-    present: value.present
+    present: (value.present)
     check(status = c.LMX_INTERP_OK && present = 0, "a void return carries no value")
     status: lmx_interp_apply_value(0, m7, 0, 0U, @ value)
-    got: value.ref
-    present: value.present
+    got: (value.ref)
+    present: (value.present)
     check(status = c.LMX_INTERP_INVALID && present = 0 && got = 0, "a refusal leaves the value empty")
     if: failures != 0
         c.printf("%d failed of %d\n", failures, checks)

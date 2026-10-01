@@ -1,0 +1,37 @@
+# A held pointer may itself address a pointer cell. Do not unwrap that payload.
+# Explicit writes select physical storage, independent of pending own values.
+sub: checkpoint ()
+return
+int: x 41
+int: y 41
+@: int p @x
+@@: int cell @p
+@: void held cell
+int: result 7
+if: held != cell || held != @p || held = p
+    result: 81
+end: if
+\p: 55
+if: \p != 55 || x != 41
+    result: 82
+end: if
+\cell: @y
+if: \cell != @y || p != @x
+    result: 83
+end: if
+\cell: 0
+if: \cell != 0 || held != @p
+    result: 84
+end: if
+checkpoint()
+if: \cell != @x || p != @x
+    result: 85
+end: if
+\cell: @y
+@: void samecell @p
+checkpoint()
+if: \cell != @y || p != @x || samecell != held
+    result: 86
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

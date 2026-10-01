@@ -1,0 +1,19 @@
+# Same values, different real cells; held pointer p and address-of-cell @p
+# must remain distinct even after both are received as void pointers.
+int: x 41
+int: y 41
+@: int p @x
+@: void value p
+@: void place @p
+int: result 7
+if: value != p || value != @x
+    result: 81
+end: if
+if: place = 0 || place != @p || place = value
+    result: 82
+end: if
+if: @x = @y || @x != @x
+    result: 83
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

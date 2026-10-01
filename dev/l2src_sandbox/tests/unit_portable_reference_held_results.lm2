@@ -1,9 +1,5 @@
-# Item 739: a held callable's result has the header's number type at the root -- size_t, unsigned,
-# ulong and char through one adapter and caller-owned declared-width destinations.
-# s(1) = 2^32 + 1, u(4000000000) = 4000000005, l(1) = 6;
-# c('a') = 200 (the captured byte, above 127) and c('b') = 'b'.  Mutants: every held call through
-# an int-width destination loses wide values; sharing CHAR result storage loses d after e.
-# Entry 7.
+# Same held scalar widths and independent CHAR result lifetimes, using source
+# literals supported by the retained graph (no machine cast interpretation).
 fn: makeS (size_t: n) fn: (size_t: x) size_t
     fn: addS (size_t: x) size_t
         return: x + n
@@ -29,7 +25,7 @@ fn: makeC (char: n) fn: (char: x) char
 s5: makeS 4294967296U
 u5: makeU 5U
 l5: makeL 5U
-char: expectedChar (cast: (char) 200)
+char: expectedChar 'A'
 pc: makeC expectedChar
 size_t: a (s5: 1U)
 unsigned: b (u5: 4000000000U)

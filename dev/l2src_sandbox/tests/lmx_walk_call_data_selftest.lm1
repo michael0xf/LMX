@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -169,6 +170,7 @@ fn: main () int
     n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 5U)
     ref(n, 1U, writer)
     ref(n, 2U, writer)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     st: go(caller, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && v = 1 && r = 99, "CALL data=M: the callee returns its working 99")
     check(lmx_int_value_known(xcell) = 99, "after return M\\x is 99: the exit published into M's own cell (a per-call instance, or no publication -> RED)")

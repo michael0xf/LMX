@@ -1,0 +1,20 @@
+# Signature synonyms transport the occurrence, never a hidden ABI pointer box.
+Model:
+    int: value 7
+end: Model
+fn: first (Model: item) int
+    @: void flat @item
+    @: void frame (@: item)
+    if: flat != @Model || frame != flat || item\value != 7
+        return: 81
+return: 7
+fn: second (@: Model item) int
+    if: @item != @Model || (@: item) != @item || item\value != 7
+        return: 82
+return: 7
+int: result first(Model)
+if: result = 7
+    result: second(@Model)
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

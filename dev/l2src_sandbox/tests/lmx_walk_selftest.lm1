@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -114,9 +115,10 @@ fn: own0 (@: Lmx parent; size_t: slot; size_t: index) @: Lmx
     sz(n, 2U, index)
 return: n
 
-fn: argn (@: Lmx parent; size_t: slot; size_t: k) @: Lmx
-    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_ARG, 2U)
+fn: argn (@: Lmx parent; size_t: slot; size_t: k; int: type) @: Lmx
+    @: Lmx n fr(parent, slot, c.LMX_WALK_OP_ARG, 4U)
     sz(n, 1U, k)
+    lmx_arena_ref_store(n, 3U, wt_witness(ga, type))
 return: n
 
 
@@ -167,8 +169,8 @@ fn: go (@: Lmx m; @@: void args; size_t: nargs; @: int r; @: int v) int
     int: st
     st: lmx_walk_run(gctx, m, args, nargs, gv)
     \v: gv\present
-    if: st = c.LMX_WALK_OK && gv\present != 0 && gv\ref != 0
-        \r: lmx_int_value_known(gv\ref)
+    if: st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT
+        \r: gv\number
     ---
 return: st
 
@@ -317,6 +319,7 @@ fn: main () int
     @@: void argv 0
     @: void abox 0
     @: void foreign 0
+    @: void descriptor_box 0
     @: Lmx subject 0
     @: Lmx peek 0
     @: Lmx bump 0
@@ -449,10 +452,11 @@ fn: main () int
     icell(subject, 1U, 35)
     # A body that would write an owner-local value of the exact immutable profile.
     qualified_writer: mk_m(unit, 26U, 2U)
-    n: fr(qualified_writer, 1U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, immutable_local)
-    sz(n, 2U, 0U)
-    lit(n, 3U, 1)
+    n: fr(qualified_writer, 1U, c.LMX_WALK_OP_PUT, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(e, 1U, immutable_local)
+    sz(e, 2U, 0U)
+    lit(n, 2U, 1)
 
     # explicit_writer: explicit_target\n: 42 -- an EXPLICIT (non-zero) holder naming a
     # Structure OTHER than explicit_writer itself. K-OT1/K-OT2 witness (-194 к.5, fable's
@@ -466,10 +470,11 @@ fn: main () int
     explicit_target: mk_m(unit, 40U, 2U)
     icell(explicit_target, 1U, 0)
     explicit_writer: mk_m(unit, 41U, 2U)
-    n: fr(explicit_writer, 1U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, explicit_target)
-    sz(n, 2U, 1U)
-    lit(n, 3U, 42)
+    n: fr(explicit_writer, 1U, c.LMX_WALK_OP_PUT, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(e, 1U, explicit_target)
+    sz(e, 2U, 1U)
+    lit(n, 2U, 42)
 
     # counter:   own n 0;  n: n + 1;  return: n
     # K-OT2 (-194 к.5): counter's own frames name NO holder (own0, holder = 0) --
@@ -493,12 +498,14 @@ fn: main () int
     n: fr(outer, 2U, c.LMX_WALK_OP_CALL, 5U)
     ref(n, 1U, inner)
     ref(n, 2U, inner)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, 0))
     n: fr(outer, 3U, c.LMX_WALK_OP_RET, 2U)
     own(n, 1U, outer, 1U)
-    n: fr(inner, 1U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, outer)
-    sz(n, 2U, 1U)
-    lit(n, 3U, 2)
+    n: fr(inner, 1U, c.LMX_WALK_OP_PUT, 3U)
+    e: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(e, 1U, outer)
+    sz(e, 2U, 1U)
+    lit(n, 2U, 2)
 
     # publisher: own y 0;  y: 5;  return: reader()    (dirty published before a call)
     # reader:    return: publisher\y                  (reads the graph)
@@ -510,6 +517,7 @@ fn: main () int
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
     ref(e, 1U, reader)
     ref(e, 2U, reader)
+    ref(e, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     n: fr(reader, 1U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(e, 1U, publisher)
@@ -518,19 +526,20 @@ fn: main () int
     # summer (k): if: k < 1 { return: 0 };  return: k + summer(k - 1)
     n: fr(summer, 1U, c.LMX_WALK_OP_IF, 3U)
     e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
-    argn(e, 1U, 0U)
+    argn(e, 1U, 0U, c.LMX_TYPE_INT)
     lit(e, 2U, 1)
     b: pl(n, 2U, 1U)
     e: fr(b, 0U, c.LMX_WALK_OP_RET, 2U)
     lit(e, 1U, 0)
     n: fr(summer, 2U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
-    argn(e, 1U, 0U)
+    argn(e, 1U, 0U, c.LMX_TYPE_INT)
     n: fr(e, 2U, c.LMX_WALK_OP_CALL, 6U)
     ref(n, 1U, summer)
     ref(n, 2U, summer)
+    ref(n, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     e: fr(n, 5U, c.LMX_WALK_OP_SUB, 3U)
-    argn(e, 1U, 0U)
+    argn(e, 1U, 0U, c.LMX_TYPE_INT)
     lit(e, 2U, 1)
 
     # looper (k): own acc 0; own i 0
@@ -542,7 +551,7 @@ fn: main () int
     n: fr(looper, 3U, c.LMX_WALK_OP_WHILE, 3U)
     e: fr(n, 1U, c.LMX_WALK_OP_LT, 3U)
     own(e, 1U, looper, 2U)
-    argn(e, 2U, 0U)
+    argn(e, 2U, 0U, c.LMX_TYPE_INT)
     b: pl(n, 2U, 4U)
     icell(b, 0U, 0)
     # §7b: acc, i and the loop body's t are the working table's rows, loaded at entry from these OWN/SET nodes.
@@ -637,46 +646,48 @@ fn: main () int
     # (shorted, padded, retired: built only to test a hand-built plan against a body's
     # actual own fields -- "G, the receiver's half" below -- which is gone with lmx_plan.)
 
-    # peek (s):   return: s\1            a field of a reference input, by reference
+    # peek (s):   return: s\1            typed primitive field of a descriptor input
     n: fr(peek, 1U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_OF, 3U)
-    argn(e, 1U, 0U)
+    argn(e, 1U, 0U, c.LMX_TYPE_LMX)
     sz(e, 2U, 1U)
     # bump (s):   return: s\0 + 1        an integer computed from a field of the subject
     n: fr(bump, 1U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_ADD, 3U)
     b: fr(e, 1U, c.LMX_WALK_OP_OF, 3U)
-    argn(b, 1U, 0U)
+    argn(b, 1U, 0U, c.LMX_TYPE_LMX)
     sz(b, 2U, 0U)
     lit(e, 2U, 1)
-    # relay (s):  return: peek(s)        a reference handed down and back through two frames
+    # relay (s):  return: peek(s)        descriptor input, typed primitive result
     n: fr(relay, 1U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 6U)
     ref(e, 1U, peek)
     ref(e, 2U, peek)
-    argn(e, 5U, 0U)
+    ref(e, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_LMX, c.LMX_TYPE_INT))
+    argn(e, 5U, 0U, c.LMX_TYPE_LMX)
     # echo (k):   return: k              an input returned as it came
     n: fr(echo, 1U, c.LMX_WALK_OP_RET, 2U)
-    argn(n, 1U, 0U)
+    argn(n, 1U, 0U, c.LMX_TYPE_INT)
     # hop (k):    return: echo(k - 1)    the dangerous one: k - 1 lives in hop's scratch slice,
     #                                    echo returns that very reference, hop returns it on
     n: fr(hop, 1U, c.LMX_WALK_OP_RET, 2U)
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 6U)
     ref(e, 1U, echo)
     ref(e, 2U, echo)
+    ref(e, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     b: fr(e, 5U, c.LMX_WALK_OP_SUB, 3U)
-    argn(b, 1U, 0U)
+    argn(b, 1U, 0U, c.LMX_TYPE_INT)
     lit(b, 2U, 1)
     # self (s):   return: s              the subject itself
     n: fr(self, 1U, c.LMX_WALK_OP_RET, 2U)
-    argn(n, 1U, 0U)
+    argn(n, 1U, 0U, c.LMX_TYPE_LMX)
     # poke (s):   own z 0;  z: 1;  return: s       leaves a trace if it ever runs
     icell(poke, 1U, 0)
     n: fr(poke, 2U, c.LMX_WALK_OP_SET, 3U)
     own(n, 1U, poke, 1U)
     lit(n, 2U, 1)
     n: fr(poke, 3U, c.LMX_WALK_OP_RET, 2U)
-    argn(n, 1U, 0U)
+    argn(n, 1U, 0U, c.LMX_TYPE_LMX)
 
     # ---- Stage C: callable occurrence fixtures ------------------------------------
     # test: return: 1
@@ -684,11 +695,11 @@ fn: main () int
     lit(n, 1U, 1)
     # test2(f): return: f   -- RET of ARG nullary-activates when f is callable
     n: fr(test2, 1U, c.LMX_WALK_OP_RET, 2U)
-    argn(n, 1U, 0U)
+    argn(n, 1U, 0U, c.LMX_TYPE_LMX)
     # test3: descriptor-only (CALLABLE child0, no body steps, header unset)
     # test4(f): same as test2; formal is the test3 shape (descriptor-compatible pass of test)
     n: fr(test4, 1U, c.LMX_WALK_OP_RET, 2U)
-    argn(n, 1U, 0U)
+    argn(n, 1U, 0U, c.LMX_TYPE_LMX)
     # host: return: 7  -- nullary callee for optional bag-arg CALL forms
     n: fr(host, 1U, c.LMX_WALK_OP_RET, 2U)
     lit(n, 1U, 7)
@@ -888,37 +899,36 @@ fn: main () int
     # (F, retired: "data writes do not touch a plan" has no meaning left -- there is no
     # plan any more, so nothing to touch or not touch.)
 
-    # ---- values are references: integer, nothing, Structure ---------------------------
+    # ---- typed values: integer, absence, Structure identity ---------------------------
     before: handed(ga)
     sum_before: digest(ga)
-    argv[0]: (cast: (@: void) subject)
-    # An integer the activation computed comes back in the caller's own destination cell:
-    # the reference IS that cell, and that identity is how the caller knows.
+    descriptor_box: (cast: (@: void) subject)
+    argv[0]: (cast: (@: void) (@ descriptor_box))
+    # Numeric results retain their type and value independently of temporary storage.
     st: lmx_walk_run(gctx, bump, argv, 1U, gv)
-    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = (cast: (@: void) (@ gv\number)) && gv\number = 8, "an integer computed from a field of the subject: 7 + 1, in the caller's cell")
-    # A field of the subject comes back as the graph's own cell -- the same address.
+    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\type = c.LMX_TYPE_INT && gv\number = 8, "an integer computed from a field of the subject: 7 + 1, in the caller's cell")
+    # A primitive field is read by value without modifying its declared cell.
     st: lmx_walk_run(gctx, peek, argv, 1U, gv)
-    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = lmx_arena_ref_value(subject, 1U), "a field of a Structure input is returned BY REFERENCE: the very cell")
-    check(gv\ref != (cast: (@: void) (@ gv\number)) && lmx_int_value_known(gv\ref) = 35, "not a computed integer, and it reads 35")
+    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\type = c.LMX_TYPE_INT && gv\number = 35, "a primitive field returns its typed value 35")
+    check(gv\type = c.LMX_TYPE_INT && lmx_int_value_known(lmx_arena_ref_value(subject, 1U)) = 35, "reading a primitive field preserves the original cell value")
     # The subject itself, handed in and handed back: the same Structure, not a copy.
     st: lmx_walk_run(gctx, self, argv, 1U, gv)
     check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = (cast: (@: void) subject), "a Structure input returned as it came: the same address")
-    # Through a nested call: two frames down and back, still the same cell.
+    # The primitive result survives two activation lifetimes.
     st: lmx_walk_run(gctx, relay, argv, 1U, gv)
-    check(st = c.LMX_WALK_OK && gv\ref = lmx_arena_ref_value(subject, 1U), "a reference handed through a nested call is the same reference")
+    check(st = c.LMX_WALK_OK && gv\type = c.LMX_TYPE_INT && gv\number = 35, "the typed primitive value survives nested call return")
     check(handed(ga) = before && digest(ga) = sum_before, "none of it allocated in the graph or wrote a byte of it: the subject was never copied")
     check(ps\used = 0U && ps\top = 0U, "and the store is empty again")
-    # A temporary never outlives the frame that made it: k - 1 is a cell of hop's scratch
-    # slice, echo returns that reference, hop must not let it out.
+    # A returned numeric snapshot remains valid after both nested scratch slices rewind.
     argv[0]: abox
     lmx_int_store_known(abox, 41)
     st: lmx_walk_run(gctx, hop, argv, 1U, gv)
-    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\ref = (cast: (@: void) (@ gv\number)) && gv\number = 40, "a temporary passed down and returned comes out by value, in the caller's cell")
+    check(st = c.LMX_WALK_OK && gv\present = 1 && gv\type = c.LMX_TYPE_INT && gv\number = 40, "a temporary passed down and returned comes out by value, in the caller's cell")
     st: go(summer, argv, 1U, @ r, @ v)
     check(gv\number = 861 && v = 1, "and the store was reused since: summer(41) = 861")
-    # echo of an integer input that IS a cell of the graph: that cell, by reference.
+    # Returning numeric input does not modify its source storage.
     st: lmx_walk_run(gctx, echo, argv, 1U, gv)
-    check(st = c.LMX_WALK_OK && gv\ref = abox, "an input that is a cell of the graph is returned as that cell")
+    check(st = c.LMX_WALK_OK && gv\type = c.LMX_TYPE_INT && gv\number = 41 && lmx_int_value_known(abox) = 41, "numeric graph input is returned by value without modifying its source cell")
     # No value: nothing is a value, and says so.
     st: lmx_walk_run(gctx, faller, 0, 0U, gv)
     check(st = c.LMX_WALK_OK && gv\present = 0 && gv\ref = 0, "a void activation: no reference, present = 0")
@@ -927,24 +937,25 @@ fn: main () int
     check(st = c.LMX_WALK_OK && gv\present = 0 && gv\ref = 0, "an absent input returned is no value")
     check(lmx_walk_run(gctx, echo, argv, 1U, 0) = c.LMX_WALK_OK, "a caller that wants no value passes none")
     # ---- what is refused ----
-    # A FOREIGN reference: an address no arena of this context can classify.  Nothing runs.
+    # Transport storage may be outside graph arenas. OF refuses a held non-Structure.
     foreign: calloc(1U, 64U)
-    argv[0]: foreign
-    st: lmx_walk_run(gctx, poke, argv, 1U, gv)
-    check(st = c.LMX_WALK_INVALID && gv\present = 0 && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 0, "a reference outside every arena of the context is INVALID, and nothing ran")
+    argv[0]: (cast: (@: void) (@ foreign))
+    st: lmx_walk_run(gctx, peek, argv, 1U, gv)
+    check(st = c.LMX_WALK_INVALID && gv\present = 0, "OF refuses a foreign held referent without producing a value")
     free(foreign)
     # A cell of ANOTHER arena -- the context's own store arena, never bound to the graph's.
     lmx_scratch_mark(ps, pm)
     lmx_scratch_take(ps, c.sizeof(@: void), @ foreign)
-    argv[0]: foreign
-    st: lmx_walk_run(gctx, poke, argv, 1U, gv)
-    check(st = c.LMX_WALK_INVALID && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 0, "so is a cell of an arena the graph's arena is not bound to")
+    argv[0]: (cast: (@: void) (@ foreign))
+    st: lmx_walk_run(gctx, peek, argv, 1U, gv)
+    check(st = c.LMX_WALK_INVALID && gv\present = 0, "OF refuses held scratch storage that is not a Structure")
     lmx_scratch_rewind(ps, pm)
     # A reference that is NOT a Structure, read as one: `of` asks, and refuses.
-    argv[0]: abox
+    argv[0]: (cast: (@: void) (@ abox))
     st: lmx_walk_run(gctx, peek, argv, 1U, gv)
     check(st = c.LMX_WALK_INVALID && gv\present = 0, "a field of something that is not a Structure is INVALID")
-    argv[0]: (cast: (@: void) subject)
+    descriptor_box: (cast: (@: void) subject)
+    argv[0]: (cast: (@: void) (@ descriptor_box))
     st: lmx_walk_run(gctx, poke, argv, 1U, gv)
     check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) subject) && lmx_int_value_known(lmx_arena_ref_value(poke, 1U)) = 1, "the same program with a good subject runs, and leaves its trace")
     argv[0]: abox
@@ -1013,12 +1024,14 @@ fn: main () int
     # one, so a formal argument cannot be the target of a hand-built CALL node here at
     # all). test2/test4 are repurposed to pin the actual new behaviour: the argument
     # reference comes back UNCHANGED.
-    argv[0]: (cast: (@: void) test)
+    descriptor_box: (cast: (@: void) test)
+    argv[0]: (cast: (@: void) (@ descriptor_box))
     st: lmx_walk_run(gctx, test2, argv, 1U, gv)
     check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) test), "test2: RET of ARG returns the reference as-is (k.4: no auto-invoke)")
     st: go(test3, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && v = 0, "test3: no body steps at all is a legitimate empty run, not a refusal (k.4)")
-    argv[0]: (cast: (@: void) test)
+    descriptor_box: (cast: (@: void) test)
+    argv[0]: (cast: (@: void) (@ descriptor_box))
     st: lmx_walk_run(gctx, test4, argv, 1U, gv)
     check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) test), "test4: same as test2, k.4 returns the reference as-is")
     # A call with no argument children is the empty argument list: P0 gives `host()`,
@@ -1029,6 +1042,7 @@ fn: main () int
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
     ref(e, 1U, host)
     ref(e, 2U, host)
+    ref(e, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     st: go(tramp, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && r = 7 && v = 1, "CALL host with no argument children => 7")
     # D-04: host() with one extra Structure argument is refused when the CALL actually
@@ -1038,6 +1052,7 @@ fn: main () int
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 6U)
     ref(e, 1U, host)
     ref(e, 2U, host)
+    ref(e, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     if: pair != 0
         pair\parent: e
         check(lmx_arena_ref_store(e, 5U, (cast: (@: void) pair)) = 0, "pair under tramp3 CALL as extra arg")
@@ -1065,6 +1080,7 @@ fn: main () int
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 6U)
     ref(e, 1U, test2)
     ref(e, 2U, test2)
+    ref(e, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX))
     if: pair != 0
         pair\parent: e
         check(lmx_arena_ref_store(e, 5U, (cast: (@: void) pair)) = 0, "pair under tramp2 CALL")
@@ -1088,6 +1104,7 @@ fn: main () int
     n: fr(caller7, 1U, c.LMX_WALK_OP_CALL, 6U)
     ref(n, 1U, native7)
     ref(n, 2U, native7)
+    ref(n, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     lit(n, 5U, 1)
     st: go(caller7, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_OK && v = 1 && r = 7, "G1 native native!=0 CALL with one int -> dest 7 (mutant: native!=0 refused)")
@@ -1095,6 +1112,7 @@ fn: main () int
     n: fr(caller2, 1U, c.LMX_WALK_OP_CALL, 5U)
     ref(n, 1U, native2)
     ref(n, 2U, native2)
+    ref(n, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, 0))
     st: go(caller2, 0, 0U, @ r, @ v)
     # D-37: throw k is LMX_WALK_THROWN + k (never bare 2 / NO_GRAPH). Mutant: status: said -> RED.
     check(st = c.LMX_WALK_THROWN + 2, "G1 native throw encoded as THROWN+2 (D-37; mutant: bare 2 collides with NO_GRAPH)")

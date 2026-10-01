@@ -9,10 +9,9 @@ include: "<string.h>"
 
 # Thread interpreted path: lmx_interp_apply -> lmx_walk_run.
 # Dispatch receives only the Thread. Per-turn L2 scratch/context are automatic.
-# The turn executes the graph as the pair (code, data) = (graph, graph), with no argument:
-# execute(code data), data = code at the root, is the principle of execution, not an argument
-# (author, q40, LMX_blog/2026-09-27.md).  What the graph returns is kept nowhere: the exit is
-# R0's exit letter or its success (q40; E1 was cancelled), and the turn's status is the walk's.
+# A turn activates its one complete Thread graph with no source arguments.
+# Its returned value is discarded; the exit letter/success and walk status remain
+# the existing Thread turn protocol. There is no persistent data companion.
 #
 # Role records and mail primitives live in ordinary sealed typed ranges of the
 # bound Thread's own arena. Every such range carries the same exact physical
@@ -118,15 +117,40 @@ fn: l3_primitive_registry_open_profiled (@: LmxArena arena; size_t: count; @: Lm
         return: 0
 return: registry
 
-fn: l3_primitive_register_profiled (@: LmxArena arena; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx owner; @: Lmx profile) @: Lmx
+# The ordinary physical args/return parts, complete before the profile is sealed.
+# Witnesses are supplied from declared callback contracts, never inferred from a
+# callback address, operand payload or the set of inputs its body happens to use.
+fn: l3_primitive_contract_profiled (@: LmxArena arena; @: Lmx profile; size_t: count; @@: void witnesses; @: void result) @: Lmx
+    @: Lmx contract l3_profile_node_new(arena, profile)
+    @: Lmx inputs l3_profile_node_new(arena, profile)
+    @: Lmx returns l3_profile_node_new(arena, profile)
+    size_t: k 0U
+    if: contract = 0 || inputs = 0 || returns = 0 || l3_profile_refs_open(arena, contract, 2U, profile) != 0
+        return: 0
+    if: count != 0U && (witnesses = 0 || l3_profile_refs_open(arena, inputs, count, profile) != 0)
+        return: 0
+    if: result != 0 && l3_profile_refs_open(arena, returns, 1U, profile) != 0
+        return: 0
+    while: k < count
+        if: lmx_arena_ref_store(inputs, k, witnesses[k]) != 0
+            return: 0
+        k: k + 1U
+    ---
+    if: result != 0 && lmx_arena_ref_store(returns, 0U, result) != 0
+        return: 0
+    if: lmx_arena_ref_store(contract, 0U, (cast: (@: void) inputs)) != 0 || lmx_arena_ref_store(contract, 1U, (cast: (@: void) returns)) != 0
+        return: 0
+return: contract
+
+fn: l3_primitive_register_profiled (@: LmxArena arena; @: Lmx registry; size_t: slot; LmxPrimitiveEntry: fn; @: Lmx signature; @: Lmx owner; @: Lmx profile) @: Lmx
     @: LmxPrimitive record 0
-    if: arena = 0 || registry = 0 || fn = 0 || profile = 0 || slot >= registry\array.size
+    if: arena = 0 || registry = 0 || fn = 0 || signature = 0 || profile = 0 || slot >= registry\array.size
         return: 0
     record: (cast: (@: LmxPrimitive) lmx_arena_take_profiled(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, profile))
     if: record = 0
         return: 0
     record\fn: fn
-    record\signature: 0
+    record\signature: signature
     record\owner: owner
     if: lmx_arena_ref_store(registry, slot, (cast: (@: void) record)) != 0
         return: 0
@@ -167,7 +191,8 @@ fn: l3_thread_success_prim (@: LmxThread t) @: Lmx
         return: 0
 return: l3_bound_success
 
-# Lane is one int cell. INBOX is 0, so a decode failure is -1.
+# Lane is declared INT value storage, possibly caller/scratch-owned. INBOX is 0,
+# so an invalid owner or lane value is reported as -1.
 fn: l3_prim_lane (@: void owner; @@: void refs; size_t: nargs) int
     @: LmxThread t 0
     @: LmxArena arena 0
@@ -181,10 +206,6 @@ fn: l3_prim_lane (@: void owner; @@: void refs; size_t: nargs) int
         arena: t\slot\arena
     ---
     if: arena = 0
-        return: -1
-    if: lmx_range_classify(arena, refs[0]) != c.LMX_KIND_PRIMITIVE
-        return: -1
-    if: lmx_range_type_of(arena, refs[0]) != c.LMX_TYPE_INT
         return: -1
     lane: lmx_int_value_known(refs[0])
     if: lane != c.LMX_POST_INBOX && lane != c.LMX_POST_OUTBOX && lane != c.LMX_POST_STAGED
@@ -288,7 +309,7 @@ fn: l3_thread_dispatch (@: LmxThread t) int
     ctx.scratch: @ scratch
     ctx.roles: l3_bound_roles
     ctx.classified: 0U
-    # execute(code data) with data = code: the graph, no argument (q40).
+    # The complete Thread graph is activated with no arguments.
     st: lmx_interp_apply(@ ctx, graph, 0, 0U)
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
@@ -302,6 +323,11 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
     @: Lmx mail_count 0
     @: Lmx mail_take 0
     @: Lmx success 0
+    @: void lane_witness 0
+    @: void message_witness 0
+    @: Lmx count_contract 0
+    @: Lmx take_contract 0
+    @: Lmx success_contract 0
     if: arena = 0 || t = 0
         return: c.LMX_THREAD_INVALID
     # Thread and its embedded Message prefix have one address, but the reverse
@@ -327,13 +353,22 @@ fn: l3_thread_bind (@: LmxArena arena; @: LmxThread t) int
         registry: l3_primitive_registry_open_profiled(arena, 3U, profile)
     ---
     if: registry != 0
-        mail_count: l3_primitive_register_profiled(arena, registry, 0U, l3_prim_mail_count, (cast: (@: Lmx) t), profile)
+        lane_witness: lmx_arena_take_profiled(arena, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, profile)
+        message_witness: lmx_arena_take_profiled(arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_MSG_REF, profile)
+    ---
+    if: lane_witness != 0 && message_witness != 0
+        count_contract: l3_primitive_contract_profiled(arena, profile, 1U, @ lane_witness, lane_witness)
+        take_contract: l3_primitive_contract_profiled(arena, profile, 1U, @ lane_witness, message_witness)
+        success_contract: l3_primitive_contract_profiled(arena, profile, 0U, 0, 0)
+    ---
+    if: count_contract != 0 && take_contract != 0 && success_contract != 0
+        mail_count: l3_primitive_register_profiled(arena, registry, 0U, l3_prim_mail_count, count_contract, (cast: (@: Lmx) t), profile)
     ---
     if: mail_count != 0
-        mail_take: l3_primitive_register_profiled(arena, registry, 1U, l3_prim_mail_take, (cast: (@: Lmx) t), profile)
+        mail_take: l3_primitive_register_profiled(arena, registry, 1U, l3_prim_mail_take, take_contract, (cast: (@: Lmx) t), profile)
     ---
     if: mail_take != 0
-        success: l3_primitive_register_profiled(arena, registry, 2U, l3_prim_success, (cast: (@: Lmx) t), profile)
+        success: l3_primitive_register_profiled(arena, registry, 2U, l3_prim_success, success_contract, (cast: (@: Lmx) t), profile)
     ---
     if: profile = 0 || roles = 0 || registry = 0 || mail_count = 0 || mail_take = 0 || success = 0 || l3_profile_seal(arena, profile) != 0
         lmx_arena_revert(arena, mark)

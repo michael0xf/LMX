@@ -1,0 +1,206 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# Transport presence, activation-owned fallback places and failed-reception state.
+# Source lexical discovery is deliberately not part of this direct runtime fixture.
+@: LmxArena ga 0
+@: Lmx roles 0
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: frame (@: Lmx parent; size_t: slot; int: op; size_t: width) @: Lmx
+    @: Lmx n lmx_walk_frame(ga, roles, parent, op, width)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        c.abort()
+return: n
+
+fn: argument (@: Lmx parent; size_t: slot; int: type; @: void fallback) @: Lmx
+    @: Lmx n frame(parent, slot, c.LMX_WALK_OP_ARG, 4U)
+    @: Lmx lit 0
+    lmx_walk_store_size(ga, n, 1U, 0U)
+    lmx_arena_ref_store(n, 3U, wt_witness(ga, type))
+    if: fallback != 0
+        lit: frame(n, 2U, c.LMX_WALK_OP_LIT, 2U)
+        lmx_arena_ref_store(lit, 1U, fallback)
+    ---
+return: n
+
+fn: main () int
+    LmxArena: arena
+    LmxPool: cells
+    LmxScratch: scratch
+    LmxWalkContext: context
+    LmxWalkFrame: active
+    LmxWalkValue: value
+    LmxWalkValue: address
+    @: Lmx unit 0
+    @: Lmx root 0
+    @: Lmx arg 0
+    @: Lmx addr 0
+    @: Lmx setarg 0
+    @: Lmx add 0
+    @: Lmx lit 0
+    @: Lmx model 0
+    @: Lmx good 0
+    @: Lmx other_good 0
+    @: Lmx bad 0
+    @: Lmx m 0
+    @: Lmx set 0
+    @: Lmx own 0
+    @: Lmx receive 0
+    @: Lmx put 0
+    @: Lmx target 0
+    @: LmxPrimitive admit 0
+    @: LmxWalkWork work 0
+    @: void fallback 0
+    @: void null_cell 0
+    @: void pointer_cell 0
+    @: void null_value 0
+    @: void supplied 0
+    @: void saved_place 0
+    @: void numeric_fallback 0
+    int: pointer_type c.LMX_TYPE_POINTER_BASE + 7
+    int: phase 0
+    int: status 0
+    memset(@ arena, 0, c.sizeof(c.LmxArena))
+    memset(@ cells, 0, c.sizeof(c.LmxPool))
+    memset(@ scratch, 0, c.sizeof(c.LmxScratch))
+    memset(@ context, 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0 || lmx_scratch_open(@ scratch, @ arena, @ cells, 32U) != c.LMX_SCRATCH_OK
+        return: 2
+    ga: @ arena
+    roles: lmx_walk_roles_open(ga)
+    context.arena: ga
+    context.scratch: @ scratch
+    context.roles: roles
+    unit: lmx_node_new_owned(ga)
+    root: lmx_walk_plain(ga, unit, 3U)
+    good: lmx_walk_plain(ga, unit, 1U)
+    lmx_walk_store_int(ga, good, 0U, 7)
+    fallback: lmx_pointer_new_owned(pointer_type, ga)
+    null_cell: lmx_pointer_new_owned(pointer_type, ga)
+    lmx_pointer_store_known(fallback, (cast: (@: void) good))
+    arg: argument(root, 0U, pointer_type, fallback)
+    addr: frame(root, 1U, c.LMX_WALK_OP_ADDRESS, 3U)
+    lmx_arena_ref_store(addr, 1U, (cast: (@: void) arg))
+    lmx_arena_ref_store(addr, 2U, wt_witness(ga, c.LMX_TYPE_POINTER_BASE + 1007))
+    setarg: frame(root, 2U, c.LMX_WALK_OP_SET_ARG, 4U)
+    lmx_walk_store_size(ga, setarg, 1U, 0U)
+    lmx_arena_ref_store(setarg, 3U, wt_witness(ga, pointer_type))
+    lit: frame(setarg, 2U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_arena_ref_store(lit, 1U, null_cell)
+
+    supplied: (cast: (@: void) (@ null_value))
+    status: lmx_walk_enter(@ active, @ context, root, root, @ supplied, 1U)
+    check(status = c.LMX_WALK_OK, "present-null activation opened")
+    status: lmx_walk_eval(@ active, (cast: (@: void) arg), @ value)
+    check(status = c.LMX_WALK_OK && (value.present) = 1 && (value.kind) = c.LMX_WALK_VALUE_REFERENCE && (value.ref) = 0, "present null does not use nonnull lexical fallback")
+    status: lmx_walk_eval(@ active, (cast: (@: void) addr), @ address)
+    saved_place: (address.ref)
+    check(status = c.LMX_WALK_OK && saved_place != 0 && saved_place != supplied && lmx_pointer_value_known(saved_place) = 0, "pointer input place is owned by callee, not the transport box")
+
+    supplied: 0
+    status: lmx_walk_enter(@ active, @ context, root, root, @ supplied, 1U)
+    status: lmx_walk_eval(@ active, (cast: (@: void) arg), @ value)
+    check(status = c.LMX_WALK_OK && (value.present) = 1 && (value.ref) = (cast: (@: void) good), "absent input reads nonnull lexical fallback")
+    status: lmx_walk_eval(@ active, (cast: (@: void) addr), @ address)
+    saved_place: (address.ref)
+    check(status = c.LMX_WALK_OK && saved_place != fallback && lmx_pointer_value_known(saved_place) = (cast: (@: void) good), "fallback is materialized in an activation-owned addressable cell")
+    status: lmx_walk_eval(@ active, (cast: (@: void) setarg), @ value)
+    check(status = c.LMX_WALK_OK && (value.present) = 1 && (value.ref) = 0, "SET_ARG can replace absent fallback with present null")
+    status: lmx_walk_eval(@ active, (cast: (@: void) addr), @ address)
+    check(status = c.LMX_WALK_OK && (address.ref) = saved_place && lmx_pointer_value_known(saved_place) = 0 && lmx_pointer_value_known(fallback) = (cast: (@: void) good), "rebinding preserves activation place and never mutates lexical fallback")
+    status: lmx_walk_eval(@ active, (cast: (@: void) arg), @ value)
+    check(status = c.LMX_WALK_OK && (value.present) = 1 && (value.ref) = 0, "rebound null remains present rather than falling back again")
+
+    # A numeric absent input exercises the same place path, not a pointer-only fix.
+    root: lmx_walk_plain(ga, unit, 3U)
+    numeric_fallback: lmx_int_new_owned(ga)
+    lmx_int_store_known(numeric_fallback, 41)
+    arg: argument(root, 0U, c.LMX_TYPE_INT, numeric_fallback)
+    setarg: frame(root, 1U, c.LMX_WALK_OP_SET_ARG, 4U)
+    lmx_walk_store_size(ga, setarg, 1U, 0U)
+    lmx_arena_ref_store(setarg, 3U, wt_witness(ga, c.LMX_TYPE_INT))
+    add: frame(setarg, 2U, c.LMX_WALK_OP_ADD, 3U)
+    lmx_arena_ref_store(add, 1U, (cast: (@: void) arg))
+    lit: frame(add, 2U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(ga, lit, 1U, 1)
+    addr: frame(root, 2U, c.LMX_WALK_OP_ADDRESS, 3U)
+    lmx_arena_ref_store(addr, 1U, (cast: (@: void) arg))
+    lmx_arena_ref_store(addr, 2U, wt_witness(ga, c.LMX_TYPE_POINTER_BASE + 1))
+    supplied: 0
+    status: lmx_walk_enter(@ active, @ context, root, root, @ supplied, 1U)
+    status: lmx_walk_eval(@ active, (cast: (@: void) setarg), @ value)
+    check(status = c.LMX_WALK_OK && (value.type) = c.LMX_TYPE_INT && (value.number) = 42, "absent numeric fallback read then SET_ARG computes42")
+    status: lmx_walk_eval(@ active, (cast: (@: void) addr), @ address)
+    saved_place: address.ref
+    check(status = c.LMX_WALK_OK && saved_place != numeric_fallback && lmx_int_value_known(saved_place) = 42 && lmx_int_value_known(numeric_fallback) = 41, "numeric fallback address names private updated cell")
+
+    # Observe dirty directly before any publication could hide a failed store.
+    model: lmx_walk_plain(ga, unit, 1U)
+    bad: lmx_walk_plain(ga, unit, 1U)
+    other_good: lmx_walk_plain(ga, unit, 1U)
+    lmx_walk_store_int(ga, model, 0U, 1)
+    lmx_walk_store_char(ga, bad, 0U, 65)
+    lmx_walk_store_int(ga, other_good, 0U, 9)
+    m: lmx_walk_plain(ga, unit, 3U)
+    pointer_cell: lmx_pointer_new_owned(pointer_type, ga)
+    lmx_pointer_store_known(pointer_cell, (cast: (@: void) good))
+    lmx_arena_ref_store(m, 0U, pointer_cell)
+    set: frame(m, 1U, c.LMX_WALK_OP_SET, 3U)
+    own: frame(set, 1U, c.LMX_WALK_OP_OWN, 3U)
+    lmx_walk_store_size(ga, own, 2U, 0U)
+    receive: frame(set, 2U, c.LMX_WALK_OP_PRIM, 5U)
+    admit: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    admit\fn: (cast: (LmxPrimitiveEntry) lmx_walk_admit)
+    admit\owner: (cast: (@: Lmx) ga)
+    admit\signature: wt_contract_same(ga, 2U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
+    lmx_arena_ref_store(receive, 1U, (cast: (@: void) admit))
+    lmx_arena_ref_store(receive, 3U, (cast: (@: void) bad))
+    lmx_arena_ref_store(receive, 4U, (cast: (@: void) model))
+    put: frame(m, 2U, c.LMX_WALK_OP_PUT, 3U)
+    target: frame(put, 1U, c.LMX_WALK_OP_AT, 3U)
+    lmx_walk_store_size(ga, target, 2U, 0U)
+    lmx_arena_ref_store(put, 2U, (cast: (@: void) receive))
+    while: phase < 2
+        lmx_pointer_store_known(pointer_cell, (cast: (@: void) good))
+        status: lmx_walk_enter(@ active, @ context, m, m, 0, 0U)
+        status: lmx_walk_load_code(@ active)
+        work: lmx_walk_work_find(@ active, lmx_arena_ref_cell(m, 0U))
+        if: status != c.LMX_WALK_OK || work = 0
+            return: 2
+        work\dirty: phase
+        status: lmx_walk_eval(@ active, (cast: (@: void) set), @ value)
+        check(status = c.LMX_WALK_THROWN + 2 && work\ref = (cast: (@: void) good) && work\dirty = phase && lmx_pointer_value_known(pointer_cell) = (cast: (@: void) good), "failed SET preserves both old binding and exact dirty bit")
+        status: lmx_walk_eval(@ active, (cast: (@: void) put), @ value)
+        check(status = c.LMX_WALK_THROWN + 2 && work\ref = (cast: (@: void) good) && work\dirty = phase && lmx_pointer_value_known(pointer_cell) = (cast: (@: void) good), "failed physical PUT preserves old cell and working dirty bit")
+        lmx_pointer_store_known(pointer_cell, (cast: (@: void) other_good))
+        status: lmx_walk_publish(@ active)
+        if: phase = 0
+            check(status = c.LMX_WALK_OK && lmx_pointer_value_known(pointer_cell) = (cast: (@: void) other_good), "failed clean reception cannot cause a later checkpoint to overwrite direct graph change")
+        else:
+            check(status = c.LMX_WALK_OK && lmx_pointer_value_known(pointer_cell) = (cast: (@: void) good), "preexisting dirty working value still publishes normally after refusal")
+        ---
+        phase: phase + 1
+    ---
+    c.printf("lmx_walk_value_transport_selftest checks=%d failures=%d\n", checks, failures)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(ga)
+    if: failures != 0
+        return: 1
+return: 0

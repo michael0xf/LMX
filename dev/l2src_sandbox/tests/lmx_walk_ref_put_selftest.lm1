@@ -102,7 +102,7 @@ sub: eq_case (@: Lmx unit; @: void left; @: void right; int: expected_status; in
     eq_operand(eq, 2U, m, right)
     status: go(m)
     if: expected_status = c.LMX_WALK_OK
-        check((cast: (int) (status = expected_status && gv\ref != 0 && lmx_int_value_known(gv\ref) = expected_value)), label)
+        check((cast: (int) (status = expected_status && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = expected_value)), label)
     else:
         check((cast: (int) (status = expected_status)), label)
     ---
@@ -165,18 +165,20 @@ fn: main () int
         return: 2
 
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    ref(n, 3U, model)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    atn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    ref(n, 2U, model)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && lmx_pointer_value_known(pcell) = (cast: (@: void) model))), "put Structure into pointer")
 
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    atn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    atn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    atn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: atn != 0 && lmx_walk_store_int(ga, atn, 1U, 7) != c.LMX_WALK_OK
         broken: broken + 1
     ---
@@ -184,23 +186,23 @@ fn: main () int
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "put int into pointer INVALID")
 
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    ref(n, 3U, model2)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    atn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    ref(n, 2U, model2)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && lmx_pointer_value_known(pcell) = (cast: (@: void) model2))), "put model2")
 
     m: mk_m(unit, 0U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     putn: fr(n, 1U, c.LMX_WALK_OP_OF, 3U)
-    atn: fr(putn, 1U, c.LMX_WALK_OP_DEREF, 2U)
-    ownn: fr(atn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ownn: fr(putn, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(ownn, 1U, holder)
     sz(ownn, 2U, 1U)
     sz(putn, 2U, 1U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 99)), "read after put model2")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 99)), "read after put model2")
 
     # Own: pointer cell field of M; SET own := model (its row: the declaration is the load point); RET own; the exit
     # publishes the cell (§7b).
@@ -258,9 +260,11 @@ fn: main () int
     eq_case(unit, pcell, same, c.LMX_WALK_OK, 1, "EQ two cells same pointee")
     eq_case(unit, nullcell, 0, c.LMX_WALK_OK, 1, "EQ typed null/working null")
     eq_case(unit, 0, nullcell, c.LMX_WALK_OK, 1, "EQ working null/typed null")
-    eq_case(unit, nullcell, integer_zero, c.LMX_WALK_OK, 1, "EQ typed null/int zero")
-    eq_case(unit, integer_zero, nullcell, c.LMX_WALK_OK, 1, "EQ int zero/typed null")
-    eq_case(unit, pcell, integer_zero, c.LMX_WALK_OK, 0, "EQ reference/int zero unequal")
+    # A source null conversion must produce a typed reference before EQ. A
+    # numeric runtime value, even zero, does not invent that source conversion.
+    eq_case(unit, nullcell, integer_zero, c.LMX_WALK_INVALID, 0, "EQ typed null/unconverted int zero refused")
+    eq_case(unit, integer_zero, nullcell, c.LMX_WALK_INVALID, 0, "EQ unconverted int zero/typed null refused")
+    eq_case(unit, pcell, integer_zero, c.LMX_WALK_INVALID, 0, "EQ reference/unconverted int zero refused")
     eq_case(unit, pcell, integer_seven, c.LMX_WALK_INVALID, 0, "EQ reference/nonzero int refused")
     eq_case(unit, integer_seven, pcell, c.LMX_WALK_INVALID, 0, "EQ nonzero int/reference refused")
     eq_case(unit, nested, nested_same, c.LMX_WALK_OK, 1, "EQ pointer cells share pointer-cell pointee")

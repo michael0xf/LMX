@@ -1,0 +1,46 @@
+# Borrowed operands retain their original index call and exact actual boundary.
+int: calls 0
+fn: index () size_t
+    node\calls: node\calls + 1
+return: 1U
+fn: write (@: int target; int: value) int
+    \target: value
+return: \target
+fn: count () int
+return: node\calls
+[]: int values 2
+values[0]: 41
+values[1]: 43
+int: result 7
+int: longSum 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
+if: longSum != 34
+    result: 81
+end: if
+int: wrote write(@values[index()], 47)
+if: wrote != 47 || values[0] != 41 || values[1] != 47 || count() != 1
+    result: 82
+end: if
+@: int selected (@: values[index()])
+if: selected != @values[1] || count() != 2
+    result: 83
+end: if
+if: 1 = 1 || values[index()] != 47
+    int: skipped 1
+end: if
+if: 1 = 0 && values[index()] != 47
+    result: 84
+end: if
+if: count() != 2
+    result: 85
+end: if
+if: 1 = 0 || values[index()] != 47
+    result: 86
+end: if
+if: 1 = 1 && values[index()] != 47
+    result: 87
+end: if
+if: count() != 4
+    result: 88
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

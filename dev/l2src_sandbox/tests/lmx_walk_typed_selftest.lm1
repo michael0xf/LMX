@@ -117,10 +117,11 @@ fn: main () int
     if: lmx_size_store_known(cell, ((cast: (size_t) 1U) << 32) + 7U) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(litn, 1U, holder)
+    sz(litn, 2U, 1U)
+    litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_size(ga, litn, 1U, 99U) != c.LMX_WALK_OK
         broken: broken + 1
     ---
@@ -138,10 +139,11 @@ fn: main () int
     if: cell = 0 || lmx_int_store_known(cell, 1) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(litn, 1U, holder)
+    sz(litn, 2U, 1U)
+    litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 5) != c.LMX_WALK_OK
         broken: broken + 1
     ---
@@ -154,14 +156,15 @@ fn: main () int
         return: 2
     ---
     holder: pl(unit, 1U, 2U)
-    cell: lmx_char_cell(ga, 97)
-    if: cell = 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
+    cell: lmx_char_new_owned(ga)
+    if: cell = 0 || lmx_char_store_known(cell, 97) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(litn, 1U, holder)
+    sz(litn, 2U, 1U)
+    litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_char(ga, litn, 1U, 98) != c.LMX_WALK_OK
         broken: broken + 1
     ---
@@ -179,10 +182,11 @@ fn: main () int
     if: ptr = 0 || lmx_arena_ref_store(holder, 1U, ptr) != 0
         return: 2
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(litn, 1U, holder)
+    sz(litn, 2U, 1U)
+    litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 1) != c.LMX_WALK_OK
         broken: broken + 1
     ---
@@ -198,10 +202,11 @@ fn: main () int
     if: cell = 0 || lmx_size_store_known(cell, 1U) != 0 || lmx_arena_ref_store(holder, 1U, cell) != 0
         return: 2
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(litn, 1U, holder)
+    sz(litn, 2U, 1U)
+    litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 99) != c.LMX_WALK_OK
         broken: broken + 1
     ---

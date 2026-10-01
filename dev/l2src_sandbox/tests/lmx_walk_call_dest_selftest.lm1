@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -12,10 +13,8 @@ predef: "l2src/lmx_value_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -174 c4 / k.4: CALL dest is a fresh typed cell of the type the CALL's rtype operand
-# (a reference to the callee's declared result cell) classifies as.
-# A size_t trampoline writes 8 bytes; the evaluator int temp is 4. Mutant: pass
-# dest (int temp) -> truncated / RED.
+# Native callbacks receive a declared-width result destination. CHAR and SIZE_T
+# snapshots survive nested calls without arena allocation or result aliasing.
 
 @: LmxArena ga 0
 @: Lmx groles 0
@@ -93,6 +92,10 @@ return: 0
 
 sub: char_cells (@: Lmx unit)
     LmxWalkFrame: frame
+    LmxWalkPlace: place
+    LmxWalkValue: supplied
+    LmxWalkValue: received
+    LmxWalkValue: first_value
     @: void a lmx_char_new_owned(ga)
     @: void b lmx_char_new_owned(ga)
     @: void result 0
@@ -115,21 +118,25 @@ sub: char_cells (@: Lmx unit)
     actual: lmx_char_cell(ga, 65)
     frame.args: @ actual
     frame.nargs: 1U
+    if: lmx_walk_args_open(@ frame) != c.LMX_WALK_OK
+        c.abort()
     if: a = 0 || b = 0 || actual = 0
         c.abort()
     lmx_char_store_known(a, 65)
     saved: a
     check(lmx_walk_store_slot(ga, @ a, 66U) = c.LMX_WALK_OK && a = saved && lmx_char_value_known(a) = 66, "published char mutates existing slot cell")
     check(lmx_walk_store_numeric_into(ga, actual, 66U) = c.LMX_WALK_INVALID && lmx_char_value_known(actual) = 65, "an arbitrary char operand is not a mutable destination")
-    st: lmx_walk_arg_write(@ frame, 0U, lmx_char_cell(ga, 66), @ spare, @ result)
-    saved: result
-    check(st = c.LMX_WALK_OK && result != actual && result != lmx_char_cell(ga, 66) && lmx_char_value_known(actual) = 65, "formal char assignment owns its cell without mutating actual")
-    st: lmx_walk_arg_write(@ frame, 0U, lmx_char_cell(ga, 67), @ spare, @ result)
-    check(st = c.LMX_WALK_OK && result = saved && lmx_char_value_known(result) = 67 && lmx_char_value_known(lmx_char_cell(ga, 66)) = 66, "repeated char formal assignment preserves local cell")
-    st: lmx_walk_arith_out(@ frame, a, c.LMX_TYPE_CHAR, 68U, @ result)
-    check(st = c.LMX_WALK_OK && result = lmx_char_cell(ga, 68) && lmx_char_value_known(a) = 66, "char expression temporary is interned, not written into arbitrary destination")
-    st: lmx_walk_call_dest(@ frame, actual, c.LMX_TYPE_CHAR, @ dest)
-    check(st = c.LMX_WALK_OK && dest != actual && dest != lmx_char_cell(ga, 0), "char call result never borrows an interned destination")
+    lmx_walk_value_num(@ supplied, c.LMX_TYPE_CHAR, 66U)
+    st: lmx_walk_arg_write(@ frame, 0U, c.LMX_TYPE_CHAR, @ supplied, @ received)
+    lmx_walk_arg_place(@ frame, 0U, c.LMX_TYPE_CHAR, @ place)
+    saved: (place.address)
+    check(st = c.LMX_WALK_OK && saved != actual && saved != lmx_char_cell(ga, 66) && lmx_char_value_known(actual) = 65 && (received.byte) = 66, "formal char assignment owns its cell without mutating actual")
+    lmx_walk_value_num(@ supplied, c.LMX_TYPE_CHAR, 67U)
+    st: lmx_walk_arg_write(@ frame, 0U, c.LMX_TYPE_CHAR, @ supplied, @ received)
+    lmx_walk_arg_place(@ frame, 0U, c.LMX_TYPE_CHAR, @ place)
+    check(st = c.LMX_WALK_OK && (place.address) = saved && lmx_char_value_known(saved) = 67 && lmx_char_value_known(lmx_char_cell(ga, 66)) = 66, "repeated char formal assignment preserves local cell")
+    st: lmx_walk_value_num(@ supplied, c.LMX_TYPE_CHAR, 68U)
+    check(st = c.LMX_WALK_OK && (supplied.present) != 0 && (supplied.type) = c.LMX_TYPE_CHAR && (supplied.byte) = 68 && lmx_char_value_known(a) = 66 && lmx_char_value_known(lmx_char_cell(ga, 68)) = 68, "char expression temporary has its own typed value and preserves literal intern")
     callee: mk_m(unit, 2U, 2U)
     lmx_arena_ref_store(callee, 0U, a)
     ret: fr(callee, 1U, c.LMX_WALK_OP_RET, 2U)
@@ -140,17 +147,16 @@ sub: char_cells (@: Lmx unit)
     call: fr(caller, 0U, c.LMX_WALK_OP_CALL, 5U)
     ref(call, 1U, callee)
     ref(call, 2U, callee)
-    ref(call, 3U, (cast: (@: Lmx) b))
+    ref(call, 3U, wt_contract_same(ga, 0U, 0, c.LMX_TYPE_CHAR))
     st: go(caller)
-    saved: gv\ref
-    check(st = c.LMX_WALK_OK && saved != a && lmx_char_value_known(saved) = 66, "walked own char return is copied to caller result cell")
+    memcpy(@ first_value, gv, c.sizeof(c.LmxWalkValue))
+    check(st = c.LMX_WALK_OK && (first_value.present) != 0 && (first_value.type) = c.LMX_TYPE_CHAR && (first_value.byte) = 66, "walked own char return is an independent typed value")
     lmx_char_store_known(a, 67)
     st: go(caller)
-    repeated: gv\ref
-    check(st = c.LMX_WALK_OK && repeated != saved && lmx_char_value_known(repeated) = 67 && lmx_char_value_known(saved) = 66, "two walked char results retain independent values")
+    check(st = c.LMX_WALK_OK && gv\type = c.LMX_TYPE_CHAR && gv\byte = 67 && (first_value.byte) = 66, "two walked char results retain independent values")
     callee\native: (cast: (LmxEntry) g1_char)
     st: go(caller)
-    check(st = c.LMX_WALK_OK && lmx_char_value_known(gv\ref) = (cast: (int) (cast: (char) 200)) && lmx_char_value_known(lmx_char_cell(ga, 0)) = 0, "native char trampoline receives mutable typed destination")
+    check(st = c.LMX_WALK_OK && gv\type = c.LMX_TYPE_CHAR && gv\byte = (cast: (char) 200) && lmx_char_value_known(lmx_char_cell(ga, 0)) = 0, "native char trampoline receives mutable typed destination")
     copied: lmx_walk_capture(ga, unit, callee, callee, @ field, 1U)
     result: lmx_arena_ref_value(copied, 0U)
     check(copied != 0 && result != a && lmx_char_value_known(result) = 67, "char capture owns independent cell")
@@ -169,7 +175,7 @@ fn: main () int
     @: Lmx n 0
     @: Lmx native 0
     @: Lmx caller 0
-    @: void rtype_cell 0
+    @: void return_contract 0
     size_t: got 0U
     size_t: want 1U
     int: st 0
@@ -196,13 +202,11 @@ fn: main () int
     if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 8U) != 0
         return: 2
     ---
-    # k.4: no descriptor, no LmxMethod/LmxCallable -- dispatch is the `native` word
-    # directly, and the result type comes from classifying the CALL's rtype operand
-    # (a reference to a size_t-typed cell here) rather than a sig mark.
+    # The actual native word is dispatched with a SIZE_T return contract.
     native: mk_m(unit, 1U, 0U)
     caller: mk_m(unit, 0U, 1U)
-    rtype_cell: lmx_size_new_owned(ga)
-    if: native = 0 || caller = 0 || rtype_cell = 0
+    return_contract: (cast: (@: void) wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_SIZE_T))
+    if: native = 0 || caller = 0 || return_contract = 0
         return: 2
     ---
     native\native: (cast: (LmxEntry) g1_wide)
@@ -210,17 +214,26 @@ fn: main () int
     n: fr(caller, 0U, c.LMX_WALK_OP_CALL, 5U)
     ref(n, 1U, native)
     ref(n, 2U, native)
-    ref(n, 3U, (cast: (@: Lmx) rtype_cell))
+    ref(n, 3U, (cast: (@: Lmx) return_contract))
     st: go(caller)
     want: 1U
     want: want << 32
     want: want + 7U
-    if: st = c.LMX_WALK_OK && gv\ref != 0
-        got: lmx_size_value_known(gv\ref)
+    if: st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_SIZE_T
+        got: gv\wide
     ---
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && gv\ref != (cast: (@: void) (@ gv\number)))), "CALL dest is not the int temp")
+    check((cast: (int) (st = c.LMX_WALK_OK && lmx_walk_value_storage(gv) = (cast: (@: void) (@ gv\wide)) && lmx_walk_value_storage(gv) != (cast: (@: void) (@ gv\number)))), "CALL dest is not the int temp")
     check((cast: (int) (st = c.LMX_WALK_OK && got = want)), "size_t trampoline dest holds full 2^32+7")
-    check((cast: (int) (gv\ref != 0 && lmx_walk_numeric_type(ga, gv\ref) = c.LMX_TYPE_SIZE_T)), "dest cell type is SIZE_T")
+    check((cast: (int) (gv\present != 0 && gv\type = c.LMX_TYPE_SIZE_T)), "dest cell type is SIZE_T")
+
+    # A declared void call discards its walked body's last numeric CALL value.
+    m: mk_m(unit, 4U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_CALL, 5U)
+    ref(n, 1U, caller)
+    ref(n, 2U, caller)
+    ref(n, 3U, wt_contract_same(ga, 0U, 0, 0))
+    st: go(m)
+    check(st = c.LMX_WALK_OK && gv\present = 0, "void CALL discards walked body-last numeric value")
 
     char_cells(unit)
     c.printf("lmx_walk_call_dest_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)

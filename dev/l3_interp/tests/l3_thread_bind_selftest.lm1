@@ -96,7 +96,7 @@ fn: mk_walk_int (@: LmxArena a; @: Lmx roles; int: value) @: Lmx
 return: m
 
 # q40: an entry whose body is `return: <its argument 0>` (RET over ARG 0).  The turn passes no
-# argument -- execute(code data) with data = code is no argument -- so reading one is refused.
+# argument, so reading a declared input without a supplied value or fallback is refused.
 fn: mk_walk_arg0 (@: LmxArena a; @: Lmx roles) @: Lmx
     @: Lmx m
     @: Lmx ret
@@ -107,8 +107,10 @@ fn: mk_walk_arg0 (@: LmxArena a; @: Lmx roles) @: Lmx
     ret: lmx_walk_frame(a, roles, m, c.LMX_WALK_OP_RET, 2U)
     if: ret = 0 || lmx_arena_ref_store(m, 1U, (cast: (@: void) ret)) != 0
         return: 0
-    arg: lmx_walk_frame(a, roles, ret, c.LMX_WALK_OP_ARG, 2U)
+    arg: lmx_walk_frame(a, roles, ret, c.LMX_WALK_OP_ARG, 4U)
     if: arg = 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) arg)) != 0 || lmx_walk_store_size(a, arg, 1U, 0U) != c.LMX_WALK_OK
+        return: 0
+    if: lmx_walk_store_int(a, arg, 3U, 0) != c.LMX_WALK_OK
         return: 0
 return: m
 

@@ -13,13 +13,15 @@ return: 7
 fn: check () int
     @: Model ref
     ref: @ Model
+    @@: Model physical @ref
     int: value read(ref)
     int: flat takeCell(@ ref)
-    if: ref != 0
+    # Explicit cell writes do not reload the caller's working pointer.
+    if: \physical != 0 || ref != @ Model
         return: 0
     ref: @ Model
     int: frame takeCell(@: ref)
-    if: ref != 0 || Model\value != 7
+    if: \physical != 0 || ref != @ Model || Model\value != 7
         return: 0
     int: n 7
     @: int p

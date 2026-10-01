@@ -1,10 +1,8 @@
-# The execution pair (FABLE-OPUS-CODE-DATA-SPLIT-20260925-189 commit c3a; next_core_tasks.md §3 item 7;
-# Q28): a call from outside a cycle of calls runs over the callee's own graph, (M, M), and a field
-# whose declaration did not run in this activation keeps the previous activation's value.
+# Both calls execute the same declared occurrence. A declaration skipped by the
+# second call does not replace or reinitialize the physical field.
 # - keep(1) reaches `int: v 7`: keep\v is 7 (h).
 # - keep(0) returns before the declaration, so keep\v is still keep(1)'s 7.
-# h * 10 + keep\v is 77.  A fresh instance for every activation (c2, and option (ii)) gives 70 with
-# the slot showing the latest instance, or 0 with the instance frame-only, not in the slot.
+# h * 10 + keep\v is77; resetting the skipped field would incorrectly produce70.
 fn: keep (int: go) int
     if: go = 0
         return: 0

@@ -1,4 +1,5 @@
 predef: "l2src/lmx_call.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l2src/lmx_value_owned.lm1"
 predef: "l2src/lmx_arena_refs.lm1"
@@ -68,8 +69,9 @@ fn: main () int
     gc_check(counts, add_e != 0, "RET frame")
     add_e: gc_fr(@ arena, roles, add_e, 1U, c.LMX_WALK_OP_ADD, 3U)
     gc_check(counts, add_e != 0, "ADD frame under RET")
-    arg_e: gc_fr(@ arena, roles, add_e, 1U, c.LMX_WALK_OP_ARG, 2U)
+    arg_e: gc_fr(@ arena, roles, add_e, 1U, c.LMX_WALK_OP_ARG, 4U)
     gc_check(counts, arg_e != 0 && lmx_walk_store_size(@ arena, arg_e, 1U, 0U) = c.LMX_WALK_OK, "ARG 0 operand")
+    lmx_arena_ref_store(arg_e, 3U, wt_witness(@ arena, c.LMX_TYPE_INT))
     lit_e: gc_fr(@ arena, roles, add_e, 2U, c.LMX_WALK_OP_LIT, 2U)
     gc_check(counts, lit_e != 0 && lmx_walk_store_int(@ arena, lit_e, 1U, 1) = c.LMX_WALK_OK, "LIT 1 operand")
 

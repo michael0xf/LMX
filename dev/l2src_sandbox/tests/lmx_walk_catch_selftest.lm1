@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -128,6 +129,8 @@ fn: main () int
     @: void cell_b 0
     @: void admitted 0
     @@: void arefs 0
+    @: void value_box 0
+    @: void model_box 0
     @: Lmx callee 0
     @: Lmx inner 0
     @: Lmx outer_pad 0
@@ -159,14 +162,14 @@ fn: main () int
     if: prim = 0
         return: 2
     prim\fn: throw_merge
-    prim\signature: 0
+    prim\signature: wt_contract_same(ga, 0U, 0, 0)
     prim\owner: (cast: (@: Lmx) ga)
     prim_rec: (cast: (@: Lmx) prim)
     counter: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
     if: counter = 0
         return: 2
     counter\fn: count_ok
-    counter\signature: 0
+    counter\signature: wt_contract_same(ga, 0U, 0, 0)
     counter\owner: (cast: (@: Lmx) ga)
 
     # catch 0: the throw propagates, the literal after it does not run.
@@ -204,7 +207,7 @@ fn: main () int
     ret7(m, 2U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK)), "numeric catch resumes")
-    check((cast: (int) (gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "numeric catch reaches literal 7")
+    check((cast: (int) (gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "numeric catch reaches literal 7")
     check((cast: (int) (cell != 0 && lmx_int_value_known(cell) = 41)), "numeric parameter is 41")
 
     # A pad reached in order is a no-op. The literal after it still runs.
@@ -214,7 +217,7 @@ fn: main () int
     ref(pad, 1U, (cast: (@: void) handler))
     ret7(m, 1U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "pad in order is skipped")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "pad in order is skipped")
 
     # Structure parameter, admit YES: empty model, store the argument reference.
     model: pl(unit, 0U)
@@ -239,7 +242,7 @@ fn: main () int
     ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "structure catch resumes")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "structure catch resumes")
     check((cast: (int) (lmx_pointer_value_known(pcell) = (cast: (@: void) value))), "structure parameter is the argument reference")
 
     # Structure parameter: bind stores the reference and does not admit, even when the
@@ -269,14 +272,16 @@ fn: main () int
     ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "structure bind stores without admit")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "structure bind stores without admit")
     check((cast: (int) (lmx_pointer_value_known(pcell) = (cast: (@: void) value))), "structure bind keeps the argument reference")
     arefs: (cast: (@@: void) calloc(2U, c.sizeof(@: void)))
     if: arefs = 0
         broken: broken + 1
     else:
-        arefs[0]: (cast: (@: void) value)
-        arefs[1]: (cast: (@: void) model)
+        value_box: (cast: (@: void) value)
+        model_box: (cast: (@: void) model)
+        arefs[0]: (cast: (@: void) (@ value_box))
+        arefs[1]: (cast: (@: void) (@ model_box))
         st: lmx_walk_admit((cast: (@: void) ga), arefs, 2U, 0, @ admitted)
         check((cast: (int) (st = c.LMX_PRIMITIVE_THROW_IMPLEMENTS)), "admit NO is a separate step")
     ---
@@ -314,7 +319,7 @@ fn: main () int
     ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 3U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "continue after pad returns 7")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "continue after pad returns 7")
     check((cast: (int) (gcount = 1)), "body before the pad runs once")
     prim\fn: throw_merge
 
@@ -369,7 +374,7 @@ fn: main () int
     ref(pn, 4U, (cast: (@: void) pad))
     ret7(m, 3U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw in the handler lands on the outer pad")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "throw in the handler lands on the outer pad")
 
     # A throw in the handler that names no pad must leave. The handler throws
     # only on its first entry, so a landing that is not cleared comes back,
@@ -419,7 +424,7 @@ fn: main () int
     ref(call, 4U, (cast: (@: void) pad))
     ret7(m, 3U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gcount = 1 && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw onto a sibling pad of the same body lands once")
+    check((cast: (int) (st = c.LMX_WALK_OK && gcount = 1 && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "throw onto a sibling pad of the same body lands once")
 
     # (d) A throw inside an IF body lands on the pad of the enclosing block.
     gpayload: 0
@@ -442,7 +447,7 @@ fn: main () int
     ---
     ref(callee, 4U, (cast: (@: void) pad))
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7)), "throw inside IF lands on the block pad")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7)), "throw inside IF lands on the block pad")
 
     # (e) Walked callee renumbers through pad 0. The caller binds the payload activate returned.
     holder: pl(unit, 1U)
@@ -463,6 +468,7 @@ fn: main () int
     ---
     m: pl(unit, 3U)
     call: fr(m, 0U, c.LMX_WALK_OP_CALL, 8U)
+    ref(call, 3U, (cast: (@: void) wt_contract_same(ga, 0U, 0, 0)))
     ref(call, 1U, (cast: (@: void) callee))
     ref(call, 2U, (cast: (@: void) callee))
     if: lmx_walk_store_size(ga, call, 4U, 1U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, call, 5U, 4U) != c.LMX_WALK_OK || lmx_walk_store_size(ga, call, 7U, 1U) != c.LMX_WALK_OK
@@ -475,7 +481,7 @@ fn: main () int
     ref(call, 6U, (cast: (@: void) pad))
     ret7(m, 2U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 7 && lmx_int_value_known(cell) = 41)), "walked callee payload is bound")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 7 && lmx_int_value_known(cell) = 41)), "walked callee payload is bound")
 
     # The same catch route binds a CHAR payload into a fresh declared parameter,
     # without modifying the payload literal or replacing that parameter's address.

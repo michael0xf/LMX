@@ -16,23 +16,18 @@ predef: "l2src/lmx_arena.h.lm1"
 # and a refusal is the translator's business (§3 item 8, "отказ — дело транслятора"), not a
 # domain check here.
 #
-# A method's typed entry receives the RESERVED NODE FIRST, selected SELF second, then the
-# arguments its signature lists; its status is the result carrier of 21.13.4.  Generated code
-# calls it directly, by its symbol.  `native` is not that entry: it is the method's TRAMPOLINE
-# (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38), the one prim ABI every dynamic call uses
-# (LmxPrimitiveEntry, lmx_primitive.h.lm1): owner = the occurrence, the inputs as references,
-# the value through dest/out, the callee's throw status as the return.
+# The selected occurrence's native word names its uniform ABI adapter. The adapter
+# receives owner=self, ordered declared-width value storage, and dest/out for the
+# result; its return is status. It invokes the implementation's typed body with
+# reserved node=self.parent, self, and the declared/dynamic values.
 #
 # The ORDER of the arguments is settled, not open: spec 518 -- the signature "begins with
 # reserved `Lmx *node` and lists declared/dynamic values in DETERMINISTIC ORDER"; the CALLER
 # (the translator) knows its own argument order, because it wrote the signature.
 #
-# ADMISSION IS DECIDED, and decided AGAINST for this stage -- Mikhail, 2026-09-18, verbatim:
-# "сверок на данном этапе надо не больше чем в Си. Так как полная типизация будет делаться
-# отдельно".  So there is NO signature check here: like C, the call goes through the
-# occurrence's typed `native` word directly, and matching the signature to the call site is
-# the TRANSLATOR's business, because the translator is what wrote both.  Full typing is a
-# separate, later effort.
+# The translator resolves source compatibility and structural admission. The walker
+# uses the call's physical args/return contract for exact-width ABI marshalling;
+# this dispatcher does not infer types from payload addresses or callback identity.
 # Host/root entries that are not graph callables may still use the one-node shape below.
 fnptr: LmxCallEntry (@: Lmx node) int
 # Optional walker for native == 0 (installed by lmx_walk / program bind).
@@ -77,12 +72,13 @@ prototype:
     fn: lmx_call_note_walk_fail (int: st) void
     fn: lmx_call_clear_walk_fail () void
     fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
-    # THE DYNAMIC CALL (-188 k.3b): every call whose callee is known only at run time, in the
-    # prim ABI.  Dispatch on CODE (child 0 / METHOD.addr; native word after k.4).  Owner = DATA
-    # = self; node = data.parent.  METHOD.addr != 0: trampoline(owner=data, ...), builds nothing.
-    # METHOD.addr == 0 (-194 к.4, G-call): the prim-walk hook below, carrying data/args/dest
-    # through.  Return is 0 or the callee's throw status; the value comes through dest/out.  A
-    # code that is not a callable occurrence is the caller's broken promise (X1).
+    # Dispatch the selected complete occurrence: nonzero native invokes its adapter;
+    # zero native invokes the installed walk hook on the same occurrence. Ordinary
+    # callers pass the same Structure as code and data; no separate data graph is built.
+    # Return is success or the callee's throw status; values travel through dest/out.
+    # refs[k] is value storage, not a held pointer; null storage is absent and
+    # a pointer payload of zero is present-null. A code that is not a callable
+    # occurrence is the caller's broken promise (X1).
     fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     fn: lmx_call_install_prim_walk (LmxCallPrimWalkFn: fn) void
 end: prototype

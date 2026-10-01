@@ -1,5 +1,6 @@
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_call.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_walk.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_turn.lm1"
@@ -336,6 +337,7 @@ fn: main () int
     tt_check(counts, call_node != 0, "G2 CALL frame")
     tt_check(counts, lmx_arena_ref_store(call_node, 1U, (cast: (@: void) thrower)) = 0, "G2 CALL -> thrower code")
     tt_check(counts, lmx_arena_ref_store(call_node, 2U, (cast: (@: void) thrower)) = 0, "G2 CALL -> thrower data")
+    lmx_arena_ref_store(call_node, 3U, (cast: (@: void) wt_contract_same(arena_at, 0U, c.LMX_TYPE_INT, 0)))
     tt_check(counts, lmx_arena_ref_store(walk_graph, 0U, (cast: (@: void) call_node)) = 0, "G2 CALL as body step")
     built: tt_message(@ arena, walk_graph, @ walk_message, @ walk_thread, @ walk_mail, @ walk_sched)
     tt_check(counts, built != 0 && walk_message != 0 && walk_thread != 0, "G2 Message built")

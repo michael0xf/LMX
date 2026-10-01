@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -131,7 +132,7 @@ fn: main () int
     if: prim = 0
         return: 2
     prim\fn: lmx_walk_merge_model
-    prim\signature: 0
+    prim\signature: wt_contract_same(ga, 1U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
     prim\owner: (cast: (@: Lmx) ga)
     prim_rec: (cast: (@: Lmx) prim)
 
@@ -144,15 +145,15 @@ fn: main () int
     ---
     # SET/PUT path: put merge result into pointer via ordinary PUT (holder = m as struct with field)
     # Simpler: PUT holder unit-field then PUT_OF into deref.
-    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, holder)
-    sz(n, 2U, 1U)
-    pn: fr(n, 3U, c.LMX_WALK_OP_PRIM, 4U)
+    n: fr(m, 1U, c.LMX_WALK_OP_PUT, 3U)
+    atn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    pn: fr(n, 2U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_rec)
     ref(pn, 3U, model)
     putn: fr(m, 2U, c.LMX_WALK_OP_PUT_OF, 4U)
-    der: fr(putn, 1U, c.LMX_WALK_OP_DEREF, 2U)
-    atn: fr(der, 1U, c.LMX_WALK_OP_AT, 3U)
+    atn: fr(putn, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(atn, 1U, holder)
     sz(atn, 2U, 1U)
     sz(putn, 2U, 0U)
@@ -166,20 +167,17 @@ fn: main () int
     got: lmx_pointer_value_known(pcell)
     check((cast: (int) (got != 0 && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) got), 0U)) = 7)), "slot0 is 7 after PUT_OF")
 
-    # Mutant2 witness: plain PUT with DEREF holder is INVALID (walk_slot X1)
+    # A computed value is not a physical place; PUT must not write it.
     m: mk_m(unit, 0U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    der: fr(n, 1U, c.LMX_WALK_OP_DEREF, 2U)
-    atn: fr(der, 1U, c.LMX_WALK_OP_AT, 3U)
-    ref(atn, 1U, holder)
-    sz(atn, 2U, 1U)
-    sz(n, 2U, 0U)
-    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    der: fr(n, 1U, c.LMX_WALK_OP_LIT, 2U)
+    ref(der, 1U, model)
+    litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 9) != c.LMX_WALK_OK
         broken: broken + 1
     ---
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_INVALID)), "PUT with DEREF holder INVALID")
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "PUT with a non-place value INVALID")
 
     c.printf("lmx_walk_put_of_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

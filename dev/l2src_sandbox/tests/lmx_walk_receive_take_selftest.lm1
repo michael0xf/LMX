@@ -1,5 +1,6 @@
 predef: "l2src/lmx_thread.lm1"
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_scratch.lm1"
 predef: "l2src/lmx_post.lm1"
 predef: "l2src/lmx_schedule.lm1"
@@ -154,7 +155,7 @@ fn: main () int
         return: 2
     ---
     prim\fn: lmx_walk_mail_take
-    prim\signature: 0
+    prim\signature: wt_contract_same(ga, 0U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
     prim\owner: 0
     prim_rec: (cast: (@: Lmx) prim)
 
@@ -164,7 +165,7 @@ fn: main () int
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 3U)
     ref(pn, 1U, prim_rec)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = 0)), "take empty -> null")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 1 && gv\kind = c.LMX_WALK_VALUE_REFERENCE && gv\ref = 0)), "take empty -> null")
 
     # accept one letter; take -> letter graph
     letter: (cast: (@: LmxMsg) lmx_arena_take(ga, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
@@ -185,10 +186,11 @@ fn: main () int
     # PUT null (empty take as value) then EQ AT(pointer) vs LIT 0 -> true
     # k.4: no descriptor slot -- PUT at slot 0, RET at slot 1.
     m: mk_m(unit, 0U, 2U)
-    putn: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(putn, 1U, holder)
-    sz(putn, 2U, 1U)
-    pn: fr(putn, 3U, c.LMX_WALK_OP_PRIM, 3U)
+    putn: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    atn: fr(putn, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(atn, 1U, holder)
+    sz(atn, 2U, 1U)
+    pn: fr(putn, 2U, c.LMX_WALK_OP_PRIM, 3U)
     ref(pn, 1U, prim_rec)
     eqn: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
     n: fr(eqn, 1U, c.LMX_WALK_OP_EQ, 3U)
@@ -196,11 +198,11 @@ fn: main () int
     ref(atn, 1U, holder)
     sz(atn, 2U, 1U)
     litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
-    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
+    if: litn != 0 && lmx_arena_ref_store(litn, 1U, lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 7, ga)) != 0
         broken: broken + 1
     ---
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref != 0 && lmx_int_value_known(gv\ref) = 1)), "PUT null then EQ 0 true")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 1)), "PUT null then EQ 0 true")
     check((cast: (int) (lmx_pointer_value_known(pcell) = 0)), "pointer cell holds null")
 
     lmx_thread_leave(thread)

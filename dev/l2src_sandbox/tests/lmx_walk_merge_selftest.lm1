@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_merge_owned.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
@@ -45,12 +46,12 @@ fn: mw_pairs (@: LmxArena arena; @: Lmx s; size_t: pslot; size_t: at; size_t: p0
         return: 1
 return: 0
 
-fn: mw_prim_record (@: LmxArena arena; LmxPrimitiveEntry: fn) @: LmxPrimitive
+fn: mw_prim_record (@: LmxArena arena; LmxPrimitiveEntry: fn; @: Lmx signature) @: LmxPrimitive
     @: LmxPrimitive rec (cast: (@: LmxPrimitive) lmx_arena_take(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
     if: rec = 0
         return: 0
     rec\fn: fn
-    rec\signature: 0
+    rec\signature: signature
     rec\owner: (cast: (@: Lmx) arena)
 return: rec
 
@@ -60,6 +61,9 @@ fn: main () int
     LmxScratch: scratch
     LmxPool: cells
     LmxWalkContext: ctx
+    LmxWalkValue: result
+    @: int types (cast: (@: int) calloc(7U, c.sizeof(int)))
+    @: Lmx contract 0
     @: Lmx roles 0
     @: Lmx unit 0
 
@@ -89,7 +93,7 @@ fn: main () int
     int: present_b 0
     int: failures 0
 
-    if: counts = 0
+    if: counts = 0 || types = 0
         return: 2
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
@@ -123,7 +127,15 @@ fn: main () int
     lmx_arena_ref_store(operand, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
     lmx_int_store_known(lmx_arena_ref_value(operand, 0U), 99)
     pairs_a: 0
-    rec_a: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map))
+    types[0]: c.LMX_TYPE_SIZE_T
+    types[1]: c.LMX_TYPE_LMX
+    types[2]: c.LMX_TYPE_LMX
+    types[3]: c.LMX_TYPE_LMX
+    types[4]: c.LMX_TYPE_SIZE_T
+    types[5]: c.LMX_TYPE_SIZE_T
+    types[6]: c.LMX_TYPE_SIZE_T
+    contract: wt_contract(@ arena, 7U, types, c.LMX_TYPE_LMX)
+    rec_a: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
     mw_check(counts, rec_a != 0, "merge-map primitive record built")
 
     caller_a: lmx_node_new_owned(@ arena)
@@ -137,7 +149,9 @@ fn: main () int
     mw_check(counts, mw_pairs(@ arena, prim_a, 3U, 7U, 0U, 1U, 0U) = 0, "pairs_a inline: model slot 0 <- operand(1) field 0")
     mw_check(counts, prim_a != 0, "caller_a graph built")
 
-    st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, (cast: (@: void) (@ r_a)), @ out_a, @ present_a)
+    st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, @ result)
+    out_a: (result.ref)
+    present_a: (result.present)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-map PRIM walked OK")
     mw_check(counts, present_a != 0 && out_a != 0 && out_a != (cast: (@: void) (@ r_a)), "merge-map result is a Structure reference, not a computed int")
     mw_check(counts, ((cast: (@: Lmx) out_a)\array.size) = 1U, "merge result has model's own width (1)")
@@ -154,7 +168,14 @@ fn: main () int
     lmx_arena_ref_store(op_b, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
     lmx_int_store_known(lmx_arena_ref_value(op_b, 0U), 42)
     pairs_b: 0
-    rec_b: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_into_map))
+    types[0]: c.LMX_TYPE_LMX
+    types[1]: c.LMX_TYPE_LMX
+    types[2]: c.LMX_TYPE_SIZE_T
+    types[3]: c.LMX_TYPE_SIZE_T
+    types[4]: c.LMX_TYPE_SIZE_T
+    types[5]: c.LMX_TYPE_SIZE_T
+    contract: wt_contract(@ arena, 6U, types, 0)
+    rec_b: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_into_map), contract)
     mw_check(counts, rec_b != 0, "merge-into primitive record built")
 
     caller_b: lmx_node_new_owned(@ arena)
@@ -167,7 +188,9 @@ fn: main () int
     mw_check(counts, mw_pairs(@ arena, prim_b, 5U, 6U, 0U, 0U, 0U) = 0, "pairs_b inline: target slot 0 <- op field 0")
     mw_check(counts, prim_b != 0, "caller_b graph built (bare PRIM statement, no RET)")
 
-    st: lmx_walk_activate(@ ctx, caller_b, caller_b, 0, 0U, (cast: (@: void) (@ r_b)), @ out_b, @ present_b)
+    st: lmx_walk_activate(@ ctx, caller_b, caller_b, 0, 0U, @ result)
+    out_b: (result.ref)
+    present_b: (result.present)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-into PRIM walked OK")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value(target_b, 0U)) = 42, "merge-into wrote op's 42 into target's own slot 0 (mutant: pairs ignored -> INVALID or target untouched, RED)")
     mw_check(counts, (target_b\array.size) = 1U, "target's own layout unchanged (nothing built fresh)")
@@ -208,7 +231,12 @@ fn: main () int
     # only thing that pool ever holds is profile_c, so sealing it right after has no
     # effect on anything else (lmx_copy_profiles_valid, lmx_graph_copy_owned.lm1:
     # 313-345, requires a retain-profile marker's OWN home pool to be sealed).
-    rec_c: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map))
+    types[0]: c.LMX_TYPE_SIZE_T
+    types[1]: c.LMX_TYPE_LMX
+    types[2]: c.LMX_TYPE_LMX
+    types[3]: c.LMX_TYPE_LMX
+    contract: wt_contract(@ arena, 4U, types, c.LMX_TYPE_LMX)
+    rec_c: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
     mw_check(counts, rec_c != 0, "merge-map primitive record built (retained-leaf fixture)")
     caller_c: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_c != 0 && lmx_arena_refs_open_owned(@ arena, caller_c, 1U) = 0, "caller_c opened")
@@ -253,7 +281,9 @@ fn: main () int
     # slot 2 is catch; D1: the pair count at 3 is 0 (no pairs); slot 6 (body) left 0.
     mw_check(counts, lmx_walk_store_size(@ arena, prim_c, 3U, 0U) = c.LMX_WALK_OK, "prim_c pair count 0")
 
-    st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, (cast: (@: void) (@ r_c)), @ out_c, @ present_c)
+    st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, @ result)
+    out_c: (result.ref)
+    present_c: (result.present)
     mw_check(counts, st = c.LMX_WALK_OK, "merge-map (retained-leaf) PRIM walked OK")
     mw_check(counts, present_c != 0 && out_c != 0 && out_c != (cast: (@: void) operand_c) && ((cast: (@: Lmx) out_c)\array.size) = 2U, "merge result is a FRESH Structure (not operand_c itself), width 2 (model_c's + operand_c's own)")
     mw_check(counts, lmx_arena_ref_value((cast: (@: Lmx) out_c), 0U) != model_field_c && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_c), 0U)) = 1, "the ORDINARY operand's field is COPIED: same value 1, a DIFFERENT address than model_field_c")
@@ -262,6 +292,7 @@ fn: main () int
 
     failures: counts[1]
     c.printf("lmx_walk_merge_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(types)
     free(counts)
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ arena)

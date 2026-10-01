@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -95,14 +96,14 @@ fn: prim_at (@: Lmx parent; size_t: slot; @: Lmx record) @: Lmx
     ref(n, 1U, record)
 return: n
 
-fn: take_prim (LmxPrimitiveEntry: fn) @: Lmx
+fn: take_prim (LmxPrimitiveEntry: fn; int: result_type) @: Lmx
     @: LmxPrimitive p (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
     if: p = 0
         broken: broken + 1
         return: 0
     ---
     p\fn: fn
-    p\signature: 0
+    p\signature: wt_contract_same(ga, 0U, 0, result_type)
     p\owner: (cast: (@: Lmx) ga)
 return: (cast: (@: Lmx) p)
 
@@ -152,9 +153,9 @@ fn: main () int
     gv: (cast: (@: LmxWalkValue) calloc(1U, c.sizeof(c.LmxWalkValue)))
     if: gv = 0
         return: 2
-    rk: take_prim(read_k)
-    bk: take_prim(bump_k)
-    bn: take_prim(bump_n)
+    rk: take_prim(read_k, c.LMX_TYPE_INT)
+    bk: take_prim(bump_k, c.LMX_TYPE_INT)
+    bn: take_prim(bump_n, 0)
     unit: lmx_node_new_owned(ga)
     if: unit = 0 || rk = 0 || bk = 0 || bn = 0 || lmx_arena_refs_open_owned(ga, unit, 4U) != 0
         return: 2

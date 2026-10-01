@@ -1,0 +1,66 @@
+predef: "l2src/tests/walk_contract_fixture.h.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+
+# Test construction only: callers supply the declared closed types. No callee
+# body or supplied value is inspected to invent a signature.
+fn: wt_witness (@: LmxArena arena; int: type) @: void
+    if: type = c.LMX_TYPE_LMX
+        return: (cast: (@: void) lmx_node_new_owned(arena))
+    if: type = c.LMX_TYPE_INT
+        return: lmx_int_new_owned(arena)
+    if: type = c.LMX_TYPE_SIZE_T
+        return: lmx_size_new_owned(arena)
+    if: type = c.LMX_TYPE_CHAR
+        return: lmx_char_new_owned(arena)
+    if: type = c.LMX_TYPE_UNSIGNED
+        return: lmx_unsigned_new_owned(arena)
+    if: type = c.LMX_TYPE_UNSIGNED_CHAR
+        return: lmx_uchar_new_owned(arena)
+    if: type = c.LMX_TYPE_ULONG
+        return: lmx_ulong_new_owned(arena)
+    if: type >= c.LMX_TYPE_POINTER_BASE
+        return: lmx_pointer_new_owned(type, arena)
+return: 0
+
+fn: wt_contract (@: LmxArena arena; size_t: count; @: int types; int: result_type) @: Lmx
+    @: Lmx signature lmx_node_new_owned(arena)
+    @: Lmx inputs lmx_walk_plain(arena, signature, count)
+    @: Lmx result 0
+    @: void witness 0
+    size_t: i 0U
+    size_t: result_count 0U
+    if: result_type != 0
+        result_count: 1U
+    result: lmx_walk_plain(arena, signature, result_count)
+    if: signature = 0 || inputs = 0 || result = 0 || (count != 0U && types = 0) || lmx_arena_refs_open_owned(arena, signature, 2U) != 0
+        return: 0
+    if: lmx_arena_ref_store(signature, 0U, (cast: (@: void) inputs)) != 0 || lmx_arena_ref_store(signature, 1U, (cast: (@: void) result)) != 0
+        return: 0
+    while: i < count
+        witness: wt_witness(arena, types[i])
+        if: witness = 0 || lmx_arena_ref_store(inputs, i, witness) != 0
+            return: 0
+        i: i + 1U
+    if: result_type != 0
+        witness: wt_witness(arena, result_type)
+        if: witness = 0 || lmx_arena_ref_store(result, 0U, witness) != 0
+            return: 0
+        ---
+    ---
+return: signature
+
+fn: wt_contract_same (@: LmxArena arena; size_t: count; int: input_type; int: result_type) @: Lmx
+    @: Lmx signature wt_contract(arena, 0U, 0, result_type)
+    @: Lmx inputs lmx_walk_plain(arena, signature, count)
+    @: void witness 0
+    size_t: i 0U
+    if: signature = 0 || inputs = 0 || lmx_arena_ref_store(signature, 0U, (cast: (@: void) inputs)) != 0
+        return: 0
+    while: i < count
+        witness: wt_witness(arena, input_type)
+        if: witness = 0 || lmx_arena_ref_store(inputs, i, witness) != 0
+            return: 0
+        i: i + 1U
+return: signature

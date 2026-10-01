@@ -1,0 +1,27 @@
+fn: forward (@: int p) @: int
+return: p
+fn: empty () @: int
+return: 0
+fn: inspect (@: int p; @@: int caller) int
+    @: int first forward(p)
+    @@: int owncell @p
+    if: owncell = caller || \owncell != p || first != p
+        return: 81
+    @: int next forward(p)
+    if: next != p || @p != owncell || \owncell != p
+        return: 82
+    p: 0
+    if: \owncell != 0 || @p != owncell || first = 0
+        return: 83
+    p: first
+    if: p != first || \owncell != first || @p != owncell
+        return: 84
+return: 7
+int: number 41
+@: int actual @number
+int: result inspect(actual, @actual)
+if: actual != @number || empty() != 0 || forward(0) != 0
+    result: 85
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

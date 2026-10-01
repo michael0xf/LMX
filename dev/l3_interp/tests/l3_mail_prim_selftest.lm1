@@ -247,15 +247,15 @@ fn: mk_non_int_lane () @: Lmx
 return: m
 
 # A physical LmxPrimitiveEntry of the TEST: one operand, the reference a nested node produced.
-# It keeps the address and hands the same reference on.  An absent reference is 0 and is not a
-# failure: an empty inbox is business, not an error.
+# It receives a Message-reference value-storage box and returns the same payload.
+# Empty inbox is present typed null, not an absent argument.
 fn: sink_letter (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     \out: 0
-    if: owner = 0 || nargs != 1U || refs = 0 || dest = 0
+    if: owner = 0 || nargs != 1U || refs = 0 || refs[0] = 0
         return: c.LMX_PRIMITIVE_FAIL
-    sunk_last: refs[0]
+    sunk_last: lmx_pointer_value_known(refs[0])
     sunk_n: sunk_n + 1
-    \out: refs[0]
+    \out: sunk_last
 return: c.LMX_PRIMITIVE_OK
 
 # [prim, sink, catch, [prim, take, catch, lane]]: the take is an OPERAND, so its result is consumed.
@@ -271,14 +271,9 @@ fn: mk_take_show () @: Lmx
     lit(q, 3U, c.LMX_POST_INBOX)
 return: m
 
-# mk_count over a GIVEN record: own n <- prim(rec, INBOX), own starts at -1.  The lane cell is
-# taken from `lane_arena`, and for the foreign-owner negative that has to be the FOREIGN Thread's
-# arena.  Measured: with the lane cell in the caller's arena the turn is refused even with the
-# owner guard REMOVED, because l3_prim_lane next classifies the operand through the OWNER's arena
-# and finds nothing there -- so that arrangement never reaches the guard.  With the cell in the
-# owner's arena the classification succeeds, and the guard alone stands between t's turn and a
-# read of t2's mailbox (guard removed: the turn is OK and publishes 1).
-fn: mk_count_of (@: Lmx rec; @: LmxArena lane_arena) @: Lmx
+# The lane literal belongs to this graph; marshalling supplies ordinary INT
+# storage. Only the callback's bound-owner check rejects the foreign mailbox.
+fn: mk_count_of (@: Lmx rec) @: Lmx
     @: Lmx m mk_m(3U)
     @: Lmx n 0
     @: Lmx p 0
@@ -289,7 +284,7 @@ fn: mk_count_of (@: Lmx rec; @: LmxArena lane_arena) @: Lmx
     p: fr(n, 2U, c.LMX_WALK_OP_PRIM, 4U)
     ref(p, 1U, rec)
     q: fr(p, 3U, c.LMX_WALK_OP_LIT, 2U)
-    if: q = 0 || lmx_walk_store_int(lane_arena, q, 1U, c.LMX_POST_INBOX) != c.LMX_WALK_OK
+    if: q = 0 || lmx_walk_store_int(gb, q, 1U, c.LMX_POST_INBOX) != c.LMX_WALK_OK
         broken: broken + 1
     ---
 return: m
@@ -333,6 +328,10 @@ fn: main () int
     @: Lmx test_reg 0
     @: Lmx profile 0
     @: Lmx test_profile 0
+    @: void message_witness 0
+    @: void lane_witness 0
+    @: Lmx sink_contract 0
+    @: Lmx count_contract 0
     @: void probe 0
     int: probe_before 0
     int: st 0
@@ -442,8 +441,12 @@ fn: main () int
     # owner arena.  It too is complete and sealed before its records enter a graph.
     test_profile: l3_profile_open(a)
     test_reg: l3_primitive_registry_open_profiled(a, 2U, test_profile)
-    sink_rec: l3_primitive_register_profiled(a, test_reg, 0U, sink_letter, (cast: (@: Lmx) t), test_profile)
-    foreign_rec: l3_primitive_register_profiled(a, test_reg, 1U, l3_prim_mail_count, (cast: (@: Lmx) t2), test_profile)
+    message_witness: lmx_arena_take_profiled(a, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_MSG_REF, test_profile)
+    lane_witness: lmx_arena_take_profiled(a, c.sizeof(int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, test_profile)
+    sink_contract: l3_primitive_contract_profiled(a, test_profile, 1U, @ message_witness, message_witness)
+    count_contract: l3_primitive_contract_profiled(a, test_profile, 1U, @ lane_witness, lane_witness)
+    sink_rec: l3_primitive_register_profiled(a, test_reg, 0U, sink_letter, sink_contract, (cast: (@: Lmx) t), test_profile)
+    foreign_rec: l3_primitive_register_profiled(a, test_reg, 1U, l3_prim_mail_count, count_contract, (cast: (@: Lmx) t2), test_profile)
     fail(counts, test_profile != 0 && test_reg != 0 && sink_rec != 0 && foreign_rec != 0 && l3_profile_seal(a, test_profile) = 0, "test primitive profile completed and sealed")
     fail(counts, lmx_range_profile(a, (cast: (@: void) sink_rec)) = test_profile && lmx_pool_is_sealed(lmx_range_pool(a, (cast: (@: void) sink_rec))) != 0, "sink record is physically profiled")
     fail(counts, lmx_range_profile(a, (cast: (@: void) foreign_rec)) = test_profile, "foreign-owner record shares that exact profile")
@@ -453,7 +456,7 @@ fn: main () int
     # and publishes 1 -- a FOREIGN Thread's mailbox read from t's turn.
     foreign_letter: (cast: (@: Lmx) lmx_arena_take(a2, c.sizeof(c.LmxMsg), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_MSG_RECORD))
     fail(counts, foreign_letter != 0 && lmx_thread_mail_accept(a2, t2, (cast: (@: void) foreign_letter), c.LMX_POST_INBOX) = c.LMX_POST_OK, "one letter in the foreign Thread's inbox")
-    m: mk_count_of(foreign_rec, a2)
+    m: mk_count_of(foreign_rec)
     probe: mk_int(a, 1)
     probe_before: lmx_range_classify(a, probe)
     fail(counts, broken = 0 && m != 0 && run_graph(t, m) = c.LMX_THREAD_INVALID, "foreign-owner record is a failed turn")

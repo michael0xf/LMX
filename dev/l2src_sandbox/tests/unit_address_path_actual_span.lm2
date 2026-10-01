@@ -27,8 +27,13 @@ fn: check () int
     sized(@ Data\count, 19U)
     byte((@: Data\letter), 'B')
     @: int p @ Data\number
+    @@: int physical @p
+    # A compound path address is the real pointer-value cell, not a loaded temporary.
+    if: @ check\p != @p || (cast: (@: void) (@ check\p)) = (cast: (@: void) p)
+        return: 85
     int: d clear(@p, 23)
-    if: a != 11 || b != 13 || c != 17 || d != 23 || p != 0
+    # The call clears the declared graph cell, not this activation's cache.
+    if: a != 11 || b != 13 || c != 17 || d != 23 || \physical != 0 || p != @ Data\number
         return: 81
     if: Data\number != 17 || Data\count != 19U || Data\letter != 'B'
         return: 82

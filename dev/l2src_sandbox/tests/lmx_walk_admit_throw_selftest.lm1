@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -79,6 +80,8 @@ fn: main () int
     @: Lmx litn 0
     @: Lmx prim_rec 0
     @: LmxPrimitive prim 0
+    @: void invalid_object 0
+    @: void invalid_reference 0
     int: st 0
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -107,17 +110,21 @@ fn: main () int
     if: prim = 0
         return: 2
     prim\fn: lmx_walk_merge_model
-    prim\signature: 0
+    prim\signature: wt_contract_same(ga, 1U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
     prim\owner: (cast: (@: Lmx) ga)
     prim_rec: (cast: (@: Lmx) prim)
 
-    # Failing merge: model operand is an int LIT, not a Structure -> THROW_MERGE -> THROWN+1
+    # A reference-typed operand holds an int cell, not a Structure: the merge
+    # callback, rather than argument-width marshalling, reports THROW_MERGE.
+    invalid_object: lmx_int_new_owned(ga)
+    invalid_reference: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 7, ga)
+    lmx_pointer_store_known(invalid_reference, invalid_object)
     m: mk_m(unit, 0U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(pn, 1U, prim_rec)
     litn: fr(pn, 3U, c.LMX_WALK_OP_LIT, 2U)
-    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
+    if: litn != 0 && lmx_arena_ref_store(litn, 1U, invalid_reference) != 0
         broken: broken + 1
     ---
     st: go(m)

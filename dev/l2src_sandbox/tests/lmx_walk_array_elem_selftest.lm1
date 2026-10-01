@@ -168,7 +168,7 @@ fn: main () int
     ix(n, 1U)
     st: go(m)
     got: gv\ref
-    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 9)), "ELEM int[1] -> 9")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 9)), "ELEM int[1] -> 9")
 
     # D-39: the index is a size cell in the holder, read by AT, not a literal.
     # Mutant: treat child 2 as a raw size -> this read is not 9.
@@ -184,7 +184,7 @@ fn: main () int
     sz(atn, 2U, 0U)
     st: go(m)
     got: gv\ref
-    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 9)), "ELEM dynamic index AT -> 9")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 9)), "ELEM dynamic index AT -> 9")
 
     # ---- LENGTH ----
     m: mk_m(unit, 3U, 1U)
@@ -192,7 +192,7 @@ fn: main () int
     atop(n, data, 1U)
     st: go(m)
     got: gv\ref
-    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_size_value_known(got) = 3U)), "LENGTH -> 3")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_SIZE_T && gv\wide = 3U)), "LENGTH -> 3")
 
     # ---- OOB: index == len -> INVALID (mutant: accept -> RED) ----
     m: mk_m(unit, 4U, 1U)
@@ -243,7 +243,7 @@ fn: main () int
     ix(n, 0U)
     st: go(m)
     got: gv\ref
-    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && got = lmx_char_cell(ga, 65))), "ELEM char -> interned 'A'")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_CHAR && gv\byte = 65)), "ELEM char -> exact typed byte 'A'")
 
     # ---- char vs int cell (mutant: accept -> RED) ----
     m: mk_m(unit, 10U, 1U)
@@ -295,7 +295,7 @@ fn: main () int
     atop(n, 0, 1U)
     st: go(m)
     got: gv\ref
-    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_size_value_known(got) = 2U)), "LENGTH holder0 -> 2")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_SIZE_T && gv\wide = 2U)), "LENGTH holder0 -> 2")
 
     # A non-array operand is a refusal. Mutant: skip the kind test -> silent trash RED.
     m: mk_m(unit, 15U, 1U)
@@ -344,7 +344,7 @@ fn: main () int
     ix(n, 0U)
     st: go(m)
     got: gv\ref
-    check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && lmx_int_value_known(got) = 5)), "ELEM(ELEM(outer)) -> 5")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 5)), "ELEM(ELEM(outer)) -> 5")
 
     # Immutable descriptor through the evaluated operand. Mutant: skip
     # lmx_walk_immutable on that address -> this ELEMPUT goes green, RED.

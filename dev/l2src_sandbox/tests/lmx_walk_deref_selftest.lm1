@@ -124,28 +124,25 @@ fn: main () int
     m: mk_m(unit, 0U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     ofn: fr(n, 1U, c.LMX_WALK_OP_OF, 3U)
-    der: fr(ofn, 1U, c.LMX_WALK_OP_DEREF, 2U)
+    der: fr(ofn, 1U, c.LMX_WALK_OP_DEREF, 3U)
+    ref(der, 2U, model)
     atn: fr(der, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(atn, 1U, holder)
     sz(atn, 2U, 1U)
     sz(ofn, 2U, 1U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && broken = 0)), "deref+of run")
-    got: gv\ref
-    if: got = 0
-        got: (cast: (@: void) (@ gv\number))
-    ---
     # ret of int field copies into dest; number should be 42
-    check((cast: (int) (gv\present != 0 && gv\ref != 0 && lmx_int_value_known(gv\ref) = 42)), "of after deref reads 42")
+    check((cast: (int) (gv\present != 0 && gv\type = c.LMX_TYPE_INT && gv\number = 42)), "of after deref reads 42")
 
-    # AT alone still yields the pointer CELL, not the Structure
+    # AT loads the held reference once; ADDRESS selects its physical cell.
     m: mk_m(unit, 0U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     atn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(atn, 1U, holder)
     sz(atn, 2U, 1U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = pcell)), "at stays pointer cell")
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) model))), "AT loads held model without another dereference")
 
     c.printf("lmx_walk_deref_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

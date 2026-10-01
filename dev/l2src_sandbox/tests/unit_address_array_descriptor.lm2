@@ -41,10 +41,10 @@ if: c.l2_test_array_address(c.l2_program_arena, c.self, p, c.LMX_TYPE_ARRAY_OF_I
     return
 @@: c.VoidArray cell @ p
 \cell: @ chars
-if: p != (@: chars) || numbers[0] != 9 || chars[0] != 'A'
+if: \cell != (@: chars) || p != (@: numbers) || numbers[0] != 9 || chars[0] != 'A'
     sendMessage: exit(exit_code: 88; stdout: ""; stderr: "")
     return
-if: c.l2_test_array_address(c.l2_program_arena, c.self, p, c.LMX_TYPE_ARRAY_OF_CHAR, 2U, @ chars[0]) = 0
+if: c.l2_test_array_address(c.l2_program_arena, c.self, (\cell), c.LMX_TYPE_ARRAY_OF_CHAR, 2U, @ chars[0]) = 0
     sendMessage: exit(exit_code: 89; stdout: ""; stderr: "")
     return
 @: void emptyAddress (@: empty)

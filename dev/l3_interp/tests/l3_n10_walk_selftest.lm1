@@ -162,8 +162,9 @@ fn: mk_read_arg0 () @: Lmx
     n: fr(m, 2U, c.LMX_WALK_OP_SET, 3U)
     own(n, 1U, m, 1U)
     e: fr(n, 2U, c.LMX_WALK_OP_OF, 3U)
-    n: fr(e, 1U, c.LMX_WALK_OP_ARG, 2U)
+    n: fr(e, 1U, c.LMX_WALK_OP_ARG, 4U)
     sz(n, 1U, 0U)
+    ref(n, 3U, m)
     sz(e, 2U, 0U)
 return: m
 
@@ -223,6 +224,7 @@ fn: main () int
     @: LmxOp fake 0
     @: Lmx frame 0
     @: void subject 0
+    @: void argument_storage 0
     @@: void args
     if: counts = 0
         return: 2
@@ -285,11 +287,13 @@ fn: main () int
     context.roles: groles
     context.classified: 0U
     subject: (cast: (@: void) cand)
-    args: @ subject
+    argument_storage: (cast: (@: void) (@ subject))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "interp_apply reads args[0] via ARG/OF")
     fail(counts, field(m, 1U) = 32, "published candidate field 0 is 32")
     subject: (cast: (@: void) cand64)
-    args: @ subject
+    argument_storage: (cast: (@: void) (@ subject))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "interp_apply with a different subject")
     fail(counts, field(m, 1U) = 64, "published candidate field 0 is 64")
     fail(counts, native_hits = 1, "interp_apply did not call native")

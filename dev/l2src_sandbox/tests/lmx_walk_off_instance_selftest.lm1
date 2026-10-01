@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -146,6 +147,7 @@ fn: main () int
     e: fr(n, 1U, c.LMX_WALK_OP_CALL, 5U)
     ref(e, 1U, reader)
     ref(e, 2U, reader)
+    ref(e, 3U, wt_contract_same(ga, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
     # rtype (child 3) left 0 -- reader is walked, not native, so lmx_walk_call never
     # reads it on that path; a fresh frame's slots are 0 until stored.
     n: fr(reader, 0U, c.LMX_WALK_OP_RET, 2U)
@@ -156,8 +158,8 @@ fn: main () int
     check(broken = 0, "fixture built")
     st: go(writer)
     r: 0
-    if: st = c.LMX_WALK_OK && gv\present != 0 && gv\ref != 0
-        r: lmx_int_value_known(gv\ref)
+    if: st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_INT
+        r: gv\number
     ---
     check(st = c.LMX_WALK_OK && r = 7, "reader AT writer\\x sees 7: the dirty SET is published before the call (mutant off-instance or no pre-call publication -> RED)")
     check(xcell != 0 && lmx_int_value_known(xcell) = 7, "writer cell x = 7 in graph (mutant working-copy never published -> RED)")

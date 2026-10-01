@@ -221,6 +221,7 @@ fn: main () int
     @: Lmx inner 0
     @: void size_cell 0
     @: void subject_void 0
+    @: void argument_storage 0
     @@: void args
 
     if: counts = 0
@@ -270,7 +271,8 @@ fn: main () int
     # and lmx_interp_apply needs nothing beyond it (no separate prepare step).
     fail(counts, broken = 0 && m != 0 && lmx_call_ready(gb, m) = c.LMX_CALL_OK, "expect-int match graph is ready")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "expect-int match interp_apply")
     fail(counts, field(m, 1U) = 42, "expect-int match: SET wrote 42")
 
@@ -285,7 +287,8 @@ fn: main () int
     m: mk_expect_int_graph(42)
     fail(counts, broken = 0 && m != 0, "expect-int mismatch graph built")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "expect-int mismatch interp_apply")
     fail(counts, field(m, 1U) = 0, "expect-int mismatch: own field stays 0")
 
@@ -299,7 +302,8 @@ fn: main () int
     m: mk_expect_int_graph(42)
     fail(counts, broken = 0 && m != 0, "non-INT leaf graph built")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "non-INT leaf (size_t): silent 0, interp_apply OK")
     fail(counts, field(m, 1U) = 0, "non-INT leaf (size_t): own field stays 0")
 
@@ -312,7 +316,8 @@ fn: main () int
     m: mk_expect_int_graph(42)
     fail(counts, broken = 0 && m != 0, "non-INT leaf (STRUCT) graph built")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_OK, "non-INT leaf (STRUCT): silent 0, interp_apply OK")
     fail(counts, field(m, 1U) = 0, "non-INT leaf (STRUCT): own field stays 0")
 
@@ -325,7 +330,8 @@ fn: main () int
     m: mk_graph(42, 1, 1)
     fail(counts, broken = 0 && m != 0 && subject != 0, "malformed path graph built")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "malformed path (non-STRUCT): interp_apply answers LMX_INTERP_INVALID")
     fail(counts, field(m, 1U) = 0, "malformed path (non-STRUCT): own field untouched")
 
@@ -336,7 +342,8 @@ fn: main () int
     m: mk_graph(42, 5, 0)
     fail(counts, broken = 0 && m != 0 && subject != 0, "out-of-range path graph built")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "out-of-range index: interp_apply answers LMX_INTERP_INVALID")
     fail(counts, field(m, 1U) = 0, "out-of-range index: own field untouched")
 
@@ -347,7 +354,8 @@ fn: main () int
     m: mk_graph(42, -1, 0)
     fail(counts, broken = 0 && m != 0 && subject != 0, "negative index graph built")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "negative index: interp_apply answers LMX_INTERP_INVALID")
     fail(counts, field(m, 1U) = 0, "negative index: own field untouched")
 
@@ -362,7 +370,8 @@ fn: main () int
     m: mk_expect_int_graph(42)
     fail(counts, broken = 0 && m != 0, "unset leaf graph built")
     subject_void: (cast: (@: void) subject)
-    args: @ subject_void
+    argument_storage: (cast: (@: void) (@ subject_void))
+    args: @ argument_storage
     fail(counts, lmx_interp_apply(@ context, m, args, 1U) = c.LMX_INTERP_INVALID, "unset leaf (null cell): interp_apply answers LMX_INTERP_INVALID")
     fail(counts, field(m, 1U) = 0, "unset leaf (null cell): own field untouched")
 

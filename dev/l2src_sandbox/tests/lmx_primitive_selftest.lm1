@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_primitive.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
@@ -79,7 +80,7 @@ return: c.LMX_PRIMITIVE_OK
 fn: pv_fail (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     pv_calls: pv_calls + 1U
     if: nargs > 0U && refs != 0 && refs[0] != 0
-        lmx_int_store_known(refs[0], 99)
+        lmx_int_store_known(lmx_pointer_value_known(refs[0]), 99)
     ---
     \out: 0
 return: c.LMX_PRIMITIVE_FAIL
@@ -138,25 +139,25 @@ fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
     ---
 return: m
 
-fn: record_new (@: LmxArena arena; LmxPrimitiveEntry: fn; @: Lmx owner) @: Lmx
+fn: record_new (@: LmxArena arena; LmxPrimitiveEntry: fn; @: Lmx owner; size_t: arity; int: input_type; int: result_type) @: Lmx
     @: LmxPrimitive r (cast: (@: LmxPrimitive) lmx_arena_take(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
     if: r = 0
         broken: broken + 1
         return: 0
     ---
     r\fn: fn
-    r\signature: 0
+    r\signature: wt_contract_same(arena, arity, input_type, result_type)
     r\owner: owner
 return: (cast: (@: Lmx) r)
 
-fn: record_new_profiled (@: LmxArena arena; @: Lmx profile; LmxPrimitiveEntry: fn; @: Lmx owner) @: Lmx
+fn: record_new_profiled (@: LmxArena arena; @: Lmx profile; LmxPrimitiveEntry: fn; @: Lmx owner; size_t: arity; int: input_type; int: result_type) @: Lmx
     @: LmxPrimitive r (cast: (@: LmxPrimitive) lmx_arena_take_profiled(arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE, profile))
     if: r = 0
         broken: broken + 1
         return: 0
     ---
     r\fn: fn
-    r\signature: 0
+    r\signature: wt_contract_same(arena, arity, input_type, result_type)
     r\owner: owner
 return: (cast: (@: Lmx) r)
 
@@ -182,6 +183,8 @@ fn: main () int
     @: Lmx reference 0
     @: LmxPrimitive bare 0
     @: Lmx rec_ok 0
+    @: Lmx rec_null 0
+    @: Lmx m_null 0
     @: Lmx rec_zero 0
     @: Lmx rec_fail 0
     @: Lmx rec_nofn 0
@@ -248,7 +251,7 @@ fn: main () int
     check(lmx_primitive_register(ga, registry, 1U, pv_ok, 0, 0, @ record) = c.LMX_PRIMITIVE_REG_OK && record != 0, "an ownerless primitive was refused")
     immutable_profile: lmx_node_new_owned(ga)
     immutable_owner: lmx_node_new_profiled(ga, immutable_profile)
-    admitted: record_new_profiled(ga, immutable_profile, pv_fail, immutable_owner)
+    admitted: record_new_profiled(ga, immutable_profile, pv_fail, immutable_owner, 0U, c.LMX_TYPE_INT, 0)
     check(immutable_profile != 0 && immutable_owner != 0 && admitted != 0, "the immutable profiled primitive was not built")
     if: immutable_profile != 0 && immutable_owner != 0 && admitted != 0
         lmx_arena_ref_store(registry, 0U, (cast: (@: void) admitted))
@@ -266,11 +269,12 @@ fn: main () int
     cell0: icell(subject, 0U, 5)
     icell(subject, 1U, 35)
     peer: pl(unit, 1U, 2U)
-    rec_ok: record_new(ga, pv_ok, peer)
-    rec_zero: record_new(ga, pv_zero, peer)
-    rec_fail: record_new(ga, pv_fail, peer)
+    rec_ok: record_new(ga, pv_ok, peer, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT)
+    rec_null: record_new(ga, pv_zero, peer, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_LMX)
+    rec_zero: record_new(ga, pv_zero, peer, 0U, c.LMX_TYPE_INT, 0)
+    rec_fail: record_new(ga, pv_fail, peer, 1U, c.LMX_TYPE_POINTER_BASE + 1, 0)
     # A record with NO fn: admitted to the arena as a cell of the domain, refused by the walk.
-    rec_nofn: record_new(ga, pv_ok, peer)
+    rec_nofn: record_new(ga, pv_ok, peer, 0U, c.LMX_TYPE_INT, c.LMX_TYPE_INT)
     bare: (cast: (@: LmxPrimitive) rec_nofn)
     if: bare != 0
         bare\fn: 0
@@ -290,12 +294,18 @@ fn: main () int
     record: fr(m_zero, 0U, c.LMX_WALK_OP_RET, 2U)
     reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 3U)
     ref(reference, 1U, rec_zero)
-    # prim_fail:    return: prim(rec_fail, subject\0)
+    m_null: mk_m(unit, 10U, 1U)
+    record: fr(m_null, 0U, c.LMX_WALK_OP_RET, 2U)
+    reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(reference, 1U, rec_null)
+    # prim_fail:    return: prim(rec_fail, @subject\0)
     m_fail: mk_m(unit, 4U, 1U)
     record: fr(m_fail, 0U, c.LMX_WALK_OP_RET, 2U)
     reference: fr(record, 1U, c.LMX_WALK_OP_PRIM, 4U)
     ref(reference, 1U, rec_fail)
-    record: fr(reference, 3U, c.LMX_WALK_OP_AT, 3U)
+    record: fr(reference, 3U, c.LMX_WALK_OP_ADDRESS, 3U)
+    lmx_arena_ref_store(record, 2U, wt_witness(ga, c.LMX_TYPE_POINTER_BASE + 1))
+    record: fr(record, 1U, c.LMX_WALK_OP_AT, 3U)
     ref(record, 1U, subject)
     sz(record, 2U, 0U)
     # prim_nofn:    return: prim(rec_nofn)
@@ -373,11 +383,13 @@ fn: main () int
     pv_calls: 0U
     v: -1
     st: go(m_ok, 0, 0U, @ v)
-    check(st = c.LMX_WALK_OK && v = 1 && gv\ref = (cast: (@: void) (@ gv\number)) && gv\number = 7, "the primitive did not run flat and land its integer in the caller's own cell")
+    check(st = c.LMX_WALK_OK && v = 1 && gv\type = c.LMX_TYPE_INT && gv\number = 7, "the primitive did not run flat and land its integer in the caller's own cell")
     check(pv_calls = 1U, "the primitive was called a number of times other than once")
     # STATUS OK WITH THE VALUE ZERO IS NOT FAILURE.
     st: go(m_zero, 0, 0U, @ v)
     check(st = c.LMX_WALK_OK && v = 0 && gv\present = 0 && gv\ref = 0, "a primitive reporting status OK with no value was read as a failure")
+    st: go(m_null, 0, 0U, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && gv\kind = c.LMX_WALK_VALUE_REFERENCE && gv\type = c.LMX_TYPE_LMX && gv\ref = 0, "declared reference result is present even when its payload is null")
     # A nonzero status is its OWN reading, and it collides with none of the four.
     st: go(m_fail, 0, 0U, @ v)
     check(st = c.LMX_WALK_PRIMITIVE, "a failing primitive did not report LMX_WALK_PRIMITIVE")

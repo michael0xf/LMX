@@ -1,0 +1,33 @@
+[]: char letters 2
+letters[0]: 'A'
+letters[1]: 'A'
+@: char left @letters[0]
+@: char right @letters[1]
+int: result 7
+if: left = right || \left != 'A' || \right != 'A'
+    result: 81
+end: if
+\left: 'B'
+if: letters[0] != 'B' || letters[1] != 'A'
+    result: 82
+end: if
+int: number 41
+int: neighbor 43
+[]: (@: int) pointers 2
+pointers[0]: @number
+pointers[1]: @neighbor
+@@: int slot @pointers[0]
+@: void erased slot
+if: \slot != @number || erased != @pointers[0] || pointers[1] != @neighbor
+    result: 83
+end: if
+\slot: 0
+if: pointers[0] != 0 || pointers[1] != @neighbor
+    result: 84
+end: if
+\slot: @number
+if: pointers[0] != @number || \slot != @number || pointers[1] != @neighbor
+    result: 85
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

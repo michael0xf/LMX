@@ -614,7 +614,7 @@ fn: lmx_walk_merge_model (@: void owner; @@: void refs; size_t: nargs; @: void d
         return: 1
     ---
     arena: (cast: (@: LmxArena) owner)
-    model: (cast: (@: Lmx) refs[0])
+    model: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))
     if: model = 0 || lmx_range_classify(arena, (cast: (@: void) model)) != c.LMX_KIND_STRUCT
         return: 2
     ---
@@ -660,7 +660,7 @@ fn: lmx_walk_merge_pairs_cells (@: LmxArena arena; @@: void cells; size_t: n; @@
     if: cells = 0
         return: 1
     while: i < 3U * n
-        if: cells[i] = 0 || lmx_range_type_of(arena, cells[i]) != c.LMX_TYPE_SIZE_T
+        if: cells[i] = 0
             return: 1
         i: i + 1U
     ---
@@ -716,7 +716,7 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
         return: 1
     ---
     arena: (cast: (@: LmxArena) owner)
-    if: refs[0] = 0 || lmx_range_type_of(arena, refs[0]) != c.LMX_TYPE_SIZE_T
+    if: refs[0] = 0
         return: 1
     ---
     np: lmx_size_value_known(refs[0])
@@ -729,13 +729,12 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     ---
     i: 0U
     while: i < op_count
-        if: refs[1U + i] = 0 || lmx_range_classify(arena, refs[1U + i]) != c.LMX_KIND_STRUCT
+        if: refs[1U + i] = 0 || lmx_range_classify(arena, lmx_pointer_value_known(refs[1U + i])) != c.LMX_KIND_STRUCT
             return: 1
         ---
         i: i + 1U
     ---
-    operands: (cast: (@@: Lmx) (refs + 1))
-    body: (cast: (@: Lmx) refs[1U + op_count])
+    body: (cast: (@: Lmx) lmx_pointer_value_known(refs[1U + op_count]))
     if: body != 0 && lmx_range_classify(arena, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
         return: 1
     ---
@@ -750,13 +749,17 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     # (l2trans.lm1:20390-20399), just read from the arena at call time instead of known
     # statically. Duplicates across operands are kept, not deduplicated -- the copier
     # treats retain_profiles as a plain membership scan, idempotently.
-    retain_profiles: (cast: (@@: Lmx) calloc(op_count, c.sizeof(@: void)))
-    if: retain_profiles = 0
+    # One operation-local array holds decoded pointer payloads and retained profiles.
+    # refs itself is value storage, not an array of Structure payloads.
+    operands: (cast: (@@: Lmx) calloc(op_count, 2U * c.sizeof(@: void)))
+    if: operands = 0
         lmx_walk_merge_pairs_free(pairs, pair_count)
         return: 1
     ---
+    retain_profiles: operands + op_count
     i: 0U
     while: i < op_count
+        operands[i]: (cast: (@: Lmx) lmx_pointer_value_known(refs[1U + i]))
         profile: lmx_range_profile(arena, (cast: (@: void) operands[i]))
         if: profile != 0
             retain_profiles[retain_count]: profile
@@ -766,7 +769,7 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     ---
     container: operands[0]\parent
     status: lmx_merge_profiles_owned(operands, op_count, body, container, arena, arena, retain_profiles, retain_count, pairs, pair_count, @ result)
-    free((cast: (@: void) retain_profiles))
+    free((cast: (@: void) operands))
     lmx_walk_merge_pairs_free(pairs, pair_count)
     if: status != c.LMX_MERGE_OK || result = 0
         return: 2
@@ -795,9 +798,9 @@ fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: voi
         return: 1
     ---
     arena: (cast: (@: LmxArena) owner)
-    target: (cast: (@: Lmx) refs[0])
-    op: (cast: (@: Lmx) refs[1])
-    if: refs[2] = 0 || lmx_range_type_of(arena, refs[2]) != c.LMX_TYPE_SIZE_T
+    target: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))
+    op: (cast: (@: Lmx) lmx_pointer_value_known(refs[1]))
+    if: refs[2] = 0
         return: 1
     ---
     np: lmx_size_value_known(refs[2])

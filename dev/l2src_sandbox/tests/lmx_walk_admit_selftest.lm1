@@ -1,4 +1,5 @@
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
 predef: "l2src/lmx_pool.lm1"
 predef: "l2src/lmx_arena.lm1"
 predef: "l2src/lmx_arena_blocks.lm1"
@@ -85,6 +86,7 @@ fn: main () int
     @: Lmx n 0
     @: Lmx pn 0
     @: Lmx model_x 0
+    @: void model_box 0
     @: Lmx model_y 0
     @: Lmx value 0
     @: Lmx value_y 0
@@ -97,6 +99,8 @@ fn: main () int
     @: void pcell 0
     @: void got 0
     @: void cell 0
+    @: void cell_reference 0
+    @: void null_value 0
     @: Lmx litn 0
     @: void null_out 0
     @@: void nrefs 0
@@ -150,11 +154,11 @@ fn: main () int
         return: 2
     ---
     prim\fn: lmx_walk_admit
-    prim\signature: 0
+    prim\signature: wt_contract_same(ga, 2U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
     prim\owner: (cast: (@: Lmx) ga)
     prim_rec: (cast: (@: Lmx) prim)
     prim_letter\fn: lmx_walk_admit_letter
-    prim_letter\signature: 0
+    prim_letter\signature: wt_contract_same(ga, 2U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
     prim_letter\owner: (cast: (@: Lmx) ga)
     prim_letter_rec: (cast: (@: Lmx) prim_letter)
 
@@ -179,17 +183,19 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2)), "admit mismatch -> THROWN+2")
 
-    # 3. value = numeric cell (via LIT so eval yields the cell) -> PRIMITIVE (FAIL=1)
+    # A held reference to a non-Structure cell reaches structural admission and fails.
     cell: lmx_int_new_owned(ga)
     if: cell = 0 || lmx_int_store_known(cell, 1) != 0
         return: 2
     ---
+    cell_reference: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 7, ga)
+    lmx_pointer_store_known(cell_reference, cell)
     m: mk_m(unit, 6U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     pn: fr(n, 1U, c.LMX_WALK_OP_PRIM, 5U)
     ref(pn, 1U, prim_rec)
     litn: fr(pn, 3U, c.LMX_WALK_OP_LIT, 2U)
-    if: litn != 0 && lmx_arena_ref_store(litn, 1U, cell) != 0
+    if: litn != 0 && lmx_arena_ref_store(litn, 1U, cell_reference) != 0
         broken: broken + 1
     ---
     ref(pn, 4U, model_x)
@@ -198,10 +204,11 @@ fn: main () int
 
     # 4. write through PUT into admitted value; visible on original (reference)
     m: mk_m(unit, 7U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 4U)
-    ref(n, 1U, value)
-    sz(n, 2U, 0U)
-    litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
+    n: fr(m, 0U, c.LMX_WALK_OP_PUT, 3U)
+    litn: fr(n, 1U, c.LMX_WALK_OP_AT, 3U)
+    ref(litn, 1U, value)
+    sz(litn, 2U, 0U)
+    litn: fr(n, 2U, c.LMX_WALK_OP_LIT, 2U)
     if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 99) != c.LMX_WALK_OK
         broken: broken + 1
     ---
@@ -213,8 +220,9 @@ fn: main () int
     if: nrefs = 0
         return: 2
     ---
-    nrefs[0]: 0
-    nrefs[1]: (cast: (@: void) model_x)
+    nrefs[0]: (cast: (@: void) (@ null_value))
+    model_box: (cast: (@: void) model_x)
+    nrefs[1]: (cast: (@: void) (@ model_box))
     null_out: (cast: (@: void) 1)
     st: lmx_walk_admit((cast: (@: void) ga), nrefs, 2U, 0, @ null_out)
     check((cast: (int) (st = 0 && null_out = 0)), "admit null -> out 0 OK")

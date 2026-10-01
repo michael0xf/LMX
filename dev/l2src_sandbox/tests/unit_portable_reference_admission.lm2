@@ -1,0 +1,38 @@
+Model:
+    int: value 1
+end: Model
+Good:
+    int: value 7
+end: Good
+Other:
+    char: wrong 'x'
+end: Other
+int: calls 0
+fn: bad () @: void
+    node\calls: node\calls + 1
+return: @Other
+fn: count () int
+return: node\calls
+sub: checkpoint ()
+return
+@: Model ref Good
+@@: Model place @ref
+checkpoint
+int: caught 0
+\place: bad()
+catch: implements ()
+    caught: caught + 1
+---
+int: result 7
+if: \place != @Good || ref != @Good
+    result: 83
+end: if
+if: caught != 1 || count() != 1
+    result: 81
+end: if
+checkpoint
+if: \place != @Good || Good\value != 7
+    result: 82
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -28,9 +28,7 @@ return: lmx_interp_apply_value(context, node, args, nargs, 0)
 # walk leaves `out` empty, which is the same answer lmx_walk_run gives when it refuses.
 fn: lmx_interp_apply_value (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     if: out != 0
-        out\ref: 0
-        out\number: 0
-        out\present: 0
+        lmx_walk_value_clear(out)
     ---
     if: context = 0 || node = 0 || context\arena = 0
         return: c.LMX_INTERP_INVALID

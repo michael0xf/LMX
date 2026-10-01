@@ -1,0 +1,21 @@
+int: calls 0
+fn: replace (@@: int slot; @: int next) int
+    node\calls: node\calls + 1
+    \slot: next
+return: 9
+fn: store (@: int p; @: int next) int
+    @: int before p
+    \p: replace(@p, next)
+    if: p != next || \before != 9 || \next != 43
+        return: 81
+return: 7
+fn: count () int
+return: node\calls
+int: left 41
+int: right 43
+int: result store(@left, @right)
+if: result = 7 && count() != 1
+    result: 82
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

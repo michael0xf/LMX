@@ -1,0 +1,17 @@
+# Indirect reception executes the same nonidentity conversion exactly once.
+int: calls 0
+fn: changed (size_t: value) int
+    node\calls: node\calls + 1
+return: 73
+fn: count () int
+return: node\calls
+int: cell 41
+@: int target @cell
+size_t: source 2U
+\target: source
+int: result 7
+if: \target != 73 || cell != 41 || count() != 1
+    result: 81
+end: if
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

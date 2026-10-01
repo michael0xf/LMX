@@ -9,10 +9,93 @@ shared declared-element address type. Checkpoint `74df17d` closes the bounded
 own-reference reception/path-admission repair. Checkpoint `0c5dd61` removes
 re-entry publication suppression and fixes current-occurrence path calls.
 Checkpoint `71c4743` lands typed portable reference values and the common
-argument/result transport ABI. Next is source-site visibility over existing
-declaration rows, then uniform native-word dispatch and remaining callable work.
+argument/result transport ABI. Checkpoint `e70689c` closes source-site visibility
+over existing declaration rows and reached admission-layout provenance.
+Next is uniform native-word dispatch and remaining callable work.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
+
+<a id="site-visibility-release"></a>
+## Source-site visibility and admission provenance: checkpoint e70689c
+
+The source checkpoint is `e70689c2bebcdc92dcc52522d8d037c7cd2957ae`,
+70 explicitly staged paths, based on documentation HEAD `e116f2b`.
+Translator SHA256:
+`F9A2D6E600CB301DD256F7C1E3A7C9E432C64F0511DB3F3E26C8BC2830578ABF`.
+The parent fast-forwarded those exact bytes; unrelated documentation and
+untracked files were not included. Stable remains unchanged.
+
+Implemented through existing declaration identity and admission machinery:
+
+- Source-site lexical selection and deferred replay retain method, source part,
+  active hosts, declaration order and initializer exclusion. Type/read/write/
+  address/indexed-root/sizeof consumers agree; structural path tails are not
+  lexical lookups. Callee lexical fallback is distinct from caller priority.
+- Repeated declarations select physical slots by original P0 declaration/name
+  identity. Header type collection preserves its lexical environment; body
+  consumers use the already resolved input model.
+- The existing `ImplEntry` carries a nullable opaque module-lifetime layout
+  token, compared only. Equal intermediate maps are not evidence of equal
+  source layouts. No runtime name registry, new language type, per-map graph,
+  hidden data graph or base Lmx/Array field is added.
+- Genuine producers record source layout after construction, not on every
+  read of a mutable own row. Received replacement values cannot inherit the
+  old declaration's provenance. Copies do not inherit admission records.
+- Native and walker reception share current-Consumer admission before
+  publishing proof or storing the value. Unknown origin stays unknown;
+  cached correspondence does not approve an unrelated later Consumer.
+  ADMIT_AS uses one inline nine-cell header plus maps/alternatives/catches;
+  all consumers migrated together, with no old-format fallback.
+
+Acceptance directories are under `C:/Nyasha_Planet/LMX/build`:
+
+| Gate | Result | Directory |
+| --- | --- | --- |
+| Focused | 107/107, 104 fixtures | `l2_harness/site_visibility_final_focus_20261001_01` |
+| Kernel | 284/284, 105 selftests; admission32/table71 | `site_visibility_kernel_20261001_final` |
+| Full generated | 1095 unique targets, 1047 OK, 48 FAIL | `l2_harness/site_visibility_full_20261001_03` |
+| L3 | 11 suites, 295 checks plus four inventories | `l3/site_visibility_20261001_final` |
+
+Compared by exact IDs with the released `71c4743` full gate: zero regressions,
+removals or duplicates; 43 added rows all pass; 48 old failures remain.
+The four old failures now passing are `unit_send_ref_root_fail`,
+`unit_a3_capture_direct_vs_copy`, `unit_root_ref_other_refused` and
+`unit_ref_formal_rebind_other_refused`. This is **not full-core green**.
+Full03 contains `baseline_comparison.json`, `final_verification.json` and
+`staged_verification.json`. Independent reviews rehashed all 70 live sources,
+189 staged owned copies, 1269 staged LM2 inputs and 55 L3 source records:
+zero mismatches. Documentation and whitespace checks pass.
+
+Final mutation evidence is linked from the focused directory's
+`final_mutation_evidence.json`; originals stayed unchanged. Under
+`build/l2_harness`, the qualified groups are:
+
+- `site_visibility_final_mechanism_mutants_02`: 12 compiler mechanisms,
+  17 cases; 15 qualifying detections (six runtime cases in 12 modes and
+  nine source-checker detections). Two invalid-C companion cases are
+  explicitly uncredited. Every mechanism has a qualifying detection.
+- `site_visibility_final_assertion_mutants_01`: 22 cases, 42 runtime
+  executions (22 native, 20 actual root-walk), all compile/link successfully.
+- `site_visibility_final_provenance_mutants_02`: nine generated runtime
+  cases in 17 modes plus five kernel assertion failures, all valid builds.
+- `site_visibility_final_receiving_mutants_01`: two runtime cases in three
+  modes plus one observer-only relationship check, recorded separately.
+
+No semantic mutant survived. Earlier interrupted groups and full01/full02
+reds remain evidence, not redefined successes. Diagnostic expectation changes
+preserve the original free-name location. Invalid valued-root tails were
+removed from two sizeof negatives to expose the intended operand diagnostic;
+the actual shared type-role scan/waits defect was then repaired. Pointer sizeof
+checks compare a type with a value of that same type, not different C99 pointer
+representations. Primitive-only type-frame support remains implementation debt.
+
+Coverage limits: constructor/target creation remains native; the collision
+witness genuinely walks observer/relay/caller, not those constructors. The
+receiving witness walks `inspect`, while its raw layout observer stays native.
+The sizeof witness walks the root transport, not its sizeof bodies. This
+checkpoint does not close uniform native-word dispatch, whole merge-result
+projection, transitive capture closure, C99 pointer-cell aliasing, compiler
+metadata caps, all canonical graph construction, or §§8–8a.
 
 <a id="bounded-indexed-expressions"></a>
 ## Shared bounded expressions and pointer actuals: checkpoint c8167af

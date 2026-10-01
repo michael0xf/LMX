@@ -97,7 +97,13 @@ Walker имеет `l2_rw_write` / `l2_rw_own` и Structure-capable working rows
 места; запрета хранить результат метода в собственном графе нет.
 
 <a id="site-binding-category-regressions"></a>
-### SITE-BINDING-CATEGORY-REGRESSIONS — 2026-10-01, Codex, IN WORK `SITE-AWARE-VISIBILITY-20261001`
+### SITE-BINDING-CATEGORY-REGRESSIONS — 2026-10-01, Codex, FIXED `e70689c`
+
+Ограниченное исправление выпущено: full03 1047/1095, 48 прежних отказов,
+ноль новых регрессий, 43 добавленные строки зелёные; focused 107/107,
+kernel 284/284, L3 11/295 плюс четыре инвентаризации. Ниже сохранена
+история диагностики, не нынешний статус промежуточных срезов.
+[Финальные байты, мутации и границы](native-selfbuild-20260930.md#site-visibility-release).
 
 **Текущий блокирующий свидетель — потеря происхождения раскладки.**
 `site_visibility_20261001_expanded05` прошёл 288/288 (285 фикстур),
@@ -251,8 +257,9 @@ owned-вход focused staging. Это ещё не полный gate и не в�
 admission 32/32, table 71/71. Новый `sizeof`-контроль сравнивает указательный
 тип с переменной того же типа, не предполагая равенства размеров разных
 C99-указателей. Его root действительно обходится, но оба тела с `sizeof`
-остаются нативными. Проверка мутаций и полный restored-прогон ещё нужны;
-SITE не выпущен, старые красные срезы не заменены новой базой.
+остаются нативными. Последующие финальные мутации, full03 и L3 завершены
+на этих же байтах; результат — в записи выпуска выше. Красные full01/full02
+остаются историей восстановления, не промежуточными «зелёными» базами.
 
 Расширенный промежуточный прогон `site_visibility_20261001_expanded02`:
 279 targets, 251 OK, 28 FAIL; это **не** acceptance текущего среза.
@@ -313,7 +320,12 @@ L3, generated и контрольные поломки. Старый `_22` с о
 служебными Structure для карт — отвергнутый промежуточный вариант,
 не архитектура и не кандидат на выпуск.
 
-### NAMED-DECLARATION-SLOT-IDENTITY — 2026-10-01, Codex, IN WORK `SITE-AWARE-VISIBILITY-20261001`
+### NAMED-DECLARATION-SLOT-IDENTITY — 2026-10-01, Codex, FIXED `e70689c`
+
+`unit_site_part_repeat` проходит native и настоящий root-walk в финальном
+SITE full03. Исправление использует P0-identity объявления; нижеследующий
+разбор сохраняет исходную причину. Общие структурные selector-пути этим
+не заменены лексическим поиском.
 
 Новый `unit_site_part_repeat` в `site_visibility_20261001_14` выявил
 существовавший раньше отказ: повторные `int: shared 11` / `int: shared 22`
@@ -754,7 +766,13 @@ Structure-кандидат после преобразования и admission,
 после ненулевой привязки проверено: отсутствие initializer означает тот
 же ноль, что явный initializer 0, а не сохранение прежнего значения.
 
-### HIDDEN-POINTER-LOCAL-SOURCE — 2026-09-30, Codex, IN WORK `SITE-AWARE-VISIBILITY-20261001`
+### HIDDEN-POINTER-LOCAL-SOURCE — 2026-09-30, Codex, FIXED `e70689c`
+
+SITE-срез закрыл видимость по месту через существующие own-строки,
+сохранённые SourceSite и общий input/model resolver. Прямое и многошаговое
+forwarding, host/formal shadow, initializer exclusion, future/depth/const
+отказы проверены на финальном срезе. Ниже — исходные измерения;
+[точная приёмка](native-selfbuild-20260930.md#site-visibility-release).
 
 Актуальный срез — `71c4743`: явные указатели уже находятся в общих own-строках,
 поэтому описанная ниже первоначальная причина с machine-local больше

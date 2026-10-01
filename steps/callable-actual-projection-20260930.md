@@ -88,7 +88,14 @@ This is a shared value-selection mechanism, not a rule that every context receiv
 <a id="site-aware-hidden-source"></a>
 ### Dependency: site-aware hidden reference inputs
 
-**Rebaseline before implementation, 2026-10-01.** The historical pointer
+**Released, 2026-10-01: `e70689c`.** The source-site/admission slice below
+is implemented and independently verified; exact gates, mutation evidence
+and remaining native-only boundaries are in the
+[release record](native-selfbuild-20260930.md#site-visibility-release).
+The following preflight and interim diagnostics explain the repair; they
+are not instructions to repeat it or claims that the wider callable task is done.
+
+**Pre-implementation baseline, 2026-10-01.** The historical pointer
 machine-local premise below has been superseded by the active
 [portable-reference migration](native-selfbuild-20260930.md#portable-reference-value-projection).
 Its exact source is now released as `71c4743` with the common transport ABI.

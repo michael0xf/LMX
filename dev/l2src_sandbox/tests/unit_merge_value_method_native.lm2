@@ -1,0 +1,15 @@
+Model:
+    int: value 1
+end: Model
+fn: make () int
+    copy: merge: Model
+    @: Model b copy
+    if: b = 0 || b != @copy || b = @Model
+        return: 81
+    b\value: 99
+    if: copy\value != 99 || Model\value != 1
+        return: 82
+    return: 7
+end: make
+sendMessage: exit(exit_code: make(); stdout: ""; stderr: "")
+return

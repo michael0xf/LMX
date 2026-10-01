@@ -685,24 +685,46 @@ fn: lmx_walk_merge_pairs_cells (@: LmxArena arena; @@: void cells; size_t: n; @@
     \out_count: n
 return: 0
 
-# -194 к.6 (K2): merge in the interpreted root, `R: merge: A B ... [body]`, with T2's own
-# override map. Node (Opus/T3; D1 2026-09-28: the map inline): generic PRIM [prim, record, catch, P, op0, ...,
-# opN-1, body_or_0, 3P pair cells] -- refs[0] the pair count P (a size cell), nargs = N + 2 + 3P (lmx_walk_prim's
-# own null-slot skip, above in lmx_walk.lm1, makes an absent body refs[i] = 0 without refusing the call).
-# refs[1] is the model, matching Q21 = A / T1's own
-# model-first rule; container = operands[0]'s own parent, the same rule
-# lmx_walk_merge_model already uses for the single-operand case. \out = the fresh
-# result. Status: 0 OK, 1 a malformed call (bad nargs, a non-Structure operand/body, a
+# The copier decides retention by actual identity. Layout is then taken from
+# the held descriptor, or from genuine direct-operand producer evidence; a
+# merge declaration is evidence only for a newly constructed result.
+fn: lmx_merge_result_layout (@: LmxArena arena; @: Lmx result; @@: Lmx operands; size_t: count; @: void fresh; @: void direct_source) int
+    size_t: i 0U
+    @: void layout fresh
+    if: result = 0 || operands = 0
+        return: c.LMX_IMPLEMENTS_UNKNOWN
+    while: i < count
+        if: result = operands[i]
+            layout: lmx_implements_layout(arena, result)
+            if: layout = 0 && count = 1U
+                layout: direct_source
+            break
+        i: i + 1U
+    ---
+    if: layout = 0
+        return: c.LMX_IMPLEMENTS_YES
+return: lmx_implements_register_map(arena, result, result, 0, 0U, layout)
+
+# Fresh merge uses ordinary PRIM_PUB inputs: pair count, expression parent,
+# boxed fresh and direct-source tokens, N operands, body, then 3P pair cells.
+# nargs = N + 5 + 3P. The parent follows the reached expression, independently
+# of operand parents. The token is optional producer metadata, never a model.
+# Only successful construction publishes its fresh identity correspondence.
+# \out = the successful result (fresh or legitimately retained).
+# Status: 0 OK, 1 a malformed call or conflicting producer metadata (bad nargs, a non-Structure operand/body, a
 # malformed pairs Structure), 2 THROW_MERGE (lmx_merge_owned itself refused -- an
 # override the translator's own static checks should have already ruled out, same as
 # lmx_walk_merge_model's own admission-refusal case).
 fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    int: layout_status c.LMX_IMPLEMENTS_YES
     @: LmxArena arena 0
     @@: Lmx operands 0
     size_t: op_count 0U
     @: Lmx body 0
     size_t: np 0U
     @: Lmx container 0
+    @: void layout 0
+    @: void direct_source 0
     @@: LmxMergePair pairs 0
     size_t: pair_count 0U
     @@: Lmx retain_profiles 0
@@ -711,8 +733,9 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     size_t: i 0U
     @: Lmx result 0
     int: status
-    \out: 0
-    if: owner = 0 || refs = 0 || out = 0 || nargs < 3U
+    if: out != 0
+        \out: 0
+    if: owner = 0 || refs = 0 || out = 0 || nargs < 6U
         return: 1
     ---
     arena: (cast: (@: LmxArena) owner)
@@ -720,25 +743,34 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
         return: 1
     ---
     np: lmx_size_value_known(refs[0])
-    if: nargs < 3U + 3U * np
+    if: nargs < 6U + 3U * np
         return: 1
     ---
-    op_count: nargs - 2U - 3U * np
+    op_count: nargs - 5U - 3U * np
+    container: (cast: (@: Lmx) lmx_pointer_value_known(refs[1]))
+    layout: (cast: (@: void) lmx_charptr_value_known(refs[2]))
+    direct_source: (cast: (@: void) lmx_charptr_value_known(refs[3]))
+    if: container != 0 && lmx_range_classify(arena, (cast: (@: void) container)) != c.LMX_KIND_STRUCT
+        return: 1
     if: op_count = 0U
         return: 1
     ---
     i: 0U
     while: i < op_count
-        if: refs[1U + i] = 0 || lmx_range_classify(arena, lmx_pointer_value_known(refs[1U + i])) != c.LMX_KIND_STRUCT
+        if: refs[4U + i] = 0
+            return: 1
+        if: lmx_pointer_value_known(refs[4U + i]) = 0
+            return: 2
+        if: lmx_range_classify(arena, lmx_pointer_value_known(refs[4U + i])) != c.LMX_KIND_STRUCT
             return: 1
         ---
         i: i + 1U
     ---
-    body: (cast: (@: Lmx) lmx_pointer_value_known(refs[1U + op_count]))
+    body: (cast: (@: Lmx) lmx_pointer_value_known(refs[4U + op_count]))
     if: body != 0 && lmx_range_classify(arena, (cast: (@: void) body)) != c.LMX_KIND_STRUCT
         return: 1
     ---
-    if: lmx_walk_merge_pairs_cells(arena, refs + 2U + op_count, np, @ pairs, @ pair_count) != 0
+    if: lmx_walk_merge_pairs_cells(arena, refs + 5U + op_count, np, @ pairs, @ pair_count) != 0
         return: 1
     ---
     # K2b (-202): an operand's profile says whether the copier RETAINS it (shares by
@@ -759,7 +791,7 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
     retain_profiles: operands + op_count
     i: 0U
     while: i < op_count
-        operands[i]: (cast: (@: Lmx) lmx_pointer_value_known(refs[1U + i]))
+        operands[i]: (cast: (@: Lmx) lmx_pointer_value_known(refs[4U + i]))
         profile: lmx_range_profile(arena, (cast: (@: void) operands[i]))
         if: profile != 0
             retain_profiles[retain_count]: profile
@@ -767,13 +799,17 @@ fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void des
         ---
         i: i + 1U
     ---
-    container: operands[0]\parent
     status: lmx_merge_profiles_owned(operands, op_count, body, container, arena, arena, retain_profiles, retain_count, pairs, pair_count, @ result)
+    if: status = c.LMX_MERGE_OK && result != 0
+        layout_status: lmx_merge_result_layout(arena, result, operands, op_count, layout, direct_source)
+    ---
     free((cast: (@: void) operands))
     lmx_walk_merge_pairs_free(pairs, pair_count)
     if: status != c.LMX_MERGE_OK || result = 0
         return: 2
     ---
+    if: layout_status != c.LMX_IMPLEMENTS_YES
+        return: 1
     \out: (cast: (@: void) result)
 return: 0
 

@@ -1372,6 +1372,38 @@ $fixtures = @(
                  'l2_profile_array: (cast: (@: VoidArray) lmx_arena_take_profiled',
                  'l2_program_qualified_roots[0U]: l2_nsp[0]',
                  'l2_entry_unit: graph') },
+    [pscustomobject]@{ Name = 'unit_merge_value_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @();
+        GraphShapes = @([pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+            [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 1 }) } },
+            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+        ) }) },
+    [pscustomobject]@{ Name = 'unit_merge_value_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @();
+        GraphShapes = @(
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 3 }) } },
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 13; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }) } }
+            ) },
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 4 }) } },
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }) } }
+            ) }
+        ) },
+    [pscustomobject]@{ Name = 'unit_merge_value_failure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @();
+        GraphShapes = @([pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+            [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 3 }) } },
+            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+        ) }) },
+    [pscustomobject]@{ Name = 'unit_merge_value_method_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_schema.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # An existing head retains its call/assignment role; a nested merge frame
+    # does not redeclare it. The present receiver lowering refuses this call.
+    [pscustomobject]@{ Name = 'unit_merge_known_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':3:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    # A reached Structure merge result does not satisfy an int return place;
+    # unit_merge_value_schema is the compatible Structure-return control.
+    [pscustomobject]@{ Name = 'unit_merge_value_int_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':4:9: return value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_site.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('3');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
@@ -1387,32 +1419,43 @@ $fixtures = @(
     # and physical copy identity. The translator must not emit merge-result selftests.
     [pscustomobject]@{ Name = 'unit_merge_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '0', 'size', '7', 'merge_fresh', '1', '0', '1', '0'); Entry = 7;
         Absent = @('merge result check', 'lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_mpp[0U]\model_slot: 0U', 'l2_mpp[0U]\operand: 1U', 'l2_mpp[0U]\field: 0U',
-                 'lmx_merge_owned(l2_mops, 2U, l2_mbody, node, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)') },
+        Debt = @('l2_mpp[0U]\model_slot: 0U', 'l2_mpp[0U]\operand: 1U', 'l2_mpp[0U]\field: 0U');
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     # -193 T1: later operands merge INTO the model in operand order -- two pairs on one model slot, the
     # last one C's -- and a new name is added.  R = {3, 2, 9}.  Success is 4.
     [pscustomobject]@{ Name = 'unit_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '3', 'merge_value', '1', '0', 'size', '3', 'merge_fresh', '1', '0', '2', '0'); Entry = 4;
         Absent = @('merge result check');
-        Debt = @('l2_mpp[0U]\operand: 1U', 'l2_mpp[1U]\model_slot: 0U', 'l2_mpp[1U]\operand: 2U',
-                 'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, l2_program_arena, l2_program_arena, l2_mpp, 2U, @ l2_mresult)') },
-    # -193 T3 (over Sonnet's K2): merge at the walked root.  The result slot of the unit takes the
-    # walker's merge primitive by reference, PUT_REF(0, slot, PRIM [prim, lmx_walk_merge_map, ops,
-    # body | 0, pairs...]); the pairs are the translator's map inline (D1, Codex 2026-09-28: no helper Structure) --
-    # their count P in slot 3, 3·P size cells after the body. The same source also has native merge
+        Debt = @('l2_mpp[0U]\operand: 1U', 'l2_mpp[1U]\model_slot: 0U', 'l2_mpp[1U]\operand: 2U');
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 2U, @ l2_mresult\)') },
+    # Merge is attached to its ordinary own store, not a reserved unit result slot.
+    # The callback header contains pair count, actual parent and two producer tokens;
+    # 3·P inline mapping cells follow operands/body. The same source also has native merge
     # code; WalkRoot checks both dispatch modes. Merge is a publication boundary (PRIM_PUB).
     # unit_root_merge_three_operands: two pairs on Model's x (C's last), B's z appended, a write
     # `R\x: 6U` through the result, and S merging the result R (read in the turn) with a body field.
     [pscustomobject]@{ Name = 'unit_root_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 0; WalkRoot = $true;
         GraphShapes = @(
-            [pscustomobject]@{ Op = 'PUT_REF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 14; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 2 }) } }) },
-            [pscustomobject]@{ Op = 'PUT_REF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 6; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }) } }) }
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 5 }) } },
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 17; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 2 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+            ) },
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 6 }) } },
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+            ) }
         ); Absent = @(); Debt = @() },
     # unit_root_merge_body: the body as the map's operand n -- R's x into Model's x, S's z into B's
     # appended z, S's w new.  D1: each merge's pair is inline, its count in slot 3 -- one pair: 3 wider.
     [pscustomobject]@{ Name = 'unit_root_merge_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 0; WalkRoot = $true;
         GraphShapes = @(
-            [pscustomobject]@{ Op = 'PUT_REF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }) } }) },
-            [pscustomobject]@{ Op = 'PUT_REF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }) } }) }
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 4 }) } },
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 12; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+            ) },
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
+                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 5 }) } },
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 13; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+            ) }
         ); Absent = @(); Debt = @() },
     # D-75: a call through a path at the walked root is typed by its method; the int result stored into
     # a size_t own takes the root's conversion edge (slice 13 -- before it, a located refusal of the mix;
@@ -1434,10 +1477,11 @@ $fixtures = @(
     # placed field's stays refused.  4 and 19.
     [pscustomobject]@{ Name = 'unit_merge_added_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '1', 'size', '3', 'merge_fresh', '1', '1', '2', '0'); Entry = 4;
         Absent = @('merge result check');
-        Debt = @('l2_mpp[0U]\model_slot: 1U', 'l2_mpp[0U]\operand: 2U', 'lmx_merge_owned(l2_mops, 3U, l2_mbody, node, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)') },
+        Debt = @('l2_mpp[0U]\model_slot: 1U', 'l2_mpp[0U]\operand: 2U');
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '1', 'merge_value', '1', '0', 'size', '5', 'merge_width', '2', '3', 'merge_value', '2', '1', 'size', '9'); Entry = 19;
         Absent = @('merge result check');
-        Debt = @('lmx_merge_owned(l2_mops, 1U, l2_mbody, node, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)', 'lmx_merge_owned(l2_mops, 2U, l2_mbody, node, l2_program_arena, l2_program_arena, l2_mpp, 1U, @ l2_mresult)') },
+        Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 1U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)', 'l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_merge_field_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_field_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -1446,7 +1490,7 @@ $fixtures = @(
     # retained cell by address (a driver merge_same fact), read back as 2.
     [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2', 'merge_width', '1', '1', 'merge_same', '1', '0', '1', '0'); Entry = 2;
         Absent = @('merge result check');
-        Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, l2_mpp, 1U, @ l2_mresult)') },
+        Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     # Callable copies have distinct occurrence descriptors but share native code; their lexical
     # parent stays the file Structure. q22: R\M() = 3; q20: all three calls return 3.
     # merged_callable additionally observes independent mutable own storage.
@@ -1748,8 +1792,10 @@ $fixtures = @(
         Needle = 'a callable merge needs one model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_header.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a callable merge header does not match the model'; Absent = @(); Debt = @() },
+    # Historical receiving-context DEBT, not a semantic integer-admission
+    # negative: the old zero-operand message misclassified the outer return.
     [pscustomobject]@{ Name = 'unit_t7_from_int.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'merge needs at least one operand'; Absent = @(); Debt = @() },
+        Needle = ':5:13: merge expression is not lowered in this receiving context'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merged_callable.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_native', '1', '0', '0', '0', 'merge_child', '1', '0', '0', '0', '2'); Entry = 5;
         Absent = @('merge result check'); Debt = @() },
     # -193 T1b (Q6 = a): no name is decided by its spelling.  l2_upper_name (all-caps = a C constant
@@ -1844,8 +1890,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s1_merge_profiles_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; });
         Absent = @('l2_out_throw[0]: node');
-        Debt = @('lmx_merge_profiles_owned(l2_mops, 2U, l2_mbody, node, l2_program_arena, l2_program_arena, l2_mprofiles, 2U, l2_mpp, 1U, @ l2_mresult)',
-                 'l2_out_throw[0]: 0', 'return: l2_ts') },
+        Debt = @('l2_out_throw[0]: 0', 'return: l2_ts');
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         GraphCalls = @([pscustomobject]@{ Method = 1; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; });
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts') },

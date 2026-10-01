@@ -1532,6 +1532,10 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         if: status != c.LMX_WALK_OK
             return: status
         return: lmx_walk_arg_write(f, index, a, @ value, out)
+    if: op = c.LMX_WALK_OP_SELF
+        if: f\node = 0
+            return: c.LMX_WALK_INVALID
+        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, lmx_walk_data_holder(f, 0))
     if: op = c.LMX_WALK_OP_NODE
         if: f\node = 0 || f\node\parent = 0
             return: c.LMX_WALK_INVALID

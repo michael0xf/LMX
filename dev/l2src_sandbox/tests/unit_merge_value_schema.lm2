@@ -1,0 +1,45 @@
+# Complete merge schema, ordinary own storage, source independence and re-entry.
+A: (int: x 1)
+B: (int: x 2; int: y 3)
+C: (size_t: z 4U)
+fn: make (int: depth) A
+    @: A failed 0
+    copy: merge: A B
+    @: A first copy
+    if: copy\x != 2 || copy\y != 3 || first != @copy || first = @A
+        return: failed
+    copy2: merge: copy C
+        size_t: z 5U
+        size_t: extra 6U
+    end: merge
+    @: B full copy2
+    if: full\x != 2 || full\y != 3 || copy2\z != 5U || copy2\extra != 6U || full = first
+        return: failed
+    full\y: 33
+    if: copy\y != 3 || B\y != 3 || copy2\y != 33 || C\z != 4U
+        return: failed
+    if: depth != 0
+        @: A inner make(0)
+        if: inner = 0 || inner = first || inner\x != 2
+            return: failed
+        inner\x: 44
+        if: first\x != 2 || inner\x != 44
+            return: failed
+    ---
+return: first
+fn: different () int
+    copy: merge: C
+    if: copy\z != 4U
+        return: 83
+return: 7
+fn: check () int
+    @: A first make(1)
+    @: A second make(0)
+    if: first = 0 || second = 0 || first = second
+        return: 81
+    first\x: 71
+    if: first\x != 71 || second\x != 2 || A\x != 1 || B\x != 2 || different() != 7
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,32 @@
+Model: (size_t: value 1U; size_t: spare 2U)
+independent:
+    const:
+        immutable:
+            (): Frozen
+                size_t: spare 88U
+                size_t: value 22U
+            end: Frozen
+        end: immutable
+    end: const
+end: independent
+fn: read (Model: actual) size_t
+return: actual\value
+fn: check () int
+    first: merge: Frozen
+    second: merge: Frozen
+    @: Model a first
+    @: Model b second
+    if: a != b || a != @Frozen || a\value != 22U || b\spare != 88U
+        return: 81
+    if: read(first) != 22U || read(second) != 22U
+        return: 82
+    @: Frozen held first
+    third: merge: held
+    @: Model c third
+    if: c != a || c\value != 22U || third\spare != 88U
+        return: 83
+    if: Frozen\value != 22U || Frozen\spare != 88U
+        return: 84
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

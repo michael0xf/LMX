@@ -102,11 +102,18 @@ prototype:
     fn: lmx_walk_merge_pairs_cells (@: LmxArena arena; @@: void cells; size_t: n; @@@: LmxMergePair out_pairs; @: size_t out_count) int
     fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void
     # -194 к.6: walk PRIM entry for a fresh multi-operand merge with an override map,
-    # `R: merge: A B ... [body]` -- [prim, record, catch, P, op0, ..., opN-1, body_or_0, 3P pair cells] (D1).
+    # `R: merge: A B ... [body]` -- [prim, record, catch, P, expression_parent,
+    # boxed_fresh_token, boxed_direct_source_token, op0, ..., opN-1, body_or_0,
+    # 3P pair cells]. Parent is the reached lexical host. Source evidence may
+    # name only a directly known operand producer, never its receiving model.
+    # A retained result preserves its held layout; a fresh result gets its own.
     # к.b (-202): each operand's lmx_range_profile, when nonzero, is collected and passed
     # to lmx_merge_profiles_owned as retain_profiles -- classified by the arena alone,
     # matching what the native emission already does (l2trans.lm1:20390-20399).
     fn: lmx_walk_merge_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    # Successful construction only: publish genuine producer evidence without
+    # relabeling an operand whose exact descriptor the copier retained.
+    fn: lmx_merge_result_layout (@: LmxArena arena; @: Lmx result; @@: Lmx operands; size_t: count; @: void fresh; @: void direct_source) int
     # -194 к.6: walk PRIM entry for merge INTO an existing target (Q26.1's own-field
     # write, `o\inner: a`) -- [prim, record, catch, target, op, P, 3P pair cells] (D1); \out is always 0.
     fn: lmx_walk_merge_into_map (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int

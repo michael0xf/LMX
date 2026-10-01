@@ -36,11 +36,22 @@ struct: L2Address
     int: immutable
 end: L2Address
 
-# Translation-only source projection, made before candidate evaluation. model
-# is a declared lookup key; layout is nonnegative only for a real descriptor
-# producer. A held own/input/result uses the existing D105 source place.
-struct: L2ReferenceSource
+# A field projected from either existing named or composed compiler metadata.
+# This record has no runtime representation and contains no binding identity.
+struct: L2SchemaField
+    @: LmP0Text name
+    @: LmP0Text type_word
+    int: kind
     int: model
+end: L2SchemaField
+
+# Translation-only source projection, made before candidate evaluation. schema
+# names complete candidate metadata, not the required receiving model. layout
+# is absent unless a real descriptor producer establishes that schema. A held
+# own/input/result uses the existing D105 source place. Tagged schema handles
+# are decoded only by the shared schema helpers; -1 alone means absent.
+struct: L2ReferenceSource
+    int: schema
     int: layout
     int: method
     int: place

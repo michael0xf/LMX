@@ -1,0 +1,14 @@
+Model:
+    int: value 1
+end: Model
+copy: merge: Model
+@: Model b copy
+if: b = 0 || b != @copy || b = @Model
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+b\value: 99
+if: copy\value != 99 || Model\value != 1
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

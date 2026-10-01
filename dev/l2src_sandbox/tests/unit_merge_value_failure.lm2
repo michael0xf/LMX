@@ -1,0 +1,23 @@
+Model: (int: value 1)
+fn: make () Model
+    @: Model source
+    copy: merge: source
+return: copy
+fn: check () int
+    initial: merge: Model
+    @: Model current initial
+    @: Model saved current
+    int: caught 0
+    ---
+        current: make()
+        catch: merge ()
+            caught: caught + 1
+    ---
+    if: caught != 1 || current != saved || current = @Model
+        return: 81
+    current\value: 44
+    if: saved\value != 44 || Model\value != 1
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

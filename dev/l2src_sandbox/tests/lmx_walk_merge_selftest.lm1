@@ -14,12 +14,9 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -194 к.6 (K2): merge in the interpreted root as a walker PRIM step with a map, and
-# merge-into (Q26.1) as a prim of the same family. Node shape agreed with Opus (T3's own
-# emitter; D1 2026-09-28: the pairs inline): [prim, record, catch, P, op0, ..., opN-1, body_or_0, 3P pair cells]
-# for the fresh multi-operand merge (lmx_walk_merge_map), [prim, record, catch, target, op, P, 3P pair cells] for
-# merge-into (lmx_walk_merge_into_map). Exercised directly against the kernel (T3's own
-# emission is not built yet).
+# Fresh merge uses [prim, record, catch, P, expression-parent, fresh-token, source-token,
+# op0, ..., opN-1, body_or_0, 3P pair cells]. Merge-into retains its independent
+# [prim, record, catch, target, op, P, 3P pair cells] contract.
 
 sub: mw_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -57,6 +54,8 @@ fn: mw_prim_record (@: LmxArena arena; LmxPrimitiveEntry: fn; @: Lmx signature) 
     rec\owner: (cast: (@: Lmx) arena)
 return: rec
 
+[]: char mw_schema_tokens 4
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -64,7 +63,7 @@ fn: main () int
     LmxPool: cells
     LmxWalkContext: ctx
     LmxWalkValue: result
-    @: int types (cast: (@: int) calloc(7U, c.sizeof(int)))
+    @: int types (cast: (@: int) calloc(10U, c.sizeof(int)))
     @: Lmx contract 0
     @: Lmx roles 0
     @: Lmx unit 0
@@ -131,24 +130,31 @@ fn: main () int
     pairs_a: 0
     types[0]: c.LMX_TYPE_SIZE_T
     types[1]: c.LMX_TYPE_LMX
-    types[2]: c.LMX_TYPE_LMX
-    types[3]: c.LMX_TYPE_LMX
-    types[4]: c.LMX_TYPE_SIZE_T
-    types[5]: c.LMX_TYPE_SIZE_T
-    types[6]: c.LMX_TYPE_SIZE_T
-    contract: wt_contract(@ arena, 7U, types, c.LMX_TYPE_LMX)
+    types[2]: c.LMX_TYPE_POINTER_BASE + 12
+    types[3]: c.LMX_TYPE_POINTER_BASE + 12
+    types[4]: c.LMX_TYPE_LMX
+    types[5]: c.LMX_TYPE_LMX
+    types[6]: c.LMX_TYPE_LMX
+    types[7]: c.LMX_TYPE_SIZE_T
+    types[8]: c.LMX_TYPE_SIZE_T
+    types[9]: c.LMX_TYPE_SIZE_T
+    contract: wt_contract(@ arena, 10U, types, c.LMX_TYPE_LMX)
+    mw_check(counts, contract != 0, "merge-map complete input/return contract")
     rec_a: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
     mw_check(counts, rec_a != 0, "merge-map primitive record built")
 
     caller_a: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_a != 0 && lmx_arena_refs_open_owned(@ arena, caller_a, 1U) = 0, "caller_a opened")
     prim_a: mw_fr(@ arena, roles, caller_a, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 10U)
+    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 13U)
     lmx_arena_ref_store(prim_a, 1U, (cast: (@: void) rec_a))
-    lmx_arena_ref_store(prim_a, 4U, (cast: (@: void) model))
-    lmx_arena_ref_store(prim_a, 5U, (cast: (@: void) operand))
-    # slot 6 (body) left 0: no body operand. slot 2 is catch.  D1: the pair count at 3, the pair at 7..9.
-    mw_check(counts, mw_pairs(@ arena, prim_a, 3U, 7U, 0U, 1U, 0U) = 0, "pairs_a inline: model slot 0 <- operand(1) field 0")
+    lmx_arena_ref_store(prim_a, 4U, (cast: (@: void) unit))
+    lmx_walk_store_charptr(@ arena, prim_a, 5U, mw_schema_tokens)
+    lmx_walk_store_charptr(@ arena, prim_a, 6U, 0)
+    lmx_arena_ref_store(prim_a, 7U, (cast: (@: void) model))
+    lmx_arena_ref_store(prim_a, 8U, (cast: (@: void) operand))
+    # Slot 9 is absent body; parent/tokens precede operands, pairs stay inline.
+    mw_check(counts, mw_pairs(@ arena, prim_a, 3U, 10U, 0U, 1U, 0U) = 0, "pairs_a inline: model slot 0 <- operand(1) field 0")
     mw_check(counts, prim_a != 0, "caller_a graph built")
 
     st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, @ result)
@@ -159,6 +165,8 @@ fn: main () int
     mw_check(counts, ((cast: (@: Lmx) out_a)\array.size) = 1U, "merge result has model's own width (1)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_a), 0U)) = 99, "merge result slot 0 = operand's 99, the paired override (mutant: pairs ignored -> model's own 1, RED)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value(model, 0U)) = 1, "model itself untouched")
+    mw_check(counts, ((cast: (@: Lmx) out_a)\parent) = unit, "merge parent is expression host, not operand parent")
+    mw_check(counts, lmx_implements_layout(@ arena, (cast: (@: Lmx) out_a)) = (cast: (@: void) mw_schema_tokens), "fresh merge records its exact declaration token")
 
     # ==== merge-into ====
     target_b: lmx_node_new_owned(@ arena)
@@ -220,6 +228,8 @@ fn: main () int
     @: Lmx prim_c 0
     @: LmxPrimitive rec_c 0
     @: Lmx caller_c 0
+    @: Lmx copied_c 0
+    @: Lmx prior_result 0
     int: r_c 0
     @: void out_c 0
     int: present_c 0
@@ -235,15 +245,19 @@ fn: main () int
     # 313-345, requires a retain-profile marker's OWN home pool to be sealed).
     types[0]: c.LMX_TYPE_SIZE_T
     types[1]: c.LMX_TYPE_LMX
-    types[2]: c.LMX_TYPE_LMX
-    types[3]: c.LMX_TYPE_LMX
-    contract: wt_contract(@ arena, 4U, types, c.LMX_TYPE_LMX)
+    types[2]: c.LMX_TYPE_POINTER_BASE + 12
+    types[3]: c.LMX_TYPE_POINTER_BASE + 12
+    types[4]: c.LMX_TYPE_LMX
+    types[5]: c.LMX_TYPE_LMX
+    types[6]: c.LMX_TYPE_LMX
+    contract: wt_contract(@ arena, 7U, types, c.LMX_TYPE_LMX)
+    mw_check(counts, contract != 0, "retained merge complete input/return contract")
     rec_c: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
     mw_check(counts, rec_c != 0, "merge-map primitive record built (retained-leaf fixture)")
     caller_c: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_c != 0 && lmx_arena_refs_open_owned(@ arena, caller_c, 1U) = 0, "caller_c opened")
     prim_c: mw_fr(@ arena, roles, caller_c, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 7U)
+    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 10U)
     mw_check(counts, prim_c != 0, "caller_c graph built")
     model_c: lmx_node_new_owned(@ arena)
     mw_check(counts, model_c != 0 && lmx_arena_refs_open_owned(@ arena, model_c, 1U) = 0, "model_c opened {m: 1} (the ordinary, COPIED operand)")
@@ -278,9 +292,12 @@ fn: main () int
     mw_check(counts, seal_pool != 0 && lmx_pool_seal(seal_pool) = 0, "leaf_c's profiled PRIMITIVE pool sealed")
 
     lmx_arena_ref_store(prim_c, 1U, (cast: (@: void) rec_c))
-    lmx_arena_ref_store(prim_c, 4U, (cast: (@: void) model_c))
-    lmx_arena_ref_store(prim_c, 5U, (cast: (@: void) operand_c))
-    # slot 2 is catch; D1: the pair count at 3 is 0 (no pairs); slot 6 (body) left 0.
+    mw_check(counts, mw_fr(@ arena, roles, prim_c, 4U, c.LMX_WALK_OP_SELF, 1U) != 0, "SELF parent operand built")
+    lmx_walk_store_charptr(@ arena, prim_c, 5U, mw_schema_tokens + 1)
+    lmx_walk_store_charptr(@ arena, prim_c, 6U, 0)
+    lmx_arena_ref_store(prim_c, 7U, (cast: (@: void) model_c))
+    lmx_arena_ref_store(prim_c, 8U, (cast: (@: void) operand_c))
+    # Slot 2 is catch; pair count at 3 is zero; slot 9 is absent body.
     mw_check(counts, lmx_walk_store_size(@ arena, prim_c, 3U, 0U) = c.LMX_WALK_OK, "prim_c pair count 0")
 
     st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, @ result)
@@ -291,6 +308,35 @@ fn: main () int
     mw_check(counts, lmx_arena_ref_value((cast: (@: Lmx) out_c), 0U) != model_field_c && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_c), 0U)) = 1, "the ORDINARY operand's field is COPIED: same value 1, a DIFFERENT address than model_field_c")
     mw_check(counts, lmx_arena_ref_value((cast: (@: Lmx) out_c), 1U) = leaf_c, "the PROFILED operand's field is RETAINED: result slot 1 is the SAME address as leaf_c, not a copy (mutant: retain_profiles not passed -> a fresh copy, different address, RED)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_c), 1U)) = 77, "the retained leaf's value still reads 77 through the result")
+
+    prior_result: (cast: (@: Lmx) out_c)
+    mw_check(counts, prior_result\parent = caller_c, "SELF returns executing occurrence A as merge parent")
+    mw_check(counts, lmx_graph_copy_owned(caller_c, @ arena, @ arena, @ copied_c) = 0 && copied_c != 0 && copied_c != caller_c, "copied occurrence R is distinct")
+    st: lmx_walk_activate(@ ctx, caller_c, copied_c, 0, 0U, @ result)
+    mw_check(counts, st = c.LMX_WALK_OK && (result.present) != 0 && (result.ref) != 0 && (result.ref) != (cast: (@: void) prior_result), "same code with copied data makes a fresh result")
+    mw_check(counts, ((cast: (@: Lmx) (result.ref))\parent) = copied_c && prior_result\parent = caller_c, "SELF uses actual R when code differs from data; old parent remains A")
+
+    # One qualified operand retains its root. Different merge declarations
+    # may alias it, but cannot relabel it with their fresh-result tokens.
+    contract: wt_contract(@ arena, 6U, types, c.LMX_TYPE_LMX)
+    rec_c: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
+    prim_c: mw_fr(@ arena, roles, caller_c, 0U, c.LMX_WALK_OP_RET, 2U)
+    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 9U)
+    lmx_arena_ref_store(prim_c, 1U, (cast: (@: void) rec_c))
+    lmx_walk_store_size(@ arena, prim_c, 3U, 0U)
+    lmx_arena_ref_store(prim_c, 4U, (cast: (@: void) caller_c))
+    lmx_walk_store_charptr(@ arena, prim_c, 5U, mw_schema_tokens)
+    lmx_walk_store_charptr(@ arena, prim_c, 6U, mw_schema_tokens + 2)
+    lmx_arena_ref_store(prim_c, 7U, (cast: (@: void) operand_c))
+    mw_check(counts, lmx_implements_layout(@ arena, operand_c) = 0, "retained root begins without invented layout")
+    st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, @ result)
+    mw_check(counts, st = c.LMX_WALK_OK && (result.ref) = (cast: (@: void) operand_c), "single qualified merge retains exact operand")
+    mw_check(counts, lmx_implements_layout(@ arena, operand_c) = (cast: (@: void) (mw_schema_tokens + 2)), "retained root receives genuine source token, not merge token")
+    lmx_walk_store_charptr(@ arena, prim_c, 5U, mw_schema_tokens + 1)
+    lmx_walk_store_charptr(@ arena, prim_c, 6U, 0)
+    st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, @ result)
+    mw_check(counts, st = c.LMX_WALK_OK && (result.ref) = (cast: (@: void) operand_c), "second declaration retains same held descriptor")
+    mw_check(counts, lmx_implements_layout(@ arena, operand_c) = (cast: (@: void) (mw_schema_tokens + 2)) && operand_c\parent = 0, "held evidence and original parent survive second merge")
 
     failures: counts[1]
     c.printf("lmx_walk_merge_selftest: %d checks, %d failed\n", counts[0], failures)

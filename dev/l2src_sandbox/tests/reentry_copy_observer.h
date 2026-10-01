@@ -9,18 +9,35 @@ static Lmx *l2_test_reentry_copy;
 static LmxArena *l2_test_reentry_arena;
 static int l2_test_reentry_captures;
 
-static int l2_test_reentry_merge(Lmx **operands, size_t count, Lmx *body,
-    Lmx *container, LmxArena *src, LmxArena *dst, LmxMergePair **overrides,
-    size_t override_count, Lmx **out)
+static void l2_test_reentry_capture(int status, Lmx **operands, size_t count,
+    LmxArena *dst, Lmx **out)
 {
-    int status = l2_driver_merge_owned(operands, count, body, container,
-                                     src, dst, overrides, override_count, out);
     if (status == 0 && count == 1 && out != 0 && *out != 0) {
         l2_test_reentry_original = operands[0];
         l2_test_reentry_copy = *out;
         l2_test_reentry_arena = dst;
         ++l2_test_reentry_captures;
     }
+}
+
+static int l2_test_reentry_merge(Lmx **operands, size_t count, Lmx *body,
+    Lmx *container, LmxArena *src, LmxArena *dst, LmxMergePair **overrides,
+    size_t override_count, Lmx **out)
+{
+    int status = l2_driver_merge_owned(operands, count, body, container,
+                                     src, dst, overrides, override_count, out);
+    l2_test_reentry_capture(status, operands, count, dst, out);
+    return status;
+}
+
+static int l2_test_reentry_merge_profiles(Lmx **operands, size_t count, Lmx *body,
+    Lmx *container, LmxArena *src, LmxArena *dst, Lmx **profiles,
+    size_t profile_count, LmxMergePair **overrides, size_t override_count,
+    Lmx **out)
+{
+    int status = l2_driver_merge_profiles_owned(operands, count, body, container,
+        src, dst, profiles, profile_count, overrides, override_count, out);
+    l2_test_reentry_capture(status, operands, count, dst, out);
     return status;
 }
 
@@ -47,4 +64,6 @@ static int l2_test_reentry_dispatch(int walked_original)
 
 #undef lmx_merge_owned
 #define lmx_merge_owned l2_test_reentry_merge
+#undef lmx_merge_profiles_owned
+#define lmx_merge_profiles_owned l2_test_reentry_merge_profiles
 #endif

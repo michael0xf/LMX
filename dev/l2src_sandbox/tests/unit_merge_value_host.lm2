@@ -1,0 +1,32 @@
+Model: (int: value 1)
+Other: (int: value 22; int: spare 33)
+fn: checkpoint () int
+return: 1
+fn: check () int
+    copy: merge: Model
+    @: Model outer copy
+    @: Model previous 0
+    int: turn 0
+    while: turn < 2
+        innerCopy: merge: Other
+        @: Model current innerCopy
+        if: current = outer || innerCopy\value != 22 || innerCopy\spare != 33
+            return: 81
+        if: previous != 0
+            if: current = previous || previous\value != 44
+                return: 85
+        ---
+        checkpoint()
+        if: while\innerCopy\value != 22 || @while\innerCopy\value != @innerCopy\value
+            return: 82
+        while\innerCopy\value: 44
+        if: innerCopy\value != 44 || Other\value != 22 || outer\value != 1
+            return: 83
+        previous: current
+        turn: turn + 1
+    ---
+    if: copy != outer || copy\value != 1
+        return: 84
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

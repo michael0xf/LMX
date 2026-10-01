@@ -1,0 +1,19 @@
+Model: (size_t: x 1U; size_t: x 2U)
+Later: (size_t: x 33U)
+Last: (size_t: x 9U)
+fn: read (Last: value) size_t
+return: value\x
+fn: check () int
+    copy: merge: Model Later
+    if: copy\[0]x != 1U || copy\[1]x != 33U || copy\x != 33U
+        return: 81
+    if: read(copy) != 33U
+        return: 82
+    @: Last alias copy
+    alias\x: 44U
+    original: merge: Model
+    if: copy\[0]x != 1U || copy\[1]x != 44U || original\[0]x != 1U || original\[1]x != 2U
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

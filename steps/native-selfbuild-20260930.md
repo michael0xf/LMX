@@ -480,6 +480,29 @@ cannot implement Array formals. Preserve the already-parsed Array/element
 contract through resolution, input metadata and native/walker consumers;
 body-Array reference tests do not prove this signature path.
 
+Read-only closure design: project the existing `L2TypeContract` tree recursively
+into its semantic contract, physical ABI type and value category. Array(T)
+has descriptor-reference ABI while retaining T, its qualifiers and any nested
+receiver contracts; `l2_array_desc_ty()` alone erases those distinctions.
+Access a formal's normalized contract through its existing declaration
+metadata, not a new runtime registry. `l2_typed_formal`, signature comparison
+and receiving checks consume that same contract. Descriptor classification
+must distinguish graph and Array inputs; `l2_rw_input_witness` supplies a real
+Array-domain witness rather than its present Structure fallback.
+
+One resolved Array binding then feeds native and walker `length`, backing,
+index and address consumers. The existing `L2IndexedOperand` remains the
+index expression; formal versus own is an ordinary storage-location choice,
+not another Array parser. Call transport boxes the descriptor reference once.
+Current runtime typed ARG, `lmx_walk_array_from`, LENGTH and ELEM already have
+the relevant descriptor operations; their existence does not prove the missing
+source contract projection. Check an Array formal forwarded through another
+method, descriptor identity via `@`, length, element read/write and one-time
+index evaluation in native and actual walked execution; include empty Arrays
+and incompatible element/depth/qualifier contracts. A bare raw-C `VoidArray*`
+cannot acquire these semantic properties by name inference. This Array-formal
+closure is queued separately from the initial portable-reference witness.
+
 Sequence after named references: resolve the value/address representation
 dependency below before lifting the generic operator restrictions; lower
 declared primitive/pointer-depth references through the shared receiving
@@ -664,6 +687,24 @@ their own results and the fresh full gates. `_09` retains a generated-L1
 parse failure in the added places fixture while the values fixture remains
 green; it is not a successful runtime test of places. All broad checkpoint
 claims above still refer to `0c5dd61`, not this mutable working tree.
+
+`portable_reference_typed_eval_20261001_11` subsequently passes 5/5 targets
+with both values and places fixtures, translator blob
+`b17715c1230f1e366f6864984a23c27e05755c67` and SHA-256 prefix
+`DB57A05BEB885F7E`. Both fixtures run natively and with the actual root native
+word cleared. The places fixture distinguishes held pointer-cell addresses,
+physical indirect stores, pending working value versus graph cell, and a null
+store. Independent review confirms removal of the address-taken cache scan
+and its memo without changing the separate catch-binding policy. It does
+not yet assert the graph value after a checkpoint; dirty publication,
+clean-no-overwrite and address-alone-clean controls remain required.
+
+That review also found native indirect stores validating a primitive
+conversion without emitting it, and dereferenced higher-depth Structure
+references losing the receiving model. Both repairs belong to the same
+resolved receiving/place path: conversion and structural admission before
+store, evaluated once, with failure leaving the previous value untouched.
+They are implementation defects, not a request for new reference semantics.
 
 <a id="reentry-publication-repair"></a>
 ### Re-entry publication and path calls: checkpoint 0c5dd61

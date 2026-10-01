@@ -9,6 +9,23 @@
 `661735a` включил перечисленные ниже исправления прежнего VERIFIED WIP.
 Оставшиеся границы каждого исправления не считаются закрытыми вместе с ним.
 
+### C99-POINTER-CELL-ALIASING — 2026-10-01, Codex, OPEN
+
+В `0c5dd61` общие `lmx_pointer_new_owned/value_known/store_known`
+(`dev/l2src_sandbox/lmx_value_owned.lm1:135–161`) обращаются к указательной
+ячейке как к `void*`, а generated native использует настоящий тип этой
+же ячейки, например `int*` через `int**`. Read-only аудит frozen
+`portable_reference_typed_eval_20261001_20` подтверждает оба вида доступа.
+Разрешённая C99-конверсия значений указателей не разрешает такой aliasing
+их ячеек. Оптимизированное неверное выполнение пока **не измерено**;
+зелёный focused gate без оптимизации не закрывает дефект.
+
+Владелец — следующий ограниченный C99 storage-тикет единственного writer.
+Нужен один типокорректный контракт native/walker-хранилища с реальным `@p`;
+не `-fno-strict-aliasing`, не возврат адреса transport box, не второй ABI.
+Новые `void*` transport boxes сами по себе корректны и не являются причиной.
+[Границы, источники стандарта и оптимизированные контроли](native-selfbuild-20260930.md#c99-pointer-cell-storage).
+
 ### COMMON-ASSIGNMENT-RHS-TYPING — 2026-09-30, Codex, FIXED `6be1235`
 
 Полный `dst_chars_cleanup_full_20260930_01` выявил 12 регрессий прежде зелёных строк после подключения machine-local assignment к общему checker. Все текущие фикстуры принимаются прежним `after_return_full` binary, но уже отказываются pre-API `diagnostic14_final` binary: удаление `dst_chars` их не создало. Десять отказов — неизвестный тип RHS, `parser_text_heap` — несовместимость известного `void*` с типизированным C-указателем, `unit_local_init_graph_ref_admit_refused` — незавершённый маршрут структурного admission. В частности, `unit_sizeof_type_frame` и C-member строки падают на присваивании pointer-cast до sizeof/доступа к члену: `l2_colon_simple_ty` знает только скалярные cast, хотя эмиттер уже поддерживает указательные.

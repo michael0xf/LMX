@@ -1795,6 +1795,45 @@ Lexical-local identity is not required to test formals/own cells/resolved paths,
 but must land before claiming correct repeated, shadowed or hidden machine-local
 operands: a correct arithmetic resolver cannot repair selection of the wrong cell.
 
+<a id="c99-pointer-cell-storage"></a>
+### C99 pointer-cell storage is not a pointer-value conversion
+
+Read-only audit on 2026-10-01 found a pre-existing storage mismatch, separate
+from the new argument-transport ABI. At source checkpoint `0c5dd61`,
+`lmx_pointer_new_owned`, `lmx_pointer_value_known` and
+`lmx_pointer_store_known` in `dev/l2src_sandbox/lmx_value_owned.lm1:135–161`
+initialize/read/write every pointer cell through `void **`. Generated native
+code exposes a typed pointer cell through its real typed address, for example
+`int **`, and stores through that address. The frozen focused run
+`portable_reference_typed_eval_20261001_20` contains both accesses in its
+places/formals generated sources; its green result is not an optimized-C99
+storage proof. No optimized wrong result has been measured by this audit.
+
+C99 permits conversion of an object-pointer **value** to/from `void *`; that
+does not make an `int *` object accessible through a `void *` lvalue. The
+effective-type/access rules are a separate constraint ([WG14 N1256,
+§6.5 paragraphs 6–7 and §6.3.2.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf)).
+GCC can exploit type-based aliasing at ordinary optimized settings
+([GCC optimization options](https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html#index-fstrict-aliasing)).
+This is an implementation defect against the adopted C99 types, not a request
+for a new language rule or a pointer-specific exception.
+
+The bounded follow-up must give pointer allocation, native typed loads/stores
+and walker loads/stores one C99-valid storage contract while preserving the
+actual language cell's address. Do not expose an argument transport box as
+`@p`, add a per-Structure registry, roll back the common call ABI, or treat
+`-fno-strict-aliasing` as the repair. Canonical transport objects
+`void *l2_arg_refN` and `LmxWalkValue.ref` genuinely have type `void *`; their
+consistent transport access is not this defect.
+
+Owner-run diagnostics should compare a same-cell typed write followed by a
+generic helper read at `-O0`, `-O2`, and `-O2 -flto`, plus a consistent
+`void **` control; a diagnostic-only no-strict-aliasing run may attribute a
+failure but cannot establish correctness. Include the real generated
+places/formals witnesses and inspect the generated access types. Matching
+unoptimized/optimized outputs alone cannot prove effective-type compliance.
+Do not run a competing compiler while the current writer owns the build slot.
+
 <a id="one-complete-lexical-graph"></a>
 ### One complete lexical graph
 

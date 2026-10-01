@@ -74,7 +74,10 @@ Stable `l2src` не обновляется.
    Q58 закрыт; общее разрешение вложенных голов реализуется отдельно от этой ABI-правки.
 3. Мигрировать [15 raw-C/string строк](steps/generated-diagnostic-migration-20260930.md#full02-dependency-map)
    по их настоящему контракту; реальные дефекты не превращать в ожидаемые
-   отказы. Закрыть [общую C99-типизацию выражений](steps/native-selfbuild-20260930.md#c99-expression-types-versus-arena-storage-domains)
+   отказы. Исправить `RAW-C-TYPE-PROVENANCE`: исходное `c.*` отличать от
+   пониженной модели по разрешённому контракту, не исключением для C-имени
+   `Lmx` в `l2_ty_raw_c_members` ([точный trace](steps/defects.md)).
+   Закрыть [общую C99-типизацию выражений](steps/native-selfbuild-20260930.md#c99-expression-types-versus-arena-storage-domains)
    и [C99-корректное хранилище указательных ячеек](steps/native-selfbuild-20260930.md#c99-pointer-cell-storage):
    преобразование значения `int*` ↔ `void*` не разрешает читать одну ячейку
    через несовместимые `int**` и `void**`. Сохранить реальный адрес `@p`,

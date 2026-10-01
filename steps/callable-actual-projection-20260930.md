@@ -88,121 +88,89 @@ This is a shared value-selection mechanism, not a rule that every context receiv
 <a id="site-aware-hidden-source"></a>
 ### Dependency: site-aware hidden reference inputs
 
-A later independent audit preserved a baseline failure in
+**Rebaseline before implementation, 2026-10-01.** The historical pointer
+machine-local premise below has been superseded by the active
+[portable-reference migration](native-selfbuild-20260930.md#portable-reference-value-projection).
+Its source is not yet released. Rerun the witnesses on the exact released
+ABI source before marking anything complete or starting another metadata
+migration.
+
+The original failure is retained in
 `build/l2_harness/bounded_indexed_expression_20260930_07/src/unit_pointer_actual_contract.lm2`:
-`check` declares local `@: int p @values[0]` and calls `hidden`; `hidden`
-passes its free input p to `read(p)`. Both the earlier frozen
-`whole_array_address_20260930_final` translator and the indexed-expression
-work in progress report `unresolved dynamic=p` at 13:14. Explicit parameters
-in the isolated pointer-actual controls do not repair that hidden input.
+`check` declares `@: int p @values[0]` and calls `hidden`; `hidden` passes
+its free input p to `read(p)`. That translator reports `unresolved dynamic=p`
+at 13:14. At that snapshot, explicit pointers were machine locals omitted
+by hidden-input resolution. This diagnosis no longer describes their
+current storage route.
 
-`l2_ml_collect` already records the local's exact pointer type. However,
-`l2_dyn_step` and `l2_hidden_from` look for the caller source among formal/own
-bindings and omit machine locals. The existing type-code round trip preserves
-reference depth and qualification; the missing prerequisite is selecting the
-correct binding at the call site, not adding a pointer-specific conversion.
+#### Reuse existing declaration identity
 
-Do not fix this by a whole-method `l2_ml_rebuild`/`l2_ml_find` lookup. That
-table includes later and nested declarations and deduplicates names without
-source/scope identity. The binary `l2_m_edge[caller,callee]` likewise retains
-no call-site identity. Neither can prove which preceding visible declaration
-supplies a particular call.
+In the current working slice, `l2_ml_collect` skips source pointer
+declarations: ordinary own rows already retain their exact declaration node,
+method, host, resolved type/model, and distinct storage for repeated
+declarations. `l2_dyn_step` and `l2_hidden_from` already consult own rows.
+Do not implement the former proposal for a second machine-local identity
+table or original-name C pointer locals. The earlier design is retained in
+this file's Git history, not as a parallel instruction.
 
-Reuse source-ordered body traversal, `l2_here_at` and the existing scope stack.
-A compiler-only deferred-site record, following `l2_wait_add`, or an equivalent
-source replay can preserve the call node and active scopes. Resolve a hidden
-source to its exact preceding binding/category/type at each call site and
-use the same result for dynamic type closure and native actual emission.
-Keep ordinary call/failure edges separate from reference transport; a copied
-or passed callable is not implicitly executed just to establish its signature.
-No persistent name registry, data/context graph, copied pointee, or receiving
-model inferred from the desired target belongs in this repair.
+This does not prove forward visibility or correct hidden-source selection.
+The inspected `l2_own_find_last` chooses the last same-name active-host row,
+skipping `l2_own_excl` but without the call site's declaration cutoff.
+`l2_dyn_step` processes a combined caller/callee edge, not each call site.
+`l2_hidden_from` receives a source node but repeats the same unbounded
+lookup. Storage identity therefore cannot substitute for source visibility.
 
-Required witnesses: direct and multi-hop hidden-pointer forwarding with actual
-identity; mutate the pointee before the call and observe the new value; call
-before a local declaration with no earlier binding (refused); the same case
-with an earlier formal/outer binding (that binding wins); nested same-name
-locals before/after declaration and after scope exit (11, then 22, then 11);
-incompatible depth and qualification. The machine-local path may remain
-native-only until a genuine walker representation exists; do not claim walked
-receiver coverage from a walked caller invoking a native method.
+The next acceptance matrix must first measure:
 
-#### First prerequisite: shared lexical-local identity
+- Direct and multi-hop hidden-pointer forwarding with exact identity and a
+  changed pointee value observed at the call.
+- A call before the only local declaration: refuse if no earlier binding
+  supplies the name; select an earlier formal/outer binding when present.
+- Two calls on opposite sides of a declaration and calls before, within,
+  and after a same-name nested declaration; preserve 11/22/11 selection.
+- Repeated declarations and an initializer that reads the preceding binding;
+  no future or sibling declaration is visible.
+- Reference depth and qualification, including incompatible candidates.
+- Actual native and walked routes where the same source is supported; a
+  walked caller entering a native callee does not prove walked callee behavior.
 
-The follow-up source audit establishes why a hidden-input-only lookup is
-insufficient. `l2_emit_reference_declaration` prints the original source name
-for every declaration, but `l2_ml_collect` retains only the first same-named
-row in the whole method. Repeated pointer declarations in one emitted scope
-therefore produce indistinguishable/repeated C declarations. Nested scopes
-do have real emitted blocks, but passing a nested-shadow test alone does not
-fix repeated identities or type checking that sees a future declaration.
+#### Share the selected source across type closure and emission
 
-The reusable pattern already exists for own fields: declaration identity,
-method, lexical host, binding order, exact-declaration lookup and latest
-visible lookup (`l2_own_decl`, `l2_own_host`, `l2_own_bseq`, `l2_own_excl`,
-`l2_own_find_decl`, `l2_own_find_last`). Apply that pattern to the existing
-machine-local metadata, without a second runtime index:
+If the timing witnesses fail, preserve the existing own row selected at
+each call site, or explicit absence, together with the current lexical
+scopes and declaration cutoff. Reuse the source-ordered traversal,
+`l2_here_at` and deferred-site machinery where appropriate. An existing row
+already owns the type and physical/native storage identity; no pointer-only
+registry or companion graph belongs here.
 
-1. Keep one dynamically reserved compiler table of all local declarations,
-   with the existing name/type/model plus method, host and exact source node.
-   Do not deduplicate names. Collect after methods are known and before free
-   input analysis/checking; release at translation reset/end. The four
-   current per-method `l2_ml_rebuild` sites must reset replay state rather
-   than destroy the declaration identities. Collection must follow actual
-   executable body scopes, not descend into every Structure-valued operand.
-2. Distinguish exact declaration lookup from visible-value lookup. Check an
-   initializer in the preceding environment, then bind that exact row.
-   Select the latest preceding active row of the same method and host chain;
-   never a later or sibling declaration. Reuse the existing scope stack and
-   binding-order replay. Saved `l2_wait_add` sites also retain the local
-   binding cutoff and restore it with their scopes during waited checks.
-3. Derive a unique native spelling from the declaration row, using one helper
-   for declaration, read, assignment, call, address, sizeof and raw-C root.
-   This is compiler symbol generation, not a language name or runtime lookup.
-   Two declarations in the same source scope then have distinct storage;
-   the second initializer can read the first before the second is bound.
-4. Migrate all ordinary consumers together: `l2_colon_bound_ty`/callable-result
-   typing, `l2_graph_nsty`/binding admission, `l2_scan_ident`, empty/named-
-   Structure classification, primary/field/path/sizeof checking,
-   `l2_address_name`, statement targets, and local value/call emission.
-   Path/index helpers currently scanning `l2_ml_n` must resolve the root row
-   and use its physical spelling. Declaration-self checks use the exact
-   source node; ordinary values use the visible binding. Preserve established
-   formal/dynamic, own and slot precedence and method visibility rules.
+Use the same selected source in dynamic type closure and actual emission.
+Keep `l2_m_edge` for reachability/failure propagation, not as a replacement
+for individual sites. Two sites between the same methods can need different
+rows or ordinary input forwarding. Preserve existing declaration/formal
+precedence, initializer-before-binding order, and namespace visibility.
+Delayed checks must replay their saved environment without duplicating
+records or choosing a later row. Pointer depth/qualification use the existing
+type projection; no pointee is copied and no receiving model is guessed.
 
-This first slice must check repeated same-scope pointer declarations, an
-initializer reading the previous binding, real outer/inner/outer shadowing,
-and a read before the only later declaration. Retain function-pointer,
-raw-C-root, address, sizeof, path, depth and qualification controls. Mutants
-binding before the initializer, selecting the first row, dropping the host
-filter or reusing the source spelling must fail. Type checking, free-name
-scanning and emission must bind rows at the same semantic point; otherwise
-an apparently stable cutoff merely preserves their disagreement.
+Apply any required visibility correction to the common binding resolver,
+not only to hidden-pointer calls. Ordinary read, assignment, address, path,
+`sizeof`, type checking and emission must agree on the same preceding
+declaration. Mutants selecting the latest future row, dropping the host or
+site identity, binding before the initializer, or reducing pointer depth
+must fail. This is independent of Q58's unknown-head classification.
 
-#### Second prerequisite: hidden sources at exact call sites
+#### Remaining machine-local categories: separate conditional debt
 
-Keep `l2_m_edge` for reachability and failure propagation. All its current
-producers (`l2_check_call`, `l2_convert_edge`, `l2_check_struct_call`) have
-a concrete source node; capture/host relationships use other tables. Retain
-the site/scopes/binding cutoff and selected local row, or explicit absence,
-alongside those calls. Reuse the existing deferred-site lifecycle where
-appropriate; delayed-check replay must not duplicate records or execute
-call-site metadata as a check. An edge missing its required site is incomplete
-compiler bookkeeping, not permission for a method-wide lookup fallback.
-
-`l2_dyn_step` must check every actual site between a caller/callee pair.
-Convert the selected row's existing type through `l2_own_ty_of_param` and
-`l2_dt_of_source`, retaining qualification and reference depth. A site with
-no local may require ordinary caller-input forwarding even if another site
-has one. `l2_hidden_from` emits the same selected row's native symbol, after
-the established formal/own routes. No copied pointee, new context graph or
-model inferred from the desired target belongs here.
-
-Check direct and multi-hop forwarding, two calls on opposite sides of a
-declaration, and calls before/inside/after a nested shadow. Mutants erasing
-site identity, selecting a later/sibling row or reducing pointer depth must
-fail. `l2_rw_dyn_arg` still requires a genuine walker representation;
-neither compiler-only slice claims interpreted receiver coverage.
+Predeclared C function-pointer locals (`ty40`) and explicit foreign C
+by-value locals (`ty41`) remain in `l2_ml_collect`. Its first-name
+deduplication/source-name emission may still mishandle repeated or shadowed
+declarations. Establish a failing accepted source witness before repairing
+those categories, and establish whether they can be dynamic inputs before
+adding transport. Recheck reachability of the residual
+`l2_ptr_local_ty`/`l2_const_local_ty` branches after own-pointer collection.
+Their existence is not permission to restore a duplicate source-pointer
+path or to make this separate machine-ABI debt a prerequisite for every
+portable hidden reference.
 
 <a id="witnesses"></a>
 ## Minimal witness matrix: pending implementation and execution

@@ -19894,6 +19894,8 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     int: k
     int: cf_kind 0
     int: cf_fi 0 - 1
+    int: cf_cand 0 - 1
+    int: ns_at 0 - 1
     if: body != 0
         a0: l2_next_active(body\first_field)
         nact: l2_actual_count(body\first_field)
@@ -19935,6 +19937,29 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 # here -- the caller of THIS method chose it.
                 if: cf_kind = 1
                     l2_m_value_used[cand_mi]: 1
+            ---
+        ---
+        # A callable WITHOUT a result is a REFERENCE value (docs #callables: a nonreturning callable
+        # is transmitted by reference, not executed).  Where the receiving contract asks for a NUMBER
+        # it is refused as any other reference is -- the phrase l2_check_value_convert_core uses --
+        # and not as a callable that has nothing to give (K04, witness matrix row 7).  A RETURNING
+        # callable is untouched: it executes, and its result is what a number place receives.
+        if: req_mi < 0 && l2_nsty_get(idx, actual_i) < 0 && l2_prim_code_name(l2_ft(idx, actual_i)) != 0
+            cf_cand: l2_cf_actual(mi, a0, actual_span, @ cf_kind, @ cf_fi)
+            if: cf_cand >= 0 && l2_m_ret[cf_cand] = 8
+                return: l2_error(path, a0\value, "a reference where a number is asked")
+            ---
+            # A name of a unit-level NAMED STRUCTURE is a reference like any other.  l2_colon_bound_ty
+            # types an own field, a formal and a dynamic input, but NOT a unit Structure's name: typing
+            # it there changed the meaning of that name for 55 unrelated callers (measured,
+            # build/l2_harness/dk_k04c_full_01 -- `unit_named_struct_*`, `unit_s7_*` and others stopped
+            # translating).  The one rule -- a number place refuses a reference -- is applied to that
+            # atom here instead, where the receiving contract is a number.
+            if: actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0 && a0\value\as\atom != 0
+                ns_at: l2_ns_find(a0\value\as\atom)
+                if: ns_at >= 0 && l2_ns_parent[ns_at] < 0
+                    return: l2_error(path, a0\value, "a reference where a number is asked")
+                ---
             ---
         ---
         if: req_mi < 0 && l2_empty_actual(a0, idx, actual_i) != 0

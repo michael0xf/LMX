@@ -1,0 +1,20 @@
+# K04c: an atom naming a UNIT-LEVEL named Structure is a reference, exactly as a method-local one is
+# (unit_valkind_arg_ref_refused), and a number formal refuses it the same way.  Was accepted: the atom typed as
+# "unknown" (l2_colon_bound_ty knew own fields, formals, dynamic inputs, slots and machine locals, not a unit
+# Structure name), and for an unknown source type the conversion check has nothing to check -- so the generated C
+# passed the Structure's descriptor into an int argument and read it there.  See
+# defects.md#named-structure-number-argument-typed-unknown.
+A:
+    int: x 1
+end: A
+
+fn: g (int: n) int
+    return: n
+end: g
+
+fn: m () int
+    return: g(A)
+end: m
+
+int: r m()
+return

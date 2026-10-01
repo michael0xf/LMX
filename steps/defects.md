@@ -1293,6 +1293,36 @@ callable по [приоритету источников](../docs/LMX_semantics.
 видимости и static native-dispatch; последний сам по себе это не закрывает.
 [Пути и раздельные свидетели arity/wrong-name](native-selfbuild-20260930.md#native-call-dispatch).
 
+<a id="named-structure-number-argument-typed-unknown"></a>
+### NAMED-STRUCTURE-NUMBER-ARGUMENT-TYPED-UNKNOWN — 2026-10-01, deepseek, FIXED срезом K04c
+
+Измерено пробой при работе над строкой 7 матрицы K04: `A: (int: x 1)` в корне единицы, метод
+`fn: m () int` с `return: g(A)` и `fn: g (int: n) int` **принимался**, и сгенерированный C читал
+дескриптор Structure как int (`int: l2_arg2 lmx_arena_ref_struct(node, 5U)`, затем
+`lmx_int_value_known(refs[0])`). Та же форма с локальным объявлением (`A: b`, затем `g(b)`) в методе
+отвергается «a reference where a number is asked» (строка `unit_valkind_arg_ref_refused`), то есть
+две формы одного правила расходились.
+
+Read-only причина: `l2_colon_bound_ty` типизирует собственное поле, формал, динамический вход, слот и
+machine local, но имя именованной Structure верхнего уровня — ни одно из них; функция возвращала 1
+(«неизвестно»), а `l2_check_value_convert` при неизвестном типе источника не проверяет ничего.
+
+Ремонт: `l2_colon_bound_ty` типизирует имя именованной Structure верхнего уровня как ссылочное
+(`l2_colon_graph_ty()`), и существующая проверка места-числа отвергает его тем же текстом. Свидетели —
+`unit_named_struct_number_arg_refused` и соседи строки 7.
+
+<a id="sub-actual-number-argument-classification"></a>
+### SUB-ACTUAL-NUMBER-ARGUMENT-CLASSIFICATION — 2026-10-01, deepseek, FIXED срезом K04c
+
+Классификационная половина [SUB-ACTUAL-REFERENCE-CLASSIFICATION](#sub-actual-reference-classification)
+в позиции аргумента: callable без результата, переданный числовому формалу, отвергался
+«a callable without a result has no value» вместо обычного отказа ссылки. Теперь обе формы
+(голый атом и нульарный кадр) дают «a reference where a number is asked» — тот же текст, что уже
+закреплён за Structure в числовом аргументе. Свидетели — `unit_value_call_sub_refused` (переведена на
+новый текст), `unit_callable_frame_int_refused`. Остальное у дефекта-родителя (обычный ссылочный
+формал, получающий callable; пути; проекция в native/walker) остаётся открытым.
+
+<a id="sub-actual-reference-classification"></a>
 ### SUB-ACTUAL-REFERENCE-CLASSIFICATION — 2026-09-30, Codex, OPEN
 
 После исправления неправильного valued return корня `unit_value_call_sub_refused` сохраняет `sub: s ()`, `fn: g (int: n) int` и `g(s)`. Корректен отказ несовместимому int-аргументу, но текущий `l2_check_value_call` сначала запрещает любое callable без результата как значение. Это не только текст: обычный ссылочный формал тоже попадает в этот путь вместо передачи дескриптора; отдельный callable-formal fast path принимает лишь ATOM имени unit-метода, не общую разрешённую привязку или переданный дальше формал.

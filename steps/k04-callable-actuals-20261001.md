@@ -138,6 +138,92 @@ so the method stops being walk-eligible. Both run natively to the same observabl
 native runs). The walker half of this decision is the residual below; no walked route is claimed for
 any row of this slice.
 
+<a id="k04c"></a>
+## K04c — a no-result callable in a NUMBER argument is a reference (matrix row 7)
+
+**Reproduction** on K04b's bytes (`adf3d71`, `l2trans.lm1` blob `d87307f5`), probes in
+`build/deepseek_k04c/src/`:
+
+| source | HEAD said |
+| --- | --- |
+| `g(s)`, `s` a nonreturning `sub`, `g (int: n)` | `8:3: a callable without a result has no value` (`detail: atom=s`) |
+| `g(s())` — the same value, the canonical nullary form | the same message (`detail: frame=s`) |
+| `g(A)`, `A` a UNIT-LEVEL named Structure | **ACCEPTED**, and emitted as an int argument |
+
+The third row was found while measuring the first two: the generated C declared the argument
+`int: l2_arg2 lmx_arena_ref_struct(node, 5U)` and read it back as an int
+(`lmx_int_value_known(refs[0])`) — the Structure's descriptor read as a number. The same shape with a
+method-local declaration (`A: b`, then `g(b)`) WAS refused ("a reference where a number is asked"), so
+two spellings of one rule disagreed. Recorded as
+[NAMED-STRUCTURE-NUMBER-ARGUMENT-TYPED-UNKNOWN](defects.md#named-structure-number-argument-typed-unknown).
+
+**The ordinary phrase.** `a reference where a number is asked` — already pinned by
+`unit_valkind_arg_ref_refused` for a Structure given to a number formal, and what the plan's matrix row
+7 asks for: "Ordinary incompatible actual/reference-versus-integer failure; no blanket assertion that
+a `sub` cannot be transported as a value".
+
+**Repair** — one edit to `l2_check_call`, in the argument loop, where the receiving formal asks for a
+number (its type is a primitive number and it is not a Structure formal):
+
+1. the actual resolves (`l2_cf_actual`) to a callable occurrence WITHOUT a result → refused as a
+   reference. A RETURNING callable is untouched: it executes, and its result is what a number place
+   receives (row 4's witness).
+2. the actual is a name of a UNIT-LEVEL named Structure → refused by the same rule. That name is a
+   reference like any other, and `l2_colon_bound_ty` types an own field, a formal and a dynamic input
+   but not it, so the receiving contract is where the rule is applied.
+
+**The general attempt, measured and withdrawn.** The first form of this repair taught
+`l2_colon_bound_ty` to type a unit-level named Structure as a reference (`l2_colon_graph_ty()`), so
+that the existing number-place check would refuse it everywhere at once. That changed the meaning of a
+Structure's name for unrelated callers: `build/l2_harness/dk_k04c_full_01` shows **55 newly failing
+targets** — `unit_named_struct_exec_*`, `unit_named_struct_call*`, `unit_walk_named_struct_*`,
+`unit_s7_*`, `unit_ns_noclose_*` and others — each stopping at
+`…: not supported yet` (`detail: atom=Counter`, the Structure's own name) because a caller that had
+received "unknown" for that atom now received a reference type. The general change is NOT the route;
+the rule is applied at the receiving contract instead, and the measured consequence is recorded here
+so the next attempt does not repeat it.
+
+**Witnesses** (rows in `tools/l2_harness.ps1`; all refusals, with the message as the observation):
+
+- `unit_value_call_sub_refused` — the atom spelling. Its needle moves to the ordinary phrase; the old
+  needle (`incompatible entry signature`) never fired, which is why the row stood red in the retained
+  list since `cbc97c79`.
+- `unit_callable_frame_int_refused` (new) — the nullary call form of the same value: one receiving
+  contract, one refusal.
+- `unit_named_struct_number_arg_refused` (new) — the unit-level named Structure as an argument.
+- The rows that keep the OTHER message stay green and are measured here: `unit_return_sub_refused`,
+  `unit_void_value`, `unit_discard_void_refused`, `unit_predef_result_void_refused` (the return and
+  assignment positions have their own sites; this slice did not change them), and
+  `unit_valkind_arg_ref_refused` (the Structure-in-a-method case, unchanged).
+
+**Evidence.**
+
+- Focused `build/l2_harness/dk_k04c_focus_02` (16 targets: the three rows, the four owners of the
+  other message, `unit_valkind_arg_ref_refused`, the named-Structure and `unit_s7` fixtures the
+  withdrawn general attempt had broken, and the K04a/K04b rows): **0 failed**; staged `l2trans.lm1`
+  blob `5576e6f8` = the committed bytes. The first focused run of the withdrawn form is
+  `dk_k04c_focus_01`.
+- M0, K04b's bytes with the changed and new rows (`build/l2_harness/dk_k04c_m0`): the three rows RED —
+  the two callable rows with "a callable without a result has no value" (not the new needle), the
+  Structure row because it is ACCEPTED. Two different failure reasons, one per half of the repair.
+- The withdrawn general form, full gate `build/l2_harness/dk_k04c_full_01`: 37 of 1141 → **91** with
+  55 newly failing targets, every one of them from that change; it is the measurement behind
+  "the general change is not the route" above.
+- Full gate of THIS slice, `build/l2_harness/dk_k04c_full_02`: **36 of 1143** targets failed (K04b's
+  committed result: 37 of 1141) — the two new rows OK, no newly failing target, and
+  `unit_value_call_sub_refused` leaves the retained list (its needle now matches the refusal the
+  translator gives). The remaining 36 are the retained failures unchanged by exact ID and diagnostic.
+  Staged `l2trans.lm1` blob `5576e6f8` = the committed bytes. Kernel and L3 sources untouched.
+- `python tools/check_docs.py` OK, `tools/gate_p0_header.ps1 -Root .` OK (47 P0 defines, 7 files),
+  `git diff --check` clean.
+
+**Residuals.** The parent defect
+[SUB-ACTUAL-REFERENCE-CLASSIFICATION](defects.md#sub-actual-reference-classification) keeps its other
+half: an ordinary REFERENCE formal receiving a callable, resolved paths, and the shared projection
+into native and walker emission. Matrix rows 5 (the two nonprimitive formal spellings), 6 (an own
+binding or path as the actual, with a shadowing formal) and 8 (the pointer-depth control) are not
+measured here. `CALLABLE-FORMAL-HIDDEN-CONTRACT` remains untouched.
+
 **Residuals (not this slice).** Matrix rows 3–8: the equivalent nullary forms (row 3), the returning
 callable received as a reference and as a result (row 4), the two nonprimitive spellings (row 5), the
 own-binding/path actual and the shadowing formal (row 6 — the resolver's next category), the ordinary

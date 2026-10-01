@@ -2594,9 +2594,19 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_dyn_call_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 10;
         Absent = @('lmx_call0('); Debt = @('lmx_call_prim(l2_program_arena, l2_c') },
     # A sub occurrence is reference-transportable in argument position, but its reference cannot
-    # satisfy an int formal.  Do not replace this with the value-position no-result diagnostic.
+    # satisfy an int formal.  K04c: the refusal is the ordinary reference-versus-number one, the phrase
+    # the Structure case already gives (unit_valkind_arg_ref_refused), not the value-position
+    # no-result diagnostic and not the call-form one.
     [pscustomobject]@{ Name = 'unit_value_call_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_value_call_sub_refused.lm2:14:3: a reference where a number is asked'; Absent = @(); Debt = @() },
+    # The canonical nullary call form of the same nonreturning callable: one receiving contract with the
+    # bare atom above, so one refusal.
+    [pscustomobject]@{ Name = 'unit_callable_frame_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_callable_frame_int_refused.lm2:16:3: a reference where a number is asked'; Absent = @(); Debt = @() },
+    # An atom naming a UNIT-LEVEL named Structure is a reference like a method-local one; a number
+    # formal refuses it the same way (was accepted and emitted as an int argument).
+    [pscustomobject]@{ Name = 'unit_named_struct_number_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_struct_number_arg_refused.lm2:16:15: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_return_trailer_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 14;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_return_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

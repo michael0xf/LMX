@@ -507,28 +507,40 @@ The source-side `L2Address.type` and `l2_rw_reference_value`'s pre-conversion
 type witness, and a callable's args-part carries the input witnesses.
 The evaluator currently returns only raw `void*`; `LmxWalkValue` carries
 `ref`, `number`, `present`, without a general closed source type. The next
-source slice must first establish one coherent expression-result/place
-representation, then use it in all reference consumers:
+source slice establishes one coherent typed temporary result through the
+existing recursive evaluator, reusing/extending `LmxWalkValue` rather than
+adding a second evaluator. Preserve presence, source closed type/value
+category and payload through recursive evaluation and saved activation/call
+results. Project a pointer-value cell exactly once at its producer; an
+already-held reference must never be reclassified and unwrapped because its
+pointee happens to be another pointer cell. Keep pre-conversion source
+identity until projection; widening to `void*` cannot erase it early.
+Activation scratch retains its declared type without being misrepresented
+as a permanent arena cell.
 
-- A typed-result route can propagate the resolved source type and the
-  necessary value/place distinction through the existing evaluation result
-  and ordinary node metadata. Keep pre-conversion source identity until the
-  reference word is projected; widening to `void*` must not erase it early.
-  Activation scratch has its declared type without pretending that it is
-  an arena-classified permanent cell.
-- Alternatively, a general place resolver can support ordinary value reads
-  and the already-defined address operation separately. Index/path address
-  resolution must select the physical place before reading a pointer
-  element's held word. A marker around an already-loaded value is too late.
-  EQ, arguments, catch and return still need unambiguous value category;
-  moving the ambiguity from store to comparison is not completion.
+Use one shared physical-place resolver for the already-defined address
+operation and ordinary place consumers. Factor existing AT/OF/ELEM location
+calculation; do not duplicate value evaluation. Resolve indexed addresses
+before loading a pointer element's word or interning a char value. Addressing
+an own declaration selects its real graph cell, not the working cache, and
+does not publish or dirty that cache. A general address graph operation may
+represent `@`; it is not new language semantics or a per-type exception.
 
-Choose the smallest complete route after inspecting its consumers; these
-are implementation alternatives, not competing language rules or an author
-question. Do not add separate per-PUT/SET exceptions, a runtime name/type
+The closed implementation boundary includes AT/OF, OWN/OWN_OF, LIT, ARG,
+ELEM and CALL/EXEC/PRIM producers; SET/PUT/ELEMPUT, ADMIT and EQ consumers;
+RET/body-last-result and call transport. Convert at the existing native ABI
+boundary using its signature/rtype. Numeric destination passing may stay,
+but a pointer-sized result cannot be written into an int scratch destination.
+Typed null remains a present reference value, not void or a missing hidden
+argument; argument-presence handling must preserve that distinction too.
+
+Read-only design review rejected a standalone REF wrapper returning only
+raw `void*`: it loses the category immediately and forces EQ/RET/ARG/CALL to
+guess again. This is an implementation decision, not an author question.
+Do not retain a legacy adapter, per-PUT/SET exceptions, a runtime name/type
 registry or a companion graph. Reuse existing closed type witnesses and
-activation storage. `lmx_walk_reference_word`, introduced for the bounded
-Structure/pointer-cell EQ case, cannot alone provide the general projection.
+activation storage. Replace the bounded `lmx_walk_reference_word` projection
+at the common boundary rather than keeping it as a parallel fallback.
 The first acceptance matrix must distinguish the two `void*` results above,
 null, primitive/Array/Structure referents and higher depth, including EQ and
 transfer across a call; only then can the generic stores be claimed fixed.

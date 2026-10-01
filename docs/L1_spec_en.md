@@ -38,9 +38,9 @@ Rule: [L2 §3](L2_spec_en.md#type-by-range). Enumerations and `LmxRange` live in
 Rule: [L2 §4](L2_spec_en.md#pool). Chunk and pool structs are in `lmx.h.lm1`. Operations `lmx_pool_open`, `lmx_pool_make`, `lmx_pool_take`, `lmx_pool_take_n`, `lmx_pool_add_chunk` are declared in `lmx_pool.h.lm1` and implemented in `lmx_pool.lm1`. Growth is a new chunk as arena blocks so `revert` retires the interval with them.
 
 <a id="method-array"></a>
-## 6. METHOD and Array in L1
+## 6. Native entry and Array in L1
 
-Rule: [L2 §5](L2_spec_en.md#method-array). `fnptr: LmxEntry () void`; `struct: LmxMethod` and `VoidArray` in `lmx.h.lm1`. The descriptor lowers to exactly two fields `{size, data}` in that order; standalone Array backing contains exactly `size` cells. The same physical representation is embedded as the first member of `Lmx` for child references. Base Array has no `capacity` and does not grow or switch backing. Dynamic membership uses separate List (`KIND_LIST`) modules such as `lmx_list_owned`. Typed Array pools: `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
+Rule: [L2 §5](L2_spec_en.md#method-array). `fnptr: LmxEntry () void` declares the native-entry word type; there is no separate `LmxMethod` record. `VoidArray` is defined in `lmx.h.lm1`. Its descriptor lowers to exactly two fields `{size, data}` in that order; standalone Array backing contains exactly `size` cells. The same physical representation is embedded as the first member of `Lmx` for child references. Base Array has no `capacity` and does not grow or switch backing. Dynamic membership uses separate List (`KIND_LIST`) modules such as `lmx_list_owned`. Typed Array pools: `lmx_array_owned`, `lmx_array_ref_owned`, `lmx_chars_owned`, `lmx_value_owned`.
 
 <a id="arena"></a>
 ## 7. Arena in L1
@@ -75,7 +75,7 @@ Rule: [L2 §10](L2_spec_en.md#own) — execution uses the complete Structure wit
 <a id="call"></a>
 ## 12. Call in L1
 
-Rule: [L2 §11](L2_spec_en.md#call). Transitional METHOD uses `fnptr: LmxCallEntry (@: Lmx node) int`; Callable uses `fnptr: LmxCallEntrySelf (@: Lmx node; @: Lmx self) int`, where `node` is the activation-fixed lexical space above the method and `self` is the hidden physical own-field base of the selected occurrence. Ordinary field `Lmx.parent` is not a language word. `lmx_call0`: `lmx_call.lm1`. Signature matching is the translator's duty, not this module's.
+Rule: [L2 §11](L2_spec_en.md#call). The native entry receives the selected occurrence's lexical `node`, active `self`, and resolved arguments; `node` is fixed for the activation, while `self` designates the executing Structure. Neither is a companion graph. The `Lmx.native` entry uses the common call adapter to reach its typed body; there is no separate one-argument METHOD route. `lmx_call0` is implemented in `lmx_call.lm1`. Semantic checking and admission precede execution; the call adapter transports values under the resolved contract rather than performing a second structural signature-matching algorithm. Ordinary `Lmx.parent` remains a header field, not a language word.
 
 <a id="child"></a>
 ## 13. Child in L1
@@ -152,7 +152,7 @@ Retaining an automatic array's address after return does not extend its lifetime
 
 The `c.` prefix is the raw door into C: explicit access to a C symbol (`c.malloc`, `c.memcpy`, `c.sizeof`, and so on). The door does not maintain a declaration registry of C names as language norm. In compact C forms, the translator removes `c.` and lowers to C99; it is not a general L1 text interpreter within parentheses. A nested colon receiver such as `c.sizeof((cast: (unsigned) 0))` has a dedicated diagnostic; a colon inside a string/character literal or matched C ternary expression must not be mistaken for a receiver.
 
-`foreign: Name` declares an externally defined type: the translator registers the name, while an included C header must provide its definition. `extern: @: Lmx object` emits a declaration of another unit's object. Header-unit `type: Alias …`, `struct:`, `enum:`, `fnptr:` describe actual C ABI, not ordinary L3 Structures. `fnptr` is a C function-pointer type; it does not replace METHOD and L2's call contract.
+`foreign: Name` declares an externally defined type: the translator registers the name, while an included C header must provide its definition. `extern: @: Lmx object` emits a declaration of another unit's object. Header-unit `type: Alias …`, `struct:`, `enum:`, `fnptr:` describe actual C ABI, not ordinary L3 Structures. `fnptr` is a C function-pointer type; it does not replace an LMX callable occurrence or L2's call contract.
 
 Header source `name.h.lm1` produces `name.lm1.h`. Headers admit declarations, not executable bodies. `l1_hdr_*` orders dependencies: forward declarations suffice for pointers, but by-value fields require complete types; cycles of such dependencies are errors. `include` includes the specified file; header `predef` preserves relative paths so same-basename files in different directories do not collide. This is translator work, not a runtime name registry.
 

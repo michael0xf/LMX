@@ -9,11 +9,15 @@ contracts are [L2](docs/L2_spec_en.md), [L3](docs/LMX_semantics.en.md), the
 The current repair and migration order is [next_core_tasks.md](next_core_tasks.md);
 its [dictionary](next_core_tasks_dictionary.md) defines the disputed terms.
 
-The implementation observations below refer to the live development tree at
-`744f759` (22 September 2026). The tree changes rapidly: a green fixture or an
-existing code path is evidence of that version, **not** proof that the intended
-contract is complete. Check the current source and tests before reusing any
-line-specific conclusion. This document introduces no new language rules.
+This map originated at `744f759` (22 September 2026); subsequently revised
+sections supersede that snapshot. The physical records and dispatch descriptions
+in §§1–3 have been rechecked against source checkpoint `0c5dd61`. The tree
+changes rapidly: a green fixture or an existing code path is evidence of that
+version, **not** proof that the intended contract is complete. Current release
+evidence and unresolved boundaries are in
+[the implementation log](steps/native-selfbuild-20260930.md). Check source and
+tests before reusing any line-specific conclusion. This document introduces
+no new language rules.
 
 ## 1. Engineering boundary
 
@@ -35,9 +39,11 @@ L3 graph (constructed) ─────────→ graph interpreter as well 
 
 L3 is compiled by the same rules as L2; the one difference is that a
 constructed L3 graph *may* also run in the graph interpreter, while L2
-operations may not. The current toolchain runs a file's root body through the
-interpreter and method bodies natively: an implementation default, not a
-language rule. The L2 runtime presently contains mostly `.lm1`
+operations may not. The sandbox emits native root bodies as well as native
+method bodies; the actual occurrence's `native` word chooses execution.
+An interpreter-only root is not an architectural category. The remaining
+coverage and complete-graph gaps are tracked in the implementation log, not
+hidden by this statement about dispatch. The L2 runtime presently contains mostly `.lm1`
 units. Porting this code to
 `.lm2` and attaining **full L2 self-build** are future milestones, not current
 facts. `myxa_manager` is an application above the kernel, not a reason to put
@@ -63,15 +69,14 @@ external failures still require precise diagnostics.
 
 ## 2. Physical graph and identity
 
-The accepted target physical layout for the universal Structure is:
+The physical layout for the universal Structure is:
 
 ```c
 typedef struct { size_t size; void *data; } VoidArray;
 typedef struct Lmx { VoidArray array; struct Lmx *parent; LmxEntry native; } Lmx;
 ```
 
-The current [`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1) still has the old flat
-`{parent, int len, void *data}` layout; the migration is pending. In the target,
+[`lmx.h.lm1`](dev/l2src_sandbox/lmx.h.lm1) defines this layout.
 `array` is the first member and the actual by-value child-reference array
 descriptor, not a C-only wrapper: `array.size` is the number of immediate child slots, not bytes or
 capacity, and `array.data` addresses their ordered `void *` backing. That
@@ -85,16 +90,18 @@ the C entry, or null when there is none. It is not a lexical element and not a
 graph field, so it sits in the record after `parent` rather than among the
 child slots; graph copy carries the word verbatim (landed 2026-09-26).
 The slots are fixed in number when the Structure is constructed; their stored references may
-change. The header has no name, type tag, method pointer, vtable, list capacity,
-dirty flag, or Message state. In particular, an empty Structure remains an
-ordinary two-direct-member Structure with zero child slots.
+change. Beyond the native-entry word shown above, the header has no name,
+type tag, method-descriptor pointer, vtable, list capacity, dirty flag, or
+Message state. An empty Structure has the same three members and zero child
+slots.
 
 For a slot `i`, `((void **)s->array.data)[i]` is a **physical reference value**. Its
 type comes from the registered address range containing that value, not from
 the address of the slot. The latter belongs to the `REFS`/children-storage
 range. A primitive child points to a primitive cell; a Structure child points
 to an `Lmx` header; an Array child points to its descriptor; a method child
-points to its method record. `void *` does not mean that all referents have the
+also points to an ordinary `Lmx` occurrence, not a separate METHOD record.
+`void *` does not mean that all referents have the
 same representation. It means the graph stores heterogeneous physical
 references and classification is external to the node. An array of `void *`
 does not care what a slot holds.
@@ -108,7 +115,7 @@ values, not a catalogue of individual Structures. See
 [L2 §3](docs/L2_spec_en.md#type-by-range) and
 [semantics §5](docs/LMX_semantics.en.md#descriptions).
 
-There are three different relationships that must not be merged:
+The following relationships must not be merged:
 
 | Relationship | Physical source | Meaning |
 | --- | --- | --- |
@@ -133,10 +140,9 @@ of half-open address intervals. A live
 `array`, and `owner`. `array` refers to the typed service pool describing the
 cells in that interval. `owner` identifies the arena that owns the storage;
 an explicitly imported view can be visible through another arena's index
-without adopting its allocation. The current [L2 specification §3](docs/L2_spec_en.md#type-by-range)
-still abbreviates the range as three fields. That documentary/ABI difference
-must be reconciled; do not silently delete `owner` or claim the descriptions
-already agree.
+without adopting its allocation. See
+[L2 specification §3](docs/L2_spec_en.md#type-by-range); ownership belongs to
+the range record, not a tag on each stored value.
 
 [`LmxPool`](dev/l2src_sandbox/lmx.h.lm1) is the descriptor of one typed
 service array: stride, coarse `kind`, exact `type`, optional physical profile,
@@ -149,7 +155,7 @@ bytes or unused pool capacity. The `profile` is a physical receiver-expression
 identity, separate from the coarse kind and representation type; `sealed` is
 a storage/collection property, not a language qualifier by itself.
 
-Representative kinds are primitive cell, METHOD record, Array descriptor,
+Representative kinds are primitive cell, Array descriptor,
 Structure child-slot storage, reference cell, Structure header, and separate
 List. Exact `LmxType` domains distinguish, for example, `int` from `char`, an
 Array-of-int descriptor from an Array-of-Structure-reference descriptor,
@@ -192,15 +198,17 @@ defect.
 
 A dynamic container is a separate implementation:
 [`lmx_list_owned`](dev/l2src_sandbox/lmx_list_owned.h.lm1) uses `KIND_LIST`
-and exposes list operations while keeping growth state in its own backing.
+and exposes list operations over `VoidDynamicArray {VoidArray array;
+size_t capacity}`. Growth state belongs to this separate descriptor, not to
+the base Array or a hidden backing prefix.
 The parent's dynamic children collection is one such List, held as an ordinary
 field in the parent's graph and cached as the **same physical reference** by
 its Thread. A mailbox ring is also private, growable storage, not a changed
-base Array. Its current `LmxPost` record has its own `inbox_capacity`; this
-is not an Array descriptor field. The [L2 specification §9](docs/L2_spec_en.md#mailbox)
-describes capacity in a private backing prefix, whereas the current mail
-record exposes `inbox_capacity`: a second precise spec/implementation
-discrepancy, not permission to put capacity into `VoidArray`.
+base Array. `LmxPost` contains an `LmxPostInboxSlotDynamicArray`, whose
+embedded fixed array holds the actual target/donor pair type and whose own
+`capacity` controls growth. Its `head`/`tail` implement the private ring.
+The [L2 specification §9](docs/L2_spec_en.md#mailbox) describes that same
+composition; it does not add capacity to `VoidArray`.
 
 ## 3. Callable graph representation and activation
 
@@ -209,7 +217,7 @@ slot. In the accepted form (2026-09-25) its signature is an ordinary graph field
 and its native implementation, if any, is the `Lmx.native` word (§2); execution
 dispatches on that word: non-null enters native code, null runs the walker over
 the body operators. Graph copy carries the word verbatim while remapping copied
-graph Structures. This form is landed (2026-09-26): there is no descriptor,
+graph Structures. This form is landed (2026-09-26): there is no separate METHOD descriptor,
 no `LmxCallable`/`LmxMethod` record, no `sig` word and no `lmx_plan`; a
 method's children are its `args` and `return` parts followed by its fields,
 while the file root and a named Structure hold their fields from slot 0.

@@ -66,13 +66,15 @@ SITE-срез выпущен: общее разрешение существую
 1. Для миграции setup-копий закрыть [приём цельного результата явного merge](steps/defects.md#merge-result-value-projection):
    `copy: merge Model` / `@: Model b copy`, без подмены копирования
    ссылкой на Model и без ограничения merge верхним телом в walker.
-   Закрыть [фактическую раскладку merge через типизированную ссылку](steps/defects.md#merge-held-operand-layout):
-   receiving model операнда не заменяет схему копируемого descriptor;
-   статически известные операнды и удержание identity этого не доказывают.
    Затем закрыть [потерю вида occurrence-селектора в admission](steps/defects.md#admission-occurrence-selector-collapse):
    bare-last и явный `[N]` нельзя свести к одной позиции required,
    если у candidate другое число повторов. Это общий путь проекции,
    не отдельное правило merge и не основание сравнивать неиспользуемые поля.
+   На том же общем пути закрыть [фактическую раскладку merge через типизированную ссылку](steps/defects.md#merge-held-operand-layout):
+   receiving model операнда не заменяет схему копируемого descriptor;
+   статически известные операнды и удержание identity этого не доказывают.
+   Для нескольких возможных раскладок нужен общий путь проекции использований,
+   а не скрытый required-descriptor специально для merge.
    Исправить [общую проекцию callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
    и убрать живые `Model: fresh` / `T: b c` fallback-ветви через
    [общую классификацию известной головы как вызова](steps/native-selfbuild-20260930.md#known-structure-call-classification).

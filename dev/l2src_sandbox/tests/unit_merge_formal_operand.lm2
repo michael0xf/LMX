@@ -1,0 +1,27 @@
+# K02 witness (next_core_tasks_v2.md K02, second bullet): a FORMAL merge operand.
+# `R: merge: source extra` merges the method's two formals; the result's schema is the first
+# operand's model (Source) with the later operand's added field (Extra's z), so `R\x` = 1 and
+# `R\z` = 2.  Before this slice a formal operand was refused outright -- "unknown merge operand
+# / atom=source" (defects.md MERGE-HELD-OPERAND-LAYOUT, the same classifier note).  Success is 7.
+Source:
+    size_t: x 1U
+end: Source
+
+Extra:
+    size_t: z 2U
+end: Extra
+
+fn: m (Source: source; Extra: extra) int
+    R: merge: source extra
+    size_t: x
+    size_t: z
+    x: R\x
+    z: R\z
+    if: x != 1U
+        return: 81
+    if: z != 2U
+        return: 82
+return: 7
+
+sendMessage: exit(exit_code: m(Source Extra); stdout: ""; stderr: "")
+return

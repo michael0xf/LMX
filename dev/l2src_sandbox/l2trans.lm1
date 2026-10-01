@@ -26097,6 +26097,7 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     int: oi
     int: ni
     int: sl
+    int: fi
     int: q 0
     int: contract
     int: inputs
@@ -26157,17 +26158,25 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
                 return: 1
             ---
         else:
-            if: oi < 0 && ni < 0
-                l2_own_excl: excluded
-                return: l2_error(l2_src, stmt, "unknown merge operand")
-            if: oi >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", prim, k + 7, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi))) < 0
-                l2_own_excl: excluded
-                return: 1
-            if: oi < 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, k + 7, ni) < 0
-                l2_own_excl: excluded
-                return: 1
+            # K02: a formal operand -- the caller's value through the ordinary ARG frame.
+            fi: l2_param_find(l2_rw_mi, last\value\as\atom)
+            if: fi >= 0
+                if: l2_rw_arg(prim, fi, @ node) != 0 || l2_rw_put(prim, k + 7, node) != 0
+                    l2_own_excl: excluded
+                    return: 1
+                ---
+            else:
+                if: oi < 0 && ni < 0
+                    l2_own_excl: excluded
+                    return: l2_error(l2_src, stmt, "unknown merge operand")
+                if: oi >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", prim, k + 7, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi))) < 0
+                    l2_own_excl: excluded
+                    return: 1
+                if: oi < 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, k + 7, ni) < 0
+                    l2_own_excl: excluded
+                    return: 1
+                ---
             ---
-        ---
         last: l2_next_active(last\next)
         k: k + 1
     ---
@@ -32811,6 +32820,7 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     int: pairs 0
     int: q 0
     int: cand 0 - 1
+    int: fi 0 - 1
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: 0
     fr: mf\as\frame
@@ -32845,10 +32855,18 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
                 ni: cand
             ---
         else:
-            oi: l2_ebr_find(last\value\as\atom)
-            ni: l2_ns_find(last\value\as\atom)
-            if: ni >= 0 && l2_ns_parent[ni] >= 0
-                ni: -1
+            # K02: a FORMAL operand of this method -- its declared model, when that model is a
+            # named Structure.  The value it carries is the caller's, reached by the ordinary
+            # value path, so only the schema has to be named here.
+            fi: l2_param_find(mi, last\value\as\atom)
+            if: fi >= 0
+                ni: l2_input_model(mi, fi)
+            else:
+                oi: l2_ebr_find(last\value\as\atom)
+                ni: l2_ns_find(last\value\as\atom)
+                if: ni >= 0 && l2_ns_parent[ni] >= 0
+                    ni: -1
+                ---
             ---
         ---
         if: oi < 0 && ni < 0 && sl < 0
@@ -33406,7 +33424,16 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 # method lowered before the entry E may already read a field of this
                 # result. Nothing to add here.
                 if: oi < 0 && sl < 0 && ni < 0
-                    return: l2_error(l2_src, stmt, "unknown merge operand")
+                    # K02: a formal operand -- the value the method's own code reads there.
+                    fi: l2_param_find(mi, last\value\as\atom)
+                    if: fi < 0
+                        return: l2_error(l2_src, stmt, "unknown merge operand")
+                    ---
+                    if: l2_tok_formal(mi, fi, l2_bind_tok) != 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: %s\n", ind, k, l2_bind_tok) < 0
+                        l2_own_excl: excluded
+                        return: 1
+                    ---
+                ---
                 if: oi >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_unit_base + l2_occ_n() + oi))) < 0
                     return: 1
                 if: oi < 0 && sl >= 0
@@ -33414,7 +33441,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                         l2_own_excl: excluded
                         return: 1
                     ---
-                if: oi < 0 && sl < 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
+                if: oi < 0 && sl < 0 && ni >= 0 && c.fprintf(l2_out, "%sl2_mops[%dU]: lmx_arena_ref_struct(%s, %uU)\n", ind, k, l2_unit_ref, (cast: (unsigned) (l2_ns_base + l2_ns_rank(ni)))) < 0
                     return: 1
                 # The actual operand, including a held alias, supplies its physical
                 # profile. This is the same runtime classification as PRIM_PUB.

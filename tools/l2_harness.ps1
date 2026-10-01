@@ -1464,6 +1464,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_path_call_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # K02 witness (next_core_tasks_v2.md K02, second bullet): a FORMAL merge operand -- the
+    # method's own formals merged through the same value path; the first operand's model is the
+    # result's schema and the later operand's added field joins it.
+    [pscustomobject]@{ Name = 'unit_merge_formal_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # K02 witness (next_core_tasks_v2.md K02, first bullet): `@: A p B` binds a reference whose
     # declared model is A and whose candidate is B; a merge over p must project the ACTUAL
     # operand's fields (B's pad and x), so `R\pad` resolves and C's later x lands in the x slot.

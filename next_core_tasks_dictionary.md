@@ -47,7 +47,7 @@ An unknown actual in an existing head's call is an error, not a declaration. For
   - Anti-patterns below are FORBIDDEN replacements for missing architecture.
 - **anti-patterns and replacements:**
   1. **`c.*` raw door:** Translator tests no concrete C names (not printf, sizeof, LmxArena, puts, array, or any other). No allowlist, header scan, or C-name dictionary. Invalid raw C is diagnosed by the C toolchain. Lmx needs use ordinary language receivers/libraries, not `c.*` special semantics. → [`c-raw-door`](#c-raw-door); Lmx sizing → [`sizeof-receiver`](#sizeof-receiver) (planned receiver-operator, not a HOLD).
-  2. **Base Array:** Target `VoidArray {size_t size, void *data}`, embedded by value as the first member `Lmx.array`, with no separate `LmxArrayDesc` alias; its backing is registered in the arena range index. Dynamic growth belongs to a separate List/ArrayList implementation. Never add capacity or policy fields to Array for one consumer. This ABI migration is not yet implemented.
+  2. **Base Array:** `VoidArray {size_t size, void *data}`, embedded by value as the first member `Lmx.array`, with no separate `LmxArrayDesc` alias; its backing is registered in the arena range index. Dynamic growth belongs to a separate List/ArrayList implementation. Never add capacity or policy fields to Array for one consumer. This physical ABI migration is implemented (`c955f24`; `steps/voidarray-migration.md`): `Lmx` embeds `array` first, then `parent` and direct `native`. `lmx_dynarray_layout_selftest` and `gate_dynarray_capacity.ps1` witness the separate fixed/dynamic layouts. Remaining Array-formal and walked-value projection gaps are not unfinished physical layout migration.
   3. **Base Message:** Stay minimal kernel graph/scheduling/message machinery. Win32 UI and application state belong in adapters/application structures referenced through ordinary composition — never embedded into Message.
   4. **Future similar demand:** Add a separate type/receiver/library/adapter at the correct layer; do not mutate the lower abstraction.
 - **not-confused-with:** Local "quick fix" branches; feature flags inside base kernel types; name allowlists as semantics.
@@ -485,36 +485,32 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 - **level:** L2
 - **Norm:** accepted
 - **Implementation:** partial
-- **Verification:** none
-- **definition:** Repeated same-name fields as distinct occurrences.
-- **invariants:** Lexical order preserved
-- **not-confused-with:** occurrence-selector
-- **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** **the mechanism is the activation plan, and it is already per-occurrence and positional.** `dev/l2src_sandbox/lmx_plan.h.lm1` `:6-56` is the contract: plan root = `LmxCallable.header` = `[ROOT role, E_0 … E_{N-1}]`; entry `E_i` = `[ENTRY role, p_0 … p_{L-1}]` of `size_t` cells, i.e. path indices and nothing else; resolving entry `i` on occurrence `M` walks the path and returns **the ADDRESS OF THE SLOT**. Activation accessor **`lmx_plan_slot_known(occurrence, plan, index)` `:100`** — and it **asks no arena** (preparation does, via `lmx_plan_validate_shape` / `lmx_plan_publish`); `lmx_plan_entry_count` `:101`; builder `lmx_plan_build_from_paths` `:81`. Producer: **`lmx_walk_prepare`** (`lmx_walk.lm1:300`, called from `lmx_interp.lm1:43`) scans the body **graph** node by node (`lmx_walk_scan_node` `:185`), appends one `LmxWalkOwn` per own **node** (`f\owns: f\owns + 1U` `:354`), publishes at `:32`, and then **verifies index-for-index** that `f\owns[i].from == lmx_plan_slot_known(node, header, i)` (`:68-72`). Repeated same-head frames are therefore distinct entries with distinct indices — the invariant holds by construction.
-  **DO NOT CONFUSE THIS WITH THE OWN TABLE.** An **own publication slot** is one per **declared field**: `l2_own_*` (`l2trans.lm1:228-230`; addresses at `:8475-8490`; native access emitted at `:5858`/`:5860`), keyed `(l2_own_mi, l2_own_name, l2_own_host)` and returning the **first** match (`:3265-3280`) — so two occurrences of one head collapse there. That is correct for publication and wrong as an occurrence index.
-  **TRAP:** `l2_own_count` (`:223`) is the **array length** of an array-typed own field (`lmx_array_new_owned(type, COUNT, arena)`), **not** an occurrence counter — despite the name.
-- **witnesses:** none yet — no `[N]field` fixture exists. The plan's own required rows (`value\[0]arg = 1`, `value\[1]arg = 2`, native **and** interpreted) are to be written, and per the LMX mutation rule they must go red under a swapped plan index or they are decoration.
-- **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
-- **positive behavior:** per definition
-- **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
+- **Verification:** fixture
+- **definition:** One declaration-position instance of a field or callable. Repeated declarations with the same name are distinct occurrences.
+- **invariants:** Declaration order is lexical. `[N]field` selects the Nth declaration; an unqualified repeated name selects the last declaration under the accepted rule. Source identity, the graph slot, and its stored value/address are distinct facts.
+- **not-confused-with:** occurrence-selector; physical child slot; activation-local working value
+- **links / sources:** [CORE](CORE.md); paired specifications; Q24/Q29 decisions; next_core_tasks.md §7b; [implementation log](steps/native-selfbuild-20260930.md).
+- **implementation:** Stable source `0c5dd61`, `l2trans.lm1`: `l2_own_find_decl` selects declaration-source identity; `l2_own_find_occ` selects a lexical same-name occurrence; `l2_own_find_last` performs unqualified lookup. Placement is separate own-row/slot metadata. `l2_own_addr` selects the real typed cell or Array/Structure descriptor, not necessarily the address of a child-reference slot. `l2_occ_slot` / `l2_occ_expr` select callable occurrences as ordinary `Lmx` Structures. There is no `lmx_plan`, `LmxCallable`, `LmxMethod`, or separate `sig` mechanism.
+- **witnesses:** `unit_q24_repeated_decl` covers explicit occurrences, unqualified-last and preceding-environment initialization; `unit_occ_local_read` and `unit_occ_root_out_of_range_refused` cover one occurrence and a missing one.
+- **open gap:** These fixtures cover their supported positions, not every pending nested/canonical-body position.
+- **positive behavior:** Two same-name declarations retain two selectable occurrences and two physical storage identities.
+- **forbidden:** Bare assignment creates no occurrence; do not restore the removed activation-plan/header model.
 
 ## `occurrence-selector`
 
 - **level:** L2
 - **Norm:** accepted
 - **Implementation:** partial
-- **Verification:** none
-- **definition:** Selects current occurrence as future publication target.
-- **invariants:** Not a second name journal
-- **not-confused-with:** selector; occurrence
-- **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** **the selector is an occurrence value, not a stored index.** Translator side — the emission-time capture state in `dev/l2src_sandbox/l2trans.lm1`: `l2_call_node` `:44`, and `l2_call_sel` `:47` whose own comment (`:45-46`) states the rule — *"Set while one call is being written: 1 when a field path selected the exact callable occurrence held in `l2_pst`"* — with `l2_call_mi` `:48`, `l2_call_k` `:49` and `l2_unit_ref` `:53` (*"How to spell the program unit Structure in the code being emitted right now"*). These are pass-scoped capture variables, **not a runtime journal**, which is why the invariant holds. Runtime side — selection is addressed by the occurrence itself: `lmx_plan_slot_known(occurrence, plan, index)` resolves the publication target per occurrence (`lmx_plan.h.lm1:100`), and the plan contract's Trust paragraph fixes the shape rule: *"An act that changes the shape of ONE occurrence first puts a fresh `LmxCallable {method, header = 0}` into that occurrence's `child[0]`; the shared descriptor and its plan are never rewritten. Nothing is re-validated per activation."*
-- **witnesses:** none yet. The observable it must be validated through is the same one [`occurrence`](#occurrence) names (`[N]field` addressed on a selected occurrence), so one fixture can witness both — but only if a harness row is added.
-- **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
-- **positive behavior:** per definition
-- **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
+- **Verification:** fixture
+- **definition:** `[N]field` selects a declaration on a resolved Structure/path. Callable selection carries the actual `Lmx` occurrence into dispatch.
+- **invariants:** Lexical resolution precedes physical slot/path resolution; no publication journal, stored plan index, or second name registry.
+- **not-confused-with:** selector; occurrence; activation-local working value
+- **links / sources:** [CORE](CORE.md); paired specifications; Q24/Q29; next_core_tasks.md §7b; [implementation log](steps/native-selfbuild-20260930.md).
+- **implementation:** At stable `0c5dd61`, `l2_occ_head` / `l2_own_find_occ` handle explicit selection; `l2_rw_path_occ` handles retained graph paths. Native resolution carries the selected Structure in `l2_pst`. `l2_call_sel` is emission-time state for a unit occurrence, path-selected occurrence, or callable formal. `l2_emit_call` snapshots the selected occurrence before evaluating actuals. Runtime dispatch uses that occurrence's direct `native` word or retained body, not `lmx_plan_slot_known`.
+- **witnesses:** `unit_q24_repeated_decl`, `unit_occ_local_read`, `unit_occ_root_out_of_range_refused`, `unit_occ_snapshot_selector`.
+- **open gap:** Pending nested/canonical-body positions still require the common path resolver; these fixtures do not establish universal completion.
+- **positive behavior:** Generated temporary names or a new activation cannot change which declaration `[N]field` denotes.
+- **forbidden:** No occurrence identity inferred from a temporary name, first matching own row, or removed callable header.
 
 ## `canonical-local-cell`
 
@@ -624,16 +620,15 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** fixture
-- **definition:** implements relation between descriptors.
-- **invariants:** Port after sections 2-6 green
-- **not-confused-with:** admission; uses
-- **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** the acts live in `dev/l2src_sandbox/lmx_implements.h.lm1` — `:113` `lmx_implements (arena, varA, varB, consumer)` (analytic), `:122` `lmx_runtime_implements` (the walk's entry), `:125` `lmx_implements_walk (arena, varA, varB, consumer, depth)`, `:126` **`lmx_implements_signature (@: LmxMethod a; @: LmxMethod b; @: LmxMethod c)`**. Constants: `:31` `NO 0`, `:32` `YES 1`, `:36` `UNKNOWN 2`, `:42` **`DEPTH 32`**. The signature predicate's body is `dev/l2src_sandbox/lmx_implements.lm1:94-103`: **three `@: LmxMethod` operands** — UNKNOWN if any operand is 0 or any `\sig = 0U`; **NO if the sigs differ; YES if equal** — i.e. a *number compared over physical references*, never a number selecting one. The prior implementation's `lm_trans_implements_signature` is **not in this tree** (0 occurrences); it is frozen-project material, so its behaviour is a reference, not a current symbol.
-- **witnesses:** UNKNOWN as a fixture. The port is gated by the invariant above (sections 2–6 green first), which is an author sequencing condition rather than a test.
-- **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
-- **positive behavior:** per definition
-- **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
+- **definition:** Structural admission relation between an available value, a required descriptor, and the paths used by the consumer.
+- **invariants:** Every required used path has an admissible leaf kind/type or registered correspondence. Cycles use operation-local pending/visited triples, not a language depth cap. Callable arguments/result are ordinary lexical fields, not a `sig` number.
+- **not-confused-with:** admission site; uses; conversion execution
+- **links / sources:** paired specifications; D-105/Q39; next_core_tasks.md §7; [port route](steps/implements-port-plan.md); [mapping](steps/d105-index-table.md); [native admission](steps/d105-native.md).
+- **implementation:** Stable `0c5dd61`, `lmx_implements.h.lm1` / `lmx_implements.lm1`: `lmx_implements`, `lmx_runtime_implements`, `lmx_implements_walk`, `lmx_implements_walk_view`, and `lmx_implements_view` traverse actual range kinds/types and Structure fields. `lmx_implements_register`, `lmx_implements_register_map`, `lmx_implements_find`, and `lmx_implements_slot` retain admitted identity/by-name correspondence in the arena. The old `lmx_implements_signature`, `LmxMethod`, fixed `DEPTH 32` and `sig` comparison are absent.
+- **witnesses:** `unit_implements_{methods,primitives,namespace,argument,assignment,return,admission}`; `unit_s7_identity`, `unit_s7_used`, `unit_s7_nested_shape`, and corresponding missing-path/leaf-kind refusals.
+- **open gap:** Consumer/call-site, Array-formal, canonical-body/copy and conversion coverage remains in its existing §7 tickets.
+- **positive behavior:** A non-identical Structure supporting the consumer-used paths can be admitted with the required slot correspondence.
+- **forbidden:** No numeric callable signature, fixed-depth refusal, kernel name registry, or hidden converter execution inside `implements`.
 
 ## `uses`
 
@@ -656,18 +651,17 @@ An unknown actual in an existing head's call is an error, not a declaration. For
 
 - **level:** L2
 - **Norm:** accepted
-- **Implementation:** divergent
-- **Verification:** none
-- **definition:** candidate==required may succeed but must still call implements.
-- **invariants:** No early bypass
-- **not-confused-with:** empty-uses-admission
-- **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition
-- **authoritative sources:** next_core_tasks.md; AUTHOR tickets 20260922; LMX_blog 2026-09-22 where applicable
-- **implementation (files/functions):** the discriminator that decides an identity case at the callable is **`lmx_implements_signature`** (`dev/l2src_sandbox/lmx_implements.lm1:94-103`; declared `lmx_implements.h.lm1:126`), and its measured discipline is the reason no bypass is implicit: **a zero `\sig` on any of the three `LmxMethod` operands returns UNKNOWN, not YES** — so an operand the kernel cannot identify cannot pass by identity; only equal non-zero sigs return YES. The `divergent` status is about the **call sites** (whether the obligation is honoured), and those I have not audited; the predicate itself is present and behaves as above.
-- **witnesses:** none — `Verification: none` in this article, and no harness row covers an admission case today.
-- **open gap to next_core_tasks.md:** see open checklist in next_core_tasks.md
-- **positive behavior:** per definition
-- **forbidden / contrast:** FORBIDDEN: silent specials contradicting universal rules; inventing registries
+- **Implementation:** partial
+- **Verification:** fixture
+- **definition:** Physical/descriptor identity may make admission succeed, but does not remove the obligation at a non-null receiving site.
+- **invariants:** No non-null identity fast path skips the ordinary analytic/runtime `implements` point. A null reference candidate follows the separate null admission route; a supplied null remains a present reference value, not an absent argument.
+- **not-confused-with:** empty-uses-admission; null admission; correspondence-map lookup
+- **links / sources:** accepted §7 admission rules; [port route](steps/implements-port-plan.md); [native admission](steps/d105-native.md).
+- **implementation:** Stable `0c5dd61`: `l2_admit_implements` / `l2_descriptor_implements` are analytic sites; `l2_emit_admit` / `l2_emit_admit_own` emit receiving admission. The non-null path calls `lmx_runtime_implements`; successful identity/by-name admission uses `lmx_implements_register` / `lmx_implements_register_map`. Identity participates in the structural route, not equality of removed `sig` fields.
+- **witnesses:** `unit_s7_identity` requires equal descriptors to succeed while admission still runs; its mutation makes the row refuse. `unit_implements_admission` is the adjacent general witness.
+- **open gap:** Remaining receiving/call/result/copy sites under §7 prevent a universal-completion claim.
+- **positive behavior:** An identical non-null candidate passes through ordinary admission and succeeds.
+- **forbidden:** No early `candidate == required` bypass or `sig == sig` substitute.
 
 ## `empty-uses-admission`
 

@@ -1826,6 +1826,30 @@ actual language cell's address. Do not expose an argument transport box as
 `void *l2_arg_refN` and `LmxWalkValue.ref` genuinely have type `void *`; their
 consistent transport access is not this defect.
 
+The compiler still has the declared type in `L2Declaration.contract`,
+`l2_contract_formal` and `l2_type_parts` (word, depth, qualifiers). Native
+cell construction/load/store can therefore use that exact type, including
+`sizeof` and typed null initialization. Relevant emitters are
+`l2_emit_cell_new_ty`, `l2_own_cell_load/store`, the corresponding path
+load/store and pointer-Array construction. In contrast, runtime witnesses
+currently retain a closed integer type id and range stride, not the compiler's
+`l2_foreign_name/depth/const` mapping. Do not interpret an arbitrary foreign
+id by guessing a process-global C type.
+
+A complete repair must close this runtime projection as well as native
+emission: walker value load/store, working publication, addressable formal
+storage, pointer-Array elements and graph copying. Copying same-type bytes
+preserves storage representation; copying a typed pointer into a `void *`
+temporary does **not** by itself perform a C99 pointer conversion. Either
+retain exact generated typed storage operations through the existing contract
+boundary (the runtime binding is not yet designed), or explicitly establish
+the supported target's pointer-representation contract before relying on
+bytewise canonical transport. Equal sizes alone prove neither conversion
+identity nor null representation. This is an implementation choice still to
+resolve in the bounded storage repair, not an adopted registry or language
+extension. The existing pool `profile` means qualifier/receiver identity and
+must not be repurposed for this purpose.
+
 Owner-run diagnostics should compare a same-cell typed write followed by a
 generic helper read at `-O0`, `-O2`, and `-O2 -flto`, plus a consistent
 `void **` control; a diagnostic-only no-strict-aliasing run may attribute a

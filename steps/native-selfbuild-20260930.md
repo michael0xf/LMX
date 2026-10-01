@@ -1091,6 +1091,71 @@ can be repaired independently; evaluate after casting both operands to the
 resolved C type, not in a size_t scratch type. Pin result domain and value in
 native/walker witnesses, including unsigned wrap and signed/unsigned comparison.
 
+Read-only preflight on `c8167af` gives the following implementation slices;
+no new arithmetic probe, test or repair is claimed by this inventory:
+
+1. Share the integer promotion/usual-arithmetic-conversion algorithm across
+   `l2_rw_unify` and `lmx_walk` arithmetic, with adapters from the translator's
+   existing code families to the existing runtime value domains. In particular,
+   formal unsigned code 34, walker typing code 3 and `LMX_TYPE_UNSIGNED` 15
+   describe the same machine type, not three promotion rules. A pure descriptor
+   of rank, signedness, promotion target and arithmetic representative carries
+   the decision. `l2_native_expr_ty`, `l2_rw_tyof`/`l2_rw_bin`,
+   `l2_native_composite_ty` and `l2_check_value_kinds` must consume that decision.
+   Today they reject differing known numeric types after char promotion;
+   meanwhile emitted C applies its own C99 conversions. The walker also
+   performs non-int arithmetic through `size_t` scratch. Compute in the actual
+   resolved C type and publish that result domain; comparison results are int.
+   Assignment/call/return conversion receivers remain a separate receiving step.
+2. Preserve the source identity of an ordinary `unsigned char` operand until
+   that promotion step. `l2_indexed_type` currently maps the imported leaf to
+   unsigned, and `l2_emit_array_load_at` prints an unsigned temporary, whereas
+   the graph keeps `LMX_TYPE_UNSIGNED_CHAR`. An internal shared type adapter
+   and exact imported C leaf spelling prevent premature widening. Do not
+   introduce an Array-only promotion rule or new public declaration syntax.
+   CHAR/UCHAR promote to int only when representable by target int, otherwise
+   to unsigned. The already determined INT/UNSIGNED/ULONG cases and this leaf
+   correction form the first dependency-closed source slice.
+3. Add the target `size_t` canonical type/rank fact in a following slice. Ordinary
+   C99 compile-only compatibility tests can compare redeclarations using
+   `size_t *` with each standard unsigned base pointer. A matching declaration
+   proves compatibility; equal size does not. No matching standard type requires
+   explicit extended-rank toolchain metadata, not a guess. `l2_type_parts`
+   currently resolves pointer spelling/depth and supplies no scalar alias proof.
+   Feed the verified fact to the same type descriptor/resolver, retain the
+   size_t arena storage domain, and admit canonical-equal receiving types before
+   requesting a conversion-table row. A rank not yet supported by the arithmetic
+   backend is implementation work, not permission to collapse it into ulong.
+4. Target literal typing/ranges remain a further common repair. The current
+   `l2_rw_tlit` hardcodes INT32/UINT32 limits, caps ulong at 4294967295 and formats
+   it after an unsigned cast; `l2_rw_num_lit` accumulates digits in size_t.
+   These cannot establish the full C99 target contract. First-slice witnesses
+   use small literals/computed unsigned wrap rather than signed-overflow UB;
+   later literal work needs target candidate lists and lossless range handling.
+
+Acceptance runs genuinely native and native-cleared graph execution. Check
+`int(-1) < unsigned(1)` gives false, INT + UNSIGNED gives UNSIGNED,
+UNSIGNED + ULONG gives ULONG, and CHAR/UCHAR promotion matches target limits.
+Observe intermediate result domain as well as final value: nested unsigned
+wrap must happen at its own operation width, not only at the final store.
+The size_t slice adds target-conditioned mixes and alias-equal assignment
+without a converter. Existing mixed-int/size_t-refusal tests migrate only
+with that slice; final receiver conversions such as int-to-char still apply.
+Mutants restore differing-type refusal, prematurely relabel UCHAR as UNSIGNED,
+skip promotion, compute through size_t, infer alias by width, or call a
+conversion receiver inside an arithmetic operator.
+
+The integer resolver must return “not an integer domain” for pointers/text,
+not establish a blanket language ban. Machine typed-pointer arithmetic and
+comparison remain governed by L2/C99 ([§18](../docs/L2_spec_en.md#lowlevel-address));
+portable references in the L3 walker do not acquire numeric-address operations.
+Use precise invalid-L3-operand and incompatible-receiver controls. Division
+by zero must not be executed as an undefined native-C witness; existing walker
+zero-divisor checks are a distinct runtime control. No Array bounds policy changes.
+Lexical-local identity is not required to test formals/own cells/resolved paths,
+but must land before claiming correct repeated, shadowed or hidden machine-local
+operands: a correct arithmetic resolver cannot repair selection of the wrong cell.
+
 <a id="one-complete-lexical-graph"></a>
 ### One complete lexical graph
 

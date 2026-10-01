@@ -466,10 +466,11 @@ explicitly lacks that case today. The raw ABI spelling `c.VoidArray*` alone
 does not establish an Array element contract. No C-name-specific inference
 may fill the gap.
 
-Suggested sequence after named references: remove the generic operator
-restrictions with runtime witnesses; lower declared primitive/pointer-depth
-references through the shared receiving checker; complete formal-cell identity;
-then Array formal/descriptor and pointer-element value projection. Prove each
+Sequence after named references: resolve the value/address representation
+dependency below before lifting the generic operator restrictions; lower
+declared primitive/pointer-depth references through the shared receiving
+checker; complete formal-cell identity; then Array formal/descriptor and
+pointer-element value projection. Prove each
 source witness natively and by actually walking the same retained program.
 Tests must distinguish pointee writes from cached bare values and normal
 checkpoint publication, pointer-cell rebinding from pointee mutation, exact
@@ -478,6 +479,59 @@ exercise real receiving contracts, not corrupted internal graphs requiring
 new defensive validation. L2 address arithmetic is outside these portable
 L3 tests. This work is required before clean-kernel; the earlier native
 descriptor tests do not claim to cover it.
+
+#### Representation dependency: preserve value versus address
+
+Follow-up read-only inspection found that the operator restriction cannot
+be removed correctly by classifying the raw result alone. For example:
+
+```text
+int: x
+@: int p @x
+@: void a p
+@: void b @p
+```
+
+Both receiving contracts are `void*`, but a receives the address held by p,
+whereas b receives the address of p's pointer-value cell. If both producers
+are lowered to the same AT of that cell, neither the receiving type nor the
+cell's arena domain can recover the lost distinction. Explicit `@p` is not
+yet lowered there; this is a dependency to implement, not a claim that the
+current generated graph already supports both cases. Typed-null LIT,
+pointer OWN and pointer ELEM also currently return different cell/held-word
+representations. An opcode heuristic such as "AT preserves, LIT unwraps"
+is not a general solution.
+
+The source-side `L2Address.type` and `l2_rw_reference_value`'s pre-conversion
+`source_ty` retain the missing information. CALL already carries a result
+type witness, and a callable's args-part carries the input witnesses.
+The evaluator currently returns only raw `void*`; `LmxWalkValue` carries
+`ref`, `number`, `present`, without a general closed source type. The next
+source slice must first establish one coherent expression-result/place
+representation, then use it in all reference consumers:
+
+- A typed-result route can propagate the resolved source type and the
+  necessary value/place distinction through the existing evaluation result
+  and ordinary node metadata. Keep pre-conversion source identity until the
+  reference word is projected; widening to `void*` must not erase it early.
+  Activation scratch has its declared type without pretending that it is
+  an arena-classified permanent cell.
+- Alternatively, a general place resolver can support ordinary value reads
+  and the already-defined address operation separately. Index/path address
+  resolution must select the physical place before reading a pointer
+  element's held word. A marker around an already-loaded value is too late.
+  EQ, arguments, catch and return still need unambiguous value category;
+  moving the ambiguity from store to comparison is not completion.
+
+Choose the smallest complete route after inspecting its consumers; these
+are implementation alternatives, not competing language rules or an author
+question. Do not add separate per-PUT/SET exceptions, a runtime name/type
+registry or a companion graph. Reuse existing closed type witnesses and
+activation storage. `lmx_walk_reference_word`, introduced for the bounded
+Structure/pointer-cell EQ case, cannot alone provide the general projection.
+The first acceptance matrix must distinguish the two `void*` results above,
+null, primitive/Array/Structure referents and higher depth, including EQ and
+transfer across a call; only then can the generic stores be claimed fixed.
 
 <a id="reentry-publication-repair"></a>
 ### Follow-on: remove the re-entry publication exception

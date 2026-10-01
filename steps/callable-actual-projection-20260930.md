@@ -197,6 +197,26 @@ Rejecting only because type inference stays unresolved is insufficient;
 the source selected by native and walker emission must obey the same rule.
 These are in-progress acceptance requirements, not completed gate evidence.
 
+#### Consumer inventory before the final visibility gate
+
+The read-only systematic scan of the `_08` frozen translator (SHA256 prefix
+`5E16F2CE`) found four remaining live lexical consumers: `l2_index_head` /
+`l2_index_token` for native pointer indexed stores; the joined-suffix fallback
+in `l2_prefix_deref`; the `for` scanner's first-own marking; and
+`l2_check_catch`'s visible-name conflict lookup. They must select the same
+source-site binding before testing its category. A first matching own row
+or a formal's stale type is not a substitute. Preserve catch policy while
+correcting the declaration selected by that policy.
+
+Do not globally replace structural enumeration: explicit occurrence/path
+tails, layout, publication and PAP binding enumeration are not lexical
+source selection. The unknown/empty/local-Structure role helpers remain
+the separate Q58 resolver work. Returned-capture value selection through
+`l2_mad_host_own`, `l2_cap_host_src` and `l2_mad_emit` also needs a coherent
+return-site audit; distinguish the current source value from an explicit
+structural `node` path and retain it in the callable/capture follow-up.
+These source traces are not additional executed failure counts.
+
 #### Remaining machine-local categories: separate conditional debt
 
 Predeclared C function-pointer locals (`ty40`) and explicit foreign C

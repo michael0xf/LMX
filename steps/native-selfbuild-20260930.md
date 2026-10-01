@@ -256,9 +256,13 @@ Reuse the existing declaration, receiving-value and cell machinery:
 2. Factor candidate normalization, single evaluation, letter payload handling
    and `l2_emit_receiving_admit` from `l2_emit_reference_declaration`.
    Ordinary native local declarations and own-cell stores use that same
-   result. Store only after successful admission. An absent initializer
-   retains the preallocated null cell; an explicit zero is a real store and
-   cannot be discarded because re-entry/rebinding may be observable.
+   result. Store only after successful admission. The receiver's omitted
+   initializer is its default zero ([L2 §18](../docs/L2_spec_en.md#lowlevel-address)),
+   not permission to preserve a value from a preceding execution. Normalize
+   omission and explicit zero to the same null candidate at each reached
+   declaration. Preallocation alone proves only the first initial state;
+   re-entry or a repeated loop-body declaration must clear an old nonnull value.
+   Null does not require structural admission or construct a model instance.
 3. Replace the shape-specific `l2_rw_ref_bind` with one reference-value store
    builder used by declaration candidates and later assignments. Existing
    `l2_rw_write`, `l2_rw_bind_op`, `l2_rw_admit` and value nodes provide
@@ -289,7 +293,9 @@ assignment, preserving the prior pointer after a caught refusal. Require
 an attached executable store/admission/candidate chain, not token presence,
 and exactly one candidate evaluation. Observe working values during execution
 and graph-cell values after the existing publication checkpoint separately;
-do not demand immediate graph mutation for a cached bare assignment. Mutants dropping the declaration step,
+do not demand immediate graph mutation for a cached bare assignment. Include
+omitted-versus-explicit-zero declarations reached again after a nonnull binding,
+not just fresh zero-filled allocation. Mutants dropping the declaration step,
 executing B, bypassing admission, choosing direct-slot storage, storing before
 admission or duplicating evaluation must fail. Add direct named-model null
 controls beside the existing machine-local and primitive-pointer controls.
@@ -1069,6 +1075,71 @@ resolved operand. The author settled sequential paths as `a[i]\[j]\[k]`,
 distinct from flat C-like `a[i][j][k]`; do not recover or infer rectangular
 shape. Detailed code boundaries and
 acceptance: [general receiver resolution](receiver-resolution-20260930.md).
+
+<a id="known-structure-call-classification"></a>
+### Remove known-head construction fallbacks through common call classification
+
+Read-only audit of `c8167af`: the old executable `Model: fresh` implicit
+clone and `T: b c` implicit alias paths are still live. `l2_colon_decl_shape`
+and `l2_colon_bind_shape` recognize a known Structure head; the tail name's
+absence selects construction in collection/checking and native/walker emission.
+That contradicts the accepted [construction rule](../docs/LMX_semantics.en.md#construction):
+a known ordinary Structure head is a call, and an invalid/unknown actual never
+turns the call into declaration or merge. This known-head correction does not
+decide Q58's unknown/nested-head definition boundary.
+
+Use one resolved executable-call classification in collection, scan, checking
+and both emissions. Extend the existing `l2_bind_node`/`l2_bind_actuals` route
+to identify a known Structure's procedure/occurrence as a call target, not a
+second argument parser. `l2_head_is_call` currently recognizes methods, callable
+formals/paths and nullary Structure forms, whereas `l2_check_struct_call`,
+`l2_emit_struct_call` and `l2_ns_proc_add` still use a zero-explicit-formal
+procedure. Common descriptor-based actual formation/checking must replace
+the bespoke “a call of a named Structure with an argument is not built yet”
+branch. Signatures are not executable statements and must not use this
+statement-head decision.
+
+Classification as a call does not promise acceptance of arbitrary arguments.
+Against a zero-formal descriptor the ordinary located arity/name/actual
+diagnostic is valid; a new dedicated refusal or an invented interface is not.
+The current normative wording requires the general call contract but does
+not explain a positive nonempty explicit interface for a headerless Structure.
+Do not silently make body fields into formals or `l2_m_dyn` into explicit arity.
+The no-fallback cleanup can proceed under the available descriptor without
+claiming that the broader positive argument-formation gap is solved.
+
+After all consumers use the resolved call, remove the old declaration/binding
+arms in `l2_colon_bound_before`, own collection, name scan, `l2_check_body`,
+`l2_body_throws`, merge scratch sizing and `l2_emit_stmts`; remove
+`l2_rw_model`/`l2_rw_model_bind` and their dispatch arms. Remove their now-unused
+shape/check helpers and `l2_colon_decl_room` only after checking remaining
+references. Preserve `L2Declaration`, actual explicit merge, pointer receiving
+admission, graph-value type projection and unknown-head definitions.
+`l2_colon_model` still has other users in empty-definition and hidden-input
+handling; do not delete it simply because it supplied the retired helpers.
+
+Migrate tests by their actual subject, never by text replacement:
+
+- Setup-only `Model: fresh` becomes explicit `fresh: merge Model` when the
+  property needs an independent constructed graph (field paths, addresses,
+  formal transmission or merge-per-activation). Keep the original property.
+- Tests whose subject is the withdrawn implicit construction become current
+  call/definition controls, not the same obsolete assertion with new spelling.
+- Old `T: b c` alias tests become explicit `@: T b c` identity/admission
+  witnesses only after [own-reference reception](#own-reference-cell-reception)
+  works. Replacing an alias with merge would destroy the tested identity.
+- Primitive copy tests and `(T: b)` / `(@: T b)` signature tests remain unchanged.
+  Q58-dependent unknown/nested-head tests stay outside this bounded repair.
+
+Acceptance preserves nullary body effects, explicit merge copy and explicit
+reference identity/nonexecution. A known head plus an unknown actual creates
+no slot, merge or binding; known actuals use the same call classification and
+descriptor checking. Q57's unknown outer definition has no immediate effect.
+Mutants restore tail-knownness dispatch, either implicit construction fallback,
+a bespoke not-built refusal, execution of the definition, signature-as-body
+handling, body-fields-as-formals, or a copy substituted for a reference.
+Successful nonempty ordinary-Structure execution needs its actual interface
+established and tested; neither a diagnostic nor a nullary test proves it.
 
 <a id="c99-expression-types-versus-arena-storage-domains"></a>
 ### C99 expression types versus arena storage domains

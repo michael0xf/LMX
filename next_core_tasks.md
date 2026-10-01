@@ -86,6 +86,11 @@ gate — 131/131 (128 фикстур), все 16 scoped файлов прове�
    проекция сохраняет path/count и identity между соседними actual; hidden-type
    waiting учитывает receiver-операнд. Следующий writer-срез — обычное значение
    whole Array, затем own pointer-cell reception и общая lexical-local identity.
+   Отдельно снять ещё живые `Model: fresh` / `T: b c` fallback-ветви через
+   [общую классификацию известной головы как вызова](steps/native-selfbuild-20260930.md#known-structure-call-classification),
+   не через очередной специальный отказ. Формирование аргументов проверяется
+   по настоящему дескриптору; поля тела и hidden-входы нельзя объявить
+   явными формалами по догадке. Это не решение открытого Q58.
    Общие фактические аргументы должны также закрыть найденный
    [скрытый pointer-input из локальной привязки](steps/callable-actual-projection-20260930.md#site-aware-hidden-source):
    сначала единая identity локального объявления/visible-binding и native

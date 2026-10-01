@@ -410,7 +410,7 @@ See [OWN-REFERENCE-PATH-REPRESENTATION](defects.md) for the measured defect.
 <a id="portable-reference-value-projection"></a>
 ### Follow-on: portable reference values in the walker
 
-Read-only audit of the current sandbox distinguishes existing storage from
+The initial read-only audit at source checkpoint `0c5dd61` distinguishes existing storage from
 missing expression projection. Pointer cells already use
 `LMX_TYPE_POINTER_BASE + closed-unit type id`; working-value load/publication
 and graph copy preserve their pointer payloads generically. `LIT`, `AT`,
@@ -451,16 +451,21 @@ type-validation layer:
   `l2_check_receiving_value` are the common source-side mechanisms.
 
 Formal reference storage needs a separate identity step. The existing
-signature args-part already holds each input's type witness, and
-`LmxWalkFrame.argown` has activation lifetime under the existing scratch mark.
-Extend that mechanism rather than allocating a persistent graph companion:
-`f.args[k]` is the logical reference value; an address-taken explicit pointer
-formal needs its own stable pointer-value cell, initialized from that value
-and retained until activation return. Loads, reassignment and `@p` must use
-one identity. The current numeric scratch-cell precedent does not make scratch
-an arena pointer domain: carry the already-known formal operand type where
-needed rather than pretending range lookup can recover it. A permanent arena
-cell is not a substitute for activation lifetime. This path remains unbuilt.
+signature args-part already holds each input's type witness. Extend activation
+storage rather than allocating a persistent graph companion. Under the selected
+value-storage ABI below, `f.args[k]` points to transport storage, not directly
+to the logical referent; an address-taken genuine pointer formal needs its own
+stable pointer-value cell, initialized from the transported value and retained
+until activation return. A nonprimitive signature formal still designates its
+actual descriptor, including the synonymous `@: A b` signature spelling; it
+is not an explicit body pointer binding. Allocate the activation's argument
+tables before nested-call scratch marks, so forwarding cannot rewind the
+caller's storage. Loads, reassignment and `@p` must use one identity. Scratch
+is not an arena pointer domain: carry the already-known formal operand type
+rather than pretending range lookup can recover it. A permanent arena cell
+is not a substitute for activation lifetime. These paths require fresh
+source-to-runtime witnesses; the older numeric scratch-cell precedent does
+not prove them.
 
 Semantic Array formals likewise need their declared descriptor/element
 contract projected through the existing input witness. `l2_input_is_descriptor`
@@ -548,6 +553,28 @@ an own declaration selects its real graph cell, not the working cache, and
 does not publish or dirty that cache. A general address graph operation may
 represent `@`; it is not new language semantics or a per-type exception.
 
+Normalize the existing physical `PUT` operation to
+`[PUT, place-expression, value]`. AT/OF/ELEM/DEREF supply the same resolved
+place used by addressing, so a write through `\p` does not need a new STORE
+opcode or a holder-only fallback. Migrate all generated producers and
+handcrafted runtime fixtures together; remove superseded physical-store
+routes when they have no callers. Keep working-cache SET operations and
+direct child-slot `PUT_REF` distinct. Preserve established evaluation order,
+once-only evaluation, receiving conversion/admission before mutation, and
+unchanged state on failure.
+
+Pointer body declarations must use the ordinary own-declaration contract,
+real graph value storage, and working load/dirty/publication path for every
+resolved pointer type; named-Structure pointers cannot be a special storage
+class. Signature formals remain governed by the separate rule above. Source
+inspection during this slice also found `l2_own_cached` disabling a pointer's
+cache merely because an address-taking scan found its name. Remove that
+scan/memo policy: `@p` selects real graph storage without changing whether
+bare `p` uses its working value. Preserve unrelated catch-binding policy.
+Test a pending pointer cache and a direct write through its graph address,
+then the ordinary checkpoint; address-taking itself neither dirties nor
+publishes the cache.
+
 The closed implementation boundary includes AT/OF, OWN/OWN_OF, LIT, ARG,
 ELEM and CALL/EXEC/PRIM producers; SET/PUT/ELEMPUT, ADMIT and EQ consumers;
 RET/body-last-result and call transport. Convert at the existing native ABI
@@ -617,6 +644,26 @@ available, and the corresponding genuinely absent input. Check both actual
 native and walked execution. The selected ABI is planned here until its
 source, direct consumers and fresh gates land together; old checkpoint ABI
 descriptions remain historical evidence, not the new contract.
+
+#### Narrow diagnostic evidence, not a release
+
+`build/l2_harness/portable_reference_typed_eval_20261001_07` is green:
+4/4 targets, translator source blob
+`681868728861997aa3b4fc55ddc33d0fffa41e75`, translator SHA-256 prefix
+`EA392B2B7485636F`. `unit_portable_reference_values` has 17 walked checks
+and a nonzero success result of 7. The same executable ran natively and with
+the actual root native word cleared. The fixture distinguishes `p` from
+`@p`, preserves pointer value through `void*`, and distinguishes addresses of
+two equal-valued primitive cells. Independent read-only review traced the
+checked result through the generated graph.
+
+This is not acceptance of the entire pointer/ABI slice: assertion inversions,
+mechanism mutants, physical-place stores, char/Array identity, null versus
+absence, formal lifetime/forwarding and direct ABI consumers still require
+their own results and the fresh full gates. `_09` retains a generated-L1
+parse failure in the added places fixture while the values fixture remains
+green; it is not a successful runtime test of places. All broad checkpoint
+claims above still refer to `0c5dd61`, not this mutable working tree.
 
 <a id="reentry-publication-repair"></a>
 ### Re-entry publication and path calls: checkpoint 0c5dd61

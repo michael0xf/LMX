@@ -752,6 +752,50 @@ post-checkpoint controls missing from `_11`; independent review confirms the
 dirty publication and clean/address-alone non-overwrite observations. Fresh
 full gates, direct runtime-test migration and mutation checks remain pending.
 
+#### Broad ABI migration diagnostics, 2026-10-01
+
+The following runs test the mutable portable-reference working slice, not a
+released checkpoint. They do not replace the last full `0c5dd61` baseline.
+
+- `build/l3/portable_reference_typed_eval_20261001_diagnostic02`: all eleven
+  suites pass, 295 checks plus four type-budget inventories. Direct mail and
+  thread primitive consumers now supply physical input/result contracts and
+  canonical reference boxes; budget capacities were not increased.
+- `build/l2src/portable_reference_typed_eval_20261001_diagnostic04`: 284
+  targets, 283 pass; the remaining new transport self-test fails to link due
+  to a duplicate `lmx_implements` definition. The explicit predef repair is
+  subsequently tested in `build/l2src/portable_reference_transport_probe_20261001`:
+  16/16 checks. The whole kernel must still rerun on the repaired source.
+- `build/l2_harness/portable_reference_typed_eval_20261001_expanded01`:
+  210 targets, 175 pass, 35 fail. All newly added portable-reference cases,
+  including held-call results, pass. None of the 35 failing fixture identities
+  belongs to the previous full gate's 52 failures: they cannot be accepted as
+  inherited full-gate debt.
+
+Independent review separates these 35 failures into 26 production regressions,
+six outdated representation observers, two old cache-reload expectations,
+and one masked refusal diagnostic. Production repairs must retain structural
+admission metadata in the shared own-declaration path, consume declaration
+wrappers without treating them as dynamic names, preserve resolved raw-C
+member types, use the existing L2 pointer-arithmetic classifier, and allow
+discarding a numerical body-last result at the common walked-call boundary.
+Replacing runtime refusal with a changed text needle is not acceptance.
+
+The six representation observers pin former local names or the old
+result-only CALL/PRIM shape. Their replacements must still observe reachable
+SET/SET_OF and admission operations, execute the intended program, and retain
+failure-preserves-binding checks. The Array-field capture negative case must
+reach its intended refusal, not fail earlier with an unrelated generic error.
+
+`unit_address_reference_cell` and `unit_address_path_actual_span` formerly
+expected an indirect write to reload the caller's bare pointer automatically.
+That contradicts the existing [working-state rule](../docs/LMX_semantics.en.md#publication),
+not a new rule selected for this migration. Both witnesses must instead
+assert the changed physical cell **and** the retained bare working value,
+while preserving pointer-depth checks. Do not restore address-taken cache
+disabling, add an implicit reload, or remove the physical-write observation.
+Fresh focused/kernel/L3/full gates and mechanism mutants remain required.
+
 <a id="reentry-publication-repair"></a>
 ### Re-entry publication and path calls: checkpoint 0c5dd61
 

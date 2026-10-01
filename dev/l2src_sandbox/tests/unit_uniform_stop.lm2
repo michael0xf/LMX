@@ -1,0 +1,31 @@
+predef: "l2src/tests/unit_uniform_aggregate.h.lm1"
+# The driver stops the real Message immediately before the saved first adapter
+# enters its typed body. The remaining adapters are checked while stopped too.
+fn: first () int
+    throws: Oops
+return: 17
+fn: plain () int
+return: 19
+fn: character () char
+return: 'Q'
+fn: pointer () @: c.L2DispatchPair
+    throws: Oops
+return: 0
+fn: aggregate () c.L2DispatchPair
+    throws: Oops
+return: c.l2_dispatch_pair_make()
+fn: later () int
+return: 31
+fn: receiver (int: a; int: b) int
+return: a + b
+fn: caller () int
+    int: published 11
+    int: received 99
+    published: 73
+    received: receiver(first(), later())
+    catch: Oops ()
+        return: 81
+    ---
+return: 7
+sendMessage: exit(exit_code: caller(); stdout: ""; stderr: "")
+return

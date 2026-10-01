@@ -1,13 +1,20 @@
-# implements-port slice 1: a callable formal's argument goes by the address of a local of the
-# formal's type -- the five numeric types (unit_cf_call_args.lm2).  A formal of any other type is
-# refused, located, until it has a witness; here a pointer.
+# Historical refusal ID retained: pointer actuals now use canonical pointer boxes.
+# Execute the formal call and observe the actual pointee, not a constant body result.
 fn: pToInt (@: int p) int
 end: pToInt
 fn: deref (@: int p) int
-    return: 7
+    return: \p
 end: deref
 fn: applyP (pToInt: op; @: int p) int
     return: op(p)
 end: applyP
+int: cell 41
+if: applyP(deref, @cell) != 41
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+cell: 73
+if: applyP(deref, @cell) != 73
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

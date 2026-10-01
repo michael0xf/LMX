@@ -1,0 +1,62 @@
+predef: "l2src/tests/unit_foreign_type.h.lm1"
+include: "l1src/p0.lm1.h" "<stdlib.h>"
+
+fn: foreign (@: c.L2ForeignPair p; int: fail) @: c.L2ForeignPair
+    throws: Oops
+    if: fail != 0
+        throw: Oops(19)
+return: p
+fn: qualified (const: @(c.L2ForeignPair p)) const: @(c.L2ForeignPair)
+    throws: Oops
+return: p
+fn: deep (@@: int p) @@: int
+    throws: Oops
+return: p
+fn: mutable_text (@: char p) @: char
+    throws: Oops
+return: p
+fn: const_text (const: @(char p)) const: @(char)
+    throws: Oops
+return: p
+fn: deep_text (@@: char p) @@: char
+    throws: Oops
+return: p
+# These foreign aliases use their declared C value storage, not int boxes.
+fn: kind (c.LmP0NodeKind: value) c.LmP0NodeKind
+    throws: Oops
+return: value
+fn: flags (c.LmP0FrameFlags: value) c.LmP0FrameFlags
+return: value
+fn: check () int
+    @: c.L2ForeignPair p (cast: (@: c.L2ForeignPair) c.calloc(1U, c.sizeof(c.L2ForeignPair)))
+    if: p = 0
+        return: 80
+    p\value: 41
+    @: c.L2ForeignPair got foreign(p, 0)
+    if: got != p || got\value != 41 || qualified(p) != p
+        return: 81
+    @: c.L2ForeignPair empty 0
+    if: foreign(empty, 0) != 0 || qualified(empty) != 0
+        return: 85
+    int: caught 0
+    got: foreign(p, 1)
+    catch: Oops (int: payload)
+        caught: payload
+    ---
+    if: caught != 19 || got != p
+        return: 82
+    int: cell 11
+    @: int held @cell
+    @@: int place @held
+    []: char chars 1
+    chars[0]: 'Q'
+    @: char text @chars[0]
+    @@: char text_place @text
+    if: deep(place) != place || mutable_text(text) != text || const_text(text) != text || deep_text(text_place) != text_place
+        return: 83
+    if: kind(41) != 41 || flags(4000000001U) != 4000000001U
+        return: 84
+    c.free(p)
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

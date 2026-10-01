@@ -3,13 +3,12 @@ predef: "l1src/libc_abi.lm1"
 predef: "l2src/l2_application.h.lm1"
 include: "<stdio.h>" "<string.h>" "<limits.h>" "<stdlib.h>"
 
-# L2 -> L1 frontend. The file is a Structure, the unit, and its root body is walked (plan §3;
-# FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159): the root's statements are checked as the METHOD
-# row E, whose occurrence is the unit, and built as walker nodes after the unit's fields.  The
-# generated main is the launch (lmx_root_launch): the host reserves R0 and calls the unit's builder
-# in R0's own arena, R0's one turn walks the unit, and the exit is the host's -- R0's exit letter
-# (`sendMessage: exit(...)`), else the mapping of R0's success.  Methods are native, reached by their
-# symbol or, dynamically, through their prim-ABI trampolines.
+# L2 -> L1 frontend. Root statements belong to the unit's method row E. The builder
+# retains supported operator bodies and installs available native entries on their
+# actual callable occurrences. Calls dispatch through that occurrence's native word,
+# or walk its retained body when the word is absent. Typed body symbols are private
+# adapter implementation details. The host reserves R0, builds the unit in its arena,
+# and launches it through lmx_root_launch; exit handling belongs to the host.
 
 int: l2_library_mode 0
 # Which predef declaration kind l2_predef_has_type is currently looking for:
@@ -167,8 +166,6 @@ int: l2_mcap_room 0
 # Frames of the model are walked once with the binding in effect and shared by address.
 int: l2_t7_n 0
 int: l2_t7_walk 0
-int: l2_t7_dyn_here 0
-int: l2_t7_dyn_n 0
 int: l2_t7b_n 0
 int: l2_t7h_n 0
 []: int l2_t7_kind 8
@@ -189,8 +186,6 @@ int: l2_t7h_n 0
 []: @(LmP0Text) l2_t7b_nm 16
 []: int l2_t7h_ty 16
 []: @(LmP0Text) l2_t7h_nm 16
-[]: int l2_t7_dyn_mi 8
-[]: int l2_t7_dyn_fi 8
 # Where the static typing of a root expression first met two numeric types (l2_rw_tyof), for the
 # located refusal.
 @: LmP0Node l2_rw_mix_at 0
@@ -709,8 +704,8 @@ prototype:
     fn: l2_input_ft (int: mi; int: k) int
     fn: l2_m_native (int: i) int
     fn: l2_tramp_class (int: mi) int
-    fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
-    fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
+    fn: l2_emit_dyn_call (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
+    fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
     fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
     fn: l2_emit_trampoline (int: i; int: proto) int
     fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
@@ -1062,6 +1057,7 @@ prototype:
     fn: l2_own_is_pointer (int: ty) int
     fn: l2_has_pointer_array () int
     fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: char dest) int
+    fn: l2_value_decl_text (int: raw; int: extra_depth; const: @(char name); @: char dest) int
     fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
     fn: l2_emit_own_pointer_type (@: FILE out; int: ty) int
     fn: l2_emit_own_pointer_array_data_type (@: FILE out; int: ty) int
@@ -1437,7 +1433,6 @@ prototype:
     fn: l2_t7_arg_ty (const: @(LmP0Text name)) int
     fn: l2_t7_extra (int: mi) int
     fn: l2_t7_host_site (int: mi) int
-    fn: l2_t7_dyn_has (int: mi; int: fi) int
     fn: l2_t7_from_return (int: mi; const: @(LmP0Node node); const: @(char path)) int
     fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); const: @(char path)) int
     fn: l2_t7_emit_actual (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
@@ -1808,8 +1803,6 @@ fn: l2_release () int
     l2_mcap_room: 0
     l2_t7_n: 0
     l2_t7_walk: 0
-    l2_t7_dyn_here: 0
-    l2_t7_dyn_n: 0
     l2_t7b_n: 0
     l2_t7h_n: 0
     l2_it_ar: 0
@@ -12954,7 +12947,7 @@ fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: ch
     int: is_const
     int: i 0
     []: char nm 256
-    if: dest = 0 || extra_depth < 0 || l2_type_parts(raw, word, @ depth, @ is_const) != 0 || depth < 1
+    if: dest = 0 || extra_depth < 0 || l2_type_parts(raw, word, @ depth, @ is_const) != 0 || depth + extra_depth < 1
         return: 1
     depth: depth + extra_depth
     dest[0]: 0
@@ -12978,6 +12971,21 @@ fn: l2_pointer_decl_text (int: raw; int: extra_depth; const: @(char name); @: ch
     if: is_const != 0 && l2_cat(dest, ")") != 0
         return: 1
 return: 0
+
+# The same resolved type supplies exact automatic value storage or its address
+# parameter. This is spelling only; foreign values do not gain walker support.
+fn: l2_value_decl_text (int: raw; int: extra_depth; const: @(char name); @: char dest) int
+    LmP0Text: word_value
+    @: LmP0Text word @ word_value
+    int: depth
+    int: qualified
+    if: dest = 0 || name = 0 || extra_depth < 0 || l2_type_parts(raw, word, @ depth, @ qualified) != 0
+        return: 1
+    if: depth + extra_depth > 0
+        return: l2_pointer_decl_text(raw, extra_depth, name, dest)
+    if: qualified != 0
+        return: 1
+return: (cast: (int) (c.sprintf(dest, "%.*s: %s", (cast: (int) word\length), word\data, name) < 0))
 
 fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
     []: char txt 1024
@@ -22202,30 +22210,23 @@ return: l2_emit_call(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, des
 # occurrence of the method, 1 the occurrence a method path has just selected (l2_pst), 2 the one
 # the callable formal fi holds.  sel and fi arrive as values: a call among the actuals goes
 # through l2_prep again and must not re-select this one.
-# The dynamic ABI passes typed data addresses, whether the callee chooses a
-# native entry or the walker. Primitive cells belong to the caller's arena;
-# All present inputs name value storage, including pointer and descriptor inputs.
-# An absent input alone uses a zero storage address.
+# Every present input names caller-owned automatic value storage, live through
+# this invocation. Scalars/foreign values keep exact width; references use a
+# canonical void* payload box. None of these boxes is a language @place.
 fn: l2_emit_call_ref (int: ft; const: @(char value); const: @(char ind); const: @(char dest)) int
-    int: ty
     int: t
+    []: char name 64
+    []: char declaration 1024
     ft: l2_formal_raw(ft)
     if: l2_pointer_depth(ft) > 0
         t: l2_tn
         l2_tn: l2_tn + 1
         return: (cast: (int) (c.fprintf(l2_out, "%s@: void l2_arg_ref%d (cast: (@: void) %s)\n%s%s: (cast: (@: void) (@ l2_arg_ref%d))\n", ind, t, value, ind, dest, t) < 0))
-    ty: l2_own_ty_of_param(ft)
-    # A foreign by-value input needs typed storage, not a cast of the value to
-    # void*. Its dynamic boxing is not implemented by the primitive-cell ABI.
-    if: ty < 0
-        return: 1
-    if: ty = 1
-        return: (cast: (int) (c.fprintf(l2_out, "%s%s: lmx_char_cell_known(l2_program_chars, ((cast: (int) (%s)) & 255))\n", ind, dest, value) < 0))
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@: void l2_arg%d %s(l2_program_arena)\n%sif: l2_arg%d = 0 || %s(l2_arg%d, %s) != 0\n%s    c.abort()\n%s%s: l2_arg%d\n", ind, t, l2_mcap_new_helper(ty), ind, t, l2_own_store_helper(ty), t, value, ind, ind, dest, t) < 0
+    if: c.sprintf(name, "l2_arg%d", t) < 0 || l2_value_decl_text(ft, 0, name, declaration) != 0
         return: 1
-return: 0
+return: (cast: (int) (c.fprintf(l2_out, "%s%s %s\n%s%s: (cast: (@: void) (@ %s))\n", ind, declaration, value, ind, dest, name) < 0))
 
 fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: char dest; int: edge) int
     L2ReferenceSource: source
@@ -22357,6 +22358,10 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
                 return: l2_prep_drop(acts, hides)
             if: l2_cap_arg_ns(idx, nact + ai) < 0 && l2_hidden_emit_admit(mi, idx, ai, l2_act_at(hides, ai), ind) != 0
                 return: l2_prep_drop(acts, hides)
+            # Capturing nested/PAP occurrences retain their existing admission
+            # role, but admission completes before this call's publication.
+            if: mcall != 0 && l2_cap_arg_ns(idx, nact + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(idx, ai)) = 0 && l2_cap_emit_admit(l2_cap_arg_ns(idx, nact + ai), l2_act_at(hides, ai), ind) != 0
+                return: l2_prep_drop(acts, hides)
             ai: ai + 1
         ---
     t: l2_tn
@@ -22400,104 +22405,25 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     # is published now, before the call (book §12, the `9 0` order).
     if: l2_emit_publish(ind) != 0
         return: l2_prep_drop(acts, hides)
-    if: sel != 2 && prty = 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%s", ind) < 0
-        return: l2_prep_drop(acts, hides)
-    if: sel != 2 && prty != 8 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sl2_t%d: ", ind, t) < 0
-        return: l2_prep_drop(acts, hides)
-    if: sel != 2 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sl2_ts%d: ", ind, t) < 0
-        return: l2_prep_drop(acts, hides)
-    if: sel = 2
-        # Ordinary explicit and hidden inputs are typed arena cells, through the
-        # same call ABI for native and walked implementations. Interned char
-        # results return their new cell through out, not by mutating dest.
-        ai: 0
-        while: ai < nact
-            if: l2_ft(idx, ai) = 8 || l2_prim_code_name(l2_ft(idx, ai)) = 0
-                l2_prep_drop(acts, hides)
-                return: l2_error(l2_src, node, "a callable formal's argument of this type is not passed yet")
-            ai: ai + 1
-        if: nact + nhid > 0 && c.fprintf(l2_out, "%s[]: @(void) l2_cfr%d %d\n", ind, t, nact + nhid) < 0
-            return: l2_prep_drop(acts, hides)
-        ai: 0
-        while: ai < nact
-            c.sprintf(ref_dest, "l2_cfr%d[%d]", t, ai)
-            if: l2_emit_call_ref(l2_ft(idx, ai), l2_act_at(acts, ai), ind, ref_dest) != 0
-                return: l2_prep_drop(acts, hides)
-            ai: ai + 1
-        # The hidden inputs after the declared actuals (Q52: through-names are part of the signature, book :1182): a
-        # number from a local of its type (a cell of it for a walked node, as an actual), a reference as itself.
-        ai: 0
-        while: ai < nhid
-            # A3 with item 738: the host's own Structure handed to its nested method is admitted as the capture's type
-            # itself, unless the host's formal is one a call site fills by name (D-105): admitted already.
-            if: mcall != 0 && l2_cap_arg_ns(idx, nact + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(idx, ai)) = 0 && l2_cap_emit_admit(l2_cap_arg_ns(idx, nact + ai), l2_act_at(hides, ai), ind) != 0
-                return: l2_prep_drop(acts, hides)
-            c.sprintf(ref_dest, "l2_cfr%d[%d]", t, nact + ai)
-            if: l2_emit_call_ref(l2_input_ft(idx, nact + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
-                return: l2_prep_drop(acts, hides)
-            ai: ai + 1
-        ---
-        # A callable formal is called through the one dynamic call ABI, lmx_call_prim
-        # (lmx_call.h.lm1; its native callee is the method's trampoline, l2_emit_trampoline): the
-        # status apart from the value.  A throwing callable's status is its throw status, carried
-        # on by l2_emit_propagate exactly as a direct call's, with the thrown record from `out`;
-        # a callable that cannot throw and reports a status is a broken promise (X1).
-        # T7: a node with native 0 is the value itself (no fresh). Other rows stay
-        # on the fresh path, so their text does not change unless this formal
-        # received a merge.
-        l2_t7_dyn_here: 0
-        if: mcall = 0 && l2_t7_dyn_has(mi, fi) != 0
-            l2_t7_dyn_here: 1
-        # A3 and S2a: the occurrence above is the code and the data (native 0; no fresh instance).
-        if: mcall != 0 && (c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0 || l2_emit_dyn_tail(idx, t, self_t, ind, nact + nhid) != 0)
-            return: l2_prep_drop(acts, hides)
-        if: mcall = 0 && l2_emit_dyn_call(idx, t, self_t, ind, nact + nhid) != 0
-            l2_t7_dyn_here: 0
-            return: l2_prep_drop(acts, hides)
-        l2_t7_dyn_here: 0
-        l2_prep_drop(acts, hides)
-        if: l2_m_throws[idx] != 0 && l2_emit_propagate(mi, idx, t, ind) != 0
-            return: 1
-        if: l2_m_ret[idx] = 8
-            dest[0]: 0
-            return: 0
-        return: l2_tok_temp(t, dest)
-    ---
-    if: l2_m_native(idx) = 0
-        l2_prep_drop(acts, hides)
-        return: l2_error(l2_src, node, "not callable")
-    ---
-    if: l2_write_sym(l2_out, idx) != 0
-        return: l2_prep_drop(acts, hides)
-    # The native ABI keeps the two physical roles distinct: the fixed lexical
-    # space above the method first, selected occurrence/home second.
-    if: c.fprintf(l2_out, "(l2_c%d\\parent, l2_c%d", self_t, self_t) < 0
+    # Selection is complete. Every occurrence now uses the same typed transport
+    # and dispatches by its actual native word, independently of selector syntax.
+    if: nact + nhid > 0 && c.fprintf(l2_out, "%s[]: @(void) l2_cfr%d %d\n", ind, t, nact + nhid) < 0
         return: l2_prep_drop(acts, hides)
     ai: 0
     while: ai < nact
-        if: c.fprintf(l2_out, ", %s", l2_act_at(acts, ai)) < 0
+        c.sprintf(ref_dest, "l2_cfr%d[%d]", t, ai)
+        if: l2_emit_call_ref(l2_ft(idx, ai), l2_act_at(acts, ai), ind, ref_dest) != 0
             return: l2_prep_drop(acts, hides)
         ai: ai + 1
     ai: 0
     while: ai < nhid
-        if: c.fprintf(l2_out, ", %s", l2_act_at(hides, ai)) < 0
+        c.sprintf(ref_dest, "l2_cfr%d[%d]", t, nact + ai)
+        if: l2_emit_call_ref(l2_input_ft(idx, nact + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
             return: l2_prep_drop(acts, hides)
         ai: ai + 1
-    # A method caller forwards its own l2_msg -- the closure makes every caller of
-    # a throwing callable throwing, so the formal is in scope. The entry has no
-    # such formal: its single `node` is the graph it was dispatched with.
-    if: l2_m_throws[idx] != 0 && fputs(", l2_msg", l2_out) < 0
-        return: l2_prep_drop(acts, hides)
-    if: l2_m_throws[idx] != 0 && l2_m_ret[idx] != 8 && c.fprintf(l2_out, ", @ l2_t%d", t) < 0
-        return: l2_prep_drop(acts, hides)
-    if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, ", @ l2_te%d", t) < 0
+    if: l2_emit_dyn_call(mi, idx, t, self_t, ind, nact + nhid) != 0
         return: l2_prep_drop(acts, hides)
     l2_prep_drop(acts, hides)
-    if: fputs(")\n", l2_out) < 0
-        return: 1
-    # Publish writes already known to this activation after the call and before
-    # a following explicit node\field read. Merely taking an address does not
-    # mark a graph-backed own cache dirty.
     # A conversion edge's call (Q33, `edge`): whatever its receiver throws is this
     # method's implicit throw `convert`; the receiver's names are not the caller's.
     if: l2_m_throws[idx] != 0 && edge != 0
@@ -23188,6 +23114,7 @@ fn: l2_emit_sig (int: mi) int
     int: j 0
     long: mark
     int: ret_ty
+    []: char declaration 1024
     ret_ty: l2_sig_ret(mi)
     if: fputs(" (@: Lmx node; @: Lmx self", l2_out) < 0
         return: 1
@@ -23204,12 +23131,6 @@ fn: l2_emit_sig (int: mi) int
         if: c.ftell(l2_out) = mark
             return: l2_error(l2_src, l2_m_node[mi], "dynamic input type has no formal spelling")
         j: j + 1
-    # `merge:` contributes the executing Message to the existing dynamic-input
-    # group. Call-graph closure marks every method that must forward it. Its
-    # formal is l2_msg: `node` is already the reserved first formal, and a second
-    # formal of that spelling is a C redefinition the C compiler alone reports.
-    if: l2_m_throws != 0 && l2_m_throws[mi] != 0 && fputs("; @: Lmx l2_msg", l2_out) < 0
-        return: 1
     # Declared-throw ABI: the outputs follow every input, the normal result
     # first and the throw payload last, and the control status is the return.
     # A callable that cannot throw keeps its direct return unchanged.
@@ -23230,7 +23151,7 @@ fn: l2_emit_sig (int: mi) int
             return: 1
         if: ret_ty = 32 && fputs("; @@@: char l2_out_result", l2_out) < 0
             return: 1
-        if: ret_ty >= 100 && fputs("; @@: Lmx l2_out_result", l2_out) < 0
+        if: ret_ty >= 100 && (l2_value_decl_text(ret_ty, 1, "l2_out_result", declaration) != 0 || c.fprintf(l2_out, "; %s", declaration) < 0)
             return: 1
         if: l2_ret_uns(mi) = 0 && ret_ty != 1 && ret_ty != 3 && ret_ty != 8 && ret_ty != 16 && ret_ty != 32 && ret_ty != 35 && ret_ty < 100 && fputs("; @: int l2_out_result", l2_out) < 0
             return: 1
@@ -23273,8 +23194,8 @@ return: l2_ft_of_own(l2_own_of_dt(l2_dt(mi, k - l2_m_arity[mi])))
 # интерпретируется по умолчанию»; steps/root-walk-trampolines.md).  Every method with a native
 # body has one more entry, with the uniform prim ABI LmxPrimitiveEntry (owner, refs, nargs,
 # dest, out) -> status (lmx_primitive.h.lm1), and its native word is that entry: a walked body's
-# call op, lmx_call0 and lmx_call_prim reach a native method the same way.  A direct native call
-# keeps calling the method by its own symbol.
+# call op, lmx_call0 and every generated call reach the selected native method
+# through this adapter. Only the selected adapter invokes its typed body symbol.
 #   * owner is the method's occurrence: node = owner\parent (lmx_call_node), self = owner;
 #   * refs are the inputs in signature order, read by l2_emit_formal's own table;
 #   * nargs that differs from the signature is the caller's broken promise -- the translator
@@ -23284,8 +23205,7 @@ return: l2_ft_of_own(l2_own_of_dt(l2_dt(mi, k - l2_m_arity[mi])))
 #     thrown record (the method's l2_out_throw);
 #   * the result reaches the caller the way the walker takes values: a scalar is written into
 #     the typed storage `dest` addresses and `out` is dest; a pointer is the reference itself
-#     in `out`; no result leaves `out` 0.  l2_msg is 0, as the entry adapter passes it: it is
-#     only ever passed down.
+#     in `out`; no result leaves `out` 0.
 # A method with a native body: a body, or a return trailer that is its body.
 fn: l2_m_native (int: i) int
     if: i < 0
@@ -23300,10 +23220,6 @@ return: (cast: (int) (l2_m_body[i] != 0 || (l2_m_node[i] != 0 && l2_m_node[i]\as
 fn: l2_tramp_class (int: mi) int
     int: rt l2_sig_ret(mi)
     int: fi
-    int: thr 0
-    if: l2_m_throws != 0 && l2_m_throws[mi] != 0
-        thr: 1
-    ---
     if: rt = 8
         return: 0
     if: rt = 2
@@ -23314,9 +23230,9 @@ fn: l2_tramp_class (int: mi) int
         return: 4
     if: rt = 3 || rt = 16 || rt = 35 || rt = 32
         return: 5
-    # The declared-throw ABI returns every foreign result as @: Lmx (l2_emit_sig).
+    # Foreign by-value results have exact destination storage even when throwing.
     fi: rt - 100
-    if: rt >= 100 && thr = 0 && fi < l2_foreign_n && l2_foreign_depth[fi] = 0
+    if: rt >= 100 && fi < l2_foreign_n && l2_foreign_depth[fi] = 0
         return: 6
     if: rt >= 100
         return: 5
@@ -23335,7 +23251,7 @@ fn: l2_tramp_store (int: cls) const: @: char
 return: "lmx_int_store_known"
 
 # The callee runs over its own Structure, lmx_call_prim(code, code): no instance is made (the author, 2026-09-28).
-fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
+fn: l2_emit_dyn_tail (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
     int: cls l2_tramp_class(idx)
     []: char args 64
     # refs and nargs: l2_cfr<t> (l2_emit_call builds it) for a call with arguments.
@@ -23357,6 +23273,8 @@ fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: na
         return: 1
     if: l2_m_throws[idx] != 0 && c.fprintf(l2_out, "\n%sif: l2_ts%d != 0\n%s    l2_te%d: (cast: (@: Lmx) l2_o%d)\n", ind, t, ind, t, t) < 0
         return: 1
+    if: l2_emit_poll(mi, ind) != 0
+        return: 1
     if: cls = 5 && l2_m_throws[idx] = 0 && c.fprintf(l2_out, "%sl2_t%d: l2_o%d\n", ind, t, t) < 0
         return: 1
     if: cls = 5 && l2_m_throws[idx] != 0 && c.fprintf(l2_out, "%sif: l2_ts%d = 0\n%s    l2_t%d: l2_o%d\n", ind, t, ind, t, t) < 0
@@ -23367,20 +23285,19 @@ fn: l2_emit_dyn_tail (int: idx; int: t; int: self_t; const: @(char ind); int: na
         return: 1
 return: 0
 
-# The dynamic call of the callable formal occurrence l2_c<self_t> that carries the signature of
-# method idx (l2_emit_call, sel 2), through lmx_call_prim; nargs > 0 passes l2_cfr<t>.  The value lands the way the
+# The call of the already selected occurrence l2_c<self_t>, with method idx's
+# resolved signature, through lmx_call_prim; nargs > 0 passes l2_cfr<t>. The value lands the way the
 # method's trampoline delivers it (l2_tramp_class): a scalar or a foreign value in l2_t<t> through
 # dest; a pointer through out, then into l2_t<t>.  On a throw `out` is the thrown record.
-# Whatever the formal holds -- a method's occurrence or a merge -- the callee runs over its own Structure, the code
-# and the data one node (the author, 2026-09-28: no per-call instance; the (code, data) pair of the ABI is an
-# implementation debt with data = code at every call).
-fn: l2_emit_dyn_call (int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
+# The callee runs over its selected Structure; this does not allocate a callable
+# instance or turn caller transport storage into a language place.
+fn: l2_emit_dyn_call (int: mi; int: idx; int: t; int: self_t; const: @(char ind); int: nargs) int
     if: c.fprintf(l2_out, "%s@: void l2_o%d 0\n", ind, t) < 0
         return: 1
-    return: l2_emit_dyn_tail(idx, t, self_t, ind, nargs)
+    return: l2_emit_dyn_tail(mi, idx, t, self_t, ind, nargs)
 
 # The call of method i from its trampoline: node, self, the inputs, and for the declared-throw
-# ABI l2_msg 0, the result local and the thrown-record local.
+# ABI the result local and the thrown-record local.
 fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
     int: k 0
     if: l2_write_sym(l2_out, i) != 0 || fputs("(l2_self\\parent, l2_self", l2_out) < 0
@@ -23389,8 +23306,6 @@ fn: l2_emit_tramp_call (int: i; int: n; int: thr; int: cls) int
         if: l2_emit_formal(l2_input_ft(i, k), i, k, 1) != 0
             return: 1
         k: k + 1
-    if: thr != 0 && fputs(", 0", l2_out) < 0
-        return: 1
     if: thr != 0 && cls != 0 && fputs(", @ l2_tv", l2_out) < 0
         return: 1
     if: thr != 0 && fputs(", @ l2_tt", l2_out) < 0
@@ -23404,6 +23319,7 @@ fn: l2_emit_trampoline (int: i; int: proto) int
     int: cls l2_tramp_class(i)
     int: rt l2_sig_ret(i)
     int: thr 0
+    []: char declaration 1024
     if: l2_m_throws != 0 && l2_m_throws[i] != 0
         thr: 1
     ---
@@ -23428,85 +23344,46 @@ fn: l2_emit_trampoline (int: i; int: proto) int
         if: l2_emit_formal(l2_input_ft(i, k), i, k, 2) != 0
             return: 1
         k: k + 1
-    # The method that cannot throw: its value is the call's own result.
-    if: thr = 0 && cls = 0 && (fputs("    ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n", l2_out) < 0 || fputs("    \\out: 0\n", l2_out) < 0)
+    # Invoke the typed body first. A stopped Message supplies no value, so
+    # neither initialized scalar placeholders nor uninitialized foreign storage
+    # may be copied to the caller. Only normal completion reaches result stores.
+    if: fputs("    \\out: 0\n", l2_out) < 0
         return: 1
-    # A char result writes the caller's mutable result cell, like every primitive result.
-    if: thr = 0 && rt = 1 && (fputs("    lmx_char_store_known(dest, (cast: (int) ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("))\n", l2_out) < 0 || fputs("    \\out: dest\n", l2_out) < 0)
+    if: cls != 0
+        k: rt
+        if: rt < 100
+            k: l2_ft_of_own(l2_ret_cell_ty(i))
+        if: l2_value_decl_text(k, 0, "l2_tv", declaration) != 0 || c.fprintf(l2_out, "    %s\n", declaration) < 0
+            return: 1
+    ---
+    if: thr != 0 && fputs("    @: Lmx l2_tt 0\n    int: l2_ts 0\n    l2_ts: ", l2_out) < 0
         return: 1
-    if: thr = 0 && rt != 1 && cls >= 1 && cls <= 4 && (c.fprintf(l2_out, "    %s(dest, ", l2_tramp_store(cls)) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")\n", l2_out) < 0 || fputs("    \\out: dest\n", l2_out) < 0)
+    if: thr = 0 && cls != 0 && fputs("    l2_tv: ", l2_out) < 0
         return: 1
-    if: thr = 0 && cls = 5 && (fputs("    \\out: (cast: (@: void) ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs(")\n", l2_out) < 0)
+    if: thr = 0 && cls = 0 && fputs("    ", l2_out) < 0
         return: 1
-    if: thr = 0 && cls = 6 && (fputs("    @: ", l2_out) < 0 || l2_write_text(l2_out, l2_foreign_name[rt - 100]) != 0 || fputs(" l2_rv (cast: (@: ", l2_out) < 0 || l2_write_text(l2_out, l2_foreign_name[rt - 100]) != 0 || fputs(") dest)\n    \\l2_rv: ", l2_out) < 0)
+    if: l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n    if: lmx_msg_poll_escape() != 0\n        return: 0\n", l2_out) < 0
         return: 1
-    if: thr = 0 && cls = 6 && (l2_emit_tramp_call(i, n, thr, cls) != 0 || fputs("\n", l2_out) < 0 || fputs("    \\out: dest\n", l2_out) < 0)
+    if: thr != 0 && fputs("    if: l2_ts != 0\n        \\out: (cast: (@: void) l2_tt)\n        return: l2_ts\n", l2_out) < 0
         return: 1
-    # The declared-throw ABI: the result through its local, the status as the throw status.
-    if: thr != 0 && rt = 1 && fputs("    char: l2_tv 0\n", l2_out) < 0
+    if: rt = 1 && fputs("    lmx_char_store_known(dest, (cast: (int) l2_tv))\n    \\out: dest\n", l2_out) < 0
         return: 1
-    if: thr != 0 && cls = 1 && rt != 1 && fputs("    int: l2_tv 0\n", l2_out) < 0
+    if: rt != 1 && cls >= 1 && cls <= 4 && c.fprintf(l2_out, "    %s(dest, l2_tv)\n    \\out: dest\n", l2_tramp_store(cls)) < 0
         return: 1
-    if: thr != 0 && cls = 2 && fputs("    size_t: l2_tv 0U\n", l2_out) < 0
+    if: cls = 5 && fputs("    \\out: (cast: (@: void) l2_tv)\n", l2_out) < 0
         return: 1
-    if: thr != 0 && cls = 3 && fputs("    unsigned: l2_tv 0U\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && cls = 4 && fputs("    ulong: l2_tv 0U\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && cls = 5 && rt = 3 && fputs("    @: char l2_tv 0\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && cls = 5 && rt = 16 && fputs("    @: void l2_tv 0\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && cls = 5 && rt = 35 && fputs("    const: @(char l2_tv) 0\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && cls = 5 && rt = 32 && fputs("    @@: char l2_tv 0\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && cls = 5 && rt >= 100 && fputs("    @: Lmx l2_tv 0\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && (fputs("    @: Lmx l2_tt 0\n    int: l2_ts 0\n    l2_ts: ", l2_out) < 0 || l2_emit_tramp_call(i, n, thr, cls) != 0)
-        return: 1
-    if: thr != 0 && (fputs("\n", l2_out) < 0 || fputs("    if: l2_ts != 0\n        \\out: (cast: (@: void) l2_tt)\n        return: l2_ts\n", l2_out) < 0)
-        return: 1
-    if: thr != 0 && cls = 0 && fputs("    \\out: 0\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && rt = 1 && fputs("    lmx_char_store_known(dest, (cast: (int) l2_tv))\n    \\out: dest\n", l2_out) < 0
-        return: 1
-    if: thr != 0 && rt != 1 && cls >= 1 && cls <= 4 && c.fprintf(l2_out, "    %s(dest, l2_tv)\n    \\out: dest\n", l2_tramp_store(cls)) < 0
-        return: 1
-    if: thr != 0 && cls = 5 && fputs("    \\out: (cast: (@: void) l2_tv)\n", l2_out) < 0
+    if: cls = 6 && (l2_value_decl_text(rt, 1, "l2_rv", declaration) != 0 || c.fprintf(l2_out, "    %s (cast: (@: ", declaration) < 0 || l2_write_text(l2_out, l2_foreign_name[rt - 100]) != 0 || fputs(") dest)\n    \\l2_rv: l2_tv\n    \\out: dest\n", l2_out) < 0)
         return: 1
     if: fputs("    return: 0\nend: ", l2_out) < 0 || l2_write_sym(l2_out, i) != 0 || fputs("_tr\n\n", l2_out) < 0
         return: 1
 return: 0
 
-# THE WALKED ROOT (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159 commit 2; plan §3 «Пользовательский
-# код интерпретируется по умолчанию»; steps/root-walk-coverage.md).  A file's root body is
-# interpreted: its statements are built, with the unit graph, as walker nodes (lmx_walk.h.lm1), the
-# steps after every field of the unit, and the unit's child 0 is a descriptor with addr 0 -- the
-# turn walks the unit (descriptor dispatch); the last evaluated expression stays the activation's
-# own value, and the program's exit is the host's (lmx_root_launch).  The declarations stay fields (the
-# root's own cells, the methods, the named Structures), and the walk passes over them.  E stays the
-# pseudo-method that holds the root's own fields and is checked as before; after those checks a
-# root statement is
-#   * an L2 operation (c.*, @, \p, sizeof:, cast:, an L2 block): refused, «L2 operation outside a
-#     method body» -- L2 belongs in methods (plan §4 (5));
-#   * `return: V`: refused, «return with a value at the root» -- the program's exit is the host's:
-#     `sendMessage: exit(exit_code: V; stdout: ""; stderr: "")`, then a bare `return`;
-#   * built as walker nodes, when this translator builds that form: a numeric own field -- int,
-#     char, size_t, unsigned, ulong (declared with or without an initializer, assigned, read) --,
-#     a decimal or char literal typed by its place, + - < = and != > <= >= over one type (-175:
-#     two types are a conversion, refused), a call of a method with numeric inputs and an int
-#     result (one that can throw included: a throw at the root is uncaught and stops R0),
-#     `implements(candidate, required, consumer)` (its translation-time answer, an int literal), an
-#     expression statement, if/else, an anonymous block, a bare `return`, and
-#     `sendMessage: Name(f: v; ...)` to the parent (l2_rw_send); since -196 also `&&` / `||`,
-#     short-circuit, as flag steps (l2_rw_sc), `while:`, a path through a qualified branch (read)
-#     or through a method's occurrence (`M\x`, `M\[N]x`, read and written), a call through a path
-#     (`Holder\viaPath(4U)`), and a string literal alone as a statement (no step);
-#   * otherwise refused, located: «root operation not walkable yet: <op>» -- never dropped and
-#     never run natively.
-# Two passes over the same statements: the first (l2_rw_emit 0) checks and counts the unit's
-# steps before the unit's size is written; the second emits the construction.
+# Retained operator bodies are built in the same complete Structure used by
+# native dispatch. A nonzero native word selects its adapter; a zero word walks
+# that occurrence's retained operators. Root and method eligibility are checked
+# by the same lowering machinery; unsupported operations are diagnosed, not
+# silently omitted. This builder does not establish a language-level L2/L3 ban.
+# The count/check pass (l2_rw_emit=0) precedes physical graph construction.
 
 # A root statement or operand this translator does not build as walker nodes yet.
 fn: l2_rw_refuse (const: @(LmP0Node node); const: @(char what)) int
@@ -29952,7 +29829,7 @@ fn: l2_emit_mad_call () int
         return: 0
     if: l2_emit_mad_inputs() != 0
         return: 1
-    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    if: nargs < 2U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 1U, refs + 2, nargs - 2U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
+    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    if: nargs < 2U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 1U, refs + 2, nargs - 2U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
         return: 1
 return: 0
 
@@ -30145,7 +30022,7 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
         return: 1
     if: c.sprintf(dest, "l2_hd%d", t) < 0
         return: 1
-return: 0
+return: l2_emit_poll(mi, ind)
 
 # Item 738: the node slot of the named Structure ns's own node, as the unit holds it -- an eternal
 # one among the occurrences' tail, any other among the named Structures.
@@ -30517,29 +30394,6 @@ fn: l2_t7_host_site (int: mi) int
     ---
 return: 0 - 1
 
-fn: l2_t7_dyn_has (int: mi; int: fi) int
-    int: i 0
-    while: i < l2_t7_dyn_n
-        if: l2_t7_dyn_mi[i] = mi && l2_t7_dyn_fi[i] = fi
-            return: 1
-        i: i + 1
-    ---
-return: 0
-
-fn: l2_t7_dyn_add (int: mi; int: fi) int
-    int: i 0
-    while: i < l2_t7_dyn_n
-        if: l2_t7_dyn_mi[i] = mi && l2_t7_dyn_fi[i] = fi
-            return: 0
-        i: i + 1
-    ---
-    if: l2_t7_dyn_n >= 8
-        return: 1
-    l2_t7_dyn_mi[l2_t7_dyn_n]: mi
-    l2_t7_dyn_fi[l2_t7_dyn_n]: fi
-    l2_t7_dyn_n: l2_t7_dyn_n + 1
-return: 0
-
 fn: l2_t7_name_bound (int: b0; int: nb; const: @(LmP0Text name)) int
     int: i 0
     int: at
@@ -30790,8 +30644,6 @@ fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); c
         return: l2_error(path, node, "incompatible entry signature")
     if: l2_t7_fill(node, mi, 2, req, path) != 0
         return: 1
-    if: l2_t7_dyn_add(callee, fi) != 0
-        return: l2_error(path, node, "out of memory")
 return: 0
 
 fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
@@ -32445,7 +32297,9 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
         return: 1
     if: nh > 0 && c.fprintf(l2_out, "%s@: void l2_nso%d 0\n%sif: lmx_call_prim(l2_program_arena, %s, %s, l2_nsr%d, %dU, 0, @ l2_nso%d) != 0\n", ind, k, ind, at, at, k, nh, k) < 0
         return: 1
-return: (cast: (int) (c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: executing a named Structure reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0))
+    if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: executing a named Structure reported a status\\n\")\n%s    c.abort()\n", ind, ind) < 0
+        return: 1
+return: l2_emit_poll(mi, ind)
 
 # The nullary call of the Structure bound to t, emitted (l2_check_struct_call): an ordinary named Structure's own name
 # executes it natively (l2_emit_ns_exec); an own field runs the same procedure

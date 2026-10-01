@@ -76,6 +76,8 @@ prototype:
     # zero native invokes the installed walk hook on the same occurrence. Ordinary
     # callers pass the same Structure as code and data; no separate data graph is built.
     # Return is success or the callee's throw status; values travel through dest/out.
+    # A stopped Message returns status zero with out absent. The caller must unwind
+    # on poll_escape before consuming result storage; no stopped value is fabricated.
     # refs[k] is value storage, not a held pointer; null storage is absent and
     # a pointer payload of zero is present-null. A code that is not a callable
     # occurrence is the caller's broken promise (X1).

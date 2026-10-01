@@ -8,10 +8,9 @@ include: "<stdio.h>" "<string.h>"
 
 # lmx_call.lm1 - the call.  Every check here is the domain question, and the call itself is one
 # cast: `Lmx.native` is the method's trampoline, the prim ABI LmxPrimitiveEntry
-# (lmx_primitive.h.lm1; FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159, D-38).  A generated body
-# WITH source arguments is called directly by generated code, which knows the signature it
-# emitted; this unit is what a runtime calls when it holds a Structure and must find out
-# whether it can call it at all, and what a dynamic call (lmx_call_prim) goes through.
+# (lmx_primitive.h.lm1). Generated calls and walked CALLs pass declared value
+# storage through this same boundary. The selected native adapter alone calls
+# its typed body; a null native word runs the selected occurrence's retained body.
 #
 # Dispatch (k.4, next_core_tasks.md §3 item 8): `native` != 0 -> native; `native` == 0 ->
 # optional walk hook (lmx_call_install_walk). The walk unit installs the hook so call.o does
@@ -134,6 +133,8 @@ fn: lmx_call0 (@: LmxArena arena; @: Lmx callable) int
     lmx_call_clear_walk_fail()
     entry: (cast: (LmxPrimitiveEntry) addr)
     st: entry((cast: (@: void) callable), 0, 0U, (cast: (@: void) (@ value)), @ out)
+    if: lmx_msg_poll_escape() != 0
+        return: 0
     if: st != 0
         # D-37: encode like the walk METHOD path (THROWN + k).
         lmx_call_note_walk_fail(c.LMX_CALL_WALK_THROWN + st)
@@ -145,7 +146,9 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
     LmxPrimitiveEntry: entry
     LmxCallPrimWalkFn: prim_walk
     LmxEntry: addr
-    # Dispatch on CODE's native word. Owner / self = DATA; trampoline builds nothing.
+    int: status
+    # Dispatch on the selected occurrence's native word. Its adapter receives
+    # the same occurrence as owner/self; transport does not create an instance.
     if: out = 0 || data = 0 || lmx_call_ready(arena, code) != c.LMX_CALL_OK
         c.fprintf(l1_stderr(), "lmx: invariant: a dynamic call of a value that is not a Structure\n")
         c.abort()
@@ -156,7 +159,11 @@ fn: lmx_call_prim (@: LmxArena arena; @: Lmx code; @: Lmx data; @@: void refs; s
         # Local fnptr (not a void* cast in the call expr) so l1trans emits commas.
         # owner = data = self (node = data.parent inside the trampoline / typed entry).
         entry: (cast: (LmxPrimitiveEntry) addr)
-        return: entry((cast: (@: void) data), refs, nargs, dest, out)
+        status: entry((cast: (@: void) data), refs, nargs, dest, out)
+        if: lmx_msg_poll_escape() != 0
+            \out: 0
+            return: 0
+        return: status
     ---
     # A walked body (-194 к.4, G-call): the prim-walk hook carries data/args/a typed dest
     # through -- unlike lmx_call0's own nullary hook, this call is not restricted to

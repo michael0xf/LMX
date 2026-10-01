@@ -1,0 +1,32 @@
+# The driver changes the selected Holder\target occurrence only. Root and
+# caller remain native. A second callee keeps its graph but loses native.
+Holder:
+    fn: target
+end: Holder
+fn: target (int: n; char: letter; size_t: wide; @: int p) int
+return: n + hidden
+fn: walked () int
+return: 37
+fn: effect (@: int count) int
+    \count: \count + 1
+return: 23
+fn: caller () int
+    int: hidden 17
+    int: count 0
+    int: cell 41
+    @: int calls @count
+    @: int p @cell
+    int: a Holder\target(effect(calls), 'Q', 4294967303U, p)
+    int: b Holder\target(effect(calls), 'Q', 4294967303U, p)
+    int: c Holder\target(effect(calls), 'Q', 4294967303U, p)
+    int: d walked()
+    int: bad 0
+    if: a != 701 || b != 702 || c != 703 || \calls != 3
+        bad: bad + 1
+    if: d != 73
+        bad: bad + 2
+    if: bad != 0
+        return: 80 + bad
+return: 7
+sendMessage: exit(exit_code: caller(); stdout: ""; stderr: "")
+return

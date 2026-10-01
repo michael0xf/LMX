@@ -7,6 +7,7 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l2src/lmx_merge_owned.lm1"
 # The walked root: the program builds walker nodes and R0's turn walks them (-159).
 predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
@@ -67,6 +68,15 @@ int: l2_ref_active 0
 int: l2_ref_reply_to_sender 0
 int: l2_ref_reply_to_parent 0
 
+# Test-only selected-occurrence observations. No argument-storage address
+# escapes a callback; only its occupied-cell count is retained.
+@: LmxArena dispatch_arena 0
+@: Lmx dispatch_selected 0
+int: dispatch_calls 0
+size_t: dispatch_second_cells 0U
+int: dispatch_throws 0
+@: Lmx dispatch_payload 0
+
 prototype:
     fn: l2_generated_main (int: argc; @@: char argv) int
     fn: l2_program_build (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
@@ -82,6 +92,116 @@ sub: check (int: ok; const: @(char label))
         c.printf("FAIL [%s] %s\n", phase, label)
     ---
 end: check
+
+fn: dispatch_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: LmxPool pool dispatch_arena\arrays
+    size_t: occupied 0U
+    @: void pointer 0
+    dispatch_calls: dispatch_calls + 1
+    check(owner = (cast: (@: void) dispatch_selected), "dispatch uses the selected copied occurrence as owner")
+    check(nargs = 5U && refs != 0 && dest != 0 && out != 0, "dispatch passes the complete typed signature")
+    if: nargs != 5U || refs = 0 || dest = 0 || out = 0
+        return: 1
+    check(lmx_int_value_known(refs[0]) = 23, "first explicit actual is evaluated once and in position")
+    check(lmx_char_value_known(refs[1]) = 81, "char actual uses char-width value storage")
+    check(lmx_size_value_known(refs[2]) = 4294967303U, "wide actual retains its exact width")
+    pointer: lmx_pointer_value_known(refs[3])
+    check(pointer != 0 && pointer != refs[3] && lmx_int_value_known(pointer) = 41, "reference actual is held in a canonical pointer box")
+    check(lmx_int_value_known(refs[4]) = 17, "hidden input follows the explicit actuals")
+    if: dispatch_throws != 0
+        # A result-looking destination must not become the successful value
+        # when status selects the separately allocated throw payload.
+        lmx_int_store_known(dest, 999)
+        out[0]: (cast: (@: void) dispatch_payload)
+        return: 1
+    while: pool != 0
+        occupied: occupied + lmx_pool_count(pool)
+        pool: pool\next
+    ---
+    if: dispatch_calls = 2
+        dispatch_second_cells: occupied
+    if: dispatch_calls = 3
+        check(occupied = dispatch_second_cells, "repeated calls allocate no arena transport cells")
+    lmx_int_store_known(dest, 700 + dispatch_calls)
+    out[0]: dest
+return: 0
+
+# Follow structural ownership, not descriptor edges, to one retained RET(LIT).
+fn: dispatch_rewrite_return (@: LmxArena arena; @: Lmx frame; @: Lmx roles) int
+    size_t: i 0U
+    int: found 0
+    @: Lmx child 0
+    @: void value 0
+    if: frame = 0
+        return: 0
+    if: frame\array.size = 2U && lmx_arena_ref_value(frame, 0U) = lmx_arena_ref_value(roles, c.LMX_WALK_OP_RET)
+        child: lmx_arena_ref_struct(frame, 1U)
+        if: child != 0 && child\array.size = 2U && lmx_arena_ref_value(child, 0U) = lmx_arena_ref_value(roles, c.LMX_WALK_OP_LIT)
+            value: lmx_arena_ref_value(child, 1U)
+            if: value != 0 && lmx_domain_type(arena, value) = c.LMX_TYPE_INT && lmx_int_value_known(value) = 37
+                lmx_int_store_known(value, 73)
+                return: 1
+        ---
+    ---
+    while: i < frame\array.size
+        value: lmx_arena_ref_value(frame, i)
+        if: value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
+            child: (cast: (@: Lmx) value)
+            if: child\parent = frame
+                found: found + dispatch_rewrite_return(arena, child, roles)
+        ---
+        i: i + 1U
+    ---
+return: found
+
+fn: dispatch_install (@: LmxArena arena; @: Lmx graph; int: original_slot; int: walked_slot; int: caller_slot) int
+    @: Lmx original lmx_arena_ref_struct(graph, (cast: (size_t) original_slot))
+    @: Lmx walked lmx_arena_ref_struct(graph, (cast: (size_t) walked_slot))
+    @: Lmx caller lmx_arena_ref_struct(graph, (cast: (size_t) caller_slot))
+    @: Lmx holder 0
+    @: Lmx copy 0
+    @: void value 0
+    LmxEntry: saved_native 0
+    size_t: i 0U
+    int: paths 0
+    check(graph\native != 0 && caller != 0 && caller\native != 0, "dispatch probe keeps root and caller native")
+    check(original != 0 && original\native != 0 && walked != 0 && walked\native != 0, "dispatch probe starts from two native callees")
+    if: original = 0 || walked = 0 || caller = 0
+        return: 1
+    saved_native: original\native
+    # Exactly one immediate physical Holder field names this method.
+    while: i < graph\array.size
+        value: lmx_arena_ref_value(graph, i)
+        if: value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT
+            holder: (cast: (@: Lmx) value)
+            if: lmx_arena_ref_value(holder, 0U) = (cast: (@: void) original)
+                paths: paths + 1
+                if: lmx_graph_copy_owned(original, arena, arena, @ copy) != c.LMX_GRAPH_COPY_OK || copy = 0
+                    return: 1
+                copy\parent: holder
+                copy\native: (cast: (LmxEntry) dispatch_probe)
+                if: lmx_arena_ref_store(holder, 0U, (cast: (@: void) copy)) != 0
+                    return: 1
+                dispatch_selected: copy
+            ---
+        ---
+        i: i + 1U
+    ---
+    check(paths = 1 && dispatch_selected != original, "one physical path selects a distinct copied occurrence")
+    check(original\native = saved_native, "the original declaration native word remains unchanged")
+    check(dispatch_rewrite_return(arena, walked, lmx_walk_program_roles()) = 1, "exactly one retained return literal is changed")
+    walked\native: 0
+    dispatch_arena: arena
+    if: dispatch_throws != 0
+        dispatch_payload: lmx_walk_plain(arena, graph, 1U)
+        value: lmx_int_new_owned(arena)
+        if: dispatch_payload = 0 || value = 0
+            return: 1
+        if: lmx_int_store_known(value, 91) != 0 || lmx_arena_ref_store(dispatch_payload, 0U, value) != 0
+            return: 1
+        ---
+    ---
+return: 0
 
 fn: arg (int: at) int
     if: at < 0 || at >= gargc
@@ -282,6 +402,10 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
         return: 0
     ---
     while: at < gargc
+        if: (c.strcmp(gargv[at], "dispatch") = 0 || c.strcmp(gargv[at], "dispatchthrow") = 0) && at + 3 < gargc
+            at: at + 4
+            continue
+        ---
         if: merge_fact_width(gargv[at]) != 0
             at: at + merge_fact_width(gargv[at])
             continue
@@ -328,6 +452,123 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
     ---
 return: 1
 
+# Test-only stopped-call observations. All descriptor/field reads happen before
+# root teardown; postlaunch checks use counters only.
+@: Lmx stop_caller 0
+@: Lmx stop_later 0
+@: Lmx stop_receiver 0
+[]: @(Lmx) stop_extra 4
+# Test-only saved callbacks retain their exact function-pointer type.
+[]: LmxPrimitiveEntry stop_saved 2
+int: stop_calls 0
+int: stop_late_calls 0
+int: stop_receiver_calls 0
+int: stop_root_returns 0
+int: stop_walk_caller 0
+
+sub: stop_probe_adapter (@: Lmx method)
+    LmxPrimitiveEntry: entry
+    @: void dest malloc(128U)
+    @: void before malloc(128U)
+    @: void result 0
+    int: status
+    check(method != 0 && method\native != 0 && dest != 0 && before != 0, "stopped adapter retains an actual typed native body")
+    if: method = 0 || method\native = 0 || dest = 0 || before = 0
+        c.abort()
+    memset(dest, 165, 128U)
+    memset(before, 165, 128U)
+    entry: (cast: (LmxPrimitiveEntry) method\native)
+    status: entry((cast: (@: void) method), 0, 0U, dest, @ result)
+    check(status = 0 && result = 0, "stopped typed adapter has no result or throw")
+    check(memcmp(dest, before, 128U) = 0, "stopped typed adapter leaves destination untouched")
+    free(dest)
+    free(before)
+end: stop_probe_adapter
+
+fn: stop_first (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    LmxPrimitiveEntry: entry
+    int: status
+    int: k 0
+    @: LmxThread current lmx_thread_current()
+    # This fixture's two own fields follow its ordinary two header parts.
+    @: void published lmx_arena_ref_value(stop_caller, 2U)
+    @: void receiver lmx_arena_ref_value(stop_caller, 3U)
+    stop_calls: stop_calls + 1
+    check(current != 0 && lmx_msg_poll_escape() = 0, "stop is requested in a genuinely running Message")
+    check(nargs = 0U && dest != 0 && out != 0, "first actual has its declared scalar result storage")
+    check(published != 0 && lmx_int_value_known(published) = 73, "first actual sees caller dirty value published before call")
+    check(receiver != 0 && lmx_int_value_known(receiver) = 99, "receiving place has its old published value")
+    check(lmx_stop_request(current, 1U, 0U) = c.LMX_THREAD_OK && lmx_msg_poll_escape() != 0, "actual stop request clears current Message running")
+    lmx_int_store_known(dest, 31415)
+    out[0]: 0
+    entry: stop_saved[0]
+    status: entry(owner, refs, nargs, dest, out)
+    check(status = 0 && out[0] = 0, "saved native adapter exposes no result after typed body entry stop")
+    check(lmx_int_value_known(dest) = 31415, "saved scalar adapter does not store an absent stopped result")
+    while: k < 4
+        stop_probe_adapter(stop_extra[k])
+        k: k + 1
+    ---
+return: status
+
+fn: stop_later_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    stop_late_calls: stop_late_calls + 1
+    lmx_int_store_known(dest, 31)
+    out[0]: dest
+return: 0
+
+fn: stop_receiver_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    stop_receiver_calls: stop_receiver_calls + 1
+    lmx_int_store_known(dest, 47)
+    out[0]: dest
+return: 0
+
+fn: stop_root_probe (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    LmxPrimitiveEntry: entry
+    int: status
+    entry: stop_saved[1]
+    status: entry(owner, refs, nargs, dest, out)
+    @: void published lmx_arena_ref_value(stop_caller, 2U)
+    @: void receiver lmx_arena_ref_value(stop_caller, 3U)
+    stop_root_returns: stop_root_returns + 1
+    check(lmx_msg_poll_escape() != 0, "root unwinds with Message still stopped")
+    check(out != 0 && status = 0 && out[0] = 0, "root stop is absent result, not a throw or success payload")
+    check(published != 0 && lmx_int_value_known(published) = 73, "unwind preserves published caller working value")
+    check(receiver != 0 && lmx_int_value_known(receiver) = 99, "stopped first actual never updates receiving field")
+    check(stop_late_calls = 0 && stop_receiver_calls = 0, "stop skips later actual and receiver body")
+return: status
+
+fn: stop_install (@: LmxArena arena; @: Lmx graph; int: at) int
+    @: Lmx first lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 1)))
+    int: k 0
+    stop_caller: lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 8)))
+    stop_later: lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 6)))
+    stop_receiver: lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + 7)))
+    check(first != 0 && first\native != 0 && stop_caller != 0 && stop_caller\native != 0 && graph\native != 0, "stop tap starts with real native adapters and caller")
+    if: first = 0 || stop_caller = 0 || stop_later = 0 || stop_receiver = 0
+        return: 1
+    check(stop_later\native != 0 && stop_receiver\native != 0, "skipped later actual and receiver begin as actual native bodies")
+    if: stop_later\native = 0 || stop_receiver\native = 0
+        return: 1
+    stop_saved[0]: (cast: (LmxPrimitiveEntry) first\native)
+    first\native: (cast: (LmxEntry) stop_first)
+    while: k < 4
+        stop_extra[k]: lmx_arena_ref_struct(graph, (cast: (size_t) arg(at + k + 2)))
+        check(stop_extra[k] != 0 && stop_extra[k]\native != 0, "each extra typed adapter starts with its native body")
+        if: stop_extra[k] = 0 || stop_extra[k]\native = 0
+            return: 1
+        k: k + 1
+    ---
+    stop_later\native: (cast: (LmxEntry) stop_later_probe)
+    stop_receiver\native: (cast: (LmxEntry) stop_receiver_probe)
+    stop_saved[1]: (cast: (LmxPrimitiveEntry) graph\native)
+    graph\native: (cast: (LmxEntry) stop_root_probe)
+    if: stop_walk_caller != 0
+        stop_caller\native: 0
+        check(stop_caller\native = 0 && first\native != 0 && graph\native != 0, "only caller is actually walked, typed stop body and root remain native")
+    ---
+return: 0
+
 # THE BUILDER TAP: the host calls the program builder it was given right after it reserved R0;
 # the driver hands the host this one, which calls the generated builder once, as the host would,
 # and inspects the unit it built in R0's own arena.
@@ -348,8 +589,23 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
     if: rc = 0
         inspect(arena, graph)
         while: at + 1 < gargc
+            if: c.strcmp(gargv[at], "stopwalk") = 0
+                stop_walk_caller: arg(at + 1)
+            at: at + 1
+        ---
+        at: 2
+        while: at + 1 < gargc
             if: c.strcmp(gargv[at], "walkroot") = 0
                 walkroot: arg(at + 1)
+            if: c.strcmp(gargv[at], "stopcall") = 0 && at + 8 < gargc
+                if: stop_install(arena, graph, at) != 0
+                    return: 1
+            ---
+            if: (c.strcmp(gargv[at], "dispatch") = 0 || c.strcmp(gargv[at], "dispatchthrow") = 0) && at + 3 < gargc
+                dispatch_throws: c.strcmp(gargv[at], "dispatchthrow") = 0
+                if: dispatch_install(arena, graph, arg(at + 1), arg(at + 2), arg(at + 3)) != 0
+                    return: 1
+            ---
             at: at + 1
         ---
         if: walkroot != 0
@@ -660,6 +916,13 @@ fn: main (int: argc; @@: char argv) int
         check(merge_calls >= merge_fail_at, "the program made the merge the row fails")
     ---
     check(merge_facts_seen = merge_facts_expected, "every configured merge observation ran exactly once")
+    if: dispatch_arena != 0
+        check(dispatch_calls = 3, "all three selected native probe calls actually execute")
+    ---
+    if: stop_caller != 0
+        check(stop_calls = 1 && stop_root_returns = 1, "the stopped actual and root unwind observations both execute once")
+        check(stop_late_calls = 0 && stop_receiver_calls = 0, "no later actual or receiver executes after stop")
+    ---
     if: thrown >= 0
         check(walk_thrown = thrown, "the walk noted the thrown status the row names")
     ---

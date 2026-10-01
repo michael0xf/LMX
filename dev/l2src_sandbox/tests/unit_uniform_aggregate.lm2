@@ -1,0 +1,18 @@
+predef: "l2src/tests/unit_uniform_aggregate.h.lm1"
+# This is a C aggregate value, not a by-value language Structure. All bodies
+# stay native; walking the root only exercises native callable transport.
+fn: echo (c.L2DispatchPair: value) c.L2DispatchPair
+    throws: Oops
+return: c.l2_dispatch_pair_change(value)
+fn: read (c.L2DispatchPair: value) int
+return: c.l2_dispatch_pair_read(value)
+fn: check () int
+    int: changed read(echo(c.l2_dispatch_pair_make()))
+    catch: Oops ()
+        return: 82
+    ---
+    if: changed != 99 || read(c.l2_dispatch_pair_make()) != 41 || c.l2_dispatch_pair_original() != 41
+        return: 81
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

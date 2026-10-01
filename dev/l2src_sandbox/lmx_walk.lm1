@@ -22,7 +22,7 @@ prototype:
     fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int
     fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
-    fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write) @: VoidArray
+    fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: VoidArray out) int
     fn: lmx_walk_array_elem_meta (int: type; @: int elem; @: size_t stride) int
     fn: lmx_walk_index (@: LmxWalkFrame f; @: void node; @: size_t out) int
 end: prototype
@@ -917,9 +917,9 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         out\descriptor: (cast: (int) (out\type = c.LMX_TYPE_LMX || out\type = c.LMX_TYPE_DESC))
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_ELEMPUT
-        array: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), write)
-        if: array = 0
-            return: c.LMX_WALK_INVALID
+        status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), write, @ array)
+        if: status != c.LMX_WALK_OK
+            return: status
         status: lmx_walk_index(f, lmx_arena_ref_value(code, 2U), @ index)
         if: status != c.LMX_WALK_OK
             return: status
@@ -980,15 +980,21 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue v
     if: status != c.LMX_WALK_OK
         return: status
 return: lmx_walk_value_load((place.address), ty, out)
-fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write) @: VoidArray
+fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: VoidArray out) int
     LmxWalkValue: value
-    if: lmx_walk_eval(f, node, @ value) != c.LMX_WALK_OK || value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE
-        return: 0
+    int: status
+    \out: 0
+    status: lmx_walk_eval(f, node, @ value)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE
+        return: c.LMX_WALK_INVALID
     if: value.ref = 0 || lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_ARRAY
-        return: 0
+        return: c.LMX_WALK_INVALID
     if: write != 0 && lmx_walk_immutable(f, (value.ref)) != 0
-        return: 0
-return: (cast: (@: VoidArray) value.ref)
+        return: c.LMX_WALK_INVALID
+    \out: (cast: (@: VoidArray) value.ref)
+return: c.LMX_WALK_OK
 fn: lmx_walk_array_elem_meta (int: aty; @: int out_ety; @: size_t out_stride) int
     ulong: ulong_probe 0U
     if: out_ety = 0 || out_stride = 0
@@ -1083,6 +1089,8 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
     st: lmx_walk_activate(@ ctx, code, data, refs, nargs, @ result)
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
+    if: st = c.LMX_WALK_STOPPED
+        return: 0
     if: st != c.LMX_WALK_OK
         # G2/D-37: note_walk_fail X1s walker errors; throws decode to k on the turn channel.
         if: st >= c.LMX_WALK_THROWN
@@ -1351,11 +1359,14 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
             entry: (cast: (LmxPrimitiveEntry) addr)
             dest: lmx_walk_native_dest(f, rtype, @ temp)
             said: entry((cast: (@: void) data), refs, n, dest, @ raw)
-            if: said != 0
-                status: c.LMX_WALK_THROWN + said
-                lmx_walk_value_ref(out, c.LMX_TYPE_LMX, raw)
+            if: lmx_msg_poll_escape() != 0
+                status: c.LMX_WALK_STOPPED
             else:
-                status: lmx_walk_native_result(f, rtype, raw, out)
+                if: said != 0
+                    status: c.LMX_WALK_THROWN + said
+                    lmx_walk_value_ref(out, c.LMX_TYPE_LMX, raw)
+                else:
+                    status: lmx_walk_native_result(f, rtype, raw, out)
             ---
         else:
             status: lmx_walk_activate(f\context, callee, data, refs, n, out)
@@ -1413,16 +1424,19 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: status = c.LMX_WALK_OK
         dest: lmx_walk_native_dest(f, witness, @ temp)
         said: record\fn(record\owner, refs, n, dest, @ raw)
-        if: said = c.LMX_PRIMITIVE_THROW_MERGE
-            status: c.LMX_WALK_THROWN + 1
+        if: lmx_msg_poll_escape() != 0
+            status: c.LMX_WALK_STOPPED
         else:
-            if: said = c.LMX_PRIMITIVE_THROW_IMPLEMENTS
-                status: c.LMX_WALK_THROWN + 2
+            if: said = c.LMX_PRIMITIVE_THROW_MERGE
+                status: c.LMX_WALK_THROWN + 1
             else:
-                if: said != c.LMX_PRIMITIVE_OK
-                    status: c.LMX_WALK_PRIMITIVE
+                if: said = c.LMX_PRIMITIVE_THROW_IMPLEMENTS
+                    status: c.LMX_WALK_THROWN + 2
                 else:
-                    status: lmx_walk_native_result(f, witness, raw, out)
+                    if: said != c.LMX_PRIMITIVE_OK
+                        status: c.LMX_WALK_PRIMITIVE
+                    else:
+                        status: lmx_walk_native_result(f, witness, raw, out)
                 ---
             ---
         ---
@@ -1724,6 +1738,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         return: c.LMX_WALK_CONTINUE
     if: op = c.LMX_WALK_OP_UNTIL || op = c.LMX_WALK_OP_WHILE || op = c.LMX_WALK_OP_FOR
         while: going != 0
+            if: lmx_msg_poll_escape() != 0
+                return: c.LMX_WALK_STOPPED
             if: op != c.LMX_WALK_OP_UNTIL
                 status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ value)
                 if: status = c.LMX_WALK_OK
@@ -1803,9 +1819,9 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             return: lmx_walk_value_num(out, c.LMX_TYPE_INT, 0U)
         return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (lmx_int_value_known(leaf) = lmx_int_value_known(want))))
     if: op = c.LMX_WALK_OP_LENGTH
-        array: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), 0)
-        if: array = 0
-            return: c.LMX_WALK_INVALID
+        status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), 0, @ array)
+        if: status != c.LMX_WALK_OK
+            return: status
         return: lmx_walk_value_num(out, c.LMX_TYPE_SIZE_T, array\size)
     if: op = c.LMX_WALK_OP_PAD
         return: c.LMX_WALK_OK
@@ -1821,6 +1837,8 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     if: f = 0 || body = 0
         return: c.LMX_WALK_INVALID
     while: status = c.LMX_WALK_OK && f\returned = 0 && i < body\array.size
+        if: lmx_msg_poll_escape() != 0
+            return: c.LMX_WALK_STOPPED
         child: lmx_arena_ref_value(body, i)
         step_op: lmx_walk_op(f, child)
         if: step_op != c.LMX_WALK_OP_NONE
@@ -1835,7 +1853,7 @@ fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
         # Landing is cleared before each handler, so this loop runs again only
         # when that handler throws onto a pad whose parent is still this body.
         # One such pad is bound once: the next turn sees landing 0 unless a new throw sets it.
-        while: status != c.LMX_WALK_OK && f\landing != 0 && f\landing\parent = body
+        while: status >= c.LMX_WALK_THROWN && f\landing != 0 && f\landing\parent = body
             pad: f\landing
             status: lmx_walk_catch_bind(f)
             if: status = c.LMX_WALK_OK
@@ -1907,7 +1925,7 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
         status: lmx_walk_body(f, code, 0U)
     # §7b: the activation ends -- a RET with its value already evaluated, a fall-off, or a throw that leaves -- so what
     # is dirty is published before control goes back (book §14).  Nested bodies end nothing: only this does.
-    if: status = c.LMX_WALK_OK || status >= c.LMX_WALK_THROWN
+    if: status = c.LMX_WALK_OK || status = c.LMX_WALK_STOPPED || status >= c.LMX_WALK_THROWN
         a: lmx_walk_publish(f)
         if: a != c.LMX_WALK_OK
             status: a
@@ -1920,7 +1938,7 @@ fn: lmx_walk_activate (@: LmxWalkContext context; @: Lmx code; @: Lmx data; @@: 
     if: status >= c.LMX_WALK_THROWN && result != 0
         lmx_walk_value_ref(result, c.LMX_TYPE_LMX, f\payload)
     ---
-    if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && status = c.LMX_WALK_OK
+    if: lmx_scratch_rewind(context\scratch, pm) != c.LMX_SCRATCH_OK && (status = c.LMX_WALK_OK || status = c.LMX_WALK_STOPPED)
         status: c.LMX_WALK_INVALID
     ---
 return: status
@@ -1930,11 +1948,16 @@ return: status
 # A direct/root caller executes one complete Structure over itself.
 fn: lmx_walk_run (@: LmxWalkContext context; @: Lmx node; @@: void args; size_t: nargs; @: LmxWalkValue out) int
     LmxWalkValue: ignored
+    int: status
     if: out = 0
         out: @ ignored
     if: context = 0 || context\arena = 0 || (nargs != 0U && args = 0)
         return: c.LMX_WALK_INVALID
-return: lmx_walk_activate(context, node, node, args, nargs, out)
+    status: lmx_walk_activate(context, node, node, args, nargs, out)
+    if: status = c.LMX_WALK_STOPPED
+        lmx_walk_value_clear(out)
+        return: c.LMX_WALK_OK
+return: status
 fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int
     \out_value: 0
     if: arena = 0

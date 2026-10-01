@@ -16,6 +16,9 @@ fn: direct (size_t: n) size_t
     if: keep != 0U
         next: keep - 1U
         sub: direct(next)
+        if: sub != next
+            return: 91U
+    ---
     return: keep
 end: direct
 fn: viaPath (size_t: n) size_t
@@ -26,6 +29,9 @@ fn: viaPath (size_t: n) size_t
     if: keep != 0U
         next: keep - 1U
         sub: Holder\viaPath(next)
+        if: sub != next
+            return: 92U
+    ---
     return: keep
 end: viaPath
 fn: rmerge (size_t: n) size_t
@@ -37,6 +43,9 @@ fn: rmerge (size_t: n) size_t
     if: keep != 0U
         next: keep - 1U
         sub: rmerge(next)
+        if: sub != next
+            return: 93U
+    ---
     return: keep
 end: rmerge
 size_t: a
@@ -54,5 +63,5 @@ c: rmerge(2U)
 if: c != 2U
     sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

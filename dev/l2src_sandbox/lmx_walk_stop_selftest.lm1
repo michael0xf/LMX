@@ -1,0 +1,196 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_post.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+@: LmxArena ga 0
+@: Lmx roles 0
+@: Lmx active 0
+int: callbacks 0
+int: late 0
+int: phase 0
+int: checks 0
+int: failures 0
+
+sub: check (int: yes; const: @(char label))
+    checks: checks + 1
+    if: yes = 0
+        failures: failures + 1
+        c.printf("FAIL phase%d %s\n", phase, label)
+    ---
+end: check
+
+fn: fr (@: Lmx parent; size_t: slot; int: op; size_t: width) @: Lmx
+    @: Lmx result lmx_walk_frame(ga, roles, parent, op, width)
+    if: result = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) result)) != 0
+        c.abort()
+return: result
+
+sub: edge (@: Lmx parent; size_t: slot; @: void value)
+    if: lmx_arena_ref_store(parent, slot, value) != 0
+        c.abort()
+end: edge
+
+fn: own (@: Lmx parent; size_t: slot; size_t: index) @: Lmx
+    @: Lmx result fr(parent, slot, c.LMX_WALK_OP_OWN, 3U)
+    edge(result, 1U, (cast: (@: void) active))
+    if: lmx_walk_store_size(ga, result, 2U, index) != c.LMX_WALK_OK
+        c.abort()
+return: result
+
+fn: stopped (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    int: expected 73
+    @: void cell lmx_arena_ref_value(active, 0U)
+    if: phase = 1
+        expected: 11
+    check(lmx_int_value_known(cell) = expected, "ordinary call publishes; plain primitive defers publication to unwind")
+    check(lmx_thread_current() != 0 && lmx_msg_poll_escape() = 0, "callback starts in a running real Thread")
+    callbacks: callbacks + 1
+    check(lmx_stop_request(lmx_thread_current(), 1U, 0U) = c.LMX_THREAD_OK, "current Thread stop request succeeds")
+    out[0]: 0
+return: 0
+
+fn: later (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    late: late + 1
+    lmx_int_store_known(dest, 19)
+    out[0]: dest
+return: 0
+
+fn: call (@: Lmx parent; size_t: slot; @: Lmx callee; int: result_type) @: Lmx
+    @: Lmx result fr(parent, slot, c.LMX_WALK_OP_CALL, 5U)
+    @: Lmx signature 0
+    @: Lmx returns 0
+    @: VoidArray witness 0
+    if: result_type = c.LMX_TYPE_DESC
+        signature: wt_contract_same(ga, 0U, 0, c.LMX_TYPE_INT)
+        returns: lmx_arena_ref_struct(signature, 1U)
+        witness: lmx_array_ref_new_owned(c.LMX_TYPE_ARRAY_OF_LMX, 0U, ga)
+        if: witness = 0 || returns = 0
+            c.abort()
+        edge(returns, 0U, (cast: (@: void) witness))
+    else:
+        signature: wt_contract_same(ga, 0U, 0, result_type)
+    ---
+    if: signature = 0
+        c.abort()
+    edge(result, 1U, (cast: (@: void) callee))
+    edge(result, 2U, (cast: (@: void) callee))
+    edge(result, 3U, (cast: (@: void) signature))
+return: result
+
+fn: main () int
+    LmxArena: arena
+    LmxArena: temporary
+    LmxPool: cells
+    LmxScratch: scratch
+    LmxWalkContext: context
+    LmxWalkValue: result
+    @: LmxThread thread 0
+    @: LmxMsg message 0
+    @: LmxPost mailbox 0
+    @: LmxSchedule schedule 0
+    @: Lmx native 0
+    @: Lmx late_native 0
+    @: Lmx node 0
+    @: Lmx target 0
+    @: Lmx value 0
+    @: LmxPrimitive record 0
+    @: LmxChunk before_at 0
+    size_t: before_used 0U
+    size_t: before_top 0U
+    int: status
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0 || lmx_arena_open(@ temporary) != 0 || lmx_scratch_open(@ scratch, @ temporary, @ cells, 16U) != c.LMX_SCRATCH_OK
+        c.printf("setup arenas/scratch failed\n")
+        return: 2
+    ga: @ arena
+    roles: lmx_walk_roles_open(ga)
+    context.arena: ga
+    context.scratch: @ scratch
+    context.roles: roles
+    native: lmx_node_new_owned(ga)
+    late_native: lmx_node_new_owned(ga)
+    if: native = 0 || late_native = 0
+        c.printf("setup native descriptors failed\n")
+        return: 2
+    native\native: (cast: (LmxEntry) stopped)
+    late_native\native: (cast: (LmxEntry) later)
+    while: phase < 4
+        active: lmx_node_new_owned(ga)
+        if: active = 0 || lmx_arena_refs_open_owned(ga, active, 5U) != 0 || lmx_walk_store_int(ga, active, 0U, 11) != 0 || lmx_walk_store_int(ga, active, 1U, 99) != 0
+            c.printf("setup active fields failed phase%d\n", phase)
+            return: 2
+        node: fr(active, 2U, c.LMX_WALK_OP_SET, 3U)
+        target: own(node, 1U, 0U)
+        value: fr(node, 2U, c.LMX_WALK_OP_LIT, 2U)
+        if: lmx_walk_store_int(ga, value, 1U, 73) != 0
+            return: 2
+        node: fr(active, 3U, c.LMX_WALK_OP_SET, 3U)
+        target: own(node, 1U, 1U)
+        if: phase = 0
+            value: fr(node, 2U, c.LMX_WALK_OP_ADD, 3U)
+            target: call(value, 1U, native, c.LMX_TYPE_INT)
+            target: call(value, 2U, late_native, c.LMX_TYPE_INT)
+        if: phase = 1
+            value: fr(node, 2U, c.LMX_WALK_OP_PRIM, 3U)
+            record: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+            if: record = 0
+                return: 2
+            record\fn: stopped
+            record\owner: 0
+            record\signature: wt_contract_same(ga, 0U, 0, c.LMX_TYPE_INT)
+            edge(value, 1U, (cast: (@: void) record))
+        if: phase = 2
+            value: fr(node, 2U, c.LMX_WALK_OP_LENGTH, 2U)
+            target: call(value, 1U, native, c.LMX_TYPE_DESC)
+        if: phase = 3
+            value: fr(node, 2U, c.LMX_WALK_OP_ELEM, 3U)
+            target: call(value, 1U, native, c.LMX_TYPE_DESC)
+            target: fr(value, 2U, c.LMX_WALK_OP_LIT, 2U)
+            if: lmx_walk_store_size(ga, target, 1U, 0U) != 0
+                return: 2
+        ---
+        target: call(active, 4U, late_native, c.LMX_TYPE_INT)
+        mailbox: (cast: (@: LmxPost) lmx_arena_take(ga, c.sizeof(c.LmxPost), c.LMX_DOMAIN_KIND_POST, c.LMX_DOMAIN_POST))
+        schedule: (cast: (@: LmxSchedule) lmx_arena_take(ga, c.sizeof(c.LmxSchedule), c.LMX_DOMAIN_KIND_SCHEDULE, c.LMX_DOMAIN_SCHEDULE))
+        thread: (cast: (@: LmxThread) lmx_arena_take(ga, c.sizeof(c.LmxThread), c.LMX_DOMAIN_KIND_MSG_RECORD, c.LMX_DOMAIN_THREAD))
+        if: mailbox = 0 || schedule = 0 || thread = 0
+            return: 2
+        if: lmx_post_init(ga, mailbox) != c.LMX_POST_OK || lmx_schedule_init(schedule, ga, (cast: (@: void) thread), 4U) != c.LMX_SCHEDULE_OK || lmx_thread_init(ga, thread, active, mailbox, schedule) != c.LMX_THREAD_OK
+            c.printf("setup Thread tuple failed phase%d\n", phase)
+            return: 2
+        message: lmx_thread_message(thread)
+        message\running: 1
+        if: lmx_thread_enter(thread) != c.LMX_THREAD_OK
+            c.printf("setup Thread enter failed phase%d\n", phase)
+            return: 2
+        before_at: scratch.at
+        before_used: scratch.used
+        before_top: scratch.top
+        callbacks: 0
+        late: 0
+        status: lmx_walk_run(@ context, active, 0, 0U, @ result)
+        check(status = c.LMX_WALK_OK && (result.present) = 0, "public stop has no result and is not INVALID or a throw")
+        check(callbacks = 1 && late = 0 && message\running = 0, "stop is reached once and skips dependent and later effects")
+        check(lmx_int_value_known(lmx_arena_ref_value(active, 0U)) = 73, "stopped activation publishes previously dirty working field")
+        check(lmx_int_value_known(lmx_arena_ref_value(active, 1U)) = 99, "stopped operand leaves receiving field unchanged")
+        check((scratch.at) = before_at && (scratch.used) = before_used && (scratch.top) = before_top, "stop rewinds all activation and nested call scratch")
+        check(lmx_thread_leave(thread) = c.LMX_THREAD_OK && lmx_thread_current() = 0, "turn leaves stopped Thread normally")
+        phase: phase + 1
+    ---
+    check(lmx_scratch_close(@ scratch) = c.LMX_SCRATCH_OK, "all stop marks are closed")
+    lmx_arena_release(@ temporary)
+    lmx_arena_release(@ arena)
+    c.printf("lmx_walk_stop_selftest checks=%d failures=%d\n", checks, failures)
+    if: failures != 0
+        return: 1
+return: 0

@@ -9,5 +9,8 @@ fn: probe () int
     return: add(1)
 end: probe
 
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+if: probe() != 2
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

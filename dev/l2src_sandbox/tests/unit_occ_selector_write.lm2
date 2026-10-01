@@ -1,0 +1,95 @@
+# K01c witness (steps/k01-selector-identity-20261001.md §5): writing and taking the address of a
+# repeated name through an admitted candidate.  The requirement Pair names its field 1 for both
+# spellings, but the value's own model decides the target: bare `v\x` must reach the VALUE's last
+# x (Triple slot 2), `v\[1]x` its occurrence 1 (slot 1).  Writes and addresses follow the same
+# edge as reads.  The identity order (Pair admitted to Pair) and a repeated call on one value are
+# checked too.  Success is 7.
+Pair: (size_t: x 10U; size_t: x 20U)
+Triple: (size_t: x 10U; size_t: x 20U; size_t: x 30U)
+fn: wrLast (Pair: v; size_t: z) size_t
+    size_t: got
+    v\x: z
+    got: v\x
+    return: got
+end: wrLast
+fn: wrSecond (Pair: v; size_t: z) size_t
+    size_t: got
+    v\[1]x: z
+    got: v\x
+    return: got
+end: wrSecond
+fn: rd (Pair: v) size_t
+    size_t: got
+    got: v\x
+    return: got
+end: rd
+fn: rdSecond (Pair: v) size_t
+    size_t: got
+    got: v\[1]x
+    return: got
+end: rdSecond
+fn: poke (@: size_t p) size_t
+    \p: 77U
+    return: \p
+end: poke
+fn: addrLast (Pair: v) size_t
+    size_t: got
+    got: poke(@: v\x)
+    return: got
+end: addrLast
+fn: addrSecond (Pair: v) size_t
+    size_t: got
+    got: poke(@: v\[1]x)
+    return: got
+end: addrSecond
+Triple: t
+Pair: p
+size_t: got 0U
+int: ok 7
+got: wrLast(t 99U)
+if: got != 99U
+    ok: 81
+got: rd(t)
+if: got != 99U
+    ok: 82
+got: rdSecond(t)
+if: got != 20U
+    ok: 83
+got: wrSecond(t 55U)
+if: got != 99U
+    ok: 84
+got: rdSecond(t)
+if: got != 55U
+    ok: 85
+got: rd(t)
+if: got != 99U
+    ok: 86
+got: addrLast(t)
+if: got != 77U
+    ok: 87
+got: rd(t)
+if: got != 77U
+    ok: 88
+got: addrSecond(t)
+if: got != 77U
+    ok: 89
+got: rdSecond(t)
+if: got != 77U
+    ok: 90
+got: wrLast(p 44U)
+if: got != 44U
+    ok: 91
+got: rd(p)
+if: got != 44U
+    ok: 92
+got: wrLast(t 66U)
+if: got != 66U
+    ok: 93
+got: rd(t)
+if: got != 66U
+    ok: 94
+got: rdSecond(t)
+if: got != 77U
+    ok: 95
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

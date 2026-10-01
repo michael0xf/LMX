@@ -1,0 +1,15 @@
+# K01d witness (same note), positive: the same candidate read at the requirement's ORDINAL
+# occurrence reaches its occurrence 0, a size_t like the requirement's -- legal, 10.
+Model: (size_t: x 10U)
+Cand: (size_t: x 10U; char: x 'q')
+fn: rdFirst (Model: v) size_t
+    size_t: got
+    got: v\[0]x
+    return: got
+end: rdFirst
+Cand: c
+int: ok 7
+if: rdFirst(c) != 10U
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

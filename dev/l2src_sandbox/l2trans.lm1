@@ -280,7 +280,14 @@ int: l2_mrs_rebuild 0
 # matching end is a declaration. Unused is valid. One unit child each, in
 # source order, node = the unit.
 int: l2_ns_n 0
-int: l2_uses_full 0
+# The Consumer's used paths (K01e): entries packed in one growable buffer, NUL-terminated,
+# l2_uses_len bytes in all.  Module scope because the walk is recursive and the list is read by
+# every consumer of the same admission; reset per l2_admit_consumer_at call and released at its
+# end.  No entry count and no path length limit: only the allocation can fail.
+@: char l2_uses_buf 0
+int: l2_uses_cap 0
+int: l2_uses_len 0
+int: l2_uses_oom 0
 @@: LmP0Text l2_ns_name 0
 @: int l2_ns_first 0
 @: int l2_ns_count 0
@@ -848,7 +855,7 @@ prototype:
     fn: l2_d105_emit_tables () int
     fn: l2_d105_width (int: req) int
     fn: l2_d105_declare_maps () int
-    fn: l2_uses_walk_body (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
+    fn: l2_uses_walk_body (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
     fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) int
     fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
     fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: char dest) int
@@ -1100,16 +1107,16 @@ prototype:
     fn: l2_method_sig_compatible (int: cand; int: req) int
     fn: l2_uses_is_slash (const: @(LmP0Text text)) int
     fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
-    sub: l2_uses_path_add (@: char paths; @: size_t count; const: @(char path); size_t: length)
+    sub: l2_uses_path_add (const: @(char path); size_t: length)
     fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
-    fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: char paths; @: size_t count; @: LmP0Field start) @: LmP0Field
-    fn: l2_uses_walk_frame (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
-    fn: l2_uses_walk_structure (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Structure body)) int
-    fn: l2_uses_walk_node (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Node node)) int
-    fn: l2_descriptor_used (int: cand; int: req; @: char paths; size_t: path_count; @: int out_result) int
+    fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: LmP0Field start) @: LmP0Field
+    fn: l2_uses_walk_frame (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
+    fn: l2_uses_walk_structure (const: @(LmP0Text varb); const: @(LmP0Structure body)) int
+    fn: l2_uses_walk_node (const: @(LmP0Text varb); const: @(LmP0Node node)) int
+    fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
     fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
-    fn: l2_admit_paths (int: cand; int: req; @: char paths; size_t: path_count; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_admit_paths (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_at (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(LmP0Structure body); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
@@ -14503,25 +14510,63 @@ fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
         i: i + 1U
 return: length
 
-sub: l2_uses_path_add (@: char paths; @: size_t count; const: @(char path); size_t: length)
+# Release the list: the buffer is no longer needed.
+fn: l2_uses_reset () int
+    if: l2_uses_buf != 0
+        l2_xfree((cast: (@: void) l2_uses_buf))
+    ---
+    l2_uses_buf: 0
+    l2_uses_cap: 0
+    l2_uses_len: 0
+    l2_uses_oom: 0
+return: 0
+
+# Room for `extra` more bytes: the buffer doubles, never a fixed ceiling.
+fn: l2_uses_ensure (size_t: extra) int
+    int: want
+    @: char grown
+    if: (cast: (size_t) l2_uses_len) + extra <= (cast: (size_t) l2_uses_cap)
+        return: 0
+    want: l2_uses_cap * 2
+    if: want < 1024
+        want: 1024
+    ---
+    while: (cast: (size_t) want) < (cast: (size_t) l2_uses_len) + extra
+        want: want * 2
+    ---
+    grown: (cast: (@: char) l2_xmalloc((cast: (size_t) want)))
+    if: grown = 0
+        return: 1
+    if: l2_uses_len > 0 && l2_uses_buf != 0
+        memcpy(grown, l2_uses_buf, (cast: (size_t) l2_uses_len))
+    ---
+    if: l2_uses_buf != 0
+        l2_xfree((cast: (@: void) l2_uses_buf))
+    ---
+    l2_uses_buf: grown
+    l2_uses_cap: want
+return: 0
+
+sub: l2_uses_path_add (const: @(char path); size_t: length)
     @: char slot
-    size_t: i 0U
+    size_t: off 0U
     size_t: n
-    if: paths = 0 || count = 0 || path = 0 || length = 0U || length >= 128U
+    if: path = 0 || length = 0U
         return
-    while: i < \count
-        slot: paths + (i * 128U)
+    while: off < (cast: (size_t) l2_uses_len)
+        slot: l2_uses_buf + off
         n: strlen(slot)
         if: n = length && memcmp(slot, path, n) = 0
             return
-        i: i + 1U
-    if: \count >= 64U
-        l2_uses_full: 1
+        off: off + n + 1U
+    ---
+    if: l2_uses_ensure(length + 1U) != 0
+        l2_uses_oom: 1
         return
-    slot: paths + (\count * 128U)
-    memcpy(slot, path, length)
-    slot[length]: 0
-    \count: \count + 1U
+    ---
+    memcpy(l2_uses_buf + (cast: (size_t) l2_uses_len), path, length)
+    l2_uses_buf[(cast: (size_t) l2_uses_len) + length]: 0
+    l2_uses_len: (cast: (int) ((cast: (size_t) l2_uses_len) + length + 1U))
 end: l2_uses_path_add
 
 fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
@@ -14545,7 +14590,7 @@ fn: l2_uses_name_eq (const: @(LmP0Text name); const: @(LmP0Text varb)) int
         return: 0
 return: memcmp(ad, bd, an) = 0
 
-fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: char paths; @: size_t count; @: LmP0Field start) @: LmP0Field
+fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: LmP0Field start) @: LmP0Field
     @: LmP0Field field
     @: LmP0Text name
     []: char path 128
@@ -14612,10 +14657,10 @@ fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: char paths; @: size_t count
         ---
         field: field\next
     if: tracked != 0 && used > 0U
-        l2_uses_path_add(paths, count, path, used)
+        l2_uses_path_add(path, used)
 return: field
 
-fn: l2_uses_walk_frame (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
+fn: l2_uses_walk_frame (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
     @: LmP0Text head 0
     size_t: slash
     size_t: rest
@@ -14631,58 +14676,58 @@ fn: l2_uses_walk_frame (const: @(LmP0Text varb); @: char paths; @: size_t count;
                     head\length: slash
                     if: l2_uses_name_eq(head, varb) != 0 && slash + 1U < frame\head\length
                         rest: frame\head\length - slash - 1U
-                        l2_uses_path_add(paths, count, frame\head\data + slash + 1U, rest)
+                        l2_uses_path_add(frame\head\data + slash + 1U, rest)
                     ---
                     l2_xfree((cast: (@: void) head))
                 ---
             ---
-            return: l2_uses_walk_body(varb, paths, count, frame)
+            return: l2_uses_walk_body(varb, frame)
         ---
     ---
-return: l2_uses_walk_body(varb, paths, count, frame)
+return: l2_uses_walk_body(varb, frame)
 
 # D-109: the uses of a consumer are its body's and its hung `return:`'s -- P0 makes a `return:` after the
 # body the frame's trailer, and a read there (`return: m\a`) is a use like any other.  The walk read the
 # body alone, and a formal admitted by the consumer's uses could lack a field its return reads.
-fn: l2_uses_walk_body (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Frame frame)) int
-    if: l2_uses_walk_structure(varb, paths, count, frame\body) != 0
+fn: l2_uses_walk_body (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
+    if: l2_uses_walk_structure(varb, frame\body) != 0
         return: 1
     if: frame\trailer != 0 && frame\trailer\body != 0
-        return: l2_uses_walk_structure(varb, paths, count, frame\trailer\body)
+        return: l2_uses_walk_structure(varb, frame\trailer\body)
 return: 0
 
-fn: l2_uses_walk_structure (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Structure body)) int
+fn: l2_uses_walk_structure (const: @(LmP0Text varb); const: @(LmP0Structure body)) int
     @: LmP0Field field
     @: LmP0Field next
     if: varb = 0 || body = 0
         return: 0
     field: body\first_field
     while: field != 0
-        next: l2_uses_scan_follow(varb, paths, count, field)
+        next: l2_uses_scan_follow(varb, field)
         if: next != field
             field: next
         else:
-            if: l2_uses_walk_node(varb, paths, count, field\value) != 0
+            if: l2_uses_walk_node(varb, field\value) != 0
                 return: 1
             field: field\next
         ---
 return: 0
 
-fn: l2_uses_walk_node (const: @(LmP0Text varb); @: char paths; @: size_t count; const: @(LmP0Node node)) int
+fn: l2_uses_walk_node (const: @(LmP0Text varb); const: @(LmP0Node node)) int
     if: varb = 0 || node = 0
         return: 0
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0
-        return: l2_uses_walk_structure(varb, paths, count, node\as\structure)
+        return: l2_uses_walk_structure(varb, node\as\structure)
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0
-        return: l2_uses_walk_frame(varb, paths, count, node\as\frame)
+        return: l2_uses_walk_frame(varb, node\as\frame)
 return: 0
 
 # Used-path Consumer: every segment of a path that required declares is
 # required on the candidate. A Structure field (kind 3) descends into that
 # pair. The last segment is a leaf: its kind must match. A name required
 # does not declare at that level is not part of this Consumer.
-fn: l2_descriptor_used (int: cand; int: req; @: char paths; size_t: path_count; @: int out_result) int
-    size_t: i 0U
+fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
+    size_t: off 0U
     @: char slot
     []: char buf 128
     size_t: n
@@ -14702,13 +14747,13 @@ fn: l2_descriptor_used (int: cand; int: req; @: char paths; size_t: path_count; 
         \out_result: 0
     if: cand = -1 || req < 0 || out_result = 0
         return: 1
-    if: path_count = 0U
+    if: l2_uses_len = 0
         \out_result: 1
         return: 0
-    if: paths = 0
+    if: l2_uses_buf = 0
         return: 1
-    while: i < path_count
-        slot: paths + (i * 128U)
+    while: off < (cast: (size_t) l2_uses_len)
+        slot: l2_uses_buf + off
         n: strlen(slot)
         ci: cand
         ri: req
@@ -14761,7 +14806,7 @@ fn: l2_descriptor_used (int: cand; int: req; @: char paths; size_t: path_count; 
                 ---
             ---
         ---
-        i: i + 1U
+        off: off + n + 1U
     ---
     \out_result: 1
 return: 0
@@ -14795,12 +14840,12 @@ return: l2_admit_finish(cand, req, status, compatible, cand_name, path, at, cont
 # The Consumer is the path list from l2_uses_walk_frame. Zero paths succeed
 # inside l2_descriptor_used. A nonempty list checks those names. req is the
 # required type, not the Consumer.
-fn: l2_admit_paths (int: cand; int: req; @: char paths; size_t: path_count; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+fn: l2_admit_paths (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     int: compatible 0
     int: status
     if: cand = -1 || req < 0
         return: 0
-    status: l2_descriptor_used(cand, req, paths, path_count, @ compatible)
+    status: l2_descriptor_used(cand, req, @ compatible)
 return: l2_admit_finish(cand, req, status, compatible, cand_name, path, at, context)
 
 fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
@@ -14810,28 +14855,22 @@ return: l2_admit_consumer_at(cand, req, varb, consumer, 0, path, at, context)
 # Structure's procedure), the body the name lives in: the paths varb takes there.  Neither: the declared type's shape.
 fn: l2_admit_consumer_at (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(LmP0Structure body); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     int: status 0
-    @: char paths
-    size_t: path_count 0U
     if: cand = -1 || req < 0
         return: 0
     if: consumer = 0 && body = 0
         return: l2_admit_implements(cand, req, req, 0, path, at, context)
-    l2_uses_full: 0
-    paths: (cast: (@: char) l2_xmalloc(64U * 128U))
-    if: paths = 0
+    l2_uses_reset()
+    if: consumer != 0 && l2_uses_walk_frame(varb, consumer) != 0
+        l2_uses_reset()
+        return: 1
+    if: consumer = 0 && l2_uses_walk_structure(varb, body) != 0
+        l2_uses_reset()
+        return: 1
+    if: l2_uses_oom != 0
+        l2_uses_reset()
         return: l2_error(path, at, "out of memory")
-    memset((cast: (@: void) paths), 0, 64U * 128U)
-    if: consumer != 0 && l2_uses_walk_frame(varb, paths, @ path_count, consumer) != 0
-        l2_xfree((cast: (@: void) paths))
-        return: 1
-    if: consumer = 0 && l2_uses_walk_structure(varb, paths, @ path_count, body) != 0
-        l2_xfree((cast: (@: void) paths))
-        return: 1
-    if: l2_uses_full != 0
-        l2_xfree((cast: (@: void) paths))
-        return: l2_error(path, at, "a uses list is full")
-    status: l2_admit_paths(cand, req, paths, path_count, 0, path, at, context)
-    l2_xfree((cast: (@: void) paths))
+    status: l2_admit_paths(cand, req, 0, path, at, context)
+    l2_uses_reset()
 return: status
 
 fn: l2_admit_consumer_uses (const: @(LmP0Text cand_name); int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int

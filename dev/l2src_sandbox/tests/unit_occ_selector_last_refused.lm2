@@ -1,0 +1,17 @@
+# K01d witness (steps/k01-selector-identity-20261001.md §5), negative: the candidate's LAST
+# occurrence of the name is a char while the requirement's is a size_t, so a Consumer that
+# reads the bare `v\x` (which selects exactly that occurrence in the VALUE) must be refused --
+# even though the same candidate's occurrence 0 is a size_t and reads fine
+# (unit_occ_selector_ordinal_ok).  Both spellings name the requirement's single field, and that
+# is the point: they part company only in the candidate.  Mirror of
+# unit_occ_selector_first_refused, where the ORDINAL half was the bad one.
+Model: (size_t: x 10U)
+Cand: (size_t: x 10U; char: x 'q')
+fn: rdLast (Model: v) size_t
+    size_t: got
+    got: v\x
+    return: got
+end: rdLast
+Cand: c
+sendMessage: exit(exit_code: rdLast(c); stdout: ""; stderr: "")
+return

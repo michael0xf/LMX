@@ -2417,6 +2417,18 @@ $fixtures = @(
     # `v\[1]x` (its occurrence 1).  Red before K01b: exit 82, both selectors one target.
     [pscustomobject]@{ Name = 'unit_occ_selector_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
+    # K01c witness (same note, §5): writes and addresses of a repeated name through the admitted
+    # candidate follow the same edge as reads -- bare reaches the value's last x, `[1]` its
+    # occurrence 1 -- with the identity order and a repeated call on one value.
+    [pscustomobject]@{ Name = 'unit_occ_selector_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Absent = @(); Debt = @() },
+    # K01d witnesses (same note, §5): the mirror pair.  The candidate's LAST occurrence of the
+    # name is an int, its occurrence 0 a size_t like the requirement's, so the bare read (which
+    # selects the last occurrence) must be refused while the ordinal read is legal.
+    [pscustomobject]@{ Name = 'unit_occ_selector_last_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_selector_ordinal_ok.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_d105_nested.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'lm2:25:6: root operation not walkable yet: an admission to a Structure type through a Structure field of another type'; Absent = @(); Debt = @() },
     # D-105 native (the author's Q39: the interpreter first, then native; steps/d105-native.md §4, REVIEW
@@ -4198,12 +4210,15 @@ $fixtures = @(
     # → this row and unit_s7_identity refuse "malformed implements descriptor".
     [pscustomobject]@{ Name = 'unit_s7_used.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # 64 used paths still run. The 65th is a located refusal. Mutant: leave
-    # l2_uses_full unset → unit_s7_uses65 translates.
+    # The used-path list is growable (K01e): the sixty-fourth and the sixty-fifth path both run,
+    # and the count is no longer a limit. What the check is for is shown by the mismatch fixture:
+    # the same 65 used paths against a candidate that differs in ONE of them are refused.
     [pscustomobject]@{ Name = 'unit_s7_uses64.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_uses65.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a uses list is full'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_uses65.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_uses65_mismatch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     # Nested used path and leaf kind. Mutant: stop after the first segment
     # → unit_s7_nested_missing translates. Mutant: skip the kind compare
     # → unit_s7_leaf_kind translates.

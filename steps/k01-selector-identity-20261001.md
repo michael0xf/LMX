@@ -478,3 +478,52 @@ green; the second put `same_halves` (a translator edit) in the kernel-edit branc
 driver was rebuilt. After both fixes, and with the kernel probes rebuilding a *pristine*
 translator first (otherwise they inherit the previous probe's L1), the table above is what the
 runs show.
+
+## 11. K01c, K01d, K01e
+
+**K01c — write and address through the admitted edge. Witness
+`unit_occ_selector_write.lm2`, and it needed no translator change.** Writes and addresses go
+through the same path emitter as reads, so the K01b edge already serves them: `v\x: z` writes
+the value's LAST x and `@v\x` addresses it, `v\[1]x` its occurrence 1, with the identity order
+(`Pair` to `Pair`) and a repeated call on one value also checked. The row is registered with
+read/write/address coverage (its methods stay native — the D-105 native slice — and the root is
+walked, as in the read witness).
+
+Two fixture mistakes are worth keeping, because both are the same class of error the slice
+itself is about: `size_t z` without the colon is not a by-value formal (P0 takes the name as the
+type and the translator refuses the call with "incompatible entry signature"), and a char field's
+initial value must be a quoted single character.
+
+**K01d — the mirror negatives. `unit_occ_selector_last_refused.lm2` and
+`unit_occ_selector_ordinal_ok.lm2`.** Requirement `Model{x: size_t}`, candidate
+`Cand{x: size_t; x: char}`. Both spellings name the requirement's one field; they part company in
+the candidate: the bare read selects the candidate's LAST occurrence (the char) and is refused at
+the call site ("implements is false in function argument"), while `v\[0]x` selects occurrence 0
+(the size_t) and runs (10). This is the exact mirror of `unit_occ_selector_unused_first` /
+`_first_refused`, where the ordinal half was the bad one — together the four rows pin both
+directions of "the same required field, two candidate targets".
+
+**K01e — the used-path list is growable.** The 64 x 128 grid and `l2_uses_full` are gone: the
+Consumer's used paths live in one packed buffer (`@: char l2_uses_buf`, `int: l2_uses_cap`,
+`int: l2_uses_len`), grown by `l2_uses_ensure` and released by `l2_uses_reset`; entries are
+NUL-terminated, so neither the number of used paths nor a path's length has a constant ceiling
+(only the allocation can fail, and that is reported as "out of memory"). `l2_uses_path_add`,
+the four walkers (`l2_uses_scan_follow`, `_walk_frame`, `_walk_body`, `_walk_structure`,
+`_walk_node`), `l2_descriptor_used` and `l2_admit_paths` lost their `paths`/`count` parameters —
+they read the module-scope list; `l2_admit_consumer_at` resets it per admission instead of
+allocating and freeing the grid.
+
+The plan's fixture replacement, not deletion: `unit_s7_uses65.lm2` (65 used paths) is now an
+**eternal-runs** row — the sixty-fifth path is checked, not refused — and the new
+`unit_s7_uses65_mismatch_refused.lm2` is the same 65 uses against a candidate that differs in
+exactly one of them (`f0` an int where Wide's is a size_t), refused with "implements is false in
+function argument". The count was never the property; the used edge is.
+
+**Capture is unchanged and its gap is now written down.** The copy still carries one cell per
+required field, taken through the ORDINAL half of the source's correspondence
+(`lmx_walk_capture` -> `lmx_implements_slot(arena, src, req, j)`), and is registered as identity
+with holes; a nested BARE read inside the copy therefore reads that cell, which is the source's
+occurrence r_j and not its last occurrence of the name — the case a value whose layout differs
+would expose. No fixture reaches it yet; it is filed as
+[CAPTURE-CARRIES-THE-ORDINAL-TARGET](defects.md#capture-carries-the-ordinal-target) rather than
+papered over by widening this slice.

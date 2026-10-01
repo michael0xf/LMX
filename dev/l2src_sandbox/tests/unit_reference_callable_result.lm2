@@ -1,0 +1,19 @@
+# A result-receiving initializer/assignment calls a returning callable formal;
+# its occurrence descriptor is not substituted for its returned reference.
+int: calls 0
+Model:
+    size_t: value 7U
+end: Model
+fn: make () @: Model
+    node\calls: node\calls + 1
+return: @ Model
+fn: use (make: f) int
+    @: Model ref f()
+    if: ref != @ Model || node\calls != 1
+        return: 81
+    ref: f()
+    if: ref != @ Model || node\calls != 2
+        return: 82
+return: 7
+sendMessage: exit(exit_code: use(make); stdout: ""; stderr: "")
+return

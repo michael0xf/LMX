@@ -1767,6 +1767,20 @@ $fixtures = @(
         Absent = @(); Debt = @('c.LMX_WALK_OP_PAD, 3U)', 'c.LMX_WALK_OP_PUT_OF, 4U)') },
     [pscustomobject]@{ Name = 'unit_catch_scope_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 20; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); PadAliases = 1;
         Absent = @(); Debt = @('c.LMX_WALK_OP_PAD, 3U)', 'c.LMX_WALK_OP_WHILE, 3U)') },
+    [pscustomobject]@{ Name = 'unit_own_reference_reception.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 7;
+        GraphShapes = @(
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 7; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM'; Width = 5; PrimitiveFn = 'lmx_walk_admit' } }) },
+            [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 3; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM'; Width = 5; PrimitiveFn = 'lmx_walk_admit'; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 5; CallLink = $true } }) } }) }
+        ); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_reference_reentry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 1;
+        GraphShapes = @([pscustomobject]@{ Op = 'SET_OF'; Width = 4; Count = 4; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'PRIM'; Width = 5; PrimitiveFn = 'lmx_walk_admit' } }) }); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_own_reference_failure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 4;
+        GraphShapes = @(
+            [pscustomobject]@{ Op = 'SET_OF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'PRIM'; Width = 8; PrimitiveFn = 'lmx_walk_admit'; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 8; CallLink = $true } }) } }) },
+            [pscustomobject]@{ Op = 'PUT_OF'; Width = 4; Count = 1; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'PRIM'; Width = 8; PrimitiveFn = 'lmx_walk_admit'; Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'CALL'; Width = 8; CallLink = $true } }) } }) }
+        ); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_callable_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_callable_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_pointer_declaration_contract.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('@: char l2_s1_0 0', '@: char l2_s1_1 0', '@: size_t l2_s1_2 0') },
     [pscustomobject]@{ Name = 'unit_pointer_char_from_int_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },

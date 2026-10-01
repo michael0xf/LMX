@@ -342,6 +342,23 @@ fn: lmx_walk_is_pointer_cell (@: LmxArena arena; @: void cell) int
         return: 0
 return: 1
 
+# Project the supported reference operand representations to one address.
+# A pointer cell contributes its held word, never the cell's address. The
+# pointee is opaque; numeric zero retains the existing null-comparison rule.
+fn: lmx_walk_reference_word (@: LmxWalkFrame f; @: void value; @@: void out) int
+    int: ty
+    size_t: word
+    \out: value
+    if: value = 0 || lmx_walk_kind(f, value) = c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_OK
+    if: lmx_walk_is_pointer_cell(f\arena, value) != 0
+        \out: lmx_pointer_value_known(value)
+        return: c.LMX_WALK_OK
+    if: lmx_walk_load_operand(f\arena, value, @ word, @ ty) != c.LMX_WALK_OK || ty != c.LMX_TYPE_INT || word != 0U
+        return: c.LMX_WALK_INVALID
+    \out: 0
+return: c.LMX_WALK_OK
+
 # -188 k.2: immediate typed store into a Structure slot (was publish_slot at checkpoint).
 # Every declared primitive slot has its own mutable cell.
 fn: lmx_walk_store_slot (@: LmxArena arena; @@: void slot; size_t: value) int
@@ -1918,61 +1935,12 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: void dest; @@: void out) 
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), (cast: (@: void) (@ b)), @ other)
         if: status != c.LMX_WALK_OK
             return: status
-        # -177: EQ on a pointer cell vs pointer cell or literal 0 compares held addresses.
-        # Mutant: always load_operand -> pointer EQ INVALID RED.
-        if: op = c.LMX_WALK_OP_EQ && value != 0 && lmx_walk_is_pointer_cell(f\arena, value) != 0
-            ua: (cast: (size_t) lmx_pointer_value_known(value))
-            if: other = 0
-                ub: 0U
-            else:
-                if: lmx_walk_is_pointer_cell(f\arena, other) != 0
-                    ub: (cast: (size_t) lmx_pointer_value_known(other))
-                else:
-                    if: lmx_walk_load_operand(f\arena, other, @ ub, @ b) != c.LMX_WALK_OK
-                        return: c.LMX_WALK_INVALID
-                    ---
-                    if: b != c.LMX_TYPE_INT || ub != 0U
-                        return: c.LMX_WALK_INVALID
-                    ---
-                    ub: 0U
-                ---
-            ---
-            lmx_int_store_known(dest, (cast: (int) (ua = ub)))
-            \out: dest
-            return: c.LMX_WALK_OK
-        ---
-        if: op = c.LMX_WALK_OP_EQ && other != 0 && lmx_walk_is_pointer_cell(f\arena, other) != 0
-            ub: (cast: (size_t) lmx_pointer_value_known(other))
-            if: value = 0
-                ua: 0U
-            else:
-                if: lmx_walk_load_operand(f\arena, value, @ ua, @ a) != c.LMX_WALK_OK
-                    return: c.LMX_WALK_INVALID
-                ---
-                if: a != c.LMX_TYPE_INT || ua != 0U
-                    return: c.LMX_WALK_INVALID
-                ---
-                ua: 0U
-            ---
-            lmx_int_store_known(dest, (cast: (int) (ua = ub)))
-            \out: dest
-            return: c.LMX_WALK_OK
-        ---
-        # -186 c4 / Opus c3b-3: EQ (and source != via 1-EQ) with a Structure
-        # reference or empty slot (null) compares addresses. A non-Structure side
-        # must be the int literal 0. Mutant: always load_operand -> struct EQ RED.
-        if: op = c.LMX_WALK_OP_EQ && (value = 0 || lmx_walk_kind(f, value) = c.LMX_KIND_STRUCT || other = 0 || lmx_walk_kind(f, other) = c.LMX_KIND_STRUCT)
-            ua: (cast: (size_t) value)
-            ub: (cast: (size_t) other)
-            if: value != 0 && lmx_walk_kind(f, value) != c.LMX_KIND_STRUCT
-                if: lmx_walk_load_operand(f\arena, value, @ ua, @ a) != c.LMX_WALK_OK || a != c.LMX_TYPE_INT || ua != 0U
-                    return: c.LMX_WALK_INVALID
-            ---
-            if: other != 0 && lmx_walk_kind(f, other) != c.LMX_KIND_STRUCT
-                if: lmx_walk_load_operand(f\arena, other, @ ub, @ b) != c.LMX_WALK_OK || b != c.LMX_TYPE_INT || ub != 0U
-                    return: c.LMX_WALK_INVALID
-            ---
-            lmx_int_store_known(dest, (cast: (int) (ua = ub)))
+        # Storage representation does not change reference identity: OWN may
+        # yield a descriptor directly, whereas AT/OF yields its pointer cell.
+        if: op = c.LMX_WALK_OP_EQ && (value = 0 || other = 0 || lmx_walk_is_pointer_cell(f\arena, value) != 0 || lmx_walk_is_pointer_cell(f\arena, other) != 0 || lmx_walk_kind(f, value) = c.LMX_KIND_STRUCT || lmx_walk_kind(f, other) = c.LMX_KIND_STRUCT)
+            if: lmx_walk_reference_word(f, value, @ value) != c.LMX_WALK_OK || lmx_walk_reference_word(f, other, @ other) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            lmx_int_store_known(dest, (cast: (int) (value = other)))
             \out: dest
             return: c.LMX_WALK_OK
         ---

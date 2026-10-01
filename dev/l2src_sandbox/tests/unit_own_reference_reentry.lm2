@@ -1,0 +1,44 @@
+# A reached declaration resets its working reference, not merely fresh storage.
+# Calls publish; an ordinary physical path does not reload the working value.
+Model:
+    size_t: value 1U
+end: Model
+Good:
+    size_t: value 7U
+end: Good
+sub: checkpoint ()
+return
+int: result 7
+@: Model expected Good
+int: turns 0
+while: turns < 2
+    @: Model ref
+    if: ref != 0
+        result: 81
+    if: turns = 1 && while\ref != expected
+        result: 82
+    ref: Good
+    checkpoint
+    if: while\ref != expected
+        result: 83
+    if: while\ref\value != 7U
+        result: 88
+    turns: turns + 1
+---
+for: int(k, 0) (k < 2) k++
+    @: Model ref 0
+    if: ref != 0
+        result: 84
+    if: k = 1 && for\ref != expected
+        result: 85
+    ref: Good
+    checkpoint
+    if: for\ref != expected
+        result: 86
+    if: for\ref\value != 7U
+        result: 89
+---
+if: turns != 2
+    result: 87
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

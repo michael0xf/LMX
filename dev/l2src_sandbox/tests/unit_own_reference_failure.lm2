@@ -1,0 +1,60 @@
+# Failed admission must leave both the previous working reference and its
+# ordinary published cell intact, at a declaration and a later assignment.
+Model:
+    size_t: value 1U
+end: Model
+Good:
+    size_t: value 7U
+end: Good
+Other:
+    char: bad 'x'
+end: Other
+int: calls 0
+fn: choose () @: void
+    node\calls: node\calls + 1
+    if: node\calls = 1
+        return: @ Good
+return: @ Other
+fn: bad () @: void
+    node\calls: node\calls + 1
+return: @ Other
+fn: count () int
+return: node\calls
+sub: checkpoint ()
+return
+int: result 7
+int: caught 0
+int: turns 0
+@: Model expected Good
+while: turns < 2
+    turns: turns + 1
+    @: Model ref choose()
+    catch: implements ()
+        caught: caught + 1
+    ---
+    if: ref != expected
+        result: 81
+    checkpoint
+    if: while\ref != expected
+        result: 82
+---
+if: 1 = 1
+    while\ref: bad()
+    catch: implements ()
+        caught: caught + 1
+    ---
+---
+if: while\ref != expected || while\ref\value != 7U
+    result: 85
+@: Model field Good
+checkpoint
+field: bad()
+catch: implements ()
+    caught: caught + 1
+---
+if: field != expected || field\value != 7U
+    result: 83
+if: caught != 3 || count() != 4
+    result: 84
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

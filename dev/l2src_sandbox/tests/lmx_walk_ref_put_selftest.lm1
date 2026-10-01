@@ -70,6 +70,44 @@ fn: go (@: Lmx m) int
         return: c.LMX_WALK_INVALID
 return: lmx_walk_run(gctx, m, 0, 0U, gv)
 
+# A null operand is the ordinary working value of a typed null own cell;
+# nonnull operands are literal existing values, including pointer cells.
+sub: eq_operand (@: Lmx op; size_t: slot; @: Lmx m; @: void value)
+    @: Lmx n 0
+    if: value = 0
+        n: fr(op, slot, c.LMX_WALK_OP_OWN, 3U)
+        ref(n, 1U, m)
+        sz(n, 2U, 0U)
+    else:
+        n: fr(op, slot, c.LMX_WALK_OP_LIT, 2U)
+        if: n = 0 || lmx_arena_ref_store(n, 1U, value) != 0
+            broken: broken + 1
+        ---
+    ---
+end: eq_operand
+
+sub: eq_case (@: Lmx unit; @: void left; @: void right; int: expected_status; int: expected_value; const: @(char label))
+    @: Lmx m mk_m(unit, 0U, 2U)
+    @: Lmx ret 0
+    @: Lmx eq 0
+    @: void zero lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 7, ga)
+    int: status
+    if: m = 0 || zero = 0 || lmx_arena_ref_store(m, 0U, zero) != 0
+        broken: broken + 1
+        return
+    ---
+    ret: fr(m, 1U, c.LMX_WALK_OP_RET, 2U)
+    eq: fr(ret, 1U, c.LMX_WALK_OP_EQ, 3U)
+    eq_operand(eq, 1U, m, left)
+    eq_operand(eq, 2U, m, right)
+    status: go(m)
+    if: expected_status = c.LMX_WALK_OK
+        check((cast: (int) (status = expected_status && gv\ref != 0 && lmx_int_value_known(gv\ref) = expected_value)), label)
+    else:
+        check((cast: (int) (status = expected_status)), label)
+    ---
+end: eq_case
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -86,6 +124,12 @@ fn: main () int
     @: Lmx atn 0
     @: Lmx ownn 0
     @: void pcell 0
+    @: void same 0
+    @: void nullcell 0
+    @: void nested 0
+    @: void nested_same 0
+    @: void integer_zero 0
+    @: void integer_seven 0
     int: st 0
     int: pty c.LMX_TYPE_POINTER_BASE + 7
 
@@ -195,6 +239,34 @@ fn: main () int
     ---
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "Own.ref set int INVALID")
+
+    pcell: lmx_pointer_new_owned(pty, ga)
+    same: lmx_pointer_new_owned(pty, ga)
+    nullcell: lmx_pointer_new_owned(pty, ga)
+    nested: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 1007, ga)
+    nested_same: lmx_pointer_new_owned(c.LMX_TYPE_POINTER_BASE + 1007, ga)
+    integer_zero: lmx_int_new_owned(ga)
+    integer_seven: lmx_int_new_owned(ga)
+    if: pcell = 0 || same = 0 || nullcell = 0 || nested = 0 || nested_same = 0 || integer_zero = 0 || integer_seven = 0
+        return: 2
+    if: lmx_pointer_store_known(pcell, (cast: (@: void) model)) != 0 || lmx_pointer_store_known(same, (cast: (@: void) model)) != 0 || lmx_pointer_store_known(nested, pcell) != 0 || lmx_pointer_store_known(nested_same, pcell) != 0 || lmx_int_store_known(integer_zero, 0) != 0 || lmx_int_store_known(integer_seven, 7) != 0
+        return: 2
+    eq_case(unit, pcell, (cast: (@: void) model), c.LMX_WALK_OK, 1, "EQ cell/direct same")
+    eq_case(unit, (cast: (@: void) model), pcell, c.LMX_WALK_OK, 1, "EQ direct/cell same")
+    eq_case(unit, pcell, (cast: (@: void) model2), c.LMX_WALK_OK, 0, "EQ cell/direct different")
+    eq_case(unit, (cast: (@: void) model2), pcell, c.LMX_WALK_OK, 0, "EQ direct/cell different")
+    eq_case(unit, pcell, same, c.LMX_WALK_OK, 1, "EQ two cells same pointee")
+    eq_case(unit, nullcell, 0, c.LMX_WALK_OK, 1, "EQ typed null/working null")
+    eq_case(unit, 0, nullcell, c.LMX_WALK_OK, 1, "EQ working null/typed null")
+    eq_case(unit, nullcell, integer_zero, c.LMX_WALK_OK, 1, "EQ typed null/int zero")
+    eq_case(unit, integer_zero, nullcell, c.LMX_WALK_OK, 1, "EQ int zero/typed null")
+    eq_case(unit, pcell, integer_zero, c.LMX_WALK_OK, 0, "EQ reference/int zero unequal")
+    eq_case(unit, pcell, integer_seven, c.LMX_WALK_INVALID, 0, "EQ reference/nonzero int refused")
+    eq_case(unit, integer_seven, pcell, c.LMX_WALK_INVALID, 0, "EQ nonzero int/reference refused")
+    eq_case(unit, nested, nested_same, c.LMX_WALK_OK, 1, "EQ pointer cells share pointer-cell pointee")
+    eq_case(unit, nested, pcell, c.LMX_WALK_OK, 0, "EQ unwraps only one pointer level")
+    eq_case(unit, integer_zero, integer_zero, c.LMX_WALK_OK, 1, "EQ numeric zero unchanged")
+    eq_case(unit, integer_seven, integer_zero, c.LMX_WALK_OK, 0, "EQ numeric inequality unchanged")
 
     c.printf("lmx_walk_ref_put_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

@@ -803,7 +803,9 @@ prototype:
     fn: l2_own_ref_decl (const: @(LmP0Node stmt); int: mi) int
     fn: l2_root_ref_ns (int: mi; const: @(LmP0Node stmt); @@: LmP0Text out_name) int
     fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
-    fn: l2_rw_ref_bind (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
+    fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @: int out) int
+    fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
+    fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_d105_sub (int: mi; int: k) int
     fn: l2_d105_mark (int: mi; int: k) int
@@ -914,6 +916,8 @@ prototype:
     fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: target_ty; int: receiving_model; const: @(LmP0Text receiving_name); int: mi; const: @(char path)) int
     fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    fn: l2_reference_fields (@@: LmP0Field first; @: int n) int
+    fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address out) int
     fn: l2_pointer_compatible (int: target; int: value) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     fn: l2_colon_bind_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name; @@: LmP0Field out_cand) int
@@ -1104,6 +1108,7 @@ prototype:
     fn: l2_kind_cell_ty (int: kind) int
     fn: l2_mrs_occ_read (int: res; const: @(LmP0Text name); int: occ; int: mi; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
     fn: l2_declaration_model (const: @(LmP0Node decl); int: signature) int
+    fn: l2_contract_model (@: L2TypeContract contract; int: signature) int
     fn: l2_ref_formal_ns (const: @(LmP0Node decl)) int
     fn: l2_formal_decl (int: mi; const: @(LmP0Text t)) @: LmP0Node
     fn: l2_ns_ref_pointee (int: ni; const: @(char pd); size_t: off; size_t: len) int
@@ -1114,6 +1119,8 @@ prototype:
     fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
     fn: l2_addr_flat_eternal (@: LmP0Field at) int
     fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
+    fn: l2_path_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model) int
+    fn: l2_field_pointee (int: ns; int: own; const: @(char pd); size_t: off; size_t: len) int
     fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
@@ -1136,6 +1143,7 @@ prototype:
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
     fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: char value) int
     fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
+    fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: char value) int
     fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
     fn: l2_throws_frame (int: mi) @: LmP0Node
@@ -1335,7 +1343,7 @@ prototype:
     fn: l2_cap_emit_admit (int: ns; const: @(char value); const: @(char ind)) int
     fn: l2_scan_node_use (int: mi; const: @(LmP0Text name)) int
     fn: l2_scan_node_text (int: mi; const: @(LmP0Text t); size_t: off) int
-    fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent) int
+    fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
     fn: l2_e_own_seg_mi (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_num_kind (int: ty) int
     fn: l2_rw_arg_fb (int: parent; int: j; @: int out) int
@@ -8815,14 +8823,20 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     int: zero_neg
     int: zero_unsigned
     size_t: zero_magnitude
+    L2Address: descriptor_value
+    @: L2Address descriptor @ descriptor_value
     only: l2_next_active(first)
     if: n = 1 && only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_STRUCTURE && only\value\as != 0 && only\value\as\structure != 0
         return: l2_check_receiving_value(stmt, only\value\as\structure\first_field, l2_count_active(only\value\as\structure), target_ty, receiving_model, receiving_name, mi, path)
     if: n < 1
         return: l2_error(path, stmt, "assignment value has unknown type")
-    if: n = 1
-        if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
-            return: l2_error(path, stmt, "assignment value has unknown type")
+    if: l2_pointer_depth(target_ty) > 0 && l2_reference_descriptor(first, n, mi, descriptor) = 0
+        value_ty: descriptor\type
+    else:
+        if: n = 1
+            if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
+                return: l2_error(path, stmt, "assignment value has unknown type")
+        ---
     ---
     if: n > 1
         composite: 1
@@ -8907,21 +8921,54 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
         return: l2_error(path, stmt, "a call of a named Structure with an argument is not built yet")
 return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, target_ty, l2_graph_nsty(mi, stmt\as\frame\head), stmt\as\frame\head, mi, path)
 
+# A receiving expression borrows its original fields. Parentheses are the
+# ordinary transparent one-value Structure, not a second initializer language.
+fn: l2_reference_fields (@@: LmP0Field first; @: int n) int
+    @: LmP0Field f l2_next_active(\first)
+    while: \n = 1 && f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as != 0 && f\value\as\structure != 0
+        \n: l2_count_active(f\value\as\structure)
+        f: l2_next_active(f\value\as\structure\first_field)
+    ---
+    \first: f
+return: 0
+
+# In a reference-receiving position an existing Structure denotes its physical
+# descriptor. Reuse the resolved binding category used by address acquisition;
+# an explicit pointer cell is not a descriptor and is read as an ordinary value.
+fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address out) int
+    @: LmP0Text name 0
+    l2_reference_fields(@ first, @ n)
+    if: n != 1 || first = 0 || first\value = 0 || first\value\as = 0
+        return: 1
+    if: first\value\kind = c.LM_P0_NODE_ATOM
+        name: first\value\as\atom
+    if: l2_empty_call_shape(first\value) != 0
+        name: first\value\as\frame\head
+    if: name = 0 || l2_address_name(mi, name, out) != 0 || out\descriptor = 0 || l2_colon_is_graph_ty(out\type) = 0
+        return: 1
+    # Callable formals retain their existing result-receiving call route. Their
+    # transport descriptor alone does not select occurrence-as-value here.
+    if: out\kind = 2 && l2_cf_get(mi, out\index) >= 0
+        return: 1
+return: 0
+
 fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     @: L2Declaration declaration l2_declaration(stmt)
     @: LmP0Field first
     int: n
     int: ty
+    L2Address: descriptor_value
+    @: L2Address descriptor @ descriptor_value
     if: declaration = 0 || declaration\candidate_count = 0
         return: 0
     if: l2_contract_formal(declaration\contract, @ ty) != 0
         return: l2_error(path, stmt, "unknown type")
     first: declaration\candidate
     n: declaration\candidate_count
-    if: n = 1 && first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_STRUCTURE && first\value\as != 0 && first\value\as\structure != 0
-        n: l2_count_active(first\value\as\structure)
-        first: first\value\as\structure\first_field
-    if: n < 1 || l2_check_fields(first, n, mi, path, stmt) != 0
+    l2_reference_fields(@ first, @ n)
+    if: n < 1
+        return: 1
+    if: l2_reference_descriptor(first, n, mi, descriptor) != 0 && l2_check_fields(first, n, mi, path, stmt) != 0
         return: 1
 return: l2_check_receiving_value(stmt, first, n, ty, l2_declaration_model(stmt, 0), declaration\name, mi, path)
 
@@ -16442,6 +16489,14 @@ fn: l2_ns_ref_pointee (int: ni; const: @(char pd); size_t: off; size_t: len) int
     ---
 return: 0 - 1
 
+# A resolved field carries its machine pointer type separately from its
+# declared structural model. Own rows already carry that model; namespace
+# fields use their existing declaration metadata. No new runtime index.
+fn: l2_field_pointee (int: ns; int: own; const: @(char pd); size_t: off; size_t: len) int
+    if: own >= 0
+        return: l2_own_nsty_get(own)
+return: l2_ns_ref_pointee(ns, pd, off, len)
+
 # The same for a bound merge result, whose slots carry the names of the fields
 # that CONTRIBUTED them.  merge makes no repeated names (the author's merge rule, plan §4):
 # a later operand's field of a model name went INTO the model's slot, so a name has one
@@ -16760,8 +16815,14 @@ fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t
         \out_kind: 9
         return: hit
     if: l2_own_nsty_get(hit) >= 0
-        \out_kind: 3
-        \out_ent: l2_own_nsty_get(hit)
+        if: l2_own_is_slot(hit) != 0
+            \out_kind: 2
+            \out_ent: l2_own_nsty_get(hit)
+        ---
+        else:
+            \out_kind: 10
+            \out_ent: l2_own_ty[hit] - 1000
+        ---
         return: hit
 return: 0 - 1
 
@@ -16785,13 +16846,15 @@ return: 0 - 1
 # of a returned node appends for it after the host's width (l2_mad_emit) -- the host itself has no such field, so a
 # direct call reads absence there (X1), never the args part.  For any other method, as l2_e_own_seg says.  0 and
 # *slot, *kind, *ent (l2_own_seg_scan's kinds; a Structure the slot holds itself is kind 2), or 1.
-fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent) int
+fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
     int: host
     int: oi
     int: j 0
     \out_slot: 0 - 1
     \out_kind: 0 - 1
     \out_ent: 0 - 1
+    if: out_own != 0
+        \out_own: 0 - 1
     host: l2_mad_host_of(mi)
     # Slice 2c-4: a method's own named Structure's procedure runs over S (lmx_call_prim(S, S): node = S's parent), and
     # S is a child of the Structure that holds its slot (l2_emit_local_ns): the method's occurrence -- `node\name` is a
@@ -16806,8 +16869,8 @@ fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int ou
             if: oi < 0
                 return: 1
             \out_slot: l2_own_fchild[oi]
-            if: \out_kind = 3 && l2_own_is_slot(oi) != 0
-                \out_kind: 2
+            if: out_own != 0
+                \out_own: oi
             return: 0
         ---
     if: host < 0
@@ -16815,13 +16878,15 @@ fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int ou
         if: oi < 0
             return: 1
         \out_slot: l2_own_uchild[oi]
+        if: out_own != 0
+            \out_own: oi
         return: 0
     ---
     oi: l2_own_seg_scan(host, 0, pd, off, len, out_kind, out_ent)
     if: oi >= 0
         \out_slot: l2_own_uchild[oi]
-        if: \out_kind = 3 && l2_own_is_slot(oi) != 0
-            \out_kind: 2
+        if: out_own != 0
+            \out_own: oi
         return: 0
     ---
     if: l2_mad_host_of(mi) < 0
@@ -16913,6 +16978,10 @@ fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
 return: 0
 
 fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
+return: l2_path_contract(pd, pn, out_mi, 0)
+
+# One field walk carries the exact leaf machine type and its receiving model.
+fn: l2_path_contract (const: @(char pd); size_t: pn; @: int out_mi; @: int out_model) int
     size_t: off 0U
     size_t: len 0U
     int: ni 0 - 1
@@ -16928,7 +16997,10 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
     int: bh 0 - 1
     int: bm 0 - 1
     int: nb
+    int: field_own
     \out_mi: 0 - 1
+    if: out_model != 0
+        \out_model: 0 - 1
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
         return: 0 - 1
     # The host the next name is resolved in (l2_body_seg): a body root's body, a method root's own level.
@@ -16948,6 +17020,7 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
         if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
             return: 0 - 1
         slot: 0 - 1
+        field_own: 0 - 1
         if: i = 1 && res >= 0
             slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
         # node/for (FABLE-SONNET-NODE-ROOT-20260923-121): segment 1 of a
@@ -16956,7 +17029,7 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
         # meaningful at i=1, ni takes over for any further segment exactly
         # as an ordinary own/ns root already does.
         if: i = 1 && root = 0 - 2
-            if: l2_node_seg(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent) != 0
+            if: l2_node_seg(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent, @ field_own) != 0
                 slot: 0 - 1
             else:
                 # Check time precedes the layout (a field's slot is -1 until l2_layout_owns): the check asks only that
@@ -16968,8 +17041,10 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
         nb: 0 - 1
         if: bh >= 0
             slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
+            field_own: slot
         if: bm >= 0
             slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
+            field_own: slot
         # A body of the host: an inline nested Structure (kind 2), the next name that body's.
         if: slot < 0 && bh >= 0
             nb: l2_body_seg(l2_for_mi[bh], bh, pd, off, len, l2_cur_mi)
@@ -16990,7 +17065,7 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
         bm: 0 - 1
         # Through a reference field `@: T q` (D-76): on into its pointee T.
         if: i + 1 < segs && kind = 10 && res < 0
-            ent: l2_ns_ref_pointee(ni, pd, off, len)
+            ent: l2_field_pointee(ni, field_own, pd, off, len)
         if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || res >= 0 || ent < 0)
             return: 0 - 1
         if: i + 1 < segs
@@ -17009,6 +17084,8 @@ fn: l2_path_kind (const: @(char pd); size_t: pn; @: int out_mi) int
         # these two kinds), so l2_field_path_read can convert it to an own-
         # storage pointer code (l2_own_ty_of_param) without a new out param.
         \out_mi: ent
+        if: out_model != 0
+            \out_model: l2_field_pointee(ni, field_own, pd, off, len)
 return: kind
 
 # Emit the walk that leaves l2_pxp addressing the LEAF SLOT of the path, and
@@ -17036,6 +17113,7 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     int: bh 0 - 1
     int: bm 0 - 1
     int: nb
+    int: field_own
     []: char l2_proot 64
     []: char sl 40
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
@@ -17119,18 +17197,21 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
         if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
             return: l2_error(l2_src, at, "malformed field path")
         slot: 0 - 1
+        field_own: 0 - 1
         if: i = 1 && res >= 0
             slot: l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent)
-        if: i = 1 && root = 0 - 2 && l2_node_seg(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent) != 0
+        if: i = 1 && root = 0 - 2 && l2_node_seg(l2_cur_mi, pd, off, len, @ slot, @ kind, @ ent, @ field_own) != 0
             slot: 0 - 1
         nb: 0 - 1
         if: bh >= 0
             slot: l2_for_own_seg(bh, pd, off, len, @ kind, @ ent)
+            field_own: slot
             if: slot >= 0
                 slot: l2_own_fchild[slot]
             ---
         if: bm >= 0
             slot: l2_own_seg_scan(bm, 0, pd, off, len, @ kind, @ ent)
+            field_own: slot
             if: slot >= 0
                 slot: l2_own_uchild[slot]
             ---
@@ -17163,7 +17244,7 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             c.sprintf(sl, "l2_dslot")
         ---
         if: i + 1 < segs && kind = 10 && res < 0
-            ent: l2_ns_ref_pointee(ni, pd, off, len)
+            ent: l2_field_pointee(ni, field_own, pd, off, len)
         if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || res >= 0 || ent < 0)
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
         # Through a reference field (D-76): its pointer cell holds the pointee Structure.
@@ -18078,12 +18159,15 @@ return: 0
 # references retain their extra level and are not paths into T itself.
 fn: l2_declaration_model (const: @(LmP0Node decl); int: signature) int
     @: L2Declaration application l2_declaration(decl)
+    if: application = 0
+        return: 0 - 1
+return: l2_contract_model(application\contract, signature)
+
+fn: l2_contract_model (@: L2TypeContract contract; int: signature) int
     @: LmP0Text word
     int: depth
     int: qualified
-    if: application = 0
-        return: 0 - 1
-    word: l2_contract_leaf(application\contract, @ depth, @ qualified)
+    word: l2_contract_leaf(contract, @ depth, @ qualified)
     if: word = 0 || (depth != 1 && (signature = 0 || depth != 0))
         return: 0 - 1
 return: l2_ns_find(word)
@@ -18316,9 +18400,6 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
             return: l2_error(path, field\value, "unknown type")
         ---
         l2_m_ret[l2_m_n]: ret_code_a
-        if: l2_ns_find(field\value\as\atom) >= 0 && l2_nsty_set(l2_m_n, 0 - 1, l2_ns_find(field\value\as\atom)) != 0
-            return: l2_error(path, fn_node, "out of memory")
-        ---
     if: is_sub = 0 && field\value\kind = c.LM_P0_NODE_FRAME && field\value\as != 0 && field\value\as\frame != 0
         return_depth: l2_address_depth(field\value\as\frame\head)
     # A const-qualified pointer return is the same pointer value at runtime,
@@ -18390,6 +18471,9 @@ fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path)) int
     ret_node: 0
     if: is_sub = 0
         ret_node: field\value
+        k: l2_contract_model(l2_contract_type(ret_node), 1)
+        if: k >= 0 && l2_nsty_set(l2_m_n, 0 - 1, k) != 0
+            return: l2_error(path, fn_node, "out of memory")
         field: l2_next_active(field\next)
     body: 0
     if: field != 0
@@ -19478,6 +19562,7 @@ return: 0 - 1
 fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     int: kind
     int: leaf_mi 0
+    int: model 0 - 1
     int: vt 0
     int: to_ft
     int: n
@@ -19492,7 +19577,9 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
         return: 0
     if: l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) != 0
         return: 0
-    kind: l2_path_kind(h\data, h\length, @ leaf_mi)
+    kind: l2_path_contract(h\data, h\length, @ leaf_mi, @ model)
+    if: kind = 10 || kind = 11
+        return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, leaf_mi, model, h, mi, path)
     to_ft: l2_path_kind_ft(kind)
     if: to_ft < 0
         return: 0
@@ -20042,6 +20129,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # The walked root's typed reference `@: T r` (l2_root_ref_ns): its own field, counted and bound here as
         # `Model: m`'s is.
         if: l2_root_ref_ns(mi, stmt, @ cname) >= 0
+            cj: l2_own_find_decl(mi, cname, stmt)
+            l2_own_excl: cj
+            k: l2_check_reference_init(stmt, mi, path)
+            l2_own_excl: -1
+            if: k != 0
+                return: 1
             cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
             if: cj < 0
                 return: 1
@@ -23051,11 +23144,11 @@ fn: l2_rw_leave (int: saved) int
     ---
 return: 0
 
-# A numeric own field declared in a nested body, including its catch parameters (T4b class 3).
+# A value cell declared in a nested body, including its catch parameters.
 fn: l2_rw_is_hosted (int: oi) int
     if: oi < 0 || oi >= l2_own_n || l2_own_host[oi] = 0
         return: 0
-    if: l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || l2_rw_num_ty(l2_own_ty[oi]) = 0
+    if: l2_own_fid[oi] < 0 || l2_own_fchild[oi] < 0 || (l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0)
         return: 0
 return: 1
 
@@ -23363,19 +23456,10 @@ fn: l2_rw_tyof (@@: LmP0Node tok; int: lo; int: hi) int
         return: 0
 return: u
 
-# The type of a call of method idx's result, by its trampoline's class: an int, a size_t, an
-# unsigned, a ulong (l2_rw_call builds the int one; the others are its located refusal).
+# The CALL result uses the existing closed return-cell contract, never an
+# invented numeric type for an unsupported/unknown return representation.
 fn: l2_rw_call_ty (int: idx) int
-    int: cls l2_tramp_class(idx)
-    if: l2_sig_ret(idx) = 1
-        return: 1
-    if: cls = 2
-        return: 2
-    if: cls = 3
-        return: 3
-    if: cls = 4
-        return: 36
-return: 0
+return: l2_ret_cell_ty(idx)
 
 # The static type of one operand.  One this typing does not know takes any type (-1), like a
 # literal: its emission names what it is (an L2 operation, a field path, a Structure value ...).
@@ -23812,6 +23896,8 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
     int: rooted 0
     int: bh 0 - 1
     int: nb
+    int: field_own
+    int: model
     if: t = 0 || t\data = 0 || path = 0
         return: 1
     while: i < t\length && t\data[i] != 92
@@ -23911,8 +23997,10 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
         if: n = 0 && path[0] = 9
             bh: path[1]
         nb: 0 - 1
+        field_own: 0 - 1
         if: bh >= 0
             slot: l2_for_own_seg(bh, t\data, b, i - b, @ kind, @ ent)
+            field_own: slot
             if: slot >= 0
                 slot: l2_own_fchild[slot]
             ---
@@ -23925,7 +24013,7 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
             ---
         else:
             if: n = 0 && path[0] = 8
-                if: l2_node_seg(l2_rw_mi, t\data, b, i - b, @ slot, @ kind, @ ent) != 0
+                if: l2_node_seg(l2_rw_mi, t\data, b, i - b, @ slot, @ kind, @ ent, @ field_own) != 0
                     slot: 0 - 1
                 ---
             else:
@@ -23937,12 +24025,15 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
             ---
         ---
         last: (cast: (int) (i >= t\length))
+        model: ent
+        if: last = 0 && kind = 10
+            model: l2_field_pointee(ni, field_own, t\data, b, i - b)
         # Item 738: the same words as the capture's own check (l2_cap_add).
         if: slot < 0 && path[0] = 7
             if: say != 0
                 l2_rw_refuse(node, "a path through a captured Structure names no field of its type")
             return: 1
-        if: slot < 0 || (last = 0 && kind != 2 && kind != 3)
+        if: slot < 0 || (last = 0 && kind != 2 && kind != 3 && (kind != 10 || model < 0))
             if: say != 0
                 l2_rw_refuse(node, "a field path")
             return: 1
@@ -23953,9 +24044,9 @@ fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int 
         n: n + 1
         bh: nb
         if: last = 0
-            if: kind = 3
+            if: kind = 10
                 path[5]: 1
-            ni: ent
+            ni: model
         ---
     ---
     if: n = 0
@@ -24046,7 +24137,7 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     ---
     kind: path[7 + 2 * (level - 1)]
     node: parent
-    if: kind = 3 && level < path[2]
+    if: kind = 10 && level < path[2]
         if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0
             return: 1
         node: \out
@@ -24092,6 +24183,9 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
     int: v
     int: h
     int: kind
+    int: raw_type
+    int: model 0 - 1
+    int: saved_mi
     if: l2_rw_path(stmt, t, 1, path) != 0
         return: 1
     if: path[3] < 0
@@ -24102,6 +24196,14 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
     ---
     if: n < 1
         return: l2_rw_refuse(stmt, "this assignment")
+    if: l2_own_is_pointer(path[3]) != 0
+        saved_mi: l2_cur_mi
+        l2_cur_mi: l2_rw_mi
+        kind: l2_path_contract(t\data, t\length, @ raw_type, @ model)
+        l2_cur_mi: saved_mi
+        if: kind != 10 && kind != 11
+            return: l2_rw_refuse(stmt, "this reference path")
+    ---
     if: path[0] = 4
         return: l2_error(l2_src, stmt, "a qualified immutable branch is not written")
     if: path[0] = 3 && path[2] = 1
@@ -24109,7 +24211,7 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
             return: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) (l2_unit_base + path[1])), \out, path[6]) < 0
             return: 1
-        if: l2_rw_texpr(value, n, path[3], \out, @ v) != 0
+        if: l2_rw_reference_receive(value, n, path[3], model, \out, @ v) != 0
             return: 1
         return: l2_rw_put(\out, 3, v)
     ---
@@ -24126,7 +24228,7 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
             return: 1
         if: kind >= 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, kind) < 0
             return: 1
-        if: l2_rw_texpr(value, n, path[3], \out, @ v) != 0
+        if: l2_rw_reference_receive(value, n, path[3], model, \out, @ v) != 0
             return: 1
         return: l2_rw_put(\out, 3, v)
     ---
@@ -24134,7 +24236,7 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, path[4], \out, path[6 + 2 * (path[2] - 1)]) < 0
         return: 1
-    if: l2_rw_texpr(value, n, path[3], \out, @ v) != 0
+    if: l2_rw_reference_receive(value, n, path[3], model, \out, @ v) != 0
         return: 1
 return: l2_rw_put(\out, 3, v)
 
@@ -24681,33 +24783,76 @@ fn: l2_own_ref_decl (const: @(LmP0Node stmt); int: mi) int
     ---
 return: 0 - 1
 
-# `r: @v` in the body being built, r a typed reference `@: T r` (l2_rw_ref_decl) and v a field of the body that holds a
-# Structure -- an own Structure slot, typed or not (a letter): `@v` is the reference to v's resolved data, the Structure
-# v holds, never v's slot address.  It is admitted to T at this binding point -- implements(v, T, T), the predicate the
-# native admission calls too, for every v, one of T's own included -- and a refusal is the implicit throw `implements`:
-# PUT(r, admit(OWN(v), T)), admit_letter for a letter.  Any other value is refused where it stands.
-fn: l2_rw_ref_bind (const: @(LmP0Node stmt); int: oi; int: into; @: int out) int
-    @: LmP0Field f
-    @: LmP0Field g
-    int: src
-    int: adm
+# A reference receiving operand uses the existing value nodes. A null literal
+# has its declared pointer-cell type; numeric zero expressions elsewhere keep
+# their numeric representation. No source binding or companion graph is made.
+fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @: int out) int
+    L2Address: descriptor_value
+    @: L2Address descriptor @ descriptor_value
+    int: is_descriptor
+    int: source_ty
+    int: neg 0
+    int: uns 0
+    size_t: mag 1U
+    int: slot
+    []: char cell_type 128
+    l2_reference_fields(@ first, @ n)
+    if: n = 1 && first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0
+        if: l2_rw_num_lit(first\value\as\atom, @ neg, @ mag, @ uns) != 0 && mag = 0U
+            n: 0
+    ---
+    if: n = 0
+        if: l2_ptr_cell_type(ty - 1000, cell_type) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, lmx_pointer_new_owned(%s, l2_program_arena)) != 0\n            return: 1\n", \out, cell_type) < 0
+            return: 1
+        return: 0
+    is_descriptor: l2_reference_descriptor(first, n, l2_rw_mi, descriptor)
+    if: is_descriptor != 0 && l2_address_operand(first, n, l2_rw_mi, descriptor) = 0 && descriptor\descriptor != 0
+        is_descriptor: 0
+    if: is_descriptor = 0
+        if: descriptor\kind = 1
+            return: l2_rw_own(parent, descriptor\index, out)
+        if: descriptor\kind = 2
+            return: l2_rw_arg_fb(parent, descriptor\index, out)
+        if: descriptor\kind = 5
+            slot: l2_ns_base + l2_ns_rank(descriptor\index)
+            if: l2_ns_eternal[descriptor\index] >= 0
+                slot: l2_unit_base + l2_occ_n() + l2_ns_eternal[descriptor\index]
+            if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0
+                return: 1
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, \out, slot) < 0
+                return: 1
+            return: 0
+        return: l2_rw_refuse(first\value, "this reference operand")
+    # The receiving checker already closed the object-pointer conversion.
+    # Keep the candidate's actual return-cell type until structural admission;
+    # ADMIT produces the same held reference, not a numeric conversion.
+    source_ty: l2_rw_fields_ty(first, n)
+    if: l2_own_is_pointer(source_ty) != 0
+        ty: source_ty
+return: l2_rw_texpr(first, n, ty, parent, out)
+
+# Declarations and later assignments share the same admitted value/store chain.
+# The existing write helper selects working SET/SET_OF or physical PUT.
+fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
     int: raw
-    int: vs
-    # P0 gives `@v` as two fields, the atom `@` and v's name.
-    if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 2
-        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
-    f: l2_next_active(stmt\as\frame\body\first_field)
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_text_eq(f\value\as\atom, "@") = 0
-        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
-    g: l2_next_active(f\next)
-    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || l2_ident(g\value\as\atom) = 0
-        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
-    src: l2_rw_find(g\value\as\atom)
-    if: src < 0 || l2_rw_seen(src) = 0 || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_slot(src) = 0
-        return: l2_rw_refuse(stmt, "a reference bound to a value that is not `@` of a field")
-    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit(\out, l2_own_nsty_get(oi), l2_rw_is_letter(src), @ adm) != 0
+    if: l2_own_is_pointer(ty) = 0
+        return: l2_rw_texpr(first, n, ty, parent, out)
+    if: model < 0
+        return: l2_rw_reference_value(first, n, ty, parent, out)
+    if: l2_rw_admit(parent, model, l2_is_letter_value(l2_rw_mi, first, n), out) != 0
         return: 1
-    if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 3, raw) != 0
+    if: l2_rw_reference_value(first, n, ty, \out, @ raw) != 0
+        return: 1
+return: l2_rw_put(\out, 3, raw)
+
+fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: int out) int
+    int: adm
+    int: vs
+    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0
+        return: 1
+    if: l2_rw_reference_receive(first, n, l2_own_ty[oi], l2_own_nsty_get(oi), \out, @ adm) != 0
         return: 1
 return: l2_rw_put(\out, vs, adm)
 
@@ -25332,6 +25477,11 @@ fn: l2_rw_write (int: into; int: oi; const: @(char op); @: int out; @: int vslot
         return: l2_rw_put(\out, 1, own)
     ---
     \vslot: 3
+    if: l2_rw_is_hosted(oi) != 0 && l2_own_is_slot(oi) = 0
+        if: l2_rw_frame(into, "LMX_WALK_OP_PUT_OF", 4, out) != 0 || l2_rw_host_at(\out, l2_own_fid[oi], @ base) != 0 || l2_rw_put(\out, 1, base) != 0
+            return: 1
+        return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, (cast: (unsigned) l2_own_fchild[oi])) < 0))
+    ---
     if: l2_rw_frame(into, op, 4, out) != 0
         return: 1
 return: l2_rw_cell(\out, oi)
@@ -25761,7 +25911,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; @: LmP0Field args; int: paren
     # (l2_rw_dyn_arg).  No third graph.
     # A result is an int, a size_t, an unsigned or a ulong (-178): the walk hands a trampoline of a
     # wider type a destination of that type, by the class of the callee's return cell (rtype).
-    if: l2_tramp_class(idx) > 4 && l2_mad_on(idx) = 0
+    if: l2_tramp_class(idx) > 4 && l2_mad_on(idx) = 0 && l2_own_is_pointer(l2_ret_cell_ty(idx)) = 0
         return: l2_rw_refuse(node, "a call whose result is not a number")
     # An input is a number (its formal's type: the trampoline reads that cell type), a Structure
     # of the formal's own named type (by reference, -179), or a callable formal, which takes a
@@ -25993,7 +26143,7 @@ fn: l2_rw_arg_fb (int: parent; int: j; @: int out) int
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, j) < 0
         return: 1
-    if: nm != 0 && nm\data != 0 && l2_node_seg(l2_rw_mi, nm\data, 0U, nm\length, @ slot, @ kind, @ ent) = 0
+    if: nm != 0 && nm\data != 0 && l2_node_seg(l2_rw_mi, nm\data, 0U, nm\length, @ slot, @ kind, @ ent, 0) = 0
         if: l2_rw_node_read(\out, slot, kind, @ fb) != 0 || l2_rw_put(\out, 2, fb) != 0
             return: 1
         return: 0
@@ -26011,7 +26161,7 @@ fn: l2_rw_node_read (int: parent; int: slot; int: kind; @: int out) int
     int: of
     int: nd
     int: holder parent
-    if: kind = 3
+    if: kind = 10
         if: l2_rw_frame(parent, "LMX_WALK_OP_DEREF", 2, out) != 0
             return: 1
         holder: \out
@@ -26020,7 +26170,7 @@ fn: l2_rw_node_read (int: parent; int: slot; int: kind; @: int out) int
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", of, slot) < 0
         return: 1
-    if: kind = 3
+    if: kind = 10
         return: l2_rw_put(\out, 1, of)
     \out: of
 return: 0
@@ -26130,7 +26280,7 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     # gives it; the walker's EQ compares the address it holds.
     if: ty >= 1000
         oi: l2_rw_find(t)
-        if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0
+        if: l2_rw_seen(oi) != 0 && (l2_rw_is_hosted(oi) != 0 || (l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0)) && l2_own_is_pointer(l2_own_ty[oi]) != 0
             return: l2_rw_own(parent, oi, out)
         ---
     ---
@@ -26799,22 +26949,13 @@ fn: l2_rw_for_step (int: node; int: oi; int: dec; @: int out) int
     int: body
     int: w
     int: vs 3
-    int: h
     int: sum
     int: own
     int: one
     if: l2_rw_plain(node, 1, @ body) != 0
         return: 1
-    if: l2_rw_cached(oi) = 0 && l2_rw_is_hosted(oi) != 0
-        if: l2_rw_frame(body, "LMX_WALK_OP_PUT_OF", 4, @ w) != 0 || l2_rw_host_at(w, l2_own_fid[oi], @ h) != 0 || l2_rw_put(w, 1, h) != 0
-            return: 1
-        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", w, (cast: (unsigned) l2_own_fchild[oi])) < 0
-            return: 1
-        ---
-    else:
-        if: l2_rw_write(body, oi, "LMX_WALK_OP_PUT", @ w, @ vs) != 0
-            return: 1
-    ---
+    if: l2_rw_write(body, oi, "LMX_WALK_OP_PUT", @ w, @ vs) != 0
+        return: 1
     if: dec = 0 && l2_rw_frame(w, "LMX_WALK_OP_ADD", 3, @ sum) != 0
         return: 1
     if: dec != 0 && l2_rw_frame(w, "LMX_WALK_OP_SUB", 3, @ sum) != 0
@@ -26978,9 +27119,18 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
         return: 0
     if: h != 0 && h\length > 2U && h\data[0] = 99 && h\data[1] = 46
         return: l2_rw_l2(stmt)
-    # A typed reference `@: T r`, T a named Structure: a pointer cell of the body, null until `r: @v` binds it
-    # (l2_rw_ref_bind) -- the walk passes over its declaration.  Any other `@` form stays an L2 operation.
-    if: l2_own_ref_decl(stmt, l2_rw_mi) >= 0
+    # A reached reference declaration writes its admitted candidate (default
+    # zero) through the same receiving/store route as later assignments.
+    oi: l2_own_ref_decl(stmt, l2_rw_mi)
+    if: oi >= 0
+        l2_own_excl: oi
+        k: l2_rw_reference_store(l2_declaration(stmt)\candidate, l2_declaration(stmt)\candidate_count, oi, into, @ node)
+        l2_own_excl: -1
+        if: k != 0 || l2_rw_bseq_mark(oi) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
+            return: 1
         return: 0
     if: l2_text_eq(h, "sizeof") || l2_text_eq(h, "cast") || l2_text_eq(h, "L2") || (h != 0 && h\length > 0U && (h\data[0] = 64 || h\data[0] = 92))
         return: l2_rw_l2(stmt)
@@ -27283,13 +27433,11 @@ fn: l2_rw_stmt (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @:
     # A declaration of a root field that is not a number (`Model: m`): what it is.
     if: oi < l2_own_n && l2_rw_num_ty(l2_own_ty[oi]) = 0
         return: l2_rw_refuse_ty(stmt, oi)
-    # An assignment into a reference field (-179): only a typed reference's `r: @v` is built, the value admitted first --
-    # the caller's implicit `implements` (D-55).  An own Structure slot's `m: value` is m's call, refused by the check
-    # before the walk (the call rule, OPUS-CALLABLE-STRUCT-BINDING-20260929-16).
+    # An explicit reference cell receives an admitted reference value. A direct
+    # Structure slot retains its separately resolved callable behavior.
     oi: l2_rw_find(h)
-    # `r: @v` into a typed reference (l2_rw_ref_bind): v's Structure admitted to r's type, then r's cell.
-    if: l2_rw_seen(oi) != 0 && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0 && l2_own_nsty_get(oi) >= 0
-        if: l2_rw_ref_bind(stmt, oi, into, @ node) != 0
+    if: l2_rw_seen(oi) != 0 && (l2_rw_is_hosted(oi) != 0 || (l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0)) && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0 && l2_own_nsty_get(oi) >= 0
+        if: l2_rw_reference_store(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), oi, into, @ node) != 0
             return: 1
         \made: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(%s, %dU, (cast: (@: void) l2_rw%d)) != 0\n            return: 1\n", pn, slot, node) < 0
@@ -30836,32 +30984,37 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
     memcpy(value, temp, strlen(temp) + 1U)
 return: 0
 
+fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: char value) int
+    L2Address: descriptor_value
+    @: L2Address descriptor @ descriptor_value
+    l2_reference_fields(@ first, @ n)
+    if: n = 0
+        strcpy(value, "0")
+        return: 0
+    if: l2_reference_descriptor(first, n, mi, descriptor) = 0
+        if: l2_emit_address(mi, descriptor, ind, value) != 0
+            return: 1
+    ---
+    else:
+        if: l2_eval_fields(first, n, mi, ind, value) != 0
+            return: 1
+        ---
+    ---
+    if: model >= 0 && l2_is_letter_value(mi, first, n) != 0 && l2_payload_expr(value) != 0
+        return: 1
+return: l2_emit_receiving_admit(ty, model, mi, ind, value)
+
 fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     @: L2Declaration declaration l2_declaration(stmt)
-    @: LmP0Field first
-    int: n
     int: ty
-    int: model
     []: char name 256
     []: char declarator 1024
     []: char value 1024
     if: declaration = 0 || l2_contract_formal(declaration\contract, @ ty) != 0 || l2_tok_text(declaration\name, name, 256U) != 0 || l2_pointer_decl_text(ty, 0, name, declarator) != 0
         return: 1
-    first: declaration\candidate
-    n: declaration\candidate_count
-    if: n = 1 && first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_STRUCTURE && first\value\as != 0 && first\value\as\structure != 0
-        n: l2_count_active(first\value\as\structure)
-        first: first\value\as\structure\first_field
-    if: n > 0
-        if: l2_eval_fields(first, n, mi, ind, value) != 0
-            return: 1
-        model: l2_declaration_model(stmt, 0)
-        if: model >= 0 && l2_is_letter_value(mi, first, n) != 0 && l2_payload_expr(value) != 0
-            return: 1
-        if: l2_emit_receiving_admit(ty, model, mi, ind, value) != 0
-            return: 1
-        return: (cast: (int) (c.fprintf(l2_out, "%s%s %s\n", ind, declarator, value) < 0))
-return: (cast: (int) (c.fprintf(l2_out, "%s%s 0\n", ind, declarator) < 0))
+    if: l2_emit_reference_value(declaration\candidate, declaration\candidate_count, ty, l2_declaration_model(stmt, 0), mi, ind, value) != 0
+        return: 1
+return: (cast: (int) (c.fprintf(l2_out, "%s%s %s\n", ind, declarator, value) < 0))
 
 fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     @: L2Declaration declaration
@@ -30996,6 +31149,12 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
         return: 1
     if: fr\body = 0
         return: 2
+    if: l2_pointer_depth(l2_ml_ty[l2_ml_find(fr\head)]) > 0
+        if: l2_emit_reference_value(fr\body\first_field, l2_count_active(fr\body), l2_ml_ty[l2_ml_find(fr\head)], l2_ml_ns[l2_ml_find(fr\head)], mi, ind, l2_tok) != 0
+            return: 2
+        if: c.fprintf(l2_out, "%s", ind) < 0 || l2_write_text(l2_out, fr\head) != 0 || c.fprintf(l2_out, ": %s\n", l2_tok) < 0
+            return: 2
+        return: 0
     initf: l2_next_active(fr\body\first_field)
     if: l2_count_active(fr\body) = 1 && initf != 0 && initf\value != 0 && initf\value\kind = c.LM_P0_NODE_FRAME && initf\value\as != 0 && initf\value\as\frame != 0 && l2_is_known(initf\value\as\frame\head)
         l2_ccall_into: l2_tok
@@ -31465,6 +31624,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     size_t: l2_pn 0U
     size_t: l2_pv 0U
     int: l2_pkind 0
+    int: l2_ptype 0 - 1
+    int: l2_pmodel 0 - 1
     int: l2_pni 0
     int: l2_pres 0
     int: l2_poi 0
@@ -31597,10 +31758,16 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         si: -1
         fi: -1
         sl: -1
-        # A typed reference own-field declaration has its cell in the
-        # occurrence. Like the walker, native emission executes no initializer
-        # for this declaration; later assignment uses ordinary admission/store.
-        if: l2_own_ref_decl(stmt, mi) >= 0
+        # A reached reference declaration evaluates/admit its candidate before
+        # binding the existing cell. Omission is zero on every execution.
+        oi: l2_own_ref_decl(stmt, mi)
+        if: oi >= 0
+            declaration: l2_declaration(stmt)
+            l2_own_excl: oi
+            pret: l2_emit_reference_value(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok)
+            l2_own_excl: -1
+            if: pret != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         # A callable-result binding is a field declaration whose value is the
@@ -31834,7 +32001,13 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             # A number of another type has the store's conversion edge (OPUS-PATHCONV-20260929-10), as a write to an
             # own field has: the receiver is called on the value and its result is stored (3: the call is emitted).
             cst: 0
-            if: l2_prhs_lit = 0
+            if: l2_pkind = 10 || l2_pkind = 11
+                l2_pkind: l2_path_contract(stmt\as\frame\head\data, stmt\as\frame\head\length, @ l2_ptype, @ l2_pmodel)
+                if: l2_emit_reference_value(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, mi, ind, l2_tok) != 0
+                    return: 1
+                cst: 3
+            ---
+            if: l2_prhs_lit = 0 && cst != 3
                 cst: l2_convert_value_to(mi, l2_path_kind_ft(l2_pkind), stmt, stmt\as\frame, ind)
             if: cst = 1
                 return: 1
@@ -31844,9 +32017,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             if: l2_pw >= 0 && c.fprintf(l2_out, "%sl2_pxp: l2_pw%d\n", ind, l2_pw) < 0
                 return: 1
-            # A size_t assignment writes the addressed cell IN PLACE. A char
-            # assignment REBINDS the field pointer cell to the cell of the new
-            # character; the character bytes of the table are never written.
+            # Explicit paths write the real typed cell in place. They do not
+            # update a separately loaded working value or substitute its cell.
             if: l2_pkind = 0 && l2_prhs_lit != 0 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_pxp[0], %zuU) != 0\n", ind, l2_pv) < 0
                 return: 1
             if: l2_pkind = 0 && l2_prhs_lit = 0 && c.fprintf(l2_out, "%sif: lmx_size_store_known(l2_pxp[0], %s) != 0\n", ind, l2_tok) < 0
@@ -32431,6 +32603,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             fi: l2_param_find(mi, fr\head)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
             fi: l2_m_alias[l2_own_off(mi, oi)]
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0
+            if: l2_emit_reference_value(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok) != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         cst: 0
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
             cst: l2_convert_on_store(mi, oi, stmt, fr, ind)

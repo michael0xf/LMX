@@ -1,0 +1,54 @@
+# Reached own reference declarations and assignments share admission/storage.
+# The same generated root runs natively and with its native word cleared.
+int: calls 0
+int: marker 0
+Model:
+    size_t: value 1U
+end: Model
+Good:
+    size_t: value 7U
+    node\marker: 99
+end: Good
+fn: candidate () @: void
+    node\calls: node\calls + 1
+return: @ Good
+fn: typed () @: Model
+    node\calls: node\calls + 1
+return: @ Good
+fn: logical () Model
+return: @ Good
+sub: checkpoint ()
+return
+int: result 7
+@: Model expected @ Good
+@: Model direct Good
+if: direct = 0 || direct != expected || direct\value != 7U
+    result: 81
+@: Model initial candidate()
+if: initial = 0 || initial != expected
+    result: 82
+initial: 0
+if: initial != 0
+    result: 83
+initial: typed()
+if: initial != expected
+    result: 84
+initial: Model
+if: initial\value != 1U
+    result: 85
+initial: logical()
+if: initial != expected
+    result: 88
+checkpoint
+if: calls != 0
+    # Bare calls is the original working value; explicit path changes do not
+    # reload it. Observe the graph counter through a method below.
+    result: 86
+fn: count () int
+return: node\calls
+fn: bodyMarker () int
+return: node\marker
+if: count() != 2 || bodyMarker() != 0
+    result: 87
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -2404,6 +2404,20 @@ $fixtures = @(
     # the same site as its frame-spelling twin `w: merge: Model`.  The message is that path's current one.
     [pscustomobject]@{ Name = 'unit_merge_atom_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_atom_assign_refused.lm2:10:5: assignment value has unknown type'; Absent = @(); Debt = @() },
+    # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
+    # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
+    # task changes stays 0 through the receiving call and is changed once by the explicit invocation.
+    [pscustomobject]@{ Name = 'unit_callable_sub_transport.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # K04a (steps/callable-actual-projection-20260930.md, matrix row 2): the callable input is FORWARDED from one
+    # formal to another -- the actual is resolved in the caller's context, not by a unit-namespace method lookup
+    # -- and the transport still executes nothing (hits 0 through both calls, then 1 after the explicit call).
+    [pscustomobject]@{ Name = 'unit_callable_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # Its negative: forwarding is not a way around the signature check -- a callable formal whose contract is
+    # incompatible with the receiving formal's is refused at the call.
+    [pscustomobject]@{ Name = 'unit_callable_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_callable_forward_refused.lm2:20:13: incompatible entry signature'; Absent = @(); Debt = @() },
     # OPUS-WALKLOOP-20260929-11: Counter's procedure has a `for` -- it stayed native under the knob until the walker's FOR,
     # though the fixture says it is walked; now it is (the Absent pins).
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;

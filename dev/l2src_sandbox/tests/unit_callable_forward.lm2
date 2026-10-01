@@ -1,0 +1,30 @@
+# K04 row 2: forward the callable input from one formal to another.  Identity and signature survive
+# forwarding; the transport executes nothing (hits stays 0 until the explicit invocation).
+int: hits 0
+
+sub: task ()
+    node\hits: node\hits + 1U
+end: task
+
+fn: count () int
+    return: node\hits
+end: count
+
+fn: inner (task: f) int
+    return: count()
+end: inner
+
+fn: outer (task: f) int
+    return: inner(f)
+end: outer
+
+int: before outer(task)
+int: after count()
+if: before != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: after != 0
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,32 @@
+# K04 witness matrix row 1 (steps/callable-actual-projection-20260930.md): a NONRETURNING `sub task`
+# received by a `(task: f)` formal.  The exact occurrence is transmitted -- the counter the task
+# changes stays unchanged during transport -- and a separate explicit invocation changes it once.
+int: hits 0
+
+sub: task ()
+    node\hits: node\hits + 1U
+end: task
+
+fn: count () int
+    return: node\hits
+end: count
+
+fn: recv (task: f) int
+    return: count()
+end: recv
+
+int: before recv(task)
+int: after count()
+if: before != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: after != 0
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+task()
+int: once count()
+if: once != 1
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

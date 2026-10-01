@@ -1,0 +1,24 @@
+# K04a negative (steps/callable-actual-projection-20260930.md, witness matrix row 2): forwarding a
+# callable formal whose own contract is INCOMPATIBLE with the receiving formal's contract is refused
+# at the call, with the checker's ordinary callable-actual diagnostic -- forwarding does not weaken
+# the signature check.  `mk` returns an int; the `task` position takes a nonreturning callable.
+int: hits 0
+
+sub: task ()
+    node\hits: node\hits + 1U
+end: task
+
+fn: mk () int
+    return: 3
+end: mk
+
+fn: inner (task: f) int
+    return: node\hits
+end: inner
+
+fn: outer (mk: g) int
+    return: inner(g)
+end: outer
+
+sendMessage: exit(exit_code: outer(mk); stdout: ""; stderr: "")
+return

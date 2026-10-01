@@ -18,13 +18,15 @@
 восстановительный focused gate — 92/92 (89 фикстур). Это не новый полный gate.
 Stable `l2src` не обновляется.
 
-Последний полный generated gate `whole_array_value_full_20260930_01`:
-**977/1029, 52 отказа**, точный источниковый checkpoint `5f11b50`.
-Относительно `bounded_indexed_expression_full_20260930_02` (970/1022)
-сохраняются те же 52 отказа, все семь новых строк зелёные, новых регрессий
-и удалённых строк нет. Восстановительный focused gate — 140/140
-(137 фикстур), все десять scoped файлов сверены по хэшам;
-семь контрольных поломок обнаружены и восстановлены.
+Последний полный generated gate `own_reference_reception_full_20260930_01`:
+**982/1034, 52 отказа**, точный источниковый checkpoint `74df17d`.
+Относительно `whole_array_value_full_20260930_01` (977/1029) сохраняются
+те же 52 отказа, все пять новых строк зелёные, новых регрессий и удалённых
+строк нет. Восстановительный focused gate — 184/184 (181 фикстура),
+kernel — 281/281 (104 selftests), L3 — 11 наборов / 295 проверок и четыре
+инвентаризации. Все девять scoped файлов и 1031 реальный файл полного
+корпуса сверены по хэшам; четырнадцать содержательных поломок generated C
+обнаружены отдельно от инверсий тестовых утверждений.
 Целевые проверки адреса формалов, общего верхнего тела и return-ABI
 не заменяют полный gate. Clean-kernel, §8 и §8a ещё не достигнуты.
 История запусков, хэши, контрольные поломки и классификация отказов —
@@ -33,41 +35,34 @@ Stable `l2src` не обновляется.
 
 Ближайшая последовательность единственного writer/build:
 
-1. Завершить [общую инициализацию и перепривязку own reference-cell](steps/native-selfbuild-20260930.md#own-reference-cell-reception):
-   candidate вычисляется один раз, затем conversion → admission → store;
-   отсутствие initializer означает ноль при каждом достигнутом объявлении.
-   Различить direct Structure slot и pointer-value cell в общем пути,
-   сохранив модель референта и выбранную identity поля. Нужны native,
-   настоящий walker, повторное объявление, отказ без потери прежней ссылки,
-   точные хэши и сравнение полного корпуса с опубликованным baseline.
-2. Убрать [старое исключение публикации при повторном входе](steps/native-selfbuild-20260930.md#reentry-publication-repair):
+1. Убрать [старое исключение публикации при повторном входе](steps/native-selfbuild-20260930.md#reentry-publication-repair):
    `l2_reent` / `f.reent` подавляют dirty-публикацию по прежней интерпретации
    Codex, не по правилу автора. Обычная публикация работает над той же S;
    удалить обслуживающие счётчики/связи и поимённо исправить старые ожидания.
    Сохранить внешнее чистое рабочее значение и identity настоящего `@x`.
-3. Закрыть [общую проекцию portable-ссылок в walker](steps/native-selfbuild-20260930.md#portable-reference-value-projection),
+2. Закрыть [общую проекцию portable-ссылок в walker](steps/native-selfbuild-20260930.md#portable-reference-value-projection),
    затем [единую lexical-local identity и hidden-source в месте вызова](steps/callable-actual-projection-20260930.md#site-aware-hidden-source).
    Structure-only ограничения общего чтения/записи ссылки не переносить
    в отдельный валидатор. Type/address/value потребители используют одно
    выбранное объявление с областью видимости, не первое совпадение имени
    в списке метода. Включить измеренный `ref\\value` gap и адресуемый формал;
    не создавать context-граф.
-4. Исправить [общую проекцию callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
+3. Исправить [общую проекцию callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
    и убрать живые `Model: fresh` / `T: b c` fallback-ветви через
    [общую классификацию известной головы как вызова](steps/native-selfbuild-20260930.md#known-structure-call-classification).
    Фактические аргументы проверяются по настоящему контракту получателя;
    поля тела и hidden-входы нельзя объявлять явными формалами по догадке.
    Это не решение открытого Q58 о вложенной голове определения.
-5. Мигрировать [13 raw-C/string строк](steps/generated-diagnostic-migration-20260930.md#writer-boundaries)
+4. Мигрировать [13 raw-C/string строк](steps/generated-diagnostic-migration-20260930.md#writer-boundaries)
    по их настоящему контракту; реальные дефекты не превращать в ожидаемые
    отказы. Закрыть [общую C99-типизацию выражений](steps/native-selfbuild-20260930.md#c99-expression-types-versus-arena-storage-domains)
    и снять искусственные ограничения общими механизмами, не увеличением
    констант. Остальные измеренные пробелы перечислены в [списке дефектов](steps/defects.md).
-6. Завершить [один canonical body/copy и полную native-компиляцию тел](steps/native-selfbuild-20260930.md#one-complete-lexical-graph),
+5. Завершить [один canonical body/copy и полную native-компиляцию тел](steps/native-selfbuild-20260930.md#one-complete-lexical-graph),
    общую классификацию принимающих выражений и произвольную вложенность.
    Старые абсолютные тестовые пины заменять наблюдениями семантики,
    не ослабляя admission, identity или полноту исполняемого графа.
-7. Закрыть весь действующий clean-kernel GATE. Затем выполнить §8:
+6. Закрыть весь действующий clean-kernel GATE. Затем выполнить §8:
    List/L2-библиотеки → runtime/parser/оба транслятора → собственные
    build/test/finalize → две проверенные самосборки и замены бинарника.
    После §8 выполнить §8a и T01–T26. §9 приложения не входит в эту работу.
@@ -76,6 +71,12 @@ Stable `l2src` не обновляется.
 сохранены в [журнале реализации](steps/native-selfbuild-20260930.md)
 и [списке дефектов](steps/defects.md). Их исторические результаты
 не подменяют свежую приёмку следующего checkpoint.
+
+Checkpoint `74df17d` закрыл [own reference-cell reception](steps/native-selfbuild-20260930.md#own-reference-cell-reception):
+однократное вычисление кандидата, conversion → admission → store,
+нулевая инициализация при каждом достигнутом объявлении и точная
+проекция ссылочного поля в общем пути. Это не закрывает portable-ссылки
+целиком, локальный `ref\value`, Array-формалы или общий callable-actual.
 
 - [x] После перехода char-copy на общую карту удалён публичный `dst_chars`
   из copier/merge и всех потребителей одной правкой API, без shim и второго

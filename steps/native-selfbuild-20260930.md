@@ -5,8 +5,10 @@ common-assignment repair. Checkpoint `e7935be` adds whole-Array descriptor
 addressing and the shared lexical lookup repair. Checkpoint `c8167af` closes
 bounded expression/actual spans and the shared pointer-actual checker.
 Checkpoint `5f11b50` adds ordinary whole-Array descriptor values and the
-shared declared-element address type. Next are own-reference candidate
-reception and shared lexical-local identity before remaining callable work.
+shared declared-element address type. Checkpoint `74df17d` closes the bounded
+own-reference reception/path-admission repair. Next is removal of the old
+re-entry publication suppression, then portable references and shared
+lexical-local identity before remaining callable work.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
@@ -254,7 +256,80 @@ generated comment claiming pure logical RHSs remain unguarded was corrected
 in the tested `c8167af` slice; it is no longer pending work here.
 
 <a id="own-reference-cell-reception"></a>
-## Pending common reference-cell initialization and rebinding
+## Common reference-cell initialization and rebinding: checkpoint 74df17d
+
+The nine-path source checkpoint contains the translator, walker, existing
+reference selftest, harness and five new fixtures. Source was tested at
+`5f11b50` plus exactly these changes; fast-forwarding the disjoint docs to
+`2cc1b5e` before commit did not change any of their hashes. The final manifest
+and independent review match every owned path to its pre-mutation freeze.
+
+Implemented through shared contracts, not a special root route:
+
+- Own declarations use the receiving checker before the new occurrence is
+  visible. `l2_emit_reference_value` is shared by reference initialization
+  and stores; `l2_rw_reference_value` builds the corresponding retained
+  value. Omission and explicit zero are reached initialization operations,
+  not merely initial zero-filled allocation. Candidate evaluation occurs
+  once, admission precedes storage, and refusal preserves the old binding.
+- `l2_reference_descriptor` consumes the resolved operand category. A bare
+  Structure candidate yields its descriptor without executing its body;
+  a returning callable formal supplies its result, not its own descriptor.
+  The old spelling-specific `l2_rw_ref_bind` is removed. Existing
+  `SET`/`SET_OF` and `PUT`/`PUT_OF` retain working-versus-physical semantics;
+  direct Structure-slot `PUT_REF` remains a different storage operation.
+- `l2_contract_model` projects the original return contract, including
+  `@: Model`; walked CALL uses `l2_ret_cell_ty`, not an unknown-to-int
+  fallback. Typed null is an ordinary typed literal cell, not a new graph.
+- Common field-path resolution carries the selected own-row identity,
+  pointer type and referent model without a second name lookup. A direct
+  Structure slot stays direct; an intermediate pointer-value cell opens
+  once. `l2_path_contract` supplies ordinary receiving/admission before
+  explicit physical writes. The three hosted fixtures keep leaf/deeper
+  path observations and actual WalkRoot execution.
+- `lmx_walk_reference_word` gives EQ one reference-value projection using
+  `void *`, not a pointer-to-integer comparison cast. A pointer cell opens
+  once, the held referent stays opaque, and direct descriptor/null identity
+  is preserved. Numeric comparisons and structural admission stay separate.
+
+Measured acceptance:
+
+| Gate | Artifact under `build/` | Result |
+|---|---|---|
+| Restored focused | `l2_harness/own_reference_reception_20260930_final` | 184/184; 181 exact fixture files |
+| Kernel | `l2src/own_reference_reception_20260930_01` | 281/281; 104 selftests; reference selftest 22/22 |
+| L3 | `l3/own_reference_reception_20260930_01` | 11 suites, 295 checks and four inventories |
+| Full generated | `l2_harness/own_reference_reception_full_20260930_01` | 982/1034; identical 52 previous failures |
+
+The full comparison against `whole_array_value_full_20260930_01` has five
+new green fixtures and zero regressions, fixes or removed identities. All
+1031 actual full fixture files match their live source; the remaining row
+is intentionally missing input (`unit_p50_missing_input`), not a lost file.
+Full generated remains RED and stable is not promoted.
+
+`l2_harness/own_reference_reception_evidence_20260930/release_report.json`
+records the commands and exact boundaries; `final_owned_manifest.json`,
+`full_comparison.json`, `l3_evidence.json` and `mutation_summary.json` retain
+the detailed evidence. Four source assertion inversions yield seven runtime
+failures: non-vacuity checks, not generator-fault tests. Separately, fourteen
+meaningful generated-C mutations compile/link and fail at runtime: twelve
+reception/evaluation/reset/admission/storage cases and two EQ projection
+cases. A preliminary bare native model-call injection survives because it
+omits the call's required publication checkpoint; it is retained as
+inconclusive and excluded. The corrected ordinary-call mutation is detected.
+
+Remaining boundaries are not hidden by this checkpoint. The callable-formal
+result fixture proves native result identity and producer counts 1/2; it
+does not close general walked callable-formals. Diagnostic `_13` retains
+the measured local `ref\\value` refusal, queued with shared lexical-local
+identity; `_14` and the final fixture do not claim field-path coverage there.
+Portable pointer operations, Array formals, canonical graph/copy and Q58
+remain independent open work. Re-entry publication suppression is next.
+
+### Original preflight and diagnostic history
+
+The instructions below preserve the pre-checkpoint analysis and dependency
+discoveries; they are not an additional outstanding implementation ticket.
 
 Read-only audit of `OWN-REFERENCE-CANDIDATE-LOSS`: method-local null
 initialization/rebinding already uses the shared contract correctly, but
@@ -450,6 +525,26 @@ dependency before the wider portable-reference and lexical-local work:
 
 The old positive native address test and the old green suppression tests
 do not certify this repair. No implementation change is claimed here.
+
+Read-only self-path preflight: removing `l2_rw_path_occ`'s self refusal alone
+is insufficient. `l2_rw_path_value` currently seeds a kind-3 method root
+from `l2_entry_unit` plus the method slot. For a copied current occurrence,
+that can select the original rather than the activation's actual Structure.
+The existing `AT`/`PUT` holder-zero contract (`lmx_walk_data_holder`) already
+selects `f.node`; native has the actual `self` argument. Resolve a method
+root equal to the current method to that current occurrence in both backends,
+then reuse the selected slot/type and ordinary segment traversal. Explicit
+paths remain graph-direct reads/writes, not `OWN`/`SET` working-value access.
+There is no need for a runtime self-name registry or a new opcode.
+
+Add copied/merged callable self-path controls with independent counters,
+as well as the re-entry trace where working x is 2 and physical x is 9.
+Mutating the root back to the original unit or replacing the path with a
+working-value read must fail. Preserve the outside-method `peek -> M\\x`
+controls. Do not claim that this also fixes other-method/sibling roots:
+the walker still seeds those from a static unit, while native selection
+uses `l2_unit_ref`; general copied-parent identity belongs to the
+[canonical-body/copy dependency](#one-complete-lexical-graph).
 
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair

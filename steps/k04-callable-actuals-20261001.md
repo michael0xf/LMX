@@ -217,6 +217,15 @@ so the next attempt does not repeat it.
 - `python tools/check_docs.py` OK, `tools/gate_p0_header.ps1 -Root .` OK (47 P0 defines, 7 files),
   `git diff --check` clean.
 
+**Found while measuring, recorded, not this slice.**
+[CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL](defects.md#callable-formal-statement-call-internal): the
+OPERATOR form of a call of a nonreturning callable formal — `f()` as a statement — ends in
+`internal: a refusal said nothing`, while the same call in a value position is refused properly and
+the same operator call with a RETURNING contract translates. Measured phase: `l2_emit_body` of the
+method holding the formal; `l2_discard_run` returns 0 for the call frame, so the statement misses the
+path that emits a discarded call (where the bare-atom form of the same value works). The minimal
+program and the bisection are in the defect entry; it is the next K04 slice's first item.
+
 **Residuals.** The parent defect
 [SUB-ACTUAL-REFERENCE-CLASSIFICATION](defects.md#sub-actual-reference-classification) keeps its other
 half: an ordinary REFERENCE formal receiving a callable, resolved paths, and the shared projection

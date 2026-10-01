@@ -1294,6 +1294,47 @@ callable по [приоритету источников](../docs/LMX_semantics.
 [Пути и раздельные свидетели arity/wrong-name](native-selfbuild-20260930.md#native-call-dispatch).
 
 <a id="named-structure-number-argument-typed-unknown"></a>
+<a id="callable-formal-statement-call-internal"></a>
+### CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL — 2026-10-01, deepseek, OPEN
+
+Минимальная программа (`build/deepseek_k04d/src/s7_simple.lm2`), найденная при работе над строкой 6
+матрицы K04:
+
+```text
+int: hits 0
+sub: task ()
+    node\hits: node\hits + 1U
+end: task
+fn: recv (task: f) int
+    f()
+    return: 0
+end: recv
+int: a recv(task)
+```
+
+Даёт `l2trans error: …: internal: a refusal said nothing (a step failed without a located diagnostic)`:
+шаг вернул отказ без локализованной диагностики. Это не отказ языка — явное исполнение полученного
+callable-формала (`f()`) законно, и та же программа с возвращающим контрактом формала
+(`fn: mk () int` вместо `sub`) транслируется.
+
+Измеренные границы (временные печати в пробной сборке; исходник восстановлен):
+
+- вызов формала с ВОЗВРАЩАЮЩИМ контрактом в операторной позиции — транслируется; вызов
+  не-возвращающего формала в позиции ЗНАЧЕНИЯ даёт правильный локализованный отказ
+  «a callable without a result has no value»; падает именно операторная форма не-возвращающего;
+- фаза: `l2_emit_body` метода с формалом (печать `emit_body method=1` есть, следующая
+  `ret_tr method=1` — нет); это не обходчик (`l2_rw_methods_emit` — его печать не срабатывает) и не
+  `l2_eval_discard` (его печать не срабатывает);
+- `l2_discard_run` для кадра `f()` возвращает 0 (`l2_expr_span` = 1, условие `n > 1` не выполнено),
+  поэтому оператор не идёт общим путём отбрасываемого выражения — а именно там живёт работающая
+  ветка для голого атома callable (`l2_eval_discard` → `l2_emit_call` с sel 2). Гипотеза владельца:
+  операторный кадр вызова формала должен идти тем же путём; иначе — локализованный отказ, а не
+  `internal`.
+
+Владелец — следующий срез callable-projection (K04): исправить и закрыть свидетелем (native и, если
+применимо, walked); до этого `internal` здесь — дефект транслятора, а не граница языка.
+
+<a id="named-structure-number-argument-typed-unknown"></a>
 ### NAMED-STRUCTURE-NUMBER-ARGUMENT-TYPED-UNKNOWN — 2026-10-01, deepseek, FIXED срезом K04c
 
 Измерено пробой при работе над строкой 7 матрицы K04: `A: (int: x 1)` в корне единицы, метод

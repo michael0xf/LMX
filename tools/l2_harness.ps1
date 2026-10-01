@@ -1400,7 +1400,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_value_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # An existing head retains its call/assignment role; a nested merge frame
     # does not redeclare it. The present receiver lowering refuses this call.
-    [pscustomobject]@{ Name = 'unit_merge_known_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':3:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_known_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':3:1: more arguments than '; Absent = @(); Debt = @() },
     # A reached Structure merge result does not satisfy an int return place;
     # unit_merge_value_schema is the compatible Structure-return control.
     [pscustomobject]@{ Name = 'unit_merge_value_int_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':4:9: return value has incompatible type'; Absent = @(); Debt = @() },
@@ -2201,9 +2201,9 @@ $fixtures = @(
     # later field of that name collides with it.  The unit classifier reads the source's order, and its answer does not
     # depend on what is registered (the count and fill walks of the lexical pass agree).
     [pscustomobject]@{ Name = 'unit_root_struct_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_root_struct_call_refused.lm2:14:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_root_struct_call_refused.lm2:14:1: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_call2_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_root_struct_call2_refused.lm2:15:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_root_struct_call2_refused.lm2:15:1: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_call2_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_root_struct_call2_forward_refused.lm2:11:1: a typed binding''s candidate is not a Structure value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_decl_beside_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -2234,7 +2234,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_bind_root_letter_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_known_b_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_bind_known_b_call_refused.lm2:16:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_bind_known_b_call_refused.lm2:16:1: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_candidate_not_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_candidate_not_name_refused.lm2:18:5: a typed binding whose candidate is not a name is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_formal_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -2548,7 +2548,8 @@ $fixtures = @(
     # call it -- EXEC pinned, no admission, no EMPTY node: 7.  Counter() and Counter: () run Counter's body from the root
     # and from bump, natively and walked (both methods walked: pinned): 7.  `Model: m` declares m, a named Structure, and
     # m() / m: () run Model's body over m: 7.  The letter's m() is its call too -- the letter's type is not declared, and
-    # that call is not built yet: refused where it stands, as its bare atom is.
+    # that call is refused where it stands: a resolved argumentless Structure takes no
+    # argument (the arity refusal, Q59), as its bare atom is.
     [pscustomobject]@{ Name = 'unit_empty_call_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @('fn: lmx_walk_admit', 'c.LMX_WALK_OP_EMPTY, 1U)'); Debt = @('c.LMX_WALK_OP_EXEC, 5U)') },
     [pscustomobject]@{ Name = 'unit_named_struct_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -2984,7 +2985,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_init_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_init_graph_place_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_init_graph_place_refused.lm2:15:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_local_init_graph_place_refused.lm2:15:5: more arguments than '; Absent = @(); Debt = @() },
     # Its explicit-reference sibling (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): `@: Box b; b: mk` binds after the
     # admission of mk's result to Box; an Other of another shape is refused -- the implicit throw `implements` stops R0.
     [pscustomobject]@{ Name = 'unit_local_init_graph_ref_admit_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
@@ -3174,19 +3175,20 @@ $fixtures = @(
     # `Model: Other`, in a method), a name bound before (Codex: when Model and m both exist, `Model: m` calls Model with m; before,
     # the second `Model: m` in a method declared m again, and at the root after `int: m` it was "incompatible entry
     # signature") -- never the assignment with admission slice 2a made of it.  A named Structure's call with an
-    # argument is not built yet: refused where it stands, the implementation's status, not a rule of the language.
+    # argument is refused where it stands: a resolved argumentless Structure takes no argument
+    # -- the common arity refusal (Q59), not an implementation status.
     [pscustomobject]@{ Name = 'unit_ns_call_arg_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ns_call_arg_method_refused.lm2:8:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_call_arg_method_refused.lm2:8:5: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_call_arg_lit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ns_call_arg_lit_refused.lm2:6:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_call_arg_lit_refused.lm2:6:1: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_call_arg_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ns_call_arg_number_refused.lm2:5:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_call_arg_number_refused.lm2:5:1: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_call_arg_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ns_call_arg_name_refused.lm2:10:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_call_arg_name_refused.lm2:10:5: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_call_arg_bound_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ns_call_arg_bound_refused.lm2:9:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_call_arg_bound_refused.lm2:9:5: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ns_call_arg_bound_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_ns_call_arg_bound_root_refused.lm2:6:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_ns_call_arg_bound_root_refused.lm2:6:1: more arguments than '; Absent = @(); Debt = @() },
     # OPUS-Q54-CONTINUE-20260929-14 slice 2b-1: a method's own named Structure -- `S:` + number fields, S resolving to
     # nothing there -- declared by the general route (book §9: an absent target with an explicit Structure value).  At
     # run time only its Structure exists: built at its statement, a child of the method's own Structure (pinned), bound
@@ -3651,7 +3653,7 @@ $fixtures = @(
     # yet: refused where it stands (was "duplicate named Structure", then "assignment target must be...", then the
     # admission's refusal).
     [pscustomobject]@{ Name = 'unit_duplicate_named_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_duplicate_named_struct_refused.lm2:9:1: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_duplicate_named_struct_refused.lm2:9:1: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_method_lexical_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
@@ -3786,7 +3788,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_ref_formal_rebind_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_formal_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_value_formal_call_refused.lm2:12:5: a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'unit_value_formal_call_refused.lm2:12:5: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');
@@ -3814,7 +3816,7 @@ $fixtures = @(
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @() },
     [pscustomobject]@{ Name = 'unit_struct_return_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a call of a named Structure with an argument is not built yet'; Absent = @(); Debt = @() },
+        Needle = 'more arguments than '; Absent = @(); Debt = @() },
     # Its explicit-reference sibling (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): `@: Model b; b: other(a)` binds after the
     # admission of the call's result to Model; an Other of another shape is refused -- the implicit throw stops R0.
     [pscustomobject]@{ Name = 'unit_struct_return_ref_admit_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;

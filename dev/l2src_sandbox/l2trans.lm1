@@ -1117,6 +1117,7 @@ prototype:
     fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
     fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
+    fn: l2_struct_arity_error (const: @(char path); const: @(LmP0Node at); const: @(LmP0Text name)) int
     fn: l2_admit_paths (int: cand; int: req; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_ix (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
     fn: l2_admit_consumer_at (int: cand; int: req; const: @(LmP0Text varb); const: @(LmP0Frame consumer); const: @(LmP0Structure body); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
@@ -9006,7 +9007,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     if: l2_colon_bound_ty(mi, stmt\as\frame\head, @ target_ty) != 0
         return: 0
     if: l2_colon_is_graph_ty(target_ty) != 0 && l2_formal_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && l2_own_is_slot(l2_own_visible(mi, stmt\as\frame\head)) != 0
-        return: l2_error(path, stmt, "a call of a named Structure with an argument is not built yet")
+        return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
 return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, target_ty, l2_graph_nsty(mi, stmt\as\frame\head), stmt\as\frame\head, mi, path)
 
 # A receiving expression borrows its original fields. Parentheses are the
@@ -14828,6 +14829,20 @@ fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @
             return: l2_error(path, at, "implements is false in a typed binding")
         return: l2_error(path, at, "implements is false")
 return: 0
+
+# Q59 (the author, 2026-10-01): "an ordinary named Structure has no arguments, while `A: B`
+# remains a general application checked against the resolved A's contract".  An argument supplied
+# to a resolved argumentless Structure is therefore the SAME arity refusal the argument matcher
+# gives a callable with too few formals -- the resolved value's contract, not an unimplemented
+# construct ("not built yet") and not a name-specific ban.
+fn: l2_struct_arity_error (const: @(char path); const: @(LmP0Node at); const: @(LmP0Text name)) int
+    []: char msg 240
+    if: name = 0 || name\data = 0 || name\length = 0U
+        c.snprintf(msg, 240U, "more arguments than the resolved Structure has formals")
+        return: l2_error(path, at, msg)
+    ---
+    c.snprintf(msg, 240U, "more arguments than %.*s has formals", (cast: (int) name\length), name\data)
+return: l2_error(path, at, msg)
 
 # No uses walk: the caller supplied a descriptor Consumer.
 fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
@@ -21149,7 +21164,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # implementation's status, not a rule of the language.  (`T()` is its nullary call, above; `T: fresh`, fresh
         # bound nowhere before, declares fresh: l2_colon_decl_shape.)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
-            return: l2_error(path, stmt, "a call of a named Structure with an argument is not built yet")
+            return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
         # A bare colon frame whose head is not a call is an update only when
         # that head already has a typed mutable binding.  In particular,
         # `arg: 7` must not silently invent arg; the graph-construction role was

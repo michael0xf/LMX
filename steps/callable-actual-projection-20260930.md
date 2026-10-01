@@ -171,6 +171,32 @@ declaration. Mutants selecting the latest future row, dropping the host or
 site identity, binding before the initializer, or reducing pointer depth
 must fail. This is independent of Q58's unknown-head classification.
 
+#### Pre-gate correction: future own field is not lexical fallback
+
+`site_visibility_20261001_08` exposed an obsolete positive expectation in
+`unit_dyn_hidden_from_cross_method`: beta reads `shared` before its own
+`int: shared 222`, while neither caller nor lexical parent supplies it.
+The historical test expected beta's own cell to supply 0 and then 222.
+That is not the current forward-visibility / `node` fallback contract.
+Do not restore a future-own type seed only for directly scanned names:
+replacing the read with a helper forwarding the same free name cannot
+create a different source-priority rule.
+
+The author's Q8/U2 in [the original question](../LMX_blog/q/q.md) is distinct:
+a parent field precedes the callee's lexical definition, although the first
+call precedes execution of the parent's declaration. That permits reading
+the parent's not-yet-initialized storage, not a later declaration in the
+callee's own body. Preserve that positive case, including an unrelated
+method's same-named field as a contamination control. Migrate the original
+beta source to a located negative expectation and document the changed
+row; do not delete it or claim an unchanged oracle.
+
+Also test mixed call sites: a valid caller may establish the hidden input's
+type, but that cannot make a different caller's missing source admissible.
+Rejecting only because type inference stays unresolved is insufficient;
+the source selected by native and walker emission must obey the same rule.
+These are in-progress acceptance requirements, not completed gate evidence.
+
 #### Remaining machine-local categories: separate conditional debt
 
 Predeclared C function-pointer locals (`ty40`) and explicit foreign C

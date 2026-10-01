@@ -6,9 +6,10 @@ addressing and the shared lexical lookup repair. Checkpoint `c8167af` closes
 bounded expression/actual spans and the shared pointer-actual checker.
 Checkpoint `5f11b50` adds ordinary whole-Array descriptor values and the
 shared declared-element address type. Checkpoint `74df17d` closes the bounded
-own-reference reception/path-admission repair. Next is removal of the old
-re-entry publication suppression, then portable references and shared
-lexical-local identity before remaining callable work.
+own-reference reception/path-admission repair. Checkpoint `0c5dd61` removes
+re-entry publication suppression and fixes current-occurrence path calls.
+Next are typed portable reference values and shared lexical-local identity
+before remaining callable work.
 Stable is not promoted.
 Implementation evidence and remaining work, not a language specification.
 
@@ -546,9 +547,9 @@ null, primitive/Array/Structure referents and higher depth, including EQ and
 transfer across a call; only then can the generic stores be claimed fixed.
 
 <a id="reentry-publication-repair"></a>
-### Follow-on: remove the re-entry publication exception
+### Re-entry publication and path calls: checkpoint 0c5dd61
 
-The live code still implements an earlier Codex interpretation, not a primary
+The removed guard implemented an earlier Codex interpretation, not a primary
 author exception. [The historical implementation record](working-state-7b.md)
 §3 explicitly attributes "a re-entered activation publishes nothing" to Codex;
 commit `cf7dd58b` and the fixture comments repeat that attribution. The author's
@@ -558,59 +559,67 @@ former fresh I2 graph does not authorize dropping the inner activation's writes.
 The current [recursive trace](../docs/LMX_semantics.en.md#activation-history)
 therefore uses one S with separate working values and ordinary publication.
 
-After the current reference-reception checkpoint, close this bounded §7b
-dependency before the wider portable-reference and lexical-local work:
+Native publication now uses ordinary dirty state. `l2_m_tracked`,
+`l2_emit_act`, generated TLS counters and their entry/call updates are gone.
+Walker `active_top`/`active_over` and frame `up/reent` support are also gone;
+ordinary machine frames, scratch, working values and results remain.
+`l2_path_current` resolves both method and named-Structure procedure roots
+to actual native `self` or existing walker AT/PUT holder zero. Explicit paths
+stay graph-direct; they do not read the working cache.
 
-- Native `l2_emit_publish` must use the ordinary dirty condition, not
-  `l2_reent = 0`. Remove the now-unused `l2_m_tracked`/`l2_emit_act` machinery,
-  generated thread-local activation counters, call-site increments/decrements
-  and entry flags together; do not leave an always-false compatibility guard.
-- Walker `lmx_walk_publish` must not return early for `f.reent`. Remove the
-  exclusively supporting `lmx_walk_active_over`, `lmx_walk_active_top` and
-  frame `up/reent` state after confirming all consumers. The ordinary call
-  stack, scratch lifetime, working values, result and dirty marks remain.
-  Do not replace the exception with graph cloning or a new activation registry.
-- Migrate the old `unit_cache_reentry`, `unit_cache_reentry_peek` and
-  `unit_walk_cache_reentry_peek` expectations by name: their existing arithmetic
-  trace gives 293 rather than 223 under common publication. Preserve the
-  measured outer-working/inner-published/final-outer-write observations, not
-  just the final number. `unit_recursive_fresh_instance` keeps local return
-  123 and outer final y 12, but the last published x is the innermost 0, not 3.
-  These are intentional correction of old Codex-derived expectations.
-- Add a clean-outer-return witness without the final outer write: graph x
-  remains inner 9, outer bare x remains 2. Preserve real declared-cell address
-  identity across entry, including the existing `unit_decl_addr_reentry`
-  native control. Run actual walked callable bodies, not only a walked root
-  that still invokes every relevant method natively. Keep any unsupported
-  direct self-path explicit rather than silently routing around it; the old
-  `l2_rw_path_occ` self refusal cites the removed fresh-instance premise.
-- Mutants restoring suppression in each backend, publishing a clean cache,
-  reloading outer working values, or substituting a fresh cell must fail.
-  Rerun restored focused, kernel, L3 and full generated gates on exact bytes;
-  compare target identities and list expectation changes explicitly.
+A real walked-root test then exposed a second dependency: graph CALL
+discarded the selected path and called the static original method. The
+shared path-headed call builder now supplies the existing resolved path
+expression to existing EXEC child 2. That target is evaluated once and
+ordinary dispatch uses its descriptor; static method metadata still supplies
+signature/result/input contracts. No copy-only route or new opcode was added.
 
-The old positive native address test and the old green suppression tests
-do not certify this repair. No implementation change is claimed here.
+Deliberately migrated expectations: re-entry and peek twins give **293**, not
+223; bare controls remain 23. Recursive local result 123 and final y 12 stay,
+but the innermost published x is 0, not 3. The clean-return twins observe outer
+working x 2 versus physical x 9 and preserve 9 after clean outer return.
+The address test keeps real shared-cell identity and value 55 by clearing
+pending dirty state at an ordinary checkpoint before the direct write; its
+separate uncheckpointed control correctly republishes pending 0. Taking an
+address itself does not clear dirty state or create a checkpoint.
 
-Read-only self-path preflight: removing `l2_rw_path_occ`'s self refusal alone
-is insufficient. `l2_rw_path_value` currently seeds a kind-3 method root
-from `l2_entry_unit` plus the method slot. For a copied current occurrence,
-that can select the original rather than the activation's actual Structure.
-The existing `AT`/`PUT` holder-zero contract (`lmx_walk_data_holder`) already
-selects `f.node`; native has the actual `self` argument. Resolve a method
-root equal to the current method to that current occurrence in both backends,
-then reuse the selected slot/type and ordinary segment traversal. Explicit
-paths remain graph-direct reads/writes, not `OWN`/`SET` working-value access.
-There is no need for a runtime self-name registry or a new opcode.
+Exact restored acceptance:
 
-Add copied/merged callable self-path controls with independent counters,
-as well as the re-entry trace where working x is 2 and physical x is 9.
-Mutating the root back to the original unit or replacing the path with a
-working-value read must fail. Preserve the outside-method `peek -> M\\x`
-controls. Do not claim that this also fixes other-method/sibling roots:
-the walker still seeds those from a static unit, while native selection
-uses `l2_unit_ref`; general copied-parent identity belongs to the
-[canonical-body/copy dependency](#one-complete-lexical-graph).
+- `build/l2_harness/reentry_publication_20260930_final`: **192/192**, 189 fixtures.
+- `build/l2src/reentry_publication_20260930_01`: **281/281**, 104 selftests.
+- `build/l3/reentry_publication_20260930_01`: **11 suites, 295 checks, four inventories**.
+- `build/l2_harness/reentry_publication_full_20260930_01`: **988/1040**, the
+  same 52 failure identities as `74df17d`; all six new rows pass, no prior
+  green regressions, fixed old failures, removals or duplicate fixture rows.
+
+All 20 owned files match frozen source, 19 match full staged inputs and all
+1037 actual fixture files match live sources; the existing intentional
+missing-input row remains absent. Eleven generated-C mechanism mutants
+compile/link and fail their intended runtime checks. Six separate assertion
+inversions yield eight runtime failures and are restored. Two positive
+instrumented artifacts independently record distinct descriptors alternating
+A,R,A,R, with actual native words 1 in native calls and 0 in walked EXEC.
+Merely setting `WalkMethods` did not prove the mode in earlier diagnostic
+attempts; the final witnesses exercise the actual dispatcher.
+
+Evidence directory: `build/l2_harness/reentry_publication_evidence_20260930`
+(`release_report.json`, `final_owned_manifest.json`, `full_comparison.json`,
+`full_fixture_manifest.json`, `runtime_gate_evidence.json`,
+`mutation_summary.json`). Translator SHA256
+`6A2FE54531B90C56CCA6145B023298BDC7940443FF44F08DF21923E50C8B76BC`;
+walker `361D20B88AD7D2E809B9564006086DBA3A95438CD98575F8A93F0F32C030BBE3`;
+header `7ED73828AC4C3B60F66D77D52BB42BED7B45B7F9BA5554F165950330281AACC1`.
+
+This closes only the bounded repair. Source `R()`/bare R after a named-root
+merge, external `A\\M\\hits`, omitted named primitive initialization and
+general copied-parent/sibling identity remain recorded defects. The named
+copy observer calls the actual captured merge result through the dispatcher
+in explicitly forced walker mode; it does not prove native compilation of
+that merged root or fix source R binding. The fn-copy witnesses cover actual
+native and walked copies. Canonical-body/copy and portable references remain
+open; stable is not promoted. Two stale comments near
+`unit_fresh_instance_skipped_decl` are deferred to the next source slice,
+not silently edited after these gates.
 
 <a id="assignment-rhs-repair"></a>
 ## Shared assignment and reference-initializer repair

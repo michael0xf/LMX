@@ -232,7 +232,14 @@ receiving/admission путь до физической записи. Явный 
 candidate, вычисленный один раз, не заменяет прежнюю допустимую ссылку.
 Свидетель отказа сохраняет обе проверки: caught-ошибку и старое значение.
 
-### REENTRY-PUBLICATION-SUPPRESSION — 2026-09-30, Codex, OPEN
+### REENTRY-PUBLICATION-SUPPRESSION — 2026-09-30, Codex, FIXED `0c5dd61`
+
+Guard и обслуживающие native/walker счётчики/связи удалены. Восстановленные
+свидетели проверяют публикацию внутренней активации, чистый внешний возврат
+и адрес реальной объявленной ячейки. Focused 192/192, kernel 281/281,
+L3 11/295, полный корпус 988/1040 с теми же 52 прежними отказами.
+[Точные байты и границы](native-selfbuild-20260930.md#reentry-publication-repair).
+Ниже — исходное наблюдение до исправления.
 
 `l2_emit_publish` требует `l2_reent = 0`, а `lmx_walk_publish` сразу
 возвращается при `f.reent`. Это подавляет записи рекурсивной активации
@@ -291,7 +298,15 @@ L1 сохраняет merge-result в слоте 4, но читает `R\hits` �
 merge и вызывающий его через обычный dispatcher, позволяет отдельно
 проверить self-пути копии, но не закрывает эти два source-level отказа.
 
-### WALK-PATH-CALL-ORIGINAL-OCCURRENCE — 2026-09-30, Codex, OPEN
+### WALK-PATH-CALL-ORIGINAL-OCCURRENCE — 2026-09-30, Codex, FIXED `0c5dd61`
+
+Общий path-headed call передаёт существующее выражение пути в EXEC child 2;
+цель вычисляется один раз, dispatch использует выбранный дескриптор.
+Независимые оригинал и копия дают 1,1,2,2 при фактических native и walker
+вызовах; возврат к статической исходной цели обнаружен runtime-мутантом.
+[Приёмка](native-selfbuild-20260930.md#reentry-publication-repair).
+Source-level привязка R после merge и внешний `A\\M\\hits` этим не исправлены.
+Ниже — сохранённая диагностика до исправления.
 
 `reentry_publication_20260930_09`: native `unit_self_path_copy` проходит,
 а действительный walked-root запуск `unit_walk_self_path_copy` возвращает

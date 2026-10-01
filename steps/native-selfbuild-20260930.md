@@ -547,6 +547,48 @@ The first acceptance matrix must distinguish the two `void*` results above,
 null, primitive/Array/Structure referents and higher depth, including EQ and
 transfer across a call; only then can the generic stores be claimed fixed.
 
+#### Selected internal argument transport and PRIM contracts
+
+The typed result must survive the call boundary too. The old raw argument
+array uses zero both for an absent hidden input and for a supplied null
+reference; a typed evaluator cannot reconstruct presence after that loss.
+The selected repair uses one value-storage convention for native trampolines
+and primitive callbacks: `refs[k] == 0` means absent; otherwise `refs[k]`
+points to storage of the declared argument value. That storage can itself
+contain a null pointer. Scalars use their declared C99 width; descriptor and
+pointer arguments load their held value exactly once. No sentinel, parallel
+presence registry, old unboxed-reference branch or pointer-domain guessing
+is added. This is internal transport, not by-value copying of an LMX graph.
+
+All producers and consumers migrate together, including direct send,
+capture/model construction, held-call adapters, foreign-pointer trampolines,
+`receive_if`, and merge model/map/into-map callbacks. Merge sources must be
+read as values from their argument storage, not by reinterpreting `refs + 1`
+as the old array of descriptors. Same-named graph child arrays elsewhere are
+not call-argument arrays and must not be mechanically converted.
+
+All seven translator PRIM construction families currently set their
+`LmxPrimitive.signature` to zero, although translator metadata already knows
+their contracts. Emit the ordinary physical args/return-parts shape from
+those resolved contracts: typed argument witnesses and an empty or typed
+return part. Runtime primitive fixtures require the same contract. A
+successful non-void reference result is present even if its payload is null;
+an empty return part is void. Marshalling follows these witnesses, never the
+callback's address, spelling or opcode. Root/named-Structure procedures do
+not thereby acquire source-level signature parts: their existing hidden-input
+ARG witnesses must retain the resolved type without mistaking source body
+fields for a signature or adding a companion graph.
+
+An argument transport box is not an addressable formal's language storage.
+A signature descriptor formal continues to designate the actual descriptor.
+An address-taken primitive/reference formal needs its own activation-lifetime
+cell; it must not expose a borrowed caller box as that cell. The acceptance
+matrix includes a supplied null hidden input with a non-null lexical value
+available, and the corresponding genuinely absent input. Check both actual
+native and walked execution. The selected ABI is planned here until its
+source, direct consumers and fresh gates land together; old checkpoint ABI
+descriptions remain historical evidence, not the new contract.
+
 <a id="reentry-publication-repair"></a>
 ### Re-entry publication and path calls: checkpoint 0c5dd61
 

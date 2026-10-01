@@ -60,7 +60,11 @@ kernel — 281/281 (104 selftests), L3 — 11 наборов / 295 провер�
    и [следование явной ссылке на Structure/Array](steps/native-selfbuild-20260930.md#descriptor-reference-follow):
    физический `Lmx*` не превращает языковое разыменование в C aggregate
    by-value. Не создавать context-граф.
-2. Исправить [общую проекцию callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
+2. Снять [прямые вызовы по C-имени в обход native выбранного вхождения](steps/native-selfbuild-20260930.md#native-call-dispatch)
+   через общий call/ABI, сохранив прямой вход только внутри уже выбранного
+   нативного адаптера. Проверить заменённое и пустое слово native при
+   нативном вызывающем; обычное сравнение двух режимов это не доказывает.
+   Исправить [общую проекцию callable-аргумента](steps/callable-actual-projection-20260930.md#shared-projection)
    и убрать живые `Model: fresh` / `T: b c` fallback-ветви через
    [общую классификацию известной головы как вызова](steps/native-selfbuild-20260930.md#known-structure-call-classification).
    Фактические аргументы проверяются по настоящему контракту получателя;

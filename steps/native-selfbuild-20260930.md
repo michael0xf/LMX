@@ -1598,6 +1598,52 @@ distinct from flat C-like `a[i][j][k]`; do not recover or infer rectangular
 shape. Detailed code boundaries and
 acceptance: [general receiver resolution](receiver-resolution-20260930.md).
 
+<a id="native-call-dispatch"></a>
+### Select every call by the actual occurrence's native word
+
+Read-only preparation after the typed argument-transport slice:
+`l2_emit_call` already selects the physical occurrence, evaluates/converts
+actuals, admits them, resolves hidden inputs and publishes. Yet only the
+callable-formal selector uses `l2_emit_call_ref` and
+`l2_emit_dyn_call` / `l2_emit_dyn_tail` to enter `lmx_call_prim`. Unit/path
+selectors instead reject a missing compile-time native body and emit a direct
+`l2_mN` call, ignoring the selected occurrence's `native` word. The historical
+plan paragraph describing direct native-to-native calls is not permission
+to preserve this bypass.
+
+Frozen `_16` formal-test C demonstrates the boundary: its native root directly
+calls the three typed bodies while their descriptor words are empty under
+`--walk-methods`; walking the root follows those empty words. These are real
+native and walked body checks, but not proof that every call selects execution
+from its actual occurrence.
+
+Route all selectors through the already shared typed value-storage transport
+and dynamic call entry after the common pre-call work. Remove the by-symbol
+branch and the compile-time-native rejection. Preserve evaluation once,
+selected occurrence identity, D-105 admission, hidden inputs, publication,
+cleanup and thrown-result mapping, including implicit conversion edges. A
+foreign by-value machine input needs its exact typed temporary from the
+existing foreign-value emitter and that temporary's address, not a new direct
+call fallback. This concerns explicit machine ABI values, not by-value LMX
+Structures. Do not add an entry-name fast path or infer signatures at runtime.
+
+The trampoline's internal call to its selected typed body is intentional;
+routing that back to the dispatcher would recurse. Separately,
+`l2_emit_library_wrappers` still calls a generated body directly and has the
+already recorded unit-ownership/lifetime defect. Close that route with the
+[owner-supplied library construction](#proposed-owner-supplied-library-construction)
+under §8, without a singleton fallback.
+
+Acceptance: retain a native caller; through the test driver's existing builder
+seam only, replace one callee occurrence's native word with a compatible probe
+returning a distinct result, and leave another callee's word empty. Observe
+explicit and hidden arguments, one evaluation of an effectful actual, both
+results and nonzero success. A direct-symbol mutant must fail independently
+of a mutant breaking native-null walker dispatch. Preserve admission,
+pre-call publication, throwing conversion and pointer/formal controls. This
+is the next bounded dispatch repair, not an expansion of the current ABI
+writer's active source slice and not an answer to Q58.
+
 <a id="known-structure-call-classification"></a>
 ### Remove known-head construction fallbacks through common call classification
 

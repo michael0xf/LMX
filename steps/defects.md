@@ -1566,7 +1566,20 @@ Read-only причина: `l2_slot_decl_ty` помечает `@: char p` код�
 | D-113 | 2026-09-28, Opus, замер границы вложенного пути (учёт REVIEW fa47449, строка — по fable_pc) | Вложенный путь от формала внутри выражения (`fn: rd (Outer: m) size_t` / `    return: m\in\x + m\a`) отказывается «unresolved name» (13:15) — а имя разрешимо: то же `m\in\x` в присваивании (`v: m\in\x`) переводится и исполняется. Сообщение называет не ту причину: либо форма «путь через поле-Structure формала в выражении» не поддержана и должна отказываться своими словами, либо это дефект разрешения путей в выражениях. Проба — скретчпад Opus `d105n/nested/read_expr_*.lm2`; на `9e0cee2` и на срезе 2b одинаково. | Opus | FIXED тем же механизмом, что D-112: проверка выражения (`l2_check_fields`) берёт путь глубже одного поля целиком (`l2_path_chain_check`), не первый шаг — лист-значение принимается, лист-не-поле — «unknown field path segment», лист-Structure — «a field path must end at a primitive field», на месте. Свидетель GATED — `unit_d113_nested_expr` (`m\in\x + m\a` через Outer и Other: 6 + 15; до — «unresolved name» 17:15). Мутант — проверка одним шагом (s1): снова «unresolved name». |
 
 <a id="unknown-nested-head-definition-internal"></a>
-### UNKNOWN-NESTED-HEAD-DEFINITION-INTERNAL — 2026-10-01, deepseek (проба), fable (подтверждено на HEAD `7f54dfb`), OPEN
+### UNKNOWN-NESTED-HEAD-DEFINITION-INTERNAL — 2026-10-01, deepseek (проба), fable, FIXED срезом K03c (fable, 2026-10-01)
+
+Исправлено (запись — `k03-head-roles-20261001.md`, K03c): вложенная голова внутри определения, которая ни
+во что не разрешается (не метод, не поле этой Structure выше, отсутствует на уровне единицы выше её
+элемента — `l2_head_absent` по порядку исходника), с хвостом-Structure (включая пустой) — это вложенная
+именованная Structure, то же поле kind 2, что объявляет форма `(): name` (`l2_ns_nested_def`,
+`l2_take_ns_body`), а не оператор процедуры. Заодно Q58: хвост из одного вызова метода у головы без
+привязки — оператор тела определения, не значение головы (`l2_tail_is_structure`). Свидетели:
+`unit_q57_nested_unknown` (C: makeA(), D\E\x = 5), `unit_q57_nested_known_arity_refused`,
+`unit_q58_batch_retained` (+ walked). Десять строк раздела C миграционной записки сняли маскирующий
+корневой `return` и дают свои прежние иглы «unresolved name».
+
+Ниже — исходная запись дефекта.
+
 
 Форма приёмки K03 (`next_core_tasks_v2.md` §3; `L2_L3_CODING_INSTRUCTION.md` §3.3): `C: makeA()` при обоих
 неизвестных именах определяет C с пустой вложенной именованной Structure makeA. Транслятор вместо

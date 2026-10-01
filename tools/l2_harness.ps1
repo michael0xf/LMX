@@ -2243,8 +2243,11 @@ $fixtures = @(
         Needle = 'unit_formal_used_other_refused.lm2:21:13: implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_prim_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_struct_guard_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_struct_guard_call_refused.lm2:7:1: unsupported trailer'; Absent = @(); Debt = @() },
+    # Q58 (K03c): `q:` with the body `show(7)`, show a method -- a named Structure holding the retained call, closed by
+    # the level cut alone; executed by its bare name (hits 0 -> 7).  Formerly unit_named_struct_guard_call_refused,
+    # which pinned the withdrawn reading that a call first in the body makes no named Structure.
+    [pscustomobject]@{ Name = 'unit_named_struct_call_body_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # steps/named-struct-exec.md, slice 2: a bare `S` at the root executes the named Structure -- its
     # whole body (Q19.2 = 2), the pair (a code node, S as data; §12: its procedure) walked by the root's CALL.  The author's
     # example reads Counter\n 0 before, 1 after one execution and 1 after two (was
@@ -3384,6 +3387,23 @@ $fixtures = @(
         Needle = 'unit_universal_absent_colon.lm2:4:1: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_universal_absent_vertical.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_universal_absent_vertical.lm2:5:1: unresolved name'; Absent = @(); Debt = @() },
+    # K03c (next_core_tasks_v2.md K03; Q57, Q58).  A nested head inside a definition that resolves to nothing, with a
+    # Structure tail, defines a NESTED named Structure -- a kind-2 field built in place under its parent, as the
+    # `(): name` spelling declares one: `C: makeA()` with both unknown (the pins: makeA under C, E under D), the block
+    # form with fields (D\E\x reads 5).  Was "internal: an own declaration has no physical field".
+    [pscustomobject]@{ Name = 'unit_q57_nested_unknown.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @('l2_nsp[1]: lmx_struct_new_owned(l2_nsp[0], l2_program_arena)', 'l2_nsp[3]: lmx_struct_new_owned(l2_nsp[2], l2_program_arena)') },
+    # A KNOWN head inside a definition is a call, checked against the resolved value's contract (Q59, K03a): an
+    # ordinary named Structure has no arguments -- the arity refusal, where it stands.
+    [pscustomobject]@{ Name = 'unit_q57_nested_known_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_q57_nested_known_arity_refused.lm2:7:4: more arguments than Known has formals'; Absent = @(); Debt = @() },
+    # Q58: `Batch: (put: 7)` with put a method -- Batch holds the one Structure (put: 7); the known call is retained as
+    # a statement of its body, not executed at the definition (hits 0), executed when Batch is (hits 1).  Native, and
+    # walked (put and Batch's procedure under --walk-methods).
+    [pscustomobject]@{ Name = 'unit_q58_batch_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_q58_batch_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_existing_value_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');

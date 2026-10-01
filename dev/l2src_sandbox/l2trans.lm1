@@ -3658,8 +3658,12 @@ fn: l2_tail_is_structure (const: @(LmP0Frame fr)) int
         if: l2_unit_names_method(f\value\as\atom) != 0 || l2_find_method(f\value\as\atom) >= 0 || l2_is_known(f\value\as\atom) != 0
             return: 0
         ---
+    # Q58 (the author, 2026-10-01): `Batch: (put: 7)` with put a method of the unit -- Batch, absent, holds the one
+    # Structure (put: 7): the known call is a STATEMENT of its body, retained, not executed at the definition and
+    # not the head's value.  A receiver's call (`merge: A B` and what the receiver takes after it) and the C door
+    # stay the head's value, as before.
     if: f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0
-        if: l2_unit_names_method(f\value\as\frame\head) != 0 || l2_find_method(f\value\as\frame\head) >= 0 || l2_is_known(f\value\as\frame\head) != 0 || l2_receiver_word(f\value\as\frame\head) != 0
+        if: l2_is_known(f\value\as\frame\head) != 0 || l2_receiver_word(f\value\as\frame\head) != 0
             return: 0
         ---
 return: 1
@@ -16345,6 +16349,30 @@ return: 0
 # nested entry, then reads the fields in source order. Fields are size_t and
 # char literals, inline nested Structures built in place with this entry as
 # their node, and references to an EARLIER named Structure shared by pointer.
+# Q57 (the author; K03): whether node, an item of named Structure me's body, defines a NESTED named Structure: a
+# frame whose head resolves to nothing -- no method, no field of me declared above it, absent at the unit level
+# above me's own item (l2_head_absent, read from the source's order) -- and whose tail is a Structure
+# (l2_tail_is_structure: the empty one, fields, statements; never one value).  `C: makeA()` with both unknown: C
+# holds an empty named makeA.  Parentheses, emptiness and the number of items do not tell a definition from a
+# call (Q58): the head's resolution does.
+fn: l2_ns_nested_def (const: @(LmP0Node node); int: me) int
+    int: j
+    int: top me
+    if: node = 0 || me < 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || l2_ident(node\as\frame\head) = 0
+        return: 0
+    j: l2_ns_first[me]
+    while: j < l2_nsf_n
+        if: l2_nsf_owner[j] = me && l2_nsf_fname[j] != 0 && l2_text_same(l2_nsf_fname[j], node\as\frame\head) != 0
+            return: 0
+        j: j + 1
+    ---
+    while: top >= 0 && l2_ns_parent[top] >= 0
+        top: l2_ns_parent[top]
+    ---
+    if: top < 0 || l2_head_absent(node\as\frame\head, l2_ns_at[top]) = 0
+        return: 0
+return: l2_tail_is_structure(node\as\frame)
+
 # steps/named-struct-exec.md, slice 1: whether node, an item of named Structure me's body, is a
 # statement -- a bare `return`, or `x: value` where x names a field me declared above (a
 # declaration's head is a type; an assignment's is the field's own name).
@@ -16366,6 +16394,10 @@ fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
         # test that finds a named Structure's first field); an item of any other shape -- `cells[1]: …`,
         # `x\f: …`, `g: 5`, `sendMessage: exit(…)` -- is a statement.  It was read as `Name: field` and
         # refused: "a Structure reference field needs a name".
+        # Q57: a nested head that resolves to nothing, with a Structure tail, is a nested named Structure -- a
+        # FIELD of me (kind 2), read by l2_take_ns_body -- not a statement of the body.
+        if: l2_ns_nested_def(node, me) != 0
+            return: 0
         if: l2_ns_decl_first(node) = 0
             return: 1
         ---
@@ -16434,6 +16466,23 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             if: l2_nsf_push(6, 0U, aty, me) < 0
                 return: l2_error(path, at, "out of memory")
             l2_nsf_fname[l2_nsf_n - 1]: fname
+            count: count + 1
+            f: l2_next_active(f\next)
+            continue
+        # Q57 (K03): a nested named Structure by general resolution (l2_ns_nested_def) -- the field the `(): name`
+        # spelling below declares, kind 2, built in place with me as its node, its body read as any Structure's
+        # (the empty one too).  The slot is reserved before recursing, so field order is source order.
+        if: l2_ns_nested_def(fld, me) != 0
+            if: l2_fn_close(fld\as\frame, fld\as\frame\head, 0) != 0
+                return: l2_error(path, at, "end target does not match close target")
+            if: l2_nsf_push(2, 0U, 0, me) < 0
+                return: l2_error(path, at, "out of memory")
+            l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) fld\as\frame\head)
+            sub_ix: l2_nsf_n - 1
+            ref_ix: l2_ns_n
+            if: l2_take_ns_body((cast: (@: LmP0Text) fld\as\frame\head), me, fld\as\frame\body, fld, path) != 0
+                return: 1
+            l2_nsf_ref[sub_ix]: ref_ix
             count: count + 1
             f: l2_next_active(f\next)
             continue

@@ -1,0 +1,23 @@
+# Q58 (the author, 2026-10-01; K03c): `q:` with the body `show(7)`, show a method of the unit -- q is a named Structure
+# holding the one statement; the call is RETAINED, not run at the definition, run when q is executed (the bare atom).
+# The block form of unit_q58_batch_retained's inline `Batch: (put: 7)`: one P0 shape, one resolution; the frame is
+# closed by the level cut alone, no `end:`, no trailer.  show adds v to the unit's field through node\hits and count
+# reads that cell: 0 after the definition, 7 after `q`.  Formerly unit_named_struct_guard_call_refused -- "a call
+# first in the body makes no named Structure, the trailer is refused" -- the reading Q58 withdrew.  Success is 7.
+int: hits 0
+fn: show (int: v) int
+    node\hits: node\hits + v
+    return: v
+end: show
+q:
+    show(7)
+fn: count () int
+return: node\hits
+int: before count()
+q
+int: after count()
+int: ok 0
+if: before = 0 && after = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

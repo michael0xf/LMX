@@ -1,0 +1,19 @@
+# Q57 (the author; next_core_tasks_v2.md K03): an unknown head inside a definition defines a NESTED named Structure --
+# `C: makeA()` with both names unknown is C holding an empty named makeA (a field of kind 2, as the `(): name`
+# spelling declares one), and the block form `D:` / `E:` / `end:` is the same resolution with fields: D\E\x reads 5.
+# Was "internal: an own declaration has no physical field": makeA fell through to a statement of C's procedure and
+# then to an own row without a slot.  Success is 7.
+C: makeA()
+D:
+    E:
+        size_t: x 5U
+    end: E
+end: D
+fn: check () int
+    size_t: v
+    v: D\E\x
+    if: v != 5U
+        return: 1
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

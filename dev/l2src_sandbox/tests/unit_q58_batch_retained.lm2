@@ -1,0 +1,22 @@
+# Q58 (the author, 2026-10-01): `Batch: (put: 7)` with put a method of the unit -- Batch, absent, holds the one
+# Structure (put: 7): the known call is RETAINED as a statement of Batch's body, not executed at the definition, and
+# runs when Batch is executed (the bare atom).  put counts its calls in the unit's field through the explicit path
+# node\hits (Q52: a bare write would change only its hidden input), and count reads that cell the same way --
+# the root's own bare `hits` is its working value, not reloaded after a call (§7b).  0 after the definition, 1 after
+# `Batch`.  Was "unresolved name": a tail of one known call was read as the head's value.  Success is 7.
+int: hits 0
+fn: put (int: n) int
+    node\hits: node\hits + 1
+    return: n
+end: put
+Batch: (put: 7)
+fn: count () int
+return: node\hits
+int: before count()
+Batch
+int: after count()
+int: ok 0
+if: before = 0 && after = 1
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

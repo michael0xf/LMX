@@ -1,0 +1,19 @@
+# The walked twin of unit_q58_batch_retained.lm2 (--walk-methods: put and Batch's procedure walked): the retained
+# tree of Batch -- the one statement `put: 7` -- is executed by the walker when Batch is executed, and not at the
+# definition; count reads the unit's cell through node\hits: 0 after the definition, 1 after `Batch`.  Success is 7.
+int: hits 0
+fn: put (int: n) int
+    node\hits: node\hits + 1
+    return: n
+end: put
+Batch: (put: 7)
+fn: count () int
+return: node\hits
+int: before count()
+Batch
+int: after count()
+int: ok 0
+if: before = 0 && after = 1
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

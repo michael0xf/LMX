@@ -579,6 +579,15 @@ not thereby acquire source-level signature parts: their existing hidden-input
 ARG witnesses must retain the resolved type without mistaking source body
 fields for a signature or adding a companion graph.
 
+The CALL operation's existing contract operand likewise carries the ordinary
+args/return contract, replacing its result-only witness. Derive it from the
+declared/prepared callee inputs; no-header procedures use their already
+resolved compiler input metadata. Preserve D-04 wrong-arity rejection and
+D-73's unused trailing formal: neither the number of supplied values nor
+the ARG nodes actually used by a body define its input contract. Migrate
+handcrafted CALL fixtures with their genuine callee contracts. This metadata
+belongs to the call operation, not to a second callable graph.
+
 An argument transport box is not an addressable formal's language storage.
 A signature descriptor formal continues to designate the actual descriptor.
 An address-taken primitive/reference formal needs its own activation-lifetime

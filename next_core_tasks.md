@@ -376,6 +376,13 @@ Acceptance:
 
 ### Одно правило исполнения: интерпретируется, если слово `native` пусто (автор, 2026-09-25; прежнее «пользовательский код интерпретируется по умолчанию» от 2026-09-24 снято — дословно в блоге)
 
+Измерения старых checkpoint ниже сохраняют факты и хэши, но не задают
+нынешний транспорт аргументов. В частности, старые прямые `refs[i]` для
+Structure и смешанный ABI числовых ячеек/ссылок заменяются выбранным
+[единым контрактом хранилища аргументов](steps/native-selfbuild-20260930.md#portable-reference-value-projection).
+Исторические METHOD/Callable и interpreter-only корень также не являются
+требованиями к следующей реализации.
+
 Действующая граница: корень файла — обычная полная Structure, исполняемая с первой строки; `main` для этого не требуется. `receiveMessage` доставляет письмо обычной почтой. Способ исполнения выбирается по `Lmx.native`: при пустом слове — walker, при заполненном — нативное тело; это не вводит второй граф данных. Приложение существующей именованной Structure принимает записанные фактические аргументы; голое имя — нульарный случай. Определение неизвестной головы тело не исполняет. Merge и повторный вход обязаны сохранять операторы и объявления в исходном порядке. Прежние формулы `(R0, R0)` и `(code, data)` — исторические, не критерий приёмки.
 
 Измерено на `d942dd9`: флаг режима — `LmxThread.current_mode`/`requested_mode`, `LMX_THREAD_MODE_NATIVE`/`INTERPRETED`, `lmx_thread_request_mode`/`lmx_thread_mode`/`lmx_thread_requested_mode`/`lmx_thread_mode_end`/`lmx_thread_interpreter_set`, `interpreter_dispatch`, `api.request_mode` — 81 упоминание в 6 файлах (`lmx_thread.h.lm1` :15–:16/:105–:109/:169–:181, `lmx_thread.lm1` :97–:99/:434–:484/:617–:685, `lmx_turn.lm1` ×4, `tests/lmx_primitive_thread_selftest.lm1` ×14, `tests/lmx_thread_turn_selftest.lm1` ×14, `tests/lmx_turn_selftest.lm1` ×6); ход: `lmx_thread_turn` :682 ветвится по `current_mode` — NATIVE → `lmx_thread_dispatch_native` (:569: внешний `entry(graph\parent)` для R0-адаптера либо `lmx_call0(arena, graph)`), INTERPRETED → `t\interpreter_dispatch(t)`; вечный драйвер (`harness/l2_eternal_driver.lm1` :41/:273) отдаёт `l2_program_entry` как внешний `entry`; транслятор op-деревьев не эмитирует (`LMX_WALK_OP_` в `l2trans.lm1` = 0), S2 (-112) делает корень файла = вхождение последнего METHOD (E), нативно.
@@ -408,7 +415,13 @@ Acceptance:
 
 ### Expression statement и discard
 
-Авторски утверждено (`LMX-DISCARD-PLAN-20260922-01`). Write-реализация входит в sole-writer ticket `GROK-BOT-C-DOOR-UNIFY-20260922-11` (вместе с унификацией двери `c.*`). Evidence addendum (held RO reviews released into this plan before code):
+Общее expression statement/discard утверждено автором. Ниже — исторические
+срезы его реализации, не действующее назначение старого writer-тикета.
+Фраза прежнего отказа «a callable without a result has no value» не задаёт
+общего запрета на передачу такого callable: в роли аргумента передаётся
+ссылка на вхождение, и совместимость определяет контракт получателя.
+Явное исполнение void-call не создаёт результата. Текущая общая проекция
+описана [в действующем маршруте](steps/callable-actual-projection-20260930.md#shared-projection).
 
 - [x] Receiverless последовательность в body — общий expression statement: тот же expression-span checker/evaluator, что и для выражений с назначением результата. **Закрыто (Opus, FABLE-OPUS-DISCARD-20260924-147, `5a77cb2`, harness 309→318):** один consumer `l2_check_discard`/`l2_eval_discard` принимает `2`, `2 + 2`, голое `f`, `(f)`, `(2 + 2)`, `()` как операторы; `l2_discard_run` даёт число полей оператора, обходчики пропускают весь run; мутант e1 (без группировки) → RED 3.
 - [x] **Binding KIND** решает call vs value: method / callable graph field — invoke; typed fnptr value — evaluate/discard **без** вызова. Discard **не** выполняет admission. **Закрыто (Opus, FABLE-OPUS-DISCARD-20260924-147, `5a77cb2`, harness 309→318):** `unit_discard_fnptr` (typed fnptr — evaluate/discard без вызова, текстовые пины), `unit_discard_calls` (callable — вызов, 11112); `l2_frame_void_call` — `sub` в значении отвергается «a callable without a result has no value» (`unit_discard_void_refused`, мутант e3 RED).

@@ -239,17 +239,23 @@ Equal projections into a required model do not identify the original
 layout. Native D-105 and walked ADMIT_AS must not reconstruct it by choosing
 the first or last equal source map.
 
-The approved implementation boundary is the existing `LmxImplEntry`, not
-`Lmx`, Array, a second graph or a new registry. A nullable weak `layout`
-witness records the compiler-known physical schema of the admitted value;
+The implementation boundary is the existing `LmxImplEntry`, not
+`Lmx`, Array, a second graph or a new registry. A nullable opaque `layout`
+key records the compiler-known source schema of the admitted value;
 it is independent of the required model and the map into that model.
-Unknown remains unknown. An identity map does not establish `layout=req`.
+The earlier graph-descriptor-only witness is rejected: a local named
+declaration has no unit schema child, and each constructed local instance
+is not a stable declaration identity. Use module-lifetime compiler metadata
+identity uniformly for known source schemas. This is not a new value type
+or runtime name/type catalogue. Unknown remains unknown; an identity map
+does not establish the source schema.
 The witness is published only with successful admission at the reached
 receiving operation, never by anticipating a later consumer's admission.
 
 Resolve the candidate's provenance once before evaluation, using the same
 source-site binding and value projection as its type and address. A direct
-named/local Structure has its actual schema. A pointer binding, formal or
+named/local Structure has its declaration's schema key, not a new key per
+instance. A pointer binding, formal or
 returned value obtains evidence from its existing correspondence; its
 declared receiving model is not evidence of its original layout. Ordinary
 reference initialization, reassignment, return and D-105 call reception
@@ -271,12 +277,17 @@ Preserve these boundaries together:
   compile-proved current uses and ordinary full-model reception must not
   be conflated merely to make native and walked branches agree.
 - A fresh capture is in its required model's physical slots, with the
-  existing holes semantics; it does not retain the original source layout.
+  existing holes semantics. A compiler-known producer supplies that schema's
+  key explicitly; a runtime-only producer without that evidence supplies
+  unknown. Neither retains the original value's source key by default.
 - Graph copy/merge produces a fresh value and does not inherit the source's
   admission entries. A known copy producer may supply its actual resulting
   schema; missing whole-merge projection remains the separate recorded debt.
-- The witness is weak, like the existing value/model/frame links. Pruning
-  must remove stale witness references; attach and realloc preserve the
+- Value/model/frame links remain weak. The key is non-owning module
+  metadata, not a graph pointer to classify during pruning. Its lifetime
+  follows the existing static-map/module contract, not a new unload policy.
+  Graph instruction operands carry it through ordinary typed pointer cells,
+  never raw unclassified child references. Attach and realloc preserve the
   complete entry. No temporary activation pointer is retained.
 
 Acceptance includes both colliding layouts, typed-reference initialization
@@ -284,6 +295,10 @@ and rebinding from another model, forwarding and returned inputs, actual
 walked bodies, null/unknown, candidate-once, failure-no-store, capture holes,
 fresh copies and prune/attach lifetimes. All registration producers and
 manual selftest constructors migrate together; no legacy-format fallback.
+Include two local declarations with colliding intermediate maps but different
+later-consumer positions, and repeated construction/re-entry: values differ,
+source keys do not. State exactly which producer/consumer bodies were walked;
+a walked root invoking a still-native local producer is not a walked producer.
 This section is a bounded repair plan, not completed runtime evidence.
 
 <a id="witnesses"></a>

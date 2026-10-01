@@ -527,6 +527,19 @@ identity until projection; widening to `void*` cannot erase it early.
 Activation scratch retains its declared type without being misrepresented
 as a permanent arena cell.
 
+Source lowering must retain the same distinction before building the graph.
+The old `l2_rw_tokens` joins path/index fields into a synthetic atom;
+`l2_rw_index_run` accepts only an atom index, and `l2_rw_texpr` uses a fixed
+63-token limit. That view loses a bounded flat address operand or a composite
+index. Replace it with compiler-owned operand records borrowing the original
+first field, field count and source node, consumed by the existing
+precedence/type/emission recursion. Reuse `L2Address`, `L2IndexedOperand` and
+the shared operand-span rules; do not add an address-only parser or copy the
+AST. Size the token/operand view from the actual source span and remove the
+superseded recognizers. Preserve arithmetic, short-circuit evaluation,
+one-time index evaluation and count/emission parity. This removes the
+touched 63-token cap, not every other recorded implementation limit.
+
 Use one shared physical-place resolver for the already-defined address
 operation and ordinary place consumers. Factor existing AT/OF/ELEM location
 calculation; do not duplicate value evaluation. Resolve indexed addresses

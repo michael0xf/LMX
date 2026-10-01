@@ -168,8 +168,8 @@ Deleting the early return is not the repair: `ty` there is a translator type cod
 value's schema is a compiler-side tagged merge schema (`l2_schema_merge(res)`), and the
 receiving consumers that ask `l2_input_model` want a named namespace.  So the slice needs a
 decision on the dynamic-input type space, which is what the design question to Codex
-(DS-CODEX-004) asks; until then the slice stays open and the witness is registered red-by-design
-in the row above.
+(DS-CODEX-004) asks. (The witness file existed but had no harness row at this point; §5 registers
+it, green.)
 
 ### DS-CODEX-004 — the reply (2026-10-01, received by fable continuing deepseek's queue)
 
@@ -211,3 +211,99 @@ Suggested focused acceptance: caller-local override; forwarding through an inter
 with no local copy; lexical fallback when no dynamic source exists; a compatible candidate whose
 requested field sits at a different position; native and walker. For a genuinely new contradiction,
 send a minimal example back under DS-CODEX-004; otherwise no author decision is needed.
+
+## 5. K02c — the repair: a merge result is an ordinary hidden input (fable, 2026-10-01)
+
+Done along Codex's reply (DS-CODEX-004 above): no new language decision, no named model invented,
+no schema Structure, no registry; the existing source/input projection generalized where it was
+named-only, and the kernel's walker given the one general mechanism the result needed.
+
+**Translator (`l2trans.lm1`).**
+- `l2_scan_ident`: the early return on `l2_mres_find` is now "a merge result bound in THIS scope"
+  (`l2_resolved_own` ≥ 0, a merge result, not `l2_own_unit_seen`); the UNIT's merge result seen
+  from a method falls to the Q52 branch and becomes the method's hidden input, as `int: total`
+  does in `unit_named_struct_hidden_input`.
+- `l2_input_schema(mi, k)` is the receiving metadata of ANY input: own-key source, formal's
+  declared model, or — new — a hidden input's lexical source schema (`l2_own_schema` of
+  `l2_own_lexical`), tagged for a merge result. `l2_input_model` stays named-only and untouched;
+  the hidden-input consumers moved to the schema: `l2_hidden_model_source` (a forwarded input),
+  `l2_path_root` (a tagged root is walked as a slot map, `res`, like an own merge root),
+  `l2_check_fields`' D-97 refusal (keyed on `res` too), `l2_hidden_emit_admit` /
+  `l2_d105_emit_source` / `l2_emit_model_admit` (the requirement; `-1` is "none", a tagged value is
+  one), `l2_dyn_site` and `l2_d105_close` (sources, edges and pairs of a place by its schema),
+  `l2_d105_emit_slot` (the by-name read), `l2_untyped_graph`, `l2_rw_call` / `l2_rw_path` /
+  `l2_rw_path_value` / `l2_rw_d105_need` (the walker).
+- `l2_model_inst`: a tagged schema is instanced by the merge result ITSELF — the Structure its own
+  slot holds (`l2_own_slot_at`), the one place its layout exists at run time. `l2_d105_width`,
+  `l2_d105_table`, `l2_admit_paths`, `l2_admit_consumer_at`, `l2_descriptor_used` take a tagged
+  requirement (their fields were already read through `l2_schema_*`, K01).
+- `l2_dyn_site`: an intermediate caller without a binding INHERITS a graph input unless the name is
+  a unit Structure or an eternal branch — `l2_colon_model` had called a merge result a model and
+  stopped the inheritance (`mid` read the unit's `copy` instead of forwarding the caller's).
+- The walker's model operands (`l2_rw_admit_project`'s ADMIT_AS child 4, `l2_rw_path_value`'s OF
+  child 3): a named Structure's `l2_nsp[req]` as before; for a tagged requirement a FRAME in the
+  model's place — `l2_rw_own` of the result's own slot (an AT), evaluated where the op runs, since
+  the result does not exist when the frames are built. `l2_rw_admit` (the PRIM admit of an
+  unknown source) keeps named models only; a tagged requirement always has a known source.
+
+**Kernel (`lmx_walk.lm1`).** `lmx_walk_model_operand(f, operand, @out)`: the model Structure
+itself, or a frame (told by role, `lmx_walk_node`) evaluated to a reference; used by ADMIT_AS
+(child 4) and OF/PUT_OF (the optional model). `tests/lmx_walk_admit_selftest.lm1` gains the case
+"a frame in the model's place is evaluated to the model" and its negative (a frame evaluating to no
+reference is INVALID): 34 checks, 0 failures; on HEAD's `lmx_walk.lm1` (the kernel mutant) the new
+case fails — recorded below.
+
+**Witnesses** (rows in `l2_harness.ps1`, all `Entry 7` unless said):
+- `unit_merge_hidden_input` — the caller's `copy: merge: Other` (22) wins over the unit's (1); was
+  81. `unit_walk_merge_hidden_input` — the same, `read` and `caller` walked (`Debt` pins the
+  ADMIT_AS).
+- `unit_merge_hidden_forward` — through `mid`, which binds no `copy`: inherited input, 22.
+- `unit_merge_hidden_lexical` — no caller binding: the unit's result, 1.
+- `unit_merge_hidden_position` — the caller's `copy: merge: Wide` (`pad` first): `value` selected by
+  NAME through the pair map, 22, never 5.
+- `unit_merge_hidden_refused` — the caller's `copy: merge: Bare` has no `value`: refused at
+  translation at the call, `11:13: implements is false in function argument` (K01's used-edge
+  check on the source).
+
+**Evidence.** Focused `build/l2_harness/k02c_focus_20261001_04` (staged `l2trans.lm1` blob
+`273e4185`, `lmx_walk.lm1` `88816478`): **19 targets, 0 failed** — the six K02c rows and the
+neighbours `unit_named_struct_hidden_input` (+ walk twin), `unit_merge_formal_operand`,
+`unit_merge_actual_operand`, `unit_merge_value_method`, `unit_merge_in_method`, `unit_d105r_formal`,
+`unit_d105n_passon`, `unit_walk_d105_perm`, `unit_d105r_edge_refused`. The runs before it record the
+repair's path: `_01` the kernel helper without its prototype (driver did not build); `_02` 18/19 —
+`forward` red, `mid` read the unit's `copy` (the `l2_dyn_site` inheritance stopped by
+`l2_colon_model`); `_03` 18/19 — `lexical` red, the root admitted its own `copy` against its not yet
+published cell (`l2_model_inst` keyed on the callee, not the emitted method). Kernel selftest
+`lmx_walk_admit_selftest`: 34 checks, 0 failures with the patched walker; on HEAD's `lmx_walk.lm1`
+the new case fails ("a frame in the model's place is evaluated to the model (K02c)") — 1 failure.
+Mutants through the harness (each restored and re-hashed before the next step):
+- M0, the defect itself — HEAD's `l2trans.lm1` (`c1950c3a`) and `lmx_walk.lm1` (`5e2b2377`) with the
+  new rows, `build/l2_harness/k02c_mutant_head_20261001_01`: `_input`, `_forward`, `_position` **exit
+  81** (read takes the unit's 1), the walk twin lacks its ADMIT_AS, `_refused` is ACCEPTED; `_lexical`
+  green by coincidence (1 is the old behaviour too). 5 of 9 targets red, each for the defect's reason.
+- M1, the old `l2_scan_ident` early return alone on the K02c bytes (`c04c9cf5`),
+  `k02c_mutant_scan_20261001_01`: the four positives red with "gcc exit 1 on the generated C" — NOT
+  the witness: with `copy` back in scope, `read` reads the unit's merge result by an own-rooted path
+  whose place is now marked (`l2_d105_sub`), so the by-name read is emitted without the reading
+  method's `l2_dslot` local (declared only where `l2_d105_any(mi)`). Recorded as "did not reach";
+  M0 is the counterfactual for the scan rule. The latent `l2_dslot` gap is a residual below.
+- M2, HEAD's kernel walker under the K02c translator (`lmx_walk.lm1` `5e2b2377`),
+  `k02c_mutant_kernel_20261001_01`: `unit_walk_merge_hidden_input` red with `lmx: walk error:
+  INVALID` (ADMIT_AS finds a frame where it expects the model); `unit_walk_named_struct_hidden_input`,
+  `unit_walk_d105_perm`, `unit_merge_hidden_input` (native) stay green.
+Full gates on the committed bytes (`l2trans.lm1` `273e4185`, `lmx_walk.lm1` `88816478`):
+- generated `build/l2_harness/k02c_full_20261001_01`: **47 of 1128 targets failed** (K03b's
+  `k03b_full_20261001_01`: 47 of 1122) — by exact ID and diagnostic the six new rows OK, no newly
+  failing target, the 47 retained failures unchanged;
+- kernel `build/l2src/k02c_kernel_20261001_01` (`build_l2src.ps1 -Run -KeepAll`): **286 targets, no
+  failures**, `lmx_walk_admit_selftest` included;
+- L3 `tools/run_l3_selftest.py`: all 11 suites ok, type budget ok.
+A bounded improvement on the disclosed red baseline, not the clean-kernel checkpoint.
+
+**Residual.** `unit_merge_hidden_input`'s explicit `node\...` path case (Codex's "explicit physical
+path that by the rules does not become a dynamic input") is not a new row: `node\copy\value` in a
+method reads the unit's field in place (the `node` root, FABLE-SONNET-NODE-ROOT-20260923-121) and is
+untouched by this slice. The runtime-selected operand (B at one call, C at another) of §2 stays
+open. A method reading ANOTHER method's marked own by an own-rooted path would emit the by-name
+read without its `l2_dslot` local (declared only where `l2_d105_any(mi)`); no real program reached
+it (the unit's fields are hidden inputs from a method, `node\…` is a different root), only M1 did.

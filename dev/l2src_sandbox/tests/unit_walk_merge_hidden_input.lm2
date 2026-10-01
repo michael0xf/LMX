@@ -1,0 +1,18 @@
+# The walked twin of unit_merge_hidden_input.lm2 (--walk-methods: read and caller walked): the caller's own
+# `copy: merge: Other` (value 22) reaches read as its hidden input, admitted against the unit-level result's schema
+# by the walker's ADMIT_AS -- whose model is the unit's `copy` itself, read where the op runs.  Success is 7.
+Model: (int: value 1)
+Other: (int: value 22)
+copy: merge: Model
+fn: read () int
+return: copy\value
+fn: caller () int
+    copy: merge: Other
+    return: read()
+end: caller
+int: result caller()
+if: result != 22
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

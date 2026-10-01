@@ -20,6 +20,7 @@ prototype:
     fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: void out) int
     fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+    fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int
     fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int
     fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
     fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: VoidArray out) int
@@ -878,6 +879,7 @@ return: lmx_walk_store_numeric_raw(place\address, ty, number)
 fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int
     LmxWalkValue: holder
     @: Lmx code (cast: (@: Lmx) node)
+    @: Lmx view_model 0
     @: VoidArray array 0
     @@: void slot 0
     @: void cell 0
@@ -949,7 +951,10 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         if: op = c.LMX_WALK_OP_PUT_OF
             kind: 4
         if: (op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_PUT_OF) && code\array.size > (cast: (size_t) kind) && lmx_arena_ref_value(code, (cast: (size_t) kind)) != 0
-            if: lmx_implements_slot(f\arena, (cast: (@: Lmx) root), (cast: (@: Lmx) lmx_arena_ref_value(code, (cast: (size_t) kind))), index, @ index) != 0
+            status: lmx_walk_model_operand(f, lmx_arena_ref_value(code, (cast: (size_t) kind)), @ view_model)
+            if: status != c.LMX_WALK_OK
+                return: status
+            if: lmx_implements_slot(f\arena, (cast: (@: Lmx) root), view_model, index, @ index) != 0
                 return: c.LMX_WALK_INVALID
             ---
         ---
@@ -2045,6 +2050,24 @@ fn: lmx_walk_admit_letter (@: void owner; @@: void refs; size_t: nargs; @: void 
     ---
 return: lmx_walk_admit_against(arena, (cast: (@: Lmx) payload), model, out)
 
+# A MODEL operand -- ADMIT_AS's child 4, OF's child 3, PUT_OF's child 4: the model Structure itself, or (K02c) a
+# frame standing in its place, evaluated here to the model's reference -- a merge result's own Structure, which
+# does not exist when the frames are built.  Told apart by role, as every operand is (lmx_walk_node): a Structure
+# is no frame.  0 stays 0 (no model).  Writes the model to out; a status other than OK is the evaluation's.
+fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int
+    LmxWalkValue: mv
+    int: status
+    \out: (cast: (@: Lmx) operand)
+    if: operand = 0 || lmx_walk_node(f, operand) = c.LMX_WALK_OP_NONE
+        return: c.LMX_WALK_OK
+    status: lmx_walk_eval(f, operand, @ mv)
+    if: status != c.LMX_WALK_OK
+        return: status
+    if: mv.present = 0 || mv.kind != c.LMX_WALK_VALUE_REFERENCE || mv.ref = 0
+        return: c.LMX_WALK_INVALID
+    \out: (cast: (@: Lmx) mv.ref)
+return: c.LMX_WALK_OK
+
 # ADMIT_AS carries one flat immutable instruction: source schema token/target model,
 # default target map, alternatives keyed by exact physical layout, then catches.
 # Existing ImplEntry views borrow this instruction and an offset; there is no
@@ -2079,7 +2102,9 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         return: c.LMX_WALK_INVALID
     ---
     catch_at: code\array.size - 3U * catch_n
-    model: (cast: (@: Lmx) lmx_arena_ref_value(code, 4U))
+    status: lmx_walk_model_operand(f, lmx_arena_ref_value(code, 4U), @ model)
+    if: status != c.LMX_WALK_OK
+        return: status
     token_cell: lmx_arena_ref_value(code, 1U)
     if: token_cell != 0
         if: lmx_domain_kind(f\arena, token_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, token_cell) != c.LMX_TYPE_CHAR_PTR

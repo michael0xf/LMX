@@ -2362,6 +2362,27 @@ $fixtures = @(
         ); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_struct_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('c.LMX_WALK_OP_EXEC, 6U)') },
+    # K02c (next_core_tasks_v2.md K02 bullet 3; defects.md MERGE-HIDDEN-INPUT-PROJECTION; Codex DS-CODEX-004): a
+    # unit-level MERGE RESULT named free in a method is that method's hidden input like any unit field (Q52), its
+    # tagged merge schema the receiving metadata (l2_input_schema): the caller's own `copy: merge: Other` (22) wins
+    # over the unit's (1); an intermediate caller without a binding forwards; no caller binding falls back to the
+    # unit's; a candidate with `value` at another position is read by NAME through the pair map (K01); native and,
+    # for the first, walked -- the walker's ADMIT_AS takes the unit's result itself as the model, read where the op
+    # runs (a frame in the model's place, lmx_walk_model_operand).
+    [pscustomobject]@{ Name = 'unit_merge_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_merge_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @(); Debt = @('LMX_WALK_OP_ADMIT_AS') },
+    [pscustomobject]@{ Name = 'unit_merge_hidden_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_hidden_lexical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_hidden_position.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # Its negative: the caller's result (Bare) has no `value`, which read uses -- the Consumer-uses admission refuses
+    # the call at translation (the source does not carry a field the Consumer reads; K01's used-edge check).
+    [pscustomobject]@{ Name = 'unit_merge_hidden_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_hidden_refused.lm2:11:13: implements is false in function argument'; Absent = @(); Debt = @() },
     # OPUS-WALKLOOP-20260929-11: Counter's procedure has a `for` -- it stayed native under the knob until the walker's FOR,
     # though the fixture says it is walked; now it is (the Absent pins).
     [pscustomobject]@{ Name = 'unit_walk_named_struct_exec_ctl_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;

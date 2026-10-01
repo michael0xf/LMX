@@ -1,0 +1,18 @@
+# K02c with K01: the caller's merge result has `value` at ANOTHER position (Wide: pad first) than the unit-level
+# result read was checked against; the field is selected by its NAME on the actual candidate (Codex, DS-CODEX-004,
+# point 4), through the admission's pair map -- 22, never pad's 5.  Success is 7.
+Model: (int: value 1)
+Wide: (int: pad 5; int: value 22)
+copy: merge: Model
+fn: read () int
+return: copy\value
+fn: caller () int
+    copy: merge: Wide
+    return: read()
+end: caller
+int: result caller()
+if: result != 22
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

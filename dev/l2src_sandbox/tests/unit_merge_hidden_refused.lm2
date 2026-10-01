@@ -1,0 +1,15 @@
+# K02c negative: the caller's merge result (Bare) has no `value`, which read uses through its hidden input -- the
+# source does not carry the field the Consumer reads, so the call is refused (the same admission that admits Other's
+# and Wide's results), never read slot 0 of whatever arrived.
+Model: (int: value 1)
+Bare: (int: other 3)
+copy: merge: Model
+fn: read () int
+return: copy\value
+fn: caller () int
+    copy: merge: Bare
+    return: read()
+end: caller
+int: result caller()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

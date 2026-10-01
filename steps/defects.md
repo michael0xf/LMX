@@ -396,7 +396,20 @@ descriptor модели. Удаление `req < 0` не устраняет эт
 проекция selectors/uses предшествует закрытию этого случая.
 
 <a id="merge-hidden-input-projection"></a>
-### MERGE-HIDDEN-INPUT-PROJECTION — 2026-10-01, Codex, OPEN
+### MERGE-HIDDEN-INPUT-PROJECTION — 2026-10-01, Codex, FIXED срезом K02c (fable, 2026-10-01)
+
+Исправлено по ответу Codex (DS-CODEX-004; запись — `k02-merge-values-20261001.md` §4–5): merge-результат
+единицы, названный свободно в методе, — обычный скрытый вход этого метода (как `int: total` в
+`unit_named_struct_hidden_input`); его принимающие метаданные — tagged-схема merge через общую
+`l2_input_schema`, экземпляр модели для допуска — сам результат (его own-слот, или рабочее значение
+эмитируемого метода); промежуточный вызывающий без своей привязки наследует вход; обходчик берёт модель
+ADMIT_AS/OF как кадр, вычисляемый на месте (`lmx_walk_model_operand` в ядре). Свидетели:
+`unit_merge_hidden_input` (22, не 1; native и walked), `_forward` (через `mid`), `_lexical` (1),
+`_position` (поле по имени, 22), `_refused` (отказ трансляции на вызове). Открытым остаётся
+runtime-выбираемый операнд merge (B/C на разных вызовах) — §2 заметки K02.
+
+Ниже — исходная запись дефекта.
+
 
 `build/l2_harness/merge_hidden_source_20261001_01`: unit объявляет
 `copy: merge: Model` с value=1; метод read читает свободное `copy\value`;

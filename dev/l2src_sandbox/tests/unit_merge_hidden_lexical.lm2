@@ -1,0 +1,14 @@
+# K02c: no caller on the way binds `copy`, so read's hidden input falls back to its lexical source -- the unit-level
+# merge result (value 1) -- the last of the three sources (the book §12).  Success is 7.
+Model: (int: value 1)
+copy: merge: Model
+fn: read () int
+return: copy\value
+fn: plain () int
+return: read()
+int: result plain()
+if: result != 1
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

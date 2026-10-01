@@ -1,0 +1,20 @@
+# K02c: the caller's merge result reaches read THROUGH an intermediate caller that binds no `copy` of its own -- mid
+# inherits read's hidden input and forwards what it received (the book §12: an inherited input before the lexical
+# fallback).  caller's copy (22) wins over the unit's (1).  Success is 7.
+Model: (int: value 1)
+Other: (int: value 22)
+copy: merge: Model
+fn: read () int
+return: copy\value
+fn: mid () int
+return: read()
+fn: caller () int
+    copy: merge: Other
+    return: mid()
+end: caller
+int: result caller()
+if: result != 22
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

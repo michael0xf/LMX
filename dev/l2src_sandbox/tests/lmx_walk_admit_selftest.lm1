@@ -133,6 +133,8 @@ fn: main () int
     @: Lmx outer_partial 0
     @: Lmx outer_model 0
     @: Lmx captured 0
+    @: Lmx kmodel_holder 0
+    @: Lmx katn 0
     @: LmxImplEntry proof 0
     @: Lmx place 0
     @: Lmx pad 0
@@ -498,6 +500,29 @@ fn: main () int
     sz(pn, 8U, 1U)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_slot(ga, captured, target_model, 0U, @ selected_slot) != 0)), "capture cannot promise full identity for a newly required field")
+
+    # K02c (lmx_walk_model_operand): the model's place may hold a FRAME, evaluated where the op runs to the model's
+    # reference -- a merge result's own Structure, which does not exist when the frames are built; an AT of the slot
+    # that holds it stands in for it.  The same candidate and instruction otherwise: admitted and recorded against
+    # target_model exactly as with the model itself.  A frame evaluating to no reference is INVALID, not a model.
+    kmodel_holder: pl(unit, 23U, 1U)
+    ref(kmodel_holder, 0U, target_model)
+    m: mk_m(unit, 24U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 9U)
+    token(pn, 1U, 0U)
+    ref(pn, 3U, mapped_value)
+    katn: fr(pn, 4U, c.LMX_WALK_OP_AT, 3U)
+    ref(katn, 1U, kmodel_holder)
+    sz(katn, 2U, 0U)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 0U)
+    sz(pn, 8U, 1U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) mapped_value) && lmx_implements_find(ga, mapped_value, target_model) != 0)), "a frame in the model's place is evaluated to the model (K02c)")
+    sz(katn, 2U, 7U)
+    st: go(m)
+    check((cast: (int) (st != c.LMX_WALK_OK)), "a model frame evaluating to no reference is no model")
 
     c.printf("lmx_walk_admit_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

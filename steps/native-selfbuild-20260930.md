@@ -322,10 +322,11 @@ inconclusive and excluded. The corrected ordinary-call mutation is detected.
 Remaining boundaries are not hidden by this checkpoint. The callable-formal
 result fixture proves native result identity and producer counts 1/2; it
 does not close general walked callable-formals. Diagnostic `_13` retains
-the measured local `ref\\value` refusal, queued with shared lexical-local
+the measured local `ref\value` refusal, queued with shared lexical-local
 identity; `_14` and the final fixture do not claim field-path coverage there.
 Portable pointer operations, Array formals, canonical graph/copy and Q58
-remain independent open work. Re-entry publication suppression is next.
+remain independent open work. Re-entry publication suppression, pending at
+that checkpoint, is repaired in `0c5dd61` below.
 
 ### Original preflight and diagnostic history
 
@@ -611,7 +612,7 @@ walker `361D20B88AD7D2E809B9564006086DBA3A95438CD98575F8A93F0F32C030BBE3`;
 header `7ED73828AC4C3B60F66D77D52BB42BED7B45B7F9BA5554F165950330281AACC1`.
 
 This closes only the bounded repair. Source `R()`/bare R after a named-root
-merge, external `A\\M\\hits`, omitted named primitive initialization and
+merge, external `A\M\hits`, omitted named primitive initialization and
 general copied-parent/sibling identity remain recorded defects. The named
 copy observer calls the actual captured merge result through the dispatcher
 in explicitly forced walker mode; it does not prove native compilation of

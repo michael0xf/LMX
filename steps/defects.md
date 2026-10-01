@@ -90,6 +90,24 @@ C-aggregate тоже получает `return: 0` от `l2_emit_poll`, что н
 `6F3F4EC9…`. Это подтверждённая прежняя граница, не runtime-отказ.
 Нынешний зелёный throwing Pair не подменяет её исправление.
 
+Read-only карта следующего ремонта на `621e8af`: `l2_emit_sig` выбирает
+status/out только по `l2_m_throws`; `l2_emit_ret_tr`, inline-return в
+`l2_emit_stmts`, `l2_mad_emit` и `l2_emit_empty_return` повторяют это
+разделение. `l2_emit_poll` при этом вынужден возвращать фиктивный scalar 0
+из небросающего typed-body. Возможный общий путь — отделить внутренний
+ABI завершения от наличия языкового `throws` и использовать уже имеющийся
+status/out для всех генерируемых typed-body. Это проект ремонта, не новая
+норма и не выполненное изменение. Нужно вместе перевести prototype/body,
+платформенные варианты, возвращаемый callable и `l2_emit_tramp_call`,
+сохранив точный тип result storage и текущее различение stop/throw/value.
+Публичный C-wrapper — отдельная граница: `l2_emit_library_wrappers` ещё
+вызывает typed-body напрямую и имеет незакрытый owner-lifetime; его нельзя
+случайно сломать сменой внутреннего прототипа или считать проверенным
+по обычному root-gate. Свидетели должны включать небросающий Pair,
+примитив, указатель, void, настоящий throw и stop до выдачи результата;
+никакого выдуманного значения и искусственного `throws` в пользовательском
+исходнике.
+
 <a id="foreign-value-member-projection"></a>
 ### FOREIGN-VALUE-MEMBER-PROJECTION — 2026-10-01, Codex, OPEN
 
@@ -155,7 +173,7 @@ Read-only trace подтверждает прежний дефект уже в `
 и без изменения правил `@`.
 
 <a id="merge-result-value-projection"></a>
-### MERGE-RESULT-VALUE-PROJECTION — 2026-10-01, Codex, OPEN
+### MERGE-RESULT-VALUE-PROJECTION — 2026-10-01, Codex, IN WORK `MERGE-RESULT-VALUE-PROJECTION-20261001`
 
 На frozen binary `site_visibility_20261001_expanded02` минимальный
 `copy: merge Model` / `@: Model b copy` отвергается в корне на 5:1

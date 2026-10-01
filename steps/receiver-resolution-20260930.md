@@ -158,8 +158,9 @@ string contract: `ok` has length 2 with no NUL in the Array (D-20,
 - Negative/mutant witnesses must distinguish wrong type, wrong receiver order
   and missing declaration information; no fabricated interpretation on error.
 - Before landing code: full affected parser, generated L2, kernel and L3 gates,
-  check_docs, diff --check, exact dev/stable synchronization and tested-byte
-  checkpoint. Focused runs are diagnostic evidence only.
+  check_docs, diff --check and an exact tested-byte checkpoint of the active
+  sandbox. The stable `l2src` copy is not synchronized as part of these repairs
+  (current plan §0). Focused runs are diagnostic evidence only.
 
 The previous proposal to generalize a two-index Array scanner into an
 arbitrary-depth Array scanner is superseded. The active requirement is general

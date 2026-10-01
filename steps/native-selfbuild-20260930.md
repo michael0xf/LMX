@@ -467,6 +467,13 @@ contract projected through the existing input witness. `l2_input_is_descriptor`
 explicitly lacks that case today. The raw ABI spelling `c.VoidArray*` alone
 does not establish an Array element contract. No C-name-specific inference
 may fill the gap.
+The earlier source-side boundary is also missing: at source checkpoint
+`0c5dd61`, `l2_contract_leaf` accepts reference/const layers but returns no
+leaf for Array contract kind 1, so `l2_contract_formal` rejects it before
+`l2_typed_formal` produces an input. Updating the descriptor predicate alone
+cannot implement Array formals. Preserve the already-parsed Array/element
+contract through resolution, input metadata and native/walker consumers;
+body-Array reference tests do not prove this signature path.
 
 Sequence after named references: resolve the value/address representation
 dependency below before lifting the generic operator restrictions; lower

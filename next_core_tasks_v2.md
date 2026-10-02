@@ -5,8 +5,9 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 This is the restart plan requested on 2026-10-01. It replaces the **active queue**
 of [next_core_tasks.md](next_core_tasks.md), not its historical evidence. It stops
 at full L3/L2 self-build and ordinary calls over Message transport. Application
-development is outside this document. Work is paused after the current
-merge-result slice and this documentation handoff, at the author's request.
+development is outside this document. The original documentation handoff paused
+code work; its subsequent resumption is recorded in [steps/current.md](steps/current.md).
+The author's 2026-10-02 priority below now determines the first remaining task.
 
 This is a plan, not a language specification or a claim that unchecked features
 work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
@@ -15,6 +16,29 @@ work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
 [v2 dictionary](next_core_tasks_dictionary_v2.md),
 [kernel map](CORE_L2_L3_v2.md), and
 [porting guide](L2_L3_CODING_INSTRUCTION.md).
+
+<a id="first-critical-graph-bug"></a>
+## First action — critical_graph_bug (CRITICAL / P0, OPEN)
+
+- [ ] **Complete [critical_graph_bug](steps/tickets/critical_graph_bug.md)
+  before choosing another remaining implementation item in this plan.**
+
+Author's explicit priority, 2026-10-02. This promotes the concrete graph-loss
+defect from K10 to the front of the active queue; it is not deferred until the
+later K10 section and does not repeat already completed K01–K04 slices.
+
+Required result: the source determines the graph's structure and field order,
+and that source structure is recoverable from the retained graph. Receivers
+may create initialized typed cells at their source-defined places; this does
+not permit moving declarations ahead of instructions or removing expression
+contents such as `(2 + 2)` because their results are discarded.
+
+The ticket owns the detailed evidence, repair boundaries and acceptance.
+Closure requires independent structural assertions and mutation controls in
+addition to native/walker execution checks. Correct exit values alone do not
+close it. Respect the current writer/build owner and preserve their WIP;
+arrange a safe handoff, not a second writer or an interrupted gate. Only after
+this ticket is closed resume the remaining dependency-ordered work below.
 
 <a id="snapshot"></a>
 ## 0. Snapshot and what must not be called complete
@@ -71,8 +95,10 @@ Still not established:
    Inspect HEAD/upstream, status and worktree ownership. Preserve unrelated WIP.
 2. Read the current merge release record. Reconcile its exact file manifest
    with Git before assuming it landed. No second writer/build beside a live one.
-3. Choose one dependency-closed item below; name files, symbols, witnesses and
-   exit conditions. Independent read-only review may run in parallel.
+3. While `critical_graph_bug` is open, choose the next bounded repair slice
+   from that ticket first. Afterwards choose one dependency-closed remaining
+   item below. Name files, symbols, witnesses and exit conditions. Independent
+   read-only review may run in parallel.
 4. First reproduce the defect or record it honestly as source-traced only.
    A translator crash is not a language diagnostic; a compiler error is not a
    runtime negative; clearing only root `native` does not prove a nested method
@@ -95,7 +121,7 @@ scratch manifests and ownership markers do not belong in source commits.
 Do not silently promote dev into stable while full gates remain red.
 
 <a id="projection"></a>
-## 2. First dependency: one semantic-use projection
+## 2. Semantic-use projection dependencies
 
 ### K01 — Preserve selector identity through admission and access
 
@@ -341,6 +367,11 @@ targets. Do not merely raise constants, create another graph or drop those tests
 
 ### K10 — One complete lexical graph, one occurrence-based dispatch
 
+**Priority override:** its confirmed graph-loss defect is now
+[the first task](#first-critical-graph-bug), not a later cleanup. Record the
+ticket's evidence here when closed; other K10 obligations remain independently
+subject to their acceptance below.
+
 - Declarations, typed value storage and executable operators retain lexical
   placement; no pure-data companion, callable-context graph, permanent load
   graph or a graph generated only for root.
@@ -407,7 +438,8 @@ RuntimeImplements decision tree and no test result masking analytical failure.
 <a id="clean-gate"></a>
 ## 6. Clean-kernel checkpoint — mandatory before stage 8
 
-All of K01–K12 are dependencies, not necessarily twelve large commits. Split them
+`critical_graph_bug` must be closed first. All of K01–K12 are dependencies,
+not necessarily twelve large commits. Split them
 into bounded shared-mechanism slices, with exact witness matrices. The remaining
 48 generated failures must each be classified and resolved against current norms;
 use [the diagnostic ledger](steps/generated-diagnostic-migration-20260930.md).
@@ -625,5 +657,7 @@ without erasing the historical counterexamples. On a real unresolved language
 contradiction, file a minimal Russian question in `LMX_blog/q/current/`; completed
 questions move one level up. Plan tickets are not questions to the author.
 
-The present handoff is a **pause after documentation**, not an authorization to
-start K01 or a claim that stages 8 and 8a have already been achieved.
+The original documentation-only pause is historical; the resumed work follows
+the current ownership instructions and the first-task priority above. This
+priority update does not start another writer/build or claim that stages 8 and
+8a have already been achieved.

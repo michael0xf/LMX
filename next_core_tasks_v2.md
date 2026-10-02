@@ -66,7 +66,10 @@ A direct `A: b` stores the callee once. The argument is the ordinary `OWN` of
 then `(2 + 2)` as `add 2 2`, then return. Entry 7, native and walked.
 `graph_shape_repeat` (`regress_ns_55`): two `int: n` stay two occurrences;
 the unqualified name exits 2. `graph_shape_occ` (`regress_ns_56`): two fields
-`n` stay in order, and `Holder\[0]n` exits 1. The
+`n` stay in order, and `Holder\[0]n` exits 1.
+`graph_shape_if_body` is red (`regress_ns_57`). The `if` body holds two
+`SET_OF` in source order, but the two cells are a unit child before the `IF`.
+That hoist is the open repair of this ticket. The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts
 as `full_05`. `build_l2src` `critical_graph_bug_05` is GREEN 286 after the int leaf was withdrawn.

@@ -28,17 +28,20 @@ choice that code and data are both the callee occurrence, `(M, M)`.
 slot 1 is the callee, slot 2 is evaluated as the data occurrence, slot 3 is
 the contract (`inputs`, `returns`), slot 4 is the catch count.
 
-Measured on `graph_shape_call` (`regress_ns_29`, native and walked exit 0,
-41 checks). A direct call stores the callee once, at slot 1, and no longer
-stores a contract shell on the call. The contract is the method occurrence's
-last child, past the body; `lmx_walk_call` reads it from there. `EXEC` still
-keeps its contract on the call and still evaluates slot 2.
+Measured on `graph_shape_call` (`regress_ns_31`, native and walked exit 5,
+39 checks). `fn: A (int: x) int` returns `x`, and `exit_code: (A: b)` after
+`int: b 5` exits 5. The shape fact is `int SET pub call OWN endcall endpub RET struct`.
+`pub`/`endpub` open the publish; `call`/`endcall` open the call. The argument
+is found by role.
 
-The shape fact `call OWN endcall` finds the argument by role. That argument
-is still an `OWN`. Replacing it with `b`'s declaration cell made the program
-exit 0 when the initializer was 5: the cell was still 0, and the live value
-is the `OWN`. That replacement was reverted. The call is not yet only the
-source application.
+A direct call stores the callee once, at slot 1, and does not store a contract
+shell on the call. The contract is the method occurrence's last child, past
+the body. `EXEC` still keeps its contract on the call and still evaluates slot 2.
+
+The argument is still an `OWN`. Replacing it with `b`'s declaration cell made
+the value 0: that cell stays 0 after `int: b 5`, and the live value is the
+`OWN`. That replacement stays reverted. The call is not yet only the source
+application.
 
 ## Do
 

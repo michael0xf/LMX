@@ -217,6 +217,8 @@ exits 16, native and walked.
 `b\value` and stops, "unknown field path segment". `@: b A` stops on
 that line, "unknown type", with detail `atom=b`. The working alias
 remains `Model: b c`.
+`regress_ns_148` reads `else\hosted` inside a while after a call.
+The value is 21. `unit_body_path_else_while` and its walked twin exit 7.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

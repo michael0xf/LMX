@@ -141,6 +141,11 @@ the unit. `unit_next_message_loop` exits 0, and `unit_body_path_deep`,
 `regress_ns_109` is green for the site rows, the reentry, and
 `unit_root_deepif70`. `regress_ns_110` follows the shelled host of the
 reference failure. `unit_own_reference_failure` exits 7.
+`regress_ns_111` accepts the letter models again.
+`unit_receive_letter_model`, `unit_send_ref_method`, and
+`unit_send_ref_driver_tap` close. The 29 rows `full_14` added past the
+baseline 36 are green in `regress_ns_101` through `regress_ns_111`.
+Those 36 stay. The full gate has not been rerun.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

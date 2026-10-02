@@ -186,6 +186,9 @@ All seven stay green, native and walked.
 `regress_ns_133` still breaks the structural check when an addition is
 erased, a declaration is moved, or two occurrences are collapsed. The
 launch exit stays the expected one.
+`regress_ns_134` replaces the if body by an empty container. The
+structural check fails, and the launch exit stays the expected one.
+The erase control stays green.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

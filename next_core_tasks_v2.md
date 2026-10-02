@@ -70,10 +70,11 @@ the unqualified name exits 2. `graph_shape_occ` (`regress_ns_56`): two fields
 `graph_shape_if_body` is red (`regress_ns_57`). The `if` body holds two
 `SET_OF` in source order, but the two cells are a unit child before the `IF`.
 The `if` and `while` placer now stores the operator first and the cell shell
-after it (`regress_ns_59`, exit 0, native and walked). `regress_ns_60` kept
-`entry_argc_if` and `graph_shape_call` green. The two `SET_OF` stay inside
-the body in source order. The shell is still a sibling of the `IF`, not a
-child of its body. `l2_rw_host_at` still addresses that sibling. The
+after it. `regress_ns_62`: the exit inside the body is `a`, which is 3,
+native and walked. `regress_ns_60` kept `entry_argc_if` and `graph_shape_call`
+green. The two `SET_OF` stay inside the body in source order. The shell is
+still a sibling of the `IF`, not a child of its body. `l2_rw_host_at` still
+addresses that sibling. The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts
 as `full_05`. `build_l2src` `critical_graph_bug_05` is GREEN 286 after the int leaf was withdrawn.

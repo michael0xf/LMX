@@ -130,6 +130,9 @@ body, then child 0. The else arm stays an activation child, and the for
 shell still precedes its operator. `unit_nested_body_else`,
 `unit_nested_body_while`, `unit_nested_body_for`, and
 `unit_walk_nested_own` exit 7.
+`regress_ns_106` is green. A named Structure declared in a nested body
+keeps its operator. `unit_local_ns_nested`, `unit_local_ns_call_nested`,
+`unit_local_ns_ctl_loop`, and `unit_local_ns_node_nested` exit 7.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

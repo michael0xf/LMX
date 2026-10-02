@@ -24,12 +24,14 @@ Author's list, 2026-10-02, inserted in front of the ticket. These are the
 missing acceptance steps. They do not replace the ticket and do not mark it
 closed.
 
-- [ ] В harness нет декодера графа, который сверяет структуру с исходником и не зависит от временных имён и старых номеров слотов.
+- [x] В harness нет декодера графа, который сверяет структуру с исходником и не зависит от временных имён и старых номеров слотов.
+  Driver fact `shape … endshape` names roles, primitive cells, `spell`, `add A B`, and `body`/`endbody`. It does not read `l2_rwN` names or old slot numbers. Witnesses: `graph_shape_unknown_atom`, `graph_shape_add`, `graph_shape_value`.
 - [x] Нет прогонов, где успех виден по значению, а не только по тому, что перевод прошёл. Сюда же входят нативное исполнение и проход через walker.
   `graph_shape_value` on `graph_shape_14`: `n: 2 + 2` then `exit_code: n`. Both the native run and the walked root exit 4.
 - [x] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
   Shown on `graph_shape_12`: `graph_shape_mut_erase` (`mutate erase-add`), `graph_shape_mut_move` (declaration after the expression), `graph_shape_mut_collapse` (two `SET` nodes aliased). Each driver exit is 1 because the shape check fails, and the launch exit stays 0.
 - [ ] Не запускались ворота из раздела 6: полный l2_harness, build_l2src, run_l3_selftest, check_docs. Прежняя полная прогонка была красной, 36 из 1149.
+  `l2_harness` `critical_graph_bug_full_03`: RED 37 of 1155. Those 36 failure lines match `gk_occ_path_full_01` exactly. The extra row is `unit_decl_unknown_type_refused`: `Nope: x` is accepted as a named Structure, the same reading as unknown `A: b`. `build_l2src`, `run_l3_selftest`, and `check_docs` were not started.
 - [ ] В тикете нет строки DONE. Правка транслятора не закоммичена.
 
 <a id="first-critical-graph-bug"></a>

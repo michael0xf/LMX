@@ -205,6 +205,8 @@ The copy's field reads sum to 20, and `Holder\a` stays 0.
 publishes the caller's cell before the re-entrant call. The outer read
 is 1 and the base read is 1. `graph_shape_reenter` exits 11, native and
 walked.
+`regress_ns_142` writes 9 through the address of `x`. The bare name
+stays 5. `unit_cache_addr_graph` and its walked twin exit 59.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

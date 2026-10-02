@@ -43,6 +43,9 @@ the value 0: that cell stays 0 after `int: b 5`, and the live value is the
 `OWN`. That replacement stays reverted. The call is not yet only the source
 application.
 
+`regress_ns_32`: the seven shape witnesses stayed green, native and walked.
+`unit_make_adder` still fails only the baseline needle `c.LMX_WALK_OP_AT, 3U)`.
+
 ## Do
 
 One representation. The call's retained children are the source head and the

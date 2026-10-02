@@ -168,6 +168,9 @@ group in that order. The nested group sets `n` to 1.
 stays green.
 `regress_ns_122` keeps one anonymous group inside another. The inner
 group sets `n` to 2. `graph_shape_nest2` exits 2, native and walked.
+`regress_ns_126` keeps an unknown Structure inside another. `B` holds
+int 1. `graph_shape_unknown_nest` exits 0, native and walked.
+`graph_shape_unknown_atom` and `graph_shape_fields` stay green.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

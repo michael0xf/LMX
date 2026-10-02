@@ -177,6 +177,10 @@ A non-hosted int own is `OWN`. The type budget is 74 names.
 `full_13`. `build_l2src` `critical_graph_bug_07` is GREEN 286.
 `run_l3_selftest` `critical_graph_bug_03` is 11 suites. The contract stays
 on the method, past the body. Do not put the leaf back.
+Codex approval `GROK-DS-CODEX-005-LAYOUT2-PROCEED-20261002-04` for
+`LmxUseLeaf` is superseded by
+`GROK-DS-CODEX-005-STOP-USELEAF-20261002-05`. The 75-name budget above
+is that withdrawn trial. It is not the current pin.
 
 ## Do
 

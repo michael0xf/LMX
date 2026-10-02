@@ -133,6 +133,11 @@ shell still precedes its operator. `unit_nested_body_else`,
 `regress_ns_106` is green. A named Structure declared in a nested body
 keeps its operator. `unit_local_ns_nested`, `unit_local_ns_call_nested`,
 `unit_local_ns_ctl_loop`, and `unit_local_ns_node_nested` exit 7.
+`regress_ns_107` keeps the walked root and the projection. The entry's
+while still stopped: its operator was stored on the child list.
+`regress_ns_108` stores that operator on the entry occurrence, which is
+the unit. `unit_next_message_loop` exits 0, and `unit_body_path_deep`,
+`unit_local_ns_nested`, and `unit_root_hosted_controls` stay green.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

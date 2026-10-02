@@ -66,6 +66,8 @@ node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts
 as `full_05`. `build_l2src` `critical_graph_bug_03` is GREEN 286.
 `graph_shape_call` after both call layouts still exits 5 (`regress_ns_43`).
+A direct call with fewer than three arguments and no catch is only the callee
+and those arguments (`regress_ns_46`).
 Those 36 stay the baseline; they are not a second ticket.
 
 <a id="critical-pointer-to-struct-bug"></a>

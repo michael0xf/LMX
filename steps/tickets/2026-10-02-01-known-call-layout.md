@@ -135,6 +135,13 @@ and hangs the contract on the callee. `build_l2src` `critical_graph_bug_02`
 was RED 9 of 286 on the one-layout walker. `critical_graph_bug_03` is GREEN
 286. `regress_ns_43`: `graph_shape_call` still exits 5, native and walked.
 
+A direct call with no catch, no dynamic input, and fewer than three arguments
+now keeps only the callee and those arguments. `regress_ns_46` is green:
+`graph_shape_call` still exits 5, and `unit_pap_add5`, `unit_walk_recursion`,
+and `unit_own_reference_reception` match the short frame. A catch, a dynamic
+input, or three or more arguments still uses the long frame. `build_l2src`
+and the full harness have not been re-run on this frame.
+
 `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The type
 budget was 75 names against a pin of 74, because `LmxUseLeaf` is one header
 type. Headroom remains 53 under the cliff of 128. The working-tree pin is 75

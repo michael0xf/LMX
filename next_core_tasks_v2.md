@@ -31,7 +31,7 @@ closed.
 - [x] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
   Shown on `graph_shape_12`: `graph_shape_mut_erase` (`mutate erase-add`), `graph_shape_mut_move` (declaration after the expression), `graph_shape_mut_collapse` (two `SET` nodes aliased). Each driver exit is 1 because the shape check fails, and the launch exit stays 0.
 - [ ] Не запускались ворота из раздела 6: полный l2_harness, build_l2src, run_l3_selftest, check_docs. Прежняя полная прогонка была красной, 36 из 1149.
-  `l2_harness` `critical_graph_bug_full_11`, uncommitted translator: RED 37 of 1159. The 36 baseline texts match `full_05`. The extra pin is green in `regress_ns_50`. `build_l2src` `critical_graph_bug_05`: GREEN 286, after the int leaf was withdrawn. `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The `LmxUseLeaf` type is withdrawn; the budget pin is back to 74 names and has not been re-measured. The harness row stays red, so this acceptance item stays open.
+  `l2_harness` `critical_graph_bug_full_12`, uncommitted translator: RED 39 of 1164. The 36 baseline texts match `full_05`. Three slot pins moved with the if shell and are green in `regress_ns_65`. `build_l2src` `critical_graph_bug_05`: GREEN 286, after the int leaf was withdrawn. `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The `LmxUseLeaf` type is withdrawn; the budget pin is back to 74 names and has not been re-measured. The harness row stays red, so this acceptance item stays open.
 - [ ] В тикете нет строки DONE. Правка транслятора не закоммичена.
 
 <a id="first-critical-graph-bug"></a>
@@ -86,7 +86,9 @@ A direct call with no catch and no hidden input is only the callee and those
 arguments, at any arity (`regress_ns_49`).
 `critical_graph_bug_full_11` is RED 37 of 1159: the same 36, plus one witness
 that read a Structure argument as a second callee. `regress_ns_50` is green.
-Those 36 stay the baseline; they are not a second ticket.
+`critical_graph_bug_full_12` is RED 39 of 1164: the same 36, plus three slot
+pins of the if shell. `regress_ns_65` is green. Those 36 stay the baseline;
+they are not a second ticket.
 
 <a id="critical-pointer-to-struct-bug"></a>
 ## Second action — critical_pointer_to_struct_bug (CRITICAL / P0, OPEN)

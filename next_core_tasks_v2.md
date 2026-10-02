@@ -31,7 +31,7 @@ closed.
 - [x] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
   Shown on `graph_shape_12`: `graph_shape_mut_erase` (`mutate erase-add`), `graph_shape_mut_move` (declaration after the expression), `graph_shape_mut_collapse` (two `SET` nodes aliased). Each driver exit is 1 because the shape check fails, and the launch exit stays 0.
 - [ ] Не запускались ворота из раздела 6: полный l2_harness, build_l2src, run_l3_selftest, check_docs. Прежняя полная прогонка была красной, 36 из 1149.
-  `l2_harness` `critical_graph_bug_full_07`, uncommitted translator: RED 36 of 1159. Those 36 texts match `critical_graph_bug_full_05` and `gk_occ_path_full_01`. `build_l2src` `critical_graph_bug_04`: GREEN 286, after the short direct call. `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The type budget pin moved to 75 names for `LmxUseLeaf` and is GREEN, headroom 53 under 128. The harness row stays red, so this acceptance item stays open.
+  `l2_harness` `critical_graph_bug_full_08`, uncommitted translator: RED 37 of 1159. The 36 baseline texts match `full_05`; the extra pin is green in `regress_ns_47`. `build_l2src` `critical_graph_bug_04`: GREEN 286, after the short direct call. `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The type budget pin moved to 75 names for `LmxUseLeaf` and is GREEN, headroom 53 under 128. The harness row stays red, so this acceptance item stays open.
 - [ ] В тикете нет строки DONE. Правка транслятора не закоммичена.
 
 <a id="first-critical-graph-bug"></a>
@@ -68,7 +68,9 @@ as `full_05`. `build_l2src` `critical_graph_bug_04` is GREEN 286 on the short di
 `graph_shape_call` after both call layouts still exits 5 (`regress_ns_43`).
 A direct call with fewer than three arguments and no catch is only the callee
 and those arguments (`regress_ns_46`).
-Those 36 stay the baseline; they are not a second ticket.
+`critical_graph_bug_full_08` is RED 37 of 1159: the same 36, plus one stale
+width pin that `regress_ns_47` then matched. Those 36 stay the baseline; they
+are not a second ticket.
 
 <a id="critical-pointer-to-struct-bug"></a>
 ## Second action — critical_pointer_to_struct_bug (CRITICAL / P0, OPEN)

@@ -140,8 +140,10 @@ now keeps only the callee and those arguments. `regress_ns_46` is green:
 `graph_shape_call` still exits 5, and `unit_pap_add5`, `unit_walk_recursion`,
 and `unit_own_reference_reception` match the short frame. A catch, a dynamic
 input, or three or more arguments still uses the long frame. `build_l2src`
-`critical_graph_bug_04` is GREEN 286 on this frame. The full harness has
-not been re-run on it.
+`critical_graph_bug_04` is GREEN 286 on this frame. `critical_graph_bug_full_08`
+is RED 37 of 1159. The baseline 36 texts are unchanged. The extra failure was
+`unit_walk_a3_capture_direct_vs_copy`: its two-argument call is now width 4,
+and the admitted argument is at slot 2. `regress_ns_47` is green on that pin.
 
 `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The type
 budget was 75 names against a pin of 74, because `LmxUseLeaf` is one header

@@ -78,7 +78,9 @@ body left native `l2_h` undeclared: that local is bound only when the shell
 is a direct child of the activation. That attempt was reverted.
 `regress_ns_64` is green again, exit 3. `graph_shape_while_body`
 (`regress_ns_66`) exits 1: the body writes `a`, then sets `n`, and the cell
-shell follows the `WHILE`. `l2_rw_host_at` still addresses the
+shell follows the `WHILE`. `graph_shape_for_body` (`regress_ns_68`) exits 1.
+The `for` shell and the initializer `i = 0` precede the operator. The body
+then writes `a` and sets `n`. `l2_rw_host_at` still addresses the
 sibling. The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

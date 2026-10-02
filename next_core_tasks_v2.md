@@ -172,6 +172,9 @@ group sets `n` to 2. `graph_shape_nest2` exits 2, native and walked.
 int 1. `graph_shape_unknown_nest` exits 0, native and walked.
 `regress_ns_129` copies that unit. The copy keeps `B` inside `A` and
 int 1. The same witness stays green.
+`regress_ns_131` merges that outer Structure. The result keeps one
+copied inner Structure, parented at the result, holding int 1.
+`graph_shape_fields` stays green.
 `graph_shape_unknown_atom` and `graph_shape_fields` stay green.
 `regress_ns_127` reads the parenthesized body as the same Structure.
 `A` holds int 1. `graph_shape_unknown_paren` exits 0, native and walked.

@@ -149,6 +149,10 @@ Those 36 stay. `critical_graph_bug_full_15` is RED 36 of 1175, the same
 36 texts as `full_13`. `build_l2src` `critical_graph_bug_07` is GREEN 286.
 `run_l3_selftest` `critical_graph_bug_03` is 11 suites, and the type
 budget stays 74 names.
+`regress_ns_113` puts the else shell at child 0 of the IF's other body,
+child 3 of the same operator. `unit_nested_body_else` exits 0.
+`unit_nested_body_while` and `unit_walk_nested_own` stay green. The for
+shell still precedes its operator.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

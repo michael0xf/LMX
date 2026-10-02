@@ -76,7 +76,9 @@ green. The two `SET_OF` stay inside the body in source order. The shell is
 still a sibling of the `IF`, not a child of its body. Putting it inside the
 body left native `l2_h` undeclared: that local is bound only when the shell
 is a direct child of the activation. That attempt was reverted.
-`regress_ns_64` is green again, exit 3. `l2_rw_host_at` still addresses the
+`regress_ns_64` is green again, exit 3. `graph_shape_while_body`
+(`regress_ns_66`) exits 1: the body writes `a`, then sets `n`, and the cell
+shell follows the `WHILE`. `l2_rw_host_at` still addresses the
 sibling. The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

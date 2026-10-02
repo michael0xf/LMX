@@ -127,9 +127,20 @@ still required the callee twice and an `OWN` frame for an int own.
 `critical_graph_bug_full_07` is RED 36 of 1159. Those 36 texts are the same
 as `critical_graph_bug_full_05`. The harness now reads a direct call's
 contract from the callee and accepts a use leaf where an `OWN` pin names the
-same index. The call is still a `CALL`. This slice stays open: `build_l2src`
-and `run_l3_selftest` have not been re-run on this tree, and the translator
-is not committed. The parent stays open.
+same index.
+
+The walker keeps both call layouts. An old call still has its data at slot 2
+and its contract at slot 3. A direct source call still stores the callee once
+and hangs the contract on the callee. `build_l2src` `critical_graph_bug_02`
+was RED 9 of 286 on the one-layout walker. `critical_graph_bug_03` is GREEN
+286. `regress_ns_43`: `graph_shape_call` still exits 5, native and walked.
+
+`run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The type
+budget was 75 names against a pin of 74, because `LmxUseLeaf` is one header
+type. Headroom remains 53 under the cliff of 128. The working-tree pin is 75
+including the platform ABI type, and `l3_type_budget` is GREEN on 4 budgets.
+The call is still a `CALL`. The translator is not committed. This slice and
+the parent stay open.
 
 ## Do
 

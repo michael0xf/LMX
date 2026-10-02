@@ -125,6 +125,11 @@ stops, "a control body has no operator".
 body shell is child 0. `unit_body_path_deep` exits 7, and
 `unit_body_seg_method`, `unit_body_path_while`, and `graph_shape_if_body`
 stay green.
+`regress_ns_105` follows that shell. The host is the operator, then the
+body, then child 0. The else arm stays an activation child, and the for
+shell still precedes its operator. `unit_nested_body_else`,
+`unit_nested_body_while`, `unit_nested_body_for`, and
+`unit_walk_nested_own` exit 7.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

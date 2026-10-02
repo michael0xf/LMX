@@ -2182,6 +2182,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_formal_frame_sub_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Says = @('s 1');
         Absent = @(); Debt = @() },
+    # Row 5: a no-result occurrence admitted to (Holder: x) and (@: Holder x).
+    # mark is not slot 0. Transport does not run the body. The walker is unclaimed.
+    [pscustomobject]@{ Name = 'unit_occ_descriptor_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_descriptor_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_occ_descriptor_refused.lm2:17:13: implements is false in function argument'; Absent = @(); Debt = @() },
     # -196: a string literal alone at the root makes no step, as natively; the numeric ones are LIT steps.
     [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },

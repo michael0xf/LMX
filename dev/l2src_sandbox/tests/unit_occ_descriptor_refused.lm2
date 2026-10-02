@@ -1,0 +1,21 @@
+# Row 5 negative. The consumer reads other. The occurrence declares only mark.
+# Admission refuses. A pointer-width accept would translate.
+Holder:
+    int: other 1
+    int: mark 0
+end: Holder
+
+sub: task ()
+    int: mark 4
+end: task
+
+fn: take (Holder: x) int
+    return: x\other
+end: take
+
+fn: go () int
+    return: take(task)
+end: go
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

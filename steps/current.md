@@ -25,9 +25,10 @@ K01 (`65e4cf4`…), K02a/K02b (`32836cb`, `6e5f84b`), K03a (`7f54dfb`), K03b (`e
 `Model: fresh` / `T: b c` после переноса потребителей — блокер `w: merge Model` снят срезом K02d),
 остаток K04 (срезы [K04a](k04-callable-actuals-20261001.md#k04a),
 [K04b](k04-callable-actuals-20261001.md#k04b), [K04c](k04-callable-actuals-20261001.md#k04c),
-[K04d](k04-callable-actuals-20261001.md#k04d) посажены;
-K04d закрыл `CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL`; открыты строки 5, 6, 8 матрицы,
-walker-половина проекции и CALLABLE-FORMAL-HIDDEN-CONTRACT), K05,
+[K04d](k04-callable-actuals-20261001.md#k04d),
+[K04e](k04-callable-actuals-20261001.md#k04e) посажены;
+K04d закрыл `CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL`; K04e закрыл native-половину строки 5
+матрицы; открыты строки 6 и 8, walker-половина проекции и CALLABLE-FORMAL-HIDDEN-CONTRACT), K05,
 runtime-выбираемый операнд merge (K02, [§2 заметки](k02-merge-values-20261001.md)).
 
 Ниже сохранены исторические сведения о ранних этапах и внешних каналах.

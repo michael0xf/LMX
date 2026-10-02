@@ -316,7 +316,7 @@ This section is a bounded repair plan, not completed runtime evidence.
 <a id="witnesses"></a>
 ## Minimal witness matrix: pending implementation and execution
 
-All rows below are acceptance work to perform, not recorded successes. Use declared Structures or explicit `merge` when construction is needed; do not revive withdrawn implicit `Model: fresh` setup.
+The rows below state the acceptance property. A measured native half is noted after the table. An unmeasured row is still acceptance work, not a recorded success. Use declared Structures or explicit `merge` when construction is needed; do not revive withdrawn implicit `Model: fresh` setup.
 
 | Witness | Required observable property |
 | --- | --- |
@@ -328,6 +328,8 @@ All rows below are acceptance work to perform, not recorded successes. Use decla
 | Actual selected through an own binding or a structural path, plus a shadowing formal | The resolved binding wins over a same-named unit method. Physical identity is preserved; an explicit pointer binding is not implicitly executed because its referent is callable. |
 | `g(int: x)` given a nonreturning callable | Ordinary incompatible actual/reference-versus-integer failure; no blanket assertion that a `sub` cannot be transported as a value. |
 | An explicit pointer cell's address supplied to a single-depth receiving formal | Wrong extra depth is still rejected. Primitive pointer controls and existing nonprimitive signature/address identity witnesses remain green. |
+
+Row 5's native half is measured (2026-10-02, [K04e](k04-callable-actuals-20261001.md#k04e)). `(Holder: x)` and `(@: Holder x)` receive one no-result occurrence by its own fields. `unit_occ_descriptor_formal` reads `mark` as 4, three transports leave `hits` unchanged, and a later explicit call increments it. `unit_occ_descriptor_refused` refuses the missing field at `unit_occ_descriptor_refused.lm2:17:13`. Walker execution of that receiver is not claimed. Rows 6 and 8 remain unmeasured.
 
 A positive fixture must return a distinctive nonzero success result or emit a checked success marker. Include deliberate inversions of identity and side-effect assertions, then restore the exact positive bytes and rerun. A descriptor equality assertion alone does not prove that no body executed; the explicit counter distinguishes transport from execution.
 

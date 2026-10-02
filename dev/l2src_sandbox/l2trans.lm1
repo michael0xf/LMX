@@ -707,9 +707,15 @@ prototype:
     fn: l2_schema_kind (int: schema) int
     fn: l2_schema_index (int: schema) int
     fn: l2_schema_merge (int: result) int
+    fn: l2_schema_method (int: mi) int
     fn: l2_schema_width (int: schema) int
     fn: l2_schema_field (int: schema; int: slot; @: L2SchemaField out) int
     fn: l2_schema_named (int: schema; const: @(LmP0Text name); int: occurrence; @: L2SchemaField out) int
+    fn: l2_schema_placed (int: schema; int: ordinal) int
+    fn: l2_method_field_own (int: mi; int: ordinal) int
+    fn: l2_method_field_count (int: mi) int
+    fn: l2_method_field_slot (int: schema; int: ordinal) int
+    fn: l2_own_nsf_kind (int: oty) int
     fn: l2_own_schema (int: own) int
     fn: l2_input_schema (int: mi; int: k) int
     fn: l2_schema_token_slot (int: schema) int
@@ -1106,6 +1112,8 @@ prototype:
     fn: l2_cf_set (int: omi; int: fk; int: req) int
     fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
     fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; @: char dest) int
+    fn: l2_occ_actual (int: mi; const: @(LmP0Field a0); int: span) int
+    fn: l2_emit_occ_admit (int: mi; int: req; int: cand; const: @(char value); const: @(char ind)) int
     fn: l2_cf_get (int: omi; int: fk) int
     fn: l2_method_sig_compatible (int: cand; int: req) int
     fn: l2_uses_is_slash (const: @(LmP0Text text)) int
@@ -19891,6 +19899,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     int: ast
     int: nst
     int: handled
+    int: occ_mi 0 - 1
     int: k
     int: cf_kind 0
     int: cf_fi 0 - 1
@@ -19968,8 +19977,18 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
             ---
         else:
             handled: 0
+            occ_mi: 0 - 1
             nst: l2_nsty_get(idx, actual_i)
+            # A no-result callable is a reference (docs #callables). An ordinary
+            # nonprimitive formal admits that occurrence; it does not call it.
             if: req_mi < 0 && nst >= 0
+                occ_mi: l2_occ_actual(mi, a0, actual_span)
+            if: occ_mi >= 0
+                if: l2_d105_source(idx, actual_i, l2_schema_method(occ_mi), node) != 0
+                    return: 1
+                handled: 1
+            ---
+            if: req_mi < 0 && nst >= 0 && occ_mi < 0
                 ast: l2_actual_ns(mi, a0, actual_span, path, node, @ cand_ns)
                 if: ast = 1
                     return: 1
@@ -19992,7 +20011,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
             # D-108: an actual admitted to a Structure-typed formal is checked as any other actual is --
             # a call in it records its edge (the throw closure reaches this caller) and meets the static
             # rule of §14; the admission above decided only its type.
-            if: handled != 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
+            if: handled != 0 && occ_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
             if: handled = 0 && req_mi < 0 && (actual_span < 1 || l2_check_fields(a0, actual_span, mi, path, node) != 0)
                 return: 1
@@ -22468,6 +22487,38 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; @: cha
         return: l2_tok_formal(mi, fi, dest)
 return: l2_tok_method_occ(cand, dest)
 
+# A no-result unit-method occurrence supplied where a reference is received.
+# Kind 2 is a forwarded formal: its value is not this method's own fields.
+# A returning callable stays a call; its result is a different value.
+fn: l2_occ_actual (int: mi; const: @(LmP0Field a0); int: span) int
+    int: kind 0
+    int: fi 0 - 1
+    int: cand
+    cand: l2_cf_actual(mi, a0, span, @ kind, @ fi)
+    if: cand < 0 || kind != 1
+        return: 0 - 1
+    if: l2_m_ret[cand] != 8
+        return: 0 - 1
+return: cand
+
+# Register the occurrence against the formal's model with the pair map built
+# from the occurrence's own fields. The callee reads through that map.
+fn: l2_emit_occ_admit (int: mi; int: req; int: cand; const: @(char value); const: @(char ind)) int
+    int: p
+    []: char rinst 320
+    []: char table 160
+    # cand is the method-occurrence schema, below -1500000000. -1 alone is absent.
+    if: req < 0 || cand = -1 || value = 0 || ind = 0
+        return: 1
+    if: l2_model_inst(mi, req, rinst) != 0
+        return: 1
+    p: l2_d105_pair(cand, req)
+    if: p < 0 || l2_d105_tnode(p, table) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sif: lmx_implements_register_map(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, %uU, 0) != c.LMX_IMPLEMENTS_YES\n%s    c.fprintf(c.stderr, \"lmx: invariant: an occurrence was not admitted to its formal\\n\")\n%s    c.abort()\n", ind, value, rinst, table, (cast: (unsigned) l2_d105_width(req)), ind, ind) < 0
+        return: 1
+return: 0
+
 fn: l2_cf_get (int: omi; int: fk) int
     int: i 0
     if: omi < 0 || fk < 0
@@ -22773,6 +22824,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     int: prty
     int: prsty
     int: er
+    int: occ_mi
     int: mcall 0
     []: char ref_dest 128
     # Capture the selected physical occurrence before evaluating actuals: a
@@ -22830,6 +22882,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         if: t >= nact
             return: l2_prep_drop(acts, hides)
         actual_span: l2_expr_span(a0)
+        occ_mi: 0 - 1
         l2_reference_source(a0, actual_span, mi, @ source)
         # A callable formal takes the occurrence its actual names, or one merge
         # built here in the caller's native code (T7). Not a call.
@@ -22848,23 +22901,36 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_prep_drop(acts, hides)
         if: l2_cf_get(idx, t) < 0 && l2_empty_actual(a0, idx, t) = 0
             er: 2
-            if: l2_nsty_get(idx, t) < 0
+            # A no-result unit method is the occurrence a nonprimitive formal receives.
+            # Its fields are admitted by the pair map; the call is not evaluated here.
+            if: l2_nsty_get(idx, t) >= 0
+                occ_mi: l2_occ_actual(mi, a0, actual_span)
+            if: occ_mi >= 0
+                if: l2_cf_actual_emit(mi, a0, actual_span, l2_act_at(acts, t)) != 0
+                    return: l2_prep_drop(acts, hides)
+                if: l2_emit_occ_admit(mi, l2_input_schema(idx, t), l2_schema_method(occ_mi), l2_act_at(acts, t), ind) != 0
+                    l2_prep_drop(acts, hides)
+                    return: l2_error(l2_src, node, "internal: an occurrence was not admitted to its formal")
+                ---
+                er: 0
+            ---
+            if: occ_mi < 0 && l2_nsty_get(idx, t) < 0
                 er: l2_emit_value_convert_field(node, a0, actual_span, l2_ft(idx, t), mi, ind, l2_act_at(acts, t))
-            if: actual_span >= 3 && l2_nsty_get(idx, t) >= 0
+            if: occ_mi < 0 && actual_span >= 3 && l2_nsty_get(idx, t) >= 0
                 er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_act_at(acts, t))
             if: er = 1
                 return: l2_prep_drop(acts, hides)
-            if: er = 2 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
+            if: occ_mi < 0 && er = 2 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_at(acts, t)) != 0)
                 return: l2_prep_drop(acts, hides)
             ---
         # A letter goes to a typed formal as its payload, admitted (D-57).
-        if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_at(acts, t)) != 0
+        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_at(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
-        if: actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_admit(mi, l2_nsty_get(idx, t), l2_act_at(acts, t), ind) != 0
+        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_admit(mi, l2_nsty_get(idx, t), l2_act_at(acts, t), ind) != 0
             return: l2_prep_drop(acts, hides)
         # D-105 native (steps/d105-native.md): the actual of a formal admitted by name is recorded before
-        # the call (l2_d105_emit_admit).
-        if: l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0) != 0
+        # the call (l2_d105_emit_admit). An occurrence already registered its pair map above.
+        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0) != 0
             return: l2_prep_drop(acts, hides)
         t: t + 1
         actual_i: 0
@@ -32862,15 +32928,20 @@ fn: l2_merge_arity (const: @(LmP0Node mf)) int
 return: n
 
 # Compiler schema handles reuse existing metadata: named namespace indices,
-# -1 absent, and tagged merge indices. No handle is a runtime type or binding.
+# -1 absent, and tagged merge indices. A handle at or below -1500000000 is
+# one method occurrence's own fields. No handle is a runtime type or binding.
 fn: l2_schema_kind (int: schema) int
     if: schema = -1
         return: 0
     if: schema >= 0
         return: 1
+    if: schema <= (0 - 1500000000)
+        return: 3
 return: 2
 
 fn: l2_schema_index (int: schema) int
+    if: l2_schema_kind(schema) = 3
+        return: (0 - 1500000000) - schema
     if: l2_schema_kind(schema) = 2
         return: -2 - schema
 return: schema
@@ -32883,11 +32954,16 @@ return: -2 - result
 fn: l2_schema_width (int: schema) int
     if: l2_schema_kind(schema) = 1
         return: l2_ns_width(schema)
+    if: l2_schema_kind(schema) = 3
+        return: l2_method_field_count(l2_schema_index(schema))
     if: l2_schema_kind(schema) = 2
         return: l2_mrs_width(l2_schema_index(schema))
 return: 0
 
 fn: l2_schema_token_slot (int: schema) int
+    # A method occurrence has no layout-token cell. Callers fail closed.
+    if: l2_schema_kind(schema) = 3
+        return: 0 - 1
     if: l2_schema_kind(schema) = 2
         return: l2_ns_n + l2_schema_index(schema)
 return: schema
@@ -32895,6 +32971,7 @@ return: schema
 fn: l2_schema_field (int: schema; int: slot; @: L2SchemaField out) int
     int: row 0
     int: ordinal 0
+    int: own
     int: owner l2_schema_index(schema)
     if: out = 0 || slot < 0 || schema = -1
         return: 1
@@ -32902,6 +32979,16 @@ fn: l2_schema_field (int: schema; int: slot; @: L2SchemaField out) int
     out\type_word: 0
     out\kind: -1
     out\model: -1
+    if: l2_schema_kind(schema) = 3
+        own: l2_method_field_own(owner, slot)
+        if: own < 0
+            return: 1
+        out\name: l2_own_name[own]
+        out\type_word: 0
+        out\kind: l2_own_nsf_kind(l2_own_ty[own])
+        out\model: 0 - 1
+        return: 0
+    ---
     if: l2_schema_kind(schema) = 2
         while: row < l2_mrs_n
             if: l2_mrs_res[row] = owner
@@ -32946,12 +33033,80 @@ fn: l2_schema_named (int: schema; const: @(LmP0Text name); int: occurrence; @: L
                 if: out != 0
                     \out: field
                 if: occurrence >= 0
-                    return: found
+                    return: l2_schema_placed(schema, found)
             ---
             seen: seen + 1
         slot: slot + 1
     ---
-return: found
+return: l2_schema_placed(schema, found)
+
+# A method occurrence's own fields. The handle sits below every merge tag.
+# l2_schema_index recovers the method. No namespace is created for it.
+fn: l2_schema_method (int: mi) int
+    if: mi < 0
+        return: 0 - 1
+return: (0 - 1500000000) - mi
+
+# Unhosted own rows of one method, in declaration order. Layout stores the
+# physical child in l2_own_uchild; this ordinal is not that child.
+fn: l2_method_field_count (int: mi) int
+    int: i 0
+    int: n 0
+    if: mi < 0
+        return: 0
+    while: i < l2_own_n
+        if: l2_own_mi[i] = mi && l2_own_host[i] = 0 && l2_own_fid[i] < 0
+            n: n + 1
+        i: i + 1
+    ---
+return: n
+
+fn: l2_method_field_own (int: mi; int: ordinal) int
+    int: i 0
+    int: seen 0
+    if: mi < 0 || ordinal < 0
+        return: 0 - 1
+    while: i < l2_own_n
+        if: l2_own_mi[i] = mi && l2_own_host[i] = 0 && l2_own_fid[i] < 0
+            if: seen = ordinal
+                return: i
+            seen: seen + 1
+        ---
+        i: i + 1
+    ---
+return: 0 - 1
+
+fn: l2_method_field_slot (int: schema; int: ordinal) int
+    int: own
+    if: l2_schema_kind(schema) != 3 || ordinal < 0
+        return: 0 - 1
+    own: l2_method_field_own(l2_schema_index(schema), ordinal)
+    if: own < 0 || l2_own_uchild[own] < 0
+        return: 0 - 1
+return: l2_own_uchild[own]
+
+# Own type codes to the field kinds a named Structure already uses.
+fn: l2_own_nsf_kind (int: oty) int
+    if: oty = 0
+        return: 7
+    if: oty = 1
+        return: 1
+    if: oty = 2
+        return: 0
+    if: oty = 3
+        return: 8
+    if: oty = 36
+        return: 9
+return: 0 - 1
+
+# Namespace and merge schemas name a field by its ordinal. A method occurrence
+# names it by the physical child layout already stored.
+fn: l2_schema_placed (int: schema; int: ordinal) int
+    if: ordinal < 0
+        return: 0 - 1
+    if: l2_schema_kind(schema) = 3
+        return: l2_method_field_slot(schema, ordinal)
+return: ordinal
 
 fn: l2_own_schema (int: own) int
     int: result l2_mres_of_own(own)

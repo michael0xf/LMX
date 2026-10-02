@@ -268,3 +268,44 @@ Source blob of both runs: `9168b081`. The harness PE prefix of the full run is `
 committed result was 36 of 1143. The two new rows are OK. The 36 names and diagnostics match
 `build/l2_harness/dk_k04c_full_02` exactly; this slice adds no failure. Walker execution of these
 rows is not claimed.
+
+<a id="k04e"></a>
+## K04e — an ordinary nonprimitive formal receives a no-result occurrence
+
+Landed with this slice. Checker, schema, and native emission only. The kernel and L3 sources are
+untouched. The stable `l2src/` twin is not promoted.
+
+On the K04d bytes an ordinary nonprimitive formal did not take `l2_cf_actual`. A no-result method
+fell through to `l2_check_value_call`. A returning method whose result model matches the formal was
+accepted as a call. `@task` failed as an unresolved address; the occurrence spelling is the bare name.
+
+The repair gives that occurrence a schema of its own fields (kind 3, handle at or below
+`-1500000000`; `-1` alone is absent). Close-time admission walks the consumer's uses against those
+fields. Native emission registers the occurrence with `lmx_implements_register_map` and does not call
+it. A returning callable stays result reception. A number formal stays on the K04c phrase. Kind-2
+forwarding of a formal is not this route. No descriptor registry, syntax branch, or automatic `@`
+strip was added.
+
+**Witnesses.**
+
+- `unit_occ_descriptor_formal` — `Holder` has `other` then `mark`, so `mark` is not slot 0. `sub task`
+  has `pad` then `mark` 4 and increments `hits`. `check` calls `task()` once, then `byColon(task)`,
+  `byAt(task)`, and `byColon(task())`. Those three read 4 and leave `hits` at 1. One later `task()`
+  makes `hits` 2. Entry 7.
+- `unit_occ_descriptor_refused` — `take` reads `x\other` and `task` declares only `mark`. Refusal
+  `unit_occ_descriptor_refused.lm2:17:13: implements is false in function argument`, frame `take`.
+
+A translated control, not a harness row: a returning `make` passed to `(Holder: x)` is still
+`lmx_call_prim` of `make`, and the call result is what the formal admits. That probe was not executed.
+
+**Evidence.** Same staged blob `44e8e4e1b355e2ad81de86d9c1e2cab4d5e08c9f`.
+
+- Focused `build/l2_harness/gk_occ_formal_02`: **5 targets, 0 failures**. PE prefix
+  `ED03C26D78312ED5`. The line pin on the refusal was added after this run.
+- Full gate `build/l2_harness/gk_occ_formal_full_01`: **36 of 1147** targets failed. K04d's committed
+  result was 36 of 1145. Both new rows are OK, including the pinned needle. The 36 FAIL lines match
+  `build/l2_harness/gk_formal_frame_full_01` exactly. PE prefix `B196EB56270DF440`. Walker execution
+  of this row is not claimed.
+
+**Residuals.** Matrix rows 6 and 8, paths, kind-2 forwarding through this schema, and the walker half
+(`l2_rw_call` still accepts only a unit method's atom). `CALLABLE-FORMAL-HIDDEN-CONTRACT` is untouched.

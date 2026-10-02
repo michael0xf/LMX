@@ -1,0 +1,53 @@
+# Row 5. A no-result callable admitted to an ordinary nonprimitive formal.
+# (Holder: x) and (@: Holder x) are the same reference transport. mark is not
+# slot 0, and pad is a different int, so a pointer-width or identity map cannot
+# read 4. One call fills the cell; the three transports must not run the body;
+# one later call increments hits. Entry 7. The walker is not this witness.
+int: hits 0
+
+Holder:
+    int: other 1
+    int: mark 0
+end: Holder
+
+sub: task ()
+    int: pad 9
+    int: mark 4
+    node\hits: node\hits + 1
+end: task
+
+fn: byColon (Holder: x) int
+    return: x\mark
+end: byColon
+
+fn: byAt (@: Holder x) int
+    return: x\mark
+end: byAt
+
+fn: check () int
+    int: seen
+    task()
+    if: node\hits != 1
+        return: 1
+    seen: byColon(task)
+    if: seen != 4
+        return: 20 + seen
+    if: node\hits != 1
+        return: 3
+    seen: byAt(task)
+    if: seen != 4
+        return: 40 + seen
+    if: node\hits != 1
+        return: 5
+    seen: byColon(task())
+    if: seen != 4
+        return: 60 + seen
+    if: node\hits != 1
+        return: 8
+    task()
+    if: node\hits != 2
+        return: 9
+return: 7
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

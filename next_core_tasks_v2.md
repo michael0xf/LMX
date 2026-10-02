@@ -153,6 +153,11 @@ budget stays 74 names.
 child 3 of the same operator. `unit_nested_body_else` exits 0.
 `unit_nested_body_while` and `unit_walk_nested_own` stay green. The for
 shell still precedes its operator.
+`regress_ns_114` keeps that for order. `graph_shape_for_body` still reads
+the counter shell, then `FOR`. The for path, its walked twin, and
+`unit_nested_body_for` stay green.
+`regress_ns_116` reads `else\hosted` as 21 after a call publishes the cell.
+`unit_body_path_else` and its walked twin exit 7.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

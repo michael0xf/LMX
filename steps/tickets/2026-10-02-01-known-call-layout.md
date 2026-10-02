@@ -46,6 +46,14 @@ application.
 `regress_ns_32`: the seven shape witnesses stayed green, native and walked.
 `unit_make_adder` still fails only the baseline needle `c.LMX_WALK_OP_AT, 3U)`.
 
+Codex `DS-CODEX-005` (`GROK-DS-CODEX-005-ANSWER-20261002-01`): the source
+argument is the resolved use of binding `b`, not the number 5 and not a
+snapshot of the declaration cell. `OWN` does not hold 5; evaluation loads the
+activation work row. Holder, slot, and helper nodes must not replace that use
+as source children. This is a general operand representation for owns, formals,
+and repeated uses, not a call-only patch. No new permanent representation
+without reporting the minimal change first.
+
 ## Do
 
 One representation. The call's retained children are the source head and the
@@ -60,9 +68,12 @@ head stays a call; unknown `A: b` stays the Structure already witnessed by
 
 ## Done when
 
-A shape witness reads the call's own body and finds the argument occurrence,
-without `l2_rwN` names or old slot numbers. `graph_shape_call` still exits 0
-native and walked. `l2_harness` does not grow failures beyond the baseline 36.
+A shape witness reads the call's own body and identifies the argument as a
+source use of binding `b`, distinct from the literal 5, without `l2_rwN` names
+or old slot numbers. `graph_shape_call` exits 5 native and walked, with the
+same checkpoint semantics: actuals are read before publication, and the
+declaration cell may still be 0. `OWN` as an opcode is not that witness.
+`l2_harness` does not grow failures beyond the baseline 36.
 `build_l2src`, `run_l3_selftest`, and `check_docs` pass. Then this file gets
 `DONE <sha> <UTC>`. The parent ticket gets its own `DONE` only after its
 remaining acceptance, including this slice.

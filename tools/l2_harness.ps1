@@ -1251,6 +1251,9 @@ $fixtures = @(
         Args = @('0', 'shape', 'int', 'SET', 'IF', 'PRIM_PUB', 'RET', 'spell', 'b', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_add.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0', 'shape', 'int', 'SET', 'add', '2', '2', 'IF', 'body', 'SET', 'endbody', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
+    # The exit value is the computed sum, once native and once with the root walked.
+    [pscustomobject]@{ Name = 'graph_shape_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'shape', 'int', 'SET', 'add', '2', '2', 'PRIM_PUB', 'RET', 'endshape'); Entry = 4; WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_mut_erase.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0', 'mutate', 'erase-add', 'shape', 'int', 'SET', 'add', '2', '2', 'IF', 'body', 'SET', 'endbody', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_mut_move.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';

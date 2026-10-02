@@ -180,6 +180,9 @@ copied inner Structure, parented at the result, holding int 1.
 `A` holds int 1. `graph_shape_unknown_paren` exits 0, native and walked.
 `regress_ns_128` keeps `A()`, `B: ()` and the block form as three empty
 Structures. `graph_shape_unknown_empty` exits 0, native and walked.
+`regress_ns_132` keeps the call, the compact call, the indexed pair, the
+repeated names, the method order, the method if, and the known atom.
+All seven stay green, native and walked.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

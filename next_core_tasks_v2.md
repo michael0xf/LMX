@@ -253,6 +253,9 @@ while. `else\pt\x` is 4. `unit_body_path_else_while_pt` exits 7, and
 the unwalked else stays green.
 `regress_ns_178` builds a `Point` inside a for. `for\pt\x` is 4.
 `unit_body_path_for_pt` exits 7, and the nested else stays green.
+`regress_ns_180` counts a `Point` inside a catch, so the method stays
+native. The caught value is 1. `return` on the `fn` column is the
+trailer. `unit_catch_scope_repeat` stays green.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

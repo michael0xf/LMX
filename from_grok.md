@@ -1,4 +1,58 @@
-# from_grok.md — как подхватить работу по `next_core_tasks.md`
+# from_grok.md — где остановился Grok, 2026-10-02
+
+Этот раздел — остановка текущей сессии. Ниже, с заголовка «Архив 2026-09-26», лежит прежняя передача по `next_core_tasks.md`. Она не задаёт очередь. Активная очередь — `next_core_tasks_v2.md`. Нормы — `docs/`. Карта ядра — `CORE_L2_L3_v2.md`. Словарь — `next_core_tasks_dictionary_v2.md`. Перенос — `L2_L3_CODING_INSTRUCTION.md`. Вход — `READ.ME`, затем `steps/current.md`.
+
+## Где остановился
+
+Ветка `main`. Документный HEAD после предложения про `regress_ns_181` — `257f25c2` (`docs: a Point in the then arm keeps the path`). Транслятор в этот коммит не входил.
+
+Первый открытый пункт — `critical_graph_bug` (`steps/tickets/critical_graph_bug.md`). Строки `DONE` нет. `critical_pointer_to_struct_bug` не начат и не начинается, пока граф не закрыт. Привязка отсутствующего `b: A` тоже ждёт обоих тикетов. `LmxUseLeaf` в исходниках нет и не возвращается.
+
+Последний прогон — `build/l2_harness/regress_ns_182`. Каталог красный, заново его не занимать. Следующий свежий `-OutDir` — `regress_ns_183`. Полный гейт не запускался. Последний полный гейт по-прежнему `critical_graph_bug_full_15`: RED 36 of 1175, те же 36 текстов, что у `full_13`. Эти 36 не переписывать. `build_l2src` `critical_graph_bug_07` и `run_l3_selftest` `critical_graph_bug_03` после более поздних правок графа заново не мерялись.
+
+`regress_ns_182` — фокус на четырёх фикстурах, 1 из 7 целей красная. Транслятор в этом прогоне: sha256 `0245015A4298F009`. Строки:
+
+- `unit_body_path_if_pt` — OK, 13 проверок. Это уже записанный `regress_ns_181`: `Point` в then, `if\pt\x` равен 4, выход 7.
+- `unit_body_path_while_pt` — OK, 13 проверок. `Point` в теле `while`, путь `while\pt\x`, `return` в колонке `fn`.
+- `unit_body_path_until_pt` — OK, 13 проверок. `Point` в блоке `until`, чтение `pt\x`, `return` в колонке `fn`.
+- `unit_body_path_merge_pt` — FAIL. Драйвер: exit 64, ожидался 7.
+
+`while` и `until` прошли внутри красного прогона. Отдельного зелёного штампа у них нет, и предложения в `next_core_tasks_v2.md` для них нет. Перед записью прогнать их одни, без `merge_pt`, в `regress_ns_183`.
+
+## Почему `merge_pt` дал 64
+
+Фикстура `dev/l2src_sandbox/tests/unit_body_path_merge_pt.lm2`: `Q: merge: P`, затем `catch: merge ()` с `Point: pt`, `pt\x: 4` и `if`, который ставит `answer` в 7. `answer` начинается с 64. Перевод прошёл. В сгенерированном `l2_m0` ветка обработчика — `l2_at0 = 1`. Туда попадание только если первый merge не дал результат. Обычный выход метода пишет `l2_q0`. Буква 64 — начальное значение, запись 7 стоит только в ветке обработчика. Значит обработчик не записал 7: первый `Q: merge: P` прошёл, и `catch` не исполнялся. Это не замер «`Point` внутри сработавшего `catch: merge`». Известный отказ того же merge — `unit_s1_catch_merge_local` (обработчик возвращает 50). Его в `regress_ns_182` не было.
+
+Строка harness для `unit_body_path_merge_pt` уже есть в грязном `tools/l2_harness.ps1`. Полный harness с этой строкой добавит отказ сверх базовых 36. До полного гейта либо починить свидетеля так, чтобы merge реально отказал и обработчик вышел 7, либо снять строку. Красный каталог `regress_ns_182` не переиспользовать.
+
+## Что не коммитить
+
+Рабочее дерево грязное. Это срез `critical_graph_bug`, не посадка:
+
+- `dev/l2src_sandbox/l2trans.lm1`
+- `dev/l2src_sandbox/lmx_walk.lm1`
+- `dev/l2src_sandbox/harness/l2_eternal_driver.lm1`
+- `dev/l2src_sandbox/tests/unit_decl_unknown_type_refused.lm2`
+- `tools/l2_harness.ps1`
+- новые `graph_shape_*.lm2` и `unit_body_path_*.lm2`, включая `unit_body_path_while_pt.lm2`, `unit_body_path_until_pt.lm2`, `unit_body_path_merge_pt.lm2`
+- неотслеживаемый `l2_driver_launch.err`
+
+`dev/l2src_sandbox/l1src/parser.lm1` совпадает с HEAD. Правку, которая делала `return` внутри метода trailer-ом `fn`, не возвращать. `return` — trailer только в колонке своей `fn` и закрывает любую вложенность. `return` с отступом внутри метода — обычный оператор. `---` или `end:` нужны только при снижении больше чем на один уровень. В `unit_body_path_for_else` и `unit_body_path_while_else` один `---` перед внутренним `return` остаётся.
+
+Стабильный `l2src/` не обновлять, пока тикет не принят. Один gcc. Вложенный `powershell -File` для harness не использовать. `-OutDir` абсолютный. `-OnlyFixture` — массив PowerShell в том же процессе: `& .\tools\l2_harness.ps1 -OutDir <абсолютный> -OnlyFixture a.lm2,b.lm2`.
+
+Документы сажать сразу и пушить в `main`. В документный коммит транслятор не класть. Сообщение коммита — файл UTF-8 без BOM. `git commit --only -F <файл> -- <путь>`. Форма `git commit --only -- <путь> -m "..."` на этой машине считает `-m` путём и коммит не создаёт.
+
+Вопросы по плану и коду — Codex, один раз: `python claude_chat/uds.py --name lmx_uds send` (в PATH нужен node: `%LOCALAPPDATA%\OpenAI\Codex\bin`) и `python claude_chat/codex_inbound.py send --sender Grok --request-id <id>`. Ответ Codex не подтверждать. Уже отправленные квитанции не повторять: callable-scope `GROK-CODEX-CALLABLE-SCOPE-20261002-03`, STOP-USELEAF `GROK-DS-CODEX-005-STOP-USELEAF-20261002-05`, понимание `GROK-DS-CODEX-005-CONFIRM-UNDERSTANDING-20261002-07`, continue `GROK-CONTINUE-20261002201806Z` и `GROK-CONTINUE-20261002212909Z`. Планировщик `01a0faad-a5e8-7fa3-953c-76cd62f2f7d4` не удалять.
+
+## Что делать сразу после
+
+1. Не закрывать `critical_graph_bug` и не открывать указательный тикет.
+2. Прогнать `unit_body_path_while_pt` и `unit_body_path_until_pt` в `regress_ns_183`. Если оба зелёные, одной фразой записать это в `next_core_tasks_v2.md`, `python tools/check_docs.py`, коммит только этого файла, push.
+3. Разобрать `unit_body_path_merge_pt`: сначала убедиться, что `unit_s1_catch_merge_local` всё ещё зелёный, затем либо сделать merge в новой фикстуре отказом (обработчик с `Point` выходит 7), либо убрать красную строку из harness до любого полного прогона.
+4. Дальше — следующее тело, где поле Structure может не попасть в размер merge или в счётчик шагов обхода. Уже измерены else, else внутри while, for, catch `Oops`, then, и в красном `regress_ns_182` ещё while и until.
+
+# Архив 2026-09-26 — как подхватить работу по `next_core_tasks.md`
 
 Срез Grok CLI на машине автора. База перед этим файлом: `origin/main` `415f7a2` (2026-09-26). После `git pull` смотреть `git log -1`. Этот файл — передача, не норма языка. Норма — `next_core_tasks.md` §0 и спеки. Книгу и спеки ведёт fable.
 

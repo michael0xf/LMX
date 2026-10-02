@@ -189,6 +189,9 @@ launch exit stays the expected one.
 `regress_ns_134` replaces the if body by an empty container. The
 structural check fails, and the launch exit stays the expected one.
 The erase control stays green.
+`regress_ns_136` reads one assigned cell twice. Both reads see 5, so
+the sum is 10. `graph_shape_repeat_use` exits 10, native and walked.
+The working row is the holder's cell slot, not a per-use leaf.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

@@ -93,7 +93,7 @@ A lexical parent determines a Structure's position in its tree; a root has no pa
 The [independent qualifier](#qualification) cuts the external lexical parent at construction; obtaining inputs from the caller follows [dynamic visibility](#dynamic). Neither mechanism changes storage ownership or object identity.
 @@ fields | Имена, пути и повторные вхождения | Names, paths and repeated occurrences | 2.3; 13.1; 14.1; 21.1-2; 21.11
 [RU]
-Имена разрешают исходные обращения; исполнение следует полученным ссылкам и позициям. Диагностическое соответствие «адрес → короткое исходное имя» не является таблицей связывания переменных, типом или идентификатором исполнения. Конструирование, копирование и вызов не требуют регистрации исходного имени. Анонимные и позиционные значения не нуждаются в синтетических именах.
+Имена разрешают исходные обращения; исполнение следует полученным ссылкам и позициям. Имена исходных сущностей не хранятся в графе вообще: ни при атомах, ни при Structure, полях, методах или применениях. Отдельная таблица соответствия «адрес → исходное имя» позволяет восстанавливать имена при выводе исходника и инструментальном просмотре; это не таблица связывания переменных, не тип и не идентификатор исполнения. Конструирование, копирование и вызов не обращаются к ней для разрешения значений или выбора кода. Анонимные и позиционные значения не нуждаются в синтетических именах. Физическое хранение дерева определено в [L2 §2.1](L2_spec_ru.md#interpretable-tree); восстановление исходника — в [контракте toLmx](#source-codec).
 
 Структурный путь `object\field\nested` последовательно выбирает поля графа. Наличие каждого перехода и его допустимость определяются выбранным объектом. Вычисляемый путь не заменяется выдуманным статически известным именем. Зарезервированный `node` обозначает лексическое пространство над методом и остаётся одним и тем же во всей его активации; `node\field` начинает явный обход из этого пространства. Голое `field`, полученное по лексическому fallback, передаётся как скрытый аргумент текущей активации и не тождественно явному пути `node\field`.
 
@@ -113,7 +113,7 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 
 Число и расположение полей структуры фиксируются при создании. Порядок полей графа строго лексический; порядок выдачи нативного кода не разрешает переставлять поля самого графа. Обновление существующего поля заменяет содержащуюся в нём ссылку; оно не добавляет новое вхождение. Для иного набора полей создаётся новая структура. Операции над массивом следуют собственному контракту и не изменяют это правило структуры.
 [EN]
-Names resolve source-level accesses; execution follows the resulting references and positions. A diagnostic mapping from address to short source name is not a variable-binding table, a type or an execution identifier. Construction, copying and calls do not require source-name registration. Anonymous and positional values need no synthetic names.
+Names resolve source-level accesses; execution follows the resulting references and positions. Source-entity names are not stored anywhere in the graph: not on atoms, Structures, fields, methods or applications. A separate address-to-source-name table reconstructs names for source output and inspection; it is not a variable-binding table, a type or an execution identifier. Construction, copying and calls do not consult it to resolve values or select code. Anonymous and positional values need no synthetic names. Physical tree storage is defined in [L2 §2.1](L2_spec_en.md#interpretable-tree); source reconstruction is defined by the [toLmx contract](#source-codec).
 
 A structural path `object\field\nested` selects graph fields in sequence. Each step's presence and validity are determined by the selected object. A computed path is not replaced by an invented statically known name. Reserved `node` denotes the lexical space above the method and stays fixed throughout that method activation; `node\field` starts explicit traversal in that space. A bare `field` obtained by lexical fallback is supplied as a hidden argument of the current activation and is not identical to the explicit `node\field` path.
 
@@ -1781,7 +1781,12 @@ Registry, Table, RegistryView, схема и политика — роли об�
 
 Связывание модуля лишь разрешает явно выбранные операции и рецепты построения в физические ссылки. Оно не сканирует произвольный каталог, не создаёт все экземпляры и не копирует runtime-namespace. Провайдер, кодек и правило понижения выбираются явной ссылкой, конфигурацией либо переданной таблицей. План исполнения удерживает выбранную ссылку; смена провайдера — явное действие, не последствие скрытого глобального поиска. Отдельной семантической операции импорта нет: графовую композицию выполняет только `merge`.
 
-`toLmx`/`fromLmx`, если предоставлены профилем, задают операции кодека с явной политикой. Переносимое сохранение выражает содержимое и идентичности согласно кодеку, не образ памяти с нативными адресами, состоянием аллокатора и внешними дескрипторами. Последние требуют отдельных политик внешних ресурсов.
+<a id="source-codec"></a>
+### Восстановление исходного кода: toLmx
+
+`toLmx` восстанавливает исходный код из [интерпретируемого дерева](L2_spec_ru.md#interpretable-tree), отдельной [таблицы имён](#fields) и сохранённых комментариев. Для дерева, построенного из исходника, отличие результата от исходной записи состоит только в каноническом форматировании с учётом эквивалентных форм грамматики. Имена восстанавливаются из таблицы, а не из полей графа. Сохраняются состав, вложенность и порядок конструкций, а также полный текст и структурное положение комментариев. Комментарии несут самостоятельное содержание; они не являются исполняемыми операциями и их текст не обрабатывается при обычном исполнении. Нативная реализация тела не разрешает сокращать его представление. Пересказ, список только полей данных или декомпиляция машинного кода не заменяют `toLmx`.
+
+`fromLmx` разбирает текстовое представление по общим правилам языка. Переносимое сохранение выражает содержимое и идентичности, не образ памяти с нативными адресами, состоянием аллокатора и внешними дескрипторами. Последние требуют отдельных политик внешних ресурсов; такие политики не разрешают терять исходные конструкции, имена или комментарии при восстановлении исходника.
 
 ### Ключи и ячейки
 
@@ -1839,7 +1844,12 @@ A reactive update may produce events, which are Messages. An agent can propose a
 
 Module linking only resolves explicitly selected operations and construction recipes to physical references. It neither scans arbitrary directories, constructs every instance nor copies a runtime namespace. Providers, codecs and lowering rules are selected by an explicit reference, configuration or supplied Table. An execution plan retains the chosen reference; changing providers is explicit, not the result of hidden global lookup. There is no separate semantic import operation: only `merge` performs graph composition.
 
-`toLmx`/`fromLmx`, when provided by a profile, specify codec operations with explicit policy. Portable persistence represents content and identities under the codec, not a memory image of native addresses, allocator state and foreign descriptors. The latter require separate external-resource policies.
+<a id="source-codec"></a>
+### Source-code reconstruction: toLmx
+
+`toLmx` reconstructs source code from the [interpretable tree](L2_spec_en.md#interpretable-tree), separate [name table](#fields) and retained comments. For a tree constructed from source, the result differs from the original notation only in canonical formatting under the grammar's equivalent forms. Names are reconstructed from the table, not from graph fields. Construct composition, nesting and order are preserved, together with the full comment text and its structural placement. Comments carry independent content; they are not executable operations and their text is not processed during ordinary execution. A body's native implementation does not permit abbreviating its representation. A summary, a list containing only data fields or decompilation of machine code does not replace `toLmx`.
+
+`fromLmx` parses the textual representation under the ordinary language rules. Portable persistence represents content and identities, not a memory image of native addresses, allocator state and foreign descriptors. The latter require separate external-resource policies; those policies do not permit losing source constructs, names or comments during source reconstruction.
 
 ### Keys and cells
 

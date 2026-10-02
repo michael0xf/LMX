@@ -25,6 +25,11 @@ The libc door is declarations in `l1src/libc_abi.lm1` and `c.name` calls. L1 hea
 
 Field definition: [L2 §2](L2_spec_en.md#lmx). The L1 projection defines `VoidArray` with `size_t: size` and `@: void data`, then `Lmx` with a **by-value first member** `VoidArray array`, a second member `@: Lmx parent` and a third member `LmxEntry: native` — the direct reference to the native implementation of the Structure's body, zero when there is none. The C header is generated. The ABI has no separate `LmxArrayDesc` alias. The embedded `array` is the physical child-reference array itself, whose backing is registered in the arena range index; there are no separate top-level `len` or `data` fields. No tag is stored on the record. A Structure field slot is a `void *` array cell; the dynamic membership of child-Message references is a separate List (`KIND_LIST`) in the graph and is not lowered to a fixed group of such slots.
 
+<a id="interpretable-tree"></a>
+### 3.1. Projection of the interpretable tree
+
+Lowering follows the [single tree-storage architecture](L2_spec_en.md#interpretable-tree). A reference to a typed cell remains a physical reference to that cell; the arena range index establishes its kind and type. No separate C leaf record or use object is generated merely to repeat information available from the address and type. Distinct source-tree positions may hold the same reference without duplicating the cell. No graph record contains a source name: the separate name table and full comment text support source reconstruction through `toLmx` but do not participate in ordinary execution. Activation bookkeeping does not become tree fields. A native entry does not waive retention of the interpretable tree and comments.
+
 <a id="type-by-range"></a>
 ## 4. Type by range in L1
 

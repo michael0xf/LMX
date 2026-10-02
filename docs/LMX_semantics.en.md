@@ -109,7 +109,7 @@ The [independent qualifier](#qualification) cuts the external lexical parent at 
 <a id="fields"></a>
 ## 4. Names, paths and repeated occurrences
 
-Names resolve source-level accesses; execution follows the resulting references and positions. A diagnostic mapping from address to short source name is not a variable-binding table, a type or an execution identifier. Construction, copying and calls do not require source-name registration. Anonymous and positional values need no synthetic names.
+Names resolve source-level accesses; execution follows the resulting references and positions. Source-entity names are not stored anywhere in the graph: not on atoms, Structures, fields, methods or applications. A separate address-to-source-name table reconstructs names for source output and inspection; it is not a variable-binding table, a type or an execution identifier. Construction, copying and calls do not consult it to resolve values or select code. Anonymous and positional values need no synthetic names. Physical tree storage is defined in [L2 §2.1](L2_spec_en.md#interpretable-tree); source reconstruction is defined by the [toLmx contract](#source-codec).
 
 A structural path `object\field\nested` selects graph fields in sequence. Each step's presence and validity are determined by the selected object. A computed path is not replaced by an invented statically known name. Reserved `node` denotes the lexical space above the method and stays fixed throughout that method activation; `node\field` starts explicit traversal in that space. A bare `field` obtained by lexical fallback is supplied as a hidden argument of the current activation and is not identical to the explicit `node\field` path.
 
@@ -1010,7 +1010,12 @@ A reactive update may produce events, which are Messages. An agent can propose a
 
 Module linking only resolves explicitly selected operations and construction recipes to physical references. It neither scans arbitrary directories, constructs every instance nor copies a runtime namespace. Providers, codecs and lowering rules are selected by an explicit reference, configuration or supplied Table. An execution plan retains the chosen reference; changing providers is explicit, not the result of hidden global lookup. There is no separate semantic import operation: only `merge` performs graph composition.
 
-`toLmx`/`fromLmx`, when provided by a profile, specify codec operations with explicit policy. Portable persistence represents content and identities under the codec, not a memory image of native addresses, allocator state and foreign descriptors. The latter require separate external-resource policies.
+<a id="source-codec"></a>
+### Source-code reconstruction: toLmx
+
+`toLmx` reconstructs source code from the [interpretable tree](L2_spec_en.md#interpretable-tree), separate [name table](#fields) and retained comments. For a tree constructed from source, the result differs from the original notation only in canonical formatting under the grammar's equivalent forms. Names are reconstructed from the table, not from graph fields. Construct composition, nesting and order are preserved, together with the full comment text and its structural placement. Comments carry independent content; they are not executable operations and their text is not processed during ordinary execution. A body's native implementation does not permit abbreviating its representation. A summary, a list containing only data fields or decompilation of machine code does not replace `toLmx`.
+
+`fromLmx` parses the textual representation under the ordinary language rules. Portable persistence represents content and identities, not a memory image of native addresses, allocator state and foreign descriptors. The latter require separate external-resource policies; those policies do not permit losing source constructs, names or comments during source reconstruction.
 
 ### Keys and cells
 

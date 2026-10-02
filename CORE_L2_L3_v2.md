@@ -91,7 +91,7 @@ Binary expression structure matters. A binary operator has ordered operand subex
 
 **Implementation.** `Lmx` uses an ordered array of untagged references as its immediate physical field sequence. This is a representation of a graph node's edges, not a claim that the program is a flat C array. Operator Frames use `LmxOp` values and graph children. A body walks ordered children; binary and control operators recursively consume their operand/body children. Declaration cells and nested hosted-body Structures remain addressable graph objects. The typed walker recognizes these operator Frames by classified operator cells, not by parsing runtime text names.
 
-The current graph representation includes protocol-shaped nodes such as CALL and ADMIT_AS. Their child layouts are internal executable encodings, not new surface syntax. A raw `void *` child alone carries no per-slot tag; the referenced address and its storage range establish its physical category.
+The current graph representation includes protocol-shaped nodes such as CALL and ADMIT_AS. Their child layouts describe implementation state, not permission to substitute protocol fields for source structure; [critical_graph_bug](steps/tickets/critical_graph_bug.md) audits that distinction. A raw `void *` child carries no per-slot tag; the referenced address and its storage range establish its physical category. The normative [tree-storage architecture](docs/L2_spec_en.md#interpretable-tree) does not require an additional leaf/use record for a reference to an existing typed cell.
 
 ### 3.2 Three different relations must not be collapsed
 
@@ -117,7 +117,11 @@ The important identities are:
 
 ### 3.3 Names, comments, and complete-source retention
 
-**Norm.** Names, occurrence identity, comments and the complete binary source/operator tree are retained as specified; comments are not executable operators. A diagnostic address-to-source-name facility is compatible with physical execution and does not become a semantic name registry.
+**Norm.** The primary specification is [L2 §2.1, storage of the interpretable tree](docs/L2_spec_en.md#interpretable-tree), with the [L1 projection](docs/L1_spec_en.md#interpretable-tree), [name rules](docs/LMX_semantics.en.md#fields) and [toLmx contract](docs/LMX_semantics.en.md#source-codec). Source names are absent from the graph as a whole, not merely from atoms: Structures, methods, fields and applications do not store their names either. The separate address-to-name table reconstructs them for source output and inspection, never for execution dispatch.
+
+An atom already has its typed arena cell and address. A Structure's ordered child references may point directly to that storage; several source positions may refer to one cell. These positions distinguish uses without a per-use leaf object, duplicate value, selector/index/spelling wrapper or an added field of base `Lmx`. Existing activation machinery resolves working values and formals; a working value is not a reason to insert another persistent graph object. This does not equate a reference-slot address with its referent or merge separate declarations.
+
+Comments are retained in full with their structural placement. They carry independent content and are not processed on the execution path. For a source-constructed tree, `toLmx` reconstructs the original source content, including names and comments, with canonical formatting as the only difference. The name table and comments are retained information, not an alternate syntax tree or textual program to execute.
 
 **Implementation boundary.** The translator retains P0 nodes, interned text, declaration-name identity, namespace/own rows and borrowed spans while translating. The generated executable retains operator/data graphs for supported lowering paths. These are two different lifetimes. This audit has not established a general final-program address-to-source-name/comment facility covering every accepted source. It also has not established that every source role emits a complete portable graph. Historical quiet graph refusal and native-only bodies are explicit evidence boundaries, not an alternate architecture.
 

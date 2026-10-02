@@ -99,8 +99,10 @@ holds an int, and `c` follows Mid. The one-level nest and the flat Holder
 stayed green. `graph_shape_method_array` (`regress_ns_83`) exits 7: the int
 comes first, then an int Array. The flat Holder stayed green.
 `graph_shape_method_arrarr` (`regress_ns_84`) exits 7: the int comes first,
-then an Array of Arrays. The int Array stayed green. A reference field inside
-a method-local Structure is still refused.
+then an Array of Arrays. The int Array stayed green.
+`graph_shape_method_ptr` (`regress_ns_85`) exits 7: the int comes first, then
+`@: int`. The Array of Arrays stayed green. A field that names another
+Structure, `Point: box`, is still refused.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

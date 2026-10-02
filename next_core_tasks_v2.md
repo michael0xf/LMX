@@ -73,8 +73,11 @@ The `if` and `while` placer now stores the operator first and the cell shell
 after it. `regress_ns_62`: the exit inside the body is `a`, which is 3,
 native and walked. `regress_ns_60` kept `entry_argc_if` and `graph_shape_call`
 green. The two `SET_OF` stay inside the body in source order. The shell is
-still a sibling of the `IF`, not a child of its body. `l2_rw_host_at` still
-addresses that sibling. The
+still a sibling of the `IF`, not a child of its body. Putting it inside the
+body left native `l2_h` undeclared: that local is bound only when the shell
+is a direct child of the activation. That attempt was reverted.
+`regress_ns_64` is green again, exit 3. `l2_rw_host_at` still addresses the
+sibling. The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts
 as `full_05`. `build_l2src` `critical_graph_bug_05` is GREEN 286 after the int leaf was withdrawn.

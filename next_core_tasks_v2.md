@@ -116,9 +116,11 @@ precede the operator.
 `regress_ns_99` resolves only an unresolved method-local kind 3 or kind 4
 field. Letter models stay accepted. `graph_shape_method_fn` and
 `graph_shape_method_ref` exit 7 again, and the if and while shells stay
-green. `regress_ns_100` follows that shell through the operator.
-`unit_body_seg_method` exits 64, its walked twin reports walk INVALID, and
-`unit_body_path_while` still faults.
+green. A nested count keeps the body's shell.
+`regress_ns_101` is green: `unit_body_seg_method`, its walked twin, and
+`unit_body_path_while` exit 7, and the if and while shapes stay green.
+`regress_ns_102` walks the while and the for. `unit_body_path_deep` still
+stops, "a control body has no operator".
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

@@ -192,6 +192,9 @@ The erase control stays green.
 `regress_ns_136` reads one assigned cell twice. Both reads see 5, so
 the sum is 10. `graph_shape_repeat_use` exits 10, native and walked.
 The working row is the holder's cell slot, not a per-use leaf.
+`regress_ns_137` assigns a hosted field and reads it twice in one call,
+then through two later calls. The sum is 20.
+`graph_shape_hosted_use` exits 20, native and walked.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

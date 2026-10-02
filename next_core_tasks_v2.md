@@ -104,8 +104,11 @@ then an Array of Arrays. The int Array stayed green.
 `@: int`. The Array of Arrays stayed green. `graph_shape_method_ref`
 (`regress_ns_90`) exits 7: the int comes first, then a copy of unit `Point`,
 and that copy's field is an int. `Point` itself follows the method. The
-pointer field stayed green. A callable field inside a method-local Structure
-is still refused.
+pointer field stayed green. `graph_shape_method_fn` (`regress_ns_91`) exits 7:
+the int comes first, then the shared method `step`, and that same method is
+the next unit child. The Point copy stayed green. The method-local field
+kinds the unit already builds are in the graph. The `if` and `while` cell
+shell is still the sibling after the operator.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

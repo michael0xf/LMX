@@ -240,6 +240,10 @@ An indented `return` inside the method is not that trailer.
 `regress_ns_169` finds the nested Structure with one `---`. The jump
 from the inner `return` back to the loop is more than one level. The
 copy and the merge stay green.
+`regress_ns_170` drops the extra closers in the two-int search. One
+`---` covers each multi-level jump. `return: 0` at the `fn` column
+closes the loop. `graph_shape_fields` and `graph_shape_unknown_nest`
+stay green.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

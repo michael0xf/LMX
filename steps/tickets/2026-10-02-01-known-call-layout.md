@@ -38,11 +38,16 @@ A direct call stores the callee once, at slot 1, and does not store a contract
 shell on the call. The contract is the method occurrence's last child, past
 the body. `EXEC` still keeps its contract on the call and still evaluates slot 2.
 
-An int own is a source-use leaf, not an `OWN` frame. Replacing the leaf with
-`b`'s declaration cell made the value 0: that cell stays 0 after `int: b 5`
-until publication, and the live value is the activation work row. That
-replacement stays reverted. The call is still a `CALL`. Its contract still
-hangs on the method, past the body. It is not yet only the source application.
+Author, 2026-10-02: an atom `int: i 5` does not get a leaf. Its address and
+type already name the binding. A separate node would be a second store. That
+`LmxUseLeaf` experiment is withdrawn. A non-hosted own is an `OWN` again.
+
+The atom `b` in `A: b` is not that declaration. Unknown `A` is a named
+Structure whose content is the atom leaf, the same empty-structure principle
+as `A()`, `A: ()`, and the block form. Known `A` makes `b` an argument. One
+argument Structure is the same chain as the arguments themselves; a Structure
+passed as one argument is a named argument. The call is still a `CALL`. Its
+contract still hangs on the method, past the body.
 
 `regress_ns_32`: the seven shape witnesses stayed green, native and walked.
 `unit_make_adder` still fails only the baseline needle `c.LMX_WALK_OP_AT, 3U)`.

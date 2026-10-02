@@ -58,6 +58,11 @@ arrange a safe handoff, not a second writer or an interrupted gate. Only after
 this ticket is closed take the pointer-depth repair below, then the reference
 application refactoring, before resuming the remaining dependency queue.
 
+Active slice of this ticket, not a detour:
+[2026-10-02-01-known-call-layout](steps/tickets/2026-10-02-01-known-call-layout.md).
+`A: b` is still the lowered `CALL` (`(M, M)` plus a contract shell). The
+baseline harness 36 stay the baseline; they are not a second ticket.
+
 <a id="critical-pointer-to-struct-bug"></a>
 ## Second action — critical_pointer_to_struct_bug (CRITICAL / P0, OPEN)
 

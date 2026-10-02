@@ -162,6 +162,10 @@ the counter shell, then `FOR`. The for path, its walked twin, and
 The string `kept` and the later assignment stay in the graph.
 `graph_shape_keep` exits 0, native and walked. `graph_shape_unknown_atom`
 stays green.
+`regress_ns_121` keeps an empty group, a discarded call, and a nested
+group in that order. The nested group sets `n` to 1.
+`graph_shape_discard` exits 1, native and walked. `graph_shape_keep`
+stays green.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

@@ -31,7 +31,7 @@ closed.
 - [x] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
   Shown on `graph_shape_12`: `graph_shape_mut_erase` (`mutate erase-add`), `graph_shape_mut_move` (declaration after the expression), `graph_shape_mut_collapse` (two `SET` nodes aliased). Each driver exit is 1 because the shape check fails, and the launch exit stays 0.
 - [ ] Не запускались ворота из раздела 6: полный l2_harness, build_l2src, run_l3_selftest, check_docs. Прежняя полная прогонка была красной, 36 из 1149.
-  `l2_harness` `critical_graph_bug_full_12`, uncommitted translator: RED 39 of 1164. The 36 baseline texts match `full_05`. Three slot pins moved with the if shell and are green in `regress_ns_65`. `build_l2src` `critical_graph_bug_06`: GREEN 286, after the if operator was placed before its cell shell. `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The `LmxUseLeaf` type is withdrawn. `l3_type_budget` is GREEN: 74 names, headroom 54 under 128. The harness row stays red, so this acceptance item stays open.
+  `l2_harness` `critical_graph_bug_full_13`, uncommitted translator: RED 36 of 1168. The three if-shell slot pins from `full_12` are absent, and no `graph_shape` witness failed. `full_12` was RED 39 of 1164: the same 36 baseline texts as `full_05`, plus those three pins, later green in `regress_ns_65`. `build_l2src` `critical_graph_bug_06`: GREEN 286, after the if operator was placed before its cell shell. `run_l3_selftest` `critical_graph_bug_02`: all 11 suites exit 0. The `LmxUseLeaf` type is withdrawn. `l3_type_budget` is GREEN: 74 names, headroom 54 under 128. The harness row stays red, so this acceptance item stays open.
 - [ ] В тикете нет строки DONE. Правка транслятора не закоммичена.
 
 <a id="first-critical-graph-bug"></a>
@@ -88,7 +88,10 @@ keeps its two header structures, then Holder, and Holder's fields are the ints
 in source order. The same run kept `graph_shape_fields`, `graph_shape_method_if`,
 and `graph_shape_call` green. `regress_ns_76` repeats that shape on a distinct
 copy of the unit, and a merge of Holder keeps int 1 then int 3 as copied cells
-parented at the unit. 82 checks, exit 7, native and walked. The
+parented at the unit. 82 checks, exit 7, native and walked.
+`critical_graph_bug_full_13` is RED 36 of 1168. Those 36 are the baseline rows.
+The three if-shell pins are not among them, and no `graph_shape` witness failed.
+The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts
 as `full_05`. `build_l2src` `critical_graph_bug_05` is GREEN 286 after the int leaf was withdrawn.

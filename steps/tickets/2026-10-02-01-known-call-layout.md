@@ -54,6 +54,29 @@ as source children. This is a general operand representation for owns, formals,
 and repeated uses, not a call-only patch. No new permanent representation
 without reporting the minimal change first.
 
+Codex `GROK-DS-CODEX-005-REPRESENTATION-20261002-02`: there is no existing
+runtime field for a source spelling. `Lmx` has array, parent, and native.
+`LmxOp` has code. `l2_rw_spell` stores text as an ordinary graph child, so
+adding `spell b` onto `OWN` does not repair the layout. A general
+source-occurrence facility is already required. The spelling may be diagnostic
+metadata outside the operand child list. Execution stays bound to the resolved
+identity, not to the spelling.
+
+Proposed layout, not yet emitted. One `USE` frame per source use. It is the
+same storage as today's `OWN`: role at child 0, work index in the frame size
+at slot 2, no holder child when the holder is the current activation. That
+size is execution metadata, not a source child. The parent retains this one
+frame as its source child. Evaluation is unchanged: `lmx_walk_work_find` on
+the current activation. The diagnostic spelling is a side record owned by the
+program arena and freed with the graph, not an arena child and not a copy of
+the value.
+
+- Bare own `b`: one `USE`, work index of `b`. Not the declaration cell.
+- Formal `x`: one `USE`, work index of `x` in that activation. Not the caller's `b`.
+- Literal 5: a `LIT` whose payload is 5. Not a `USE`.
+- Two uses of `b`: two `USE` frames, one shared work row, two spelling records.
+  The value is not copied into either frame.
+
 ## Do
 
 One representation. The call's retained children are the source head and the

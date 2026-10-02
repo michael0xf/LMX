@@ -113,6 +113,11 @@ that child through the operator. `graph_shape_if_body` still exits 3,
 `graph_shape_while_body` exits 1, and `graph_shape_method_if` and
 `entry_argc_if` stayed green. The `for` shell and its initializer still
 precede the operator.
+`regress_ns_99` resolves only an unresolved method-local kind 3 or kind 4
+field. Letter models stay accepted. `graph_shape_method_fn` and
+`graph_shape_method_ref` exit 7 again, and the if and while shells stay
+green. A path that names an if or while body still expects that body's
+activation slot.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

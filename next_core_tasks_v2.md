@@ -217,6 +217,10 @@ exits 16, native and walked.
 `b\value` and stops, "unknown field path segment". `@: b A` stops on
 that line, "unknown type", with detail `atom=b`. The working alias
 remains `Model: b c`.
+Codex `GROK-DS-CODEX-REF-ABSENT-20261002-01`: absent `b: A` and
+`@: b A` bind one admitted reference, destination then value. That
+defect waits until after `critical_pointer_to_struct_bug`. This stage
+does not add a name-specific exception. `Model: A` is not the setup.
 `regress_ns_148` reads `else\hosted` inside a while after a call.
 The value is 21. `unit_body_path_else_while` and its walked twin exit 7.
 `regress_ns_149` reads `else\hosted` inside a for after a call.

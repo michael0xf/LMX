@@ -232,6 +232,9 @@ by themselves. `---` jumps out of the inner if and the else.
 `regress_ns_162` puts a while inside an else the same way. `while\hosted`
 is 21. `unit_body_path_while_else` and its walked twin exit 7. No `end:`
 is used.
+`regress_ns_167` puts `return: 5` on the same column as `fn:`. It is
+that function's trailer and closes three nested `if`s. The call exits 5.
+An indented `return` inside the method is not that trailer.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

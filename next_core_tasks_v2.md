@@ -210,6 +210,9 @@ stays 5. `unit_cache_addr_graph` and its walked twin exit 59.
 `regress_ns_144` assigns the last `n` and does not add an occurrence.
 `[0]n` stays 1 and the last `n` becomes 6. `graph_shape_assign_occ`
 exits 16, native and walked.
+`regress_ns_145` refuses `Holder: 1` inside a method. The text is
+"more arguments than Holder has formals". The known nested call
+`Known(1)` stays refused the same way.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

@@ -1246,6 +1246,17 @@ $fixtures = @(
     # -179: the take and the null test run.
     [pscustomobject]@{ Name = 'entry_argc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('one', 'two');
         Absent = @(); Debt = @() },
+    # Graph shape: unit child order by role and retained spelling, not by slot number.
+    [pscustomobject]@{ Name = 'graph_shape_unknown_atom.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'shape', 'int', 'SET', 'IF', 'PRIM_PUB', 'RET', 'spell', 'b', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_add.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0', 'shape', 'int', 'SET', 'add', '2', '2', 'IF', 'body', 'SET', 'endbody', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_mut_erase.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0', 'mutate', 'erase-add', 'shape', 'int', 'SET', 'add', '2', '2', 'IF', 'body', 'SET', 'endbody', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_mut_move.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0', 'shape', 'int', 'SET', 'add', '2', '2', 'IF', 'body', 'SET', 'endbody', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_mut_collapse.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0', 'mutate', 'collapse', 'shape', 'int', 'SET', 'add', '2', '2', 'IF', 'body', 'SET', 'endbody', 'PRIM_PUB', 'RET', 'endshape'); Entry = 0; Absent = @(); Debt = @() },
     # The former main-signature refusals test ordinary method formals now (L2 has no main, S2).
     [pscustomobject]@{ Name = 'entry_argc_bad.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_argc_dup.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'duplicate formal'; Absent = @(); Debt = @() },
@@ -5379,7 +5390,7 @@ foreach ($fx in $fixtures) {
         $noteGone = @($fx.Notes | Where-Object { $noteLog -notmatch [regex]::Escape($_) })
         if ($noteGone.Count -gt 0) { Add-Row 'FAIL' ('fixture:' + $stem) ('l2trans did not note "' + $noteGone[0] + '"'); continue }
     }
-    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1' -or $fx.Expect -eq 'shape-mutant') {
         $entryLine = [regex]::Match((Get-Content -LiteralPath $genLm1 -Raw), '(?m)^# entry statements: (\d+)\s*$')
         if (-not $entryLine.Success) { Add-Row 'FAIL' ('fixture:' + $stem) 'the generated L1 does not state `# entry statements: N`'; continue }
         $emptyOk = $fx.PSObject.Properties['EmptyEntry'] -and $fx.EmptyEntry
@@ -5500,7 +5511,7 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ($units.Count.ToString() + ' library units in one relocatable link, own cells ' + ($cells -join ' ') + ', no unhashed external name; LINK and SYMBOLS only, nothing was run'); continue
     }
 
-    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1' -or $fx.Expect -eq 'shape-mutant') {
         $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
         $why = Test-NativeGraphWitnesses $fx $l1
         foreach ($a in $fx.Absent) {
@@ -5587,6 +5598,13 @@ foreach ($fx in $fixtures) {
                 continue
             }
             Add-Row 'OK' ('fixture:' + $stem) 'X1 exit 3, walk error INVALID'
+            continue
+        }
+        if ($fx.Expect -eq 'shape-mutant') {
+            $mlog = Log-Text ('fixture.' + $stem + '.run')
+            $mutantOk = $ran -eq 1 -and $mlog -match 'failed of' -and $mlog -match 'FAIL \[' -and $mlog -notmatch 'l2_eternal_driver: exit \d+, expected'
+            if (-not $mutantOk) { Add-Row 'FAIL' ('fixture:' + $stem) ('shape mutant expected structural failure with the same exit, got exit ' + $ran); continue }
+            Add-Row 'OK' ('fixture:' + $stem) 'structural check failed; the launch exit stayed the expected one'
             continue
         }
         $said = ((Log-Text ('fixture.' + $stem + '.run')) -split "`r?`n" | Where-Object { $_ -match '^l2_eternal_driver: \d+ checks' } | Select-Object -Last 1)

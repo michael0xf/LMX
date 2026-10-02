@@ -405,6 +405,17 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
         if: (c.strcmp(gargv[at], "dispatch") = 0 || c.strcmp(gargv[at], "dispatchthrow") = 0) && at + 3 < gargc
             at: at + 4
             continue
+        if: c.strcmp(gargv[at], "shape") = 0
+            at: at + 1
+            while: at < gargc && c.strcmp(gargv[at], "endshape") != 0
+                at: at + 1
+            ---
+            if: at < gargc
+                at: at + 1
+            continue
+        if: c.strcmp(gargv[at], "mutate") = 0 && at + 1 < gargc
+            at: at + 2
+            continue
         ---
         if: merge_fact_width(gargv[at]) != 0
             at: at + merge_fact_width(gargv[at])
@@ -450,6 +461,336 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
             ---
         ---
     ---
+return: 1
+
+# A shape word is an operator role, a primitive cell, or `spell` plus the retained text.
+# `struct` is a Structure that is not itself an operator. The match walks the unit in
+# child order and skips the children list and the settings node by what they are.
+fn: shape_op_code (const: @(char word)) int
+    if: c.strcmp(word, "RET") = 0
+        return: c.LMX_WALK_OP_RET
+    if: c.strcmp(word, "SET") = 0
+        return: c.LMX_WALK_OP_SET
+    if: c.strcmp(word, "ADD") = 0
+        return: c.LMX_WALK_OP_ADD
+    if: c.strcmp(word, "IF") = 0
+        return: c.LMX_WALK_OP_IF
+    if: c.strcmp(word, "WHILE") = 0
+        return: c.LMX_WALK_OP_WHILE
+    if: c.strcmp(word, "FOR") = 0
+        return: c.LMX_WALK_OP_FOR
+    if: c.strcmp(word, "PUT") = 0
+        return: c.LMX_WALK_OP_PUT
+    if: c.strcmp(word, "CALL") = 0
+        return: c.LMX_WALK_OP_CALL
+    if: c.strcmp(word, "PRIM_PUB") = 0
+        return: c.LMX_WALK_OP_PRIM_PUB
+    if: c.strcmp(word, "BREAK") = 0
+        return: c.LMX_WALK_OP_BREAK
+return: 0 - 1
+
+fn: shape_node_op (@: Lmx roles; @: void node; @: LmxArena arena) int
+    @: void head node
+    size_t: k 1U
+    if: roles = 0 || node = 0
+        return: 0 - 1
+    if: lmx_domain_kind(arena, node) = c.LMX_KIND_STRUCT
+        head: lmx_arena_ref_value((cast: (@: Lmx) node), 0U)
+    while: k < roles\array.size
+        if: head != 0 && head = lmx_arena_ref_value(roles, k)
+            return: (cast: (int) k)
+        k: k + 1U
+    ---
+return: 0 - 1
+
+# The node itself, or one of its children, when that node is the operator `code`.
+fn: shape_find_op (@: LmxArena arena; @: Lmx roles; @: void node; int: code) @: void
+    size_t: i 0U
+    @: void child 0
+    @: Lmx holder 0
+    if: shape_node_op(roles, node, arena) = code
+        return: node
+    if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
+        return: 0
+    holder: (cast: (@: Lmx) node)
+    while: i < holder\array.size
+        child: lmx_arena_ref_value(holder, i)
+        if: shape_node_op(roles, child, arena) = code
+            return: child
+        i: i + 1U
+    ---
+return: 0
+
+# 1 when `node` is a LIT whose operand is the int `want`. The operand is the role's own child.
+fn: shape_lit_int (@: LmxArena arena; @: Lmx roles; @: void node; int: want) int
+    @: void cell 0
+    @: Lmx holder 0
+    if: shape_node_op(roles, node, arena) != c.LMX_WALK_OP_LIT || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
+        return: 0
+    holder: (cast: (@: Lmx) node)
+    if: holder\array.size < 2U
+        return: 0
+    cell: lmx_arena_ref_value(holder, 1U)
+    if: cell != 0 && lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, cell) = c.LMX_TYPE_INT && lmx_int_value_known(cell) = want
+        return: 1
+return: 0
+
+# The operator's last child, when it is the body of if, while, or for.
+fn: shape_body (@: LmxArena arena; @: Lmx roles; @: void node) @: void
+    int: op
+    size_t: n 0U
+    @: Lmx holder 0
+    if: node = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
+        return: 0
+    op: shape_node_op(roles, node, arena)
+    if: op != c.LMX_WALK_OP_IF && op != c.LMX_WALK_OP_WHILE && op != c.LMX_WALK_OP_FOR
+        return: 0
+    holder: (cast: (@: Lmx) node)
+    n: holder\array.size
+    if: n < 2U
+        return: 0
+return: lmx_arena_ref_value(holder, n - 1U)
+
+# Optional graph damage named by `mutate`. The program text stays the same, so a constant
+# exit letter still exits 0. The shape check then has to fail on the damaged graph.
+fn: shape_mutate (@: LmxArena arena; @: Lmx graph) int
+    @: Lmx roles 0
+    int: at 2
+    size_t: i 0U
+    size_t: k 0U
+    @: void child 0
+    @: void frame 0
+    @: void outer 0
+    @: void body 0
+    @: Lmx holder 0
+    if: graph = 0
+        return: 0
+    while: at + 1 < gargc && c.strcmp(gargv[at], "mutate") != 0
+        at: at + 1
+    ---
+    if: at + 1 >= gargc
+        return: 1
+    roles: lmx_walk_program_roles()
+    if: roles = 0
+        return: 0
+    if: c.strcmp(gargv[at + 1], "erase-add") = 0
+        while: i < graph\array.size
+            child: lmx_arena_ref_value(graph, i)
+            frame: shape_find_op(arena, roles, child, c.LMX_WALK_OP_ADD)
+            if: frame != 0 && lmx_domain_kind(arena, frame) = c.LMX_KIND_STRUCT
+                holder: (cast: (@: Lmx) frame)
+                if: holder\array.size >= 3U
+                    lmx_arena_ref_store(holder, 1U, 0)
+                    lmx_arena_ref_store(holder, 2U, 0)
+                ---
+            ---
+            i: i + 1U
+        ---
+        return: 1
+    if: c.strcmp(gargv[at + 1], "collapse") = 0
+        while: i < graph\array.size
+            child: lmx_arena_ref_value(graph, i)
+            if: outer = 0 && shape_node_op(roles, child, arena) = c.LMX_WALK_OP_SET
+                outer: child
+            if: body = 0
+                frame: shape_body(arena, roles, child)
+                if: frame != 0
+                    body: frame
+                ---
+            ---
+            i: i + 1U
+        ---
+        if: outer != 0 && body != 0 && lmx_domain_kind(arena, body) = c.LMX_KIND_STRUCT
+            holder: (cast: (@: Lmx) body)
+            while: k < holder\array.size
+                child: lmx_arena_ref_value(holder, k)
+                if: shape_node_op(roles, child, arena) = c.LMX_WALK_OP_SET
+                    lmx_arena_ref_store(holder, k, outer)
+                    k: holder\array.size
+                ---
+                k: k + 1U
+            ---
+        ---
+        return: 1
+return: 1
+
+fn: shape_has_spell (@: LmxArena arena; @: void node; const: @(char word)) int
+    size_t: i 0U
+    @: void cell 0
+    @: char text 0
+    @: Lmx holder 0
+    if: node = 0 || word = 0 || lmx_domain_kind(arena, node) != c.LMX_KIND_STRUCT
+        return: 0
+    holder: (cast: (@: Lmx) node)
+    while: i < holder\array.size
+        cell: lmx_arena_ref_value(holder, i)
+        if: cell != 0 && lmx_domain_kind(arena, cell) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, cell) = c.LMX_TYPE_CHAR_PTR
+            text: lmx_charptr_value_known(cell)
+            if: text != 0 && c.strcmp(text, word) = 0
+                return: 1
+            ---
+        ---
+        i: i + 1U
+    ---
+return: 0
+
+# 1, 2, or 3 tokens consumed. 0: this child is not that word.
+# `add A B` is an ADD of two int literals, on this child or inside its shell.
+fn: shape_take (@: LmxArena arena; @: Lmx roles; @: void node; int: at) int
+    int: code
+    int: got
+    @: void frame 0
+    @: Lmx holder 0
+    if: at < 0 || at >= gargc || node = 0
+        return: 0
+    if: numeric_type(gargv[at]) != 0
+        if: lmx_domain_kind(arena, node) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, node) = numeric_type(gargv[at])
+            return: 1
+        return: 0
+    if: c.strcmp(gargv[at], "spell") = 0 && at + 1 < gargc
+        if: shape_has_spell(arena, node, gargv[at + 1]) != 0
+            return: 2
+        return: 0
+    if: c.strcmp(gargv[at], "struct") = 0
+        if: lmx_domain_kind(arena, node) = c.LMX_KIND_STRUCT && shape_node_op(roles, node, arena) < 0
+            return: 1
+        return: 0
+    if: c.strcmp(gargv[at], "add") = 0 && at + 2 < gargc
+        frame: shape_find_op(arena, roles, node, c.LMX_WALK_OP_ADD)
+        if: frame = 0 || lmx_domain_kind(arena, frame) != c.LMX_KIND_STRUCT
+            return: 0
+        holder: (cast: (@: Lmx) frame)
+        if: holder\array.size < 3U
+            return: 0
+        if: shape_lit_int(arena, roles, lmx_arena_ref_value(holder, 1U), arg(at + 1)) = 0
+            return: 0
+        if: shape_lit_int(arena, roles, lmx_arena_ref_value(holder, 2U), arg(at + 2)) = 0
+            return: 0
+        return: 3
+    code: shape_op_code(gargv[at])
+    if: code < 0
+        return: 0
+    got: shape_node_op(roles, node, arena)
+    if: got = code
+        return: 1
+return: 0
+
+fn: shape_check (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
+    @: Lmx roles lmx_walk_program_roles()
+    int: at 2
+    int: stop 0
+    int: tok 0
+    size_t: i 0U
+    int: used 0
+    @: void child 0
+    int: saw 0
+    int: opened 0
+    @: Lmx box graph
+    size_t: lim 0U
+    size_t: depth 0U
+    []: @(Lmx) stack_box 4
+    []: size_t stack_at 4
+    []: size_t stack_lim 4
+    []: @(void) seen_node 16
+    int: seen_n 0
+    int: seen_i 0
+    @: void last 0
+    if: graph = 0
+        return: 0
+    lim: graph\array.size
+    while: at < gargc && c.strcmp(gargv[at], "shape") != 0
+        at: at + 1
+    ---
+    if: at >= gargc
+        return: 1
+    stop: at + 1
+    while: stop < gargc && c.strcmp(gargv[stop], "endshape") != 0
+        stop: stop + 1
+    ---
+    check(stop < gargc && roles != 0, "shape names a closed role list and the program's roles")
+    if: stop >= gargc || roles = 0
+        return: 0
+    tok: at + 1
+    while: tok < stop
+        opened: 0
+        if: c.strcmp(gargv[tok], "body") = 0
+            child: shape_body(arena, roles, last)
+            check(child != 0 && depth < 4U && lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT, "body opens the operator's own body")
+            if: child = 0 || depth >= 4U || lmx_domain_kind(arena, child) != c.LMX_KIND_STRUCT
+                return: 0
+            stack_box[depth]: box
+            stack_at[depth]: i
+            stack_lim[depth]: lim
+            depth: depth + 1U
+            box: (cast: (@: Lmx) child)
+            i: 0U
+            lim: box\array.size
+            tok: tok + 1
+            opened: 1
+        ---
+        if: opened = 0 && c.strcmp(gargv[tok], "endbody") = 0
+            check(i = lim && depth > 0U, "endbody closes a body that was fully read")
+            if: i != lim || depth = 0U
+                return: 0
+            depth: depth - 1U
+            box: stack_box[depth]
+            i: stack_at[depth]
+            lim: stack_lim[depth]
+            tok: tok + 1
+            opened: 1
+        ---
+        if: opened = 0
+            check(i < lim, "the shape still has a graph child")
+            if: i >= lim
+                return: 0
+            child: lmx_arena_ref_value(box, i)
+            used: 0
+            if: box = graph && child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_LIST && lmx_domain_type(arena, child) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
+                used: 0 - 1
+            if: used = 0 && box = graph && child = (cast: (@: void) settings)
+                used: 0 - 1
+            if: used = 0
+                used: shape_take(arena, roles, child, tok)
+                check(used != 0, "graph child matches the next shape word")
+                if: used = 0
+                    return: 0
+                if: lmx_domain_kind(arena, child) = c.LMX_KIND_STRUCT
+                    seen_i: 0
+                    while: seen_i < seen_n
+                        check(seen_node[seen_i] != child, "collapsed occurrences")
+                        if: seen_node[seen_i] = child
+                            return: 0
+                        seen_i: seen_i + 1
+                    ---
+                    if: seen_n < 16
+                        seen_node[seen_n]: child
+                        seen_n: seen_n + 1
+                    ---
+                ---
+                last: child
+                tok: tok + used
+                saw: saw + 1
+            ---
+            i: i + 1U
+        ---
+    ---
+    check(depth = 0U, "every body was closed")
+    if: depth != 0U
+        return: 0
+    while: i < graph\array.size
+        child: lmx_arena_ref_value(graph, i)
+        used: 0
+        if: child != 0 && lmx_domain_kind(arena, child) = c.LMX_KIND_LIST && lmx_domain_type(arena, child) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD
+            used: 0 - 1
+        if: used = 0 && child = (cast: (@: void) settings)
+            used: 0 - 1
+        if: used = 0
+            check(0, "the graph has no child past the shape")
+            return: 0
+        ---
+        i: i + 1U
+    ---
+    check(tok = stop && saw > 0, "the shape accounts for every graph child")
 return: 1
 
 # Test-only stopped-call observations. All descriptor/field reads happen before
@@ -588,6 +929,8 @@ fn: l2_driver_program (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
     phase: "R0's program"
     if: rc = 0
         inspect(arena, graph)
+        shape_mutate(arena, graph)
+        shape_check(arena, graph, settings)
         while: at + 1 < gargc
             if: c.strcmp(gargv[at], "stopwalk") = 0
                 stop_walk_caller: arg(at + 1)

@@ -107,8 +107,12 @@ and that copy's field is an int. `Point` itself follows the method. The
 pointer field stayed green. `graph_shape_method_fn` (`regress_ns_91`) exits 7:
 the int comes first, then the shared method `step`, and that same method is
 the next unit child. The Point copy stayed green. The method-local field
-kinds the unit already builds are in the graph. The `if` and `while` cell
-shell is still the sibling after the operator.
+kinds the unit already builds are in the graph. `regress_ns_92` puts the
+`if` and `while` cell shell at child 0 of the walked body. `l2_h` loads
+that child through the operator. `graph_shape_if_body` still exits 3,
+`graph_shape_while_body` exits 1, and `graph_shape_method_if` and
+`entry_argc_if` stayed green. The `for` shell and its initializer still
+precede the operator.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

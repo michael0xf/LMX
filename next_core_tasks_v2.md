@@ -171,6 +171,10 @@ group sets `n` to 2. `graph_shape_nest2` exits 2, native and walked.
 `regress_ns_126` keeps an unknown Structure inside another. `B` holds
 int 1. `graph_shape_unknown_nest` exits 0, native and walked.
 `graph_shape_unknown_atom` and `graph_shape_fields` stay green.
+`regress_ns_127` reads the parenthesized body as the same Structure.
+`A` holds int 1. `graph_shape_unknown_paren` exits 0, native and walked.
+`regress_ns_128` keeps `A()`, `B: ()` and the block form as three empty
+Structures. `graph_shape_unknown_empty` exits 0, native and walked.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

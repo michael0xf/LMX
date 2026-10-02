@@ -62,20 +62,31 @@ source-occurrence facility is already required. The spelling may be diagnostic
 metadata outside the operand child list. Execution stays bound to the resolved
 identity, not to the spelling.
 
-Proposed layout, not yet emitted. One `USE` frame per source use. It is the
-same storage as today's `OWN`: role at child 0, work index in the frame size
-at slot 2, no holder child when the holder is the current activation. That
-size is execution metadata, not a source child. The parent retains this one
-frame as its source child. Evaluation is unchanged: `lmx_walk_work_find` on
-the current activation. The diagnostic spelling is a side record owned by the
-program arena and freed with the graph, not an arena child and not a copy of
-the value.
+Correction from Codex `GROK-DS-CODEX-005-LAYOUT-CORRECTION-20261002-03`.
+`lmx_walk_store_size` allocates a `size_t` cell and stores it at `child[2]`.
+That is a graph child. `code.array.size` stays the child count. A null holder
+at `child[1]` is still a child slot. `lmx_walk_work_find` searches by the
+physical slot address, not by a numeric work-row index. Renaming `OWN` to
+`USE` leaves those children in place. Ordinary formals are `ARG` width 4:
+formal index at `child[1]`, input witness at `child[3]`; evaluation reads
+`f.args`, not the own-work row.
 
-- Bare own `b`: one `USE`, work index of `b`. Not the declaration cell.
-- Formal `x`: one `USE`, work index of `x` in that activation. Not the caller's `b`.
-- Literal 5: a `LIT` whose payload is 5. Not a `USE`.
-- Two uses of `b`: two `USE` frames, one shared work row, two spelling records.
-  The value is not copied into either frame.
+Proposed record, not yet emitted. One source-use leaf per use. The leaf is
+not an `Lmx` Structure and has no synthetic children. It is the parent's one
+source child. Beside it, arena-owned and freed with the graph:
+
+- `kind`: own-place or formal. The two selectors stay distinct.
+- own-place: the holder identity and child index that `lmx_walk_work_cell`
+  already uses, resolved against the current activation. Not a stored
+  `LmxWalkWork` pointer and not a global row number.
+- formal: the formal index that `ARG` already uses, read from `f.args`.
+- `spell`: diagnostic only. Execution never reads it.
+
+- Bare own `b`: one leaf, own-place selector of `b`. Not the declaration cell.
+- Formal `x`: one leaf, formal selector of `x`. Not an own-place read.
+- Literal 5: a `LIT` whose payload is 5. Not a use leaf.
+- Two uses of `b`: two leaves, one live binding, two spelling records.
+  The value is not copied into either leaf.
 
 ## Do
 

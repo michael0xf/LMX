@@ -118,6 +118,19 @@ shape witnesses stayed green, native and walked, 10 targets.
 `regress_ns_39`: `unit_make_adder` fails only the baseline debt
 `c.LMX_WALK_OP_AT, 3U)`.
 
+`@` of an int own takes the leaf's cell. Reading the leaf as an `Lmx` aborted
+the walk (`-1073741819`). `regress_ns_40` and `regress_ns_41` are green on
+those walks, and `graph_shape_call` still exits 5.
+
+`critical_graph_bug_full_06` was RED 76 of 1159: the abort, plus pins that
+still required the callee twice and an `OWN` frame for an int own.
+`critical_graph_bug_full_07` is RED 36 of 1159. Those 36 texts are the same
+as `critical_graph_bug_full_05`. The harness now reads a direct call's
+contract from the callee and accepts a use leaf where an `OWN` pin names the
+same index. The call is still a `CALL`. This slice stays open: `build_l2src`
+and `run_l3_selftest` have not been re-run on this tree, and the translator
+is not committed. The parent stays open.
+
 ## Do
 
 One representation. The call's retained children are the source head and the

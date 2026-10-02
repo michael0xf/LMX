@@ -7,7 +7,7 @@ of [next_core_tasks.md](next_core_tasks.md), not its historical evidence. It sto
 at full L3/L2 self-build and ordinary calls over Message transport. Application
 development is outside this document. The original documentation handoff paused
 code work; its subsequent resumption is recorded in [steps/current.md](steps/current.md).
-The author's 2026-10-02 priority below now determines the first remaining task.
+The author's 2026-10-02 list below stands in front of `critical_graph_bug`. That ticket stays the first implementation defect after those steps.
 
 This is a plan, not a language specification or a claim that unchecked features
 work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
@@ -16,6 +16,19 @@ work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
 [v2 dictionary](next_core_tasks_dictionary_v2.md),
 [kernel map](CORE_L2_L3_v2.md), and
 [porting guide](L2_L3_CODING_INSTRUCTION.md).
+
+<a id="before-critical-graph-bug"></a>
+## Before critical_graph_bug — acceptance still required
+
+Author's list, 2026-10-02, inserted in front of the ticket. These are the
+missing acceptance steps. They do not replace the ticket and do not mark it
+closed.
+
+- [ ] В harness нет декодера графа, который сверяет структуру с исходником и не зависит от временных имён и старых номеров слотов.
+- [ ] Нет прогонов, где успех виден по значению, а не только по тому, что перевод прошёл. Сюда же входят нативное исполнение и проход через walker.
+- [ ] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
+- [ ] Не запускались ворота из раздела 6: полный l2_harness, build_l2src, run_l3_selftest, check_docs. Прежняя полная прогонка была красной, 36 из 1149.
+- [ ] В тикете нет строки DONE. Правка транслятора не закоммичена.
 
 <a id="first-critical-graph-bug"></a>
 ## First action — critical_graph_bug (CRITICAL / P0, OPEN)

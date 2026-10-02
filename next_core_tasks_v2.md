@@ -201,6 +201,10 @@ name keeps 4. `unit_arg_decl_dyn` and its walked twin exit 7.
 `regress_ns_139` copies `Holder` into `box` and assigns `box\a`.
 The copy's field reads sum to 20, and `Holder\a` stays 0.
 `graph_shape_copy_field` exits 20, native and walked.
+`regress_ns_140` keeps walked recursion at exit 7. `regress_ns_141`
+publishes the caller's cell before the re-entrant call. The outer read
+is 1 and the base read is 1. `graph_shape_reenter` exits 11, native and
+walked.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

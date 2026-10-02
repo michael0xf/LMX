@@ -91,6 +91,11 @@ copy of the unit, and a merge of Holder keeps int 1 then int 3 as copied cells
 parented at the unit. 82 checks, exit 7, native and walked.
 `critical_graph_bug_full_13` is RED 36 of 1168. Those 36 are the baseline rows.
 The three if-shell pins are not among them, and no `graph_shape` witness failed.
+`graph_shape_method_nest` (`regress_ns_80`) exits 7. Holder's first field is
+the nested Structure Inner, whose field is an int, and `c` follows it. The flat
+method Holder and the unit Holder stayed green in that run. A nested field
+deeper than one Structure, or a nested field that is not a number or a char,
+is still refused.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

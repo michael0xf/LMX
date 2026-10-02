@@ -309,3 +309,45 @@ A translated control, not a harness row: a returning `make` passed to `(Holder: 
 
 **Residuals.** Matrix rows 6 and 8, paths, kind-2 forwarding through this schema, and the walker half
 (`l2_rw_call` still accepts only a unit method's atom). `CALLABLE-FORMAL-HIDDEN-CONTRACT` is untouched.
+
+<a id="k04f"></a>
+## K04f — a path actual selects the callable field's occurrence
+
+Landed with this slice. Resolution of the actual only. The kernel and L3 sources are untouched.
+The stable `l2src/` twin is not promoted.
+
+On the K04e bytes `l2_cf_actual` accepted one atom or one nullary frame. A value-position path
+arrives as atoms around the separator, so `recv(Holder\other)` was span 3 and the callable formal
+refused it. An own `int` of the method's spelling did not hide the unit method: the old emission
+passed `lmx_arena_ref_struct` of that method.
+
+The repair joins that span with `l2_join_path` and uses the text a frame head already carries.
+A callable formal stays kind 2. Any other formal stays absent. A nearest binding
+(`l2_colon_bound_ty` returns 0) hides a unit method of the same spelling. Otherwise
+`l2_head_method` selects a bare method or a path whose leaf is a callable field. That field's
+method is the occurrence, the shared terminal, emitted by the existing `l2_tok_method_occ`.
+No descriptor registry, syntax branch, or automatic `@` strip was added.
+
+**Witnesses.**
+
+- `unit_occ_path_actual` — `task` adds 1, `other` adds 10, and `Holder` has `fn: other`. `recv`
+  calls its formal once. `Holder\other` leaves `hits` at 10. `Holder\other()` leaves `hits` at 20.
+  Entry 7. Generated L1 passes unit child 5 (`other`, `l2_m1`) into `recv` at child 6. It does not
+  call `other` while transporting it. Child 4 is `task`.
+- `unit_occ_own_shadow` — `int: task 4` is the nearest binding. Refusal
+  `unit_occ_own_shadow.lm2:15:5: incompatible entry signature`, frame `recv`.
+
+**Evidence.** Staged blob `a24cda703df5ac2bab775874d86a3c83263fa6c8`.
+
+- Focused `build/l2_harness/gk_occ_path_03`: **11 targets, 0 failures**. PE prefix
+  `9AA9F8F2CFEA5B16`. The line pin on the refusal was added after this run.
+- Full gate `build/l2_harness/gk_occ_path_full_01`: **36 of 1149** targets failed. K04e's committed
+  result was 36 of 1147. Both new rows are OK, including the pinned needle. The 36 FAIL lines match
+  `build/l2_harness/gk_occ_formal_full_01` exactly. PE prefix `5EEE53F41DF1D7A9`. Walker execution
+  of this row is not claimed.
+
+**Residuals.** The explicit pointer sentence of row 6 is unmeasured: a valid pointer binding was
+not shown to stay unexecuted merely because its referent is callable. `@: task` is not that
+witness; it is an unknown type. Row 8 and the walker half remain open. Kind-2 forwarding is
+unchanged. `CALLABLE-FORMAL-HIDDEN-CONTRACT` is untouched. The next code item is
+[critical_graph_bug](tickets/critical_graph_bug.md), not row 8.

@@ -2188,6 +2188,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_descriptor_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_occ_descriptor_refused.lm2:17:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # Row 6: a path selects the callable field's occurrence. An own of the
+    # same spelling hides the unit method. The walker is unclaimed.
+    [pscustomobject]@{ Name = 'unit_occ_path_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_occ_own_shadow.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_occ_own_shadow.lm2:15:5: incompatible entry signature'; Absent = @(); Debt = @() },
     # -196: a string literal alone at the root makes no step, as natively; the numeric ones are LIT steps.
     [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },

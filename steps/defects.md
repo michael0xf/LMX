@@ -1402,7 +1402,9 @@ Read-only цепочка на translator blob `e19c599184993d79ff6c42e15619b39b0
 
 Точный [аудит потребителей и путь общей переделки](callable-actual-projection-20260930.md#shared-projection) отделяет норму от предлагаемой реализации.
 
-Native-половина строки 5 закрыта срезом [K04e](k04-callable-actuals-20261001.md#k04e). Обычный непримитивный формал `(Holder: x)` и `(@: Holder x)` принимает вхождение callable без результата по его собственным полям. `unit_occ_descriptor_formal` читает `mark` равным 4; три передачи не меняют `hits`; следующий явный вызов доводит `hits` до 2; вход 7. Несовместимое поле отказывается `unit_occ_descriptor_refused.lm2:17:13: implements is false in function argument`. Возвращающий callable в той же позиции по-прежнему исполняется. Обходчик, строки 6 и 8, пути и пересылка формала этим срезом не закрыты.
+Native-половина строки 5 закрыта срезом [K04e](k04-callable-actuals-20261001.md#k04e). Обычный непримитивный формал `(Holder: x)` и `(@: Holder x)` принимает вхождение callable без результата по его собственным полям. `unit_occ_descriptor_formal` читает `mark` равным 4; три передачи не меняют `hits`; следующий явный вызов доводит `hits` до 2; вход 7. Несовместимое поле отказывается `unit_occ_descriptor_refused.lm2:17:13: implements is false in function argument`. Возвращающий callable в той же позиции по-прежнему исполняется. Обходчик, строка 8 и пересылка формала этим срезом не закрыты.
+
+Путь и тень own строки 6 закрыты срезом [K04f](k04-callable-actuals-20261001.md#k04f). `Holder\other` и `Holder\other()` выбирают вхождение `other`, не одноимённый unit-метод `task`; две передачи и по одному вызову формала оставляют `hits` равным 20; вход 7. Own `int: task` скрывает unit-метод: `unit_occ_own_shadow.lm2:15:5: incompatible entry signature`. Явная pointer-привязка этой строки не измерена. Обходчик и строка 8 этим срезом не закрыты.
 
 ### MERGE-RESULT-STALE-LITERAL-CHECK — 2026-09-30, Codex, FIXED `661735a`
 

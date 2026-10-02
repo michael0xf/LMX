@@ -1,0 +1,20 @@
+# Row 6 negative. The own int named task is the nearest binding.
+# The unit method of that name is not the actual.
+int: hits 0
+
+sub: task ()
+    node\hits: node\hits + 1
+end: task
+
+fn: recv (task: f) int
+    return: 0
+end: recv
+
+fn: go () int
+    int: task 4
+    recv(task)
+    return: 0
+end: go
+
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

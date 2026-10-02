@@ -61,7 +61,7 @@ application refactoring, before resuming the remaining dependency queue.
 Active slice of this ticket, not a detour:
 [2026-10-02-01-known-call-layout](steps/tickets/2026-10-02-01-known-call-layout.md).
 A direct `A: b` stores the callee once. The argument is the ordinary `OWN` of
-`b`, not a leaf on `int: b 5`. Unknown `A: b` stays a Structure. The
+`b`, not a leaf on `int: b 5` (`regress_ns_48`, exit 5). Unknown `A: b` stays a Structure. The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts
 as `full_05`. `build_l2src` `critical_graph_bug_04` is GREEN 286 on the short direct call.

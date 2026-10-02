@@ -41,6 +41,8 @@ the body. `EXEC` still keeps its contract on the call and still evaluates slot 2
 Author, 2026-10-02: an atom `int: i 5` does not get a leaf. Its address and
 type already name the binding. A separate node would be a second store. That
 `LmxUseLeaf` experiment is withdrawn. A non-hosted own is an `OWN` again.
+`regress_ns_48`: `graph_shape_call` exits 5 native and walked, shape word `OWN`.
+`graph_shape_unknown_atom` and `graph_shape_known_atom` stay structures.
 
 The atom `b` in `A: b` is not that declaration. Unknown `A` is a named
 Structure whose content is the atom leaf, the same empty-structure principle

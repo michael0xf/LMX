@@ -244,6 +244,10 @@ copy and the merge stay green.
 `---` covers each multi-level jump. `return: 0` at the `fn` column
 closes the loop. `graph_shape_fields` and `graph_shape_unknown_nest`
 stay green.
+`regress_ns_176` builds a `Point` inside an else of a method the walk
+does not enter. The merge scratch is sized for that declaration.
+`else\pt\x` is 4. `unit_body_path_else_unwalked` exits 7, and
+`unit_body_path_deep` stays green.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

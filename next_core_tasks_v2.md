@@ -195,6 +195,9 @@ The working row is the holder's cell slot, not a per-use leaf.
 `regress_ns_137` assigns a hosted field and reads it twice in one call,
 then through two later calls. The sum is 20.
 `graph_shape_hosted_use` exits 20, native and walked.
+`regress_ns_138` binds a dynamic input by the same-name declaration.
+The working value becomes 4, the place then reads 100, and the bare
+name keeps 4. `unit_arg_decl_dyn` and its walked twin exit 7.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

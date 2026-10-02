@@ -38,10 +38,11 @@ A direct call stores the callee once, at slot 1, and does not store a contract
 shell on the call. The contract is the method occurrence's last child, past
 the body. `EXEC` still keeps its contract on the call and still evaluates slot 2.
 
-The argument is still an `OWN`. Replacing it with `b`'s declaration cell made
-the value 0: that cell stays 0 after `int: b 5`, and the live value is the
-`OWN`. That replacement stays reverted. The call is not yet only the source
-application.
+An int own is a source-use leaf, not an `OWN` frame. Replacing the leaf with
+`b`'s declaration cell made the value 0: that cell stays 0 after `int: b 5`
+until publication, and the live value is the activation work row. That
+replacement stays reverted. The call is still a `CALL`. Its contract still
+hangs on the method, past the body. It is not yet only the source application.
 
 `regress_ns_32`: the seven shape witnesses stayed green, native and walked.
 `unit_make_adder` still fails only the baseline needle `c.LMX_WALK_OP_AT, 3U)`.
@@ -71,7 +72,7 @@ physical slot address, not by a numeric work-row index. Renaming `OWN` to
 formal index at `child[1]`, input witness at `child[3]`; evaluation reads
 `f.args`, not the own-work row.
 
-Proposed record, not yet emitted. One source-use leaf per use. The leaf is
+Record, emitted for an int own. One source-use leaf per use. The leaf is
 not an `Lmx` Structure and has no synthetic children. It is the parent's one
 source child. Beside it, arena-owned and freed with the graph:
 
@@ -95,8 +96,27 @@ Copy and re-entry must remap the record onto the new activation. Spelling
 stays diagnostic. Renaming `OWN` or hiding its children in the decoder does
 not close the parent.
 
-Working tree only, not wired and not measured: `LmxUseLeaf` in
-`dev/l2src_sandbox/lmx_walk.h.lm1` (`selector`, `index`, `spell`).
+Working tree, not committed. `LmxUseLeaf` is in
+`dev/l2src_sandbox/lmx.h.lm1` (`selector`, `index`, `ty`, `spell`). It is not
+an `Lmx` and it is not a child list. Selector 1 names the own-place: holder
+is the current activation, index is the child `lmx_walk_work_cell` already
+uses. `spell` is diagnostic. The walker never reads it. Copy keeps selector,
+index, and `ty`, and leaves `spell` null. Hosted owns stay `OWN_OF`. Other
+non-int owns stay `OWN`. Formals stay `ARG`.
+
+`lmx_walk_actuals` evaluates a use leaf. A role of `NONE` is not a raw cell:
+the leaf's type is not a number, and that load returned `INVALID`
+(`regress_ns_34`). Actuals are still read before `lmx_walk_publish`.
+
+Measured. `regress_ns_37`, `graph_shape_call`: shape
+`int SET pub call use b endcall endpub RET struct`, Entry 5. Native: 33
+checks, driver exit 0. Walked root: 37 checks, driver exit 0. The launch
+exit is 5 in both. `regress_ns_35` was the same exit with a bare `use` and
+no binding name. `regress_ns_36` failed gcc because a cast stood on the left
+of the spell store; that directory is not reused. `regress_ns_38`: the seven
+shape witnesses stayed green, native and walked, 10 targets.
+`regress_ns_39`: `unit_make_adder` fails only the baseline debt
+`c.LMX_WALK_OP_AT, 3U)`.
 
 ## Do
 

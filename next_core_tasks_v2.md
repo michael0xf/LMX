@@ -60,8 +60,11 @@ application refactoring, before resuming the remaining dependency queue.
 
 Active slice of this ticket, not a detour:
 [2026-10-02-01-known-call-layout](steps/tickets/2026-10-02-01-known-call-layout.md).
-`A: b` is still the lowered `CALL` (`(M, M)` plus a contract shell). The
-baseline harness 36 stay the baseline; they are not a second ticket.
+A direct `A: b` stores the callee once. The argument is a use leaf of binding
+`b`, and `graph_shape_call` exits 5 native and walked (`regress_ns_38`). The
+node is still a `CALL`, and the contract still hangs on the method. The slice
+stays open. The baseline harness 36 stay the baseline; they are not a second
+ticket. `critical_graph_bug_full_05` predates this leaf.
 
 <a id="critical-pointer-to-struct-bug"></a>
 ## Second action — critical_pointer_to_struct_bug (CRITICAL / P0, OPEN)

@@ -183,6 +183,9 @@ Structures. `graph_shape_unknown_empty` exits 0, native and walked.
 `regress_ns_132` keeps the call, the compact call, the indexed pair, the
 repeated names, the method order, the method if, and the known atom.
 All seven stay green, native and walked.
+`regress_ns_133` still breaks the structural check when an addition is
+erased, a declaration is moved, or two occurrences are collapsed. The
+launch exit stays the expected one.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

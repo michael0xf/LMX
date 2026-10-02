@@ -251,6 +251,8 @@ does not enter. The merge scratch is sized for that declaration.
 `regress_ns_177` builds a `Point` inside an else that is inside a
 while. `else\pt\x` is 4. `unit_body_path_else_while_pt` exits 7, and
 the unwalked else stays green.
+`regress_ns_178` builds a `Point` inside a for. `for\pt\x` is 4.
+`unit_body_path_for_pt` exits 7, and the nested else stays green.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

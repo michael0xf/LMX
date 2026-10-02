@@ -96,8 +96,9 @@ the nested Structure Inner, whose field is an int, and `c` follows it. The flat
 method Holder and the unit Holder stayed green in that run.
 `graph_shape_method_deep` (`regress_ns_81`) exits 7. Mid holds Inner, Inner
 holds an int, and `c` follows Mid. The one-level nest and the flat Holder
-stayed green. A nested field that is not a number, a char, or another such
-Structure is still refused.
+stayed green. `graph_shape_method_array` (`regress_ns_83`) exits 7: the int
+comes first, then an int Array. The flat Holder stayed green. A reference
+field and an Array of Arrays inside a method-local Structure are still refused.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

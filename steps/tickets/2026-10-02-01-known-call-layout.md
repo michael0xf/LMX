@@ -145,11 +145,13 @@ and hangs the contract on the callee. `build_l2src` `critical_graph_bug_02`
 was RED 9 of 286 on the one-layout walker. `critical_graph_bug_03` is GREEN
 286. `regress_ns_43`: `graph_shape_call` still exits 5, native and walked.
 
-A direct call with no catch, no dynamic input, and fewer than three arguments
-now keeps only the callee and those arguments. `regress_ns_46` is green:
+A direct call with no catch and no hidden input keeps only the callee and
+those arguments, at any arity. `regress_ns_49`: `graph_shape_call` still
+exits 5, and the capture call that has a hidden input stays on the long frame.
+`regress_ns_46` is green:
 `graph_shape_call` still exits 5, and `unit_pap_add5`, `unit_walk_recursion`,
-and `unit_own_reference_reception` match the short frame. A catch, a dynamic
-input, or three or more arguments still uses the long frame. `build_l2src`
+and `unit_own_reference_reception` match the short frame. A catch or a
+hidden input still uses the long frame. `build_l2src`
 `critical_graph_bug_04` is GREEN 286 on this frame. `critical_graph_bug_full_08`
 is RED 37 of 1159. The baseline 36 texts are unchanged. The extra failure was
 `unit_walk_a3_capture_direct_vs_copy`: its two-argument call is now width 4,

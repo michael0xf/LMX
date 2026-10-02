@@ -121,6 +121,10 @@ green. A nested count keeps the body's shell.
 `unit_body_path_while` exit 7, and the if and while shapes stay green.
 `regress_ns_102` walks the while and the for. `unit_body_path_deep` still
 stops, "a control body has no operator".
+`regress_ns_103` stores a one-child operator on an unwalked method whose
+body shell is child 0. `unit_body_path_deep` exits 7, and
+`unit_body_seg_method`, `unit_body_path_while`, and `graph_shape_if_body`
+stay green.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

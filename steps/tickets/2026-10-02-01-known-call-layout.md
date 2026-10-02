@@ -170,6 +170,14 @@ including the platform ABI type, and `l3_type_budget` is GREEN on 4 budgets.
 The call is still a `CALL`. The translator is not committed. This slice and
 the parent stay open.
 
+Author, 2026-10-02, after the leaf trial: an atom `int: i 5` has no leaf.
+Address and type name the binding. `LmxUseLeaf` is not in the working tree.
+A non-hosted int own is `OWN`. The type budget is 74 names.
+`critical_graph_bug_full_15` is RED 36 of 1175, the same texts as
+`full_13`. `build_l2src` `critical_graph_bug_07` is GREEN 286.
+`run_l3_selftest` `critical_graph_bug_03` is 11 suites. The contract stays
+on the method, past the body. Do not put the leaf back.
+
 ## Do
 
 One representation. The call's retained children are the source head and the
@@ -189,6 +197,8 @@ source use of binding `b`, distinct from the literal 5, without `l2_rwN` names
 or old slot numbers. `graph_shape_call` exits 5 native and walked, with the
 same checkpoint semantics: actuals are read before publication, and the
 declaration cell may still be 0. `OWN` as an opcode is not that witness.
+The later author correction withdraws the leaf that this sentence was
+aiming at. `OWN` is the measured argument. This file still has no `DONE` line.
 `l2_harness` does not grow failures beyond the baseline 36.
 `build_l2src`, `run_l3_selftest`, and `check_docs` pass. Then this file gets
 `DONE <sha> <UTC>`. The parent ticket gets its own `DONE` only after its

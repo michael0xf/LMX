@@ -213,6 +213,10 @@ exits 16, native and walked.
 `regress_ns_145` refuses `Holder: 1` inside a method. The text is
 "more arguments than Holder has formals". The known nested call
 `Known(1)` stays refused the same way.
+`regress_ns_147` does not bind an absent reference. `b: A` reaches
+`b\value` and stops, "unknown field path segment". `@: b A` stops on
+that line, "unknown type", with detail `atom=b`. The working alias
+remains `Model: b c`.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

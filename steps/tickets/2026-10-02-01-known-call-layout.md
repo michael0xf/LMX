@@ -28,13 +28,12 @@ choice that code and data are both the callee occurrence, `(M, M)`.
 slot 1 is the callee, slot 2 is evaluated as the data occurrence, slot 3 is
 the contract (`inputs`, `returns`), slot 4 is the catch count.
 
-Measured on `graph_shape_call` (`regress_ns_22`, native and walked exit 0,
-41 checks). A direct call stores the callee once, at slot 1. `lmx_walk_call`
+Measured on `graph_shape_call` (`regress_ns_25`, native and walked exit 0,
+38 checks). A direct call stores the callee once, at slot 1. `lmx_walk_call`
 uses that occurrence as both code and data. `EXEC` still evaluates slot 2.
-The shape fact `call OWN endcall` finds the argument by role: children that
-are not the next word are skipped, so the match is not a slot number. The
-argument is still an `OWN`, and slot 3 is still the contract shell. That is
-not yet the source application body.
+For `A: b` at the entry, slot 5 stores `b`'s own int cell, not an `OWN` frame.
+The shape fact `call int endcall` finds that cell by role. Slot 3 is still
+the contract shell, so the call is not yet only the source application.
 
 ## Do
 

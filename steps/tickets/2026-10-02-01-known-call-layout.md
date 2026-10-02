@@ -43,6 +43,8 @@ type already name the binding. A separate node would be a second store. That
 `LmxUseLeaf` experiment is withdrawn. A non-hosted own is an `OWN` again.
 `regress_ns_48`: `graph_shape_call` exits 5 native and walked, shape word `OWN`.
 `graph_shape_unknown_atom` and `graph_shape_known_atom` stay structures.
+Compact `A(b)` is the same application. `regress_ns_51`, `graph_shape_call_paren`:
+the same shape words, exit 5, native and walked.
 `build_l2src` `critical_graph_bug_05` is GREEN 286 after the leaf was withdrawn.
 `critical_graph_bug_full_10` is RED 36 of 1159. Those 36 texts match
 `critical_graph_bug_full_05`. The parent stays open.

@@ -25,13 +25,13 @@ missing acceptance steps. They do not replace the ticket and do not mark it
 closed.
 
 - [x] В harness нет декодера графа, который сверяет структуру с исходником и не зависит от временных имён и старых номеров слотов.
-  Driver fact `shape … endshape` names roles, primitive cells, `spell`, `add A B`, and `body`/`endbody`. It does not read `l2_rwN` names or old slot numbers. Witnesses: `graph_shape_unknown_atom`, `graph_shape_add`, `graph_shape_value`.
+  Driver fact `shape … endshape` names roles, primitive cells, `spell`, `add A B`, `body`/`endbody`, and `fields`/`endfields`. It does not read `l2_rwN` names or old slot numbers. Witnesses: `graph_shape_unknown_atom`, `graph_shape_add`, `graph_shape_value`, and `graph_shape_fields` (Holder's ints 1 then 3, native and walked, `regress_ns_19`).
 - [x] Нет прогонов, где успех виден по значению, а не только по тому, что перевод прошёл. Сюда же входят нативное исполнение и проход через walker.
   `graph_shape_value` on `graph_shape_14`: `n: 2 + 2` then `exit_code: n`. Both the native run and the walked root exit 4.
 - [x] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
   Shown on `graph_shape_12`: `graph_shape_mut_erase` (`mutate erase-add`), `graph_shape_mut_move` (declaration after the expression), `graph_shape_mut_collapse` (two `SET` nodes aliased). Each driver exit is 1 because the shape check fails, and the launch exit stays 0.
 - [ ] Не запускались ворота из раздела 6: полный l2_harness, build_l2src, run_l3_selftest, check_docs. Прежняя полная прогонка была красной, 36 из 1149.
-  `l2_harness` `critical_graph_bug_full_05`, uncommitted translator: RED 36 of 1158. Those 36 lines match `gk_occ_path_full_01`. `unit_decl_unknown_type_refused` (`Nope: x`, Entry 7) passed, as did `graph_shape_mixed`, `graph_shape_call`, and `graph_shape_known_atom` (native and walked). `build_l2src`, `run_l3_selftest`, and `check_docs` were not started.
+  `l2_harness` `critical_graph_bug_full_05`, uncommitted translator: RED 36 of 1158. Those 36 lines match `gk_occ_path_full_01`. `unit_decl_unknown_type_refused` (`Nope: x`, Entry 7) passed, as did `graph_shape_mixed`, `graph_shape_call`, and `graph_shape_known_atom` (native and walked). `build_l2src` `critical_graph_bug_01` is running (selftests had started; no verdict yet). `run_l3_selftest` and `check_docs` wait for that slot.
 - [ ] В тикете нет строки DONE. Правка транслятора не закоммичена.
 
 <a id="first-critical-graph-bug"></a>

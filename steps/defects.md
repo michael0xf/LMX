@@ -4,6 +4,25 @@
 
 ## Текущие и недавно закрытые
 
+<a id="critical-graph-bug"></a>
+### critical_graph_bug — 2026-10-02, Codex, CRITICAL / OPEN
+
+The retained graph loses source structure during construction: method value
+fields/control containers precede an appended executable-step region, and
+`l2_body_inert` removes the contents of pure anonymous expressions such as
+`(2 + 2)`. The assignment `i: 6` is retained as SET; this is not a claim that
+its effect disappears. Independently, unknown `A: b` is refused by
+`l2_tail_is_structure` instead of retaining a Structure with atom `b`.
+
+Confirmed by code inspection and five translation-only probes on `36bbefca`;
+no new runtime/build gate was run. The full requirement is structural recovery
+from the graph, including source-defined field order, while allowing receivers
+to materialize typed cells. Runtime results alone cannot establish it.
+Owner unclaimed; the detailed author-requested ticket, exact provenance,
+examples and structural/mutation acceptance are in
+[critical_graph_bug](tickets/critical_graph_bug.md). This is an open K10 defect,
+not implementation completed by this documentation commit.
+
 Статус в заголовке относится к текущему состоянию. Описания первоначальных
 падений и промежуточных прогонов сохраняют историю проверки; checkpoint
 `661735a` включил перечисленные ниже исправления прежнего VERIFIED WIP.

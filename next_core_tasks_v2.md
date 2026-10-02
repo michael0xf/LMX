@@ -226,6 +226,9 @@ The value is 21. `unit_body_path_else_while` and its walked twin exit 7.
 `regress_ns_149` reads `else\hosted` inside a for after a call.
 The value is 21. `unit_body_path_else_for` and its walked twin exit 7.
 The for shell still precedes its operator.
+`regress_ns_161` puts that for inside an else. One-level dedents close
+by themselves. `---` jumps out of the inner if and the else.
+`for\hosted` is 21. `unit_body_path_for_else` and its walked twin exit 7.
 `regress_ns_135` keeps the method-local witnesses. A shared callable,
 a copied and merged Holder, a nested Structure, a deeper nest, an array,
 an array of arrays, a pointer cell, and a Structure reference stay green,

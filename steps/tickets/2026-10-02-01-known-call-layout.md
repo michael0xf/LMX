@@ -148,6 +148,10 @@ was RED 9 of 286 on the one-layout walker. `critical_graph_bug_03` is GREEN
 A direct call with no catch and no hidden input keeps only the callee and
 those arguments, at any arity. `regress_ns_49`: `graph_shape_call` still
 exits 5, and the capture call that has a hidden input stays on the long frame.
+`critical_graph_bug_full_11` is RED 37 of 1159. The baseline 36 texts are
+unchanged. The extra failure was `unit_cf_call_args`: the first argument of a
+three-argument call is a Structure, and the witness read slot 2 as a second
+callee. On the short frame that slot is the argument. `regress_ns_50` is green.
 `regress_ns_46` is green:
 `graph_shape_call` still exits 5, and `unit_pap_add5`, `unit_walk_recursion`,
 and `unit_own_reference_reception` match the short frame. A catch or a

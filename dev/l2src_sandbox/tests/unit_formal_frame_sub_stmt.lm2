@@ -1,0 +1,17 @@
+# The same standalone Frame when the formal's contract returns nothing. f() calls s once.
+# The unit's y stays 0 (Q52). Entry 0. One line: s 1.
+int: y 0
+
+sub: s ()
+    y: y + 1
+    c.printf: "s %d\n" y
+end: s
+
+fn: w (s: f) int
+    f()
+    return: 0
+end: w
+
+int: r w(s)
+sendMessage: exit(exit_code: r + y; stdout: ""; stderr: "")
+return

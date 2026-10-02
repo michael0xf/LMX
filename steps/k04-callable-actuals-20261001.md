@@ -218,13 +218,12 @@ so the next attempt does not repeat it.
   `git diff --check` clean.
 
 **Found while measuring, recorded, not this slice.**
-[CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL](defects.md#callable-formal-statement-call-internal): the
-OPERATOR form of a call of a nonreturning callable formal — `f()` as a statement — ends in
-`internal: a refusal said nothing`, while the same call in a value position is refused properly and
-the same operator call with a RETURNING contract translates. Measured phase: `l2_emit_body` of the
-method holding the formal; `l2_discard_run` returns 0 for the call frame, so the statement misses the
-path that emits a discarded call (where the bare-atom form of the same value works). The minimal
-program and the bisection are in the defect entry; it is the next K04 slice's first item.
+[CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL](defects.md#callable-formal-statement-call-internal): a
+standalone Frame of a known callable formal, `f()`, ended in `internal: a refusal said nothing`.
+The 2026-10-01 note said a returning contract's standalone Frame already translated. The 2026-10-02
+remeasurement does not support that: both the nonreturning and the returning standalone Frames fail
+on blob `5576e6f8`. `return: f()` is result reception, a different context, and it does translate.
+The repair is the next section.
 
 **Residuals.** The parent defect
 [SUB-ACTUAL-REFERENCE-CLASSIFICATION](defects.md#sub-actual-reference-classification) keeps its other
@@ -243,3 +242,29 @@ formal is not walked; the rows above run natively and no walked route is claimed
 `CALLABLE-FORMAL-HIDDEN-CONTRACT` defect (the callee's hidden inputs built from the required exemplar
 rather than from the actual callable) is untouched here: this slice resolves the actual, it does not
 rebuild the callee's free inputs from it.
+
+<a id="k04d"></a>
+## K04d — a standalone Frame of a known callable formal is the call
+
+Landed with this slice. Emission only; the kernel and L3 sources are untouched.
+
+On the unchanged bytes a standalone `f()` whose head is a callable formal took the formal-store
+route: `l2_emit_stmts` saw `fi >= 0` and called `l2_eval_fields` on the empty argument list, and
+`l2_eval_fields` returns 1 for `n <= 0` without a located diagnostic. The later call emission
+requires `fi < 0`, so the formal never reached it. `l2_head_is_call` already knew the head was a
+call. The repair clears the store targets when that common classifier says the head is a call, and
+the existing discarded-call emission runs. An unknown `f()` is not a call under that classifier, so
+it stays an empty named Structure. An ordinary pointer formal is not a callable formal, so this
+does not invoke it. A no-result callable in a result position keeps its located refusal.
+
+**Focused evidence**, not a full gate: `build/l2_harness/gk_formal_frame_03`, 10 targets, 0
+failures. `unit_formal_frame_stmt` runs and says `m 1` once, entry 5. `unit_formal_frame_sub_stmt`
+says `s 1` once, entry 0. Controls that stayed green: `unit_bare_in_method`,
+`unit_callable_nullary_forms` (argument-position `task()` still does not execute),
+`unit_callable_returning_two_contracts`, `unit_return_sub_refused`, `unit_void_value`.
+Source blob of both runs: `9168b081`. The harness PE prefix of the full run is `E649E0BCA71BBC5E`.
+
+**Full gate** `build/l2_harness/gk_formal_frame_full_01`: **36 of 1145** targets failed. K04c's
+committed result was 36 of 1143. The two new rows are OK. The 36 names and diagnostics match
+`build/l2_harness/dk_k04c_full_02` exactly; this slice adds no failure. Walker execution of these
+rows is not claimed.

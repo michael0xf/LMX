@@ -1,0 +1,20 @@
+# A standalone Frame of a known callable formal is the same nullary call as the bare atom.
+# f holds m's occurrence; passing m runs nothing. f() runs m once and discards the result 7.
+# w returns 5. hits stays 0: m's write is its own hidden input (Q52). Entry 5. One line: m 1.
+int: hits 0
+
+fn: m () int
+    hits: hits + 1
+    c.printf: "m %d\n" hits
+    return: 7
+end: m
+
+fn: w (m: f) int
+    f()
+    return: 5
+end: w
+
+int: r 0
+r: w(m)
+sendMessage: exit(exit_code: hits * 10 + r; stdout: ""; stderr: "")
+return

@@ -34505,6 +34505,14 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             fi: l2_param_find(mi, fr\head)
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0
             fi: l2_m_alias[l2_own_off(mi, oi)]
+        # Known callable head: a nullary call, not a store into a same-spelled formal.
+        # Unknown f() is a definition and l2_head_is_call leaves it here. An empty call
+        # body is not an assignment value; storing it called l2_eval_fields with no fields
+        # and failed without a located diagnostic.
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && l2_head_is_call(fr\head, fr\body, fr\flags, mi) != 0
+            oi: 0 - 1
+            si: 0 - 1
+            fi: 0 - 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0
             if: l2_emit_reference_value(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok) != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
                 return: 1

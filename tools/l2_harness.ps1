@@ -2173,6 +2173,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_bare_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         Says = @('m 1', 'm 1');
         Absent = @(); Debt = @() },
+    # CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL: a standalone Frame of a known callable formal is
+    # that same nullary call, for a returning contract and for a contract with no result. The empty
+    # argument list is not a store into the formal. Unknown f() stays a definition.
+    [pscustomobject]@{ Name = 'unit_formal_frame_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        Says = @('m 1');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_frame_sub_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
+        Says = @('s 1');
+        Absent = @(); Debt = @() },
     # -196: a string literal alone at the root makes no step, as natively; the numeric ones are LIT steps.
     [pscustomobject]@{ Name = 'unit_bare_literal_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },

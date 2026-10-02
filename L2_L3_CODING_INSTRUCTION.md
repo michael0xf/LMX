@@ -530,7 +530,7 @@ typedef struct Lmx {
 } Lmx;
 ```
 
-`array` is first and holds the node's physical child references. `parent` is the immediate lexical/structural parent. `native` selects execution. A child slot is not the child's data cell. `@field` must address the resolved data, not the `void *` slot that happens to point at it.
+`array` is first and holds the node's physical child references. `parent` is the immediate lexical/structural parent. `native` selects execution. A primitive's child-reference slot is not its primitive data cell. For a Structure/Array held by reference, the language value itself is that reference, and `@field` addresses its real reference-holding place, not the descriptor. Do not generalize the primitive distinction into a ban on addressing a reference cell. Neither case permits a cache, temporary or ABI carrier as the language place; exact storage types are part of the pointer-repair acceptance.
 
 ### 10.3 Activation state
 

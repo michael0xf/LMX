@@ -1,5 +1,14 @@
 # Native compilation and the route to §§8–8a
 
+**Evidence boundary, 2026-10-02.** This is the historical checkpoint log.
+Descriptor-return address probes below do not establish the corrected unary
+`@Structure`/`@Array` rule: address the actual reference-holding cell and add
+one level, rather than reload the descriptor. Likewise, old bare-reference
+rebinding and explicit-dereference-only invocation are superseded by ordinary
+reference application and explicit `@:` reassignment. The accepted corrections
+are queued after graph repair in [v2](../next_core_tasks_v2.md#critical-pointer-to-struct-bug).
+Preserve the measured results below without reusing them as new acceptance.
+
 Status: 2026-10-01, development checkpoint `6be1235` contains the verified
 common-assignment repair. Checkpoint `e7935be` adds whole-Array descriptor
 addressing and the shared lexical lookup repair. Checkpoint `c8167af` closes

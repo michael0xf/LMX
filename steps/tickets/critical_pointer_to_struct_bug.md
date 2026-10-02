@@ -100,12 +100,14 @@ No new code build or runtime reproduction is claimed by this ticket creation.
 
 ## 6. Gates and closure
 
-Run sequentially using fresh directories and the repository's verified toolchain:
+Run from the repository root, sequentially, using fresh absolute evidence paths
+and the repository's verified toolchain. The harness changes working directories;
+a relative `-OutDir` must not be interpreted relative to its staged source tree.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/l2_harness.ps1 -OutDir build/l2_harness/critical_pointer_to_struct_bug_01 -KeepAll
-powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_l2src.ps1 -Run -OutDir build/l2src/critical_pointer_to_struct_bug_01 -KeepAll
-python tools/run_l3_selftest.py --output build/l3_selftest/critical_pointer_to_struct_bug_01
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/l2_harness.ps1 -OutDir C:/Nyasha_Planet/LMX/build/l2_harness/critical_pointer_to_struct_bug_01 -KeepAll
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/build_l2src.ps1 -Run -OutDir C:/Nyasha_Planet/LMX/build/l2src/critical_pointer_to_struct_bug_01 -KeepAll
+python tools/run_l3_selftest.py --output C:/Nyasha_Planet/LMX/build/l3_selftest/critical_pointer_to_struct_bug_01
 python tools/check_docs.py
 git diff --check
 ```

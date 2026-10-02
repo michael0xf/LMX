@@ -53,7 +53,7 @@ runtime-выбираемый операнд merge (K02, [§2 заметки](k02
 
 Исторический ранний checkpoint аварийной правки Array/List — `7419470`: L2 harness `60/60` без FAIL (`build/l2_harness/20260922_073250`), L3 type budget `62/64` и `818/4096`, `check_docs` зелёный. Он предшествует миграциям `VoidArray` и DynamicArray и не описывает нынешнюю раскладку List. Две последующие комментарные правки сохранены checkpoint `f0afb6a`. Checkpoint `f858cea` убрал зависимость решения «вызов или не вызов» от короткой формы и оставил разрешение головы источником решения; L2 harness зелёный `65/65` (`build/l2_harness/20260922_075940`). Входящая почта публикует под единственным monitor пару физического адреса и donor-арены, а арену присоединяет только принимающий owner при `take`. Отказ закрытия сохраняет pending-пару; settle закрывает почту до unregister/remove/attach/release.
 
-Актуальная очередь и критерии продолжения находятся в [next_core_tasks.md](../next_core_tasks.md); ранний совместный план [implementation-plan.md](implementation-plan.md) сохраняется как предшествующий этап.
+Актуальная очередь и критерии продолжения находятся в [next_core_tasks_v2.md](../next_core_tasks_v2.md); [next_core_tasks.md](../next_core_tasks.md) и ранний совместный [implementation-plan.md](implementation-plan.md) сохраняют историю предшествующих этапов.
 
 - Start from `docs/LMX_semantics.ru.md` / `docs/LMX_semantics.en.md` and the user's current instructions. Do not import old Message/arena/runtime designs as new requirements.
 - Keep RU/EN documents synchronized in meaning, order, examples, and cross-references. Preserve the author's Russian semantic opening verbatim.

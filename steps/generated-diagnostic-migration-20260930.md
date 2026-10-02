@@ -346,14 +346,14 @@ The fixture still constructs through `Other: o`; prefix replacement does not clo
 
 Frozen actual: `12:5: graph assignment admission requires receiving-expression tests`. The old fixture treats `(Model: v)` as callable but `(@: Model v)` as a different reference class. Accepted nonprimitive signature semantics makes those forms synonyms.
 
-Rebinding/admission must be tested with explicit current reference construction. Both `Model: w` and `Model: mo` are withdrawn implicit constructors. The old call-refusal expectation is invalid. A repaired witness must compare both signature spellings under the same assignment/admission operation, not assert a difference between them.
+Both signature spellings must use the same receiving contract; their synonymy does not select assignment in a later body statement. Under the 2026-10-02 correction, ordinary application through the held Structure calls, while explicit `@: v candidate` selects reference reassignment. Both `Model: w` and `Model: mo` are withdrawn implicit constructors. Re-author setup, call/assignment observations and admission together. Do not retain a bare-`v: w` assignment golden, erase the extra level of `@mo`, or infer a difference solely from the two signature spellings. The earlier K03b runs are historical evidence, not acceptance of the new rule.
 
 ### D5-D6. Terminal Structure-path handling
 
 - `unit_field_path_struct_rebind_refused`: actual `22:1: a field path must end at a primitive field`.
 - `unit_matrix_path_struct_rebind_refused`: actual `13:1: a field path must end at a primitive field`.
 
-Terminal nonprimitive-path handling remains a production gap. Both fixtures additionally rely on implicit `Outer: o` / `Model: a` construction and `Model: inner`. Update setup to explicit composition/reference declarations in the production slice; use an explicitly reference-valued target when testing rebinding, rather than silently treating a callable Structure field as an assignable reference binding.
+Terminal nonprimitive-path handling remains a production gap. Both fixtures additionally rely on implicit `Outer: o` / `Model: a` construction and `Model: inner`. Update setup to explicit composition/reference construction in the production slice. Select rebinding by the explicit `@:` receiver, not by treating a Structure-reference head as a special non-callable category; ordinary application uses the selected callable's actual contract. Preserve source occurrences and target identity.
 
 Preserve actual target admission and a readback proving the reference changed; an incompatible candidate must fail. Do not canonize the current primitive-only limitation by changing the expected text alone.
 

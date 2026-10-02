@@ -63,7 +63,9 @@ Active slice of this ticket, not a detour:
 A direct `A: b` stores the callee once. The argument is the ordinary `OWN` of
 `b`, not a leaf on `int: b 5` (`regress_ns_48`, exit 5). Compact `A(b)` is the same application (`regress_ns_51`, exit 5). Unknown `A: b` stays a Structure.
 `graph_shape_method_order` (`regress_ns_54`) reads the method: three assignments,
-then `(2 + 2)` as `add 2 2`, then return. Entry 7, native and walked. The
+then `(2 + 2)` as `add 2 2`, then return. Entry 7, native and walked.
+`graph_shape_repeat` (`regress_ns_55`): two `int: n` stay two occurrences;
+the unqualified name exits 2. The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts
 as `full_05`. `build_l2src` `critical_graph_bug_05` is GREEN 286 after the int leaf was withdrawn.

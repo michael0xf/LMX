@@ -44,6 +44,8 @@ type already name the binding. A separate node would be a second store. That
 `regress_ns_48`: `graph_shape_call` exits 5 native and walked, shape word `OWN`.
 `graph_shape_unknown_atom` and `graph_shape_known_atom` stay structures.
 `build_l2src` `critical_graph_bug_05` is GREEN 286 after the leaf was withdrawn.
+`critical_graph_bug_full_10` is RED 36 of 1159. Those 36 texts match
+`critical_graph_bug_full_05`. The parent stays open.
 
 The atom `b` in `A: b` is not that declaration. Unknown `A` is a named
 Structure whose content is the atom leaf, the same empty-structure principle

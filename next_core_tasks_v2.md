@@ -53,7 +53,38 @@ Closure requires independent structural assertions and mutation controls in
 addition to native/walker execution checks. Correct exit values alone do not
 close it. Respect the current writer/build owner and preserve their WIP;
 arrange a safe handoff, not a second writer or an interrupted gate. Only after
-this ticket is closed resume the remaining dependency-ordered work below.
+this ticket is closed take the pointer-depth repair below, then the reference
+application refactoring, before resuming the remaining dependency queue.
+
+<a id="critical-pointer-to-struct-bug"></a>
+## Second action — critical_pointer_to_struct_bug (CRITICAL / P0, OPEN)
+
+- [ ] Complete [critical_pointer_to_struct_bug](steps/tickets/critical_pointer_to_struct_bug.md)
+  after critical_graph_bug and before any reference-application refactoring.
+
+A is held as a reference (conceptually Lmx*); @A addresses the real cell holding
+it (conceptually Lmx**). Remove the descriptor-specific address-level erasure
+from native and walker lowering, including formals, paths and Array descriptor
+references. No C-valued language Structures, temporary address targets or hidden
+ABI boxes. Migrate the false A/@A argument-synonym tests and exact-depth admission.
+This is an existing bug, independent of the following new rules. The ticket
+owns source anchors, positive/negative/mutant witnesses and full release gates.
+
+<a id="structure-reference-application"></a>
+## Third action — Structure/reference application refactoring (OPEN)
+
+- [ ] Complete [structure_reference_application_refactor](steps/tickets/structure_reference_application_refactor.md)
+  only after the preceding pointer ticket closes.
+
+For absent b, b: A and @: b A are equivalent assignment forms. Afterwards
+b: args applies the selected Structure under its actual callable contract;
+@: b B explicitly reassigns the reference. Preserve repeated declarations and
+the source-body construction rule; do not infer object identity from reference
+storage or erase source occurrences. No extra nominal Type entity or implicit
+merge. Unary @A still adds an address level; it is not the @: receiver.
+Ordinary named Structures acquire no formal arguments. Resolve once and migrate
+all consumers; a call failure never becomes assignment. This stage is a
+refactoring to accepted rules, not a claim that the current code supports them.
 
 <a id="snapshot"></a>
 ## 0. Snapshot and what must not be called complete
@@ -85,6 +116,10 @@ boundaries are in [the source/evidence ledger](steps/native-selfbuild-20260930.m
 Do not implement these again from an older checked box; extend the shared
 mechanism where a remaining case fails.
 
+The 2026-10-02 pointer ticket explicitly reopens the descriptor-address
+exemption: previous bounded gates do not establish that @Structure adds the
+required reference level. The two new front stages remain unchecked.
+
 The current merge slice removes the phantom global result namespace for its
 supported static operands, stores results at ordinary declaration places,
 preserves composed schemas and real expression-host parentage, and corrects
@@ -110,9 +145,10 @@ Still not established:
    Inspect HEAD/upstream, status and worktree ownership. Preserve unrelated WIP.
 2. Read the current merge release record. Reconcile its exact file manifest
    with Git before assuming it landed. No second writer/build beside a live one.
-3. While `critical_graph_bug` is open, choose the next bounded repair slice
-   from that ticket first. Afterwards choose one dependency-closed remaining
-   item below. Name files, symbols, witnesses and exit conditions. Independent
+3. Follow the mandatory front queue: critical_graph_bug, then
+   critical_pointer_to_struct_bug, then structure_reference_application_refactor.
+   Afterwards choose one dependency-closed remaining item below. Name files,
+   symbols, witnesses and exit conditions. Independent
    read-only review may run in parallel.
 4. First reproduce the defect or record it honestly as source-traced only.
    A translator crash is not a language diagnostic; a compiler error is not a
@@ -217,8 +253,9 @@ methods, nested Structures, anonymous bodies, formals and receiving expressions:
   supplying B to that value is an arity error; fn/fm/sub use their declared
   signatures. Do not add explicit arguments to an ordinary named Structure.
   See the author's [Q59 clarification](LMX_blog/q/q59.md).
-- Existing primitive or explicit reference binding → assignment after
-  conversion/admission; a reference binding does not auto-call its referent.
+- Existing primitive → assignment after conversion/admission. A held Structure
+  reference permits ordinary application b: args; explicit reassignment uses
+  @: b B. For absent b, b: A and @: b A are equivalent.
 - Explicit dereference → referent value, then ordinary operation on that value.
 - Signature descriptions do not execute; structural reference formals are not
   a construction shortcut in executable bodies.
@@ -231,8 +268,9 @@ Acceptance includes equivalent completed surface forms; unknown `f()` defining
 empty f versus known f() calling; `C: makeA()` with both names unknown; Q58's
 known nested `put: 7` retained without definition-time execution; method arguments
 and ordinary rejection of arguments to a resolved argumentless Structure;
-empty and nonempty definition bodies; explicit ref assignment versus `\ref`
-call; declarations without return/trailer; no source-name or root-only branch.
+empty and nonempty definition bodies; explicit @: reference assignment versus
+ordinary application through the reference; declarations without return/trailer;
+no source-name or root-only branch.
 
 The current diagnostic “a call of a named Structure with an argument is not
 built yet” records a real refusal but gives the wrong reason after Q59. Replace
@@ -270,8 +308,9 @@ primitive-initializer handling, and remaining local declaration-site identity
 cases. Do not infer zero/null primitive initialization from compiler storage
 convenience. Recheck current code before replaying any old defect description.
 
-Addresses must select real typed storage: Structure/Array descriptor, primitive
-cell, Array element, or explicit pointer-value cell as appropriate. `@p` adds
+Addresses must select real value storage: the cell holding a Structure/Array
+reference, primitive cell, Array element or pointer-value cell as appropriate.
+`@p` adds
 depth to p, not to the referent silently. Address-taking does not newly dirty a
 working cache. Complete ordinary explicit paths at arbitrary depth, without
 special root/body/node routes or a copied return value as address destination.
@@ -453,7 +492,9 @@ RuntimeImplements decision tree and no test result masking analytical failure.
 <a id="clean-gate"></a>
 ## 6. Clean-kernel checkpoint — mandatory before stage 8
 
-`critical_graph_bug` must be closed first. All of K01–K12 are dependencies,
+The three front stages (critical_graph_bug, critical_pointer_to_struct_bug,
+structure_reference_application_refactor) must be closed first.
+All of K01–K12 are dependencies,
 not necessarily twelve large commits. Split them
 into bounded shared-mechanism slices, with exact witness matrices. The remaining
 48 generated failures must each be classified and resolved against current norms;

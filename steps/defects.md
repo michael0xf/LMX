@@ -23,6 +23,22 @@ examples and structural/mutation acceptance are in
 [critical_graph_bug](tickets/critical_graph_bug.md). This is an open K10 defect,
 not implementation completed by this documentation commit.
 
+<a id="critical-pointer-to-struct-bug"></a>
+### critical_pointer_to_struct_bug — 2026-10-02, Codex, CRITICAL / OPEN
+
+Source-confirmed descriptor exemption erases one level of unary address-taking:
+`@A` returns the Structure descriptor instead of the actual reference-holding
+cell. `l2_address_name`, `l2_own_addr`, `l2_emit_address`, `l2_rw_address` all
+participate. Ordinary Lmx storage is already by reference; no general C-valued
+Structure regression is claimed. Old normative docs duplicated this defect.
+
+Required: A is conceptually Lmx*, @A is Lmx**; preserve real place, depth,
+formals/paths/Array-reference parity and C99 pointer-cell storage. No new runtime
+gate is claimed by this audit. Take after critical_graph_bug, before the new
+reference-application refactoring. Detailed evidence and acceptance:
+[critical_pointer_to_struct_bug](tickets/critical_pointer_to_struct_bug.md).
+Owner unclaimed; documentation correction is not code closure.
+
 Статус в заголовке относится к текущему состоянию. Описания первоначальных
 падений и промежуточных прогонов сохраняют историю проверки; checkpoint
 `661735a` включил перечисленные ниже исправления прежнего VERIFIED WIP.

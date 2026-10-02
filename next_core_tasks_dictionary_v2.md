@@ -81,10 +81,10 @@ dangling `f:` is invalid. Bare f is an expression evaluated by its resolved role
 
 A reserved language receiver applies its defined contract and cannot be shadowed.
 An unknown ordinary head in definition position defines a named Structure and
-retains its tail without executing it. An existing callable Structure is called;
-an existing primitive or explicit reference binding is assigned after admission.
-An invalid call does not fall back to declaration. A reference binding is not
-automatically callable: explicitly dereference it to operate on the referent.
+retains its tail without executing it. An existing callable Structure, directly or through a reference, is called;
+a primitive is assigned under its receiver contract. For absent b, b: A and
+@: b A are equivalent. Explicit reference reassignment uses @: b B, not
+application b: args. An invalid call never falls back to assignment.
 
 **Body versus signature.** `(A: b)` in a signature describes a structural
 reference parameter, synonymous there with `(@: A b)`. It does not execute A.
@@ -193,29 +193,13 @@ that require termination. `@a[0]` alone never adds a terminator.
 <a id="references"></a>
 ## 7. Value reference, address of storage and typed reference cell
 
-**Norm.** A Structure/Array value travels by descriptor reference, not C aggregate
-copy. `@Structure` obtains the actual typed descriptor address. `@primitive`
-selects its actual typed cell. A declared explicit reference variable has its
-own pointer-value cell; `@p` addresses that cell and adds depth. Dereference
-`\p` obtains the referenced value. Pointer arithmetic and raw machine casts
-remain L2, while portable typed references are available in L3.
+**Norm.** A Structure/Array value travels by descriptor reference, never a C by-value aggregate. Unary `@A` addresses the real cell holding that reference: conceptually `Lmx **`, not the `Lmx *` descriptor. Primitive cells and pointer cells obey the same value-storage rule. Each level is preserved in actuals, returns, paths and both execution engines. No address of a cache or transport-ABI temporary may substitute for a language place.
 
-`@: A p` creates pointer-value storage, with the default null value, not an A
-instance. `@: A p B` converts the candidate reference, checks implements against
-the requirement and Consumer, and commits only after success. `p: B` can use the
-general Structure-to-pointer primitive conversion; it is not a converter row
-invented for each pair of named Structures. `p: @B` names that candidate directly.
+For absent `b`, `b: A` and `@: b A` are equivalent. Ordinary `b: args` applies the selected Structure under its actual callable contract. `@: b B` explicitly reassigns the reference after conversion and admission. Repeated declarations are not duplicate-name errors or coalesced occurrences. Requirements are primitives or ordinary Structures, not an extra nominal type category.
 
-**Mechanism/debt.** Use the common resolved value/address category and schema,
-not a parameter's C spelling. A machine parameter carrying an Array descriptor
-reference is not a graph slot whose address should be returned. Typed pointer
-value conversion does not permit aliased differently typed pointer cells.
-See `L2ReferenceSource` and `C99-POINTER-CELL-ALIASING`.
+**Mechanism/debt.** First repair [critical_pointer_to_struct_bug](steps/tickets/critical_pointer_to_struct_bug.md), then perform [reference application refactoring](steps/tickets/structure_reference_application_refactor.md). Current `l2_address_name`, `l2_emit_address`, `l2_own_addr` and `l2_rw_address` exempt descriptors from one address level. Current reference-head classification also prevents ordinary invocation; that is a separate later repair. Canonical ABI pointer boxes must not become language cells. Retain the C99 pointer-cell effective-type obligation, not a cast-based workaround.
 
-**Verification.** Compare real addresses, mutate through them and observe the
-proper storage; distinguish @p from p, primitive locals from graph cells and
-backing elements from descriptor cells. Preserve exact depth in formals/results.
-Do not silently strip @ to make a call fit or copy a value to repair lifetime.
+**Verification.** Prove `A != @A` as value/place depth, native/walker parity, writes through the actual reference cell, stable lifetime and correct admission. Test declaration occurrences, callable rebinding via `@:`, pointer primitives, Array references, arbitrary deeper levels and unchanged source graph shape. Rebinding must not mutate the descriptor, native word, lexical parent or earlier independently held references. Verify actual behavior rather than only generated spelling.
 
 <a id="activation"></a>
 ## 8. Activation, own field, hidden input, node and publication

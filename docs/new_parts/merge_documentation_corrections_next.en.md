@@ -1,5 +1,12 @@
 # NEXT — Fable task: resolve the remaining documentation contradictions with the author
 
+**Address/application correction, 2026-10-02.** Historical address assertions
+below do not override current [L2 §18](../L2_spec_en.md#lowlevel-address):
+@Structure addresses its reference-holding cell, adding a level, not its
+descriptor. See [the recorded correction](assignment_is_not_declaration.en.md).
+Ordinary application through a Structure reference and explicit @: reassignment
+follow [current construction](../LMX_semantics.en.md#construction).
+
 **Completed historical editing task.** The problem statements and questions
 preceding the Applied report describe that earlier review. Its recorded author
 answers and subsequent [assignment correction](assignment_is_not_declaration.en.md)

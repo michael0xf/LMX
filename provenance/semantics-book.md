@@ -951,7 +951,7 @@ A foreign handle requires a checked high-level wrapper and explicit resource and
 
 ### Разрешение головы и роль хвоста
 
-Блочная, короткая и скобочная записи выражают одно применение «голова принимает хвост». Сначала определяется роль головы в данном контексте. Зарезервированный receiver-оператор применяет собственный общий контракт и не затеняется пользовательским именем. Для существующего callable, включая обычную именованную Structure, применение является вызовом; неизвестный фактический аргумент или отказ admission — ошибка вызова, без перехода к объявлению. Для существующей примитивной либо явно ссылочной non-callable привязки действует присваивание. Неизвестная голова в позиции определения объявляет именованную Structure с записанным содержимым; свободные имена этого содержимого не обязаны быть разрешены при определении.
+Блочная, короткая и скобочная записи выражают одно применение «голова принимает хвост». Зарезервированный ресивер применяет свой контракт. Существующая callable Structure, непосредственно либо через хранящуюся ссылку, вызывается; ошибка вызова не превращается в объявление или присваивание. Примитив получает присваивание по своему контракту. Неизвестная голова сохраняет общее построение именованной Structure с записанным содержимым без исполнения тела; свободные имена могут разрешаться позже. При неизвестном b формы b: A и @: b A равнозначны как присваивание при введении b. Далее b: args применяет Structure, а @: b B переприсваивает ссылку. Эта равнозначность не разрешает стирать исходное тело, неявно делать merge или считать разные исходные вхождения одним объектом лишь из-за ссылочного хранения.
 
 Неизвестное имя аргумента не превращает существующую Structure-голову в ресивер объявления по модели. При существующем A запись A: b в исполняемом теле сначала классифицируется как вызов. Если A — обычная именованная Structure, этот вызов с аргументом ошибочен: у неё есть только тело и нет аргументов; допустим её нульарный вызов. Для fn/fm/sub применяются объявленные сигнатуры. Неизвестный фактический b не объявляется и не клонируется; ошибка вызова не превращается в присваивание. Неявного merge(A, empty) здесь нет. Ресивер примитивного типа int, напротив, объявляет по своему контракту: int: i 5 передаёт ему имя i и значение 5. Произвольная вложенность ресиверов не означает равенства цепочки применений списку аргументов; каждую вложенную форму потребляет её принимающее выражение.
 
@@ -979,9 +979,9 @@ f(), f: () и явно закрытая пустая вертикальная ф
 
 Для клонирования либо композиции уже существующих структур используется явный [merge](#composition). В b: merge A C операнды — A и C, внешний b получает результат; имя результата не является первым операндом merge. Неявное клонирование по факту неизвестного аргумента не выполняется. Формирование возвращаемого вложенного callable с данными завершающейся активации регулируется отдельно тем же разделом композиции и не отменяется правилами объявления.
 
-Для явной изменяемой ссылочной привязки служит @: Type var с необязательным третьим аргументом-кандидатом; подробный контракт и глубина описаны в [§12](#dynamic). Такая привязка сама не становится callable. var: value присваивает ей ссылку; для вызова референта используется явное разыменование \var. Объявление ссылки выделяет место для ссылочного значения, а не экземпляр Type; отсутствие инициализатора задаёт нулевое ссылочное значение.
+Ресивер @: выбирает присваивание ссылки. Structure и ссылка на неё равноправны при применении b: args, с неизменным контрактом вызываемого. Повторные объявления сохраняют отдельные исходные вхождения. Ресивер @: не тождествен унарному @b: последний адресует хранимую ссылку и добавляет уровень ([§12](#dynamic)).
 
-Если кандидат — Structure, а цель — типизированная ссылка, допустимое преобразование сначала получает ссылку на кандидата, затем implements проверяет референт относительно требования и Consumer, и только после успеха записывается ссылка. Поэтому ptr: A и ptr: @A могут предоставлять один кандидат через общий конвертер. Указатель является примитивным значением; таблица преобразований относится к представлениям примитивов, а не к каждой паре пользовательских структур. Соответствие конкретных структур устанавливает implements. Все обычные Lmx-вхождения используют общий типизированный диапазон, а не отдельный одноэлементный массив для каждой модели.
+Преобразование кандидата предшествует implements относительно требования потребителя; запись ссылки происходит после успешного допуска. Обычное значение Structure уже передаётся ссылкой. @A адресует её ячейку и не является конверсией Structure в обычную ссылку: A и @A имеют разную глубину. Таблица конверсий описывает примитивные значения, в том числе указатели, а не пары пользовательских структур. Их пригодность устанавливает implements; физический диапазон Lmx общий, не отдельный для каждой модели.
 
 ### Сигнатура не исполняется
 
@@ -992,15 +992,15 @@ sub: test (A: b)
 sub: test (@: A b)
 ```
 
-Для структурного c передачи test(c) и test(@c) имеют одинаковую ссылочную глубину. Уже объявленная ссылочная переменная p передаёт своё ссылочное значение; @p адресует её ячейку и добавляет уровень, поэтому не подставляется в тот же одноуровневый формал снятием лишней глубины. Примитивные формалы (int: b) и (@: int b) не являются синонимами. Передача и обычный возврат непримитивного значения не используют C by-value aggregate; способ машинного хранения дескриптора не меняет эту семантику.
+Для структурного c передачи test(c) и test(@c) имеют разную глубину: ссылка на Structure и ссылка на ячейку этой ссылки. Лишний уровень не снимается ради формала. Это одинаково для Structure, ссылочной переменной и непримитивного формала; адресуется собственное языковое хранилище, не транспортная ABI-ячейка. Примитивные формалы (int: b) и (@: int b) не синонимы. Передача и возврат непримитивов не используют C by-value aggregate.
 
 ### Присваивание и места объявления
 
-Присваивание обновляет существующую non-callable привязку после полного admission. Кешированные проверенные адреса и оптимизированное локальное хранение не отменяют implements. Неуспех не меняет ни цель, ни её dirty и не стирает ранее допущенное, ещё не опубликованное значение. Примитив получает значение; явно ссылочная переменная — ссылку без копирования референта, переподчинения parent или переноса владения.
+Присваивание примитиву либо выбранное через @: присваивание ссылки выполняется после admission, в том числе при кешированных адресах и оптимизированных locals. Отказ сохраняет цель, dirty и ожидающее публикации допущенное значение. Присваивание ссылки не копирует референт, не меняет parent и не переносит владение. Применение b: args к callable Structure остаётся вызовом.
 
 Присваивание явному либо скрытому аргументу обновляет локальное значение активации и не создаёт поля графа, не пишет обратно вызывающему. Объявленное own-поле сохраняет своё место в полном графе; его присваивание меняет рабочее значение по общему правилу публикации. Наличие записи в теле не служит основанием для дополнительного объявления. Неизвестная голова с литералом задаёт структурное содержимое, а не неявно типизированный примитив: для примитивной переменной требуется ресивер её типа.
 
-Прямое применение callable-поля — вызов, не перепривязка callable. Замена выполняется общими структурными механизмами: merge с более поздним одноимённым полем и admission, динамической перегрузкой из вызывающего контекста либо явной передачей callable-аргумента. Изменяемая ссылка на callable объявляется явно и следует обычному контракту ссылочной переменной.
+Прямое применение callable-поля — вызов, не перепривязка. Для явного присваивания ссылки используется @:; merge, динамическое переопределение и передача callable-аргумента сохраняют собственные контракты. Ошибка вызова не разрешает откат к присваиванию.
 
 Все объявления и операторы сохраняются в лексическом порядке полного графа. Повторные поля не склеиваются по имени. Вхождения выбираются общим [правилом структурных путей](#fields), независимо от порядка рабочего кэша активации.
 
@@ -1017,7 +1017,7 @@ Source notation constructs the complete Structure graph: values, declarations an
 
 ### Head resolution and the role of the tail
 
-Block, short and parenthesized spellings express one application, “the head consumes the tail.” First determine the head's role in the given context. A reserved receiver-operator applies its own general contract and cannot be shadowed by a user name. Applying an existing callable, including an ordinary named Structure, is a call; an unknown actual argument or admission failure is a call error, without falling back to declaration. An existing primitive or explicitly referenced non-callable binding selects assignment. An unknown head in definition position declares a named Structure with the written contents; free names in those contents need not resolve at definition time.
+Block, short and parenthesized spellings express one application: the head consumes the tail. A reserved receiver applies its contract. An existing callable Structure, directly or through its held reference, is called; a call error does not become declaration or assignment. A primitive receives assignment under its contract. An unknown head retains general construction of a named Structure with its written contents without executing the body; free names may resolve later. For absent b, b: A and @: b A are equivalent assignment forms introducing b. Subsequently b: args applies the Structure, while @: b B reassigns the reference. This equivalence does not authorize erasing the source body, implicit merge, or identifying distinct source occurrences merely because storage uses references.
 
 An unknown argument name does not turn an existing Structure head into a model-declaration receiver. With existing A, A: b in an executable body is first classified as a call. If A is an ordinary named Structure, this argument-bearing call is erroneous: it has only a body and no arguments; its nullary call is admissible. fn/fm/sub use their declared signatures. An unknown actual b is neither declared nor cloned; a call error does not become assignment. There is no implicit merge(A, empty). A primitive type receiver such as int instead declares under its own contract: int: i 5 supplies the name i and value 5. Arbitrary receiver nesting does not equate an application chain with an argument list; each nested form is consumed by its receiving expression.
 
@@ -1045,9 +1045,9 @@ f(), f: () and an explicitly closed empty vertical form have one representation.
 
 Explicit [merge](#composition) clones or composes existing Structures. In b: merge A C the operands are A and C and outer b receives the result; the destination name is not the first merge operand. An unknown argument does not trigger implicit cloning. Formation of a returned nested callable with data from the finishing activation is governed separately by that composition section and is not removed by declaration rules.
 
-An explicit mutable reference binding uses @: Type var with an optional third candidate argument; its detailed contract and depth are defined in [§12](#dynamic). The binding does not itself become callable. var: value assigns a reference; invoking its referent uses explicit dereferencing \var. A reference declaration allocates reference-value storage, not a Type instance; omitting the initializer gives a null reference value.
+The @: receiver selects reference assignment. A Structure and its reference have equal application behavior in b: args, under the unchanged callable contract. Repeated declarations retain separate source occurrences. The @: receiver is not unary @b: the latter addresses the stored reference and adds a level ([§12](#dynamic)).
 
-When the candidate is a Structure and the destination a typed reference, an admissible conversion first obtains the candidate reference, then implements checks the referent against the requirement and Consumer, and the reference is stored only after success. Thus ptr: A and ptr: @A can supply the same candidate through a general converter. A pointer is a primitive value; conversion tables describe primitive representations, not every pair of user Structures. implements establishes suitability of particular Structures. Ordinary Lmx occurrences use a common typed range, not a separate single-element array for each model.
+Candidate conversion precedes implements against the Consumer's requirement; reference storage changes after admission succeeds. An ordinary Structure value already travels by reference. @A addresses its cell and is not conversion of a Structure to its ordinary reference: A and @A have different depths. The conversion table describes primitive values, including pointers, not pairs of user Structures. implements establishes their suitability; the physical Lmx range is common, not separate for each model.
 
 ### A signature is not executed
 
@@ -1058,15 +1058,15 @@ sub: test (A: b)
 sub: test (@: A b)
 ```
 
-For structural c, test(c) and test(@c) supply the same reference depth. An already declared reference variable p passes its reference value; @p addresses its cell and adds a level, so the same single-level formal cannot accept it by silently stripping that depth. Primitive formals (int: b) and (@: int b) are not synonyms. Passing and ordinarily returning a nonprimitive value never use a C by-value aggregate; the descriptor's machine storage does not change this semantics.
+For structural c, test(c) and test(@c) have different depths: a Structure reference and a reference to the cell holding it. No extra level is removed to fit a formal. This applies equally to a Structure, a reference variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. Primitive formals (int: b) and (@: int b) are not synonyms. Passing and returning nonprimitives never use C by-value aggregates.
 
 ### Assignment and declaration sites
 
-Assignment updates an existing non-callable binding after full admission. Cached checked addresses and optimized local storage do not remove implements. Failure changes neither the destination nor its dirty state and does not erase an earlier admitted value awaiting publication. A primitive receives a value; an explicitly referenced variable receives a reference without copying the referent, reparenting it or transferring ownership.
+Primitive assignment or reference assignment selected through @: occurs after admission, including cached addresses and optimized locals. Failure preserves the destination, dirty state and admitted pending value. Reference assignment does not copy the referent, change parent or transfer ownership. Applying b: args to a callable Structure remains a call.
 
 Assignment to an explicit or hidden argument updates the activation-local value, creates no graph field and does not write back to the caller. A declared own-field retains its place in the complete graph; assignment changes its working value under ordinary publication rules. A write in a body is not grounds for another declaration. An unknown head with a literal supplies structural contents, not an implicitly typed primitive: a primitive variable requires its type receiver.
 
-Direct application of a callable field is invocation, not callable rebinding. Replacement uses general structural mechanisms: merge with a later same-named field and admission, dynamic override from the caller, or explicit callable-argument transport. A mutable reference to a callable is declared explicitly and follows the ordinary reference-variable contract.
+Direct application of a callable field is a call, not rebinding. Explicit reference assignment uses @:; merge, dynamic override and callable-argument transport retain their contracts. A call error never licenses fallback to assignment.
 
 All declarations and operators remain in the complete graph's lexical order. Repeated fields are not coalesced by name. Occurrences are selected by the common [structural-path rule](#fields), independently of an activation's working-cache order.
 
@@ -1215,41 +1215,29 @@ A returned reference preserves its exact target identity. Constructing a result,
 
 Локальность и длительность хранения здесь являются разными свойствами. Место объявления переменной вызываемого вхождения хранит опубликованное значение после активации в полной Structure — там, где объявление написано, без отдельного поля рядом; рабочая переменная активации снаружи не видна, а путь `M\x` снаружи открывает место объявления, поскольку объявление в любом случае заводит значение; запись в него не является изменением внешней привязки: ячейка аргумента вызывающего выражения и поле над-методного пространства остаются неизменными. Это внешнее поле меняется только явной записью через путь `node\x`, где `node` — данные лексического родителя.
 
-В L3 @ сохраняет ссылочный смысл: объявление ссылки, получение ссылки на разрешённое значение, передача, перепривязка и разыменование допустимы без машинной адресной арифметики. @: Type var объявляет типизированную ссылочную переменную; третий аргумент @: Type var candidate задаёт начальный кандидат. Без третьего аргумента записывается нулевое ссылочное значение, а не создаётся экземпляр Type. Ноль не является пустой Structure; разыменование несвязанной ссылки не даёт значения. Type и var — отдельные аргументы принимающего выражения, а не неявная цепочка вызовов.
+В L3 @ сохраняет ссылочный смысл без машинной адресной арифметики. Ресивер @: выбирает присваивание ссылки, а унарное @ получает адрес хранимого значения. Для неизвестного b формы b: A и @: b A равнозначны; после связывания b: args применяет Structure, а @: b B переприсваивает ссылку. Контракт вызываемого не меняется: это не добавляет аргументов обычной именованной Structure.
 
 ```text
-@: A ptr_a A
-@: A ptr_b B
-ptr_b: @A
-ptr_b: A
+b: A       # b is absent: equivalent to @: b A
+b: args    # application under the selected Structure's call contract
+@: b B     # explicit reference reassignment
 ```
 
-В этих формах A и B — существующие структуры. Преобразование кандидата в ссылку предшествует implements(B, A, Consumer); сохраняется только допущенное ссылочное значение. Преобразование описывается общей таблицей примитивных представлений, поскольку указатель — примитив. Таблица не перечисляет пары пользовательских моделей; пригодность структурного референта устанавливает implements. Ссылочная переменная не становится callable от того, что её референт исполняем: ptr_b: A — присваивание; для вызова референта служит явное \ptr_b.
+Равноправие применения не отождествляет разные исходные вхождения: сохраняются общее построение записанного тела и полный граф. Известность имени не запрещает повторные объявления; каждое сохраняет собственное вхождение. Присваивание уже выбранной ячейке новым объявлением не является. Преобразование, затем implements относительно потребителя предшествуют записи; отказ сохраняет цель. Требования описываются примитивами и обычными Structure, не отдельным номинальным классом «Type».
 
-| Форма | Смысл в L3 |
+| Запись | Смысл |
 | --- | --- |
-| @: var | Объявление ссылки без заданного требования к типу референта (void-ссылка), начальное значение 0 |
-| @: Type var | Объявление типизированной ссылки var с начальным значением 0 |
-| @: Type var candidate | Объявление и инициализация ссылки после преобразования и admission кандидата |
-| @: Type: var | Вложенная форма @(Type(var)); не автоматический синоним двух отдельных аргументов Type и var |
-| @x, return: @x, передача @x аргументом | Получение и перенос ссылки на реальное типизированное значение без машинной адресной арифметики |
-| @@: Type var, @@@: Type var и далее | Объявление ссылок большей глубины; искусственного предела глубины нет |
-| \var | Разыменование ссылки; дальнейшая операция определяется полученным значением |
+| @: b A | Явное присваивание ссылки; при неизвестном b равнозначно b: A |
+| b: args | Применение связанной Structure, не переприсваивание |
+| @: b B | Явное переприсваивание ссылки по общим правилам допуска |
+| @: p | Ссылка без заданного структурного требования (void), начальное значение 0 |
+| @: int p, @@: int pp | Объявления указательных примитивов; предела глубины нет |
+| @x, return: @x, передача @x | Адрес хранилища x; для хранимой ссылки добавляется уровень |
+| \var | Разыменование; дальнейшую операцию определяет полученное значение |
 
-Адресуется реальное значение, а не служебный слот, которым граф хранит ссылку на него. Для обычной Structure x ссылка @x указывает на её типизированный дескриптор Lmx, а не на внутреннюю ячейку void* дочерних ссылок; в C-проекции это Lmx*, не автоматически Lmx**. Для явно ссылочной переменной p операция @p адресует саму ячейку её ссылочного значения и добавляет один уровень; обычное чтение p возвращает хранимую ссылку. Для примитива или элемента массива адресуется соответствующая типизированная ячейка. Уточнения машинной проекции и времени жизни приведены в [L2 §18](L2_spec_ru.md#lowlevel-address).
+Structure хранится по ссылке. Для адресуемого структурного значения A обычное значение есть ссылка на Lmx (концептуально Lmx*), а @A — адрес ячейки этой ссылки (концептуально Lmx**). Это не адрес дескриптора и не повторное чтение A. Для Array, также хранимого ссылкой на дескриптор, действует тот же принцип. Для примитива @ адресует его типизированную ячейку; для элемента массива — ячейку элемента, включая ссылочную. Глубина не схлопывается. Адресуется реальное стабильное хранилище разрешённого значения, не временная копия, кеш или ABI-буфер. Проекция и сроки жизни описаны в [L2 §18](L2_spec_ru.md#lowlevel-address).
 
-Передача и return ссылочной переменной переносят её значение, не адрес переменной. Новой Structure требуется явное определение либо merge; объявление @ не клонирует референт. L3 не предоставляет числового адреса, машинного cast, произвольного доступа к сырой памяти или изменения адреса арифметикой. Переносимая ссылка, включая получение @x и разыменование, не запрещается из-за машинного способа реализации L2; допустимость определяется операцией, а не наличием символа @.
-
-Каждое тело, которое принимающее выражение исполняет по операторам, — структура графа и владелец непосредственно объявленных в нём полей. Тела `if` и `else`, циклов и других принимающих выражений образуют вложенную иерархию, не плоский список полей метода. Невыполненная ветвь не производит присваиваний. Обычный вложенный блок не создаёт новую активацию метода или границу динамических входов. Условие, аргумент вызова и аргумент `return` сами по себе не являются исполняемыми телами: их роль задаёт принимающее выражение, а не наличие вложенной структуры в последней синтаксической позиции.
-
-```text
-fn: remember (int: x) int
-    x: 7
-    return: x
-end: remember
-```
-
-Здесь `x: 7` обновляет локальный аргумент `x`, и `remember(3)` возвращает 7; поля у `remember` от этого не появляется, переменная вызывающего выражения не меняется, и состояния `remember` не хранит. Поле есть только там, где его ставит объявление: `int: x 3` в теле объявило бы его, и тогда голое имя читает и пишет это поле через рабочую копию. Кэшируются только собственные поля, реально используемые голым именем либо для передачи динамического входа дальше; явный путь читает граф и сам по себе не создаёт own-кэш; поле не исчезает из графа оттого, что голое имя его не использует.
+Передача и return значения переносят это значение; @x явно передаёт адрес его хранилища. Непримитивы не становятся C-valued. L3 не предоставляет числового адреса, машинного cast, сырой памяти или адресной арифметики. Ссылки на ссылочные ячейки допустимы как переносимые ссылки, но не продлевают время жизни своих целей.
 
 Перед передачей управления другому вызываемому выражению публикуются только собственные рабочие поля с активной отметкой `dirty`. После публикации отметки очищаются. Граница публикации — вызов, который может опубликовать или выпустить состояние, вызвать пользовательский код, войти в Message повторно или передать управление за пределы активации; неопределённый внешний вызов считается границей консервативно; приватный не-выпускающий помощник, служащий только обходу текущей активации, классификации адреса или явной графовой операции, — не граница, даже если он читает или пишет граф (источник 21.6). Так же публикуют все выходы — сквозной конец тела, `return`, `throw`, неуспешный `assert`, остановка и отмена — и приостановка `yield`. Неизменённое кэшированное поле без такой отметки не записывается обратно: вложенный вызов мог уже изменить его через явную ссылку. После возврата вызывающая активация не перечитывает свои рабочие значения из графа. Невозможность разрешить или записать связанное поле — диагностический `assert`; предназначенный внешний вызов после этого не выполняется. Общей транзакции с откатом предыдущих записей нет.
 
@@ -1317,41 +1305,29 @@ Assignment updates an already resolved binding. It does not create an additional
 
 Locality and storage duration are separate properties here. The place of declaration of a callable occurrence's variable retains the published value after the activation in the complete Structure -- where the declaration is written, with no separate field beside it; the activation's working variable is not visible from outside, while the path `M\x` from outside opens the place of declaration, since a declaration always establishes a value; a write into it is not a mutation of an outer binding: the caller's argument cell and the above-method space's field remain unchanged. Only an explicit `node\x` path write mutates that outer field, where `node` is the lexical parent's data.
 
-In L3 @ retains reference semantics: reference declaration, acquisition from a resolved value, passing, rebinding and dereferencing are admissible without machine address arithmetic. @: Type var declares a typed reference variable; a third argument in @: Type var candidate supplies its initial candidate. Omitting it stores a null reference value rather than constructing a Type instance. Null is not an empty Structure; dereferencing an unbound reference yields no value. Type and var are separate receiver arguments, not an implicit chain of calls.
+In L3 @ retains reference semantics without machine address arithmetic. The @: receiver selects reference assignment; unary @ obtains the address of stored value storage. For absent b, b: A and @: b A are equivalent; after binding, b: args applies the Structure and @: b B reassigns the reference. The callable contract is unchanged: this gives no arguments to an ordinary named Structure.
 
 ```text
-@: A ptr_a A
-@: A ptr_b B
-ptr_b: @A
-ptr_b: A
+b: A       # b is absent: equivalent to @: b A
+b: args    # application under the selected Structure's call contract
+@: b B     # explicit reference reassignment
 ```
 
-Here A and B are existing Structures. Candidate-to-reference conversion precedes implements(B, A, Consumer); only the admitted reference value is stored. Conversion belongs to the general table of primitive representations because a pointer is a primitive. That table does not enumerate pairs of user models; implements determines structural referent suitability. A reference variable does not become callable merely because its referent is executable: ptr_b: A assigns; explicit \ptr_b is used to invoke the referent.
+Equal application behavior does not identify distinct source occurrences: general construction of the written body and the complete graph are retained. A known name does not prohibit repeated declarations; each preserves its own occurrence. Assignment to an already selected cell is not another declaration. Conversion, then implements against the Consumer, precede storage; failure preserves the destination. Requirements are described by primitives and ordinary Structures, not a separate nominal category named “Type”.
 
-| Form | L3 meaning |
+| Form | Meaning |
 | --- | --- |
-| @: var | Declare a reference without a referent-type requirement (void reference), initially 0 |
-| @: Type var | Declare typed reference var, initially 0 |
-| @: Type var candidate | Declare and initialize a reference after candidate conversion and admission |
-| @: Type: var | Nested @(Type(var)) form; not an automatic synonym for separate arguments Type and var |
-| @x, return: @x, passing @x as an argument | Obtain and transport a reference to the actual typed value without machine address arithmetic |
-| @@: Type var, @@@: Type var and beyond | Declare deeper references with no artificial depth bound |
-| \var | Dereference the reference; the resulting value determines the subsequent operation |
+| @: b A | Explicit reference assignment; equivalent to b: A when b is absent |
+| b: args | Application of the bound Structure, not rebinding |
+| @: b B | Explicit reference reassignment under general admission |
+| @: p | Reference without a structural requirement (void), initially 0 |
+| @: int p, @@: int pp | Pointer-primitive declarations; no depth limit |
+| @x, return: @x, passing @x | Address of x's storage; a stored reference gains a level |
+| \var | Dereference; the resulting value determines the subsequent operation |
 
-The target is the actual value, not the service slot by which the graph stores its reference. For ordinary Structure x, @x refers to its typed Lmx descriptor, not an internal void* child-reference cell; the C projection is Lmx*, not automatically Lmx**. For explicitly referenced variable p, @p addresses its reference-value cell and adds one level; ordinary p reads the stored reference. For a primitive or an Array element the target is its corresponding typed cell. Machine projection and lifetime details are defined in [L2 §18](L2_spec_en.md#lowlevel-address).
+A Structure is stored by reference. For addressable structural value A, the ordinary value is a reference to Lmx (conceptually Lmx*), while @A addresses the cell holding it (conceptually Lmx**). It is neither the descriptor address nor another read of A. The same principle applies to an Array held by descriptor reference. For a primitive, @ addresses its typed cell; for an Array element, its element cell, including a reference cell. Depth is not collapsed. The target is the resolved value's real stable storage, not a temporary copy, cache or ABI buffer. Projection and lifetimes are defined in [L2 §18](L2_spec_en.md#lowlevel-address).
 
-Passing or returning a reference variable transports its value, not the variable's address. A new Structure requires an explicit definition or merge; @ declaration does not clone a referent. L3 exposes no numeric address, machine cast, arbitrary raw memory access or arithmetic address modification. Portable references, including @x acquisition and dereferencing, are not prohibited because of L2's machine implementation: admissibility is determined by the operation, not the presence of @.
-
-Every body that a receiving expression executes statement by statement is a graph Structure hosting its directly declared fields. Bodies of `if`, `else`, loops and other receivers form a containment hierarchy, not a flat method-field list. An untaken branch performs no assignments. An ordinary nested block creates neither another method activation nor a dynamic-input boundary. Conditions, call arguments and `return` arguments are not executable bodies merely by being arguments: their receiving expression determines the role, not a Structure in the last syntactic position.
-
-```text
-fn: remember (int: x) int
-    x: 7
-    return: x
-end: remember
-```
-
-Here `x: 7` updates the local argument `x`, and `remember(3)` returns 7; no field of `remember` arises from it, the caller's variable is unchanged, and `remember` keeps no state. A field exists only where a declaration puts it: `int: x 3` in the body would declare one, and then the bare name reads and writes that field through the working copy. Only own fields actually used by a bare name or to forward a dynamic input are cached; an explicit path reads the graph and alone creates no own cache; a field does not vanish from the graph because no bare name uses it.
+Passing or returning a value transports that value; @x explicitly transports its storage address. Nonprimitives do not become C-valued. L3 exposes no numeric address, machine cast, raw memory or address arithmetic. References to reference cells are admissible portable references but do not extend their targets' lifetimes.
 
 Before control passes to another callable expression, only own working fields with an active `dirty` mark are published. Marks are cleared after publication. A publication boundary is a call that may publish or escape state, invoke user code, re-enter the Message or transfer control outside the activation; every uncertain external call is treated conservatively as one; a private, non-escaping helper used only for the current activation's own traversal, address classification or explicit graph operation is not a boundary, even if it reads or writes the graph (origin 21.6). Every exit -- fallthrough of the body, `return`, `throw`, a failing `assert`, stop and cancellation -- and `yield` suspension publish the same way. A cached field without such a mark must not be written back: a nested call may already have changed it through an explicit reference. After return, the caller activation does not reload its working values from the graph. Failure to resolve or store into a bound field uses diagnostic `assert`; the intended outbound call is not executed afterward. There is no general transaction rolling back earlier writes.
 

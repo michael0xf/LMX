@@ -333,25 +333,19 @@ source graph and on the applicable address/publication rules. See the
 normative L2 §18.2–18.3 and L3 §12 and the open implementation work in §7b
 of `next_core_tasks.md`.
 
-For an actual Structure value `A`, `@A` refers to the Structure descriptor
-itself, not the graph slot containing its reference and not a copy. An
-explicit reference binding `@: A ptr` is different: its ordinary value is
-the pointer it holds; `@ptr` addresses the pointer-holding cell and adds one
-indirection. That level is not silently removed to match a formal.
-Dereferencing an explicit reference yields its referent; when that referent
-is to be called, invocation uses the ordinary callable rule. Writing
-`ptr: value` assigns the reference binding rather than invoking its referent.
-In L2, address acquisition, load and store have their machine meanings;
-machine addresses do not extend the lifetime of activation locals. L3 keeps
-typed reference operations without numeric address arithmetic, raw-memory
-access, backing access or machine casts. See L2 §18 and L3 §12.
+A Structure value is stored and transported by reference, conceptually `Lmx *`; unary `@A` addresses the cell holding that reference, conceptually `Lmx **`. The extra level is not removed for a Structure, Array, formal, field or callable. Ordinary `A` reads the stored reference. `@` must use real stable value storage, not a temporary, working cache, transport-ABI box or the pointee descriptor. Array descriptor references obey the same rule; primitive `@x` addresses the primitive cell. Source model names denote ordinary Structures used by admission, not separate nominal or C aggregate types.
+
+The `@:` receiver selects explicit reference assignment: for absent `b`, `b: A` and `@: b A` are equivalent; after binding, `b: args` applies the selected Structure and `@: b B` reassigns the reference. Repeated declarations remain distinct occurrences. Conversion and `implements` against the Consumer precede storage; failure preserves the destination and dirty state. Reference assignment does not clone, reparent or transfer ownership. It does not create a nominal type system: requirements are primitives or ordinary Structures. Unary `@A` is a different operation and adds a reference level; it is not a synonym of ordinary `A`.
+
+See L2 §18 and L3 §9/§12. Native and walker descriptor-depth exemptions are pending repair, not language rules.
 
 ## 4. Declaration, assignment, call, and admission
 
 These are distinct semantic operations even when surface syntax looks similar.
 Reserved language receivers retain their declared contracts. For an ordinary
 head, an existing Structure or other callable is **called**; an existing
-primitive or explicit reference binding is **assigned** through admission;
+primitive is **assigned** through admission; explicit Structure-reference
+reassignment uses `@: b B`, whereas `b: args` is application;
 an unknown head **defines a named Structure** whose tail is its body. The
 definition does not execute that body, and free names in it need not already
 be resolved at the definition. A failed call never falls through to assignment
@@ -381,17 +375,7 @@ The established composition needed when returning a nested callable remains
 a separate return contract; removing implicit declaration cloning does not
 remove that composition or change its captured values.
 
-`@: A ptr` declares an explicit reference with default initializer 0;
-`@: A ptr B` initializes it from `B`. On a Structure-to-pointer transfer,
-the primitive conversion first obtains the pointer, then
-`implements(B, A, Consumer)` checks its typed referent before storage.
-Conversion describes common primitive representations, not a table of every
-pair of user models; all Lmx Structures share the same physical descriptor
-domain. The non-executing formal descriptions `(A: b)` and `(@: A b)` are
-synonyms for nonprimitive `A` only in a signature. Passing a Structure `B`
-or `@B` supplies the same reference level; `@ptr` instead adds a level.
-Primitive `(int: b)` and `(@: int b)` are not synonyms, and signature
-synonymy does not turn either body spelling into an implicit construction.
+For absent `b`, `b: A` and `@: b A` are equivalent assignment forms under the existing source-body construction rules. Repeated declarations retain distinct occurrences. The reference's target is invoked by `b: args`; `@: b B` explicitly selects reference reassignment. Structural admission remains Consumer-relative. `B` and `@B` have different reference depths even though the descriptor travels by reference; a signature cannot erase that distinction. Primitive value and primitive-reference formals remain distinct.
 
 The parser's parenthesized, short-colon, and vertical forms must already
 produce the same normalized Frame/body, before semantic consumption. `f()`,
@@ -666,7 +650,7 @@ an implementation's current behavior, an accepted rule, and a planned fix.
 | Boundary | Current evidence / consequence | Owner of the next decision |
 | --- | --- | --- |
 | P0 argument-container normal form | The unequal shapes and CALL-only unwrapping were historical defects; landed normalization evidence is recorded in `next_core_tasks.md` §2. | Preserve the common normalized tree for every head; parser equality does not itself prove correct head resolution or execution. |
-| General application and declaration | Legacy `Model: fresh` / `A: b c` recognizers and stale tests still compete with current resolution. | Unknown head defines the written Structure without execution; an existing ordinary named Structure permits only nullary invocation, and written actuals are a call error without fallback. `fn`/`fm`/`sub` retain declared formals; existing primitive or explicit non-callable reference bindings assign. Remove implicit cloning and use the shared resolved act; see plan §3 and Q56/Q57. |
+| General application and declaration | Legacy `Model: fresh` / `A: b c` recognizers and stale tests still compete with current resolution. | Unknown head defines the written Structure without execution; an existing ordinary named Structure permits only nullary invocation, and written actuals are a call error without fallback. `fn`/`fm`/`sub` retain declared formals; primitive bindings assign; Structure-reference application calls and `@:` explicitly reassigns. Remove implicit cloning and use the shared resolved act; see plan §3 and Q56/Q57. |
 | Repeated fields, publication and addresses | Verify `[N]field` and own-value publication against the current address contract: `@` selects actual typed graph data or the descriptor, not an activation working copy. Address-taking alone is not a dirty write. | One occurrence-to-physical-path algorithm shared by native and interpreter; L2 §18.2–18.3 controls the addressed storage category. |
 | Admission | Current-Consumer checking and source-layout correspondence landed in `e70689c`; complete compiler uses/capture closure and the full directed conversion table are not established by that slice. | Preserve reached admission and physical correspondence while closing the separately recorded projection/conversion gaps. |
 | Raw C door | Raw-C type provenance and legacy generated/test assumptions remain cleanup debt; `sizeof:` already has native lowering with incomplete operand support. | One raw `c.*` door; keep the language receiver separate and resolve its operands through the shared type/value contracts. |

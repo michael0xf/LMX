@@ -99,7 +99,7 @@ The role order is:
 
 1. a reserved receiver/operator uses its defined contract;
 2. a known callable, including an ordinary named Structure, is called and its resolved contract checks the written actuals;
-3. a known primitive or explicitly referenced non-callable binding is assigned under its contract;
+3. a known primitive is assigned under its contract; a Structure reference uses ordinary callable application, with explicit rebinding selected by `@: b B`;
 4. an unknown head in definition position declares a named Structure.
 
 Argument count, parentheses, or an empty tail do not override this resolution.
@@ -199,44 +199,31 @@ C often represents several of these with pointer-shaped words. LMX semantics doe
 
 ### 5.2 Reference declaration
 
-**NORMATIVE.** The canonical reference declaration has separate receiver arguments:
+**NORMATIVE.** Reference assignment and ordinary Structure application are separate acts:
 
 ```text
-@: A p
-@: A q candidate
+b: A       # absent b; equivalent to @: b A
+b: args    # application; the selected callable checks its actual arguments
+@: b B     # explicit reference reassignment
 ```
 
-`p` is a typed reference variable initialized to a null reference. `q` receives `candidate` after source conversion and structural admission. The declaration allocates storage for a reference value; it does not allocate an `A` instance.
+Do not reinterpret this equivalence as permission to erase a written body, merge implicitly, or identify distinct declaration occurrences. Repeated declarations retain separate places. Conversion and implements precede any reference store; a failed check leaves the prior value intact. There is no separate nominal “Type” object: requirements use primitives or ordinary Structures.
 
-The grammar shape `@: A: p` is nested `@(A(p))`, not the same field list as `@: A p`.
-
-Arbitrary depth uses repeated heads:
-
-```text
-int: x 0
-@: int p
-@@: int pp
-@@@: int ppp
-p: @x
-pp: @p
-ppp: @pp
-```
-
-There is no fixed syntactic depth limit.
+Pointer primitives retain their declared depth, for example `@: int p` and `@@: int pp`. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `test(A) == test(@A)` assumption.
 
 ### 5.3 What `@x` denotes
 
-**NORMATIVE.** `@x` obtains a reference to the actual resolved typed data, not a temporary and not a Structure's internal `void *` child slot.
+**NORMATIVE.** `@x` addresses the resolved value's actual storage. A Structure/Array value is already a descriptor reference; `@x` addresses the cell holding it and adds a level, never returning the descriptor again or the address of a temporary.
 
 | Selected `x` | `@x` denotes |
 | --- | --- |
 | declared primitive graph field | the real typed primitive cell |
-| ordinary Structure | the actual `Lmx` occurrence/descriptor |
-| ordinary Array | the actual Array descriptor |
+| ordinary Structure | the real reference-holding cell; conceptually `Lmx **` |
+| ordinary Array | the cell holding its descriptor reference; one level deeper |
 | Array element | the actual typed backing element |
 | explicit reference variable | the reference-value cell; depth increases by one |
 | primitive formal/dynamic input | its activation-local typed cell |
-| nonprimitive formal | the transported descriptor, not the address of a hidden C parameter |
+| nonprimitive formal | its stable activation-owned reference cell, not caller storage or an ABI transport box |
 
 Example:
 
@@ -428,7 +415,7 @@ In L2:
 @array[i]
 ```
 
-denotes the actual typed backing element. It must not read the element into a temporary and address the temporary. `@array` denotes the descriptor, not its first element and not implicit C array decay.
+denotes the actual typed backing element. It must not read the element into a temporary and address the temporary. `@array` addresses the cell holding the descriptor reference, not the descriptor, first element or implicit C array decay.
 
 In L3, the equivalent reference operation remains portable only under the declared Array/reference contract; raw backing arithmetic remains L2.
 
@@ -701,7 +688,7 @@ fn: read (A: a) int
 return: a\value
 ```
 
-`a` is descriptor/reference transport with admission to `A`. `@: A a` is synonymous in the signature only. A body declaration `@: A a candidate` is a true mutable reference binding and is not synonymous with a bare executable application.
+`a` is descriptor/reference transport with admission to `A`. `@: A a` is synonymous in the signature only. The executable receiver `@: b A` selects reference assignment; `b: args` instead applies the selected Structure. Signature descriptions do not collapse unary address depth.
 
 ### 14.3 C heap vector to fixed Array
 
@@ -865,7 +852,7 @@ Do not implement or document any of the following as language semantics:
 - rank, shape, capacity, or hidden prefixes in the base Array descriptor;
 - per-coordinate L3 bounds checks for flat rectangular syntax;
 - a fixed maximum path depth, receiver depth, argument count, or construction chain;
-- `@Structure` as address of an internal child-reference slot;
+- `@Structure` lowered as the descriptor itself instead of the real cell holding its reference;
 - address-taking as automatic dirty/sticky publication;
 - nonprimitive Structure transport as a C by-value aggregate;
 - all pointer-shaped values treated as the same reference category;

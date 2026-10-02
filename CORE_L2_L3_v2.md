@@ -152,7 +152,7 @@ VoidDynamicArray
 
 `native` is a function pointer, not a `void *` data pointer and not a numeric address. The runtime's declared function-pointer cast is the adapter boundary. Ordinary Structure references are `Lmx *`; their model names do not generate one C record type per model.
 
-A Structure's `array.data` addresses storage of physical child references. The child slot is normally a `void *` entry. Its internal address is **not** the language address of an ordinary Structure value. `@Structure` denotes the actual `Lmx` descriptor; an explicit pointer variable's address denotes its pointer-value cell instead.
+A Structure's `array.data` addresses its ordered physical child references. A language Structure value is held by reference; unary `@A` addresses that held reference's actual cell (conceptually `Lmx **`), not the `Lmx *` pointee. The same rule applies to Array descriptor references. Exact language place, pointer depth and C99 storage type must survive lowering; an arbitrary `void **` cast is not a storage proof.
 
 ### 4.2 Physical kind, exact type, and language requirement are distinct
 
@@ -203,7 +203,7 @@ Arena operations include allocate/take, range registration/import, mark/revert, 
 | Expression role | Required projection |
 | --- | --- |
 | Ordinary Array value, including an initializer, assignment, return or ordinary actual | Descriptor reference. |
-| `@array` | Address/reference of that same actual descriptor, not backing or a child slot. |
+| `@array` | Address of the cell holding the descriptor reference, one level deeper; not descriptor backing or another read of the descriptor. |
 | `array[i]` | The selected element value. |
 | `@array[i]` | Address of the actual element cell, one pointer level beyond the closed element type. |
 | Length | Descriptor length, not C `sizeof`. |
@@ -269,16 +269,16 @@ The shared place resolver covers the existing AT/OF/ARG/DEREF/ELEM/address route
 
 | Source category | `@x` denotes | What it does not denote |
 | --- | --- | --- |
-| Ordinary Structure value | Actual typed `Lmx` descriptor | Internal `void **` graph child slot; activation cache; C by-value aggregate. |
-| Ordinary Array value | Actual Array descriptor | Element backing, first element, or slot containing the descriptor pointer. |
+| Ordinary Structure value | Actual reference-value cell; conceptually `Lmx **` | Pointee descriptor; temporary/cache/transport box. |
+| Ordinary Array value | Actual cell holding its descriptor reference | Descriptor itself, backing or first element. |
 | Declared primitive field | Actual typed arena cell at the declaration | Working cached scalar. |
 | Explicit pointer binding `p` | The pointer-value cell, adding one depth level | Its already-held pointee value. |
 | Primitive formal/local | Stable activation-owned typed cell | Caller's variable or a shared global argument slot. |
-| Ordinary nonprimitive signature formal | Logical descriptor reference | Hidden C transport parameter/box. |
+| Ordinary nonprimitive signature formal | Stable activation-owned reference cell | Caller storage; shared descriptor; ABI transport box. |
 
 The distinctions remain meaningful after conversion to a common receiver such as `void *`: `p` and `@p` are still different source values. A receiving type cannot recover a source distinction that an earlier untyped evaluator discarded.
 
-`@: A p [candidate]` declares an explicit reference binding. Its omitted initializer is zero on each reached declaration, including hosted re-entry. `@: p` has the accepted untyped/void reference intent and the same zero default. Assignment first converts the candidate according to the available directed conversion, then checks structural admission when the receiving model requires it, then stores. A failed admission must leave the receiving cell and its dirty state unchanged. Pointer/reference bindings do not become callable merely because their referents are callable Structures.
+**Norm.** For absent `b`, `b: A` and `@: b A` are equivalent assignment forms. Ordinary `b: args` applies the bound Structure; `@: b B` explicitly reassigns the reference after conversion and admission. Repeated declarations retain separate occurrences. Do not infer that source-defined bodies disappear or distinct occurrences become one object from reference storage alone. The old non-callable-reference shortcut is implementation debt, not another language contract.
 
 Signatures are nonexecuting. `A: b` and `@: A b` are synonymous reference transmission forms for ordinary nonprimitive signature values; this is not a universal synonym for primitive declarations or an authorization for executable implicit cloning.
 
@@ -799,7 +799,7 @@ These are corrections of stale descriptions, not new execution rules. No L2 spec
 
 ### 18.2 Current consistent reference rules
 
-The paired L1/L2 address sections consistently distinguish actual Structure/Array descriptor from graph child slot; explicit pointer-cell address from held reference; primitive formal cell from ordinary nonprimitive descriptor formal; portable L3 references from numeric/raw L2 operations; and taking an address from dirty-state mutation. The signature sections retain nonexecuting nonprimitive reference transmission. Conversion precedes structural admission. This audit does not reinstate any of the withdrawn “all @ is L2”, “address makes sticky dirty”, “@own returns working cache”, or “ordinary nonprimitive formal means hidden pointer-parameter address” claims.
+The address contract is corrected on 2026-10-02: a Structure/Array value is held by descriptor reference, while unary @ addresses its real reference-value cell and adds depth. Primitive/formal/reference cells and portable L3 references remain distinct from raw L2 operations and ABI boxes. The current descriptor-level exemption in compiler and walker is the open critical_pointer_to_struct_bug, not a released correct mechanism. The subsequent reference-application refactoring separately enables ordinary calls through Structure references and explicit @: reassignment. Earlier gates cited in this map do not certify either repair.
 
 ### 18.3 Residues outside the owned correction set
 

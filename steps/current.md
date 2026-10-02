@@ -37,7 +37,11 @@ K01 (`65e4cf4`…), K02a/K02b (`32836cb`, `6e5f84b`), K03a (`7f54dfb`), K03b (`e
 K04d закрыл `CALLABLE-FORMAL-STATEMENT-CALL-INTERNAL`; K04e закрыл native-половину строки 5
 матрицы; K04f закрыл путь и тень own строки 6, явная pointer-привязка этой строки не измерена;
 открыты строка 8, walker-половина проекции и CALLABLE-FORMAL-HIDDEN-CONTRACT). Следующий код —
-[critical_graph_bug](tickets/critical_graph_bug.md), до остальных пунктов плана. Затем K05,
+[critical_graph_bug](tickets/critical_graph_bug.md), затем
+[critical_pointer_to_struct_bug](tickets/critical_pointer_to_struct_bug.md), затем
+[рефакторинг применения Structure/ссылки](tickets/structure_reference_application_refactor.md),
+до остальных пунктов плана. Документационная норма обновлена 2026-10-02; эти два
+новых этапа ещё не реализованы. Затем K05,
 runtime-выбираемый операнд merge (K02, [§2 заметки](k02-merge-values-20261001.md)).
 
 Ниже сохранены исторические сведения о ранних этапах и внешних каналах.

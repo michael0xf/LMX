@@ -31,7 +31,7 @@ closed.
 - [x] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
   Shown on `graph_shape_12`: `graph_shape_mut_erase` (`mutate erase-add`), `graph_shape_mut_move` (declaration after the expression), `graph_shape_mut_collapse` (two `SET` nodes aliased). Each driver exit is 1 because the shape check fails, and the launch exit stays 0.
 - [ ] Не запускались ворота из раздела 6: полный l2_harness, build_l2src, run_l3_selftest, check_docs. Прежняя полная прогонка была красной, 36 из 1149.
-  `l2_harness` `critical_graph_bug_full_05`, uncommitted translator: RED 36 of 1158. Those 36 lines match `gk_occ_path_full_01`. `unit_decl_unknown_type_refused` (`Nope: x`, Entry 7) passed, as did `graph_shape_mixed`, `graph_shape_call`, and `graph_shape_known_atom` (native and walked). `build_l2src` `critical_graph_bug_01`: GREEN 286 targets, no failures. `run_l3_selftest` `critical_graph_bug_01` is running. `check_docs` waits for it.
+  `l2_harness` `critical_graph_bug_full_05`, uncommitted translator: RED 36 of 1158. Those 36 lines match `gk_occ_path_full_01`. `unit_decl_unknown_type_refused` (`Nope: x`, Entry 7) passed, as did `graph_shape_mixed`, `graph_shape_call`, and `graph_shape_known_atom` (native and walked). `build_l2src` `critical_graph_bug_01`: GREEN 286 targets. `run_l3_selftest` `critical_graph_bug_01`: all 11 suites ok, type budget ok (4 units). `check_docs`: OK. `git diff --check`: clean. The harness row stays red, so this acceptance item stays open.
 - [ ] В тикете нет строки DONE. Правка транслятора не закоммичена.
 
 <a id="first-critical-graph-bug"></a>

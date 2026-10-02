@@ -28,11 +28,12 @@ choice that code and data are both the callee occurrence, `(M, M)`.
 slot 1 is the callee, slot 2 is evaluated as the data occurrence, slot 3 is
 the contract (`inputs`, `returns`), slot 4 is the catch count.
 
-Measured on `graph_shape_call` (harness `regress_ns_16`, native and walked exit 0):
-the `CALL` frame has width 6; slots 1 and 2 both store the method occurrence
-(entry-unit slot 5); slot 3 is a plain contract shell. The argument `b` is not
-a direct child of the call. The shape witness only checks that a `CALL` node
-sits after `b`'s cell and initializer. That does not recover the application.
+Measured on `graph_shape_call` after the working-tree edit (`regress_ns_20`,
+native and walked exit 0): a direct call stores the callee once, at slot 1.
+`lmx_walk_call` uses that occurrence as both code and data. `EXEC` still
+evaluates slot 2. Slot 3 is still the plain contract shell, and the argument
+`b` is still an `OWN` at slot 5, not the call's source body. The shape witness
+still only checks that a `CALL` node sits after `b`'s cell and initializer.
 
 ## Do
 

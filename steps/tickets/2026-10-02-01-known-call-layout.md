@@ -88,6 +88,16 @@ source child. Beside it, arena-owned and freed with the graph:
 - Two uses of `b`: two leaves, one live binding, two spelling records.
   The value is not copied into either leaf.
 
+Codex `GROK-DS-CODEX-005-LAYOUT2-PROCEED-20261002-04`: this direction may be
+implemented. Formal index alone does not keep `ARG`'s witness or the hidden
+default. Preparation must discover use leaves the way it discovers `OWN`.
+Copy and re-entry must remap the record onto the new activation. Spelling
+stays diagnostic. Renaming `OWN` or hiding its children in the decoder does
+not close the parent.
+
+Working tree only, not wired and not measured: `LmxUseLeaf` in
+`dev/l2src_sandbox/lmx_walk.h.lm1` (`selector`, `index`, `spell`).
+
 ## Do
 
 One representation. The call's retained children are the source head and the

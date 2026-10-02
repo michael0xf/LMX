@@ -138,6 +138,9 @@ while still stopped: its operator was stored on the child list.
 `regress_ns_108` stores that operator on the entry occurrence, which is
 the unit. `unit_next_message_loop` exits 0, and `unit_body_path_deep`,
 `unit_local_ns_nested`, and `unit_root_hosted_controls` stay green.
+`regress_ns_109` is green for the site rows, the reentry, and
+`unit_root_deepif70`. `regress_ns_110` follows the shelled host of the
+reference failure. `unit_own_reference_failure` exits 7.
 The
 node is still a `CALL`, and the contract still hangs on the method. The slice
 stays open. `critical_graph_bug_full_07` is RED 36 of 1159, the same 36 texts

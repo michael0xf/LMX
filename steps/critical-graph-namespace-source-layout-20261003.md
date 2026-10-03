@@ -1,10 +1,13 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_24` is RED199/1329
-on frozen3B903EC6 bytes: one lazy-load oracle recovers, but15 located unknown-
-name diagnostics regress. The view-only provenance correction is focused08
-GREEN64 on6E4E0FD8; full25 is running on those new bytes. Earlier full23
+The latest completed full harness `critical_graph_fix_full_25` is RED184/1329
+on frozen6E4E0FD8 bytes: all15 located unknown-name diagnostics recover,
+with184 unchanged failure details and no new regression from full24.
+The later nested-source04 is focused GREEN102 on85E54097;05 is RED2/106
+on the same translator, exposing refusal of both new copied-parent calls.
+Full26 is running with the later observer; it has no verdict yet.
+Earlier full24 RED199/1329 on3B903EC6 and full23
 RED185/1329, full22 RED188/1329, cutover04 RED7/32 and cutover06
 GREEN31 remain historical bounded evidence, not whole-kernel acceptance.
 No stable twin has been changed. This is part of
@@ -28,7 +31,8 @@ Construction fills declared initial values but does not execute `x: 2`.
 An explicit invocation executes the stored body by the ordinary dispatcher.
 
 Before this cutover, `l2_ns_procs` registered root definitions selectively.
-It now registers ordinary original root definitions independently of invocation.
+It now registers ordinary original definitions, including parented global
+occurrences, independently of invocation; see the bounded nested evidence below.
 Local, qualified and synthetic named-UNTIL producers are still separate migration
 debts; the original-body identity test does not pretend to migrate them.
 The bookkeeping does not give an ordinary Structure a signature or arguments.
@@ -928,12 +932,18 @@ with zero outstanding counted addresses. The latter still refuses at14:5
 and publishes no output. The three uncounted frees remain outside the
 certificate. Scripts/logs use the `provenance08_` prefix in the same fault
 evidence directory; this result is not merely inherited from frozen06.
-Full25 is pending on the same frozen source. Neither focused gate closes
+Full25 completes **RED184/1329** on the same frozen source, executable SHA256
+`802C15DAFAB39E3C8E39E2B4A78F9E21F3A0009B4A00448BFBA4AC9AE9D45174`.
+The same1329 target identities remain: all15 located diagnostic regressions
+from full24 recover and184 failure details are byte-for-byte unchanged.
+No shared OK-to-FAIL row or removed target hides a regression. These are
+the completed frozen full25 bytes, not the later nested-source slice.
+Neither focused gate closes
 graph reconstruction or the pointer ticket; stable promotion remains
 blocked by full acceptance.
 
 <a id="nested-source-next"></a>
-### 5.15 Next connected source slice: real nested definitions
+### 5.15 Connected source slice: real nested definitions, bounded evidence
 
 A parented original namespace already has one NSF object allocated with
 its actual parent. Its original source body must be registered and filled
@@ -958,7 +968,7 @@ inner width4 is cell0/INIT1/cell2/INIT3 with the actual Outer parent.
 Deleting only inner INIT1 must fail shape with unchanged exit7. The called
 variant adds inner `x: 2` and parent bare `in`: require widths5/6, exact
 EXEC target, observed values before/after and genuinely cleared procedures.
-Include real `node\\tag`, a copied parent and depth-three sibling identities.
+Include real `node\tag`, a copied parent and depth-three sibling identities.
 Legacy `(): name`, qualified/local and synthetic UNTIL body adapters require
 their connected original-body normalization; do not certify them by removing
 their source-identity guards. This is pending work, not new language syntax.
@@ -977,6 +987,147 @@ not prove builder scope. A foreign-holder projection there cannot use the
 builder-local `l2_nsp` array. Audit that existing latent owner-selection gap
 when migrating runtime paths; a construction-only streaming helper does not
 close it and must not be advertised as such.
+
+#### Completed bounded nested-source checks
+
+The sandbox now separates `l2_ns_original_body` from its execution adapter:
+the original P0 body is identified before procedure registration, regardless
+of whether the global occurrence has a parent or will be invoked. Width and
+source fields then use that same registered body and existing `nsp` object.
+Construction projections stream the allocated builder handle, not a guessed
+unit slot or a fixed-depth concatenated path. Local/qualified/synthetic
+normalization and the runtime foreign-holder route remain open.
+
+An existing own-table row binds a retained nested declaration only when its
+original declaration/name tokens and namespace model match. That proof
+distinguishes the constructed child from an assignment to a same-spelled
+reference. Only the retained Structure constructor skips the old declaration
+collector; bare Array/foreign/reference bindings keep their ordinary path.
+The stored EXEC target uses the executing parent's OWN slot, including the
+existing cached working binding, not the first same-named module definition.
+
+`critical_graph_build_occurrence_01` is RED6/98: the old95 fixtures retain
+their result but the six new nested witnesses expose missing registration.
+`critical_graph_nested_source_01` is RED2/98 on sourceB88D7CF8: all dormant
+and inner-INIT erasure rows pass; the two called rows exit7 in both modes,
+but the new oracle incorrectly expects AT where the existing binding uses
+OWN. Source02 retains ordinary bare Array declarations and corrects that
+oracle without changing the call rule. It is **GREEN98** on source SHA256
+`D8270E5A43F3BDEC363182882DA047F46EA2928ABA762CF009E4680375AC63D5`,
+executable SHA256
+`DF2F4DFC28D0B3374873EEE6208BB56479008C0197EAA95942C6640398C6ED82`.
+
+For an original nested callable, `node` selects its declared lexical parent
+procedure's source layout. MAD and method-local routes keep their existing
+host selection; no control-body parent is substituted for the method's
+lexical parent. The native trampoline passes that occurrence's actual parent.
+The source witness deliberately gives root and parent different `tag` slots
+and values, and requires only the parent value9 to become10 while root77
+stays unchanged. Both read and write select actual parent child2.
+
+Source03 is RED2/102 solely because its new shape oracle expects opcode22
+(MOD) instead of the emitted PUT7; all four native/walked logs exit7 with
+one shape failure and no other failure. Source04 corrects this assertion
+and additionally checks PUT -> OF -> NODE. It is **GREEN102** on source SHA256
+`85E54097097B97F55B845C641C2A93764D2727280EB6268808A8131A50C0568D`,
+executable SHA256
+`748A36ED7606799FA827508B21A0655E91E9DD441FABD503B86230AF992BC2C2`.
+The four added rows cover node and bare Array reads in native and genuinely
+cleared procedure dispatch. These focused results do not close either
+critical ticket or certify copied-parent/depth-three sibling behavior.
+
+The later harness observer correction is recorded separately in
+[GRAPH-BUILDER-OBSERVER-IDENTITY](defects.md#graph-builder-observer-identity).
+Its25 pure controls preserve all four measured reachable sets under equivalent
+namespace spelling. Two further controls reject an earlier unresolved native
+slot after its final zero/replacement write, bringing the pure total to27.
+Those observer tags are transient test facts, not fields or atom metadata.
+
+Source05 uses the same85E54097 translator and completes **RED2/106**.
+The earlier102 rows and both new depth-three repeated-sibling rows pass;
+native and cleared procedures separately call `First\mid\in` and
+`Second\mid\in`, changing only the correct parent's tag. Both copied-parent
+rows refuse bare `copied` from `copied: merge Outer` at4:1 with
+`executing a named Structure is not supported yet`, before publishing L1.
+This locates missing value-call resolution; it is not a runtime witness of
+bad copy parents, and the test is not converted to a refusal acceptance.
+The current generic copied-parent language call remains open.
+Full26 is running on these source bytes with the final27-control observer;
+frozen04 or05 cannot certify that later harness by implication.
+
+<a id="sleep-checkpoint"></a>
+### 5.16 Sleep/resume checkpoint — 2026-10-03 12:43 UTC
+
+All edits are saved on disk. Root Codex is the only writer/build; no external
+writer, watcher or queue has been restarted. The stable `l2src` twin remains
+untouched. Both critical tickets are OPEN, as is the larger8+8a goal.
+This checkpoint is not a release of the inherited dirty sandbox.
+
+Current saved translator SHA256:
+`85E54097097B97F55B845C641C2A93764D2727280EB6268808A8131A50C0568D`.
+Current saved harness SHA256:
+`B1310B66A25B0E64413ED375E3DFAB7C0376C160D3283ED995E4D76C0A352AC1`.
+The27 pure builder-observer controls pass without building the compiler.
+Focused04 is GREEN102; focused05 is RED2/106, as recorded above.
+Completed full25 is RED184/1329 on the older6E4E0FD8 source.
+Full26 is the sole running build in
+`build/l2_harness/critical_graph_fix_full_26`; at this checkpoint it has no
+final summary. The current local terminal session is38302, but that handle
+may not survive an app restart. Evidence paths, frozen source and actual
+process state are authoritative, not a remembered terminal handle.
+
+Resume in this order:
+
+1. Read `AGENTS.md`, `READ.ME`, `steps/current.md` and this checkpoint; inspect
+   HEAD/upstream/status without replacing inherited WIP. These four edited
+   documentation files are a separate bounded checkpoint; source is uncommitted.
+2. Inspect full26's summary/logs and actual running process before starting any
+   build. If still active, let it finish. If terminated without verdict, retain
+   its evidence and use a fresh output directory for the next single build.
+   Compare target identities and detailed results with full25; fourteen added
+   nested/node/Array/copy/sibling identities predict1343 targets, but only the
+   completed actual manifest determines that count. Do not waive the two
+   positive copy-call rows or call a queued/running test green.
+3. Complete the common own-value callable-origin route. Current refusal:
+   `copied: merge Outer` followed by bare `copied`, source4:1. The existing
+   own row is allocated and `l2_mres_source` has constructor provenance, but
+   `l2_own_nsty_get(copied)` is absent and `l2_local_ns_callee` accepts only an
+   original named constructor layout. Use existing source proof to identify
+   applicable procedure/input metadata while dispatching the actual copied
+   occurrence. Do not overwrite the merge-result schema with a namespace
+   type, select the original module object, introduce an arity-shaped call
+   special case or bypass the language witness through a test-only C door.
+   A shared translation-only `l2_own_call_origin` can consume proven existing
+   `l2_mres_source[res].layout`, not the possible-source catalogue used for
+   admission. Its consumers include `l2_local_ns_callee`, `l2_ns_exec_field`,
+   `l2_check_struct_call`, walker Structure calls and `l2_emit_local_exec`.
+   Keep ordinary hidden-input preparation and `lmx_call_prim(actual, actual)`;
+   a constructor's past origin is not proof after reception or rebinding.
+   Propagation through copied values, changed/composed bodies and hidden-input
+   preparation must be proved explicitly, not guessed from a familiar shape.
+4. The related runtime native-reuse debt is already required by K02, not a
+   request for a new language rule. Current semantics§20 (native reuse) and
+   L2 copy/merge retain an unchanged selected body's implementation. The older comment
+   at `lmx_merge_owned.lm1`265–271 still says every fresh result is interpreted;
+   allocation of the extra result root loses the `native` which the ordinary
+   copier already preserves at `lmx_graph_copy_owned.lm1`842–845. A narrow
+   identity composition is straightforward, but it is not the whole fix:
+   current multioperand translation/runtime append unnamed operations instead
+   of proving selected executable-body identity. Reuse must consume existing
+   operation/initializer/source-place provenance and preserve the selected
+   native body's real own-slot and argument/result contract. Neither 'last
+   nonzero native wins' nor source spelling is a proof. Existing copy observer
+   clears native deliberately; add a real native-retention witness and changed-
+   body/reordered-layout controls rather than claiming it tests this contract.
+5. Continue remaining local/qualified/synthetic retained-source producers and
+   independent source/name/comment reconstruction. After the final connected
+   repair, run fresh focused, full harness, ordinary kernel and L3 gates
+   sequentially. No blanket Strict switch, fixed depth cap, atom metadata,
+   hidden companion graph, stable promotion or DONE before acceptance.
+
+The R0 placement clarification is already saved: launch/settings belong to
+the preparation stub; Thread children to existing `Thread.children`. Do not
+redo that audit or add either as invisible program-source fields.
 
 ## 6. Required evidence
 

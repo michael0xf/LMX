@@ -48,7 +48,9 @@ failure details remain unchanged. Cloning dynamic-name bytes broke
 Text view in the existing dynamic table with borrowed original bytes;
 the foreign interner still owns independent byte copies. Provenance08
 is GREEN64 on6E4E0FD8, restoring all15 locations and preserving the
-previous ownership/Array/until controls. Full25 is pending on that source.
+previous ownership/Array/until controls. Full25 completes RED184/1329 on
+that source: all15 locations recover, with184 unchanged failure details,
+no added/removed target and no new regression relative to full24.
 Fresh exact traces on frozen08 independently free all2296 baseline and
 all1453 retained-second-cache failure allocations, with zero outstanding
 counted addresses. Uncounted P0/CRT remains outside this scoped certificate;
@@ -64,6 +66,40 @@ but refuses a misspelled selected fixture name. These four attempts are not
 accepted gates or cleanup evidence. Full hashes, mechanisms, fault controls
 and remaining diagnostic limitations:
 [bounded ownership evidence](critical-graph-namespace-source-layout-20261003.md#compiler-ownership-evidence).
+
+<a id="graph-builder-observer-identity"></a>
+### GRAPH-BUILDER-OBSERVER-IDENTITY — 2026-10-03, Codex, IN WORK
+
+The harness's text observer confused reusable construction locals with
+allocated graph objects. A namespace body read through its existing `nsp`
+handle lost executable reachability relative to an equivalent unit-slot
+spelling. A native binding to an unknown leaf could inherit a prior method's
+slot. These are harness defects, not permission to alter runtime storage.
+
+The bounded repair scans only the actual emitted program builder, observes
+each existing allocation and its current aliases in statement order, and
+preserves captured root edges/native targets across later leaf reuse.
+Explicit zero/replacement stores remove prior edges, including stores through
+an alias of the root. Namespace handle identity changes or repeated allocation
+are refused by this limited observer rather than merged speculatively.
+Observer allocation tags exist only in the test's transient facts, never in
+the language graph or compiler output.
+
+The ignored local pure-control script
+`build/l2_harness/critical_graph_builder_identity_oracle_01.ps1` passes27
+controls without a compiler build or program execution. It preserves exact
+reachable sets44/63/121/43 for four frozen full25 artifacts under equivalent
+namespace alias spelling. Controls reject stale slots, unknown/forward aliases,
+cycles, explicit nulls, ambiguous root attachments, allocation reuse and
+identity-changing rebinding; another function cannot overwrite builder facts.
+Two sequential ordinary allocations through the same leaf stay distinct.
+An earlier unresolved direct-slot binding is also refused when final writes
+clear that slot or replace it with a different object.
+This is not a full emitted-code dataflow proof or independent source decoder.
+Focused05 tests the first25-control observer: the existing102 rows and two
+new sibling rows pass; the two new copied-parent rows are refused by the
+translator, not by this observer. The last direct-slot guards are later than
+frozen05; full26 is running with those later bytes. No full verdict yet.
 
 <a id="critical-graph-bug"></a>
 ### critical_graph_bug — 2026-10-02, Codex, CRITICAL / OPEN

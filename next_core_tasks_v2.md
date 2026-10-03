@@ -358,7 +358,9 @@ Current bounded implementation, with no DONE claim:
   original source bytes, preserving source-occurrence identity rather than
   copying those bytes. The foreign interner still owns independent copies.
   Provenance08 is GREEN64 on6E4E0FD8 and recovers all15 exact locations.
-  Full25 is running on that frozen source; it is not yet a full verdict.
+  Full25 completes RED184/1329 on that frozen source: all15 exact locations
+  recover, the184 remaining failure details are unchanged, and no target is
+  added, removed or newly regressed relative to full24. This is not release.
   Fresh exact traces on frozen6E4E0FD8 independently repeat zero outstanding
   counted addresses:2296/2296 baseline and1453/1453 on the later cache
   allocation failure. The older3B903EC6 certificate is not silently
@@ -372,7 +374,21 @@ Current bounded implementation, with no DONE claim:
   schema/trailer slices separately from the
   [next nested-source cut](steps/critical-graph-namespace-source-layout-20261003.md#nested-source-next):
   preserve original nested INIT occurrences and actual parent-instance/EXEC
-  projection; not a guard-only fix.
+  projection; not a guard-only fix. The bounded implementation now passes
+  `critical_graph_nested_source_04` GREEN102 on source85E54097: nested
+  original definitions are retained whether called or dormant, an erased
+  inner INIT fails shape without changing exit7, and child invocation uses
+  the executing parent's own slot. The child `node` witness changes its
+  lexical parent's tag while preserving the same-named root value; both
+  native and genuinely cleared procedures are tested. Bare own Array access
+  is retained. This does not yet certify a copied parent, repeated nested
+  sibling identities, local/qualified/synthetic producers or full acceptance.
+  The subsequent builder-observer repair passes27 pure mutation/equivalence
+  controls. Focused05 is RED2/106: all previous102 rows and both added
+  depth-three repeated-sibling rows pass, while invoking the explicit merge
+  result is refused before output. That does not prove copied-child routing
+  wrong; the required copied-parent language call remains unimplemented.
+  Full26 is running on frozen85E54097 with the later observer; no verdict yet.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

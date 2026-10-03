@@ -721,6 +721,21 @@ shape oracle consume exact source counts; neither oracle skips implicit protocol
 fields. GC marks the membership edge from the actual Thread root, including an
 unregistered externally allocated Thread.
 
+Read-only placement verification also checks the actual host builder:
+`lmx_root_host_make` stores the settings branch only in the existing host
+`LMX_ROOT_HOST_SETTINGS` place; `lmx_root_launch_tapped` stores its launch record
+in `LMX_ROOT_HOST_LAUNCH`. R0 is reserved with exactly `launch.fields` and its
+program receives the settings reference explicitly, without an appended source
+field. These are the host's explicit three places, not a reserved prefix of a
+program. `lmx_root_selftest` asserts that both initially empty source graphs
+have size0/data0/lexical-parent0 while their Threads own distinct same-arena
+children Lists. `lmx_app_root_stub_selftest` separately verifies R0's lexical
+node0: its supervising parent does not become `Lmx.parent`. Both witnesses
+passed in the recorded names11 and interface01 kernel gates. The manually
+constructed fields in `lmx_root_host_selftest` and
+`lmx_thread_children_selftest` are explicit fixture data; their mere presence
+does not prove or authorize hidden source fields.
+
 `build/critical_graph_source_names_11`: **GREEN, 290 targets**, all **107**
 selftest/cselftest rows executed. The external-name witness gives **98 checks,
 0 failures**, including a cold arena where spelling is allocated before a CHAR
@@ -1291,6 +1306,33 @@ constructor-identity/capture-projection repair is cutover09 **RED11/96**;
 the four capture regressions now pass. This does not certify a full green or
 close the copy-construction-order and Array-path debts. The connected layout
 journal records frozen hashes, exact scopes and strict oracle changes.
+The later bounded cutover10 is RED10/99, with the formal-pointer shadow read
+restored and three extra raw-pointer controls passing. The independent valid
+explicit-copy slice is GREEN10; its61-check witness observes and walks the
+actual merge return, then invokes the native original without cross-writing.
+This separates legal runtime copying from legacy implicit-copy setup. Exact
+artifacts and remaining constructed-field path debts are in the same journal.
+
+Full21 then completes **RED182/1324** on the same B54A source as cutover10
+and explicit-copy01, executable
+`6C966AC2225AA9F968A512A3FFA18026A4BF3C6AE1F5244866947589A36119A6`.
+Against full20,72 shared FAIL rows recover, no shared OK regresses, no target
+is removed and no remaining shared failure detail changes. The three added
+targets are the passing61-check actual-copy witness and the two still-refused
+Array indexed-STORE witnesses. This is a full red verdict, not graph acceptance;
+it predates the subsequent namespace field-contract join. Exact frozen source
+hash and residual identities are in the
+[connected full21 evidence](critical-graph-namespace-source-layout-20261003.md#ns-full21-evidence).
+
+The subsequent exact namespace/execution-entry contract join has focused
+read02 **RED2/26**, source4F08DC67 (full hashes in the
+[read evidence](critical-graph-namespace-source-layout-20261003.md#ns-array-read-evidence)).
+Both additive Array/borrowed-method read witnesses pass108 checks; prior
+selected controls pass. Only the original two indexed-STORE witnesses remain
+red. Read01's two additional failures were a new witness's incorrect cache
+expectation, not a reason to reload clean working state. The corrected ordinary
+reader asserts the actual parent field through its explicit path. Full21
+does not cover this subsequent translator slice; no full green is claimed.
 
 ### Actual signature-header oracle negative control
 

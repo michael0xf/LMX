@@ -513,6 +513,126 @@ legacy copy-result fields. The latter is not an accepted language feature.
 No full gate has run on09 bytes; kernel/L3 interface01 certify only their own
 earlier frozen slices. Both critical tickets and stable promotion remain open.
 
+<a id="ns-explicit-copy-evidence"></a>
+### 5.8 Pointer operand classification and valid explicit copy
+
+`critical_graph_namespace_cutover_10` is **RED10/99**, source SHA256
+`B54ADEBE9B5875338EE6734B071BBA33D13640A85CD51AD3DE0CBE2D4E7B036C`,
+executable SHA256
+`E404B0C944DCE6A1662614FFCE88AF7EC3DDCDB4EF6C102646AF0220E79720E9`.
+The only shared outcome change from09 is `unit_array_index_formal_shadow`
+FAIL to OK; three added raw-pointer index-expression/type/chain controls pass.
+`l2_path_chain_check` now distinguishes actual structural paths from operands
+with no structural step. `values[0]` is left to the existing pointer binding
+and index route; a real `\field` path retains all its checks and projections.
+No name-specific exception or new pointer semantics is introduced.
+
+The old `Point: box` setup is not restored. A fresh translation-only probe
+under `build/critical_graph_explicit_copy_probe_01` establishes the supported
+explicit combination: method `copied: merge Point`, local Holder with
+`@: Point point`, then ordinary `Holder\point: copied`. The subsequent
+development fixture `graph_shape_method_explicit_copy.lm2` tests this combination
+at runtime without using `@Point`/`@copied` before the pointer repair.
+
+`build/l2_harness/critical_graph_explicit_copy_01` is **GREEN10**, on the same
+B54A translator source and executable SHA256
+`66DBDDCFAF4A44F12972B127CAE8984618144203B92DC5565A947655F1847409`.
+The new fixture executes61 driver checks. Before the turn, Point has exactly
+two source fields, int cell0 and source INIT at1 (SET opcode8, facet1).
+Existing merge observations check the actual returned width2, initialized
+int value1, distinct primitive cell, distinct non-null INIT and distinct OWN
+operand. The test-only existing reentry observer captures this exact merge
+return; it does not rebuild source or identify it by name.
+
+The source writes the copy's x=9 and original x=11, then forces ordinary
+interpreter dispatch on that returned copy: its retained INIT resets only
+copy.x to1; original.x stays11. Holder's typed reference observes the same
+copy. Writing copy.x=13 then calling the native original resets only
+original.x to1. Language exit7 and the observed independent values pass.
+The merged aggregate is already zero-native (logged before forced clearing);
+this test does not require every aggregate result to inherit a native entry.
+The native-original assignment is separately required by the harness.
+
+This bounded slice also retains both repaired merge-interface rows, callable
+merge/native lexical-parent witness,466-check native/walk namespace-order
+twins and the actual old-prefix mutant with unchanged positive exit7. The
+source SHA matches cutover10; executable hashes differ between fresh builds
+and are recorded separately. Complete G4 body/name/comment reconstruction,
+full final gate, stable promotion and both critical tickets remain open.
+
+Remaining Array witness work is not parser repair. A registered execution
+procedure must not hide the original namespace's Array/callable field
+contract from native lookup (`l2_path_root` versus walker
+`l2_rw_path_resolve`). Reuse original NSF metadata and `l2_nsf_slot`; do not
+invent a parallel own row. The already parked indexed STORE needs a shared
+resolved typed-field place for CHECK/native/walker, actual descriptor access
+and ordinary ELEMPUT. It is neither a raw-pointer substitute nor a special
+two-level Array type. The two failing source-constructor rows stay registered.
+
+<a id="ns-full21-evidence"></a>
+### 5.9 Full21: bounded repairs recovered, release still red
+
+`build/l2_harness/critical_graph_fix_full_21` completed **RED182/1324**,
+source SHA256
+`B54ADEBE9B5875338EE6734B071BBA33D13640A85CD51AD3DE0CBE2D4E7B036C`,
+executable SHA256
+`6C966AC2225AA9F968A512A3FFA18026A4BF3C6AE1F5244866947589A36119A6`.
+Against full20,72 shared failures recover, no shared green regresses, no
+target is removed and no remaining shared failure detail changes. Three
+targets are added: the valid explicit-copy witness passes61 checks and both
+constructed-Array write witnesses still refuse at their indexed STORE.
+
+Eight namespace-cutover regressions remain relative to full19:
+`graph_shape_method_ref`, `unit_eternal_shape`,
+`unit_capture_struct_write_only`, `unit_capture_struct_write_root`,
+`unit_field_path_struct_rebind_refused`,
+`unit_matrix_path_struct_rebind_refused`, `unit_s7_nested_ok`, and
+`unit_s7_nested_shape`. The remaining172 full19 failure identities also
+remain, in addition to the two new Array witnesses. The dominant refusal
+group still lacks generated L1; legacy construction setups and genuine
+source/admission gaps require individual normative triage, not a blanket
+test waiver. All complete rows are retained in `summary.txt`.
+
+This full gate predates the subsequent namespace/execution-entry field
+contract join and its additive read witness. It does not certify those later
+bytes. Kernel/L3 interface01 likewise certify their recorded earlier bytes,
+not a current all-green release. Stable promotion and both critical tickets
+remain open.
+
+<a id="ns-array-read-evidence"></a>
+### 5.10 Original namespace field contract through its execution entry
+
+`l2_path_root` now joins the already selected execution method to its exact
+original namespace with `l2_m_nsof` and `l2_ns_source_body`. Own/formal
+precedence is unchanged. The existing source-body predicate excludes local,
+parented, qualified and synthetic-wrapper producers. Metadata uses the
+original NSF rows; emission uses their completed `l2_nsf_slot` projection.
+`l2_path_current` retains current `self` where appropriate; external access
+uses the original namespace occurrence. No own row or runtime graph is added.
+
+`build/l2_harness/critical_graph_namespace_read_02` completes **RED2/26**,
+source SHA256
+`4F08DC6789B382F7DC88A5DC8B9CA570F11E484FD2B39F6D35DD08FAC8BAA241`,
+executable SHA256
+`396E9F7A729DED7354A78C2C589B88A2AFE4E6272B680E775E3FEF6938CB9BB9`.
+The two additive Array/borrowed-method read witnesses pass108 checks each:
+exact six source fields, cells0/4, INIT1/5, Array2, method3, names, alias
+identity and unchanged lexical parent; length2, nullary Shelf execution and
+the borrowed method's result9/physical parent-field increment all pass.
+Native and cleared-method variants retain the actual method-index pin3.
+Existing projection, merge, source-order/mutant and raw-pointer controls pass.
+Only the original two indexed-STORE witnesses remain red and unchanged.
+
+Read01 is preserved **RED4/26** on the same translator source, executable
+`B4D665A463AC50076217CAEC51BC9F95DB32112D70F659F703B056CF21CDDBEC`.
+Its new witness wrongly expected bare `calls` to refresh after an explicit
+`node\calls` write. Under [L3 working-state rules](../docs/LMX_semantics.en.md#dynamic)
+the clean working snapshot remains0. The corrected witness uses an ordinary
+`readCalls` method's explicit lexical path to assert the real field becomes1;
+it does not remove that assertion or change caching semantics. Both original
+write witnesses remain intact. Read02 is focused evidence, not a full gate;
+whole-body reconstruction, indexed STORE and both critical releases are open.
+
 ## 6. Required evidence
 
 Add a full width5 Holder shape oracle, including parent ownership, real int

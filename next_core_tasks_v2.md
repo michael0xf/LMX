@@ -203,6 +203,31 @@ Current bounded implementation, with no DONE claim:
   A frozen premature-name-publication mutant fails the late outer-merge rollback
   assertion alone, exit 1. Both negative controls finish without crash/timeout.
   This is not universal source construction, a codec, or a critical-ticket release.
+- [x] G4 bounded valid explicit-copy witness:
+  `critical_graph_explicit_copy_01` GREEN10, including the actual runtime merge
+  return, not a surrogate P0/unit copy. The new witness passes61 checks:
+  distinct primitive/INIT/OWN objects, complete original INIT, forced walking
+  of the actual result after mutation and native execution of the original
+  retain independent values. It uses explicit `merge` and a typed reference
+  field, not obsolete `Point: box` or the still-open `@Structure` address route.
+  This does not close whole-body/source-codec G4 or release the critical fix.
+- [x] G2 bounded namespace/execution-entry field-contract join: native lookup
+  reuses the exact original namespace via `l2_m_nsof`/`l2_ns_source_body`;
+  existing own/formal priority and actual current-self projection remain.
+  `critical_graph_namespace_read_02` RED2/26: both additive read witnesses
+  pass108 checks each with Array/borrowed-method identity and lexical parent,
+  length and physical increment verified; selected prior controls pass.
+  The only failures are the two unchanged indexed-STORE witnesses. No full
+  gate has run on these later bytes; this does not close the connected item.
+- [ ] G2 connected constructed-field paths: native metadata lookup must retain
+  the original namespace contract when a procedure is its execution entry,
+  just as the walker already does. Array/callable fields must use their
+  existing NSF row and completed physical slot, not fabricated own rows.
+  Add one shared typed-field indexed-place route to CHECK, native and walker
+  for the valid `Shelf\values[0]: 4` witness. The Array descriptor supplies
+  actual storage; do not reuse the raw-pointer path, create a nested-Array
+  special case, impose an arbitrary depth limit or infer rank from length.
+  Keep the two currently failing constructor witnesses intact until verified.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
   Earlier full `critical_graph_fix_full_12`: RED, 204 of 1284,
@@ -290,6 +315,16 @@ Current bounded implementation, with no DONE claim:
   capture regressions pass, but copy construction order, legacy setup and
   Array-path witnesses still require work. Exact frozen hashes and all scopes
   are in the connected layout evidence; no full current-byte green is claimed.
+  The later cutover10 is RED10/99: the shared structural-path classifier now
+  leaves `values[0]` to pointer indexing, restoring the formal-shadow row;
+  three additional raw-pointer controls pass, with no shared green regression.
+  Valid explicit copy is independently GREEN10; legacy implicit-copy rows
+  remain migration debt, not a reason to restore the rejected rule.
+  Full21 then completes RED182/1324 on the same B54A source:72 shared failures
+  recover relative to full20, no shared green regresses, no target is removed
+  and remaining shared failure details do not change. Three added targets
+  are the passing actual-copy witness and both still-refused Array stores.
+  The later field-contract join is a separate slice, not covered by full21.
   Neither focused green nor full red releases either ticket.
   Earlier runtime recheck of the pre-cutover staged bytes is GREEN290 with107 executed
   selftests; L3 passes11 suites and4 budget units. The next connected namespace

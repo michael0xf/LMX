@@ -205,7 +205,7 @@ Current bounded implementation, with no DONE claim:
   This is not universal source construction, a codec, or a critical-ticket release.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest completed full `critical_graph_fix_full_12`: RED, 204 of 1284,
+  Earlier full `critical_graph_fix_full_12`: RED, 204 of 1284,
   source SHA256 `8A4841BA2B8130EB6E6081B77644A072849F6E488A2C666EDDE2386047908C2D`.
   Mandatory method retention exposes previously skipped source producers;
   relative to full11, ten old failure identities disappear and 169 new ones
@@ -214,6 +214,41 @@ Current bounded implementation, with no DONE claim:
   admission before retrying the full gate. Do not restore quiet source discard.
   Subsequent focused external-producer09 is GREEN39, including migrated hosted
   field paths and a real erase mutant; it is not a replacement full verdict.
+  Focused `critical_graph_callable_producer_05` is GREEN25 on source
+  `C1EA155D8CEEDBED8F0F4E9EB058A448457BF066255C2AD9EF08FB23BE4E24CB`:
+  source calls retain the explicitly selected actual formal and signature,
+  forwarded/path occurrences are transported without execution, and no-result
+  callable actuals use their occurrence schema. The exact new source witness
+  passes 1189 assertions; erasing its actual EXEC ARG fails shape checks with
+  unchanged exit7. Own/formal shadow ordering, upstream path-buffer limits,
+  two `int`/`1U` producer refusals and the absent-occurrence diagnostic remain
+  audited debts. Existing walker exclusions are not waived. Earlier completed
+  full `critical_graph_fix_full_13` is RED185/1286 on the same C1EA source:
+  19 old failure identities disappear relative to full12, with no new failure
+  identity. Its executable SHA256 is
+  `2B3089FEC181A1B1BFC5793F8A868F0343F17CB4FC4B56A8D9A37F844316F802`.
+  The later own/formal ordering, source-site binder, rootless occurrence and
+  local-model producer edits are measured by `_callable_producer_07` (RED1/23)
+  and `_08` (RED1/26), source
+  `DBF576ACB2E50F39FC69849C9EF25E32B37549E0232F9EA7D1D5F89D3A33E7D0`.
+  All their bounded callable/binding/occurrence/model witnesses pass; the sole
+  failing row remains the unimplemented raw-pointer indexed-store source
+  producer. Three full own/formal source-shape witnesses pass 329/869/489
+  assertions; genuine erase mutants fail shape with unchanged positive result3.
+  Full14 completed RED178/1292 on those frozen bytes, executable
+  `048C0659DE0C6755E0D5C75E58ACC77F090556B57AF43C564C78AEA75FE25D15`:
+  seven failures disappear relative to full13 and no new identity appears.
+  The connected raw-pointer index producer now has bounded evidence: original
+  borrowed base/index views, all native index groups, real retained OWN/ARG
+  operands and truthful native-only SOURCE_MACHINE capability, never fake ELEM.
+  `_pointer_index_producer_08` is GREEN18 on source C4BD8508 (full identities
+  in the journal). Its 1088-assertion full-method shape passes native and
+  cleared-root runs; erasing the actual ARG index fails shape alone while
+  keeping program result7. Compound actual-index boundaries, repeated groups,
+  typed C99 elements and prior indexed-expression/callable regressions pass.
+  Earlier producer01–07 failures/aborted runs remain recorded. Full15 is
+  running on the frozen bytes; full14 RED178/1292 remains the latest completed
+  full verdict. Neither focused green nor full red releases either ticket.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

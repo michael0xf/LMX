@@ -1010,7 +1010,7 @@ borrowed field, fails shape checks and leaves program exit7 unchanged.
 Both original executions already returned7; this was an oracle migration,
 not a translator execution fix or proof of a complete hosted-source codec.
 
-Latest completed full `critical_graph_fix_full_12`: **RED, 204 of 1284**,
+Earlier completed full `critical_graph_fix_full_12`: **RED, 204 of 1284**,
 staged from document HEAD `6b42515b`, with the same translator source above
 and executable SHA256
 `0A188C3FB2F9946C540CB9BEB5D3136BC773A4326B9669779C8AD60AEAC5CA8A`.
@@ -1023,11 +1023,11 @@ field paths, 20 statements, 17 operands and 14 local executable definitions.
 These groups are triage, not evidence that every failing input is normative
 or that all old expectations are obsolete. Complete rows remain in summary.txt.
 
-Read-only review distinguishes genuine resolution disagreements from missing
-producers: callable-formal result typing currently selects an unrelated unit
-method in a name clash, and a no-result callable actual incorrectly enters
-return-model admission. The existing context-aware callable/occurrence
-resolvers must supply both source and execution routes. Other connected
+Read-only review distinguished genuine resolution disagreements from missing
+producers: callable-formal result typing selected an unrelated unit
+method in a name clash, and a no-result callable actual incorrectly entered
+return-model admission. The bounded continuation below repairs these two
+routes using existing callable/occurrence resolution. Other connected
 repairs are exact hosted Structure receiver destinations, executable local
 definitions, proven foreign-member paths and local-model admission using the
 reached GraphField rather than a namespace prototype. Ordinary quoted actuals,
@@ -1035,6 +1035,150 @@ discarded forward headers, library/PAP/MAD nested definitions, actual returns
 and post-return source also remain open. Existing negative diagnoses must be
 restored, not replaced by an earlier generic producer refusal. Stable twins,
 pointer implementation and self-build release remain behind the red graph gate.
+
+### Callable-formal source selection and occurrence transport
+
+The source producer now selects a callable formal explicitly through the
+existing context-aware head resolver. Both `f()` and a bare result-bearing
+`f` use EXEC with the actual formal ARG as its target and the selected
+signature as its contract; they do not select an unrelated unit method named
+`f`, assign the formal, or execute its bodiless signature descriptor.
+Synthetic conversion/MAD calls explicitly carry no source formal selection.
+Result typing uses the same selected contract. Own-value shadowing remains
+a separate source-site ordering audit; this bounded result is not proof that
+every lexical binding class is already unified.
+
+A common actual-occurrence projector retains a forwarded callable ARG, a
+unit occurrence, or the physical selected path value without executing it.
+The path projector reuses normal path resolution with buffers sized from
+the actual path. Older upstream 256-byte head/actual-path buffers remain an
+open limit; a dynamically sized new helper does not remove those limits.
+An ordinary Structure formal receiving a no-result callable uses the actual
+occurrence schema rather than a nonexistent return model, matching the
+existing native admission route.
+
+Fresh focused evidence (all earlier red directories retained):
+
+| Run under `build/l2_harness/` | Verdict | Meaning |
+| --- | --- | --- |
+| `critical_graph_callable_producer_01` | No fixture verdict | An invalid selector stopped setup; not a gate |
+| `critical_graph_callable_producer_02` | RED, 3 of 25 | Two existing `int`/`1U` expression producers and the located absent-occurrence diagnostic remain unresolved |
+| `critical_graph_callable_producer_03` | RED, 2 of 21 | New oracle used the wrong INT type-domain value; execution already returned7 |
+| `critical_graph_callable_producer_04` | RED, 2 of 23 | Exact shape attempted a cyclic `same` comparison before the root entered its traversal set |
+| `critical_graph_callable_producer_05` | GREEN, 25 targets | Exact retained-source witness, actual ARG erase mutant, forward/path/no-result/callable-signature regressions and existing walker exclusions |
+
+The `_05` staged translator source SHA256 is
+`C1EA155D8CEEDBED8F0F4E9EB058A448457BF066255C2AD9EF08FB23BE4E24CB`;
+executable SHA256 is
+`978B7A9C004D9B06B09D4ADBEBAB8446A3D7320AD9FA7F8C293458AE7A4DB3E0`.
+`graph_shape_callable_formal` executes7 and passes 1189 harness assertions
+across native and cleared-root runs, including exact field order, source
+roles, EXEC argument/contract, forwarded ARG identity and actual unit target.
+The root identity is checked separately by `samepath`, not a cyclic exact-shape
+traversal. Its mutant requires successful baseline/setup/comparison, erases
+the actual EXEC ARG, fails structural checks, and still executes7. Existing
+`--walk-methods` callable-formal refusals remain explicit negative gates;
+the witness does not claim that those method activations are interpreted.
+No old `1U` or absent-occurrence expectation was changed. Latest completed full
+`critical_graph_fix_full_13` is **RED, 185 of 1286**, on these same C1EA frozen
+bytes at document HEAD `5d393390`; executable SHA256:
+`2B3089FEC181A1B1BFC5793F8A868F0343F17CB4FC4B56A8D9A37F844316F802`.
+Relative to full12, 19 old failure identities disappear, with no new failure
+identity. Full summary/logs remain in that directory. Later own/formal order,
+binding source-site, rootless occurrence and local-model producer edits are
+not part of that staged source. Focused25 does not supply a full green verdict
+or release either critical ticket.
+
+Focused `critical_graph_callable_producer_06` stopped at the L1 parse stage:
+the new local-model producer omitted the explicit cutter when returning two
+indentation levels. No translator binary or fixture verdict was produced.
+The cutter is restored; `_07` is the subsequent fresh run, not a rewritten
+directory or an assertion that `_06` passed.
+
+Focused `_07` is **RED, 1 of 23**, and `_08` is **RED, 1 of 26**, on translator
+source SHA256
+`DBF576ACB2E50F39FC69849C9EF25E32B37549E0232F9EA7D1D5F89D3A33E7D0`.
+Their executable SHA256 values are respectively
+`F91F065BF52612F3B2DE950796F681D74F4782F460AD01D7824600C236C5E502`
+and `3E560D333FD4754CFAD2D5C1D211A8372444537EEC86355CF386F301E9B148C7`.
+The own/formal ordering, original-source-site binder, rootless occurrence
+and local-model admission witnesses pass. The sole unchanged failing row is
+`unit_array_index_formal_shadow`: its first raw-pointer indexed store passes
+native checking but has no retained-source producer. It is not waived.
+
+`_08` adds full physical-shape and binding-identity assertions for
+`graph_shape_callable_own`, `_own_site` and `_own_init`: respectively 329,
+869 and 489 harness assertions over native and cleared-root runs, with
+positive entry result3. The three real erase mutants preserve result3 while
+breaking the structural oracle. In the two ARG mutants the logs record
+successful baseline/setup/comparison, two shape failures and no other failure;
+this is not a claim that the native method was interpreted. Full
+`critical_graph_fix_full_14` completed **RED, 178 of 1292**, on that same frozen
+DBF source and these expanded assertions; executable SHA256:
+`048C0659DE0C6755E0D5C75E58ACC77F090556B57AF43C564C78AEA75FE25D15`.
+Relative to full13, seven failing fixture identities disappear (the two
+local-model/site rows and five occurrence rows); there is no new failing
+identity. Neither focused nor full red evidence releases either ticket.
+
+### Bounded raw-pointer index producer; full graph acceptance still open
+
+The next connected producer borrows original frame-head text or bounded P0
+fields in translation-only `L2RawIndex`. The existing parser scans lexical
+pieces and matching delimiters; no joined P0 tree or runtime index metadata is
+introduced. Native stores iterate all bracket groups instead of combining the
+first base with only the last index. Retained reads/stores use an actual
+native-only `SOURCE_MACHINE` operation holding the resolved base, all indices
+and optional RHS. Known roots remain real OWN/ARG values, not new source
+symbols; a raw pointer is never presented as a descriptor Array ELEM.
+
+`critical_graph_pointer_index_producer_01` and `_02` have no fixture verdict:
+the translator's generated C did not compile because new L1 argument sites
+used unsupported dot-token forms and a misplaced prefix load. These are
+retained failed compiler evidence, not successful graph checks. `_03` built
+the translator and accidentally started a **full** harness: `-FixtureName`
+was not a declared option. It was stopped at `unit_site_pointer_index`, with
+all evidence preserved and no full verdict. A debugger stack and its generated
+C identify the loop: the new L1 local named `end` lost its increment through
+trailer recognition. Renaming that local to `root_end` removes the empty loop.
+The correct diagnostic selector is `-OnlyFixture`; `_04` stopped on an unknown
+requested fixture and is not a fixture verdict either.
+
+Later bounded history is explicit: `_05` RED2/10 (unsupported unsigned Array
+declaration in the new witness, and the separate existing string-to-pointer
+producer gap); `_06` RED2/10 (new shape paths/opcodes and duplicate mutant-row
+identity were wrong); `_07` RED1/17 (the new two-method fixture pinned the root
+to method1 instead of its actual method2). No red history is replaced.
+The C99 element witness now isolates unsigned pointer access through an actual
+unsigned cell, while char/size_t/int witnesses retain nonzero element indices.
+This does not implement or waive the missing unsigned Array constructor.
+
+`critical_graph_pointer_index_producer_08` is **GREEN, 18 targets**, selected
+with `-OnlyFixture`, source SHA256
+`C4BD85088C0F56B5DFCF41CAA3BA297200EEDB2250E9AED62F5AECDA4CE49A0B`,
+executable SHA256
+`91E830B8C0B4A54148E7A2396633378B61563664C054BDFBD6B16629A558CEF1`.
+Its pointer-source witness executes 1088 assertions: full method/source order,
+physical signature headers, pointer/size_t ARG ordinals and actual witnesses,
+both STORE/READ index operands, literal cells and CALL target identity. Native
+and cleared-root runs of the same artifact both return7; the pointer-bearing
+method remains native. Erasing the real second STORE's ARG index gives exactly
+one shape failure, successful baseline/setup/comparison, no other failures and
+the same positive program result7. This is not interpretation of machine
+pointer indexing.
+
+General actual-expression boundaries now use the same bounded postfix reader
+for alternating field/index steps and arbitrary original index field spans.
+The former fixed single-index cardinality helpers are removed from that route;
+the own-Array semantic decoder is not silently redefined. Compound-index
+positional actuals, repeated pointer groups, site shadowing, foreign members,
+Array/formal shadowing and the existing indexed-expression regression pass.
+Callable/formal/site, declaration and call-shape witnesses also remain green.
+Exact quoted-name identity and known slot/ml retained producers remain audited
+shared-boundary debts, not permission to create new symbols for known inputs.
+
+Full `critical_graph_fix_full_15` is running on these frozen source bytes.
+The latest completed full verdict remains full14 RED178/1292. This focused
+green does not close either critical ticket or start the pointer-depth repair.
 
 ### Actual signature-header oracle negative control
 

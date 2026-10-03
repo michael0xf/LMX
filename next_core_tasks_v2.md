@@ -94,6 +94,14 @@ Current bounded implementation, with no DONE claim:
   `critical_graph_constructor_boundary_02`: 29 targets, 0 failed; all 25
   successfully emitted fixture L1 files equal their `full_03` bytes exactly.
   No ownership ledger/cut-over, shell removal or graph release is claimed.
+- [x] G2 bounded inert-container producer cut-over: committed COUNT/PLACE/FILL
+  owns actual source containers in distinct METHOD/PAP/T7 views, records real
+  constructor/attachment edges, removes their former GLOBAL allocation and
+  prefix contribution, and shares one original field/span traversal.
+  `critical_graph_source_producer_05`: 13 targets, 0 failed, including actual
+  parent checks, a parent-only mutant and its setup-miss control. Mixed bodies
+  execute in native and explicitly selected walker modes; their declaration
+  storage shell has not moved yet. This does not close G2/G3 or runtime T7 copy.
 - [ ] G2/G3: construct all source occurrences through one recursive placement
   algorithm, migrate every width/path/schema/copy/capture consumer, then remove
   selective eligibility, packed fallback and data-shell placement. B0 does not

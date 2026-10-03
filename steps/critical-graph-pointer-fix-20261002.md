@@ -220,11 +220,54 @@ This proves the tested output was preserved, not that source topology became
 universal. The first boundary attempt aborted on an unknown filter name
 `unit_deepif`; it has no fixture verdict and is not counted as evidence.
 
-The committed producer/temp-edge relation remains to be implemented.
-Speculative COUNT still does not construct PAD topology; old global shells
-and body allocations can still duplicate one source body. The general owner
-selection and reindex described in the plan must be one connected cut-over,
-not a pointer-nonzero fallback or a new special anonymous-container branch.
+That preparation is now followed by the bounded committed-producer cut-over
+below. Its green result does not remove the remaining mixed-body storage shells.
+
+### G2 committed source-container ownership: inert containers
+
+`L2SourceContainer` records the original P0 body and its actual METHOD/PAP/T7
+construction view. COUNT accepts or discards a speculative view; PLACE records
+the common constructors and owning attachments, including delayed operation
+attachments and actual PADs; FILL constructs each accepted row exactly once.
+Borrowed operands do not acquire an owning edge. These are temporary compiler
+records, not runtime fields, a second AST or primitive-cell metadata.
+
+The source-owned inert rows no longer use the former GLOBAL allocation,
+attachment or prefix width. Surviving prefixes and top-level ranks are repacked;
+their `GraphPlace` is bound to the actual containing body after PLACE. No own
+declaration cell is moved in this slice. The original field/span traversal is
+shared by the committed GLOBAL and SOURCE_OWNED producers; a positive original
+fid on a projected row is not a second construction owner.
+
+Focused gates `critical_graph_source_producer_03`, `_04`, `_05` are GREEN:
+10, 12 and 13 targets respectively. The final run tests the single common
+traversal, not only the earlier two wrappers. It covers complete owned nested
+containers and empty bodies, depth-six contents, catch/merge, native and cleared
+root execution, both explicitly walked nested methods, and two distinct retained
+model/PAP and model/T7 construction occurrences. The T7 check does not certify
+ownership of its subsequently returned runtime copies; that remains G4 work.
+
+An exact `owned` assertion checks each container's actual parent. The new
+parent-only mutation changes the parent of the unique container containing
+`3 + 4`: its unmodified baseline matches, the applied mutation fails the graph
+check, and execution still has the expected exit. The setup-miss control changes
+nothing and is explicitly rejected as a structural detection result.
+
+Latest focused translator source SHA256:
+`219FE430ED834322E7D9F1318B56E2CAC831AA9D707A9B97269011607E08AB98`.
+Header SHA256:
+`F672942D82A6E43E237F380376355D319167587C8E0EBF6E97B86130A30FB4C4`.
+Driver SHA256:
+`6E34CBB59F5B924CF36162E3A79B46E919A9AD561FA9E5BAD70F97EB7AD37289`.
+
+Next connected cut-over: declarations must occupy their original mixed-body
+fields rather than a separate packed shell. Locate their physical owner by the
+exact original body field and declaration identity, not its lexical scope fid:
+FOR header counters and body locals, and CATCH parameters and handler locals,
+can share a lexical fid without sharing a physical source container. Field-path
+consumers must preserve `GraphField.holder`, not only its child number. General
+mixed placement, native-only bodies, source/name/comment reconstruction and
+removal of all legacy producers remain OPEN; neither critical ticket is DONE.
 
 ### Full-run witness corrections, with stronger execution acceptance
 
@@ -547,6 +590,16 @@ unit_native_activation
 unit_matrix_callable_struct_identity
 unit_matrix_path_struct_rebind_refused
 ```
+
+Fresh full harness `critical_graph_fix_full_04` is **RED, 35 of 1245 targets**.
+Its complete 35 FAIL texts equal `full_03`; all nine newly added targets pass.
+It staged translator source
+`14FB2F82CE54EBB06D7217D4B65418AA5D6044CC54EAE249BD42C9B23087D68F`
+and built executable
+`B236C7165D1012BCF95D86D0A6C614D350F3A3B3E6ECF7E3D861F8A23EA8BE42`.
+The subsequent common traversal cleanup has the `_05` focused verdict above,
+not a full current-source verdict. No old failed row was waived to obtain this
+unchanged failure list. Stable twins remain untouched.
 
 Optional `-Strict` kernel run `critical_graph_ret_ownership_01`: **RED,
 138 of 286**, with blanket `-Werror -O2` diagnostics in existing modules and

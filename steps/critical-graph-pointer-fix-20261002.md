@@ -759,15 +759,16 @@ mail handling, CHAR/address identity, exact atom/source-boundary/ELSE placement,
 portable reference arrays, real root native attachment and physical cleared-root
 walking. The remaining ELSE mutant deleted a whole body-place container, so native
 entry correctly aborted before it could emit isolated same-exit comparison evidence.
-The control is being narrowed to damage its source operator head while retaining
-the runtime body place; the failed run is not green mutant evidence.
+The control was subsequently narrowed in full10 to damage only its source
+operator head while retaining the runtime body place; protocol02 itself remains
+failed-run evidence, not a green mutant verdict.
 Protocol02 staged translator source SHA256:
 `9C6B6142F2361C883793C097C135603BD697109922B98048AEE1D2E1396DDCDD`;
 executable SHA256:
 `DC585759E7C481F466AAA4BC5BD574EB16BB8F49A0242C4D1EC60498B0AE6CB3`.
 
-The latest completed full `critical_graph_fix_full_09` is **RED, 81 of 1263**,
-not the older full08 result. It predates the subsequent ELSE/contract-tail,
+The previous completed full `critical_graph_fix_full_09` is **RED, 81 of 1263**.
+It predates the subsequent ELSE/contract-tail,
 canonical CHAR and runtime/source placement repairs. Frozen translator source:
 `4251E2CF9CE6A417AFC8E298C97E90EB3C075C6C5332AF2C4EB18FDA77EFC4F1`;
 executable:
@@ -775,6 +776,107 @@ executable:
 The full source codec, remaining producer/resolution defects, full graph release
 and pointer implementation are still open; kernel/focused green subsets do not
 substitute for those acceptance gates.
+
+### Full10 and independent L3 closure, 2026-10-03
+
+`build/l2_harness/critical_graph_fix_full_10`: **RED, 91 of 1266 targets**.
+Frozen translator source SHA256:
+`9C6B6142F2361C883793C097C135603BD697109922B98048AEE1D2E1396DDCDD`;
+staged Git blob: `47e7c63eb91dca276e6742cc501ec4e1ab12fd37`;
+executable SHA256:
+`A17841433EA73BCAAF4384A68BF53E131C1AF3BCCC91841BC1DAF467CAC262AB`.
+It started at c734e6cf; only the bounded docs checkpoint e74985b3 was published
+during this frozen run. No code release or stable-tree promotion occurred.
+
+The narrowed ELSE source mutant uses `null-path 2 5 0` rather than removing
+the body container. It records mutation=1, baseline=1, setup=1, compared=1,
+setup_failures=0, shape_failures=1, other_failures=0, actual/expected exit7;
+the sole shape assertion is the missing shared application head. Thus it is
+independent graph-loss evidence despite identical execution. Full10 also runs
+`unit_eternal_shape`: 33 checks, two roots, exit0, with source width20 rather
+than old width22 including hidden children/settings.
+
+Failures are not waived: they include genuine closure/path/type/admission
+debts, old physical-slot assertions and omissions in the generated-header
+oracle. Read-only comparison proved nine SET/PUT destination assertions
+need the source-place indices (not the old storage-prefix indices); all
+other operation widths, edges and runtime checks remain required. Existing
+descriptor-as-address and implicit-Model-clone fixtures still encode later
+pointer/application migration debt and do not establish the current norm.
+
+`build/l3_selftest/critical_graph_protocol_01`: all 11 suites fail to link
+because the runner omits the external `lmx_source_names` link unit; no suite
+executes. The four header budget probes also detect the added LmxSourceName
+type (75 names, expected74). The runner now translates/links the actual
+module, and the explicit expected budget is rebaselined for this one new
+header declaration, leaving the 128-name/8192-byte capacities unchanged.
+`critical_graph_protocol_02`: **RED, one of 11 executed suites**. Ten pass;
+N9 has two IF-false assertions because its manually built fixture still
+puts a naked else body in the IF slot instead of the retained ELSE
+application plus its body. The four budget probes pass at 75/128 names,
+1070/8192 bytes. The fixture was corrected without changing the runtime's
+condition or iteration rules. Fresh `critical_graph_protocol_03` is **GREEN:
+all 11 executed suites and all four budget probes**; N9 executes 43 checks.
+These are L3 kernel suites, not the absent full source codec or L3+L2
+self-build chain.
+
+### Resolved receiver and contract-oracle slices, 2026-10-03
+
+`l2_predef_receiver` reuses the existing structural `.h.lm1` lookup with its
+type-or-function-pointer mode. Head absence, assignment classification and
+unit declaration collection now use that same receiver-presence fact. It is
+not a C-header scanner, C-name registry or a name-specific native-call rule.
+`critical_graph_predef_receiver_01` stopped before fixture verdicts because
+the new helper lacked its forward declaration; this is retained failed
+build evidence. Fresh `_02` is **GREEN, 27 targets**: 13 foreign-function-pointer
+shape rows, two executed RHS positives, three unknown-head opposites and six
+merge destination rows. Frozen translator source SHA256:
+`9B50129B48ABEBCB22CCB1F54909ACFEBFA5A42DBE42E4276373D8A54CC06678`;
+executable SHA256:
+`FFE54E75E775680068693EE82E0C0D914761373555BABAE91422ED84342D3377`.
+This does not prove complete native-only source construction.
+
+The graph oracle now records even empty real method-input header parts and
+descriptor stores through `l2_fkid`. CALL argument boundaries follow the
+actual header or explicit contract, not a guess from the first argument's
+shape. Nine old SET/PUT destination pins were replaced by independently
+observed source-place indices; operation widths, edges and execution remain
+checked. Exact method/source-order rows no longer require hidden service
+fields or a duplicated contract after the source body. Fresh
+`critical_graph_contract_oracle_02` is **GREEN, 24 targets**, including
+descriptor-first three-argument CALL, empty input, callable signature kinds,
+six exact source-body rows, merge/PUT places and the independent ELSE mutant.
+Its source SHA256 equals `_predef_receiver_02`; executable SHA256:
+`7AC3A0AFA051B4B4F50CC7DF5720493D89372D5240CB4CDE1041698FB6AC2BA3`.
+The first `_01` attempt rejected misspelled fixture selectors and supplies
+no fixture verdict.
+
+Subsequent oracle review requires actual signature-part allocation provenance
+and the explicit contract's observed parent chain. Ordinary source-body
+Structures cannot impersonate method headers. The separate AST-only negative
+control `build/critical_graph_call_header_oracle_mutant_02/RunReviewed.ps1`
+accepts the baseline and rejects a one-line real-header kind mutation, a
+missing empty header, an incidental body shaped like a header and a wrong
+contract owner. Its reviewed harness SHA256 is
+`34995E6A33D5B3C1796DE456E89AA5BE36B527912E026BF29F1D4A0885C7A9A4`.
+It executes no constructor or compiler and cannot certify runtime behavior.
+
+Full `critical_graph_fix_full_11` is running against the same frozen
+translator source as the two focused green slices. Its harness predates
+the later provenance review and the five added genuine hidden/formal-input
+witness rows. A completed full11 verdict cannot certify those later edits;
+a fresh focused run is required for them.
+
+Runtime CALL representation remains an explicit implementation debt.
+`lmx_walk_call` still guesses compact versus explicit-contract layout from
+ordinary Structure widths. A source body's first two fields can have the
+same shapes as an input/result header, and a compact CALL argument can itself
+be such a Structure. Existing arena domain facts do not distinguish these
+cases. Oracle builder provenance is not a runtime representation and must
+not become a hidden registry or another shape fallback. The next runtime
+slice must consume an unambiguous common executable/receiving contract,
+retaining the source operands and ordinary parentage; no new language rule
+or per-name exception is implied. Neither critical ticket is closed.
 
 ### Actual signature-header oracle negative control
 
@@ -810,10 +912,15 @@ a source head as its own Structure before a real caller supplies the hidden
 input of that name. The later checker records callsites too late to undo that
 role without losing source meaning. `l2_local_ns_shape` already queries dynamic
 formals: replacing one lookup or reordering two passes does not fix the second
-registration route. `unit_free_write_literal_refused` is a genuine hidden-int
-assignment mismatch, unlike old tests refusing a truly absent literal-headed
-definition. Its positive companion must return the changed internal value1
-while the caller keeps5; a zero-only exit is insufficient evidence.
+registration route when an existing input is actually established. An earlier
+audit incorrectly called `unit_free_write_literal_refused` a hidden-int
+mismatch: peek has no visible/formal/input k, and its caller's unrelated local
+k does not retroactively establish one. Current construction semantics make
+`k: 1U` there a named Structure holding the unsigned literal. A genuine hidden
+input witness must first establish the outer binding, return the changed
+internal value1 while the caller keeps5 and the lexical source keeps3, and
+refuse `peek\k` as a graph field. Explicit-formal and truly unknown-head cases
+are separate opposites; a zero-only exit is insufficient evidence.
 
 Required shared boundary: reuse existing `L2SourceSite`, source save/restore,
 ordinary binding resolution and dynamic worklist; factor caller-source selection

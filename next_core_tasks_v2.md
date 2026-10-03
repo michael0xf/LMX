@@ -178,9 +178,12 @@ Current bounded implementation, with no DONE claim:
   This is not universal source construction, a codec, or a critical-ticket release.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest completed full `critical_graph_fix_full_09`: RED, 81 of 1263.
-  This frozen snapshot predates subsequent ELSE, contract-tail and runtime/source
-  placement changes; it is not their full verdict.
+  Latest completed full `critical_graph_fix_full_10`: RED, 91 of 1266.
+  It includes the ELSE, contract-tail and runtime/source placement changes,
+  and stricter exact source/header checks. Its isolated ELSE-head mutant now
+  detects graph loss with unchanged execution; `unit_eternal_shape` runs 33
+  checks successfully without implicit launch/membership fields. Full09
+  remains earlier RED evidence (81/1263), not the latest verdict.
   Exact identities/hashes are retained in the evidence journal.
   The remaining failures include obsolete expectations and genuine admission/
   capture implementation debts, not a blanket waiver. Do not

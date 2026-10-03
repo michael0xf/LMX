@@ -59,6 +59,16 @@ that graph but are not additional runtime objects. Current walker operator
 graphs demonstrate selected executable coverage; preserving the whole source
 binary tree and name/comment mapping must be verified separately.
 
+Executable construction must use the resolved operation and its receiving
+contract, not infer that contract from the widths of incidental body fields.
+For example, an ordinary body may begin with two Structures shaped like a
+method's input/result parts, and an actual CALL argument may have that same
+shape. Compiler allocation provenance can check emitted output but is not a
+runtime resolver or permission for a hidden registry. The runtime protocol
+must itself distinguish its source operands and established contract through
+common representation facts. The remaining CALL-layout debt and measured
+oracle controls are recorded in the [graph repair ledger](steps/critical-graph-pointer-fix-20261002.md).
+
 **Occurrence** is an actual lexical declaration/appearance, not just a name.
 **Physical slot** is an index among all direct graph fields. `[N]name` counts
 only occurrences of that name. The two indices need not be equal. Current

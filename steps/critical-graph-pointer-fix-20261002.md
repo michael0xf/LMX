@@ -1176,9 +1176,30 @@ Callable/formal/site, declaration and call-shape witnesses also remain green.
 Exact quoted-name identity and known slot/ml retained producers remain audited
 shared-boundary debts, not permission to create new symbols for known inputs.
 
-Full `critical_graph_fix_full_15` is running on these frozen source bytes.
-The latest completed full verdict remains full14 RED178/1292. This focused
-green does not close either critical ticket or start the pointer-depth repair.
+Full `critical_graph_fix_full_15` completed **RED, 175 of 1297 targets** on
+these frozen source bytes; executable SHA256
+`BB6FB674F74745E0A931DA61E202B0A0521C34B9393B8E0723953481F2E43CBB`.
+Relative to full14, `unit_site_pointer_index`, `unit_site_foreign_index`, and
+`unit_array_index_formal_shadow` cease failing. All five introduced pointer
+fixtures pass; no previously green fixture regresses and none is removed.
+`unit_ptr_grow` remains red because its historical `root-pending` row demands
+refusal although translation now succeeds. A real positive run is required
+before replacing that expectation; translation alone is not acceptance.
+The other failure identities/diagnostics are unchanged. This full red and the
+focused green do not close either ticket or start the pointer-depth repair.
+
+Current runtime gates on the staged C4BD source snapshot:
+`build/l2src/critical_graph_pointer_index_kernel_01` is **GREEN290**, all107
+selftest rows executed, with the repository's ordinary hard C guards (not
+blanket `-Strict`). `build/l3_selftest/critical_graph_pointer_index_l3_01`
+passes all11 suites and all4 type-budget units (75/128 names). These green
+runtime results do not waive the full translator harness's175 failures.
+
+The connected next namespace/source-layout slice is documented in
+[its implementation plan](critical-graph-namespace-source-layout-20261003.md).
+The existing `[declared cells..., code...]` namespace prefix cannot be repaired
+by removing the COUNT guard alone: source ownership, one actual constructor,
+physical field projection, schema/merge coordinates and trailers must agree.
 
 ### Actual signature-header oracle negative control
 

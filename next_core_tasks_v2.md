@@ -246,9 +246,17 @@ Current bounded implementation, with no DONE claim:
   cleared-root runs; erasing the actual ARG index fails shape alone while
   keeping program result7. Compound actual-index boundaries, repeated groups,
   typed C99 elements and prior indexed-expression/callable regressions pass.
-  Earlier producer01–07 failures/aborted runs remain recorded. Full15 is
-  running on the frozen bytes; full14 RED178/1292 remains the latest completed
-  full verdict. Neither focused green nor full red releases either ticket.
+  Earlier producer01–07 failures/aborted runs remain recorded. Full15 completed
+  RED175/1297 on those frozen bytes: three pointer/site/Array-shadow failures
+  disappear, all five added fixtures pass, no former green regresses and no
+  fixture is removed. `unit_ptr_grow` still fails its old refusal expectation
+  after successful translation; its real positive execution is not yet gated.
+  Neither focused green nor full red releases either ticket.
+  Runtime recheck of the same staged bytes is GREEN290 with107 executed
+  selftests; L3 passes11 suites and4 budget units. The next connected namespace
+  layout work is [specified separately](steps/critical-graph-namespace-source-layout-20261003.md):
+  original source order, one cell constructor, explicit metadata/physical
+  projection, schema/merge and actual trailer retention; not a guard-only fix.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

@@ -646,6 +646,51 @@ Integrate source ADDRESS retention and general value/place/depth projection
 atomically at the shared address boundary after universal placement. No such
 code or compatibility branch has been added, and neither ticket is closed.
 
+### Concrete C99 storage dependency, not another language rule
+
+The source/address split alone cannot manufacture a genuine `Lmx **` out of
+a `void *` object. The current CHILDREN backing has actual `void *` cells,
+and `ref_cell/ref_value/ref_store` access them through `void **`. If native
+typed code must address a genuine `Lmx *` binding object, its one real place
+must be allocated with that storage type. One shared typed arena pool can
+hold these cells, exactly as it holds primitive cells; the existing
+heterogeneous child edge points to the cell. A cell is the language binding,
+not a companion Structure, copied descriptor, per-model array or synchronized
+shadow. Ordinary acquisition loads its held reference; unary address-taking
+returns that cell. Rebinding updates the cell, not its parent edge.
+
+This is a connected representation migration, not implemented here. The
+resolved source/declaration/place contract determines which edges denote
+language-addressable values. Named bindings alone are insufficient: exposed
+Structure body paths such as `M\\for` also need the real place. Internal
+operation/callee wiring is not promoted to a new language variable merely
+because it contains a Structure pointer. Pool kind/type later distinguishes
+the actual storage without a per-cell record or name lookup.
+
+`lmx_arena_ref_store` remains raw edge construction; it has no arena argument
+and must not silently allocate a binding. Existing producers have the owner
+and can explicitly allocate and initialize the real cell. Generic logical
+acquisition, walker place resolution, native reads/address emission, own
+publication, implements, graph copy, merge, GC and the codec must migrate
+together. An activation's addressable formals need their own genuine typed
+cells, not the transport `LmxWalkValue.ref` member.
+
+`LMX_KIND_REF/LMX_TYPE_LMX` and `/LMX_TYPE_DESC` already back Array and List
+elements. `lmx_array_ref_new_owned` and `lmx_list_grow` currently create/use
+those cells through `void **`; reusing the pools for genuine typed bindings
+requires coordinated backing access, copy and GC migration. Mixing different
+C effective object types in one pool or adding a second ad hoc pool to avoid
+that work is not this repair. Arbitrary closed-unit C pointer storage likewise
+must preserve its actual declared storage contract, not be reinterpreted as
+`void **` because object pointers happen to have equal sizes on this host.
+
+Required additional observations: two bindings may hold the same descriptor
+but have distinct addresses; a real `Lmx **` C store changes only the selected
+binding and is visible in both backends; null values retain the declared depth
+without a pointee probe; copy preserves binding/alias topology independently
+of the existing opaque machine-pointer pointee policy. These remain future
+P0–P3 acceptance, not measured successes.
+
 ## 5. Full gate / release status
 
 Full harness `build/l2_harness/critical_graph_fix_full_01`: **RED, 36 of 1222**.

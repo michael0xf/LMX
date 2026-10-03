@@ -1252,6 +1252,15 @@ removed row or remaining failure-detail change. The normalized translator
 diagnostic sets are identical (518 lines each). This full red is not a release.
 The newer metadata-selection prerequisite is recorded separately in the
 [connected namespace plan](critical-graph-namespace-source-layout-20261003.md#ns-metadata-evidence).
+Its full17 completes **RED174/1305**, source
+`EE290DF836B0D178B98D268D1357343B523FC718BB1275F0F56E86C23D9EB0DF`,
+executable
+`816E0410EB2ED0B8105C55FD6C19206CC3ACE6936E811A3D0BA5E9A3E706C712`.
+Three added reference-contract fixtures pass; all shared outcomes and failure
+details remain unchanged. The later [original namespace trailer slice](critical-graph-namespace-source-layout-20261003.md#ns-source-trailer-evidence)
+is GREEN15; full18 on that newer source B7126723 is running. These distinct
+snapshots must not be conflated, and namespace physical source order remains
+open.
 
 ### Actual signature-header oracle negative control
 

@@ -259,8 +259,12 @@ Current bounded implementation, with no DONE claim:
   and the remaining translator diagnostics are unchanged. The next bounded
   metadata-selection preparation is RED2/16: all three new LAST/explicit
   reference-contract witnesses pass; the two failures are unchanged
-  method-local Structure-constructor debts. Full17 on those newer bytes is
-  running; it is not a completed certificate.
+  method-local Structure-constructor debts. Full17 completes RED174/1305:
+  the three added reference-contract rows pass; no existing outcome or
+  failure detail changes. The next bounded source-trailer slice is GREEN15:
+  original namespace return is shared by CHECK, graph construction and native
+  emission; actual namespace interpretation and source-erasure mutants pass.
+  Full18 on those trailer bytes is running, not a completed certificate.
   Neither focused green nor full red releases either ticket.
   Runtime recheck of the same staged bytes is GREEN290 with107 executed
   selftests; L3 passes11 suites and4 budget units. The next connected namespace

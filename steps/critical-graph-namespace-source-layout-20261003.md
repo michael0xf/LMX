@@ -1,7 +1,7 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The preceding full harness `critical_graph_fix_full_16` is RED174/1302.
+The latest completed full harness `critical_graph_fix_full_17` is RED174/1305.
 The bounded metadata-selection prerequisite below is implemented and tested;
 the source-order physical layout cutover is not implemented yet.
 No stable twin has been changed. This is part of
@@ -58,8 +58,11 @@ dense producer, not a fallback for a completed source-layout map.
 ## 3. COUNT, PLACE, FILL
 
 CHECK and initial COUNT validate names/types from selected NSF rows. Root
-COUNT precedes the appended namespace procedure COUNT, so it cannot require
-the future physical child3 of `Holder\y` before that layout exists.
+and method traversal must not require the future physical child3 of `Holder\y`
+before all source layouts exist. The minimal root-namespace fixture currently
+registers Holder as method0 and the entry as method1; ordinary fn rows can
+precede namespaces, and discovered local procedures can be appended later.
+Do not rely on one fixture's registration order as a layout guarantee.
 PLACE/FILL use the completed physical projection after all source counts.
 
 The current implementation rebuilds path tuples, inline maps and pending-call
@@ -76,9 +79,9 @@ boundary, because non-emitting PLACE still needs real coordinates.
 
 For the common source body, header width is0. Native lowering may have ordinary
 machine temporaries, but must not create a signature header in the Structure.
-Its real return trailer must come from its original namespace frame:
-`l2_rw_trailer` currently checks only `m_node`, which is0 for namespace
-procedures. A named `until` currently borrows a synthetic loop wrapper;
+Its real return trailer comes from its original namespace frame through
+`l2_callable_source_node/frame`, shared by CHECK, graph and native emission;
+bounded evidence is below. A named `until` currently borrows a synthetic loop wrapper;
 source ownership must not identify that wrapper as the author's original body.
 That loop boundary requires connected handling, not simply removal of a guard.
 
@@ -132,7 +135,8 @@ symbols rather than mutable line numbers.
 
 ### 5.1 Audited name/path call sites
 
-There are eight operational `l2_ns_slot_named` calls in the current sandbox.
+The audit found eight name/path selection consumers. Four metadata calls now
+use `l2_ns_named_row` directly; four producer calls still use `l2_ns_slot_named`.
 The selected NSF row carries kind/model metadata; a physical slot is needed
 only by a completed-layout consumer.
 
@@ -148,7 +152,7 @@ only by a completed-layout consumer.
 | `l2_cap_add` | Selected row for validation; projection for emitted capture list |
 
 `l2_rw_path` serves metadata callers (`l2_src_path_write`, `l2_rw_opty`,
-`l2_rw_operand_ty`, `l2_rw_index_ty`) as well as actual path/address/index
+`l2_rw_span_ty`, `l2_rw_index_ty`) as well as actual path/address/index
 producers. Expose distinct resolution/projection entry points. Neither a
 bare `rw_emit` check nor substituting an ordinal for a missing physical map
 defines that distinction. Physical D105 edge/width projection also belongs
@@ -184,7 +188,71 @@ pointer graph and raw-C graph rows pass. Both failures exactly match full16:
 method-local Structure constructor. No expectation is waived. `_01` failed
 L1 parsing at an accidental multi-level dedent in the new helper; `_02` fixes
 the helper's source layout without changing the parser. Failed evidence stays.
-Full17 on these newer bytes is running; no completed full verdict is claimed.
+Full17 on these bytes completes **RED174/1305**, executable SHA256
+`816E0410EB2ED0B8105C55FD6C19206CC3ACE6936E811A3D0BA5E9A3E706C712`.
+All three new rows pass; independent full16/full17 comparison finds no shared
+outcome change, removed row or failure-detail change. The two extra diagnostic
+lines are the new expected opposite-field refusals. This is a frozen
+metadata-only certificate, not a test of the following trailer edits.
+
+### 5.3 Connected path-resolution boundary
+
+There are ten operational `l2_rw_path` callers: four type-only callers above,
+and six producers (`l2_rw_path_read`, `l2_rw_path_write`, `l2_rw_indexed_path`,
+`l2_rw_length_of`, `l2_rw_path_reference`, `l2_rw_address`). `say=0` means
+diagnostic silence, not metadata: `length_of` immediately builds a value
+operand. Keep shared lexical resolution with explicit metadata/producer
+entry points; thread that choice through `path_occ`, `path_bodies` and a
+resolution/projection adapter for `l2_node_seg`, not only the namespace branch.
+
+A selected own ID establishes field existence even before it has a physical
+slot. Metadata must not query `l2_graph_field_child` or compute
+`l2_m_width(host)+formal` to establish existence. Kind15 remains a body ID;
+kind16 remains an own ID. The actual operand producer projects these semantic
+handles through the real graph place. Preserve method-use checks and source
+occurrence selection. Physical D105 offsets apply only to completed layout.
+Producer COUNT still traverses graph-place ancestry to count its AT/OF
+operation topology; this is not the same as a type-only metadata resolver.
+
+The initial registration proof (`l2_ns_proc_add`) and layout seed
+(`l2_layout_owns`) are the only `l2_own_mslot` consumers. Their namespace route
+may use exact NSF-row identity plus an explicit declaration ordinal; they do
+not need the future physical projection and must not recursively read the
+GraphField relation while creating it. Actual emission later uses GraphField.
+
+An existing constructor classification collision also requires care:
+anonymous retained atoms use NSF kind12 with no `fname`, but the old reference
+depth encoding can produce kind12 for a named depth3 pointer. A numeric kind
+range does not prove a cell was constructed. The ownership proof must establish
+the actual source/constructor contract, including anonymous atom identity;
+missing higher-depth reference constructors remain defects, not prefilled cells.
+
+<a id="ns-source-trailer-evidence"></a>
+### 5.4 Original namespace return trailer
+
+`l2_callable_source_node/frame` selects the original method frame, or the
+original namespace frame for a registered ordinary Structure. Both CHECK
+loops, `l2_rw_trailer` and native `l2_emit_ret_tr` use that same selection.
+The existing method-only `l2_fn_frame` contract is unchanged. No signature,
+runtime metadata or companion graph is introduced; named UNTIL's distinct
+source-boundary debt remains open.
+
+`critical_graph_ns_source_trailer_02` is **GREEN15**, source SHA256
+`B712672334B56BF9C1921B04F85EBFE226818830381C09145237E7B00E0F7990`,
+executable SHA256
+`58D9EF0DE905D49AFAD5BF5858142E51B108FF3B86A65C1E28CE5850B1ECB0AF`.
+The Counter witness checks its complete width4 source container and root
+width6 (354 assertions), actual initial value1, explicit invocation changing
+only its real x-cell to2, and positive result7. Two positive rows exercise
+native/cleared-root execution with Counter native, and native/cleared-root
+execution with Counter genuinely interpreted by `--walk-methods`. Two real
+RET-erasure mutants preserve native result7 but fail the graph assertion.
+Column-0 `return: 1` on a void Structure is refused by the ordinary return
+contract diagnostic, not silently admitted. Previous return, named execution,
+UNTIL, cast and reference-contract rows pass. `_01` had only an incorrect
+negative diagnostic expectation (`unsupported body`); refusal itself was
+correct. Its evidence is retained. Full18 is running on these bytes; neither
+this focused green nor the previous full red closes either critical ticket.
 
 ## 6. Required evidence
 

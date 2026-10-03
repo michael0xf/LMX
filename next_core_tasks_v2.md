@@ -269,10 +269,29 @@ Current bounded implementation, with no DONE claim:
   resolver preparation is a separate RED11/56 focused snapshot: the eleven
   old selected failures are unchanged, four new dormant/order-mutant controls
   pass, and35 overlapping emitted L1 files are byte-identical to full18.
-  Full19 on those preparation bytes is running. Physical namespace source
-  order is still open.
+  Full19 on those preparation bytes completes RED174/1314: four new controls
+  pass, shared outcomes/details do not change; one already-failing nested
+  diagnostic becomes unlocated. The subsequent original-root namespace
+  source-layout cutover is implemented but not accepted: cutover04 is RED7/32,
+  all seven new namespace rows pass. Five old producer refusals and two real
+  merge runtime regressions remain. The merge pair cannot be waived as old
+  oracle expectations; full interface reception must ignore source applications
+  without ignoring missing real fields. The subsequent shared interface adapter
+  repairs both merge rows: cutover06 is GREEN31, kernel recheck GREEN290 with107
+  executed selftests (67 runtime-implements assertions, including missing and
+  nested-field negatives). The explicit Consumer predicate stays unchanged.
+  The earlier five method-construction rows use legacy implicit-construction
+  setup and remain K03 migration debt; do not restore that obsolete rule.
+  Fresh L3 passes11 suites and4 budget units. Full20 completed RED252/1321:
+  seven added rows pass; one old failure resolves;79 shared green rows regress.
+  These include real constructor/capture defects and stale physical-slot
+  oracles, not a permission to waive the full gate. The later constructor
+  identity/capture projection repair is bounded cutover09 RED11/96; the four
+  capture regressions pass, but copy construction order, legacy setup and
+  Array-path witnesses still require work. Exact frozen hashes and all scopes
+  are in the connected layout evidence; no full current-byte green is claimed.
   Neither focused green nor full red releases either ticket.
-  Runtime recheck of the same staged bytes is GREEN290 with107 executed
+  Earlier runtime recheck of the pre-cutover staged bytes is GREEN290 with107 executed
   selftests; L3 passes11 suites and4 budget units. The next connected namespace
   layout work is [specified separately](steps/critical-graph-namespace-source-layout-20261003.md):
   original source order, one cell constructor, explicit metadata/physical

@@ -1264,9 +1264,33 @@ executable
 `F17D7448A8520C365C4D6C8D5E39470E4D30C8FA7F228392E8851DACC35E5E47`.
 All five new trailer rows pass; independent comparison finds no shared outcome
 change, removed row or failure-detail drift. The only added diagnostic is the
-new expected valued-return refusal. Later resolver/map preparation has not
-been certified by full18. These distinct snapshots must not be conflated,
-and namespace physical source order remains open.
+new expected valued-return refusal. Later resolver/map preparation is separately
+certified by full19: **RED174/1314**, source SHA256
+`1A09F18E89BE6DCFCEF49C372A647C05B71E760B1D063D8CB54542E86FE86B51`,
+executable SHA256
+`B70ED58979D811B72A4F2E4B23A84BEBC8C4CCB95BAC954D5BF32BA4D1E90BE7`.
+Four added controls pass; shared outcomes/details remain unchanged, though the
+already-failing nested-admission diagnostic loses its location.
+
+The later original-root namespace source-layout cutover is implemented but
+not accepted: cutover04 is **RED7/32**; all seven new rows pass. Five existing
+producer refusals remain, and `unit_merge_value_schema/repeat` regress at
+runtime in native and cleared-root modes. These are not oracle failures and
+cannot be waived. The connected [layout evidence](critical-graph-namespace-source-layout-20261003.md#ns-source-layout-evidence)
+records the exact bytes and shared interface-reception repair. No full final
+cutover verdict or `@Structure` repair is claimed. The subsequent
+[shared interface-reception slice](critical-graph-namespace-source-layout-20261003.md#ns-interface-reception-evidence)
+repairs both merge regressions: cutover06 **GREEN31**, ordinary kernel
+**GREEN290** with all107 selftests executed. Real missing/type-incompatible
+and nested cached fields still fail reception. The explicit Consumer predicate
+is unchanged. Legacy implicit-construction setup remains separate K03 migration
+debt; this bounded green does not close either ticket. Fresh L3 passes all11
+suites and4 budget units. Full20 completed **RED252/1321**: seven new rows
+pass, one old failure resolves,79 shared green rows regress. Subsequent bounded
+constructor-identity/capture-projection repair is cutover09 **RED11/96**;
+the four capture regressions now pass. This does not certify a full green or
+close the copy-construction-order and Array-path debts. The connected layout
+journal records frozen hashes, exact scopes and strict oracle changes.
 
 ### Actual signature-header oracle negative control
 

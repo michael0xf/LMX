@@ -1,16 +1,20 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_18` is RED174/1310.
-The bounded metadata-selection prerequisite below is implemented and tested;
-the source-order physical layout cutover is not implemented yet.
+The latest completed full harness `critical_graph_fix_full_19` is RED174/1314
+on the earlier resolver-preparation bytes. The subsequent original-root namespace
+source-order cutover is implemented but incomplete: cutover04 is RED7/32.
+Its seven new rows pass; its two merge regressions are repaired by the subsequent
+interface-reception slice (cutover06 GREEN31). Full current-byte acceptance is
+still outstanding.
 No stable twin has been changed. This is part of
 [critical_graph_bug](tickets/critical_graph_bug.md), before the pointer repair.
 
 ## 1. Existing object, original order
 
-For `Holder: (int: x 1; x: 2; int: y 3)` the current namespace constructor
-reserves two declaration cells before its executable steps:
+Before this cutover, the namespace constructor for
+`Holder: (int: x 1; x: 2; int: y 3)` reserved two declaration cells before
+its executable steps:
 
 ```text
 actual:   [x-cell, y-cell, INIT(x,1), SET(x,2), INIT(y,3)]
@@ -23,9 +27,10 @@ a second object containing either its data or a reconstruction of its body.
 Construction fills declared initial values but does not execute `x: 2`.
 An explicit invocation executes the stored body by the ordinary dispatcher.
 
-`l2_ns_procs` currently creates source/procedure bookkeeping only for root
-definitions that are called, have statements, or belong to a part. Registration
-for source construction must not depend on whether someone calls a definition.
+Before this cutover, `l2_ns_procs` registered root definitions selectively.
+It now registers ordinary original root definitions independently of invocation.
+Local, qualified and synthetic named-UNTIL producers are still separate migration
+debts; the original-body identity test does not pretend to migrate them.
 The bookkeeping does not give an ordinary Structure a signature or arguments.
 
 ## 2. Distinct compiler coordinates
@@ -104,9 +109,9 @@ occurrence-position producer; do not compress them into a declaration prefix.
 
 Skipping an existing typed-cell allocator must not lose its external name:
 `l2_emit_cell_new` publishes on the actual typed cell at `slot[0]`, whereas
-`l2_emit_ns_names` currently publishes on the owning reference slot. Publish
-the declaration name on the already-created typed cell without allocating
-another cell. Borrowed Structure/callable aliases still name their own place,
+`l2_emit_ns_names` now publishes on both the owning reference slot and the
+already-created typed value cell where applicable, without allocating another
+cell. Borrowed Structure/callable aliases still name their own place,
 not their shared referent.
 
 Existing constructor holes remain defects: `l2_emit_one_nest` counts some NSF
@@ -161,8 +166,10 @@ only to the completed-layout route.
 The two CHECK capture callers discarded local `capf[32]` arrays; those arrays
 are now removed and validation explicitly uses `out=0`, no capacity. The actual
 capture-list consumers remain `l2_mad_cap_emit_walk` and `l2_mad_cap_emit`.
-The physical capture list still uses the explicit dense-producer adapter
-pending the connected layout cutover.
+At that preparation checkpoint the physical capture list still used the
+explicit dense-producer adapter. After the connected source-layout cutover,
+actual capture emission uses the projected physical slot, as verified below;
+metadata-only CHECK remains non-projecting.
 
 `l2_path_arr_leaf` now reads count/kind directly from its selected NSF row.
 Dead `l2_ns_field_len`, `l2_ns_field_kind` and `l2_ns_field_ref` accessors are
@@ -288,7 +295,11 @@ damaged native body-holder lookup in the invoked task, causing invariant
 exit3 before the final graph comparison. They did not meet the shape-only
 same-exit control; no expectation was relaxed. Preparation02 uses a genuinely
 uncalled carrier to isolate that control. Full19 on preparation02's frozen
-sources is running; it does not certify a subsequent namespace cutover.
+sources completes **RED174/1314**, executable SHA256
+`B70ED58979D811B72A4F2E4B23A84BEBC8C4CCB95BAC954D5BF32BA4D1E90BE7`.
+All four added controls pass; no shared outcome or failure-detail change.
+The already-failing `unit_walk_d105_nested` diagnostic loses its location.
+This full snapshot does not certify the subsequent namespace cutover.
 
 <a id="ns-source-trailer-evidence"></a>
 ### 5.4 Original namespace return trailer
@@ -322,6 +333,185 @@ outcome change, removed row or failure-detail drift; the sole added diagnostic
 is the expected valued-return refusal. This is not evidence for the later
 metadata/producer split or phase0 map deferral. Neither this focused green nor
 the full red closes either critical ticket.
+
+<a id="ns-source-layout-evidence"></a>
+### 5.5 Original root namespace source-layout cutover
+
+`critical_graph_namespace_cutover_04` is **RED7/32**, source SHA256
+`931F1F5F58D8CA079831F0E1209923920CB7F1BF9E606B19D01446C3C5C366DD`,
+executable SHA256
+`C223141DFA205912156FAA9151A1A5F1482D85FD73E7272BEFE33F3706740450`.
+
+The existing namespace object now uses its original source-body container;
+declaration rows resolve to actual source slots through original-token identity.
+COUNT/CHECK use declaration metadata explicitly; PLACE/FILL, path resolution,
+schema enumeration and final MRS tables use the physical source coordinates.
+Already-constructed typed, nested and callable children are not allocated again.
+The shared bounded-operand path also handles explicit `[N]name` native operands.
+Primitive pointers beyond the old shallow spelling cases use the existing
+type interner at the requested depth; no new depth cap is introduced.
+
+All seven new namespace rows pass: ordered/repeated native and genuinely
+interpreted bodies, dormant retention, the actual old-prefix mutant, and depth3
+pointer construction. The mutant has baseline1/setup1/shape_failures2/
+other_failures0/exit7. Five existing method-Structure producer refusals remain.
+`unit_walk_d105_nested` again has its expected located refusal; nested admission
+has not thereby been implemented.
+
+Two existing rows regress from full19 success to genuine native and cleared-root
+runtime failure: `unit_merge_value_schema` and `unit_merge_value_repeat`.
+Their named-field pair coordinates are correct, but full reception attempts to
+consume retained INIT applications as interface fields. A hole alone does not
+identify an unused application: missing typed fields use the same sentinel.
+The connected repair must project only existing OP-headed source applications
+out of declaration/interface reception, preserve every real field requirement,
+and leave the explicit physical Consumer used-tree predicate unchanged.
+No name sidecar, second graph, new map sentinel or namespace-only exemption is
+permitted. Native and walker selected-map/fallback receptions share that repair.
+
+No full current-cutover verdict or `@Structure` repair is claimed. These real
+merge regressions cannot be waived as stale oracles. Both critical tickets remain
+open. The subsequent evidence below repairs this bounded regression; it does
+not certify all remaining producer and reconstruction routes.
+
+<a id="ns-interface-reception-evidence"></a>
+### 5.6 Shared interface reception, without comparing source algorithms
+
+`lmx_implements_walk_project` is the common operation-local DFS. Its explicit
+interface projection ignores only a Structure whose first child is in the
+already registered OP address domain. No source name or extra metadata is
+needed. `lmx_implements_receiver_view` requires all remaining actual fields;
+its hole policy is strict. The existing public `walk_view`/`runtime_implements`
+used-tree predicate retains its physical Consumer contract, and sparse-through
+retains its separate proved-unused-hole policy. Plain nested Structures,
+typed cells, unknown cells and nested cached holes are not silently admitted.
+
+Native and walker selected-map and unknown/cached-layout receptions, Thread
+receive and root payload reception use that one interface adapter. No parser
+change, namespace exception, signature redesign, auxiliary graph or new source
+map is introduced.
+
+`critical_graph_namespace_cutover_05` is retained **RED7/37** on source SHA256
+`CD71E46D00E005C3F4ECE481AB0B23E8C40F7AE5D1368C6779BF2AAFC329FA00`,
+executable SHA256
+`A2916DCC2E5FCB084A86B8D496471C592E0B1378394343DA8BDA4ECF31CC4524`.
+Relative to04, only the two shared merge rows change FAIL to OK. Their own
+methods are genuinely interpreted under `--walk-methods`; both native-root
+and cleared-root runs return7. All seven new namespace rows still pass.
+The depth3 oracle now checks the actual IMPLICIT facet and typed-null literal
+write, not merely an opaque SET (193 assertions).
+
+Of the five added selected rows, three wrong-value/shape receptions still stop
+with the expected `implements` throw. The compound-reference arithmetic refusal
+already existed in full19. `unit_site_layout_failure` did not execute in05
+because its generated-root index assertion was stale: ordinary registration
+moves the actual root from3 to8, without changing the tested methods0–2.
+Correcting that exact index yields the later positive runtime witness; no
+expected refusal, store/provenance assertion or walk forcing was removed.
+
+`critical_graph_namespace_cutover_06` is **GREEN31** on that same translator
+source, executable SHA256
+`33A772D794031F7C1B52BD3287A1D811C91919A9296EB6B6F369270D41EC3D78`.
+This bounded set includes the seven namespace rows, genuine old-prefix mutant,
+both repaired merge rows, source trailers, restored located nested refusal and
+strict failed store/provenance/runtime receptions. The six earlier legacy or
+unrelated translation refusals are retained as separate debt in05, not changed
+to success or deleted from the full harness.
+
+Fresh ordinary kernel `build/l2src/critical_graph_namespace_interface_01` is
+**GREEN290**, all107 selftest rows executed. `lmx_runtime_implements_selftest`
+runs67 checks with zero failures: twelve added checks distinguish interface
+projection from explicit used-tree checking and exercise required field holes,
+real type mismatches, unknown/unset cells and ordinary nested Structure fields.
+Existing cached partial/capture/nested-hole admission witnesses still pass
+(`lmx_walk_admit_selftest`:34 checks, zero failures). Fresh L3
+`build/l3_selftest/critical_graph_namespace_interface_01` passes all11 suites
+and four type-budget units (75/128 names, 1070/8192 name bytes). Full20 then
+completed **RED252/1321**; its frozen result is recorded below, not superseded
+by a focused green. Neither critical ticket is closed.
+
+The five method-Structure refusals in05 still use obsolete implicit construction
+forms such as `Other: o` and `Model: loc`. Do not restore that implicit merge or
+delete its guard to make those fixtures green. Their legitimate setup must be
+migrated explicitly under the existing K03 plan; use explicit-merge witnesses
+to isolate the current producer and preserve the original evidence. Callable
+capture from a tagged merge schema is a separate consumer debt, not permission
+to invent a new data graph.
+
+<a id="ns-full20-constructor-evidence"></a>
+### 5.7 Full20 and the shared constructor/capture repair
+
+`build/l2_harness/critical_graph_fix_full_20` is **RED252/1321** on source
+SHA256 `CD71E46D00E005C3F4ECE481AB0B23E8C40F7AE5D1368C6779BF2AAFC329FA00`,
+executable SHA256
+`9097991C9E6DCFBB54B44615BE52175AE7A40B15807F65AFD5F255183607D1E9`.
+Against full19, seven added namespace rows pass, one old nested diagnostic
+failure resolves,79 shared green rows regress, and no row is removed. The79
+include27 stale root pins,31 constructor failures, five previously expected
+negative cases masked by those constructors, four real capture failures,
+six exact namespace-shape mismatches, four merge-width assertions, one
+repeated-model slot assertion and one obsolete native-projection pattern.
+The root pins are method indices, not Booleans: update them only from the
+actual frozen root installation. Retain exact field order, values, fresh-copy
+identity, parent and native/walk assertions when migrating an oracle.
+
+The general constructor fix stores the original declaration node in each
+existing compiler NSF row (`l2_nsf_source0`, the `source` argument of
+`l2_nsf_push`). `l2_ns_constructed_row` joins that identity to the original
+direct body and owner, rather than reinterpreting an already transformed P0
+shape. Nested fields, Arrays and borrowed callable fields reuse the one
+existing constructor; source emission registers their actual physical places
+before omitting duplicate construction. No runtime field, atom wrapper,
+second graph or name-based constructor rule is introduced.
+
+`critical_graph_namespace_cutover_08` is **RED20/94**, source SHA256
+`FDAEFEA6D8E082D1DF045671D0EEB71CCC37B93D3D9CFBBA236443ACB19A9D12`.
+This bounded set contains the79 full20 regressions, seven namespace controls,
+strict reception failures, negative RHS witnesses and own-reference failure.
+The constructor regression group and masked-negative group recover; strict
+namespace/merge oracles retain their exact structural checks. This is not a
+full-harness verdict.
+
+The capture fix is the same selector for native and walked emission:
+`l2_cap_add` uses `l2_nsf_slot(row)` for an actual capture list, never the
+declaration ordinal. CHECK with `out=0` validates metadata without requiring
+a completed slot. Missing physical projection is an internal error, not an
+ordinal fallback. INIT applications are not captured in place of the declared
+cells. The repaired locations are `[2]` instead of `[1]`, or `[0,2]` instead
+of `[0,1]`; these are consequences of actual source order, not special fields.
+
+`critical_graph_namespace_cutover_09` is **RED11/96**, source SHA256
+`D50639AC7391E54A8C134CA10951805CD6987930CD2E5753BF27D0245FE7429A`,
+executable SHA256
+`39303332CCC3E47B60CAF984525C2DF5BC0B8DB4C44452DA8096CF9DAEC30157`.
+It retains all08 selected fixtures and adds two Array/borrowed-method source
+witnesses. All four previous capture failures pass, as do the corrected exact
+own-reference and constructor-reception assertions. Eleven failures remain:
+`graph_shape_method_ref`, `unit_eternal_shape`,
+`unit_capture_struct_write_only`, `unit_capture_struct_write_root`,
+`unit_array_index_formal_shadow`, `unit_field_path_struct_rebind_refused`,
+`unit_matrix_path_struct_rebind_refused`, `unit_s7_nested_ok`,
+`unit_s7_nested_shape`, and both `graph_shape_ns_source_constructors` rows.
+Neither new Array witness is accepted: translation refuses the field-indexed
+write. Their failure must not be hidden by removing the access assertion.
+
+The copied-Point case exposes retained-graph loss in addition to its old
+literal shape oracle: the legacy kind3 constructor copies Point before
+original source INIT/body fields are filled. The copier follows lexical
+parents and therefore copies the whole reachable closure, not merely Point.
+Exit7 in both modes does not certify retention of that copied INIT. However,
+`Point: box` is itself obsolete implicit-construction setup under the current
+rules. Do not make a Point-only early FILL, a namespace-name topological sort,
+or a new cyclic initialization protocol to restore that rule. Migrate the
+fixture to valid explicit `merge`/reference construction under K03 first;
+verify the complete original and actual copy independently. A valid producer
+must copy a completed closure (holders/cells, edges, headers and source
+bodies), not publish a partial object. The existing copier's handling of
+cycles in a completed graph is distinct from inventing semantics for pending
+legacy copy-result fields. The latter is not an accepted language feature.
+
+No full gate has run on09 bytes; kernel/L3 interface01 certify only their own
+earlier frozen slices. Both critical tickets and stable promotion remain open.
 
 ## 6. Required evidence
 

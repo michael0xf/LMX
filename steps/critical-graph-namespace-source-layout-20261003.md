@@ -1,11 +1,12 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_29` is RED184/1361
-on frozen7ADBFE22 and observer821DF2F1:19 recoveries, no new failures against
-full28, with identical target identities. A later45-fixture migration first
-exposes11 failures; the connected path/body/literal repair and stronger copy
-oracles pass `critical_path_schema_03` GREEN43. Neither critical ticket closes.
+The latest completed full harness `critical_graph_fix_full_30` is RED138/1364
+on frozen5A70F7CB and observerAADE22D0. Against full29:47 common recoveries,
+three new passing rows and one diagnostic regression. That regression is
+repaired through the common root resolver in focused05; the unchanged local
+S refusal leaves that focused run RED1/10. [Exact delta](#full30-local-source-next).
+Neither critical ticket closes.
 Actual-call input formation, local source occurrences, capture placement and
 typed pointer storage remain incomplete. [Current evidence](#path-schema-closure).
 Earlier focused merge/output01 is RED7/152 on9DD7E13A,
@@ -1661,6 +1662,62 @@ depth/ABI negatives; genuine nested walker execution. Compare a
 descriptor-as-address mutant with an independently selected arena ref-cell
 address before dereferencing: detection must be an assertion, not incidental
 undefined access. Existing descriptor-comparison positives need migration.
+
+<a id="full30-local-source-next"></a>
+### 5.23 Full30 and local source occurrence migration
+
+Full30 is terminal RED138/1364; executable
+`9946D8720C8CBE4D582C058F793553CD60BDFAACE21D2F279454F0FEDD3449BD`,
+translator `5A70F7CB747E36B3F89ECE24DDC1B1A214699C3752B0577A5A85A69E6407B181`,
+harness `AADE22D03A5A94D7284E295DC9CD812A23E2E359F1889C8EB838F6934AB60539`.
+There are1361 common identities, no removed identities, three added positives
+all passing. Of47 recovered common rows,44 have explicitly migrated fixture
+bytes; unchanged-source recoveries are `unit_address_path_actual_span`,
+`unit_nested_body_own_not_node`, and `unit_ref_absent_colon`. All137 retained
+failures have the same summary reason;136 normalized translator logs are
+identical. The remaining migrated captured-merge row moves its failure from
+the obsolete Model declaration to the actual missing captured `loc` path.
+All1340 completed staged fixtures having live counterparts match; the75
+common staged headers and generated driver C are unchanged against full29.
+The RED run correctly has no PROVENANCE_COMPLETE certificate.
+
+The sole new failure is diagnostic, not acceptance: `unit_node_root_in_entry_refused`
+still refuses, but the new missing-tail check mislabels the absent lexical
+root as a missing segment. `l2_path_chain_check` now first asks the ordinary
+`l2_path_root` under the selected method, restores the caller context, then
+diagnoses the tail. No node-name branch or expectation change is added.
+Focused `critical_path_schema_05` is RED1/10: all six path/diagnostic controls
+pass; unchanged `unit_local_ns_node_nested` still refuses at S's declaration.
+
+Next is a connected producer migration, not removal of individual guards:
+
+1. Finish original-local namespace registration by exact P0 declaration
+   identity before any COUNT/throws/signature arrays are sized. Do not append
+   methods during COUNT/PLACE/FILL or recursively reuse a not-yet-committed
+   method index during `ns_proc_add`.
+2. Keep two compiler coordinates for the same occurrence: S's callable-relative
+   source root (null root place) and its exact host GraphField attachment.
+   Resolve nested/repeated definitions by source identity, not spelling or the
+   `ns_local` outer-method stamp alone.
+3. COUNT each whole local body through the ordinary source traversal. Allocate
+   host shells and local roots in dependency order; alias the existing exact
+   host child, then allocate its source bodies. Fill edges only after shells
+   exist; borrowed references are not allocation dependencies.
+4. Retire reached-declaration `l2_emit_local_ns` allocation and its incomplete
+   NSF prefix/control-shell producer together. Reach must neither clone S nor
+   invoke its body. Attach native and walk roles to that same occurrence.
+5. Derive NODE's exact lexical-owner stop; replay only the remaining physical
+   suffix. Test uncalled, repeated, nested, hosted and copied parents; force
+   both host/local methods through the walker and reject duplicate-allocation
+   or wrong-parent mutants with graph assertions.
+
+The historical `unit_local_ns_fresh` expectation94 is not the current rule.
+For its exact source, §9 retains dormant S, §12 re-enters the same occurrence,
+and Q19.2 distinguishes calling S from accessing S\\v. The first m writes9;
+the second m does not call S, so it reads9: expected99 is a normative deduction,
+not yet a measured new gate. An explicit S call re-runs its initializer in the
+same cell; merge copies current state and is not an implicit reset to literal4.
+Do not preserve94 by inserting a clone, implicit invocation or reset.
 
 ## 6. Required evidence
 

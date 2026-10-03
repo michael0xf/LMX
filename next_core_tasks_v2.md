@@ -466,6 +466,12 @@ Current bounded implementation, with no DONE claim:
   separate held value from address and close real C pointer-cell storage,
   native/walker depth consumption, copy/GC and raw C boundaries together.
   A cast or a new synchronized shadow cell is not a repair.
+  [Full30 delta and local source producer](steps/critical-graph-namespace-source-layout-20261003.md#full30-local-source-next):
+  RED138/1364,47 common recoveries plus three new positives; one root/tail
+  diagnostic regression restored by shared root resolution. Finish exact local
+  registration before sizing passes, dependency-ordered source shells and
+  source-field attachment, then retire reached-declaration cloning. Dormant S
+  persists; its literal initializer runs only when S is explicitly executed.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

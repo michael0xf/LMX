@@ -135,6 +135,10 @@ method/body-to-own/schema paths, registered-body merge/ABI/receive planning
 and authoritative path/literal CHECK diagnostics. Three obsolete text pins
 now observe copy independence and recursive123 at exit7. Neither result
 closes the full source-graph or pointer ticket.
+Full30 is RED138/1364:47 common recoveries, three new positives and one
+root-versus-tail diagnostic regression. The common root-resolver repair
+restores that row in focused05 RED1/10; the unchanged local S producer remains
+the sole focused refusal. [Delta and connected next slice](critical-graph-namespace-source-layout-20261003.md#full30-local-source-next).
 Typed @Structure and current held callable/capture are not repaired by this
 placement cut. [Exact bytes and boundaries](critical-graph-namespace-source-layout-20261003.md#compact-output-place).
 

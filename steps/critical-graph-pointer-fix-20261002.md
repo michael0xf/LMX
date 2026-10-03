@@ -699,6 +699,76 @@ without a pointee probe; copy preserves binding/alias topology independently
 of the existing opaque machine-pointer pointee policy. These remain future
 P0–P3 acceptance, not measured successes.
 
+### Original unit order and hosted callable-field continuation
+
+The E producer now reads the original P0 unit, rather than using the filtered
+executable body as the source-order authority. Original method/named-definition
+identity selects its existing constructor and source slot. Compact tail ranks
+exclude definitions already placed there. The execution body remains a separate
+compiler projection; it is not a second retained graph. E counting is mandatory:
+an absent source producer is a located refusal, not permission to filter the
+source again. OS/directives, discarded forward signatures and native-only
+operations still need their real generic producer. This bounded change does not
+claim that all source forms are preserved.
+
+| Evidence directory under `build/l2_harness/` | Verdict | Scope |
+| --- | --- | --- |
+| `critical_graph_original_root_01` | GREEN, 8 | First original-unit order witnesses |
+| `critical_graph_original_root_02` | No fixture verdict | Incorrect selection filter; not evidence |
+| `critical_graph_original_root_03` | RED, 15 of 17 | Driver L1 member-argument spelling error; corrected by a local width variable |
+| `critical_graph_original_root_04` | GREEN, 17 | Original source order, actual parents, copy and root-order mutants |
+| `critical_graph_original_root_05` | RED, 1 of 14 | Dormant fixture placed `return: ()` at column zero; that is a root operation, not a sub trailer |
+| `critical_graph_original_root_06` | GREEN, 11 | Eight fixtures, native/cleared-root order, dormant DIV/MOD, order mutants and translation-only zero-divisor pin |
+| `critical_graph_raw_c_01` | RED, 12 of 20 | Twelve safe native C-operation positives expose the missing retained source producer; five located root-return refusals pass |
+| `critical_graph_local_callable_place_01` | RED, 2 of 7 | Old root-order shape plus an unsupported hosted field-call fixture setup |
+| `critical_graph_local_callable_place_02` | RED, 1 of 4 | Scalar-read hosted fixture reaches the actual invalid flat-slot constructor |
+| `critical_graph_local_callable_place_03` | RED, 1 of 7 | Hosted effect and two local-procedure regressions pass; old root-order shape still fails before execution |
+
+`original_root_06` staged translator source SHA256
+`01E8CA6C22C41DF67580F26608855A834E6E0BCDD5F7E8D1DB9FD661C70C51C6`
+and executable SHA256
+`49B543680ACA74A33C38B04B167E9DAEE3A958E813AC4C0725B6184141CB849E`.
+Its root-order mutants actually swap two distinct fields, fail graph assertions
+and retain the expected program exit 7. Dormant literal-zero DIV/MOD operations
+remain present but are never executed; no C undefined behavior is used as proof.
+The fixture trailer was corrected without changing the parser.
+
+The raw-C positive fixtures use the ordinary exit message and retain their
+original literal payloads. Empty output is checked as one empty program line,
+not discarded by a truthiness check or invented from a trailing newline. The
+positive-output assertions have not passed yet: mandatory original-source
+counting refuses the missing C-operation producer. These failures must be
+fixed by retaining native-only source generally, not by a C-name allowlist,
+an OP_NONE substitute or restoring the filtered-root fallback. The five
+passing negative rows pin located valued-root-return diagnostics; they do not
+prove a C-argument validator and do not execute invalid raw C calls.
+
+`local_callable_place_03` staged translator source SHA256
+`97CF90B9326E748EE41656EA65C05142B18B680CA99EEBCBD35ED3632AE5FA35`
+and executable SHA256
+`75B003A2F630B7949814AB37A1277685437F89B0647B96694CA517BAEFD57F91`.
+The connected field constructor now uses the completed GraphField holder/child,
+not a fabricated root slot and `own_uchild = -1`. Deferred Structure/callable
+fields consume their actual ordinals before later numeric fields. The obsolete
+local-namespace flat-index patch pass is removed. Local procedures still build
+their real objects in their reached runtime constructor; no substitute unit
+object is allocated. After this measured run, the constructor pass moved after
+unit reference wiring to avoid copying an incompletely wired global model;
+that new ordering is not certified by `_03`. Exact field-identity/parent and
+post-callable-field tests are being added. Effect 7 alone is insufficient.
+
+### Latest completed frozen full gate
+
+`critical_graph_fix_full_06`: **RED, 32 of 1249**. Nine `_05` failures disappear,
+and no new failure identity occurs. It staged translator source SHA256
+`AC1BE69317AD36CB4342C4F8A2209CC7E0030FBD429B52482F4136ABE0F8D6B9`
+and executable SHA256
+`601BB0B7E5CDBBFD9FD314D556E13FE5C2AB53C57F7367353E509617E98BFA29`.
+It predates the original-unit and hosted-constructor changes above and is not
+a current-source verdict. Its complete remaining identities and diagnostics
+are in that directory's `summary.txt`. No failed row has been waived wholesale;
+stable twins, graph release and pointer implementation remain pending.
+
 ## 5. Full gate / release status
 
 Full harness `build/l2_harness/critical_graph_fix_full_01`: **RED, 36 of 1222**.

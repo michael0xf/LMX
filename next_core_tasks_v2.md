@@ -118,8 +118,24 @@ Current bounded implementation, with no DONE claim:
   method/namespace/qualified slot helpers. `critical_graph_root_source_05`:
   15 targets, 0 failed; `critical_graph_unit_slots_01`: 17 targets, 0 failed.
   These gates do not prove original-unit declaration order, full T7 formal
-  defaults, names/comments or pointer depth. Full `_06` is running; no verdict
-  is claimed. [Exact scope and hashes](steps/critical-graph-pointer-fix-20261002.md).
+  defaults, names/comments or pointer depth. Frozen full `_06` completed RED,
+  32 of 1249; it predates the continuation below.
+  [Exact scope and hashes](steps/critical-graph-pointer-fix-20261002.md).
+- [x] G2 bounded original-unit producer: actual method/named definitions take
+  their original source slots; compact tail ranks exclude already placed
+  definitions. E counting cannot fall back to a filtered graph.
+  `critical_graph_original_root_06`: GREEN, 11 targets from eight fixtures,
+  including exact order/parents and two effect-preserving order mutants.
+  OS/directives, forward signatures and generic native-only source retention
+  remain open. Safe raw-C focused positives expose the missing producer:
+  `critical_graph_raw_c_01` RED, 12 of 20; this is not permission to omit them.
+- [ ] G2 hosted field construction: constructor and callable/Structure links
+  must use the actual GraphField holder/child after holder/reference allocation,
+  consuming every source ordinal. The old flat-index local patcher is removed
+  in sandbox. `_local_callable_place_03` passes the hosted effect and two local
+  procedure regressions but is RED, 1 of 7, on an obsolete root-order shape.
+  Exact field identity/parents, later fields and the final constructor ordering
+  still require fresh measurement; neither critical ticket is closed.
 - [ ] G2/G3: construct all source occurrences through one recursive placement
   algorithm, migrate every width/path/schema/copy/capture consumer, then remove
   selective eligibility, packed fallback and data-shell placement. B0 does not
@@ -136,6 +152,7 @@ Current bounded implementation, with no DONE claim:
   an actually green graph checkpoint before the pointer implementation.
   Latest completed full `critical_graph_fix_full_06`: RED, 32 of 1249.
   Nine failures from `_05` no longer occur; no new failures were introduced.
+  This snapshot predates the original-unit/hosted-constructor continuation.
   The remaining failures include obsolete expectations and genuine admission/
   capture implementation debts, not a blanket waiver. Do not
   substitute focused green rows for a full current-source verdict.

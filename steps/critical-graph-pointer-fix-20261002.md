@@ -927,25 +927,114 @@ slice must consume an unambiguous common executable/receiving contract,
 retaining the source operands and ordinary parentage; no new language rule
 or per-name exception is implied. Neither critical ticket is closed.
 
-### Next bounded producer dependency: resolved external-native calls
+### Shared resolved external-native producer and mandatory method retention
 
-Read-only full11 inspection confirms that the native receiver correction above
-does not supply a retained application producer. `l2_is_known` recognizes raw
-`c.*` and functions from the unit's parsed-predef declarations; `l2_rw_operand`
-and `l2_rw_stmt_content` retain the former but omit the latter. `entry_parse_min`
-refuses at source line21, frame `lm_p0_parse_file`, with `this operand`.
-`unit_define_ccall` emits real native strlen calls and size_t cells, yet its
-quiet walker-eligibility refusal discards the source-view body. Neither native
-success nor a complete method header makes that omitted body acceptable.
+The sandbox now shares one statement/expression producer for explicit `c.*`,
+parsed-predef functions and resolved foreign callable places. Existing native
+head resolution selects the category; a real lexical value/formal wins over
+a prototype with the same spelling. Actual boundaries reuse the native
+expression spans, with no fixed arity. Known names use existing OWN/ARG/path/
+index readers; literal values use real primitive cells or Array descriptors.
+Only explicitly external/unbound symbolic operands get symbolic identities.
+Macro operands also check the real lexical binding before the existing define
+table. No header scanning, C-name allowlist, per-atom metadata, second AST or
+runtime name resolver was added. Frame trailers use the shared source writer.
 
-The bounded repair must reuse the resolved external-native category and
-`l2_predef_result_ty`, and retain actual operands through ordinary spans/place
-projections. Merely adding `l2_is_known -> l2_rw_source_node` is insufficient:
-the current raw recursive writer materializes known variable atoms as new
-SOURCE_SYMBOL leaves. It must not duplicate their real value cells or bind
-source names at runtime. Original body counting/placement must remain
-independent of interpreter capability. No code for this next substep has been
-added, and no C-name allowlist or unknown-call fallback is authorized.
+Ordinary source-bearing method COUNT is mandatory, independently of walker
+eligibility. A failed producer now returns a located diagnostic; the former
+quiet failed-view discard helper is removed. Empty source bodies, actual return
+trailers and descriptor-only contracts remain distinct. Native-dependent source
+sets interpreter capability false, not source width zero. T7 cannot manufacture
+a native-zero returned occurrence containing unsupported machine operations.
+Library/local procedure/PAP/MAD source routing still has separate unfinished
+boundaries; this is not universal G2 closure.
+
+The existing field-Structure constructor is factored to its actual owning
+source holder/child and reused by a second FILL pass over the same source rows.
+Ordinary allocation precedes namespace reference wiring; field construction
+follows that wiring so merge cannot clone an incomplete referent. Projected
+construction targets its own row alias, not the model's root slot. The old late
+fill is suppressed only for those source-owned definitions. Retention itself
+does not implement the walker's reached-declaration fresh-instance effect:
+those methods stay native. No duplicate graph object or substitute activation
+was introduced. Projected returned bodies containing those declarations still
+need that common execution producer before they can be admitted.
+
+`throws` is retained as a source declaration, not an executable operation.
+`throw` keeps native execution and retains its declared exit plus payload using
+the same resolved actual producer. Existing trailer and payload checking remains
+in force. The existing catch/rethrow and throw-signature tests still pass.
+
+Completed evidence directories under `build/l2_harness/`:
+
+| Directory | Verdict | Scope / correction |
+| --- | --- | --- |
+| `critical_graph_external_producer_01` | No fixture verdict | Unknown focused selector after staging |
+| `critical_graph_external_producer_02` | RED, 3 of 17 | External positives/mutants pass; a pre-execution cell oracle and two other missing string producers fail |
+| `critical_graph_external_producer_03` | No fixture verdict | Unknown focused selectors; not a gate |
+| `critical_graph_external_producer_04` | RED, 3 of 22 | Mandatory retention exposes Holder, macro operand and throws gaps |
+| `critical_graph_external_producer_05` | No fixture verdict | Relative output path resolves incorrectly after staging |
+| `critical_graph_external_producer_06` | No fixture verdict | Translator parse failure: missing multi-level tail cutter in the new branch |
+| `critical_graph_external_producer_07` | RED, 1 of 29 | All producers/regressions pass; new mutant did not pass its command to the driver |
+| `critical_graph_external_producer_08` | GREEN, 18 | Corrected genuine mutant, field freshness, macro, throw/catch/signature regressions |
+| `critical_graph_external_producer_09` | GREEN, 39 | All bounded producers, exact Holder/hosted-field paths and mutants, existing local constructor regressions |
+
+The pre-execution shadow oracle checks the declared cell's type, not its later
+value13: INIT0 and SET13 remain exact, and both actual executions still return13.
+The corrected mutant uses the driver's established `mutate null-path` arguments;
+no structural assertion or expected program result was removed.
+
+Both `_07` and `_08` use translator source SHA256
+`8A4841BA2B8130EB6E6081B77644A072849F6E488A2C666EDDE2386047908C2D`.
+The `_08` executable SHA256 is
+`057381412C2AF0AE144F655410D7CE92CA9A0D9D8F99F5FBD88CE6157E0382F1`.
+Raw/predef applications pass 710/718 assertions, including own/formal actuals,
+conditional bodies, unreachable post-return calls and unchanged native dispatch.
+The assignment/return operand witness passes 544; lexical shadow passes206.
+Holder now has the method's two actual headers, ordered fields1/3, actual external
+names/parents and the source RET at slot3: 472 assertions across native and cleared-
+root runs. The method itself keeps its native word under the clear-method knob.
+The repeated local-construction regression returns94, not a stale-instance99.
+Five external/Holder erase mutants match a baseline, mutate the actual graph,
+fail structural comparison, and retain program exit7. These are focused source-
+retention results, not a full graph/name/comment codec or pointer release.
+
+The `_09` translator source is unchanged from `_08`; its executable SHA256 is
+`8ACBBA5D69A5CFA6FB40CB8EB37D70D0B55FD2AD57008E95F5DCA3908219F583`.
+The hosted callable-field oracle removes only its obsolete extra shell edge.
+The IF body at `[0,4,2]` has two source fields; Holder is directly at
+`[0,4,2,0]`, with `c=3`, the borrowed root `step`, and `d=11`, and its parent
+is that IF body. All value/identity/parent assertions remain: 108 pass across
+native and cleared-root runs. Its relocated erase mutant changes the actual
+borrowed field, fails shape checks and leaves program exit7 unchanged.
+Both original executions already returned7; this was an oracle migration,
+not a translator execution fix or proof of a complete hosted-source codec.
+
+Latest completed full `critical_graph_fix_full_12`: **RED, 204 of 1284**,
+staged from document HEAD `6b42515b`, with the same translator source above
+and executable SHA256
+`0A188C3FB2F9946C540CB9BEB5D3136BC773A4326B9669779C8AD60AEAC5CA8A`.
+It precedes the hosted oracle migration; `_09` is the subsequent focused
+verdict, not a replacement full gate. Compared with full11 (RED45/1266), ten
+failure identities disappear and 169 new ones occur. Mandatory method COUNT
+exposes previously erased source producers; restoring silent discard is not
+a repair. Diagnostic groups include 72 method Structure declarations, 21
+field paths, 20 statements, 17 operands and 14 local executable definitions.
+These groups are triage, not evidence that every failing input is normative
+or that all old expectations are obsolete. Complete rows remain in summary.txt.
+
+Read-only review distinguishes genuine resolution disagreements from missing
+producers: callable-formal result typing currently selects an unrelated unit
+method in a name clash, and a no-result callable actual incorrectly enters
+return-model admission. The existing context-aware callable/occurrence
+resolvers must supply both source and execution routes. Other connected
+repairs are exact hosted Structure receiver destinations, executable local
+definitions, proven foreign-member paths and local-model admission using the
+reached GraphField rather than a namespace prototype. Ordinary quoted actuals,
+discarded forward headers, library/PAP/MAD nested definitions, actual returns
+and post-return source also remain open. Existing negative diagnoses must be
+restored, not replaced by an earlier generic producer refusal. Stable twins,
+pointer implementation and self-build release remain behind the red graph gate.
 
 ### Actual signature-header oracle negative control
 

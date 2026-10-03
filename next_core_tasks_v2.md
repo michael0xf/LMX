@@ -149,7 +149,7 @@ Current bounded implementation, with no DONE claim:
   literal tails, or the latter by adding rank/depth-specific Array forms.
   Exact mechanisms and distinguishing witnesses are in the evidence journal;
   these are implementation dependencies, not new language rules.
-- [ ] G2 resolved external-native application producer: raw `c.*` and ordinary
+- [x] G2 bounded resolved external-native application producer: raw `c.*` and ordinary
   functions admitted by the existing parsed-predef mechanism must use one
   retained statement/expression construction route. Carry ordinary actuals
   through their resolved spans and real declared places, not fresh symbolic
@@ -158,7 +158,24 @@ Current bounded implementation, with no DONE claim:
   body is omitted after a quiet walker-eligibility refusal is not source-faithful.
   Positive native effects, exact graph/target/value assertions, an independent
   erase mutant, an ordinary LMX-call opposite and unknown-head definitions
-  are required before this bounded substep is closed.
+  are measured by `critical_graph_external_producer_07` and `_08`: ordinary
+  source-bearing method COUNT no longer quietly discards native-only bodies.
+  `_07` RED1/29 was only a new mutant command omission; `_08` GREEN18 verifies
+  the corrected real mutation and local-field/throw/macro regressions. External
+  statement/assignment/return actuals, conditional and post-return operations,
+  lexical shadowing, and unchanged native words have exact graph assertions.
+  This is not the complete source codec: library/local procedure/PAP/MAD routes
+  and general method-source producers still have open gaps. The G2/G3 and full-
+  gate items remain open.
+- [x] G2 bounded field-constructor reuse: placed field Structures are filled
+  through their actual source holder/child after namespace references exist,
+  without another owning node or an old late duplicate fill. The exact Holder
+  oracle now requires its source method RET as well as ordered values/names/
+  parents; `_08` passes native, cleared-root, native-retention and real erase
+  controls. Local construction still returns94 on repeated calls. The walker
+  lacks the reached-declaration fresh-instance producer, so those methods stay
+  native; projected zero-native returned bodies with such definitions remain
+  blocked until that general producer exists. Do not bypass the capability guard.
 - [ ] G1/G4: complete the graph decoder and the real name/comment codec;
   compare full source containment, not just selected lowered instructions.
   The development kernel now has a bounded external address-to-source-name
@@ -188,8 +205,16 @@ Current bounded implementation, with no DONE claim:
   This is not universal source construction, a codec, or a critical-ticket release.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest completed full `critical_graph_fix_full_11`: RED, 45 of 1266.
-  Full10 remains RED history (91/1266). Full11 includes the shared predef
+  Latest completed full `critical_graph_fix_full_12`: RED, 204 of 1284,
+  source SHA256 `8A4841BA2B8130EB6E6081B77644A072849F6E488A2C666EDDE2386047908C2D`.
+  Mandatory method retention exposes previously skipped source producers;
+  relative to full11, ten old failure identities disappear and 169 new ones
+  occur. Repair context-aware callable resolution, method Structure receiver
+  places, executable local definitions, proven foreign-member paths and local
+  admission before retrying the full gate. Do not restore quiet source discard.
+  Subsequent focused external-producer09 is GREEN39, including migrated hosted
+  field paths and a real erase mutant; it is not a replacement full verdict.
+  Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33
   checks successfully without implicit launch/membership fields. The independent

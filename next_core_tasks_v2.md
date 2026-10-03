@@ -134,9 +134,10 @@ Current bounded implementation, with no DONE claim:
   ownership through the same copy map; no second AST or saved source replay.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest completed full `critical_graph_fix_full_05`: RED, 41 of 1248;
-  historical 35 failures plus six stale layout assertions. It predates the
-  later T7/root/slot-helper cut. Fresh `_06` is running, not accepted. Do not
+  Latest completed full `critical_graph_fix_full_06`: RED, 32 of 1249.
+  Nine failures from `_05` no longer occur; no new failures were introduced.
+  The remaining failures include obsolete expectations and genuine admission/
+  capture implementation debts, not a blanket waiver. Do not
   substitute focused green rows for a full current-source verdict.
 
 - [ ] **Complete [critical_graph_bug](steps/tickets/critical_graph_bug.md)

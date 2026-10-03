@@ -537,8 +537,16 @@ critical_graph_unit_slots_01 executable SHA256
   770A338A632B41329860742551F38D6106C467B14231275DA2C43BB436F8C617
 ```
 
-`critical_graph_fix_full_06` staged that exact source and is running. No
-verdict is claimed here. Earlier `full_05` is RED, 41 of 1248: the historical
+`critical_graph_fix_full_06` staged that exact source and completed **RED,
+32 of 1249 targets**. Its executable SHA256 is
+`601BB0B7E5CDBBFD9FD314D556E13FE5C2AB53C57F7367353E509617E98BFA29`.
+Nine failures from `full_05` are absent and no new failure identity appeared.
+The remaining 32 are not waived: several rows still prescribe the removed
+root-pending limitation or temporary names, while the nested unused-field
+admission and whole captured-Structure transport have genuine implementation
+debts. Positive fixtures using obsolete implicit `Model: fresh` cloning need
+valid explicit-merge setup and actual observed success before their generated
+text assertions may be migrated. Earlier `full_05` is RED, 41 of 1248: the historical
 35 failures plus six pre-execution layout assertions; it predates this cut.
 Neither critical ticket is closed, and stable twins remain untouched.
 

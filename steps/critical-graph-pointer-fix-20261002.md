@@ -861,11 +861,60 @@ contract owner. Its reviewed harness SHA256 is
 `34995E6A33D5B3C1796DE456E89AA5BE36B527912E026BF29F1D4A0885C7A9A4`.
 It executes no constructor or compiler and cannot certify runtime behavior.
 
-Full `critical_graph_fix_full_11` is running against the same frozen
-translator source as the two focused green slices. Its harness predates
+Full `critical_graph_fix_full_11` is **RED, 45 of 1266 targets** against
+the same frozen translator source as the two focused green slices. Its
+executable SHA256 is
+`56A3487FC720491ED212AE59D3277BCC321CEF9013541A70A56AB714EECCD6A1`.
+It staged at doc HEAD e74985b3; the later published changes were docs only.
+Its harness predates
 the later provenance review and the five added genuine hidden/formal-input
 witness rows. A completed full11 verdict cannot certify those later edits;
-a fresh focused run is required for them.
+a fresh focused run is required for them. Exact remaining identities and
+diagnostics are retained in its `summary.txt`; no blanket waiver or code
+promotion occurred. Full10's 91 failures remain historical evidence.
+
+Fresh `critical_graph_binding_oracle_03` is **GREEN, 17 targets**. Both genuine
+unsigned hidden-input and explicit-formal cases execute natively, with the
+physical root forced through the walker, and with both methods' native words
+cleared. The callee sees caller5, returns its internal1, and neither caller5
+nor lexical source3 changes. Reading `peek\\k` refuses at the missing name;
+the input did not become a graph field. Real unknown-RHS, incompatible-value
+and void-result negatives remain required. CALL/header probes also exercise
+the later allocation-provenance oracle. `_01` rejected unknown fixture names
+before builds; `_02` was RED2/17 on an old x-slot pin and the new refusal's
+guessed diagnostic. Independently observed x at source slot5 and the exact
+located missing-name diagnostic were then pinned, leaving runtime behavior
+and all type/kind/arity assertions unchanged. This closes only those measured
+input/opposite witnesses, not universal source-environment closure.
+
+Fresh `critical_graph_literal_definition_01` is **GREEN, 17 targets**, with
+the same frozen translator source and executable SHA256
+`3CAFC03A58E2BA33E357EDA8E2C8629D9ADF0120346B31F7EA7193FF0B11C6DA`.
+Nine former refusal rows now check their actual current semantics: four root
+unknown-head literal definitions, three method-local literal definitions and
+two unknown unsigned definitions in peek. Historical filenames are retained,
+but obsolete comments/Expect values are corrected. Each requires program exit7
+and an exact whole-tree assertion, external names, parent links, literal values
+and callable target identity. The four root cases run 95 checks, method-local
+cases 282 and unsigned cases 813; native and cleared-root walking both execute.
+The unsigned twin also clears the native words of peek and m. Real unknown-RHS,
+incompatible assignment and no-result-as-value negatives still refuse.
+
+The driver adds only `numvalue TYPE VALUE`, reusing its existing exact numeric
+type/value accessors; it does not introduce a new core value category or loosen
+the tree decoder. An independent frozen generated-C mutant in
+`build/critical_graph_unsigned_value_mutant_01` changes exactly the retained
+unsigned source cell initializer1 to0, not the native constructor or program
+logic. Baseline C SHA256:
+`DC4406C97004117D19001BE294D5467A90488DCF0B38B79F0EE8C67C03CB4D5E`;
+mutant SHA256:
+`AFFD8A492BE3FD8FCE546B9A150A6E8FD808331676728E75791228E3DE844DC1`.
+Baseline exits0; mutant exits1, with compared=1, shape_failures=1,
+other_failures=0 and actual/expected program exit7. The primitive domain/type
+checks still pass; the exact unsigned value assertion detects the defect.
+This is an actual constructor mutation, not changing the expected value or
+removing an assertion. It does not make the earlier full11 green or close the
+source codec, universal layout or pointer repair.
 
 Runtime CALL representation remains an explicit implementation debt.
 `lmx_walk_call` still guesses compact versus explicit-contract layout from
@@ -877,6 +926,26 @@ not become a hidden registry or another shape fallback. The next runtime
 slice must consume an unambiguous common executable/receiving contract,
 retaining the source operands and ordinary parentage; no new language rule
 or per-name exception is implied. Neither critical ticket is closed.
+
+### Next bounded producer dependency: resolved external-native calls
+
+Read-only full11 inspection confirms that the native receiver correction above
+does not supply a retained application producer. `l2_is_known` recognizes raw
+`c.*` and functions from the unit's parsed-predef declarations; `l2_rw_operand`
+and `l2_rw_stmt_content` retain the former but omit the latter. `entry_parse_min`
+refuses at source line21, frame `lm_p0_parse_file`, with `this operand`.
+`unit_define_ccall` emits real native strlen calls and size_t cells, yet its
+quiet walker-eligibility refusal discards the source-view body. Neither native
+success nor a complete method header makes that omitted body acceptable.
+
+The bounded repair must reuse the resolved external-native category and
+`l2_predef_result_ty`, and retain actual operands through ordinary spans/place
+projections. Merely adding `l2_is_known -> l2_rw_source_node` is insufficient:
+the current raw recursive writer materializes known variable atoms as new
+SOURCE_SYMBOL leaves. It must not duplicate their real value cells or bind
+source names at runtime. Original body counting/placement must remain
+independent of interpreter capability. No code for this next substep has been
+added, and no C-name allowlist or unknown-call fallback is authorized.
 
 ### Actual signature-header oracle negative control
 

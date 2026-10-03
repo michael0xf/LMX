@@ -149,6 +149,16 @@ Current bounded implementation, with no DONE claim:
   literal tails, or the latter by adding rank/depth-specific Array forms.
   Exact mechanisms and distinguishing witnesses are in the evidence journal;
   these are implementation dependencies, not new language rules.
+- [ ] G2 resolved external-native application producer: raw `c.*` and ordinary
+  functions admitted by the existing parsed-predef mechanism must use one
+  retained statement/expression construction route. Carry ordinary actuals
+  through their resolved spans and real declared places, not fresh symbolic
+  leaves or a second AST. COUNT/PLACE/FILL must retain the complete method
+  source even when its operations require native dispatch. A method whose
+  body is omitted after a quiet walker-eligibility refusal is not source-faithful.
+  Positive native effects, exact graph/target/value assertions, an independent
+  erase mutant, an ordinary LMX-call opposite and unknown-head definitions
+  are required before this bounded substep is closed.
 - [ ] G1/G4: complete the graph decoder and the real name/comment codec;
   compare full source containment, not just selected lowered instructions.
   The development kernel now has a bounded external address-to-source-name
@@ -178,11 +188,12 @@ Current bounded implementation, with no DONE claim:
   This is not universal source construction, a codec, or a critical-ticket release.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest completed full `critical_graph_fix_full_10`: RED, 91 of 1266.
-  It includes the ELSE, contract-tail and runtime/source placement changes,
-  and stricter exact source/header checks. Its isolated ELSE-head mutant now
+  Latest completed full `critical_graph_fix_full_11`: RED, 45 of 1266.
+  Full10 remains RED history (91/1266). Full11 includes the shared predef
+  receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33
-  checks successfully without implicit launch/membership fields. Full09
+  checks successfully without implicit launch/membership fields. The independent
+  L3 gate runs all 11 suites and four type-budget probes successfully. Full09
   remains earlier RED evidence (81/1263), not the latest verdict.
   Exact identities/hashes are retained in the evidence journal.
   The remaining failures include obsolete expectations and genuine admission/

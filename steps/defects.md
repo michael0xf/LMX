@@ -4,6 +4,57 @@
 
 ## Текущие и недавно закрытые
 
+<a id="compiler-text-view-ownership"></a>
+### COMPILER-TEXT-VIEW-OWNERSHIP — 2026-10-03, Codex, IN WORK
+
+Targeted allocation probes for the shared Array-place slice expose a counted
+translation-storage residue even on the successful baseline: n2295/free1227/
+live1068. Failing its first retained compact-head allocation leaves live1065;
+therefore that residue does not require any successful new head-cache or path
+workspace allocation. Do not claim that all1065 have one cause without exact
+pointer tracing.
+
+Source-confirmed older ownership gaps: `l2_text_skip` allocates a Text view
+without an owner, while repeated `l2_foreign_intern` may return an existing
+type without retaining/releasing that view; `l2_foreign_free` drops the
+registry arrays but not owned views. The static Lmx/sender/payload Text caches
+also require explicit lifetime review. These are compiler Text views, not
+language atoms or permission to add runtime metadata.
+
+Repair the common ownership boundary: transient views must not accumulate
+for repeated classification, and any retained view must have an exact owner
+and release path. Preserve raw-C admission, primitive/foreign contract
+identity and source-byte lifetime. A whole-allocation list or a runtime graph
+is not a substitute. Exact evidence and limitations:
+[resource probe](critical-graph-namespace-source-layout-20261003.md#array-place-resource-evidence).
+The initial probe is historical evidence, not an all-heap leak certificate.
+The follow-up sandbox slice removes transient heap views and lets the
+existing type interner own one Text-plus-bytes block per new entry. Existing
+fixed-name pointer caches retain one literal-backed view each and are freed
+and reset at the translation's release boundary; the Array descriptor name
+is a borrowed local view. Sender/payload cache failures are diagnosed before
+their namespace rows are published. Focused05 is GREEN41 but exact pointer
+tracking still finds1068 leaked addresses:1065 table names, two procedure
+adapter shells and one discarded foreign-type name. The final owner repair
+frees table names, synthetic shells before borrowed P0 document destruction,
+and interner rows before count rollback. Focused06 is GREEN41 and the
+independent until/trailer07 gate GREEN11 on source3B903EC6. Exact tracing
+frees all2296 counted baseline allocations and all1453 allocations after
+the second retained-cache allocation fails. P0/uncounted CRT allocations
+are not covered. Full24 is running on those bytes; full23 completed
+RED185/1329 on the preceding resource slice, not these edits.
+This is not a runtime graph or a claim that source reconstruction is complete.
+
+Preserved attempts `critical_graph_text_ownership_01`/02 fail before building
+the compiler: a global valued foreign Text is checked before predef types
+are registered. Attempt03's explicit `foreign` duplicates its registration
+on the pinned L1 validator's second pass. No L1/parser edit or fake qualifier
+was introduced to hide that ordering defect. Attempt04 builds the compiler
+but refuses a misspelled selected fixture name. These four attempts are not
+accepted gates or cleanup evidence. Full hashes, mechanisms, fault controls
+and remaining diagnostic limitations:
+[bounded ownership evidence](critical-graph-namespace-source-layout-20261003.md#compiler-ownership-evidence).
+
 <a id="critical-graph-bug"></a>
 ### critical_graph_bug — 2026-10-02, Codex, CRITICAL / OPEN
 
@@ -18,7 +69,7 @@ Confirmed by code inspection and five translation-only probes on `36bbefca`;
 no new runtime/build gate was run. The full requirement is structural recovery
 from the graph, including source-defined field order, while allowing receivers
 to materialize typed cells. Runtime results alone cannot establish it.
-Owner unclaimed; the detailed author-requested ticket, exact provenance,
+Owner Codex (inherited sandbox repair in work); the author-requested ticket, exact provenance,
 examples and structural/mutation acceptance are in
 [critical_graph_bug](tickets/critical_graph_bug.md). This is an open K10 defect,
 not implementation completed by this documentation commit.

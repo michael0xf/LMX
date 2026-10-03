@@ -325,12 +325,45 @@ Current bounded implementation, with no DONE claim:
   and remaining shared failure details do not change. Three added targets
   are the passing actual-copy witness and both still-refused Array stores.
   The later field-contract join is a separate slice, not covered by full21.
+  Its original Array STORE and read witnesses subsequently pass through one
+  declaration-derived descriptor place shared by CHECK/native/walker.
+  `critical_graph_array_place_08` is GREEN16 on source9589D74D:
+  original witnesses108 checks each, selector witness44 native/48 cleared
+  method/root checks, exact ELEM/ELEMPUT operand shapes, and one isolated
+  index-erasure mutant with unchanged exit7. This is a bounded one-descriptor
+  index route, not closure of all nested Array/rectangular/formal producers
+  or old fixed-path consumers. Full22 completes RED188/1329: two old failures
+  recover, five added rows pass, eight shared rows regress. Normative triage
+  must distinguish obsolete witnesses from missing shared producers, not
+  waive either. The subsequent resource/diagnostic slice is focused14
+  GREEN20 on B7AFC2FB; full23 completes RED185/1329 on those frozen bytes.
+  Four diagnostic/bounds rows recover; the sole new failure is the obsolete
+  lazy Array-load spelling oracle, not an observed unguarded load.
+  Connected remaining work: preserve ordinary descriptor-reference element
+  contracts through nested Array paths (without depth/literal-only bans);
+  migrate obsolete implicit-copy fixtures to explicit merge; recognize valid
+  C99 integer bases in the shared literal producer, never in an index-specific
+  decoder. The counted text-view allocation residue has a separate
+  [ownership repair](steps/defects.md#compiler-text-view-ownership) in work;
+  successful source retention is not a heap-cleanup certificate.
+  The subsequent Text-ownership slices are GREEN41 on source865F7E6E and
+  GREEN41 on source3B903EC6, with an additional GREEN11 until/trailer gate
+  on3B903EC6. Exact pointer tracking on the latter source frees all2296
+  counted baseline allocations and all1453 counted allocations when the
+  second retained head-cache allocation fails. This is bounded compiler
+  ownership evidence, not a certificate for uncounted P0/CRT storage.
+  Full24 is running on the new frozen source and strengthened lazy-load
+  oracle; full23 remains the latest completed verdict until it finishes.
+  [Ownership mechanisms and hashes](steps/critical-graph-namespace-source-layout-20261003.md#compiler-ownership-evidence).
+  [Exact scope and hashes](steps/critical-graph-namespace-source-layout-20261003.md#array-place-evidence).
   Neither focused green nor full red releases either ticket.
   Earlier runtime recheck of the pre-cutover staged bytes is GREEN290 with107 executed
-  selftests; L3 passes11 suites and4 budget units. The next connected namespace
-  layout work is [specified separately](steps/critical-graph-namespace-source-layout-20261003.md):
-  original source order, one cell constructor, explicit metadata/physical
-  projection, schema/merge and actual trailer retention; not a guard-only fix.
+  selftests; L3 passes11 suites and4 budget units. The connected namespace
+  layout journal records those completed bounded source-order/constructor/
+  schema/trailer slices separately from the
+  [next nested-source cut](steps/critical-graph-namespace-source-layout-20261003.md#nested-source-next):
+  preserve original nested INIT occurrences and actual parent-instance/EXEC
+  projection; not a guard-only fix.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

@@ -1,12 +1,11 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_19` is RED174/1314
-on the earlier resolver-preparation bytes. The subsequent original-root namespace
-source-order cutover is implemented but incomplete: cutover04 is RED7/32.
-Its seven new rows pass; its two merge regressions are repaired by the subsequent
-interface-reception slice (cutover06 GREEN31). Full current-byte acceptance is
-still outstanding.
+The latest completed full harness `critical_graph_fix_full_23` is RED185/1329
+on frozen B7AFC2FB bytes. The subsequent Text-ownership slice is focused06
+GREEN41 plus until/trailer07 GREEN11 on3B903EC6; full24 is running on those
+new bytes. Earlier full22 RED188/1329, cutover04 RED7/32 and cutover06
+GREEN31 remain historical bounded evidence, not whole-kernel acceptance.
 No stable twin has been changed. This is part of
 [critical_graph_bug](tickets/critical_graph_bug.md), before the pointer repair.
 
@@ -632,6 +631,303 @@ the clean working snapshot remains0. The corrected witness uses an ordinary
 it does not remove that assertion or change caching semantics. Both original
 write witnesses remain intact. Read02 is focused evidence, not a full gate;
 whole-body reconstruction, indexed STORE and both critical releases are open.
+
+<a id="array-place-evidence"></a>
+### 5.11 One descriptor place for indexed reads and writes
+
+The common Array contract now serves CHECK, native lowering and retained
+walker operands. A compact statement head is parsed from its exact original
+bytes by P0; the cached compiler document retains topology and source
+coordinates until application cleanup. Bindings and contracts are resolved
+afresh in the original method environment. This is not an atom metadata
+table or another runtime graph.
+
+The existing structural path parser consumes `\[N]name` as a field
+occurrence. Its next bracket group is the element-expression span. The
+contract comes from the actual declaration, not a kind5/6 int/char guess or
+an already allocated physical slot. Native lowering captures the selected
+descriptor and backing before evaluating the index and RHS, then uses the
+ordinary receiving/conversion machinery. The walker retains ELEMPUT/4 and
+ELEM/3, with the same field projection and index span. It does not classify
+ordinary typed field-array access as raw C. L2 gains no bounds guard; L3
+keeps its existing final-element checking. The established immutable-branch
+write restriction and descriptor-path failure handling are shared, not new
+fallbacks.
+
+The new walker place allocates its path workspace from the actual segment
+count. Legacy fixed42 path consumers still exist elsewhere; this does not
+claim that all old depth limits have been removed. Likewise, one descriptor
+index is established here, not a complete producer for Array formals,
+following independent descriptors, or all rectangular adjacent groups.
+
+Fresh `build/l2_harness/critical_graph_array_place_08` is **GREEN16**:
+translator source SHA256
+`9589D74D371C8D49D3ACB6770D1C27AAF5ABCA0B2CB60F81BC91F9FAEC256814`,
+executable SHA256
+`A9BD3916A5625A13F91F0EA9C35714B43444B94899F7F353DA63A8AD70F44FB9`.
+Both original Array STORE witnesses now pass108 checks, as do the two
+additive read witnesses. The original STORE witness now reads the physical
+increment through ordinary `readCalls`, preserving its Array writes,
+reads, source-order/name/cell assertions, method identity and parent checks.
+This corrects the same clean-cache expectation identified in read01; it
+does not change working-state semantics.
+
+The new selector witness passes44 checks natively and48 with the actual
+method and root native entries cleared. It independently selects the first
+and last same-name Array fields (physical slots2 and5), evaluates
+`i+1U`/`i+2U`, rejects substitution by a same-name own Array, and
+checks both values and untouched scalar cells. Four generated graph-shape
+assertions require the exact OF/ARG/ADD/LIT edges in both ELEM and ELEMPUT.
+An isolated runtime mutant erases the first stored index operand:
+baseline1/setup1/compared1, setup_failures0, shape_failures1,
+other_failures0, with unchanged program exit7. It proves that the retained
+index is actually checked, not merely that native execution succeeds.
+
+The int-index negative still refuses the missing selected
+`lm_stg_convert_int_size_t` receiver. Its obsolete generic diagnostic
+needle and comment were corrected, not the refusal removed.
+Raw-pointer/index and existing method-array controls remain green.
+
+Attempts01,03 and04 retain compiler-build failures;02 and05 preserve
+RED3/13;06 preserves RED1/15;07 preserves RED1/16 (its first mutant omitted
+the comparison of the mutated operand). None is a release. Full22 on these
+bytes completes as recorded below; neither focused green nor an earlier
+kernel/L3 gate closes either critical ticket or permits stable promotion.
+
+<a id="array-place-full22"></a>
+### 5.12 Frozen full22 and normative triage
+
+`build/l2_harness/critical_graph_fix_full_22` completes **RED188/1329**,
+translator source SHA256
+`9589D74D371C8D49D3ACB6770D1C27AAF5ABCA0B2CB60F81BC91F9FAEC256814`,
+executable SHA256
+`F6DBE046E041AE348AA5BD144F82CAF8E339AE7203F1176E4C47232B46ECBB14`.
+Relative to full21, both original namespace Array STORE rows recover.
+All five added rows pass: the two namespace read rows, native/cleared selector
+rows, and index-erasure mutant. No row is removed.
+
+The eight shared OK-to-FAIL rows are not one undifferentiated implementation
+regression:
+
+- `entry_array_leading_zero` uses invalid C99 octal `08`. The former
+  index-only decimal accumulator accepted it incorrectly. Do not restore
+  that shortcut. Valid octal `010` is also unsupported by the shared
+  numeric producer; base-aware recognition/value/range support is genuine
+  common literal debt, not an Array rule.
+- `unit_arr_path_inner_value_refused`, `unit_arr_path_three_refused`,
+  and `unit_arr_path_variable_index_refused` encode withdrawn length-only,
+  depth-two or literal-only restrictions. The current earlier refusal at an
+  Array operand lacking a common value contract is also not an acceptable
+  final implementation. Establish descriptor-reference production; migrate
+  independent nested indexing to `\[index]`, leaving adjacent brackets to
+  one flat rectangular Array. Preserve any actual receiving-converter duty.
+- `unit_array_write_general_root_real_field` is a historical negative,
+  not a positive store test. Its unsupported-index refusal formerly masked
+  obsolete `Model: fresh` setup and an invalid value-return from the root.
+  Replace its setup deliberately with explicit merge and independently prove
+  that the copied field changes while its model and unrelated own Array do
+  not. Merely re-pinning the new diagnostic would not prove that behavior.
+- `unit_array_write_root_out_of_range` translates correctly; only its old
+  `[5U]` generated spelling pin fails. The changed remaining failure
+  `unit_arr_path_bounds_refused` similarly fails only an old `[3U]` pin.
+  Preserve translation-only status: executing either native out-of-bounds
+  access is C undefined behavior, not a safe acceptance run.
+- `unit_elem_store_norow_refused` and its walker twin still reject the
+  absent `lm_stg_convert_int_size_t`; their diagnostic shifted from RHS
+  `:7:11` to head `:7:5`. Restore the receiving value's exact diagnostic
+  place rather than loosen the promised refusal check.
+
+These results leave both critical tickets open. Eight older namespace rows
+that regressed relative to full19 were also inspected individually:
+`graph_shape_method_ref`, `unit_eternal_shape`, both
+`unit_capture_struct_write_*` rows, both
+`unit_*path_struct_rebind_refused` rows, and both `unit_s7_nested_*`
+rows. Seven refuse at obsolete known-Structure receiver declaration setup
+before reaching capture/admission/rebinding. The method-ref row exits7 in
+both dispatches and fails only its old Point-width1 oracle, but also retains
+obsolete `Point: box` setup. The valid explicit-copy row is already
+GREEN61 in full22. Migrate these deliberately without restoring implicit
+construction or accepting whole-Structure assignment through a path.
+
+Actual unknown-head nested definitions are an independent remaining source
+retention gap. `l2_ns_source_body` excludes parented namespaces and
+`l2_ns_procs` registers only root occurrences; nested `in: (int: x 1;
+int: y 3)` still needs width4 with both original INIT occurrences, not
+just two readable cells. Connect the existing nested source identity and
+actual instance/parent projection through constructor, native/EXEC and NSF
+consumers. Removing a parent guard alone is unsafe while EXEC still assumes
+a unit-root slot. Add native/cleared source-width/order witnesses and an
+independent dormant missing-INIT mutant before claiming this slice.
+
+<a id="array-place-resource-evidence"></a>
+### 5.13 Resource refusal, exact receiving diagnostics and dormant source oracle
+
+Cached compact-head parsing and joined path/workspace allocation now propagate
+an already diagnosed failure instead of falling through to an old producer.
+The workspace checks its actual segment-count arithmetic. A bare Atom needs
+no joined path allocation: its original Text view is borrowed, then the same
+value contract classifies an own Array versus a raw pointer. Non-Atom roots
+outside this name/path producer are not misreported as out-of-memory.
+No runtime guard, field, atom metadata or new graph is added.
+
+The receiving checker locates STORE conversion failure at the actual RHS.
+The two absent-converter twins again refuse exactly at `:7:11`. The two
+translation-only out-of-bounds rows now pin the captured index and actual
+typed backing relationship instead of an old decimal spelling.
+The write row additionally requires the exact retained ELEMPUT/AT/LIT/LIT
+edges and values at its original source statement place.
+
+The general oracle's optional `StoredAt {Method, Path}` scope follows
+the selected method's actual stored source edges. Its default executable
+reachability scope is unchanged. The dormant `broken` method is not
+pretended executed merely to inspect its source body, and its unsafe access
+is never run.
+Read-only in-memory controls accept its baseline and reject a null or removed
+index edge, index5 changed to6, and relocation of the stored operator from
+source slot3 to2. All native text relationships stay unchanged; removing only
+the optional scope restores the original executable-reachability rejection.
+These are pure oracle controls, not executions of the out-of-bounds program.
+
+Fresh `critical_graph_array_place_14` is **GREEN20**:
+translator source SHA256
+`B7AFC2FBB49C02C534B83869A734ABFAF39BCB57CC8E8168F54409B9B7CB1B17`,
+executable SHA256
+`F675C01E63FB2109D9144C937E9A9803C72CD73C290376F1D8A96F2A0FC689FF`.
+All original STORE/read witnesses, repeated-name selector native/cleared
+variants, independent index-erasure mutant, raw-pointer controls, missing
+converter twins, and both translation-only bounds witnesses pass.
+
+Intermediate evidence remains:09 RED7/16 misclassified borrowed bare roots
+as allocation failures;10 failed compiler build on an invalid L1 dereference;
+11 GREEN18;12/13 RED1/20 had an incorrect then incorrectly scoped dormant
+oracle, not a failed STORE. Their evidence is retained.
+
+Targeted `critical_graph_array_fault_01` uses frozen13 on the identical
+B7AFC2FB source, executable
+`E152743E2CE315DA6003B133B896A7A96217069655F513B2E105A7EA72FE5577`.
+Before-call debugger probes identify cache allocations1448/1453 and COUNT
+path-workspace allocation1643. All three injected failures give exit1 with a
+located out-of-memory diagnostic; no public L1, temporary or backup exists.
+The second failure occurs after an earlier cache was successfully retained.
+
+This probe does **not** establish whole-compiler heap cleanup. The ordinary
+baseline reports counted live1068, and each injected run retains live1065.
+Existing allocated Text-view/type-cache ownership must be investigated and
+repaired separately; do not describe that residue as zero or attribute all
+of it to one site without pointer evidence. P0's own allocations are outside
+the counted fault injector. Full23 completes RED185/1329 on frozen B7AFC2FB,
+executable SHA256
+`E0F314B94A7A313F1DB97C16D27AA06738D0822C1F30CF0B4667BCC078B96931`.
+Compared with full22, both missing-converter diagnostic rows and both bounds
+spelling rows recover; no row is added or removed. The sole OK-to-FAIL row is
+`unit_indexed_lazy_reads`: its old standalone-load matcher counts zero after
+loads move inside the received comparison expressions. Read-only inspection
+finds all five loads under lazy guards. Focused14 and full23 do not certify
+full acceptance or permit stable promotion; neither tests the later Text
+ownership edits.
+
+The corrected lazy-load matcher accepts both frozen full22 and full23 native
+artifacts. Its strengthened form also rejects deleting/commenting one real
+load, substituting an address expression or inline-comment substring,
+duplicating one captured place instead of another, moving a load outside
+its lazy guard, and replacing the guard with `if: 1`. All these pure controls
+change the actual artifact. This lexical count is not a complete use-def
+proof: replacing the real guard with an unrelated lazy-shaped temporary
+still passes. Do not claim that it proves result-temp identity or every
+source RHS arm independently. Full24 uses this strengthened oracle.
+
+<a id="compiler-ownership-evidence"></a>
+### 5.14 Compiler ownership: exact retained owners, no runtime metadata
+
+The transient Text views used for type classification now borrow their
+original bytes. The existing foreign-type interner clones one Text-plus-bytes
+block only for a genuinely new retained entry. Its truncate/free boundary
+releases discarded entries before restoring the row count. Dynamic names
+likewise belong to their existing method table. The three existing literal-
+backed Lmx/sender/payload views are freed/reset at translation release.
+No runtime field, new allocation registry, atom wrapper or type-name table
+is introduced. This does not change callable or Array semantics.
+
+Exact debugger tracing after the first repair explains the residual1068
+addresses:1065 table-cell name copies, two namespace procedure adapter
+objects, and one foreign-type name discarded by row-count rollback.
+The final repair releases the table names through `l2_tbx_name`, frees the
+compiler's synthetic procedure/UNTIL shells without traversing borrowed
+source bodies, and truncates foreign names through their retained owner.
+Procedure shells are freed **before** destroying the original P0 document,
+while source-identity comparisons are still valid. Partial shell allocation
+and namespace-registration failures use the same ownership boundary.
+Owned address-path buffers now use the matching counted free operation.
+
+Preserved attempts01/02 fail on a global valued foreign Text before the
+pinned L1 predef registration;03 fails on duplicate explicit registration.
+04 builds but selects a misspelled fixture stem. None is accepted evidence.
+05 is GREEN41 on source SHA256
+`865F7E6E7434633C27E8B17C8CE41DDCB811375743EE595DD78CB78E142961FC`,
+executable SHA256
+`87C88224F275828AE77D1EB55F11EDD6A88B59FBC10BEB08A635EDE00B999FDB`.
+Its exact trace still has2296 allocations,1228 frees,1068 outstanding;
+05 alone does not establish cleanup. No L1 or parser was changed.
+
+Final `critical_graph_text_ownership_06` is **GREEN41** on source SHA256
+`3B903EC67045EA5A378C228A4F535B124EE81374ECEAD106AEDF7C68B83D7309`,
+executable SHA256
+`F1A380BF9B8631E0671C66834A2570884A63BC13F629F6798CE649D71F5001F6`.
+The independent until/trailer07 gate is **GREEN11** on the same source,
+executable SHA256
+`72C63893D32318A49917AED322917C31C55DAA0F67ED49F5C2DE71A990EC2A23`.
+It includes native/cleared trailer shape checks and effect-preserving
+trailer-erasure mutants; the existing value-return refusal remains intact.
+
+`critical_graph_array_fault_02` retains the exact pointer trace scripts and
+logs. On frozen06, the ordinary selectors witness gives2296 counted
+allocations,2296 actual frees, **zero outstanding counted addresses**.
+The second retained-cache failure gives1453 counted allocations,1453 actual
+frees, **zero outstanding counted addresses**. These are address-set results,
+not a live counter floored at zero. Three additional existing frees concern
+uncounted objects; P0 and other uncounted CRT allocation are outside this
+certificate.
+
+Injected failures1449/1454/1644 exercise the first cache, a later cache after
+an earlier retained one, and COUNT path workspace respectively. All exit1
+with a located allocation diagnostic and leave no public output, temporary
+or backup. The COUNT failure additionally emits a generic1:1 diagnostic;
+it is not evidence of a single precise diagnostic. All three aggregate
+counted live results are zero, but exact address tracking was run only for
+the baseline and the retained-second-cache failure. Full24 on3B903EC6 is
+pending; neither focused gate closes graph reconstruction or the pointer
+ticket, and stable promotion remains blocked by full acceptance.
+
+<a id="nested-source-next"></a>
+### 5.15 Next connected source slice: real nested definitions
+
+A parented original namespace already has one NSF object allocated with
+its actual parent. Its original source body must be registered and filled
+through that object rather than packed into declaration-only cells. Register
+ordinary original definitions independently of calledness; retain exact
+source identity and make width/slot projection consume the completed source
+container. Do not merely remove the root-only guard while consumers still
+assume one unit-root slot.
+
+Connect builder aliases, native/EXEC targets and `node` to the actual parent
+chain through existing `ns_parent` and physical NSF slots. A child invoked
+from an explicit copy of its parent must target that copy's child, not the
+original module object. Record the already constructed source binding in
+the existing own table or shared scoped NSF lookup; do not expose nested
+same-name fields through global first-match `ns_find`. Source occurrence
+identity, not an implicit-copy recognizer, proves construction. Avoid a new
+depth ceiling from concatenating nested paths into fixed small buffers.
+
+Decisive dormant witness: `Outer: (int: tag 9; in: (int: x 1;
+int: y 3); int: after 11)`, positive entry7. Outer width5 has `in` at2;
+inner width4 is cell0/INIT1/cell2/INIT3 with the actual Outer parent.
+Deleting only inner INIT1 must fail shape with unchanged exit7. The called
+variant adds inner `x: 2` and parent bare `in`: require widths5/6, exact
+EXEC target, observed values before/after and genuinely cleared procedures.
+Include real `node\\tag`, a copied parent and depth-three sibling identities.
+Legacy `(): name`, qualified/local and synthetic UNTIL body adapters require
+their connected original-body normalization; do not certify them by removing
+their source-identity guards. This is pending work, not new language syntax.
 
 ## 6. Required evidence
 

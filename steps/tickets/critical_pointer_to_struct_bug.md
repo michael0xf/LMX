@@ -63,6 +63,35 @@ could supply the same actual. Those assertions are withdrawn. Existing tests
 that enshrine them must be migrated, not cited as authority to keep the bug.
 No new code build or runtime reproduction is claimed by this ticket creation.
 
+### 3.1 Additional generic pointer-consuming ABI evidence (2026-10-03)
+
+Read-only review of the still-unreleased development walker found another
+representation gap at the same consuming boundary:
+
+- `lmx_walk_actuals` accepts any `LMX_WALK_VALUE_REFERENCE` when
+  the witness is CHAR_PTR, POINTER_BASE, LMX or DESC, without establishing
+  its actual representation/depth for that witness.
+- `lmx_walk_call_prim_dispatch` returns any reference result as
+  `result.ref` without establishing the receiving return contract.
+
+A char-Array datum is a real descriptor reference with exact length and no
+implicit NUL. Its descriptor address is not its character backing and cannot
+be supplied as a primitive `char *` just because both are references.
+The ordinary conversion/admission contract must select the representation;
+no Array-specific reinterpret cast, inferred depth stripping or untyped
+reference box is permitted. The same principle covers Structure and other
+reference-valued actuals/results.
+
+This is source evidence, not a claimed runtime repair. Retaining quoted data
+in the graph must not mark the datum machine-only. A genuinely raw C access
+is separately native-only. Native success of a quoted-to-pointer fixture
+does not certify walker consumption or close this ticket. Before adding a
+forced-walker pointer-literal acceptance row, establish this generic
+consuming contract with positive and incompatible-representation witnesses.
+The ordering in §1 remains unchanged; if graph acceptance depends on this
+consuming repair, record that dependency explicitly rather than waive the
+gate or silently introduce a conversion.
+
 ## 4. Bounded repair route
 
 1. Snapshot exact HEAD/source hashes after graph repair release; reproduce one
@@ -91,6 +120,9 @@ No new code build or runtime reproduction is claimed by this ticket creation.
   primitive elements and existing flat/nested indexing contracts remain right.
 - [ ] Positive exact-depth formals/returns work; incompatible depth is refused
   without implicit dereference. Null stored references remain present values.
+- [ ] The generic actual/result ABI does not accept an Array descriptor or
+  arbitrary reference as primitive pointer storage. Available conversions
+  and structural admission are checked at their ordinary consuming place.
 - [ ] Stable repeated address-taking, re-entry and recursion do not leak an
   ABI box, temporary, working cache or a previous activation's cell.
 - [ ] Native and genuinely exercised walker paths agree; clearing only a root

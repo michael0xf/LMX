@@ -109,6 +109,48 @@ RED7/139; expanded merge/output01 is RED7/152 with unchanged failures.
 These focused results do not certify a full later-source gate or source
 reconstruction.
 
+<a id="graph-computed-output-place"></a>
+### GRAPH-COMPUTED-OUTPUT-PLACE — 2026-10-03, Codex, bounded cut verified
+
+Synthetic null-storage siblings inflated repeated-output body width10 versus
+source width8. Translator5CDEF70B now stores each computed descriptor in child1
+of its real output OWN/AT operand. Borrows share that edge; explicit typed
+targets retain their cells. No pointer-cell, second graph or runtime metadata.
+Focused compact02 GREEN13 verifies width, parents, distinct places, aliases,
+names and four damage controls at unchanged result7. Ordinary kernel compact02
+GREEN292 executes109 selftests; new output-place witness passes16 checks,
+including copied cached/physical isolation and compact immutable no-store.
+The earlier RED1/292 kernel compact01 was a new test's L1 grouping error only.
+Compact03/04 RED10/154 expose three old static OWN/alias expectations;
+compact05 RED7/154 restores those three rows. Later line-time/last-store
+observer fixes pass21 controls; two actual runtime mutants exit1. L3 compact01
+passes11 suites and four budget units. Full28 on intermediate F9F42142 is
+terminal RED203/1361. Its15 newly failing rows recover in compact06 GREEN33:
+six foreign-holder C failures, two typed @: producer failures, four compact
+shape expectations and three migrated receiving fixtures. Four additional
+historical-fixture migrations pass GREEN14 without restoring implicit merge.
+Full29 is terminal RED184/1361:19 recoveries, zero new failing rows against
+full28. Later path-schema03 is GREEN43 on5A70F7CB/8A013A1D, repairing common
+method/body-to-own/schema paths, registered-body merge/ABI/receive planning
+and authoritative path/literal CHECK diagnostics. Three obsolete text pins
+now observe copy independence and recursive123 at exit7. Neither result
+closes the full source-graph or pointer ticket.
+Typed @Structure and current held callable/capture are not repaired by this
+placement cut. [Exact bytes and boundaries](critical-graph-namespace-source-layout-20261003.md#compact-output-place).
+
+<a id="local-source-and-capture-place"></a>
+### LOCAL-SOURCE-AND-CAPTURE-PLACE — 2026-10-03, Codex, OPEN
+
+The unchanged `unit_local_ns_node_nested` is refused at S's declaration in
+full29 and path-schema02. Local namespaces lack an original-body route into
+the common source producer; their native field constructor is not a complete
+retained graph. NODE projections lack their precise lexical stop. Capture
+collection accepts only namespace ids; MAD constructors flatten capture
+slots and share nonprimitive graph nodes through a primitive-cell helper.
+This does not authorize a persistent data context graph. Repair source
+occurrence, ownership, full schema, stable required-model instance, complete
+place and ordinary composition/copy coherently. [Exact omissions and tests](critical-graph-namespace-source-layout-20261003.md#local-source-capture-closure).
+
 <a id="graph-call-origin-current-value"></a>
 ### GRAPH-CALL-ORIGIN-CURRENT-VALUE — 2026-10-03, Codex, IN WORK
 
@@ -126,13 +168,15 @@ copy-call refusals remain visible rather than repinned to expected refusal.
 The current source factors a stack-only own-place view and receiver output
 projection. Prepass/CHECK/native/walker use the same source-site selected
 own index, rather than independently selecting first/latest same-name rows.
-This does not yet prove current value origin. Next: factor resolved storage
-effects, replay to the exact source call site, join reaching states and
-invalidate after replacement or unproved effects. A later write must not
-retrospectively invalidate an earlier call; a primitive cell write or distinct
-declaration must not invalidate the other value. No atom metadata, runtime
-binding registry, possible-candidate proof, prototype substitution or
-receiver-name scan in the origin analysis. [Exact scope and witnesses](critical-graph-namespace-source-layout-20261003.md#current-value-call-origin).
+The next implementation boundary is common native/walker input formation and
+admission for the actual selected callable, not mandatory whole-program
+constructor-origin replay. Evaluate its current value once; retain the
+receiving contract, caller-current dynamic inputs and lexical fallback, then
+dispatch its actual native word or graph. Existing prototype-only native
+preparation and call-site-only walker witnesses do not supply the candidate's
+complete interface. No METHOD/sig record, new Lmx field, native registry,
+atom metadata, hidden graph or prototype substitution is permitted.
+[Exact scope and witnesses](critical-graph-namespace-source-layout-20261003.md#current-value-call-origin).
 
 <a id="merge-root-copy-identity"></a>
 ### MERGE-ROOT-COPY-IDENTITY — 2026-10-03, Codex, IN WORK (bounded fix verified)

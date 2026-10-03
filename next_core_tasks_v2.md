@@ -415,19 +415,57 @@ Current bounded implementation, with no DONE claim:
   adverse runtime mutations are rejected. General multi-operand native/body
   selection, current callable origin and the full current-source gate remain
   open; no stable twin is promoted.
-  Next connected layout cut: computed outputs belong to their existing
-  operation's operand, not synthetic sibling fields in the source body.
+  Connected layout cut is saved on translator5CDEF70B: computed outputs now
+  belong to child1 of their existing OWN/AT operand, not synthetic siblings.
+  Focused compact02 is GREEN13, with width8 instead of10, distinct output
+  operands/parents/borrow aliases/names and four shape mutations at exit7.
+  Ordinary kernel compact02 is GREEN292 with109 executed selftests; the new
+  runtime witness passes16 checks, including copied physical writes and
+  exact immutable no-store. Kernel compact01 was RED1/292 due solely to a
+  malformed new L1 test, not a runtime verdict. Compact03/04 RED10/154 expose
+  three static merge-oracle gaps; compact05 RED7/154 recovers them through
+  OWN2/FILL-alias observation. Later shared line-time/last-store observer
+  refinements pass21 pure controls; two runtime mutations are rejected.
+  L3 compact01 passes11 suites and four budget units. Full28 completes
+  RED203/1361 on intermediate harness F9F42142; its15 newly failing rows
+  recover in compact06 GREEN33 on7ADBFE22. Four historical-fixture migrations
+  pass GREEN14 while preserving copy/shared-reference/permuted-field/call
+  controls; no implicit merge is restored. Full29 is terminal RED184/1361 on
+  observer821DF2F1:19 recoveries and no new failures against full28. Later45
+  setup migrations first give RED11/57; common own/body/schema path,
+  registered-body ABI/receive planning and CHECK diagnostics repair seven
+  failures. Three stale text pins become observable copy/recursion oracles.
+  `critical_path_schema_03` is GREEN43 on source5A70F7CB/harness8A013A1D.
+  A full current-source green and L3 rerun remain required. No stable promotion.
   Keep distinct output occurrences and shared working-place identity, copy
   isolation, explicit typed targets and source-name publication. A new pointer
   cell or hidden companion graph must not replace the ordinary descriptor edge.
-  [Runtime identity evidence and compact-output boundary](steps/critical-graph-namespace-source-layout-20261003.md#merge-root-integrity).
-  Before accepting copied/received callable origin, implement the common
-  source-site current-value proof: exact constructor establishes origin,
-  replacement of its resolved place invalidates it, ordinary primitive writes
-  do not. Branch joins, loop backedges, catches and call effects must be
-  accounted for; possible-source catalogues and declaration history are not
-  proof of the value held now. Do not inspect receiver spelling in the proof
-  or add runtime atom metadata. [Connected interfaces, witnesses and evidence](steps/critical-graph-namespace-source-layout-20261003.md#current-value-call-origin).
+  [Runtime identity evidence](steps/critical-graph-namespace-source-layout-20261003.md#merge-root-integrity)
+  and [compact-output boundary](steps/critical-graph-namespace-source-layout-20261003.md#compact-output-place).
+  Implement the common actual-call input formation/admission boundary for
+  copied/received/current held callables: exact visible place, current target
+  evaluated once, receiving interface plus selected candidate's complete
+  ordered inputs/defaults/dynamic requirements, caller activation and lexical
+  fallback, actual native-word dispatch or walk. Mandatory interprocedural
+  constructor-origin replay is not a language prerequisite and is no longer
+  the required implementation design. Static constructor evidence must not
+  substitute a prototype after replacement. No new METHOD/sig record, Lmx
+  member, native registry, atom metadata or hidden companion graph.
+  Complete the foreign nested-namespace actual owner-root projection separately
+  from its inside-owner GraphField suffix. [Connected interfaces, witnesses and evidence](steps/critical-graph-namespace-source-layout-20261003.md#current-value-call-origin).
+  [Latest evidence and connected next slices](steps/critical-graph-namespace-source-layout-20261003.md#path-schema-closure):
+  retain a local definition at its exact GraphField, run the complete body
+  through COUNT/PLACE/FILL and retire its fields-only constructor, not its
+  refusal guard alone. Native/walker NODE needs one proved lexical owner,
+  scope and GraphPlace stop. Capture schema, stable required-model instance
+  and complete physical place must flow together; never flatten child1
+  captures or reload a later factory result. Primitive-only MAD copies and
+  all-host-formal reconstructed roots are not accepted graph-copy evidence.
+  Saved r40/r50, two-holder and direct/copy mutation tests must discriminate
+  replacement, collision and sharing. The following pointer stage must
+  separate held value from address and close real C pointer-cell storage,
+  native/walker depth consumption, copy/GC and raw C boundaries together.
+  A cast or a new synchronized shadow cell is not a repair.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

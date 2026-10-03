@@ -1,9 +1,14 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_27` is RED189/1351
-on frozen070B6123; exact INIT observers recover, but current-value callable
-proof is still missing. Later focused merge/output01 is RED7/152 on9DD7E13A,
+The latest completed full harness `critical_graph_fix_full_29` is RED184/1361
+on frozen7ADBFE22 and observer821DF2F1:19 recoveries, no new failures against
+full28, with identical target identities. A later45-fixture migration first
+exposes11 failures; the connected path/body/literal repair and stronger copy
+oracles pass `critical_path_schema_03` GREEN43. Neither critical ticket closes.
+Actual-call input formation, local source occurrences, capture placement and
+typed pointer storage remain incomplete. [Current evidence](#path-schema-closure).
+Earlier focused merge/output01 is RED7/152 on9DD7E13A,
 ordinary kernel fixed02 GREEN291 and L3 passes11 suites plus four budget units.
 [Latest bounded evidence and remaining work](#merge-root-integrity).
 Earlier full24 RED199/1329 on3B903EC6 and full23
@@ -1200,28 +1205,42 @@ RED189/1351 on this frozen source. Both strict INIT observers recover;
 output.186 other failure details are unchanged. All eight added INIT/body/
 facet mutations pass. This gate is terminal, not a pending process or release.
 
-#### Required connected source-site proof, not a new language rule
+#### Actual-call boundary, not a mandatory whole-program origin analysis
 
-Use existing `L2SourceSite` save/restore and `L2Address` views. Factor a
-shared semantic storage-effect projection from real producer/store paths:
-exact declaration and merge own rows, receiver output places, ordinary
-receiving/reference stores, resolved path targets and indirect aliases.
-Distinguish construction, descriptor/reference replacement, primitive cell
-mutation, no executed effect, and unproved call/alias effects. Raw or unknown
-effects cannot be silently classified as no effect. A signature or dormant
-definition is not executed while analyzing its containing body.
+The earlier implementation proposal to require an interprocedural replay of
+all mutations is superseded here. Constructor identity is not a language
+prerequisite for calling a runtime-selected value. The existing norms under
+[call admission](../docs/LMX_semantics.en.md#admission-case-7) and
+[transported callable](../docs/LMX_semantics.en.md#admission-case-8) already
+require the actual selected callable's interface and available dynamic inputs
+to be checked at its call. A receiving contract and a current value are
+different facts; a contract may stay fixed while its compatible value changes.
 
-Replay the borrowed executable source to the exact queried call occurrence:
-an exact constructor establishes origin; replacement of the same resolved
-place kills/replaces it; unrelated cell writes and distinct declaration
-occurrences do not. Join branch states, include loop backedges, return/catch
-paths and call effects. Retain an origin only if all reaching states prove
-the actual held body's origin and its usable addressing/input contract.
-Keep constructor `mres_source` evidence intact: it is still needed for fresh
-merge production and D105; clearing it globally corrupts unrelated evidence.
-Source offsets, possible-source catalogues and first-name matches are not
-held-value proof. Apply the reasoning to old named constructors as well as
-copies. No permanently hidden runtime data structure is introduced.
+Implement one native/walker call boundary: resolve the exact visible place,
+evaluate its current target once, form the selected callable's ordered inputs
+from the current caller activation and its lexical fallback, apply directed
+admission, then dispatch that occurrence's actual native word or graph. The
+existing native dispatch already selects the actual word; the missing piece
+is common input formation/admission, not choosing a constructor's prototype.
+Native preparation currently relies on prototype procedure metadata; walker
+EXEC currently checks call-site witnesses only. Neither proves the selected
+candidate's complete hidden-input/default contract. Zero-argument dispatch
+is not a repair: it would lose caller-supplied hidden inputs.
+
+Use existing `L2SourceSite`/`L2Address` views for source-visible resolution.
+Keep constructor `mres_source` evidence for fresh merge production and D105,
+but never treat it as proof of a later value's executable origin. Do not add
+a METHOD record, sig word, native registry, Lmx member, hidden companion graph
+or atom metadata. Do not infer the declared interface from operands or only
+the ARG nodes that happened to execute. A static optimization may prove an
+exact body, but the universal runtime-selected route cannot depend on that
+optimization succeeding. Its complete interface representation is still an
+open implementation gap, not a new semantic exception. The explicit normative
+ban on source-name-table execution conflicts with using that already existing
+table for hidden-input identity. The bounded representation clarification was
+[asked of the author](../LMX_blog/q/current/graph-hidden-input-name-binding.md);
+do not silently repeal that ban or invent a new persistent registry. This
+does not pause unrelated graph/projection/test repairs.
 
 The paired prefixes `copied: merge Outer / copied / receiveMessage: copied`
 and `copied: merge Outer / receiveMessage: copied / copied` require exact
@@ -1235,8 +1254,8 @@ primitive write, distinct same-name declarations, a proved effect-free sub,
 an opaque external call, branch joins and loop/catch controls. Resolution
 must prove that each write really targets the queried occurrence: merely
 repeating its name inside another scope does not manufacture that witness.
-Uncovered effects require a located unproved-origin result or the real
-dynamic call route, not a normative language ban, silent skip or stale origin.
+These controls must exercise the actual-value boundary, not a normative ban
+on calls after an opaque effect, a silent skip or stale constructor identity.
 
 Both critical tickets and8+8a stay OPEN. Code is saved but uncommitted;
 stable twins remain untouched. Native root reuse after merge and the general
@@ -1246,7 +1265,7 @@ the sleep checkpoint, not closed by these source-site views or focused tests.
 <a id="merge-root-integrity"></a>
 ### 5.18 Source-ordered output bindings and one-root merge integrity
 
-Current translator SHA256:
+Translator SHA256 at the source-ordered binding/merge checkpoint:
 `9DD7E13A5FEC4F994F9F32AA0517E6CF0D8E0EF7E7C3513D9AAE5003684A5E31`.
 Harness:
 `E0D29C346519B8C4422DA1E69C1FF21FB0730A73DBE01C63509F1FD1CA45BA34`.
@@ -1309,9 +1328,9 @@ a new failure. The seven remaining failures are `unit_receive_letter_model`,
 in the bounded one-operand branch; it is not another execution certificate.
 No full gate on these later bytes or stable promotion is claimed.
 
-#### Next connected cut: output storage inside the written operation
+#### Connected cut: output storage inside the written operation
 
-The repeated-output fixture still has width10 where its source body requires8:
+Before the connected cut, the repeated-output fixture has width10 where its source body requires8:
 two synthetic null-storage siblings precede the written SET operations. Removing
 them must not remove the output's actual stable storage or introduce a wrapper
 graph. Place a computed reference in the existing output operand's ordinary
@@ -1333,6 +1352,315 @@ not create a genuine C99 Lmx* effective-type cell; all address levels and
 generic consuming contracts still require the subsequent connected repair.
 Do not claim that compact storage repairs @Structure or callable current-value
 proof. Both critical tickets and8+8a stay OPEN.
+
+<a id="compact-output-place"></a>
+### 5.19 Compact computed-output places — bounded verification
+
+Translator `5CDEF70B12C5CCAB8D786142D4ECBA5A3BA980469F6F87D619B84E419DBE0EDB`
+and compiler-only application header
+`4463ECAE7370510F4ECF644B7B55A70966236F8FAA2D34B8824A5BCEE6B5307E`
+now place computed output storage in child1 of its actual OWN/AT operand.
+The SourceField retains the written operation's logical source position;
+its L2GraphField targets the physical operand child1. Explicit typed targets
+keep their existing declared cells. No synthetic storage sibling, pointer
+cell, new wrapper graph or runtime atom metadata is introduced.
+
+Only the exact declaration registers a ConstructionTemp. A borrow creates
+no storage, enters no construction ownership ledger and never reparents the
+operand. Preallocation declares the saved PLACE handle explicitly; FILL
+aliases that handle rather than assuming COUNT/PLACE/FILL temporary numbers
+coincide. Reads and writes use this same real edge. Descriptor copy still
+follows ordinary graph edges, not terminal primitive-pointer storage.
+
+`lmx_walk_slot_place` shares place decoding among cached OWN publication and
+physical PUT_REF. Compact OWN/AT's intrinsic child1 and explicitly supplied
+holder/index select the same slot. Arbitrary executable holders remain
+refused; exact immutable-profile classification applies to the resolved
+holder before a write. The existing unequal code/data ABI follows only the
+accessed owned child chain into the selected occurrence. A missing chain
+refuses rather than writing the original; external holders retain identity.
+This creates neither a context graph nor a mapping registry.
+
+Runtime SHA256:
+`B8013230B211A2611F0E675E15E51A8B35C0F5614B8642E5CADB35AB8D400855`.
+New runtime witness `lmx_walk_output_place_selftest.lm1`:
+`C2EC23A13990DC33AF07E1309DB31626EF2C28371CC3E55BFD1C7491B8633D00`.
+It executes16 checks: independent repeated cached outputs, dirty publication,
+copy/borrow alias and isolation, unequal-occurrence cached and physical writes,
+missing-edge refusal, foreign-holder identity, immutable compact no-store,
+and arbitrary-OP refusal. It does not certify typed @ or RHS side effects.
+
+Ordinary kernel `build/l2src/critical_output_compact_01` is RED1/292:
+the new witness failed C compilation because its L1 valued-field argument
+expressions lacked explicit grouping. That was not a runtime verdict.
+After correction and the physical-copy/immutable witnesses, fresh
+`build/l2src/critical_output_compact_02` is GREEN292,109 selftests run;
+the new witness reports16 checks,0 failures. Independent review finds no
+additional defect in this bounded route and confirms staged/live identity;
+source review is not another execution certificate.
+
+Focused `build/l2_harness/critical_output_compact_02` is GREEN13
+(ten fixtures plus build/scope rows). Repeated output now has source width8,
+not10; its two OWN operands have distinct addresses, correct parents/names,
+and later reads borrow the corresponding operand. Four native/walk mutations
+are detected with unchanged program result7: append a hidden null body field
+or change an output operand's source facet. The append mutation replaces the
+array backing and slot addresses while preserving child values; it proves
+width sensitivity, not saved-address preservation. Harness/driver hashes:
+`D46980B1C9D9EED7D7CE544AB4FC85D1E88EFF26AD55A44E70F73CF1322CA69C` /
+`3E5D161C3157265203883273BC7ADA27D95C7E63439DE45B7F086F9DAEE95716`.
+The driver hash includes a subsequent comment-only clarification of that
+mutation; the fresh expanded run must establish its own artifact identity.
+
+Expanded compact03/04 finish RED10/154: the previous seven no-L1 refusals and
+three static SET/OWN shape failures stopped before runtime. The three merge
+rows still expected OWN3 with hidden coordinates; after migration to OWN2,
+the observer also had to follow the preallocated rw-to-rw FILL alias and role.
+Compact05 finishes RED7/154, executable
+`5BD88253D7A03BFCE87DAE8DE99F1C757FD1B8702906CC3B7251E24BC82D9922`:
+the three merge rows recover in native/walk; the same seven no-L1 debts remain.
+No shape or program-result requirement is dropped. Some old merge controls
+still equate @copy with a descriptor: those expectations must migrate with
+the pointer ticket and do not certify its corrected contract.
+
+Further read-only observer review identifies preexisting false-positive
+routes. The shared builder pass now snapshots every graph, parent and numeric
+write at its own source line. Alias reassignment cannot rewrite a stored edge;
+allocated stable-handle rebinding is refused by the observer. Reference stores
+and typed-cell helper stores compete in one last-writer event stream. Final
+explicit child0 writes override constructor/deferred roles; only an actual
+shared role-record lookup proves an opcode, not a numeric opcode cast. Empty
+identities produce no graph object; opaque primitive-cell expressions are
+values, not inferred Lmx allocations. These are testing-tool corrections,
+not changes to the language or runtime representation.
+
+`tools/test_l2_walk_graph_facts.ps1` loads only observer definitions through
+the PowerShell AST, never the harness build body. Twenty-one positive/damage
+controls pass (aliases, attachment, real parent, final role, width/edge,
+line-time identity, numeric identity, typed-helper replacement and same-line
+write order, stable sc aliases and snapshot identity after rebind). Current
+harness/observer SHA256:
+`821DF2F1BC7284DDC99ABC4E84378AEADB95196F01768C36797660C029024FB1` /
+`89D4C15A6C2F570BBF7CD6D2E0522470FC38915979918E04F47447412A11B801`.
+These refinements are later than compact05 staging. Full28 completed
+RED203/1361 on intermediate harness F9F42142. Its source5CDEF70B and executable
+`84DF0E2D5AB13BBF728DB60B01D879FACB181888B14605FC777504316B6403AF`
+do not certify the current observer. Ten added identities pass;15 shared rows
+regress, one migrated typed-receive row recovers, and188 previous failures
+retain their verdicts. Four structural failures stop before execution, not
+proof that SET/PUT/CALL disappeared. Full29 subsequently finishes RED184/1361
+on the final observer; no full later-source success is claimed.
+
+The compact06 source `7ADBFE227BD81ABFE6E6567F825E0298F7E85E0FBE8B3556399FFD7B535AF864`
+projects a foreign field through its actual owning occurrence and ordinary
+GraphField parent/child edges instead of a local l2_gp alias belonging to
+another activation. It also distinguishes explicit typed pointer-cell
+declarations from computed receiver output operands by the existing storage
+category. Six hidden-merge C compile failures and two local @: producer
+failures recover. Four strict structural oracles now demand compact OWN2,
+retaining all surrounding SET/PUT/CALL/admission edges. Three old receiving
+fixtures now declare an explicit typed target; negative thrown2 expectations
+are unchanged. These15 rows plus output/order/merge controls and four real
+shape mutants pass `critical_output_compact_06` GREEN33, executable
+`5372D44614F3DF7C4CCF9B81A2D08FC08F3C5F5D6EDBAC9737DA994472DE7AE4`.
+
+`critical_fixture_migration_01` GREEN14 (11 fixtures plus build/scope) migrates
+four historical fixtures deliberately: fresh values use explicit merge,
+shared candidates use explicit references, and signatures remain unchanged.
+It preserves copy independence, nested int paths, formal sharing, admitted
+permuted-field read10 rather than20, actual named calls and typed-receive
+opposites. Executable:
+`3C6E486E5645C12FBBC399BEE39444D5B7E2DE358015BDB554C28EDB05B29099`.
+These are migrated-fixture results, not same-byte recovery certificates.
+The remaining foreign nested-namespace owner-root fallback in l2_own_ctr is
+not repaired by the inside-owner GraphField suffix; it remains a connected
+actual lexical-owner projection debt, pending its own witness.
+
+Two actual generated-C mutations in `build/critical_output_place_mutants_01`
+compile and exit1 after16 executed checks: original-holder substitution
+causes five copy/isolation failures; bypassing immutable guarding causes one
+no-store failure. They link frozen kernel compact02's libc/source-name objects.
+No compile failure is counted as semantic detection.
+`build/l3_critical_output_compact_01` passes11 suites and four budget units
+(75/128 names,1070/8192 bytes). No stable promotion or full green gate is claimed.
+The known @computed-descriptor path still
+returns the held Structure rather than the address of its pointer storage;
+that is the connected pointer-ticket debt, not fixed by compact placement.
+Current callable-origin/capture and multioperand body selection remain OPEN.
+No code release or stable promotion is claimed.
+
+Read-only full27 classification:157 no-L1 refusals,20 diagnostic mismatches,
+seven old negatives accepted, four text pins, one graph-shape failure.139/157
+refusals report non-walkable root operations, not measured runtime crashes.
+Its three instance fixtures still use old `Model: fresh`/`Other: o` setup;
+only later focused sources migrated to explicit merge. `graph_shape_method_ref`
+reaches Entry7 but its old constructor copies Point before filling INIT and
+uses obsolete `Point: box`: migrate to valid explicit copy and inspect full
+original/copy topology, not weaken the oracle. Preserve the forward-visibility
+control `unit_s7_part_root_below_refused` rather than repinning its acceptance.
+
+Actual-call target selection must distinguish cached working descriptor from
+physical cell. Explicit path/address writes do not reload l2_q; own-store
+changes it. Intervening calls do not justify substituting a constructor's
+prototype for the value held now. Runtime admission must use that value. Root
+ns-exec must resolve the source-visible binding, not whole-body own_find_last.
+
+<a id="path-schema-closure"></a>
+### 5.20 Full29 and the common own/body/schema path
+
+`critical_graph_fix_full_29` is terminal RED184/1361. Executable:
+`85C32ABED67C51E092CE1BA19BA1C7CDBBE373A5CA0011F70E24180BED039D48`;
+translator source7ADBFE22, harness821DF2F1. Independent row comparison finds
+19 FAIL-to-OK, zero OK-to-FAIL, zero added/removed/duplicate targets. All184
+retained failures keep the same normalized reason and translator log. Seven
+recoveries include deliberately migrated fixtures; eight unchanged fixtures
+recover through translator repair, four through compact-source observation.
+Do not describe all19 as same-byte code recovery.
+
+The45-file second migration changes51 setup lines to explicit merge; no
+runtime expectations are weakened. `critical_fixture_migration_02` is
+RED11/57, executable
+`63739FE4E369AA7174A9CA6F48A6BA17F4D66F31F0A5B3DC560630DCA088F105`.
+Thirty-four migrated fixtures recover. Remaining failures: three method-root
+paths through a computed own value; two registered frame-owned bodies; one
+captured merge schema; two masked diagnostics; three obsolete generated-text
+pins. Twenty-nine other setup fixtures remain unmigrated pending precise
+reference, nested-definition, identity or call semantics. This is not a
+blanket replacement of every known-head form.
+
+The connected repair removes `l2_rw_path_occ`/`l2_rw_path_bodies` as a
+competing traversal. Literal method roots use the common resolver: exact
+own declaration or body, then complete schema. Physical kind16 retains an
+own row until GraphField holder/child projection; compiler row numbers never
+masquerade as runtime child indices. NODE requires a proved lexical stop,
+not silent reinterpretation. Semantic leaf classification is recovered
+from the recorded declaration when a physical coordinate is used.
+
+Merge scanning, throws/ABI planning and receive scratch planning now all
+visit a registered frame's actual statement list when it is the existing
+lexical body. Selection uses body identity, not an ELSE-only spelling branch.
+The common update checker invokes the existing path-chain validator and
+primitive literal check before value production. Foreign members keep their
+existing binding classification; no raw-C name check is introduced.
+
+Three historical copy rows now observe copied values, unchanged models,
+independent reached merges, and recursive123 at exit7. Obsolete temporary/
+frame-width substrings are not storage oracles. An initial strengthened
+fixture requested an unprovided size_t-to-int converter; that attempt is
+`critical_fixture_observable_01`, not a measured kernel failure. Final witnesses
+compare like-typed values without requesting that converter.
+
+`critical_path_schema_01` is RED5/27: the new scan exposes missing throws ABI,
+and three attempted text pins still name the wrong merge entrypoint.
+`critical_path_schema_02` is RED1/33 solely on the unchanged, already-red
+local named-definition control. It fails at S's declaration, before NODE
+projection, identically to full29. Neither attempt is green.
+`critical_path_schema_03` is GREEN43 (40 fixtures plus build/scope): native/
+walked body paths, cache read25, path writes/conversion refusal, visibility
+negatives, both diagnostics, copy/recursion observations, native/walked
+receive inside a frame-owned body, and repeated-output152 checks with actual
+cleared-root walking. Source:
+`5A70F7CB747E36B3F89ECE24DDC1B1A214699C3752B0577A5A85A69E6407B181`;
+harness:
+`8A013A1D7A8375881A256C40ECB9F4A9330D03FD1258D8FDD2CAC5733C90B274`;
+executable:
+`7FC8E76630A080180A7585F04AE12C90CEA306159911E9E7C77EA1F9A0F0D059`.
+No runtime/header change accompanies this translator/harness slice. A full
+gate on the exact later bytes remains required.
+
+`critical_path_schema_04` is GREEN9 (six fixtures plus build/scope). An
+identical-source method-chain twin now clears all five nested native words
+and verifies they are absent; cache twin clears all three. Both preserve the
+same observed results as native execution. Receive twins also assert their
+actual native/cleared method selection. Translator source remains5A70F7CB;
+harness:
+`AADE22D03A5A94D7284E295DC9CD812A23E2E359F1889C8EB838F6934AB60539`;
+executable:
+`3D4AC5014DC2EBC2E401F4A1C2201E6545A8B6AC99E1283108166EB0A926B84D`.
+
+<a id="local-source-capture-closure"></a>
+### 5.21 Local definitions and returned captures: remaining source closure
+
+Read-only audits identify omissions, not new semantics. `l2_ns_original_body`
+excludes local definitions; their native constructor enumerates fields and
+control shells but never fills the complete original body. Body production,
+eligibility and parts emission then exclude that procedure. Removing its
+refusal or inventing a unit slot is not a fix. Resolve the exact declaration
+and GraphField; retain its complete body through COUNT/PLACE/FILL; share one
+actual occurrence across cell/name/native/walk producers; retire the
+competing fields-only constructor. Definition does not execute the named
+body. Reconcile old fresh-on-reach test claims against the approved re-entry
+norm, not against implementation comments.
+
+NODE already denotes the actual callable's parent. Native/walker projection
+must share one compiler-only lexical context: owner procedure, exact source
+scope and GraphPlace stop. A hosted local definition's exact constructor row
+supplies that stop. NULL stop is a proved source root, not lookup failure.
+Project only the suffix below NODE; never traverse its enclosing body twice.
+
+Capture collection records only namespace ids. Existing complete schema,
+schema-field lookup and layout tokens must flow through typing, used-field
+admission, construction, ARG fallback and both emitters. Receiving schema,
+actual required-model instance and physical captured place are distinct roles.
+Do not replace a merge schema with its first model, or reload the factory's
+latest result after re-entry instead of the selected callable's lexical copy.
+Computed captures can share child1 but have different GraphField holders:
+constructor and fallback must retain the complete place, not flatten it.
+
+Older MAD constructors create sparse C of host-width plus all host formals,
+then N whose nonprimitive body descriptors are shared by `lmx_walk_cell_copy`.
+That helper copies only five primitive cell types; operation parents, edges
+and source names are not relocated through the verified graph-copy closure.
+This is not accepted source-copy evidence. [Response48 §§3.3–6](../LMX_blog/q/response48.md)
+and L3§20 compose actually used values through ordinary merge; they do not
+authorize an all-host-arity tail, hidden environment, blanket operator sharing
+or rewriting free inputs as formals. Existing input witness cells describe
+contracts/defaults; they are not activation storage to overwrite for capture.
+Partial Structure capture remains valid: do not copy every unused field as
+a shortcut. This audit does not prescribe a new physical capture layout.
+
+Required controls: make r40 and r50 before reading either; observe82/102/84;
+capture two outputs with equal child ordinals under different holders; retain
+direct-versus-copy mutation, alias/parent/operator relocation, source-name
+and unchanged-signature checks. Walk returned readers and constructor twins
+genuinely on identical bytes. Actual-call input formation is a separate debt.
+The [external-name binding question](../LMX_blog/q/current/graph-hidden-input-name-binding.md)
+is unanswered; its normative ban is not silently removed.
+
+<a id="pointer-connected-storage-boundary"></a>
+### 5.22 Pointer ticket: value, place, depth and actual C storage
+
+Pointer implementation follows the green graph checkpoint; no fix is claimed.
+`@A` addresses A's existing reference-holding cell and adds one level; a null
+reference still has its nonnull place. Named/computed/Array/nested/formal
+places share this distinction. Primitive addresses select real typed payload
+or backing cells. Separate held-value extraction from address extraction:
+current `l2_reference_descriptor`/`l2_emit_reference_value` reuse ADDRESS for
+the ordinary held value, and walker descriptor production erases @.
+
+A graph reference slot is real void* storage. A pointer-to-pointer cast does
+not turn its stored C object into an Lmx* cell. Close native indirect loads/
+stores, formals, pointer Array backing, walker transport and raw C boundaries
+against actual storage lvalues; convert loaded pointer values where allowed.
+Neither a cast-only patch nor a synchronized shadow formal/temporary repairs
+the existing cell. Imported C storage retains its real typed route. CHAR_PTR
+arena payloads and canonical void* ABI boxes similarly need storage-aware
+access at their producer/place, not one blanket load-helper replacement.
+
+Walker DEREF must preserve object-referent witnesses and distinguish a
+reference-cell referent. Existing witness kind can express the distinction;
+no new Lmx field/registry is authorized. Any encoding must close pointer
+construction/classification, work/copy/GC, depth normalization, actuals,
+stores and returned values together. Logical type equality does not prove
+actual C pointer-cell storage compatibility.
+
+Acceptance: stable unequal addresses of two holders of one object; independent
+write-through; null places; real formal cells, not transport boxes; nested/
+repeated declarations; Arrays versus backing elements; copied-slot isolation;
+depth/ABI negatives; genuine nested walker execution. Compare a
+descriptor-as-address mutant with an independently selected arena ref-cell
+address before dereferencing: detection must be an assertion, not incidental
+undefined access. Existing descriptor-comparison positives need migration.
 
 ## 6. Required evidence
 

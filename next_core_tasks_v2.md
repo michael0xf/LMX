@@ -264,7 +264,13 @@ Current bounded implementation, with no DONE claim:
   failure detail changes. The next bounded source-trailer slice is GREEN15:
   original namespace return is shared by CHECK, graph construction and native
   emission; actual namespace interpretation and source-erasure mutants pass.
-  Full18 on those trailer bytes is running, not a completed certificate.
+  Full18 completes RED174/1310 on those trailer bytes: all five new rows
+  pass; no existing outcome or failure detail changes. Later metadata/physical
+  resolver preparation is a separate RED11/56 focused snapshot: the eleven
+  old selected failures are unchanged, four new dormant/order-mutant controls
+  pass, and35 overlapping emitted L1 files are byte-identical to full18.
+  Full19 on those preparation bytes is running. Physical namespace source
+  order is still open.
   Neither focused green nor full red releases either ticket.
   Runtime recheck of the same staged bytes is GREEN290 with107 executed
   selftests; L3 passes11 suites and4 budget units. The next connected namespace

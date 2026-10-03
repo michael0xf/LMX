@@ -1258,9 +1258,15 @@ executable
 `816E0410EB2ED0B8105C55FD6C19206CC3ACE6936E811A3D0BA5E9A3E706C712`.
 Three added reference-contract fixtures pass; all shared outcomes and failure
 details remain unchanged. The later [original namespace trailer slice](critical-graph-namespace-source-layout-20261003.md#ns-source-trailer-evidence)
-is GREEN15; full18 on that newer source B7126723 is running. These distinct
-snapshots must not be conflated, and namespace physical source order remains
-open.
+is GREEN15; full18 completes **RED174/1310** on source
+`B712672334B56BF9C1921B04F85EBFE226818830381C09145237E7B00E0F7990`,
+executable
+`F17D7448A8520C365C4D6C8D5E39470E4D30C8FA7F228392E8851DACC35E5E47`.
+All five new trailer rows pass; independent comparison finds no shared outcome
+change, removed row or failure-detail drift. The only added diagnostic is the
+new expected valued-return refusal. Later resolver/map preparation has not
+been certified by full18. These distinct snapshots must not be conflated,
+and namespace physical source order remains open.
 
 ### Actual signature-header oracle negative control
 

@@ -1,7 +1,7 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_17` is RED174/1305.
+The latest completed full harness `critical_graph_fix_full_18` is RED174/1310.
 The bounded metadata-selection prerequisite below is implemented and tested;
 the source-order physical layout cutover is not implemented yet.
 No stable twin has been changed. This is part of
@@ -168,8 +168,9 @@ pending the connected layout cutover.
 Dead `l2_ns_field_len`, `l2_ns_field_kind` and `l2_ns_field_ref` accessors are
 removed. Metadata-only `l2_path_in_eternal`, `l2_path_contract`,
 `l2_rw_index_ty` and validating `l2_cap_add` use the selected row. Actual
-emitters still use the old physical producer. The mixed `l2_rw_path` route,
-including the first stage of `l2_rw_index_ty`, remains connected cutover debt.
+emitters still use the old physical producer. The mixed `l2_rw_path` route is
+now split as described below; completed source projection remains connected
+cutover debt.
 
 <a id="ns-metadata-evidence"></a>
 ### 5.2 Metadata-selection prerequisite evidence
@@ -220,12 +221,74 @@ may use exact NSF-row identity plus an explicit declaration ordinal; they do
 not need the future physical projection and must not recursively read the
 GraphField relation while creating it. Actual emission later uses GraphField.
 
+The explicit resolver split is implemented and verified by the preparation
+scope below. `l2_rw_path_meta` and the existing producer
+`l2_rw_path` wrap one `l2_rw_path_resolve(project,...)`; that mode continues
+through `path_occ`, `path_bodies` and `l2_node_seg_resolve`. All four type-only
+callers use metadata; all six operand producers keep physical mode, including
+non-emitting COUNT. Own/formal/NSF rows establish metadata existence; the
+D105 physical half-offset is producer-only. `l2_path_contract` now uses the
+metadata node resolver instead of substituting child0 for an unplaced field.
+No emitted layout is intentionally changed by this preparation. Physical
+projection's missing-map handling remains a cutover obligation, including
+the hidden-input fallback producer `l2_rw_arg_fb`; it may not turn a missing
+projection into a size_t(-1) operand or a different fallback.
+
+`l2_rw_map_inline` now defers only construction phase0's physical map
+resolution and its projection-boundary check. ADMIT's extent/count and
+map offset advancement remain outside this helper and unchanged. PLACE
+(`rw_emit=0`, phase1) still resolves and checks the table; FILL writes the
+same constants. Consumer/schema checks are not waived. This preparation
+does not remove the older fixed-capacity map buffers; that separate bounded
+implementation debt remains, and no arbitrary size limit becomes a norm.
+
+Namespace source registration must prove an original declaration, not just
+nonlocal parent flags: receiveMessage's generated letter model also has an
+NSF entry whose `ns_at` is the receiver statement. The ordinary declaration's
+original `ns_name == ns_at.frame.head` token identity distinguishes it without
+name-specific rules; part roots keep their explicit existing producer.
+Registering all real dormant definitions also cannot demand a type for the
+retained unknown atom in `A: b`. Source-atom construction must share its actual
+original-node/NSF producer identity with traversal and executable analysis,
+without interpreting that inert symbol as an unresolved dynamic input.
+Neither a generated letter tail nor a second data graph is a source body.
+
 An existing constructor classification collision also requires care:
 anonymous retained atoms use NSF kind12 with no `fname`, but the old reference
 depth encoding can produce kind12 for a named depth3 pointer. A numeric kind
 range does not prove a cell was constructed. The ownership proof must establish
 the actual source/constructor contract, including anonymous atom identity;
 missing higher-depth reference constructors remain defects, not prefilled cells.
+
+<a id="ns-projection-preparation-evidence"></a>
+### 5.3.1 Resolver/map preparation and generic order mutation
+
+Fresh `critical_graph_ns_projection_preparation_02` is **RED11/56**, source
+SHA256 `1A09F18E89BE6DCFCEF49C372A647C05B71E760B1D063D8CB54542E86FE86B51`,
+executable SHA256
+`50D0E9F718FF43EE22E1CA5DD729D4F194AE28214B79DB9B2831A61B503D6FEB`.
+All eleven failures already exist in full18: six `unit_body_path_*_pt` rows,
+`unit_capture_struct_own`, `unit_d105n_arg/write/passon`, `unit_d105r_formal`.
+No shared outcome, failure detail or translator diagnostic changes. All35
+overlapping successful generated L1 files are byte-identical to full18; three
+other overlapping successes are expected refusals without generated L1.
+This certifies preparation, not source-order namespace layout.
+
+The generic driver `move-path-field` moves one actual reference inside the
+selected existing container without changing its size, parent or value cells.
+Its dormant positive carrier checks the complete IF/IF/trailer body, in
+native-root and cleared-root modes (127/131 assertions, language exit7).
+Both actual moves yield baseline1/setup1/shape_failures1/other_failures0/exit7.
+The out-of-range setup control yields baseline1/setup0/setup_failures1/
+shape_failures0/other_failures0/exit7, so setup failure is not defect detection.
+The original called/forced-interpreted return witness is unchanged.
+
+Preparation01 is retained **RED13/55**. Its two applied order moves also
+damaged native body-holder lookup in the invoked task, causing invariant
+exit3 before the final graph comparison. They did not meet the shape-only
+same-exit control; no expectation was relaxed. Preparation02 uses a genuinely
+uncalled carrier to isolate that control. Full19 on preparation02's frozen
+sources is running; it does not certify a subsequent namespace cutover.
 
 <a id="ns-source-trailer-evidence"></a>
 ### 5.4 Original namespace return trailer
@@ -251,8 +314,14 @@ Column-0 `return: 1` on a void Structure is refused by the ordinary return
 contract diagnostic, not silently admitted. Previous return, named execution,
 UNTIL, cast and reference-contract rows pass. `_01` had only an incorrect
 negative diagnostic expectation (`unsupported body`); refusal itself was
-correct. Its evidence is retained. Full18 is running on these bytes; neither
-this focused green nor the previous full red closes either critical ticket.
+correct. Its evidence is retained. Full18 on these bytes completes
+**RED174/1310**, executable SHA256
+`F17D7448A8520C365C4D6C8D5E39470E4D30C8FA7F228392E8851DACC35E5E47`.
+All five added rows pass. Independent full17/full18 comparison finds no shared
+outcome change, removed row or failure-detail drift; the sole added diagnostic
+is the expected valued-return refusal. This is not evidence for the later
+metadata/producer split or phase0 map deferral. Neither this focused green nor
+the full red closes either critical ticket.
 
 ## 6. Required evidence
 

@@ -146,9 +146,14 @@ expression-value codes when an outer predef lookup succeeds. Recursive header
 parsing keeps contract codes unchanged. The former mutable `char *` result
 was mistaken for the expression code of `const char *`.
 The unchanged `unit_lm_own_actual_span` manually links its actual `own.lm1`
-support object and now exits 10 with 13 checks. The harness row is explicitly
-translation-only until the harness can link that dependency; it is not reported
-as a runtime harness gate. Structure/void/unknown result refusals are preserved.
+support object and exits 10 with 13 checks. The earlier constructor gate's row
+was explicitly translation-only. `critical_graph_post_full_01` subsequently
+runs that same source with a generic per-fixture `LinkSources` dependency list:
+the staged `l1src/own.lm1` is translated by the pinned translator, compiled
+with the fixture's existing C guards, and linked into the fixture executable.
+There is no prebuilt-object or implicit-library fallback. That fresh harness
+run records 13 checks and the required entry result 10.
+Structure/void/unknown result refusals are preserved.
 
 ### B2: the file root is not erased by a source name
 
@@ -157,7 +162,7 @@ unwraps a sole Structure named `L2` or refuses ordinary names `L1`/`L3`.
 The outer profile comes from the source file, not these names. Forty-six
 current sandbox fixtures have been mechanically converted from obsolete
 profile wrappers to the already normative wrapperless form. Historical and
-stable sources are unchanged. Grammar source and both generated languages
+stable sources are unchanged. Grammar source and both generated grammar documents
 now describe this same rule; quoted historical examples stay intact.
 
 The sole `L2` fixture checks the exact retained container and int value 7.
@@ -193,6 +198,57 @@ of G2. Selection of source placement is still conditional; native-only/local
 named procedures, other control bodies, definition placement, CALL protocol
 containers, names and comments have not all migrated. Their old producers
 must still be removed, not hidden behind this green subset.
+
+### G2 construction-boundary preparation, not an ownership cut-over
+
+All eight `l2_rw_body` callers now pass the actual P0 Structure, rather than
+only its first field. Empty-body identity and the distinction between a body
+and its FOR/CATCH lexical scope are therefore available at the common API.
+Body allocation uses the existing `l2_rw_plain` constructor instead of a
+second handwritten copy of that constructor's output. Twenty-six direct
+attachments in statement emission, catch, trailers and Structure calls now
+use `l2_rw_put`. Unused native-name buffers were removed from those paths.
+No new runtime storage or compiler ledger was added in this preparation.
+
+`critical_graph_constructor_boundary_02` is GREEN: 29 targets, comprising
+26 fixtures plus translator/driver/scope checks. Twenty-five successfully
+generated fixture L1 files are byte-for-byte identical to their `full_03`
+counterparts; the remaining fixture requires the unchanged refusal. The gate
+includes exact source/mutation assertions, walked nested methods, catch,
+merge, callable return/partial-application cases and actual own-span linkage.
+This proves the tested output was preserved, not that source topology became
+universal. The first boundary attempt aborted on an unknown filter name
+`unit_deepif`; it has no fixture verdict and is not counted as evidence.
+
+The committed producer/temp-edge relation remains to be implemented.
+Speculative COUNT still does not construct PAD topology; old global shells
+and body allocations can still duplicate one source body. The general owner
+selection and reindex described in the plan must be one connected cut-over,
+not a pointer-nonzero fallback or a new special anonymous-container branch.
+
+### Full-run witness corrections, with stronger execution acceptance
+
+Five additional failures in `critical_graph_fix_full_02` were pre-execution
+assertions, not observed runtime regressions. Wrapper removal moved the
+unchanged no-result/value-return refusal in `entry_puts_after_return` to
+line 1, column 1. The corrected row still requires that exact refusal.
+`unit_walk_trailer` previously required the next sibling to be a bare RET
+role; the new generic `NextShape` check instead requires exactly one incoming
+sequence edge and its next physical sibling to be a RET/1 Structure. The
+ARG/ADD/LIT3 and SET_ARG/OWN operand checks remain. All five invoked methods
+are explicitly checked to have no native word under `--walk-methods`.
+
+The three `unit_nested_body_{else,while,for}` rows pinned obsolete native
+temporary spellings. Their replacements compare SET_OF destinations and
+initializer literals, plus PUT through OF(NODE, field), without naming
+generated temporaries. These are exact transitional holder relationships,
+not a complete source-topology oracle. Original readbacks 21/31/41 remain;
+new ordinary external paths read hosted fields 2/3/4, the finished WHILE
+flag is 0 and FOR index is 1, and the root's bare working `shared` remains 3.
+Success is now explicit entry result 7 rather than fall-through 0.
+Each source has a native-method variant and an alias forcing both producer
+and reader methods through the walker, with driver-cleared root parity.
+No production branch was introduced for these three fixtures.
 
 ### G4 bounded copy repair: operation Structures are not terminals
 
@@ -253,6 +309,10 @@ absolute output paths and PowerShell's actual `OnlyFixture` array.
 | `critical_graph_source_container_02` | RED, 1 of 11 | Both new method executions exited 7; the shorthand exact CALL expectation had not consumed its children |
 | `critical_graph_source_container_03` | 12 targets, 0 failed | Explicit exact CALL/holder comparison, recursive source contents, real erase mutant and prior regressions |
 | `critical_graph_source_container_04` | 14 targets, 0 failed | Adds deep retained containers (192 checks) and unreachable body after return (283); method-body row also executes 283 checks, root multi-expression row 99 |
+| `critical_graph_post_full_01` | 8 targets, 0 failed | Exact return-refusal location, strict owned RET sibling, actual own-span support link/runtime (13 checks), prior graph regressions |
+| `critical_graph_nested_acceptance_01` | 10 targets, 0 failed | Three unchanged control contracts with added actual field-path/publication assertions; native and genuinely walked producer/reader methods, plus all five walked trailer methods; each positive row executes 17 driver checks |
+| `critical_graph_constructor_boundary_01` | Aborted, no fixture verdict | Unknown focused filter `unit_deepif`; not a full or focused acceptance gate |
+| `critical_graph_constructor_boundary_02` | 29 targets, 0 failed | Actual P0-body API, common constructor/26 attachments, source mutants, nested methods/catches/merge/callable-return regressions; 25 emitted L1 files exactly equal to full_03 |
 
 The exact declaration witness executes 171 checks across native and
 driver-cleared physical root walking. The 24-occurrence witness executes 491;
@@ -291,7 +351,9 @@ The later shared-place executable is SHA256
 Its 24-occurrence witness executes 522 checks, the exact declaration 186,
 and depth-six 140. Both new RET fixtures use `WalkMethods = true` plus
 `WalkedMethods = [0]`; their logs confirm `--walk-methods`, and the harness
-checks the selected method's dispatch. An array containing only ordinal zero
+checks the selected method's dispatch. Successful fixture logs can be pruned
+by the standard harness unless `-KeepAll` is supplied; the retained summary
+and fixture rows record that acceptance. An array containing only ordinal zero
 must not be used as the Boolean flag: it coerces to false in PowerShell.
 
 The B2 focused translator executable (`critical_graph_root_container_05`) is
@@ -299,12 +361,20 @@ SHA256 `22611FE5AAE8F6C0F2DC7AEAC37BEA42CF5CD136869A2BCA3B3896A97D1BCF91`.
 Later source-container work is a different staged snapshot and is recorded
 separately; none of these executables identifies a committed code release.
 
-`critical_graph_source_container_04` is the last focused staged snapshot:
+`critical_graph_source_container_04` records the source-container snapshot:
 translator executable prefix SHA256 `11C839DE3FBB0ED5`.
-The subsequent full run uses these current source bytes with a fresh directory.
-The frozen translator source in that focused run, in `critical_graph_fix_full_02`,
-and in the development tree has SHA256
+The frozen translator source in that focused run, in `critical_graph_fix_full_02`
+and in `critical_graph_fix_full_03` has SHA256
 `E81F563C25AD601C05CD2A7AC8270C9CFEBE4160C7C42461F54C3D049258F3CD`.
+Later construction-boundary edits are a different development snapshot and
+must not borrow that full-run verdict.
+
+The frozen translator source in `critical_graph_constructor_boundary_02`
+matches the current development source and has SHA256
+`983243C9ED34326C811542BD973E41CB9A9567DA5D1D9D8FD6B6F253C2BDCA85`.
+Its translator executable has SHA256
+`3FD5CAB8528A98073C5ADA7E5CBC6DDEF1016C07C936460964156E5800CA1C97`.
+This later snapshot has focused acceptance only; no full green release.
 
 The 106 kernel selftest rows comprise 105 ordinary exit-0 runs and one
 expected-fatal watchdog exit-3 run. The latter is an intentional successful
@@ -343,6 +413,27 @@ tails and all receiver-created storage must participate. Source preservation
 must not depend on whether the walker can execute the body. Name/comment
 codec and copy/merge metadata remapping are also still open.
 
+### Concrete codec gap, not an already implemented name table
+
+The normative address-to-source-name table and `toLmx`/`fromLmx` are not
+implemented in the inspected development kernel. Compiler P0 text/name arrays
+and generated diagnostic comments are translation-lifetime evidence, not
+that runtime facility. `l2trans` destroys its P0 document immediately after
+`l2_emit_unit`. Inline comments are skipped by `lm_p0_skip_field_space`;
+raw comment blocks are scanned and skipped by the field parser. The original
+document owns the complete source only during translation. Merely walking P0
+fields therefore cannot recover every retained comment later.
+
+G1/G4 must explicitly implement independently owned name/comment payloads
+bound to actual source occurrence places before document disposal. Repeated
+declarations or applications sharing a target must not collapse their source
+occurrence identities. Copy/merge must remap those place keys through the
+same graph-copy relation and retain payload ownership when source storage is
+released. Names are not an execution resolver; comments are not executable
+nodes. No Lmx member, per-primitive wrapper, second AST or saved whole source
+may substitute for the missing mechanism. The roundtrip must reconstruct
+from the actual graph plus only these retained payloads.
+
 ## 4. Pointer repair inventory; implementation not started
 
 The existing `L2Address.type` mixes stored value and address type, and ordinary
@@ -358,11 +449,38 @@ storage types and lifetimes. Casting `void **` to `Lmx **` and dereferencing,
 or copying a different pointer representation without conversion, is not a
 general repair. No additional holder or permanent graph is justified.
 
+The ordinary value contract and address-result contract must remain distinct
+in `l2_reference_descriptor/source` too; they currently reuse the same
+`L2Address.type`. Raw C-type interning can collapse a language model reference
+onto the foreign spelling `Lmx *`, so the stored C-type code alone is not
+enough to select a typed native cell versus a CHILDREN `void *` cell.
+Use the resolved declaration/signature contract and actual storage-range
+projection; do not deduce the effective C cell type from an aliased cast.
+
+Null adds a concrete coordinated boundary: current AT/OWN/OF reference code
+classifies `slot[0]` and defaults a null to LMX. CHILDREN/TYPE_REFS range
+membership does not distinguish an Array-null from a Structure-null contract.
+The producer's existing declaration/signature contract must supply that type,
+without a per-cell metadata record or a pointee probe. Exact-depth actuals
+must be checked before consumer-relative implements, including null values.
+These are read-only findings for P0–P3, not implemented pointer fixes.
+
 The existing reversible non-owning range registration can describe actual
 already-existing machine cells if needed. That route still requires a concrete
 storage contract and retirement on every exit; it has not been implemented
 or adopted as a new language rule. Exact-depth actual/formal/return tests,
 cross-native/walker writes and alias/lifetime witnesses remain P0–P3 work.
+
+The source-loss and pointer-depth parts of address lowering are coupled:
+`l2_rw_span` reaches `l2_address_operand` only for source unary `@`, but
+`l2_address_name` suppresses depth addition for descriptors and
+`l2_rw_address` omits their ADDRESS application. Native `l2_emit_address`
+and runtime `lmx_walk_place` likewise substitute the descriptor for its cell.
+Just inserting ADDRESS can change its type witness while leaving the wrong
+reference level; adding a compatibility branch would preserve the defect.
+Integrate source ADDRESS retention and general value/place/depth projection
+atomically at the shared address boundary after universal placement. No such
+code or compatibility branch has been added, and neither ticket is closed.
 
 ## 5. Full gate / release status
 
@@ -371,6 +489,64 @@ Exact FAIL lines equal the 36 lines in Grok's `critical_graph_bug_full_15`
 (36 of 1175); all 47 added targets passed. This full run predates the final
 mutation classifier and RET/shared-place changes and is not a full verdict
 for those later bytes. No old expectation was changed to remove a failure.
+
+The subsequent full harness `critical_graph_fix_full_02` is **RED, 40 of
+1233**. Relative to that earlier 36-failure list, own-span ceased failing its
+old translation-only row and five new pre-execution pins failed: the return
+location, owned RET sibling, and three control-body native temporary names.
+All five were individually reviewed and then migrated as described above;
+fresh focused runs are green. This does not turn the old full run green.
+The earlier remaining failures have not been waived or changed wholesale.
+
+Fresh full harness `critical_graph_fix_full_03`, staged from document HEAD
+`0c3ee212`, is **RED, 35 of 1236 targets**. All five reviewed pre-execution
+failures above are absent; the other 35 FAIL texts are exactly unchanged from
+`full_02`. The three additional walked control-body aliases pass. Its translator
+executable has SHA256
+`653078EAC0BA3C6B76F637F639B73514CE68898254F889CDB204AB6A1D998F36`.
+This verdict applies to the frozen source hash above, not to the subsequent
+construction-boundary edits. None of the remaining rows has been waived.
+
+Exact remaining fixture identities (their complete diagnostic texts are in
+that evidence directory's `summary.txt`):
+
+```text
+entry_puts_empty
+entry_puts_bad_arg
+entry_puts_extra_arg
+entry_puts_nested
+entry_puts_triple
+entry_puts_triple_lead
+entry_puts_triple_lead_sq
+entry_puts_triple_long
+entry_puts_triple_runs
+entry_puts_triple_seven
+entry_puts_triple_seven_sq
+entry_puts_triple_single
+entry_ret_tr_puts
+entry_ret_tr_two
+unit_arr_path_read
+entry_parse_min
+unit_make_adder
+unit_capture_struct_whole_refused
+unit_walk_make_adder_native_note
+unit_walk_d105_nested
+unit_walk_struct_formal
+unit_root_model_field
+unit_root_div_zero_refused
+unit_discard_calls
+unit_arg_addr_pointer
+unit_puts_main_beside_method
+unit_colon_method_lexical_model
+unit_field_path_unit_colon
+unit_field_path_struct_rebind_refused
+unit_addr_slot_structure_projection
+unit_addr_entry_name_collision
+unit_ptr_grow
+unit_native_activation
+unit_matrix_callable_struct_identity
+unit_matrix_path_struct_rebind_refused
+```
 
 Optional `-Strict` kernel run `critical_graph_ret_ownership_01`: **RED,
 138 of 286**, with blanket `-Werror -O2` diagnostics in existing modules and

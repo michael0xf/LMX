@@ -82,14 +82,36 @@ Current bounded implementation, with no DONE claim:
   six expression-bearing levels, a method's unreachable tail and a real erase
   mutant. Conditional source-placement selection and other producers remain;
   this does not close the universal-layout item below.
+- [x] Strengthen the migrated body-location witnesses: ELSE/WHILE/FOR now
+  check actual external hosted-field paths, publication, and positive exit 7;
+  their source aliases exercise both selected nested methods through the
+  walker. The owned-RET sibling witness checks all five invoked methods.
+  `critical_graph_nested_acceptance_01`: 10 targets, 0 failed. This is not
+  proof that the remaining data-shell/source-topology producers are gone.
+- [x] G2 construction-boundary preparation: all eight nested-body callers
+  pass the original P0 Structure; allocation uses the common plain constructor
+  and 26 statement/catch/trailer/call attachments use `l2_rw_put`.
+  `critical_graph_constructor_boundary_02`: 29 targets, 0 failed; all 25
+  successfully emitted fixture L1 files equal their `full_03` bytes exactly.
+  No ownership ledger/cut-over, shell removal or graph release is claimed.
 - [ ] G2/G3: construct all source occurrences through one recursive placement
   algorithm, migrate every width/path/schema/copy/capture consumer, then remove
   selective eligibility, packed fallback and data-shell placement. B0 does not
   close this step or make the old graph source-faithful.
 - [ ] G1/G4: complete the graph decoder and the real name/comment codec;
   compare full source containment, not just selected lowered instructions.
+  The inspected development kernel has no implemented runtime
+  address-to-source-name table or `toLmx`/`fromLmx`. Preserve independent
+  name/comment payloads at actual source places before P0 document disposal;
+  do not mistake compiler name arrays or generated diagnostic comments for
+  that facility. Copy/merge must remap source-place keys and preserve payload
+  ownership through the same copy map; no second AST or saved source replay.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
+  Latest full `critical_graph_fix_full_03`: RED, 35 of 1236, five reviewed
+  stale witness failures removed and the remaining FAIL texts unchanged.
+  It predates the subsequent construction-boundary preparation; do not call
+  it a full acceptance of the current development source.
 
 - [ ] **Complete [critical_graph_bug](steps/tickets/critical_graph_bug.md)
   before choosing another remaining implementation item in this plan.**

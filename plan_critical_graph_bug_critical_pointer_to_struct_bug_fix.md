@@ -183,9 +183,17 @@ constructor/attachment PLACE, один producer, reindex старых префи
 field/span traversal. `critical_graph_source_producer_05` — GREEN, 13 целей;
 `critical_graph_fix_full_04` — RED, 35 из 1245, без новых отказов. Точные байты
 и ограничения находятся в [журнале реализации](steps/critical-graph-pointer-fix-20261002.md).
-Следующая связанная граница — typed cells смешанных тел в исходном порядке,
-включая перенос holder в resolved field paths, а не только child index.
-FOR header/CATCH parameters не считать полями их вложенных тел по общему fid.
+Следующая связанная граница реализована в sandbox: typed cells смешанных тел
+в исходном порядке, с holder и child в resolved field paths. FOR header/CATCH
+parameters не считаются полями вложенных тел по общему fid; они хранятся в
+своих реальных операциях, без отдельного data shell. `critical_graph_mixed_scope_06`
+— GREEN 20; `critical_graph_no_init_02` — GREEN 9, включая отсутствие лишнего
+слота при объявлении счётчика без initializer. Это не полный G2/G3 release.
+Далее: METHOD/root occurrence сам становится source-контейнером (без второго
+тела); перенести PAP/T7 с плотного suffix шагов на source placement. Независимо
+от допустимости интерпретации требуется сохранить полный граф native-only и
+library bodies, включая MAD return tails и вложенные объявления. Неподдержанную
+интерпретацию нельзя подменять OP_NONE или пропуском исходной операции.
 Постоянные служебные структуры, Lmx-поля или новая норма языка не вводятся.
 
 ### G3. Полные выражения, применения и согласованные потребители

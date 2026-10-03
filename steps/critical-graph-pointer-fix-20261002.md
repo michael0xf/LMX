@@ -269,6 +269,60 @@ consumers must preserve `GraphField.holder`, not only its child number. General
 mixed placement, native-only bodies, source/name/comment reconstruction and
 removal of all legacy producers remain OPEN; neither critical ticket is DONE.
 
+### G2 mixed-body producer cut-over: real declaration cells in source order
+
+The next bounded cut is implemented in the development tree. A committed
+source body now allocates its real own cells at the fields found by the common
+source traversal. Its FILL aliases that one preallocated object; it does not
+allocate a second data shell. Compiler-only `L2SourceField.place` carries the
+actual holder and child for each construction view. It is not runtime atom
+metadata. Primary and projected views do not overwrite each other's places.
+
+FOR's existing operation owns its counter at field 4; the actual nested body
+owns body-local declarations. PAD owns its parameter cells and its actual
+handler. Neither header parameters nor the FOR counter are packed into the
+body merely because their declarations share one lexical fid. No new method
+activation, Lmx member, language rule or companion graph is introduced.
+
+Native and interpreted path lowering preserve the whole resolved field place,
+including the owning edge chain, rather than just the old child number. Old
+transferred producer reservations are removed with a prefix projection of
+surviving source slots, so skipping an allocation leaves no vacant sibling.
+Projected FILL requires its own committed binding and unchanged producer width.
+
+`critical_graph_mixed_scope_06`: **GREEN, 20 targets**. It includes exact
+mixed declaration order (1537 checks per row), FOR/header/body/step ownership
+and operands (697 checks), nested ELSE/FOR native and genuinely walked methods,
+ELSE/WHILE/FOR publication/readbacks, and repeated CATCH parameter/local use.
+Stale generated factory-name/shell-path pins were replaced by exact graph
+relationships; execution values and forced-walk requirements were not weakened.
+
+Frozen translator source SHA256:
+`D624F3B80308CBC7449424345ABA7AC2A3516B868C256D7582F9968903A6A35A`.
+Executable:
+`DBA79E4659BD8E2B74B92D83434296D669315418082914E8317070EFB07F2ACD`.
+
+An additional independent boundary witness found a compulsory FOR-initializer
+assumption: `for: int(i) (0) i++` had been admitted by checking but refused
+silently by native emission, and source placement reserved an action even
+when none existed. Native emission now delegates that header declaration to
+the ordinary statement emitter. Source placement counts explicit candidate,
+implicit input carry, or no action from the resolved receiving contract.
+`critical_graph_no_init_01` is retained **RED** evidence, not a successful run.
+`critical_graph_no_init_02`: **GREEN, 9 targets**, including the no-initializer
+source sequence without a hole, initialized FOR's 697-check exact tree,
+native/walker hosted fields, and nested FOR/ELSE paths.
+
+Its frozen source SHA256:
+`B2DA7AD235A3E81AB9C6CF6A51707FFADA2B262D240960857B53CC1EC40E52E2`.
+Executable:
+`B03022A59811B8717916B4043570732C6AA4D1D87025DC02600A2A589C1C4250`.
+
+This is not the universal graph release. Root/method occurrence construction,
+PAP/T7 dense action suffixes, native-only/library retention, MAD tails/nested
+declarations, source names/comments and the complete decoder remain OPEN.
+The pointer implementation is still unstarted behind graph acceptance.
+
 ### Full-run witness corrections, with stronger execution acceptance
 
 Five additional failures in `critical_graph_fix_full_02` were pre-execution

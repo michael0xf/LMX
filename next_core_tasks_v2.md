@@ -101,7 +101,16 @@ Current bounded implementation, with no DONE claim:
   `critical_graph_source_producer_05`: 13 targets, 0 failed, including actual
   parent checks, a parent-only mutant and its setup-miss control. Mixed bodies
   execute in native and explicitly selected walker modes; their declaration
-  storage shell has not moved yet. This does not close G2/G3 or runtime T7 copy.
+  storage shell had not moved in that gate. This does not close G2/G3 or runtime T7 copy.
+- [x] G2 bounded mixed-body producer cut-over: actual body-local cells occupy
+  their original source fields; FOR counter and PAD parameters belong to their
+  actual headers, not a companion body. Native/walker paths retain holder plus
+  child, projected views have independent committed places, and obsolete
+  producer slot reservations are removed. `critical_graph_mixed_scope_06`:
+  20 targets, 0 failed; exact mixed tree 1537 checks, exact FOR tree 697 checks.
+  `critical_graph_no_init_02`: 9 targets, 0 failed; FOR's declaration uses the
+  ordinary native emitter and explicit/carry/no-action source cardinality.
+  These bounded results do not close G2/G3, names/comments or the pointer ticket.
 - [ ] G2/G3: construct all source occurrences through one recursive placement
   algorithm, migrate every width/path/schema/copy/capture consumer, then remove
   selective eligibility, packed fallback and data-shell placement. B0 does not

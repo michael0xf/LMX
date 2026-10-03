@@ -1,12 +1,11 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_25` is RED184/1329
-on frozen6E4E0FD8 bytes: all15 located unknown-name diagnostics recover,
-with184 unchanged failure details and no new regression from full24.
-The later nested-source04 is focused GREEN102 on85E54097;05 is RED2/106
-on the same translator, exposing refusal of both new copied-parent calls.
-Full26 is running with the later observer; it has no verdict yet.
+The latest completed full harness `critical_graph_fix_full_27` is RED189/1351
+on frozen070B6123; exact INIT observers recover, but current-value callable
+proof is still missing. Later focused merge/output01 is RED7/152 on9DD7E13A,
+ordinary kernel fixed02 GREEN291 and L3 passes11 suites plus four budget units.
+[Latest bounded evidence and remaining work](#merge-root-integrity).
 Earlier full24 RED199/1329 on3B903EC6 and full23
 RED185/1329, full22 RED188/1329, cutover04 RED7/32 and cutover06
 GREEN31 remain historical bounded evidence, not whole-kernel acceptance.
@@ -1194,11 +1193,12 @@ Focused09 completes **RED5/124**, executable SHA256
 `3C8355B740F03CF3C1608E6035C3E10E0979D99B38D1A24B2B0634C3ACE0D2D9`.
 The three additionally selected translation failures are existing full26
 rows `unit_receive_letter_model`, `unit_native_typed_receive` and
-`entry_index`, alongside the two copy-call rows. A fresh **full27 is running**
-on the current frozen source and strict observer; local session55497 is
-only a handle, not completion evidence. Predicted1351 targets are not a
-verdict. Inspect that same process and evidence before any new build;
-do not restart from an observation timeout or absence of summary.
+`entry_index`, alongside the two copy-call rows. Full27 subsequently completes
+RED189/1351 on this frozen source. Both strict INIT observers recover;
+`unit_named_struct_exec_instance`, `unit_named_struct_exec_two_types` and
+`unit_model_var_call` newly refuse their migrated explicit-copy calls before
+output.186 other failure details are unchanged. All eight added INIT/body/
+facet mutations pass. This gate is terminal, not a pending process or release.
 
 #### Required connected source-site proof, not a new language rule
 
@@ -1223,10 +1223,14 @@ Source offsets, possible-source catalogues and first-name matches are not
 held-value proof. Apply the reasoning to old named constructors as well as
 copies. No permanently hidden runtime data structure is introduced.
 
-The decisive paired prefixes are `copied: merge Outer / copied /
-receiveMessage: copied` (a later write must not erase an earlier call's
-proof) and `copied: merge Outer / receiveMessage: copied / copied` (the
-last call cannot borrow Outer's old hidden-input contract). Add an unrelated
+The paired prefixes `copied: merge Outer / copied / receiveMessage: copied`
+and `copied: merge Outer / receiveMessage: copied / copied` require exact
+declaration identity: Q53 makes a separately written computed output a new
+occurrence unless it targets a real explicit typed contract. Do not describe
+the second prefix as replacement of the first merge cell without proving it.
+It does show that the later shadow must not borrow the earlier merge's origin.
+An actual replacement witness must target the same resolved storage place;
+a later replacement must not erase an earlier call's proof. Add an unrelated
 primitive write, distinct same-name declarations, a proved effect-free sub,
 an opaque external call, branch joins and loop/catch controls. Resolution
 must prove that each write really targets the queried occurrence: merely
@@ -1238,6 +1242,97 @@ Both critical tickets and8+8a stay OPEN. Code is saved but uncommitted;
 stable twins remain untouched. Native root reuse after merge and the general
 multioperand body-selection/ABI proof remain the separate known debt from
 the sleep checkpoint, not closed by these source-site views or focused tests.
+
+<a id="merge-root-integrity"></a>
+### 5.18 Source-ordered output bindings and one-root merge integrity
+
+Current translator SHA256:
+`9DD7E13A5FEC4F994F9F32AA0517E6CF0D8E0EF7E7C3513D9AAE5003684A5E31`.
+Harness:
+`E0D29C346519B8C4422DA1E69C1FF21FB0730A73DBE01C63509F1FD1CA45BA34`.
+Driver:
+`A3B2276FD210333B68A0F18324733303FC16C217EFD67174CA9341C5E9438C90`.
+
+`l2_own_source_after`, binding/ordinal selection and exact-host output selection
+now consume source order rather than own-registration order. The output route
+first recognizes the same written declaration, then the nearest earlier
+same-body occurrence; only its actual typed contract permits target reuse.
+A nearer computed shadow does not silently reach past itself to an older
+typed declaration. Native and walker consume the same stack-only L2Address
+projection. No persistent binding row is added to the language graph.
+
+`critical_output_binding_05` is RED7/139, executable
+`F61885808168D366605AD200862C9B6B39606DB63036D39F1B4E6D9FB9969A3D`.
+Six added output/order fixtures pass both native and same-artifact cleared-root
+walk; two mutants redirect actual SIZE_T target storage and fail shape while
+the program still succeeds with7. Typed reception and entry_argc_if recover.
+The typed output fixture explicitly receives argc3 (exe plus two arguments),
+then observes a second receive returning null; no guessed argc2 expectation.
+
+The runtime identity subcase of merge previously copied an operand closure,
+then assembled a second root from the copied root's children. Against frozen
+baseline1F950CA7 the new witness exits1 with four failures among12 checks:
+self edge, nested backedge, ordinary native word and empty-body native word.
+The fix in `lmx_merge_owned` returns `copies[0]` directly only after successful
+copy with count1, body0 and no active override map. Fresh copies are parented
+to the supplied execution container; exact retained-profile occurrences keep
+their address, parent and native. Staged names are published on the returned
+copy. General multioperand/body native selection is unchanged and unresolved.
+
+Exact merge implementation/header SHA256:
+`96BFEBD2CE745DADEA461D473825D3F21EDF1F458F25FD0327E55578D2B4ECD2` /
+`1C15C1BDC34EF33D82B3803C389DD1625FD665EB53490820448EA620DE350F6F`.
+New `lmx_merge_root_identity_selftest.lm1`:
+`10074065C8DA1844AA3465EE076624391ABA5D56D5A3527F5FC681C75D25435B`.
+It observes actual native dispatch with copied self/parent and independent
+mutation41->42, self/back edges, repeated aliases, empty native and no invented
+native. The names witness keeps post-copy allocation failure coverage on two
+operands and separately checks one-root names; retained-profile coverage uses
+a distinct nonzero container and native word.
+
+`build/l2src/critical_merge_root_fix_02` is ordinary GREEN291 with108 executed
+selftests. New root identity:15 checks; names:102; qualified range:44, all0
+failures. Frozen generated-C mutations under `build/critical_merge_root_mutants_01`
+are rejected: original-object substitution exits3 with failed isolation checks
+and the dynamic-call invariant; unpublished names exits1 with three failures;
+retained reparenting exits1 with its new assertion. These are actual mutations,
+not a claim that a compile failure proves semantic detection.
+
+Expanded `critical_merge_root_output_01` is RED7/152, executable
+`D49AE02AEBC9C29A27F3E482C2E71EBDFDA4D35A54CB012366F5ACC3E10C7F4E`.
+It retains binding05's complete scope and adds13 passing merge controls, without
+a new failure. The seven remaining failures are `unit_receive_letter_model`,
+`entry_index`, `unit_named_struct_exec_instance`, `unit_named_struct_exec_two_types`,
+`unit_model_var_call` and the native/walk-method nested-copy shape pair.
+`build/l3_critical_merge_root_01` passes all11 suites and four budget units
+(75/128 names,1070/8192 bytes). Read-only independent review finds no defect
+in the bounded one-operand branch; it is not another execution certificate.
+No full gate on these later bytes or stable promotion is claimed.
+
+#### Next connected cut: output storage inside the written operation
+
+The repeated-output fixture still has width10 where its source body requires8:
+two synthetic null-storage siblings precede the written SET operations. Removing
+them must not remove the output's actual stable storage or introduce a wrapper
+graph. Place a computed reference in the existing output operand's ordinary
+descriptor edge; keep explicitly declared typed targets in their real cells.
+All reads/writes of that occurrence must borrow the same operand/storage place,
+not copy its initial payload or create an independent working row.
+
+Use existing compiler-only SourceField/construct-place machinery to reserve
+and fill that operand before borrows; no runtime names, leaf metadata, pointer
+registry or fixed depth cap. An explicit primitive pointer cell is not a
+substitute for an ordinary Structure edge: the copier treats pointer storage
+as a terminal, so that substitution would lose closure isolation. Extend the
+shared runtime place decoder and native/walker producers together. Preserve
+actual copied-instance routing, dirty publication, independent repeated
+outputs, typed-target reuse, exact source widths/parents/order and names.
+
+This is graph placement, not closure of the pointer ticket. A void** cast does
+not create a genuine C99 Lmx* effective-type cell; all address levels and
+generic consuming contracts still require the subsequent connected repair.
+Do not claim that compact storage repairs @Structure or callable current-value
+proof. Both critical tickets and8+8a stay OPEN.
 
 ## 6. Required evidence
 

@@ -399,8 +399,28 @@ Current bounded implementation, with no DONE claim:
   RED2/116 on E7F4BC2E retains the two honest positive copy-call refusals.
   Current070B6123 shares the receiver output-place projection across prepass,
   CHECK, native take and walker take; focused09 is RED5/124 (the same two
-  copy rows plus three additionally selected old failures). Full27 is running
-  on that source and the later strict observer; no verdict yet.
+  copy rows plus three additionally selected old failures). Full27 completes
+  RED189/1351 on frozen070B6123: the two strict INIT observers recover; three
+  shared explicit-copy call rows now refuse before runtime;186 other failure
+  details are unchanged. This is not a release.
+  Later source9DD7E13A orders output bindings by exact source site, not table
+  registration order. Binding05 is RED7/139; six added output/order fixtures
+  and two actual-cell mutation controls pass in native/cleared-root modes.
+  Expanded `critical_merge_root_output_01` is RED7/152 with the same seven
+  failures; all13 additional merge controls pass. The one-operand runtime
+  identity fix returns the actual copied root, preserving closure edges,
+  aliases, native and names, without reparenting retained profile addresses.
+  `critical_merge_root_fix_02` is ordinary GREEN291 with108 executed selftests;
+  `l3_critical_merge_root_01` passes11 suites and four budget units. Three
+  adverse runtime mutations are rejected. General multi-operand native/body
+  selection, current callable origin and the full current-source gate remain
+  open; no stable twin is promoted.
+  Next connected layout cut: computed outputs belong to their existing
+  operation's operand, not synthetic sibling fields in the source body.
+  Keep distinct output occurrences and shared working-place identity, copy
+  isolation, explicit typed targets and source-name publication. A new pointer
+  cell or hidden companion graph must not replace the ordinary descriptor edge.
+  [Runtime identity evidence and compact-output boundary](steps/critical-graph-namespace-source-layout-20261003.md#merge-root-integrity).
   Before accepting copied/received callable origin, implement the common
   source-site current-value proof: exact constructor establishes origin,
   replacement of its resolved place invalidates it, ordinary primitive writes

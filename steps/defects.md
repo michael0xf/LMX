@@ -102,8 +102,12 @@ translator, not by this observer. The last direct-slot guards are later than
 frozen05. Full26 completes RED188/1343:184 old failures are unchanged;
 two old shape observers omit retained INIT, and two new language copy-call
 witnesses refuse. The exact INIT/copy observer and eight damage controls
-subsequently pass in focused07/08/09. Full27 is running on the current source;
-the focused results do not certify that full gate or source reconstruction.
+subsequently pass in focused07/08/09. Full27 completes RED189/1351 on070B6123:
+the two INIT observers recover, three shared explicit-copy call rows refuse,
+and186 other failure details remain unchanged. Later output binding05 is
+RED7/139; expanded merge/output01 is RED7/152 with unchanged failures.
+These focused results do not certify a full later-source gate or source
+reconstruction.
 
 <a id="graph-call-origin-current-value"></a>
 ### GRAPH-CALL-ORIGIN-CURRENT-VALUE — 2026-10-03, Codex, IN WORK
@@ -111,8 +115,11 @@ the focused results do not certify that full gate or source reconstruction.
 A fresh `copied: merge Outer` has constructor provenance but lacks the
 ordinary named-constructor call route. A trial shared `l2_own_call_origin`
 consuming `l2_mres_source.layout` passes both copied-parent runtime witnesses.
-It is not a closed fix: reception can replace the same own row, while that
-constructor record remains unchanged. Existing own-layout evidence has the
+It is not a closed fix: an actual receiving/reference store can replace a
+resolved storage place, while its constructor record remains unchanged.
+A separately written computed output can instead declare a new occurrence;
+repeated spelling alone proves neither replacement nor identity.
+Existing own-layout evidence has the
 same lifetime limitation. The copy-origin extension was withdrawn; positive
 copy-call refusals remain visible rather than repinned to expected refusal.
 
@@ -126,6 +133,27 @@ retrospectively invalidate an earlier call; a primitive cell write or distinct
 declaration must not invalidate the other value. No atom metadata, runtime
 binding registry, possible-candidate proof, prototype substitution or
 receiver-name scan in the origin analysis. [Exact scope and witnesses](critical-graph-namespace-source-layout-20261003.md#current-value-call-origin).
+
+<a id="merge-root-copy-identity"></a>
+### MERGE-ROOT-COPY-IDENTITY — 2026-10-03, Codex, IN WORK (bounded fix verified)
+
+With one operand, no supplied body and no active overrides, the runtime copied
+the closure, then allocated another result root from its child edges. Self
+edges and nested backedges still targeted the abandoned copied root; the
+published root lost its native word, including on an empty callable body.
+The new runtime selftest against frozen baseline1F950CA7 reproduces all four
+failures (12 checks, exit1). No source syntax or normative rule changes.
+
+The bounded sandbox fix returns the copier's completed root and publishes its
+staged names. Only a fresh copied occurrence gets the execution parent; an
+exact retained profile keeps its physical address, old parent and native.
+Ordinary kernel fixed02 passes291 targets with108 executed selftests; the
+new closure/call witness passes15 checks, names102 and qualified range44.
+Mutants returning the original, cancelling names or reparenting a retained
+profile are all rejected. L3 passes11 suites plus four budget units; the
+expanded focused harness is RED7/152 with no added failure from its RED7/139
+scope. General multioperand native selection and critical-graph acceptance
+remain open. [Exact hashes and scope](critical-graph-namespace-source-layout-20261003.md#merge-root-integrity).
 
 <a id="critical-graph-bug"></a>
 ### critical_graph_bug — 2026-10-02, Codex, CRITICAL / OPEN

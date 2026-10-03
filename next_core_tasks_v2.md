@@ -249,8 +249,18 @@ Current bounded implementation, with no DONE claim:
   Earlier producer01–07 failures/aborted runs remain recorded. Full15 completed
   RED175/1297 on those frozen bytes: three pointer/site/Array-shadow failures
   disappear, all five added fixtures pass, no former green regresses and no
-  fixture is removed. `unit_ptr_grow` still fails its old refusal expectation
-  after successful translation; its real positive execution is not yet gated.
+  fixture is removed. The subsequent null-input `unit_ptr_grow` execution
+  passes; its obsolete refusal expectation is replaced by the measured
+  positive row. This does not exercise successful allocation or raw-pointer
+  interpretation. Cast04 is GREEN19 with the complete 919-assertion nested
+  cast/type/value oracle and four genuine source-erasure mutants. Full16 is
+  RED174/1302 on source511F8AA6: only `unit_ptr_grow` changes FAIL to OK;
+  the five new cast rows pass, no former green regresses, no row is removed,
+  and the remaining translator diagnostics are unchanged. The next bounded
+  metadata-selection preparation is RED2/16: all three new LAST/explicit
+  reference-contract witnesses pass; the two failures are unchanged
+  method-local Structure-constructor debts. Full17 on those newer bytes is
+  running; it is not a completed certificate.
   Neither focused green nor full red releases either ticket.
   Runtime recheck of the same staged bytes is GREEN290 with107 executed
   selftests; L3 passes11 suites and4 budget units. The next connected namespace

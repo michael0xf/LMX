@@ -1201,6 +1201,58 @@ The existing `[declared cells..., code...]` namespace prefix cannot be repaired
 by removing the COUNT guard alone: source ownership, one actual constructor,
 physical field projection, schema/merge coordinates and trailers must agree.
 
+### Cast type descriptions and actual value bindings
+
+The ordinary cast producer now applies the existing cast contract to the
+retained source: first body field describes a type; the complete remaining
+tail is an ordinary value expression. Type descriptions remain descriptive,
+including a foreign type name that is homonymous with an own cell. Known
+values in nested casts use the shared actual-expression producer and real
+OWN/ARG readers. There is no new binding table, parser copy or runtime graph.
+The retained operation is truthfully native-only SOURCE_MACHINE; clearing
+the root's native word does not claim that its machine-bearing method is
+interpretable.
+
+`critical_graph_machine_cast_producer_01` was GREEN12, but its new fixture
+only checked execution, not source retention. `_02` did not build: the
+invocation supplied a relative translator path that became invalid after
+staging changed the working directory. `_03` was RED2/17: the positive
+919-assertion graph oracle passed, and both actual mutants were detected;
+the test rows incorrectly combined the ordinary parity-run convention with
+the expected shape-mutant failure convention. Evidence is preserved. The
+corrected rows separately exercise native and cleared-root mutants, rather
+than loosening the mutant classifier or changing the driver.
+
+Fresh `critical_graph_machine_cast_producer_04` is **GREEN19**, source SHA256
+`511F8AA6F587F4EC00EE7B29C6DD95C4355C0D426641CB3FB2CB5DB38E311C05`,
+executable SHA256
+`03481F109CC1062AF4BC12424DA6961C2B73EDADF6E643E79CF8D05A03221EE8`.
+The root width4 / method width9 oracle verifies the entire method's field
+order, real typed cells, initializer/assignment facets, nested type bodies,
+ARG0:size, OWN slots2/4, conditional and return operands. Each of four
+mutants erases either the real nested ARG or the actual type leaf, in native
+or cleared-root execution. Baseline/setup/comparison succeed, exactly one
+shape assertion fails, other failures remain0 and the program still returns7.
+This distinguishes lost source from changed native execution.
+
+The `unit_ptr_grow` null-input witness now really executes and returns7 in
+native and cleared-root modes. Its historical refusal row is replaced only
+after this measured positive. It returns before successful realloc or buffer
+access, so this is neither an allocation-success claim nor interpretation of
+raw pointer operations. External applications, pointer-index graph retention,
+cast/value, sizeof and C99 pointer-expression regressions pass. Both critical
+tickets remain open; stable twins are untouched.
+
+The subsequent full harness `critical_graph_fix_full_16` is **RED174/1302**,
+on that same source511F8AA6, executable SHA256
+`3A282D6C520D8D008B7609C271B6E76919D5E350A23BFD85FE1CFDCA2B68AFDF`.
+Compared with full15, only `unit_ptr_grow` changes FAIL to OK; all five added
+cast rows pass. Independent comparison finds no green-to-red regression,
+removed row or remaining failure-detail change. The normalized translator
+diagnostic sets are identical (518 lines each). This full red is not a release.
+The newer metadata-selection prerequisite is recorded separately in the
+[connected namespace plan](critical-graph-namespace-source-layout-20261003.md#ns-metadata-evidence).
+
 ### Actual signature-header oracle negative control
 
 `build/critical_graph_call_header_oracle_mutant_01` retains the protocol02

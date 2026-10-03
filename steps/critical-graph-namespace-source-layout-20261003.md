@@ -1,7 +1,9 @@
 # Namespace source layout: connected next slice
 
-Status: implementation plan, **not an accepted fix**. Read-only audit of the
-current sandbox follows full harness `critical_graph_fix_full_15` RED175/1297.
+Status: connected layout implementation plan, **not an accepted fix**.
+The preceding full harness `critical_graph_fix_full_16` is RED174/1302.
+The bounded metadata-selection prerequisite below is implemented and tested;
+the source-order physical layout cutover is not implemented yet.
 No stable twin has been changed. This is part of
 [critical_graph_bug](tickets/critical_graph_bug.md), before the pointer repair.
 
@@ -47,11 +49,11 @@ The old genuinely dense constructor may use declaration ordinal until it is
 migrated; its producer must be explicit. Do not change a helper's coordinate
 meaning silently depending on `rw_emit`: PLACE also has `rw_emit=0`.
 
-`l2_ns_field_ix` already returns a **global NSF row**, used to read kind/ref;
-it must not be changed to return a child slot. Factor its lexical selection
-through the same selected-row resolver. `l2_ns_ref_pointee` currently selects
-the first independent spelling match; it must use that same LAST/`[N]` row or
-the selected cell and its model can disagree.
+`l2_ns_field_ix` returns a **global NSF row**, used to read kind/ref;
+it must not become a child slot. It and `l2_ns_ref_pointee` now share
+`l2_ns_named_row` with LAST/`[N]` selection. The old independent first-match
+model lookup is removed. `l2_nsf_ordinal` explicitly identifies the current
+dense producer, not a fallback for a completed source-layout map.
 
 ## 3. COUNT, PLACE, FILL
 
@@ -64,6 +66,13 @@ The current implementation rebuilds path tuples, inline maps and pending-call
 caches each pass; it does not persist those initial ordinal constants into
 FILL. Construction edges are recorded in phase1 only. Merge source-coordinate
 rows **do** persist: retain `l2_mrs_rebuild_all` after final PLACE/binding.
+
+`l2_rw_admit_project` also invokes `l2_rw_map_inline` during COUNT. That
+helper computes physical D105 correspondence cells but creates no rw temp
+or owning edge. Defer only that physical-map computation in construction
+phase0; retain model/type resolution and normal frame counting. PLACE and
+FILL must compute it from the completed layout. `rw_emit=0` is not the
+boundary, because non-emitting PLACE still needs real coordinates.
 
 For the common source body, header width is0. Native lowering may have ordinary
 machine temporaries, but must not create a signature header in the Structure.
@@ -90,6 +99,13 @@ already-created objects, not clone them again in the shared source-field pass.
 Unnamed atom rows have no named own-token match and need their real source
 occurrence-position producer; do not compress them into a declaration prefix.
 
+Skipping an existing typed-cell allocator must not lose its external name:
+`l2_emit_cell_new` publishes on the actual typed cell at `slot[0]`, whereas
+`l2_emit_ns_names` currently publishes on the owning reference slot. Publish
+the declaration name on the already-created typed cell without allocating
+another cell. Borrowed Structure/callable aliases still name their own place,
+not their shared referent.
+
 Existing constructor holes remain defects: `l2_emit_one_nest` counts some NSF
 kinds without emitting their cells. Changing its counter cannot silently hide
 those holes or pretend to implement the absent constructors.
@@ -102,7 +118,6 @@ symbols rather than mutable line numbers.
 - Physical paths/publication: `l2_ns_field_in_parent`, `l2_own_mslot`,
   `l2_ns_slot_named`, `l2_emit_path_to`, `l2_emit_actual_path`, `l2_rw_path`,
   and emitting `l2_cap_add`.
-- Physical inverse: `l2_ns_field_kind`, `l2_ns_field_len`, `l2_ns_field_ref`.
 - Metadata-only validation: `l2_path_in_eternal`, `l2_path_contract`,
   `l2_path_arr_leaf`, `l2_rw_index_ty`, validation-only `l2_cap_add`, and
   consumer interface/admission checks.
@@ -114,6 +129,62 @@ symbols rather than mutable line numbers.
   their declared-own ordinal and existing method projection. `l2_mrs_take_entry`
   scans physical source order, not named fields followed by a code suffix;
   `l2_msrc_fld` must hold the real copied source child.
+
+### 5.1 Audited name/path call sites
+
+There are eight operational `l2_ns_slot_named` calls in the current sandbox.
+The selected NSF row carries kind/model metadata; a physical slot is needed
+only by a completed-layout consumer.
+
+| Consumer | Required coordinate |
+| --- | --- |
+| `l2_path_in_eternal` | Selected row: existence/kind/model only |
+| `l2_path_contract` | Selected row: type/model only |
+| `l2_emit_path_to` | Projected physical child |
+| `l2_path_arr_leaf` | Selected row; count comes directly from `nsf_val` |
+| `l2_emit_actual_path` | Projected physical child |
+| `l2_rw_path` | Split metadata resolution from physical production |
+| `l2_rw_index_ty` | Selected row: type only |
+| `l2_cap_add` | Selected row for validation; projection for emitted capture list |
+
+`l2_rw_path` serves metadata callers (`l2_src_path_write`, `l2_rw_opty`,
+`l2_rw_operand_ty`, `l2_rw_index_ty`) as well as actual path/address/index
+producers. Expose distinct resolution/projection entry points. Neither a
+bare `rw_emit` check nor substituting an ordinal for a missing physical map
+defines that distinction. Physical D105 edge/width projection also belongs
+only to the completed-layout route.
+
+The two CHECK capture callers discarded local `capf[32]` arrays; those arrays
+are now removed and validation explicitly uses `out=0`, no capacity. The actual
+capture-list consumers remain `l2_mad_cap_emit_walk` and `l2_mad_cap_emit`.
+The physical capture list still uses the explicit dense-producer adapter
+pending the connected layout cutover.
+
+`l2_path_arr_leaf` now reads count/kind directly from its selected NSF row.
+Dead `l2_ns_field_len`, `l2_ns_field_kind` and `l2_ns_field_ref` accessors are
+removed. Metadata-only `l2_path_in_eternal`, `l2_path_contract`,
+`l2_rw_index_ty` and validating `l2_cap_add` use the selected row. Actual
+emitters still use the old physical producer. The mixed `l2_rw_path` route,
+including the first stage of `l2_rw_index_ty`, remains connected cutover debt.
+
+<a id="ns-metadata-evidence"></a>
+### 5.2 Metadata-selection prerequisite evidence
+
+Fresh `critical_graph_ns_metadata_selection_02` is **RED2/16**, source SHA256
+`EE290DF836B0D178B98D268D1357343B523FC718BB1275F0F56E86C23D9EB0DF`,
+executable SHA256
+`DB1A4853C1BA884D542A70B015904735B8C20642FE63F555D53DBBCF7236F82D`.
+The positive dormant reference-contract witness passes16 checks in native and
+cleared-root modes; both opposite-field negative witnesses refuse with the
+correct unknown-field diagnostic. They do not dereference null references and
+do not certify the future physical layout. Existing repeated declarations,
+merge, named Structure execution, reference reception, sizeof, cast graph,
+pointer graph and raw-C graph rows pass. Both failures exactly match full16:
+`unit_ns_ref_field_general` and `unit_cache_struct_ref` lack the reached
+method-local Structure constructor. No expectation is waived. `_01` failed
+L1 parsing at an accidental multi-level dedent in the new helper; `_02` fixes
+the helper's source layout without changing the parser. Failed evidence stays.
+Full17 on these newer bytes is running; no completed full verdict is claimed.
 
 ## 6. Required evidence
 

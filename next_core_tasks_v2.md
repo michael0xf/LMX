@@ -388,7 +388,26 @@ Current bounded implementation, with no DONE claim:
   depth-three repeated-sibling rows pass, while invoking the explicit merge
   result is refused before output. That does not prove copied-child routing
   wrong; the required copied-parent language call remains unimplemented.
-  Full26 is running on frozen85E54097 with the later observer; no verdict yet.
+  Full26 completes RED188/1343 on frozen85E54097: all184 old failure details
+  are unchanged; two old strict observers omit the now-retained INIT, and
+  two new copy-call rows refuse before runtime. The observer repair now
+  requires the exact declaration/INIT operand order, source facet and copied
+  parents; eight init/body/facet mutations fail shape with unchanged exit7.
+  A DBED8A61 trial passes focused06 GREEN106 and focused07 GREEN116, but its
+  immutable merge-source origin can become stale after reception/rebinding;
+  that extension is withdrawn, not released or treated as closure. Focused08
+  RED2/116 on E7F4BC2E retains the two honest positive copy-call refusals.
+  Current070B6123 shares the receiver output-place projection across prepass,
+  CHECK, native take and walker take; focused09 is RED5/124 (the same two
+  copy rows plus three additionally selected old failures). Full27 is running
+  on that source and the later strict observer; no verdict yet.
+  Before accepting copied/received callable origin, implement the common
+  source-site current-value proof: exact constructor establishes origin,
+  replacement of its resolved place invalidates it, ordinary primitive writes
+  do not. Branch joins, loop backedges, catches and call effects must be
+  accounted for; possible-source catalogues and declaration history are not
+  proof of the value held now. Do not inspect receiver spelling in the proof
+  or add runtime atom metadata. [Connected interfaces, witnesses and evidence](steps/critical-graph-namespace-source-layout-20261003.md#current-value-call-origin).
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

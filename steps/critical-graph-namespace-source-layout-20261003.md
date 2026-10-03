@@ -1052,8 +1052,9 @@ rows refuse bare `copied` from `copied: merge Outer` at4:1 with
 This locates missing value-call resolution; it is not a runtime witness of
 bad copy parents, and the test is not converted to a refusal acceptance.
 The current generic copied-parent language call remains open.
-Full26 is running on these source bytes with the final27-control observer;
-frozen04 or05 cannot certify that later harness by implication.
+Full26 subsequently completes RED188/1343 on these source bytes with the
+final27-control observer. Frozen04 or05 cannot certify it by implication;
+the exact delta and subsequent repair are recorded below.
 
 <a id="sleep-checkpoint"></a>
 ### 5.16 Sleep/resume checkpoint — 2026-10-03 12:43 UTC
@@ -1128,6 +1129,115 @@ Resume in this order:
 The R0 placement clarification is already saved: launch/settings belong to
 the preparation stub; Thread children to existing `Thread.children`. Do not
 redo that audit or add either as invisible program-source fields.
+
+<a id="current-value-call-origin"></a>
+### 5.17 Full26 delta, exact INIT observer and current-value call origin
+
+Full26 is terminal **RED188/1343** on source85E54097, executable SHA256
+`C40E74667F3666664E244277C347F9FA6C113FCB9D819AE67AB0A2C4240AA13D`.
+All1329 old identities remain. All184 old failure details are unchanged;
+none recovers. Of14 added identities,12 pass and the two copied-parent calls
+refuse at4:1 before output. The two shared OK-to-FAIL rows are stale exact
+observers: `graph_shape_depth6` omits Level5's initializer, and
+`graph_shape_unknown_nest` omits B's initializer. Actual programs still
+finish both modes with their then-declared exit0, not a runtime regression.
+
+The repaired observers require exact widths and source order: Level5 is
+`[int37, INIT SET(OWN0,LIT37)]`; B is `[int1, INIT SET(OWN0,LIT1)]`.
+No trailing fields are ignored. The nested merge finder requires A width1
+and B width2; it verifies the copied initializer and OWN/LIT operands have
+the copied owners and the initializer is not borrowed from the original B.
+Root/method shape selection remains strict. Both positive fixtures now end
+with7, so a silent zero exit is not success. Eight mutation rows erase the
+deep initializer, erase B's initializer or B itself, or change INIT's facet;
+each is checked natively and with the same artifact's root cleared. Baseline
+must match, mutation must be applied, shape must fail, and program exit7
+must remain unchanged. Copies and the nested merge remain in those checks.
+
+`critical_graph_nested_source_06` is **GREEN106** on trial source SHA256
+`DBED8A61AC474C510B83A23DA5F0DAFD3AE28C2476295F21E5AFEF9DC1BE99AE`,
+executable `62D99E74F0166C0769EB15D14BF2DAEE2F1CDC0356A0C6FCFEC28099D17FC203`.
+Source07 is **GREEN116** on that same trial source with the stricter driver
+and eight mutations, executable
+`7150D356D352B9B1E3DADA138390B7855FE28E4DF86BF86A94FD34202DC7EF6E`.
+These are bounded experiments, not current release evidence: the trial
+shared `l2_own_call_origin` used immutable merge-constructor `.layout` to
+choose input/procedure metadata while dispatching the actual own value.
+After reception or rebinding that value can change, but the constructor
+record does not. The extension was removed rather than shipped as a
+guard-only fix. No namespace type was attached to the tagged merge schema,
+and no original prototype was substituted for the held value.
+
+Source08 is **RED2/116** on E7F4BC2E, executable
+`EFA29C52E98ABEFF87EE90AF24A731B20703A04748E343A0A4778E884B16519B`:
+the exact observers and all eight mutants pass, while both positive copy
+rows honestly retain the unsupported-call diagnostic. The helper now
+selects only the prior constructed-body producer route; neither it nor
+`own_layout` alone proves a later value after replacement.
+
+Current source09 SHA256:
+`070B612392702FFCCDF2D509ACE54BE4F304DB8E6C15CCF44E58A2CDEEC6758D`.
+Harness SHA256:
+`D355D76924974E1597E944F2ACE843410B7946BB2D0182152D9CC1E81F4A917D`.
+Driver SHA256:
+`91FCB5FE5C9D538B694E14A6194BB23C929C0FB5F02FDAD5CA8ED30811A3A166`.
+It adds stack-only `l2_storage_own_place` and `l2_receiver_output_place`,
+using existing `L2Address`. Prepass, receiving CHECK, native take and
+walker take consume the same source-site resolved own index. Previously
+`own_add` could reuse the first same-host occurrence while native
+`own_visible` selected the last visible one. The view itself has no runtime
+field, AST clone, binding registry, physical-slot guess or atom metadata.
+Receiver classification still respects a declared method's shadowing;
+origin analysis must consume the resulting place, never scan its spelling.
+
+Focused09 completes **RED5/124**, executable SHA256
+`3C8355B740F03CF3C1608E6035C3E10E0979D99B38D1A24B2B0634C3ACE0D2D9`.
+The three additionally selected translation failures are existing full26
+rows `unit_receive_letter_model`, `unit_native_typed_receive` and
+`entry_index`, alongside the two copy-call rows. A fresh **full27 is running**
+on the current frozen source and strict observer; local session55497 is
+only a handle, not completion evidence. Predicted1351 targets are not a
+verdict. Inspect that same process and evidence before any new build;
+do not restart from an observation timeout or absence of summary.
+
+#### Required connected source-site proof, not a new language rule
+
+Use existing `L2SourceSite` save/restore and `L2Address` views. Factor a
+shared semantic storage-effect projection from real producer/store paths:
+exact declaration and merge own rows, receiver output places, ordinary
+receiving/reference stores, resolved path targets and indirect aliases.
+Distinguish construction, descriptor/reference replacement, primitive cell
+mutation, no executed effect, and unproved call/alias effects. Raw or unknown
+effects cannot be silently classified as no effect. A signature or dormant
+definition is not executed while analyzing its containing body.
+
+Replay the borrowed executable source to the exact queried call occurrence:
+an exact constructor establishes origin; replacement of the same resolved
+place kills/replaces it; unrelated cell writes and distinct declaration
+occurrences do not. Join branch states, include loop backedges, return/catch
+paths and call effects. Retain an origin only if all reaching states prove
+the actual held body's origin and its usable addressing/input contract.
+Keep constructor `mres_source` evidence intact: it is still needed for fresh
+merge production and D105; clearing it globally corrupts unrelated evidence.
+Source offsets, possible-source catalogues and first-name matches are not
+held-value proof. Apply the reasoning to old named constructors as well as
+copies. No permanently hidden runtime data structure is introduced.
+
+The decisive paired prefixes are `copied: merge Outer / copied /
+receiveMessage: copied` (a later write must not erase an earlier call's
+proof) and `copied: merge Outer / receiveMessage: copied / copied` (the
+last call cannot borrow Outer's old hidden-input contract). Add an unrelated
+primitive write, distinct same-name declarations, a proved effect-free sub,
+an opaque external call, branch joins and loop/catch controls. Resolution
+must prove that each write really targets the queried occurrence: merely
+repeating its name inside another scope does not manufacture that witness.
+Uncovered effects require a located unproved-origin result or the real
+dynamic call route, not a normative language ban, silent skip or stale origin.
+
+Both critical tickets and8+8a stay OPEN. Code is saved but uncommitted;
+stable twins remain untouched. Native root reuse after merge and the general
+multioperand body-selection/ABI proof remain the separate known debt from
+the sleep checkpoint, not closed by these source-site views or focused tests.
 
 ## 6. Required evidence
 

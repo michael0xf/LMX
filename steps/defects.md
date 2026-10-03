@@ -99,7 +99,33 @@ This is not a full emitted-code dataflow proof or independent source decoder.
 Focused05 tests the first25-control observer: the existing102 rows and two
 new sibling rows pass; the two new copied-parent rows are refused by the
 translator, not by this observer. The last direct-slot guards are later than
-frozen05; full26 is running with those later bytes. No full verdict yet.
+frozen05. Full26 completes RED188/1343:184 old failures are unchanged;
+two old shape observers omit retained INIT, and two new language copy-call
+witnesses refuse. The exact INIT/copy observer and eight damage controls
+subsequently pass in focused07/08/09. Full27 is running on the current source;
+the focused results do not certify that full gate or source reconstruction.
+
+<a id="graph-call-origin-current-value"></a>
+### GRAPH-CALL-ORIGIN-CURRENT-VALUE — 2026-10-03, Codex, IN WORK
+
+A fresh `copied: merge Outer` has constructor provenance but lacks the
+ordinary named-constructor call route. A trial shared `l2_own_call_origin`
+consuming `l2_mres_source.layout` passes both copied-parent runtime witnesses.
+It is not a closed fix: reception can replace the same own row, while that
+constructor record remains unchanged. Existing own-layout evidence has the
+same lifetime limitation. The copy-origin extension was withdrawn; positive
+copy-call refusals remain visible rather than repinned to expected refusal.
+
+The current source factors a stack-only own-place view and receiver output
+projection. Prepass/CHECK/native/walker use the same source-site selected
+own index, rather than independently selecting first/latest same-name rows.
+This does not yet prove current value origin. Next: factor resolved storage
+effects, replay to the exact source call site, join reaching states and
+invalidate after replacement or unproved effects. A later write must not
+retrospectively invalidate an earlier call; a primitive cell write or distinct
+declaration must not invalidate the other value. No atom metadata, runtime
+binding registry, possible-candidate proof, prototype substitution or
+receiver-name scan in the origin analysis. [Exact scope and witnesses](critical-graph-namespace-source-layout-20261003.md#current-value-call-origin).
 
 <a id="critical-graph-bug"></a>
 ### critical_graph_bug — 2026-10-02, Codex, CRITICAL / OPEN

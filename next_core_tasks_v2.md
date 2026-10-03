@@ -111,6 +111,15 @@ Current bounded implementation, with no DONE claim:
   `critical_graph_no_init_02`: 9 targets, 0 failed; FOR's declaration uses the
   ordinary native emitter and explicit/carry/no-action source cardinality.
   These bounded results do not close G2/G3, names/comments or the pointer ticket.
+- [x] G2 bounded projected-body/root and slot-boundary migration: T7 returned
+  occurrences are constructed directly from committed source views, without
+  the former anchor/suffix pack; the filtered executable root uses its existing
+  occurrence as the producer. Forty-five physical lookup lines use common
+  method/namespace/qualified slot helpers. `critical_graph_root_source_05`:
+  15 targets, 0 failed; `critical_graph_unit_slots_01`: 17 targets, 0 failed.
+  These gates do not prove original-unit declaration order, full T7 formal
+  defaults, names/comments or pointer depth. Full `_06` is running; no verdict
+  is claimed. [Exact scope and hashes](steps/critical-graph-pointer-fix-20261002.md).
 - [ ] G2/G3: construct all source occurrences through one recursive placement
   algorithm, migrate every width/path/schema/copy/capture consumer, then remove
   selective eligibility, packed fallback and data-shell placement. B0 does not
@@ -125,10 +134,10 @@ Current bounded implementation, with no DONE claim:
   ownership through the same copy map; no second AST or saved source replay.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest full `critical_graph_fix_full_03`: RED, 35 of 1236, five reviewed
-  stale witness failures removed and the remaining FAIL texts unchanged.
-  It predates the subsequent construction-boundary preparation; do not call
-  it a full acceptance of the current development source.
+  Latest completed full `critical_graph_fix_full_05`: RED, 41 of 1248;
+  historical 35 failures plus six stale layout assertions. It predates the
+  later T7/root/slot-helper cut. Fresh `_06` is running, not accepted. Do not
+  substitute focused green rows for a full current-source verdict.
 
 - [ ] **Complete [critical_graph_bug](steps/tickets/critical_graph_bug.md)
   before choosing another remaining implementation item in this plan.**

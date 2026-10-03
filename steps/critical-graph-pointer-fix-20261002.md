@@ -485,6 +485,63 @@ requires the opposite setup result and cannot pass as a detected mutation.
 The old `graph_shape_mut_move` changes input source order; it is retained as
 a source-order negative control, not misreported as a graph-side mutation.
 
+### Projected returned bodies and execution-root construction
+
+T7 projected occurrences now have their own committed source producer. The
+generated `l2_view_build_<site>` builds the actual returned occurrence and
+its cells directly. The former `l2_t7_base`, `l2_t7_bases`, `l2_t7_extra`,
+`l2_t7s` and `l2_t7k` packed anchor/suffix allocation is removed. The lexical
+anchor remains translation information, not another allocated body. This
+does not settle the older T7 formal-default/type projection debt: merge
+defaults do not remove or bind a formal under the normative contract.
+
+The file's **filtered executable** E body also uses an existing root
+occurrence as its source-container producer: actual cells are created once
+at their recorded places, and the old own-cell allocation skips precisely
+those committed declarations. Empty roots participate without a dummy body.
+This is not yet original-unit preservation: `l2_make_entry` still filters out
+method/named definitions, directives and OS declarations.
+
+Forty-five native/walker/construction lookup lines now use the common
+`l2_occ_slot`, `l2_ns_unit_slot` and `l2_ebr_unit_slot` boundaries instead of
+recomputing positions from table ordinals. Physical declaration placement
+is not yet moved by this lookup migration; the remaining base arithmetic is
+confined to those producers and tail-size calculations.
+
+New evidence, all focused rather than complete release gates:
+
+| Directory | Verdict | Scope |
+| --- | --- | --- |
+| `critical_graph_t7_own_05` | RED, 3 of 14 | T7 and control-body runtime witnesses pass; three stale generated-layout assertions fail |
+| `critical_graph_root_source_02` | GREEN, 14 | Filtered-root constructor, T7, mixed/control bodies, own/formal regressions |
+| `critical_graph_root_source_03` | RED, 4 of 15 | Overstated returned-model reachability and trampoline expectations; two obsolete holder paths |
+| `critical_graph_root_source_04` | RED, 1 of 15 | One remaining obsolete PUT holder path, before runtime execution |
+| `critical_graph_root_source_05` | GREEN, 15 | Corrected exact holder paths; no admission/exit expectation weakened; native and root-walker runs |
+| `critical_graph_unit_slots_01` | GREEN, 17 | Common slot helpers, 1537-check mixed tree, T7/IF/WHILE/root FOR/catch/control regression witnesses |
+
+The static `GraphShapes` checker follows execution-reachable relationships,
+not every returned object. Removing a too-strong RET assertion from
+`unit_make_adder` does not establish a source reconstruction oracle. Its
+independent nonzero execution witness remains. Likewise the native-note row
+checks the genuinely walked host, not a nonexistent trampoline for its nested
+model. The two holder assertions now follow the actual shared graph places:
+SET_OF targets `OF(AT(4),2)`, and the admission PUT targets
+`OF(OF(AT(10),2),1)`; the source/reference tests and admission operands remain.
+
+Current focused snapshot:
+
+```text
+l2trans source SHA256
+  AC1BE69317AD36CB4342C4F8A2209CC7E0030FBD429B52482F4136ABE0F8D6B9
+critical_graph_unit_slots_01 executable SHA256
+  770A338A632B41329860742551F38D6106C467B14231275DA2C43BB436F8C617
+```
+
+`critical_graph_fix_full_06` staged that exact source and is running. No
+verdict is claimed here. Earlier `full_05` is RED, 41 of 1248: the historical
+35 failures plus six pre-execution layout assertions; it predates this cut.
+Neither critical ticket is closed, and stable twins remain untouched.
+
 ## 3. Remaining graph work: the next implementation boundary
 
 The universal topology must start from the original unit returned by
@@ -498,6 +555,16 @@ and occurrence from lexical scope. In the current code, for/catch scopes
 combine different source components, and IF may consume its following ELSE.
 `l2_rw_stmt.made` counts effects, not source occurrences: declarations can make
 zero effects, and a for can make two. It cannot be the topology counter.
+
+Existing declaration objects can be attached at their exact P0 sites using
+`l2_m_node`, `l2_ns_at` and `l2_ebr_at`, with COUNT-only slot registration and
+compact ranks for genuinely unplaced producers. Do not merely feed original
+root fields to executable lowering: OS/directives need their actual retained
+source bodies, and a forward signature currently discarded by
+`l2_bind_same_unit_forward` needs its own nonexecuting contract occurrence,
+not an alias containing the later implementation. OS alternatives must retain
+their separate source bodies even though only the first is registered as a
+method row. No silent skip or fake empty body satisfies this boundary.
 
 Migrate widths, construction, own/path addresses, native body bindings,
 schema field slots and merge/capture projections together to that one relation.

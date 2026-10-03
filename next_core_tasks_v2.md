@@ -141,6 +141,14 @@ Current bounded implementation, with no DONE claim:
   algorithm, migrate every width/path/schema/copy/capture consumer, then remove
   selective eligibility, packed fallback and data-shell placement. B0 does not
   close this step or make the old graph source-faithful.
+  Connected pending substeps discovered by full09/read-only review:
+  source-head availability must close over real callsite environments before
+  an unresolved head is materialized as a field; qualified indexed expression
+  spans must use the same resolved Array/path projection in typing, native
+  lowering and retained graph emission. Do not repair the former by banning
+  literal tails, or the latter by adding rank/depth-specific Array forms.
+  Exact mechanisms and distinguishing witnesses are in the evidence journal;
+  these are implementation dependencies, not new language rules.
 - [ ] G1/G4: complete the graph decoder and the real name/comment codec;
   compare full source containment, not just selected lowered instructions.
   The development kernel now has a bounded external address-to-source-name
@@ -158,11 +166,22 @@ Current bounded implementation, with no DONE claim:
   not misaligned casts to Lmx headers. `critical_graph_names_atom_03` GREEN,
   13 targets, measures exact selected names and dormant native/root-walker
   parity. This does not close the universal codec or either critical ticket.
+- [x] G2 bounded runtime/source placement: the sole membership List is held
+  directly by existing `Thread.children`, in its parent-owner arena. Launch
+  service data/settings remain in the already described R0 parent stub;
+  neither protocol appends implicit source fields. `critical_graph_source_names_11`
+  is GREEN, 290 targets, with all 107 selftests executed: external names 98
+  checks, GC 51 checks. An isolated frozen GC mutant removes only the children
+  mark and fails exactly the descriptor/backing retention assertions, exit 2.
+  A frozen premature-name-publication mutant fails the late outer-merge rollback
+  assertion alone, exit 1. Both negative controls finish without crash/timeout.
+  This is not universal source construction, a codec, or a critical-ticket release.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest completed full `critical_graph_fix_full_08`: RED, 34 of 1256.
-  This frozen snapshot predates the final common atom/name producer changes;
-  exact identities/hashes are retained in the evidence journal.
+  Latest completed full `critical_graph_fix_full_09`: RED, 81 of 1263.
+  This frozen snapshot predates subsequent ELSE, contract-tail and runtime/source
+  placement changes; it is not their full verdict.
+  Exact identities/hashes are retained in the evidence journal.
   The remaining failures include obsolete expectations and genuine admission/
   capture implementation debts, not a blanket waiver. Do not
   substitute focused green rows for a full current-source verdict.

@@ -391,9 +391,12 @@ physical pointers and does not reparent every Structure to the recipient.
 Message is the minimal record; Thread contains it first by value and adds the
 execution/scheduling/mail tail. A standalone Message cannot be treated as a full
 Thread merely because the addresses share a prefix convention. The sole child
-membership is the ordinary List of physical Thread references; service is a
-routing lookup, not another source of tree membership. R0 is an ordinary child
-of its preparation/stub parent, not a different close state machine.
+membership is the ordinary List of physical Thread references, allocated in
+the parent's arena and held directly by existing `Thread.children`, not appended
+to the program's source graph; service is a routing lookup, not another source of tree membership. R0 is an ordinary child
+of its preparation/stub parent, not a different close state machine. Launch
+service data/settings remain in that existing stub and are passed explicitly;
+there is no hidden source-graph settings slot.
 
 **Mechanism/debt.** Existing mail holds target/source-arena pairs, adopts the
 donor at the receiving boundary and publishes under normal turn success. Preserve

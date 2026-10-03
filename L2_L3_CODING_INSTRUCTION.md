@@ -642,7 +642,7 @@ Do not model stop as a language exception if the current contract defines it sep
 
 ### 13.4 Messages and mail
 
-An executable Thread contains a by-value `LmxMsg` prefix plus Thread-only state. A standalone Message is not upgraded into a Thread by address coincidence. Mail, scheduling, and child membership do not become fields of every Message.
+An executable Thread contains a by-value `LmxMsg` prefix plus Thread-only state. A standalone Message is not upgraded into a Thread by address coincidence. Mail, scheduling, and child membership do not become fields of every Message. The sole child List is allocated in the parent's arena and held directly by existing `Thread.children`; neither it nor a settings reference is appended as an implicit source field. Launch service data/settings stay in the already defined R0 parent stub and are passed explicitly. The source body's field count, order and nesting remain determined by the source.
 
 `sendMessage` and `receiveMessage` remain high-level wrappers over one underlying mail mechanism. A failed turn publishes no outgoing letters. A taken letter is not available through a second API. Address/delivery services resolve and hand off; they do not inspect the recipient mailbox or invent a second queue.
 

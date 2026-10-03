@@ -703,6 +703,143 @@ predates the subsequent atom/expression GraphField constructor factoring.
 Neither focused result implements comments or the canonical full decoder.
 The full graph and pointer tickets remain OPEN; stable twins are unchanged.
 
+### Runtime ownership without implicit source fields — 2026-10-03
+
+The author's placement confirmation and subsequent R0-stub clarification
+are archived verbatim in [the technical journal](../LMX_blog/2026-10-03.md#thread-runtime-placement).
+Launch/settings still live in the existing preparation parent stub; no new
+storage location or companion data/context graph was introduced. The translator
+no longer appends their duplicate reference or membership to PROGRAM.
+
+Each existing `Thread.children` holds the sole owned List directly. The common
+`children_open` constructor replaces source-graph scanning in ordinary child/root
+preparation. Existing Thread layout, binding type/owner/empty/single-bind contract,
+close order and explicit application-data constructors remain. Fresh root/source
+graphs permit exactly zero source fields. Host-only R0/settings/launch slots remain
+explicit profile data, not programmer source. Root/library construction and the
+shape oracle consume exact source counts; neither oracle skips implicit protocol
+fields. GC marks the membership edge from the actual Thread root, including an
+unregistered externally allocated Thread.
+
+`build/critical_graph_source_names_11`: **GREEN, 290 targets**, all **107**
+selftest/cselftest rows executed. The external-name witness gives **98 checks,
+0 failures**, including a cold arena where spelling is allocated before a CHAR
+value; GC gives **51 checks, 0 failures**. CHAR initialization uses the existing
+canonical table initialization guard before name/string backing allocations.
+The staged 247-file kernel digest is
+`d91fcd76aa239cd60e5b74a8165c8b20ffbb0aa46ca015d1fe064187c925d69d`.
+Earlier `_09` was RED4/290 (L1 dotted operands and stale host-slot expectation);
+`_10` was RED1/290 (reserved L1 identifier `external` in the new GC test).
+Those runs are preserved, not relabeled as green.
+
+Independent frozen negative controls, with live sources unchanged:
+
+- `critical_graph_gc_membership_mutant_01` removes only the direct children GC
+  mark from names11 generated C. The isolated witness has no scheduler, registration,
+  mailbox or slot retaining the membership. It finishes exit2, **50 checks,
+  exactly two failures**: descriptor and backing retention. Potentially reclaimed
+  values are checked by saved range addresses before dereference; no crash/timeout
+  is accepted as detection. Mutant C SHA256:
+  `D0B1C8AA65C06CECA0209CC109BE181312C629D82EE5E91A6B1FE012371F10D8`.
+- `critical_graph_source_names_mutant_01` publishes staged copied names immediately
+  before the outer merge result is allocated. The existing injected late allocation
+  failure finishes exit1, **98 checks, exactly one failure**: `failed outer merge
+  publishes no intermediate names`. Mutant C SHA256:
+  `600D3B1027974BBF4AA4477166B2B8259BCC6A1DA5D7E36A2D8AF9BBA853F226`.
+  Its first runner assertion used the wrong summary spelling; the recorded runner
+  now checks the actual `source names: 98 checks, 1 failures` line as well as
+  the exact assertion and exit. No live implementation was altered for either mutant.
+
+`critical_graph_protocol_01`: **RED, 23 of 25 targets**. One driver compile
+error split an unparenthesized dotted-member operand inside an L1 call; the other
+22 failed fixture rows consequently did not execute. Fixing the driver expression
+to use its existing size local produced `critical_graph_protocol_02`: **RED,
+1 of 25 targets**. All 21 positive fixtures execute successfully, including
+mail handling, CHAR/address identity, exact atom/source-boundary/ELSE placement,
+portable reference arrays, real root native attachment and physical cleared-root
+walking. The remaining ELSE mutant deleted a whole body-place container, so native
+entry correctly aborted before it could emit isolated same-exit comparison evidence.
+The control is being narrowed to damage its source operator head while retaining
+the runtime body place; the failed run is not green mutant evidence.
+Protocol02 staged translator source SHA256:
+`9C6B6142F2361C883793C097C135603BD697109922B98048AEE1D2E1396DDCDD`;
+executable SHA256:
+`DC585759E7C481F466AAA4BC5BD574EB16BB8F49A0242C4D1EC60498B0AE6CB3`.
+
+The latest completed full `critical_graph_fix_full_09` is **RED, 81 of 1263**,
+not the older full08 result. It predates the subsequent ELSE/contract-tail,
+canonical CHAR and runtime/source placement repairs. Frozen translator source:
+`4251E2CF9CE6A417AFC8E298C97E90EB3C075C6C5332AF2C4EB18FDA77EFC4F1`;
+executable:
+`BF1A75EF88F5086C1DB54EF4C5D6F7803498FBD26DA1E27201B6384C6898152F`.
+The full source codec, remaining producer/resolution defects, full graph release
+and pointer implementation are still open; kernel/focused green subsets do not
+substitute for those acceptance gates.
+
+### Actual signature-header oracle negative control
+
+`build/critical_graph_call_header_oracle_mutant_01` retains the protocol02
+generated PAP L1, a separate one-line mutant and a frozen harness. Its runner
+extracts only `Get-WalkGraphFacts`, `Get-WalkWitnessKind`,
+`Get-WalkCallContractNode` and `Test-WalkCallContract` from the PowerShell AST;
+it does not source or execute the build script. The compact CALL `l2_rw45`
+has width3, points to real callee root slot1 and has no copied contract tail.
+Explicit input int/result int/arity1 is accepted; changing only the actual
+input-header allocator to CHAR is rejected. The only changed parsed witness
+key is `signature-part:3:0` (physical generated line299). Baseline L1 SHA256:
+`89BE9A5324545D0D0B3DDAFCDBFDEFF780481A4D42E2158C3BBBFF2FE9D146AF`;
+mutant:
+`B3CFE7122F925BC0D1C170C06568F10F26F50EFD9A591E90361B4F4B388B9BEA`;
+frozen harness:
+`40A99535BBF8F216EEAC8C571335D17A6FFCD0A90A7C8B76EB817048B697032B`.
+
+This is generated-header-contract **oracle** evidence, not runtime graph
+construction/mutation evidence: no compiler or constructor runs. A first
+ambiguous patch hit a different cell; the runner rejected it before any claim,
+and the final mutation is verified as exactly one line and one signature key.
+The helper's old slot3 width2-tail heuristic remains a separate migration debt;
+this width3 probe cannot exercise it and does not certify all CALL layouts.
+
+### Connected source resolution and indexed-operand debts
+
+These read-only findings guide the next code slice; none is claimed implemented.
+
+`l2_parse_unit` currently collects assignment/declaration bindings before
+`l2_dyn_local`; `l2_collect_asgn_body` and `l2_scan_body` can therefore register
+a source head as its own Structure before a real caller supplies the hidden
+input of that name. The later checker records callsites too late to undo that
+role without losing source meaning. `l2_local_ns_shape` already queries dynamic
+formals: replacing one lookup or reordering two passes does not fix the second
+registration route. `unit_free_write_literal_refused` is a genuine hidden-int
+assignment mismatch, unlike old tests refusing a truly absent literal-headed
+definition. Its positive companion must return the changed internal value1
+while the caller keeps5; a zero-only exit is insufficient evidence.
+
+Required shared boundary: reuse existing `L2SourceSite`, source save/restore,
+ordinary binding resolution and dynamic worklist; factor caller-source selection
+and generalize `l2_colon_bound_before` to the exact saved scope/source prefix.
+Defer unresolved head decisions, not preallocate own fields and delete them
+later. Close real callsite/receiving-contract facts and newly discovered local
+callable bodies without a fixed pass count before absent-head materialization.
+Callable atoms passed as references are not callsites; the existing checker
+actual-contract traversal must supply that distinction. A nested expression's
+source context must retain its enclosing statement/prefix, so a missing direct
+stop identity cannot accidentally expose future declarations. This is compiler
+environment bookkeeping, not a runtime binding/name registry or data graph.
+
+Qualified indexed borrowed spans currently join source text but route it through
+plain `l2_rw_path/read`, whereas single-atom paths use indexed helpers. Both
+indexed helpers also cut at the first `[` and mistake `s\[N]name`'s selector
+for an Array index. One allocation-free terminal suffix projection must serve
+typing/emission and preserve the complete field-prefix; a name after `]`
+distinguishes the occurrence selector. Adjacent flat-Array `[][]` groups and
+unnamed `\[i]` steps cannot be conflated. The old kind5/kind6, two-index and
+fixed-buffer helpers are debt to replace, not authority for new restrictions.
+Native checking/preparation and retained ELEM/OF/index nodes must consume the
+same original bounded operand view. Distinguished descriptor identity for
+duplicate selected Array fields and native/cleared-method walking are required;
+zero-filled Array output alone does not prove preserved indexed source.
+
 ## 4. Pointer repair inventory; implementation not started
 
 The existing `L2Address.type` mixes stored value and address type, and ordinary

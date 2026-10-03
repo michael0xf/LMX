@@ -518,7 +518,7 @@ running, success, handoff_ready, graph
 
 The flag fields use the defined small atomic-access representation; `graph` is the Message graph root. Running zero is a stop request/permission boundary, not proof that all work and descendants are already closed. Success is set by user behavior and not reset by the system on failure; plain-letter delivery has its specified success action. Handoff-ready marks a safe ownership transfer point.
 
-[LmxThread](dev/l2src_sandbox/lmx_thread.h.lm1) embeds Message **by value as its first member**, followed by mail, scheduling slot, turn/state, prepared children, supervision parent, service link, the direct-children List, liveness/close/orphan fields, result, manager, and Thread/mail API tables. There are no current/requested execution-mode fields. There is no Thread mode commit at end turn.
+[LmxThread](dev/l2src_sandbox/lmx_thread.h.lm1) embeds Message **by value as its first member**, followed by mail, scheduling slot, turn/state, prepared children, supervision parent, service link, `children` holding the sole direct-children List, liveness/close/orphan fields, result, manager, and Thread/mail API tables. There are no current/requested execution-mode fields. There is no Thread mode commit at end turn.
 
 The Thread address equals the address of its Message prefix under C first-member layout. That does not license reading the Thread tail of a standalone Message. L3 binding checks the exact range kind/type/stride and owner before accessing that tail.
 
@@ -546,15 +546,15 @@ The queue grows by the specified non-constant schedule and closes before members
 
 ### 11.4 Children and scheduling
 
-Direct children have one authoritative graph List, allocated in the parent's ownership context. Child preparation, publication, supervision and the scheduler use that membership; no removed `LmxLink` chain should reappear as a parallel source of truth. `lmx_child`, `lmx_schedule`, `lmx_manager` and `lmx_thread` divide preparation, scheduling and execution responsibilities.
+Direct children have one authoritative List, allocated in the parent's arena and held directly by the existing `Thread.children` field. It is Thread runtime state, not an implicit lexical field appended to `message.graph` or any source body's ordered field array. Child preparation, publication, supervision and the scheduler use that membership; no removed `LmxLink` chain should reappear as a parallel source of truth. `lmx_child`, `lmx_schedule`, `lmx_manager` and `lmx_thread` divide preparation, scheduling and execution responsibilities.
 
 The scheduling slot supplies the executable arena relationship; a Thread does not need a duplicate arena field merely to cache it. Parent operations serialize the structural membership changes; the mailbox monitor is not repurposed into a universal runtime lock. Native and interpreter adapters must obey the same owner binding and Message identity checks.
 
 ### 11.5 R0 and WorldWideMix host
 
-**Norm.** R0 is an ordinary executable child of an outer host frame; it is not a special root-only language object. Only the uppermost frame lacks a parent. Program arguments and settings arrive through ordinary Message construction. The normal shutdown waits for the entire descendant subtree; an external total watchdog bounds that operation independently of individual liveness deadlines.
+**Norm.** R0 is an ordinary executable child of an outer host frame; it is not a special root-only language object. Only the uppermost frame lacks a parent. Program arguments arrive through ordinary Message construction. Launch service data and settings belong to the already defined R0 parent stub; settings references are passed explicitly without appending fields to the program's source graph. The normal shutdown waits for the entire descendant subtree; an external total watchdog bounds that operation independently of individual liveness deadlines.
 
-**Implementation.** `lmx_root_launch_tapped` opens the host graph, creates/publishes R0, sends the argument/settings letter, schedules the child, lets the host receive the exit result, chooses the exit Message or success fallback, writes the report and closes the tree. The host's internal field constants are this builder's layout, not universal language-reserved Structure slots. Root's last expression is not automatically an OS exit code.
+**Implementation.** `lmx_root_launch_tapped` opens the host graph, creates/publishes R0, sends the argument letter and explicitly passes the host's settings reference, schedules the child, lets the host receive the exit result, chooses the exit Message or success fallback, writes the report and closes the tree. The existing host stub holds its explicit launch/result/settings data; its internal builder positions are not added to R0's source body and are not universal language-reserved Structure slots. Root's last expression is not automatically an OS exit code.
 
 The tapped launch seam permits test-only observations before teardown without adding a public language API. A teardown-safe nonzero success marker and graph assertions are stronger evidence than a wrapper process returning zero.
 

@@ -203,9 +203,9 @@ A dynamic container is a separate implementation:
 and exposes list operations over `VoidDynamicArray {VoidArray array;
 size_t capacity}`. Growth state belongs to this separate descriptor, not to
 the base Array or a hidden backing prefix.
-The parent's dynamic children collection is one such List, held as an ordinary
-field in the parent's graph and cached as the **same physical reference** by
-its Thread. A mailbox ring is also private, growable storage, not a changed
+The parent's dynamic children collection is one such List, held directly by
+its existing `Thread.children` field in the parent's arena. This is the sole
+membership reference, not a cache of an implicit source-graph field. A mailbox ring is also private, growable storage, not a changed
 base Array. `LmxPost` contains an `LmxPostInboxSlotDynamicArray`, whose
 embedded fixed array holds the actual target/donor pair type and whose own
 `capacity` controls growth. Its `head`/`tail` implement the private ring.
@@ -471,8 +471,8 @@ prefix are equal. The exact Thread range, however, is distinct from a
 standalone Message range: prefix address equality never licenses reading a
 Thread tail from a plain Message. Thread-only state includes mail, schedule,
 turn number/state, prepared
-children, supervision up-link, route-service link, cached reference to the
-single graph children List, liveness/close/orphan data, result cell, manager,
+children, supervision up-link, route-service link, authoritative reference in `children` to the
+single runtime children List, liveness/close/orphan data, result cell, manager,
 and separate `LmxThreadApi` and `LmxThreadMailApi` tables. These fields are
 not candidates for inclusion in `LmxMsg`.
 
@@ -514,7 +514,7 @@ to restore the obsolete ignored-status claim.
 [`lmx_child`](dev/l2src_sandbox/lmx_child.h.lm1) creates a child in its own
 arena and records a parent-turn reservation. At a successful end boundary,
 the child's physical Thread reference joins the parent's **single** dynamic
-children List in the graph; an optional application result cell may receive
+children List held by `Thread.children`; an optional application result cell may receive
 the Message address. At a failed boundary, the unpublished reservation and
 child arena are dropped, leaving that optional cell untouched. The parent
 up-link is written on the parent's lane when the child is published. Neither
@@ -527,7 +527,7 @@ descendants. A finished child's arena can be attached to the parent only
 when its Message is handoff-safe and no native user retains it. Physical
 references remain stable across attach. The service registry is a route
 index for finding destinations; it is **not** an alternative children
-collection. A scheduler traverses the graph's one children List rather than
+collection. A scheduler traverses the Thread's one children List rather than
 constructing a second family tree.
 
 R0 is an ordinary Thread beneath a local stub parent that stands in for a
@@ -569,7 +569,7 @@ not replace either with a speculative second ownership registry.
 
 [`lmx_gc`](dev/l2src_sandbox/lmx_gc.h.lm1) uses an arena generation and
 per-chunk mark stamps. It traverses Message/Thread state, graph roots,
-mail-visible targets, and the single graph children List, then sweeps
+mail-visible targets, and `Thread.children`'s single runtime List, then sweeps
 unreached chunks. The granularity is the storage chunk, not a per-value
 refcount. Sealed retained ranges are excluded from normal sweep by their
 explicit storage policy. A simple arena refuses collection. Later module

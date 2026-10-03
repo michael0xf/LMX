@@ -1809,7 +1809,7 @@ executable
 The next full gate freezes these source/observer bytes. Documentation-only
 publication does not release the sandbox implementation.
 
-Still open: the full current-source harness; signature/actual-call closure;
+Still open: a green full current-source harness; signature/actual-call closure;
 capture schema, stable required-model instance and complete GraphPlace; MAD's
 primitive-only sharing/copy path; modeled-letter required-model projection;
 foreign lexical owner roots; source-role-aware binding/merge scanning at
@@ -1819,6 +1819,79 @@ models, not explicit `R: merge Local`; a blanket kind3 dependency sorter is
 not justified by this audit. The external-name binding question remains
 unanswered. Neither critical ticket, the clean-kernel barrier, nor self-build
 is closed by focused greens. Stable `l2src` remains untouched.
+
+<a id="full31-source-context"></a>
+### 5.25 Full31 and exact local callable traversal boundaries
+
+`critical_graph_fix_full_31` completed RED135/1380 on the run18 source/
+harness/driver hashes above. Its executable is
+`AEA2CAC60916C5E274EC75C50EC41DF27D984E5BE222D5D32A24264CF6075D32`,
+not the separately built focused18 executable. There are1364 common targets,
+16 added and zero removed. Fifteen previous failures recover (14 local-source
+rows and the missing-root diagnostic);11 previous passes diverge. Fifteen
+added controls pass; the retained required nullary positive fails12:13 with
+`this call's inputs`. Both explicit-copy twins pass16 checks, including the
+same artifact's native/cleared root and actual selected method native words.
+
+The11 new discrepancies are classified, not waived:
+
+- Three named UNTIL rows fail construction with `a source body has no owning
+  root`. Their original body is excluded after the existing loop adapter
+  replaces the compiler procedure body; the source producer must retain the
+  original owner relation, not merely accept a synthetic root.
+- `unit_own_reference_failure` and `unit_portable_reference_admission` pass
+  native execution but their cleared-root run returns INVALID/3. New honest
+  namespace layout registrations expose the walker's opaque-source admission
+  coverage/status boundary. This is not evidence of a pointer-storage repair.
+- `unit_colon_graph_update_admission_blocked` stops without its exit Message;
+  `unit_merge_known_head_refused` wrongly accepts its unchanged source.
+- The captured missing-field diagnostic changes; three generation assertions
+  (`unit_named_struct_call`, `unit_ref_local_path`, `unit_site_layout_local`)
+  fail before runtime. In named-call output the only YES marker is a builder
+  self-layout registration, not admission at Counter's call. Local layout's
+  old fresh-instance claim must be checked against persistent source ownership.
+
+Of123 retained failures,120 normalized translation diagnostics are identical;
+the changed cases are `graph_shape_method_ref` (old implicit Point declaration
+now refuses earlier), `unit_asgn_fallback`, and `unit_discard_fnptr`.
+Common fixture sources are unchanged except two already documented comments.
+Neither the failing verdict nor an old text assertion licenses dropping a row.
+
+Two new positive programs isolate wrong traversal context. Binding initially
+visits a local scalar `f: 9` under its parent's method and confuses it with
+the global two-input f, refusing12:9 `f has no argument b`. A second program
+copies Inner inside S's anonymous if body; the old parent-mi merge scan
+refuses10:22 `unknown merge operand`. Its first harness attempt also caught
+an erroneous new fixture's two-level dedent; adding `end: S` fixes the fixture,
+not the parser. The baseline frozen executable then measures the merge refusal.
+
+The common correction inverts existing original callable source identities:
+binding and merge discovery stop at another registered defining Frame, while
+each method's existing loop visits its own body and trailer. Synthetic namespace
+adapters are not original definitions; anonymous controls keep their existing
+host activation/scope. Actual binding runs after original local registration
+and reference resolution, before merge/schema/value consumers. No METHOD row,
+runtime object, atom metadata or persistent lookup registry is added.
+
+`critical_local_source_context_02` is RED11/22, translator
+`5A41817264FE2FED2ADA960F63CA612D16E7D29AA47C0920001CE16D19881396`,
+harness `F1288E305C09BF565D4963770CD0D38064B10F34043FB76805B850CC91BFC276`,
+executable `0A3A8B302CA80ADF627903C2D6372E17FB507B289C1A295FFD54DFADDB6F64F1`.
+All four new context twins pass16 checks with positive entry7, actual native/
+walked methods and that artifact's cleared root. Existing named actuals and
+explicit-copy1/1/2/2 controls pass. The11 remaining rows are exactly the
+full31 discrepancies listed above; expectations are unchanged.
+
+Independent G1 review identifies further source loss: binding rewrites P0
+named actuals into formal-ordered positional fields; header emission combines
+written and inferred inputs; comments are discarded before any retained
+payload service exists. A canonical graph-side codec cannot reconstruct that
+lost information. Preserve original application order via compiler-only input
+projection, retain independent comments at actual source places through the
+existing ownership/copy-map mechanics, and distinguish written signature input
+places. Existing typed-cell address/range, external source names and INIT/
+implicit roles need no redundant atom wrapper. Shape assertions are not a
+general decoder. Both critical tickets remain OPEN.
 
 ## 6. Required evidence
 

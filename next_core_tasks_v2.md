@@ -482,9 +482,18 @@ Current bounded implementation, with no DONE claim:
   explicit-copy schema phase order; the common registration/reference-before-
   merge correction is measured in run18 GREEN19, with independent original/
   copied callable counters1/1/2/2 and genuine native/walker selection.
-  Next close local callable-boundary
-  binding/scanning, actual signature/argument formation and capture closure;
+  [Full31 and local source contexts](steps/critical-graph-namespace-source-layout-20261003.md#full31-source-context):
+  RED135/1380,15 common recoveries and11 new discrepancies, no removed rows;
+  15 of16 added controls pass. The subsequent exact-source callable boundary
+  and late binding pass make all four new local shadow/named-actual/hosted-merge
+  native/walker controls pass; context02 remains RED11/22 on the same11
+  discrepancies. Next close original UNTIL ownership, opaque-source admission,
+  exact call/declaration classification, actual signature/argument formation and capture closure;
   then rerun the full frozen-source harness. No pointer fix or release is claimed.
+  G1 additionally requires non-destructive named-actual projection, distinction
+  of written versus inferred signature inputs, full comment retention and a
+  genuine graph-side canonical decoder. Existing source cells need no new
+  name/leaf metadata; correct execution alone cannot recover erased source.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

@@ -166,6 +166,15 @@ The nullary held-call positive, local callable-boundary binding/scanning,
 complete capture/actual-input formation, full gates and pointer ticket remain
 open. [Measured scope, not release](critical-graph-namespace-source-layout-20261003.md#local-source-producer-measured).
 
+Full31 is RED135/1380:15 common recoveries,11 new discrepancies,16 additive
+rows (15 pass; nullary held-call remains a positive failure), no removed rows.
+The next scope-boundary correction passes all four new native/walker local
+binding/hosted-merge positives in context02 RED11/22; its remaining11 rows
+are the full31 discrepancies. UNTIL original-owner projection, opaque-source
+walker admission and exact call/declaration classification still need repair;
+stale construction regexes must be replaced only with measured physical/effect
+assertions. [Full delta and scope evidence](critical-graph-namespace-source-layout-20261003.md#full31-source-context).
+
 <a id="graph-call-origin-current-value"></a>
 ### GRAPH-CALL-ORIGIN-CURRENT-VALUE — 2026-10-03, Codex, IN WORK
 

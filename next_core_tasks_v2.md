@@ -24,8 +24,13 @@ Author's list, 2026-10-02, inserted in front of the ticket. These are the
 missing acceptance steps. They do not replace the ticket and do not mark it
 closed.
 
-- [x] В harness нет декодера графа, который сверяет структуру с исходником и не зависит от временных имён и старых номеров слотов.
+- [ ] В harness нет декодера графа, который сверяет структуру с исходником и не зависит от временных имён и старых номеров слотов.
   Driver fact `shape … endshape` names roles, primitive cells, `spell`, `add A B`, `body`/`endbody`, and `fields`/`endfields`. It does not read `l2_rwN` names or old slot numbers. Witnesses: `graph_shape_unknown_atom`, `graph_shape_add`, `graph_shape_value`, and `graph_shape_fields` (Holder's ints 1 then 3, native and walked, `regress_ns_19`).
+  This is partial structural assertion coverage, not the complete independent
+  P0-to-retained-graph decoder. `spell` still observes forbidden graph-resident
+  names; it cannot certify the address-to-name-table contract. The current
+  exact assertions and genuine mutation controls improve coverage but leave
+  full source/name/comment reconstruction OPEN.
 - [x] Нет прогонов, где успех виден по значению, а не только по тому, что перевод прошёл. Сюда же входят нативное исполнение и проход через walker.
   `graph_shape_value` on `graph_shape_14`: `n: 2 + 2` then `exit_code: n`. Both the native run and the walked root exit 4.
 - [x] Нет контрольных поломок: стереть выражение, передвинуть объявление, схлопнуть два вхождения. Каждая должна ломать структурную проверку даже при том же коде выхода.
@@ -36,6 +41,55 @@ closed.
 
 <a id="first-critical-graph-bug"></a>
 ## First action — critical_graph_bug (CRITICAL / P0, OPEN)
+
+Codex resumed the inherited sandbox implementation on the author's request.
+[Bounded G0/G1 evidence and remaining universal-layout/codec work](steps/critical-graph-pointer-fix-20261002.md)
+are recorded separately. Both critical tickets remain OPEN; focused graph
+assertions are not a complete reconstruction or clean-kernel checkpoint.
+
+Current bounded implementation, with no DONE claim:
+
+- [x] Fix the merge-handler witness to exercise the existing forced refusal;
+  `critical_graph_fix_g0_01`: 7 targets, 0 failed.
+- [x] Remove the structural test's fixed depth-four/16-occurrence limits;
+  inspect exact child order, values, initializer roles and targets, and reject
+  a failed mutation setup instead of mistaking it for a detected graph defect.
+- [x] Give all zero-operand RET applications their own ordinary operation
+  Structure; do not let a leading bare role misclassify the enclosing body.
+- [x] B0: native and walker hosted-body locators consume one temporary
+  `L2GraphPlace` child relation. Existing physical layout is preserved for this
+  preparatory slice; no extra runtime Structure or source AST is added.
+  `critical_graph_shared_places_01`: 34 targets, 0 failed, including explicit
+  walked-method return witnesses and nested body-path cases.
+- [x] B1: own-cell addresses, hosted external paths, schema and capture use
+  the same temporary physical-field relation. Construction references an
+  already allocated catch holder rather than traversing unfinished graph edges;
+  `critical_graph_constructor_copy_02`: 12 targets, 0 failed.
+- [x] B2: retain the actual file root and ordinary containers named L1/L2/L3;
+  remove source-name-based profile unwrapping. `critical_graph_root_container_05`:
+  14 targets, 0 failed; sole-container construction and actual name-execution
+  parity are separate witnesses. Historical/stable inputs are unchanged.
+- [x] G4 bounded ordinary-copy repair: copy operation Structures through the
+  common closure map, preserve aliases/parents/native implementation, then run
+  a copied graph after its source arena is released. Kernel gate
+  `critical_graph_copy_closed_02`: 286 targets, all 106 selftest rows executed
+  (105 ordinary exit-0 runs and one expected-fatal watchdog exit-3 run).
+  Restoring the former sharing branch gives an expected 7-assertion failure.
+  This does not close source/name/comment reconstruction or the whole G4 stage.
+- [x] G2 first content axis: one recursive COUNT/PLACE/FILL traversal preserves
+  multiple expressions and nested original anonymous containers at their actual
+  places. `critical_graph_source_container_04`: 14 targets, 0 failed, including
+  six expression-bearing levels, a method's unreachable tail and a real erase
+  mutant. Conditional source-placement selection and other producers remain;
+  this does not close the universal-layout item below.
+- [ ] G2/G3: construct all source occurrences through one recursive placement
+  algorithm, migrate every width/path/schema/copy/capture consumer, then remove
+  selective eligibility, packed fallback and data-shell placement. B0 does not
+  close this step or make the old graph source-faithful.
+- [ ] G1/G4: complete the graph decoder and the real name/comment codec;
+  compare full source containment, not just selected lowered instructions.
+- [ ] G5: fix or justify each full-gate refusal by the current norm and release
+  an actually green graph checkpoint before the pointer implementation.
 
 - [ ] **Complete [critical_graph_bug](steps/tickets/critical_graph_bug.md)
   before choosing another remaining implementation item in this plan.**

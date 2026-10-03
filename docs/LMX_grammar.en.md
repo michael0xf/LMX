@@ -2139,11 +2139,11 @@ An unnamed path step is written `value\[index]`; a named occurrence selector is 
 
 Sources: §§6.6.6, 20.2.2–20.3.
 
-`c.name` is an explicit C-surface form, not an ordinary LMX field. A compact token beginning with `c.` continues to an LMX boundary: horizontal space, newline, `,`, `;`, `(`, `)`, `:`, comment start, or item end. Dotted continuations remain C surface; calls and indices use bounded forms in the common stream. An exact registered head such as `c.struct:`, `c.union:`, `c.enum:`, or `c.array:` takes precedence in head position over the generic form.
+`c.name` is an explicit C-surface form, not an ordinary LMX field. A compact token beginning with `c.` continues to an LMX boundary: horizontal space, newline, `,`, `;`, `(`, `)`, `:`, comment start, or item end. Dotted continuations remain C surface; calls and indices use bounded forms in the common stream. Names following `c.` pass through the common raw C door; particular C names have no separate registration or special parsing ([L2](L2_spec_en.md#lowlevel-abi)).
 
 Type heads such as `int`, `char`, and `size_t` do not require `c.`. An unresolved ordinary name does not automatically become a C name. `c.` is not universal declarator, label, or C-tag syntax. `C:` separately accepts explicitly supplied string text; a string does not become code merely by appearing within `L1:`, `L2:`, or `L3:`.
 
-The `.lm1` file suffix in the previous direct L1 profile selects an implicit root L1 body; an explicit `L1:` wrapper is invalid in that profile. `L2:` and `L3:` are ordinary profile-selecting receivers of the second translator. These are specific profile boundaries, not changes to general P0 structure. A catalog of all library receivers is not grammar.
+The file extension selects the outer profile, and the file itself is a Structure ([semantics](LMX_semantics.en.md#scope)). In L2/L3, `L1`, `L2`, and `L3` do not select a profile and resolve as ordinary names; a container with one of these names is neither erased from the source tree nor executed in place of the root. The previous direct L1 profile takes wrapperless `.lm1` input ([L1](L1_spec_en.md#scope)). The source excerpts below containing `L2:` describe the previous specification, not a rule of automatic profile selection. A catalog of library receivers is not grammar.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 5150–5150.
 

@@ -1,8 +1,10 @@
 # critical_graph_bug — source structure is destroyed while constructing the retained graph
 
 Date: 2026-10-02. Priority: **CRITICAL / P0**. Status: **OPEN**.
-Requested by the author; recorded by Codex. Implementation owner: not claimed.
-This commit creates the ticket, not its implementation or a second writer.
+Requested by the author; recorded by Codex. Implementation owner: Codex.
+TAKEN main@84181df8 2026-10-02T23:22:39Z — continued the inherited sandbox WIP,
+with one writer/build. [Current bounded evidence](../critical-graph-pointer-fix-20261002.md)
+does not close this ticket; the universal layout and complete codec remain open.
 
 This is a concrete defect under [K10: the complete lexical graph](../../next_core_tasks_v2.md#graph),
 not a new language feature. It blocks a claim of complete graph preservation or

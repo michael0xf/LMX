@@ -1714,10 +1714,111 @@ Next is a connected producer migration, not removal of individual guards:
 The historical `unit_local_ns_fresh` expectation94 is not the current rule.
 For its exact source, §9 retains dormant S, §12 re-enters the same occurrence,
 and Q19.2 distinguishes calling S from accessing S\\v. The first m writes9;
-the second m does not call S, so it reads9: expected99 is a normative deduction,
-not yet a measured new gate. An explicit S call re-runs its initializer in the
+the second m does not call S, so it reads9: expected99 was initially a normative
+deduction and is now measured in the focused local-source runs below. An explicit S call re-runs its initializer in the
 same cell; merge copies current state and is not an implicit reset to literal4.
 Do not preserve94 by inserting a clone, implicit invocation or reset.
+
+<a id="local-source-producer-measured"></a>
+### 5.24 Whole local source producer: measured cut, not release
+
+The sandbox now registers original local definitions by exact P0 identity,
+commits a procedure index before collecting its declarations, and completes
+that registration fixed point before COUNT/signature/throws cardinalities are
+frozen. Empty local definitions take this same route. COUNT resets the exact
+statement context before selecting its binding; a previous statement cannot
+make `f()` classify against the wrong source site. A completed zero-step body
+can be selected for genuine walking; a missing lowering still has steps=-1.
+
+The common source producer owns the full local body. Its callable-relative
+root aliases the existing exact host GraphField; it is not another Structure.
+`l2_emit_local_ns` and its competing reached-declaration body allocator have
+been removed. Reaching a definition neither clones it nor invokes it.
+`unit_local_ns_fresh` now measures99, and `unit_local_ns_node_nested` and the
+actually walked `unit_walk_local_ns_stmt` pass without allocating a unit child.
+
+Compiler-only SourceContainer.source_mi denotes the callable owner separately
+from the selected construction-view index. Whole local roots run through the
+same COUNT/PLACE/FILL route in original and T7 construction. Shell dependency
+allocation carries the selected projected root rather than silently returning
+to the original method. A projected GraphPlace inherits its source owner's
+method, not the outer T7 anchor. Namespace reference fill is factored into
+`l2_emit_ns_refs`; original and projected source roots share it. Ordinary
+construction records layout provenance in the existing implements mechanism,
+including a local result later consumed through a different receiving model.
+No atom metadata, runtime SourceContainer, companion graph or Lmx field is added.
+
+`critical_local_source_12` is GREEN24, translator
+`ECDBF1E77673BD9BC03CD34FD9DB39167F534FEF1DA6FE98488C51C916116ED2`,
+executable
+`F165640108F94243027E371D4A39D4B9692C76B3366193448E766BD0FBB6D5C9`.
+The T7 local-definition twins each run203 checks on both the native root and
+that artifact's actually cleared root. At the fixture's final generated
+service post, their physical oracle observes distinct w/u/S occurrences and
+primitive cells, correct parents/width/source names, and actual local native
+words (present normally, absent in the walked twin). The observer is the
+existing driver service-post tap, not a general after-turn API or kernel hook.
+Two false assertions were run independently and rejected: declaring the same S
+twice as distinct, and requiring native1 on the actually walked S. Both return
+driver failure1 even though the fixture's successful program result is7.
+
+The one-formal T7 local callable-field twins each pass16 checks. The original
+nullary case is retained separately as the required positive
+`unit_held_nullary_source_field`; it is not changed to an expected refusal.
+It reaches the old held-call route's one-argument limitation and remains open.
+That route needs a pure borrowed signature view and shared actual-argument
+formation, not an arity0 shim. Runtime `lmx_call_prim`/long EXEC already admit
+zero through arbitrary actual counts. Existing MAD/T7 signature/transport
+restrictions, including the T7 header count limit and INT-only witnesses,
+must not be advertised as universal support.
+
+Old local-definition shape oracles were migrated without changing their
+programs: typed cells and written INIT operations remain interleaved. The
+fields fixture keeps both whole-graph copy and actual merge assertions;
+the driver recognizes cell/INIT/cell/INIT, verifies copied parents and OWN
+indices, and searches structural ownership without the old depth3 limit.
+The genuinely walked task is checked for actual native absence. Pointer
+declaration's implicit default SET has facet2, separately from c's written
+initializer facet1; no initializer is invented for an uninitialized Array.
+`critical_local_source_14` is RED2/23: all these structural/copy/merge controls
+pass; both new explicit-local-callable-copy twins initially refuse Local as
+an unknown merge operand. This is a real phase-order defect, not kind3 copying.
+
+Declaration registration and unresolved namespace-reference resolution now
+precede merge schema consumers. A schema no longer snapshots an unresolved
+callable field. The post-merge collection/reference pass remains idempotent.
+Run16 advances the two new controls from unknown Local to unresolved R\\M;
+run17 translates both, but their test row incorrectly pinned the new root's
+trampoline index1 instead of actual2. Those row errors are corrected; run18
+is GREEN19. Both local explicit-copy twins measure1/1/2/2 for original/copy/
+original/copy, with check/M actually native or actually walked as asserted,
+and with the same artifact's root also cleared for a second run. Local source
+layout, T7 local bodies/fields, actual NODE, prior self-copy, future binding,
+recursive model, full source pair copy/merge and pointer-default damage
+controls remain green. Attempt15 stopped before build because its
+focused selector contained an unregistered fixture name; it is not a gate.
+
+Run18 translator
+`8D13A8C2E96DF01BD5BD2FC40BF0A4F1A76DF6EBABCFF417189EFFD92B571867`,
+harness
+`36EB40D046D8E9EBFBC315AD967202C3D3212FA9B7D564C1D4DD8056EF98F737`,
+driver
+`E30B6004CCC89193B3CBBCF1825A234EB79D24B5849F093E346CC4740B0405BA`,
+executable
+`D43A434AAE5EBF6A8E3EECDC6E94E6898E9C0A392FEEB3A8314F95783B91F8FE`.
+The next full gate freezes these source/observer bytes. Documentation-only
+publication does not release the sandbox implementation.
+
+Still open: the full current-source harness; signature/actual-call closure;
+capture schema, stable required-model instance and complete GraphPlace; MAD's
+primitive-only sharing/copy path; modeled-letter required-model projection;
+foreign lexical owner roots; source-role-aware binding/merge scanning at
+registered local callable boundaries; all pointer-ticket storage/depth/ABI
+acceptance. Kind3 serves obsolete implicit-copy syntax and synthesized letter
+models, not explicit `R: merge Local`; a blanket kind3 dependency sorter is
+not justified by this audit. The external-name binding question remains
+unanswered. Neither critical ticket, the clean-kernel barrier, nor self-build
+is closed by focused greens. Stable `l2src` remains untouched.
 
 ## 6. Required evidence
 

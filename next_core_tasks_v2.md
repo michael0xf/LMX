@@ -472,6 +472,19 @@ Current bounded implementation, with no DONE claim:
   registration before sizing passes, dependency-ordered source shells and
   source-field attachment, then retire reached-declaration cloning. Dormant S
   persists; its literal initializer runs only when S is explicitly executed.
+  [Measured whole-local-source cut](steps/critical-graph-namespace-source-layout-20261003.md#local-source-producer-measured):
+  focused12 GREEN24, exact local registration and ordinary source-body
+  COUNT/PLACE/FILL now cover original/T7 roots; reached-declaration cloning
+  is removed. Local freshness witness measures99. Native/actually walked
+  local source and one-formal callable-field twins pass; nullary held call
+  stays an open positive, not an expected refusal. Exact initializer/copy/
+  merge oracles now retain source operations. Run14 RED2/23 exposes local
+  explicit-copy schema phase order; the common registration/reference-before-
+  merge correction is measured in run18 GREEN19, with independent original/
+  copied callable counters1/1/2/2 and genuine native/walker selection.
+  Next close local callable-boundary
+  binding/scanning, actual signature/argument formation and capture closure;
+  then rerun the full frozen-source harness. No pointer fix or release is claimed.
   Full11 remains RED history (45/1266), as does full10 (91/1266). Full11 includes the shared predef
   receiver correction and repaired source/header assertions. Its ELSE-head mutant
   detects graph loss with unchanged execution; `unit_eternal_shape` runs 33

@@ -62,6 +62,20 @@ Codex продолжает `critical_graph_bug`, затем pointer-тикет; 
 Это не релиз. [Полный delta и следующий producer](critical-graph-namespace-source-layout-20261003.md#full30-local-source-next).
 Полные29/28/27 — история.
 
+Позднейший whole-local-source срез `critical_local_source_12` GREEN24 на
+translatorECDBF1E7: оригинальные локальные тела, их T7-копии, реальные
+native/cleared-root пути и заполнение callable-полей проверены вместе.
+Reached-declaration клонирование убрано; `unit_local_ns_fresh` реально даёт99.
+Старые local shape-oracle теперь удерживают cell/INIT в исходном порядке,
+включая фактические copy/merge и повреждения INIT при неизменном результате7.
+Run14 RED2/23 выявил отдельную ошибку порядка регистрации перед merge;
+общая перестановка фаз и разрешение callable-полей записаны, run18 GREEN19
+проверяет явное копирование локального callable и независимость его состояния
+(1/1/2/2), native и реально walked, на translator8D13A8C2.
+Нульаргументный held-call остаётся обязательным положительным тестом,
+не переименован в ожидаемый отказ. [Точные границы](critical-graph-namespace-source-layout-20261003.md#local-source-producer-measured).
+Это sandbox WIP, не выпуск кода и не зелёный полный гейт.
+
 Текущий translator9DD7E13A выбирает выходные объявления по точному source-site
 и порядку исходника, не по порядку регистрации own. Шесть новых output/order
 свидетелей и два повреждения реальных target-ячеек проходят native/walker.

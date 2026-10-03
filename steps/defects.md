@@ -155,6 +155,17 @@ This does not authorize a persistent data context graph. Repair source
 occurrence, ownership, full schema, stable required-model instance, complete
 place and ordinary composition/copy coherently. [Exact omissions and tests](critical-graph-namespace-source-layout-20261003.md#local-source-capture-closure).
 
+Later sandbox source production is measured in focused12 GREEN24: exact local
+registration, full original/T7 bodies, shared namespace-reference fill and
+source layout provenance replace reached-declaration cloning. Local S now
+persists (measured99); real NODE/local walker controls pass. Updated source
+oracles preserve INIT and copied ownership. Run14 RED2/23 isolates new explicit
+local-callable-copy refusals; common phase-order repair passes run18 GREEN19
+with independent original/copy counters1/1/2/2 under native and actual walking.
+The nullary held-call positive, local callable-boundary binding/scanning,
+complete capture/actual-input formation, full gates and pointer ticket remain
+open. [Measured scope, not release](critical-graph-namespace-source-layout-20261003.md#local-source-producer-measured).
+
 <a id="graph-call-origin-current-value"></a>
 ### GRAPH-CALL-ORIGIN-CURRENT-VALUE — 2026-10-03, Codex, IN WORK
 

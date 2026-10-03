@@ -585,12 +585,14 @@ tails and all receiver-created storage must participate. Source preservation
 must not depend on whether the walker can execute the body. Name/comment
 codec and copy/merge metadata remapping are also still open.
 
-### Concrete codec gap, not an already implemented name table
+### Concrete codec gap; name-service implementation status
 
-The normative address-to-source-name table and `toLmx`/`fromLmx` are not
-implemented in the inspected development kernel. Compiler P0 text/name arrays
-and generated diagnostic comments are translation-lifetime evidence, not
-that runtime facility. `l2trans` destroys its P0 document immediately after
+The initial inspection found no runtime address-to-source-name table. A bounded
+external service now exists in the sandbox; its ownership tests are described
+below. This does not establish complete producer integration or a source codec.
+`toLmx`/`fromLmx` and retained comments are still absent. Compiler P0 text/name
+arrays and generated diagnostic comments are translation-lifetime evidence, not
+those missing facilities. `l2trans` destroys its P0 document immediately after
 `l2_emit_unit`. Inline comments are skipped by `lm_p0_skip_field_space`;
 raw comment blocks are scanned and skipped by the field parser. The original
 document owns the complete source only during translation. Merely walking P0
@@ -605,6 +607,101 @@ released. Names are not an execution resolver; comments are not executable
 nodes. No Lmx member, per-primitive wrapper, second AST or saved whole source
 may substitute for the missing mechanism. The roundtrip must reconstruct
 from the actual graph plus only these retained payloads.
+
+### G4 bounded external-name ownership and transactional publication
+
+Fresh kernel gate `build/critical_graph_source_names_06`: **GREEN, 290 targets**.
+All 107 selftest rows ran, including the normal expected-fatal watchdog. The new
+`lmx_source_names_selftest` executes **81 checks, 0 failures**. A separately staged
+focused executable in `critical_graph_source_names_focus_07` has the same count.
+These are ownership/lifetime tests, not the complete graph/source codec.
+
+The independent service stores only `{key, text}`: an actual occurrence or
+owning-child-cell address, and its owned length-bearing CHAR text. It does not
+duplicate a value, type, execution binding or Lmx header field. Same-spelling
+publication is idempotent; an alias place can keep `left` or `right` without
+renaming a common referent. Foreign lookup uses the actual range owner; creating
+an unnamed foreign key in a borrower is refused. Transfer and copy use normal
+arena ownership. Weak marking prunes all dead keys before marking surviving
+spelling chunks, preventing spelling bytes from resurrecting another key.
+Range retirement cancels affected key, record and text entries.
+
+Copy prepares names through the existing closure map, but does not publish them
+until its enclosing operation succeeds. Merge owns the complete pending batch,
+including final result-place names. A later merge allocation failure cancels
+every pending row before ordinary arena reversion. The selftest injects this
+late failure and both initial pending-map allocation failures, then proves a
+successful retry and exact same-destination batch deduplication. No arena
+allocation/GC protocol or language failure semantics was changed.
+
+Earlier red evidence is retained: `_04` failed the new selftest's duplicate-body
+link closure; `_05` linked but its test used uninitialized stack arenas; the
+focused `_06` ran 70 checks with one failed chunk-sharing test setup. The live
+test now zero-initializes arenas and seeds CHAR chunk capacity before the
+weak-key contamination witness. Do not cite any earlier red run as green.
+
+Fresh full harness `build/l2_harness/critical_graph_fix_full_08`: **RED,
+34 of 1256 targets**. Frozen translator source SHA256:
+`76B60C794882CC0AFB5B719EAB717204B1996E34B8C24B78C08A814FA0DD5D68`;
+executable SHA256:
+`E256E3BEC74A4CCA9932B51C0EB21529098692AB00E57BA6BF2A02AAF90633A0`.
+Its exact failure rows are in `summary.txt`; they are not waived. This frozen run
+predates subsequent producer-name integration and common source-atom emission.
+It is not a verdict for those later live bytes.
+
+In the current uncommitted translator, source retention and interpreter
+capability are separate compiler facts: retained machine operations contribute
+source width without clearing a method's native word. The MAD helper-generation
+gate follows retained construction, not the host's interpreter capability.
+The new common atom emitter replaces the three legacy kind-12 CHAR_PTR spelling
+producers, including qualified allocation profiles. Namespace fields name their
+actual owning places using `l2_nsf_fname`; `l2_nsf_name` is not a substitute,
+because it can name the referent or written atom. Primitive own cells, ordinary
+method occurrences, namespace descriptors and formal owning places use the
+same external service. Exact `namepath` and `placenamepath` assertions inspect
+only the selected key, without neighboring-name/text fallback. These producer
+  changes require their own focused/full gates; names alone do not close G1/G2/G4.
+
+### Common source atoms: symbolic identities are not opcode records
+
+`critical_graph_names_atom_01`: **RED, 2 of 13**. Both retained `A: b`
+witnesses reached UNSUPPORTED because the first symbolic leaf was incorrectly
+allocated as OP/UNKNOWN, making its otherwise dormant holder look like an
+executable frame. `names_atom_02` remained **RED, 2 of 13** after splitting
+the leaf domain: walking and exact-name assertions passed, but ordinary copy
+had no leaf constructor. These are real failed probes, not green evidence.
+
+The common atom producer now uses real typed primitive cells, CHAR Array
+descriptors and identity-only symbolic cells. A symbolic occurrence has one
+inert identity byte in SOURCE_SYMBOL kind23/type36; no opcode/value/name/type
+payload is added. Its name resides externally. Generic atom handles are
+`void*`, so adjacent byte cells are not misaligned conversions to `Lmx*`.
+Source-name service type35 avoids colliding with existing Message domain21;
+no existing ABI number moved. Walker classification itself needed no special
+symbol-name skip: only genuine OP/ROLE addresses determine operation roles.
+
+Symbol copying allocates a destination identity, registers the normal copy
+map and remaps external spelling. Equal spellings do not collapse distinct
+occurrences; repeated edges to one occurrence remain shared. No symbol is
+added to the shared opcode-terminal policy.
+
+`build/l2_harness/critical_graph_names_atom_03`: **GREEN, 13 targets**.
+Ten selected fixtures plus three build/scope rows passed. Exact unknown/known
+`A: b` names, same-arena copy and native/cleared-root walking give 96/84
+checks respectively. Frozen translator source SHA256:
+`92FD6184D3C9CF73ABE421EFB8F7F90797264E17BD43F5574B2AE467FF2B4A5F`;
+executable SHA256:
+`A14784883A61DAA3B866540CF78CA0CB0978491BF618EB1D67AD6C3F60AD3A19`.
+
+`build/critical_graph_source_names_07`: **GREEN, 290 targets**, all 107
+selftest rows executed. Its external-name witness gives **93 checks, 0
+failures**, including cross-arena distinct/shared symbolic identities and
+their spelling after releasing the source arena. Existing genuine unknown-OP
+refusal tests still run in `lmx_walk_selftest`. This frozen kernel gate
+predates the subsequent atom/expression GraphField constructor factoring.
+
+Neither focused result implements comments or the canonical full decoder.
+The full graph and pointer tickets remain OPEN; stable twins are unchanged.
 
 ## 4. Pointer repair inventory; implementation not started
 

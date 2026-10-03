@@ -27,8 +27,9 @@ closed.
 - [ ] В harness нет декодера графа, который сверяет структуру с исходником и не зависит от временных имён и старых номеров слотов.
   Driver fact `shape … endshape` names roles, primitive cells, `spell`, `add A B`, `body`/`endbody`, and `fields`/`endfields`. It does not read `l2_rwN` names or old slot numbers. Witnesses: `graph_shape_unknown_atom`, `graph_shape_add`, `graph_shape_value`, and `graph_shape_fields` (Holder's ints 1 then 3, native and walked, `regress_ns_19`).
   This is partial structural assertion coverage, not the complete independent
-  P0-to-retained-graph decoder. `spell` still observes forbidden graph-resident
-  names; it cannot certify the address-to-name-table contract. The current
+  P0-to-retained-graph decoder. The initial `spell` oracle observed forbidden
+  graph-resident names. It now also consults the external service, but its
+  compatibility/text fallback cannot certify the address-to-name-table contract. The current
   exact assertions and genuine mutation controls improve coverage but leave
   full source/name/comment reconstruction OPEN.
 - [x] Нет прогонов, где успех виден по значению, а не только по тому, что перевод прошёл. Сюда же входят нативное исполнение и проход через walker.
@@ -142,17 +143,26 @@ Current bounded implementation, with no DONE claim:
   close this step or make the old graph source-faithful.
 - [ ] G1/G4: complete the graph decoder and the real name/comment codec;
   compare full source containment, not just selected lowered instructions.
-  The inspected development kernel has no implemented runtime
-  address-to-source-name table or `toLmx`/`fromLmx`. Preserve independent
+  The development kernel now has a bounded external address-to-source-name
+  service; `toLmx`/`fromLmx` and full comment retention are still absent. Preserve independent
   name/comment payloads at actual source places before P0 document disposal;
   do not mistake compiler name arrays or generated diagnostic comments for
   that facility. Copy/merge must remap source-place keys and preserve payload
   ownership through the same copy map; no second AST or saved source replay.
+- [x] G4 bounded external-name ownership and transactional copy/merge:
+  `critical_graph_source_names_07` GREEN, 290 targets; all 107 selftests ran.
+  The name-service witness executes 93 checks, including late merge rollback,
+  weak-key marking, retirement, cross-owner transfer and copied symbolic
+  occurrences after source release. Symbolic leaves have only a distinct
+  address-domain identity; names are external, and atom handles are `void*`,
+  not misaligned casts to Lmx headers. `critical_graph_names_atom_03` GREEN,
+  13 targets, measures exact selected names and dormant native/root-walker
+  parity. This does not close the universal codec or either critical ticket.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
-  Latest completed full `critical_graph_fix_full_06`: RED, 32 of 1249.
-  Nine failures from `_05` no longer occur; no new failures were introduced.
-  This snapshot predates the original-unit/hosted-constructor continuation.
+  Latest completed full `critical_graph_fix_full_08`: RED, 34 of 1256.
+  This frozen snapshot predates the final common atom/name producer changes;
+  exact identities/hashes are retained in the evidence journal.
   The remaining failures include obsolete expectations and genuine admission/
   capture implementation debts, not a blanket waiver. Do not
   substitute focused green rows for a full current-source verdict.

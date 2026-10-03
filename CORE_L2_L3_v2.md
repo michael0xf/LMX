@@ -12,9 +12,23 @@ This is a technical map of the kernel that actually exists, not a replacement la
 | **Verification** | A particular source snapshot and a particular executed witness or gate. Its scope does not silently extend to another interpreter, another native-word configuration, another fixture, or a later source edit. |
 | **Debt** | A measured defect, missing route, unverified requirement, or remaining implementation restriction. Debt is not a new language restriction. |
 
-The inspected development source is `build/opus_wt/dev/l2src_sandbox/`, with the L3 adapters in `build/opus_wt/dev/l3_interp/`. The exact source checkpoint is now landed in main as **`8359a59f67b87382c55eb402e9f09f9a4b1ce954`**. Repository-relative source links below use its canonical destinations under `dev/`; do not substitute an older main checkout or root `l2src/` copy.
+The original inspection used `build/opus_wt/dev/l2src_sandbox/`, with L3 adapters in that worktree. Its October1 release landed as **`8359a59f67b87382c55eb402e9f09f9a4b1ce954`**. That is a historical frozen baseline, not the current handoff. Active development is now the uncommitted `dev/l2src_sandbox/` and `dev/l3_interp/` under `C:\Nyasha_Planet\LMX`; stable root `l2src/` is unchanged by the critical-graph work. Source links below point to these canonical development paths; source symbols and the cited frozen gate identify each observation.
 
-The document was started on **2026-10-01** against main documentation commit `f980dce9bbcc9959d47cde85cb79a186277ad1ba` and completed against the released merge-result source freeze:
+**Current boundary, 2026-10-03.** The author transfers implementation to Fable;
+Codex completes documentation and subsequently answers questions. Read
+[to_fable.md](to_fable.md) and [the v2 plan](next_core_tasks_v2.md).
+Latest full gate `critical_graph_fix_full_32` is RED130/1395 on translator
+`BFF213AC9309EF2D2975499C6894ABA6EA10BE8EBD3DC9B95733E43B7985B81A`.
+Later focused `critical_persistent_oracle_01` is GREEN7/7 on the same translator,
+with revised occurrence oracles; its generated-runtime copy-to-alias mutant
+fails in both native and cleared-root execution. Kernel admit_status01 is
+GREEN292 with109 selftests; L3 source_admit01 passes11 suites/four budgets.
+These are separate scopes, not one full-green checkpoint. Exact evidence and
+hashes are [in the current ledger](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles).
+Both critical tickets, complete source/comment decoding, actual copied/held-call
+inputs, pointer-cell correctness and §§8/8a remain OPEN.
+
+The historical inspection was started on **2026-10-01** against main documentation commit `f980dce9bbcc9959d47cde85cb79a186277ad1ba` and completed against the then released merge-result source freeze:
 
 ```text
 l2trans.lm1 SHA-256
@@ -123,7 +137,7 @@ A primitive materialized by a receiver, such as i in `int: i 5`, already has its
 
 Comments are retained in full with their structural placement. They carry independent content and are not processed on the execution path. For a source-constructed tree, `toLmx` reconstructs the original source content, including names and comments, with canonical formatting as the only difference. The name table and comments are retained information, not an alternate syntax tree or textual program to execute.
 
-**Implementation boundary.** The translator retains P0 nodes, interned text, declaration-name identity, namespace/own rows and borrowed spans while translating. The generated executable retains operator/data graphs for supported lowering paths. These are two different lifetimes. This audit has not established a general final-program address-to-source-name/comment facility covering every accepted source. It also has not established that every source role emits a complete portable graph. Historical quiet graph refusal and native-only bodies are explicit evidence boundaries, not an alternate architecture.
+**Implementation boundary.** The translator retains P0 nodes, interned text, declaration-name identity, namespace/own rows and borrowed spans while translating. The generated executable retains operator/data graphs for supported lowering paths. These are two different lifetimes. The development runtime now has an external address-to-source-name service (`lmx_source_names`), with measured weak-key lifetime, range retirement and transactional copy/merge remapping. That is not an execution binding table. Full comment payload retention, independent retained-graph/source decoding and coverage of every original source role remain incomplete; the service alone does not prove the `toLmx` contract. Historical quiet graph refusal and native-only bodies are explicit evidence boundaries, not an alternate architecture.
 
 See [one complete lexical graph](steps/native-selfbuild-20260930.md#one-complete-lexical-graph). A native test can pass while its root graph is empty; graph attachment and actual walked dispatch need independent witnesses.
 
@@ -213,7 +227,7 @@ Arena operations include allocate/take, range registration/import, mark/revert, 
 | Length | Descriptor length, not C `sizeof`. |
 | Explicit raw-C access | The expressly selected backing/element address and C ABI, not an implicit graph conversion. |
 
-`l2_value_ft_of_own`, `l2_emit_array_desc`, `L2IndexedOperand`, the common address contract, and `lmx_walk`'s Array place/value operations implement this distinction in the covered source paths. Pointer-element addressing now derives the exact declared element contract and applies the common address-depth transformation, rather than a short list of four element kinds. This does not imply that every imported C scalar or arbitrary foreign aggregate Array has a portable walker implementation.
+`l2_value_ft_of_own`, `l2_emit_array_desc`, `L2IndexedOperand`, the common address contract, and `lmx_walk`'s Array place/value operations provide bounded historical descriptor-value/backing and indexed-element coverage. That does not certify corrected unary `@array`: the descriptor-address exemption remains debt under `critical_pointer_to_struct_bug`, and must become acquisition of the real reference-value cell's address. Pointer-element addressing derives the declared element contract and uses the common depth transformation rather than a short list of element kinds. Coverage of every imported C scalar or arbitrary foreign aggregate Array is not established.
 
 ### 5.2 Nested and multidimensional forms
 
@@ -309,6 +323,12 @@ The callee owns the storage of its addressable formals. The caller's transport b
 
 `LmxWalkWork` records holder, physical index/slot, typed working value, dirty state and its work-list link. Native lowering emits equivalent typed locals and publication logic. Neither representation is an extra language object or a persistent activation graph.
 
+**Bounded computed-result placement.** The current source producer stores a
+computed output at child1 of the existing canonical OWN/AT operand; reads borrow
+that same actual place. It no longer adds a synthetic sibling data field or
+pointer-cell companion. This mechanism is measured by the compact-output
+oracles, not a proof of every source producer or of pointer-depth correctness.
+
 The basic sequence is:
 
 ```text
@@ -361,6 +381,16 @@ CALL and PRIM carry an ordinary physical input/result contract: ordered input wi
 `LmxPrimitive {fn, signature, owner}` is a typed service record. The callback address does not identify its argument types. ARG and SET_ARG carry declared witnesses for named/root bodies that do not have a function signature prefix. There is no fabricated universal `child[0]` header and no result-type inference from an arena address domain.
 
 Scalar and char actuals use exact-width automatic storage in the common generated call route; they no longer require a fresh arena allocation on every synchronous native call. Reference transport remains canonical `void *` boxes. Foreign by-value actual/result storage uses the exact declared C type, not a cast through an Lmx pointer or an int-sized scratch cell.
+
+**Current actual-input debt.** `lmx_call_prim` and EXEC already dispatch the
+actual selected occurrence's native word/body. That is not proof that all
+inputs were formed for that occurrence: copied/held ordinary Structure calls
+still encounter `l2_own_call_origin`, while `l2_rw_ns_hidden` and
+`l2_emit_ns_exec_at` can prepare the prototype's hidden interface. Complete
+actual ordered inputs must be selected before admission and dispatch. Do not
+substitute the exemplar's interface, infer it from ARG usage, or invent a
+zero-argument exception for a convenient witness. These positive call failures
+are preserved in full32 and the current plan.
 
 ### 8.3 Result, status, and stop are separate
 
@@ -499,7 +529,7 @@ The current fixture set distinguishes fresh values on repeated reach, held alias
 
 ### 10.5 Open source routes are not hidden by the repaired storage
 
-The documented `copy: merge Model` form still has a located common receiver-resolution gap: in the measured source it did not enter the merge parser. The established nested-Frame probes `copy: merge: Model` reached the repaired path. This is not a language declaration that the documented form is invalid.
+The October1 inspection found that documented `copy: merge Model` did not enter the merge parser while nested-Frame probes did. That historical parser refusal is no longer the current plain-form status: frozen full32 and canonical-copy native/walk controls reach the ordinary merge path. Do not reintroduce the alternate spelling as a requirement. General stored-result invocation and complete actual-layout projection remain separate debts.
 
 A held operand whose actual layout differs from its declared view still exposes a complete-schema projection gap. Same-schema retained-alias tests do not close it. Formal merge operands and certain hidden-input/scanner routes remain separately located. General source invocation of a stored merged callable (`R()`/bare `R`) has also had distinct resolution gaps; invoking the actual result through a test-only existing runtime call interface certifies runtime identity, not that source syntax.
 
@@ -595,14 +625,14 @@ These are compiler work records, not hidden runtime graph companions or a second
 
 The exact implementation is larger than a single pass. Important phases in `l2_parse_unit` and `l2_emit_unit` include:
 
-1. Bind actuals to the resolved callable formals before treating named actual syntax as another call.
+1. Identify the resolved callable contract before interpreting named actual syntax as another call. Register complete original/local-definition source identities before sizing/checking/counting their bodies. The later bounded `l2_bind_calls` traversal runs after local-definition/namespace registration; its destructive rewriting of named-actual P0 order remains debt, not a desired execution order.
 2. Collect declarations, callable/signature metadata, named/local Structure layouts and ordinary merge-result bindings.
 3. Scan local/free uses and establish hidden-input dependencies.
 4. Collect throws and prepare partial/captured callable information.
 5. Check bodies under their actual method/source/host context; build or rebuild machine-local metadata where needed.
 6. Close throws and hidden inputs across call sites, then replay deferred checks with the saved SourceSite.
 7. Reject unresolved root inputs; intern/prove physical call signatures.
-8. Build correspondence/source catalogs and graph counts, then emit matching graph initialization and native bodies/adapters.
+8. Build correspondence/source catalogs and traverse original source with matching COUNT/PLACE/FILL. Declaration/result reads borrow those exact places, including compact OWN/AT result places; then emit matching graph initialization and native bodies/adapters. Remaining unsupported producers must not silently discard their source.
 9. Lower emitted L1 through the separate L1 translator and compile C99.
 
 This list is an implementation orientation, not a new language execution order. Compile-time collection does not execute an executable declaration or make a later own field lexically visible at an earlier source use.
@@ -631,7 +661,7 @@ This prevents three distinct errors: reading into the next actual, evaluating an
 
 ### 13.6 Construction and calls: accepted rule versus legacy code
 
-**Norm.** An absent head in a declaration defines a named Structure; declaration does not execute it. Under Q57, unknown `C` in `C: makeA()` creates the named Structure `C` containing a named empty Structure `makeA`; it is neither an immediate call nor a saved invocation. The author's explicit 2026-10-01 clarification is that an **ordinary named Structure has no arguments, only a body**. Its nullary invocation is valid; applying an existing ordinary `A` as `A: B` is a **call error**, whether or not `B` exists. There is no assignment or declaration fallback. The declared formal arguments of `fn`, `fm` and `sub` are unaffected. Unknown actual arguments to those contracts remain errors, not silently created placeholders. Explicit expression merge is the construction mechanism; implicit `Model: fresh` cloning in executable declarations is not the accepted rule.
+**Norm.** An absent head in a declaration defines a named Structure; declaration does not execute it. Under Q57, when **both `C` and `makeA` are unknown**, `C: makeA()` creates the named Structure `C` containing a named empty Structure `makeA`; it is neither an immediate call nor a saved invocation. If the nested head resolves to a callable, its ordinary application is retained in the dormant body instead; defining the containing Structure does not execute it. Reference assignment equivalence is governed separately by §6.2 and the resolved source role. The author's explicit 2026-10-01 clarification is that an **ordinary named Structure has no arguments, only a body**. Its nullary invocation is valid; applying an existing ordinary `A` as `A: B` is a **call error**, whether or not `B` exists. There is no assignment or declaration fallback. The declared formal arguments of `fn`, `fm` and `sub` are unaffected. Unknown actual arguments to those contracts remain errors, not silently created placeholders. Explicit expression merge is the construction mechanism; implicit `Model: fresh` cloning in executable declarations is not the accepted rule.
 
 **Implementation/debt.** The translator still contains legacy no-candidate clone paths in `l2_colon_decl_shape` and associated fixture setups. The provenance repair correctly stamps the actual successful legacy copy producer rather than later uses, because accepted replacement paths can change the stored value. This preserves implementation integrity while the obsolete spelling remains; it does not bless that spelling as current norm. The general known-head/declaration/body-role cleanup is separate and must not be silently decided by a test fixture.
 
@@ -678,12 +708,19 @@ The following groups cover the current `LMX_WALK_OP_*` constants. Numbers identi
 | Native service calls | PRIM 16, PRIM_PUB 33 | Physical primitive signature; PRIM_PUB includes the required working-state publication boundary. |
 | Admission/testing | EXPECT_INT 17, ADMIT_AS 37 | Receiver/testing operations and the single current flat mapped-admission encoding. |
 
-COUNT is 44; UNKNOWN is -1. Internal STOPPED is a control status, not another graph opcode. The inventory documents what exists, not new L2/L3 syntax or a blanket guarantee that the older `l3_exec` accepts this encoding.
+The development encoding additionally has SOURCE_INERT44 (retained dormant
+source), SOURCE_MACHINE45 (native-only source), and ELSE46; COUNT is47 and
+UNKNOWN is-1. Source facets ordinary/initializer/implicit/anonymous/trailer
+are0/1/2/3/4 in the existing role code word; they are not atom metadata fields.
+These source roles do not certify complete retention or portable execution of
+L2-only operations. Internal STOPPED is a control status, not another graph
+opcode. This inventory is not new syntax or a guarantee that older `l3_exec`
+accepts the encoding.
 
 <a id="verification-ledger"></a>
 ## 15. Verification ledger and how to interpret gates
 
-### 15.1 Released baseline and current checkpoint
+### 15.1 Historical October1 released baseline
 
 | Evidence | What it establishes | Boundary |
 | --- | --- | --- |
@@ -695,7 +732,7 @@ COUNT is 44; UNKNOWN is -1. Internal STOPPED is a control status, not another gr
 | `merge_value_final_focus_20261001_02` and final restored rerun | **48/48** each on the translator hash in §1. | Restored final source, not an unreverted mutation. |
 | `build/l2_harness/merge_value_full_20261001_02` | **1110 targets / 1062 OK / 48 FAIL**; independently recomputed exact same 48 baseline failure identities, ten added green fixtures, no regressions/removals/duplicates. | Exact source released as `8359a59`; the retained failures remain open. |
 | `build/l2src/merge_value_closure_preflight_20261001_02` | Six actual translate/compile/link/run closures, **174 checks**. | Not a replacement for the final full kernel gate. |
-| `build/l2src/merge_value_kernel_20261001_02` | **286/286**; persistent `run_selftest_lmx_walk_merge_selftest.log` reports **54 checks, 0 failed**. | Exact current runtime freeze, not a claim that all generated-language gaps are closed. |
+| `build/l2src/merge_value_kernel_20261001_02` | **286/286**; persistent `run_selftest_lmx_walk_merge_selftest.log` reports **54 checks, 0 failed**. | Exact historical October1 runtime freeze, not the current critical-graph WIP or closure of all generated-language gaps. |
 | `build/l3_interp/merge_value_final_20261001_02/runner.log` | **11 suites / 295 checks**, four successful **74/128 names, 1056/8192 bytes** inventories. | Actual suite dispatch surfaces remain as described in §14. |
 
 The intermediate merge full01 was **1108 / 1056 OK / 52 FAIL**: the released 48 failures plus three self-path rows and a T7 diagnostic mismatch. Two named-copy failures came from an observer that intercepted only the old unprofiled constructor; the actual walked self-path failure came from lost method context during graph count/emission. These are different causes. The targeted repair restores the common context and updates the observer to the actual constructor return. T7 remains an explicitly labeled receiver-lowering debt; separate negatives preserve actual receiving-type and known-head assertions.
@@ -766,19 +803,19 @@ The following is a boundary map, not authorization for another coding phase:
 | Full self-build / §§8 and 8a | Not complete. Current handwritten L1 and host carriers remain; two successful self-building generations are not established. |
 | Complete lexical/binary graph and source metadata | Required. Native success and some attached graph edges do not certify complete retention of every declaration/operator/name/comment. |
 | General receiver/known-head classification | Still contains legacy construction and unsupported source routes. The accepted ordinary named-Structure rule is nullary-only; its implementation cleanup must not add a fallback or confuse it with `fn`/`fm`/`sub` formal contracts. |
-| Documented merge expression spelling | Located receiver gap separate from ordinary merge-result storage. Nested-Frame test success does not close it. |
+| Documented merge expression spelling | The historical plain-form parser gap is superseded by current canonical-copy controls. General held/dynamic merge and stored-result invocation remain separately open. |
 | Held/formal/hidden merge schema | Specific incomplete projections remain; a known required view is not the actual complete operand layout. |
 | Cross-count repeated selectors | Consumer bare-last versus explicit ordinal can require distinct correspondence despite the same required slot. Current map form is not a proof of full support. |
 | Complete transitive capture/uses | Runtime hole controls are meaningful, but an incomplete syntactic capture scan is not a normative unused-field proof. |
 | Arbitrary Array formals/nested/imported categories | Current descriptor/element paths have bounded verified coverage; no new metadata field or universal support is inferred. |
-| Foreign by-value and aggregates | Supported exact native transport is real; arbitrary foreign graph execution, field projection and nonthrow aggregate stop returns remain separately bounded. |
+| Foreign by-value and aggregates | Supported exact native transport is real; retained producers for activation-local imported C records/function pointers remain incomplete. Their machine values belong to normal native activation storage, not persistent stack-address fields; arbitrary foreign graph execution, field projection and nonthrow aggregate stop returns remain separately bounded. |
 | C99 real pointer-cell effective type | Canonical ABI boxes are fixed; language-real typed cell representation still needs its own closure. No target-size fact is promoted to ISO portability. |
 | GC/legacy traversal limits | GC64 and legacy receiver64 remain. Removed implements/holder caps do not imply uncapped all-kernel execution. |
 | Compiler metadata/path caps | Some fixed capacities remain despite removed 64-token expression limits and checked dynamic path buffers; see [compiler metadata caps](steps/defects.md#compiler-metadata-caps). |
 | Module unload | No complete unload/lifetime protocol for token/qualified references is certified. |
 | Separately compiled library lifetime and instances | Existing link/symbol witnesses do not prove a live independent unit. Singleton arena/unit globals and temporary-root lifetime require repair; see the [proposed owner-supplied construction route](steps/native-selfbuild-20260930.md#proposed-owner-supplied-library-construction). This is a proposal to validate, not accepted new module semantics or a proved 41/42 runtime result. |
 | Older L3 executor | Separate immediate-write subset, not evidence of typed walker's dirty semantics or universal interpreter consolidation. |
-| Current merge release | Released as `8359a59`: final/restored focus 48/48 each, full/kernel/L3 gates terminal, exact combined hashes retained. This checkpoint does not close the separately listed debts or overall self-build. |
+| Historical October1 merge release | Released as `8359a59`: final/restored focus48/48 each, full/kernel/L3 gates terminal, exact combined hashes retained. This is not the later critical-graph WIP or closure of the separately listed debts. |
 
 <a id="documentation-audit"></a>
 ## 18. Documentation consistency audit accompanying this map
@@ -814,4 +851,4 @@ Where the normative L2 text describes the complete graph, all finite reference d
 <a id="handoff"></a>
 ## 19. Handoff boundary
 
-This document records the current kernel and its evidence boundary. It does not schedule further implementation, authorize another compiler slice, or declare the overall goal complete. The current merge release is landed as `8359a59`. After this documentation handoff, subsequent coding is stopped under the user's latest instruction. The replacement plan and dictionary preserve future acceptance/debt for a later explicit instruction; they do not resume that work automatically. Any future evidence update must preserve retained failures and residual limitations rather than rewriting the checkpoint as complete self-build.
+This document records the current kernel and its evidence boundary, not completed self-build. `8359a59` is the historical October1 release. The author resumed critical-graph implementation afterwards and now transfers continuation to Fable on 2026-10-03, as recorded in [to_fable.md](to_fable.md). Codex starts no new code stage after the documentation handoff and remains the question-answering advisor. Fable verifies ownership and proceeds through the v2 queue; there is still only one writer/build. Full32 is RED130/1395; focused persistent_oracle01 GREEN7/7 is bounded evidence, not release. Any future update must preserve retained failures and residual limitations rather than rewriting the checkpoint as complete §§8/8a.

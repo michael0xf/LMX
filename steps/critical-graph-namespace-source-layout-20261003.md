@@ -2016,6 +2016,70 @@ nested/type-word map projections remain separate implementation debt. No new
 runtime fields, atom metadata, source-name reads or companion graph were added.
 Stable `l2src` is untouched; code is not released.
 
+<a id="persistent-occurrence-oracles"></a>
+### 5.27 Persistent-occurrence oracles and documentation handoff
+
+The author requests finishing the current bounded step, updating `to_fable.md`,
+auditing the documentation (especially v2), committing/pushing documentation,
+and transferring implementation to Fable. Codex starts no new code stage and
+subsequently answers Fable's questions. Both critical tickets remain OPEN.
+
+`critical_persistent_oracle_01` is terminal GREEN7/7: four fixture rows, two
+build rows and one focused-scope row. This is **not** a rerun of full32 or a
+provenance/release certificate. The translator and driver are unchanged from
+the preceding full32/admission slice; only four harness oracles and two fixture
+setups were migrated in this bounded step.
+
+| Row | What changed and what is observed |
+| --- | --- |
+| `unit_named_struct_call` | Source unchanged. Remove the blanket prohibition on `LMX_IMPLEMENTS_YES`: a builder's legitimate self-map is not an admission bypass. Keep the forbidden `lmx_walk_admit` check.128 runtime assertions retain root width21, Counter width4, original INIT/SET/RET facets, actual parent/native word, external names, and all three EXEC targets pointing to the same Counter occurrence; entry7. |
+| `unit_ref_local_path` | Replace obsolete `r: @mo` setup with ordinary `r: mo` conversion/admission. It no longer relies on the known incorrect unary-@ descriptor exemption.106 assertions distinguish Model from the persistent method-local mo, retain exact initializer/rebinding nodes and parent, and verify Model.value1 versus mo.value11; entry7. Forbid an implicit reached-declaration clone. This is not pointer-depth certification. |
+| `unit_site_layout_local` | Independence requires explicit copying, not repeated declaration reach. Use `fresh: merge C` / `fresh: merge D`, return fresh, compare the recursive result against that actual copy, mutate it and observe the independent values. Keep C/D different field orders and call/failure counters.16 checks pass native root and the same artifact with its physical root native word cleared; selected methods are genuinely walked. |
+| `unit_capture_struct_nofield_write_refused` | Source unchanged; keep refusal at `:15:9` and use shared `unknown field path segment` wording. It remains a negative, not a weakened acceptance. |
+
+Exact hashes:
+
+```text
+dev/l2src_sandbox/l2trans.lm1
+BFF213AC9309EF2D2975499C6894ABA6EA10BE8EBD3DC9B95733E43B7985B81A
+tools/l2_harness.ps1
+DF38FC1D846566A502E6C4CF25AC12677768429B3DB000FFCFA64012D797EA1A
+dev/l2src_sandbox/harness/l2_eternal_driver.lm1
+E30B6004CCC89193B3CBBCF1825A234EB79D24B5849F093E346CC4740B0405BA
+build/l2_harness/critical_persistent_oracle_01/bin/l2trans.exe (raw PE)
+7D03B6C390ACBC2926F5FF4707FADDF078C5246F0C0A2415CBBCFC4F887B9995
+staged translator Git blob
+41ecd85c0e5cce99a4bc59524f367845f891e5cb
+```
+
+One independent mechanism mutant changes only the unary completed-merge
+result from `copies[0]` to `operands[0]` in an isolated generated driver C copy,
+`build/l2_harness/critical_persistent_oracle_01/mutants/merge_alias.c`.
+Compile0/link0; the unchanged site-layout object then exits81 instead of7.
+Native driver exits1 (one failure/12 checks); cleared-root driver exits1 (one
+failure/16 checks). The failing result is observed by the existing entry oracle,
+not a compile refusal or timeout. Normal generated/compiled artifacts and
+production driver source remain unchanged. Retained logs are
+`merge_alias.compile.log`, `.native.run.log` and `.walk.run.log` in that
+mutant directory; linking completed successfully but has no separate log file.
+
+Reproduction of the ordinary focused gate, **only after confirming the single
+build slot is free**, uses a new output directory rather than overwriting this
+evidence:
+
+```powershell
+& .\tools\l2_harness.ps1 -KeepAll -Translator C:\Nyasha_Planet\LMX\bin\l1trans.exe -OutDir C:\Nyasha_Planet\LMX\build\l2_harness\critical_persistent_oracle_fable_01 -OnlyFixture @('unit_named_struct_call','unit_ref_local_path','unit_site_layout_local','unit_capture_struct_nofield_write_refused')
+```
+
+Latest full gate remains frozen `critical_graph_fix_full_32`, RED130/1395.
+Do not subtract these focused recoveries from130 and announce a guessed full
+verdict. The required positive `unit_named_until_copy_call` pair and
+`unit_held_nullary_source_field` remain unresolved. Native-only declaration
+producers, nondestructive named-actual formation, complete comments/source
+decoding, capture and old capacity limits remain open. Stable `l2src/` is
+unchanged; inherited sandbox code and this step's test/harness edits are saved
+but uncommitted. The documentation handoff does not release that code.
+
 ## 6. Required evidence
 
 Add a full width5 Holder shape oracle, including parent ownership, real int

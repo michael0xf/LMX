@@ -6,11 +6,20 @@ chronological plan or a replacement specification. For the source map read
 [CORE_L2_L3_v2.md](CORE_L2_L3_v2.md); for worked migration examples read
 [L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md).
 
-Evidence baseline: 2026-10-01, main `f980dce` plus the current bounded merge
+Historical evidence baseline: 2026-10-01, main `f980dce` plus the released bounded merge
 slice identified in [the release ledger](steps/native-selfbuild-20260930.md#merge-result-value-release).
 Use that ledger for the final commit, source hashes and gates. “Required” below
 means a documented contract, not an assertion that the current compiler supports
 every example. Source symbols are search anchors; their line numbers change.
+
+Current continuation is transferred to Fable on 2026-10-03:
+[handoff](to_fable.md), [current plan](next_core_tasks_v2.md), and
+[persistent-occurrence evidence](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles).
+Latest full32 is RED130/1395; later focused persistent_oracle01 is GREEN7/7
+with a rejected copy-to-alias mutant. Neither result closes critical_graph_bug,
+critical_pointer_to_struct_bug or §§8/8a. The active code is uncommitted sandbox
+WIP, not the historical released merge bytes. Codex answers questions; Fable
+owns continuation after verifying the single writer/build slot is free.
 
 Every entry separates **Norm**, **Mechanism/debt**, and **Verification**. Where
 the implementation design is not settled, a route is labelled proposed rather

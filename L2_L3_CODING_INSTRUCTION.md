@@ -10,7 +10,7 @@ The authoritative language documents are:
 - `docs/LMX_grammar.en.md`, generated from `provenance/grammar.json`, for source shapes;
 - `CORE.md` for the compact core summary.
 
-Implementation state is intentionally kept separate. `steps/current.md`, `next_core_tasks.md`, `steps/native-selfbuild-20260930.md`, and `steps/defects.md` describe released checkpoints, pending work, and measured limitations. The development source under `build/opus_wt/dev/l2src_sandbox` is a mutable implementation worktree, not a normative source. Do not derive a language rule from a temporary worktree branch, generated identifier, diagnostic, or passing fixture.
+Implementation state is intentionally kept separate. The active queue is [next_core_tasks_v2.md](next_core_tasks_v2.md), read with [its dictionary](next_core_tasks_dictionary_v2.md), [CORE_L2_L3_v2.md](CORE_L2_L3_v2.md), [steps/current.md](steps/current.md), and [to_fable.md](to_fable.md). `next_core_tasks.md` and `steps/native-selfbuild-20260930.md` preserve older released evidence; `steps/defects.md` records measured limitations. Active development is `dev/l2src_sandbox/`; `build/opus_wt/` is an older worktree, not the current handoff source. Do not derive a language rule from a temporary worktree branch, generated identifier, diagnostic, or passing fixture. Latest full32 remains RED130/1395; later focused GREEN7/7 does not certify either critical fix or self-build.
 
 ## 1. Status words used here
 
@@ -78,9 +78,9 @@ A bad migration transliterates C syntax into L3. A correct migration replaces C'
 
 ### 3.1 Complete retained graph
 
-**NORMATIVE.** Source constructs one complete binary Structure tree containing declarations, values, comments, names, and executable operators in lexical order. A declaration does not execute its body. An executable operator is not moved into a separate “code graph,” “saved-call object,” capsule, or permanent parallel context graph.
+**NORMATIVE.** Source constructs one complete binary Structure tree containing declarations, values, and executable operators in lexical order. Names are absent from the graph as a whole and are reconstructed through the separate address-to-source-name table. Comments are retained in full with their structural placement. A declaration does not execute its body. An executable operator is not moved into a separate “code graph,” “saved-call object,” capsule, or permanent parallel context graph.
 
-Names and comment text may be retained for diagnostics and tooling. Runtime dispatch and value resolution follow resolved graph references and positions, not a name lookup table.
+Name reconstruction and full comment retention are required, not optional diagnostic decoration: `toLmx` must recover the source content with canonical formatting as the only difference. Runtime dispatch and value resolution follow resolved graph references and positions, not a name lookup table. The implemented external name service is bounded evidence; full comments and the independent retained-graph/source codec remain OPEN.
 
 ```text
 fn: put (int: n) int
@@ -439,6 +439,11 @@ Plain `char` retains target C signedness. Character storage identity is still or
 
 **SUPPORTED.** Released checkpoints described in `steps/native-selfbuild-20260930.md` cover whole-Array descriptor addressing and value projection, shared indexed expression spans, typed pointer/value transport, and several native/walker reference cases.
 
+That is historical implementation coverage, not certification of the corrected
+unary `@Array` contract. Acquiring the real descriptor-reference cell's address
+and adding depth is reopened by `critical_pointer_to_struct_bug`; the former
+descriptor-address exemption is a defect, not a supported normative alternative.
+
 **PENDING.** The same notes explicitly retain semantic Array formal projection, some descriptor-reference following cases, arbitrary receiver composition in all consumers, general occurrence/use-edge projection, and some walker/copy combinations. An example that uses these is normative but must be marked unverified until its focused native and actual-walker evidence exists.
 
 ## 8. Paths, repeated names, and resolution
@@ -603,6 +608,13 @@ Candidate admission has two distinct stages:
 2. successful interpretation of all unit tests defined by that Consumer against the already constructed graph.
 
 A matching machine type, address range, source name, signature fragment, or native callback does not replace either stage.
+
+**Current implementation phase.** The present analytical kernel slice checks
+the Consumer-required interface and safe consumption, not algorithmic equivalence
+or candidate behavior. Consumer unit-test execution is the separate second
+stage; it is not implemented or proven by current analytical gates. Do not add
+algorithm analysis to `implements` or claim that a structural PASS completes
+that later stage.
 
 ### 12.2 Conversion precedes structural admission
 
@@ -788,7 +800,9 @@ For each migrated mechanism, record all three layers separately.
 Prefer mutations that change one semantic relationship:
 
 - select the original callable instead of the copied occurrence;
-- address a temporary or graph slot instead of the data cell;
+- address a temporary, wrong occurrence, or pointee descriptor instead of the
+  real language storage cell; for a Structure/Array this real cell holds the
+  descriptor reference, so its address is the required extra pointer level;
 - collapse present null into absence;
 - evaluate an actual twice or out of order;
 - detach the body while leaving an orphan operator frame;

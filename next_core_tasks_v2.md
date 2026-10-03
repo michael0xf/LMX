@@ -17,6 +17,18 @@ work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
 [kernel map](CORE_L2_L3_v2.md), and
 [porting guide](L2_L3_CODING_INSTRUCTION.md).
 
+**Current handoff, 2026-10-03.** The author has transferred continuation to
+Fable; Codex finishes documentation and then answers Fable's questions, without
+starting another code stage. Read [to_fable.md](to_fable.md) before taking the
+single writer/build slot. Latest completed full gate: `critical_graph_fix_full_32`,
+RED130/1395. The later `critical_persistent_oracle_01` is focused GREEN7/7;
+its copy-to-alias mutant fails in native and cleared-root execution. It is not
+a new full-gate verdict. Sandbox code/tests are uncommitted and stable `l2src`
+is unchanged. Both critical tickets remain OPEN. Exact current evidence:
+[persistent occurrence oracles](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles).
+Historical runs and intermediate task descriptions below are not restart
+instructions where a later measured slice supersedes them.
+
 <a id="before-critical-graph-bug"></a>
 ## Before critical_graph_bug — acceptance still required
 
@@ -172,10 +184,12 @@ Current bounded implementation, with no DONE claim:
   without another owning node or an old late duplicate fill. The exact Holder
   oracle now requires its source method RET as well as ordered values/names/
   parents; `_08` passes native, cleared-root, native-retention and real erase
-  controls. Local construction still returns94 on repeated calls. The walker
-  lacks the reached-declaration fresh-instance producer, so those methods stay
-  native; projected zero-native returned bodies with such definitions remain
-  blocked until that general producer exists. Do not bypass the capability guard.
+  controls. That historical run returned94 on repeated calls. The later
+  whole-local-source producer preserves the persistent declared occurrence,
+  removes reached-declaration cloning and measures99, with genuine walked
+  coverage (`critical_local_source_12` GREEN24 and later context controls).
+  Do not restore a fresh-instance producer from this superseded observation.
+  Actual copied/held-call input formation remains separately OPEN.
 - [ ] G1/G4: complete the graph decoder and the real name/comment codec;
   compare full source containment, not just selected lowered instructions.
   The development kernel now has a bounded external address-to-source-name
@@ -219,15 +233,14 @@ Current bounded implementation, with no DONE claim:
   length and physical increment verified; selected prior controls pass.
   The only failures are the two unchanged indexed-STORE witnesses. No full
   gate has run on these later bytes; this does not close the connected item.
-- [ ] G2 connected constructed-field paths: native metadata lookup must retain
-  the original namespace contract when a procedure is its execution entry,
-  just as the walker already does. Array/callable fields must use their
-  existing NSF row and completed physical slot, not fabricated own rows.
-  Add one shared typed-field indexed-place route to CHECK, native and walker
-  for the valid `Shelf\values[0]: 4` witness. The Array descriptor supplies
-  actual storage; do not reuse the raw-pointer path, create a nested-Array
-  special case, impose an arbitrary depth limit or infer rank from length.
-  Keep the two currently failing constructor witnesses intact until verified.
+- [x] G2 bounded constructed-field indexed places: the original namespace
+  contract, existing NSF row and completed physical slot supply the shared
+  CHECK/native/walker route, including `Shelf\values[0]: 4`.
+  `critical_graph_array_place_08` GREEN16 closes the two indexed-STORE
+  refusals recorded above; [exact scope](steps/critical-graph-namespace-source-layout-20261003.md#array-place-evidence)
+  remains distinct from arbitrary nested/imported Array coverage.
+  The descriptor supplies actual storage, not a fabricated own row, raw-pointer
+  substitute, nested-Array special case, depth cap or rank inferred from length.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
   Earlier full `critical_graph_fix_full_12`: RED, 204 of 1284,
@@ -539,7 +552,11 @@ arrange a safe handoff, not a second writer or an interrupted gate. Only after
 this ticket is closed take the pointer-depth repair below, then the reference
 application refactoring, before resuming the remaining dependency queue.
 
-Active slice of this ticket, not a detour:
+Historical inherited slice of this ticket (2026-10-02), not current topology
+instructions. The observations below preserve their original run boundaries;
+later COUNT/PLACE/FILL and canonical-cell evidence above supersedes sibling
+shells, old slot pins and reached-declaration cloning. Do not reconstruct those
+old layouts in the current implementation:
 [2026-10-02-01-known-call-layout](steps/tickets/2026-10-02-01-known-call-layout.md).
 A direct `A: b` stores the callee once. The argument is the ordinary `OWN` of
 `b`, not a leaf on `int: b 5` (`regress_ns_48`, exit 5). Compact `A(b)` is the same application (`regress_ns_51`, exit 5). Unknown `A: b` stays a Structure.
@@ -788,7 +805,7 @@ all consumers; a call failure never becomes assignment. This stage is a
 refactoring to accepted rules, not a claim that the current code supports them.
 
 <a id="snapshot"></a>
-## 0. Snapshot and what must not be called complete
+## 0. Historical starting snapshot and what must not be called complete
 
 The starting documentation/source baseline is `f980dce`, containing the
 native-dispatch repair `621e8af`. The last complete pre-merge generated-program
@@ -803,11 +820,13 @@ That record, including the exact source hashes, final counts and commit, is
 the authority for the handoff boundary; intermediate focused runs are not a
 replacement for it. A passing focused run does not certify a full clean kernel.
 
-The source checkpoint is now `8359a59`: focused and restored runs 48/48;
+The October1 released source checkpoint was `8359a59`: focused and restored runs 48/48;
 full generated run 1110 targets, 1062 OK, the exact same 48 failures; kernel
 286/286; L3 11 suites/295 checks plus four budget controls. Ten new generated
-rows pass, with no regressions. This is the starting code snapshot for the v2
-handoff, not completion of the clean-kernel dependencies below.
+rows pass, with no regressions. This was the starting code snapshot for the
+original v2 handoff, not the current critical-graph WIP or completion of the
+clean-kernel dependencies below. The current handoff is identified at the top
+of this file; retain the frozen older counts as history, not a current verdict.
 
 Already repaired bounded mechanisms include actual declared-cell addressing,
 whole-Array descriptor projection, common reference initialization/rebinding,
@@ -821,7 +840,7 @@ The 2026-10-02 pointer ticket explicitly reopens the descriptor-address
 exemption: previous bounded gates do not establish that @Structure adds the
 required reference level. The two new front stages remain unchecked.
 
-The current merge slice removes the phantom global result namespace for its
+The October1 released merge slice removed the phantom global result namespace for its
 supported static operands, stores results at ordinary declaration places,
 preserves composed schemas and real expression-host parentage, and corrects
 retained-result provenance. It does **not** close arbitrary held/formal/dynamic
@@ -973,11 +992,12 @@ empty and nonempty definition bodies; explicit @: reference assignment versus
 ordinary application through the reference; declarations without return/trailer;
 no source-name or root-only branch.
 
-The current diagnostic “a call of a named Structure with an argument is not
-built yet” records a real refusal but gives the wrong reason after Q59. Replace
-it through the common resolved-call contract check, not a new syntax-specific
-ban and not implementation of invented arguments. The frozen merge slice's
-negative fixture is category evidence only until that diagnostic is migrated.
+The October1 diagnostic “a call of a named Structure with an argument is not
+built yet” was stale after Q59. The current shared `l2_struct_arity_error`
+already checks the resolved formal contract and diagnoses excess arguments;
+do not reopen that diagnostic migration or implement invented arguments.
+This does not close execution of a copied/held nullary Structure or its actual
+hidden-input preparation: the two positive copy-call refusals remain OPEN.
 
 ### K04 — Callable actuals and hidden inputs
 
@@ -1198,7 +1218,8 @@ structure_reference_application_refactor) must be closed first.
 All of K01–K12 are dependencies,
 not necessarily twelve large commits. Split them
 into bounded shared-mechanism slices, with exact witness matrices. The remaining
-48 generated failures must each be classified and resolved against current norms;
+full-gate failures must each be classified and resolved against current norms
+(latest frozen full32: RED130/1395, not the historical48);
 use [the diagnostic ledger](steps/generated-diagnostic-migration-20260930.md).
 Changing an expectation requires a cited accepted rule; do not weaken runtime
 observations into compile-only successes.

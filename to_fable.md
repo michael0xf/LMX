@@ -1,134 +1,413 @@
-# Передача Fable: LMX, ядро, дальнейшая работа и связь с Grok Bot
+# Handoff to Fable — LMX kernel, 2026-10-03
 
-Дата среза: 2026-09-22. Репозиторий: `C:\Nyasha_Planet\LMX`.
-Это рабочая инструкция для продолжения проекта, а не новая спецификация языка.
-Семантические указания §3 уточнены 2026-10-02 по исправлению адреса Structure и правилам ссылочного применения. Срезы HEAD, владельцев, результатов и старой очереди — исторические; они не возобновляют тикеты и не подтверждают новую норму. Текущая очередь — [next_core_tasks_v2.md](next_core_tasks_v2.md), инструкции — [steps/current.md](steps/current.md). После critical_graph_bug идут critical_pointer_to_struct_bug и рефакторинг применения; документационная правка не является готовой реализацией.
-Первое правило работы здесь: **ВСЕ ПРАВИЛА ЯЗЫКА УНИВЕРСАЛЬНЫ. Никаких исключений по имени, форме записи или удобству транслятора. Если обнаружено противоречие или для реализации будто бы требуется исключение, сразу предъявить минимальный пример и точные места кода автору; не закрывать вопрос обходом.**
+Repository: `C:\Nyasha_Planet\LMX`. Active queue:
+[next_core_tasks_v2.md](next_core_tasks_v2.md). This is a working handoff, not a
+language specification.
 
-## Core engineering principles — instructions to all agents
+The author has asked Codex to finish its current bounded step, update this file,
+audit documentation, commit/push the documentation, and stop starting code
+stages. Fable takes over implementation. Codex remains available to answer
+Fable's questions about the plan and accepted rules; only an unresolved
+contradiction or genuinely missing author decision goes to the author, in
+Russian, through the Codex chat.
 
-1. **This is a language kernel, not ordinary application code.** Its job is to implement a coherent language model. A locally convenient fix is wrong if it introduces a second meaning for the same construct or changes the language to accommodate the current translator. Application-level policies, adapters, UI state, recovery machinery, and dynamic containers belong in their own layers and types.
-2. **Make every language rule as general as possible.** Do not add exceptional cases for a particular name, source form, method, fixture, type spelling, or backend shortcut. The parser may preserve source-form metadata for spans, but that metadata must not decide semantic operations. If an apparent exception is required, first identify the missing general rule or a genuine contradiction and bring it to the author explicitly.
-3. **Keep the kernel algorithm maximally simple.** Do not add defensive programming inside the kernel: no speculative preflight validators, poison states, retry stages, duplicated registries, silent fallbacks, or extra checks of invariants that the architecture establishes by construction. Test the kernel thoroughly instead. A real language error and a required external boundary check still need a precise diagnostic; simplicity does not authorize undefined or silently wrong behavior.
-4. **Follow the specification as closely as possible.** Separate an accepted language rule from the behavior of today's code and from a green test result. Do not promote an implementation accident, an old fixture, or a passing wrapper exit code into a language rule. When evidence conflicts, show the smallest source example, the relevant specification clauses, the exact code path, and the measured result.
-5. **Treat L1 as a technical auxiliary language.** L1 is an intermediate stage for lowering into C; it is not the authority that defines the graph, admission, publication, or other L2/L3 language semantics. L2 and L3 are defined by their specifications. Some requirements may have been omitted from the current documents and may still be preserved in the older `lingvamyxa_prev/Lingvamyxa_spec.txt`. Check that source when reconstructing intent, but do not silently copy an old rule over a later author decision; present the conflict to the author.
-6. **Escalate logical inconsistencies to the author in Russian.** Ask a concrete question in Russian, with a minimal program and the two conflicting interpretations, before implementing a rule that depends on the answer. Do not bury the disagreement in a shim, an undocumented assumption, or a test expectation. **Communicate with other agents exclusively in English:** tickets, status messages, technical reviews, handoffs, and replies to Grok Bot or `lmx_uds` must be in English. This language split applies to communication, not to the original language of source quotations preserved in `LMX_blog`.
+## 1. Read before writing
 
-## 1. Что считать целью
+Read these documents completely in this order:
 
-Три результата, которых ещё нет: полный перенос поддерживаемого кода L1 → L2 → преимущественно L3; полная самосборка **L2**, затем L3 + L2 с явно перечисленными необходимыми L2-вставками; воспроизводимый `myxa_manager` как приложение с одним входом, а не коллекция модулей и тестовых harness. Перенос не следует подменять реализацией операторов, которыми проект не пользуется. Самосборка L1 и зелёная линковка библиотеки не доказывают самосборку L2 или запуск manager.
+1. [AGENTS.md](AGENTS.md), [READ.ME](READ.ME), [steps/current.md](steps/current.md).
+2. [next_core_tasks_v2.md](next_core_tasks_v2.md) and
+   [next_core_tasks_dictionary_v2.md](next_core_tasks_dictionary_v2.md).
+3. [CORE_L2_L3_v2.md](CORE_L2_L3_v2.md) and
+   [L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md).
+4. The current RU/EN semantics, grammar and L2 specification in `docs/`;
+   the L1 specification for actual lowering/ABI work. Grammar is generated
+   from `provenance/grammar.json`.
+5. [The two-fix decomposition](plan_critical_graph_bug_critical_pointer_to_struct_bug_fix.md),
+   [critical_graph_bug](steps/tickets/critical_graph_bug.md),
+   [critical_pointer_to_struct_bug](steps/tickets/critical_pointer_to_struct_bug.md),
+   and [the current evidence ledger](steps/critical-graph-namespace-source-layout-20261003.md).
+6. [work_chat/README.md](work_chat/README.md) for the question/reply route.
 
-Ближайший порядок задан [`next_core_tasks.md`](next_core_tasks.md): закончить семантику и очистить ядро (§§2–6, §7a, затем `GATE`), только после точного зелёного pushed checkpoint портировать `implements` (§7), затем выполнять §8 и §9. Разрешены заранее read-only исследования и подготовка несовпадающих writer-границ. Не начинать `implements` write-порт или L1 → L2 миграцию на разобранном ядре.
+The earlier `next_core_tasks.md`, old `CORE.md`, `from_grok.md`, and the
+October1 merge release are historical context. They are not authority to
+restore an obsolete layout or restart a superseded ticket. No application or
+`myxa_manager` work is included in this handoff.
 
-## 2. Как восстановить состояние перед каждым действием
+## 2. Ownership and exact state
 
-1. Прочитать `AGENTS.md`, `READ.ME`, `steps/current.md`, `next_core_tasks.md`, `next_core_tasks_dictionary.md`, `work_chat/README.md`; для конкретной нормы открыть соответствующий RU/EN документ и дословную техническую запись в `LMX_blog/`. Старые `codex_next.md`, `steps/implementation-plan.md`, `steps/core-self-build.md` содержат историю и местами прежние владельцы/оценки; проверять их по текущему коду и свежему плану.
-2. Выполнить из `C:\Nyasha_Planet\LMX`: `git status --short --branch`, `git rev-parse HEAD`, `git rev-parse origin/main`, `git worktree list --porcelain`, `python claude_chat/chat_status.py peers`. Сверить активные `LOCKED`/`OWNED_BY` по **содержимому**, а не по имени файла; старые два `OWNED_BY_GROK_*` в `dev/l2src_sandbox` прямо помечены `SUPERSEDED` и `closed`.
-3. Для каждого вывода разделять: **норма принята**, **реализация существует**, **runtime проверен**, **checkpoint опубликован**. `[x]` в плане или зелёный aggregate не заменяет ни одну из следующих проверок. Если HEAD ушёл вперёд, заново сверить файлы и gates; номера строк и этот срез не вечны.
-4. Записывать `request ID → адресат → delivery → STARTED → RESULT/BLOCKER → SHA/файлы/gates → независимая проверка`. HTTP 200, pipe ACK и статус `busy` не являются содержательным результатом.
+There is **one writer/build slot**. Before taking it, inspect actual processes,
+current agent/session state, Git status, worktrees and ownership markers.
+A marker, dirty diff, old STARTED, delivery ACK or completed sub-ticket is not
+proof that a current run is active.
 
-На момент записи `HEAD == origin/main == 7e07343514fa73d095eb5189e7dbf2b56ae6ff66`. Последний стабильный fix `7e07343` вернул общий token-door для `c.*` в `l2_head_is_call`; предыдущий `e79482f` удалил ранний `COMPACT`-приоритет. Это **не** означает окончания §2 или очистки `c.*`: другие специальные ветки и расхождение stable/dev остаются. У Grok Bot gate этого fix зелёный; `build_l2src -Run` сообщил 246 aggregate targets, из них 68 actual selftests. Не называйте 246 числом selftests.
+The last documentation baseline before this handoff was `da9a6fc7` on
+`main`, equal to `origin/main`. The documentation commit containing this
+file supersedes it; obtain its actual SHA locally rather than guessing it.
 
-В рабочем дереве до этой инструкции были изменены generated `docs/LMX_semantics.en.md` и `.ru.md`, а также лежали чужие untracked `bin/`, `*.LOCKED`, backups, `unit_occ_sticky_selector.lm2`, `memory/` и временные файлы. Их нельзя молча включать в коммит, удалять или «чистить». Отдельный worktree OpenRouter `C:\Nyasha_Planet\LMX_openrouter_dictionary` содержит исправленный detached commit `4cee6e81e873ebde007872976d4e717bc3b976e8` только по словарю; он **не интегрирован** в main. Перед интеграцией проверить diff против текущего main и смысл статусов словаря; не выдавать detached commit за опубликованное изменение.
+Active implementation is `dev/l2src_sandbox/`, with relevant adapters in
+`dev/l3_interp/`. Stable root `l2src/` has not been updated by these critical
+fixes. Do not use `build/opus_wt/` as the current writer tree or silently
+combine different ABI generations.
 
-## 3. Архитектурные правила, которые уже решены автором
+The checkout contains substantial **uncommitted inherited kernel/translator,
+harness and fixture WIP**, including new untracked source-name modules and
+many graph witnesses. All of it has been preserved. The documentation handoff
+does not commit, release, discard or synchronize that code.
 
-### Язык и разрешение операции
+This is a **local checkout handoff**. A fresh/cloud clone sees the pushed
+documents, not this uncommitted implementation. If continuing elsewhere,
+arrange an explicit reviewed transfer of the preserved WIP before editing;
+do not substitute the old committed translator or pretend it contains these
+measured changes.
 
-- P0 различает синтаксические записи; транслятор и интерпретатор получают структуру и разрешённую операцию. Блочная, короткая/colon и скобочная записи равноценны во всём языке. `LM_P0_FRAME_COLON`/`COMPACT` не выбирают семантику. Зарезервированные receiver-операторы языка (например `fn:`; запланированный `sizeof:`) классифицируются как операторы и не затеняются пользовательскими bindings. `c.*` — отдельное **сырое окно в C**, определяемое по токену, без списка разрешённых имён, сканирования `*.h` и отдельных L2-смыслов для `c.sizeof`, `c.puts`, `c.array`.
-- После классификации receiver и контекста действует общее разрешение: существующая Structure/callable-голова, в том числе через ссылку, → применение по фактическому контракту; существующий примитив → присваивание с admission; неизвестная голова в позиции определения → построение записанного тела без его исполнения. Для неизвестного b равнозначны `b: A` и `@: b A`; дальнейшее `b: args` применяет выбранную Structure, а `@: b B` явно переприсваивает ссылку. Ошибка вызова не переходит к присваиванию. Повторные объявления и исходная структура тела не схлопываются.
-- При существующем `Model` записи `Model: fresh` и `Model(fresh)` вызывают `Model`; неизвестный фактический аргумент `fresh` — ошибка вызова, не создание fresh и не `merge(Model, empty)`. При неизвестном `A` запись `A: b` определяет Structure `A` с телом `b`, а не пустую типизированную ссылку b. Уточнение Q57 при неизвестных C и makeA: `C: makeA()` определяет C с вложенной именованной пустой Structure makeA. По последующему [Q58](LMX_blog/q/q58.md) известная вложенная callable-голова остаётся обычным оператором полного дерева; определение внешней Structure его не исполняет. Отдельного объекта «сохранённого вызова» нет. Явный `b: merge A C` сохраняется: A/C — операнды merge, b — внешний получатель результата. Композиция при возврате вложенного callable — отдельный действующий контракт; отмена неявного clone-объявления её не отменяет.
-- Сигнатура описывает, а не исполняет. Только в сигнатуре непримитивные `(A: b)` и `(@: A b)` — синонимы; это не правило неявного построения в теле. Структуры передаются ссылками на дескрипторы, не копированием aggregate. Примитивные `(int: b)` и `(@: int b)` не синонимы. Источники: [Q56](LMX_blog/q/q56.md), [Q57](LMX_blog/q/q57.md) и действующая семантика.
-- **Уточнение автора 2026-09-23 (заменяет старую CALL-only формулировку ниже):** `f()`, `f: ()`, явно закрытое `f:` + `---` дают одно пустое P0 Frame-body; единственный анонимный контейнер всего списка нормализуется в P0 для любой головы и для непустого тела тоже. `mystruct()` и `mystruct: ()` имеют одно дерево. Голое `f:` P0 отвергает; голое `f` остаётся atom/expression, но callable даёт тот же нульарный эффект. См. `next_parser_fix.md`.
-- Обычная форма применения callable не становится присваиванием при ошибке аргументов. Явная замена хранимой ссылки выбирается `@: b B`; merge, динамическое перекрытие и передача callable остаются общими механизмами. Обычная именованная Structure не получает новой сигнатуры: она нульарна. Дескриптор без тела `fn: test3 () int` остаётся контрактом; его прямое исполнение без реализации отвергается, а использование как требования сигнатуры законно. Старые METHOD/LmxCallable-записи ниже — исторический срез, не описание нынешнего Lmx.
+The just-finished bounded step changed:
 
-### Физическая модель
+- `tools/l2_harness.ps1`: four measured fixture-oracle migrations;
+- `dev/l2src_sandbox/tests/unit_ref_local_path.lm2`;
+- `dev/l2src_sandbox/tests/unit_site_layout_local.lm2`.
 
-- Текущее описание ABI — [CORE_L2_L3_v2.md](CORE_L2_L3_v2.md#physical-records) и [L2 §2](docs/L2_spec_ru.md#lmx): `Lmx {VoidArray array; Lmx *parent; LmxEntry native;}`, где `array` первый, `VoidArray {size_t size; void *data;}`, без `LmxArrayDesc`. Динамический List использует отдельный `VoidDynamicArray {VoidArray array; size_t capacity;}`, не скрытый префикс базового Array. Message не получает UI-state. Старые замеры и неисполненные поручения ниже не переопределяют эту раскладку.
-- Единственный авторитетный состав прямых детей Thread — его List в графе. Не добавлять root slots, вторую membership queue или второе дерево. Входящая почта содержит неразделимую пару `[target, source_arena]`; при отказе attach на `take` она остаётся в очереди. R0 закрывается линейным обычным алгоритмом через родительскую заглушку; защитный `close_stage`, poison/retry и дополнительные валидаторы ядру не нужны.
-- Structure/Array values хранятся и передаются ссылками на дескрипторы, не C aggregate by value. Унарное `@B` адресует реальную ячейку хранимой ссылки: концептуально `Lmx **`, не дескриптор `Lmx *`. Явная ссылочная переменная, Array и непримитивный формал следуют тому же правилу. `test(B)` и `test(@B)` имеют разную глубину; её не снимают ради сигнатуры. Реальное хранилище не заменяется кешем или ABI-буфером. Для ссылочного переприсваивания служит receiver `@: b B`, для обычного применения — `b: args`. Допуск структур остаётся Consumer-relative implements; таблица конверсий примитивов не становится таблицей пар пользовательских моделей. L3 допускает переносимые ссылочные операции без числовой адресной арифметики, raw-memory/backing access и машинных cast.
-- Полный граф сохраняет объявления, значения и инструкции в исходном лексическом порядке. Повторные объявления — различные `[N]field`; присваивание не создаёт объявлений, но его оператор остаётся в графе. Выбор неуточнённого имени и явного индекса задаёт [действующий общий контракт](docs/LMX_semantics.ru.md#fields), а не прежние локальные таблицы. `if`/`while`/`for` имеют Structure-тела без отдельной активации. Один `occurrence → physical slot/path` обслуживает native и walker; постоянного data/context-двойника нет.
-- Обычная машинная activation и рабочие значения не заменяют граф. У объявления есть собственное типизированное хранилище в полной Structure; внешний `M\i` открывает значение в месте объявления, не рабочую копию и не initializer-оператор (Q51). Присваивание свободному имени без объявления в теле не создаёт там поля и не пишет обратно в вызывающего (Q52). Применимые load/cache/dirty/checkpoint-механизмы не меняют смысл адреса фактических данных. Admission — свойство семантического присваивания до записи; checkpoint отражает уже допущенное значение. Даже identity/empty-uses и оптимизированные C locals не обходят семантическую точку `implements`.
+The production translator and driver were not changed by that step. These
+three files remain part of the saved sandbox WIP. Do not stage their entire
+larger inherited diff as if it were only the last four-row change.
 
-## 4. Исторический срез реализации и обнаруженных дыр
-
-Это измерения прежнего HEAD, не текущие задания. Неявный `Model: fresh` отменён. Прежнее утверждение об отмене double-pointer-проекции само отменено решением 2026-10-02: унарное `@Structure` добавляет уровень и адресует ссылочную ячейку. Старые fixtures и результаты не подтверждают ни это исправление, ни последующий рефакторинг применения.
-
-1. P0 commit `9c166ff` синхронизировал три parser `.lm1` и три generated seeds; прежние проверки self-build/parser были зелёными **для тогдашних goldens**. Их деревья теперь противоречат уточнению автора 2026-09-23: `f()` имеет ноль полей, `f: ()`/vertical — одно дополнительное поле. Native/interpreter CALL-only unwrap — временное следствие этого расхождения; не продолжать его как архитектурный маршрут. Текущий маршрут — `next_parser_fix.md`.
-2. Две копии `parser_stack_stream_port.lm2` (`l2src/` и `dev/l2src_sandbox/`) всё ещё несут старый resolver без P0 блока материализации. Они не входят в текущий gate. Порт и его parity gate — отдельный этап после фикса P0/natives, с точными oracle и отрицательным контролем.
-3. Расхождение `stable`/`dev` существенно: `l2src/l2trans.lm1` — frozen twin, `dev/l2src_sandbox/l2trans.lm1` — LIVE источник `tools/l2_harness.ps1`. У stable нет `l2_colon_*`; main-only исследование `LMXUDS-MAIN-COUNT-BISECT-84` относится к **dev**. В dev `l2_m_n != 0` пропускает `l2_parse_unit` и colon-normalization в единице с одним main; простое снятие parse guard доводит до emit guard, снятие обоих приводит к segfault. Opus исследует сбор `main` как реального метода и обязан отчитаться раздельно по обеим копиям. Не превращать гипотезу в готовый fix до его collision inventory.
-4. Новое измерение Opus `OPUS-MAIN-AS-METHOD-ARCH-20260922-88 / CONTRADICTION-2`: в изолированной копии entry вернул `70` для девяти ostensibly green eternal-runs сценариев, включая `unit_colon_model_decl`; внешний процесс сохранил exit `0`, потому что `lmx_thread_dispatch_native` отбрасывает результат entry, а driver проверяет только результат `lmx_root_turn`. Сгенерированный `Model: fresh` заходит в `lmx_merge_owned` и падает до последующих assertions. Это **измерение исследователя, требующее независимого gate**, но текущий зелёный harness нельзя считать доказательством успешного runtime merge. Делать результат entry наблюдаемым в тестовом пути и расследовать status `70` отдельными точными tickets; не маскировать провал новой ожидаемой цифрой и не объявлять все 90 строки runtime-green.
-5. Историческое измерение `@: Model slot`: две декларации, hoisted `@@: void slot 0` и literal `@: Model slot`, в C — `void **slot` и недопустимое `Model *slot`. Тогдашнее исследование Sonnet (`SONNET-L2-ADDRESS-SLOT-ARCH-20260922-89`) касалось дублирования объявления. Предложение переводить саму ссылку на Structure в foreign `Lmx **` больше не действует: её представление `Lmx *`; дополнительный уровень даёт адрес явной pointer-переменной. Проверять текущий код по §3, не продолжать старый патч по этой записи.
-6. OpenRouter исправил словарь в изолированном commit `4cee6e81`: статус surface-form-equivalence оставлен partial; корректно разведены callable KIND и typed fnptr; исправлены SHA и fixtures. Этот commit ещё надо проверить и интегрировать без перезаписи main. Словарь не должен объявлять «принято/реализовано/проверено» одним статусом.
-
-Текущие исследователи: `opus` — `-88` main pipeline, `sonnet` — `-89` адресный слот; оба read-only. `fable` закончил `FABLE-NATIVE-CONTAINER-GAP-20260922-85` и может координировать следующий шаг. `openrouter` idle после detached commit. `grok_bot` завершил `-87` и может получить следующий bounded writer ticket. `lmx_uds` после `-84` служит **только почтальоном**; пользователь сменил его модель на Haiku/high. Grok CLI и DeepSeek закрыты пользователем — не выдавать им новые тикеты и не считать старые ownership задания активными без проверки.
-
-## 5. Исторический маршрут `next_core_tasks.md` и ограничения его повторного использования
-
-Порядок ниже фиксирует прежний срез очереди, не заменяет текущий план §§8/8a и не открывает заново завершённые работы. Исторический PASS нужно сопоставить с действующей нормой. Каждый новый writer получает конкретные файлы, положительные и отрицательные случаи, команду gate и способ вернуть результат. Большинство изменений сходятся в `l2trans.lm1`; в одном дереве их нельзя писать параллельно.
-
-1. **Свидетельствующий gate перед новыми семантическими PASS.** Разобрать вывод `entry=70` и сделать результат исполнения наблюдаемым в driver/harness, проверяя actual result и graph effects. Временная диагностическая инструментализация допускается в isolated copy. Сразу перепроверить `Model: fresh` и остальные девять строк. Это нужно для достоверности следующих green claims. Сохранять различие между compiler PASS, link PASS и runtime PASS.
-2. **P0 и head resolution (§§2–3; обновлено 2026-09-23).** Сначала единая P0-нормализация `f()`/`f: ()`/vertical и непустых единственных анонимных контейнеров по `next_parser_fix.md`. После parity удалить CALL-only accessor/unwrap как параллельный маршрут; затем проверять call, declaration (`mystruct()` = `mystruct: ()`), assignment и expression на одинаковом дереве. Native/interpreter, stable/dev и generated seeds сверять раздельно; именованная Structure остаётся отдельным значением.
-3. **Общий executable pipeline и ссылки (§§3, 5–6).** Применить один native/graph pipeline ко всем предназначенным для исполнения Structure, без отдельного смысла верхнего тела. Адресные проверки теперь следуют §3 этой инструкции: `@B` настоящей Structure — дескриптор, `@ptr` явной ссылочной переменной — дополнительный уровень; `@: A ptr` не порождает `Lmx **` и не дублирует C declaration. Проверять assignment/admission для local/own/formal/path и матрицу definition/call/explicit-reference без implicit `Model: fresh` клона. Старые negatives неизвестной обычной головы с телом не переносятся автоматически: это определение Structure, не неявно типизированного примитива.
-4. **Occurrences и публикация (§§4–5).** Отдельные `[N]field`, индекс по умолчанию `[0]`, единая physical path в native/interpreter, sticky address, selector и checkpoint. Проверять alias `p=@arg` до/после переключения occurrence и identity графовых ссылок, не только текст generated C.
-5. **Expression statement и сырая дверь (§3 discard, §7a).** Универсальный span walker и typed `l2_tN` для отброшенного результата; `void` не создаёт незадекларированный temp; typed fnptr data не вызывается. Затем убрать специальные `c.puts`/L2 `c.array`, scanners/header dictionaries/name checks, оставить `c.*` сырым token-door. Ввести `sizeof:` как language receiver-operator в отдельной партии до миграции L2-операндов, которым нужен размер **значения**; `c.sizeof(c.Type)` остаётся обычным C текстом. L1 `c.array` исследовать отдельно по байтовому output, не смешивать с L2 cleanup.
-6. **Clean-kernel GATE.** После всех обязательных cleanup подтвердить отсутствие старых name-special/parallel discard/shim/fallback путей, чужого WIP в owned файлах и мёртвых ссылок. На одном SHA пройти focused fixtures, полный `tools/build_l2src.ps1 -Run`, generated `tools/l2_harness.ps1`, relevant L3 runner, `python tools/check_docs.py`, `git diff --check`; commit точных путей и push, затем сверить HEAD/upstream. Не засчитывать `library-links` как RUN: сейчас возможен exit 0 даже когда wrapper не открыл библиотеку.
-7. **`implements` (§7).** После gate полностью перенести проверенную старую реализацию из `lingvamyxa_prev`, всю направленную таблицу конверсии примитивов и L2 механизм создания таблиц. Разобрать `Consumer/uses`, runtime admission, identity/empty-uses; убрать fast-path обходы. Тесты именно нового механизма не были приоритетом на этапе подготовки порта, но writer должен доказать реально используемый admission и не ослабить контракт.
-8. **Миграция и приложение (§§8–9).** Переносить поддерживаемые единицы L1 в L2, включая отдельный List, parser, translator, runtime tables и `implements`. Добиться работы L2 parser port/parity и выполнения L2 library body. Затем L2 → преимущественно L3, полная самосборка L2 и L3 + L2 с точным перечнем вставок, наконец один reproducible `myxa_manager` entrypoint, production modules, lifecycle и end-to-end запуск из чистого checkout. Не объявлять manager готовым по запуску тестового driver.
-
-## 6. Ведение работы и документов
-
-- Один writer в общем worktree/index. Два непересекающихся writer возможны только через **разные worktrees** с отдельными коммитами; второй возвращает commit/SHA для интеграции. Не запускать конкурирующие сборки, которые пишут в один `build/` output. Перед стартом читать `LOCKED`/`OWNED_BY`, `git status`, HEAD/upstream. Не применять `checkout/restore/reset/rebase/clean/stash/revert/force-push`, не `git add -A`; стадировать только собственные точные пути. Чужие generated, backup и untracked файлы сохранять.
-- Задача агенту: request ID, исходный HEAD, exact files/functions и запрет соседних зон, ожидаемое поведение/контрпример, focused test, full gate, mutation/negative witness при семантическом изменении, commit/push policy, точный обратный канал. Промежуточные статусы: `DELIVERED`, `STARTED`, `RESULT` или `BLOCKER`; только RESULT с кодом/проверками закрывает задачу.
-- Нормы RU/EN синхронны; `docs/LMX_grammar.*` генерируются из `provenance/grammar.json`. В specs писать только принятую семантику, без разговоров, тикетов, текущих багов и планов. Рабочий план — `next_core_tasks.md` и словарь; состояние кода — `docs/implementation-notes.*` и `steps/`; дословные технические реплики **автора** — в `LMX_blog/` с датой/источником. Не выдавать выводы агентов за цитаты автора. `python tools/check_docs.py` обязателен после документальных изменений.
-- Почтальон `lmx_uds` только ищет уникального peer, вызывает `SendMessage`, пересылает ответы дословно через `codex_inbound.py` и сообщает доставку. Он не анализирует код и не получает новых содержательных тикетов. Для Claude peers открыть `python claude_chat/chat_status.py peers`; повторяющиеся имена исправить до отправки. В текущем реестре `fable`, `opus`, `sonnet`, `openrouter` имеют отдельные имена.
-
-## 7. Как Fable связаться именно с Grok Bot
-
-Grok Bot — существующая webhook-беседа; это **не** закрытый Grok CLI и не новая ACP-беседа `claude_chat/grok.py`. Рабочий маршрут и его границы описаны в [`work_chat/README.md`](work_chat/README.md#incoming-grok-bot-webhook-and-required-handler). В старом проекте `C:\Nyasha_Planet\lingvamyxa\work_chat\grok_bot\scripts\watch-config.json` локально лежат `webhookUrl` и `webhookSenderKey`. Читайте файл только для вызова уже настроенного endpoint; не печатайте URL/key, не кладите их в git, не меняйте watcher и не пишите файловую «почту». Исторически обработчик принимает `source = codex_peer_transport_test`, `request_id`, `message`, `new = []`. В `message` обязательно указать настоящего отправителя `From fable`. Сменять `source` по догадке нельзя.
-
-Шаблон отправки из PowerShell (запускать из `C:\Nyasha_Planet\LMX` после проверки, что Grok Bot не владеет пересекающимся writer-файлом):
+Start with read-only checks:
 
 ```powershell
-$botConfig = Get-Content -LiteralPath 'C:\Nyasha_Planet\lingvamyxa\work_chat\grok_bot\scripts\watch-config.json' -Raw | ConvertFrom-Json
-$botHeaders = @{
-    Authorization = 'Bearer ' + $botConfig.webhookSenderKey
-    'X-Webhook-Key' = $botConfig.webhookSenderKey
-}
-$ticketId = 'FABLE-GROKBOT-CALL-ARGS-UNIQUE-ID'
-$ticket = @'
-From fable to Grok_bot. Request FABLE-GROKBOT-CALL-ARGS-UNIQUE-ID.
-Recipient: the existing Grok Bot conversation. Reply STARTED and then RESULT/BLOCKER with the SAME request ID.
-HEAD: <verified full SHA>. Ownership: <exact file list>; do not edit other files or another writer's WIP.
-Task: <one bounded change from next_core_tasks.md, accepted rule and minimal counterexample>.
-Checks: <exact focused command, negative/mutation witness, full gates>; report exit codes, counts, evidence paths and diff.
-Commit/push: <main only if the writer slot is free; otherwise isolated worktree and return SHA>.
-Return to Codex: python C:\Nyasha_Planet\LMX\claude_chat\codex_inbound.py send --sender Grok_bot --request-id FABLE-GROKBOT-CALL-ARGS-UNIQUE-ID "STARTED/RESULT/BLOCKER ..."
-Also send a copy to fable through lmx_uds using SendMessage routing; lmx_uds is only the postman.
-Report a logical contradiction immediately with source example and code anchors. Do not invent a special branch.
-'@
-$botBody = @{
-    source = 'codex_peer_transport_test'
-    request_id = $ticketId
-    message = $ticket
-    new = @()
-} | ConvertTo-Json -Compress
-$botResult = Invoke-RestMethod -Method Post -Uri $botConfig.webhookUrl -Headers $botHeaders -Body ([Text.Encoding]::UTF8.GetBytes($botBody)) -ContentType 'application/json; charset=utf-8'
-$botResult | Select-Object success, runUuid
+Set-Location C:\Nyasha_Planet\LMX
+git status --short
+git log -5 --oneline
+git rev-parse HEAD
+git rev-parse origin/main
+git diff --cached --name-only
+git worktree list
+python claude_chat/chat_status.py peers
+python claude_chat/uds.py --name lmx_uds status
+python claude_chat/codex_inbound.py status
 ```
 
-Заменить **все три** вхождения ID на одно новое уникальное значение, затем заполнить точные поля тикета. Секреты остаются только в переменных shell. `success/runUuid` — приём webhook, **не** `STARTED` и не результат. Для ответа в Codex команда `codex_inbound.py send` принимает сообщение позиционным аргументом или stdin; `--message` у неё нет. Codex после restart обязан выполнить `python claude_chat/codex_inbound.py bind` и `status` для текущей задачи. Если Fable нужна собственная копия результата, Grok Bot должен явно отправить её в `lmx_uds`, а почтальон — адресовать `fable` через `SendMessage`; не предполагать, что Codex callback автоматически дублируется Fable. Конкретный запрос Bot к почтальону: `python C:\Nyasha_Planet\LMX\claude_chat\uds.py --name lmx_uds send "From Grok_bot. Route verbatim to fable via SendMessage. Request <ID>. RESULT <полный ответ>"`. Fable принимает работу лишь после получения настоящего `STARTED/RESULT`, а не заявления почтальона о доставке.
+Do not `checkout/restore/reset/rebase/clean/stash/revert/force-push`, use
+`git add -A`, wipe ignored evidence, or kill another writer's compiler.
+Preserve backups, markers and unrelated WIP. Review and stage exact owned
+paths. A source checkpoint must identify the tested dependency closure, not
+just the translator file.
 
-**Что писать Grok Bot сейчас.** Следующий разумный bounded ticket — native CALL argument accessor из Fable `-85`, при свободном writer-слоте. Текст должен требовать: after resolved callable head определить единственную последовательность аргументов; использовать её в arity/count, checker/admission и emitter (включая typed fnptr); `test: ()`, explicit vertical empty и `add: (1 2)` становятся эквивалентами обычных call forms; `mystruct: ()` остаётся отдельно для declaration ticket; named field и вложенный двойной контейнер не разворачиваются рекурсивно; Opus/Sonnet исследуют другие участки read-only и их файлы не трогать. Сначала добавить runtime witness с наблюдаемым return, если текущий driver может скрыть провал. Указать конкретные места из свежего кода и команды gate после повторной проверки HEAD, а не копировать старые номера строк из отчёта.
+## 3. Core engineering principles — mandatory English instructions
 
-Готовое смысловое ядро `message` для следующего тикета (вставить в шаблон выше, предварительно проверив HEAD и свободное ownership):
+This is the **kernel of a programming language**, not defensive end-user
+application code. Implement the simplest universal working algorithm and
+test it rigorously. Do not add defensive policy, poison/retry frameworks,
+name allowlists, convenience fallbacks, shims or exceptional branches to
+cover an ununderstood contract.
+
+All language rules are universal within their domain: no exceptions by
+identifier, type, syntax spelling, nesting depth, translation path or fixture.
+A local need does not change a base abstraction. If a required contract is
+missing or contradictory, present the minimal source example, exact normative
+anchors and source symbols to Codex. Do not silently choose new semantics.
+
+L1 is a **generated technical intermediate** on the way to C99. The final
+kernel and its self-build orchestration must be L3 with necessary L2 inserts,
+not maintained handwritten L1. Existing `.lm1` source is transitional.
+Generated L1 remains legitimate. Earlier specification material may be in
+`lingvamyxa_prev/Lingvamyxa_spec.txt`; compare it with current accepted
+decisions, do not resurrect superseded text.
+
+### One source-faithful graph
+
+- Original containment, field/operation order and binary expressions must be
+  recoverable from the retained graph. Declarations, executable operations,
+  dormant tails and nested source bodies do not disappear because native
+  code exists or a result is discarded.
+- There is no permanent auxiliary data/context/callable graph and no second
+  source AST/text replay in the runtime. Ordinary machine activation state,
+  typed formals, work values and compiler-only borrowed views are allowed;
+  they are not new persistent language Structures.
+- Names are absent **everywhere** in the graph. The separate address-to-name
+  service reconstructs source names; it is not an execution binding table.
+  Comments have independent meaning and must be retained in full with their
+  placement, outside the execution hot path.
+- A materialized primitive cell such as `int: i 5` needs no extra leaf or
+  atom metadata: its address and arena type identify it. An unresolved source
+  leaf in a dormant Structure is a different role and must be retained.
+- COUNT/PLACE/FILL, paths, schema projection, copy/merge and interpreter
+  construction must share original source identity and actual physical places.
+  Do not fix an oracle by changing only generated temporary names.
+
+### Values, references, admission and calls
+
+- Structure/Array values are descriptor references, not generated C aggregates
+  stored by value. Unary `@A` addresses the **real cell holding that reference**
+  and adds depth: conceptually `Lmx **`, not another `Lmx *` descriptor read.
+  This remains an OPEN implementation repair; old descriptor exemptions do
+  not establish correctness.
+- A source reference cell, the referent, an activation-owned formal, a work
+  cache and an ABI payload box are distinct. Taking an address must not
+  expose a convenient temporary or discard a pointer level.
+- Resolve the head and source role before interpreting its tail. Follow the
+  current documented `b: A` / `@: b A`, ordinary application and explicit
+  reassignment rules; do not replace retained bodies or repeated occurrences
+  with an invented alias topology.
+- Nonexecuting signatures are not bodies. Signature-only synonymy is not
+  permission to execute a formal description or collapse unary address depth.
+- An ordinary named Structure has a body and **no explicit formal arguments**.
+  Its nullary invocation is valid. General `A: B` routing checks the resolved
+  A's actual contract; if that contract has no formals, excess arguments are
+  an ordinary call error, not assignment fallback. `fn/fm/sub` keep their
+  declared formal contracts.
+- Defining an unknown head does not execute its body. In Q57, **both** C and
+  makeA unknown in `C: makeA()` retain C containing an empty named makeA.
+  A known nested callable application is also retained, not eagerly executed
+  while the containing Structure is defined.
+- Named Structures are not automatically executed in the surrounding source
+  sequence. Anonymous bodies execute inline. IF/WHILE/FOR/UNTIL do not acquire
+  a separate procedure activation merely because their bodies are Structures.
+- `node` is the executing callable's fixed method-parent contract, not the
+  dynamic caller or the current control body's generic parent.
+- Explicit `copy: merge Model` uses the ordinary merge mechanism.
+  Reaching a declaration repeatedly must not invent implicit fresh copies.
+- Conversion concerns primitive value categories, including pointers; actual
+  Structure compatibility is Consumer-relative `implements`. Convert first,
+  admit the actual candidate, then store the destination reference only on
+  success. Earlier argument effects and ordinary call/exit publication are
+  not rolled back by a later admission refusal.
+- Current analytical admission checks the expected consumed interface, not
+  algorithmic equivalence. The Consumer unit-test phase is a separate later
+  stage; do not introduce candidate algorithm analysis now.
+- Field/occurrence correspondence serves the Consumer's actual named paths
+  and selectors, not positional zipping or behavioral inference.
+- Invoke the actual selected occurrence. Native versus interpreted dispatch
+  depends only on its actual native implementation word. Actual inputs,
+  defaults, result/exits and admission must match that occurrence, not the
+  original exemplar. Correct dispatch alone does not prove correct input
+  preparation.
+
+### Arrays and machine boundaries
+
+- Scalar and pointer behavior follows target C99; invent only actual LMX
+  abstractions. L2 does not add Array bounds checks. L3 checks the final
+  linear element address/bound of rectangular access, not every dimension.
+- The base erased Array is `VoidArray { size_t size; void *data; }`.
+  Typed descriptors retain their actual C ABI field spelling such as `len`.
+  There is no capacity, rank, shape or array-of-dimension-lengths in that base.
+  Growth belongs to separate DynamicArray/List.
+- `[]: []: ...` is ordinary receiver composition of arbitrary depth, not a
+  special two-dimensional Array category. Each selected Array has its own
+  descriptor and element contract; `length` reads that descriptor only.
+- Flat C-like rectangular adjacent indexing and per-container `\[i]` steps
+  are separate contracts. Never infer rectangle/rank from total length or
+  confuse another descriptor with another dimension.
+- Receiver nesting `a: b: c: ...` has no language depth cap. Remove artificial
+  compiler/runtime ceilings through general ownership/traversal mechanisms,
+  not a larger fixed number or syntax-specific local parser.
+- `c.*` is the raw C token door. Non-`c.*` arguments use normal L2 lowering.
+  No header scanners, C-name dictionaries or puts/sizeof/array name exceptions.
+  Defined reserved language receivers are not raw-C special cases.
+
+### Lifetime, control syntax and runtime placement
+
+- The sole child-membership List is held by existing `Thread.children` in
+  the parent's arena, **not** appended to the source root. Launch settings and
+  service data belong to the already described R0 parent stub.
+- Message remains minimal message/scheduling core; Thread owns Thread-only
+  state. UI/application state belongs to adapters/application Structures.
+- R0 follows the ordinary record close order and its ordinary parent stub.
+  A shutdown dialog is UI/liveness policy, not a new cleanup protocol.
+- A one-level dedent closes implicitly. An explicit closing form is required
+  only for a larger dedent. A trailer may close multiple intervening levels,
+  but `return` binds to its own method contract: it is not automatically a
+  trailer for unrelated bodies.
+- No method, sub or named Structure is required to contain explicit return
+  or trailer merely to be recognized as a declaration.
+
+## 4. Completed step and honest evidence boundary
+
+[Exact current evidence](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles)
+contains hashes, fixture changes, mutant commands/results and residual debts.
+
+| Evidence | Result | Scope |
+| --- | --- | --- |
+| `critical_graph_fix_full_32` | RED130/1395 | Latest completed full generated harness. All1380 old targets retained; seven FAIL→OK, no OK→FAIL;15 additions,13 pass/two positive copy-call failures. |
+| `critical_persistent_oracle_01` | GREEN7/7 | Four revised fixture rows plus two builds/scope. Not a full rerun or release. |
+| Isolated `merge_alias` generated-runtime mutant | Compile0/link0; native/walk driver exit1 | Replacing copied result with original operand yields81 instead of7; confirms the explicit-copy independence oracle detects aliasing. Normal artifacts unchanged. |
+| Kernel `critical_admit_status_01` | GREEN292;109 selftests | Bounded runtime admission/status closure,40 checks in the extended admit test; two separate mechanism mutants rejected. |
+| L3 `l3_critical_source_admit_01` | All11 suites/four budgets GREEN |75 names/128,1070 bytes/8192; this is not proof of completed self-hosting. |
+
+Current translator SHA256:
+`BFF213AC9309EF2D2975499C6894ABA6EA10BE8EBD3DC9B95733E43B7985B81A`.
+
+Current harness SHA256 after the bounded migration:
+`DF38FC1D846566A502E6C4CF25AC12677768429B3DB000FFCFA64012D797EA1A`.
+
+Driver SHA256:
+`E30B6004CCC89193B3CBBCF1825A234EB79D24B5849F093E346CC4740B0405BA`.
+
+The four revised rows verify actual Counter EXEC identity, persistent local
+reference placement, explicit recursive-copy independence, and the unchanged
+missing-field negative. Full details belong to the ledger, not an invented
+new blanket PASS. Do not subtract focused recoveries from130 to announce a
+guessed full verdict. Both critical tickets and8/8a remain OPEN.
+
+## 5. Next work, in dependency order
+
+Review the preserved WIP against the current source and frozen evidence first.
+Then continue sequentially; add a concrete necessary subtask to the v2 plan
+when discovered, rather than waiting for Codex to guess a new ticket.
+
+1. Recheck the current focused cohort, expand with neighboring unchanged
+   controls, then freeze the next full gate. Do not edit copied fixtures during
+   a running gate; they are staged by the harness as rows start.
+2. Continue **critical_graph_bug**. The immediate real gaps include:
+   - actual copied/held-call contract and ordered hidden-input formation;
+   - nondestructive named-actual binding: preserve original P0 wrappers/order,
+     evaluate payloads once in written order and transport by resolved formal
+     coordinates, without a runtime permutation registry or second graph;
+   - complete comments/name/source codec and an independent graph decoder;
+   - source-faithful producers for native-only imported C local records and
+     function pointers, plus retained forward-only callable headers;
+   - capture/original-owner closure and artificial metadata/traversal caps.
+3. Keep `unit_named_until_copy_call` and its walk pair, plus
+   `unit_held_nullary_source_field`, as required **positive** witnesses.
+   They currently refuse. Do not rename them into expected negatives, supply
+   invented zero-input adapters, or replace actual occurrence provenance with
+   the first merge operand.
+4. Finish full graph acceptance and publish one exact green dependency
+   checkpoint. A source-name service, useful shape assertions or green exits
+   alone do not close the codec or the critical ticket.
+5. Next: **critical_pointer_to_struct_bug**. Cover real value/place/depth,
+   Structure/Array reference cells, formals/locals, copy/merge, null values,
+   returns/admission and C99 effective type. No `-fno-strict-aliasing` escape.
+6. Then the separately planned Structure/reference application refactoring,
+   remaining K01–K12 dependencies and the **clean-kernel checkpoint**.
+7. Only after that: stage8 source migration and full two-generation L3/L2
+   self-build without handwritten L1; stage8a ordinary calls over Message
+   transport and its complete T01–T26 acceptance.
+
+Important source anchors for the next actual-call investigation:
+`l2_own_call_origin`, `l2_rw_ns_hidden`, `l2_emit_ns_exec_at`,
+`l2_emit_parts`; runtime `lmx_call_prim` and EXEC already dispatch actual
+occurrences. For named actuals inspect `l2_bind_call_in`, `l2_bind_calls`,
+`l2_rw_call` and `lmx_walk_actuals`. Use symbols and actual current lines,
+not old numeric coordinates.
+
+The native-only producer work must preserve source identity while keeping
+C ABI locals in ordinary machine activation storage. No persistent graph
+pointer may outlive a stack object. The forward-header problem is retention of
+the validated original descriptor-only source occurrence, not permission to
+invent another METHOD registry or body.
+
+One author question remains open:
+[hidden-input name binding](LMX_blog/q/current/graph-hidden-input-name-binding.md).
+The ban on using the external name table for construction/copy/call binding has
+**not** been lifted. Do not implement a name-lookup workaround. Ask Codex about
+the exact dependent case; continue independent work while that decision waits.
+
+## 6. Verification and release discipline
+
+Use unique fresh output directories and the pinned `bin/l1trans.exe`.
+Its SHA256 is
+`601D350E853CA16A35EC4B7ED7C2B5B82248A63E96B72A545329B1D8C6AA2196`.
+The local compiler is `C:\Qt\Tools\mingw1310_64\bin\gcc.exe`.
+
+Current tools:
+
+```powershell
+& .\tools\l2_harness.ps1 -KeepAll -Translator C:\Nyasha_Planet\LMX\bin\l1trans.exe -OutDir C:\Nyasha_Planet\LMX\build\l2_harness\fable_focus_01 -OnlyFixture @('unit_named_struct_call','unit_ref_local_path','unit_site_layout_local','unit_capture_struct_nofield_write_refused')
+& .\tools\l2_harness.ps1 -KeepAll -Translator C:\Nyasha_Planet\LMX\bin\l1trans.exe -OutDir C:\Nyasha_Planet\LMX\build\l2_harness\fable_full_01
+& .\tools\build_l2src.ps1 -Run -KeepAll -OutDir C:\Nyasha_Planet\LMX\build\l2src\fable_kernel_01
+python tools/run_l3_selftest.py --help
+python tools/check_docs.py
+git diff --check
+```
+
+Select the L3 runner's actual output option after reading its help. Do not
+overwrite the cited evidence directories. The ordinary kernel gate uses
+`-Run -KeepAll`; `-Strict` is a different scope and must not be silently
+substituted. Fixture selectors are stems, not paths.
+
+Report compiler/linker/run results separately. Observe actual entry result,
+field state, identity, dispatch and admission. A missing output with process
+exit0 is still a translator refusal; an interrupted process is not a completed
+gate. Clearing only root native does not prove every callee walked.
+
+For a mechanism change, retain an independent mutant that compiles and fails
+the intended runtime/structural observation. Do not use a compiler error,
+wrong expected return, empty success or timeout as the mutation certificate.
+Frozen staging and original artifact hashes must remain intact.
+
+Before release: classify every full refusal against accepted norms, compare
+fixture identities and retained failures, run the actual kernel/L3/generated/
+documentation gates on the final bytes, review exact diffs, stage explicit
+owned paths, commit/push and verify HEAD/upstream. A green kernel suite alone
+does not release a red generated translator. Stable/dev convergence includes
+the whole tested closure, not a partial ABI copy.
+
+## 7. Questions to Codex through lmx_uds
+
+All inter-agent messages are **English**. Codex addresses the author in Russian.
+Use the existing relay/session, not a newly created agent, webhook writer,
+watcher or filesystem mailbox.
+
+Fable must **not** run `codex_inbound.py bind`: only the intended Codex task
+binds its own incoming pipe. Check status and report routing failure; a stale
+pipe is not a language blocker.
+
+Inside Fable's Claude session, resolve the actual unique peer and use its
+native tools:
 
 ```text
-Historical ticket text superseded 2026-09-23: the CALL-only accessor was implemented in live dev, but it is not the final architecture. Normalize the sole whole-list anonymous Structure in P0 (empty and nonempty) before semantic consumption, preserve invalid bare `f:`, then remove the redundant CALL-only path in native/interpreter and verify all heads including structural declaration. See `next_parser_fix.md`; do not issue the old CALL-only ticket again.
+SendMessage(to="lmx_uds", message="From Fable. QUESTION FABLE-CODEX-<unique-id>. Route the full text verbatim to the existing bound Codex task. HEAD <sha>; ownership <files>; minimal program <source>; expected rule <doc anchor>; measured result <output/evidence>; exact source symbols <symbols>; question <one precise decision>. Ask Codex to reply to Fable through lmx_uds with the same request ID.", summary="Kernel question for Codex")
 ```
 
-Если webhook не доставил STARTED, сначала проверить request ID в живом ответе и статус агента; не посылать тот же write-ticket повторно вслепую. Если Bot занят, держать очередь и заниматься независимым read-only аудитом. Если Bot нашёл архитектурное противоречие, переслать его автору, остановить только зависимую write-часть и продолжать независимые исследования.
+The equivalent local client is:
 
-## 8. Историческое следующее действие Fable (не текущий тикет)
+```powershell
+python claude_chat/uds.py --name lmx_uds send "From Fable. QUESTION FABLE-CODEX-<unique-id>. Route verbatim to the bound Codex task; preserve sender Fable and request ID. <Full question and explicit return route to Fable through lmx_uds>."
+```
 
-Проверить свежие ответы `OPUS-MAIN-AS-METHOD-ARCH-20260922-88` и `SONNET-L2-ADDRESS-SLOT-ARCH-20260922-89`, сверить измерения с текущим HEAD и обновить очередь в `next_core_tasks.md` без преждевременных галочек. Затем предложить Codex первый непересекающийся writer ticket Grok Bot, с наблюдаемым runtime gate. Параллельно проверить исправленный словарь OpenRouter commit `4cee6e81` и интегрировать его только после scoped review и согласования текущего writer-слота. Дальнейшее управление должно двигать §2–§6 → clean-kernel gate → `implements` → L2 self-build → L3 + L2 self-build → `myxa_manager`, а не останавливаться на очередной таблице PASS.
+The relay completes the final hop:
+
+```powershell
+python claude_chat/codex_inbound.py send --sender Fable --request-id FABLE-CODEX-<unique-id> "<Full question; reply to Fable through lmx_uds with the same ID>"
+```
+
+The message is a positional argument or stdin; there is no `--message`
+option. Codex returns the substantive answer through `uds.py --name lmx_uds
+send`, asking the relay to use native SendMessage to the unique Fable peer.
+The relay must actually complete that hop, not leave the answer in its own
+transcript. No ACK-of-ACK loops.
+
+A good question includes: original source, known/unknown identifiers at that
+site, receiving context, exact spec anchors, current symbols/lines, actual
+native/walker outcomes and why existing rules do not answer it. Ask about the
+shared rule, not a name-specific implementation exception. Established rules
+are implemented without repeatedly asking the author.
+
+Track `DELIVERED -> STARTED -> RESULT/BLOCKER` per request. A completed child
+run does not mean an unfinished parent stage is still active. If the writer
+is idle and its next dependent step is unblocked, explicitly start that
+bounded continuation under the same ownership. Long running gates are work,
+not idleness; do not interrupt them to manufacture progress.
+
+## 8. Documents and unresolved questions
+
+Specifications contain only accepted normative rules, not agents, tickets,
+HOLD/status or implementation evidence. Plans/dictionaries contain the repair
+route; `steps/` contains exact measured state. Separate Norm, Implementation
+and Verification. Preserve historical hashes and failed attempts as labelled
+history; do not keep them as current imperatives.
+
+Store only verbatim technical author clarifications in `LMX_blog/`, with
+source/date outside the quote. Organizational handoffs do not belong there.
+Open questions **to the author**, not ordinary plan tickets, go in
+`LMX_blog/q/current/`; answered questions move up to `LMX_blog/q/`.
+
+This handoff corrected stale v2 claims about names/comments, Array addressing,
+local fresh-instance cloning, completed indexed STORE work, the plain merge
+spelling, named-Structure arity diagnostics, opcode inventory and old release
+status. None of these edits invents a new language rule or closes the critical
+fixes. Continue from measured state, not from a historical checkbox.
+
+Codex's implementation turn ends after the documentation commit/push. Fable
+owns continuation; Codex is the question-answering advisor. Do not revive the
+old Grok reminder automation or other writers from earlier instructions.

@@ -41,8 +41,18 @@ and interner rows before count rollback. Focused06 is GREEN41 and the
 independent until/trailer07 gate GREEN11 on source3B903EC6. Exact tracing
 frees all2296 counted baseline allocations and all1453 allocations after
 the second retained-cache allocation fails. P0/uncounted CRT allocations
-are not covered. Full24 is running on those bytes; full23 completed
-RED185/1329 on the preceding resource slice, not these edits.
+are not covered. Full24 completes RED199/1329: the lazy-load oracle
+recovers, but15 exact unresolved-name locations regress, while184 old
+failure details remain unchanged. Cloning dynamic-name bytes broke
+`l2_source_text`'s original-byte identity. The follow-up keeps an owned
+Text view in the existing dynamic table with borrowed original bytes;
+the foreign interner still owns independent byte copies. Provenance08
+is GREEN64 on6E4E0FD8, restoring all15 locations and preserving the
+previous ownership/Array/until controls. Full25 is pending on that source.
+Fresh exact traces on frozen08 independently free all2296 baseline and
+all1453 retained-second-cache failure allocations, with zero outstanding
+counted addresses. Uncounted P0/CRT remains outside this scoped certificate;
+the result is not an inference from frozen06.
 This is not a runtime graph or a claim that source reconstruction is complete.
 
 Preserved attempts `critical_graph_text_ownership_01`/02 fail before building

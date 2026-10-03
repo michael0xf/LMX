@@ -1,10 +1,11 @@
 # Namespace source layout: connected next slice
 
 Status: connected layout implementation plan, **not an accepted fix**.
-The latest completed full harness `critical_graph_fix_full_23` is RED185/1329
-on frozen B7AFC2FB bytes. The subsequent Text-ownership slice is focused06
-GREEN41 plus until/trailer07 GREEN11 on3B903EC6; full24 is running on those
-new bytes. Earlier full22 RED188/1329, cutover04 RED7/32 and cutover06
+The latest completed full harness `critical_graph_fix_full_24` is RED199/1329
+on frozen3B903EC6 bytes: one lazy-load oracle recovers, but15 located unknown-
+name diagnostics regress. The view-only provenance correction is focused08
+GREEN64 on6E4E0FD8; full25 is running on those new bytes. Earlier full23
+RED185/1329, full22 RED188/1329, cutover04 RED7/32 and cutover06
 GREEN31 remain historical bounded evidence, not whole-kernel acceptance.
 No stable twin has been changed. This is part of
 [critical_graph_bug](tickets/critical_graph_bug.md), before the pointer repair.
@@ -894,9 +895,42 @@ with a located allocation diagnostic and leave no public output, temporary
 or backup. The COUNT failure additionally emits a generic1:1 diagnostic;
 it is not evidence of a single precise diagnostic. All three aggregate
 counted live results are zero, but exact address tracking was run only for
-the baseline and the retained-second-cache failure. Full24 on3B903EC6 is
-pending; neither focused gate closes graph reconstruction or the pointer
-ticket, and stable promotion remains blocked by full acceptance.
+the baseline and the retained-second-cache failure. These frozen06 results
+do not automatically certify a later source revision.
+
+Full24 completes **RED199/1329** on source3B903EC6, executable SHA256
+`DC874E7A4D7166090F44E452E2AA8C30B702FB590D14D18195CD6166980CD626`.
+The target identities are unchanged from full23: the repaired lazy-load
+oracle recovers,184 previous failures retain exactly the same details, and
+15 previously green negative rows lose the expected source position. They
+still refuse the unresolved name, but report the enclosing declaration or
+1:1 instead of the actual atom. This is a diagnostic regression, not a
+reason to relax the location assertions or a claimed runtime regression.
+
+`l2_dyn_add` had cloned bytes as well as the retained Text view, whereas
+`l2_source_text` identifies the original source occurrence by byte address.
+The repair lets the existing dynamic-name table own only its Text view and
+borrow the original P0 bytes. Original/part documents and retained parsed
+head documents remain alive through translation and diagnostics; transient
+views point into those bytes, not into stack byte arrays. The foreign-type
+interner still owns its independent Text-plus-bytes clone. No spelling-only
+fallback, additional source registry or runtime atom metadata is introduced.
+
+`critical_graph_text_ownership_provenance_08` is **GREEN64** on source SHA256
+`6E4E0FD8C2EDB3F3B5D840F3FADD15CE9B42AD0D72EE47E6784208F038F0EA2C`,
+executable SHA256
+`1C575FEC79DDFC3682BE1D5BEB1ABD42CD51F66F7591C00D8FB9A9FAB9208959`.
+All15 exact diagnostics recover, with the previous ownership, Array-place,
+raw-pointer and until/trailer controls retained. Fresh exact address-set
+traces on frozen08 independently give2296 allocations/2296 actual frees
+for the baseline and1453/1453 for the retained-second-cache failure, both
+with zero outstanding counted addresses. The latter still refuses at14:5
+and publishes no output. The three uncounted frees remain outside the
+certificate. Scripts/logs use the `provenance08_` prefix in the same fault
+evidence directory; this result is not merely inherited from frozen06.
+Full25 is pending on the same frozen source. Neither focused gate closes
+graph reconstruction or the pointer ticket; stable promotion remains
+blocked by full acceptance.
 
 <a id="nested-source-next"></a>
 ### 5.15 Next connected source slice: real nested definitions
@@ -928,6 +962,21 @@ Include real `node\\tag`, a copied parent and depth-three sibling identities.
 Legacy `(): name`, qualified/local and synthetic UNTIL body adapters require
 their connected original-body normalization; do not certify them by removing
 their source-identity guards. This is pending work, not new language syntax.
+
+Preparatory construction projection must be separate from runtime selection:
+stream a builder's existing `l2_nsp[ni]` alias or actual unit occurrence
+instead of assembling a nested expression into a fixed-size text buffer.
+The alias exists only after the global namespace allocation phase. COUNT
+does not emit that projection. A method-local namespace has no global alias;
+do not substitute a unit slot or silently omit its source-fill obligations.
+Its reached constructor still needs the connected retained-body migration.
+
+In particular, `l2_emit_kx` emits `l2_rw_expr` inside a runtime function with
+an existing `host` argument, outside the unit builder. `l2_rw_emit=1` does
+not prove builder scope. A foreign-holder projection there cannot use the
+builder-local `l2_nsp` array. Audit that existing latent owner-selection gap
+when migrating runtime paths; a construction-only streaming helper does not
+close it and must not be advertised as such.
 
 ## 6. Required evidence
 

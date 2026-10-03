@@ -352,8 +352,17 @@ Current bounded implementation, with no DONE claim:
   counted baseline allocations and all1453 counted allocations when the
   second retained head-cache allocation fails. This is bounded compiler
   ownership evidence, not a certificate for uncounted P0/CRT storage.
-  Full24 is running on the new frozen source and strengthened lazy-load
-  oracle; full23 remains the latest completed verdict until it finishes.
+  Full24 completes RED199/1329 on3B903EC6: the lazy-load oracle recovers,
+  but15 exact unknown-name diagnostics regress; the184 old failure details
+  are unchanged. The dynamic table now owns its Text view while borrowing
+  original source bytes, preserving source-occurrence identity rather than
+  copying those bytes. The foreign interner still owns independent copies.
+  Provenance08 is GREEN64 on6E4E0FD8 and recovers all15 exact locations.
+  Full25 is running on that frozen source; it is not yet a full verdict.
+  Fresh exact traces on frozen6E4E0FD8 independently repeat zero outstanding
+  counted addresses:2296/2296 baseline and1453/1453 on the later cache
+  allocation failure. The older3B903EC6 certificate is not silently
+  transferred to these later bytes; uncounted P0/CRT remains outside scope.
   [Ownership mechanisms and hashes](steps/critical-graph-namespace-source-layout-20261003.md#compiler-ownership-evidence).
   [Exact scope and hashes](steps/critical-graph-namespace-source-layout-20261003.md#array-place-evidence).
   Neither focused green nor full red releases either ticket.

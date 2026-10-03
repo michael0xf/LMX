@@ -1893,6 +1893,129 @@ places. Existing typed-cell address/range, external source names and INIT/
 implicit roles need no redundant atom wrapper. Shape assertions are not a
 general decoder. Both critical tickets remain OPEN.
 
+<a id="canonical-cell-opaque-admission"></a>
+### 5.26 Canonical borrowed-body cells and opaque receiving instructions
+
+This is sandbox implementation evidence, not completion of either critical
+ticket. `critical_local_source_context_04` was RED3/26; context05 was RED3/19.
+The original-identity traversal correction remains in force. Registered
+execution roots now include every actual method body, including an existing
+adapted UNTIL body; `ns_source_body` still means exact original identity and
+is not made true for an adapter. A repeated known merge head again takes
+the call/refusal route, not a second declaration.
+
+`l2_ns_decl_constructor` projects an existing NSF-owned declaration only
+when its owner, source-site identity and field name agree. The common
+`l2_source_borrowed_constructor` applies that producer to a borrowed view
+of the same method. COUNT/PLACE does not allocate another declared cell,
+SourceField or source edge there; reached initialization remains an action.
+The former second x-cell in the adapted UNTIL body is eliminated. Ordinary
+`S\x`, `@S\x` and execution now address the one declared typed arena cell.
+This does not retire the old synthetic UNTIL topology, or close its complete
+local/T7 original-owner projection.
+
+The added canonical-copy witness separates storage from calling a copy.
+It executes S, copies its current state with explicit merge, writes distinct
+values through primitive addresses of S.x and R.x, and invokes S again.
+R retains23 while S becomes17; the nested declaration remains a distinct
+cell. Root counters are read through primitive cell references: bare caller
+working values must not be reloaded after a nested call. The reached nested
+initializer writes91 on each body execution, then increments to92. Early
+new-fixture runs used a malformed exit letter, stale caller working counters,
+and then an incorrect93 expectation; these are witness repairs, not language
+changes or permission to reload/clone. `unit_named_until_copy_call` remains a
+separate required positive; R() still refuses before generation. Do not
+hide it by classifying the refusal as success or calling S instead of R.
+
+The walker formerly classified an unproved opaque admission as INVALID.
+`lmx_walk_admit_op` now takes its ordinary implements throw channel for every
+non-YES admission result, matching native execution. Malformed operands and
+evaluation failures still retain their own INVALID classification. Neither
+UNKNOWN nor a genuine source-layout registration is promoted to target YES.
+There is no positional identity fallback for a known unlisted source.
+
+The existing compiler source/edge tables now retain possible source facts
+through checked pointer returns, pointer-typed formal forwarding, and pointer
+casts. The immediate cast operand must itself have a pointer contract; an
+integer intermediate or arithmetic is not recursively unwrapped into source
+evidence. A pointer cast preserves the operand's schema/layout/source key,
+never replaces it with the cast target. These are possible layouts, not
+proof that a reached receiving instruction succeeded.
+
+Every modeled receiving instruction prepares its required pair maps before
+map declaration, including a physical indirect destination such as
+`\place: bad()`. Map-only requests reuse the compiler edge table: target
+method -1 means required schema, while a direct source method -1 means raw
+candidate schema. These requests never publish a value, never enter the
+fixed-point value flow and have no runtime representation. Raw negative
+schema tags are decoded before own-key handling. Both declared defaults and
+possible alternatives are checked against completed physical schemas, with
+located failures instead of an internal late-map error. Direct identity
+requests use no edge capacity.
+
+Full reception visits required physical ORDINAL fields. A definite failed
+typed-own reception is not propagated as a stored value to later consumers;
+the original producer fact and its refusing instruction alternative remain.
+The negative filter preserves unknown kinds and ambiguous nested/callable
+Structure crossings; it does not claim full-interface YES or analyze an
+algorithm. LAST remains a separate used-field selector in the pair table.
+`unit_opaque_reference_ordinal_flow` proves a compatible first int x remains
+admissible despite a last char x, when the consumer explicitly reads [0]x.
+Opaque cast/forwarding controls reject Other under catch and preserve Good.
+Machine-cast bodies remain native; pure forwarding/read/check methods and
+the artifact root are genuinely cleared in their walker twins.
+
+The existing reception/failure/indirect-store shape assertions were migrated
+only for genuine newly carried alternatives: ADMIT9 ->14, ADMIT12 ->17/22.
+SET/SET_OF/PUT, full destination paths, result-pointer CALL links, depths,
+catch metadata and exact alternative counts remain checked. Runtime entry7,
+calls/catches and unchanged destinations are still required. The observer's
+plain-integer Sizes parser does not inspect casted map-hole constants;
+no hole-content certificate is claimed from that DSL.
+
+Intermediate diagnostic runs are retained: context06 RED8/22, context07
+RED6/24, contexts08/09 RED2/22. `critical_local_source_context_10` is
+GREEN24/24 (21 fixtures and build/scope targets), with actual native/walked
+methods and native/cleared-root execution for the positive twins. Frozen
+translator `1F609741689E1BE19906CD76370DC419876B14C9438BA7BC3AE29F68D2BC2FC5`,
+harness `65FD76B7C37D461BCA400389D8DAA5148198F51BB328CE6D8CD63BD9DEBBBCB4`,
+driver `E30B6004CCC89193B3CBBCF1825A234EB79D24B5849F093E346CC4740B0405BA`,
+executable `74B6DA1FB296B3C83265BA34AF3AD0B044264BDF6D3383844FB294F7D66826CB`.
+The later identity-request omission changes translator to
+`BFF213AC9309EF2D2975499C6894ABA6EA10BE8EBD3DC9B95733E43B7985B81A`;
+`critical_graph_fix_full_32` completed RED130/1395 on those exact bytes,
+executable `E97FEB6D6F217D1390992C2E34C8431870E1F35B99DC7A070B880359C523CCAE`.
+All1380 old targets remain. Seven FAIL -> OK, zero OK -> FAIL; of15 new
+targets13 pass and both required copied named-Structure call positives fail.
+The128 retained failure summary details are byte-identical to full31.
+Recovered: `unit_merge_known_head_refused`, `unit_portable_reference_admission`,
+`unit_own_reference_failure`, `unit_ns_until_root`, `unit_ns_until_method`,
+`unit_walk_ns_until_method`, `unit_colon_graph_update_admission_blocked`.
+Focused10 is not a full-gate certificate; the full gate remains RED.
+
+Ordinary kernel `critical_admit_status_01` is GREEN292, with109 selftests
+executed; the extended admit selftest has40 checks and zero failures.
+Its six added assertions cover an unlisted genuine source layout, ordinary
+implements throw, no target-proof publication, preserved source evidence,
+and a correctly listed alternative. Frozen walk source
+`61BED7074E575B44C410A4D805024693A5B3B496B4D89A36A59AC089AD6E3918`,
+selftest `C0426161B41CC1CCA7CFA84B8F28286304FF8BA2766F7784AB281CCEE45DEC98`.
+Two separate generated-C mutants compile and fail: restoring UNKNOWN ->
+INVALID causes one assertion failure; inventing a positional fallback causes
+two. Normal kernel artifacts are unchanged. L3
+`l3_critical_source_admit_01` passes all11 suites and four type-budget units
+(75 names/128,1070 bytes/8192).
+
+Still open: full-gate failures; immutable written-order P0/named-actual execution
+projection and full comments/codec; actual copied/held-call contract and
+hidden-input preparation; capture/original-owner closure; all pointer-storage
+acceptance. Existing compiler limits256 source facts,128 shared edges,64
+pairs/marks and128 map cells remain debt. Map-only requests share that old
+edge budget; this slice is not an unbounded-table repair. Existing unsupported
+nested/type-word map projections remain separate implementation debt. No new
+runtime fields, atom metadata, source-name reads or companion graph were added.
+Stable `l2src` is untouched; code is not released.
+
 ## 6. Required evidence
 
 Add a full width5 Holder shape oracle, including parent ownership, real int

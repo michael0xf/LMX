@@ -175,6 +175,22 @@ walker admission and exact call/declaration classification still need repair;
 stale construction regexes must be replaced only with measured physical/effect
 assertions. [Full delta and scope evidence](critical-graph-namespace-source-layout-20261003.md#full31-source-context).
 
+Later canonical-cell/admission context10 GREEN24/24 removes duplicated
+borrowed-body declaration cells and verifies independent copy storage.
+Opaque source facts survive checked pointer cast/return/forwarding; indirect
+receiving instructions reserve maps before declaration without attributing
+referent writes to pointer holders. A failed admission leaves storage intact
+and uses ordinary implements, not INVALID; UNKNOWN is never target proof.
+The new ordinal control distinguishes FIRST from LAST. Kernel292/109 actual
+selftests and L3 eleven suites/four budgets pass; two status/fallback mutants
+are rejected. Full32 on later identity-request cleanup completes RED130/1395:
+seven old rows recover, no old green regresses, no target is removed;
+13 of15 new targets pass, both new copy-call positives fail. The128 retained
+failure summary details are unchanged. The real
+copied-Structure R() and nullary held-call positives still refuse; full source
+codec/comments, capture/original-owner, old table caps and pointer acceptance
+remain OPEN. [Exact scope and witness corrections](critical-graph-namespace-source-layout-20261003.md#canonical-cell-opaque-admission).
+
 <a id="graph-call-origin-current-value"></a>
 ### GRAPH-CALL-ORIGIN-CURRENT-VALUE — 2026-10-03, Codex, IN WORK
 

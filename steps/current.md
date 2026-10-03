@@ -89,6 +89,23 @@ Run14 RED2/23 выявил отдельную ошибку порядка рег
 исходного порядка named actuals при их destructive P0 binding, полный codec
 и комментарии; корректное исполнение не доказывает их сохранение.
 
+Позднейший context10 GREEN24/24 на1F609741 проверяет единые ячейки borrowed
+UNTIL тела, независимость explicit-copy хранения, непрозрачные cast/return/
+forwarding и indirect admission. Ошибка допуска идёт ordinary implements,
+не INVALID; неуспешная запись сохраняет ячейку. Настоящие варианты таблиц
+готовятся до emission, без второго графа/атомных метаданных. ORDINAL проверка
+не смешана с LAST. Kernel admit_status01 GREEN292/109 selftests, новый
+admit selftest40 проверок; два мутанта отклонены. L3 source_admit01 —11 suites
+и четыре budgets GREEN. Последний translatorBFF213AC дополнительно не
+резервирует пустые identity requests; full32 завершён RED130/1395.
+Все1380 прежних targets сохранены: семь FAIL -> OK, ни одного OK -> FAIL;
+из15 новых13 проходят, два обязательных copy-call варианта отказывают.
+128 прежних отказов сохраняют точные summary details. R() результата
+merge и nullary held-call остаются обязательными положительными отказами;
+полный codec/comments, capture, старые числовые caps и pointer-тикет OPEN.
+[Точные изменения, ошибки свидетелей и хеши](critical-graph-namespace-source-layout-20261003.md#canonical-cell-opaque-admission).
+Это не релиз, стабильная копия не изменена.
+
 Текущий translator9DD7E13A выбирает выходные объявления по точному source-site
 и порядку исходника, не по порядку регистрации own. Шесть новых output/order
 свидетелей и два повреждения реальных target-ячеек проходят native/walker.

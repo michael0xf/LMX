@@ -487,7 +487,20 @@ Current bounded implementation, with no DONE claim:
   15 of16 added controls pass. The subsequent exact-source callable boundary
   and late binding pass make all four new local shadow/named-actual/hosted-merge
   native/walker controls pass; context02 remains RED11/22 on the same11
-  discrepancies. Next close original UNTIL ownership, opaque-source admission,
+  discrepancies. [Later canonical-cell/admission scope](steps/critical-graph-namespace-source-layout-20261003.md#canonical-cell-opaque-admission)
+  is context10 GREEN24/24: borrowed UNTIL declarations reuse their real cell,
+  explicit copies have independent state, opaque casts/returns/formals retain
+  possible source facts, and every receiving instruction prepares its maps.
+  Indirect and caught failed admission preserve the target; UNKNOWN is not
+  mislabeled INVALID or promoted to YES. ORDINAL and LAST remain distinct.
+  Kernel292/109 selftests and L3 eleven suites/four budgets are green; two
+  admit-status mutants fail. Full32 on later identity-request cleanup is
+  RED130/1395: all1380 former targets remain, seven recover and no former
+  green regresses;13 of15 new targets pass. The two new copied-Structure
+  call positives remain failures. Required copied-Structure R() and
+  nullary held calls are still open positive failures. Synthetic UNTIL/local
+  owner projection, compiler numeric caps and pointer storage are not closed.
+  Next close original UNTIL ownership,
   exact call/declaration classification, actual signature/argument formation and capture closure;
   then rerun the full frozen-source harness. No pointer fix or release is claimed.
   G1 additionally requires non-destructive named-actual projection, distinction

@@ -1,0 +1,59 @@
+# An indexed field path whose container is a merge result. A slot of the
+# result has the element contract of the declaration that contributed it: the
+# model's int Array, a later operand's char Array, the same through a copy of
+# a copy, a variable index, and the address of an element. Each store lands in
+# the copy; the operands keep their contents. Entry 7.
+A:
+    []: int buf 3
+    int: x 1
+end: A
+B:
+    []: char cs 2
+    int: y 2
+end: B
+
+fn: both (size_t: i) int
+    r: merge A B
+    r\buf[i]: 5
+    r\cs[1]: 'q'
+    if: r\buf[i] != 5 || r\buf[0] != 0 || r\cs[1] != 'q' || r\cs[0] != 0
+        return: 81
+    if: A\buf[i] != 0 || B\cs[1] != 0
+        return: 82
+    if: length(r\buf) != 3 || length(r\cs) != 2
+        return: 83
+    return: 0
+end: both
+
+fn: again () int
+    o: merge A
+    o\buf[1]: 3
+    p: merge o
+    p\buf[1]: 4
+    if: o\buf[1] != 3 || p\buf[1] != 4 || A\buf[1] != 0
+        return: 84
+    return: 0
+end: again
+
+fn: through () int
+    a: merge A
+    @: int e
+    e: @ a\buf[2]
+    \e: 9
+    if: a\buf[2] != 9 || A\buf[2] != 0
+        return: 85
+    return: 0
+end: through
+
+int: ok 7
+int: r both(2U)
+if: r != 0
+    ok: r
+r: again()
+if: r != 0
+    ok: r
+r: through()
+if: r != 0
+    ok: r
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

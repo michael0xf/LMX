@@ -741,3 +741,104 @@ The 43 red rows by mechanism:
 
 No stale negative expectation is left among them except the three letter rows
 and `unit_asgn_fallback` named above.
+
+<a id="merge-result-array"></a>
+## 20. An indexed field path whose container is a merge result
+
+**Cause.** The general Array place (`l2_array_place_contract`) takes the
+element contract from the declaration of the path's leaf.
+`l2_path_resolve_contract` found that declaration for a field of a declared
+Structure and for a hosted own field, and not for a slot of a merge result:
+the slot map (`l2_mrs_*`) kept each slot's name, kind and type and not the
+field that contributed it. So `a\buf[i]` with `a: merge Holder` had no
+contract, while `o\inner\buf[1]` already worked: after the first segment the
+container is a declared Structure (measured before the change).
+
+**Mechanism.** Each slot of a merge result keeps the field row that
+contributed it (`l2_mrs_row`): the model's row for a slot that later operands
+went into (the merge rule makes their types equal), the same row through a
+result used as an operand (a copy of a copy), and none for a copied step or
+a body pair of a new name. `l2_mrs_slot_row(res, slot)` is the one reader.
+Consumers:
+
+- `l2_path_resolve_contract`: the leaf's declaration, hence the element
+  contract of the general Array place, for reads, stores and their graph
+  twins;
+- `l2_path_arr_leaf` and `l2_arr_operand`, which `length(P)` still goes
+  through: a merge-result container is a typed one, and a nested result is
+  followed as `l2_path_resolve_contract` follows it.
+
+**The address of an element through a path, `@ P[i]`, in the retained
+graph.** The native emission had it; the graph producer refused it
+(`this operand`), which was the hidden second failure of
+`unit_arr_path_read` even with its legacy setup. `l2_rw_array_place_address`
+builds `ADDRESS` over the very `ELEM` operand a read of that place has, typed
+as a pointer to the element, as the own-Array form does (`l2_rw_indexed`).
+The interpreter's `ADDRESS` already resolves any `ELEM` place.
+
+**Verification.**
+
+- Recovered: `unit_arr_path_read` (at the root: reads, `length()`, the
+  address of an element, a typed formal, the model unchanged) and
+  `unit_array_write_general_root_real_field`.
+- New `unit_arr_path_merge_result` and its walked twin (`WalkedMethods`
+  0, 1, 2): a merge of two operands with an `int` Array from the model and a
+  `char` Array from the later operand, a variable index, a copy of a copy,
+  the address of an element; every store lands in the copy and the operands
+  keep their contents.
+- Translator mutant `fable_mres_mut_first` (every slot answers with the
+  result's first row): `unit_array_write_general_root_real_field` and both
+  new rows red (`18:14: the program has no method lm_stg_convert_char_int`:
+  the `char` Array took the `int` Array's contract). Mutant
+  `fable_mres_mut_nocopy` (a row taken from another result loses its field
+  row): both new rows red (`32:5: unsupported index` at `p\buf[1]`).
+  `unit_arr_path_read` stays green under both: its Array is the first row of
+  its Structure and it has no copy of a copy, so it cannot see either. The
+  live file was restored and its hash re-verified after each.
+- Probes, not gated: a path naming no field of the result next to an
+  unrelated own Array of that name is refused (`unsupported index`), and so
+  is an index after a body pair of a new name.
+- Focused `fable_mres_01`: 48 targets, 0 failed, with all 36 `unit_merge*`
+  rows unchanged.
+
+<a id="capture-copy"></a>
+## 21. A nested method captures a whole copy
+
+`loc: merge Model` in the host, and a nested method that reads `loc\value`.
+The capture record took the host field's declared type
+(`l2_own_nsty_get`); a merge result has none, the name stayed unrecorded and
+the walk of the nested method refused `a field path`.
+`l2_own_capture_ns` is the type a capture has: the declared type, or for a
+whole copy `x: merge S` the Structure S it copies (`l2_own_copy_layout`, the
+relation of [section 16](#held-call-step-one): one named Structure, no body,
+so the copy is S's completed occurrence with S's fields at S's slots).
+
+- Recovered: `unit_capture_struct_own` (two readers, 42 and 9) and
+  `unit_capture_struct_call_arg` (82). Before the change both refused at the
+  captured read; focused `fable_cap_01`, 46 targets with every capture,
+  callable-merge and copy-call row, shows only the six open positives red.
+- `unit_capture_struct_whole` now reaches its own limit:
+  `20:23: a captured Structure used whole (item 738: its fields are read)`.
+  The node a host's return builds carries a copy of the fields the method
+  reads, with holes; a whole use needs the complete value. Open, with the
+  capture closure.
+- Not covered, measured: a host copy of two operands (`loc: merge A B`) has
+  no single Structure to name and is still refused at the read
+  (`a field path`). It is a valid program and becomes a required positive
+  with the next slice.
+
+<a id="full-08"></a>
+## 22. Full gate after sections 20 and 21
+
+`fable_full_08` completes **RED 39/1428** on translator SHA256
+`FF719E8C7F7A41CFE2F7C4F4C5D5CA4B7FC5755BCCE2DE34534BDA632474083A`
+(staged Git blob `90b6d8724052ff1a1f5fba88dfd2cc3204c8d7ee`), harness
+`B198DE9366FA0F5D2D3A5ADD8A80605D8A2EECEA71C6FE96A37A23112E30B9BF`,
+walker and driver unchanged.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_07` (RED 43/1426) | 4 | 0 | 2, both OK | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 90 | 0 | | |
+
+The kernel and L3 gates were not rerun: no kernel source changed.

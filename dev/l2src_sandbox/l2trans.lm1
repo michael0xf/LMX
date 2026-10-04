@@ -429,6 +429,9 @@ int: l2_nsty_cap 0
 @@: LmP0Text l2_mrs_type 0
 @: int l2_mrs_kind 0
 @: int l2_mrs_ent 0
+# The field row (l2_nsf_*) that contributed the slot -- the model's, for a slot later operands
+# went into; -1 for a slot with no declaration: a copied step, a body pair of a new name.
+@: int l2_mrs_row 0
 int: l2_mrs_n 0
 # Where each operand field of a merge lands (the author's merge rule, plan §4): result
 # res, operand op, its field fld, the result slot, and pair = 1 when the field is written
@@ -1105,6 +1108,7 @@ prototype:
     fn: l2_own_layout (int: own) int
     fn: l2_own_call_origin (int: own) int
     fn: l2_own_copy_layout (int: own) int
+    fn: l2_own_capture_ns (int: own) int
     fn: l2_own_copy_origin (int: own) int
     fn: l2_copy_calls_verify (const: @(char path)) int
     fn: l2_own_source_layout (int: own) int
@@ -1298,7 +1302,7 @@ prototype:
     fn: l2_emit_cstr (const: @(LmP0Text t)) int
     fn: l2_emit_atom_slot (int: k; int: oi; const: @(LmP0Text t)) int
     fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
-    fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; const: @(LmP0Text type_word)) int
+    fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; const: @(LmP0Text type_word); int: row) int
     fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
     fn: l2_mrs_take_result (int: res; int: k; int: src; const: @(LmP0Node at)) int
     fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags; int: mi) int
@@ -1327,6 +1331,7 @@ prototype:
     fn: l2_nsf_ordinal (int: row) int
     fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
+    fn: l2_mrs_slot_row (int: res; int: slot) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
     fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
@@ -9795,6 +9800,18 @@ fn: l2_own_copy_layout (int: own) int
         return: -1
 return: source\layout
 
+# The named Structure type a nested method captures a host's own field as: the
+# field's declared type, or for a whole copy `x: merge S` the Structure S whose
+# completed occurrence the copy is -- the same fields at the same slots.
+fn: l2_own_capture_ns (int: own) int
+    int: ns
+    if: own < 0
+        return: -1
+    ns: l2_own_nsty_get(own)
+    if: ns < 0
+        ns: l2_own_copy_layout(own)
+return: ns
+
 # The copied Structure whose procedure contract a call of own row `own`
 # uses: one proved alternative. The row is a slot filled by its one merge
 # declaration and declared in the body that lexically owns the copied
@@ -11673,8 +11690,8 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: l2_mad_host_of(mi) >= 0 && l2_mad_host_own(l2_mad_host_of(mi), t) >= 0
         ty: l2_own_ty[l2_mad_host_own(l2_mad_host_of(mi), t)]
-        if: l2_own_nsty_get(l2_mad_host_own(l2_mad_host_of(mi), t)) >= 0
-            if: l2_mcap_add(mi, t, ty, l2_own_nsty_get(l2_mad_host_own(l2_mad_host_of(mi), t))) != 0
+        if: l2_own_capture_ns(l2_mad_host_own(l2_mad_host_of(mi), t)) >= 0
+            if: l2_mcap_add(mi, t, ty, l2_own_capture_ns(l2_mad_host_own(l2_mad_host_of(mi), t))) != 0
                 return: 1
             return: l2_cap_dyn_add(mi, t, ty, 1)
         if: l2_mcap_ty_ok(ty) != 0
@@ -20382,7 +20399,7 @@ fn: l2_ebr_root (int: k) int
 return: 0 - 1
 
 # Append one result-slot row. Kind -1 marks a slot with no source name.
-fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; const: @(LmP0Text type_word)) int
+fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; const: @(LmP0Text type_word); int: row) int
     @@: LmP0Text gt
     @: int gi
     size_t: want (cast: (size_t) (l2_mrs_n + 1))
@@ -20398,6 +20415,10 @@ fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; const: 
     if: gi = 0
         return: 0 - 1
     l2_mrs_ent: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_mrs_row), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 0 - 1
+    l2_mrs_row: gi
     gt: (cast: (@@: LmP0Text) realloc((cast: (@: void) l2_mrs_name), want * c.sizeof(@: void)))
     if: gt = 0
         return: 0 - 1
@@ -20411,6 +20432,7 @@ fn: l2_mrs_push (int: res; const: @(LmP0Text name); int: kind; int: ent; const: 
     l2_mrs_type[l2_mrs_n]: (cast: (@: LmP0Text) type_word)
     l2_mrs_kind[l2_mrs_n]: kind
     l2_mrs_ent[l2_mrs_n]: ent
+    l2_mrs_row[l2_mrs_n]: row
     l2_mrs_n: l2_mrs_n + 1
 return: 0
 
@@ -20492,7 +20514,7 @@ return: 0
 # field is a row of its own.  So merge makes no repeated names.  The body joins last, as
 # operand n (the kernel's `operand = count`, -194 K1); pairs apply in this order, so a later
 # operand's value wins.
-fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; int: ent; const: @(LmP0Text type_word); const: @(LmP0Node at)) int
+fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; int: ent; const: @(LmP0Text type_word); int: row; const: @(LmP0Node at)) int
     int: r 0
     int: slotix 0
     int: hit 0 - 1
@@ -20513,7 +20535,7 @@ fn: l2_mrs_join (int: res; int: k; int: j; const: @(LmP0Text name); int: kind; i
         return: l2_msrc_push(res, k, j, hit, 1)
     if: l2_msrc_push(res, k, j, l2_mrs_width(res), 0) != 0
         return: 0 - 1
-return: l2_mrs_push(res, name, kind, ent, type_word)
+return: l2_mrs_push(res, name, kind, ent, type_word, row)
 
 # Before placement CHECK uses declaration metadata. The completed merge map
 # instead visits every real child in source order, including unnamed operations.
@@ -20525,9 +20547,9 @@ fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
             q: l2_ns_row_at_slot(ni, j)
             if: q = -2
                 return: l2_error(l2_src, at, "internal: a merge source child has no completed place")
-            if: q >= 0 && l2_mrs_join(res, k, j, l2_nsf_fname[q], l2_nsf_kind[q], l2_nsf_ref[q], l2_nsf_name[q], at) != 0
+            if: q >= 0 && l2_mrs_join(res, k, j, l2_nsf_fname[q], l2_nsf_kind[q], l2_nsf_ref[q], l2_nsf_name[q], q, at) != 0
                 return: 1
-            if: q < 0 && l2_mrs_join(res, k, j, 0, -1, -1, 0, at) != 0
+            if: q < 0 && l2_mrs_join(res, k, j, 0, -1, -1, 0, -1, at) != 0
                 return: 1
             j: j + 1
         ---
@@ -20535,7 +20557,7 @@ fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
     ---
     while: q < l2_nsf_n
         if: l2_nsf_owner[q] = ni
-            if: l2_mrs_join(res, k, j, l2_nsf_fname[q], l2_nsf_kind[q], l2_nsf_ref[q], l2_nsf_name[q], at) != 0
+            if: l2_mrs_join(res, k, j, l2_nsf_fname[q], l2_nsf_kind[q], l2_nsf_ref[q], l2_nsf_name[q], q, at) != 0
                 return: 1
             j: j + 1
         ---
@@ -20544,7 +20566,7 @@ fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
     # R9: after its fields a Structure with a procedure holds its code -- control bodies, steps -- and the merge
     # copies them as it copies every child: a row each, with no name, so none pairs (l2_text_same of no name is 0).
     while: j < l2_ns_width(ni)
-        if: l2_mrs_join(res, k, j, 0, 0 - 1, 0 - 1, 0, at) != 0
+        if: l2_mrs_join(res, k, j, 0, 0 - 1, 0 - 1, 0, -1, at) != 0
             return: 1
         j: j + 1
     ---
@@ -20558,7 +20580,7 @@ fn: l2_mrs_take_result (int: res; int: k; int: src; const: @(LmP0Node at)) int
     n: l2_mrs_n
     while: r < n
         if: l2_mrs_res[r] = src
-            if: l2_mrs_join(res, k, j, l2_mrs_name[r], l2_mrs_kind[r], l2_mrs_ent[r], l2_mrs_type[r], at) != 0
+            if: l2_mrs_join(res, k, j, l2_mrs_name[r], l2_mrs_kind[r], l2_mrs_ent[r], l2_mrs_type[r], l2_mrs_row[r], at) != 0
                 return: 1
             j: j + 1
         ---
@@ -21129,6 +21151,22 @@ fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @:
         k: k + 1
     ---
 return: hit
+
+# The field row that contributed slot `slot` of bound merge result res; -1 when it has none.
+fn: l2_mrs_slot_row (int: res; int: slot) int
+    int: k 0
+    int: slotix 0
+    if: res < 0 || slot < 0
+        return: -1
+    while: k < l2_mrs_n
+        if: l2_mrs_res[k] = res
+            if: slotix = slot
+                return: l2_mrs_row[k]
+            slotix: slotix + 1
+        ---
+        k: k + 1
+    ---
+return: -1
 
 # Occurrence occ (0 = the first) of field `name` of bound merge result res: its slot, with the
 # field kind and entry; -1 when there is no such occurrence.  Only the model's own repeats
@@ -21737,6 +21775,9 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
                 declaration: l2_declaration(l2_own_decl[field_own])
             if: field_own < 0 && res < 0 && ni >= 0 && slot < l2_nsf_n && l2_nsf_owner[slot] = ni
                 declaration: l2_declaration(l2_nsf_source[slot])
+            # A slot of a merge result has the contract of the declaration that contributed it.
+            if: field_own < 0 && res >= 0 && l2_mrs_slot_row(res, slot) >= 0
+                declaration: l2_declaration(l2_nsf_source[l2_mrs_slot_row(res, slot)])
             if: declaration != 0
                 \out_contract: declaration\contract
         ---
@@ -22306,13 +22347,19 @@ fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out
         return: 1
     if: oi >= 0
         ni: l2_own_nsty_get(oi)
-    if: ni < 0 || res >= 0 || root != 0 - 1
+    if: (ni < 0 && res < 0) || root != 0 - 1
         return: 1
     segs: l2_seg_count(pd, pn)
     while: i < segs
         if: l2_seg_at(pd, pn, i, @ off, @ len) != 0 || len = 0U
             return: 1
-        slot: l2_ns_named_row(ni, pd, off, len, @ kind, @ ent)
+        # A merge result's slot is the field that contributed it (l2_mrs_slot_row); a slot with
+        # no declaration is not a field of this route.
+        if: res >= 0
+            slot: l2_mrs_slot_row(res, l2_mrs_slot_named(res, pd, off, len, @ kind, @ ent))
+        else:
+            slot: l2_ns_named_row(ni, pd, off, len, @ kind, @ ent)
+        ---
         if: slot < 0
             return: 1
         if: i + 1 < segs && kind != 2 && kind != 3
@@ -22326,6 +22373,12 @@ fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out
             \out_count: l2_nsf_val[slot]
         if: i + 1 < segs
             ni: ent
+            res: 0 - 1
+            if: l2_schema_kind(ent) = 2
+                res: l2_schema_index(ent)
+                ni: -1
+            ---
+        ---
         i: i + 1
     ---
 return: 0
@@ -22386,9 +22439,9 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @
     # An own field holding a graph with no declared type (the letter receiveMessage gives an
     # untyped m): the path has no fields to walk.  A c.* raw root is not a graph and is left
     # to the raw-path machinery.
-    if: oi >= 0 && ni < 0 && l2_colon_is_graph_ty(l2_dt_of_own(l2_own_ty[oi])) != 0
+    if: oi >= 0 && ni < 0 && res < 0 && l2_colon_is_graph_ty(l2_dt_of_own(l2_own_ty[oi])) != 0
         return: 3
-    if: ni < 0 || res >= 0 || root != 0 - 1
+    if: (ni < 0 && res < 0) || root != 0 - 1
         return: 1
     # A typed root: from here the tokens are this route's, and a failure is its to report.
     if: l2_path_arr_leaf(pd, pn, @ kind, @ elem, @ count) != 0
@@ -26039,6 +26092,19 @@ fn: l2_rw_array_place_operand (const: @(LmP0Node stmt); const: @(L2ArrayPlace pl
         return: 1
 return: 0
 
+# The address of an Array place's element: ADDRESS over the very ELEM operand a
+# read of that place has, with the pointer type as its witness. Nothing is read.
+fn: l2_rw_array_place_address (const: @(LmP0Node at); const: @(L2ArrayPlace place); int: parent; @: int out) int
+    int: value
+    int: ty l2_address_type(place\type)
+    if: ty < 0
+        return: l2_rw_refuse(at, "the address of this Array element")
+    if: l2_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0 || l2_rw_witness(\out, 2, l2_own_ty_of_param(ty), 0) != 0
+        return: 1
+    if: l2_rw_array_place_operand(at, place, "LMX_WALK_OP_ELEM", 3, \out, @ value) != 0
+        return: 1
+return: l2_rw_put(\out, 1, value)
+
 fn: l2_indexed_clear (@: L2IndexedOperand out) int
     out\own: -1
     out\type: -1
@@ -29305,6 +29371,23 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
         if: ty < 0
             return: -1
         return: l2_own_ty_of_param(ty)
+    # The address of an Array place's element is a pointer to the element's type.
+    if: l2_rw_address_rest(span, @ operand) = 0
+        status: l2_array_span((operand.first), (operand.count), l2_rw_mi, @ array_place)
+        if: status = 3
+            return: -1
+        if: status = 0
+            ty: array_place.type
+            own: array_place.count
+            l2_array_place_release(@ array_place)
+            if: own = operand.count
+                ty: l2_address_type(ty)
+                if: ty < 0
+                    return: -1
+                return: l2_own_ty_of_param(ty)
+            ---
+        ---
+    ---
     if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
         ty: address.type
         return: l2_own_ty_of_param(ty)
@@ -32820,6 +32903,20 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
         if: l2_rw_machine_index(@ raw_index, 0, 0, own, @ status) != 0
             return: 1
         return: l2_rw_put(own, 0, status)
+    # `@ P[i]`: the address of an element of an Array place reached by a path.
+    if: l2_rw_address_rest(span, @ operand) = 0
+        status: l2_array_span((operand.first), (operand.count), l2_rw_mi, @ array_place)
+        if: status = 3
+            return: 1
+        if: status = 0
+            if: array_place.count = operand.count
+                status: l2_rw_array_place_address((operand.node), @ array_place, parent, out)
+                l2_array_place_release(@ array_place)
+                return: status
+            ---
+            l2_array_place_release(@ array_place)
+        ---
+    ---
     if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
         return: l2_rw_address(@ address, parent, out)
     if: span\count = 1
@@ -35950,8 +36047,8 @@ fn: l2_scan_node_use (int: mi; const: @(LmP0Text name)) int
         return: 0
     ---
     oi: l2_mad_host_own(host, name)
-    if: oi >= 0 && l2_own_nsty_get(oi) >= 0
-        return: l2_mcap_add(mi, name, l2_own_ty[oi], l2_own_nsty_get(oi))
+    if: oi >= 0 && l2_own_capture_ns(oi) >= 0
+        return: l2_mcap_add(mi, name, l2_own_ty[oi], l2_own_capture_ns(oi))
     if: oi >= 0 && l2_mcap_ty_ok(l2_own_ty[oi]) != 0
         return: l2_mcap_add(mi, name, l2_own_ty[oi], 0 - 1)
 return: 0
@@ -39528,7 +39625,7 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
         bv: l2_next_active(bf\value\as\frame\body\first_field)
         if: bv = 0 || bv\value = 0 || bv\value\kind != c.LM_P0_NODE_ATOM
             return: 0
-        if: l2_mrs_join(res, n, bj, bv\value\as\atom, 0, 0 - 1, 0, bf\value) != 0
+        if: l2_mrs_join(res, n, bj, bv\value\as\atom, 0, 0 - 1, 0, -1, bf\value) != 0
             return: 1
         bj: bj + 1
         bf: l2_next_active(bf\next)

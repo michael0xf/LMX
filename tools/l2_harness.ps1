@@ -2239,8 +2239,8 @@ $fixtures = @(
     # type through a typed root; `@` before an element addresses it in graph storage; length() on
     # both levels.  The former formal-`main` fixtures now read argv from the letter (mainArgs);
     # `{source}` in Argv is this fixture's own path.
-    # Triage 2026-10-03: a positive again, with an explicit copy for its setup. OPEN positive
-    # (an indexed field path whose root is a merge result).
+    # A positive with an explicit copy for its setup: reads, length(), the address of an
+    # element and a typed formal, through an indexed field path whose root is a merge result.
     [pscustomobject]@{ Name = 'unit_arr_path_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0;
         Absent = @(); Debt = @() },
     # D-06: a failed receiveMessage or rebinding store is an invariant on the X1 route, not a printed line.
@@ -6071,10 +6071,16 @@ $fixtures = @(
         ) }) },
     [pscustomobject]@{ Name = 'unit_array_write_general_root_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported index'; Absent = @(); Debt = @() },
-    # Triage 2026-10-03: a positive store into an Array field of an explicit copy, with the
-    # model's Array and an unrelated own Array as controls. OPEN positive (an indexed field
-    # path whose root is a merge result).
+    # A positive store into an Array field of an explicit copy, with the model's Array and an
+    # unrelated own Array as controls.
     [pscustomobject]@{ Name = 'unit_array_write_general_root_real_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # A slot of a merge result has the element contract of the declaration that contributed
+    # it: the model's int Array and a later operand's char Array, a copy of a copy, a
+    # variable index, the address of an element. Natively and with the three methods walked.
+    [pscustomobject]@{ Name = 'unit_arr_path_merge_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_arr_path_merge_result_walk.lm2'; Source = 'unit_arr_path_merge_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_undeclared_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = (& $criticalLiteralMethod 'broken' 'arg' 7); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },

@@ -1980,6 +1980,33 @@ identity-with-holes. Поэтому голое чтение `v\x` внутри �
 копия значения с отличающимся макетом (голое чтение = последнее вхождение) и копия того же типа
 (обе записи совпадают), плюс проверка, что копия по-прежнему не наследует token исходной схемы.
 
+<a id="foreign-value-witness-silent"></a>
+### FOREIGN-VALUE-WITNESS-SILENT — 2026-10-03, fable, FIXED в sandbox (не выпущено)
+
+Чтение формала чужого C-типа по значению (`c.LmP0NodeKind: kind`, `c.L2DispatchPair: value`)
+строило `ARG`, чей witness требует типизированную ячейку. Проход подсчёта это принимал, проход
+заполнения возвращал ошибку из `l2_rw_witness` (тип `-1`: «у графа нет ячейки такого типа») без
+диагностики: `internal: a refusal said nothing`. Дефект был скрыт более ранними расположенными
+отказами в `parser_alloc_port`.
+
+Исправление: witness такого входа остаётся пустым местом — так же, как его место в объявленной
+части самого метода, — а тело помечается native-only (`l2_rw_input_witness`,
+`l2_foreign_value_ft`). Свидетель: `graph_shape_foreign_value` с фактом `nullpath` и мутантом,
+который переносит ординал входа в место witness;
+[журнал продолжения](fable-continuation-20261003.md#foreign-value).
+
+<a id="native-raw-index-literal-type"></a>
+### NATIVE-RAW-INDEX-LITERAL-TYPE — 2026-10-03, fable, OPEN
+
+`l2_native_span_ty` возвращает `-1` для сырого индекса, тип элемента которого L2 неизвестен
+(`stack\columns[idx]` у `c.LmP0IndentStack`). В нативной типизации `-1` означает «литерал без
+суффикса», поэтому `l2_native_composite_ty` превращает его в `int`, и `return: stack\columns[idx]`
+в методе с результатом `size_t` требует конвертер `lm_stg_convert_int_size_t`, которого в программе
+нет. Строка `unit_indent_stack_field_index` из-за этого красная. Значение неизвестного C-типа —
+непрозрачное (его проверяет C), а не целочисленный литерал: вернуть «не типизировано» (`-99`),
+как для остальных чужих путей. Исправление не сделано: меняет нативную типизацию и требует
+отдельного полного гейта.
+
 <a id="machine-local-table-stale"></a>
 ### MACHINE-LOCAL-TABLE-STALE — 2026-10-03, fable, FIXED в sandbox (не выпущено)
 

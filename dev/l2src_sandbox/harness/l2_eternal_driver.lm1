@@ -776,11 +776,26 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
             mode: 10
         if: c.strcmp(gargv[at], "nativepath") = 0
             mode: 11
+        if: c.strcmp(gargv[at], "nullpath") = 0
+            mode: 12
         if: mode = 0
             at: at + 1
             continue
         at: at + 1
-        value: shape_path(arena, graph, @ at, (cast: (int) (mode = 6)))
+        value: shape_path(arena, graph, @ at, (cast: (int) (mode = 6 || mode = 12)))
+        # An empty place is a fact about its holder: the path stops at the
+        # holder, and its last ordinal names the place that holds no object.
+        if: mode = 12
+            check(value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT, "nullpath selects an actual holder Structure")
+            if: value = 0 || lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
+                return: 0
+            holder: (cast: (@: Lmx) value)
+            selected: arg(at - 1)
+            check(selected >= 0 && (cast: (size_t) selected) < (holder\array.size), "empty place is an existing child ordinal")
+            if: selected < 0 || (cast: (size_t) selected) >= (holder\array.size)
+                return: 0
+            check(lmx_arena_ref_value(holder, (cast: (size_t) selected)) = 0, "selected place holds no object")
+            continue
         if: mode = 6 && value != 0
             check(lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT, "name place belongs to an actual Structure")
             if: lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT

@@ -52,9 +52,24 @@ Bounded slices of this continuation (each measured, none closes a ticket):
   `graph_shape_machine_local` with three shape mutants. The per-method
   machine-local table was stale in three passes and is rebuilt now.
 - [x] Three withdrawn or pending expectations migrated to runtime positives.
+- [x] Native-only machine operators: address arithmetic, the address of a raw
+  element, the raw index of a pointer to a foreign by-value record. Witness
+  `graph_shape_machine_address` with shape and translator mutants
+  ([ledger](steps/fable-continuation-20261003.md#machine-operators)).
+- [x] Foreign by-value inputs and results in the retained graph: empty witness
+  place, calls retained whole, native-only callers; the silent producer
+  failure is fixed. Witness `graph_shape_foreign_value`
+  ([ledger](steps/fable-continuation-20261003.md#foreign-value)).
 
 Subtasks discovered, in dependency order with the items below (all OPEN):
 
+- [ ] Deferred head-role decision for `h: tail`: an executable free read
+  that precedes the statement establishes the input and must not be suppressed
+  by an early definition row (`unit_own_dirty_rhs`); audit
+  `unit_arg_addr_dyn_types`; three rows wait for the author
+  ([ruling and split](steps/fable-continuation-20261003.md#head-role)).
+- [ ] `NATIVE-RAW-INDEX-LITERAL-TYPE`: an unknown foreign raw index is opaque,
+  not an int literal (`unit_indent_stack_field_index`).
 - [ ] Actual-call boundary for a held/copied ordinary Structure (nine red
   required positives). Codex ruling FABLE-CODEX-20261003-02: selection by the
   actual value's token only as a bounded optimization with a proved complete

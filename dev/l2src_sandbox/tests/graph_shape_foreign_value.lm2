@@ -1,0 +1,31 @@
+predef: "l2src/tests/unit_uniform_aggregate.h.lm1"
+include: "l1src/p0.lm1.h"
+# A foreign C value passed and returned by value lives in exact C storage: the
+# graph has no cell type for it. The calls that transport it are retained whole
+# with their actuals at their written places, the witness place of such an
+# input stays empty, and every body that touches the value is native-only --
+# probe too, whose only machine operation is the by-value call itself.
+# The values really travel through the methods. Entry 7.
+fn: echo (c.L2DispatchPair: value) c.L2DispatchPair
+    throws: Oops
+return: c.l2_dispatch_pair_change(value)
+fn: read (c.L2DispatchPair: value) int
+return: c.l2_dispatch_pair_read(value)
+fn: kind (c.LmP0NodeKind: value) c.LmP0NodeKind
+return: value
+fn: probe () int
+    if: kind(41) != 41
+        return: 84
+return: 7
+fn: check () int
+    int: changed read(echo(c.l2_dispatch_pair_make()))
+    catch: Oops ()
+        return: 83
+    ---
+    if: changed != 99
+        return: 81
+    if: read(c.l2_dispatch_pair_make()) != 41
+        return: 82
+return: probe()
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

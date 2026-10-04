@@ -1682,6 +1682,48 @@ $criticalMachineLocalPaths = @('widthpath','0','5','widthpath','1','2','9',
     'namepath','3','2','5','2','allocate','widthpath','4','2','5','2','1','1',
     'namepath','2','2','7','c.free')
 
+# Address arithmetic and the address of a raw element are machine operators
+# named by their written spelling. Unit: bump, step, publish, return. bump:
+# two header parts, q's pointer cell, its initialization, the store of
+# `@ p[1]`, the store through q and the return trailer; the address operator
+# holds the raw index, whose operands are the formal and the literal. step:
+# header parts, buf, q, q's initialization, the store of `@ buf[0] + 2`, the
+# store through q, two IFs and the return trailer; `+` holds the element
+# address and the count in source order. Both methods keep their native word.
+$criticalMachineAddressPaths = @('widthpath','0','4','namepath','1','0','bump','namepath','1','1','step',
+    'widthpath','1','0','7','widthpath','1','1','10',
+    'rolepath','3','0','4','2','45','0','namepath','3','0','4','2','@','widthpath','4','0','4','2','1','1',
+    'rolepath','5','0','4','2','1','0','45','0','namepath','5','0','4','2','1','0','[',
+    'widthpath','6','0','4','2','1','0','1','2',
+    'rolepath','7','0','4','2','1','0','1','0','5','0','rolepath','7','0','4','2','1','0','1','1','3','0',
+    'intpath','8','0','4','2','1','0','1','1','1','1',
+    'rolepath','3','1','5','2','45','0','namepath','3','1','5','2','+','widthpath','4','1','5','2','1','2',
+    'rolepath','5','1','5','2','1','0','42','0','rolepath','6','1','5','2','1','0','1','25','0',
+    'rolepath','5','1','5','2','1','1','3','0','intpath','6','1','5','2','1','1','1','2',
+    'nativepath','1','0','1','nativepath','1','1','1')
+
+# A foreign C value by value has no graph cell. Unit: predef, include, echo,
+# read, kind, probe, check, publish, return. echo's declared input part is
+# one named empty place; after its `throws` line, its read of that input is
+# ARG 0 whose witness place is empty too, and so is kind's. probe keeps
+# `kind(41)` as a CALL of kind's very occurrence with the literal at its
+# place; check keeps `read(echo(make()))` whole, the call that can throw
+# holding its actual at the first input place of the long frame. All five
+# methods keep their native word.
+$criticalForeignValuePaths = @('widthpath','0','9','namepath','1','2','echo','namepath','1','3','read',
+    'namepath','1','4','kind','namepath','1','5','probe','namepath','1','6','check',
+    'widthpath','2','2','0','1','placenamepath','3','2','0','0','value','nullpath','3','2','0','0',
+    'rolepath','5','2','3','1','1','0','5','0','widthpath','5','2','3','1','1','0','4',
+    'sizepath','6','2','3','1','1','0','1','0','nullpath','6','2','3','1','1','0','3',
+    'rolepath','3','4','2','1','5','0','nullpath','4','4','2','1','3',
+    'rolepath','5','5','2','1','2','1','2','0','widthpath','5','5','2','1','2','1','3',
+    'samepath','6','5','2','1','2','1','1','1','4',
+    'rolepath','6','5','2','1','2','1','2','3','0','intpath','7','5','2','1','2','1','2','1','41',
+    'rolepath','3','6','3','2','2','0','samepath','4','6','3','2','1','1','3',
+    'rolepath','4','6','3','2','2','2','0','widthpath','4','6','3','2','2','9','samepath','5','6','3','2','2','1','1','2',
+    'rolepath','5','6','3','2','2','5','45','0','namepath','5','6','3','2','2','5','c.l2_dispatch_pair_make',
+    'nativepath','1','2','1','nativepath','1','3','1','nativepath','1','4','1','nativepath','1','5','1','nativepath','1','6','1')
+
 # Formal invocations select ARG, not the unit method of the same spelling.
 # Native words stay selected; these facts certify retained source, not the
 # currently excluded --walk-methods callable-formal execution profile.
@@ -2495,6 +2537,36 @@ $fixtures = @(
         Args = @('0','mutate','null-path','4','2','2','1','1') + $criticalMachineLocalPaths; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_machine_local_use_mutant.lm2'; Source = 'graph_shape_machine_local.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','4','2','3','1','1') + $criticalMachineLocalPaths; Entry = 7; Absent = @(); Debt = @() },
+    # Address arithmetic and the address of a raw element: retained machine
+    # operators. Both methods run natively and really store through the
+    # computed addresses; under the method-walk knob they keep their native
+    # word, because the interpreter has no implementation for the operators.
+    [pscustomobject]@{ Name = 'graph_shape_machine_address.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $criticalMachineAddressPaths; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_walk_machine_address.lm2'; Source = 'graph_shape_machine_address.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $criticalMachineAddressPaths; Entry = 7; WalkRoot = $true; WalkMethods = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_machine_address_base_mutant.lm2'; Source = 'graph_shape_machine_address.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','5','1','5','2','1','0') + $criticalMachineAddressPaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_machine_address_count_mutant.lm2'; Source = 'graph_shape_machine_address.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','5','1','5','2','1','1') + $criticalMachineAddressPaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_machine_address_element_mutant.lm2'; Source = 'graph_shape_machine_address.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','5','0','4','2','1','0') + $criticalMachineAddressPaths; Entry = 7; Absent = @(); Debt = @() },
+    # A foreign C value by value: retained calls, an empty witness place,
+    # native words kept in both modes -- probe's only machine operation is the
+    # by-value call. The witness mutant moves the input ordinal into the
+    # witness place and carries the one fact that must then fail.
+    [pscustomobject]@{ Name = 'graph_shape_foreign_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $criticalForeignValuePaths; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_walk_foreign_value.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $criticalForeignValuePaths; Entry = 7; WalkRoot = $true; WalkMethods = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_foreign_value_actual_mutant.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','5','6','3','2','2','5') + $criticalForeignValuePaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_foreign_value_callee_mutant.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','5','6','3','2','2','1') + $criticalForeignValuePaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_foreign_value_literal_mutant.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','6','5','2','1','2','1','2') + $criticalForeignValuePaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_foreign_value_witness_mutant.lm2'; Source = 'graph_shape_foreign_value.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','move-path-field','5','2','3','1','1','0','1','3','nullpath','6','2','3','1','1','0','3'); Entry = 7; Absent = @(); Debt = @() },
     # A valid explicit copy retains INIT and its OWN operand. The source
     # walks the actual merge return after mutation, then calls the native
     # original; neither action may touch the other's primitive cell.

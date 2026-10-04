@@ -217,17 +217,20 @@ A red generated harness is not a release: 70 rows remain, classified below.
 <a id="remaining"></a>
 ## 7. Remaining red rows by mechanism (after `fable_full_04`)
 
+Later state: sections [11](#machine-operators) and [12](#foreign-value)
+recover the two groups marked below; [section 14](#full-05) has the gate.
+
 Translator refusals:
 
 | Group | Rows | Next mechanism |
 | --- | --- | --- |
 | held/copied nullary call | `unit_named_until_copy_call`(+walk), `graph_shape_ns_source_nested_copy`(+walk_methods), `unit_named_struct_exec_instance`, `…_two_types`, `unit_model_var_call`, `unit_empty_type_call_method`, `unit_held_nullary_source_field` | actual-call boundary (design question FABLE-CODEX-20261003-02 sent) |
-| foreign by-value call | `unit_uniform_foreign_results`, `unit_uniform_aggregate`, `parser_trailer_role` | CALL producer for foreign by-value inputs/results |
+| foreign by-value call (recovered, section 12) | `unit_uniform_foreign_results`, `unit_uniform_aggregate`, `parser_trailer_role` | CALL producer for foreign by-value inputs/results |
 | nested admission maps | `unit_d112_nested_return`, `unit_d113_nested_expr`, `unit_s7_nested_shape` | correspondence through nested fields of distinct definitions |
 | capture of a merge-result local | `unit_capture_struct_own`, `unit_capture_struct_call_arg` | capture closure |
 | C99 common arithmetic | four `1U`-in-`int` rows (`unit_callable_forward`, `unit_callable_nullary_forms`, `unit_callable_returning_two_contracts`, `unit_callable_sub_transport`), `unit_indent_stack_field_index` (missing `int`→`size_t` conversion receiver) | K08 conversions in the producer and walker |
-| return value typing | `unit_free_conv`(+walk), `unit_colon_hidden_update` (`return value has incompatible type`) | not yet triaged against the norm |
-| pointer arithmetic / raw address forms | `unit_addr_own_array_arith`, `unit_rhs_compound_admission_refused`, `unit_rhs_reference_admission`, `unit_addr_own_array_element`, `parser_alloc_port` | native-only producers for address arithmetic and raw index of a record pointer |
+| head role of a dynamically supplied name | `unit_free_conv`(+walk), `unit_colon_hidden_update`, and from the single rows `unit_own_dirty_rhs`, `unit_arg_addr_dyn_types` | triaged in [section 13](#head-role): one decidable, one to audit, three behind an author question |
+| pointer arithmetic / raw address forms (recovered, section 11) | `unit_addr_own_array_arith`, `unit_rhs_compound_admission_refused`, `unit_rhs_reference_admission`, `unit_addr_own_array_element`, `parser_alloc_port` | native-only producers for address arithmetic and raw index of a record pointer |
 | Array in a nested body | `unit_address_array_descriptor`, `unit_array_index_shadow`, `unit_array_value_projection` | Array cell constructor in a hosted body |
 | letter/mainArgs element contract | `entry_index`, `entry_strcmp`, `unit_charpp_return`, `unit_l2_puts_library`, `entry_arg_len` | Array-of-Array element contract (K06/K07) |
 | reception into a model | `unit_receive_letter_model`, `unit_send_ref_method`, `unit_send_ref_driver_tap` | admission producer for a received letter |
@@ -338,3 +341,161 @@ therefore committed to `main` as preservation of work in progress.
 The checkpoint is not a release, not a green kernel, not a ticket closure and
 not self-build readiness. Both critical tickets and stages 8/8a remain OPEN.
 Later slices are committed separately with their own evidence.
+
+<a id="machine-operators"></a>
+## 11. Native-only machine operators: address arithmetic, raw element address, foreign record index
+
+**Norm.** `@array[i] + n` and `@array[i] - n` are the element's address, C
+address arithmetic ([D-24](d24-addr.md): in a method this is C pointer
+arithmetic, not a walker node). L2 operations that need a machine address or
+raw memory are absent from an interpreted body
+([levels](../docs/LMX_semantics.en.md)); the retained graph still keeps every
+written occurrence in source order.
+
+**Implementation** (`dev/l2src_sandbox/l2trans.lm1`, symbols):
+
+- `l2_rw_machine_operator`: a written machine operator is one
+  `SOURCE_MACHINE` node named by the operator's own spelling, holding exactly
+  its operand places in source order. It marks the body native-only.
+- `l2_rw_machine_offset` (from `l2_rw_bin`): `+` or `-` whose result is a
+  reference is retained with both operands, each built by its own static
+  type. The former refusal `arithmetic on a reference` is gone for `+`/`-`;
+  `* / %` on a reference stays refused.
+- `l2_rw_address_rest`, `l2_rw_span`, `l2_rw_span_ty`: `@ p[i]`, the address
+  of a raw element, is the address operator over the existing machine index;
+  its type is a pointer to the element type.
+- `l2_foreign_record_pointer`, `l2_raw_index_text`, `l2_raw_index_span`: the
+  element of a pointer to a foreign by-value record (`structure[0]` under
+  `c.sizeof`) is a raw index whose element is C storage without an L2 value
+  type. A Structure reference and a void pointer are not such storage, and
+  nothing indexes the element further.
+
+No check was loosened: `@: int q 1 + 2` and `q: 1 + @ buf[0]` are still
+refused by the native check, and
+`unit_addr_own_array_arithmetic_refused` keeps its refusal.
+
+**Verification.**
+
+- `fable_ptr_01` (focused) GREEN 39/39: `unit_addr_own_array_arith`,
+  `unit_addr_own_array_element`, `unit_rhs_reference_admission` and
+  `unit_rhs_compound_admission_refused` translate and run; the neighbouring
+  address and receiving rows are unchanged.
+- New witness `graph_shape_machine_address` (288 checks, both methods really
+  store through the computed addresses) and its twin under the method-walk
+  knob. Path oracle: the `@` operator over the `[` index with the formal and
+  the literal; the `+` operator over the element address and the count; both
+  native words. Three shape mutants null one operand each.
+- Translator mutant (`fable_fbv_mut_01`): with the native-only mark removed
+  from `l2_rw_machine_operator`, `graph_shape_walk_machine_address` goes red
+  (`tested method l2_m1 has no native implementation word`). The live file was
+  restored and its hash re-verified.
+
+**Gap seen, not changed.** A pointer difference `q - r` is typed as a
+reference by the shared expression typing and is refused where a number is
+asked. No row needs it; it belongs to the K08 arithmetic typing.
+
+<a id="foreign-value"></a>
+## 12. Foreign by-value inputs and results
+
+**Norm.** A foreign by-value actual or result uses the exact declared C type
+([core map](../CORE_L2_L3_v2.md), section 8.2); the graph has no cell type
+for it. A method's own declared part already represents such an input as one
+named empty place.
+
+**Defect found — the graph producer failed without a diagnostic.** A read of a
+formal of foreign by-value type built an `ARG` whose witness asks for a typed
+cell. The count pass accepted it; the fill pass returned an error from
+`l2_rw_witness` with nothing said (`internal: a refusal said nothing`). It had
+been hidden behind earlier located refusals in `parser_alloc_port`.
+
+**Implementation.**
+
+- `l2_foreign_value_ft`: a foreign C type held by value, by its formal code.
+- `l2_rw_input_witness`: the witness place of such an input stays empty, as
+  its place in the method's declared part does, and the body is native-only.
+- `l2_rw_call`: a call whose result is a foreign value (trampoline class 6) or
+  that has a foreign by-value input is retained whole, with every written
+  actual at its place, and marks the caller native-only. The refusals
+  `a call whose result is not a number` and `a call with an input that is not
+  a number` remain for anything else.
+- Driver: a new path fact `nullpath` (the holder exists and the named place
+  holds no object).
+
+**Verification.**
+
+- `fable_fbv_01` (focused): `unit_uniform_foreign_results`,
+  `unit_uniform_aggregate`, `parser_alloc_port` and `parser_trailer_role` pass.
+- New witness `graph_shape_foreign_value` (363 checks) and its twin under the
+  method-walk knob: the empty declared input place, the empty `ARG` witness,
+  `kind(41)` as a `CALL` of kind's own occurrence with its literal, the nested
+  `read(echo(make()))` with each callee identity, five native words. Four
+  shape mutants; the witness mutant moves the input ordinal into the witness
+  place and carries only the `nullpath` fact, so that fact is shown to fail.
+- Translator mutant (`fable_fbv_mut_02`): with the three native-only marks of
+  the by-value transport removed, `graph_shape_walk_foreign_value` goes red
+  (`tested method l2_m3 has no native implementation word`): `probe`, whose
+  only machine operation is the by-value call, would have been handed to the
+  interpreter. A first version of the fixture did not reach this witness (its
+  caller was native-only for another reason); the method was added for it.
+- The first version of the fixture also met the known OPEN defect
+  [NONTHROW-AGGREGATE-STOP-ABI](defects.md#nonthrow-aggregate-stop-abi)
+  (`return 0` in a C function returning an aggregate). The fixture declares
+  `throws:` on the aggregate method, as `unit_uniform_aggregate` does; the
+  defect is not repaired here.
+
+<a id="head-role"></a>
+## 13. Head role of a name that only a caller supplies (Codex, FABLE-CODEX-20261003-04)
+
+Five red required positives share one implementation cause:
+`l2_collect_asgn_binds` runs before any dynamic input exists, so
+`l2_local_ns_shape` makes `h: tail` a local named Structure definition and
+the later read finds that local row. I proposed that a caller's same-named
+binding makes the head known. Codex rejected it: that conclusion was
+withdrawn on 2026-10-03 ([free names](free-names.md)), and
+`unit_free_write` / `unit_free_write_literal_refused` keep the opposite
+(`k: 1` stays a definition although the caller has `int: k 5`). The split:
+
+| Row | Status |
+| --- | --- |
+| `unit_own_dirty_rhs` | Decidable: an executable free read of `quote` precedes both writes and is an independent input-use fact. The early definition row must not suppress it. Needs the deferred head-role decision described in [the pointer-fix ledger](critical-graph-pointer-fix-20261002.md). |
+| `unit_arg_addr_dyn_types` | First audit its `setnull(@: dp)` spelling against the current unary `@` / `@:` receiver contract; the pointer ticket is OPEN. |
+| `unit_colon_hidden_update`, `unit_free_conv`, `unit_walk_free_conv` | No independent preceding use. Both readings are self-consistent; the tie-break is [asked of the author](../LMX_blog/q/current/head-role-hidden-input-fixed-point.md). Expectations stay as they are, red. |
+
+A body reached through a callable formal or a path follows the same rule as a
+directly called one. Once a name is established as a required input, each call
+supplies it by the ordinary priority, and only absence from every eligible
+source is a missing input.
+
+<a id="full-05"></a>
+## 14. Full gate after sections 11 and 12
+
+`fable_full_05` completes **RED 62/1412** on translator SHA256
+`51C6CFF48C86F262D8023E151AE477769E0F150B5E9CD5D90943935E4061EB69`
+(staged Git blob `bbc7737b847cd2a8e53e6fddc5eff6ba032463ec`), driver
+`44A72173A401DB4B68F16BA3300D42422FD7A16977396CAFE9CC4AE200140E0C`, harness
+`4CD9EEA8EF9CE9F3668DC680CE9E686486461B8B2D616C3BCA052A0D46C296C7`.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_04` (RED 70/1401) | 8 | 0 | 11, all OK | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 64 | 0 | 17, all OK | 0 |
+
+The eight recovered rows are `parser_alloc_port`, `parser_trailer_role`,
+`unit_addr_own_array_arith`, `unit_addr_own_array_element`,
+`unit_rhs_compound_admission_refused`, `unit_rhs_reference_admission`,
+`unit_uniform_aggregate` and `unit_uniform_foreign_results`. No retained
+failure changed its message. The kernel and L3 gates were not rerun: no kernel
+source changed, the driver is harness code, and the kernel gate does not build
+the translator. A red generated harness is not a release; 62 rows remain.
+
+Other triage recorded while the gate ran, no code change:
+
+- `unit_indent_stack_field_index`: the native composite typing reads an
+  unknown foreign raw index as an untyped literal and then asks for an
+  `int` to `size_t` converter ([defect](defects.md#native-raw-index-literal-type)).
+- `entry_array_leading_zero`: `08` is not a C99 integer literal; the earlier
+  ledger already records the row's expectation as invalid. It needs a located
+  literal diagnostic and a migrated expectation, not the old index shortcut.
+- `unit_s7_ret_field`, `unit_s7_ret_deep`, `unit_s7_arg_deep` still carry the
+  legacy `Rich: p` setup inside a definition and need the same deliberate
+  migration as section 2 before their producer is judged.

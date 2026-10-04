@@ -1564,6 +1564,10 @@ prototype:
     fn: l2_rw_machine_index (const: @(L2RawIndex indexed); @: LmP0Field assigned; int: assigned_count; int: parent; @: int out) int
     fn: l2_rw_machine_local (const: @(LmP0Text text); @: int out) int
     fn: l2_rw_foreign_path (const: @(LmP0Text text)) int
+    fn: l2_rw_machine_operator (const: @(LmP0Text op); int: operands; int: parent; @: int out; @: int body) int
+    fn: l2_rw_machine_offset (@: L2ValueSpan tok; int: lo; int: best; int: hi; int: parent; @: int out) int
+    fn: l2_rw_address_rest (@: L2ValueSpan span; @: L2ValueSpan rest) int
+    fn: l2_foreign_record_pointer (int: ty) int
     fn: l2_emit_index_base (const: @(LmP0Text t); int: mi; const: @(char ind); @: char dest) int
     fn: l2_index_token (const: @(LmP0Text t); int: mi; const: @(char ind); @: char dest) int
     fn: l2_array_literal (int: oi; const: @(LmP0Text t); size_t: begin; size_t: stop; @: size_t out_index) int
@@ -13052,9 +13056,17 @@ fn: l2_raw_index_text (const: @(LmP0Text text); int: mi; @: L2RawIndex out) int
             return: 2
         out\groups: out\groups + 1
         if: out\foreign = 0
-            ty: l2_indirect_type(ty)
+            # The element of a pointer to a foreign by-value record is C
+            # storage without an L2 value type; nothing indexes it further.
             if: ty < 0
                 return: 3
+            if: l2_foreign_record_pointer(ty) != 0
+                ty: 0 - 1
+            else:
+                ty: l2_indirect_type(ty)
+                if: ty < 0
+                    return: 3
+                ---
             ---
         ---
     ---
@@ -13062,6 +13074,22 @@ fn: l2_raw_index_text (const: @(LmP0Text text); int: mi; @: L2RawIndex out) int
     if: out\foreign != 0
         out\type: -1
 return: 0
+
+# The pointee of `ty` is a foreign C record held by value: one indirection
+# reaches C storage that has no L2 value type. A Structure reference and a
+# void pointer are not such storage.
+fn: l2_foreign_record_pointer (int: ty) int
+    LmP0Text: word_value
+    @: LmP0Text word @ word_value
+    int: depth
+    int: qualified
+    int: result
+    int: raw l2_formal_raw(ty)
+    if: raw < 100 || l2_type_parts(raw, word, @ depth, @ qualified) != 0 || depth != 1
+        return: 0
+    if: l2_text_eq(word, "Lmx") != 0 || l2_ret_type_word(word, 0, 0, @ result) = 0
+        return: 0
+return: 1
 
 # Split read operands keep their actual P0 base and index nodes. This view
 # does not join source text or allocate a replacement parser tree.
@@ -13110,9 +13138,15 @@ fn: l2_raw_index_span (@: L2ValueSpan span; int: mi; @: L2RawIndex out) int
         used: used + group
         out\groups: out\groups + 1
         if: out\foreign = 0
-            ty: l2_indirect_type(ty)
             if: ty < 0
                 return: 3
+            if: l2_foreign_record_pointer(ty) != 0
+                ty: 0 - 1
+            else:
+                ty: l2_indirect_type(ty)
+                if: ty < 0
+                    return: 3
+                ---
             ---
         ---
     ---
@@ -28050,6 +28084,14 @@ fn: l2_tramp_class (int: mi) int
         return: 1
 return: 0
 
+# A foreign C type held by value (depth 0), by its formal code: its storage is
+# native C storage of that exact type, and the graph has no cell type for it.
+fn: l2_foreign_value_ft (int: ft) int
+    int: fi ft - 100
+    if: ft < 100 || fi >= l2_foreign_n
+        return: 0
+return: (cast: (int) (l2_foreign_depth[fi] = 0))
+
 # The typed store of a scalar result class (l2_tramp_class 1-4).
 fn: l2_tramp_store (int: cls) const: @: char
     if: cls = 2
@@ -28302,6 +28344,12 @@ fn: l2_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", parent, slot, (cast: (unsigned) (l2_occ_slot(callable)))) < 0))
     if: l2_rw_emit != 0 && model >= 0 && l2_input_is_descriptor(mi, j) != 0
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", parent, slot, model) < 0))
+    # A foreign by-value input is native C storage with no graph cell. Its
+    # witness place stays empty, as its place in the method's own declared
+    # part does, and the body that transports it is native-only.
+    if: callable < 0 && model < 0 && l2_foreign_value_ft(l2_input_ft(mi, j)) != 0
+        l2_rw_machine: 1
+        return: 0
 return: l2_rw_witness(parent, slot, l2_own_ty_of_param(l2_input_ft(mi, j)), l2_input_is_descriptor(mi, j))
 
 # Retain a parser-established source distinction on the existing operation.
@@ -29136,6 +29184,15 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
         if: raw_index.type < 0
             return: -1
         ty: raw_index.type
+        return: l2_own_ty_of_param(ty)
+    # The address of a raw element is a pointer to that element's type.
+    if: l2_rw_address_rest(span, @ operand) = 0 && l2_raw_index_span(@ operand, l2_rw_mi, @ raw_index) = 0
+        if: raw_index.type < 0
+            return: -1
+        ty: raw_index.type
+        ty: l2_address_type(ty)
+        if: ty < 0
+            return: -1
         return: l2_own_ty_of_param(ty)
     if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
         ty: address.type
@@ -31850,15 +31907,25 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
     # (l2_rw_dyn_arg).  No third graph.
     # A result is an int, a size_t, an unsigned or a ulong (-178): the walk hands a trampoline of a
     # wider type a destination of that type, by the class of the callee's return cell (rtype).
+    # A foreign by-value result (class 6) is delivered into exact C storage
+    # and has no graph cell: the call is retained whole, native-only.
     if: l2_tramp_class(idx) > 4 && l2_mad_on(idx) = 0 && l2_own_is_pointer(l2_ret_cell_ty(idx)) = 0
-        return: l2_rw_refuse(node, "a call whose result is not a number")
+        if: l2_tramp_class(idx) != 6
+            return: l2_rw_refuse(node, "a call whose result is not a number")
+        l2_rw_machine: 1
+    ---
     # An input is a number (its formal's type: the trampoline reads that cell type), a Structure
     # of the formal's own named type (by reference, -179), or a callable formal, which takes a
     # method's occurrence by reference.
     j: 0
     while: j < l2_m_arity[idx]
         if: l2_cf_get(idx, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_input_ft(idx, j))) = 0 && l2_own_is_pointer(l2_own_ty_of_param(l2_input_ft(idx, j))) = 0 && l2_nsty_get(idx, j) < 0
-            return: l2_rw_refuse(node, "a call with an input that is not a number")
+            # A foreign by-value input travels in exact C storage: the
+            # written actual keeps its place and the call is native-only.
+            if: l2_foreign_value_ft(l2_input_ft(idx, j)) = 0
+                return: l2_rw_refuse(node, "a call with an input that is not a number")
+            l2_rw_machine: 1
+        ---
         j: j + 1
     ---
     a: l2_next_active(args)
@@ -32624,6 +32691,14 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
         return: l2_rw_indexed(@ indexed, parent, out)
     if: l2_raw_index_span(span, l2_rw_mi, @ raw_index) = 0
         return: l2_rw_machine_index(@ raw_index, 0, 0, parent, out)
+    # `@ p[i]`: the address of a raw element. The written address operator
+    # keeps the machine index as its one operand; nothing is read.
+    if: l2_rw_address_rest(span, @ operand) = 0 && l2_raw_index_span(@ operand, l2_rw_mi, @ raw_index) = 0
+        if: l2_rw_machine_operator(l2_next_active(span\first)\value\as\atom, 1, parent, out, @ own) != 0
+            return: 1
+        if: l2_rw_machine_index(@ raw_index, 0, 0, own, @ status) != 0
+            return: 1
+        return: l2_rw_put(own, 0, status)
     if: l2_address_operand(span\first, span\count, l2_rw_mi, @ address) = 0
         return: l2_rw_address(@ address, parent, out)
     if: span\count = 1
@@ -32694,8 +32769,9 @@ fn: l2_rw_bin (@: L2ValueSpan tok; int: lo; int: hi; int: ty; int: parent; @: in
     if: bestp != 3 || l2_own_is_pointer(left_ty) = 0 || l2_own_is_pointer(right_ty) = 0
         left_ty: ot
         right_ty: ot
+    # `+` or `-` whose result is a reference is C address arithmetic.
     if: bestp = 5 && ty >= 1000
-        return: l2_rw_refuse(l2_span_node(tok, best), "arithmetic on a reference")
+        return: l2_rw_machine_offset(tok, lo, best, hi, parent, out)
     op: l2_span_node(tok, best)\as\atom
     if: bestp = 1 || bestp = 2
         return: l2_rw_sc(tok, lo, best, hi, bestp, parent, out)
@@ -33633,6 +33709,55 @@ fn: l2_rw_machine_word (const: @(LmP0Text text); int: parent; @: int out) int
     if: l2_ident(text) != 0 && l2_define_name(text) = 0 && l2_is_known(text) = 0
         return: l2_rw_refuse(0, "an unresolved native index operand")
 return: l2_rw_source_atom(text, parent, out)
+
+# A written machine operator with no interpreted implementation: the node is
+# named by the operator and holds exactly `operands` operand places, which
+# the caller fills in source order. The body that contains it is native-only.
+fn: l2_rw_machine_operator (const: @(LmP0Text op); int: operands; int: parent; @: int out; @: int body) int
+    l2_rw_machine: 1
+    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, op) != 0 || l2_rw_plain(\out, operands, body) != 0
+        return: 1
+return: l2_rw_put(\out, 1, \body)
+
+# 0 when the span is the address operator followed by one operand run; `rest`
+# is that run. Nothing is resolved or built.
+fn: l2_rw_address_rest (@: L2ValueSpan span; @: L2ValueSpan rest) int
+    @: LmP0Field f l2_next_active(span\first)
+    if: span\count < 2 || f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_text_eq(f\value\as\atom, "@") = 0
+        return: 1
+    rest\first: l2_next_active(f\next)
+    rest\count: span\count - 1
+    if: rest\first = 0
+        return: 1
+    rest\node: rest\first\value
+return: 0
+
+# Arithmetic whose result is a reference, `p + n` or `p - n`, is C address
+# arithmetic: a machine operation the interpreter does not implement. The
+# written operator stays at its place with both operands in source order,
+# each built by its own static type. Nothing is scaled or folded here.
+fn: l2_rw_machine_offset (@: L2ValueSpan tok; int: lo; int: best; int: hi; int: parent; @: int out) int
+    int: body
+    int: child
+    int: left_ty l2_rw_tyof(tok, lo, best - 1)
+    int: right_ty l2_rw_tyof(tok, best + 1, hi)
+    if: left_ty = 0 - 3 || right_ty = 0 - 3
+        return: l2_rw_refuse(l2_span_node(tok, best), "mixed numeric types (a conversion)")
+    if: left_ty = 0 - 1
+        left_ty: 0
+    if: left_ty = 0 - 2
+        left_ty: 3
+    if: right_ty = 0 - 1
+        right_ty: 0
+    if: right_ty = 0 - 2
+        right_ty: 3
+    if: l2_rw_machine_operator(l2_span_node(tok, best)\as\atom, 2, parent, out, @ body) != 0
+        return: 1
+    if: l2_rw_bin(tok, lo, best - 1, left_ty, body, @ child) != 0 || l2_rw_put(body, 0, child) != 0
+        return: 1
+    if: l2_rw_bin(tok, best + 1, hi, right_ty, body, @ child) != 0
+        return: 1
+return: l2_rw_put(body, 1, child)
 
 # The declaration leaf of an activation-local machine value named `text`, once
 # its declaration has been produced in this method body: 0 and *out. 1 when

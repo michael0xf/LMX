@@ -1,0 +1,22 @@
+# Address arithmetic and the address of a raw element are C machine
+# operations: the interpreter has no implementation for them. Each written
+# operator stays at its place in the retained source with its operands in
+# source order, and the methods that use them are native-only. The stores
+# through the computed addresses really reach the Array. Entry 7.
+fn: bump (@: int p) int
+    @: int q
+    q: @ p[1]
+    \q: 13
+return: p[1]
+fn: step () int
+    []: int buf 3
+    @: int q
+    q: @ buf[0] + 2
+    \q: 9
+    if: buf[2] != 9
+        return: 81
+    if: bump(@ buf[0]) != 13 || buf[1] != 13
+        return: 82
+return: 7
+sendMessage: exit(exit_code: step(); stdout: ""; stderr: "")
+return

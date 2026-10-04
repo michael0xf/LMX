@@ -781,7 +781,7 @@ prototype:
     fn: l2_bind_node (const: @(LmP0Node n); int: mi; const: @(char path)) int
     fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) int
     fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
-    fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
+    fn: l2_bind_call (const: @(LmP0Node node); int: idx; int: held; const: @(char path)) int
     fn: l2_bound_find (const: @(LmP0Structure body)) int
     fn: l2_bound_rank (int: bi; int: k) int
     fn: l2_bound_formal (int: bi; int: rank) int
@@ -794,7 +794,7 @@ prototype:
     fn: l2_bound_free () int
     fn: l2_actual_field (@: LmP0Field first; int: k) @: LmP0Field
     fn: l2_rw_put_actual (int: call; int: site; int: place; int: arg) int
-    fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
+    fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0Node
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
     fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
@@ -1724,6 +1724,8 @@ prototype:
     fn: l2_mad_held (const: @(LmP0Text name)) int
     fn: l2_mad_held_arity (int: oi) int
     fn: l2_mad_held_arg_ty (int: oi; int: k) int
+    fn: l2_mad_held_arg_name (int: oi; int: k) @: LmP0Text
+    fn: l2_mad_held_formals (int: oi) int
     fn: l2_mad_held_ret_ty (int: oi) int
     fn: l2_mad_need_held (int: oi) int
     fn: l2_emit_mad_call_protos () int
@@ -8336,6 +8338,7 @@ return: status
 fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) int
     int: idx
     int: fi 0
+    int: held
     int: status 0
     @: L2HeadExpression expression
     if: n = 0 || n\as = 0
@@ -8348,8 +8351,17 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
         return: 0
     if: n\as\frame\head != 0 && n\as\frame\body != 0
         idx: l2_call_head_method(mi, n\as\frame\head, @ fi)
-        if: idx >= 0 && idx != l2_e && l2_bind_call(n, idx, path) != 0
+        if: idx >= 0 && idx != l2_e && l2_bind_call(n, idx, 0 - 1, path) != 0
             return: 1
+        # A held callable is called by the formals of the header of its declared
+        # callable type, where the check and both emissions read it as held
+        # (l2_mad_held).
+        if: idx < 0
+            held: l2_mad_held(n\as\frame\head)
+            if: held >= 0 && l2_bind_call(n, 0 - 1, held, path) != 0
+                return: 1
+            ---
+        ---
     ---
     # An indexed head, `row[i]: v`, is an expression of its own, parsed apart from
     # the body and kept by its statement (l2_head_expression): every reader of the
@@ -8653,11 +8665,15 @@ fn: l2_actual_field (@: LmP0Field first; int: k) @: LmP0Field
     ---
 return: a
 
-# Call node of callee idx, its actuals bound (l2_bind_actuals); a call with a named one gets a record with its
-# projection in its formals' order, and its body is left as written.  One slot per formal of the callee
-# (l2_m_arity): the language puts no bound on a callable's formals (REVIEW 394f6a9, P62).  0, or 1 said.
-fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
+# Call node of callee idx, or of held callable `held` when idx is -1: its actuals bound (l2_bind_actuals)
+# to the callee's formals -- a method's own, or those of the header of the held callable's declared type.
+# A call with a named one gets a record with its projection in its formals' order, and its body is left
+# as written.  One slot per formal of the callee: the language puts no bound on a callable's formals
+# (REVIEW 394f6a9, P62).  A held callable whose header cannot be read is left to the check, which says
+# so.  0, or 1 said.
+fn: l2_bind_call (const: @(LmP0Node node); int: idx; int: held; const: @(char path)) int
     int: nf
+    int: k 0
     int: rc
     size_t: m
     size_t: psz
@@ -8666,7 +8682,13 @@ fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
     @@: LmP0Field first 0
     @: int span 0
     @: int cnt 0
-    nf: l2_m_arity[idx]
+    if: idx >= 0
+        nf: l2_m_arity[idx]
+    else:
+        nf: l2_mad_held_formals(held)
+        if: nf < 0
+            return: 0
+    ---
     m: (cast: (size_t) nf) + 1U
     psz: c.sizeof(@: char)
     if: nf < 0 || l2_mul_ok(m, psz) = 0 || l2_mul_ok(m, c.sizeof(c.int)) = 0
@@ -8689,7 +8711,14 @@ fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
         memset((cast: (@: void) first), 0, m * psz)
         memset((cast: (@: void) span), 0, m * c.sizeof(c.int))
         memset((cast: (@: void) cnt), 0, m * c.sizeof(c.int))
-        rc: l2_bind_call_in(node, idx, path, nf, at, span, names, first, cnt)
+        while: k < nf
+            if: idx >= 0
+                names[k]: l2_fn(idx, k)
+            else:
+                names[k]: l2_mad_held_arg_name(held, k)
+            k: k + 1
+        ---
+        rc: l2_bind_call_in(node, path, nf, at, span, names, first, cnt)
     else:
         rc: l2_alloc_or(path, node, "out of memory")
     if: at != 0
@@ -8704,8 +8733,8 @@ fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
         l2_xfree((cast: (@: void) cnt))
 return: rc
 
-# The binding of l2_bind_call over its nf per-formal slots.  0, or 1 said.
-fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
+# The binding of l2_bind_call over its nf per-formal slots, the formals' names given.  0, or 1 said.
+fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     @: LmP0Structure body
     []: char callee 160
     @: LmP0Field f
@@ -8723,10 +8752,6 @@ fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int
     @: int rank 0
     @@: LmP0Node wrap 0
     body: node\as\frame\body
-    while: k < nf
-        names[k]: l2_fn(idx, k)
-        k: k + 1
-    ---
     c.snprintf(callee, 160U, "%.*s", (cast: (int) node\as\frame\head\length), node\as\frame\head\data)
     if: l2_bind_actuals(body\first_field, nf, names, callee, at, span, path, node) != 0
         return: 1
@@ -24012,13 +24037,13 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && l2_mad_held(node\as\frame\head) >= 0
         # An empty argument body contains no expressions to check; signature
         # admission still applies at the same held-call construction route.
-        if: node\as\frame\body != 0 && l2_count_active(node\as\frame\body) > 0 && l2_check_fields(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, path, node) != 0
+        if: node\as\frame\body != 0 && l2_call_actual_fields(node\as\frame\body) > 0 && l2_check_fields(l2_call_actuals(node\as\frame\body), l2_call_actual_fields(node\as\frame\body), mi, path, node) != 0
             return: 1
         # The call passes what the held callable's header declares, no more and no less.
         if: l2_mad_held_arity(l2_mad_held(node\as\frame\head)) >= 0
             idx: 0
             if: node\as\frame\body != 0
-                idx: l2_actual_count(node\as\frame\body\first_field)
+                idx: l2_actual_count(l2_call_actuals(node\as\frame\body))
             if: idx != l2_mad_held_arity(l2_mad_held(node\as\frame\head))
                 return: l2_error(path, node, "a held callable takes the arguments of its header")
         ---
@@ -38099,6 +38124,36 @@ return: own
 
 # How many formals that header declares, zero included; -1 when oi holds no such callable or the
 # header is not numbers to a number (item 739: each formal and the result a number).
+# How many formals the header of held callable oi declares, of any type, or -1 with no header.
+fn: l2_mad_held_formals (int: oi) int
+    @: LmP0Node formals 0
+    @: LmP0Node result 0
+    if: l2_mad_held_header(oi, @ formals, @ result) != 0
+        return: -1
+    if: formals\as = 0 || formals\as\structure = 0
+        return: 0
+return: l2_count_active(formals\as\structure)
+
+# The written name of formal k of the header of held callable oi, or 0.
+fn: l2_mad_held_arg_name (int: oi; int: k) @: LmP0Text
+    @: LmP0Node formals 0
+    @: LmP0Node result 0
+    @: LmP0Field g
+    @: L2Declaration declaration
+    if: k < 0 || l2_mad_held_header(oi, @ formals, @ result) != 0 || formals\as = 0 || formals\as\structure = 0
+        return: 0
+    g: l2_next_active(formals\as\structure\first_field)
+    while: g != 0 && k > 0
+        g: l2_next_active(g\next)
+        k: k - 1
+    ---
+    if: g = 0 || g\value = 0
+        return: 0
+    declaration: l2_declaration(g\value)
+    if: declaration = 0
+        return: 0
+return: declaration\name
+
 fn: l2_mad_held_arity (int: oi) int
     @: LmP0Node formals 0
     @: LmP0Node result 0
@@ -38403,6 +38458,8 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     int: bty
     int: ns
     int: oty
+    int: bound 0 - 1
+    int: written 0
     @: LmP0Field f 0
     []: char hv 1024
     []: char av 1024
@@ -38413,8 +38470,8 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     if: n < 0 || rty < 0
         return: l2_error(l2_src, node, "a held callable whose header is not numbers to a number")
     if: node\as\frame\body != 0
-        f: l2_next_active(node\as\frame\body\first_field)
-        given: l2_actual_count(node\as\frame\body\first_field)
+        given: l2_actual_count(l2_call_actuals(node\as\frame\body))
+        bound: l2_bound_find(node\as\frame\body)
     ---
     if: given != n
         return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
@@ -38436,8 +38493,15 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     if: c.fprintf(l2_out, "%s[]: @(void) l2_hr%d %d\n%s@: void l2_hcode%d (cast: (@: void) %s)\n%sl2_hr%d[0]: (cast: (@: void) (@ l2_hcode%d))\n%s@: void l2_ho%d 0\n", ind, t, 1 + n + nh, ind, t, hv, ind, t, t, ind, t) < 0
         return: 1
     # The declared arguments, each evaluated once in the order they are written, each a value of
-    # its formal's type.
-    while: j < n
+    # its formal's type, each into its formal's place: a call bound with named actuals keeps its
+    # written order in its record (l2_bound_formal).
+    while: written < n
+        j: l2_bound_formal(bound, written)
+        f: 0
+        if: j >= 0 && j < n
+            f: l2_actual_field(l2_call_actuals(node\as\frame\body), j)
+        if: f = 0
+            return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
         span: l2_expr_span(f)
         if: span < 1
             return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
@@ -38447,8 +38511,7 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
         c.sprintf(ref_dest, "l2_hr%d[%d]", t, 1 + j)
         if: l2_emit_call_ref(l2_ft_of_own(l2_mad_held_arg_ty(oi, j)), av, ind, ref_dest) != 0
             return: 1
-        f: l2_skip_span(f, span)
-        j: j + 1
+        written: written + 1
     ---
     # Reading 1: per hidden input of the model, this caller's own binding of its name, or nothing.
     k: 0
@@ -38678,6 +38741,8 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     int: contract
     int: inputs
     int: rty
+    int: bound 0 - 1
+    int: site
     if: node = 0 || node\as = 0 || node\as\frame = 0
         return: l2_rw_refuse(node, "this call's inputs")
     # The primitive contract carries the actual formal and result widths. The
@@ -38687,8 +38752,9 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     if: n < 0 || rty < 0
         return: l2_rw_refuse(node, "a held callable whose header is not numbers to a number")
     if: node\as\frame\body != 0
-        f: l2_next_active(node\as\frame\body\first_field)
-        given: l2_actual_count(node\as\frame\body\first_field)
+        f: l2_next_active(l2_call_actuals(node\as\frame\body))
+        given: l2_actual_count(l2_call_actuals(node\as\frame\body))
+        bound: l2_bound_find(node\as\frame\body)
     ---
     if: given != n
         return: l2_rw_refuse(node, "this call's inputs")
@@ -38710,12 +38776,22 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
         if: l2_rw_own(\out, oi, @ at) != 0 || l2_rw_put(\out, 3, at) != 0
             return: 1
     ---
-    # The declared arguments in the order they are written, each of its formal's type.
+    # The declared arguments, each of its formal's type, at the places they are written.  A
+    # named one stands there under a NAMED operand that carries its formal's coordinate among
+    # the primitive's inputs -- the held callable is input 0, formal j is input 1 + j -- and
+    # the written name; the walk evaluates the operands in that order (l2_rw_call does the same).
     while: j < n
         span: l2_expr_span(f)
         if: span < 1
             return: l2_rw_refuse(node, "this call's inputs")
-        if: l2_rw_texpr(f, span, l2_mad_held_arg_ty(oi, j), \out, @ arg) != 0 || l2_rw_put(\out, 4 + j, arg) != 0
+        site: \out
+        if: l2_bound_wrap(bound, j) != 0
+            if: l2_rw_frame(\out, "LMX_WALK_OP_NAMED", 3, @ site) != 0 || l2_rw_source_name(site, l2_mad_held_arg_name(oi, j)) != 0
+                return: 1
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", site, 1 + j) < 0
+                return: 1
+            ---
+        if: l2_rw_texpr(f, span, l2_mad_held_arg_ty(oi, j), site, @ arg) != 0 || l2_rw_put_actual(\out, site, 4 + l2_bound_rank(bound, j), arg) != 0
             return: 1
         f: l2_skip_span(f, span)
         j: j + 1

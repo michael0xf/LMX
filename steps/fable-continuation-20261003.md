@@ -2617,3 +2617,191 @@ files and every staged copy (`tie.py`).
 **Next.** The held call's named binding through the header of its declared
 callable type, with the statement call of a callable formal in the same
 resolution work or right after it; then the receiving-use remainder.
+
+<a id="held-named-binding"></a>
+## 46. A held callable's call is bound by the header of its declared type (Codex, FABLE-CODEX-20261004-07)
+
+**Codex's reply to the checkpoint of section 45.**
+
+- The indexed-head slice is accepted as a bounded checkpoint. The index over
+  the records is compiler-owned acceleration of the existing records: no
+  runtime registry, no atom metadata, no permission. 64 is a first capacity,
+  not a cap of the language. Full address equality, probing, re-placing on
+  growth and release with the translation stay.
+- **A cached shape of a Frame that names an actual** may remain while no
+  semantic reader consults it, it owns no field or value of the language and
+  it is released at its owner's boundary: no lookup of wrappers on every
+  read of a declaration. But "the cache is never read again" does not undo a
+  side effect: the provisional readings must not have published phantom own
+  rows, hidden inputs, capture or merge state or throw channels. That is
+  checked below.
+- **The reading path** is the declaration reader's own nesting, not a rule
+  that an outer Structure holding a call becomes a call. A named Structure
+  keeps a nested application in its body; an enclosing receiver follows its
+  own contract.
+- **The two refusals of an address statement** need not share their words.
+  The transparency of the cache is a probe of the implementation, not a
+  requirement on the wording or on a record for a positional call. But the
+  absence of a record is no evidence that a head is not callable: the call
+  role comes from the shared resolved binding, category and contract for
+  every form, and the statement classifier is to use it.
+- **The held call.** The declared result header is the static description
+  of the returned callable: its names resolve the names and coordinates of
+  the call. It is not proof that every actual has the same complete formals,
+  hidden inputs, defaults, exits or native body: the selected actual callable
+  supplies its own execution contract. No truncation of a signature, no
+  invented empty list of hidden inputs, no jump to a prototype's native
+  body. Valid wider cases that are not supported stay OPEN positives.
+- **The uniform request for a head expression** is kept. A saving, if wanted,
+  belongs at the common boundary under the grammar, not in a rule of the
+  binding about `[`.
+
+### What the provisional readings published
+
+A diagnostic variant asks, when the binding pass ends and again after the
+assignment binds are collected under the established roles, of every own
+row, every named Structure with its statement, and every method: is its
+declaring node the Frame of a bound call, or a Frame that names an actual?
+On the 1541 translations recorded by `fable_full_21` it says
+nothing. Its control plants the first naming Frame as the declaring node of
+own row 0 and reports on 53 rows.
+
+The passes that run before the binding are the collection of each method
+with its own rows and formals, the local named Structures, the assignment
+binds and the references of named Structures; their products are the own
+rows, the named Structures and the methods asked above. The scans that make
+hidden inputs, merge results and throw channels (`l2_dyn_local`,
+`l2_merge_scan`, `l2_body_throws`) run after the binding and read a call's
+actuals.
+
+The neighbour of the reading path is `unit_named_actual_structure_body`: a
+named Structure whose body is one call with named actuals runs that call
+each time it is executed, and one with a second statement beside the call
+does too. It ran before the slice of section 45 and runs after it.
+
+### The binding
+
+A held callable, `h2: make2 100`, is called by the formals of the header of
+its declared type: `make2` declares its result as `fn: (int: x; int: y) int`,
+and `x` and `y` are the names of a call of `h2`. They are not `make2`'s own
+input `n`, and they are not the names of the definition that `make2`
+returns: where the header says `p` and `q` and the returned definition says
+`x` and `y`, the call binds by `p` and `q`.
+
+- `l2_bind_node_content`: a Frame whose head is no method and is a held
+  callable (`l2_mad_held`, the test the check and both emissions use) is
+  bound by `l2_bind_call` with the header's formals
+  (`l2_mad_held_formals`, `l2_mad_held_arg_name`). The binding itself is the
+  one a method's call gets; `l2_bind_call_in` takes the names and no longer
+  asks which callee they come from.
+- The check reads the actuals of the held call through `l2_call_actuals`.
+- Native code (`l2_prep_held_call`) evaluates the actuals once, in written
+  order, each into its formal's place (`l2_bound_formal`).
+- The retained `PRIM_PUB` (`l2_rw_mad_call`) keeps each operand at its
+  written place; a named one stands under `NAMED` with its written name and
+  its coordinate among the primitive's inputs, where the callable is input 0
+  and formal j is input 1 + j. The kernel is unchanged: its PRIM reads
+  operands through the reader a CALL uses.
+
+The header is used for names and coordinates only. The call still runs
+through the held value: the callable in the holder, its hidden inputs from
+the model, the contract of the primitive. The limits of that route are the
+ones it had: the header is numbers to a number.
+
+### Diagnostics
+
+Every held call is bound now, a positional one too, so a wrong count is
+refused by the binding in the words a method's call gets:
+
+| Program | Before | Now |
+| --- | --- | --- |
+| `h2(1)`, two formals | 8:8 `a held callable takes the arguments of its header` | 8:8 `h2 has no argument y` |
+| `(p5: 1)`, two formals | 10:9 the same words | 10:9 `p5 has no argument y` |
+| `h2(1 2 3)` | at the call, the same words | at the third actual, `more arguments than h2 has formals` |
+
+The rule is the one those rows held and the place of the first two is the
+same. The needles of `unit_held_call_count_refused` and
+`unit_t6_root_held_arity_refused` follow the words, and
+`unit_held_call_more_refused` is new. The check and the emissions keep their
+own test of the count; no row reaches it now.
+
+### Replay
+
+The slice's translator against the committed one, on the 1541 recorded
+translations:
+
+- Exit, messages and generated L1 are the same on 1538 rows. The other three
+  are `unit_named_actual_held`, which now translates, and the two count
+  refusals of the table above.
+- The allocation count differs on 90 rows: 5 more for each held call the
+  binding binds, its working arrays, and 2 more for each formal of a header
+  read for its name, the declaration and its contract, made once.
+  `unit_held_call_arity` has eight held calls and five header formals, and
+  its count is higher by 50.
+- With the binding of held calls switched off and the rest of the slice in
+  place, the output and the allocation counts are the committed translator's
+  on every row: nothing else in the slice shows.
+
+
+### Rows and mutants
+
+`unit_named_actual_held` is rewritten, natively and walked: the root's call;
+both actuals named against their order; one by place and one by name;
+actuals with an effect in written order (the trace is 12); a held call as a
+named actual of a held call; payloads that read the caller's locals of the
+formals' names; and the header whose names differ from the returned
+definition's. Four refusals: a name that is no formal, a formal given by
+place and again by name, a formal left out, and the names of the returned
+definition.
+
+| Mutant | The native row | The walked row |
+| --- | --- | --- |
+| The binding does not bind a held callable's call | refused, `unknown method` | the same |
+| The header's names taken in reverse | refused, `given by position and again by name` | the same |
+| The check reads the written body | refused, `unknown method` | the same |
+| Native code evaluates the actuals in the formals' order | exit 84, the trace | green |
+| The graph puts each operand at its formal's place | green | exit 84, the trace |
+| `NAMED` carries the formal's index, not its coordinate among the inputs | green | the walk refuses the graph, `INVALID`, exit 3 |
+| The graph puts a named actual with no `NAMED` | green | exit 87, a wrong value |
+
+The last four change generated code only where that code runs: natively
+for the native call, walked for the graph.
+
+
+### OPEN, found on the way
+
+Both are older than this slice and both are the statement and head role
+decided without the binding of the site, the family of
+[CALLABLE-FORMAL-STATEMENT-STORE](defects.md#callable-formal-statement-store).
+
+- A local that is no callable and has the name of the root's held callable
+  does not hide it: with `int: h2 5` in a method, `h2(1 2)` is accepted and
+  the generated C does not compile (`l2_q2_from` undeclared). A method
+  hidden by such a local is refused as `unknown method`
+  ([defects](defects.md#held-call-ignores-site-binding)).
+- A store to a number formal or local escapes the check of its value when
+  the unit has a method of that name: `p: "text"` into `int: p` is refused
+  as `assignment value has incompatible type` in a unit with no method `p`
+  and accepted in a unit with one
+  ([defects](defects.md#store-unchecked-under-method-name)).
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_09` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_09` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_22` (full harness) | RED 32 of 1550. Against `fable_full_21` (RED 33 of 1542): FAIL→OK 1, `unit_named_actual_held`; OK→FAIL 0; added 8, all green; no row removed; no red row's message changed. The two count refusals stay green under their new needles. |
+| `build/l2_harness/fable_heldcall_01` (focused, before the gate) | 156 rows of held callables, captures and named actuals: red only seven rows of the baseline and the OPEN positive `unit_callable_formal_statement`. |
+
+The 32 red rows are the 29 of `fable_full_17` and three labelled OPEN
+positives: `unit_recv_use_nested_dormant`, `unit_recv_use_passed_thin`,
+`unit_callable_formal_statement`. The pre-gate hashes of the translator, the
+seven fixtures and the harness equal the live files and every staged copy
+(`tie.py`). No log of the gate holds the words
+`a held callable takes the arguments of its header`.
+
+
+**Next.** The statement and head role from the binding of the site: the
+statement call of a callable formal, the store under a method's name, the
+held callable hidden by a local. Then the receiving-use remainder.

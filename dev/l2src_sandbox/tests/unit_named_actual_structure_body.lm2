@@ -1,0 +1,28 @@
+# A named Structure whose body is one statement, a call with named actuals.
+# The reader of declarations passes through a Frame that holds a single Frame,
+# and stops at a call; that makes the call no declaration and leaves the
+# Structure what it is: a definition whose body runs the call. Solo runs twice
+# from the root: f prints its actuals by their formals. A Structure that holds
+# one more statement beside the call (Pair) is the neighbour with two fields.
+# Entry 7.
+fn: f (int: a; int: b) int
+    c.printf: "f %d %d\n" a b
+return: a - b
+
+Solo:
+    f(b: 2; a: 9)
+return
+
+Pair:
+    int: kept 0
+    kept: f(b: 3; a: 8)
+return
+
+Solo
+Pair
+Solo
+int: ok 0
+if: Pair\kept = 5
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

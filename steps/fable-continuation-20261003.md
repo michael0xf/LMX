@@ -4093,3 +4093,62 @@ directory `build/l2src/fable_kernel_15` is no evidence of anything.
 from a nested definition. Then whole-value composition, nested admission
 and the capture closure. The store of a factory's result waits for the
 author.
+
+<a id="formal-free-names"></a>
+## 54. A call through a callable formal forms the actual's free names from the contract's list (OPEN)
+
+No gated byte changes with this section. It records a defect found while
+reading the call path for the held callable given to a callable formal
+([section 52](#result-receipt)). The defect needs no held callable.
+
+```text
+int: base 5
+int: other 9
+fn: f0 () int
+    return: base
+end: f0
+fn: g1 () int
+    return: other + 1
+end: g1
+fn: run (f0: q) int
+    return: q()
+end: run
+int: r run(g1)
+```
+
+Measured on `69d3d9a5`, natively:
+
+| Program | By the rules | The translator |
+| --- | --- | --- |
+| As written | 10: `run` has no `other`, the lexical source gives 9 | 6: `g1` received the value of `base` in the place of `other` |
+| With `int: other 40` inside `run` | 41: the caller's binding | 6 |
+| `run(f0)` with `int: base 40` inside `run` | 40 | 40 |
+| An actual with two free names, the contract with one | its value | accepted; stops at run time, `a trampoline was called outside its method's signature` |
+| An actual with no free name, the contract with one | its value | accepted; the same stop |
+| A contract with no free name, an actual with one | its value | accepted; the same stop |
+
+With the methods walked each of these is refused: `a callable result or a
+callable formal is outside the walkable subset`.
+
+What the generated code does: `run` takes the contract's free name as a
+hidden input of its own and calls the occurrence with that one cell. The
+actual is admitted by `l2_method_sig_compatible`: arity, result, throws and
+the types of the declared formals. The free names of the actual are neither
+compared nor formed.
+
+The semantics, where it defines the complete signature: "`formed` the
+inputs after the defaults of omitted formals, permitted conversions and the
+ordinary sources of free names". The ordinary sources of a free name are
+the caller's binding, then a permitted lexical source.
+So the actual's own free names are to be formed, by name, where the call is
+made.
+
+`run` is translated once and does not know its actuals. Forming each
+actual's free names by name needs a mechanism that the translator does not
+have: the question is with Codex, with these measurements
+(FABLE-CODEX-20261004-12, addendum). Until it is settled nothing in this
+area is changed. The held callable given to a callable formal is one more
+actual whose free names, the factory's captured formal, differ from the
+contract's; it waits for the same mechanism
+([defects](defects.md#callable-formal-free-names-by-contract)). Red rows for
+the first two programs come with the next gate.

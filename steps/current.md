@@ -240,6 +240,11 @@ Fable принял единственный writer/build-слот по [to_fable
 - Открыто: вызов удерживаемого callable из определения, которое метод возвращает, отвергается из
   корня и аварийно останавливается при вызове из метода
   ([HELD-CALL-FROM-NESTED-DEFINITION](defects.md#held-call-from-nested-definition)).
+- Открыто, найдено чтением пути вызова: вызов через callable-формал формирует свободные имена
+  фактического по списку контракта; принятая программа даёт неверное значение или останавливается
+  при исполнении. Механизм формирования по имени — вопрос у Codex
+  ([CALLABLE-FORMAL-FREE-NAMES-BY-CONTRACT](defects.md#callable-formal-free-names-by-contract),
+  [§54 журнала](fable-continuation-20261003.md#formal-free-names)).
 - Открыто, блокер G5: удерживаемый callable, поданный явно объявленному callable-формалу, отвергается
   (`incompatible entry signature`); по норме формал получает вхождение
   ([HELD-CALLABLE-TO-CALLABLE-FORMAL](defects.md#held-callable-to-callable-formal)).

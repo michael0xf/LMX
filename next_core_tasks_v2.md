@@ -197,6 +197,12 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   root, accepted and aborting at run time from a method. A required red
   positive
   ([defects](steps/defects.md#held-call-from-nested-definition)).
+- [ ] A call through a callable formal forms the actual's free names from
+  the contract's list: an accepted program gives a wrong value or aborts
+  when the actual's free names are not the contract's. The mechanism of
+  forming them by name is asked of Codex; the held callable given to a
+  callable formal waits for it
+  ([defects](steps/defects.md#callable-formal-free-names-by-contract)).
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

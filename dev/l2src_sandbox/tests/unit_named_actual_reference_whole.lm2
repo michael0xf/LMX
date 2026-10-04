@@ -1,0 +1,24 @@
+# The caller's typed reference v is passed whole to a formal named v. The
+# naming Frame `v: v` is not a store to v that takes v's own value: it hands
+# the whole reference to another Consumer, take, which reads v\extra. keep's
+# candidate is a Model and carries extra: 2. Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+fn: take (Model: v) int
+    return: v\extra
+end: take
+
+fn: keep () int
+    o: merge Model
+    @: Model v o
+    return: take(v: v)
+end: keep
+
+int: ok 7
+if: keep() != 2
+    ok: 80
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

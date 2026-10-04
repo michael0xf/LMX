@@ -1,0 +1,38 @@
+# A throwing call that is an actual of another call: thrower returns
+# f(boom(3 3) 0), boom throws Oops(3), and catcher's handler takes the
+# payload: 3 + 4. Natively it runs. OPEN with the methods walked: the payload
+# does not reach the handler and the run stops at "lmx: invariant: catch
+# payload". The same throw written `return: boom(3 3)` or through a local
+# reaches it. Entry 7.
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: boom (int: a; int: b) int
+    throws: Oops
+    if: a = b
+        throw: Oops(a)
+    return: a - b
+end: boom
+
+fn: thrower () int
+    throws: Oops
+    return: f(boom(3 3) 0)
+end: thrower
+
+fn: catcher () int
+    int: got 0
+    ---
+        got: thrower()
+        catch: Oops (int: v)
+            got: v + 4
+    ---
+    return: got
+end: catcher
+
+int: r0 catcher()
+int: ok 7
+if: r0 != 7
+    ok: 80
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

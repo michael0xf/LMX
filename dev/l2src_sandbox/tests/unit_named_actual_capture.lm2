@@ -1,0 +1,31 @@
+# A definition inside a method calls f with named actuals whose names are also
+# names of its host: the host's formal a and its local b. read names a and b
+# and reads the host's b; read2 passes the host's b as a value. Neither reads
+# the host's a. Entry 7.
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: make (int: a) fn: (int: x) int
+    int: b 2
+    fn: read (int: x) int
+        return: f(b: x; a: 10) + b
+    return: read
+
+fn: make2 (int: a) fn: (int: x) int
+    int: b 2
+    fn: read2 (int: x) int
+        return: f(b: b; a: x)
+    return: read2
+
+r: make 100
+int: got (r: 3)
+s: make2 100
+int: got2 (s: 9)
+int: ok 7
+if: got != 9
+    ok: 80
+if: got2 != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

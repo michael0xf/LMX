@@ -1,0 +1,75 @@
+# A named call inside forms kept as machine text or as source: the operand of
+# a cast, the payload of a throw, a call written with its colon whose actuals
+# are named as `b(1) a(8)`, the value of an element store, an index of a read,
+# an actual beside a size. Entry 7.
+int: a 100
+int: b 200
+
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: g (size_t: a; size_t: b) size_t
+    return: a + b
+end: g
+
+fn: casted () size_t
+    int: a 9
+    return: (cast: (size_t) f(b: 2; a: a))
+end: casted
+
+fn: thrower (int: b) int
+    throws: Oops
+    if: b > 0
+        throw: Oops(f(b: b; a: 9))
+    return: 0
+end: thrower
+
+fn: caught () int
+    int: got 0
+    ---
+        got: thrower(2)
+        catch: Oops (int: v)
+            got: v
+    ---
+    return: got
+end: caught
+
+fn: colon () int
+    int: r 0
+    r: (f: b(1) a(8))
+    return: r
+end: colon
+
+fn: element () int
+    []: int row 3
+    size_t: a 1U
+    int: b 1
+    row[a]: f(b: b; a: 8)
+    row[g(1U 1U)]: 5
+    return: row[1] + row[g(a: 1U; b: 1U)]
+end: element
+
+fn: sized () size_t
+    size_t: a 3U
+    return: g(b: c.sizeof(c.int); a: a) - c.sizeof(c.int)
+end: sized
+
+size_t: r0 casted()
+int: r1 caught()
+int: r2 colon()
+int: r3 element()
+size_t: r4 sized()
+int: ok 7
+if: r0 != 7U
+    ok: 80
+if: r1 != 7
+    ok: 81
+if: r2 != 7
+    ok: 82
+if: r3 != 12
+    ok: 83
+if: r4 != 3U
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

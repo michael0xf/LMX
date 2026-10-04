@@ -1,0 +1,16 @@
+# OPEN. A held callable called with named actuals. Its header declares the
+# formals x and y; h2(y: 2; x: 1) gives x 1 and y 2: 100 + 10 + 2. The binding
+# does not reach a held callable's call yet, and it is refused as "unknown
+# method". Entry 7.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+
+h2: make2 100
+int: got h2(y: 2; x: 1)
+int: ok 7
+if: got != 112
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

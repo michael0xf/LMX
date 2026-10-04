@@ -1,0 +1,13 @@
+# The unresolved name is the a read in b's body, not the a that names f's
+# formal: g has no a and nothing hands it one. The diagnostic stands at the
+# read, column 24.
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: g () int
+    return: f(a: 1; b: a)
+end: g
+
+sendMessage: exit(exit_code: g(); stdout: ""; stderr: "")
+return

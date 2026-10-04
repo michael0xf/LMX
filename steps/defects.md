@@ -2126,9 +2126,60 @@ int: w f(b: mark(1); a: mark(2))
 передаёт значение формалу по координате. Свидетели `unit_named_actual_order`,
 `unit_named_actual_order_forms` (оба с обходимыми двойниками), `unit_named_actual_order_callable`,
 самотест ядра `lmx_walk_named_actual_selftest`
-([журнал](fable-continuation-20261003.md#named-actual-order)). Остаток: P0-тело вызова после
-привязки по-прежнему держит список в порядке формалов; порядок записи лежит рядом, в записи
-привязки.
+([журнал](fable-continuation-20261003.md#named-actual-order)). Остаток — тело вызова, переписанное
+привязкой, — закрыт: [NAMED-ACTUAL-BODY-REWRITTEN](#named-actual-body-rewritten).
+
+<a id="named-actual-body-rewritten"></a>
+### NAMED-ACTUAL-BODY-REWRITTEN — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-03, FIXED в sandbox (не выпущено)
+
+Привязка (`l2_bind_call_in`) заменяла поля тела вызова списком в порядке формалов: первое и
+последнее поле и счётчик P0-тела после неё описывали не то, что написано, а именующие кадры в теле
+не оставались. Исходный текст вызова по дереву было не восстановить. Исправлено: тело не трогается;
+проекция лежит в записи привязки, и читатель берёт её через `l2_call_actuals` там, где входит в
+тело. Попутно найдено, что обходчик, читающий написанное тело, принимает именующий кадр за имя,
+объявление или запись вызывающего: скан свободных имён, скан merge и канала throw (кадр
+`Model: x` как объявление), скан использования ссылки (кадр `v: v\value` как запись в ссылку).
+Все они переведены на проекцию. Память привязки освобождается в конце трансляции. Свидетели —
+`unit_named_actual_scope_names`, `_method_names`, `_reference_name`, `_reference_whole`,
+`_structure_name` и его библиотечная строка, `_capture`, `_callable_names`, `_facts`, `_forms`,
+`_machine`, `_free_name_refused`; контроли по одному читателю и проверка целости тела —
+[§43 журнала](fable-continuation-20261003.md#written-body-kept).
+
+<a id="named-actual-binding-reach"></a>
+### NAMED-ACTUAL-BINDING-REACH — 2026-10-04, fable, OPEN
+
+Привязка именованных фактических не доходит до двух мест, и валидная программа отказана словами
+«unknown method»:
+
+```text
+row[g(b: 1U; a: 0U)]: 5      # индекс в заголовке записи: заголовок разбирается отдельно
+h2(y: 2; x: 1)               # h2 — удерживаемый callable с заголовком (int: x; int: y)
+```
+
+В первом случае выражение заголовка — отдельный разобранный документ, и `l2_bind_calls` его не
+обходит. Во втором заголовок вызова разрешается в собственное поле, а не в метод, и
+`l2_call_head_method` возвращает -1; формалы у такого вызова есть — это формалы заголовка
+удерживаемого callable. Оба воспроизводятся на трансляторе до среза. Обязательные позитивы,
+красные: `unit_named_actual_head_index`, `unit_named_actual_held`.
+
+<a id="walk-throw-payload-nested-actual"></a>
+### WALK-THROW-PAYLOAD-NESTED-ACTUAL — 2026-10-04, fable, OPEN
+
+При обходе методов (`--walk-methods`) бросающий вызов, стоящий фактическим другого вызова, теряет
+payload:
+
+```text
+fn: thrower () int
+    throws: Oops
+    return: f(boom(3 3) 0)      # boom бросает Oops(3)
+```
+
+Обработчик `catch: Oops (int: v)` в вызывающем получает пустой payload, и ядро останавливается на
+инварианте `lmx: invariant: catch payload` (выход 3). Тот же бросок, записанный
+`return: boom(3 3)` или через локал `int: t boom(3 3)`, до обработчика доходит; нативно работают
+все три формы. Именованные фактические ни при чём: воспроизводится на позиционном вызове и на
+трансляторе до среза. Обязательный позитив, красный: `unit_throw_nested_actual_walk`; нативная
+строка `unit_throw_nested_actual` зелёная.
 
 <a id="prefix-minus-not-an-operand"></a>
 ### PREFIX-MINUS-NOT-AN-OPERAND — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-02, FIXED в sandbox (не выпущено)

@@ -1,0 +1,19 @@
+# OPEN. A named actual inside the index of a store's head. The index is an
+# expression like any other and g(b: 1U; a: 0U) is 1: the store writes row[1].
+# The binding does not reach an expression inside a head yet, and the call is
+# refused as "unknown method". Entry 7.
+fn: g (size_t: a; size_t: b) size_t
+    return: a + b
+end: g
+
+fn: put () int
+    []: int row 3
+    row[g(b: 1U; a: 0U)]: 5
+    return: row[1]
+end: put
+
+int: ok 7
+if: put() != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

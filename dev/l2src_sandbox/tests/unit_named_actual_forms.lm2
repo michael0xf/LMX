@@ -1,0 +1,69 @@
+# Named actuals whose names collide with the caller's, in more forms: a body
+# kept whole (`b: - 1`), the empty Structure (`x: ()`), a C-style loop's
+# condition and body, a throwing call inside a block with its catch, and a
+# field of the exit message. Entry 7.
+int: a 100
+int: b 200
+
+E: ()
+end: E
+
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: take (E: x; int: b) int
+    return: b
+end: take
+
+fn: boom (int: a; int: b) int
+    throws: Oops
+    if: a = b
+        throw: Oops(a)
+    return: a - b
+end: boom
+
+fn: whole () int
+    int: b 8
+    return: f(a: b; b: - 1)
+end: whole
+
+fn: empty () int
+    int: x 3
+    return: take(x: (); b: x)
+end: empty
+
+fn: loop () int
+    int: a 0
+    for: int(i, 0) (i < f(b: 0; a: 3)) i++
+        a: a + f(a: i; b: 0)
+    end: for
+    return: a
+end: loop
+
+fn: caught () int
+    int: a 4
+    int: got 0
+    ---
+        got: boom(b: a; a: 4)
+        catch: Oops (int: v)
+            got: v + 3
+    ---
+    return: got
+end: caught
+
+int: r1 whole()
+int: r2 empty()
+int: r3 loop()
+int: r4 caught()
+int: ok 7
+if: r1 != 9
+    ok: 81
+if: r2 != 3
+    ok: 82
+if: r3 != 3
+    ok: 83
+if: r4 != 7
+    ok: 84
+sendMessage: exit(exit_code: f(b: ok; a: ok + ok); stdout: ""; stderr: "")
+return

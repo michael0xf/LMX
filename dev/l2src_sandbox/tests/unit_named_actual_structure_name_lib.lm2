@@ -1,0 +1,15 @@
+# A library unit: named_lib_f's formal has the name of the unit's Structure
+# Model, and named_lib_use names it at the call. `Model: x` passes x; it is no
+# declaration of x by Model and no construction, so named_lib_use has no throw
+# channel and the unit keeps a library ABI.
+Model:
+    int: value 1
+end: Model
+
+fn: named_lib_f (int: Model; int: b) int
+    return: Model - b
+end: named_lib_f
+
+fn: named_lib_use (int: x; int: y) int
+    return: named_lib_f(Model: x; b: y)
+end: named_lib_use

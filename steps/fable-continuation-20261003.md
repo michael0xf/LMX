@@ -2057,3 +2057,212 @@ experiments run on isolated bytes, and the next ones will.
 follow-up, as Codex said; the cohort is part of the next ordinary gate, where
 the expected count is 1508 targets with the 29 red rows of `fable_full_17`
 and these two.
+
+<a id="written-body-kept"></a>
+## 43. The written call body is kept: the end state of section 41
+
+The destructive rewrite is removed. `l2_bind_call_in` no longer writes the
+body of a call: its first and last field, its count, the links between its
+fields and the Frames that name its actuals stay as P0 parsed them. The
+projection, the actuals as one list in the order of the callee's formals with
+a named actual's payload in its formal's place, is kept in the binding record
+(`l2_bnd_first`, `l2_bnd_count`) beside the written rank and the naming Frame
+of each formal that [section 30](#named-actual-order) added.
+
+**The choice of view.** One accessor gives the actuals of a call:
+`l2_call_actuals(body)`, with `l2_call_actual_fields(body)` for their count.
+For a bound body it is the projection; for any other body it is the body's
+own fields. A reader calls it where it enters a body. The iterators only
+advance and filter; no field address is looked up and there is no ambient
+view.
+
+| Reader | View it takes |
+| --- | --- |
+| The binding's own recursion, `l2_bind_struct` | The written body. A naming Frame is passed through to its payload (`l2_bound_is_wrap`); it is not walked as a statement of the caller's scope. |
+| The call check, the native call and the graph call: `l2_check_call`, `l2_emit_call`, the three callers of `l2_rw_call` | The actuals. Evaluation and the retained operands keep the written order through the record's ranks, as in section 30. |
+| The free-name scan: a method's call, a callable formal's call, a call written as a statement (`l2_scan_node`, `l2_scan_body`) | The actuals. |
+| The walkers that pass any Frame and give it a meaning: the merge scan, the throw-channel scan, the receiving-use scans, the method's locals, receives, the room for own rows, the mentions and returns of a callable merge, the capture scan, the uses of `implements`, the node of a free name for its diagnostic | The actuals. |
+| The declaration reader `l2_declaration`, asked first by every statement classifier | Neither: a Frame the binding resolved as a call declares nothing. |
+| Containment by node address (`l2_node_in`), a test that a body has no field, the retained source nodes (`l2_rw_source_node`) | The written body. |
+
+The last row is not migrated on purpose. Containment is about the source
+tree; it serves the file of a diagnostic. The compiler's own nodes of a
+projection, a named body kept whole and the empty Structure, are not in that
+tree: a diagnostic at one is said in the file its pass hands it, and a probe
+with such a call inside a program part names the part's file. A union of the
+two views in containment had no witness and was not added. A bound call has a
+written actual for every formal, so "no field" is false in both views. A
+retained source node is a source traversal, and no bound call stands inside
+one: a machine operand goes through the ordinary expression walker and its
+calls through `l2_rw_call`.
+
+**What a raw reader did.** Each of these was measured before its reader was
+moved, by a program in which a formal of the callee has the name of something
+in the caller:
+
+- The free-name scan read the head of a naming Frame as a name of the
+  caller's scope. With nothing of that name: `unresolved name`. With a unit
+  field of that name the method takes it as a hidden input in silence: a
+  method that only names `a` and `b` gained two hidden inputs.
+- The merge scan and the throw-channel scan read `Model: x`, where the formal
+  is named like a Structure, as a declaration of `x` by `Model`. The caller
+  got merge machinery and a throw channel it does not have.
+- The receiving-use scan read a naming Frame whose name is the caller's typed
+  reference as a store to it. For a field read through the reference the
+  coverage came out the same by accident. For the reference handed whole it
+  came out known and empty where it is unknown.
+- The statement classifiers read the naming Frames of a call written as a
+  statement as a type, a name and a candidate. The answer did not change,
+  because a call's head is not a type; the work did.
+
+**The binding's memory.** Every block the binding allocates beside the
+source, the projections and the Structures that keep a named body whole,
+comes from `l2_bound_alloc` and is released by `l2_bound_free`: in the
+finaliser of `l2_translate`, after the procedures' shells and before the
+document is destroyed, and at the start of a unit. The blocks borrow the
+source's nodes and own none. It is an arena of the binding, not a list of
+all allocations. The translator's allocation log (`L2_ALLOC_LOG`) reads
+`live=0` for the programs with named actuals; with the release taken out it
+reads the blocks live (control `nofree` below).
+
+**Census on isolated bytes.** The live tree was not changed for any of this.
+Three tools, kept in the session's scratchpad:
+
+- *Replay.* A harness evidence directory records the translator command of
+  every row. The replay runs each command with another translator and keeps
+  the exit, the messages, the generated L1 and the allocation count. It takes
+  25 seconds for a full gate's rows and no gcc.
+- *Variants.* A copy of the translator built beside the live one with one
+  change: `empty`, the written body of a bound call holds no field after the
+  binding; `rewrite`, it holds the projection, as the old code left it.
+- *Controls.* A copy in which one migrated reader enters the written body
+  again.
+
+**Results.** The rows are the 1493 recorded translations of `fable_full_17`,
+the 54 of the focused cohort `fable_bind_04` (every row that binds a named
+actual, old and new) and 13 stress programs, each natively and with its
+methods walked: 26 runs.
+
+- The working translator gives the same exit, messages and generated L1 as
+  the committed one on every row. The change is not visible in one generated
+  byte.
+- The `empty` and the `rewrite` variant give the same output as the working
+  translator on every row: no reader's result depends on what the written
+  body of a bound call holds.
+- The allocation count is the same for the working translator and `rewrite`
+  on every row. Against `empty` it differs on two rows, a callable formal's
+  call, by the test of `l2_empty_call_shape` for a body with no field, which
+  the written body of a bound call never is.
+
+The allocation count found what the output could not. Before
+`l2_declaration` passed over bound calls, 25 rows had the same output and
+another count; a debugger trace of the allocations put every difference under
+`l2_declaration`, reached from the statement classifiers.
+
+An earlier run of the controls is discarded. I had stopped it with the
+tool's stop; its shell chain ran on and built in the shared variant stage
+while other builds ran there, and one of its results was an artifact of that
+race. Everything below is from one sequential rerun with nothing else
+running, and a variant build now fails if its staged source changes under it.
+
+**Integrity of the source.** A variant hashes every bound body when its
+record is made, with its first, last and count, every field, value, flag and
+kind and the same of each Frame among its fields, and hashes it again when
+the translation ends. It reports nothing on the 1547 replayed
+translations. Its two controls report on every row that binds: with the old
+rewrite on top, 26 of the gate's rows and 45 of the cohort's; with one link of the written list cut,
+20 and 37. A third diagnostic says a call bound a second time; it says nothing
+on the same rows, so one record per body holds without a guard.
+
+**Controls.** One reader each goes back to the written body. "Output" is a
+difference in exit, messages or generated L1; "allocations" is a difference
+in the allocation count only.
+
+| The reader that enters the written body again | Gate rows, of 1493 | Cohort rows, of 54 | Stress runs, of 26 |
+| --- | --- | --- | --- |
+| The call check | output 25 | output 44 | output 26 |
+| The native call, each actual by its formal | output 26 | output 42 | output 21 |
+| The native call, the count of actuals | none | none | none |
+| The graph call of a method, as an operand | output 24 | output 41 | output 24 |
+| The graph call, as a statement | output 4 | output 6 | output 2 |
+| The graph call through a path the head resolver does not take | none | none | none |
+| The free-name scan, a method's call | output 17 | output 31 | output 17 |
+| The free-name scan, a callable formal's call or a path call | output 6 | output 7 | output 3 |
+| The free-name scan, a call written as a statement | output 4 | output 6 | output 2 |
+| The merge scan | allocations 22 | output 3 | output 2 |
+| The throw-channel scan, a body's fields | allocations 20 | output 3; the library row is refused, `unsupported library ABI` | output 2 |
+| The throw-channel scan, a statement's inner fields | allocations 8 | allocations 16 | allocations 10 |
+| The receiving-use scan | none | none | output 2 |
+| The receiving-use mentions and the scan for a path's segment | none | none | none |
+| The binding's recursion, a naming Frame walked as a statement | allocations 1 | output 2: `more arguments than h has formals` | output 2 |
+| `l2_declaration` | allocations 25 | allocations 44 | allocations 26 |
+| The room for own rows | allocations 22 | allocations 41 | allocations 24 |
+| The method's locals, receives, the node of a free name, the uses of `implements` | none | none | none |
+| The callable merge's mentions, value mentions, returns; the capture scan | none | none | none |
+| The binding's memory never released (`nofree`) | allocations 26, `live` above 0 | allocations 45 | allocations 26 |
+| The binding's memory released when the binding pass ends (`earlyfree`) | output 26 | output 45 | output 26 |
+
+The receiving-use scan had no witness in the cohort of 54. The fixture
+`unit_named_actual_reference_whole` and its probe row were added for it
+afterwards: under that control the generated text gains the coverage call the
+probe forbids.
+
+The readers with no witness are equivalent by construction today: a naming
+Frame's head is one identifier, never a path below a capture, a `return` or a
+name with a field path, and a bound call has the same number of written
+actuals as of formals. They take the actuals for the one rule, not for a
+measured difference, and this table says so.
+
+**Rows.** New fixtures, each natively and with the root and its methods
+walked unless noted; the walked rows name the methods they walk:
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_named_actual_scope_names` | The formals' names are also unit fields, locals and hidden inputs of the callers, in every position a call stands. A method that names them and reads neither takes no hidden input. |
+| `unit_named_actual_method_names` | Formals named like methods; a payload that is a call of the method; the written order. |
+| `unit_named_actual_reference_name`, `unit_named_actual_reference_whole` | A formal named like the caller's typed reference. A field read through it is no store, so the reference receives the thinner candidate. The reference handed whole is a use by another Consumer; a temporary probe row holds that it gets no coverage today. |
+| `unit_named_actual_structure_name`, `..._lib` | A formal named like a Structure: no declaration, no construction. The library row links: a method on the throw channel has no library ABI. |
+| `unit_named_actual_capture` | A definition inside a method names its host's names. |
+| `unit_named_actual_callable_names` | A callable formal invoked with colliding names. Native only: the walked profile excludes callable formals. |
+| `unit_named_actual_facts` | A read through `node`, an admitted formal passed on, a whole typed reference and a store's right side stand only inside named actuals. |
+| `unit_named_actual_forms`, `unit_named_actual_machine` | A body kept whole, the empty Structure, a loop's condition and body, a block with its catch, a message field; a cast operand, a throw's payload, the colon form, an element store, a size. |
+| `unit_named_actual_free_name_refused` | A free name inside a named actual is said at its own place, not at the naming Frame of the same name. |
+
+**OPEN, found on the way.** All three reproduce on the committed translator
+and none is a matter of the written body.
+
+- `unit_named_actual_head_index`: a named actual inside the index of a
+  store's head. The head is parsed apart and the binding does not walk it:
+  `unknown method`.
+- `unit_named_actual_held`: a held callable called with named actuals. Its
+  head resolves to an own field, not to a method, and the binding does not
+  bind it: `unknown method`.
+- `unit_throw_nested_actual_walk`: with the methods walked, a throwing call
+  that is an actual of another call loses its payload and the run stops at
+  the kernel's `catch payload` invariant. Written as `return: boom(3 3)` or
+  through a local, the same throw reaches its handler. Natively it runs.
+
+They are required positives and stay red. One more observation, recorded and
+not changed: translation time grows faster than the program.
+A generated unit of 300 methods with ten named calls each translates in
+25 seconds and one of 600 in 90; the committed translator takes 32 and 147,
+with the same output. The cost is older than this slice. The accessor finds a
+record by its body's address with a linear search, which did not show in that
+measure.
+
+**Evidence.**
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_06` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_06` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_19` (full harness) | RED 34 of 1534. Against `fable_full_17` (RED 29 of 1494): FAIL→OK 0, OK→FAIL 0, removed 0, added 40. Of the added, 14 are the rows of section 42 with its two OPEN positives, and 26 are this slice's with the three OPEN positives above. |
+| `build/l2_harness/fable_bind_05` (focused) | 57 rows, every row that binds a named actual: red only the three OPEN positives. |
+
+The full gate ran twice. `fable_full_18` (RED 34 of 1531) ran with the kernel
+and L3 gates on the same translator bytes; the fixture
+`unit_named_actual_reference_whole` and its three rows were added after it,
+and `fable_full_19` is the gate of the committed bytes. Between the two: three
+rows added, all green, nothing else changed. The pre-gate hashes of the
+translator, the 15 fixtures and the harness equal the live files and every
+staged copy (`tie.py`).

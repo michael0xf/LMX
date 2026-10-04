@@ -1,0 +1,33 @@
+# A formal may have the name of a Structure of the unit. The naming Frame
+# `Model: x` passes x to f's formal Model; it does not declare x by Model and
+# constructs nothing. Entry 7.
+Model:
+    int: value 1
+end: Model
+
+fn: f (int: Model; int: b) int
+    return: Model - b
+end: f
+
+fn: use () int
+    int: x 9
+    int: y 2
+    return: f(Model: x; b: y)
+end: use
+
+fn: again () int
+    int: x 4
+    int: r 0
+    r: f(b: 1; Model: x)
+    if: f(Model: x; b: 4) = 0
+        r: r + 4
+    return: r
+end: again
+
+int: ok 7
+if: use() != 7
+    ok: 80
+if: again() != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

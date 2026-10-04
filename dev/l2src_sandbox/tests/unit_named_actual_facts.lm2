@@ -1,0 +1,71 @@
+# What an analysis must find stands only inside a named actual: a read of the
+# unit through node, a formal admitted by name passed on, a typed reference
+# passed whole, the right side of a store in a method's own Structure.
+# Entry 7.
+int: trace 5
+
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+Thin:
+    size_t: value 8U
+end: Thin
+
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: val (Model: m; int: k) int
+    return: m\extra + k
+end: val
+
+fn: size (Model: m) size_t
+    return: m\value
+end: size
+
+fn: merged () int
+    o: merge Model
+    return: val(k: 5; m: o)
+end: merged
+
+fn: viaNode () int
+    return: f(b: node\trace; a: 12)
+end: viaNode
+
+fn: outer (Model: m) int
+    return: val(k: 1; m: m)
+end: outer
+
+fn: whole () size_t
+    o: merge Model
+    @: Model v o
+    return: size(m: v)
+end: whole
+
+fn: store () int
+    S:
+        int: g 1
+        int: answer 0
+        answer: f(b: 2; a: 9)
+    S()
+    return: S\answer
+end: store
+
+Model: unitModel
+int: r1 merged()
+int: r2 viaNode()
+int: r3 outer(unitModel)
+size_t: r4 whole()
+int: ok 7
+if: r1 != 7
+    ok: 81
+if: r2 != 7
+    ok: 82
+if: r3 != 3
+    ok: 83
+if: r4 != 1U
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

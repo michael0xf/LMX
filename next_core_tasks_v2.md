@@ -32,10 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_17` RED29/1494 — 97 FAIL→OK against that
-baseline, OK→FAIL 0; kernel `fable_kernel_05` GREEN296 with 113 executed
-selftests; L3 `fable_l3_05`
-([gates](steps/fable-continuation-20261003.md#full-16)). The checkpoint gate
+continuation bytes: `fable_full_19` RED34/1534 — 97 FAIL→OK against that
+baseline, OK→FAIL 0; the five red rows above the 29 of `fable_full_17` are
+labelled OPEN positives; kernel `fable_kernel_06` GREEN296 with 113 executed
+selftests; L3 `fable_l3_06`
+([gates](steps/fable-continuation-20261003.md#written-body-kept)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -129,14 +130,20 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   its written place as `NAMED [coordinate, payload]` with its written name;
   no runtime permutation table, no second graph
   ([ledger](steps/fable-continuation-20261003.md#named-actual-order)).
-- [ ] Named actuals, the remainder, REQUIRED before G5 (Codex ruling
-  FABLE-CODEX-20261004-02): the call's P0 body must keep its written fields,
-  wrappers and order, and every call reader must consume one common checked
-  projection explicitly; the decoder may not depend on the binding record
-  ([ruling](steps/fable-continuation-20261003.md#written-body-and-prefix-ruling)).
-  Today the body holds the bound projection after the binding pass. Also: the
+- [x] Named actuals, the written body (Codex rulings FABLE-CODEX-20261004-02
+  and -03): the call's P0 body keeps its written fields, wrappers and order;
+  the projection by formal coordinate lives in the binding record and every
+  reader of a call's actuals takes it through one accessor where it enters
+  the body; the binding's memory is released when the translation ends
+  ([ledger](steps/fable-continuation-20261003.md#written-body-kept)).
+- [ ] Named actuals, what the binding does not reach: an index inside a
+  store's head and a held callable's call are refused as `unknown method`
+  ([defects](steps/defects.md#named-actual-binding-reach)). Also: the
   interpreter does not yet run a callable formal's invocation
   (`--walk-methods` excludes callable formals).
+- [ ] With the methods walked, a throwing call that is an actual of another
+  call loses its payload
+  ([defects](steps/defects.md#walk-throw-payload-nested-actual)).
 - [x] Prefix signs `-` and `+` in the shared expression producer: a retained
   unary operator with one source operand (`NEG`, `POS`), for expressions,
   returns and actuals; no invented zero subtraction

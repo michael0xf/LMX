@@ -1,0 +1,132 @@
+# A named actual's name is a formal of the callee, never a name of the caller's
+# scope. f's formals are a and b; the callers have a and b of their own: unit
+# fields, locals, formals' namesakes read as hidden inputs. Each call names
+# the formals against their order and passes the caller's a and b as values,
+# wherever a call stands: a return, an assignment, a declaration, a condition,
+# a loop, an operand, an actual of another call, a trailer, a sub called as a
+# statement, the root. `only` names a and b and reads neither: it takes no
+# hidden input from the unit. Entry 7.
+int: a 100
+int: b 200
+int: trace 0
+
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+sub: put (int: a; int: b)
+    int: d 0
+    d: a - b
+end: put
+
+fn: only () int
+    return: f(a: 1; b: 2)
+end: only
+
+fn: locals () int
+    int: a 5
+    int: b 3
+    int: r 0
+    r: f(b: a; a: b)
+    return: r
+end: locals
+
+fn: hidden () int
+    return: f(b: a; a: b)
+end: hidden
+
+fn: mixed () int
+    int: a 9
+    return: f(a; b: 4)
+end: mixed
+
+fn: stmt () int
+    int: a 1
+    put(b: a; a: 2)
+    return: put\d
+end: stmt
+
+fn: cond () int
+    int: b 4
+    if: f(b: b; a: 5) = 1
+        return: 1
+    return: 0
+end: cond
+
+fn: loop () int
+    int: a 0
+    while: f(b: a; a: 3) > 0
+        a: a + 1
+    return: a
+end: loop
+
+fn: nest () int
+    int: a 2
+    int: b 1
+    return: f(b: f(b: b; a: a); a: f(a: a; b: b))
+end: nest
+
+fn: oper () int
+    int: a 6
+    return: 10 + f(b: mark(a); a: mark(7)) * 2
+end: oper
+
+fn: decl () int
+    int: b 2
+    int: r f(b: b; a: 9)
+    return: r
+end: decl
+
+fn: trail () int
+    int: a 7
+return: f(b: 1; a: a)
+
+int: r0 only()
+int: r1 locals()
+int: r2 hidden()
+int: r3 mixed()
+int: r4 stmt()
+int: r5 cond()
+int: r6 loop()
+int: r7 nest()
+int: r8 oper()
+int: r9 decl()
+int: r10 trail()
+int: q f(b: a; a: b)
+put(b: b; a: a)
+int: d 0
+d: put\d
+int: ok 7
+if: r0 != 0 - 1
+    ok: 80
+if: r1 != 0 - 2
+    ok: 81
+if: r2 != 100
+    ok: 82
+if: r3 != 5
+    ok: 83
+if: r4 != 1
+    ok: 84
+if: r5 != 1
+    ok: 85
+if: r6 != 3
+    ok: 86
+if: r7 != 0
+    ok: 87
+if: r8 != 12
+    ok: 88
+if: r9 != 7
+    ok: 89
+if: r10 != 6
+    ok: 90
+if: q != 100
+    ok: 91
+if: d != 0 - 100
+    ok: 92
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

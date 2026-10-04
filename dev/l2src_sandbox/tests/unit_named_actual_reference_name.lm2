@@ -1,0 +1,29 @@
+# The callee's formal v has the name of the caller's typed reference v. The
+# naming Frame `v: v\value` is not a store to the reference: it passes the
+# field value, read through the reference, to show's formal. That read is the
+# only use of the reference, so it receives Thin, which carries value and no
+# extra. Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+Thin:
+    size_t: value 8U
+end: Thin
+
+fn: show (size_t: v) size_t
+    return: v + 1U
+end: show
+
+fn: keep () int
+    o: merge Thin
+    @: Model v o
+    size_t: got show(v: v\value)
+    if: got != 9U
+        return: 81
+    return: 7
+end: keep
+
+sendMessage: exit(exit_code: keep(); stdout: ""; stderr: "")
+return

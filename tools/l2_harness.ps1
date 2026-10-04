@@ -7022,15 +7022,17 @@ $fixtures = @(
         Args = @('0'); Absent = @(); Debt = @() },
     # Named actuals of an ordinary call (book :1060; steps/named-actuals.md): every call's actuals are bound to
     # its callee's formals by the one binding the receiver `table` uses (l2_bind_actuals), before any pass reads
-    # them (l2_bind_calls); a call with a named argument is rewritten in its formals' order, a named argument's
-    # body its formal's positional actual, kept whole when by position it would not be one actual.  Witnesses:
+    # them (l2_bind_calls); a call with a named argument gets a projection in its formals' order beside its
+    # body, which stays as written -- a named argument's body its formal's positional actual, kept whole when
+    # by position it would not be one actual -- and a reader takes the actuals through l2_call_actuals.  Witnesses:
     # named, reordered, positional then named, an expression body, a call bound inside an argument, from a
     # method and walked; the binding's five refusals in the book's words; a callable formal called by its
     # contract's formal name (native: a callable formal is outside the walkable subset); a path call; a frame
     # among the actuals that names a formal of the callee is that formal's argument (P0 gives g(2) and g: 2 one
     # tree); a body kept whole (b: - 1).  D-23's `take(x: ())` (above) is the empty Structure after the binding.
     # Mutants (steps/named-actuals.md §3, each by copy, both modes): no binding pass -- every named row red, the
-    # formal-name row runs the method g (81), D-23's row red; bound but not rewritten -- the running rows red;
+    # formal-name row runs the method g (81), D-23's row red; a reader of the actuals turned back to the body's
+    # own fields -- the running rows red (the controls of §5 there, reader by reader);
     # a body never kept whole -- the whole row, "incompatible entry signature"; the callee by method name only --
     # the formal and path rows red; a bound call's actuals not read for calls of their own -- the nested call
     # red; the empty actual known only in D-23's frame form -- D-23's row red.
@@ -7127,6 +7129,85 @@ $fixtures = @(
         Args = @('0') + $namedActualCallableShape; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_order_callable_swap_mutant.lm2'; Source = 'unit_named_actual_order_callable.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','move-path-field','3','5','2','1','5','6') + $namedActualCallableShape; Entry = 7; Absent = @(); Debt = @() },
+    # A bound call's body stays as written: the Frames that name its actuals are the binding's to read, and
+    # every other reader takes the call's actuals (l2_call_actuals).  These rows hold what that view must
+    # keep.  A name that names an actual is a formal of the callee, never a name of the caller's scope:
+    # not when it is also a unit field, a local or a hidden input of the caller (scope_names), a method
+    # (method_names), a Structure (structure_name: no declaration, no construction, and so no throw
+    # channel -- the library row, link and symbols only: a method on the throw channel has no library
+    # ABI), the caller's typed reference (reference_name: no store, so the reference's only use is the
+    # field it reads and it receives the thinner candidate; reference_whole: the reference handed whole
+    # to another Consumer is a use of it, not a store to it), a name of a definition's host (capture) or
+    # of the caller of a callable formal (callable_names).  What an analysis looks for inside a named
+    # actual is found there (facts: a read through node, an admitted formal passed on, a whole typed
+    # reference, a store's right side), in every form a call takes (forms, machine).  A free name inside
+    # a named actual is said at its own place (free_name_refused).  Natively, and with the root and the
+    # methods walked; three forms are machine text and their methods stay native in the walked row too
+    # (boom's throw with a payload; casted, thrower and sized), and each row says which.
+    [pscustomobject]@{ Name = 'unit_named_actual_scope_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4,5,6,7,8,9,10,11,12,13); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_scope_names_walk.lm2'; Source = 'unit_named_actual_scope_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7,8,9,10,11,12,13); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_method_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_method_names_walk.lm2'; Source = 'unit_named_actual_method_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_reference_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_reference_name_walk.lm2'; Source = 'unit_named_actual_reference_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_reference_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_reference_whole_walk.lm2'; Source = 'unit_named_actual_reference_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # TEMPORARY IMPLEMENTATION-COVERAGE PROBE, of the kind above (unit_recv_use_..._limit_probe): the whole
+    # reference passed on by a named actual is a use the coverage analysis does not compose yet, so the
+    # reference gets no coverage and is received in full.  Read as a store to the reference, the naming Frame
+    # would give it an empty coverage instead.  It goes when the coverage is composed.
+    [pscustomobject]@{ Name = 'unit_named_actual_reference_whole_limit_probe.lm2'; Source = 'unit_named_actual_reference_whole.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
+    [pscustomobject]@{ Name = 'unit_named_actual_structure_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_structure_name_walk.lm2'; Source = 'unit_named_actual_structure_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_structure_name_lib.lm2'; Expect = 'library-links'; Exit = 0; Needle = '';
+        With = @(); Exports = @('named_lib_f', 'named_lib_use'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_capture_walk.lm2'; Source = 'unit_named_actual_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_callable_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_facts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_facts_walk.lm2'; Source = 'unit_named_actual_facts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_forms_walk.lm2'; Source = 'unit_named_actual_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4,5,6); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_machine.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_machine_walk.lm2'; Source = 'unit_named_actual_machine.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5,6); NativeMethods = @(2,3,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_free_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_free_name_refused.lm2:9:24: unresolved name'; Absent = @(); Debt = @() },
+    # OPEN: valid programs the binding does not reach yet.  A named actual inside the index of a store's
+    # head (the head is parsed apart and its calls are not bound) and a held callable called with named
+    # actuals (its head resolves to an own field, not to a method) are refused as "unknown method".  They
+    # are required positives and stay red until the binding reaches them.
+    [pscustomobject]@{ Name = 'unit_named_actual_head_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # Found beside them, and no matter of named actuals: a throwing call that is an actual of another
+    # call.  Natively its payload reaches the handler.  OPEN with the methods walked: the payload is
+    # lost and the run stops at the kernel's "catch payload" invariant; the walked row is a required
+    # positive and stays red.
+    [pscustomobject]@{ Name = 'unit_throw_nested_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_throw_nested_actual_walk.lm2'; Source = 'unit_throw_nested_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # A free name under the type checks (book :1180, :1182; steps/free-names.md): a dynamic input is a value of its
     # binding's type, under the rule a local of that type is under.  The check reads types before l2_dyn_close gives
     # the inputs theirs, so a check whose value (or the hidden argument it assigns) reads an input without a type

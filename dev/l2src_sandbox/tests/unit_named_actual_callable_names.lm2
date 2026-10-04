@@ -1,0 +1,16 @@
+# A callable formal invoked with named actuals whose names are also names of
+# the caller: via's own formal a is passed as p's b, and p's a is named and
+# given 1. p is f: 1 - 5. Entry 7.
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: via (f: p; int: a) int
+    return: p(b: a; a: 1)
+end: via
+
+int: ok 7
+if: via(f 5) != 0 - 4
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -2330,7 +2330,15 @@ callable-формал получает ссылку на вхождение; к�
 ([§50 журнала](fable-continuation-20261003.md#result-receipt-open)).
 
 <a id="held-bare-name-operand-result"></a>
-### HELD-BARE-NAME-OPERAND-RESULT — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+### HELD-BARE-NAME-OPERAND-RESULT — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, FIXED в sandbox (не выпущено)
+
+Исправлено: общее решение (`l2_held_result_receive`) читает прогон из нескольких полей как операцию
+и записывает каждый операнд — голое имя удерживаемого callable, заголовок которого даёт число.
+Спрашивают проверка каждой операции (`l2_check_value_kinds`) и проверка одного значения условия
+(`if`, `while`, `for`, `until`). Записанное место считается значением с вызовом, поэтому короткое
+замыкание внутри группы остаётся ленивым. Свидетели — `unit_held_call_bare_name_operand`,
+`unit_held_call_bare_name_condition`, `unit_held_call_bare_name_message_operand`
+([§53 журнала](fable-continuation-20261003.md#operand-receipt)). Ниже — запись, как она стояла.
 
 Операнд арифметики, упорядочивающего сравнения и равенства — место, принимающее результат. Голое
 имя удерживаемого callable, возвращающего значение, там исполняется, как исполняется названный так
@@ -2352,6 +2360,53 @@ held in a reference or the other operand happens to be zero.» Сравнени�
 ненулевым вхождением и нулевым результатом, счётчик вызовов, контроли короткого замыкания, явное
 сравнение ссылки. Чинить через общий маршрут выражения и запись категории места, как целое
 значение ([§52 журнала](fable-continuation-20261003.md#result-receipt)).
+
+<a id="native-group-call-parentheses"></a>
+### NATIVE-GROUP-CALL-PARENTHESES — 2026-10-04, fable, FIXED в sandbox (не выпущено)
+
+Нативная эмиссия группы, в полях которой есть вызов, выдавала текст вычисления группы без скобок:
+
+```text
+fn: u () int
+    return: 100
+end: u
+int: x (u() + 1) * 2      # нативно: l2_t1 + 1 * 2 = 102; с обходом: 202
+```
+
+Группа без вызовов всегда выдавалась в скобках. Ошибка стояла на закоммиченном трансляторе для
+метода единицы, вызванного или названного голым именем, и для удерживаемого вызова; найдена
+свидетелем группы-операнда. Исправлено: текст группы выдаётся в скобках на обоих маршрутах
+(`l2_prep`). Свидетель — `unit_group_call_parentheses` (нативно и с обходом), мутант без скобок даёт
+102. В 66 трансляциях гейта изменились только добавленные скобки
+([§53 журнала](fable-continuation-20261003.md#operand-receipt)).
+
+<a id="held-call-from-nested-definition"></a>
+### HELD-CALL-FROM-NESTED-DEFINITION — 2026-10-04, fable, OPEN
+
+Определение внутри метода, который его возвращает, вызывает другой удерживаемый callable:
+
+```text
+p0: make0 100                      # заголовок () int
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + p0()
+    return: g0
+u0: makeUse 5
+int: r u0()                        # из корня: отказ
+fn: inner () int
+    return: u0()                   # из метода: принято, останов при исполнении
+end: inner
+```
+
+Из корня — отказ `root operation not walkable yet: a caller's binding of a held callable's free
+name is of another type`. Если вызов только из метода, программа принимается и останавливается
+при исполнении, нативно и с обходом: `lmx: invariant: a callable merge was called outside its
+header`. Так на закоммиченном трансляторе с вызовом `p0()`; после среза операндов голое имя в таком
+определении при вызове из метода приходит к тому же останову. Найдено пробой условий во вложенном
+определении.
+Принятая программа, которая аварийно останавливается, хуже отказа. Обязательный позитив, красный:
+`unit_held_call_from_nested_definition`. Блокирует ли G5 — вопрос к Codex
+([§53 журнала](fable-continuation-20261003.md#operand-receipt)).
 
 <a id="held-callable-to-callable-formal"></a>
 ### HELD-CALLABLE-TO-CALLABLE-FORMAL — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)

@@ -7460,16 +7460,44 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4); NativeMethods = @(5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_bare_name_args_refused.lm2:12:4: a held callable takes the arguments of its header'; Absent = @(); Debt = @() },
-    # OPEN positives, required before G5 (Codex, FABLE-CODEX-20261004-12).  Red until repaired; never to be turned
-    # into expected refusals.  The first: an operand of arithmetic, of an ordering and of an equality receives a
-    # result, so the bare name of a held callable is executed there and `z0 = 0` compares what z0 gives, not its
-    # occurrence (HELD-BARE-NAME-OPERAND-RESULT).  This implementation refuses the arithmetic and the ordering and
-    # compares the occurrence in the equalities.  The second: an explicitly declared callable formal receives the
-    # occurrence of a held callable whose header it admits (HELD-CALLABLE-TO-CALLABLE-FORMAL).  This implementation
-    # refuses the call, `incompatible entry signature`.
+    # The operands of an operation and the one value of a condition receive a number too (Codex,
+    # FABLE-CODEX-20261004-12): the bare name of a held callable there is executed, and `z0 = 0` compares what z0
+    # gives, not its occurrence.  The first program: arithmetic, an ordering, equalities with a zero result and a
+    # non-null occurrence, short-circuits, a prefix sign, groups, operations in an actual, a store, a path write and
+    # a return, and an opaque reference compared without a call.  The second: the conditions of if, while, until
+    # and for.  The third: an operation in a number field of a message.
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_operand_walk.lm2'; Source = 'unit_held_call_bare_name_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_condition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,7,9,11,13); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_condition_walk.lm2'; Source = 'unit_held_call_bare_name_condition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,7,9,11,13); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_message_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    # An operation given to a place of another number type, where that conversion is the method's only one: the
+    # store notes its edge from the type the operation has with its operands received.
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_operand_convert.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_operand_convert_walk.lm2'; Source = 'unit_held_call_bare_name_operand_convert.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3,4,5); Absent = @(); Debt = @() },
+    # A group is one operand of the operation around it: natively a group whose fields call went out without its
+    # parentheses (NATIVE-GROUP-CALL-PARENTHESES), `(u() + 1) * 2` as 100 + 1 * 2.
+    [pscustomobject]@{ Name = 'unit_group_call_parentheses.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_group_call_parentheses_walk.lm2'; Source = 'unit_group_call_parentheses.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # OPEN positive, required before G5 (Codex, FABLE-CODEX-20261004-12).  Red until repaired; never to be turned
+    # into an expected refusal.  An explicitly declared callable formal receives the occurrence of a held callable
+    # whose header it admits (HELD-CALLABLE-TO-CALLABLE-FORMAL).  This implementation refuses the call,
+    # `incompatible entry signature`.
     [pscustomobject]@{ Name = 'unit_held_call_to_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    # OPEN positive (HELD-CALL-FROM-NESTED-DEFINITION).  A definition a method returns calls another held
+    # callable.  This implementation accepts the program and stops at run time: `a callable merge was called
+    # outside its header`.  Red until repaired; never to be turned into an expected failure.
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },

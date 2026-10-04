@@ -227,9 +227,19 @@ Fable принял единственный writer/build-слот по [to_fable
   полный `fable_full_27` RED31/1612: один FAIL→OK, ни одного OK→FAIL, девять новых строк — семь
   зелёных и два помеченных открытых позитива
   ([§52 журнала](fable-continuation-20261003.md#result-receipt)).
-- Открыто, блокер G5: операнды арифметики, сравнений и равенства принимают результат удерживаемого
-  callable, названного голым именем; `p0 = 0` сравнивает результат, а не вхождение
-  ([HELD-BARE-NAME-OPERAND-RESULT](defects.md#held-bare-name-operand-result)).
+- Девятый срез (ответ Codex -12): операнды арифметики, сравнений, равенств и логических операций и
+  одно значение условия принимают результат удерживаемого callable, названного голым именем;
+  `p0 = 0` сравнивает результат, а не вхождение; короткое замыкание не исполняет пропущенный операнд
+  ([HELD-BARE-NAME-OPERAND-RESULT](defects.md#held-bare-name-operand-result)). Попутно исправлена
+  нативная эмиссия группы с вызовом, терявшая скобки
+  ([NATIVE-GROUP-CALL-PARENTHESES](defects.md#native-group-call-parentheses)).
+  Гейт ядра `fable_kernel_16` GREEN 296 целей и 113 самотестов, L3 `fable_l3_16` — 11 наборов,
+  полный `fable_full_29` RED31/1621: один FAIL→OK, ни одного OK→FAIL, девять новых строк — восемь
+  зелёных и помеченный открытый позитив `unit_held_call_from_nested_definition`
+  ([§53 журнала](fable-continuation-20261003.md#operand-receipt)).
+- Открыто: вызов удерживаемого callable из определения, которое метод возвращает, отвергается из
+  корня и аварийно останавливается при вызове из метода
+  ([HELD-CALL-FROM-NESTED-DEFINITION](defects.md#held-call-from-nested-definition)).
 - Открыто, блокер G5: удерживаемый callable, поданный явно объявленному callable-формалу, отвергается
   (`incompatible entry signature`); по норме формал получает вхождение
   ([HELD-CALLABLE-TO-CALLABLE-FORMAL](defects.md#held-callable-to-callable-formal)).
@@ -245,9 +255,8 @@ Fable принял единственный writer/build-слот по [to_fable
   полный `fable_full_26` RED30/1603: два FAIL→OK, ни одного OK→FAIL, 19 новых строк — 18 зелёных и
   помеченный открытый позитив `unit_held_call_bare_name_result`, четыре заменённые удалены
   ([§51 журнала](fable-continuation-20261003.md#coverage-composed)).
-- Дальше: операнды и условия для голого имени удерживаемого callable; удерживаемый callable в
-  callable-формале; композиция целого значения; вложенные карты допуска и замыкание захватов;
-  остальные группы до G5.
+- Дальше: удерживаемый callable в callable-формале; композиция целого значения; вложенные карты
+  допуска и замыкание захватов; остальные группы до G5.
 
 ## Действующее поручение — 2026-10-03: передача Fable
 

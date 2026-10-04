@@ -1,0 +1,63 @@
+# An operation whose operand is the bare name of a held callable has the type
+# its operands' results give it, and a place of another number type takes it
+# through the place's ordinary conversion. p0 gives an int, 100. In each
+# method the conversion to size_t is the method's only one, so the method is
+# on the throw channel for that edge alone: a store of the operation, a field
+# written through a path, an initializer, and a store of the bare name by
+# itself. Entry 7.
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n
+    return: f0
+
+Box:
+    int: v 0
+    size_t: z 0U
+end: Box
+
+p0: make0 100
+
+fn: stored () int
+    size_t: wide 0U
+    wide: p0 + 1
+    if: wide != 101U
+        return: 81
+    return: 7
+end: stored
+
+fn: pathed () int
+    b: merge Box
+    b\z: p0 + 2
+    if: b\z != 102U
+        return: 82
+    return: 7
+end: pathed
+
+fn: begun () int
+    size_t: first p0 + 3
+    if: first != 103U
+        return: 83
+    return: 7
+end: begun
+
+fn: alone () int
+    size_t: wide 0U
+    wide: p0
+    if: wide != 100U
+        return: 84
+    return: 7
+end: alone
+
+int: ok stored()
+if: ok = 7
+    ok: pathed()
+if: ok = 7
+    ok: begun()
+if: ok = 7
+    ok: alone()
+size_t: rw 0U
+rw: p0 + 4
+if: rw != 104U
+    ok: 85
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

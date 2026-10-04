@@ -3914,3 +3914,182 @@ receive the result of a held callable named bare, with the short-circuit
 controls. Then the held callable given to a callable formal. Then
 whole-value composition, nested admission and the capture closure. The
 store of a factory's result waits for the author.
+
+<a id="operand-receipt"></a>
+## 53. The operands of an operation and the condition receive the result (Codex, FABLE-CODEX-20261004-12)
+
+The first OPEN positive of [section 52](#result-receipt) is green, and a
+native miscompilation of a group that calls, found by its witness, is
+repaired. The kernel and the walker are not touched.
+
+### The ruling
+
+Codex's reply -12:
+
+> Yes: arithmetic and numeric ordering operands are result-receiving places.
+> This is the same receiving-contract rule as the whole-value edge, not a
+> special held-name rule. A known value-returning nullary callable used
+> there supplies its result, through the ordinary call and conversions.
+
+> For your p0, whose accepted header is () int, p0 = 0 and p0 != 0 compare
+> the returned int with numeric zero, just as the corresponding unit-method
+> expressions do. Do NOT choose occurrence/null comparison merely because
+> the callable is held in a reference or the other operand happens to be
+> zero. Its physical storage cannot change the meaning of an otherwise
+> equivalent callable expression.
+
+> Reference/null comparison remains available under an explicitly
+> reference-receiving contract: for example, the opaque reference value
+> retained by @: void k p0 can be compared with null without calling p0.
+
+### The same decision, more kinds of place
+
+The decision of section 52 (`l2_held_result_receive`) takes a run of several
+fields as an operation: the run is read as the typers read it, operands and
+operators in turn (`l2_held_result_operands`), and each operand is a place
+of its own that receives a number. The operand of a prefix sign is the
+operand; a group is the expression its fields make, and a group of one
+value is that value. An operand of several fields, a path, an address, an
+indexed place, is no bare name and is left alone. So `@ p0` is not
+reinterpreted.
+
+Three places ask:
+
+- the field check of every operation (`l2_check_value_kinds`), before it
+  types the operation;
+- a store's composite value (`l2_check_receiving_value`): the store is
+  checked before its fields are, and it notes its conversion edge from the
+  type the operation has;
+- the check of a condition's one value: `if` and `while`, `for`, `until`.
+
+The second was dropped once and came back. With it removed every fixture of
+the day gave the same result, because none stored an operation into a place
+of another number type. A probe that does went out without its conversion
+edge: gcc, `'l2_out_throw' undeclared`. The gate that was running on that
+text was stopped, and the probe is now the row
+`unit_held_call_bare_name_operand_convert`.
+
+The graph asks nothing more. Every operation and every condition is checked
+before a graph is built, for the root as for a method, so the record is
+complete when the graph reads it. Hooks of the same question in the graph's
+conditions and in a path write's composite value were tried: with each
+removed, every fixture gave the same result, the converting path write
+included, so they are not in the slice.
+
+The readers of the record are the four of section 52. The reader that
+counts a recorded site as a value that calls was tried again and dropped
+again: a run with a logical operator is always evaluated arm by arm, in a
+group too (`l2_emit_fields` hands it to the lazy splitter), so a
+short-circuit does not depend on it. With it and without it the generated
+text is the same. Section 52 expected a short-circuit to reach it; it does
+not.
+
+### A group that calls lost its parentheses (NATIVE-GROUP-CALL-PARENTHESES)
+
+Found by the witness of the group operand, and no matter of held callables.
+In native code a group whose fields contain a call went out as the bare
+text of its evaluation: `(u() + 1) * 2` was emitted as `l2_t1 + 1 * 2` and
+gave 102 for u = 100. The walked graph gave 202. A group whose fields call
+nothing was always written in parentheses. Now the group's text is in
+parentheses on both routes (`l2_prep`). The committed translator has the
+error for a unit method called or named bare and for a held call alike
+([defects](defects.md#native-group-call-parentheses)).
+
+### Found on the way: a held call from a nested definition (OPEN)
+
+A probe of the conditions inside a definition that a method returns found a
+defect that this slice neither makes nor repairs. A definition `g0` inside
+`makeUse`, returned by it, calls another held callable, `p0()`:
+
+- called from the root, the program is refused: `root operation not
+  walkable yet: a caller's binding of a held callable's free name is of
+  another type`;
+- called from a method alone, the program is accepted and stops at run time,
+  natively and walked: `lmx: invariant: a callable merge was called outside
+  its header`.
+
+The committed translator does the same with the call written `p0()`. With
+this slice the bare name in such a definition, called from a method,
+reaches the same stop. An accepted program that aborts is worse than a
+refusal, so the
+defect is OPEN with a required positive, red:
+`unit_held_call_from_nested_definition`
+([defects](defects.md#held-call-from-nested-definition)).
+
+### A note on the witnesses
+
+The factory's formal is named `n`, and the callables read it as a free
+name. By the rule of the caller's binding (section 48) a caller's own `n`
+is the callable's `n` at that call. A first draft of the operand witness had
+a local `n` in the calling method: `p0 = z0` was then true, both callables
+giving the caller's value. The witness names no local `n`.
+
+### What stays as it was
+
+- A held callable whose header gives no number is not received as a result
+  anywhere: its bare name is the occurrence, in an operation too.
+- The limits of section 52 stand: formals without defaults, default values,
+  a header with a formal that is no number, a definition that throws.
+
+### Replay
+
+The slice's translator against the committed one (`471b145c`), on the 1611
+translations recorded by `fable_full_27`: exit and messages are the same on
+1610 rows, and the one other is the OPEN row, refused before and translated
+now. The generated L1 differs on 66 more rows, in every one of them only by
+added parentheses: the group repair. No row keeps more memory than before;
+the allocation counts rise on most rows, because the field check now reads
+the spans of each operation once more and frees them.
+
+### Rows
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_held_call_bare_name_operand`, natively and walked | Arithmetic, an ordering, equalities with a zero result and a non-null occurrence, two short-circuits, a short-circuit in a group, a prefix sign, a group, a group of one value, an operation in an actual, in a store, in a field through a path, in a returned value, a lazy group as an operand of arithmetic; an opaque reference compared without a call; the root's operations. Was the OPEN positive. |
+| `unit_held_call_bare_name_condition`, natively and walked | The one value of `if`, of `while`, of `until` and of `for`, with callables that give 0 at chosen calls; each loop breaks after ten turns, so a reading by the occurrence fails and does not hang. |
+| `unit_held_call_bare_name_message_operand` | An operation in a number field of a message. |
+| `unit_held_call_bare_name_operand_convert`, natively and walked | An operation given to a place of another number type, where that conversion is the method's only one: a store, a field through a path, an initializer, and the bare name stored by itself. |
+| `unit_group_call_parentheses`, natively and walked | A group that calls, on either side of the operator, with the method called and named bare, beside a group that calls nothing. |
+| `unit_held_call_to_callable_formal` | OPEN required positive: red. |
+| `unit_held_call_from_nested_definition` | OPEN required positive: red. |
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart, and
+compared with the slice on the five new fixtures, natively and walked.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| An operation's operands are never asked about | `unit_held_call_bare_name_operand`, `unit_held_call_bare_name_message_operand` and `unit_held_call_bare_name_operand_convert` are refused by the translator. |
+| The field check's operation does not ask | The same three are refused. |
+| A store's composite value does not ask | `unit_held_call_bare_name_operand_convert` does not compile: `'l2_out_throw' undeclared`. |
+| The check of `if` and `while` conditions does not ask | `unit_held_call_bare_name_condition` fails with a walk error, natively and walked. |
+| The check of a `for` condition does not ask | It fails one check natively and with a walk error walked. |
+| The check of an `until` condition does not ask | The same. |
+| The operand of a prefix sign is not an operand | `unit_held_call_bare_name_operand` is refused. |
+| A group is not read | `unit_held_call_bare_name_operand` is refused. |
+| A group that calls goes out without its parentheses | `unit_group_call_parentheses` fails one check natively. |
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_16` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_16` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_29` (full harness) | RED 31 of 1621. Against `fable_full_27` (RED 31 of 1612): FAIL→OK 1, the former OPEN positive; OK→FAIL 0; added 9, of which 8 green and the labelled OPEN `unit_held_call_from_nested_definition` red; removed 0; no red row's message changed. |
+| `build/l2_harness/fable_oper_02` (focused, before the gate) | 140 rows of held callables, groups, callable formals, conversions and loops. Red only the two OPEN rows. |
+
+The 31 red rows are the 29 of `fable_full_17` and the two labelled OPEN
+positives `unit_held_call_to_callable_formal` and
+`unit_held_call_from_nested_definition`. The pre-gate hashes of the translator, the six fixtures and the
+harness equal the live files and every staged copy (`tie.py`).
+
+A gate started earlier on a text without the store's question was stopped in
+its kernel stage, when the probe of a converting store failed; its partial
+directory `build/l2src/fable_kernel_15` is no evidence of anything.
+
+**Next.** The held callable given to a callable formal
+([defects](defects.md#held-callable-to-callable-formal)) and the held call
+from a nested definition. Then whole-value composition, nested admission
+and the capture closure. The store of a factory's result waits for the
+author.

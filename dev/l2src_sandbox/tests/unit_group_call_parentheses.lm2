@@ -1,0 +1,32 @@
+# A group is one operand of the operation around it, whatever its fields are.
+# u gives 100. `(u() + 1) * 2` is 202, and so is the same group with the
+# method named bare; a group whose fields call nothing, `(a + 1) * 2`, was
+# always that. Natively a group that calls went out without its parentheses
+# and gave 100 + 1 * 2. Entry 7.
+fn: u () int
+    return: 100
+end: u
+
+fn: inner () int
+    int: a 100
+    int: x (u() + 1) * 2
+    int: y (u + 1) * 2
+    int: z (a + 1) * 2
+    int: w 2 * (u() + 1)
+    if: x != 202
+        return: 81
+    if: y != 202
+        return: 82
+    if: z != 202
+        return: 83
+    if: w != 202
+        return: 84
+    return: 7
+end: inner
+
+int: ok inner()
+int: r (u() + 1) * 2
+if: r != 202
+    ok: 85
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

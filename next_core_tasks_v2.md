@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_27` RED31/1612 — 100 FAIL→OK against that
+continuation bytes: `fable_full_29` RED31/1621 — 101 FAIL→OK against that
 baseline, OK→FAIL 0; the two red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_14` GREEN296 with 113 executed
-selftests; L3 `fable_l3_14`
-([gates](steps/fable-continuation-20261003.md#result-receipt)). The checkpoint gate
+labelled OPEN positives; kernel `fable_kernel_16` GREEN296 with 113 executed
+selftests; L3 `fable_l3_16`
+([gates](steps/fable-continuation-20261003.md#operand-receipt)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -187,10 +187,16 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   a place that receives a reference takes the occurrence (Codex rulings
   FABLE-CODEX-20261004-11 and -12)
   ([ledger](steps/fable-continuation-20261003.md#result-receipt)).
-- [ ] The same for operands: arithmetic, orderings, equalities and
-  conditions receive the result; `p0 = 0` compares the result, not the
-  occurrence. A G5 blocker with a required red positive
-  ([defects](steps/defects.md#held-bare-name-operand-result)).
+- [x] The same for operands: arithmetic, orderings, equalities, logical
+  operations and the one value of a condition receive the result;
+  `p0 = 0` compares the result, not the occurrence; a short-circuit does not
+  execute the operand it skips. A native group that calls keeps its
+  parentheses
+  ([ledger](steps/fable-continuation-20261003.md#operand-receipt)).
+- [ ] A held call from a definition that a method returns: refused from the
+  root, accepted and aborting at run time from a method. A required red
+  positive
+  ([defects](steps/defects.md#held-call-from-nested-definition)).
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

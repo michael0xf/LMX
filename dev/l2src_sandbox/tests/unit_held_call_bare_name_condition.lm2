@@ -1,0 +1,121 @@
+# The one value of a condition is a place where a result is received: the bare
+# name of a held callable that returns a value is executed there, and the
+# condition tests what it gives, not its occurrence. p0 gives 100 and z0
+# gives 0: `if: z0` is false, though z0's occurrence is not null. down counts
+# a unit field down and gives what is left: `while: down` runs its body twice
+# and calls three times. again gives 0 at its first call and 1 after:
+# `until: again` runs its body twice. few gives 1 at its first two calls and
+# 0 after: the `for` with the bare condition `few` runs its body twice. Each
+# held callable notes 1 at a call. A loop whose condition tested the
+# occurrence would not end; each body breaks after ten turns, so a wrong
+# reading fails here and does not hang. Entry 7.
+int: trace 0
+int: left 3
+int: turns 0
+int: fews 0
+
+fn: note (int: v) int
+    node\trace: node\trace + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: dec () int
+    node\left: node\left - 1
+    return: node\left
+end: dec
+
+fn: turn () int
+    node\turns: node\turns + 1
+    if: node\turns >= 2
+        return: 1
+    return: 0
+end: turn
+
+fn: some () int
+    node\fews: node\fews + 1
+    if: node\fews > 2
+        return: 0
+    return: 1
+end: some
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + note(1)
+    return: f0
+
+fn: makeDown (int: n) fn: () int
+    fn: d0 () int
+        return: n + dec() + note(1)
+    return: d0
+
+fn: makeTurn (int: n) fn: () int
+    fn: t0 () int
+        return: n + turn() + note(1)
+    return: t0
+
+fn: makeFew (int: n) fn: () int
+    fn: w0 () int
+        return: n + some() + note(1)
+    return: w0
+
+p0: make0 100
+z0: make0 0
+down: makeDown 0
+again: makeTurn 0
+few: makeFew 0
+
+fn: inner () int
+    int: a 0
+    if: p0
+        a: 1
+    if: a != 1 || seen() != 1
+        return: 81
+    int: b 0
+    if: z0
+        b: 1
+    if: b != 0 || seen() != 2
+        return: 82
+    int: laps 0
+    while: down
+        laps: laps + 1
+        if: laps > 10
+            break
+    end: while
+    if: laps != 2 || seen() != 5
+        return: 83
+    int: rounds 0
+    ---
+        rounds: rounds + 1
+        if: rounds > 10
+            break
+    until: again
+    if: rounds != 2 || seen() != 7
+        return: 84
+    int: loops 0
+    for: int(i, 0) (few) i++
+        loops: loops + 1
+        if: loops > 10
+            break
+    end: for
+    if: loops != 2 || seen() != 10
+        return: 85
+    return: 7
+end: inner
+
+int: ok inner()
+int: ra 0
+if: z0
+    ra: 1
+if: ra != 0 || seen() != 11
+    ok: 86
+int: rb 0
+if: p0
+    rb: 1
+if: rb != 1 || seen() != 12
+    ok: 87
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

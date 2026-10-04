@@ -1,12 +1,13 @@
-# OPEN positive. An operand of arithmetic, of an ordering and of an equality
-# is a place where a result is received: the bare name of a held callable
-# that returns a value is executed there, as a method named bare is. p0 gives
-# 100 and z0 gives 0; each notes 1 at a call. z0's occurrence is not null, so
-# `z0 = 0` tells the result from the occurrence: it calls z0 once and is true.
-# A short-circuit does not execute the operand it skips. An opaque reference
-# that received the name compares the occurrence and calls nothing. This
-# implementation refuses the arithmetic and the ordering, and compares the
-# occurrence in the equalities. Entry 7.
+# An operand of arithmetic, of an ordering and of an equality is a place where
+# a result is received: the bare name of a held callable that returns a value
+# is executed there, as a method named bare is. p0 gives 100 and z0 gives 0;
+# each notes 1 at a call. z0's occurrence is not null, so `z0 = 0` tells the
+# result from the occurrence: it calls z0 once and is true. The operand of a
+# prefix sign, a group, a group of one value, an operation inside an actual,
+# in a store, in a field written through a path and in a returned value are
+# the same places. A short-circuit does not execute the operand it skips, in
+# a group too. In refs an opaque reference that received the name compares
+# the occurrence and calls nothing. Entry 7.
 int: trace 0
 
 fn: note (int: v) int
@@ -23,8 +24,20 @@ fn: make0 (int: n) fn: () int
         return: n + note(1)
     return: f0
 
+fn: id (int: a) int
+    return: a
+end: id
+
+Box:
+    int: v 0
+end: Box
+
 p0: make0 100
 z0: make0 0
+
+fn: more () int
+    return: p0 + 5
+end: more
 
 fn: inner () int
     int: a p0 + 1
@@ -60,23 +73,68 @@ fn: inner () int
         g: 1
     if: g != 1 || seen() != 7
         return: 87
+    int: h 0
+    if: a = 101 && (z0 != 0 && p0 = 100)
+        h: 1
+    if: h != 0 || seen() != 8
+        return: 88
+    int: i - p0
+    if: i != -100 || seen() != 9
+        return: 89
+    int: j (p0 + 1) * 2
+    if: j != 202 || seen() != 10
+        return: 90
+    int: k id(p0 + z0)
+    if: k != 100 || seen() != 12
+        return: 91
+    int: m more()
+    if: m != 105 || seen() != 13
+        return: 92
+    int: q 0
+    if: p0 = z0
+        q: 1
+    if: q != 0 || seen() != 15
+        return: 93
+    int: w (p0) * 2
+    if: w != 200 || seen() != 16
+        return: 94
+    w: p0 + 2
+    if: w != 102 || seen() != 17
+        return: 95
+    bx: merge Box
+    bx\v: p0 + 3
+    if: bx\v != 103 || seen() != 18
+        return: 96
+    int: s (z0 != 0 && p0 = 100) + 5
+    if: s != 5 || seen() != 19
+        return: 101
+    return: 7
+end: inner
+
+fn: refs () int
     @: void k z0
     int: h 0
     if: k = 0
         h: 1
-    if: h != 0 || seen() != 7
-        return: 88
+    if: h != 0
+        return: 97
     return: 7
-end: inner
+end: refs
 
 int: ok inner()
+int: before seen()
+int: rr refs()
+if: rr != 7
+    ok: rr
+if: seen() != before
+    ok: 98
 int: ra z0 + 3
-if: ra != 3 || seen() != 8
-    ok: 89
+if: ra != 3 || seen() != before + 1
+    ok: 99
 int: rb 0
 if: z0 = 0
     rb: 1
-if: rb != 1 || seen() != 9
-    ok: 90
+if: rb != 1 || seen() != before + 2
+    ok: 100
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

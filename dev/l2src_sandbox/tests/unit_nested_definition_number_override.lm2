@@ -1,0 +1,32 @@
+# The control beside the references: a number free name of a definition its
+# method returns takes the caller's nearest binding, else the unit's value at
+# the call. inner has its own base 50: 5 + 50. plain names none: 5 + 5, and
+# 5 + 7 after base: 7. Entry 7.
+int: base 5
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + base
+    return: g0
+
+u0: makeUse 5
+
+fn: inner () int
+    int: base 50
+    return: u0()
+end: inner
+
+fn: plain () int
+    return: u0()
+end: plain
+
+int: a inner()
+int: b plain()
+base: 7
+int: c plain()
+int: d u0()
+int: ok 7
+if: a != 55 || b != 10 || c != 12 || d != 12
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

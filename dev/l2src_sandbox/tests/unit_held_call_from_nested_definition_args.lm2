@@ -1,0 +1,48 @@
+# A definition a method returns calls held callables of the unit: one with an
+# argument, two in one expression. Neither caller names them: the definition
+# reads each from its lexical source, the unit. g0 gives 5 + (4 + 3) = 12;
+# h0 gives 5 + 100 + 30 = 135, from a method and from the root. Entry 7.
+fn: makeAdd (int: n) fn: (int: x) int
+    fn: a0 (int: x) int
+        return: x + n
+    return: a0
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n
+    return: f0
+
+p1: makeAdd 3
+p0: make0 100
+q0: make0 30
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + p1(4)
+    return: g0
+
+fn: makeSum (int: k) fn: () int
+    fn: h0 () int
+        return: k + p0() + q0()
+    return: h0
+
+u0: makeUse 5
+s0: makeSum 5
+
+fn: inner () int
+    return: u0()
+end: inner
+
+fn: innerSum () int
+    return: s0()
+end: innerSum
+
+int: a inner()
+int: b innerSum()
+int: c s0()
+int: d u0()
+int: ok 7
+if: a != 12 || b != 135 || c != 135 || d != 12
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

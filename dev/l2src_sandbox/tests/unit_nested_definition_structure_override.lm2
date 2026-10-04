@@ -1,0 +1,33 @@
+# OPEN positive. The caller's nearest binding of a free name comes first, for
+# a reference as for a number. g0, a definition its method returns, reads
+# m\v. inner calls it with its own m of the same type, whose v is 40: 5 + 40.
+# This implementation supplies a caller's own reference only when it is the
+# declaration the definition's lexical source names, and refuses this call:
+# `a caller's own reference under a held callable's free name is not admitted
+# to its use yet`. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+m: merge Model
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + m\v
+    return: g0
+
+u0: makeUse 5
+
+fn: inner () int
+    m: merge Model
+    m\v: 40
+    return: u0()
+end: inner
+
+int: r inner()
+int: s u0()
+int: ok 7
+if: r != 45 || s != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

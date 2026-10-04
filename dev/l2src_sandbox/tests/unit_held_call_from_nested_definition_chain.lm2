@@ -1,0 +1,48 @@
+# Definitions that methods return call one another through held callables of
+# the unit, two levels deep, and a held callable named bare where a number is
+# received is its call. g0 gives 5 + 100; h0 gives 1 + g0's 105; b0 names p0
+# and u0 bare. The calling method names none of them. Entry 7.
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n
+    return: f0
+
+p0: make0 100
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + p0()
+    return: g0
+
+u0: makeUse 5
+
+fn: makeTop (int: j) fn: () int
+    fn: h0 () int
+        return: j + u0()
+    return: h0
+
+t0: makeTop 1
+
+fn: makeBare (int: j) fn: () int
+    fn: b0 () int
+        return: j + p0 + u0
+    return: b0
+
+w0: makeBare 2
+
+fn: inner () int
+    return: t0()
+end: inner
+
+fn: innerBare () int
+    return: w0 + 1
+end: innerBare
+
+int: a inner()
+int: b innerBare()
+int: c t0()
+int: ok 7
+if: a != 106 || b != 208 || c != 106
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

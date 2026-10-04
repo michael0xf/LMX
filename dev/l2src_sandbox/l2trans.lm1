@@ -30624,9 +30624,10 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # §7b: so is a cached pointer field -- its working value is the Structure its cell holds (OWN), no cell to open.
     if: level = 0 && path[0] = 1
         return: l2_rw_own(parent, path[1], out)
-    # A Structure formal is already the Structure the caller passed (ARG), not a cell to open.
+    # A Structure formal is already the Structure the caller passed (ARG), not a cell to open.  A hidden
+    # input of a definition its method returns may be absent: its lexical source then (l2_rw_arg_fb).
     if: level = 0 && path[0] = 6
-        return: l2_rw_arg(parent, path[1], out)
+        return: l2_rw_arg_fb(parent, path[1], out)
     # Item 738 with A3: a captured Structure is the method's hidden input -- absent (a returned node called with no
     # binding of it), the graph's: its node path (l2_rw_arg_fb).
     if: level = 0 && path[0] = 7
@@ -38910,8 +38911,14 @@ fn: l2_rw_held_binding (const: @(LmP0Node node); int: model; int: k; int: parent
         return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
     if: ns >= 0
         return: l2_rw_mad_host_struct(parent, l2_rw_mi, nm, out)
-    if: l2_own_ty[oi] != oty || l2_rw_num_ty(oty) = 0
+    if: l2_own_ty[oi] != oty
         return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
+    # A reference -- a held callable, a Structure -- is supplied when its declaration is the one the
+    # model's own lexical source names: the same occurrence, so its contract is the model's.  Another
+    # declaration of the name is another value.  Its admission to the model's use is not built: a
+    # limit of this implementation and no rule, said where it stands.
+    if: l2_rw_num_ty(oty) = 0 && l2_own_visible(model, nm) != oi
+        return: l2_rw_refuse(node, "a caller's own reference under a held callable's free name is not admitted to its use yet")
 return: l2_rw_own(parent, oi, out)
 
 # steps/merge-callable-r48.md S1: the held callable of own oi called from a native method as the walk's PRIM calls it
@@ -39242,8 +39249,10 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, "l2_mad_call", \out, \out, \out, \out) < 0
         return: 1
     # In a walked method the held callable's name is a hidden input (Q52): ARG, else the root's own field.
+    # In a definition its method returns the caller may leave that input absent: the definition then
+    # reads its lexical source, as it reads a number's (l2_rw_arg_fb).
     if: l2_rw_mi != l2_e && l2_param_find(l2_rw_mi, l2_own_name[oi]) >= 0
-        if: l2_rw_arg(\out, l2_param_find(l2_rw_mi, l2_own_name[oi]), @ at) != 0 || l2_rw_put(\out, 3, at) != 0
+        if: l2_rw_arg_fb(\out, l2_param_find(l2_rw_mi, l2_own_name[oi]), @ at) != 0 || l2_rw_put(\out, 3, at) != 0
             return: 1
         ---
     else:

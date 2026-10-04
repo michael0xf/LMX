@@ -4309,3 +4309,167 @@ the capture closure (`unit_capture_struct_whole`,
 `unit_capture_struct_merge_two`); whole-value composition and nested
 admission. No adapter special to a formal or to a held callable, and no
 names at run time.
+
+<a id="nested-references"></a>
+## 56. A reference among the free names of a definition its method returns; Codex's review of the design
+
+### The bounded step
+
+Codex allowed this step before the common route (second reply -12): "The
+immediate scalar/named-Structure-only preparation gap may be repaired as a
+bounded step of that common dependency if its actual source and contract
+are proven using existing physical graph references."
+
+A hidden input of a definition its method returns may be left absent by the
+caller. For a number the definition then read its lexical source: its `ARG`
+carries a fallback, a name of the host's body read through `node`, else the
+declaration of the unit field (`l2_rw_arg_fb`). For a reference it had no
+such reading. Three places change, in `dev/l2src_sandbox/l2trans.lm1`:
+
+| Place | Before | Now |
+| --- | --- | --- |
+| `l2_rw_mad_call`: the held callable a walked body calls is its hidden input | plain `ARG`: absent, the call stopped, `a callable merge was called outside its header` | `ARG` with the fallback |
+| `l2_rw_path_value`: the root of a path is a hidden input | plain `ARG`: absent, `walk error: INVALID` | `ARG` with the fallback |
+| `l2_rw_held_binding`: a walked caller's own row under the free name | a number only; a reference was refused as "of another type" | a reference too, when it is the very declaration the definition's lexical source names |
+
+The third row is narrow on purpose. The caller's own reference of another
+declaration is another value, and whether it fits the definition's use is
+decided by the ordinary admission, which this path does not have. It is
+refused where it stands with words of its own: `a caller's own reference
+under a held callable's free name is not admitted to its use yet`. That is
+a limit of the implementation and no rule
+([HELD-FREE-REFERENCE-OTHER-DECLARATION](defects.md#held-free-reference-other-declaration)).
+
+Measured on the committed translator and on this one, natively and with the
+methods walked (the same in both):
+
+| Program | Before | Now |
+| --- | --- | --- |
+| A held callable called from a returned definition, from a method that names it nowhere | stops at run time | 105 |
+| The same from the root | refused | 105 |
+| A held callable with an argument; two in one expression | stops; refused from the root | 12; 135 |
+| Two levels of returned definitions; the held callable named bare | stops | 106; 208 |
+| A Structure of the unit read by a path, from a method | `walk error: INVALID` | 9; 35 after `m\v: 30` |
+| The same from the root | refused | 9; 35 |
+| A number, the caller's own first | 55, 10, 12 | the same |
+| The caller's own Structure with no field the definition reads | refused | refused |
+| The caller's own Structure of the same type, another declaration | refused | refused: OPEN |
+
+Two things measured and left: a local `p0: make0 200` in a method of a unit
+that has `p0` is an application of that `p0`, so it is refused as a call
+with too many arguments, by the rule of the bound name; and a pointer read
+through `\pp` in such a definition is an `unresolved name` before and
+after.
+
+### Replay
+
+The step's translator against the committed one (`0840b44c`), on the 1630
+translations recorded by `fable_full_30`: exit, messages and the generated
+L1 are the same on 1626 rows. The four others are the rows of the held call
+by caller: the two from the root were refused and translate now, the two
+from a method change their L1.
+
+### Mutants
+
+Each is a copy of the step's translator with one change, built apart and run
+on the eight fixtures, natively and walked. The two modes agree in every
+cell.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| The held callable a walked body calls keeps the plain `ARG` | `unit_held_call_from_nested_definition_method`, `_args` and `_chain` stop at run time: `a callable merge was called outside its header`. |
+| A path root keeps the plain `ARG` | `unit_nested_definition_structure_path` fails with `walk error: INVALID`. |
+| A caller's own reference is refused as before | `unit_held_call_from_nested_definition_root`, `_args`, `_chain` and `unit_nested_definition_structure_path` are refused by the translator. |
+| A caller's own reference of any declaration is supplied | `unit_nested_definition_structure_other_refused` translates and gives 6: the definition read another field of the caller's Structure in the place of `v`. |
+
+Under the last mutant the OPEN row `unit_nested_definition_structure_override`
+gives its 45. So what that row lacks is the admission and nothing else.
+
+### Codex's review of the design (fifth reply -12)
+
+The design of [section 55](#actual-inputs-ruling) went to Codex as items a
+to g. The review keeps the direction and corrects five things.
+
+1. No last branch through the declaring method's list. "An unmodeled actual must NEVER be called using the exemplar's
+hidden-input vector." Where the formation cannot yet be produced the valid
+program stays an OPEN required positive with a located limit. And all
+inputs absent is not the universal route: "Absence is correct only
+when the caller really supplies no available binding."
+2. Propagation. I had read "already inherited" as a ban on new inheritance.
+Codex: ""Already inherited dynamic input" describes SOURCE PRIORITY at
+execution. It does not forbid the translator from propagating statically
+known requirements." Once the translator knows that an actual reaches a
+formal, the actual's free names enter the ordinary fixed point; the
+declaring method's names do not stay as an artificial requirement; and no
+caller is asked for the names of a candidate it does not pass. The chain
+witness: an outer caller has `other` 40 as its own formal, `run` has none,
+`run` calls `g1` through `q`: 41.
+3. Identity is exact. An address comparison is valid only for the very
+occurrence supplied at the call; "Do not compare native words, input
+widths or positional type witnesses as proxies for occurrence identity."
+An incomplete flow is UNKNOWN, never a closed set.
+4. `l2_hidden_from` is a starting point. Its fallback for a number reaches
+the cell from the caller's own containing Structures (`l2_own_from_expr`),
+not from the selected occurrence. The cell must be in the actual
+occurrence's lexical tree.
+5. One formation for plain, forwarded and held actuals, every kind of value
+and both engines.
+
+### The design, corrected
+
+- **What the translator proves.** Which methods reach each callable formal:
+  a source where an actual names a unit method, an edge where a formal is
+  handed on, and, for a callee that is itself the value of a formal, the
+  actual goes to that formal of every method that reaches it. A merge built
+  as an actual, a held callable and a library entry are not followed yet:
+  such a formal is UNKNOWN.
+- **Measured: which occurrences exist.** A callable field of a named
+  Structure names a unit method and shares its one occurrence (`a callable
+  field needs a method name` otherwise); the unit is not copied. So the only
+  occurrences of a method other than the unit's own are the nodes a merge
+  builds: held callables and merge actuals. Those carry their copied lexical
+  context and are called with absent inputs falling back through `node`.
+- **First slice: formation classes, no identity test.** Where every method
+  that reaches a formal forms its inputs alike (the same free names, types
+  and lexical declarations), the call through the formal forms that list
+  with the existing `l2_hidden_from`, the selected occurrence as its callee.
+  Nothing is compared at run time, so no claim about identity is made.
+  Where the methods differ, or the formal is UNKNOWN, the call is refused
+  where it stands with a limit of the implementation, and the valid program
+  stays a red required positive. The declaring method's list is used by no
+  path.
+- **Propagation.** At the call through the formal the fixed point of
+  dynamic inputs (`l2_dyn_site`) takes the reaching methods in the place of
+  the declaring method. The consumer inherits what they need and it does
+  not bind; its callers supply it by the ordinary rule.
+- **The lexical fallback** of a number is emitted through the parent of the
+  selected occurrence, as a Structure's already is.
+- **Second slice.** Methods that form their inputs differently and reach
+  one formal: a branch per exact occurrence, and an inherited input that
+  only some of them need. That input must be able to be absent in the
+  consumer's activation. Today a hidden input of a native method is a
+  machine argument by value with no absent state; absence exists only as an
+  empty entry of `refs` at `lmx_call_prim`, which a walked body's `ARG`
+  reads through its fallback. The plan is to keep such an input as that
+  entry, with no new record.
+- **Then** the same formation for held callables and merge nodes as actuals
+  and as callees (the admission the limit above waits for), and the walked
+  consumer.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_17` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_17` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_31` (full harness) | RED 38 of 1642. Against `fable_full_30` (RED 40 of 1631): FAIL→OK 4, the held call by caller, natively and walked; OK→FAIL 0; added 11, of which 9 green and the two labelled OPEN rows of the caller's own Structure red; removed 0; no red row's message changed. |
+| `build/l2_harness/fable_nest_01` (focused, before the gates) | 120 rows of nested definitions, held calls, captures, merges and callable formals. Red only baseline and labelled OPEN rows. |
+
+The 38 red rows are the 29 of `fable_full_17` and nine labelled OPEN
+positives: `unit_held_call_to_callable_formal`, six of the callable formal's
+free names and the two of the caller's own Structure. The pre-gate hashes of
+the translator, the eight fixtures and the harness equal the live files and
+every staged copy (`tie.py`).
+
+**Next.** The first slice of the common route, with the chain witness, the
+controls and the mutants; then the second.

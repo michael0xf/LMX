@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_30` RED40/1631 — 101 FAIL→OK against that
-baseline, OK→FAIL 0; the eleven red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_16` GREEN296 with 113 executed
-selftests; L3 `fable_l3_16`, both on the same translator bytes
-([gates](steps/fable-continuation-20261003.md#actual-inputs-ruling)). The checkpoint gate
+continuation bytes: `fable_full_31` RED38/1642 — 105 FAIL→OK against that
+baseline, OK→FAIL 0; the nine red rows above the 29 of `fable_full_17` are
+labelled OPEN positives; kernel `fable_kernel_17` GREEN296 with 113 executed
+selftests; L3 `fable_l3_17`
+([gates](steps/fable-continuation-20261003.md#nested-references)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -197,11 +197,16 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   execute the operand it skips. A native group that calls keeps its
   parentheses
   ([ledger](steps/fable-continuation-20261003.md#operand-receipt)).
-- [ ] A held call from a definition that a method returns: refused from the
-  root, accepted and aborting at run time from a method. A G5 blocker (Codex,
-  FABLE-CODEX-20261004-12), part of K04's formation of actual inputs and of
-  the capture closure; required red positives by caller, natively and walked
-  ([defects](steps/defects.md#held-call-from-nested-definition)).
+- [x] A held call from a definition that a method returns: a reference among
+  its free names reads its lexical source where the caller supplies none, as
+  a number did. The bounded step Codex allowed; the positives by caller are
+  green natively and walked
+  ([ledger](steps/fable-continuation-20261003.md#nested-references)).
+- [ ] A caller's own reference of another declaration under a held callable's
+  free name is refused where it stands, a limit of the implementation; by
+  the rules it comes first. A G5 blocker with a red required positive; it
+  waits for the admission of K04's common formation
+  ([defects](steps/defects.md#held-free-reference-other-declaration)).
 - [ ] A call through a callable formal forms the actual's free names from
   the list of the formal's declaring method (K04,
   CALLABLE-FORMAL-HIDDEN-CONTRACT): measured, an accepted program gives a
@@ -212,8 +217,11 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   translation, and run time follows references and positions
   ([record](LMX_blog/2026-10-04.md#no-runtime-name-table),
   [defects](steps/defects.md#callable-formal-hidden-contract)). The design
-  of the common route goes to Codex first. The held callable given to a
-  callable formal waits for it.
+  is reviewed by Codex and corrected: no path through the declaring
+  method's list, the reaching methods' free names in the ordinary fixed
+  point, exact identity only, the lexical fallback through the selected
+  occurrence ([ledger](steps/fable-continuation-20261003.md#nested-references)).
+  The held callable given to a callable formal waits for it.
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

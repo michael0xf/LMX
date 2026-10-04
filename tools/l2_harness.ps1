@@ -7494,18 +7494,49 @@ $fixtures = @(
     # `incompatible entry signature`.
     [pscustomobject]@{ Name = 'unit_held_call_to_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
-    # OPEN positives, required before G5 (HELD-CALL-FROM-NESTED-DEFINITION; Codex, FABLE-CODEX-20261004-12).  A
-    # definition a method returns calls another held callable.  Called from the root, this implementation refuses
-    # the program; called from a method that names the callable nowhere, it accepts the program and stops at run
-    # time, natively and walked: `a callable merge was called outside its header`.  Red until repaired; never to
-    # be turned into expected failures.
+    # A reference among the free names of a definition its method returns (HELD-CALL-FROM-NESTED-DEFINITION; Codex,
+    # FABLE-CODEX-20261004-12).  The caller that names no such reference supplies nothing, and the definition reads
+    # its lexical source at the call: a held callable of the unit (root, method), with an argument and two in one
+    # expression (args), two levels deep and named bare (chain), a Structure of the unit read by a path, also after
+    # a write to it (structure_path).  From the root the unit's own row is the caller's binding and the lexical
+    # source at once.  The control beside them is the number, which had this reading before
+    # (number_override: the caller's own number first).  Each natively and with the methods walked.
     [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_root_walk.lm2'; Source = 'unit_held_call_from_nested_definition_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,2,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_method_walk.lm2'; Source = 'unit_held_call_from_nested_definition_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,4,6,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_args_walk.lm2'; Source = 'unit_held_call_from_nested_definition_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4,6,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,4,6,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_chain_walk.lm2'; Source = 'unit_held_call_from_nested_definition_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4,6,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_definition_structure_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_definition_structure_path_walk.lm2'; Source = 'unit_nested_definition_structure_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_definition_number_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_definition_number_override_walk.lm2'; Source = 'unit_nested_definition_number_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
+    # A caller's own Structure under the definition's free name, with no field the definition reads: present and
+    # not fitting, so the call is refused and the unit's Structure is not read in its place.  The words are those
+    # of the limit below: this implementation does not yet tell a reference that fits from one that does not.
+    [pscustomobject]@{ Name = 'unit_nested_definition_structure_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_nested_definition_structure_other_refused.lm2:24:13: root operation not walkable yet: a caller''s own reference under a held callable''s free name is not admitted to its use yet'; Absent = @(); Debt = @() },
+    # OPEN positive, required before G5.  A caller's own Structure of the same type under the definition's free
+    # name is the caller's nearest binding and comes first: 5 + 40.  This implementation supplies a caller's own
+    # reference only when it is the very declaration the definition's lexical source names, and refuses this call
+    # where it stands.  A limit of the implementation and no rule; red until the admission is built.
+    [pscustomobject]@{ Name = 'unit_nested_definition_structure_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_definition_structure_override_walk.lm2'; Source = 'unit_nested_definition_structure_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # OPEN positives, required before G5 (CALLABLE-FORMAL-HIDDEN-CONTRACT, K04; Codex, FABLE-CODEX-20261004-12).
     # The callable given to a callable formal supplies its own free names, formed where the call is made: the

@@ -1,0 +1,29 @@
+# A caller's binding that is present and does not fit is not absence. g0, a
+# definition its method returns, reads m\v. inner calls it with its own m, a
+# Structure with no v. The call is refused where it stands; the unit's m is
+# not read in its place.
+Model:
+    int: v 4
+end: Model
+
+Other:
+    int: w 1
+end: Other
+
+m: merge Model
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + m\v
+    return: g0
+
+u0: makeUse 5
+
+fn: inner () int
+    m: merge Other
+    return: u0()
+end: inner
+
+int: r inner()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

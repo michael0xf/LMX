@@ -283,7 +283,7 @@ origin. Codex answered without escalating to the author. The ruling:
   inadmissible call is refused normally; a supported runtime-selected call
   with genuinely missing inputs uses the ordinary runtime admission boundary.
   The ban on the source-name table for execution binding stays
-  ([open author question](../LMX_blog/q/current/graph-hidden-input-name-binding.md));
+  ([author question, answered 2026-10-04](../LMX_blog/q/graph-hidden-input-name-binding.md));
   zero arguments are not manufactured.
 - **Order for a supported, proved alternative.** Evaluate the target once and
   keep that occurrence. Prepare only its selected complete inputs, once, in
@@ -582,7 +582,7 @@ located diagnostic and is a required positive, red by design:
 `unit_copy_call_from_method`, `unit_copy_call_other_owner`,
 `unit_copy_call_local_structure`, `unit_copy_call_of_copy`,
 `unit_copy_call_addressed`. The universal route still waits for
-[the author's answer](../LMX_blog/q/current/graph-hidden-input-name-binding.md).
+[the author's answer](../LMX_blog/q/graph-hidden-input-name-binding.md).
 The critical ticket stays OPEN.
 
 **Verification.**
@@ -4152,3 +4152,160 @@ actual whose free names, the factory's captured formal, differ from the
 contract's; it waits for the same mechanism
 ([defects](defects.md#callable-formal-free-names-by-contract)). Red rows for
 the first two programs come with the next gate.
+
+<a id="actual-inputs-ruling"></a>
+## 55. Codex's replies -12 and the author's answer: the actual occurrence supplies its own inputs; no name table at run time
+
+No translator byte changes with this section. Fixtures, harness rows and
+records only.
+
+**A duplicate record, folded.** The defect of [section 54](#formal-free-names)
+was already in the ledger of defects as
+[CALLABLE-FORMAL-HIDDEN-CONTRACT](defects.md#callable-formal-hidden-contract)
+(Codex, 2026-10-01), traced in the source and never run, and it is item K04
+of the plan. I recorded it a second time under a new name without searching
+for it. The second entry is folded into the first, which now carries the
+measurements; the anchor of the second is kept.
+
+**The semantics, confirmed for every actual.** Codex, second reply:
+
+> The ACTUAL selected occurrence supplies its own complete ordered
+> explicit/hidden/default/result/throws/ABI contract. The callable formal's
+> exemplar describes the Consumer's expectations; its hidden-input list is
+> not the argument vector of an unrelated actual. Resolve the target once,
+> form its actual inputs, perform the ordinary conversions/admission, then
+> dispatch that same occurrence through its actual native word or retained
+> body.
+
+> For an actual free name, source priority is the caller's nearest current
+> binding, then its already inherited dynamic input, then the actual
+> occurrence's eligible lexical source.
+
+> A missing required actual input is an ordinary call/admission refusal
+> before entry, not an invariant abort. A present incompatible caller
+> binding is not absence and must not silently fall back to the lexical
+> value.
+
+And what the repair must not be: "Do NOT repair l2_method_sig_compatible by
+requiring identical hidden names/counts to the exemplar, or by accepting a
+prefix and padding arbitrary missing cells."
+
+**The mechanism: the author's answer.** The second reply left the mechanism
+to the author's open question. The third and fourth replies carry his answer
+of 2026-10-04. It is archived word for word in the
+[journal of clarifications](../LMX_blog/2026-10-04.md#no-runtime-name-table),
+and the question is answered and moved to
+[`LMX_blog/q/`](../LMX_blog/q/graph-hidden-input-name-binding.md). The rule:
+no name table at run time under any conditions; names serve translation and
+`toLmx` only; the addresses of existing objects do not move.
+
+What Codex draws from it, third reply: "Resolve source-level
+identities/correspondences at translation. Runtime follows the resulting
+physical references, selected declaration places and ordinary input
+coordinates." No text lookup, no use of `lmx_source_names` for the binding
+of a call, no registry of hashed names in its place, no METHOD record, Lmx
+member, atom metadata or permanent auxiliary graph. A specialization made at
+translation is allowed where it is proved; the enumeration of every future
+actual is not to become a requirement of the language, and an unknown
+provenance is not an incompatibility. "If today's retained graph/ABI has
+lost the ordinary references needed for this, that is the
+representation/formation defect to fix." Fourth reply: "Identify where
+that existing resolved relation is lost or ignored and repair that path."
+
+The normative texts are synchronized in both languages: sections 1 and 4 of
+the semantics (through the book), L2 section 2.1, `CORE_L2_L3_v2.md`,
+`L2_L3_CODING_INSTRUCTION.md`, `to_fable.md` and the plan. They forbade
+execution through the table before. What changes: the table is said to serve
+translation and `toLmx` only, and the formation of a call's inputs is named
+among the things that never consult it.
+
+**Where the resolved relation is lost.** Lines on `69d3d9a5`.
+
+- The relation exists for a callee the translator knows. `l2_hidden_from`
+  (:26333) chooses the source of hidden input `k` of `callee` in caller
+  `mi`: the caller's formal or inherited input of that name, the caller's
+  own field of that name it uses, then the declaration in the callee's
+  lexical context. A Structure is reached through the parent of the selected
+  occurrence, `l2_c<self>\parent` (:26374). A number's cell is reached as a
+  field place from the caller's own containing Structures
+  (`l2_own_from_expr`, :11419), not through the occurrence. The name is
+  resolved at translation; run time gets an address or a value.
+- A call through a callable formal ignores it. `l2_emit_call` (:27958) takes
+  the counts of declared and hidden inputs from the method that declares the
+  formal (:28014, :28015) and asks `l2_hidden_from` about that method
+  (:28114). The actual's list never enters the call.
+- The actual's trampoline checks the count alone (:29209) and reads every
+  cell it is given.
+- The actual occurrence does carry its inputs physically: the argument part
+  of its signature holds a cell per declared formal and per through-name
+  (`l2_emit_parts`, :43400 and :43428).
+- A walked body already reads the lexical source of an absent hidden input
+  through `node` (`l2_rw_arg_fb`, :34271; `l2_mad_inputs`, :38827). A native
+  trampoline has no such reading.
+
+How the call through a formal is to learn which actual it holds is not
+decided here. The design goes to Codex under the same ID before any
+translator byte changes.
+
+**The nested definition.** Codex, second reply: "HELD-CALL-FROM-NESTED-DEFINITION is
+G5-blocking. Keep it a REQUIRED positive and cover both root and method
+callers, native and genuinely walked." It belongs to the same dependency,
+the formation of an actual call's inputs and the capture closure (K04), and
+is not to be repaired by an environment special to held callables: "A
+captured callable is an ordinary nonprimitive reference; the
+source-faithful copied occurrence and necessary lexical dependencies must
+survive composition. At invocation the ordinary caller-source priority
+still applies. Copying lexical data does not freeze a free name against a
+later caller override."
+
+Measured beside it on `69d3d9a5`, with a definition `g0` returned by its
+method:
+
+| Free name of `g0` | From a method that does not name it |
+| --- | --- |
+| A number of the unit, `base` | Read at the call: 5 + 5, and 5 + 7 after `base: 7` |
+| A Structure of the unit read by a path, `m\v` | Accepted; `walk error: INVALID` |
+| A held callable, `p0()` | Accepted; `a callable merge was called outside its header` |
+| The same held callable, when the calling method names `p0` itself | 105 |
+
+So the formation of a held call's free names has the caller's own binding
+for every kind of value and a lexical fallback for numbers alone.
+
+**Rows.** All are required positives; none may become an expected failure.
+
+| Fixture | Now |
+| --- | --- |
+| `unit_callable_formal_free_names_other` | red: 6 where the rules give 10 |
+| `unit_callable_formal_free_names_override` | red: 6 where the rules give 41 |
+| `unit_callable_formal_free_names_extra` | red: accepted, stops at run time |
+| `unit_callable_formal_free_names_none` | red: accepted, stops at run time |
+| `unit_callable_formal_free_names_forward` | red: 6 through a forwarded formal |
+| `unit_callable_formal_free_names_self` | green: the actual is the declaring method; lexical 5, caller's 40 |
+| `unit_callable_formal_free_names_self_walk` | red: a callable formal is outside the walkable subset; debt of the implementation |
+| `unit_held_call_from_nested_definition_root`, natively and walked | red: refused |
+| `unit_held_call_from_nested_definition_method`, natively and walked | red: accepted, stops at run time |
+
+`unit_held_call_from_nested_definition` of section 53 is replaced by the two
+rows by caller.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2_harness/fable_full_30` (full harness) | RED 40 of 1631. Against `fable_full_29` (RED 31 of 1621): FAIL→OK 0; OK→FAIL 0; added 11, of which `unit_callable_formal_free_names_self` green and ten labelled OPEN positives red; removed 1, the red `unit_held_call_from_nested_definition` the two rows by caller replace; no red row's message changed. |
+| Kernel and L3 | Not run again: the translator is the bytes of `fable_kernel_16` and `fable_l3_16`, verified by hash before the run. |
+
+The 40 red rows are the 29 of `fable_full_17` and eleven labelled OPEN
+positives: `unit_held_call_to_callable_formal`, the four rows of the nested
+definition by caller, and six of the callable formal's free names. The
+pre-gate hashes of the translator, the eight fixtures and the harness equal
+the live files and every staged copy (`tie.py`).
+
+**Next.** The design of the common formation of an actual call's inputs from
+references resolved at translation, for Codex. Then the bounded step Codex
+allowed: references among the free names of a definition its method returns,
+as far as their source and contract are proven by existing graph references;
+the capture closure (`unit_capture_struct_whole`,
+`unit_capture_struct_merge_two`); whole-value composition and nested
+admission. No adapter special to a formal or to a held callable, and no
+names at run time.

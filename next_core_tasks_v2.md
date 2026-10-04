@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_29` RED31/1621 — 101 FAIL→OK against that
-baseline, OK→FAIL 0; the two red rows above the 29 of `fable_full_17` are
+continuation bytes: `fable_full_30` RED40/1631 — 101 FAIL→OK against that
+baseline, OK→FAIL 0; the eleven red rows above the 29 of `fable_full_17` are
 labelled OPEN positives; kernel `fable_kernel_16` GREEN296 with 113 executed
-selftests; L3 `fable_l3_16`
-([gates](steps/fable-continuation-20261003.md#operand-receipt)). The checkpoint gate
+selftests; L3 `fable_l3_16`, both on the same translator bytes
+([gates](steps/fable-continuation-20261003.md#actual-inputs-ruling)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -100,7 +100,11 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   Three required positives stay red: `unit_copy_call_other_owner` (the
   procedure reaches its unit and `node` through the occurrence's parent),
   `unit_copy_call_from_method`, `unit_copy_call_addressed`. The
-  unknown-origin case stays behind the open author question.
+  unknown-origin case no longer waits for the author: his answer of
+  2026-10-04 forbids a name table at run time
+  ([record](LMX_blog/2026-10-04.md#no-runtime-name-table)), and the case
+  belongs to K04's formation of the actual's inputs from references resolved
+  at translation.
 - [x] Receiving-use contract, the mechanism and its first producer (Codex
   rulings FABLE-CODEX-20261003-01 and -20261004-01): the shared walk takes
   the model as index space and the coverage of the instruction being run;
@@ -194,15 +198,22 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   parentheses
   ([ledger](steps/fable-continuation-20261003.md#operand-receipt)).
 - [ ] A held call from a definition that a method returns: refused from the
-  root, accepted and aborting at run time from a method. A required red
-  positive
+  root, accepted and aborting at run time from a method. A G5 blocker (Codex,
+  FABLE-CODEX-20261004-12), part of K04's formation of actual inputs and of
+  the capture closure; required red positives by caller, natively and walked
   ([defects](steps/defects.md#held-call-from-nested-definition)).
 - [ ] A call through a callable formal forms the actual's free names from
-  the contract's list: an accepted program gives a wrong value or aborts
-  when the actual's free names are not the contract's. The mechanism of
-  forming them by name is asked of Codex; the held callable given to a
-  callable formal waits for it
-  ([defects](steps/defects.md#callable-formal-free-names-by-contract)).
+  the list of the formal's declaring method (K04,
+  CALLABLE-FORMAL-HIDDEN-CONTRACT): measured, an accepted program gives a
+  wrong value or aborts when the actual's free names are not that method's.
+  A G5 blocker with required red positives. The semantics is confirmed. The
+  author's answer of 2026-10-04 forbids a name table at run time: the
+  correspondence of the actual's inputs to their sources is resolved at
+  translation, and run time follows references and positions
+  ([record](LMX_blog/2026-10-04.md#no-runtime-name-table),
+  [defects](steps/defects.md#callable-formal-hidden-contract)). The design
+  of the common route goes to Codex first. The held callable given to a
+  callable formal waits for it.
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

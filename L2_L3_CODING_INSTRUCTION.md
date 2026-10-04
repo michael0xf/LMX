@@ -479,7 +479,7 @@ A captured value keeps the physical identity required by its category:
 - explicit reference variables preserve reference-cell depth;
 - copying a graph preserves alias topology through the common copy map.
 
-Do not repair capture by installing a persistent runtime name table. Compiler-owned source-site metadata may select an already declared binding; runtime execution then uses resolved references.
+Do not repair capture by installing a persistent runtime name table. Compiler-owned source-site metadata may select an already declared binding; runtime execution then uses resolved references. The author's rule of 2026-10-04 is absolute ([record](LMX_blog/2026-10-04.md#no-runtime-name-table)): no name table at run time under any conditions; names serve translation and `toLmx` only. This covers the formation of a call's inputs: the correspondence between a callable's inputs and their sources is resolved at translation, and run time follows physical references, selected declaration places and input positions. A registry of hashed names is a name table under another spelling. Addresses of existing objects do not move ([record](LMX_blog/2026-10-04.md#addresses-do-not-move)), so no relocation handle or second identity system is needed.
 
 ## 9. Raw C and foreign ABI
 

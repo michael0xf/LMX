@@ -1,0 +1,31 @@
+# OPEN positive. The callable given to a callable formal may read more free
+# names than the method that declares the formal. g2 reads other and third;
+# f0 reads base alone. run has neither, so g2 reads the unit's: 9 + 20. This
+# implementation accepts the program and stops at run time, `lmx: invariant:
+# a trampoline was called outside its method's signature`. Entry 7.
+int: base 5
+int: other 9
+int: third 20
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: g2 () int
+    return: other + third
+end: g2
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+int: r run(g2)
+int: ok 7
+if: r != 29
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

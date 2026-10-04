@@ -1,10 +1,8 @@
 # OPEN positive. A definition inside a method that returns it may call another
 # held callable. g0, defined in makeUse and returned by it, calls p0 and adds
-# what makeUse was given: 100 + 5, called from the root and from a method.
-# This implementation refuses the root's call, `a caller's binding of a held
-# callable's free name is of another type`; with the method's call alone it
-# accepts the program and stops at run time, `lmx: invariant: a callable
-# merge was called outside its header`. Entry 7.
+# what makeUse was given: 100 + 5, called from the root. This implementation
+# refuses the root's call, `a caller's binding of a held callable's free name
+# is of another type`. Entry 7.
 fn: make0 (int: n) fn: () int
     fn: f0 () int
         return: n
@@ -18,17 +16,9 @@ fn: makeUse (int: k) fn: () int
     return: g0
 
 u0: makeUse 5
-
-fn: inner () int
-    return: u0()
-end: inner
-
 int: r u0()
-int: s inner()
 int: ok 7
 if: r != 105
     ok: 81
-if: s != 105
-    ok: 82
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

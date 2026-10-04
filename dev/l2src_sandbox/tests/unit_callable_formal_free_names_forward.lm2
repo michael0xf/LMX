@@ -1,0 +1,30 @@
+# OPEN positive. A callable formal handed on to another callable formal is
+# the same callable, called with its own free names. pass hands q to run;
+# q is g1, which reads other: 9 + 1 through both. This implementation gives
+# g1 the value of base: 6. Entry 7.
+int: base 5
+int: other 9
+int: third 20
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: pass (f0: q) int
+    return: run(q)
+end: pass
+
+int: r pass(g1)
+int: ok 7
+if: r != 10
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,34 @@
+# The callable given to a callable formal is the very method that declares
+# the formal: its free name is formed as at any call of it. run has no base,
+# so f0 called through q reads the unit's base, 5. runb declares base 40,
+# and f0 called through q reads the caller's: 40. Entry 7.
+int: base 5
+int: other 9
+int: third 20
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: runb (f0: q) int
+    int: base 40
+    return: q()
+end: runb
+
+int: r run(f0)
+int: s runb(f0)
+int: ok 7
+if: r != 5
+    ok: 81
+if: s != 40
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

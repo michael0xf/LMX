@@ -1239,7 +1239,7 @@ optimization succeeding. Its complete interface representation is still an
 open implementation gap, not a new semantic exception. The explicit normative
 ban on source-name-table execution conflicts with using that already existing
 table for hidden-input identity. The bounded representation clarification was
-[asked of the author](../LMX_blog/q/current/graph-hidden-input-name-binding.md);
+[asked of the author](../LMX_blog/q/graph-hidden-input-name-binding.md);
 do not silently repeal that ban or invent a new persistent registry. This
 does not pause unrelated graph/projection/test repairs.
 
@@ -1625,8 +1625,10 @@ capture two outputs with equal child ordinals under different holders; retain
 direct-versus-copy mutation, alias/parent/operator relocation, source-name
 and unchanged-signature checks. Walk returned readers and constructor twins
 genuinely on identical bytes. Actual-call input formation is a separate debt.
-The [external-name binding question](../LMX_blog/q/current/graph-hidden-input-name-binding.md)
-is unanswered; its normative ban is not silently removed.
+The [external-name binding question](../LMX_blog/q/graph-hidden-input-name-binding.md)
+is unanswered; its normative ban is not silently removed. (Answered by the
+author on 2026-10-04: no name table at run time; the linked record carries the
+answer.)
 
 <a id="pointer-connected-storage-boundary"></a>
 ### 5.22 Pointer ticket: value, place, depth and actual C storage

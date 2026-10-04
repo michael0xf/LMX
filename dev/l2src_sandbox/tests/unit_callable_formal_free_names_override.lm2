@@ -1,0 +1,27 @@
+# OPEN positive. A free name of the callable given to a callable formal takes
+# the caller's binding first. run declares other 40 and calls q, which is
+# g1: g1 reads run's other, 40 + 1. This implementation gives g1 the value
+# of base, the free name of the formal's declaring method: 6. Entry 7.
+int: base 5
+int: other 9
+int: third 20
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: run (f0: q) int
+    int: other 40
+    return: q()
+end: run
+
+int: r run(g1)
+int: ok 7
+if: r != 41
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

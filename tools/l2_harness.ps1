@@ -7494,11 +7494,43 @@ $fixtures = @(
     # `incompatible entry signature`.
     [pscustomobject]@{ Name = 'unit_held_call_to_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
-    # OPEN positive (HELD-CALL-FROM-NESTED-DEFINITION).  A definition a method returns calls another held
-    # callable.  This implementation accepts the program and stops at run time: `a callable merge was called
-    # outside its header`.  Red until repaired; never to be turned into an expected failure.
-    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+    # OPEN positives, required before G5 (HELD-CALL-FROM-NESTED-DEFINITION; Codex, FABLE-CODEX-20261004-12).  A
+    # definition a method returns calls another held callable.  Called from the root, this implementation refuses
+    # the program; called from a method that names the callable nowhere, it accepts the program and stops at run
+    # time, natively and walked: `a callable merge was called outside its header`.  Red until repaired; never to
+    # be turned into expected failures.
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_root_walk.lm2'; Source = 'unit_held_call_from_nested_definition_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_from_nested_definition_method_walk.lm2'; Source = 'unit_held_call_from_nested_definition_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # OPEN positives, required before G5 (CALLABLE-FORMAL-HIDDEN-CONTRACT, K04; Codex, FABLE-CODEX-20261004-12).
+    # The callable given to a callable formal supplies its own free names, formed where the call is made: the
+    # caller's binding, then the callable's lexical source.  This implementation forms them from the list of the
+    # method that declares the formal, by position: another name of the same count gets the wrong value (other,
+    # override, forward), another count is accepted and stops at run time (extra, none).  Red until repaired;
+    # never to be turned into expected failures or refusals.
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_extra.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_none.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    # The one case this implementation has right: the actual is the method that declares the formal.  Its free
+    # name takes the caller's binding, else the lexical source.  With the methods walked a callable formal is
+    # outside the walkable subset (the limit row unit_walk_methods_callable_formal_refused): that is debt of the
+    # implementation and no rule, and the walked twin is an OPEN positive, red.
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_self_walk.lm2'; Source = 'unit_callable_formal_free_names_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     # A throw raised while an actual is evaluated (found beside the named actuals, and no matter of them):

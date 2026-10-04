@@ -1,0 +1,44 @@
+# OPEN positive. The callable given to a callable formal may read fewer free
+# names than the method that declares the formal, and more. h1 reads none
+# and is given to a formal declared by f0, which reads base: 3. g1 reads
+# other and is given to a formal declared by c0, which reads none: 9 + 1.
+# This implementation accepts the program and stops at run time, `lmx:
+# invariant: a trampoline was called outside its method's signature`.
+# Entry 7.
+int: base 5
+int: other 9
+int: third 20
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: h1 () int
+    return: 3
+end: h1
+
+fn: c0 () int
+    return: 1
+end: c0
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: runc (c0: q) int
+    return: q()
+end: runc
+
+int: r run(h1)
+int: s runc(g1)
+int: ok 7
+if: r != 3
+    ok: 81
+if: s != 10
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -296,11 +296,16 @@ pointer may outlive a stack object. The forward-header problem is retention of
 the validated original descriptor-only source occurrence, not permission to
 invent another METHOD registry or body.
 
-One author question remains open:
-[hidden-input name binding](LMX_blog/q/current/graph-hidden-input-name-binding.md).
-The ban on using the external name table for construction/copy/call binding has
-**not** been lifted. Do not implement a name-lookup workaround. Ask Codex about
-the exact dependent case; continue independent work while that decision waits.
+The author question on
+[hidden-input name binding](LMX_blog/q/graph-hidden-input-name-binding.md)
+is answered (2026-10-04,
+[record](LMX_blog/2026-10-04.md#no-runtime-name-table)): no name table at run
+time under any conditions; names serve translation and `toLmx` only; addresses
+of existing objects do not move. The ban on using the external name table for
+construction/copy/call binding is therefore final. Form the actual
+occurrence's inputs from correspondences resolved at translation and from
+physical references. No name-lookup workaround, hashed-name registry or new
+identity layer.
 
 ## 6. Verification and release discipline
 

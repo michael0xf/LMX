@@ -1,0 +1,28 @@
+# OPEN positive. The callable given to a callable formal is called with its
+# own free names formed where the call is made: the caller's binding, then
+# the callable's lexical source. run's formal is declared by f0, which reads
+# base. g1 reads other. run has no other, so g1 called through q reads the
+# unit's other: 9 + 1. This implementation gives g1 the value of base in the
+# place of other: 6. Entry 7.
+int: base 5
+int: other 9
+int: third 20
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+int: r run(g1)
+int: ok 7
+if: r != 10
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

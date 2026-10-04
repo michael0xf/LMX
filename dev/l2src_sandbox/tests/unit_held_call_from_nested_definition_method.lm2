@@ -1,0 +1,29 @@
+# OPEN positive. A definition inside a method that returns it may call another
+# held callable. g0, defined in makeUse and returned by it, calls p0 and adds
+# what makeUse was given: 100 + 5, called from a method that names p0
+# nowhere. This implementation accepts the program and stops at run time,
+# `lmx: invariant: a callable merge was called outside its header`. Entry 7.
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n
+    return: f0
+
+p0: make0 100
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + p0()
+    return: g0
+
+u0: makeUse 5
+
+fn: inner () int
+    return: u0()
+end: inner
+
+int: r inner()
+int: ok 7
+if: r != 105
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

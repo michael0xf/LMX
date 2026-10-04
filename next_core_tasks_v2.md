@@ -32,9 +32,9 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_09` RED37/1432 — 93 FAIL→OK against that
+continuation bytes: `fable_full_10` RED34/1436 — 96 FAIL→OK against that
 baseline, no OK→FAIL
-([gate](steps/fable-continuation-20261003.md#full-09)). The checkpoint gate
+([gate](steps/fable-continuation-20261003.md#full-10)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -116,6 +116,9 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [x] Reception into a letter model, `receiveMessage: m T`, in the retained
   graph and in the interpreter, with the root statement no longer dropped
   ([ledger](steps/fable-continuation-20261003.md#receive-model)).
+- [x] A field path that ends at a Structure field, as a returned value and as
+  an argument: nested written leaves, the admission source, the graph
+  reference ([ledger](steps/fable-continuation-20261003.md#structure-path-value)).
 - [ ] Letter Array-of-Array element contract for a typed letter reference
   (`entry_arg_len`, `entry_index`, `entry_strcmp`, `entry_parse_min`,
   `unit_charpp_return`, `unit_l2_puts_library`).

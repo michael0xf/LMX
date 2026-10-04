@@ -914,3 +914,80 @@ walker and driver unchanged.
 | `fable_full_01` (RED 126/1395, baseline) | 93 | 0 | | |
 
 The kernel and L3 gates were not rerun: no kernel source changed.
+
+<a id="structure-path-value"></a>
+## 25. A field path that ends at a Structure field, as a value
+
+`return: h\p` and `take(h\a\p)`, where the leaf field is a Structure and the
+receiver is a reference of another model. Three rows; their setups still used
+the withdrawn `Rich: p` field form and were migrated first, as
+[section 2](#legacy-setup-migration) does it: the nested definition is written in
+place.
+
+**What the migration showed.** With a nested written leaf the checker refused
+the program before the graph was reached: `a field path must end at a
+Structure`. The route for a Structure-valued path (`l2_actual_path`, its
+one-atom spelling and the native `l2_emit_actual_path`) accepted a field of a
+named Structure type only (kind 3). A nested written Structure field (kind 2)
+is a Structure field with its own declared type; the three places take both.
+
+**The value's source.** The admission of a reference needs to know what the
+value is (`L2ReferenceSource`). For a path it said nothing, so no pair map was
+prepared for the leaf's type and the receiving model.
+`l2_reference_path_leaf` gives the Structure the leaf field declares, which
+is also what the field physically holds: a whole Structure is never assigned
+through a path. One reader, `l2_path_field_leaf`, now walks a typed path for
+both its Array leaf (section 20) and its Structure leaf. The check, the
+native emission and the graph take the source from the same call, so the pair
+is prepared once and both engines use it.
+
+**The graph.** Where a reference is received, a path is read as the path's
+reference (`l2_rw_path_reference`, the producer callable paths already use);
+a number is still never read from a Structure (`l2_rw_path_read` keeps
+`a Structure value`).
+
+**Verification.**
+
+- The three rows were strengthened while they were migrated. They used to
+  call a callee that wrote a field and returned a constant, so nothing
+  observed which Structure had arrived. Now the leaf has an unread `extra`
+  before its `equals`, Equatable has `equals` alone, the callee writes
+  `equals` through the admitted reference and returns what it reads, and the
+  root checks the callee's value, the leaf's `equals` in `Holder` itself and
+  the untouched `extra`. A positional admission would write `extra`.
+- Recovered: `unit_s7_ret_field`, `unit_s7_ret_deep`, `unit_s7_arg_deep`
+  (`NativeMethods` 0, 1, 2), each with a walked twin (`WalkedMethods` 0, 1,
+  2 and the root).
+- Translator mutant `fable_sval_mut_noschema` (the path's leaf gives the
+  admission no source): all six rows red at run time, natively exit 3 and
+  walked exit 1; the neighbouring negatives and `unit_s7_ret_rich` unchanged.
+- New negative `unit_s7_ret_nested_refused`: a nested leaf without the
+  required field is refused, `15:1: implements is false in return value`.
+  Two checks hold it: the one at the return statement and the check of the
+  sources that reach a result place. A mutant of the first alone
+  (`fable_sval_mut_retadmit`) does not reach it, the row stays green; with
+  both off (`fable_sval_mut_retadmit2`) the translator accepts the program
+  and the row is red, with `unit_s7_ret_name`. The live file was restored and
+  its hash re-verified after each mutant.
+- Focused `fable_sval_01`: 85 targets around Structure-valued paths, D-105
+  and callable rows; the seven red rows are the known open ones.
+
+**Not migrated.** The negative neighbours `unit_s7_ret_path`,
+`unit_s7_arg_deep_refused` and their kin keep the `Plain: p` field form and
+their pinned refusals. They go with the head-classifier cutover.
+
+<a id="full-10"></a>
+## 26. Full gate after section 25
+
+`fable_full_10` completes **RED 34/1436** on translator SHA256
+`8EB5C2A9DE87409A2A05C6F5F9EC0FA7CF97BC843E916D1F3FA09EAB3D7BA9D0`
+(staged Git blob `866c1780af8ceb86d4393f9d5798ea46ebb509f0`), harness
+`858534AC6FED0CA2CCB290BEA3702F9324C4CBE6F525E9B2BFA6AE409D277903`,
+walker and driver unchanged.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_09` (RED 37/1432) | 3 | 0 | 4, all OK | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 96 | 0 | | |
+
+The kernel and L3 gates were not rerun: no kernel source changed.

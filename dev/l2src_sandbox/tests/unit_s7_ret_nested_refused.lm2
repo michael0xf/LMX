@@ -1,0 +1,22 @@
+# return: h\p. The field is a nested Structure that has no equals; Equatable
+# requires it. The Consumer of a return is the required descriptor, so the
+# return is refused: a nested written leaf is admitted like any Structure,
+# not accepted because it is one.
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+Holder:
+    p:
+        size_t: toString 0U
+end: Holder
+
+fn: pick (Holder: h) Equatable
+return: h\p
+
+fn: go (Holder: h) int
+return: 4
+
+sendMessage: exit(exit_code: go(Holder); stdout: ""; stderr: "")
+return

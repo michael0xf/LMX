@@ -6229,13 +6229,23 @@ $fixtures = @(
     # Mutant: l2_actual_path returns 2 for span > 3 → the refusal is
     # "no located diagnostic" and the Entry 7 row does not translate.
     [pscustomobject]@{ Name = 'unit_s7_arg_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # The leaf is a nested written Structure; the callee's write through the admitted argument
+    # is observed in Holder's own leaf. The same with the three methods and the root walked.
+    [pscustomobject]@{ Name = 'unit_s7_arg_deep_walk.lm2'; Source = 'unit_s7_arg_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_arg_deep_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_deep_walk.lm2'; Source = 'unit_s7_ret_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_path.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'implements is false in return value'; Absent = @(); Debt = @() },
+    # The same with a nested written leaf: it is admitted like any Structure, not accepted
+    # because it is one. Mutant: l2_admit_return returns 0 before the descriptor call.
+    [pscustomobject]@{ Name = 'unit_s7_ret_nested_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s7_ret_nested_refused.lm2:15:1: implements is false in return value'; Absent = @(); Debt = @() },
     # A return's Consumer is the required descriptor. Callers are not in the body.
     # Mutant: l2_admit_return returns 0 before the descriptor call
     # → unit_s7_ret_name translates.
@@ -6248,7 +6258,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_ret_rich.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_ret_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s7_ret_field_walk.lm2'; Source = 'unit_s7_ret_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     # Named primitive value codes call l2_primitive_leaf_implements.
     # Mutant: same-name success stores 0 → unit_s7_prim_same refuses.
     # Mutant: cross-leaf success stores 0 → unit_s7_prim_cross refuses

@@ -1358,6 +1358,9 @@ prototype:
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: size_t out_count) int
+    fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
+    fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
+    fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
     fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
     fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int: elem; int: depth; size_t: i0; size_t: i1; int: want_len; const: @(char ind); const: @(LmP0Node at); @: char dest) int
     fn: l2_arr_len_shape (const: @(LmP0Node node); @: char pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
@@ -9936,12 +9939,32 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
             out\place: address\index
         return: 0
     ---
+    # A field path that ends at a Structure field: the value is the Structure that field
+    # declares, which is also what the field physically holds. A path is not a place a call
+    # site fills, so it has no alternatives.
+    if: n >= 3 && l2_reference_path_leaf(first, n, mi) >= 0
+        out\schema: l2_reference_path_leaf(first, n, mi)
+        out\layout: out\schema
+        return: 0
     callee: l2_d105_callee(mi, first, n)
     if: callee >= 0
         out\schema: l2_input_model(callee, -1)
         out\method: callee
         out\place: -1
 return: 0
+
+# The declared Structure of the field a path span ends at, read where mi stands, or -1.
+fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
+    @: char text l2_address_path_text(first, n)
+    int: saved l2_cur_mi
+    int: leaf
+    if: text = 0
+        return: -1
+    l2_cur_mi: mi
+    leaf: l2_path_struct_leaf(text, strlen(text))
+    l2_cur_mi: saved
+    l2_xfree(text)
+return: leaf
 
 fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     @: L2Declaration declaration l2_declaration(stmt)
@@ -22340,6 +22363,34 @@ return: 0
 # 1 char) and, for kind 5, the declared count.  1 = the root is not a typed one, or the
 # path does not end at an Array field.
 fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: size_t out_count) int
+    int: kind 0 - 1
+    int: ent 0 - 1
+    int: row 0 - 1
+    \out_kind: 0 - 1
+    \out_elem: 0 - 1
+    \out_count: 0U
+    if: l2_path_field_leaf(pd, pn, @ kind, @ ent, @ row) != 0 || (kind != 5 && kind != 6)
+        return: 1
+    \out_kind: kind
+    \out_elem: ent
+    if: kind = 5
+        \out_count: l2_nsf_val[row]
+return: 0
+
+# The declared Structure a typed field path ends at -- a nested written definition (kind 2) or
+# a field of a named Structure type (kind 3) -- or -1.
+fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
+    int: kind 0 - 1
+    int: ent 0 - 1
+    int: row 0 - 1
+    if: l2_path_field_leaf(pd, pn, @ kind, @ ent, @ row) != 0 || (kind != 2 && kind != 3)
+        return: -1
+return: ent
+
+# The leaf of a typed field path: its kind, its entity and the field row that declares it.
+# 1 = the root is not a typed one, a step goes through a slot that is not a Structure, or a
+# name is no declared field.
+fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
     size_t: off 0U
     size_t: len 0U
     int: ni 0 - 1
@@ -22352,9 +22403,6 @@ fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out
     int: slot
     int: kind 0 - 1
     int: ent 0 - 1
-    \out_kind: 0 - 1
-    \out_elem: 0 - 1
-    \out_count: 0U
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
         return: 1
     if: oi >= 0
@@ -22376,13 +22424,10 @@ fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out
             return: 1
         if: i + 1 < segs && kind != 2 && kind != 3
             return: 1
-        if: i + 1 = segs && kind != 5 && kind != 6
-            return: 1
         if: i + 1 = segs
             \out_kind: kind
-            \out_elem: ent
-        if: i + 1 = segs && kind = 5
-            \out_count: l2_nsf_val[slot]
+            \out_ent: ent
+            \out_row: slot
         if: i + 1 < segs
             ni: ent
             res: 0 - 1
@@ -23575,7 +23620,7 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
         fx: l2_ns_field_ix(owner, buf)
         if: fx < 0
             return: l2_error(path, mem\value, "unresolved name")
-        if: l2_nsf_kind[fx] != 3 || l2_nsf_ref[fx] < 0
+        if: (l2_nsf_kind[fx] != 2 && l2_nsf_kind[fx] != 3) || l2_nsf_ref[fx] < 0
             return: l2_error(path, mem\value, "a field path must end at a Structure")
         if: consumed = span
             \out_ni: l2_nsf_ref[fx]
@@ -23628,7 +23673,7 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
         memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
         buf[mem\value\as\atom\length]: 0
         slot: l2_ns_slot_named(owner, buf, 0U, mem\value\as\atom\length, @ kind, @ ent)
-        if: slot < 0 || kind != 3 || ent < 0
+        if: slot < 0 || (kind != 2 && kind != 3) || ent < 0
             return: 2
         if: nseg >= 32
             return: l2_error(l2_src, at, "expression too long")
@@ -23738,7 +23783,7 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
                 fx: l2_ns_field_ix(owner, buf + off + 1U)
                 if: fx < 0
                     return: l2_error(path, a0\value, "unresolved name")
-                if: l2_nsf_kind[fx] != 3 || l2_nsf_ref[fx] < 0
+                if: (l2_nsf_kind[fx] != 2 && l2_nsf_kind[fx] != 3) || l2_nsf_ref[fx] < 0
                     return: l2_error(path, a0\value, "a field path must end at a Structure")
                 \out_ni: l2_nsf_ref[fx]
                 return: 0
@@ -32947,7 +32992,13 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
     if: l2_rw_foreign_path(@ word) != 0
         status: l2_rw_machine_word(@ word, parent, out)
     else:
-        status: l2_rw_path_read(span\node, @ word, parent, out)
+        # Where a reference is received a path may end at a Structure field: the value is
+        # that Structure. A number is never read from one (l2_rw_path_read).
+        if: l2_own_is_pointer(ty) != 0
+            status: l2_rw_path_reference(span\node, @ word, parent, out)
+        else:
+            status: l2_rw_path_read(span\node, @ word, parent, out)
+        ---
     ---
     l2_xfree(text)
 return: status

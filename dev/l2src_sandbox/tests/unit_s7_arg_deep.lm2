@@ -1,36 +1,32 @@
-# take(h\a\p). The leaf is Rich, not Equatable. take reads equals.
-# Rich has equals and an unread extra. Entry 7.
-
-Rich:
-    size_t: equals 0U
-    size_t: extra 0U
-end: Rich
-
-Mid:
-    Rich: p
-end: Mid
-
-Holder:
-    Mid: a
-end: Holder
+# take(h\a\p). The leaf is a nested Structure, not Equatable: it has an
+# unread extra before its equals. take writes equals through the admitted
+# argument; the write is seen in Holder's own leaf and extra keeps its
+# value. Entry 7.
 
 Equatable:
     size_t: equals 0U
 end: Equatable
 
-fn: take (Equatable: slot) int
-    slot\equals: 1U
-return: 4
+Holder:
+    a:
+        p:
+            size_t: extra 5U
+            size_t: equals 0U
+end: Holder
 
-fn: pass (Holder: h) int
+fn: take (Equatable: slot) size_t
+    slot\equals: 9U
+return: slot\equals
+
+fn: pass (Holder: h) size_t
 return: take(h\a\p)
 
-fn: go () int
+fn: go () size_t
 return: pass(Holder)
 
-int: k
+size_t: k
 k: go()
-if: k = 4
+if: k = 9U && Holder\a\p\equals = 9U && Holder\a\p\extra = 5U
     sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")

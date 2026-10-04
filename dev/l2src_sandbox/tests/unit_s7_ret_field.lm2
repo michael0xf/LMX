@@ -1,32 +1,32 @@
-# return: h\p. The field is Rich. Equatable requires equals.
-# take reads that field. Entry 7.
-
-Rich:
-    size_t: equals 0U
-    size_t: extra 0U
-end: Rich
+# return: h\p. The field is a nested Structure with an unread extra before
+# its equals; Equatable requires equals alone. take writes through the
+# admitted reference and reads it back. The write is seen in Holder's own
+# field and extra keeps its value: the returned value is that very
+# Structure, admitted by name. Entry 7.
 
 Equatable:
     size_t: equals 0U
 end: Equatable
 
 Holder:
-    Rich: p
+    p:
+        size_t: extra 5U
+        size_t: equals 0U
 end: Holder
 
 fn: pick (Holder: h) Equatable
 return: h\p
 
-fn: take (Equatable: slot) int
-    slot\equals: 1U
-return: 4
+fn: take (Equatable: slot) size_t
+    slot\equals: 9U
+return: slot\equals
 
-fn: go () int
+fn: go () size_t
 return: take(pick(Holder))
 
-int: k
+size_t: k
 k: go()
-if: k = 4
+if: k = 9U && Holder\p\equals = 9U && Holder\p\extra = 5U
     sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")

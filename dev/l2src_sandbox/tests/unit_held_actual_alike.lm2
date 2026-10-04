@@ -1,0 +1,40 @@
+# One callable formal receives a held definition and two methods of the
+# unit that all form their inputs alike: each reads the one name other, a
+# field of the unit, 9. One formation serves the three and nothing has to
+# be told apart where the formal is called. run calls its formal: 109, 10
+# and 9. under has other 20: 120, 21 and 20. Entry 7.
+int: other 9
+
+fn: f0 () int
+    return: other
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: make0 (int: k) fn: () int
+    fn: g0 () int
+        return: other + 100
+    return: g0
+
+p0: make0 5
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: under () int
+    int: other 20
+    return: run(p0) * 10000 + run(g1) * 100 + run(f0)
+end: under
+
+int: a run(p0)
+int: b run(g1)
+int: c run(f0)
+int: d under()
+int: ok 7
+if: a != 109 || b != 10 || c != 9 || d != 1202120
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

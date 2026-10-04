@@ -1,0 +1,45 @@
+# OPEN positive. One callable formal receives held definitions made by two
+# methods, each formed in its own way, and two copies of one of them. ga
+# reads n; gb reads m. pa and pa2 hold ga with n 100 and n 200; pb holds gb
+# with m 30. run calls its formal: 105, 205 and 60. under has n 1 and m 2:
+# 6 and 6 for the two copies of ga, 4 for gb. This implementation does not
+# tell the node of one definition from the node of another where the call
+# is made: the call in run is refused where it stands, as a limit and no
+# rule. Entry 7.
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: makeA (int: n) fn: () int
+    fn: ga () int
+        return: n + 5
+    return: ga
+
+fn: makeB (int: m) fn: () int
+    fn: gb () int
+        return: m * 2
+    return: gb
+
+pa: makeA 100
+pa2: makeA 200
+pb: makeB 30
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: under () int
+    int: n 1
+    int: m 2
+    return: run(pa) * 10000 + run(pa2) * 100 + run(pb)
+end: under
+
+int: a run(pa)
+int: b run(pa2)
+int: c run(pb)
+int: d under()
+int: ok 7
+if: a != 105 || b != 205 || c != 60 || d != 60604
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

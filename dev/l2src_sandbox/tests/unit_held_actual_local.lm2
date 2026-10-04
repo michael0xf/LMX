@@ -1,0 +1,39 @@
+# A held definition made in a method and kept in that method's own name is
+# given to a callable formal from there. g0 reads n, a name of the method
+# that made it, and other, a field of the unit, 9. local makes a copy with
+# its k and gives it to run: 109 and 909, each call its own copy. localn has
+# its own n, 3: the caller's value wins over the copy's 500, 12. Entry 7.
+int: other 9
+
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: make0 (int: n) fn: () int
+    fn: g0 () int
+        return: n + other
+    return: g0
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: local (int: k) int
+    h: make0 k
+    return: run(h)
+end: local
+
+fn: localn (int: k) int
+    int: n 3
+    h: make0 k
+    return: run(h)
+end: localn
+
+int: a local(100)
+int: b local(900)
+int: c localn(500)
+int: ok 7
+if: a != 109 || b != 909 || c != 12
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

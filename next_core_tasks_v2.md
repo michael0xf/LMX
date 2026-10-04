@@ -32,12 +32,12 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_35` RED37/1679 — against that baseline 97
-FAIL→OK, OK→FAIL 0, five red rows replaced and 289 added; the 37 red rows
-are 24 of the baseline and 13 added, eight of them labelled OPEN positives
-above the 29 of `fable_full_17`; kernel `fable_kernel_21` GREEN296 with 113
-executed selftests; L3 `fable_l3_21`
-([gates](steps/fable-continuation-20261003.md#held-chain)). The checkpoint gate
+continuation bytes: `fable_full_36` RED38/1686 — against that baseline 97
+FAIL→OK, OK→FAIL 0, five red rows replaced and 296 added; the 38 red rows
+are 24 of the baseline and 14 added, nine of them labelled OPEN positives
+above the 29 of `fable_full_17`; kernel `fable_kernel_22` GREEN296 with 113
+executed selftests; L3 `fable_l3_22`
+([gates](steps/fable-continuation-20261003.md#held-actual)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -234,17 +234,24 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   along the chain of callers; a name of the method that made a definition
   stays the definition's free name, the copied value its own source
   ([ledger](steps/fable-continuation-20261003.md#held-chain)).
-- [ ] The third slice, the rest: held callables and merge nodes as actuals,
-  with their own exact identity, through the same formation and the ordinary
-  admission (`unit_held_call_to_callable_formal`, `unit_t7_convert`,
+- [x] The third slice, step two: a held definition as the actual of a
+  callable formal, admitted by its model's signature, handed as the node
+  itself, its free names formed where the formal is called; the presence
+  record of step one closed by enumeration and by an instrument over the
+  corpus ([ledger](steps/fable-continuation-20261003.md#held-actual)).
+- [ ] The third slice, the rest: a merge built as the actual, from the graph
+  it really makes (`unit_t7_convert`,
   `unit_callable_formal_unfollowed_actual`); the reference: its absence
   (`unit_callable_formal_site_names_reference`), its admission and its
   asking along the chain (`unit_nested_definition_structure_override`); the
   conversion of a handed-on input (`unit_held_call_free_name_converted`);
   the library unit's callable formal (`unit_lib_callable_formal`); the walked
-  consumer (`unit_callable_formal_free_names_self_walk`). Any new route that
-  makes an occurrence a value writes its flow fact or the row "not
-  followed".
+  consumer (`unit_callable_formal_free_names_self_walk`); the complete copy
+  of a returned definition's node against L2 §13 and a node's own contract
+  route, by which its class is told among callables formed differently
+  (`unit_held_actual_among_methods`, `unit_held_actual_two_models`). Any new
+  route that makes an occurrence a value writes its flow fact or the row
+  "not followed".
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

@@ -1,0 +1,22 @@
+# A held definition is admitted to a callable formal by its own signature.
+# run's formal is declared by f0, which takes nothing and gives an int. p1
+# holds a definition that takes an int: it is not such a callable, and the
+# call that gives it is refused.
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: make1 (int: n) fn: (int: x) int
+    fn: g1 (int: x) int
+        return: n + x
+    return: g1
+
+p1: make1 100
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+int: a run(p1)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,54 @@
+# A held definition given to a callable formal is called there with its own
+# free names, formed as any callable's. g0 reads n, a name of the method
+# that made it, and other, a field of the unit, 9. p0 and p9 hold two copies,
+# of n 100 and n 900. run calls its formal; mid hands its formal to run;
+# caller, a method, gives both. From the root: 109, and 909 through mid.
+# From caller: 109 and 909. withn has n 40, two methods above the call: the
+# value given wins over both copies, 49 and 49. withother has other 2: 102.
+# Entry 7.
+int: other 9
+
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: make0 (int: n) fn: () int
+    fn: g0 () int
+        return: n + other
+    return: g0
+
+p0: make0 100
+p9: make0 900
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: mid (f0: q2) int
+    return: run(q2)
+end: mid
+
+fn: caller () int
+    return: run(p0) * 1000 + mid(p9)
+end: caller
+
+fn: withn () int
+    int: n 40
+    return: caller()
+end: withn
+
+fn: withother () int
+    int: other 2
+    return: run(p0)
+end: withother
+
+int: a run(p0)
+int: b mid(p9)
+int: c caller()
+int: d withn()
+int: e withother()
+int: ok 7
+if: a != 109 || b != 909 || c != 109909 || d != 49049 || e != 102
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

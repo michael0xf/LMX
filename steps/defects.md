@@ -1591,11 +1591,12 @@ type/model/address/target/value потребителям и native-именов�
 вхождение, за которым трансляция не следит, — узел merge как фактический (`unit_t7_convert`,
 `unit_callable_formal_unfollowed_actual`) или вхождение из другой трансляции через экспортированную
 обёртку метода библиотечной единицы (`unit_lib_callable_formal`); потребитель с callable-формалом при
-обходе методов (`_self_walk`); удерживаемый callable как фактический
-([HELD-CALLABLE-TO-CALLABLE-FORMAL](#held-callable-to-callable-formal)). Это покрытие реализации, не
+обходе методов (`_self_walk`); узел возвращённого определения среди callable другого формирования у
+одного формала ([HELD-ACTUAL-NODE-CLASS](#held-actual-node-class)). Это покрытие реализации, не
 ограничение языка ([§57](fable-continuation-20261003.md#formal-formation),
-[§58](fable-continuation-20261003.md#absent-input) и
-[§59 журнала](fable-continuation-20261003.md#site-requirements)).
+[§58](fable-continuation-20261003.md#absent-input),
+[§59](fable-continuation-20261003.md#site-requirements) и
+[§61 журнала](fable-continuation-20261003.md#held-actual)).
 
 **Измерено 2026-10-04, fable, транслятор `69d3d9a5`, нативно.** Минимальные программы запущены.
 
@@ -2652,8 +2653,86 @@ left out yet`. Это предел реализации, не правило: н
 третьим срезом K04 вместе с отсутствием ссылки
 ([§59 журнала](fable-continuation-20261003.md#site-requirements)).
 
+<a id="t7-model-free-name"></a>
+### T7-MODEL-FREE-NAME — 2026-10-04, fable, OPEN (блокер G5)
+
+Узел, который строит `merge(y: k; add)`, не имеет места для скрытых входов модели. Если модель читает
+свободное имя, удерживаемый вызов узла останавливает процесс:
+
+```text
+int: other 9
+fn: add (int: y; int: x) int
+    return: y + x + other
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; add)
+w: wrap 5
+int: a (w: 1)          # lmx: invariant: a callable merge was called outside its header
+```
+
+Удерживаемый вызов подаёт скрытый вход модели после объявленного аргумента. Заголовок узла его не
+содержит, а тело узла читает имя по позиции модели: ARG 2 при одном объявленном аргументе. По норме
+15, а под вызывающим с `other` 20 — 26. Измерено нативно на `f3c46518` и на трансляторе §61 пробником
+вне гейта; строка харнесса появится вместе с исправлением, в шаге «узел merge как фактическое»
+([§61 журнала](fable-continuation-20261003.md#held-actual)).
+
+<a id="held-actual-node-class"></a>
+### HELD-ACTUAL-NODE-CLASS — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+
+До одного callable-формала доходят узел определения, возвращённого методом, и callable другого
+формирования: метод единицы или узел другого определения. Вызов через формал должен при исполнении
+выбрать формирование по тому вхождению, которое формал держит. Метод единицы узнаётся сравнением
+самого вхождения. У определения одного адреса нет: каждый возврат его метода строит новый узел. Вызов
+отвергается на месте: `a call through a callable formal that receives a held callable among callables
+formed differently is not built yet`. Это предел реализации, не правило. Обязательные позитивы,
+красные: `unit_held_actual_among_methods` (по норме 105, 10, 1 и 122101) и
+`unit_held_actual_two_models` (105, 205, 60 и 60604). Где формирование одно, выбирать нечего и вызов
+работает: две копии одного определения (`unit_held_actual_free_names`), определение и методы единицы с
+одинаковыми входами (`unit_held_actual_alike`).
+
+Измерено и не принято. Узел сегодня делит со своей моделью часть аргументов по адресу, и выбор класса
+по этому адресу проходит оба позитива. Это отношение существует только потому, что узел — неполная
+копия ([RETURNED-NODE-PARTIAL-COPY](#returned-node-partial-copy)). Codex: «Do not bless partial MAD construction as complete
+copying, or preserve a wrong alias solely to tag model provenance. If the class witness survives the
+correct existing representation, use it; if correcting the copy removes that relation, do not add a
+tag/registry to recreate it or pretend the relation remains proved. Keep that route explicitly OPEN
+until its actual physical contract route is implemented.»
+Маршрут остаётся открытым, пока у узла нет собственного физического маршрута контракта
+([§61 журнала](fable-continuation-20261003.md#held-actual)).
+
+<a id="returned-node-partial-copy"></a>
+### RETURNED-NODE-PARTIAL-COPY — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+
+Узел, который возврат метода строит для возвращаемого вложенного определения (`l2_mad_emit`), —
+неполная копия вхождения модели. Слоты 0 и 1, части аргументов и результата, записаны адресом модели.
+Число получает свежую ячейку своего типа. Всё остальное, шаги и вложенные тела, остаётся адресом
+модели (`lmx_walk_cell_copy`: число копируется, нечисловое возвращается как есть). По норме
+([L2 §13](../docs/L2_spec_en.md#copy-merge), [L3 §20](../docs/LMX_semantics.en.md#composition)) копия
+покрывает всё используемое замыкание с переписанными ссылками и `parent`; по исходному адресу
+удерживаются только переиспользуемая нативная реализация и допущенная ветвь
+`independent: const: immutable`. Codex: «Sharing an ordinary graph signature/step merely because this
+constructor already does so is not a new retention exception.»
+
+Программа, которая через разделяемые части даёт неверное значение, не известна: числовое состояние
+копий независимо (`unit_held_actual_node`: каждая копия ведёт свой счёт). Запись — обязательство
+представления, а не измеренный отказ. Проверить: `parent` разделяемых шагов, хранение формалов и
+умолчаний, ссылки операндов; свидетель — независимое изменение нечислового состояния двух копий. Шаг
+§61 не добавляет ничего, что опиралось бы на разделяемую часть
+([§61 журнала](fable-continuation-20261003.md#held-actual)).
+
 <a id="held-callable-to-callable-formal"></a>
-### HELD-CALLABLE-TO-CALLABLE-FORMAL — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+### HELD-CALLABLE-TO-CALLABLE-FORMAL — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, FIXED для одного формирования 2026-10-04
+
+**Исправлено 2026-10-04 для одного формирования.** Удерживаемое определение, поданное
+callable-формалу, допускается по сигнатуре своей модели и передаётся самим узлом, без исполнения при
+приёме: программа ниже даёт 200 (`unit_held_call_to_callable_formal`). Свободные имена определения
+формируются там, где формал вызывается, как у любого callable: каждая копия читает своё, значение
+вызывающего побеждает (`unit_held_actual_free_names`, `unit_held_actual_local`,
+`unit_held_actual_alike`). Формал держит сам узел: явное чтение `node` даёт значение копии, запись в
+узел остаётся в копии (`unit_held_actual_node`). Отказ по несовместимой сигнатуре остаётся
+(`unit_held_actual_signature_refused`). Не построено: узел определения среди callable другого
+формирования у одного формала ([HELD-ACTUAL-NODE-CLASS](#held-actual-node-class)). Только нативно: с
+обходом методов метод с callable-формалом остаётся вне обходимого подмножества
+([§61 журнала](fable-continuation-20261003.md#held-actual)). Ниже — запись, как она стояла.
 
 Удерживаемый callable, поданный явно объявленному callable-формалу, отвергается:
 

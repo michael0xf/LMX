@@ -426,6 +426,16 @@ for the other type the call is a located limit. A reference through a held call
 is not asked along the chain yet
 ([ledger](steps/fable-continuation-20261003.md#held-chain)).
 
+A held definition is an actual of a callable formal as a method of the unit is:
+admitted by its model's signature, handed as the node itself, followed as the
+flow fact "a node of model M" (`l2_cfl_note`, kind 4), its free names formed
+where the formal is called. One class of formation at a formal needs nothing
+told apart. A definition's node among callables formed differently is a located
+limit: a node has no contract route of its own, and the args part it shares
+with its model by address is the partial copy of `l2_mad_emit`, an open
+obligation against L2 §13, so nothing selects by it
+([ledger](steps/fable-continuation-20261003.md#held-actual)).
+
 A number no caller binds is handed absent, `refs[k] = 0`. A method that only
 forwards the name hands its entry on as it is (`l2_dyn_fwd`,
 `l2_hidden_forward`) and does not read a lexical source of its own. The

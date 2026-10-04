@@ -1411,6 +1411,7 @@ prototype:
     fn: l2_cf_set (int: omi; int: fk; int: req) int
     fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
     fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; @: char dest) int
+    fn: l2_cf_held (int: mi; const: @(LmP0Field a0); int: span) int
     fn: l2_occ_actual (int: mi; const: @(LmP0Field a0); int: span) int
     fn: l2_emit_occ_admit (int: mi; int: req; int: cand; const: @(char value); const: @(char ind)) int
     fn: l2_cf_get (int: omi; int: fk) int
@@ -24797,8 +24798,16 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 cf_kind: 0
                 cf_fi: 0 - 1
                 cand_mi: l2_cf_actual(mi, a0, actual_span, @ cf_kind, @ cf_fi)
+                # K04 S3: a held name -- a node of its model (kind 4), admitted by the model's signature.
+                if: cand_mi < 0 && l2_cf_held(mi, a0, actual_span) >= 0
+                    cf_fi: l2_cf_held(mi, a0, actual_span)
+                    cf_kind: 4
+                    cand_mi: l2_mad_held_model(cf_fi)
+                ---
                 if: cand_mi < 0 || l2_method_sig_compatible(cand_mi, req_mi) = 0
                     return: l2_error(path, node, "incompatible entry signature")
+                if: cf_kind = 4 && l2_cfl_note(idx, mi, fi, actual_i, 4, cand_mi, cf_fi, node) != 0
+                    return: 1
                 # A unit method's occurrence is used by this call; a forwarded formal's is not known
                 # here -- the caller of THIS method chose it.
                 if: cf_kind = 1
@@ -27870,6 +27879,18 @@ fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_
         \out_kind: 1
     return: cand
 
+# K04 S3: the actual of a callable formal that is a held name -- the node the name holds, of the model its
+# store statement's method returns -- is handed as it is, as the occurrence a method's name is.  The held own,
+# or -1.
+fn: l2_cf_held (int: mi; const: @(LmP0Field a0); int: span) int
+    int: oi
+    if: a0 = 0 || span != 1 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
+        return: 0 - 1
+    oi: l2_call_head_held(mi, a0\value\as\atom)
+    if: oi < 0 || l2_mad_held_model(oi) < 0
+        return: 0 - 1
+return: oi
+
 # The same resolution, for the native emitter: the occurrence expression of the actual, in the
 # caller's code.  A unit method's occurrence is its descriptor in the unit; a forwarded formal is
 # whatever value that formal holds (l2_tok_formal), so nothing is invented for it.
@@ -27879,7 +27900,14 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; @: cha
     int: cand
     cand: l2_cf_actual(mi, a0, actual_span, @ kind, @ fi)
     if: cand < 0
-        return: 1
+        # A held name: the node it holds.  In a method the name is a hidden input (Q52).
+        fi: l2_cf_held(mi, a0, actual_span)
+        if: fi < 0
+            return: 1
+        if: l2_param_find(mi, l2_own_name[fi]) >= 0
+            return: l2_tok_formal(mi, l2_param_find(mi, l2_own_name[fi]), dest)
+        return: l2_own_load(fi, dest)
+    ---
     if: kind = 2
         return: l2_tok_formal(mi, fi, dest)
 return: l2_tok_method_occ(cand, dest)
@@ -28235,7 +28263,7 @@ return: 0
 fn: l2_cfl_bring (int: f; int: c; @: int changed) int
     int: j 0
     int: n
-    if: l2_cfl_kind[f] = 1
+    if: l2_cfl_kind[f] = 1 || l2_cfl_kind[f] = 4
         return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], changed)
     if: l2_cfl_kind[f] = 3
         return: l2_cfr_add(c, l2_cfl_t[f], 0 - 1, changed)
@@ -28388,6 +28416,14 @@ fn: l2_cfl_classes (int: c; int: t; const: @(LmP0Node at); @: int out) int
             k: k + 1
         i: i + 1
     ---
+    # K04 S3: a node of a model is no occurrence of the unit; telling its class from another's at run time is
+    # not built yet.
+    i: 0
+    while: k > 1 && i < n
+        if: l2_mad_host_of(l2_cfl_at(c, t, i)) >= 0
+            return: l2_error(l2_src, at, "a call through a callable formal that receives a held callable among callables formed differently is not built yet")
+        i: i + 1
+    ---
     \out: k
 return: 0
 
@@ -28530,7 +28566,7 @@ fn: l2_site_denotes (int: m; const: @(LmP0Node node); int: fi; int: x; int: t; i
     f: l2_cfl_site_fact(node, m, fi, x, t)
     if: f < 0
         return: 2
-    if: l2_cfl_kind[f] = 1
+    if: l2_cfl_kind[f] = 1 || l2_cfl_kind[f] = 4
         return: (cast: (int) (l2_cfl_a[f] = a))
     if: l2_cfl_kind[f] = 2 && l2_cfl_a[f] = m
         if: l2_cfr_has(m, l2_cfl_a_fi[f], 0 - 1) != 0
@@ -35462,6 +35498,13 @@ fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int ou
     int: status
     size_t: capacity 1U
     size_t: top (cast: (size_t) -1)
+    # K04 S3: a held name -- the node it holds; in a walked method the name is a hidden input (Q52).
+    if: candidate < 0 && l2_cf_held(l2_rw_mi, first, span) >= 0
+        formal: l2_cf_held(l2_rw_mi, first, span)
+        if: l2_rw_mi != l2_e && l2_param_find(l2_rw_mi, l2_own_name[formal]) >= 0
+            return: l2_rw_arg_fb(parent, l2_param_find(l2_rw_mi, l2_own_name[formal]), out)
+        return: l2_rw_own(parent, formal, out)
+    ---
     if: candidate < 0 || candidate = l2_e
         return: l2_rw_refuse((first\value), "an unresolved callable occurrence")
     if: kind = 2

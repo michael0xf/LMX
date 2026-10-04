@@ -7492,11 +7492,36 @@ $fixtures = @(
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_group_call_parentheses_walk.lm2'; Source = 'unit_group_call_parentheses.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
-    # OPEN positive, required before G5 (Codex, FABLE-CODEX-20261004-12).  Red until repaired; never to be turned
-    # into an expected refusal.  An explicitly declared callable formal receives the occurrence of a held callable
-    # whose header it admits (HELD-CALLABLE-TO-CALLABLE-FORMAL).  This implementation refuses the call,
-    # `incompatible entry signature`.
+    # A held definition as the actual of a callable formal (HELD-CALLABLE-TO-CALLABLE-FORMAL; K04 S3; Codex,
+    # FABLE-CODEX-20261004-12).  The formal receives the node the name holds, and nothing is called on reception
+    # (to_callable_formal).  The definition's free names are formed where the formal is called, as any
+    # callable's: each copy reads its own where no caller has the name, and a caller's value wins over both
+    # copies, through a formal handed on and from a method (free_names).  The formal holds that very node: an
+    # explicit read of the node gives the copy's own value whatever the callers give, and a write to the node
+    # stays in that copy (node).  A definition made in a method and kept in that method's own name is given from
+    # there, each call its own copy (local).  A definition and methods of the unit that form their inputs alike
+    # are one formation, and nothing is told apart where the formal is called (alike).  Natively only: a method
+    # with a callable formal is outside the walkable subset.
     [pscustomobject]@{ Name = 'unit_held_call_to_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_free_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_alike.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
+    # A held definition is admitted to a callable formal by the signature of its model.
+    [pscustomobject]@{ Name = 'unit_held_actual_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_actual_signature_refused.lm2:20:8: incompatible entry signature'; Absent = @(); Debt = @() },
+    # OPEN positives, required before G5.  A limit of this implementation and no rule; red until built, never to
+    # be turned into expected refusals.  A definition's node at a formal that also receives callables formed in
+    # another way -- methods of the unit (among_methods), the nodes of another definition (two_models) -- is
+    # refused where the formal is called: a node has no contract route of its own yet to be told by.
+    [pscustomobject]@{ Name = 'unit_held_actual_among_methods.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_two_models.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     # A reference among the free names of a definition its method returns (HELD-CALL-FROM-NESTED-DEFINITION; Codex,
     # FABLE-CODEX-20261004-12).  The caller that names no such reference supplies nothing, and the definition reads

@@ -1,0 +1,44 @@
+# OPEN positive. One callable formal receives a held definition and two
+# methods of the unit, each formed in its own way. g0, held in p0 with n
+# 100, reads n; g1 reads other, a field of the unit, 9; f0 reads nothing.
+# run calls its formal: 105, 10 and 1. under has n 7 and other 20: 12 for
+# the held definition, 21 for g1, 1 for f0. This implementation does not
+# tell a definition's node from a callable formed in another way where the
+# call is made: the call in run is refused where it stands, as a limit and
+# no rule. Entry 7.
+int: other 9
+
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: make0 (int: n) fn: () int
+    fn: g0 () int
+        return: n + 5
+    return: g0
+
+p0: make0 100
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: under () int
+    int: n 7
+    int: other 20
+    return: run(p0) * 10000 + run(g1) * 100 + run(f0)
+end: under
+
+int: a run(p0)
+int: b run(g1)
+int: c run(f0)
+int: d under()
+int: ok 7
+if: a != 105 || b != 10 || c != 1 || d != 122101
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

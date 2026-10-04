@@ -1,0 +1,39 @@
+# A held definition given to a callable formal keeps its own node: the
+# formal holds that node itself, never the definition it was copied from.
+# g0 reads n twice: bare, a free name, which a caller's value gives; and
+# node\n, the value kept in its node. Then it adds 1 to its node's n. p0 and
+# p9 hold two copies, of n 100 and n 900. Through run: p0 gives 100 and 100;
+# p9 900 and 900; p0 again 101 and 101: each copy keeps its own count. under
+# has n 7: the bare n is 7, the node's is still its own, 102. Entry 7.
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: make0 (int: n) fn: () int
+    fn: g0 () int
+        int: r n * 1000 + node\n
+        node\n: node\n + 1
+        return: r
+    return: g0
+
+p0: make0 100
+p9: make0 900
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: under () int
+    int: n 7
+    return: run(p0)
+end: under
+
+int: a run(p0)
+int: b run(p9)
+int: c run(p0)
+int: d under()
+int: ok 7
+if: a != 100100 || b != 900900 || c != 101101 || d != 7102
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

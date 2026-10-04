@@ -5206,3 +5206,243 @@ equal the live files and every staged copy (`tie.py`).
 identity, through the same formation; the reference: its absence, its
 admission, and its asking along the chain; the conversion of a handed-on
 input; the library's ingress; the walked consumer.
+
+<a id="held-actual"></a>
+## 61. A held definition as the actual of a callable formal (third slice, step two)
+
+### Codex's tenth reply -12
+
+It accepts the last checkpoint, with the open conversion case and the
+presence mutant no gated row kills kept visible, and answers the question
+sent with it: may the class of a definition's node be told, where a formal
+is called, by the address of the signature part the node shares with its
+model.
+
+- The answer: "YES as an existing, proved physical witness of a
+  FORMATION CLASS in this bounded flow analysis; NO as an unconditional
+  identity of the callable occurrence, or as a universal language rule that
+  every copy shares its signature."
+- What is called: "The selected q remains self; its own parent
+  supplies lexical fallback and its own native word selects native/walk
+  dispatch. Never replace q by the model occurrence or read the model's
+  captured cells."
+- The remainder: "The last branch is allowed only as the previously
+  proved exhaustive remainder; UNKNOWN never means the last model."
+- The obligation under that selector: "There is a concrete copy
+  obligation you must NOT freeze to keep the proposed selector working.
+  l2_mad_emit currently shares slots 0/1 and executable parts while copying
+  cells." And: "Do not bless partial MAD construction as
+  complete copying, or preserve a wrong alias solely to tag model
+  provenance. If the class witness survives the correct existing
+  representation, use it; if correcting the copy removes that relation, do
+  not add a tag/registry to recreate it or pretend the relation remains
+  proved. Keep that route explicitly OPEN until its actual physical contract
+  route is implemented."
+- The merge built as an actual: "A measured MAD relation does not
+  automatically establish a T7 relation."
+- The presence record of section 60: "The never-present optimization
+  is sound only under a complete, closed presence proof. No recorded PRESENT
+  mark must not mean NEVER_PRESENT when an external/unfollowed ingress or
+  incomplete closure remains possible."
+- The order of work: "Proceed through the existing common dependency:
+  held/merge actual formation, reference absence/admission and transitive
+  forwarding, receiving-edge conversion, external ingress, genuinely walked
+  consumers."
+
+### What changed
+
+All in `dev/l2src_sandbox/l2trans.lm1`.
+
+| Step | Where | What |
+| --- | --- | --- |
+| The actual | `l2_cf_held`, `l2_check_call` | An actual of a callable formal that is a held name whose model is known is admitted by the model's signature against the method that declares the formal (`l2_method_sig_compatible`), as a method of the unit is. |
+| The flow fact | `l2_cfl_note` with kind 4, `l2_cfl_bring`, `l2_site_denotes` | The fact says: a node of model M. The closure brings M to the formal as it brings a method, so the fixed point of dynamic inputs asks M's names of the consumer and up its chain, and the site knows which callable it gives. |
+| What is handed | `l2_cf_actual_emit`, `l2_rw_callable_actual` | The node the name holds: the caller's own field, or, where the held name is a name of the unit read in a method, that method's hidden input of the name. Nothing is called. |
+| The call through the formal | unchanged | `q` is the node itself. Its hidden inputs are formed by the one formation of its class; its own parent gives the lexical fallback; its own native word selects the dispatch. |
+| The limit | `l2_cfl_classes` | Where more than one class of formation reaches a formal and one of the reaching callables is a definition's node, the call is refused where it stands. |
+
+### The class of a node
+
+With more than one class of formation at a formal, the call tells, when it
+runs, which class the occurrence it holds belongs to. For a method of the
+unit that is the comparison of the occurrence itself
+([section 59](#site-requirements)): a method of the unit has one
+occurrence. A definition's node is made anew by every return of its method;
+no one address is the definition.
+
+One relation exists today between a node and its model. `l2_mad_emit`
+stores the model's args part and return part into the node by address, so
+the args part of `q` is the args part of the model's occurrence for every
+node of that model and for no node of another. A variant of this step's
+translator selects by it. It was built and measured:
+`unit_held_actual_among_methods` and `unit_held_actual_two_models` pass on
+it, and with the comparison put back to the occurrence itself they fail.
+
+It is not landed. The relation exists because the node is a partial copy:
+slots 0 and 1 are the model's by address, a number is a fresh cell, and
+everything else, the steps and the nested bodies, is the model's by address
+(`lmx_walk_cell_copy`). L2 [§13](../docs/L2_spec_en.md#copy-merge) requires
+a copy of the complete used closure with references and `parent` links
+rewritten, and retains by address only a reusable native implementation and
+an admitted `independent: const: immutable` branch. A selector that reads
+the shared part would freeze the sharing. So the route stays open, as Codex
+rules, with the two fixtures as red required positives
+([HELD-ACTUAL-NODE-CLASS](defects.md#held-actual-node-class)), and the copy
+is recorded as an obligation of its own
+([RETURNED-NODE-PARTIAL-COPY](defects.md#returned-node-partial-copy)). No
+program is known that gives a wrong value through the shared parts.
+
+What needs no telling works. Two copies of one definition are one class
+(`unit_held_actual_free_names`). A definition and methods of the unit that
+form their inputs alike are one class (`unit_held_actual_alike`).
+
+### The presence record, closed
+
+`l2_held_never` ([section 60](#held-chain)) lets a held call pass over a
+method's handed-on input of another type only where that input can never
+arrive present. "No record" may mean "never present" only if every
+hand-over is recorded. That was checked in two ways.
+
+By enumeration. A hidden input is formed in six places: the native call
+(`l2_emit_call_hides`), the native execution of a named Structure
+(`l2_emit_ns_exec_at`), the walked call (`l2_rw_call`), the walked execution
+(`l2_rw_ns_hidden`), the native held call (`l2_prep_held_call`) and the
+walked held call (`l2_rw_mad_call`). Each stands at a site the check phase
+records for the fixed point: a call of a method, an execution of a named
+Structure and a conversion edge by `l2_note_call`; a call through a formal
+by `l2_check_call`; a held call by `l2_check_held_call`. A callable this
+translation does not follow, reaching a formal, makes the call a refusal
+(`l2_cfl_classes`), so a translated program has no entry the fixed point did
+not see. A library unit's methods are entered from other translations:
+every input of a library unit counts as one that can be present
+(`l2_dyp_has`).
+
+By an instrument. A scratch copy of this step's translator, never landed,
+stops at each of the six places where a number input the callee only hands
+on receives an entry that can be present while the fixed point recorded no
+presence for that callee and name.
+
+Replayed over the 1678 translations recorded by `fable_full_35`: 57 rows have
+at least one such hand-over (649 counting every emission pass: 277 entries
+handed on and 372 values), and none stops. Four of this step's fixtures have
+them too, and none stops. On every row the exit, the messages other than the
+instrument's own lines, and the generated L1 equal the uninstrumented
+translator's.
+
+The instrument's control is the same instrument over a translator whose
+fixed point records no presence at all. It stops on 44 of the 58 rows that
+then have a hand-over, and on the four fixtures of this step. The other 14
+rows hand on only entries of a caller whose own presence is equally
+unrecorded, which the instrument has to read as never present.
+
+This is a census of the corpus and a reading of the code. It is no proof
+for a program the corpus lacks.
+
+### Measured
+
+On the committed translator (`f3c46518`) and on this one, natively.
+
+| Program | Before | Now |
+| --- | --- | --- |
+| `unit_held_call_to_callable_formal`: `run`'s formal takes a held definition and calls it twice | refused where the name is given: `incompatible entry signature` | 200; the trace is 0 on entry to `run` and 2 after |
+| `unit_held_actual_free_names`: two copies of one definition, of `n` 100 and 900, reading `n` and the unit's `other`, 9; given to `run`, through `mid`, and from a method; `withn` has `n` 40 two methods above the call; `withother` has `other` 2 | refused the same way | 109 and 909; 109 and 909; 49 and 49; 102 |
+| `unit_held_actual_node`: the definition reads `n`, reads `node\n`, then adds 1 to its node's `n`; `p0`, `p9`, `p0` again, then `p0` under a caller's `n` 7 | refused the same way | 100 and 100; 900 and 900; 101 and 101; 7 and 102 |
+| `unit_held_actual_local`: a definition made in a method, kept in that method's own name and given from there; `localn` has `n` 3 | refused the same way | 109; 909; 12 |
+| `unit_held_actual_alike`: a definition and two methods of the unit, each reading only `other`, at one formal; `under` has `other` 20 | refused the same way | 109, 10 and 9; 120, 21 and 20 |
+| `unit_held_actual_signature_refused`: a definition that takes an `int`, given to a formal declared by a method that takes nothing | refused at 20:8: `incompatible entry signature` | the same refusal, now by the model's signature: see the mutants |
+| `unit_held_actual_among_methods`: a definition reading `n`, a method reading `other` and a method reading nothing, at one formal | refused the same way | refused where the formal is called, as a limit: OPEN |
+| `unit_held_actual_two_models`: definitions made by two methods, one reading `n` and one reading `m`, and two copies of the first, at one formal | refused the same way | refused where the formal is called, as a limit: OPEN |
+
+Of the witnesses Codex names for this step the rows carry: two copies of
+one model with different captured values; a caller's value against an
+explicit read of the node; independent change of the copied state; a
+definition among callables of the same signature, formed alike and formed
+differently, the second red. Not carried: execution with the consumer
+walked. With the methods walked the translation is refused at the method
+that declares the formal (`a callable result or a callable formal is outside
+the walkable subset`), as before this step, so there is no walked twin, and
+the branch of `l2_rw_callable_actual` for a held name that is a walked
+method's hidden input cannot run yet. It has the form of the branch for a
+formal handed on, which waits for the same walked consumer.
+
+### Measured by scratch probes, not gated
+
+These are no rows yet. They become rows with the next step.
+
+- Two definitions made by two methods that form alike, each reading the one
+  name `n`, at one formal: 105 and 60, and 6 and 2 under a caller's `n` 1.
+  One class; nothing is told apart.
+- A reference among the definition's free names. `g0` reads `m\v`, where `m`
+  is a field of the unit made from `Model`. Through the formal the reference
+  travels as any method's input does: 9 from the root. Under a caller with
+  its own `m` of the same declaration and `v` 40: 45. Under a caller whose
+  `m` is of another declaration, with `v` at another position: 45, admitted
+  by the field it reads. Under a caller whose `m` is of a declaration
+  without `v`: refused at translation where the formal is called,
+  `implements is false in function argument`. The direct held call of such
+  a definition under a caller's own `m` is still the located limit of
+  [section 56](#nested-references).
+- Ahead of the next step, a defect found: a merge whose model reads a free
+  name. `add` reads the unit's `other`; `w: wrap 5` holds
+  `merge(y: k; add)`; `(w: 1)` stops the process when it runs: `lmx:
+  invariant: a callable merge was called outside its header`. The held call
+  hands the model's hidden input after the declared argument. The node the
+  merge builds has no place for it in its header, and its body reads the
+  name at the model's own position. The committed translator does the same
+  ([T7-MODEL-FREE-NAME](defects.md#t7-model-free-name)).
+
+### Replay
+
+The step's translator against the committed one (`f3c46518`), on the 1678
+translations recorded by `fable_full_35`: exit, messages and the generated
+L1 are the same on 1677 rows. The one other,
+`unit_held_call_to_callable_formal`, refused before, translates. The replay
+ran on a build of the translator whose generated C equals, byte for byte,
+that of the source committed with this step.
+
+The eight rows of the step were run before the gates (`fable_hactp_02`): six
+pass, the two labelled OPEN rows are red.
+
+### Mutants
+
+Each is a copy of the step's translator with one change, built apart and run
+natively on the eight fixtures.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| The held actual writes no flow fact | `unit_held_call_to_callable_formal`, `unit_held_actual_free_names`, `_node` and `_local` end in `walk error: INVALID`: the call through the formal forms nothing for the definition. `_alike` is refused: what the call needs depends on a callable not followed. |
+| A held definition is admitted whatever its signature | `unit_held_actual_signature_refused` translates and ends in `walk error: INVALID`. |
+| The native caller never reads the held name as its hidden input | `unit_held_actual_free_names`, `_node` and `_alike`, where a method gives a held name of the unit, do not compile: the generated C names a cell the method does not have. |
+| The native caller never loads the held name as its own field | Every row that gives a held name is refused: `internal: a refusal said nothing`. |
+| The walked caller does not know a held name as an actual | Every row that gives a held name is refused where the root gives it: `an unresolved callable occurrence`. |
+| The limit fires for one class too | The five rows that run are refused with the limit's message. |
+| The limit removed, a node's class compared as a method's occurrence is | No gated row changes. The two OPEN rows translate and end in `walk error: INVALID` and in a wrong value in place of the located limit. |
+| The limit replaced by the selection on the part shared with the model | Every row passes, the two OPEN rows too. Not landed, for the reason above. |
+
+The seventh is not a kill by a gated row, and is said as it is. As with the
+presence mutant of section 60, the only programs that tell the limit from
+its absence are red required positives; they become gated kills when a node
+has its own contract route. The sixth shows the other direction is gated:
+the limit does not reach a formal with one class.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_22` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_22` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_36` (full harness) | RED 38 of 1686. Against `fable_full_35` (RED 37 of 1679): FAIL→OK 1, `unit_held_call_to_callable_formal`; OK→FAIL 0; added 7, of which 5 green and two labelled OPEN rows red; removed 0. |
+| `build/l2_harness/fable_hactp_02` (focused, before the gates) | 8 rows, 6 pass; see the replay above. |
+
+Against the baseline `fable_full_01` (RED 126 of 1395), counted directly:
+97 FAIL→OK, OK→FAIL 0, five red rows replaced, 296 added of which 14 red.
+The 38 red rows are 24 of the baseline and 14 added: the five that
+`fable_full_17` had above the baseline and nine labelled OPEN positives.
+The pre-gate hashes of the translator, the eight fixtures and the harness
+equal the live files and every staged copy (`tie.py`).
+
+**Next.** A merge built as the actual, from the graph it really makes; the
+reference: its absence, its admission, and its asking along the chain; the
+conversion of a handed-on input; the library's ingress; the walked
+consumer; the complete copy of a returned definition's node and a node's
+own contract route.

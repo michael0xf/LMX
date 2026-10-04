@@ -1,0 +1,275 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# A named actual among a call's operands: NAMED [named, coordinate, payload].
+# The call evaluates its operands in the order they stand and hands each value
+# to the formal whose coordinate the operand carries; an operand that is not
+# NAMED supplies the formal of its own position. sub2(a, b) = a - b and
+# mix(a, b, c) = a - (b - c) tell the formals apart.
+#
+# The refusals are the kernel's own. The translator refuses these programs
+# before a graph exists, so a graph that reaches the walker with a coordinate
+# outside the formals, with one coordinate supplied twice (by two names, by a
+# position and a name, or by an empty payload and a name), with a NAMED of
+# another width or with no coordinate cell must not run on a made-up binding.
+# NAMED is an operand of a call and not an expression.
+#
+# A coordinate supplied twice leaves another formal with no value, and a callee
+# that reads that formal stops on the read whatever the binding did. So the
+# "twice" graphs call first2(a, b) = a and second2(a, b) = b, which read only
+# the coordinate supplied twice: the refusal is the binding's own.
+
+sub: na_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: na_check
+
+fn: na_fr (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n 0
+    if: parent = 0
+        return: 0
+    n: lmx_walk_frame(arena, roles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        return: 0
+return: n
+
+fn: na_arg (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; size_t: k) @: Lmx
+    @: Lmx n na_fr(arena, roles, parent, slot, c.LMX_WALK_OP_ARG, 4U)
+    if: n = 0 || lmx_walk_store_size(arena, n, 1U, k) != c.LMX_WALK_OK || lmx_arena_ref_store(n, 3U, wt_witness(arena, c.LMX_TYPE_INT)) != 0
+        return: 0
+return: n
+
+fn: na_lit (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: v) @: Lmx
+    @: Lmx n na_fr(arena, roles, parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n = 0 || lmx_walk_store_int(arena, n, 1U, v) != c.LMX_WALK_OK
+        return: 0
+return: n
+
+# NAMED of the given width at an operand slot: its coordinate at child 1 unless
+# `bare` asks for no coordinate cell, a LIT payload at child 2 unless `empty`
+# asks for none.
+fn: na_named (@: LmxArena arena; @: Lmx roles; @: Lmx call; size_t: slot; size_t: coordinate; int: v; size_t: width; int: bare; int: empty) @: Lmx
+    @: Lmx n na_fr(arena, roles, call, slot, c.LMX_WALK_OP_NAMED, width)
+    if: n = 0
+        return: 0
+    if: bare = 0 && lmx_walk_store_size(arena, n, 1U, coordinate) != c.LMX_WALK_OK
+        return: 0
+    if: empty = 0 && width > 2U && na_lit(arena, roles, n, 2U, v) = 0
+        return: 0
+return: n
+
+# A caller: RET [ret, CALL [call, callee, callee, contract, catch, operands...]].
+# The result is the CALL, whose operands start at child 5; its owner is \caller.
+fn: na_call (@: LmxArena arena; @: Lmx roles; @: Lmx callee; @: void contract; size_t: n; @@: Lmx caller) @: Lmx
+    @: Lmx holder lmx_node_new_owned(arena)
+    @: Lmx ret 0
+    @: Lmx call 0
+    \caller: 0
+    if: holder = 0 || lmx_arena_refs_open_owned(arena, holder, 1U) != 0
+        return: 0
+    ret: na_fr(arena, roles, holder, 0U, c.LMX_WALK_OP_RET, 2U)
+    call: na_fr(arena, roles, ret, 1U, c.LMX_WALK_OP_CALL, 5U + n)
+    if: call = 0 || lmx_arena_ref_store(call, 1U, (cast: (@: void) callee)) != 0 || lmx_arena_ref_store(call, 2U, (cast: (@: void) callee)) != 0 || lmx_arena_ref_store(call, 3U, contract) != 0
+        return: 0
+    \caller: holder
+return: call
+
+# Run a caller. 0: walked to an int, left in \out. 1: refused as INVALID.
+# 2: anything else.
+fn: na_run (@: LmxWalkContext ctx; @: Lmx caller; @: int out) int
+    LmxWalkValue: value
+    int: st
+    \out: 0
+    if: caller = 0
+        return: 2
+    st: lmx_walk_activate(ctx, caller, caller, 0, 0U, @ value)
+    if: st = c.LMX_WALK_INVALID
+        return: 1
+    if: st != c.LMX_WALK_OK || (value.present) = 0 || (value.type) != c.LMX_TYPE_INT
+        return: 2
+    \out: (cast: (int) (value.number))
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxScratch: scratch
+    LmxPool: cells
+    LmxWalkContext: ctx
+    @: Lmx roles 0
+    @: Lmx sub2 0
+    @: void sub2_contract 0
+    @: Lmx mix 0
+    @: void mix_contract 0
+    @: Lmx first2 0
+    @: Lmx second2 0
+    @: Lmx e 0
+    @: Lmx call 0
+    @: Lmx caller 0
+    @: Lmx bad 0
+    int: r 0
+    int: said 0
+    int: failures 0
+
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_scratch_open(@ scratch, @ arena, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ arena)
+        free(counts)
+        return: 2
+    ---
+    roles: lmx_walk_roles_open(@ arena)
+    na_check(counts, roles != 0, "roles opened")
+    ctx.arena: @ arena
+    ctx.scratch: @ scratch
+    ctx.roles: roles
+
+    # sub2(a, b) = a - b: args-part {a, b} at slot 0, RET SUB(ARG 0, ARG 1) at slot 1.
+    sub2: lmx_node_new_owned(@ arena)
+    na_check(counts, sub2 != 0 && lmx_arena_refs_open_owned(@ arena, sub2, 2U) = 0, "sub2 opened {args, RET}")
+    lmx_arena_ref_store(sub2, 0U, (cast: (@: void) lmx_walk_plain(@ arena, sub2, 2U)))
+    e: na_fr(@ arena, roles, sub2, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: na_fr(@ arena, roles, e, 1U, c.LMX_WALK_OP_SUB, 3U)
+    na_check(counts, e != 0 && na_arg(@ arena, roles, e, 1U, 0U) != 0 && na_arg(@ arena, roles, e, 2U, 1U) != 0, "sub2's body built")
+    sub2_contract: (cast: (@: void) wt_contract_same(@ arena, 2U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    na_check(counts, sub2_contract != 0, "sub2's declared contract built")
+
+    # mix(a, b, c) = a - (b - c).
+    mix: lmx_node_new_owned(@ arena)
+    na_check(counts, mix != 0 && lmx_arena_refs_open_owned(@ arena, mix, 2U) = 0, "mix opened {args, RET}")
+    lmx_arena_ref_store(mix, 0U, (cast: (@: void) lmx_walk_plain(@ arena, mix, 3U)))
+    e: na_fr(@ arena, roles, mix, 1U, c.LMX_WALK_OP_RET, 2U)
+    e: na_fr(@ arena, roles, e, 1U, c.LMX_WALK_OP_SUB, 3U)
+    na_check(counts, e != 0 && na_arg(@ arena, roles, e, 1U, 0U) != 0, "mix's left operand built")
+    e: na_fr(@ arena, roles, e, 2U, c.LMX_WALK_OP_SUB, 3U)
+    na_check(counts, e != 0 && na_arg(@ arena, roles, e, 1U, 1U) != 0 && na_arg(@ arena, roles, e, 2U, 2U) != 0, "mix's right operand built")
+    mix_contract: (cast: (@: void) wt_contract_same(@ arena, 3U, c.LMX_TYPE_INT, c.LMX_TYPE_INT))
+    na_check(counts, mix_contract != 0, "mix's declared contract built")
+
+    # first2(a, b) = a and second2(a, b) = b, under sub2's contract.
+    first2: lmx_node_new_owned(@ arena)
+    na_check(counts, first2 != 0 && lmx_arena_refs_open_owned(@ arena, first2, 2U) = 0, "first2 opened {args, RET}")
+    lmx_arena_ref_store(first2, 0U, (cast: (@: void) lmx_walk_plain(@ arena, first2, 2U)))
+    e: na_fr(@ arena, roles, first2, 1U, c.LMX_WALK_OP_RET, 2U)
+    na_check(counts, e != 0 && na_arg(@ arena, roles, e, 1U, 0U) != 0, "first2's body built")
+    second2: lmx_node_new_owned(@ arena)
+    na_check(counts, second2 != 0 && lmx_arena_refs_open_owned(@ arena, second2, 2U) = 0, "second2 opened {args, RET}")
+    lmx_arena_ref_store(second2, 0U, (cast: (@: void) lmx_walk_plain(@ arena, second2, 2U)))
+    e: na_fr(@ arena, roles, second2, 1U, c.LMX_WALK_OP_RET, 2U)
+    na_check(counts, e != 0 && na_arg(@ arena, roles, e, 1U, 1U) != 0, "second2's body built")
+
+    # -- The coordinate carries the value to its formal.
+    # sub2(b: 1; a: 2): written b then a. By coordinate 2 - 1 = 1; by position -1.
+    call: na_call(@ arena, roles, sub2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 1U, 1, 3U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "sub2(b: 1; a: 2) built")
+    said: na_run(@ ctx, caller, @ r)
+    na_check(counts, said = 0 && r = 1, "sub2(b: 1; a: 2) = 1: each named value reaches the formal of its coordinate")
+
+    # sub2(a: 2; b: 1): names in the formals' own order.
+    call: na_call(@ arena, roles, sub2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 0U, 2, 3U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 1U, 1, 3U, 0, 0) != 0, "sub2(a: 2; b: 1) built")
+    said: na_run(@ ctx, caller, @ r)
+    na_check(counts, said = 0 && r = 1, "sub2(a: 2; b: 1) = 1")
+
+    # sub2(2; b: 1): a position, then a name.
+    call: na_call(@ arena, roles, sub2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_lit(@ arena, roles, call, 5U, 2) != 0 && na_named(@ arena, roles, call, 6U, 1U, 1, 3U, 0, 0) != 0, "sub2(2; b: 1) built")
+    said: na_run(@ ctx, caller, @ r)
+    na_check(counts, said = 0 && r = 1, "sub2(2; b: 1) = 1")
+
+    # mix(3; c: 4; b: 5): 3 - (5 - 4) = 2; by position 3 - (4 - 5) = 4.
+    call: na_call(@ arena, roles, mix, mix_contract, 3U, @ caller)
+    na_check(counts, call != 0 && na_lit(@ arena, roles, call, 5U, 3) != 0 && na_named(@ arena, roles, call, 6U, 2U, 4, 3U, 0, 0) != 0 && na_named(@ arena, roles, call, 7U, 1U, 5, 3U, 0, 0) != 0, "mix(3; c: 4; b: 5) built")
+    said: na_run(@ ctx, caller, @ r)
+    na_check(counts, said = 0 && r = 2, "mix(3; c: 4; b: 5) = 2: a positional prefix, then two names out of the formals' order")
+
+    # first2(b: 9; a: 2) = 2 and second2(b: 9; a: 2) = 9: the controls of the
+    # "twice" refusals below, with every coordinate supplied once.
+    call: na_call(@ arena, roles, first2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 1U, 9, 3U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "first2(b: 9; a: 2) built")
+    said: na_run(@ ctx, caller, @ r)
+    na_check(counts, said = 0 && r = 2, "first2(b: 9; a: 2) = 2")
+    call: na_call(@ arena, roles, second2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 1U, 9, 3U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "second2(b: 9; a: 2) built")
+    said: na_run(@ ctx, caller, @ r)
+    na_check(counts, said = 0 && r = 9, "second2(b: 9; a: 2) = 9")
+
+    # -- Refusals.
+    # A coordinate outside the formals.
+    call: na_call(@ arena, roles, sub2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 2U, 1, 3U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "a coordinate past the formals built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a coordinate past the formals is refused")
+
+    # One coordinate by two names.
+    call: na_call(@ arena, roles, first2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 0U, 1, 3U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "one coordinate by two names built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "one coordinate supplied by two names is refused")
+
+    # One coordinate by a name and then by a position.
+    call: na_call(@ arena, roles, second2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 1U, 1, 3U, 0, 0) != 0 && na_lit(@ arena, roles, call, 6U, 2) != 0, "a name, then its position built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a coordinate supplied by a name and again by position is refused")
+
+    # One coordinate by a position and then by a name.
+    call: na_call(@ arena, roles, first2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_lit(@ arena, roles, call, 5U, 1) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "a position, then its name built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a coordinate supplied by position and again by a name is refused")
+
+    # One coordinate by an empty payload and then by a name: an absent value
+    # is a supplied coordinate all the same.
+    call: na_call(@ arena, roles, first2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 0U, 0, 3U, 0, 1) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "an empty named actual, then the same name built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a coordinate supplied by an empty named actual and again by a name is refused")
+
+    # A NAMED of another width.
+    call: na_call(@ arena, roles, sub2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 1U, 1, 2U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "a NAMED of width 2 built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a NAMED with no payload place is refused")
+    call: na_call(@ arena, roles, sub2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 1U, 1, 4U, 0, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "a NAMED of width 4 built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a NAMED with a place past its payload is refused")
+
+    # A NAMED with no coordinate cell.
+    call: na_call(@ arena, roles, sub2, sub2_contract, 2U, @ caller)
+    na_check(counts, call != 0 && na_named(@ arena, roles, call, 5U, 1U, 1, 3U, 1, 0) != 0 && na_named(@ arena, roles, call, 6U, 0U, 2, 3U, 0, 0) != 0, "a NAMED with no coordinate built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a NAMED with no coordinate is refused, not read as coordinate 0")
+
+    # NAMED is not an expression: RET [ret, NAMED [named, 0, LIT 2]].
+    caller: lmx_node_new_owned(@ arena)
+    na_check(counts, caller != 0 && lmx_arena_refs_open_owned(@ arena, caller, 1U) = 0, "bare caller opened")
+    bad: na_fr(@ arena, roles, caller, 0U, c.LMX_WALK_OP_RET, 2U)
+    na_check(counts, bad != 0 && na_named(@ arena, roles, bad, 1U, 0U, 2, 3U, 0, 0) != 0, "a NAMED as a returned expression built")
+    na_check(counts, na_run(@ ctx, caller, @ r) = 1, "a NAMED outside a call's operands is refused")
+
+    failures: counts[1]
+    c.printf("lmx_walk_named_actual_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        return: 1
+return: 0

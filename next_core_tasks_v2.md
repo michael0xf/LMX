@@ -32,9 +32,10 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_11` RED34/1440 — 96 FAIL→OK against that
-baseline, no OK→FAIL
-([gate](steps/fable-continuation-20261003.md#full-11)). The checkpoint gate
+continuation bytes: `fable_full_12` RED34/1448 — 96 FAIL→OK against that
+baseline, no OK→FAIL; kernel `fable_kernel_03` GREEN293 with 110 executed
+selftests; L3 `fable_l3_02` 11 suites/four budgets
+([gates](steps/fable-continuation-20261003.md#full-12)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -100,6 +101,15 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   ([ledger](steps/fable-continuation-20261003.md#receiving-use-mechanism)).
 - [ ] Merge-result declaration inside a named Structure body (internal error)
   ([defects](steps/defects.md#merge-decl-in-named-body-internal)).
+- [x] Named actuals: evaluated once in written order, transported by the
+  resolved formal coordinate; the retained call keeps each named actual at
+  its written place as `NAMED [coordinate, payload]` with its written name;
+  no runtime permutation table, no second graph
+  ([ledger](steps/fable-continuation-20261003.md#named-actual-order)).
+- [ ] Named actuals, the remainder: the call's P0 body still holds the bound
+  projection after the binding pass, with the written order and the naming
+  Frames in the binding record; the interpreter does not yet run a callable
+  formal's invocation (`--walk-methods` excludes callable formals).
 - [x] A path through a merge result's reference field, read and store, with
   the store admitted to the field's model
   ([ledger](steps/fable-continuation-20261003.md#merge-result-reference-field)).

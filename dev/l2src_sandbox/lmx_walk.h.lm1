@@ -255,7 +255,14 @@ define: LMX_WALK_OP_SOURCE_MACHINE 45
 # application for its false arm; the enclosing body owns it. Encountering the
 # sibling in ordinary source order does not execute its body a second time.
 define: LMX_WALK_OP_ELSE 46
-define: LMX_WALK_OP_COUNT 47
+# [named, coordinate, payload]: a named actual at its written place among a
+# call's operands. The call evaluates its operands in the order they stand,
+# which is the order they were written, and hands each value to the formal
+# whose coordinate the operand carries. An operand that is not NAMED supplies
+# the formal of its own position. The node's source name is the written name
+# of the formal. Outside a call's operands the node is not an expression.
+define: LMX_WALK_OP_NAMED 47
+define: LMX_WALK_OP_COUNT 48
 # Source role of an operation, separate from its execution opcode. The shared
 # role record encodes source * OP_COUNT + opcode in its existing code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.

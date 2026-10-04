@@ -433,6 +433,17 @@ int: l2_nsty_cap 0
 # went into; -1 for a slot with no declaration: a copied step, a body pair of a new name.
 @: int l2_mrs_row 0
 int: l2_mrs_n 0
+# The written order of a call bound with named actuals (l2_bind_call_in). From the binding
+# on, the call's fields are its actuals in the order of its formals; this record keeps, per
+# call body, each formal's rank among the actuals as written and the Frame that named it.
+# The emission evaluates and the graph retains the actuals in that written order.
+@@: LmP0Structure l2_bnd_body 0
+@: int l2_bnd_off 0
+@: int l2_bnd_nf 0
+int: l2_bnd_n 0
+@: int l2_bnd_rank 0
+@@: LmP0Node l2_bnd_wrap 0
+int: l2_bnd_cells 0
 # Where each operand field of a merge lands (the author's merge rule, plan §4): result
 # res, operand op, its field fld, the result slot, and pair = 1 when the field is written
 # INTO a model slot (a LmxMergePair) rather than being a slot of its own.
@@ -721,6 +732,13 @@ prototype:
     fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) int
     fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
     fn: l2_bind_call (const: @(LmP0Node node); int: idx; const: @(char path)) int
+    fn: l2_bound_find (const: @(LmP0Structure body)) int
+    fn: l2_bound_rank (int: bi; int: k) int
+    fn: l2_bound_formal (int: bi; int: rank) int
+    fn: l2_bound_wrap (int: bi; int: k) @: LmP0Node
+    fn: l2_bound_add (const: @(LmP0Structure body); int: nf; @: int rank; @@: LmP0Node wrap) int
+    fn: l2_actual_field (@: LmP0Field first; int: k) @: LmP0Field
+    fn: l2_rw_put_actual (int: call; int: site; int: place; int: arg) int
     fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0Node
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
@@ -4650,6 +4668,8 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_mres_n: 0
     l2_mrs_n: 0
     l2_msrc_n: 0
+    l2_bnd_n: 0
+    l2_bnd_cells: 0
     l2_cf_n: 0
     l2_lp_n: 0
     l2_pad_n: 0
@@ -8276,6 +8296,96 @@ fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0N
         node\span: at\span
 return: node
 
+# The written-order record of a bound call body, or -1: a call with no named actual has none,
+# and its written order is the order of its formals.
+fn: l2_bound_find (const: @(LmP0Structure body)) int
+    int: i 0
+    if: body = 0
+        return: -1
+    while: i < l2_bnd_n
+        if: l2_bnd_body[i] = body
+            return: i
+        i: i + 1
+    ---
+return: -1
+
+# The rank of formal k's actual among the actuals as written.
+fn: l2_bound_rank (int: bi; int: k) int
+    if: bi < 0 || bi >= l2_bnd_n || k < 0 || k >= l2_bnd_nf[bi]
+        return: k
+return: l2_bnd_rank[l2_bnd_off[bi] + k]
+
+# The formal whose actual was written at that rank, or -1.
+fn: l2_bound_formal (int: bi; int: rank) int
+    int: k 0
+    if: bi < 0 || bi >= l2_bnd_n
+        return: rank
+    while: k < l2_bnd_nf[bi]
+        if: l2_bnd_rank[l2_bnd_off[bi] + k] = rank
+            return: k
+        k: k + 1
+    ---
+return: -1
+
+# The Frame that named formal k's actual, or 0 for one given by position.
+fn: l2_bound_wrap (int: bi; int: k) @: LmP0Node
+    if: bi < 0 || bi >= l2_bnd_n || k < 0 || k >= l2_bnd_nf[bi]
+        return: 0
+return: l2_bnd_wrap[l2_bnd_off[bi] + k]
+
+fn: l2_bound_add (const: @(LmP0Structure body); int: nf; @: int rank; @@: LmP0Node wrap) int
+    @@: LmP0Structure gb
+    @@: LmP0Node gw
+    @: int gi
+    int: k 0
+    size_t: want (cast: (size_t) (l2_bnd_n + 1))
+    size_t: cells (cast: (size_t) (l2_bnd_cells + nf + 1))
+    gb: (cast: (@@: LmP0Structure) realloc((cast: (@: void) l2_bnd_body), want * c.sizeof(@: void)))
+    if: gb = 0
+        return: 1
+    l2_bnd_body: gb
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_bnd_off), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 1
+    l2_bnd_off: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_bnd_nf), want * c.sizeof(c.int)))
+    if: gi = 0
+        return: 1
+    l2_bnd_nf: gi
+    gi: (cast: (@: int) realloc((cast: (@: void) l2_bnd_rank), cells * c.sizeof(c.int)))
+    if: gi = 0
+        return: 1
+    l2_bnd_rank: gi
+    gw: (cast: (@@: LmP0Node) realloc((cast: (@: void) l2_bnd_wrap), cells * c.sizeof(@: void)))
+    if: gw = 0
+        return: 1
+    l2_bnd_wrap: gw
+    l2_bnd_body[l2_bnd_n]: (cast: (@: LmP0Structure) body)
+    l2_bnd_off[l2_bnd_n]: l2_bnd_cells
+    l2_bnd_nf[l2_bnd_n]: nf
+    while: k < nf
+        l2_bnd_rank[l2_bnd_cells + k]: rank[k]
+        l2_bnd_wrap[l2_bnd_cells + k]: wrap[k]
+        k: k + 1
+    ---
+    l2_bnd_cells: l2_bnd_cells + nf
+    l2_bnd_n: l2_bnd_n + 1
+return: 0
+
+# The first field of the k-th actual of a formal-ordered list, or 0.
+fn: l2_actual_field (@: LmP0Field first; int: k) @: LmP0Field
+    @: LmP0Field a l2_next_active(first)
+    int: i 0
+    int: span
+    while: a != 0 && i < k
+        span: l2_expr_span(a)
+        if: span < 1
+            return: 0
+        a: l2_skip_span(a, span)
+        i: i + 1
+    ---
+return: a
+
 # Call node of callee idx, its actuals bound (l2_bind_actuals); a call with a named one is rewritten in its
 # formals' order.  One slot per formal of the callee (l2_m_arity): the language puts no bound on a callable's
 # formals (REVIEW 394f6a9, P62).  0, or 1 said.
@@ -8343,6 +8453,8 @@ fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int
     int: again 1
     int: rounds 0
     int: s0
+    @: int rank 0
+    @@: LmP0Node wrap 0
     body: node\as\frame\body
     while: k < nf
         names[k]: l2_fn(idx, k)
@@ -8360,6 +8472,33 @@ fn: l2_bind_call_in (const: @(LmP0Node node); int: idx; const: @(char path); int
     # Every actual by position, in order: the call stands as written.
     if: named = 0
         return: 0
+    # The written order, taken before the fields are replaced: each formal's rank among the
+    # actuals as written, and the Frame that named it.
+    rank: (cast: (@: int) calloc((cast: (size_t) (nf + 1)), c.sizeof(c.int)))
+    wrap: (cast: (@@: LmP0Node) calloc((cast: (size_t) (nf + 1)), c.sizeof(@: void)))
+    if: rank = 0 || wrap = 0
+        return: l2_error(path, node, "out of memory")
+    f: l2_next_active(body\first_field)
+    n: 0
+    while: f != 0
+        k: 0
+        while: k < nf
+            if: at[k] = f
+                rank[k]: n
+                if: span[k] = 0
+                    wrap[k]: f\value
+                ---
+            ---
+            k: k + 1
+        ---
+        n: n + 1
+        f: l2_skip_span(f, l2_expr_span(f))
+    ---
+    k: l2_bound_add(body, nf, rank, wrap)
+    free((cast: (@: void) rank))
+    free((cast: (@: void) wrap))
+    if: k != 0
+        return: l2_error(path, node, "out of memory")
     # Each formal's actual: a positional one's fields as written; a named one's body -- no field is the
     # empty Structure (`name: ()`, P0 flattens its sole ()).
     k: 0
@@ -27202,7 +27341,8 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     int: t
     int: self_t
     int: actual_span
-    int: actual_i
+    int: bound 0 - 1
+    int: written 0
     @: char acts 0
     @: char hides 0
     int: nact 0
@@ -27265,8 +27405,26 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_error(l2_src, node, "out of memory")
         memset((cast: (@: void) acts), 0, (cast: (size_t) nact) * 1024U)
         ---
+    # The actuals are evaluated in the order they were written (book §10: fields are evaluated
+    # in lexical order), each into its formal's place. A call bound with named actuals keeps its
+    # written order beside its formal-ordered fields (l2_bound_find).
+    if: body != 0
+        bound: l2_bound_find(body)
     while: a0 != 0
-        if: t >= nact
+        actual_span: l2_expr_span(a0)
+        if: t >= nact || actual_span < 1
+            return: l2_prep_drop(acts, hides)
+        t: t + 1
+        a0: l2_skip_span(a0, actual_span)
+    ---
+    if: t != nact
+        return: l2_prep_drop(acts, hides)
+    while: written < nact
+        t: l2_bound_formal(bound, written)
+        if: t < 0 || t >= nact
+            return: l2_prep_drop(acts, hides)
+        a0: l2_actual_field(body\first_field, t)
+        if: a0 = 0
             return: l2_prep_drop(acts, hides)
         actual_span: l2_expr_span(a0)
         occ_mi: 0 - 1
@@ -27319,14 +27477,8 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         # the call (l2_d105_emit_admit). An occurrence already registered its pair map above.
         if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0) != 0
             return: l2_prep_drop(acts, hides)
-        t: t + 1
-        actual_i: 0
-        while: actual_i < actual_span && a0 != 0
-            a0: l2_next_active(a0\next)
-            actual_i: actual_i + 1
-        ---
-    if: t != nact
-        return: l2_prep_drop(acts, hides)
+        written: written + 1
+    ---
     if: nhid > 0
         if: l2_mul_ok((cast: (size_t) nhid), 1024U) = 0
             l2_alloc_err: 2
@@ -32153,6 +32305,8 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
     int: hidden_source
     int: source_mi
     int: source_input
+    int: bound 0 - 1
+    int: site
     L2ReferenceSource: reference_source
     l2_rw_conv: 0
     if: conv = 0 && node != 0 && node\as != 0
@@ -32256,13 +32410,26 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
         if: l2_rw_method_contract(\out, idx, @ contract) != 0 || l2_rw_put(\out, 3, contract) != 0
             return: 1
         ---
+    # A call bound with named actuals keeps its operands in the order they were written. A
+    # named one stands at its written place under a NAMED operand that carries its formal's
+    # coordinate and the written name; the walk evaluates the operands in that order and hands
+    # each value to its formal.
+    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\body != 0 && node\as\frame\body\first_field = args
+        bound: l2_bound_find(node\as\frame\body)
     a: l2_next_active(args)
     while: a != 0
         span: l2_expr_span(a)
+        site: \out
+        if: l2_bound_wrap(bound, k) != 0
+            if: l2_rw_frame(\out, "LMX_WALK_OP_NAMED", 3, @ site) != 0 || l2_rw_source_name(site, l2_fn(idx, k)) != 0
+                return: 1
+            if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", site, k) < 0
+                return: 1
+            ---
         if: l2_cf_get(idx, k) >= 0
             # The caller's resolved occurrence, not the descriptor of a
             # same-named unit method or the formal's signature anchor.
-            if: l2_rw_callable_actual(a, span, \out, @ arg) != 0 || l2_rw_put(\out, arg0 + k, arg) != 0
+            if: l2_rw_callable_actual(a, span, site, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
                 return: 1
             ---
         else:
@@ -32284,7 +32451,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                 ---
                 if: l2_rw_d105_need(node, idx, k, cand, @ need) != 0
                     return: 1
-                holder: \out
+                holder: site
                 l2_reference_source(a, span, l2_rw_mi, @ reference_source)
                 if: occurrence >= 0
                     reference_source.schema: cand
@@ -32292,7 +32459,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                     reference_source.method: -1
                     reference_source.place: -1
                 ---
-                if: need != 0 && l2_rw_admit_project(\out, l2_nsty_get(idx, k), @ reference_source, 0, @ holder) != 0
+                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(idx, k), @ reference_source, 0, @ holder) != 0
                     return: 1
                 if: l2_empty_actual(a, idx, k) != 0
                     if: l2_rw_empty_arg(l2_nsty_get(idx, k), holder, @ arg) != 0
@@ -32314,11 +32481,11 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                         return: 1
                     arg: holder
                 ---
-                if: l2_rw_put(\out, arg0 + k, arg) != 0
+                if: l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
                     return: 1
                 ---
             else:
-                if: l2_rw_reference_receive(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, \out, @ arg) != 0 || l2_rw_put(\out, arg0 + k, arg) != 0
+                if: l2_rw_reference_receive(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, site, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
                     return: 1
                 ---
             ---
@@ -32363,6 +32530,16 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
         d: d + 1
     ---
 return: 0
+
+# An actual goes to its place among the call's operands: directly, or through the NAMED
+# operand `site` that holds it as its payload.
+fn: l2_rw_put_actual (int: call; int: site; int: place; int: arg) int
+    if: site != call
+        if: l2_rw_put(site, 2, arg) != 0
+            return: 1
+        return: l2_rw_put(call, place, site)
+    ---
+return: l2_rw_put(call, place, arg)
 
 # Callable receiving contexts share the native resolver's exact occurrence
 # classification. Nullary frames and paths do not execute here; a forwarded

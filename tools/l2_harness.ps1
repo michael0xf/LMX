@@ -1755,6 +1755,37 @@ $criticalForeignValuePaths = @('widthpath','0','9','namepath','1','2','echo','na
     'rolepath','5','6','3','2','2','5','45','0','namepath','5','6','3','2','2','5','c.l2_dispatch_pair_make',
     'nativepath','1','2','1','nativepath','1','3','1','nativepath','1','4','1','nativepath','1','5','1','nativepath','1','6','1')
 
+# Named actuals stand in the retained call at their written places: NAMED (47)
+# carries the written name, the resolved formal coordinate and the payload.
+# h (unit child 6) writes f(b: ..; a: ..): coordinates 1 then 0. k (child 7)
+# writes g(positional; c: ..; b: ..): a plain CALL, then coordinates 2 and 1.
+# The root's third call (child 13) repeats h's order in a SET.
+$namedActualOrderShape = @(
+    'rolepath','3','6','2','1','2','0','widthpath','3','6','2','1','4',
+    'rolepath','4','6','2','1','2','47','0','widthpath','4','6','2','1','2','3',
+    'namepath','4','6','2','1','2','b','sizepath','5','6','2','1','2','1','1',
+    'rolepath','5','6','2','1','2','2','2','0',
+    'rolepath','4','6','2','1','3','47','0','widthpath','4','6','2','1','3','3',
+    'namepath','4','6','2','1','3','a','sizepath','5','6','2','1','3','1','0',
+    'rolepath','5','6','2','1','3','2','2','0',
+    'rolepath','3','7','2','1','2','0','widthpath','3','7','2','1','5',
+    'rolepath','4','7','2','1','2','2','0',
+    'rolepath','4','7','2','1','3','47','0','namepath','4','7','2','1','3','c','sizepath','5','7','2','1','3','1','2',
+    'rolepath','4','7','2','1','4','47','0','namepath','4','7','2','1','4','b','sizepath','5','7','2','1','4','1','1',
+    'rolepath','5','7','2','1','3','2','2','0','rolepath','5','7','2','1','4','2','2','0',
+    'rolepath','2','13','2','2','0','widthpath','2','13','2','4',
+    'rolepath','3','13','2','2','47','0','namepath','3','13','2','2','b','sizepath','4','13','2','2','1','1',
+    'rolepath','3','13','2','3','47','0','namepath','3','13','2','3','a','sizepath','4','13','2','3','1','0')
+# via (unit child 5) invokes its callable formal: EXEC (35) keeps the callee's
+# formal, the contract and then the two named operands in their written places.
+$namedActualCallableShape = @(
+    'rolepath','3','5','2','1','35','0','widthpath','3','5','2','1','7',
+    'rolepath','4','5','2','1','2','5','0',
+    'rolepath','4','5','2','1','5','47','0','widthpath','4','5','2','1','5','3',
+    'namepath','4','5','2','1','5','b','sizepath','5','5','2','1','5','1','1','rolepath','5','5','2','1','5','2','2','0',
+    'rolepath','4','5','2','1','6','47','0','widthpath','4','5','2','1','6','3',
+    'namepath','4','5','2','1','6','a','sizepath','5','5','2','1','6','1','0','rolepath','5','5','2','1','6','2','2','0')
+
 # Formal invocations select ARG, not the unit method of the same spelling.
 # Native words stay selected; these facts certify retained source, not the
 # currently excluded --walk-methods callable-formal execution profile.
@@ -1793,7 +1824,9 @@ $criticalCallableFormalShape = @('widthpath','0','6',
 # Full physical source, not only the result of the still-native method.
 # A previous callable input is visible in its own declaration's initializer;
 # after that declaration a bare name reads the new own value. The unexpanded
-# root reference in AT avoids a cyclic exact-shape traversal.
+# root reference in AT avoids a cyclic exact-shape traversal. The initializer's
+# named actual `f(x: 3)` stands in the invocation as NAMED with its written
+# name, the formal's coordinate and the literal.
 $criticalCallableOwnIdentity = @('samepath','3','1','0','0','1','0',
     'samepath','3','2','3','1','1','1','samepath','4','2','3','2','1','0')
 $criticalCallableOwnSelectedIdentity = @('samepath','3','1','0','0','1','0',
@@ -1816,11 +1849,13 @@ $criticalCallableOwnInitShape = @('shape','exact','struct','fields',
     'SET','fields','role','8','1','OWN','fields','role','4','0','null','sizevalue','2','endfields',
     'EXEC','fields','role','35','0','null','ARG','fields','role','5','0','sizevalue','0','null','same','endfields',
     'struct','fields','struct','fields','int','endfields','struct','fields','int','endfields','endfields','null',
-    'LIT','fields','role','3','0','numvalue','int','3','endfields','endfields','endfields',
+    'NAMED','fields','role','47','0','sizevalue','0',
+    'LIT','fields','role','3','0','numvalue','int','3','endfields','endfields','endfields','endfields',
     'RET','fields','role','1','0','OWN','fields','role','4','0','null','sizevalue','2','endfields','endfields','endfields',
     'PRIM_PUB','fields','role','33','0','primitive','null','CALL','fields','role','2','0','same',
     'AT','fields','role','6','0','struct','sizevalue','0','endfields','endfields','endfields',
-    'RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity
+    'RET','fields','role','1','0','endfields','endshape') + $criticalCallableOwnSelectedIdentity +
+    @('namepath','4','1','3','2','5','x')
 $criticalCallableOwnSiteShape = @('shape','exact','struct','fields',
     'struct','fields','endfields','struct','fields','unsigned','endfields',
     'RET','fields','role','1','0','LIT','fields','role','3','0','numvalue','unsigned','7','endfields','endfields','endfields',
@@ -6817,6 +6852,36 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_named_actual_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
+    # Nondestructive binding of named actuals: the actuals are evaluated once in the order they are
+    # written and each value goes to the formal its name resolves to. mark() records the order of its
+    # calls in the unit's trace; f(b: mark(1); a: mark(2)) must leave 12, not the formal order 21, and
+    # still compute a - b = 1. A positional prefix followed by two named actuals out of formal order
+    # (g) and the root's own call hold the same. Natively, and with the root and all six methods
+    # walked: the walker reads the written order and the coordinates from the graph's NAMED operands.
+    [pscustomobject]@{ Name = 'unit_named_actual_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $namedActualOrderShape; Entry = 7; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_order_walk.lm2'; Source = 'unit_named_actual_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $namedActualOrderShape; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    # The shape facts see the written order (the two named operands of h exchanged) and a named
+    # operand's payload (emptied).
+    [pscustomobject]@{ Name = 'unit_named_actual_order_swap_mutant.lm2'; Source = 'unit_named_actual_order.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','move-path-field','3','6','2','1','2','3') + $namedActualOrderShape; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_order_payload_mutant.lm2'; Source = 'unit_named_actual_order.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','5','7','2','1','4','2') + $namedActualOrderShape; Entry = 7; Absent = @(); Debt = @() },
+    # The same order wherever a call stands: a sub called as a statement, a call in a condition, an
+    # operand of an expression, a named actual of another named call, a method's `return:` trailer and
+    # a sub called by the root. Natively, and with the root and the ten methods walked.
+    [pscustomobject]@{ Name = 'unit_named_actual_order_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4,5,6,7,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_order_forms_walk.lm2'; Source = 'unit_named_actual_order_forms.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7,8,9); Absent = @(); Debt = @() },
+    # The invocation of a callable formal. The --walk-methods profile excludes callable formals, so
+    # the interpreter does not run this EXEC: its order is seen natively and its named operands as
+    # retained source, with the exchange of the two as the facts' control.
+    [pscustomobject]@{ Name = 'unit_named_actual_order_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $namedActualCallableShape; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_order_callable_swap_mutant.lm2'; Source = 'unit_named_actual_order_callable.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','move-path-field','3','5','2','1','5','6') + $namedActualCallableShape; Entry = 7; Absent = @(); Debt = @() },
     # A free name under the type checks (book :1180, :1182; steps/free-names.md): a dynamic input is a value of its
     # binding's type, under the rule a local of that type is under.  The check reads types before l2_dyn_close gives
     # the inputs theirs, so a check whose value (or the hidden argument it assigns) reads an input without a type

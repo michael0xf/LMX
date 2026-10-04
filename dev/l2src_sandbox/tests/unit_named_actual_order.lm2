@@ -1,0 +1,48 @@
+# Named actuals written in another order than the formals are evaluated in the
+# order they were written, and each value goes to the formal it names (book
+# §10: fields are evaluated in lexical order). mark appends its argument to
+# the unit's trace. f(b: mark(1); a: mark(2)) calls mark(1) first and f
+# receives a = 2, b = 1. g takes a positional actual before two named ones.
+# The root makes a third call itself. The trace is 1234567. Entry 7.
+int: trace 0
+
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+
+fn: g (int: a; int: b; int: c) int
+    return: a * 100 + b * 10 + c
+end: g
+
+fn: h () int
+    return: f(b: mark(1); a: mark(2))
+end: h
+
+fn: k () int
+    return: g(mark(3); c: mark(4); b: mark(5))
+end: k
+
+int: r h()
+int: q k()
+int: w f(b: mark(6); a: mark(7))
+int: t seen()
+int: ok 7
+if: r != 1
+    ok: 81
+if: q != 354
+    ok: 82
+if: w != 1
+    ok: 83
+if: t != 1234567
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

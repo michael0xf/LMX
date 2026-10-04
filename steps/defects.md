@@ -2100,6 +2100,36 @@ end: check
 допуска. Исправлено тем же `l2_mrs_ref_pointee`. Свидетель `unit_mres_ref_field_store_refused`
 с обходимым двойником, мутант `fable_mref_mut_noleaf`.
 
+<a id="named-actual-formal-order"></a>
+### NAMED-ACTUAL-FORMAL-ORDER — 2026-10-04, fable, FIXED в sandbox (не выпущено)
+
+Именованные фактические аргументы вычислялись в порядке формалов, а не в порядке записи:
+
+```text
+int: trace 0
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+fn: f (int: a; int: b) int
+    return: a - b
+end: f
+int: w f(b: mark(1); a: mark(2))
+```
+
+След вызовов был 21, а не 12 — и в native, и в интерпретаторе. Привязка (`l2_bind_call_in`)
+переписывала тело вызова в порядок формалов до того, как его читал любой проход; удержанный граф
+хранил аргументы на местах формалов, без имён и без порядка записи. Норма: поля графа стоят и
+вычисляются в лексическом порядке. Исправлено: привязка сохраняет ранг записи и именующий Frame
+каждого формала; native готовит аргументы в порядке записи; в графе именованный аргумент стоит на
+своём месте записи как `NAMED [координата, значение]`, интерпретатор вычисляет операнды подряд и
+передаёт значение формалу по координате. Свидетели `unit_named_actual_order`,
+`unit_named_actual_order_forms` (оба с обходимыми двойниками), `unit_named_actual_order_callable`,
+самотест ядра `lmx_walk_named_actual_selftest`
+([журнал](fable-continuation-20261003.md#named-actual-order)). Остаток: P0-тело вызова после
+привязки по-прежнему держит список в порядке формалов; порядок записи лежит рядом, в записи
+привязки.
+
 <a id="receiving-use-full-receiver"></a>
 ### RECEIVING-USE-FULL-RECEIVER — 2026-10-03, fable по ответу Codex FABLE-CODEX-20261003-01, OPEN
 

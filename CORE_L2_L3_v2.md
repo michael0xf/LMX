@@ -625,7 +625,7 @@ These are compiler work records, not hidden runtime graph companions or a second
 
 The exact implementation is larger than a single pass. Important phases in `l2_parse_unit` and `l2_emit_unit` include:
 
-1. Identify the resolved callable contract before interpreting named actual syntax as another call. Register complete original/local-definition source identities before sizing/checking/counting their bodies. The later bounded `l2_bind_calls` traversal runs after local-definition/namespace registration; its destructive rewriting of named-actual P0 order remains debt, not a desired execution order.
+1. Identify the resolved callable contract before interpreting named actual syntax as another call. Register complete original/local-definition source identities before sizing/checking/counting their bodies. The later bounded `l2_bind_calls` traversal runs after local-definition/namespace registration. It installs the bound projection (the actuals in the formals' order) in the call's P0 body and keeps the written rank and the naming Frame of every formal beside it; native code prepares the actuals in written order and the retained call keeps each named actual at its written place as `NAMED [coordinate, payload]`. The body holding the projection instead of the written list remains debt.
 2. Collect declarations, callable/signature metadata, named/local Structure layouts and ordinary merge-result bindings.
 3. Scan local/free uses and establish hidden-input dependencies.
 4. Collect throws and prepare partial/captured callable information.

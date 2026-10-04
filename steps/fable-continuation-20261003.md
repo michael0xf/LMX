@@ -1123,3 +1123,127 @@ received by a Consumer that requires the omitted field and refused; one
 candidate with a present compatible field admitted thin, then consumed more
 fully with no spurious map conflict; a nested partial path with distinct bare
 and `[N]` selectors; unknown coverage never promoted to empty.
+
+<a id="named-actual-order"></a>
+## 30. Named actuals: written order of evaluation, kept in the graph
+
+**The defect** ([NAMED-ACTUAL-FORMAL-ORDER](defects.md#named-actual-formal-order)).
+The binding of named actuals rewrote the call's body into the formals' order
+before any pass read it, and both producers worked from the rewritten list.
+Native code evaluated `f(b: mark(1); a: mark(2))` as `mark(2)`, then
+`mark(1)`; the interpreter did the same; the retained call held the two
+actuals at the formals' places with neither the names nor the written order.
+The norm keeps a graph's fields in lexical order and evaluates them in that
+order ([fields](../docs/LMX_semantics.en.md#fields),
+[callables](../docs/LMX_semantics.en.md#callables)); the core map called the
+rewriting a debt. Measured on the committed translator by a probe: the trace
+of the two calls was 21, natively and walked.
+
+**Mechanism.** No table of permutations exists at run time and no second
+graph: the coordinate is a cell of the operand itself.
+
+- *Binding.* `l2_bind_call_in` records, before it installs the bound list, the
+  rank of every formal's actual among the actuals as written and the Frame
+  that named it (`l2_bound_add`, read by `l2_bound_rank`, `l2_bound_formal`,
+  `l2_bound_wrap`). The record belongs to the call's body.
+- *Native code.* `l2_emit_call` counts the actuals, then prepares them in
+  written order (`l2_bound_formal`), each into the place of its formal. The
+  emitted call is unchanged: values travel by formal position.
+- *Graph.* `l2_rw_call` puts every operand at its written place
+  (`l2_bound_rank`). A named one is `NAMED [coordinate, payload]`
+  (`LMX_WALK_OP_NAMED`, 47) whose source name is the written name of the
+  formal; a positional one stands as before.
+- *Interpreter.* `lmx_walk_actuals` evaluates the operands in the order they
+  stand. A `NAMED` operand hands its payload's value to the formal of its
+  coordinate, any other to the formal of its own position. A coordinate past
+  the formals, a `NAMED` of another width or with no coordinate cell, and a
+  coordinate supplied twice are `LMX_WALK_INVALID`. "Supplied" is a mark in the
+  references array, not the presence of a value: an empty actual supplies its
+  coordinate too. Outside a call's operands `NAMED` is not an expression.
+- The driver's shape grammar reads the word `NAMED`.
+
+**What is not done.** The call's P0 body still holds the bound projection
+(the actuals in the formals' order, fresh field cells over the same value
+nodes) once the binding pass has run; every later pass of the translator
+reads that list. The written cells are untouched and the written order and
+the naming Frames are reachable from the binding record, so nothing is lost,
+but the P0 body itself is not the written list. Making the body keep the
+written list and every reader go through the projection is a refactor of all
+call readers and is not part of this slice. The interpreter does not run the
+invocation of a callable formal with named actuals: `--walk-methods` excludes
+callable formals, so that `EXEC` is witnessed natively and as retained source
+only.
+
+**Verification.**
+
+- New `unit_named_actual_order` and its walked twin (root and six methods
+  walked): two named actuals against the formals' order, a positional prefix
+  followed by two names out of order, and the root's own call; the trace is
+  1234567 and every result is the bound one. Path facts on both rows: each
+  operand's role, written name, coordinate and payload, in `h`, in `k` and at
+  the root. Two shape mutants: the two named operands of `h` exchanged, a
+  named operand's payload emptied.
+- New `unit_named_actual_order_forms` and its walked twin (root and ten
+  methods walked): a sub called as a statement, a call in a condition, an
+  operand of an expression, a named actual of another named call, a method's
+  `return:` trailer and a sub called by the root.
+- New `unit_named_actual_order_callable`: the invocation of a callable formal,
+  natively, with path facts on the `EXEC` and a shape mutant.
+- Shape oracle changed with the mechanism: `graph_shape_callable_own_init`
+  describes `f(x: 3)` as `NAMED [0, LIT 3]` named `x`. Its mutant row is
+  unchanged.
+- New kernel selftest `lmx_walk_named_actual_selftest` (43 checks), over
+  hand-built graphs the translator never writes: four bound calls, and the
+  refusals of a coordinate past the formals, of one coordinate supplied by two
+  names, by a name and a position in either order, by an empty named actual
+  and a name, of a `NAMED` of width 2 and 4, of a missing coordinate cell and
+  of a `NAMED` as a returned expression. The "twice" graphs call a callee that
+  reads only the doubled coordinate: with `sub2` the refusal was the callee's
+  read of the formal left without a value, and the first version of the
+  selftest stayed green under the mutant that allows a coordinate twice.
+- Kernel mutants, each on a copy of the gate's staged sources, rebuilt with
+  the gate's own command lines: a `NAMED` operand supplies its own position —
+  8 of 43 checks fail; a coordinate may be supplied twice — the 4 "twice"
+  checks fail; "supplied" read from the value's presence — the empty-actual
+  check alone fails.
+- Translator mutants through a focused harness run, live file restored and its
+  hash re-verified after each; the control run of the same 11 rows is green.
+  Native evaluation in the formals' order (`fable_named_mut_formalorder`): the
+  native rows red, the walked half of the walked twin still exit 0. No `NAMED`
+  operand (`fable_named_mut_nowrap`): the order rows, `unit_walk_named_actuals`
+  and `graph_shape_callable_own_init` red. Every operand at its formal's place
+  (`fable_named_mut_norank`): the order rows red, `unit_walk_named_actuals`
+  green, since the coordinates still carry the values. The kernel mutant that
+  ignores the coordinate (`fable_named_mut_nocoord`): the native row green,
+  the walked twin and `unit_walk_named_actuals` red. The first two translator
+  mutants repeated on the forms and callable rows
+  (`fable_named_mut2_formalorder`, `fable_named_mut2_norank`) redden them the
+  same way.
+- Focused `fable_named_01` (235 targets: every named-actual, call and
+  graph-shape row) before the oracle change: red only the two
+  `graph_shape_callable_own_init` rows and the known `unit_named_actual_whole`.
+  Focused `fable_named_02` after it: 17 targets green.
+
+<a id="full-12"></a>
+## 31. Full, kernel and L3 gates after section 30
+
+`fable_full_12` completes **RED 34/1448** on translator SHA256
+`4CB8CECA9DDCECD083296C302B5E5825EAE36DC2D887D450193FA428B6BF5840`
+(staged Git blob `ff9d6951b31d256c9fc9ddaf5d7fa8e5be6e8d55`), walker
+`662B61A7C85EC5C241C94E9A092B64221B95E966954DD3CEEC0609BC8EA43B3F`, walker header
+`2EA3CEFA10A9B9D76A08D89471BF8B0438CC09A2180EF5DD266346C4B0DA4C36`, driver
+`D2869B3342B5D4C15812EC3B5BA918E1ED7FA067D2CE9732DCBA1C4857E24D27`, harness
+`61CE02B84231F2723630D0F992DFC240EED108CDEE8EDF769AEF493F233309B5`.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_11` (RED 34/1440) | 0 | 0 | 8 | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 96 | 0 | | |
+
+The kernel sources changed, so both kernel gates were rerun on the same
+bytes before the full gate:
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_03` (`build_l2src.ps1 -Run -KeepAll`) | GREEN, 293 targets; 110 selftests executed: 109 ran with exit 0, the expected-fatal close-watchdog selftest exited 3 as required. One target and one selftest more than `fable_kernel_01`: `lmx_walk_named_actual_selftest`. |
+| `build/l3_selftest/fable_l3_02` (`run_l3_selftest.py`) | all 11 suites exit 0; four type-budget units 75/128 names, 1070/8192 bytes. |

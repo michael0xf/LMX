@@ -1290,6 +1290,7 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; 
     @: LmxWalkValue values 0
     @@: void refs 0
     size_t: i 0U
+    size_t: at 0U
     int: status c.LMX_WALK_OK
     int: ty
     \refs_out: 0
@@ -1304,27 +1305,49 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; 
     if: lmx_scratch_take(f\context\scratch, n * c.sizeof(@: void), @ room) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_NOMEM
     refs: (cast: (@@: void) room)
+    memset(room, 0, n * c.sizeof(@: void))
+    # Operands are evaluated in the order they stand. A NAMED operand hands its
+    # payload's value to the formal whose coordinate it carries; any other one
+    # to the formal of its own position. No coordinate is supplied twice: an
+    # empty operand supplies its coordinate too, so the test is the mark left
+    # in the references and not the presence of a value.
     while: i < n && status = c.LMX_WALK_OK
         child: lmx_arena_ref_value(code, first + i)
-        if: child != 0
+        at: i
+        if: child != 0 && lmx_walk_op(f, child) = c.LMX_WALK_OP_NAMED
+            if: (cast: (@: Lmx) child)\array.size != 3U || lmx_walk_load_numeric(f\arena, lmx_arena_ref_value((cast: (@: Lmx) child), 1U), @ at) != c.LMX_WALK_OK || at >= n
+                status: c.LMX_WALK_INVALID
+                at: i
+            else:
+                child: lmx_arena_ref_value((cast: (@: Lmx) child), 2U)
+            ---
+        ---
+        if: status = c.LMX_WALK_OK && refs[at] != 0
+            status: c.LMX_WALK_INVALID
+        refs[at]: (cast: (@: void) (values + at))
+        if: status = c.LMX_WALK_OK && child != 0
             if: lmx_walk_op(f, child) = c.LMX_WALK_OP_NONE
-                status: lmx_walk_value_cell(f\arena, child, values + i)
+                status: lmx_walk_value_cell(f\arena, child, values + at)
             else:
-                status: lmx_walk_eval(f, child, values + i)
+                status: lmx_walk_eval(f, child, values + at)
             ---
         ---
-        if: status = c.LMX_WALK_OK && values[i].present != 0
-            ty: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(contract, i))
+        if: status = c.LMX_WALK_OK && values[at].present != 0
+            ty: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(contract, at))
             if: ty >= c.LMX_TYPE_POINTER_BASE || ty = c.LMX_TYPE_LMX || ty = c.LMX_TYPE_DESC || ty = c.LMX_TYPE_CHAR_PTR
-                if: values[i].kind != c.LMX_WALK_VALUE_REFERENCE
+                if: values[at].kind != c.LMX_WALK_VALUE_REFERENCE
                     status: c.LMX_WALK_INVALID
                 ---
             else:
-                if: values[i].kind != c.LMX_WALK_VALUE_NUMBER || values[i].type != ty
+                if: values[at].kind != c.LMX_WALK_VALUE_NUMBER || values[at].type != ty
                     status: c.LMX_WALK_INVALID
                 ---
             ---
         ---
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < n
         refs[i]: lmx_walk_value_storage(values + i)
         i: i + 1U
     ---

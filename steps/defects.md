@@ -1979,3 +1979,87 @@ identity-with-holes. Поэтому голое чтение `v\x` внутри �
 закрыт, захват в него не входил). Закрывать его следует отдельным срезом с парой свидетелей:
 копия значения с отличающимся макетом (голое чтение = последнее вхождение) и копия того же типа
 (обе записи совпадают), плюс проверка, что копия по-прежнему не наследует token исходной схемы.
+
+<a id="machine-local-table-stale"></a>
+### MACHINE-LOCAL-TABLE-STALE — 2026-10-03, fable, FIXED в sandbox (не выпущено)
+
+`l2_local_ns_shape` спрашивает `l2_ml_find`, но таблица машинных локалов метода (`l2_ml_*`) не
+пересобиралась ни в проходе сбора ролей объявлений (`l2_collect_asgn_binds`), ни в обоих проходах
+построения графа (`l2_rw_methods_count`, `l2_rw_methods_emit`): там читалась таблица последнего
+проверенного метода либо пустая. Пока объявление `L2TestAllocFn: f av\alloc` отказывало раньше, это
+не проявлялось. После появления producer'а объявления оператор `f: n` (вызов через локальный указатель
+на функцию) регистрировался как локальное определение именованной Structure `f`: лишняя процедура
+`l2_m2`, лишний `l2_nsp[0]` и лишний child метода, которого в исходнике нет.
+
+Исправление: таблица собирается для читаемого метода во всех трёх местах. В раннем проходе читаются
+только локалы, классифицируемые по импортированному имени типа (`l2_ml_imported_only`): полное
+раннее чтение отказывало `@: Model Model @Other` словами `unknown type`, потому что локальное
+определение `Model` ещё не зарегистрировано (два OK→FAIL в промежуточном `fable_full_02`, устранены
+до каких-либо утверждений). Свидетель: `graph_shape_machine_local` (ширина метода 9, без лишнего
+child) и его три мутанта; запись — [журнал продолжения](fable-continuation-20261003.md#machine-locals).
+
+<a id="merge-decl-in-named-body-internal"></a>
+### MERGE-DECL-IN-NAMED-BODY-INTERNAL — 2026-10-03, fable, OPEN
+
+Объявление результата merge внутри тела именованной Structure — unit-уровня или локальной —
+даёт внутреннюю ошибку вместо построения:
+
+```text
+E: (int: a 7)
+Holder:
+    kept: merge E
+    size_t: mutable_cell 3U
+end: Holder
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return
+```
+
+`internal: an own declaration has no physical field`, `frame=kept` (то же для
+`Holder: (int: c 3; box: merge Point)` внутри метода). Место — `l2_layout_owns`: для процедуры
+namespace `l2_own_mslot` сопоставляет own-строку только с NSF-строкой по токену имени, а вычисляемый
+результат merge NSF-поля не имеет. Обычные методы дают таким own-строкам упакованный начальный слот,
+который затем заменяет source-layout. Чинить общим source-producer'ом вычисляемого выхода в теле
+namespace (место — child1 существующего операнда OWN/AT), не веткой по имени и не новым NSF-видом.
+Свидетеля в harness пока нет: миграции этого среза намеренно обошли форму вложенными определениями.
+
+<a id="merge-result-reference-field-path"></a>
+### MERGE-RESULT-REFERENCE-FIELD-PATH — 2026-10-03, fable, OPEN
+
+Чтение пути через reference-поле результата merge в его pointee не разрешается:
+
+```text
+Model: (size_t: value 1U)
+Holder:
+    @: Model q
+end: Holder
+fn: check () int
+    h: merge Holder
+    size_t: v
+    v: h\q\value
+return: 7
+```
+
+`unknown field path segment`, `atom=h`. Запись `h\q: mo` через тот же путь транслируется; тот же
+трёхсегментный путь от локального определения `h: (@: Model q)` или от unit-уровня `Holder` читается.
+Пробел — проекция схемы результата merge через reference-поле (потребители, считающие каждую схему
+именованной моделью; словарь v2 §10). Свидетеля в harness пока нет.
+
+<a id="receiving-use-full-receiver"></a>
+### RECEIVING-USE-FULL-RECEIVER — 2026-10-03, fable по ответу Codex FABLE-CODEX-20261003-01, OPEN
+
+Явное типизированное объявление или запись ссылки (`@: Model b o`; запись в `@: Model r`) сейчас
+допускает кандидата по всей форме модели: в native эмитируется
+`lmx_implements_receiver_view(…, candidate, Model, Model, …)`. По норме допуск относителен
+Consumer'у: проверяются используемые пути ссылки в её видимом теле
+([implements](../docs/LMX_semantics.ru.md#three-argument-implements)); неиспользуемое поле у
+кандидата не требуется, читаемое — требуется, неизвестное покрытие не считается пустым.
+`CORE_L2_L3_v2.md` §9.3 описывает full-receiver как реализацию, не норму.
+
+Следствия записаны в [журнале продолжения](fable-continuation-20261003.md#receiving-use-contract):
+`unit_bind_method_thin_other` — обязательный положительный (сейчас красный на явной форме);
+`unit_ref_rebind_other_refused` и `unit_struct_return_ref_admit_refused` не читают полей принятой
+ссылки и зелены как отказы ложно — мигрировать в положительные вместе с механизмом;
+`unit_ref_formal_rebind_other_refused` и `unit_formal_spelling_rebind_other_refused` читают
+`v\value` и остаются отказами. Чинить общим контрактом использования принимающего места
+(пустое доказанное использование / конкретные пути / неизвестное покрытие) в native и walker,
+без ветки по методу, корню, написанию `@` или имени модели.

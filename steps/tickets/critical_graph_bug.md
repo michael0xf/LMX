@@ -5,6 +5,9 @@ Requested by the author; recorded by Codex. Implementation owner: Codex.
 TAKEN main@84181df8 2026-10-02T23:22:39Z — continued the inherited sandbox WIP,
 with one writer/build. [Current bounded evidence](../critical-graph-pointer-fix-20261002.md)
 does not close this ticket; the universal layout and complete codec remain open.
+TAKEN main@4114628c 2026-10-03T22:30:00Z — Fable continues after the handoff
+([to_fable.md](../../to_fable.md)), one writer/build. [Continuation evidence](../fable-continuation-20261003.md)
+does not close this ticket either.
 
 This is a concrete defect under [K10: the complete lexical graph](../../next_core_tasks_v2.md#graph),
 not a new language feature. It blocks a claim of complete graph preservation or

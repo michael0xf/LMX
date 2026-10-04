@@ -29,6 +29,44 @@ is unchanged. Both critical tickets remain OPEN. Exact current evidence:
 Historical runs and intermediate task descriptions below are not restart
 instructions where a later measured slice supersedes them.
 
+**Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
+Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
+four persistent-oracle recoveries against full32. Latest full gate on the
+continuation bytes: `fable_full_04` RED70/1401 — 56 FAIL→OK, no OK→FAIL, six
+added targets pass; kernel `fable_kernel_01` GREEN292 with 109 executed
+selftests; L3 `fable_l3_01` 11 suites/four budgets. Not a release: sandbox code
+is unreleased, stable `l2src` unchanged, both critical tickets OPEN.
+[Exact evidence, bytes and the remaining rows by mechanism](steps/fable-continuation-20261003.md).
+
+Bounded slices of this continuation (each measured, none closes a ticket):
+
+- [x] K03 setup migration: 28 fixtures off the implicit `Model: x` copy
+  (explicit `merge`, nested written definitions); no translator change.
+- [x] Native-only source producers: activation-local machine values (imported
+  C function-pointer and by-value record locals: retained declaration, one name
+  leaf borrowed by every use, no cell and no stack address), foreign member
+  path read/store, same-unit forward header, string-literal operand. Witness
+  `graph_shape_machine_local` with three shape mutants. The per-method
+  machine-local table was stale in three passes and is rebuilt now.
+- [x] Three withdrawn or pending expectations migrated to runtime positives.
+
+Subtasks discovered, in dependency order with the items below (all OPEN):
+
+- [ ] Actual-call boundary for a held/copied ordinary Structure (nine red
+  required positives). Design question FABLE-CODEX-20261003-02 is with Codex;
+  the unknown-origin case stays behind the open author question.
+- [ ] Receiving-use contract for explicit typed reference declarations and
+  stores: Consumer-relative used paths instead of the whole model shape
+  (Codex ruling FABLE-CODEX-20261003-01; norm is explicit). Migrate the two
+  false-green no-use refusal rows with the mechanism.
+- [ ] Merge-result declaration inside a named Structure body (internal error),
+  and a path read through a merge result's reference field
+  ([defects](steps/defects.md#merge-decl-in-named-body-internal)).
+- [ ] Nested correspondence maps across distinct nested definitions; capture of
+  a merge-result local; foreign by-value call producer; address-arithmetic and
+  nested-body Array producers; C99 common arithmetic (K08) for the `1U` rows.
+- [ ] Normative triage of the 19 remaining stale negative/text-pin rows.
+
 <a id="before-critical-graph-bug"></a>
 ## Before critical_graph_bug — acceptance still required
 

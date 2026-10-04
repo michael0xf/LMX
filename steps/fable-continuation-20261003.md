@@ -1,0 +1,250 @@
+# Fable continuation ledger — 2026-10-03
+
+Working evidence of the continuation that follows [the handoff](../to_fable.md)
+and [the v2 plan](../next_core_tasks_v2.md). It is not a specification and not a
+release record. Earlier evidence stays in
+[the namespace source-layout ledger](critical-graph-namespace-source-layout-20261003.md).
+Both critical tickets and stages 8/8a remain OPEN. Stable `l2src/` is unchanged.
+
+Roles: Fable is the single writer/build owner; Codex answers questions through
+`lmx_uds`. Every gate below ran alone, one compiler chain at a time.
+
+<a id="takeover"></a>
+## 1. Takeover checks and baseline
+
+Read-only checks at takeover: `HEAD = origin/main = 4114628c`; no staged paths;
+no compiler process; `lmx_uds` and the Codex inbound bridge answer; hashes of
+the translator `BFF213AC…`, harness `DF38FC1D…`, driver `E30B6004…` and pinned
+`bin/l1trans.exe` `601D350E…` equal the handoff. A plain file copy of the
+315 inherited uncommitted paths is kept in the ignored
+`build/fable_backup/handoff_wip_4114628c.tar`.
+
+| Run | Result | Scope |
+| --- | --- | --- |
+| `build/l2_harness/fable_focus_01` | GREEN 7/7 | The handoff's four persistent-oracle rows, reproduced. |
+| `build/l2_harness/fable_full_01` | RED 126/1395 | Full generated harness on the unchanged handoff bytes. |
+
+`fable_full_01` against `critical_graph_fix_full_32`: the same 1395 targets;
+exactly four FAIL→OK (`unit_named_struct_call`, `unit_ref_local_path`,
+`unit_site_layout_local`, `unit_capture_struct_nofield_write_refused`); no
+OK→FAIL; the other 126 failure details are byte-identical after normalizing the
+output directory name. This is the baseline every later comparison uses.
+
+<a id="legacy-setup-migration"></a>
+## 2. Legacy construction setups (K03 migration debt)
+
+**Norm.** An existing ordinary named Structure has a body and no arguments;
+`Model: x` in an executable body is an erroneous argument-bearing call
+([construction](../docs/LMX_semantics.en.md#construction), Q59). Explicit
+`merge` is the copy mechanism. A nested Structure that must exist at
+construction is a nested definition with its written body.
+
+**Implementation.** No translator change. Twenty-eight fixtures whose setup
+still used the implicit `Model: x` copy were migrated: 26 of the 27 rows that
+refused with `a Structure-typed field in a method` (since namespaces and local
+definitions became source-counted procedures), and two refusal rows hidden
+behind the same setup. The forms used:
+
+- `Model: x` → `x: merge Model`;
+- a nested `Inner: in` inside a definition → the nested definition written in
+  place (`in:` with its body);
+- `@S` used as S's descriptor in an actual or a rebinding → `S`; unary `@`
+  depth is the pointer ticket's subject, not these rows';
+- `unit_ns_ref_field_general` uses the unit-level `Holder` directly;
+- `graph_shape_method_ref` keeps its int then a nested written Structure, with
+  an exact oracle (`$criticalMethodRefShape`) instead of the stale coarse one
+  and two new INIT-erasure mutants;
+- three stale generated-text pins now name the explicit merge call
+  (`lmx_merge_profiles_owned(…, self, …)`, operand read through `node`).
+
+The interim rebinding spelling `r: mo` is retained where Codex's earlier
+migrations use it; the accepted explicit form `@: r mo` is not lowered yet and
+belongs to the reference-application stage.
+
+**Verification.** `fable_mig_03` RED 7/37 (focused): 20 migrated rows, the two
+new mutants and five unchanged neighbouring controls are green. The seven red
+rows are not migration errors; each now stops on a real open mechanism instead
+of the obsolete setup:
+
+| Row | Diagnostic after migration | Mechanism it needs |
+| --- | --- | --- |
+| `unit_capture_struct_own` | `a field path` on captured `loc` | capture of a merge-result local (capture closure) |
+| `unit_d112_nested_return`, `unit_d113_nested_expr`, `unit_s7_nested_shape` | `an admission to a Structure type through a Structure field of another type` | nested correspondence maps across distinct nested definitions |
+| `unit_empty_type_call_method` | `executing a named Structure is not supported yet` | held/copied-call boundary |
+| `unit_bind_method_thin_other` | runs, implements throw, exit 1 instead of 7 | receiving-use contract (§3) |
+| `unit_eternal_shape` | unchanged, not migrated | needs the reference binding `kept: E` (reference-application stage) or the merge-in-named-body defect below |
+
+Two refusal rows hidden behind the same setup
+(`unit_field_path_struct_rebind_refused`,
+`unit_matrix_path_struct_rebind_refused`) were migrated the same way and refuse
+again with their pinned text. That text (`a Structure assigned through a path`)
+is an implementation wording: by the norm `o\inner: a` is an application of the
+held Structure and an arity error. It stays recorded as debt of the
+reference-application stage.
+
+<a id="receiving-use-contract"></a>
+## 3. Resolved rule: receiving-use contract (Codex, FABLE-CODEX-20261003-01)
+
+**Question.** Is a candidate received by an explicit typed reference
+declaration or store (`@: Model b o`; a store into `@: Model r`) admitted by the
+used paths of that reference in its visible body, or by Model's whole shape?
+
+**Answer (no author question needed; the norm is explicit).** Consumer-relative
+used paths: [three-argument implements](../docs/LMX_semantics.en.md#three-argument-implements)
+and L2 §implements. A genuinely known-thin Consumer admits a candidate lacking
+unused fields; a field the Consumer reads is required. The full-receiver
+behaviour described in `CORE_L2_L3_v2.md` §9.3 is Implementation, not authority.
+
+**Consequences, OPEN implementation work:**
+
+- The shared receiving/admission contract must distinguish proven-empty uses,
+  specific required paths and unknown analytical coverage, in native and
+  walker routes. Passing the model itself as the complete requirement is wrong
+  for an unused local. Unknown coverage is not known-thin; no YES from unknown
+  provenance, no reuse of a prior thin map for another Consumer.
+- `unit_bind_method_thin_other` stays a required positive on the explicit
+  initializer (red until the mechanism exists). `unit_bind_root_thin_other`
+  keeps its thin intent when its legacy `Model: b o` setup is migrated.
+- `unit_ref_rebind_other_refused` and `unit_struct_return_ref_admit_refused`
+  read no field of the received reference; their whole-shape refusal
+  expectations are wrong and must become known-thin positives with real
+  runtime observations, on the accepted explicit forms. They are still green
+  as refusals today: false greens, to migrate with the mechanism, not by
+  flipping flags.
+- `unit_ref_formal_rebind_other_refused` and
+  `unit_formal_spelling_rebind_other_refused` read `v\value`; their refusal is a
+  real missing-used-field rejection and stays.
+- Explicit rebinding is `@: r o`; the plain `r: o` route is legacy
+  implementation pending the reference-application stage.
+
+<a id="machine-locals"></a>
+## 4. Native-only source producers: machine locals, foreign member paths, forward headers
+
+**Norm.** The retained graph keeps every source occurrence in source order,
+also in native-only bodies ([L2 interpretable tree](../docs/L2_spec_en.md#interpretable-tree)).
+Names are absent from the graph; an activation-local C value lives in machine
+activation storage and no graph pointer may outlive a stack object.
+
+**Implementation** (`dev/l2src_sandbox/l2trans.lm1`, symbols):
+
+- `l2_rw_machine_declaration`: `TYPE: name [initializer]` for an imported C
+  function-pointer or by-value record local is one `SOURCE_MACHINE` node named
+  by the type head; its body holds one source leaf for the declared name and
+  each initializer span through the ordinary resolved actual producer. No cell
+  is allocated.
+- `l2_ml_rw` / `l2_rw_machine_local`: every later use of that name borrows the
+  declaration's own leaf (a shared reference, not an owning edge and not a new
+  symbol). Reached from the operand, machine-actual, machine-word and indirect
+  producers.
+- `l2_rw_foreign_path`, `l2_rw_machine_word`, `l2_rw_machine_store`: a member
+  path rooted at foreign C storage (`x\length`, `av\alloc`, two-hop) is a
+  `SOURCE_MACHINE` node named by the written path with its resolved root, as a
+  read operand (atom or field span) and as a store with its assigned value.
+  `l2_rw_span_ty` types it by the native path contract.
+- A same-unit forward header (`l2_fn_defined = 0` and a defining occurrence
+  found by `l2_unit_defined_fn`) is retained at its written unit slot as an
+  inert description; no body is fabricated.
+- A string literal operand is retained as its char Array source value; its
+  consumption as a raw character pointer marks the body native-only.
+
+**Defect found and fixed with it — stale machine-local table.**
+`l2_local_ns_shape` asks `l2_ml_find`, but the declaration-role collection pass
+(`l2_collect_asgn_binds`) and both walker passes never rebuilt the table for
+the method being read. A statement `f: n` with `f` a function-pointer local was
+therefore registered as a spurious local named Structure (an extra procedure
+and an extra unit child) once its declaration stopped refusing. The table is
+now rebuilt per method in those three places. In the early collection pass only
+locals classified by an imported type name alone are read
+(`l2_ml_imported_only`): a full early read refused
+`@: Model Model @Other` with `unknown type` before the local definition existed
+(two OK→FAIL rows in the intermediate `fable_full_02`, repaired before any
+claim).
+
+**Verification.**
+
+- `fable_ml_02` (focused) RED 1/33: all 18 function-pointer/record-local rows
+  and 8 foreign-member rows pass; the remaining row
+  (`unit_uniform_foreign_results`) moved on to the separate foreign by-value
+  call producer.
+- New witness `graph_shape_machine_local`: 124 checks, native method that
+  really allocates through the local, root also walked. Path oracle: unit and
+  method widths, the declaration's name, its name leaf and initializer names,
+  identity of the leaf with the comparison's operand (`samepath`), the separate
+  call application. Three mutants (`…_leaf_mutant`, `…_init_mutant`,
+  `…_use_mutant`) null one real field each: baseline matches, the structural
+  comparison fails, the program result stays 7.
+- `fable_str_01`/`fable_str_02` (focused): the seven string rows translate and
+  five run green; `parser_alloc_port` and `parser_trailer_role` moved on to
+  other producers.
+
+<a id="oracle-triage"></a>
+## 5. Expectation triage done in this slice
+
+| Row | Old expectation | Finding | Now |
+| --- | --- | --- | --- |
+| `unit_native_activation` | refused: `L2 operation outside a method body` | That rule is withdrawn ([scope](../docs/LMX_semantics.en.md#scope)): the root is compiled like every body. | runs, entry 7 |
+| `unit_arg_addr_pointer` | `root-pending` | The pending operation is built; the row had been reporting ACCEPTED. | runs, says `P local is null` |
+| `unit_discard_calls` | `root-pending`, entry 11112 | Translates now, but its counters used bare `hits: hits + N` in methods and a bare read at the root. A bare name in a method is its hidden input (Q52); the root's bare own value is not reloaded after a call ([working state](../docs/LMX_semantics.en.md#dynamic)). | callees write `node\hits`, the root reads the published cell through `@hits`; entry 11112 |
+
+<a id="full-gates"></a>
+## 6. Full gates of this continuation
+
+| Run | Result | Against `fable_full_01` |
+| --- | --- | --- |
+| `fable_full_02` | RED 82/1401 | 46 FAIL→OK, 6 added (all OK), 2 OK→FAIL caused by the early machine-local read; intermediate, superseded. |
+| `fable_full_03` | RED 71/1401 | 55 FAIL→OK, 0 OK→FAIL, 6 added (all OK), 0 removed. `unit_discard_calls` still red there; its fixture was corrected afterwards (focused `fable_str_02` GREEN 6/6). |
+| `fable_full_04` | RED 70/1401 | Final bytes of this slice: 56 FAIL→OK, 0 OK→FAIL, 6 added (all OK), 0 removed. Against `fable_full_03` only `unit_discard_calls` changes, FAIL→OK. |
+
+Bytes of `fable_full_04` (the same translator and harness as `fable_full_03`):
+translator SHA256
+`D7807F2A3E85860C8BF96E7D706BDC3F44F1F5B1489A2D6ECF22A06435FEF70A`
+(staged Git blob `de4f149012260335753a947ba8e083ae0193df34`), harness
+`F30F7DC5896168ABDC4588CB89BF6F37265D9DFD1B5E74D5060467BA94CD23D0`, driver
+unchanged `E30B6004…`, raw executable
+`0CCF305DA88C67C10303D7A9D57C44A192DEB785F39159386850C11AAC00D45C`.
+
+Other gates on the same tree (the kernel and L3 sources were not edited by this
+continuation; the runs establish that the tree as a whole is where the handoff
+said it was):
+
+| Run | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_01` (`build_l2src.ps1 -Run -KeepAll`) | GREEN, 292 targets; 109 selftests executed: 108 ran with exit 0, the expected-fatal close-watchdog selftest exited 3 as required. |
+| `build/l3_selftest/fable_l3_01` (`run_l3_selftest.py`) | all 11 suites exit 0; four type-budget units 75/128 names, 1070/8192 bytes. |
+
+A red generated harness is not a release: 70 rows remain, classified below.
+
+<a id="remaining"></a>
+## 7. Remaining red rows by mechanism (after `fable_full_04`)
+
+Translator refusals:
+
+| Group | Rows | Next mechanism |
+| --- | --- | --- |
+| held/copied nullary call | `unit_named_until_copy_call`(+walk), `graph_shape_ns_source_nested_copy`(+walk_methods), `unit_named_struct_exec_instance`, `…_two_types`, `unit_model_var_call`, `unit_empty_type_call_method`, `unit_held_nullary_source_field` | actual-call boundary (design question FABLE-CODEX-20261003-02 sent) |
+| foreign by-value call | `unit_uniform_foreign_results`, `unit_uniform_aggregate`, `parser_trailer_role` | CALL producer for foreign by-value inputs/results |
+| nested admission maps | `unit_d112_nested_return`, `unit_d113_nested_expr`, `unit_s7_nested_shape` | correspondence through nested fields of distinct definitions |
+| capture of a merge-result local | `unit_capture_struct_own`, `unit_capture_struct_call_arg` | capture closure |
+| C99 common arithmetic | four `1U`-in-`int` rows (`unit_callable_forward`, `unit_callable_nullary_forms`, `unit_callable_returning_two_contracts`, `unit_callable_sub_transport`), `unit_indent_stack_field_index` (missing `int`→`size_t` conversion receiver) | K08 conversions in the producer and walker |
+| return value typing | `unit_free_conv`(+walk), `unit_colon_hidden_update` (`return value has incompatible type`) | not yet triaged against the norm |
+| pointer arithmetic / raw address forms | `unit_addr_own_array_arith`, `unit_rhs_compound_admission_refused`, `unit_rhs_reference_admission`, `unit_addr_own_array_element`, `parser_alloc_port` | native-only producers for address arithmetic and raw index of a record pointer |
+| Array in a nested body | `unit_address_array_descriptor`, `unit_array_index_shadow`, `unit_array_value_projection` | Array cell constructor in a hosted body |
+| letter/mainArgs element contract | `entry_index`, `entry_strcmp`, `unit_charpp_return`, `unit_l2_puts_library`, `entry_arg_len` | Array-of-Array element contract (K06/K07) |
+| reception into a model | `unit_receive_letter_model`, `unit_send_ref_method`, `unit_send_ref_driver_tap` | admission producer for a received letter |
+| Structure value in return/argument | `unit_s7_ret_field`, `unit_s7_ret_deep`, `unit_s7_arg_deep` | Structure-valued operand producer |
+| single rows | `unit_t7_convert`, `unit_named_actual_whole` (unary minus), `entry_array_leading_zero`, `unit_arg_addr_dyn_types`, `unit_own_dirty_rhs`, `unit_eternal_shape` | individual triage |
+
+The table covers the 50 translator refusals of `fable_full_04`. The other 20
+red rows are oracle rows: 19 stale negative expectations or generated-text pins
+(seven `ACCEPTED a fixture that must be refused`, eight `refused, but not with`,
+four missing text pins) and the runtime row `unit_bind_method_thin_other` (§3).
+Each needs the same normative triage as §5 before its expectation changes;
+`unit_capture_struct_whole_refused` in particular pins an implementation limit
+(a captured Structure used whole), which the norm does not forbid.
+
+<a id="defects-found"></a>
+## 8. Defects and gaps recorded by this continuation
+
+Details are in [defects](defects.md): `MACHINE-LOCAL-TABLE-STALE` (fixed in the
+sandbox), `MERGE-DECL-IN-NAMED-BODY-INTERNAL`,
+`MERGE-RESULT-REFERENCE-FIELD-PATH`, `RECEIVING-USE-FULL-RECEIVER`.

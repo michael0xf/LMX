@@ -1,0 +1,125 @@
+# What a callee reads through its formal is required of the reference handed
+# to it whole, where the reference receives its candidate. The candidate is
+# an Other, which has no value. In each method the reference is handed to a
+# callee that reads value: directly, through a callee that hands it on, in a
+# branch the call does not take, through a callee that hands it to itself,
+# and by the formal's name. Each reference refuses the Other at its own
+# declaration, before the call: the handler finds stage still 0 and gives
+# 10. Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: take (Model: v) size_t
+    return: v\value
+end: take
+
+fn: pass (Model: v) size_t
+    return: take(v)
+end: pass
+
+fn: turn (Model: v; int: c) size_t
+    if: c = 1
+        return: v\value
+    return: 0U
+end: turn
+
+fn: walk (Model: v; int: n) size_t
+    if: n > 0
+        return: walk(v n - 1)
+    return: v\value
+end: walk
+
+fn: direct () int
+    int: stage 0
+    size_t: got 0U
+    ---
+        o: merge Other
+        @: Model b o
+        stage: 1
+        got: take(b)
+        stage: 2
+        catch: implements ()
+            stage: stage + 10
+    ---
+    return: stage
+end: direct
+
+fn: handed () int
+    int: stage 0
+    size_t: got 0U
+    ---
+        o: merge Other
+        @: Model b o
+        stage: 1
+        got: pass(b)
+        stage: 2
+        catch: implements ()
+            stage: stage + 10
+    ---
+    return: stage
+end: handed
+
+fn: branch () int
+    int: stage 0
+    size_t: got 0U
+    ---
+        o: merge Other
+        @: Model b o
+        stage: 1
+        got: turn(b 0)
+        stage: 2
+        catch: implements ()
+            stage: stage + 10
+    ---
+    return: stage
+end: branch
+
+fn: again () int
+    int: stage 0
+    size_t: got 0U
+    ---
+        o: merge Other
+        @: Model b o
+        stage: 1
+        got: walk(b 2)
+        stage: 2
+        catch: implements ()
+            stage: stage + 10
+    ---
+    return: stage
+end: again
+
+fn: named () int
+    int: stage 0
+    size_t: got 0U
+    ---
+        o: merge Other
+        @: Model b o
+        stage: 1
+        got: take(v: b)
+        stage: 2
+        catch: implements ()
+            stage: stage + 10
+    ---
+    return: stage
+end: named
+
+int: ok 7
+if: direct() != 10
+    ok: 81
+if: handed() != 10
+    ok: 82
+if: branch() != 10
+    ok: 83
+if: again() != 10
+    ok: 84
+if: named() != 10
+    ok: 85
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

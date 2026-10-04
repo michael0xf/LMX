@@ -1,0 +1,48 @@
+# A store the reference refuses leaves the reference what it was, and the
+# value it held is still what a later Consumer gets. b holds a Wide, which
+# carries the value that take reads. The store of an Other into b is refused,
+# the Other has no value, and the handler takes the throw. After it b is
+# handed whole to take, which reads the Wide's 9. The refused candidate is
+# no value of b: it does not reach take, and take is not refused for it.
+# Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+Wide:
+    int: p 5
+    size_t: value 9U
+end: Wide
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: take (Model: v) size_t
+    return: v\value
+end: take
+
+fn: m () int
+    int: stage 0
+    size_t: got 0U
+    w: merge Wide
+    o: merge Other
+    @: Model b w
+    ---
+        b: o
+        stage: 1
+        catch: implements ()
+            stage: 10
+    ---
+    got: take(b)
+    if: stage != 10
+        return: 81
+    if: got != 9U
+        return: 82
+    return: 7
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

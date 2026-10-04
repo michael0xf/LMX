@@ -3990,18 +3990,28 @@ $fixtures = @(
         Args = @('0','mutate','null-path','4','1','4','2','15') + $recvUseNestedShape; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_level_mutant.lm2'; Source = 'unit_recv_use_nested_path.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','4','1','4','2','12') + $recvUseNestedShape; Entry = 7; Absent = @(); Debt = @() },
-    # A field that is needed and missing is refused however the need reaches the reference.  In the three programs
-    # below the need is not in the method's own body: a callee the reference is passed whole to reads the field, a
-    # definition inside the method that is returned and invoked reads it, another method reads it by a path.  Each
-    # refusal is right by the contract; these rows hold the behaviour only.  That this implementation refuses them
-    # by receiving in full, for want of a composed coverage, is held apart, by the probes below.
-    [pscustomobject]@{ Name = 'unit_recv_use_unknown_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
-        NativeMethods = @(0,1); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_recv_use_unknown_refused_walk.lm2'; Source = 'unit_recv_use_unknown_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+    # A field that is needed and missing is refused however the need reaches the reference.  In the programs below
+    # the need is not in the method's own body: a callee the reference is passed whole to reads the field, a
+    # definition inside the method reads it -- one the method returns, one the method calls, one a definition beside
+    # it calls -- another method reads it by a path.  Each refusal is right by the contract; these rows hold the
+    # behaviour.  What the callee reads through its formal is composed into the coverage of the reference handed to
+    # it whole (the passed row: the native text receives by coverage).  The other routes still receive in full, for
+    # want of a composed coverage; that is held apart, by the probes below.
+    [pscustomobject]@{ Name = 'unit_recv_use_passed_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_passed_refused_walk.lm2'; Source = 'unit_recv_use_passed_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_reader_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_reader_refused_walk.lm2'; Source = 'unit_recv_use_nested_reader_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_called_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_called_refused_walk.lm2'; Source = 'unit_recv_use_nested_called_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_sibling_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_sibling_refused_walk.lm2'; Source = 'unit_recv_use_nested_sibling_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     # A path rooted at the method's name reaches its reference from another method.  A candidate with every field in
     # its own places is received and read through the reference's correspondence from the other method; one that
@@ -4014,20 +4024,41 @@ $fixtures = @(
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_path_from_method_refused_walk.lm2'; Source = 'unit_recv_use_path_from_method_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
-    # OPEN positives of the coverage limit (Codex, FABLE-CODEX-20261004-04).  Both programs are valid: nothing that
-    # runs reads the field the Other lacks.  In the first the reading definition stays dormant -- the method returns
-    # another one; in the second the callee the reference is passed to reads nothing.  This implementation gives the
-    # reference no coverage in either case and refuses the Other by the whole of Model.  Red until the coverage is
-    # composed; never to be turned into expected refusals.
+    # The coverage composed across a call, and the definition nothing consumes (Codex, FABLE-CODEX-20261004-04 and
+    # -11).  Nothing that runs reads the field the Other lacks: in the first the reading definition is neither
+    # called nor returned by its method and asks for nothing; in the second the callee the reference is passed to
+    # reads nothing, so the composed coverage is known and empty.  Both receive the Other.  The passed_reads pair
+    # runs every route by which a callee's reads reach the reference -- directly, handed on, in a branch the call
+    # does not take, handed to itself, by the formal's name: received where the candidate carries what is read,
+    # refused at the declaration where it does not.  A store the reference refuses publishes no candidate: the
+    # value held before reaches the later Consumer, and that Consumer is not refused for the rejected one.
     [pscustomobject]@{ Name = 'unit_recv_use_nested_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_dormant_walk.lm2'; Source = 'unit_recv_use_nested_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_passed_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_passed_thin_walk.lm2'; Source = 'unit_recv_use_passed_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_passed_reads.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_passed_reads_walk.lm2'; Source = 'unit_recv_use_passed_reads.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_passed_reads_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7,8); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_passed_reads_refused_walk.lm2'; Source = 'unit_recv_use_passed_reads_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_rejected_store_keeps.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_rejected_store_keeps_walk.lm2'; Source = 'unit_recv_use_rejected_store_keeps.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # TEMPORARY IMPLEMENTATION-COVERAGE PROBES (Codex, FABLE-CODEX-20261004-04).  Not language acceptance criteria.
     # Each reads the generated text of a program above and holds the present LIMIT of the coverage analysis: the
     # program's reference gets no coverage and is received in full.  A composition that gives it a coverage and still
     # refuses what must be refused is correct, closes the gap, and this row must then change or go.
-    [pscustomobject]@{ Name = 'unit_recv_use_unknown_refused_limit_probe.lm2'; Source = 'unit_recv_use_unknown_refused.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_called_refused_limit_probe.lm2'; Source = 'unit_recv_use_nested_called_refused.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
+        Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_sibling_refused_limit_probe.lm2'; Source = 'unit_recv_use_nested_sibling_refused.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_reader_refused_limit_probe.lm2'; Source = 'unit_recv_use_nested_reader_refused.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
@@ -4035,6 +4066,15 @@ $fixtures = @(
         Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
     [pscustomobject]@{ Name = 'unit_recv_use_path_from_method_refused_limit_probe.lm2'; Source = 'unit_recv_use_path_from_method_refused.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
         Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
+    # TEMPORARY IMPLEMENTATION-COVERAGE PROBES of another kind.  Not language rules either.  The coverage analysis
+    # counts a definition inside a method as unconsumed when no method calls it and its method does not return it
+    # (unit_recv_use_nested_dormant).  That holds only while no other route to such a definition is accepted.  The
+    # two routes below -- a path from outside the method, a copy of the method -- are refused by this
+    # implementation today.  A row that goes red means the route opened: the analysis must model it first.
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_path_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:29:11: unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_copy_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:29:10: unknown merge operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_root_used_other_refused.lm2:14:1: implements is false in a typed binding'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -7162,16 +7202,14 @@ $fixtures = @(
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_reference_name_walk.lm2'; Source = 'unit_named_actual_reference_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # The whole reference passed on by a named actual takes on what the callee reads through that formal: the
+    # naming Frame is not a store to the reference.  The refusing neighbour is the method named in
+    # unit_recv_use_passed_reads_refused: read as a store, the Frame would give the reference an empty coverage
+    # and the candidate without the field would be received.
     [pscustomobject]@{ Name = 'unit_named_actual_reference_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
     [pscustomobject]@{ Name = 'unit_named_actual_reference_whole_walk.lm2'; Source = 'unit_named_actual_reference_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
-    # TEMPORARY IMPLEMENTATION-COVERAGE PROBE, of the kind above (unit_recv_use_..._limit_probe): the whole
-    # reference passed on by a named actual is a use the coverage analysis does not compose yet, so the
-    # reference gets no coverage and is received in full.  Read as a store to the reference, the naming Frame
-    # would give it an empty coverage instead.  It goes when the coverage is composed.
-    [pscustomobject]@{ Name = 'unit_named_actual_reference_whole_limit_probe.lm2'; Source = 'unit_named_actual_reference_whole.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = '';
-        Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
     [pscustomobject]@{ Name = 'unit_named_actual_structure_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_structure_name_walk.lm2'; Source = 'unit_named_actual_structure_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -7398,6 +7436,13 @@ $fixtures = @(
         NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_walk.lm2'; Source = 'unit_held_call_bare_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4); Absent = @(); Debt = @() },
+    # OPEN positive, required before G5 (Codex, FABLE-CODEX-20261004-11; HELD-BARE-NAME-RESULT-RECEIPT).  Where a
+    # result is received -- a store to an int, an int formal's actual, the value an int method returns -- the bare
+    # name of a held callable that returns a value executes it, as the name with () does.  This implementation
+    # takes the bare name for the callable's reference in each of the three places and refuses the program.  Red
+    # until the receiving decision is repaired; never to be turned into an expected refusal.
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     # A throw raised while an actual is evaluated (found beside the named actuals, and no matter of them):

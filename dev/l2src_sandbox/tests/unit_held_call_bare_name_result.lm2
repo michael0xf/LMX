@@ -1,0 +1,48 @@
+# OPEN positive. Where a result is received, the bare name of a held callable
+# that returns a value executes it, as `p0()` does: the receiving contract
+# selects the result. p0 gives 100 and notes 1 at each call. An int receives
+# it by a store, as the actual of an int formal, and as the value an int
+# method returns: 100 each time, three calls. This implementation takes the
+# bare name for the callable's reference in each of the three places and
+# refuses the program. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 10 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + note(1)
+    return: f0
+
+fn: id (int: a) int
+    return: a
+end: id
+
+p0: make0 100
+int: r 0
+r: p0
+int: s id(p0)
+
+fn: use () int
+    return: p0
+end: use
+
+int: t use()
+int: ok 7
+if: r != 100
+    ok: 81
+if: s != 100
+    ok: 82
+if: t != 100
+    ok: 83
+if: seen() != 111
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

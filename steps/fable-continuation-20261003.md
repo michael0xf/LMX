@@ -3500,3 +3500,229 @@ routes that set them are modelled, and an unmodelled route leaves the
 coverage unknown; the flow of types prunes a source only where the
 incompatibility is structurally proven, and a rejected store must not
 delete the value the place held before it.
+
+<a id="coverage-composed"></a>
+## 51. The coverage composed across a call; the definition nothing consumes (Codex, FABLE-CODEX-20261004-11)
+
+[Section 42](#receiving-use-follow-up) left two valid programs red:
+`unit_recv_use_passed_thin`, where a reference is handed whole to a callee
+that reads nothing through it, and `unit_recv_use_nested_dormant`, where a
+definition inside the method reads through the reference and never runs.
+Both are green with this slice. Three things changed in the translator, all
+in the analysis of a typed reference's coverage and in the static flow that
+uses it. The kernel and the walker are not touched.
+
+### What Codex ruled
+
+On the definition that does not run (reply -10 rejected a test by the
+definition's name; reply -11, point 3):
+
+> Replacing textual names with resolved definition identities is correct.
+> But I cannot certify that three existing flags are an exhaustive
+> escape/consumption proof merely from their names. Inventory what actually
+> sets them: indirect/forwarded calls, qualified or ordinal paths,
+> copied/merged hosts, reference/address/Array storage, whole-host transport
+> and opaque receiving consumers. If a route is unmodeled, absence of a flag
+> is UNKNOWN, not proof of no consumption.
+
+On the composition and the flow (reply -11, point 4):
+
+> Composing the resolved callee formal's uses into the source reference,
+> keeping the same model/index spaces and ORDINAL/LAST distinct, is
+> appropriate for the bounded slice. Preserve every visible alternative and
+> further receiving use; propagate UNKNOWN when incomplete.
+>
+> Prune flow only for structurally PROVEN incompatibility under that precise
+> coverage/contract, not for unknown source, unknown coverage or a
+> conversion/admission whose result is still unknown. A failed store does
+> not publish its candidate; the prior destination remains a possible value,
+> especially on the handler path. Add a caught rejected store followed by
+> consuming the old valid value to ensure pruning does not delete it or
+> cause a false static callee refusal.
+
+### The whole pass is composed
+
+An own typed reference of a plain method, handed whole to a method as one
+whole actual, takes on what the callee reads through that formal
+(`l2_ruse_compose`). The reads go into the same list of entries as the
+reads of the caller's own body: the same model as the index space, the same
+level, row and half. The ordinal half and the last half stay apart.
+
+The use is composed only when all of this holds:
+
+- the head of the call selects a method at the site
+  (`l2_call_head_method`), and not through a callable formal;
+- the reference is one whole actual and the call gives every formal its
+  actual; the place is read from the call's projected actuals
+  (`l2_ruse_actual_index`), so a named actual is found at its formal;
+- the callee is a plain method: no procedure of a named Structure, no host
+  of a callable merge, no definition inside one, no method of a part;
+- the formal receives by the same model as the reference;
+- nothing else in the callee bears the formal's name, and no path in the
+  program names it.
+
+The callee's body is then read by the same scan (`l2_ruse_scan_method`).
+What that scan cannot place in the callee leaves the caller's coverage
+unknown, exactly as in the caller's own body: the formal returned, stored
+or taken by address, or named inside a definition of the callee. A formal
+handed on to another callee is composed in turn. A chain of calls that
+comes back to a formal already being read adds nothing to that formal, so a
+method that hands its formal to itself ends.
+
+If a condition fails the use stays unclassified: the coverage is unknown and
+the reception is full, as before.
+
+A callee that reads nothing gives a coverage that is known and empty. That
+is `unit_recv_use_passed_thin`.
+
+### The definition nothing consumes
+
+A definition inside the method that names the reference made the coverage
+unknown. It still does, unless the definition is unconsumed
+(`l2_ruse_unconsumed`), by the facts of its own identity that the check of
+every body has established:
+
+- no call edge leads to it from any method (`l2_m_edge`: a call by name or
+  by a path, or through a callable formal's contract);
+- it is no callable actual and no model of a merge (`l2_m_value_used`);
+- no host returns it (`l2_mad_model`).
+
+The inventory Codex asked for, measured on this translator with a reading
+definition `read` inside `make`:
+
+| Route to the definition | What the translator does |
+| --- | --- |
+| `make` calls it | A call edge. Consumed: `unit_recv_use_nested_called_refused`. |
+| A definition beside it calls it, and `make` returns that one | A call edge from the sibling. Consumed: `unit_recv_use_nested_sibling_refused`. |
+| `make` returns it | `l2_mad_model`. Consumed: `unit_recv_use_nested_reader_refused`. |
+| `make` returns it on one branch and another definition on another | Refused, `assignment value has incompatible type`, at the return that differs from the method's last. |
+| A path from outside, `make\read()` | Refused, `unknown field path segment`. Held by a tripwire row. |
+| A copy of the method, `c: merge make` | Refused, `unknown merge operand`. Held by a tripwire row. |
+| In `make`: a callable actual, the bare name where a value is received, the bare name as a statement, a comparison, the short store `q: read` | Refused, `a callable merge host names a nested method outside the return`. |
+| In `make`: a reference declared to it, `@: k read` | Refused, `unknown type`. |
+| A definition inside a method that returns no callable | Refused, `unsupported body`. |
+
+So on this translator a definition inside a method is reached only by a
+call in its host or beside it, or by the host's return, and the three facts
+cover those routes. That is a property of what the translator accepts
+today, not a rule of the language. The two outside routes are held by the
+labelled rows `unit_recv_use_nested_path_reach_limit_probe` and
+`unit_recv_use_nested_copy_reach_limit_probe`: a row that goes red means the
+route opened, and the analysis must model it before the row changes.
+
+A consumed definition that reads through the reference is still another
+Consumer that this analysis does not compose: the coverage is unknown and
+the reception full. That is a limit, held by the `..._limit_probe` rows of
+the three consumed cases.
+
+### The flow of types at a place of known coverage
+
+The static flow of candidates (`l2_d105_receiving_flow`) passed every
+candidate through a place of known coverage. With the composition that
+gave a false refusal: in `unit_recv_use_passed_reads_refused` the reference
+refuses the candidate at its declaration, the handler takes the throw, and
+the call under it is never reached; the translator still carried the
+candidate on to the callee's formal and refused the program, `implements is
+false in function argument`.
+
+Now a place of known coverage prunes a candidate by the fields its coverage
+names at the root, each by the half it names, with the tests the full
+reception already applied to every field: the candidate has no field of
+that name at that occurrence, or the field there is provably of another
+kind or model. A place of unknown coverage requires every field, as before.
+Nothing else prunes: an unknown candidate layout, a coverage entry below
+the root and a conversion are passed on as they were.
+
+A pruned candidate is one the place refuses when it is reached, so it is no
+value of the place afterwards. The value the place held before a refused
+store stays: `unit_recv_use_rejected_store_keeps` holds a Wide, refuses a
+store of an Other under a handler, and then hands the reference to a callee
+that reads the Wide's value.
+
+The comment above `l2_d105_receiving_flow` still describes the earlier
+behaviour ("A place whose Consumer's coverage is known is not pruned
+here"); the comment inside the function is the current one. The stale lines
+go with the next change of the translator: the gated bytes are not edited
+after their gate.
+
+### Replay
+
+The slice's translator against the committed one (`3e7a2f28`), on the 1587
+translations recorded by `fable_full_25`: exit, messages and allocation
+counts are the same on every row. The generated L1 differs on 25 rows, of
+two kinds, told apart by counting the reception calls and the coverage
+arrays in each text.
+
+- 19 rows gain a coverage where the reference had none, and their reception
+  goes by coverage: `unit_recv_use_passed_thin`,
+  `unit_recv_use_nested_dormant`, `unit_recv_use_unknown_refused` with its
+  walked twin and its probe, `unit_named_actual_reference_whole` with its
+  walked twin and its probe, `unit_named_actual_facts`,
+  `unit_opaque_reference_ordinal_flow`, `unit_opaque_reference_source_chain`
+  and `unit_colon_graph_update_admission_blocked`, each with its walked twin,
+  `unit_pointer_raw_c_admission`, `unit_rhs_reference_admission`,
+  `unit_rhs_returned_model`.
+- 6 rows keep their coverage and lose one lookup of a field by name: the
+  candidate the place refuses is no longer a possible source of the read
+  under it. `unit_recv_use_selectors` with its walked twin,
+  `unit_local_init_graph_ref_admit_refused`,
+  `unit_rhs_returned_model_refused`,
+  `unit_rhs_void_admission_assign_refused`,
+  `unit_rhs_void_admission_init_refused`.
+
+Every one of these rows keeps its verdict in the gate.
+
+### Rows
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_recv_use_passed_thin`, natively and walked | The callee reads nothing: the Other is received. Was the OPEN positive. |
+| `unit_recv_use_nested_dormant`, natively and walked | The reading definition is neither called nor returned: the Other is received. Was the OPEN positive. |
+| `unit_recv_use_passed_reads`, natively and walked | The routes of a callee's reads: directly, handed on, in a branch, handed to itself, by the formal's name. A Wide, which carries the field at another place and lacks the unread one, is received on each. |
+| `unit_recv_use_passed_reads_refused`, natively and walked | The same routes with an Other: each reference refuses at its declaration, before the call, under a handler. |
+| `unit_recv_use_rejected_store_keeps`, natively and walked | A refused store under a handler leaves the value held before; the later Consumer reads it. |
+| `unit_recv_use_passed_refused`, natively and walked | `unit_recv_use_unknown_refused` renamed: the refusal is by the composed coverage now, and the row pins the reception by coverage. |
+| `unit_recv_use_nested_called_refused`, `unit_recv_use_nested_sibling_refused`, natively and walked, each with its `_limit_probe` | A definition the host calls, or a sibling calls, is consumed: full reception, the Other refused. |
+| `unit_recv_use_nested_path_reach_limit_probe`, `unit_recv_use_nested_copy_reach_limit_probe` | Tripwires of the two refused outside routes to a nested definition. |
+| `unit_named_actual_reference_whole` | Pins the reception by coverage: the naming Frame is no store to the reference. |
+| `unit_held_call_bare_name_result` | OPEN required positive of [section 50](#result-receipt-open): red. |
+
+Removed: `unit_recv_use_unknown_refused_limit_probe` and
+`unit_named_actual_reference_whole_limit_probe`. Their limit, a whole pass
+that is not composed, is closed.
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart, and
+compared with the slice on the fixtures of the family, natively and walked.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| A whole pass is never composed | `unit_recv_use_passed_thin` and `unit_recv_use_passed_reads` are refused at run time: R0 stops. |
+| A whole pass is classified without reading the callee | `unit_recv_use_passed_reads_refused`, `unit_recv_use_passed_refused` and `unit_recv_use_rejected_store_keeps` are refused by the translator, `implements is false in function argument`. |
+| The flow does not prune at a place of known coverage | The same three rows are refused by the translator with the same words. |
+| The flow prunes there by every field of the model | `unit_recv_use_passed_thin`, `unit_recv_use_passed_reads`, `unit_recv_use_selectors` and `unit_recv_use_later_consumer` fail, natively and walked. |
+| The composition does not notice a formal already being read | `unit_recv_use_passed_reads` is refused at run time: R0 stops. |
+| A definition the method calls counts as unconsumed | `unit_recv_use_nested_called_refused` aborts: "a captured Structure was not admitted as itself". |
+| Only a call from the definition's own host counts | `unit_recv_use_nested_sibling_refused` fails with a walk error; the called and the dormant rows are as the slice's. |
+| A definition its host returns counts as unconsumed | `unit_recv_use_nested_reader_refused` aborts: "a Structure capture could not be copied". |
+| A definition formed into a value by a callable actual counts as unconsumed | Did not reach: no accepted program forms a nested definition so (the inventory above). The line stays as a guard without a witness. |
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_13` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_13` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_26` (full harness) | RED 30 of 1603. Against `fable_full_25` (RED 31 of 1588): FAIL→OK 2, the two former OPEN positives; OK→FAIL 0; added 19, of which 18 green and the labelled OPEN `unit_held_call_bare_name_result` red; removed 4, the renamed row with its walked twin and the two closed probes; no red row's message changed. |
+| `build/l2_harness/fable_ruse_01` (focused, before the gate) | 239 rows of receptions, admissions, opaque and returned references, named actuals and captures. Red only two rows of the baseline and the new OPEN row. |
+
+The 30 red rows are the 29 of `fable_full_17` and the labelled OPEN positive
+`unit_held_call_bare_name_result`. The pre-gate hashes of the translator,
+the eleven fixtures and the harness equal the live files and every staged
+copy (`tie.py`).
+
+**Next.** The bare name of a held callable where a result is received
+([section 50](#result-receipt-open)), through the receiving contract of the
+place. Then whole-value composition, nested admission and the capture
+closure. The store of a factory's result waits for the author.

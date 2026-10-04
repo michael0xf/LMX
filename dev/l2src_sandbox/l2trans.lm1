@@ -284,6 +284,11 @@ int: l2_ruse_e_cap 0
 int: l2_ruse_unknown 0
 int: l2_ruse_cur_first 0
 int: l2_ruse_cur_levels 0
+# The formals whose reads are being composed into the analysis in progress (l2_ruse_compose).
+@: int l2_ruse_chain_m 0
+@: int l2_ruse_chain_k 0
+int: l2_ruse_chain_n 0
+int: l2_ruse_chain_cap 0
 const: @: LmP0Structure l2_ruse_unit 0
 # The flag steps of the statement being built (-196): a short-circuit `a && b` / `a || b` is an IF
 # step that runs before its statement and leaves the value in a cell (l2_rw_sc); l2_rw_stmts puts
@@ -1033,7 +1038,11 @@ prototype:
     fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own) int
     fn: l2_ruse_reset () int
     fn: l2_ruse_of (int: own) int
+    fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
     fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0Text name)) int
+    fn: l2_ruse_scan_method (int: mi; int: req; const: @(LmP0Text name)) int
+    fn: l2_ruse_compose (int: callee; int: k; int: req) int
+    fn: l2_ruse_unconsumed (const: @(LmP0Node node)) int
     fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
@@ -31043,6 +31052,14 @@ fn: l2_ruse_reset () int
         free((cast: (@: void) l2_ruse_e_last))
     if: l2_ruse_e_below != 0
         free((cast: (@: void) l2_ruse_e_below))
+    if: l2_ruse_chain_m != 0
+        free((cast: (@: void) l2_ruse_chain_m))
+    if: l2_ruse_chain_k != 0
+        free((cast: (@: void) l2_ruse_chain_k))
+    l2_ruse_chain_m: 0
+    l2_ruse_chain_k: 0
+    l2_ruse_chain_n: 0
+    l2_ruse_chain_cap: 0
     l2_ruse_state: 0
     l2_ruse_first: 0
     l2_ruse_count: 0
@@ -31434,7 +31451,31 @@ return: f
 # is the candidate of a typed reference of the method: 1 its declaration, whose
 # name atom is `place` and whose candidate follows it, 2 a store into it, whose
 # whole body is the candidate.
-fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const: @(LmP0Text name); const: @(LmP0Text declared); int: recv; const: @(LmP0Text place)) int
+# The place among a call's actuals of field f, when f is one whole actual of it and the call
+# gives every formal of `callee` its actual; else -1.
+fn: l2_ruse_actual_index (const: @(LmP0Structure body); const: @(LmP0Field f); int: callee) int
+    @: LmP0Field a
+    int: k 0
+    int: span
+    if: body = 0 || callee < 0 || callee >= l2_m_n
+        return: -1
+    a: l2_next_active(l2_call_actuals(body))
+    if: l2_actual_count(a) != l2_m_arity[callee]
+        return: -1
+    while: a != 0
+        span: l2_expr_span(a)
+        if: span < 1
+            return: -1
+        if: a = f
+            if: span != 1
+                return: -1
+            return: k
+        a: l2_skip_span(a, span)
+        k: k + 1
+    ---
+return: -1
+
+fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const: @(LmP0Text name); const: @(LmP0Text declared); int: recv; const: @(LmP0Text place); int: callee) int
     @: LmP0Field f
     @: LmP0Field prev 0
     @: LmP0Field next
@@ -31479,6 +31520,11 @@ fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const:
                     how: 0
                 if: recv = 2 && next = 0 && prev = 0
                     how: 0
+                # The whole actual of a method's call.  The callee's formal consumes what the
+                # callee reads through it: those reads are composed into this coverage by the
+                # same scan, over the callee's body (l2_ruse_compose).
+                if: how != 0 && callee >= 0 && l2_ruse_compose(callee, l2_ruse_actual_index(body, f, callee), req) = 0
+                    how: 0
                 if: how != 0
                     l2_ruse_unknown: 1
                     return: 0
@@ -31490,7 +31536,7 @@ fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const:
         f: next
     ---
     if: body\trailer != 0 && l2_ruse_unknown = 0
-        return: l2_ruse_scan_struct(mi, req, body\trailer\body, name, 0, 0, 0)
+        return: l2_ruse_scan_struct(mi, req, body\trailer\body, name, 0, 0, 0, 0 - 1)
 return: 0
 
 fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0Text name)) int
@@ -31498,18 +31544,21 @@ fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0
     @: LmP0Text place 0
     int: recv 0
     int: at
+    int: callee 0 - 1
+    int: callee_formal 0 - 1
     size_t: k 0U
     if: node = 0 || node\as = 0 || l2_ruse_unknown != 0
         return: 0
     if: node\kind = c.LM_P0_NODE_STRUCTURE
-        return: l2_ruse_scan_struct(mi, req, node\as\structure, name, 0, 0, 0)
+        return: l2_ruse_scan_struct(mi, req, node\as\structure, name, 0, 0, 0, 0 - 1)
     if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
         return: 0
     fr: node\as\frame
     # A definition inside the method is another Consumer: it is not read here,
     # and a spelling of the name inside it is a use this analysis cannot place.
+    # One the program neither calls nor forms into a value is no Consumer (l2_ruse_unconsumed).
     if: l2_ruse_is_definition(node) != 0
-        if: l2_ruse_mentions(node, name) != 0
+        if: l2_ruse_mentions(node, name) != 0 && l2_ruse_unconsumed(node) = 0
             l2_ruse_unknown: 1
         return: 0
     at: l2_ruse_head_at(fr\head, name)
@@ -31538,34 +31587,20 @@ fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0
         recv: 1
     if: place = 0 && (fr\flags & c.LM_P0_FRAME_COLON) != 0U && l2_ruse_place_named(mi, fr\head) != 0
         recv: 2
-    l2_ruse_scan_struct(mi, req, fr\body, name, l2_ruse_declared(mi, node, name), recv, place)
+    # A call of a method by its own name: its actuals are received by its formals.
+    if: fr\head != 0
+        callee: l2_call_head_method(mi, fr\head, @ callee_formal)
+    if: callee >= 0 && callee_formal >= 0
+        callee: 0 - 1
+    l2_ruse_scan_struct(mi, req, fr\body, name, l2_ruse_declared(mi, node, name), recv, place, callee)
     if: fr\trailer != 0 && l2_ruse_unknown = 0
-        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0)
+        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0, 0 - 1)
 return: 0
 
-# The analysis of own row `own`: 2 with its entries recorded, or 1.
-fn: l2_ruse_analyse (int: own) int
-    int: mi
-    int: req
+# Is the name a segment of a path anywhere in the program: in the unit or in a part?  Such a
+# name is reached from other bodies, which this analysis does not read.
+fn: l2_ruse_named_by_path (const: @(LmP0Text name)) int
     int: k 0
-    @: LmP0Node node
-    @: LmP0Frame fr
-    @: LmP0Field f
-    @: LmP0Text name
-    if: own < 0 || own >= l2_own_n || l2_library_mode != 0
-        return: 1
-    mi: l2_own_mi[own]
-    name: l2_own_name[own]
-    req: l2_own_nsty_get(own)
-    if: mi < 0 || mi >= l2_m_n || mi = l2_e || name = 0 || l2_m_nsof(mi) >= 0
-        return: 1
-    if: l2_own_is_pointer(l2_own_ty[own]) = 0 || l2_own_is_slot(own) != 0 || req < 0 || l2_schema_kind(req) != 1
-        return: 1
-    if: l2_param_find(mi, name) >= 0
-        return: 1
-    node: l2_m_node[mi]
-    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
-        return: 1
     if: l2_ruse_unit = 0 || l2_ruse_seg_struct(l2_ruse_unit, name) != 0
         return: 1
     while: k < l2_part_n
@@ -31573,11 +31608,22 @@ fn: l2_ruse_analyse (int: own) int
             return: 1
         k: k + 1
     ---
-    l2_ruse_unknown: 0
-    l2_ruse_cur_first: l2_ruse_e_n
-    l2_ruse_cur_levels: 1
+return: 0
+
+# The body of method mi read for the spellings of one name, into the analysis in progress:
+# past the method's own name and its formals, the rest of the header, then the body and its
+# trailers.
+fn: l2_ruse_scan_method (int: mi; int: req; const: @(LmP0Text name)) int
+    @: LmP0Node node
+    @: LmP0Frame fr
+    @: LmP0Field f
+    node: 0
+    if: mi >= 0 && mi < l2_m_n
+        node: l2_m_node[mi]
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+        l2_ruse_unknown: 1
+        return: 0
     fr: node\as\frame
-    # Past the method's own name and its formals: the rest of the header, then the body.
     f: l2_next_active(fr\body\first_field)
     if: f != 0
         f: l2_next_active(f\next)
@@ -31594,9 +31640,106 @@ fn: l2_ruse_analyse (int: own) int
         f: l2_next_active(f\next)
     ---
     if: l2_ruse_unknown = 0 && fr\body\trailer != 0
-        l2_ruse_scan_struct(mi, req, fr\body\trailer\body, name, 0, 0, 0)
+        l2_ruse_scan_struct(mi, req, fr\body\trailer\body, name, 0, 0, 0, 0 - 1)
     if: l2_ruse_unknown = 0 && fr\trailer != 0
-        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0)
+        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0, 0 - 1)
+return: 0
+
+# The reads of method `callee` through its formal k, composed into the analysis in progress.
+# 0 when they are composed.  The formal receives by the same model; it is a plain method's;
+# nothing else in the callee has its name and no path in the program names it; and the
+# callee's body is classified by the same scan, which leaves the coverage unknown where it
+# cannot classify.  1 when they are not composed: the caller's use stays unclassified.
+# A call chain that comes back to a formal already being read adds nothing to that formal.
+fn: l2_ruse_compose (int: callee; int: k; int: req) int
+    @: LmP0Text name
+    int: i 0
+    int: want
+    if: callee < 0 || callee >= l2_m_n || callee = l2_e || k < 0 || k >= l2_m_arity[callee]
+        return: 1
+    if: l2_m_nsof(callee) >= 0 || l2_mad_on(callee) != 0 || l2_mad_host_of(callee) >= 0 || l2_m_file(callee) >= 0
+        return: 1
+    if: l2_nsty_get(callee, k) != req
+        return: 1
+    name: l2_fn(callee, k)
+    if: name = 0 || l2_own_any(callee, name) >= 0 || l2_ruse_named_by_path(name) != 0
+        return: 1
+    while: i < l2_ruse_chain_n
+        if: l2_ruse_chain_m[i] = callee && l2_ruse_chain_k[i] = k
+            return: 0
+        i: i + 1
+    ---
+    if: l2_ruse_chain_n >= l2_ruse_chain_cap
+        want: l2_ruse_chain_cap * 2
+        if: want < 16
+            want: 16
+        if: l2_ruse_grow(@ l2_ruse_chain_m, l2_ruse_chain_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_chain_k, l2_ruse_chain_cap, want) != 0
+            return: 1
+        l2_ruse_chain_cap: want
+    ---
+    l2_ruse_chain_m[l2_ruse_chain_n]: callee
+    l2_ruse_chain_k[l2_ruse_chain_n]: k
+    l2_ruse_chain_n: l2_ruse_chain_n + 1
+    l2_ruse_scan_method(callee, req, name)
+    l2_ruse_chain_n: l2_ruse_chain_n - 1
+return: l2_ruse_unknown
+
+# Is this definition inside a method unconsumed: a callable's definition that the checked
+# program neither calls nor forms into a value?  These are facts of the definition's own
+# identity, established by the check of every body: no call edge leads to it -- a call by its
+# name, by a path, through a copy -- it is no callable actual and no converter's model
+# (l2_m_value_used), and no host returns it (l2_mad_model).  What such a definition reads is no
+# requirement of the Consumer that runs: the presence of a definition is not its execution.
+# Any other definition stays another Consumer this analysis does not compose.
+fn: l2_ruse_unconsumed (const: @(LmP0Node node)) int
+    int: d 0 - 1
+    int: i 0
+    while: i < l2_m_n && d < 0
+        if: l2_m_node[i] = node
+            d: i
+        i: i + 1
+    ---
+    if: d < 0 || d = l2_e || l2_m_nsof(d) >= 0 || l2_m_edge = 0
+        return: 0
+    if: l2_m_value_used != 0 && l2_m_value_used[d] != 0
+        return: 0
+    i: 0
+    while: i < l2_m_n
+        if: l2_edge_off(i, d) = (cast: (size_t) -1) || l2_m_edge[l2_edge_off(i, d)] != 0
+            return: 0
+        if: l2_mad_on(i) != 0 && l2_mad_model[i] = d
+            return: 0
+        i: i + 1
+    ---
+return: 1
+
+# The analysis of own row `own`: 2 with its entries recorded, or 1.
+fn: l2_ruse_analyse (int: own) int
+    int: mi
+    int: req
+    @: LmP0Node node
+    @: LmP0Text name
+    if: own < 0 || own >= l2_own_n || l2_library_mode != 0
+        return: 1
+    mi: l2_own_mi[own]
+    name: l2_own_name[own]
+    req: l2_own_nsty_get(own)
+    if: mi < 0 || mi >= l2_m_n || mi = l2_e || name = 0 || l2_m_nsof(mi) >= 0
+        return: 1
+    if: l2_own_is_pointer(l2_own_ty[own]) = 0 || l2_own_is_slot(own) != 0 || req < 0 || l2_schema_kind(req) != 1
+        return: 1
+    if: l2_param_find(mi, name) >= 0
+        return: 1
+    node: l2_m_node[mi]
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+        return: 1
+    if: l2_ruse_named_by_path(name) != 0
+        return: 1
+    l2_ruse_unknown: 0
+    l2_ruse_cur_first: l2_ruse_e_n
+    l2_ruse_cur_levels: 1
+    l2_ruse_chain_n: 0
+    l2_ruse_scan_method(mi, req, name)
     if: l2_ruse_unknown != 0
         l2_ruse_e_n: l2_ruse_cur_first
         l2_ruse_unknown: 0
@@ -31605,6 +31748,28 @@ fn: l2_ruse_analyse (int: own) int
     l2_ruse_count[own]: l2_ruse_e_n - l2_ruse_cur_first
     l2_ruse_levels[own]: l2_ruse_cur_levels
 return: 2
+
+# Which half of the model's field at `slot` the known coverage of own row `own` names at its
+# root: 0 none, 1 the ordinal half (or both), 2 the last half alone.
+fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
+    int: row
+    int: half 0
+    int: i l2_ruse_first[own]
+    int: end l2_ruse_first[own] + l2_ruse_count[own]
+    if: l2_schema_kind(req) != 1
+        return: 0
+    row: l2_ns_row_at_slot(l2_schema_index(req), slot)
+    if: row < 0
+        return: 0
+    while: i < end
+        if: l2_ruse_e_level[i] = 0 && l2_ruse_e_row[i] = row
+            if: l2_ruse_e_last[i] = 0
+                return: 1
+            half: 2
+        ---
+        i: i + 1
+    ---
+return: half
 
 # The coverage of own row `own`: 2 known, 1 unknown.  Asked once per row: the
 # answer is a fact of the source, the same for the flow of types, for native
@@ -31727,15 +31892,23 @@ fn: l2_d105_receiving_flow (int: cand; int: mi; int: key) int
     int: slot 0
     int: prior
     int: occurrence
+    int: known
+    int: half
     if: own < 0 || req = -1 || cand = req || l2_schema_kind(cand) = 0
         return: 1
-    if: l2_ruse_of(own) = 2
-        return: 1
+    # A place of known coverage requires the fields its coverage names at the root, each by
+    # the half it names, and looks at no other field: a candidate that lacks one of them is
+    # refused where the place receives it and reaches no later Consumer.  A place of unknown
+    # coverage receives in full and requires every field.
+    known: (cast: (int) (l2_ruse_of(own) = 2))
     width: l2_schema_width(req)
     while: slot < width
         if: l2_schema_field(req, slot, @ needed) != 0
             return: 1
-        if: needed.name != 0
+        half: 1
+        if: known != 0
+            half: l2_ruse_root_slot(own, req, slot)
+        if: needed.name != 0 && half != 0
             occurrence: 0
             prior: 0
             while: prior < slot
@@ -31745,6 +31918,8 @@ fn: l2_d105_receiving_flow (int: cand; int: mi; int: key) int
                     occurrence: occurrence + 1
                 prior: prior + 1
             ---
+            if: half = 2
+                occurrence: 0 - 1
             if: l2_schema_named_meta(cand, (needed.name), occurrence, @ actual) < 0
                 return: 0
             if: actual.kind >= 0 && needed.kind >= 0

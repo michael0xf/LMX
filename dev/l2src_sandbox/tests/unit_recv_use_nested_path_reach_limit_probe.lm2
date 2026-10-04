@@ -1,0 +1,31 @@
+# LIMIT PROBE, not a rule. A definition inside a method reached from outside
+# it by a path, `make\read()`. This implementation refuses the path, and the
+# coverage analysis relies on that: a definition inside a method counts as
+# unconsumed when its method neither calls it nor returns it, because no
+# other route to it is accepted (unit_recv_use_nested_dormant). If this path
+# is ever accepted, the row goes red and that analysis must model the route
+# before the row is changed.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: make () fn: () size_t
+    o: merge Other
+    @: Model b o
+    fn: read () size_t
+        return: b\value
+    fn: plain () size_t
+        return: 7U
+    return: plain
+end: make
+
+r: make
+size_t: got r()
+size_t: z make\read()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

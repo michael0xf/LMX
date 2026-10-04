@@ -1,0 +1,32 @@
+# A definition inside the method that another definition of the method calls
+# is a Consumer that runs when that one does. read, defined in make, reads
+# value through b; plain, defined beside it, calls read, and make returns
+# plain. The call r() runs plain and so read. The read is not composed into
+# b's coverage by this analysis: b's coverage is unknown, b receives by the
+# whole of Model, and the Other, which has no value, is refused at the
+# declaration -- the implicit throw implements, uncaught, stops R0. The
+# neighbour whose reading definition nothing calls and nothing returns is
+# unit_recv_use_nested_dormant.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: make () fn: () size_t
+    o: merge Other
+    @: Model b o
+    fn: read () size_t
+        return: b\value
+    fn: plain () size_t
+        return: read()
+    return: plain
+end: make
+
+r: make
+size_t: got r()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

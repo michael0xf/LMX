@@ -1,0 +1,58 @@
+# A reference handed whole to a callee takes on what the callee reads through
+# its formal: those reads are part of what the reference's Consumer needs.
+# take reads value. pass hands its formal on to take. turn reads value in one
+# branch alone. walk hands its formal to itself and reads value at the end.
+# The candidate is a Wide, which carries value at another place than Model
+# does and has no extra: no route reads extra, so none asks for it, and each
+# reads the 9 at the Wide's own place; the last hands the reference by the
+# formal's name. Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+Wide:
+    int: p 5
+    size_t: value 9U
+end: Wide
+
+fn: take (Model: v) size_t
+    return: v\value
+end: take
+
+fn: pass (Model: v) size_t
+    return: take(v)
+end: pass
+
+fn: turn (Model: v; int: c) size_t
+    if: c = 1
+        return: v\value
+    return: 0U
+end: turn
+
+fn: walk (Model: v; int: n) size_t
+    if: n > 0
+        return: walk(v n - 1)
+    return: v\value
+end: walk
+
+fn: m () int
+    o: merge Wide
+    @: Model b o
+    if: take(b) != 9U
+        return: 81
+    if: pass(b) != 9U
+        return: 82
+    if: turn(b 1) != 9U
+        return: 83
+    if: turn(b 0) != 0U
+        return: 84
+    if: walk(b 2) != 9U
+        return: 85
+    if: take(v: b) != 9U
+        return: 86
+    return: 7
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

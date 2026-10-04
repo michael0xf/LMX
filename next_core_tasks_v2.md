@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_25` RED31/1588 — 97 FAIL→OK against that
-baseline, OK→FAIL 0; the two red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_12` GREEN296 with 113 executed
-selftests; L3 `fable_l3_12`
-([gates](steps/fable-continuation-20261003.md#no-forward-lookup)). The checkpoint gate
+continuation bytes: `fable_full_26` RED30/1603 — 99 FAIL→OK against that
+baseline, OK→FAIL 0; the one red row above the 29 of `fable_full_17` is a
+labelled OPEN positive; kernel `fable_kernel_13` GREEN296 with 113 executed
+selftests; L3 `fable_l3_13`
+([gates](steps/fable-continuation-20261003.md#coverage-composed)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -109,20 +109,28 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   typed reference of a plain method. The eight witnesses run natively and
   walked; the two false-green refusal rows are migrated
   ([ledger](steps/fable-continuation-20261003.md#receiving-use-coverage)).
+- [x] Receiving-use contract, the whole pass and the unconsumed definition
+  (Codex ruling FABLE-CODEX-20261004-11): a reference handed whole to a
+  plain method takes on what the callee reads through its formal; a
+  definition inside the method that nothing calls and nothing returns asks
+  for nothing; the static flow at a place of known coverage prunes by that
+  coverage. `unit_recv_use_nested_dormant` and `unit_recv_use_passed_thin`
+  are green
+  ([ledger](steps/fable-continuation-20261003.md#coverage-composed)).
 - [ ] Receiving-use contract, the rest. Coverage is unknown, and the
   reception full, for: a reference of the root or of a named Structure's
-  procedure; a reference used whole (an actual, a return, a copy, an
-  address); a definition inside the method that reads through it; a rebound
-  formal, a field store, an element store, a return; a candidate of unknown
-  layout. Held and invoked are not told apart for a callable at the end of a
-  path. These are limits of the implementation, not rules, and no row
-  expects them as refusals of valid programs. Two valid programs the limit
-  refuses are required positives that stay red:
-  `unit_recv_use_nested_dormant` and `unit_recv_use_passed_thin`. Four
-  `..._limit_probe` rows hold the present conservative mode by generated
-  text; they are temporary implementation probes and go when the coverage
-  is composed
-  ([follow-up](steps/fable-continuation-20261003.md#receiving-use-follow-up)).
+  procedure; a reference used whole in another way than one whole actual of
+  a plain method (a return, a copy, an address, a call through a callable
+  formal); a definition inside the method that reads through it and is
+  called or returned; a rebound formal, a field store, an element store, a
+  return; a candidate of unknown layout. Held and invoked are not told apart
+  for a callable at the end of a path. These are limits of the
+  implementation, not rules, and no row expects them as refusals of valid
+  programs. The `..._limit_probe` rows hold the present conservative mode by
+  generated text, and two more hold the refused outside routes to a nested
+  definition; they are temporary implementation probes
+  ([follow-up](steps/fable-continuation-20261003.md#receiving-use-follow-up),
+  [composition](steps/fable-continuation-20261003.md#coverage-composed)).
 - [ ] Merge-result declaration inside a named Structure body (internal error)
   ([defects](steps/defects.md#merge-decl-in-named-body-internal)).
 - [x] Named actuals: evaluated once in written order, transported by the

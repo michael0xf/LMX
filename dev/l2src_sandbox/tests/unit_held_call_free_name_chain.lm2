@@ -1,0 +1,57 @@
+# A free name of a held definition is asked along the chain of callers. mk's
+# formal n is a free name of the definition f it returns, which reads it:
+# the copied value is f's own source, not a frozen binding. u5 and u9 are
+# two copies, of n 5 and n 9. From the root, with no n anywhere, each reads
+# its own: 6 and 10. outer has n 40 and calls through hop, which only hands
+# the name on: the value given wins over both copies, 41 and 41. over,
+# between outer2 and the call, has its own n, 7: the nearest binding wins,
+# 8. zero has n 0: a present zero is present, 1. Entry 7.
+fn: mk (int: n) fn: () int
+    fn: f () int
+        return: n + 1
+    return: f
+
+u5: mk 5
+u9: mk 9
+
+fn: call5 () int
+    return: u5()
+end: call5
+
+fn: call9 () int
+    return: u9()
+end: call9
+
+fn: hop () int
+    return: call5() * 100 + call9()
+end: hop
+
+fn: outer () int
+    int: n 40
+    return: hop()
+end: outer
+
+fn: over () int
+    int: n 7
+    return: call5()
+end: over
+
+fn: outer2 () int
+    int: n 40
+    return: over()
+end: outer2
+
+fn: zero () int
+    int: n 0
+    return: call5()
+end: zero
+
+int: a hop()
+int: b outer()
+int: c outer2()
+int: d zero()
+int: ok 7
+if: a != 610 || b != 4141 || c != 8 || d != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

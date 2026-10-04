@@ -1,0 +1,33 @@
+# A method that assigns a free name hands its working value on, through a
+# method that only forwards the name, to a held definition that reads it;
+# the unit's field is not written. f reads v, a field of the unit, 9. hopf
+# calls the held f and only hands v on. From the root: 100 + 9. work adds 2
+# to its v and calls hopf: 100 + 11. After it the unit's v is still 9, and
+# the root's call gives 109 again. Entry 7.
+int: v 9
+
+fn: mk (int: k) fn: () int
+    fn: f () int
+        return: k + v
+    return: f
+
+u0: mk 100
+
+fn: hopf () int
+    return: u0()
+end: hopf
+
+fn: work () int
+    v: v + 2
+    return: hopf()
+end: work
+
+int: a hopf()
+int: b work()
+int: c v
+int: d hopf()
+int: ok 7
+if: a != 109 || b != 111 || c != 9 || d != 109
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

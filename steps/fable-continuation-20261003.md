@@ -5036,3 +5036,173 @@ equal the live files and every staged copy (`tie.py`).
 callees through this same formation, with the ordinary admission; the
 absence of a reference; a held call's names asked along the chain of
 callers; the library's ingress; the walked consumer.
+
+<a id="held-chain"></a>
+## 60. A held call asks its model's names along the chain of callers (third slice, step one)
+
+### Codex's ninth reply -12
+
+It answers the one edge asked with the last checkpoint.
+
+- "YES: a captured FREE name does not stop at the immediate caller. It
+  remains a free/dynamic input of the returned callable; the copied value is
+  its lexical fallback, not a frozen binding."
+- The sources at each call: "1. the caller's nearest current
+  local/working binding; 2. that caller's already inherited PRESENT dynamic
+  input; 3. the selected actual occurrence's eligible lexical source."
+- "There is no stack/name-table search: translation resolves the
+  relations, activation/ABI references carry the values or absence."
+- The boundary: ""One model per own today" is a measured provenance
+  boundary, not a new language rule; unproved/rebound alternatives remain
+  UNKNOWN until their actual formation is implemented."
+- What is not free: "A formal of the SELECTED returned method is not
+  free: omitted explicit formals use their declared defaults, not a
+  same-named inherited value."
+- Another type: "A present zero/null or present incompatible candidate
+  is not absence. Conversion/admission failure must not silently choose the
+  captured value."
+- Its authorities are the book: the priority of sources and the forwarding to
+  a fixed point in [§12](../docs/LMX_semantics.en.md#dynamic), and the two
+  subsections of [composition](../docs/LMX_semantics.en.md#composition) on
+  returned nested methods and on the lexical fallback.
+
+### What changed
+
+All in `dev/l2src_sandbox/l2trans.lm1`.
+
+| Step | Where | What |
+| --- | --- | --- |
+| A held call is a site | `l2_check_held_call`, `l2_dyn_site`, `l2_dyn_site_held` | The check notes the call as a site of the fixed point of dynamic inputs, its callee the model of the held name. A number the model needs that the calling method does not bind becomes the method's own input, which it only hands on, with the reasons and the hardness of the second slice. |
+| The formation | `l2_held_binding`, `l2_rw_held_binding` | Unchanged: the held call takes the caller's input of the name as it takes any binding of the caller, the entry itself where the caller only hands it on. |
+| The root | `l2_held_unbound` | Unchanged: the root has no caller; a name it cannot give is left to the model's readers, or refused where one of them has no source. |
+| What can be present | `l2_dyp_mark`, `l2_dyp_has`, in `l2_dyn_site_callee` and `l2_dyn_site_held` | Each site records whether it hands a value for an input of its callee: the caller's own field or formal of the name, its own input that it reads or assigns, or its own handed-on input that can itself be present; the root's reading of a callee's lexical source. An input with no record is absent at every call. A library unit's inputs can all be present. |
+| One name, two types | `l2_held_never` | See below. |
+
+The model of a held name is the one definition its store statement's method
+returns: one per held name today, and that is the site's callee. Measured by
+probes, not gate rows: rebinding a held name to another held definition is
+refused (`unknown type`), and a name stored from a held name is not
+callable (`unknown method`). A route that lets a held name change its
+definition has to make the site's callee not known.
+
+The reference is not in this step. A Structure among a held definition's
+free names keeps the calling method's own binding or the node's copy, with
+the located limit of
+[section 56](#nested-references) for another declaration.
+
+### One name, two types
+
+A method hands on one input of a name, with one type. Two held definitions
+called by one method can require the name as two numeric types:
+`unit_held_call_arity` calls three, made by methods whose formal `n` is an
+`int`, an `int` and a `size_t`. Before this step the method had no input
+`n` at all and each definition read its own copy.
+
+By the norm a caller's value of another type is a present candidate, to be
+converted, never passed over. The conversion of a handed-on input is not
+built. What is built is the distinction that keeps the working program
+working and the other one honest:
+
+- where the method's input can never arrive present, since no caller of it,
+  up the chain, has a value to give, the definition of the other type
+  receives nothing and its readers resolve the name: the program runs as
+  before;
+- where it can be present, the call is refused where it stands, as before
+  this step a caller's binding of another type was: a limit, with the red
+  required positive `unit_held_call_free_name_converted`.
+
+### A fixture's expectation changed
+
+`unit_a3_caller_binding` and its walked twin expected 6 for `plain()`
+called by the root below the root's `int: n 100`: the copy, since `plain`
+has no `n` of its own. That was the reading in which a held call asks only
+the method that makes it. By the book and Codex's ninth reply the root's
+`n` reaches the definition through `plain`, which only hands it on: 101.
+The fixture now calls `plain()` twice: above the root's declaration, where
+no caller has an `n`, 6, the copy; below it, 101. The committed translator
+gives 6 for both.
+
+### Measured
+
+On the committed translator (`3d67e69d`) and on this one, natively and with
+the methods walked.
+
+| Program | Before | Now |
+| --- | --- | --- |
+| `unit_held_call_required_input_from_caller`: `outer` has `zz` 30 and calls `inner`; `inner` calls a held definition that hands `zz` on to a reader with no source | refused where the held call stands, the limit of section 59 | 36; and 41 from a method that calls the reader itself |
+| `unit_held_call_free_name_chain`: two copies of one definition, of `n` 5 and `n` 9; the root has no `n`; `outer` has `n` 40 and calls through `hop`; `over` has `n` 7 between `outer2` and the call; `zero` has `n` 0 | a wrong value (the fixture's exit 81) | 6 and 10; 41 and 41; 8; 1 |
+| `unit_held_call_free_name_working`: the definition reads the unit's `v`, 9; `hopf` only hands it on; `work` adds 2 to its `v` and calls `hopf` | a wrong value | 109; 111; the unit's `v` still 9; 109 |
+| `unit_held_call_free_name_node`: the definition reads `n` and its node's `n`; built with 5; `outer` has `n` 40 | a wrong value | 505; 4005 |
+| `unit_held_call_required_input_unavailable_refused`: no one has `zz` | refused at the held call in `inner`, as the limit | refused at 27:8, the root's call of `inner`: `unbound dynamic input zz` |
+| `unit_a3_caller_binding`, with `plain()` above and below the root's `n` 100 | 6 and 6 (exit 72) | 6 and 101 |
+| `unit_held_call_arity`: three held definitions whose `n` is an `int`, an `int` and a `size_t`, called by one method; no caller has an `n` | runs | runs |
+| `unit_held_call_free_name_converted`: the same shape, and a caller with an `int` `n` 40 | translates and gives a wrong value: the `size_t` definition reads its copy | refused where its call stands, as a limit: OPEN |
+
+Of Codex's witnesses for this step the rows carry all but one. The chain
+`outer` to `inner` to the held definition to the reader; a second
+forwarding method and a nearer binding between; a working value assigned and
+handed on; a present zero; no value anywhere, with two copies each reading
+its own; an explicit `node` read keeping the copy under a supplied value; a
+required input no one can give, refused at the root's call that starts the
+chain. Each natively and with every method walked. The one not carried:
+structural candidates of another shape, which belong to the reference.
+
+### Replay
+
+The step's translator against the committed one (`3d67e69d`), on the 1669
+translations recorded by `fable_full_34`: exit, messages and the generated
+L1 are the same on 1606 rows. Of the 63 others, 62 translate as before with
+another L1, in each of which a method gains a handed-on input, and
+`unit_held_call_required_input_from_caller`, refused before, translates. No
+row that translated is refused.
+
+A first form of the step refused four of them, the rows of
+`unit_held_call_arity`: its method came to hand on `n` as an `int` and then
+met the definition whose `n` is a `size_t`. That is the case of one name and
+two types above; the replay showed it before any gate.
+
+The 63 rows and the new ones were run before the gates
+(`fable_heldp_01`): 84 rows, 77 pass. Of the seven red ones five are
+labelled OPEN or baseline rows. The other two were `unit_a3_caller_binding`
+and its walked twin, with the expectation recorded above; they were changed
+after that run.
+
+### Mutants
+
+Each is a copy of the step's translator with one change, built apart and run
+natively and with the methods walked on nine fixtures.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| The held call is not noted as a site | As the committed translator: `required_input_from_caller` is refused; `free_name_chain`, `_working`, `_node` give wrong values; `unit_a3_caller_binding` gives 6 for 101; the unavailable input is refused in the wrong place, as the limit. |
+| The calling method records no reason for the name it takes | Every row with a held call from a method is refused at the root: `unbound dynamic input`, for the definition's own `n` or `k`. |
+| Every entry can be present | `unit_held_call_arity` is refused: `a caller's binding of a held callable's free name is of another type`. |
+| No entry is ever recorded as present | No gated row changes. The OPEN row `unit_held_call_free_name_converted` translates and gives a wrong value in place of the located limit. |
+
+The last is not a kill by a gated row, and is said as it is. The record of
+presence decides one thing only: whether a method's handed-on input of one
+type may be passed over for a definition that requires the name as another
+type. Where it may not, the right behaviour is the conversion, which is not
+built, so the only program that tells the two apart is a red required
+positive. It becomes a gated kill with the conversion.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_21` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_21` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_35` (full harness) | RED 37 of 1679. Against `fable_full_34` (RED 37 of 1670): FAIL→OK 1, `unit_held_call_required_input_from_caller`; OK→FAIL 0; added 9, of which 8 green and one labelled OPEN row red; removed 0. The two rows of `unit_a3_caller_binding`, with the changed expectation, pass. |
+| `build/l2_harness/fable_heldp_01` (focused, before the gates) | 84 rows, 77 pass; see the replay above. |
+
+Against the baseline `fable_full_01` (RED 126 of 1395), counted directly:
+97 FAIL→OK, OK→FAIL 0, five red rows replaced, 289 added of which 13 red.
+The 37 red rows are 24 of the baseline and 13 added: the five that
+`fable_full_17` had above the baseline and eight labelled OPEN positives.
+The pre-gate hashes of the translator, the nine fixtures and the harness
+equal the live files and every staged copy (`tie.py`).
+
+**Next.** Held callables and merge nodes as actuals, with their own exact
+identity, through the same formation; the reference: its absence, its
+admission, and its asking along the chain; the conversion of a handed-on
+input; the library's ingress; the walked consumer.

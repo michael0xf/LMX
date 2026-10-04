@@ -412,9 +412,19 @@ callable it gives: for a name a method only hands on the fixed point keeps the
 complete conditions under which it is needed (`l2_dyr_add`, `l2_site_needs`),
 and an input not needed is handed absent. A required input no one can give is
 refused at translation, where the chain starts; generated code carries no abort
-for it. A reference not needed is not handed absent yet, and a held call asks
-only its own caller: located limits
+for it. A reference not needed is not handed absent yet: a located limit
 ([ledger](steps/fable-continuation-20261003.md#site-requirements)).
+
+A held call is a site of the same fixed point (`l2_dyn_site_held`): a number
+its model needs that the calling method does not bind becomes the method's own
+handed-on input, so a binding of the caller's caller reaches the definition,
+and the value kept in the definition's node is its own source, read only where
+no caller gives the name. Which inputs can arrive present at all is recorded
+per site (`l2_dyp_mark`). One name required as two numeric types through one
+method is handed on with one type and not converted: where it can be present
+for the other type the call is a located limit. A reference through a held call
+is not asked along the chain yet
+([ledger](steps/fable-continuation-20261003.md#held-chain)).
 
 A number no caller binds is handed absent, `refs[k] = 0`. A method that only
 forwards the name hands its entry on as it is (`l2_dyn_fwd`,

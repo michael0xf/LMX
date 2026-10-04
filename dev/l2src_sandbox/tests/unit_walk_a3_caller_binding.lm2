@@ -1,8 +1,10 @@
 # Walked twin of unit_a3_caller_binding.lm2 (--walk-methods: its methods are walked).
-# Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28): a free name of a returned method
-# takes the caller's own binding first; the node's copied lexical context is only the fallback.  add5 copied n 5 at
-# makeAdder's return.  The root, with its own n 100, calls add5(1): 101.  go, with its formal n 7: 8.  plain, with no
-# n of its own: the copy, 6.  Success is 7; otherwise 64 plus a bit per failed reading.
+# Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28 and 2026-10-04): a free name of a
+# returned method takes the nearest binding of its callers first; the node's copied lexical context is only the
+# fallback.  add5 copied n 5 at makeAdder's return.  The root, with its own n 100, calls add5(1): 101.  go, with its
+# formal n 7: 8.  plain has no n of its own and only hands the name on: called above the root's n, where no caller
+# has one, the copy, 6; called below it, the root's 100 reaches add5 through plain: 101.  Success is 7; otherwise 64
+# plus a bit per failed reading.
 fn: makeAdder (int: n) fn: (int: x) int
     fn: addN (int: x) int
         return: n + x
@@ -13,10 +15,11 @@ fn: go (int: n) int
     return: add5: 1
 fn: plain () int
     return: add5: 1
+int: c (plain())
 int: n 100
 int: a (add5: 1)
 int: b (go: 7)
-int: c (plain())
+int: d (plain())
 int: bad 0
 if: a != 101
     bad: bad + 1
@@ -24,6 +27,8 @@ if: b != 8
     bad: bad + 2
 if: c != 6
     bad: bad + 4
+if: d != 101
+    bad: bad + 8
 int: ok 7
 if: bad != 0
     ok: 64 + bad

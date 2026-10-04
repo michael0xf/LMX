@@ -1,0 +1,29 @@
+# A name a held definition requires, which no one can give, is refused at
+# the call that starts the chain, before anything runs. r reads zz; the unit
+# does not declare it. direct has zz 40 and may call r. The definition f
+# calls r and only hands zz on; inner calls the held f and has no zz. The
+# root calls inner and has none either: that call is refused.
+fn: r () int
+    return: zz + 1
+end: r
+
+fn: mk (int: k) fn: () int
+    fn: f () int
+        return: k + r()
+    return: f
+
+u0: mk 5
+
+fn: inner () int
+    return: u0()
+end: inner
+
+fn: direct () int
+    int: zz 40
+    return: r()
+end: direct
+
+int: b direct()
+int: a inner()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -158,6 +158,13 @@ int: l2_dyc_cap 0
 @: int l2_dys_t 0
 @: int l2_dys_a 0
 int: l2_dys_cap 0
+# K04 S3 (ledger section 60): the hidden inputs that can arrive present.  A row says some call of method m
+# hands a value for name nm: a caller's own binding, or a caller's own input that can itself be present.  An
+# input with no row is absent at every call.  Compiler metadata: nothing of it exists at run time.
+@: int l2_dyp_m 0
+@@: LmP0Text l2_dyp_nm 0
+int: l2_dyp_n 0
+int: l2_dyp_cap 0
 @: int l2_cf_omi 0
 @: int l2_cf_fk 0
 @: int l2_cf_req 0
@@ -1420,6 +1427,9 @@ prototype:
     fn: l2_dyr_any (int: x; const: @(LmP0Text nm)) int
     fn: l2_reader_source (int: x; int: k) int
     fn: l2_held_unbound (const: @(LmP0Node node); int: mi; int: model; int: k) int
+    fn: l2_held_never (int: mi; int: model; int: k) int
+    fn: l2_dyp_has (int: m; const: @(LmP0Text nm)) int
+    fn: l2_dyp_mark (int: m; const: @(LmP0Text nm); @: int changed) int
     fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: x; int: k; int: add; @: int changed; const: @(char path)) int
     fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; const: @(char ind); const: @(LmP0Node node); int: mcall; int: cfi; @@: char out) int
     fn: l2_emit_call_result (int: idx; int: t; const: @(char ind)) int
@@ -4845,6 +4855,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_cfr_n: 0
     l2_dyr_n: 0
     l2_dyc_n: 0
+    l2_dyp_n: 0
     l2_lp_n: 0
     l2_pad_n: 0
     l2_pad_seq: 0
@@ -13059,6 +13070,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
     int: before
     int: model
     int: need
+    int: pres
     @: LmP0Text nm
     while: k < l2_m_dyn[cidx]
         if: l2_mad_host_of(cidx) = m && l2_cap_arg_ns(cidx, l2_m_arity[cidx] + k) >= 0
@@ -13076,7 +13088,11 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
         own: l2_resolved_own(m, nm)
         src: -1
         sdt: 0
+        # K04 S3: whether this site hands the entry present (l2_dyp_mark): the caller's own binding, or its own
+        # input when that can be present.
+        pres: 0
         if: own >= 0 && l2_m_uses[l2_own_off(m, own)] != 0
+            pres: 1
             if: l2_dt_of_source(l2_own_ty[own], path, site\source, @ sdt) != 0
                 return: 1
             ---
@@ -13093,6 +13109,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                     \changed: 1
                 src: l2_param_find(m, nm)
             if: src >= 0 && src < l2_m_arity[m]
+                pres: 1
                 if: l2_input_is_descriptor(m, src) != 0
                     sdt: l2_colon_graph_ty()
                     ---
@@ -13105,6 +13122,8 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                 # The name goes on from m's own input: m needs it for the reasons this site has.
                 if: l2_site_needs(m, site\source, fi, cidx, k, 1, changed, path) < 0
                     return: 1
+                if: l2_dyn_fwd(m, src - l2_m_arity[m]) = 0 || l2_dyp_has(m, nm) != 0
+                    pres: 1
                 sdt: l2_dt(m, src - l2_m_arity[m])
                 if: sdt = 0 && ty != 0
                     if: l2_dt_set(m, src - l2_m_arity[m], ty) != 0
@@ -13123,6 +13142,9 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                     if: own < 0
                         need: 2
                     ---
+                # The root reads the lexical source of a callee that cannot take the entry absent, and hands it.
+                if: l2_hid_takes_absent(cidx, k) = 0
+                    pres: 1
                 if: own >= 0
                     if: l2_dt_of_source(l2_own_ty[own], path, site\source, @ sdt) != 0
                         return: 1
@@ -13139,6 +13161,8 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                         return: l2_error(path, site\source, missing)
                     ---
         ---
+        if: pres != 0 && l2_dyp_mark(cidx, nm, changed) != 0
+            return: 1
         if: sdt != 0 && ty != 0 && sdt != ty
             return: l2_error(path, site\source, "incompatible entry signature")
         if: sdt != 0 && ty = 0
@@ -13162,6 +13186,69 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
         k: k + 1
 return: 0
 
+# One held call in the fixed point (K04 S3; Codex, FABLE-CODEX-20261004-12).  A number the model needs that
+# the calling method does not bind becomes the method's own input, which it only hands on: its callers give it
+# along the chain, as for a call of a method, and where no one does it arrives absent and the model's readers
+# resolve it, each from its own source -- for a name of the model's host, the value kept in its node.  The
+# root has no caller: what it cannot give is refused or left to the readers where the call is formed
+# (l2_held_unbound).  Where the method already hands on the name as another type nothing is added: see
+# l2_held_never.  A reference keeps the calling method's own binding or the node's copy: it is not asked of the
+# callers yet.
+fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char path); @: int changed) int
+    int: m site\method
+    int: k 0
+    int: need
+    int: own
+    int: pi
+    int: before
+    int: ty
+    int: pres
+    @: LmP0Text nm
+    if: m < 0 || model < 0
+        return: 0
+    while: k < l2_m_dyn[model]
+        nm: l2_dn(model, k)
+        ty: l2_dt(model, k)
+        if: nm = 0 || ty = 0 || l2_rw_num_ty(l2_own_of_dt(ty)) = 0
+            k: k + 1
+            continue
+        need: l2_site_needs(m, site\source, 0 - 1, model, k, 0, 0, path)
+        if: need < 0
+            return: 1
+        if: need = 0
+            k: k + 1
+            continue
+        own: l2_resolved_own(m, nm)
+        pres: 0
+        # The root's every declared field of the name is its binding (l2_rw_held_bound); a method's, the one it
+        # uses.
+        if: own >= 0 && (m = l2_e || l2_m_uses[l2_own_off(m, own)] != 0)
+            pres: 1
+        if: pres = 0 && m != l2_e
+            pi: l2_param_find(m, nm)
+            if: pi >= 0 && pi < l2_m_arity[m]
+                pres: 1
+            # The method's own input of the name, of this type or not yet typed: it hands it on.  One it has as
+            # another type stays as it is.
+            if: pi < 0 || (pi >= l2_m_arity[m] && (l2_dt(m, pi - l2_m_arity[m]) = 0 || l2_dt(m, pi - l2_m_arity[m]) = ty))
+                before: l2_m_dyn[m]
+                if: l2_dyn_add(m, nm, ty) != 0
+                    return: l2_alloc_or(path, site\source, "unsupported body")
+                if: l2_m_dyn[m] != before
+                    \changed: 1
+                pi: l2_param_find(m, nm)
+                if: l2_site_needs(m, site\source, 0 - 1, model, k, 1, changed, path) < 0
+                    return: 1
+                if: pi >= l2_m_arity[m] && (l2_dyn_fwd(m, pi - l2_m_arity[m]) = 0 || l2_dyp_has(m, nm) != 0)
+                    pres: 1
+            ---
+        ---
+        if: pres != 0 && l2_dyp_mark(model, nm, changed) != 0
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
 # One call site in the fixed point.  A call of a method asks that method's dynamic inputs of its caller.  A
 # call through a callable formal (count = formal + 1, l2_check_call) asks those of every method that reaches
 # the formal, and nothing on behalf of the method that only declares it (K04; Codex,
@@ -13170,6 +13257,9 @@ fn: l2_dyn_site (const: @(L2SourceSite site); const: @(char path); @: int change
     int: fi (cast: (int) site\count) - 1
     int: i 0
     int: n
+    # A held call (count -1, l2_check_held_call).
+    if: fi = 0 - 2
+        return: l2_dyn_site_held(site, site\target, path, changed)
     if: fi < 0
         return: l2_dyn_site_callee(site, site\target, 0 - 1, path, changed)
     n: l2_cfl_count(site\method, fi)
@@ -28012,7 +28102,37 @@ fn: l2_dys_reserve (int: need) int
     l2_dys_cap: cap
 return: 0
 
+fn: l2_dyp_reserve () int
+    int: cap
+    size_t: isz
+    size_t: psz
+    @: void p
+    if: l2_dyp_n < l2_dyp_cap
+        return: 0
+    cap: l2_cap_next(l2_dyp_cap, l2_dyp_n + 1)
+    if: cap < 0
+        l2_alloc_err: 2
+        return: 1
+    isz: c.sizeof(c.int)
+    psz: c.sizeof(@: char)
+    p: l2_vec_grow((cast: (@: void) l2_dyp_m), l2_dyp_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_dyp_m: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_dyp_nm), l2_dyp_n, cap, psz)
+    if: p = 0
+        return: 1
+    l2_dyp_nm: (cast: (@@: LmP0Text) p)
+    l2_dyp_cap: cap
+return: 0
+
 fn: l2_flow_free () int
+    l2_xfree((cast: (@: void) l2_dyp_m))
+    l2_dyp_m: 0
+    l2_xfree((cast: (@: void) l2_dyp_nm))
+    l2_dyp_nm: 0
+    l2_dyp_n: 0
+    l2_dyp_cap: 0
     l2_xfree((cast: (@: void) l2_cfl_callee))
     l2_cfl_callee: 0
     l2_xfree((cast: (@: void) l2_cfl_via))
@@ -28281,6 +28401,51 @@ fn: l2_cfl_site_fact (const: @(LmP0Node node); int: m; int: fi; int: x; int: t) 
         f: f + 1
     ---
 return: 0 - 1
+
+# Whether some call of method m can hand a value for name nm (K04 S3).  A library unit's methods are called
+# from other translations, which may bind anything.
+fn: l2_dyp_has (int: m; const: @(LmP0Text nm)) int
+    int: r 0
+    if: l2_library_mode != 0
+        return: 1
+    while: r < l2_dyp_n
+        if: l2_dyp_m[r] = m && l2_text_same(l2_dyp_nm[r], nm) != 0
+            return: 1
+        r: r + 1
+    ---
+return: 0
+
+fn: l2_dyp_mark (int: m; const: @(LmP0Text nm); @: int changed) int
+    if: m < 0 || m >= l2_m_n || nm = 0 || l2_dyp_has(m, nm) != 0
+        return: 0
+    if: l2_dyp_reserve() != 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
+    l2_dyp_m[l2_dyp_n]: m
+    l2_dyp_nm[l2_dyp_n]: (cast: (@: LmP0Text) nm)
+    l2_dyp_n: l2_dyp_n + 1
+    if: changed != 0
+        \changed: 1
+return: 0
+
+# A held call in method mi whose model requires name k as another type than the input of that name mi hands
+# on, where that input can never arrive present: no caller of mi, up the chain, has a value to give.  Nothing
+# then reaches the model for the name, and its readers resolve it.  Where the input can be present its value
+# would have to be converted to the model's type, which is not built: the caller's binding is refused as one of
+# another type, as before.
+fn: l2_held_never (int: mi; int: model; int: k) int
+    @: LmP0Text nm
+    int: pi
+    if: mi < 0 || mi = l2_e || model < 0 || k < 0 || k >= l2_m_dyn[model]
+        return: 0
+    nm: l2_dn(model, k)
+    if: nm = 0 || l2_cap_arg_ns(model, l2_m_arity[model] + k) >= 0
+        return: 0
+    pi: l2_param_find(mi, nm)
+    if: pi < l2_m_arity[mi] || l2_dyn_fwd(mi, pi - l2_m_arity[mi]) = 0 || l2_formal_row(mi, pi) >= 0
+        return: 0
+    if: l2_own_ty_of_param(l2_input_ft(mi, pi)) = l2_own_of_dt(l2_dt(model, k))
+        return: 0
+return: (cast: (int) (l2_dyp_has(mi, nm) = 0))
 
 # Whether method x has a recorded reason for name nm.
 fn: l2_dyr_any (int: x; const: @(LmP0Text nm)) int
@@ -39587,6 +39752,10 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
     ---
     # The same native held-call helper is needed for every compiled body.
     l2_mad_need_held(oi)
+    # K04 S3: a held call is a site of the fixed point of dynamic inputs (count -1, l2_dyn_site_held): what its
+    # model needs is asked along the chain of callers, as for a call of a method.
+    if: l2_mad_held_model(oi) >= 0 && l2_wait_add(4, mi, (cast: (@: void) node), 0 - 1, l2_mad_held_model(oi), node, path) != 0
+        return: 1
 return: 0
 
 # Is this statement the declaration of a held callable: the store of a callable merge that gave
@@ -40229,6 +40398,15 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
         ---
         ns: l2_cap_arg_ns(model, l2_m_arity[model] + k)
         oty: l2_own_of_dt(l2_dt(model, k))
+        # K04 S3: the caller only hands the name on, as another type, and it can never arrive: nothing to give.
+        if: l2_held_never(mi, model, k) != 0
+            if: l2_held_unbound(node, mi, model, k) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%sl2_hr%d[%d]: 0\n", ind, t, 1 + n + k) < 0
+                return: 1
+            k: k + 1
+            continue
+        ---
         if: ns >= 0 && l2_bound_nsty(mi, l2_dn(model, k)) != ns
             return: l2_error(l2_src, node, "a caller's binding of a held callable's free name is of another type")
         if: ns < 0 && bty != oty
@@ -40446,6 +40624,7 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     int: rty
     int: bound 0 - 1
     int: site
+    int: hb
     const: @(LmP0Structure body) l2_call_node_body(node)
     if: node = 0 || node\as = 0
         return: l2_rw_refuse(node, "this call's inputs")
@@ -40506,9 +40685,13 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     # the capture's type, unless the caller's formal is admitted by name already), or nothing -- an empty operand.
     k: 0
     while: k < nh
-        if: l2_rw_held_bound(model, k) = 0 && l2_held_unbound(node, l2_rw_mi, model, k) != 0
+        hb: l2_rw_held_bound(model, k)
+        # K04 S3: the caller only hands the name on, as another type, and it can never arrive: nothing to give.
+        if: hb != 0 && l2_held_never(l2_rw_mi, model, k) != 0
+            hb: 0
+        if: hb = 0 && l2_held_unbound(node, l2_rw_mi, model, k) != 0
             return: 1
-        if: l2_rw_held_bound(model, k) != 0
+        if: hb != 0
             holder: \out
             ns: l2_cap_arg_ns(model, l2_m_arity[model] + k)
             if: ns >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(model, k)) = 0 && l2_rw_admit_as(\out, ns, ns, @ holder) != 0

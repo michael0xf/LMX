@@ -1,0 +1,41 @@
+# OPEN positive. A caller's value of another numeric type for a held
+# definition's free name is a present candidate: it is converted to the
+# definition's type by the ordinary conversion, never passed over for the
+# copied value. h0's n is an int, 6; h3's n is a size_t, 1000. go calls
+# both. From the root, with no n: 7, and 1001. outer has an int n, 40: h0
+# reads 40, and h3 reads it as 40U: 41 + 100. This implementation hands one
+# input of a name on with one type and does not convert it: the call of h3
+# is refused where it stands, as a limit and no rule. Entry 7.
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + 1
+    return: f0
+
+fn: make3 (size_t: n) fn: () size_t
+    fn: f3 () size_t
+        return: n + 1U
+    return: f3
+
+h0: make0 6
+h3: make3 1000U
+
+fn: go () size_t
+    int: a h0()
+    size_t: b h3()
+    if: a > 10
+        return: b + 100U
+    return: b
+end: go
+
+fn: outer () size_t
+    int: n 40
+    return: go()
+end: outer
+
+size_t: x go()
+size_t: y outer()
+int: ok 7
+if: x != 1001U || y != 141U
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

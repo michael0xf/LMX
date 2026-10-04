@@ -1,0 +1,28 @@
+# A definition's explicit read of its own node is not its free name. f reads
+# n twice: bare, a free name, which a caller's value gives; and node\n, the
+# value kept in the node its method built, which no caller changes. u5 is
+# built with n 5. From the root, with no n: 5 and 5, 505. From outer, which
+# has n 40: 40 and still 5, 4005. Entry 7.
+fn: mk (int: n) fn: () int
+    fn: f () int
+        return: n * 100 + node\n
+    return: f
+
+u5: mk 5
+
+fn: call5 () int
+    return: u5()
+end: call5
+
+fn: outer () int
+    int: n 40
+    return: call5()
+end: outer
+
+int: a call5()
+int: b outer()
+int: ok 7
+if: a != 505 || b != 4005
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

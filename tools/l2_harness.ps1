@@ -3356,10 +3356,11 @@ $fixtures = @(
             [pscustomobject]@{ Op = 'CALL'; Width = 8; Count = 2; CallLink = $true; ResultKind = 'int'; Edges = @([pscustomobject]@{ Slot = 6; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'ARG'; Width = 4 } }) } }) },
             [pscustomobject]@{ Op = 'CALL'; Width = 4; Count = 1; CallLink = $true; ResultKind = 'pointer'; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } }) } }) }
         ); Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
-    # Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28): a free name of a returned
-    # method takes the caller's own binding first, the node's copied context only as the fallback -- the root's n
-    # 100: 101; go's formal n 7: 8; plain, with none: the copy, 6.  A held call passes the caller's binding per hidden
-    # input, or nothing; the model's ARG falls back to the graph through `node`.
+    # Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28 and 2026-10-04): a free name
+    # of a returned method takes the nearest binding of its callers first, the node's copied context only as the
+    # fallback -- the root's n 100: 101; go's formal n 7: 8; plain, which only hands the name on: the copy, 6, where
+    # no caller has an n, and the root's 100 through plain, 101, where it has.  A held call asks its model's names
+    # along the chain of callers (K04 S3); the model's ARG falls back to the graph through `node`.
     [pscustomobject]@{ Name = 'unit_a3_caller_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_a3_caller_binding.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -7636,16 +7637,45 @@ $fixtures = @(
     # another callable is given.
     [pscustomobject]@{ Name = 'unit_callable_formal_site_names_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_callable_formal_site_names_missing_refused.lm2:27:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+    # A held call asks its model's number names along the chain of callers, as a call of a method does (K04 S3;
+    # Codex, FABLE-CODEX-20261004-12).  A name the model's reader requires, bound by the caller of the method
+    # that makes the held call (required_input_from_caller).  A name of the method that made the definition is
+    # the definition's free name, and the copied value its own source and no frozen binding: two copies each
+    # read their own where no caller has the name; a caller's value, handed on through a method that only
+    # forwards it, wins over both copies; a nearer binding wins over a farther one; a present zero is present
+    # (free_name_chain).  A method that assigns the name hands its working value on and the unit's field is not
+    # written (free_name_working).  An explicit read of the node keeps the copied value whatever the callers
+    # give (free_name_node).  Each natively and with the methods walked.
+    [pscustomobject]@{ Name = 'unit_held_call_required_input_from_caller.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_required_input_from_caller_walk.lm2'; Source = 'unit_held_call_required_input_from_caller.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_chain_walk.lm2'; Source = 'unit_held_call_free_name_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_working.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_working_walk.lm2'; Source = 'unit_held_call_free_name_working.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_node_walk.lm2'; Source = 'unit_held_call_free_name_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
+    # A name a held definition requires that no one can give: refused at the root's call of the method that
+    # makes the held call, where the chain starts.
+    [pscustomobject]@{ Name = 'unit_held_call_required_input_unavailable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_required_input_unavailable_refused.lm2:27:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
     # OPEN positives, required before G5.  Limits of this implementation and no rules; each is refused where it
     # stands and stays red until built.  A reference among the names of a callable a site does not give: only a
-    # number is handed absent yet (site_names_reference).  A name a held callable requires, bound by the caller
-    # of the method that calls it: a held call asks only its own caller yet (required_input_from_caller).  A
-    # merge built as the actual reaching a formal handed on: what the call needs cannot be told
-    # (unfollowed_actual).  A library unit's callable formal: every method of a library unit has an exported
-    # wrapper, so an occurrence from another translation can reach the formal.
+    # number is handed absent yet (site_names_reference).  A caller's value of another numeric type for a held
+    # definition's free name: one input of a name is handed on with one type and is not converted
+    # (free_name_converted).  A merge built as the actual reaching a formal handed on: what the call needs
+    # cannot be told (unfollowed_actual).  A library unit's callable formal: every method of a library unit has
+    # an exported wrapper, so an occurrence from another translation can reach the formal.
     [pscustomobject]@{ Name = 'unit_callable_formal_site_names_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_held_call_required_input_from_caller.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_converted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_unfollowed_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },

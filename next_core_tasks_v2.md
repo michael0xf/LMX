@@ -32,12 +32,12 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_34` RED37/1670 — against that baseline 97
-FAIL→OK, OK→FAIL 0, five red rows replaced and 280 added; the 37 red rows
+continuation bytes: `fable_full_35` RED37/1679 — against that baseline 97
+FAIL→OK, OK→FAIL 0, five red rows replaced and 289 added; the 37 red rows
 are 24 of the baseline and 13 added, eight of them labelled OPEN positives
-above the 29 of `fable_full_17`; kernel `fable_kernel_20` GREEN296 with 113
-executed selftests; L3 `fable_l3_20`
-([gates](steps/fable-continuation-20261003.md#site-requirements)). The checkpoint gate
+above the 29 of `fable_full_17`; kernel `fable_kernel_21` GREEN296 with 113
+executed selftests; L3 `fable_l3_21`
+([gates](steps/fable-continuation-20261003.md#held-chain)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -230,13 +230,17 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   required input no one can give refused at translation where the chain
   starts, and the entry's abort removed
   ([ledger](steps/fable-continuation-20261003.md#site-requirements)).
-- [ ] The third slice: held callables and merge nodes as actuals and as
-  callees through the same formation, with the ordinary admission
-  (`unit_held_call_to_callable_formal`,
-  `unit_nested_definition_structure_override`, `unit_t7_convert`,
-  `unit_callable_formal_unfollowed_actual`); the absence of a reference
-  (`unit_callable_formal_site_names_reference`); a held call's names asked
-  along the chain of callers (`unit_held_call_required_input_from_caller`);
+- [x] The third slice, step one: a held call asks its model's number names
+  along the chain of callers; a name of the method that made a definition
+  stays the definition's free name, the copied value its own source
+  ([ledger](steps/fable-continuation-20261003.md#held-chain)).
+- [ ] The third slice, the rest: held callables and merge nodes as actuals,
+  with their own exact identity, through the same formation and the ordinary
+  admission (`unit_held_call_to_callable_formal`, `unit_t7_convert`,
+  `unit_callable_formal_unfollowed_actual`); the reference: its absence
+  (`unit_callable_formal_site_names_reference`), its admission and its
+  asking along the chain (`unit_nested_definition_structure_override`); the
+  conversion of a handed-on input (`unit_held_call_free_name_converted`);
   the library unit's callable formal (`unit_lib_callable_formal`); the walked
   consumer (`unit_callable_formal_free_names_self_walk`). Any new route that
   makes an occurrence a value writes its flow fact or the row "not

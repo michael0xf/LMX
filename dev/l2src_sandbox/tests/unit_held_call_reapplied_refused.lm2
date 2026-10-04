@@ -1,0 +1,13 @@
+# A statement under a head that already holds a callable is the application of
+# that callable, whatever its actuals look like. `h2: make2 200` after
+# `h2: make2 100` is the call h2(make2 200): it is checked as any call, and a
+# method's name is no value for the int formal x. It does not store a second
+# callable merge over the first.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+h2: make2 100
+h2: make2 200
+sendMessage: exit(exit_code: h2(1 2); stdout: ""; stderr: "")
+return

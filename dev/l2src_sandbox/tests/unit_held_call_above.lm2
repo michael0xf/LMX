@@ -1,0 +1,40 @@
+# A method of the unit sees the unit's held callable wherever the method
+# stands: the name is a free name of the method, bound by its callers. Both
+# methods are written above the store. value calls it in an expression; first
+# applies it by its first statement. The callable notes 12 and then 56.
+# Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 100 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: value () int
+    return: h2(1 2)
+end: value
+
+fn: first () int
+    h2(5 6)
+    return: 0
+end: first
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + note(x * 10 + y)
+    return: f2
+
+h2: make2 100
+int: a value()
+int: z first()
+int: ok 7
+if: a != 100
+    ok: 81
+if: seen() != 1256
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

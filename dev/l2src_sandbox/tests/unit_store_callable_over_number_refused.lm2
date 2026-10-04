@@ -1,0 +1,12 @@
+# Under a head that names a number of the site, the shape that stores a
+# callable merge is a store to that number, and declares no callable over it.
+# `h2: make2 100` after `int: h2 5` stores to the int, and a method's name is
+# no number.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+int: h2 5
+h2: make2 100
+sendMessage: exit(exit_code: h2(1 2); stdout: ""; stderr: "")
+return

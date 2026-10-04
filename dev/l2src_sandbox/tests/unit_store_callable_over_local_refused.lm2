@@ -1,0 +1,17 @@
+# In a method with a local number h2, `h2: make2 200` is a store to that
+# local: it neither declares a callable of the method nor applies the
+# callable the root holds under the name. A method's name is no number.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+h2: make2 100
+
+fn: use () int
+    int: h2 3
+    h2: make2 200
+    return: h2
+end: use
+
+sendMessage: exit(exit_code: use(); stdout: ""; stderr: "")
+return

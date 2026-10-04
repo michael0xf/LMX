@@ -1721,15 +1721,15 @@ prototype:
     fn: l2_mad_sig (const: @(LmP0Node node)) int
     fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
+    fn: l2_mad_declaring (const: @(LmP0Node stmt); int: mi) int
     fn: l2_mad_held (const: @(LmP0Text name)) int
     fn: l2_call_head_held (int: mi; const: @(LmP0Text head)) int
-    fn: l2_unit_holds_callable (const: @(LmP0Text name)) int
-    fn: l2_head_is_held (int: mi; const: @(LmP0Text head)) int
     fn: l2_mad_held_arity (int: oi) int
     fn: l2_mad_held_arg_ty (int: oi; int: k) int
     fn: l2_mad_held_arg_name (int: oi; int: k) @: LmP0Text
     fn: l2_mad_held_formals (int: oi) int
     fn: l2_mad_held_ret_ty (int: oi) int
+    fn: l2_mad_held_value_ty (int: oi; @: int out_ty) int
     fn: l2_mad_need_held (int: oi) int
     fn: l2_emit_mad_call_protos () int
     fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char ind); @: char dest) int
@@ -7819,9 +7819,9 @@ fn: l2_is_asgn (const: @(LmP0Node stmt); int: mi) int
     # name.  A caller with no site asks the unit's methods alone.
     if: mi >= 0 && l2_call_head_method(mi, h, @ fi) >= 0
         return: 0
-    # So is a head that names a held callable of the site (l2_head_is_held);
+    # So is a head that names a held callable of the site (l2_call_head_held);
     # the statement that stores the callable merge is that binding's own.
-    if: mi >= 0 && l2_mad_store_stmt(stmt) = 0 && l2_head_is_held(mi, h) != 0
+    if: mi >= 0 && l2_mad_declaring(stmt, mi) = 0 && l2_call_head_held(mi, h) >= 0
         return: 0
     if: mi < 0 && l2_find_method(h) >= 0
         return: 0
@@ -8065,6 +8065,9 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         # receiving C type. It is neither an unresolved name nor an int.
         \out_ty: -12
         return: 0
+    # A held callable's call has the type of its header's result.
+    if: m < 0 && l2_call_head_held(mi, value\as\frame\head) >= 0
+        return: l2_mad_held_value_ty(l2_call_head_held(mi, value\as\frame\head), out_ty)
     if: m < 0
         return: 1
 return: l2_colon_ret_ty(m, out_ty)
@@ -10683,6 +10686,10 @@ fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
     fr: stmt\as\frame
     if: l2_param_find(mi, fr\head) >= 0 || l2_slot_find(mi, fr\head) >= 0 || l2_ml_find(fr\head) >= 0
         return: 0
+    # A held callable of the site is a callable head: the statement is its call with no
+    # actuals, checked against its header as any call of it is.
+    if: l2_call_head_held(mi, fr\head) >= 0
+        return: 0
     oi: l2_own_find(mi, fr\head)
     if: oi >= 0 && l2_own_decl[oi] != stmt
         return: l2_colon_is_graph_ty(l2_ft_of_own(l2_own_ty[oi]))
@@ -11888,7 +11895,10 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
-        if: l2_mad_store_stmt(stmt) != 0
+        # The store of a callable merge declares its head where the head has no binding at
+        # this site (or this statement has its row from an earlier pass).  Under a head that
+        # has a binding the shape is an application of it, left to the statements below.
+        if: l2_mad_store_stmt(stmt) != 0 && (l2_own_by_decl(mi, stmt) >= 0 || l2_colon_bound_ty(mi, stmt\as\frame\head, @ k) != 0)
             cj: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
             if: cj < 0
                 return: 1
@@ -11910,22 +11920,50 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             field: l2_next_active(field\next)
 return: 0
 
+# Is method i a root whose fields other methods see by name: the entry, or the root procedure
+# of a program part?
+fn: l2_asgn_root (int: i) int
+    int: k 0
+    if: i = l2_e
+        return: 1
+    while: k < l2_part_n
+        if: l2_part_ns != 0 && l2_part_ns[k] >= 0 && l2_ns_proc[l2_part_ns[k]] = i
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
+fn: l2_collect_asgn_method (int: i; const: @(char path)) int
+    l2_vis_method(i)
+    # A head that names an activation-local machine value is its use, not
+    # a definition: the declaration roles below are classified against
+    # this method's own machine locals, never another method's table.
+    l2_ml_free()
+    l2_ml_imported_only: 1
+    if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_collect(l2_m_body[i]\as\structure, i, path) != 0
+        l2_ml_imported_only: 0
+        return: 1
+    l2_ml_imported_only: 0
+    if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_collect_asgn_body(l2_m_body[i]\as\structure, i, path) != 0
+        return: 1
+return: 0
+
+# The roots first, then the other methods in their order: a method's statement is classified
+# with the declarations of the root it sees already collected.  The order among a method's own
+# rows, and among a root's, is the order of their statements either way.
 fn: l2_collect_asgn_binds (const: @(char path)) int
     int: i 0
     while: i < l2_m_n
-        l2_vis_method(i)
-        # A head that names an activation-local machine value is its use, not
-        # a definition: the declaration roles below are classified against
-        # this method's own machine locals, never another method's table.
-        l2_ml_free()
-        l2_ml_imported_only: 1
-        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_ml_collect(l2_m_body[i]\as\structure, i, path) != 0
-            l2_ml_imported_only: 0
-            return: 1
-        l2_ml_imported_only: 0
-        if: l2_m_body[i] != 0 && l2_m_body[i]\as != 0 && l2_collect_asgn_body(l2_m_body[i]\as\structure, i, path) != 0
+        if: l2_asgn_root(i) != 0 && l2_collect_asgn_method(i, path) != 0
             return: 1
         i: i + 1
+    ---
+    i: 0
+    while: i < l2_m_n
+        if: l2_asgn_root(i) = 0 && l2_collect_asgn_method(i, path) != 0
+            return: 1
+        i: i + 1
+    ---
     l2_vis_on: 0
 return: 0
 
@@ -21342,7 +21380,7 @@ fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigne
     if: req >= 0
         return: 1
     # A held callable of the site is called in every form, as a method is.
-    if: l2_head_is_held(mi, t) != 0
+    if: l2_call_head_held(mi, t) >= 0
         return: 1
     # c.name(...) is the raw C door (spec 6.6.6): a call in every form, an empty argument list
     # included (`c.abort()`), never an update of a field of that name.
@@ -25512,7 +25550,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_mad_on(mi) != 0 && l2_mad_is_return(stmt, l2_mad_model[mi]) != 0
             field: l2_next_active(field\next)
             continue
-        if: l2_mad_store_stmt(stmt) != 0
+        if: l2_mad_declaring(stmt, mi) != 0
             last: l2_next_active(stmt\as\frame\body\first_field)
             k: l2_find_method(last\value\as\atom)
             call_body: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(c.LmP0Structure)))
@@ -36605,7 +36643,7 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: l2_rw_put(into, slot, node) != 0
             return: 1
         return: 0
-    if: l2_mad_store_stmt(stmt) != 0
+    if: l2_mad_declaring(stmt, l2_rw_mi) != 0
         if: l2_rw_mad_store(stmt, into, @ node) != 0
             return: 1
         \made: 1
@@ -38068,6 +38106,15 @@ fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
         return: 0
 return: 1
 
+# Is this statement the declaration of a held callable: the store of a callable merge that gave
+# its head its binding, which is the statement the collector reserved a row for?  A statement of
+# the same shape under a head that has a binding at its site is an application of that binding
+# (semantics, section 9): its row is another statement's, and it has none of its own.
+fn: l2_mad_declaring (const: @(LmP0Node stmt); int: mi) int
+    if: l2_mad_store_stmt(stmt) = 0
+        return: 0
+return: (cast: (int) (l2_own_by_decl(mi, stmt) >= 0))
+
 fn: l2_mad_held (const: @(LmP0Text name)) int
     int: oi
     if: name = 0 || l2_e < 0
@@ -38077,49 +38124,34 @@ fn: l2_mad_held (const: @(LmP0Text name)) int
         return: 0 - 1
 return: oi
 
-# The held callable a call head names at its site, in method mi, or -1.  A binding of the site
-# that is not that callable -- a formal, another own row, a slot or a machine local of its
-# name -- blocks it, as a non-callable binding blocks a method of its name (l2_call_head_method).
+# The held callable a call head names at its site, in method mi, or -1.  A formal, a slot or a
+# machine local of the name is that binding and no held callable.  Otherwise the name
+# selects a row as any name of the site does (l2_own_visible): the site's own row declared
+# last before it, or, in a method, the field of the unit visible from the method -- declared
+# above it, the last of the name.  The head names a held callable when the store of a callable
+# merge declared the selected row, a field of the root and a local of a method alike; a
+# selected row of another kind is that binding, and a later declaration of the name does not
+# reach back to the site.
+#
+# DEBT (HELD-FORWARD-LOOKUP).  A method that stands above every declaration of the name
+# selects no row.  There the name is a free name of the method, and the callable is still found
+# by the entry's last declaration of the name (l2_mad_held): a lookup of held callables alone,
+# beside the ordinary selection, kept as every earlier translator answered.
 fn: l2_call_head_held (int: mi; const: @(LmP0Text head)) int
-    int: oi l2_mad_held(head)
     int: own
-    if: oi < 0 || mi < 0
-        return: oi
-    own: l2_resolved_own(mi, head)
-    if: own >= 0 && own != oi
+    if: mi < 0 || l2_e < 0
+        return: l2_mad_held(head)
+    if: head = 0 || l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
         return: -1
-    if: l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
-        return: -1
-return: oi
-
-# Does the unit store a callable merge under this name, `name: make 5`?  That statement is the
-# declaration of a held callable.  This reads the source, as l2_unit_declares does, for the
-# passes that classify a method's statements before the root's rows are collected.
-fn: l2_unit_holds_callable (const: @(LmP0Text name)) int
-    @: LmP0Field field
-    if: l2_cur_unit = 0 || name = 0
-        return: 0
-    field: l2_next_active(l2_cur_unit\first_field)
-    while: field != 0
-        if: l2_mad_store_stmt(field\value) != 0 && l2_text_same(field\value\as\frame\head, name) != 0
-            return: 1
-        field: l2_next_active(field\next)
-    ---
-return: 0
-
-# Does a head name a held callable at its site?  Its row says so (l2_call_head_held); before
-# the root's rows are collected the unit's own statement does, unless a binding of the site
-# has the name.
-fn: l2_head_is_held (int: mi; const: @(LmP0Text head)) int
-    int: own
-    if: l2_call_head_held(mi, head) >= 0
-        return: 1
-    if: mi < 0 || l2_mad_held(head) >= 0 || l2_unit_holds_callable(head) = 0
-        return: 0
     own: l2_own_visible(mi, head)
-    if: (own >= 0 && l2_own_mi[own] = mi) || l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
-        return: 0
-return: 1
+    if: own >= 0
+        if: l2_mad_store_stmt(l2_own_decl[own]) = 0
+            return: -1
+        return: own
+    ---
+    if: mi = l2_e
+        return: -1
+return: l2_mad_held(head)
 
 # The own-type code of a result code (unsigned is 33 as a result, 3 as an own).
 fn: l2_ret_own (int: code) int
@@ -38195,6 +38227,19 @@ fn: l2_mad_held_ret_ty (int: oi) int
     if: l2_rw_num_ty(own) = 0
         return: -1
 return: own
+
+# The value type of that header's result, as l2_colon_ret_ty gives a method's: 0 and the type,
+# or 1 when the header is not readable or its result is no number.
+fn: l2_mad_held_value_ty (int: oi; @: int out_ty) int
+    @: LmP0Node formals 0
+    @: LmP0Node result 0
+    int: code 0
+    if: out_ty = 0 || l2_mad_held_header(oi, @ formals, @ result) != 0 || l2_ret_type_word(result\as\atom, 0, 0, @ code) != 0
+        return: 1
+    if: l2_rw_num_ty(l2_ret_own(code)) = 0
+        return: 1
+    \out_ty: l2_result_value_ty(code)
+return: 0
 
 # How many formals that header declares, zero included; -1 when oi holds no such callable or the
 # header is not numbers to a number (item 739: each formal and the result a number).
@@ -41906,7 +41951,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # A callable-result binding is a field declaration whose value is the
         # Structure returned by its initializer. Use the same own cell and
         # expression lowering as any other declaration, in every native body.
-        if: l2_mad_store_stmt(stmt) != 0
+        if: l2_mad_declaring(stmt, mi) != 0
             oi: 0
             while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != mi)
                 oi: oi + 1

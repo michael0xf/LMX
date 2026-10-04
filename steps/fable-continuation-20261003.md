@@ -2909,7 +2909,10 @@ was the statement itself, not a call's Frame. `l2_head_is_held` therefore
 asks the unit's source when the row is not collected yet
 (`l2_unit_holds_callable`, the statement that stores a callable merge under
 the name), as `l2_unit_declares` and `l2_unit_names_method` already do for
-the unit's other declarations.
+the unit's other declarations. **Replaced in
+[section 48](#site-selection):** that lookup answered for the whole unit,
+whatever the site, and is removed; the roots are collected first and the
+ordinary rows answer.
 
 **What is not changed.** `l2_local_ns_shape` is untouched; it receives the
 method index its caller already had. The heads the author's open question is
@@ -2918,7 +2921,8 @@ before: every one of the 1549 recorded translations but the
 one fixed positive gives the same output. Two callers of the classifier have
 no site and ask the unit's methods alone, as before: `l2_empty_call_shape`
 and `l2_merge_atom_settle`. A second store of a callable merge under a name
-that already holds one, `h2: make2 200`, is still a store.
+that already holds one, `h2: make2 200`, is still a store. (A defect, fixed
+in [section 48](#site-selection): it is the application of the callable.)
 
 ### Replay
 
@@ -2983,3 +2987,273 @@ the live files and every staged copy (`tie.py`).
 nested admission and the capture closure. Recorded for the ordinary cleanup:
 the count tests of a held call below the binding, after an inventory of
 their callers.
+
+<a id="site-selection"></a>
+## 48. The held callable is the row its head selects at the site (Codex, FABLE-CODEX-20261004-09)
+
+**Codex's reply to the checkpoint of section 47.**
+
+- The matching-interface positive, the two probes of differing names and
+  the OPEN discrepancy of section 47 stay as they are, and G5 stays blocked
+  on it.
+- **The second statement of the storing shape is a defect now.** "After h2
+  has an established callable binding, h2:make2 200 is ordinary application
+  of that binding, not another initialization solely because the RHS looks
+  like a callable-producing factory. Its actuals must undergo the ordinary
+  call/arity/type/admission rules; it may be an invalid call, but MUST NOT
+  silently replace h2." The shape predicate `l2_mad_store_stmt` must not
+  exempt every later statement before role resolution: "Review each
+  interception point that does so; fix the shared criterion, not just the
+  final emitter."
+- **Whole-unit name presence is not the resolved role.**
+  `l2_unit_holds_callable` and `l2_head_is_held` of section 47 search every
+  statement of the unit for the storing shape under the name; a known row of
+  another kind and a row not collected yet both look like "no held row", and
+  an earlier source occurrence can supply an unjustified answer. "The common
+  source-site selector must choose the eligible declaration
+  occurrence/category with lexical host, source order, repeated-name
+  selection, formal/own/hidden/local shadows and excluded initializer
+  context; then the held-call route consumes that result." "Apply the
+  established visibility of the DECLARATION CATEGORY; do not guess a new
+  blanket forward/backward rule for every reference." Completing the
+  ordinary scoped declaration metadata before the dependent decisions is
+  preferred. "A held-only source scan standing beside collected-row
+  resolution is still bounded implementation debt, not a new normative
+  second resolver. Keep it labelled accordingly until the common selector
+  replaces it."
+- The two callers of the classifier that have no site may remain a bounded
+  open audit if no failing program is known; they are to be inventoried
+  without widening the work.
+- This follow-up closes first, as a bounded slice; then the two receiving-use
+  positives, whole-value composition, nested admission and the capture
+  closure.
+
+### What section 47 left wrong
+
+**The second store replaced the callable.** After `h2: make2 100` the
+statement `h2: make2 200` declared a second row, and the program ran to 200.
+The storing shape was taken for a declaration wherever it stood: by the
+collector, by the check, by the graph, by the native emission and by the
+classifier's exemption.
+
+**A regression of section 47.** `l2_unit_holds_callable` answered for the
+whole unit. After `h2: make2 100` and a later `int: h2 5`, a method's
+`h2: 7` was refused, `unknown method`: the name was still "a held callable
+of the unit" for the classifier and no callable for the call. The translator
+before section 47 stored the number. No row of the gate had the shape.
+
+### The decision
+
+**The roots are collected first.** The collector of assignment binds
+visited the methods in their order and the entry last, so a method's
+statement was classified before the root's rows existed; section 47 covered
+that with the source-level lookup. The collector now visits the roots first
+(the entry, and the root procedure of a program part) and then the other
+methods. It is the same collector reserving the same rows; nothing is
+executed and no field is added. The source-level lookup and its fallback are
+removed. One effect reaches the output: the global index of an own row
+appears in generated names, and it changes where a root's assignment bind
+used to be numbered after a method's (see the replay).
+
+**The store of a callable merge declares its head only where the head has
+no binding at the site.** The collector reserves the row under that
+condition (`l2_colon_bound_ty` finds nothing for the head, or the statement
+already has its row from an earlier pass). Every later pass asks the
+statement's own row, `l2_mad_declaring(stmt, mi)`: the storing shape and a
+row whose declaring node is this statement. The check, the graph, the native
+emission and the classifier ask it where they asked the shape. Under a head
+that has a binding the same shape is a use of that binding: a held callable
+is applied, a number is stored to.
+
+**The held callable is the row the name selects.**
+`l2_call_head_held(mi, head)`: a formal, a slot or a machine local of the
+name is that binding. Otherwise the name selects a row as any name of the
+site does (`l2_own_visible`): the site's own row declared last before the
+site, within its lexical host; in a method, the field of the unit visible
+from the method, which is the one declared above the method, the last of the
+name. The head names a held callable when the store of a callable merge
+declared the selected row. A selected row of another kind is that binding. A
+later declaration does not reach back to an earlier site, and the row's
+own initializer does not see it.
+
+**The owner of the row does not matter.** A method's local declared by the
+store of a callable merge holds its callable as a field of the root does.
+Before, a held callable was looked for among the root's fields alone, and
+the call of such a local was refused.
+
+**The caller's binding decides at the call.** A method under the store calls
+`h2`; the root calls that method after `int: h2 5`. The caller's `h2` is the
+int there, and the call of the method is refused, `incompatible entry
+signature`. The superseded callable is not called in its place. A number
+field behaves the same way: the caller's current value is what the method
+reads.
+
+### Debt, labelled: HELD-FORWARD-LOOKUP
+
+A method that stands above every declaration of the name selects no row.
+The kernel map, section 13.3, makes a parent declaration that precedes the
+callee's definition eligible as its lexical fallback, and says nothing of
+one that follows. For such a method the callable is still found by the
+entry's last declaration of the name (`l2_mad_held`): a lookup of held
+callables alone, beside the ordinary selection, kept because every earlier
+translator answered so and programs run by it. `unit_held_call_above` holds
+those programs (a call in an expression and a statement in the paren form);
+it is no rule of visibility. The colon form under such a head, `h2: 5 6` in
+a method above the declaration, is held by no row: an unknown head with
+nothing established is the author's open question. The lookup goes when the
+role of a call head that is a free name is decided
+([defects](defects.md#held-forward-lookup)).
+
+### The same decision at three more sites
+
+Found by the probes of this slice; each was refused by every translator
+measured, back to `fable_full_17`.
+
+- **The value typer.** `r: h2(1 2)`, a held callable's call standing alone
+  at the right of a store, was refused, `assignment value has unknown type`:
+  the typer of a single value knew a method's call and a predefined
+  function's, not a held callable's. It now gives the type of the header's
+  result (`l2_mad_held_value_ty`), and a wrong target is refused as for any
+  int.
+- **The empty statement.** `p0()` under a nullary held callable was sent to
+  the execution of a named Structure and refused, `executing a named
+  Structure is not supported yet`. The test that sends an empty statement
+  there (`l2_empty_struct_assign_shape`) asks the site's held callable, as
+  it asks the site's formals.
+- **The method's local**, above.
+
+### Open, recorded
+
+- **The bare name.** `p0` alone as a statement, for a nullary held callable,
+  is refused the same way through another route (`l2_check_struct_call`).
+  The semantics makes a bare name the nullary entry. A labelled probe holds
+  the refusal ([defects](defects.md#held-bare-name-statement)).
+- **The factory's actuals in the store are positional.**
+  `h2: make2(n: 100)` is not read as the store: the shape asks an atom after
+  the head. Every translator measured answers so; no row holds it
+  ([defects](defects.md#held-store-factory-actuals-positional)).
+- **An application of the storing shape that is valid cannot be written
+  today.** It needs a callable formal that takes a callable-returning
+  method, and a signature with such a formal is refused, `incompatible entry
+  signature`. So the invalid later application is refused at translation
+  and no program runs to show the callable unchanged. The control that does
+  run is an application that fails at run time:
+  `unit_held_call_failed_application`.
+
+### The callers of the classifier that have no site
+
+`l2_is_asgn(stmt, -1)` answers by the names of the unit's methods. Seven
+places reach it, six through `l2_empty_call_shape`.
+
+| Caller | Site at hand | What the answer decides | Finding |
+| --- | --- | --- | --- |
+| `l2_empty_struct_assign_shape` | yes | whether an empty statement executes a named Structure | A failing program was found, `p0()` above, and fixed: the function resolves the head at its site after the shape test. |
+| `l2_reference_descriptor` | yes | an empty call shape given as a single reference value | The name is then resolved at the site (`l2_address_name`). No failing program known. |
+| `l2_colon_bound_before` | yes | whether an earlier statement of the body declared the name | A declaration's shape. No failing program known. |
+| `l2_ns_exec_scan` | no | which named Structures a body executes | A role, asked by name. No failing program known. |
+| `l2_body_calls_name` | no | whether a body executes a given name | A role, asked by name. No failing program known. |
+| `l2_colon_decl_room` | no | whether a node holds a declaring form | Shape only. |
+| `l2_merge_atom_settle`, through `l2_merge_frame` | no | whether `x: merge a b` is a binding's statement | A role, asked by name. No failing program known. |
+
+The shape tests still ask the method-name classifier where shape alone is
+wanted, and three roles are still asked without a site. That stays a bounded
+open audit; no code was changed for it beyond the one failing program.
+
+### Replay
+
+The slice's translator against the committed one (`af3b907e`), on the 1557
+translations recorded by `fable_full_23`:
+
+- Exit and messages are the same on every row, and so is the allocation
+  count.
+- The generated L1 is the same on 1111 of the 1141 rows that translate. On
+  the other 30 it differs by the numbering of own rows alone. The roots-first
+  order changes the global index of a root's assignment bind where a method's
+  rows used to precede it, and that index appears in generated names
+  (`l2_own<N>`, `l2_q<N>`) and in the texts `own field N`. For each of the 30
+  files a one-to-one renumbering was found through its index lines
+  (`# const: @(char l2_own<N>) "<name>"`), under which the two outputs are
+  equal byte for byte. The positions of fields inside their Structures are
+  not touched by that renumbering and are equal as they stand.
+- The 30 rows: `graph_shape_t7_local_callable_field`,
+  `graph_shape_t7_local_definition`, `unit_copy_call_chain_inputs`,
+  `unit_held_nullary_source_field`, `unit_mres_ref_field_path`,
+  `unit_named_actual_facts`, `unit_recv_use_nested_reader_refused`, each with
+  its walked twin; the source and the target mutant of
+  `unit_copy_call_chain_inputs`; `unit_capture_struct_call_arg`,
+  `unit_capture_struct_own`, `unit_field_path_terminal_checklist`,
+  `unit_merge_hidden_forward`, `unit_merge_hidden_input`,
+  `unit_merge_hidden_position`, `unit_next_message_in_method`,
+  `unit_receive_else_body`, `unit_recv_use_nested_dormant`,
+  `unit_recv_use_nested_reader_refused_limit_probe`, `unit_struct_int_field`,
+  `unit_throwing_callable`, `unit_walk_merge_hidden_input`,
+  `unit_walk_receive_else_body`.
+- The steps after the first (the selected row, any owner, the value type,
+  the empty statement) each give the replay of the step before it on every
+  row: they change only programs no recorded row holds.
+
+
+### Rows
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_held_call_reapplied_refused`, `unit_held_call_reapplied_method_refused` | `h2: make2 200` after the store, at the root and in a method: the application of h2, refused as that call. |
+| `unit_store_callable_over_number_refused`, `..._over_local_refused`, `..._over_formal_refused` | The storing shape under a number field, local and formal of the name: a store to the number, refused. |
+| `unit_held_call_failed_application`, natively and walked | An application by a statement whose first actual throws; the callable does not run, and is the stored one afterwards. |
+| `unit_held_call_superseded`, natively and walked | `int: h2 5` after the store. The root calls h2 between the two, by its formals' names; a method between them calls it; a method below both reads the int and stores to it. |
+| `unit_held_call_superseded_refused` | The call of h2 in a method below the superseding declaration: `unknown method`. |
+| `unit_held_call_superseded_caller_refused` | A method under the store called from a site whose h2 is the int: refused at the call of the method. |
+| `unit_held_call_block`, natively and walked; `unit_held_call_block_refused` | A callable held by a field of a nested body: called there; no binding after the body. |
+| `unit_held_call_method_local`, natively and walked; `unit_held_call_other_method_refused` | A method's local holds a callable, one per activation and one per branch; another method does not see it. |
+| `unit_held_call_formal_shadow_refused`; `unit_held_call_shadow` with a store to the formal | A number formal of the name hides the root's callable for a call and for a store. |
+| `unit_held_call_assigned`, natively and walked; `unit_held_call_assigned_type_refused` | The call assigned alone, int and unsigned, at the root and in a method; an int result stored to a reference is refused. |
+| `unit_held_call_nullary_statement`, natively and walked | `p0()` as a statement, at the root and in a method. |
+| `unit_held_call_above`, natively and walked | The debt above: methods standing above the store. |
+| `unit_held_call_bare_name_limit_probe` | The OPEN bare name: the refusal as it is today. |
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart, and
+compared with the slice on its fixtures and those of section 47, natively
+and walked.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| The collector visits the other methods before the roots | `unit_held_call_statement` is refused, `more arguments than h2 has formals`; `unit_held_call_failed_application`, `unhandled throw: Oops`; `unit_held_call_nullary_statement`, `unknown method`; `unit_held_call_reapplied_method_refused` is accepted; `unit_held_call_above` translates and runs to 82. |
+| The collector reserves a row for every statement of the storing shape | The two reapplied stores and the store over a number field are accepted; over a local and over a formal the refusal moves to the `return`. |
+| Every pass takes the storing shape for the declaration | `callable result field was not reserved` for the reapplied stores and for those over a local and a formal. |
+| The check alone intercepts by shape | `root operation not walkable yet` for the same five rows, or `unknown method` at the later call. |
+| The classifier alone exempts by shape | The reapplied stores are refused in other words, `more arguments than h2 has formals`. |
+| The graph alone, and the native emission alone, intercept by shape | Did not reach a witness: the same output on every fixture. No program the check accepts carries the storing shape under a bound head. |
+| In a method the callable is the entry's last declaration of the name | `unit_held_call_superseded` is refused, `unknown method`; `unit_held_call_method_local` is refused. |
+| The row is selected without the site | `unit_held_call_superseded` is refused at the root's call, `unknown method`. |
+| A selected row of another kind does not block the callable | `unit_held_call_local_shadow_refused` is accepted; `unit_held_call_shadow` is refused, `h2 has no argument y`. |
+| No lookup where the selection finds no row | `unit_held_call_above` is refused, `unknown method`. |
+| A formal of the name does not block the callable | `unit_held_call_formal_shadow_refused` is accepted; `unit_held_call_shadow` is refused. |
+| Only a field of the root holds a callable | `unit_held_call_method_local` is refused, `more arguments than h has formals`. |
+| The typer of an assigned value does not know a held callable's call | `unit_held_call_assigned`, `unit_held_call_method_local` and the type refusal: `assignment value has unknown type`. |
+| An empty statement under a held callable goes to the Structure route | `unit_held_call_nullary_statement` is refused, `executing a named Structure is not supported yet`. |
+
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_11` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_11` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_24` (full harness) | RED 31 of 1584. Against `fable_full_23` (RED 31 of 1558): FAIL→OK 0; OK→FAIL 0; added 26, all green; removed 0; no red row's message changed. |
+| `build/l2_harness/fable_role2_01` (focused, before the gate) | 197 rows: the 26 new ones, the 30 renumbered ones and the rows of held callables, callables, stores and named actuals. Red only five rows of the baseline. |
+
+The 31 red rows are the 29 of `fable_full_17` and the two labelled OPEN
+positives `unit_recv_use_nested_dormant` and `unit_recv_use_passed_thin`. Of
+the 30 renumbered rows 29 ran green in the gate; the other is
+`unit_recv_use_nested_dormant`, red before. The pre-gate hashes of the
+translator, the 20 fixtures and the harness equal the live files and every
+staged copy (`tie.py`).
+
+
+**Next.** The receiving-use remainder with section 42's OPEN positives, then
+whole-value composition, nested admission and the capture closure. Recorded
+for the ordinary cleanup: the count tests of a held call below the binding,
+after an inventory of their callers; the audit of the classifier's callers
+above.

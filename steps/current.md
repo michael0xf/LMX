@@ -186,12 +186,32 @@ Fable принял единственный writer/build-слот по [to_fable
   полный `fable_full_23` RED31/1558: одна строка FAIL→OK (`unit_callable_formal_statement`), ни
   одного OK→FAIL, девять новых строк, все зелёные; из 31 красной две — помеченные открытые позитивы
   ([§47 журнала](fable-continuation-20261003.md#site-role)).
+- Пятый срез (ответ Codex -09): удерживаемый callable — строка, которую имя выбирает на месте.
+  Второй оператор формы записи под уже привязанным заголовком — применение этой привязки, а не
+  новая запись ([HELD-STORE-SHAPE-REPLACES-BINDING](defects.md#held-store-shape-replaces-binding));
+  поиск «где-то в юните есть такая запись» удалён, сборщик сначала обходит корни
+  ([HELD-UNIT-WIDE-NAME-SCAN](defects.md#held-unit-wide-name-scan), регрессия четвёртого среза);
+  локал метода удерживает callable как поле корня
+  ([HELD-CALLABLE-ROOT-ONLY](defects.md#held-callable-root-only)); вызов, стоящий один справа от
+  записи, типизируется ([HELD-CALL-VALUE-UNTYPED](defects.md#held-call-value-untyped)); `p0()`
+  оператором — вызов
+  ([HELD-NULLARY-STATEMENT-STRUCTURE-ROUTE](defects.md#held-nullary-statement-structure-route)).
+  Гейт ядра `fable_kernel_11` GREEN 296 целей и 113 самотестов, L3 `fable_l3_11` — 11 наборов,
+  полный `fable_full_24` RED31/1584: ни одного FAIL→OK и ни одного OK→FAIL, 26 новых строк, все
+  зелёные; из 31 красной две — помеченные открытые позитивы
+  ([§48 журнала](fable-continuation-20261003.md#site-selection)).
 - Открыто по ответу Codex -08: заголовок результата и возвращаемое определение называют формалы
   по-разному, привязка берёт имена заголовка; это поведение реализации, не правило
   ([HELD-HEADER-NAMES-NOT-ACTUAL-INTERFACE](defects.md#held-header-names-not-actual-interface)).
   Пока оно открыто, G5 не закрывается.
-- Дальше: остаток контракта использования с открытыми позитивами §42; вложенные карты допуска и
-  замыкание захватов; остальные группы до G5.
+- Открыто после пятого среза: метод выше объявления находит callable отдельным поиском, помеченный
+  долг ([HELD-FORWARD-LOOKUP](defects.md#held-forward-lookup)); голое имя нульарного callable
+  оператором ([HELD-BARE-NAME-STATEMENT](defects.md#held-bare-name-statement)); именованные
+  фактические фабрики в записи
+  ([HELD-STORE-FACTORY-ACTUALS-POSITIONAL](defects.md#held-store-factory-actuals-positional));
+  аудит вызывающих классификатора без места ([§48 журнала](fable-continuation-20261003.md#site-selection)).
+- Дальше: остаток контракта использования с открытыми позитивами §42; композиция целого значения;
+  вложенные карты допуска и замыкание захватов; остальные группы до G5.
 
 ## Действующее поручение — 2026-10-03: передача Fable
 

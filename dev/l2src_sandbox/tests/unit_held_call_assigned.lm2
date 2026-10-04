@@ -1,0 +1,36 @@
+# A held callable's call is a value of its header's result type, and is assigned
+# as one: alone at the right of a store, at the root and in a method, and to
+# a number of another type. h2 gives 100 + 10 * x + y; u gives n + x as
+# unsigned. Entry 7.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+
+fn: makeu (unsigned: n) fn: (unsigned: x) unsigned
+    fn: fu (unsigned: x) unsigned
+        return: n + x
+    return: fu
+
+h2: make2 100
+u: makeu 40U
+int: r 0
+r: h2(1 2)
+unsigned: w 0U
+w: u(2U)
+
+fn: a () int
+    int: q 0
+    q: h2(3 4)
+    return: q
+end: a
+
+int: ok 7
+if: r != 112
+    ok: 81
+if: w != 42U
+    ok: 82
+if: a() != 134
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

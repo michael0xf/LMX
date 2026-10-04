@@ -1,0 +1,37 @@
+# A held callable without formals applied by a statement: `p0()` standing
+# alone is its call, as it is in an expression, and no execution of a named
+# Structure. The callable notes 1 at each call: twice at the root and twice
+# in the method. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 10 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + note(1)
+    return: f0
+
+p0: make0 100
+p0()
+int: a p0()
+
+fn: use () int
+    p0()
+    return: p0()
+end: use
+
+int: b use()
+int: ok 7
+if: a != 100 || b != 100
+    ok: 81
+if: seen() != 1111
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

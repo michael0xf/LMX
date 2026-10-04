@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_23` RED31/1558 — 97 FAIL→OK against that
+continuation bytes: `fable_full_24` RED31/1584 — 97 FAIL→OK against that
 baseline, OK→FAIL 0; the two red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_10` GREEN296 with 113 executed
-selftests; L3 `fable_l3_10`
-([gates](steps/fable-continuation-20261003.md#site-role)). The checkpoint gate
+labelled OPEN positives; kernel `fable_kernel_11` GREEN296 with 113 executed
+selftests; L3 `fable_l3_11`
+([gates](steps/fable-continuation-20261003.md#site-selection)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -154,6 +154,22 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   under a method's name too; a local hides the root's held callable; a held
   callable applied by a statement is its call
   ([ledger](steps/fable-continuation-20261003.md#site-role)).
+- [x] The held callable is the row its head selects at the site (Codex
+  ruling FABLE-CODEX-20261004-09): the storing shape declares its head only
+  where the head has no binding, and is an application or a store under a
+  bound one; the roots are collected first and the unit-wide lookup of the
+  storing shape is removed; a method's local holds a callable; a held call
+  assigned alone is typed; `p0()` as a statement is the call
+  ([ledger](steps/fable-continuation-20261003.md#site-selection)).
+- [ ] Labelled debt and open limits of that slice: the callable found from a
+  method above its declaration by a lookup of its own
+  ([defects](steps/defects.md#held-forward-lookup)); the bare name of a
+  nullary held callable as a statement
+  ([defects](steps/defects.md#held-bare-name-statement)); named actuals of
+  the factory in the store
+  ([defects](steps/defects.md#held-store-factory-actuals-positional)); the
+  audit of the statement classifier's callers that have no site
+  ([ledger](steps/fable-continuation-20261003.md#site-selection)).
 - [ ] A held callable whose declared result header and returned definition
   name their formals differently: the binding takes the header's names
   today; whether that named use is admitted by the callable's actual

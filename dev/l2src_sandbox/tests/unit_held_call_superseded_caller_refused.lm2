@@ -1,0 +1,18 @@
+# The caller binds the free names of what it calls by its own bindings at the
+# call. mid stands under the store of h2 and calls it. The root calls mid
+# after the declaration `int: h2 5`: its h2 is the int there, no callable for
+# mid to call, and the call of mid is refused. The superseded callable is
+# not called in its place.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+h2: make2 100
+
+fn: mid () int
+    return: h2(1 2)
+end: mid
+
+int: h2 5
+sendMessage: exit(exit_code: mid(); stdout: ""; stderr: "")
+return

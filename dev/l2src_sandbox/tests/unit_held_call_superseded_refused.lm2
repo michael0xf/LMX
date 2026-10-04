@@ -1,0 +1,16 @@
+# After a declaration of another kind supersedes the held callable, the name
+# is no callable: its call is refused, and the callable is not found past the
+# declaration by its name.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+h2: make2 100
+int: h2 5
+
+fn: use () int
+    return: h2(1 2)
+end: use
+
+sendMessage: exit(exit_code: use(); stdout: ""; stderr: "")
+return

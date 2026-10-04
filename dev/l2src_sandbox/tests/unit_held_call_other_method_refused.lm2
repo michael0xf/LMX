@@ -1,0 +1,18 @@
+# A callable held by one method's local is no binding of another method: b
+# has no h, the unit has none, and the call is refused.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+
+fn: a () int
+    h: make2 100
+    return: 0
+end: a
+
+fn: b () int
+    return: h(1 2)
+end: b
+
+sendMessage: exit(exit_code: a() + b(); stdout: ""; stderr: "")
+return

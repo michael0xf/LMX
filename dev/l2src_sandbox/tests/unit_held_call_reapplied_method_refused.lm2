@@ -1,0 +1,16 @@
+# In a method, a statement under the name of the root's held callable is the
+# application of that callable too: `h2: make2 200` is the call h2(make2 200),
+# refused as that call, and declares no local of the method.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+h2: make2 100
+
+fn: use () int
+    h2: make2 200
+    return: h2(1 2)
+end: use
+
+sendMessage: exit(exit_code: use(); stdout: ""; stderr: "")
+return

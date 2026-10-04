@@ -1,0 +1,12 @@
+# A callable held by a field of a nested body is no binding after that body:
+# the name is not declared where the call stands, and the call is refused.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+int: c 1
+if: c = 1
+    h2: make2 100
+---
+sendMessage: exit(exit_code: h2(1 2); stdout: ""; stderr: "")
+return

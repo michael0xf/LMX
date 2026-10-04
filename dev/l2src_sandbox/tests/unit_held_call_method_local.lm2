@@ -1,0 +1,56 @@
+# A callable merge stored in a method's local is held by that local, and is
+# called there as the root's is: in an expression, by a statement in both
+# forms, and by its formals' names. Each activation of a holds its own: the
+# callable of a(100) gives 100 and that of a(200) gives 200. Each call notes
+# x * 2 + y: 4, 7 and 9 in either activation. In pick each branch holds a
+# callable of its own under one name and calls it, noting 0. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 10 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + note(x * 2 + y)
+    return: f2
+
+fn: a (int: k) int
+    h: make2 k
+    h(1 2)
+    h: 3 1
+    return: h(y: 1; x: 4)
+end: a
+
+fn: pick (int: c) int
+    int: q 0
+    if: c = 1
+        h: make2 300
+        q: h(0 0)
+    else:
+        h: make2 400
+        q: h(0 0)
+    ---
+    return: q
+end: pick
+
+int: r1 a(100)
+int: r2 a(200)
+int: r3 pick(1)
+int: r4 pick(2)
+int: ok 7
+if: r1 != 100
+    ok: 81
+if: r2 != 200
+    ok: 82
+if: r3 != 300 || r4 != 400
+    ok: 83
+if: seen() != 47947900
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

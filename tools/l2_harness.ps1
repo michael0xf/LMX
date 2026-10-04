@@ -7296,6 +7296,95 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_local_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_local_shadow_refused.lm2:11:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_formal_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_formal_shadow_refused.lm2:10:13: unknown method'; Absent = @(); Debt = @() },
+    # The held callable a head names is the row the name selects at its site (Codex,
+    # FABLE-CODEX-20261004-09): the site's own row declared last before it, or in a method the unit's
+    # field visible from the method.  The store of a callable merge declares its head only where the
+    # head has no binding at the site; under a head that has one the same shape is a use of that
+    # binding.  So `h2: make2 200` after `h2: make2 100` is the application h2(make2 200), refused as
+    # that call, at the root and in a method (it ran to 200 before: the second statement replaced the
+    # callable); under a number of the name -- a field, a local, a formal -- it is a store to the
+    # number, refused as one.  A failed application leaves the callable as it was (the first actual
+    # throws; the callable is then called and is the one stored).  A later `int: h2 5` supersedes
+    # the callable from there on and does not reach back: the root calls h2 between the two, a
+    # method standing between them sees the store, a method below both sees the int, and a call of
+    # the method between them from a site whose h2 is the int is refused.  A callable held by a
+    # field of a nested body is called there and is no binding after it.  A method's local holds a
+    # callable as the root does; another method does not see it.  A held callable's call is typed
+    # by its header's result where it is assigned alone, and an empty statement under a nullary held
+    # callable is its call.
+    # DEBT (HELD-FORWARD-LOOKUP), unit_held_call_above: methods standing above every declaration
+    # of the name select no row; the callable is still found by the entry's last declaration of the
+    # name, as every earlier translator found it.  The row keeps what programs run today; it is no
+    # rule of visibility.
+    # Mutants: the roots collected last -- the statement in a method is refused or accepted wrongly
+    # and unit_held_call_above runs to 82; the collector or every pass by shape -- the reapplied
+    # stores are accepted or "callable result field was not reserved"; the check alone by shape --
+    # "root operation not walkable yet"; the classifier alone by shape -- "more arguments than h2
+    # has formals"; the entry's last declaration in a method -- unit_held_call_superseded refused;
+    # the row selected without the site -- the same; a row of another kind not blocking -- the
+    # shadow rows flip; no lookup above the declaration -- unit_held_call_above refused; a formal
+    # not blocking -- the formal's rows flip; the root's rows only -- unit_held_call_method_local
+    # refused; no type of an assigned call -- "assignment value has unknown type"; an empty
+    # statement sent to the Structure route -- "executing a named Structure is not supported yet".
+    # Two mutants did not reach a witness: the graph alone and the native emission alone
+    # intercepting by shape.  No program the check accepts carries the storing shape under a bound
+    # head, so neither point is entered with one.
+    [pscustomobject]@{ Name = 'unit_held_call_reapplied_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_reapplied_refused.lm2:11:5: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_reapplied_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_reapplied_method_refused.lm2:11:9: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_store_callable_over_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_store_callable_over_number_refused.lm2:10:5: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_store_callable_over_local_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_store_callable_over_local_refused.lm2:12:9: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_store_callable_over_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_store_callable_over_formal_refused.lm2:11:9: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_failed_application_walk.lm2'; Source = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_superseded.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_superseded_walk.lm2'; Source = 'unit_held_call_superseded.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_superseded_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_superseded_refused.lm2:12:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_superseded_caller_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_superseded_caller_refused.lm2:17:30: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_above_walk.lm2'; Source = 'unit_held_call_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_block_walk.lm2'; Source = 'unit_held_call_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_block_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_block_refused.lm2:11:30: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_method_local_walk.lm2'; Source = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_other_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_other_method_refused.lm2:14:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_assigned.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_assigned_walk.lm2'; Source = 'unit_held_call_assigned.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_assigned_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_assigned_type_refused.lm2:11:1: assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_nullary_statement_walk.lm2'; Source = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4); Absent = @(); Debt = @() },
+    # OPEN (HELD-BARE-NAME-STATEMENT), a temporary probe of what the translator does and no norm: a
+    # nullary held callable named alone as a statement is its call, as a bare method name is; the
+    # bare name is sent to the execution of a named Structure and refused.  The probe goes when the
+    # bare name reaches the held call.
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_bare_name_limit_probe.lm2:12:1: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     # A throw raised while an actual is evaluated (found beside the named actuals, and no matter of them):

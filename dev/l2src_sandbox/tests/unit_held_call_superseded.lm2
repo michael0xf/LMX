@@ -1,0 +1,54 @@
+# A later declaration of another kind under the name supersedes the held
+# callable, and does not reach back. The root calls h2 between its store and
+# the declaration `int: h2 5`: there the name is the callable, called by its
+# formals' names. The method mid stands between the two as well: the
+# declaration it sees above it is the store, and the root calls it while its
+# own h2 is the callable. The callable notes 12 and then 34. After the
+# declaration the name is the int. The method reads takes it as a number; in
+# the method stores the statement `h2: 7` is a store of a number, no
+# application of the callable, and the method reads back what it stored.
+# Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 100 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + note(x * 10 + y)
+    return: f2
+
+h2: make2 100
+
+fn: mid () int
+    return: h2(3 4)
+end: mid
+
+int: a h2(y: 2; x: 1)
+int: b mid()
+int: h2 5
+
+fn: reads () int
+    return: h2 + 2
+end: reads
+
+fn: stores () int
+    h2: 7
+    return: h2
+end: stores
+
+int: ok 7
+if: a != 100 || b != 100 || seen() != 1234
+    ok: 81
+if: reads() != 7
+    ok: 82
+if: stores() != 7
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

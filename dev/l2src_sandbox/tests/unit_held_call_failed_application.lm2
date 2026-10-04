@@ -1,0 +1,58 @@
+# An application of a held callable that fails leaves the callable as it
+# was: a call error becomes no declaration and no assignment. h2 is held by
+# the root. In apply the statement `h2: boom(3 3) 4` is its application; the
+# first actual throws Oops, the callable does not run, and failing's handler
+# takes the throw: 3 + 4. After it h2 is the callable it was: h2(1 2) gives
+# 100 and notes 12, and the trace holds that note alone. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 100 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: boom (int: a; int: b) int
+    throws: Oops
+    if: a = b
+        throw: Oops(a)
+    return: a - b
+end: boom
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + note(x * 10 + y)
+    return: f2
+
+h2: make2 100
+
+fn: apply () int
+    throws: Oops
+    h2: boom(3 3) 4
+    return: 0
+end: apply
+
+fn: failing () int
+    int: got 0
+    ---
+        got: apply()
+        catch: Oops (int: v)
+            got: v + 4
+    ---
+    return: got
+end: failing
+
+int: r failing()
+int: a h2(1 2)
+int: ok 7
+if: r != 7
+    ok: 81
+if: a != 100
+    ok: 82
+if: seen() != 12
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

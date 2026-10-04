@@ -2179,6 +2179,129 @@ fn: named (note: p; int: x) int
 callable оператором. Строки с callable-формалом нативные: обход методов их исключает
 ([§47 журнала](fable-continuation-20261003.md#site-role)).
 
+<a id="held-store-shape-replaces-binding"></a>
+### HELD-STORE-SHAPE-REPLACES-BINDING — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-09, FIXED в sandbox (не выпущено)
+
+Оператор формы «запись callable merge» объявлял заголовок всюду, где стоял:
+
+```text
+h2: make2 100
+h2: make2 200      # было: вторая строка h2, программа доходила до 200
+```
+
+По норме (`#construction`, словарь `#head`) после установленной привязки `h2` второй оператор —
+обычное применение этой привязки: его фактические проходят правила вызова, вызов может быть
+недопустимым, но не заменяет `h2` молча. Форму принимали за объявление сборщик, проверка, граф,
+нативная эмиссия и исключение в классификаторе операторов.
+
+Исправлено: сборщик резервирует строку, только когда у заголовка нет привязки на месте; остальные
+проходы спрашивают собственную строку оператора (`l2_mad_declaring`: форма и строка, объявленная
+именно этим узлом). Под привязанным заголовком та же форма — использование привязки: удерживаемый
+callable применяется, в число записывают. Свидетели — `unit_held_call_reapplied_refused`,
+`unit_held_call_reapplied_method_refused`, три `unit_store_callable_over_*_refused`; неизменность
+callable после неудавшегося применения — `unit_held_call_failed_application`
+([§48 журнала](fable-continuation-20261003.md#site-selection)).
+
+<a id="held-unit-wide-name-scan"></a>
+### HELD-UNIT-WIDE-NAME-SCAN — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-09, FIXED в sandbox (не выпущено)
+
+Регрессия среза §47 (`af3b907e`). Роль «заголовок — удерживаемый callable» бралась из поиска по
+всему юниту (`l2_unit_holds_callable`): любой оператор формы записи под этим именем.
+
+```text
+h2: make2 100
+int: h2 5
+fn: stores () int
+    h2: 7          # было: отказ, unknown method; до §47 — запись числа
+    return: h2
+end: stores
+```
+
+Исправлено: поиск по исходнику удалён. Сборщик сначала обходит корни, затем методы, и отвечают
+обычные строки. Удерживаемый callable — строка, которую имя выбирает на месте (`l2_own_visible`):
+собственная строка места, объявленная последней перед ним, в своём лексическом хозяине; в методе —
+поле юнита, видимое из метода, то есть объявленное выше него. Более позднее объявление назад не
+действует. Свидетели — `unit_held_call_superseded`, `unit_held_call_superseded_refused`,
+`unit_held_call_superseded_caller_refused`, `unit_held_call_block`, `unit_held_call_block_refused`
+([§48 журнала](fable-continuation-20261003.md#site-selection)).
+
+<a id="held-callable-root-only"></a>
+### HELD-CALLABLE-ROOT-ONLY — 2026-10-04, fable, FIXED в sandbox (не выпущено)
+
+Удерживаемый callable искался только среди полей корня. Локал метода, объявленный записью callable
+merge, получал строку, но его вызов отвергался (`unknown method`, в форме оператора — `more arguments
+than h has formals`):
+
+```text
+fn: a (int: k) int
+    h: make2 k
+    return: h(1 2)
+end: a
+```
+
+Исправлено: владелец выбранной строки не важен, важна объявившая её запись. Свидетели —
+`unit_held_call_method_local` (по callable на активацию и на ветку), `unit_held_call_other_method_refused`
+([§48 журнала](fable-continuation-20261003.md#site-selection)).
+
+<a id="held-call-value-untyped"></a>
+### HELD-CALL-VALUE-UNTYPED — 2026-10-04, fable, FIXED в sandbox (не выпущено)
+
+Вызов удерживаемого callable, стоящий один справа от записи, отвергался: `r: h2(1 2)` —
+`assignment value has unknown type`. Воспроизводится на всех измеренных трансляторах до
+`fable_full_17`. Типизатор одиночного значения знал вызов метода и предопределённой функции, но не
+удерживаемого callable.
+
+Исправлено: тип — результат заголовка (`l2_mad_held_value_ty`). Свидетели — `unit_held_call_assigned`
+(int и unsigned, корень и метод), `unit_held_call_assigned_type_refused`
+([§48 журнала](fable-continuation-20261003.md#site-selection)).
+
+<a id="held-nullary-statement-structure-route"></a>
+### HELD-NULLARY-STATEMENT-STRUCTURE-ROUTE — 2026-10-04, fable, FIXED в sandbox (не выпущено)
+
+Оператор `p0()` под нульарным удерживаемым callable уходил в исполнение именованной Structure и
+отвергался: `executing a named Structure is not supported yet`. Воспроизводится на всех измеренных
+трансляторах до `fable_full_17`. Найдено инвентаризацией вызывающих классификатора без места.
+
+Исправлено: `l2_empty_struct_assign_shape` спрашивает удерживаемый callable места, как спрашивает
+его формалы. Свидетель — `unit_held_call_nullary_statement`
+([§48 журнала](fable-continuation-20261003.md#site-selection)).
+
+<a id="held-bare-name-statement"></a>
+### HELD-BARE-NAME-STATEMENT — 2026-10-04, fable, OPEN
+
+Голое имя нульарного удерживаемого callable как оператор отвергается:
+
+```text
+p0: make0 100
+p0                 # отказ: executing a named Structure is not supported yet
+```
+
+По норме голое имя — тот же нульарный вход. Маршрут другой, чем у `p0()`: голый атом идёт в
+`l2_check_struct_call`, а вызову удерживаемого callable в проверке, графе и нативной эмиссии нужен
+Frame. Не исправлено. Помеченная временная проба текущего отказа —
+`unit_held_call_bare_name_limit_probe`; она не норма.
+
+<a id="held-forward-lookup"></a>
+### HELD-FORWARD-LOOKUP — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-09, OPEN (помеченный долг)
+
+Метод, стоящий выше всех объявлений имени, не выбирает строки: имя для него свободное. Удерживаемый
+callable для такого метода по-прежнему находится по последнему объявлению имени на входе
+(`l2_mad_held`). Это поиск одних удерживаемых callable рядом с обычным выбором строки, а не правило
+видимости: карта ядра, §13.3, делает допустимым лексическим запасным путём объявление родителя,
+стоящее перед определением вызываемого, и о стоящем после ничего не говорит. Оставлено, потому что
+так отвечали все прежние трансляторы и по этому пути работают программы; их держит
+`unit_held_call_above`. Форму `h2: 5 6` под таким заголовком не держит ни одна строка: это открытый
+вопрос автора о неизвестной голове. Поиск уходит, когда решена роль заголовка вызова — свободного
+имени.
+
+<a id="held-store-factory-actuals-positional"></a>
+### HELD-STORE-FACTORY-ACTUALS-POSITIONAL — 2026-10-04, fable, OPEN
+
+Запись callable merge распознаётся только с позиционными фактическими фабрики:
+`h2: make2 100` — запись, а `h2: make2(n: 100)` — нет (форма требует атом после заголовка), и
+последующий вызов `h2(1 2)` отвергается, `unknown method`. Так отвечают все измеренные трансляторы.
+Строки гейта нет.
+
 <a id="held-header-names-not-actual-interface"></a>
 ### HELD-HEADER-NAMES-NOT-ACTUAL-INTERFACE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-08, OPEN
 

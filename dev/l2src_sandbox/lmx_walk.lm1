@@ -1773,6 +1773,32 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         if: lmx_walk_value_number(@ other, @ ub, @ b) != c.LMX_WALK_OK
             return: c.LMX_WALK_INVALID
         return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (ub != 0U)))
+    # A prefix sign: one operand, evaluated once. The C99 integer promotion
+    # comes first, as for every arithmetic operand below; the result has the
+    # promoted type. Negation is the unsigned one of the stored width, which is
+    # the two's complement negation for an int.
+    if: op = c.LMX_WALK_OP_NEG || op = c.LMX_WALK_OP_POS
+        if: code\array.size != 2U
+            return: c.LMX_WALK_INVALID
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: lmx_walk_value_number(@ value, @ ua, @ a) != c.LMX_WALK_OK
+            return: c.LMX_WALK_INVALID
+        if: a = c.LMX_TYPE_CHAR
+            a: c.LMX_TYPE_INT
+            if: c.CHAR_MAX > c.INT_MAX
+                a: c.LMX_TYPE_UNSIGNED
+        ---
+        if: a = c.LMX_TYPE_UNSIGNED_CHAR
+            a: c.LMX_TYPE_INT
+            if: c.UCHAR_MAX > c.INT_MAX
+                a: c.LMX_TYPE_UNSIGNED
+        ---
+        wv: ua
+        if: op = c.LMX_WALK_OP_NEG
+            wv: 0U - ua
+        return: lmx_walk_value_num(out, a, wv)
     if: op = c.LMX_WALK_OP_ADD || op = c.LMX_WALK_OP_SUB || op = c.LMX_WALK_OP_MUL || op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD || op = c.LMX_WALK_OP_LT || op = c.LMX_WALK_OP_EQ
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ value)
         if: status != c.LMX_WALK_OK

@@ -1435,3 +1435,129 @@ walker and driver unchanged.
 | `fable_full_01` (RED 126/1395, baseline) | 96 | 0 | | |
 
 The kernel and L3 gates were not rerun: no kernel source changed.
+
+<a id="prefix-sign"></a>
+## 35. Prefix signs: one retained operator with one operand
+
+The defect ([PREFIX-MINUS-NOT-AN-OPERAND](defects.md#prefix-minus-not-an-operand))
+and its direction are in [section 32](#written-body-and-prefix-ruling). Before
+this slice a sign was no operand anywhere but in native text. Measured by
+probes on the committed translator: the declarations `int: c -b`,
+`int: g 2 * -b` and `int: f - 1` were refused as an unsupported body,
+`int: d -(b + 1)` as an unknown method, and the store `h: -b`, which the
+check pass let through, was refused by the graph producer.
+
+**Mechanism.** One recognition, read by every pass.
+
+- *Where a sign is a prefix.* `l2_prefix_sign` knows `-` and `+`.
+  `l2_operand_run` takes a sign and the operand after it as one operand, to
+  any depth. It is asked only where an operand begins (`l2_expr_span`, the
+  even places of `l2_value_spans`), so a `-` between two operands stays the
+  binary operator whatever the spacing: `a - -b` is a minus and a sign.
+  `l2_prefix_rest` gives the operand of such a span. A sign written against a
+  group, `-(a + b)`, is a Frame headed by the sign in P0; `l2_prefix_frame`
+  reads it as the same prefix over the group.
+- *Typing.* The result has the operand's type promoted as C promotes it
+  (`l2_rw_unify` of the type with itself): a char gives an int, every other
+  type stays, a literal alone stays a literal and takes its place's type. The
+  same rule in native typing (`l2_native_span_ty`, `l2_native_leaf_ty`,
+  `l2_colon_simple_ty` for a group taken as a whole value) and in graph typing
+  (`l2_rw_span_ty`, `l2_rw_opty`).
+- *The kind rule.* A reference or a text under a sign is refused where it
+  stands, with the messages of every other operation (`l2_prefix_native_ty`;
+  `l2_check_value_kinds` now reaches an operation of two fields;
+  `l2_prefix_kind_refused` for the group form, in the check of an operand and
+  of an assigned value).
+- *Native code.* The field form already went out as text. The group form is
+  the group's value, prepared as any group is, under the sign (`l2_prep`). C
+  promotes and negates.
+- *Graph.* `NEG [operand]` and `POS [operand]` (`LMX_WALK_OP_NEG` 48,
+  `LMX_WALK_OP_POS` 49), width 2, at the operand's place
+  (`l2_rw_prefix`, `l2_rw_prefix_group`). Nothing else stands for a sign: no
+  subtraction from a zero the source does not have, no signed literal made of
+  an operator and its operand. `- 1` is `NEG [LIT 1]`.
+- *Interpreter.* The operand is evaluated once; the C99 integer promotion
+  comes first, as for the binary operations; `NEG` negates in the promoted
+  width (an unsigned type wraps, the least int is its own negation), `POS`
+  leaves the value. A reference operand, no operand and a width other than 2
+  are `LMX_WALK_INVALID`.
+- The driver's shape grammar reads the words `NEG` and `POS`.
+
+**What is not done.**
+
+- The prefixes `!`, `~`, `++` and `--` are not built, as before.
+- A sign written against a call head, `-mark(3)`, is one Frame headed
+  `-mark` in P0: the parser does not split an operator from a call head. The
+  same holds for `2+mark(3)`. It is a parser gap, older than this slice
+  ([P0-OPERATOR-BEFORE-CALL-HEAD](defects.md#p0-operator-before-call-head));
+  the witness writes `- mark(3)`.
+- An operand whose type the native typer does not know (a raw pointer) is
+  left to the C compiler, as in every binary operation.
+- The sign of a char stored into a char needs the conversion's receiver, like
+  any int stored into a char; the retained graph has no conversion of its own.
+
+**Verification.**
+
+- Recovered: `unit_named_actual_whole` (`f(a: 8; b: - 1)`), now with path
+  facts on the named actual and a new walked twin.
+- New `unit_prefix_sign` and its walked twin (root and ten methods walked):
+  `-x`, `-(a + b)`, `- -x`, `a - -b`, `- mark(3)` with the trace 3, `+x`, a
+  sign in a condition, in a declaration, under `*` in a store, over a literal
+  in an actual, over a group as a whole stored value, and `-n + 2U` over a
+  size_t that wraps. Path facts hold every sign as `NEG` or `POS` of width 2
+  over its operand, and the literal under the sign of the actual as 1. One
+  shape mutant empties a sign's operand.
+- New refusals: `unit_prefix_sign_ref_refused` and
+  `unit_prefix_sign_group_ref_refused` (a Structure under a sign, located at
+  the operand), `unit_prefix_sign_text_refused`,
+  `unit_prefix_sign_char_promoted_refused` (the sign of a char is an int:
+  storing it into a char asks for the conversion's receiver).
+- New kernel selftest `lmx_walk_prefix_sign_selftest` (29 checks): int,
+  size_t, unsigned and ulong operands, the promotion of a char and of an
+  unsigned char for `NEG` and for `POS`, a sign over a sign, the least int,
+  and the refusals of a reference operand, of no operand and of a width other
+  than 2.
+- Kernel mutants on a copy of the live kernel sources, built with a kernel
+  gate's flags: a char keeps its type (2 checks fail), `NEG` leaves the value
+  (6), a sign of any width is run (1), `POS` negates (2).
+- Translator mutants through a focused harness run, the live file restored
+  and its hash re-verified after each. `-x` retained as a subtraction from an
+  invented zero (`fable_prefix_mut_zerosub`): the native rows still run to
+  their exit 7 and fail 23 and 3 shape facts with no other failure; the walked
+  twin stops on the invalid subtraction of an int zero from a size_t. A sign
+  that begins no operand (`fable_prefix_mut_norun`): the positive rows are
+  refused and the field-form refusals fail with another message. No kind rule
+  under a sign (`fable_prefix_mut_nokind`): the reference and the text row of
+  the field form are red. The group row stayed green under it: its group was
+  `b + 1`, and the binary rule inside the group refused the reference before
+  the sign was asked. The witness now holds the reference alone, `-(b)`, and a
+  probe under the same mutant shows the other message (`assignment value has
+  unknown type`). The result keeps the operand's type
+  (`fable_prefix_mut_nopromote`): the char row alone is red.
+- Focused `fable_prefix_01` (74 targets: the prefix rows, every named-actual,
+  value-kind, conversion and literal row): red only the known
+  `unit_t7_convert`.
+
+<a id="full-14"></a>
+## 36. Full, kernel and L3 gates after section 35
+
+`fable_full_14` completes **RED 31/1462** on translator SHA256
+`5FFE807D07F4206656D2BB77EF15EE4A2674ABEA3CCBFAEA3FEB60E62AA73367`
+(staged Git blob `964c3012bb38dfe5c0967c2a440e98bb66c39137`), walker
+`2CB95DC8582FA05BE37B4C99EC5962E69AA0BB2F482087C12E2B88C30A9C411E`, walker header
+`D101FEAEE6D4701A711B94CCAB7B89748B361ED81BBFD9B9A0DF7E0085DA8E1D`, driver
+`C34DCAB3FEA5C06CA732BFFE842C742D2EACF62EC944C61A59F18D005BC26BDB`, harness
+`894F1D77F661B1759A23AA460D50E198606A529F95A9F21C4B0D7968BEB1B723`.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_13` (RED 32/1454) | 1 | 0 | 8 | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 97 | 0 | | |
+
+The kernel sources changed, so both kernel gates were rerun on the same
+bytes before the full gate:
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_04` (`build_l2src.ps1 -Run -KeepAll`) | GREEN, 294 targets; 111 selftests executed, all but the expected-fatal close-watchdog selftest with exit 0, that one with exit 3 as required. One target and one selftest more than `fable_kernel_03`: `lmx_walk_prefix_sign_selftest`. |
+| `build/l3_selftest/fable_l3_03` (`run_l3_selftest.py`) | all 11 suites exit 0; four type-budget units 75/128 names, 1070/8192 bytes. |

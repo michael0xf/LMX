@@ -1,0 +1,104 @@
+# A prefix sign is one operator over one operand (grammar, operators): the
+# sign of a name, of a group, of a sign, of a call, after a binary minus, in a
+# condition, in a declaration, in a store and in an actual, and the unary plus.
+# What tells a prefix from the binary operator is where it stands, not the
+# spacing: `a - -b` is a minus and a sign, `-x` and `- x` the same sign. The
+# operand is evaluated once: mark appends its argument to the unit's trace,
+# and the trace is 3. An unsigned operand keeps its type and wraps. Entry 7.
+int: trace 0
+
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: neg (int: x) int
+    return: -x
+end: neg
+
+fn: grp (int: a; int: b) int
+    return: -(a + b)
+end: grp
+
+fn: twice (int: x) int
+    return: - -x
+end: twice
+
+fn: after (int: a; int: b) int
+    return: a - -b
+end: after
+
+fn: once () int
+    return: - mark(3)
+end: once
+
+fn: plus (int: x) int
+    return: +x
+end: plus
+
+fn: cond (int: x) int
+    if: -x < 0
+        return: 1
+    return: 0
+end: cond
+
+fn: wide (size_t: n) size_t
+    return: -n + 2U
+end: wide
+
+int: x 5
+int: y 2
+int: a neg(x)
+if: a != -5
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+int: b grp(x; y)
+if: b != -7
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+int: d twice(x)
+if: d != 5
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+int: e after(x; y)
+if: e != 7
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+int: f once()
+int: t seen()
+if: f != -3 || t != 3
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+int: g plus(x)
+if: g != 5
+    sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+    return
+int: h cond(x)
+if: h != 1
+    sendMessage: exit(exit_code: 87; stdout: ""; stderr: "")
+    return
+int: i -x
+int: j 0
+j: 2 * -y
+if: i != -5 || j != -4
+    sendMessage: exit(exit_code: 88; stdout: ""; stderr: "")
+    return
+int: k neg(- 1)
+if: k != 1
+    sendMessage: exit(exit_code: 89; stdout: ""; stderr: "")
+    return
+int: m 0
+m: -(x + y)
+if: m != -7
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
+size_t: w wide(1U)
+if: w != 1U
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

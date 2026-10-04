@@ -1,0 +1,14 @@
+# A prefix sign promotes its operand as C does: the sign of a char is an int.
+# Storing it back into a char is a conversion and needs the conversion's
+# receiver, which this program does not have. The sign's result is not forced
+# back to the type of its operand.
+fn: peek () int
+    char: c 65
+    char: d 0
+    d: -c
+    return: 0
+end: peek
+int: r 0
+r: peek()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

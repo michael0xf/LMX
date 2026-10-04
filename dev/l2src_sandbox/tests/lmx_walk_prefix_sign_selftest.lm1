@@ -1,0 +1,198 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
+
+# A prefix sign over one operand: NEG [neg, operand] and POS [pos, operand].
+# The operand is evaluated once and promoted as C promotes it: a char and an
+# unsigned char become an int, every other type stays. NEG negates the promoted
+# value in its own width -- an unsigned type wraps, the least int is its own
+# negation -- and POS leaves it. A reference has no sign; a sign with no
+# operand, or with a place past its operand, is not a node the walker runs.
+
+sub: ps_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: ps_check
+
+fn: ps_fr (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n 0
+    if: parent = 0
+        return: 0
+    n: lmx_walk_frame(arena, roles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        return: 0
+return: n
+
+# A fresh caller: RET [ret, <the expression goes to child 1>]. The result is
+# the RET; its owner is \caller.
+fn: ps_ret (@: LmxArena arena; @: Lmx roles; @@: Lmx caller) @: Lmx
+    @: Lmx holder lmx_node_new_owned(arena)
+    \caller: 0
+    if: holder = 0 || lmx_arena_refs_open_owned(arena, holder, 1U) != 0
+        return: 0
+    \caller: holder
+return: ps_fr(arena, roles, holder, 0U, c.LMX_WALK_OP_RET, 2U)
+
+# LIT [lit, cell] of one numeric type at a slot: 0 int, 1 size_t, 2 unsigned,
+# 3 ulong, 4 char, 5 unsigned char.
+fn: ps_lit (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: kind; size_t: v) @: Lmx
+    @: Lmx n ps_fr(arena, roles, parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    @: void cell 0
+    int: st c.LMX_WALK_INVALID
+    if: n = 0
+        return: 0
+    if: kind = 0
+        st: lmx_walk_store_int(arena, n, 1U, (cast: (int) v))
+    if: kind = 1
+        st: lmx_walk_store_size(arena, n, 1U, v)
+    if: kind = 2
+        st: lmx_walk_store_unsigned(arena, n, 1U, (cast: (unsigned) v))
+    if: kind = 3
+        st: lmx_walk_store_ulong(arena, n, 1U, (cast: (ulong) v))
+    if: kind = 4
+        st: lmx_walk_store_char(arena, n, 1U, (cast: (int) v))
+    if: kind = 5
+        cell: lmx_uchar_new_owned(arena)
+        if: cell != 0 && lmx_uchar_store_known(cell, (cast: (unsigned char) v)) = 0 && lmx_arena_ref_store(n, 1U, cell) = 0
+            st: c.LMX_WALK_OK
+        ---
+    ---
+    if: st != c.LMX_WALK_OK
+        return: 0
+return: n
+
+# RET [ret, SIGN [sign, LIT]]: one sign over one literal. The caller in \caller.
+fn: ps_one (@: LmxArena arena; @: Lmx roles; int: op; int: kind; size_t: v; @@: Lmx caller) int
+    @: Lmx ret ps_ret(arena, roles, caller)
+    @: Lmx sign ps_fr(arena, roles, ret, 1U, op, 2U)
+    if: sign = 0 || ps_lit(arena, roles, sign, 1U, kind, v) = 0
+        return: 1
+return: 0
+
+# 0: walked to a number, left in \value. 1: refused as INVALID. 2: anything else.
+fn: ps_run (@: LmxWalkContext ctx; @: Lmx caller; @: LmxWalkValue value) int
+    int: st
+    if: caller = 0
+        return: 2
+    st: lmx_walk_activate(ctx, caller, caller, 0, 0U, value)
+    if: st = c.LMX_WALK_INVALID
+        return: 1
+    if: st != c.LMX_WALK_OK || value\present = 0 || value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: 2
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxScratch: scratch
+    LmxPool: cells
+    LmxWalkContext: ctx
+    LmxWalkValue: value
+    @: Lmx roles 0
+    @: Lmx caller 0
+    @: Lmx ret 0
+    @: Lmx sign 0
+    @: Lmx inner 0
+    int: failures 0
+
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_scratch_open(@ scratch, @ arena, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ arena)
+        free(counts)
+        return: 2
+    ---
+    roles: lmx_walk_roles_open(@ arena)
+    ps_check(counts, roles != 0, "roles opened")
+    ctx.arena: @ arena
+    ctx.scratch: @ scratch
+    ctx.roles: roles
+
+    # -- An int: the sign's own type.
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_NEG, 0, 5U, @ caller) = 0, "NEG over the int 5 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 0 - 5, "NEG over the int 5 is the int -5")
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_POS, 0, 5U, @ caller) = 0, "POS over the int 5 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 5, "POS over the int 5 is the int 5")
+
+    # A sign over a sign: RET [ret, NEG [neg, NEG [neg, LIT 5]]].
+    ret: ps_ret(@ arena, roles, @ caller)
+    sign: ps_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_NEG, 2U)
+    inner: ps_fr(@ arena, roles, sign, 1U, c.LMX_WALK_OP_NEG, 2U)
+    ps_check(counts, inner != 0 && ps_lit(@ arena, roles, inner, 1U, 0, 5U) != 0, "NEG over NEG built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 5, "NEG over NEG over 5 is 5")
+
+    # The least int is its own negation; nothing traps.
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_NEG, 0, (cast: (size_t) c.INT_MIN), @ caller) = 0, "NEG over the least int built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = c.INT_MIN, "NEG over the least int is the least int")
+
+    # -- Unsigned types keep their type and wrap.
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_NEG, 1, 1U, @ caller) = 0, "NEG over the size_t 1 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_SIZE_T && (value.wide) + 1U = 0U, "NEG over the size_t 1 is the greatest size_t")
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_NEG, 2, 1U, @ caller) = 0, "NEG over the unsigned 1 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_UNSIGNED && (value.natural) + 1U = 0U, "NEG over the unsigned 1 is the greatest unsigned")
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_NEG, 3, 1U, @ caller) = 0, "NEG over the ulong 1 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_ULONG && (value.longnum) + 1U = 0U, "NEG over the ulong 1 is the greatest ulong")
+
+    # -- A char and an unsigned char are promoted: the result is an int, for
+    # POS too, where nothing else changes.
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_NEG, 4, 65U, @ caller) = 0, "NEG over the char 65 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 0 - 65, "NEG over the char 65 is the int -65")
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_POS, 4, 65U, @ caller) = 0, "POS over the char 65 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 65, "POS over the char 65 is the int 65, not a char")
+    ps_check(counts, ps_one(@ arena, roles, c.LMX_WALK_OP_NEG, 5, 200U, @ caller) = 0, "NEG over the unsigned char 200 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 0 - 200, "NEG over the unsigned char 200 is the int -200")
+
+    # -- Refusals.
+    # A reference has no sign: RET [ret, NEG [neg, SELF]].
+    ret: ps_ret(@ arena, roles, @ caller)
+    sign: ps_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_NEG, 2U)
+    ps_check(counts, sign != 0 && ps_fr(@ arena, roles, sign, 1U, c.LMX_WALK_OP_SELF, 1U) != 0, "NEG over a reference built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 1, "NEG over a reference is refused")
+
+    # No operand.
+    ret: ps_ret(@ arena, roles, @ caller)
+    sign: ps_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_NEG, 2U)
+    ps_check(counts, sign != 0, "NEG with an empty operand place built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 1, "NEG with no operand is refused")
+    ret: ps_ret(@ arena, roles, @ caller)
+    sign: ps_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_POS, 1U)
+    ps_check(counts, sign != 0, "POS with no operand place built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 1, "POS with no operand place is refused")
+
+    # A place past the operand: a sign is not a subtraction with a missing side.
+    ret: ps_ret(@ arena, roles, @ caller)
+    sign: ps_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_NEG, 3U)
+    ps_check(counts, sign != 0 && ps_lit(@ arena, roles, sign, 1U, 0, 5U) != 0 && ps_lit(@ arena, roles, sign, 2U, 0, 2U) != 0, "NEG of width 3 built")
+    ps_check(counts, ps_run(@ ctx, caller, @ value) = 1, "NEG with two operands is refused")
+
+    failures: counts[1]
+    c.printf("lmx_walk_prefix_sign_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        return: 1
+return: 0

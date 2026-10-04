@@ -1802,6 +1802,33 @@ $namedActualCallableShape = @(
     'rolepath','4','5','2','1','6','47','0','widthpath','4','5','2','1','6','3',
     'namepath','4','5','2','1','6','a','sizepath','5','5','2','1','6','1','0','rolepath','5','5','2','1','6','2','2','0')
 
+# A prefix sign is one retained operator with one operand: NEG (48) for `-`,
+# POS (49) for `+`, width 2. Unit children 4..11 are neg, grp, twice, after,
+# once, plus, cond, wide. neg: NEG over the formal. grp: NEG over the ADD of a
+# group. twice: NEG over NEG. after: SUB whose right operand is NEG. once: NEG
+# over the CALL. plus: POS. cond: NEG under LT. wide: NEG under ADD. The root:
+# NEG over its own x (40), under MUL (43), over the literal 1 in an actual (46;
+# the literal is 1, not a signed -1) and over a group as a whole value (50).
+$prefixSignShape = @(
+    'rolepath','3','4','2','1','48','0','widthpath','3','4','2','1','2','rolepath','4','4','2','1','1','5','0',
+    'rolepath','3','5','2','1','48','0','widthpath','3','5','2','1','2','rolepath','4','5','2','1','1','9','0',
+    'rolepath','3','6','2','1','48','0','rolepath','4','6','2','1','1','48','0','rolepath','5','6','2','1','1','1','5','0',
+    'rolepath','3','7','2','1','10','0','rolepath','4','7','2','1','1','5','0','rolepath','4','7','2','1','2','48','0','widthpath','4','7','2','1','2','2',
+    'rolepath','3','8','2','1','48','0','rolepath','4','8','2','1','1','2','0',
+    'rolepath','3','9','2','1','49','0','widthpath','3','9','2','1','2','rolepath','4','9','2','1','1','5','0',
+    'rolepath','4','10','2','1','1','48','0',
+    'rolepath','4','11','2','1','1','48','0',
+    'rolepath','2','40','2','48','0','widthpath','2','40','2','2','rolepath','3','40','2','1','4','0',
+    'rolepath','3','43','2','2','48','0',
+    'rolepath','3','46','2','2','48','0','rolepath','4','46','2','2','1','3','0','intpath','5','46','2','2','1','1','1',
+    'rolepath','2','50','2','48','0','rolepath','3','50','2','1','9','0')
+# The original witness: h (unit child 1) stores f(a: 8; b: - 1). The named
+# actual b keeps its sign over the literal 1.
+$prefixSignNamedActualShape = @(
+    'rolepath','4','1','4','2','3','47','0','namepath','4','1','4','2','3','b',
+    'rolepath','5','1','4','2','3','2','48','0','widthpath','5','1','4','2','3','2','2',
+    'rolepath','6','1','4','2','3','2','1','3','0','intpath','7','1','4','2','3','2','1','1','1')
+
 # Formal invocations select ARG, not the unit method of the same spelling.
 # Native words stay selected; these facts certify retained source, not the
 # currently excluded --walk-methods callable-formal execution profile.
@@ -6848,8 +6875,31 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_formal_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_actual_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_named_actual_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $prefixSignNamedActualShape; Entry = 7; NativeMethods = @(0,1);
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_named_actual_whole.lm2'; Source = 'unit_named_actual_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $prefixSignNamedActualShape; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    # A prefix sign (grammar, operators): one operator over one operand, told from the binary operator by
+    # where it stands. Over a name, a group, a sign, a call evaluated once, after a binary minus, in a
+    # condition, a declaration, a store and an actual; the unary plus; an unsigned operand that wraps.
+    # Natively, and with the root and the ten methods walked. The path facts hold the retained shape: a
+    # subtraction from an invented zero gives the same numbers and fails them.
+    [pscustomobject]@{ Name = 'unit_prefix_sign.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $prefixSignShape; Entry = 7; NativeMethods = @(0,1,2,3,4,5,6,7,8,9);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_prefix_sign_walk.lm2'; Source = 'unit_prefix_sign.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $prefixSignShape; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7,8,9);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_prefix_sign_operand_mutant.lm2'; Source = 'unit_prefix_sign.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','4','4','2','1','1') + $prefixSignShape; Entry = 7; Absent = @(); Debt = @() },
+    # The kind rule under a sign: a reference and a text are refused where they stand, in the field
+    # form and inside a group. The sign of a char is an int: storing it into a char is a conversion.
+    [pscustomobject]@{ Name = 'unit_prefix_sign_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_prefix_sign_ref_refused.lm2:10:9: a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_prefix_sign_group_ref_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_prefix_sign_group_ref_refused.lm2:11:10: a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_prefix_sign_text_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_prefix_sign_text_refused.lm2:8:10: a text where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_prefix_sign_char_promoted_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_prefix_sign_char_promoted_refused.lm2:8:5: the program has no method `lm_stg_convert_int_char`, the receiver of this conversion'; Absent = @(); Debt = @() },
     # REVIEW 394f6a9: a callee's formals have no bound -- 17 bound by position and by name past the sixteenth
     # (fable_pc's P62 a; red under a copy with the former 16-slot binding: "internal: a callee with more formals
     # than a binding holds"); a named call in a method's `return:` trailer, outside its body (M54, P62 c; red

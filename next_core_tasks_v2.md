@@ -32,11 +32,10 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_13` RED32/1454 — 96 FAIL→OK against that
-baseline, no OK→FAIL ([gate](steps/fable-continuation-20261003.md#full-13));
-kernel `fable_kernel_03` GREEN293 with 110 executed selftests; L3
-`fable_l3_02` 11 suites/four budgets
-([gates](steps/fable-continuation-20261003.md#full-12)). The checkpoint gate
+continuation bytes: `fable_full_14` RED31/1462 — 97 FAIL→OK against that
+baseline, no OK→FAIL; kernel `fable_kernel_04` GREEN294 with 111 executed
+selftests; L3 `fable_l3_03` 11 suites/four budgets
+([gates](steps/fable-continuation-20261003.md#full-14)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -123,11 +122,14 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   Today the body holds the bound projection after the binding pass. Also: the
   interpreter does not yet run a callable formal's invocation
   (`--walk-methods` excludes callable formals).
-- [ ] Prefix operators in the shared expression producer: a retained unary
-  operator with one source operand, for expressions, returns and actuals; no
-  invented zero subtraction; `unit_named_actual_whole` is the red witness
-  ([defect](steps/defects.md#prefix-minus-not-an-operand),
+- [x] Prefix signs `-` and `+` in the shared expression producer: a retained
+  unary operator with one source operand (`NEG`, `POS`), for expressions,
+  returns and actuals; no invented zero subtraction
+  ([ledger](steps/fable-continuation-20261003.md#prefix-sign),
   [ruling](steps/fable-continuation-20261003.md#written-body-and-prefix-ruling)).
+- [ ] The other prefixes of the grammar (`!`, `~`, `++`, `--`), not built; and
+  the P0 parser's split of an operator written against a call head
+  ([defect](steps/defects.md#p0-operator-before-call-head)).
 - [x] A path through a merge result's reference field, read and store, with
   the store admitted to the field's model
   ([ledger](steps/fable-continuation-20261003.md#merge-result-reference-field)).

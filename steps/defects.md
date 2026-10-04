@@ -2131,7 +2131,7 @@ int: w f(b: mark(1); a: mark(2))
 привязки.
 
 <a id="prefix-minus-not-an-operand"></a>
-### PREFIX-MINUS-NOT-AN-OPERAND — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-02, OPEN
+### PREFIX-MINUS-NOT-AN-OPERAND — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-02, FIXED в sandbox (не выпущено)
 
 Префиксный минус не распознаётся как начало операнда:
 
@@ -2149,8 +2149,28 @@ fn: h () int
 текст в C как есть. Грамматика (раздел об операторах) перечисляет префиксы `+` и `-`, запись
 слитно с операндом — стиль, не граница P0. Решение Codex: удержанный унарный оператор с одним
 исходным операндом, общее распознавание для выражений, возвратов и аргументов, без `SUB(LIT 0, x)`
-в графе ([журнал](fable-continuation-20261003.md#written-body-and-prefix-ruling)). Свидетель —
-красная строка `unit_named_actual_whole`.
+в графе ([журнал](fable-continuation-20261003.md#written-body-and-prefix-ruling)). Исправлено:
+знак `-` или `+` в начале операнда — префикс; в графе он стоит как `NEG [операнд]` или
+`POS [операнд]`, тип результата — продвинутый по правилам C тип операнда. Свидетели
+`unit_named_actual_whole`, `unit_prefix_sign` (оба с обходимыми двойниками), четыре отказа и
+самотест ядра `lmx_walk_prefix_sign_selftest`
+([журнал](fable-continuation-20261003.md#prefix-sign)).
+
+<a id="p0-operator-before-call-head"></a>
+### P0-OPERATOR-BEFORE-CALL-HEAD — 2026-10-04, fable, OPEN
+
+Оператор, записанный слитно с головой вызова, не отделяется парсером P0:
+
+```text
+int: q -mark(3)
+int: p 2+mark(3)
+```
+
+P0 даёт один Frame с головой `-mark` и `2+mark`; транслятор отвечает `unknown method`. С пробелом
+(`- mark(3)`, `2 + mark(3)`) обе записи проходят. Грамматика: P0 разбивает слитные записи вроде
+`a+b*c==d` на поля и операторы; слитность префикса с операндом — стиль. Для головы вызова
+разбиение не выполняется. Это пробел парсера (четыре копии, отдельный порядок изменения), не
+транслятора выражений; найдено при проверке префиксного знака.
 
 <a id="receiving-use-full-receiver"></a>
 ### RECEIVING-USE-FULL-RECEIVER — 2026-10-03, fable по ответу Codex FABLE-CODEX-20261003-01, OPEN

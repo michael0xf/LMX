@@ -1117,6 +1117,10 @@ prototype:
     fn: l2_native_composite_ty (@: LmP0Field field; int: n; int: mi) int
     fn: l2_native_expr_ty (@: L2ValueSpan tok; int: lo; int: hi; int: mi) int
     fn: l2_native_group_ty (@: LmP0Field first; int: n; int: mi) int
+    fn: l2_prefix_sign (const: @(LmP0Text t)) int
+    fn: l2_prefix_frame (const: @(LmP0Node node)) int
+    fn: l2_prefix_native_ty (int: ty; const: @(LmP0Node at)) int
+    fn: l2_prefix_kind_refused (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_native_path_ty (const: @(LmP0Text t)) int
     fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
     fn: l2_path_store_converts (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
@@ -7901,6 +7905,19 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         return: l2_colon_bound_ty(mi, atom, out_ty)
     if: value\kind != c.LM_P0_NODE_FRAME || value\as\frame = 0 || value\as\frame\head = 0
         return: 1
+    # A prefix sign applied to a group: the group's own type, promoted as C
+    # promotes it; a group that is a literal alone is a number literal. A
+    # reference or a text under the sign has no type here: the kind rule says
+    # what it is (l2_prefix_kind_refused).
+    if: l2_prefix_frame(value) != 0
+        m: l2_prefix_native_ty(l2_native_group_ty(value\as\frame\body\first_field, l2_count_active(value\as\frame\body), mi), value)
+        if: m = 0 - 1 || m = 0 - 2
+            \out_ty: -10
+            return: 0
+        if: m >= 0 && l2_prim_code_name(m) != 0
+            \out_ty: m
+            return: 0
+        return: 1
     # sizeof: / length are operators whose result is size_t (storage bytes / element count).
     if: l2_text_eq(value\as\frame\head, "sizeof") || l2_text_eq(value\as\frame\head, "length")
         \out_ty: 2
@@ -9142,6 +9159,60 @@ return: 3
 # (0/1/2/3/36), or -3 when the composite is itself internally mixed (located "mixed numeric
 # types"), or -1 when it cannot be typed at all -- the caller's silent bypass, same as an
 # unresolved single value.
+# A prefix sign: `-` (1) or `+` (2). The grammar lists them among the prefix
+# operators and says that writing a prefix next to its operand is style, so the
+# token alone says nothing. The expression context does: the sign is a prefix
+# only where an operand begins (l2_operand_run), never where an operator stands.
+fn: l2_prefix_sign (const: @(LmP0Text t)) int
+    if: t = 0
+        return: 0
+    if: l2_text_eq(t, "-")
+        return: 1
+    if: l2_text_eq(t, "+")
+        return: 2
+return: 0
+
+# `-(a + b)`: P0 gives a sign written against a group as a Frame headed by the
+# sign. It is the same prefix over that group. 0 for any other node.
+fn: l2_prefix_frame (const: @(LmP0Node node)) int
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0 || node\as\frame\trailer != 0
+        return: 0
+return: l2_prefix_sign(node\as\frame\head)
+
+# The operand of a span that begins with a prefix sign: every field after the
+# sign. 1 when the span does not begin with one.
+fn: l2_prefix_rest (@: L2ValueSpan span; @: L2ValueSpan rest) int
+    @: LmP0Field f
+    if: span = 0 || rest = 0 || span\count < 2
+        return: 1
+    f: l2_next_active(span\first)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_prefix_sign(f\value\as\atom) = 0
+        return: 1
+    rest\first: l2_next_active(f\next)
+    rest\count: span\count - 1
+    if: rest\first = 0
+        return: 1
+    rest\node: rest\first\value
+return: 0
+
+# The native kind of a prefix sign's result from its operand's: the operand
+# promoted as C promotes it (l2_rw_unify of a type with itself). A reference or
+# a text is no number: the kind rule's own refusals, located at the operand.
+fn: l2_prefix_native_ty (int: ty; const: @(LmP0Node at)) int
+    if: ty <= 0 - 15 && ty >= 0 - 17
+        return: ty
+    if: ty = 0 - 5
+        if: l2_kind_at = 0
+            l2_kind_at: (cast: (@: LmP0Node) at)
+        return: 0 - 15
+    if: ty = 0 - 6
+        if: l2_kind_at = 0
+            l2_kind_at: (cast: (@: LmP0Node) at)
+        return: 0 - 16
+    if: ty = 0 - 99 || ty = 0 - 3
+        return: ty
+return: l2_rw_unify(ty, ty)
+
 fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
     @: LmP0Text t
     int: neg 0
@@ -9191,6 +9262,8 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
             return: 0 - 99
         return: ty
     if: node\kind = c.LM_P0_NODE_FRAME
+        if: l2_prefix_frame(node) != 0
+            return: l2_prefix_native_ty(l2_native_group_ty(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi), node)
         # A callable formal's call: its contract's result (l2_native_cf_ty).
         if: node\as\frame != 0 && l2_native_cf_ty(mi, node\as\frame\head) != 0 - 100
             return: l2_native_cf_ty(mi, node\as\frame\head)
@@ -9209,6 +9282,29 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
             return: 0 - 99
         return: l2_native_group_ty(node\as\structure\first_field, l2_count_active(node\as\structure), mi)
 return: 0 - 99
+
+# The kind rule over a prefix sign applied to a group: a reference or a text
+# under the sign is refused where it stands, and two numeric types in the
+# group are a conversion. 1: refused, said. 0: nothing to say.
+fn: l2_prefix_kind_refused (const: @(LmP0Node node); int: mi; const: @(char path)) int
+    int: ty
+    @: LmP0Node where
+    if: l2_prefix_frame(node) = 0
+        return: 0
+    l2_kind_at: 0
+    ty: l2_native_leaf_ty(node, mi)
+    where: l2_kind_at
+    if: where = 0
+        where: (cast: (@: LmP0Node) node)
+    if: ty = 0 - 15
+        return: l2_error(path, where, "a reference where a number is asked")
+    if: ty = 0 - 16
+        return: l2_error(path, where, "a text where a number is asked")
+    if: ty = 0 - 17
+        return: l2_error(path, where, "a reference compared with a number other than 0")
+    if: ty = 0 - 3
+        return: l2_error(path, where, "mixed numeric types (a conversion)")
+return: 0
 
 # Is value the bare name of a callable formal of method mi -- named where a value is consumed, its call?
 fn: l2_cf_named (int: mi; const: @(LmP0Node value)) int
@@ -9763,6 +9859,8 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
         value_ty: descriptor\type
     else:
         if: n = 1
+            if: only != 0 && l2_prefix_kind_refused(only\value, mi, path) != 0
+                return: 1
             if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
                 return: l2_error(path, stmt, "assignment value has unknown type")
         ---
@@ -23674,6 +23772,14 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: 0
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
         return: l2_check_addr(node, mi, path)
+    # A prefix sign applied to a group, `-(a + b)`: the group is checked as the
+    # expression it is, and the kind rule asks a number of it.
+    if: l2_prefix_frame(node) != 0
+        if: l2_count_active(node\as\frame\body) < 1
+            return: l2_error(path, node, "a prefix sign needs an operand")
+        if: l2_check_fields(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, path, node) != 0
+            return: 1
+        return: l2_prefix_kind_refused(node, mi, path)
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0
         return: l2_check_fields(node\as\structure\first_field, l2_count_active(node\as\structure), mi, path, node)
     if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
@@ -24777,7 +24883,14 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
     int: m
     int: ty
     @: LmP0Node where
-    if: field = 0 || n < 3
+    @: LmP0Field lead
+    L2ValueSpan: rest
+    # A prefix sign makes an operation of two fields: `- p` is checked as every
+    # operation is.
+    if: field = 0 || n < 2
+        return: 0
+    lead: l2_next_active(field)
+    if: n < 3 && (lead = 0 || lead\value = 0 || lead\value\kind != c.LM_P0_NODE_ATOM || lead\value\as = 0 || l2_prefix_sign(lead\value\as\atom) = 0)
         return: 0
     if: l2_ptr_arith_ty(field, n, mi, @ ty) = 0
         return: 0
@@ -24788,7 +24901,7 @@ fn: l2_check_value_kinds (@: LmP0Field field; int: n; int: mi; const: @(char pat
     tok: l2_value_spans(field, n, @ m)
     if: tok = 0
         return: 0
-    if: m < 3
+    if: m < 3 && l2_prefix_rest(tok, @ rest) != 0
         l2_xfree((cast: (@: void) tok))
         return: 0
     l2_kind_at: 0
@@ -27261,6 +27374,29 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: l2_tok_text(node\as\atom, dest, 256U)
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
         return: l2_prep_addr(node, mi, ind, dest)
+    # A prefix sign applied to a group: the group's value, as a group's is
+    # prepared just below, then the sign. C promotes and negates.
+    if: l2_prefix_frame(node) != 0
+        s2[0]: 0
+        s3[0]: 0
+        if: l2_fields_has_call(node\as\frame\body\first_field, l2_count_active(node\as\frame\body))
+            if: l2_eval_fields(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, ind, s2) != 0
+                return: 1
+            ---
+        else:
+            if: l2_emit_fields(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, ind, s2) != 0
+                return: 1
+            ---
+        ---
+        if: l2_prefix_frame(node) = 1
+            t: c.snprintf(s3, 1024U, "(- (%s))", s2)
+        else:
+            t: c.snprintf(s3, 1024U, "(+ (%s))", s2)
+        ---
+        if: t < 0 || t >= 1024
+            return: l2_error(l2_src, node, "expression too long")
+        memcpy(dest, s3, strlen(s3) + 1U)
+        return: 0
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0
         if: l2_fields_has_call(node\as\structure\first_field, l2_count_active(node\as\structure))
             return: l2_eval_fields(node\as\structure\first_field, l2_count_active(node\as\structure), mi, ind, dest)
@@ -29334,6 +29470,9 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0 && node\as\structure != 0
         return: l2_rw_fields_ty(node\as\structure\first_field, l2_count_active(node\as\structure))
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
+        if: l2_prefix_frame(node) != 0
+            ty: l2_rw_fields_ty(node\as\frame\body\first_field, l2_count_active(node\as\frame\body))
+            return: l2_rw_unify(ty, ty)
         idx: l2_call_head_method(l2_rw_mi, node\as\frame\head, @ formal)
         if: idx >= 0 && idx != l2_e
             return: l2_rw_call_ty(idx)
@@ -29493,6 +29632,17 @@ fn: l2_operand_run (@: LmP0Field first; int: count) int
     # before the same leading slash can be considered a raw dereference.
     if: count >= 5 && l2_occ_run(f) = 5
         return: 5
+    # A prefix sign and its operand are one operand; a sign before a sign is
+    # one too, to any depth. This is asked only where an operand begins, so a
+    # `-` between two operands stays the binary operator whatever the spacing.
+    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_prefix_sign(f\value\as\atom) != 0
+        if: count < 2
+            return: 0
+        run: l2_operand_run(l2_next_active(f\next), count - 1)
+        if: run < 1
+            return: 0
+        return: run + 1
+    ---
     if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && (l2_text_eq(f\value\as\atom, "@") != 0 || l2_is_slash(f\value\as\atom) != 0)
         if: count < 2
             return: 0
@@ -29583,6 +29733,8 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
     int: status
     int: own
     @: LmP0Node name
+    if: l2_prefix_rest(span, @ operand) = 0
+        return: l2_prefix_native_ty(l2_native_span_ty(@ operand, mi), (operand.node))
     own: l2_operand_occurrence(span\first, span\count, mi, @ name)
     if: own != -2
         if: own < 0
@@ -29650,6 +29802,11 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
     int: status
     int: own
     @: LmP0Node name
+    # A prefix sign: its operand's type, promoted as C promotes it. A literal
+    # alone stays a literal and takes its place's type.
+    if: l2_prefix_rest(span, @ operand) = 0
+        ty: l2_rw_span_ty(@ operand)
+        return: l2_rw_unify(ty, ty)
     own: l2_operand_occurrence(span\first, span\count, l2_rw_mi, @ name)
     if: own != -2
         if: own < 0
@@ -32884,6 +33041,63 @@ fn: l2_rw_indirect_span (@: L2ValueSpan operand; int: levels; int: source_type; 
         return: 1
 return: l2_rw_put(\out, 1, child)
 
+# The retained prefix sign: one operator with ONE operand, NEG for `-` and POS
+# for `+`, at the operand's place in `parent`. Nothing else stands for it: no
+# subtraction from a zero the source does not have, no signed literal made of
+# an operator and its operand.
+fn: l2_rw_prefix_node (int: sign; int: parent; @: int out) int
+    if: sign = 1
+        return: l2_rw_frame(parent, "LMX_WALK_OP_NEG", 2, out)
+return: l2_rw_frame(parent, "LMX_WALK_OP_POS", 2, out)
+
+# The type a prefix sign's operand is built with: its own static type `sub`,
+# or, for a literal alone, the type `ty` of the place. 0 and \out_ty, or the
+# refusal. A reference has no sign. A literal in a char's place would be
+# promoted to int by the sign and stored back into the char: a conversion.
+fn: l2_rw_prefix_operand_ty (const: @(LmP0Node at); int: opty; int: ty; @: int out_ty) int
+    if: opty = 0 - 3
+        return: l2_rw_refuse(at, "mixed numeric types (a conversion)")
+    if: opty >= 1000
+        return: l2_rw_refuse(at, "arithmetic on a reference")
+    if: opty < 0
+        if: ty = 1
+            return: l2_rw_refuse(at, "mixed numeric types (a conversion)")
+        if: ty >= 1000
+            return: l2_rw_refuse(at, "arithmetic on a reference")
+        opty: ty
+    ---
+    \out_ty: opty
+return: 0
+
+# A prefix sign and the fields after it, `- x`.
+fn: l2_rw_prefix (@: L2ValueSpan span; @: L2ValueSpan operand; int: ty; int: parent; @: int out) int
+    @: LmP0Field f l2_next_active(span\first)
+    int: opty 0
+    int: child
+    if: l2_rw_prefix_operand_ty(operand\node, l2_rw_span_ty(operand), ty, @ opty) != 0
+        return: 1
+    if: l2_rw_prefix_node(l2_prefix_sign(f\value\as\atom), parent, out) != 0
+        return: 1
+    if: l2_rw_span(operand, opty, \out, @ child) != 0 || l2_rw_put(\out, 1, child) != 0
+        return: 1
+return: 0
+
+# A prefix sign applied to a group, `-(a + b)`.
+fn: l2_rw_prefix_group (const: @(LmP0Node node); int: ty; int: parent; @: int out) int
+    @: LmP0Field first node\as\frame\body\first_field
+    int: n l2_count_active(node\as\frame\body)
+    int: opty 0
+    int: child
+    if: n < 1
+        return: l2_rw_refuse(node, "an empty operand")
+    if: l2_rw_prefix_operand_ty(node, l2_rw_fields_ty(first, n), ty, @ opty) != 0
+        return: 1
+    if: l2_rw_prefix_node(l2_prefix_frame(node), parent, out) != 0
+        return: 1
+    if: l2_rw_texpr(first, n, opty, \out, @ child) != 0 || l2_rw_put(\out, 1, child) != 0
+        return: 1
+return: 0
+
 fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) int
     int: v 0
     size_t: eix 0U
@@ -32906,6 +33120,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_texpr(node\as\structure\first_field, l2_count_active(node\as\structure), ty, parent, out)
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
         t: node\as\frame\head
+        if: l2_prefix_frame(node) != 0
+            return: l2_rw_prefix_group(node, ty, parent, out)
         if: l2_rw_external_head(t) != 0
             return: l2_rw_machine_application(node, parent, out)
         if: l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || (t != 0 && t\length > 0U && (t\data[0] = 64 || t\data[0] = 92))
@@ -33210,6 +33426,8 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
     int: status
     int: own
     @: LmP0Node name
+    if: l2_prefix_rest(span, @ operand) = 0
+        return: l2_rw_prefix(span, @ operand, ty, parent, out)
     own: l2_operand_occurrence(span\first, span\count, l2_rw_mi, @ name)
     if: own != -2
         if: own < 0

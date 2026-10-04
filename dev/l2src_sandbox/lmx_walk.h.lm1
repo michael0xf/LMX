@@ -262,7 +262,13 @@ define: LMX_WALK_OP_ELSE 46
 # the formal of its own position. The node's source name is the written name
 # of the formal. Outside a call's operands the node is not an expression.
 define: LMX_WALK_OP_NAMED 47
-define: LMX_WALK_OP_COUNT 48
+# [neg, operand], [pos, operand]: a prefix sign over its one operand. The
+# operand is evaluated once and promoted as C promotes it; NEG negates the
+# promoted value, POS leaves it. A written prefix stays one operator with one
+# operand: it is never a subtraction from an invented zero.
+define: LMX_WALK_OP_NEG 48
+define: LMX_WALK_OP_POS 49
+define: LMX_WALK_OP_COUNT 50
 # Source role of an operation, separate from its execution opcode. The shared
 # role record encodes source * OP_COUNT + opcode in its existing code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.

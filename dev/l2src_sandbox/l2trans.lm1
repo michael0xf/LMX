@@ -1385,6 +1385,16 @@ prototype:
     fn: l2_cfl_at (int: c; int: t; int: k) int
     fn: l2_cfl_formation (int: c; int: t; const: @(LmP0Node at); @: int out) int
     fn: l2_m_unit_level (int: mi) int
+    fn: l2_dyn_reads (int: m; int: k) int
+    fn: l2_dyn_fwd (int: m; int: k) int
+    fn: l2_hid_own_lex (int: m; int: k) int
+    fn: l2_hid_takes_absent (int: callee; int: k) int
+    fn: l2_hidden_lex (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
+    fn: l2_hidden_forward (int: mi; int: pi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
+    fn: l2_emit_hidden_ref (int: ft; const: @(char value); const: @(char ind); const: @(char dest)) int
+    fn: l2_emit_tramp_lex (int: i; int: k) int
+    fn: l2_rw_arg_lex (const: @(LmP0Node node); int: parent; int: pi; int: idx; int: k; @: int out) int
+    fn: l2_rw_lex_operand (const: @(LmP0Node node); int: idx; int: k; int: parent; @: int out) int
     fn: l2_method_sig_compatible (int: cand; int: req) int
     fn: l2_uses_is_slash (const: @(LmP0Text text)) int
     fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
@@ -26412,6 +26422,10 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
         return: l2_cap_host_src(mi, nm, ind, dest)
     pi: -1
     pi: l2_param_find(mi, nm)
+    # K04 S2: an input this caller only forwards is its entry of refs, not a value (l2_hidden_forward), until a
+    # field of that name declared in scope has bound it.
+    if: pi >= l2_m_arity[mi] && l2_dyn_fwd(mi, pi - l2_m_arity[mi]) != 0 && l2_formal_row(mi, pi) < 0
+        return: l2_hidden_forward(mi, pi, callee, k, callee_self, ind, dest, at)
     if: pi >= 0
         return: l2_tok_formal(mi, pi, dest)
     oi: -1
@@ -26436,6 +26450,25 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
         if: c.sprintf(dest, "lmx_arena_ref_struct(l2_c%d\\parent, %uU)", callee_self, (cast: (unsigned) (l2_ns_unit_slot(ni)))) < 0
             return: 1
         return: 0
+    # K04 S2: the caller has no binding of the name.  A callee that only forwards the input, or resolves it
+    # itself, takes it absent; the lexical source read is then the reader's own.
+    if: l2_hid_takes_absent(callee, k) != 0
+        return: (cast: (int) (c.sprintf(dest, "ABSENT") < 0))
+return: l2_hidden_lex(mi, callee, k, callee_self, ind, dest, at)
+
+# The callee's lexical cell of its number input k, read here in the caller: where the callee cannot take the
+# input absent.
+fn: l2_hidden_lex (int: mi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
+    @: LmP0Text nm
+    int: ty
+    int: child
+    int: t
+    []: char l2_hf_msg 1024
+    if: mi < 0 || dest = 0 || callee < 0 || k < 0 || k >= l2_m_dyn[callee]
+        return: 1
+    nm: l2_dn(callee, k)
+    ty: l2_dt(callee, k)
+    dest[0]: 0
     child: l2_own_lexical(callee, nm)
     if: child < 0
         if: c.snprintf(l2_hf_msg, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
@@ -26466,6 +26499,36 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
     if: c.sprintf(dest, "l2_t%d", t) < 0
         return: 1
 return: 0
+
+# The caller mi only forwards its input pi, a number, and the callee's input k takes that name.  Where the
+# callee takes the input absent the entry goes on as it is.  Where it cannot, the entry goes on when present,
+# and when absent the callee's lexical cell is read here into storage of the caller's activation.
+fn: l2_hidden_forward (int: mi; int: pi; int: callee; int: k; int: callee_self; const: @(char ind); @: char dest; const: @(LmP0Node at)) int
+    int: t
+    @: char deep 0
+    []: char lex 1024
+    []: char decl 1024
+    []: char name 64
+    if: l2_hid_takes_absent(callee, k) != 0
+        return: (cast: (int) (c.sprintf(dest, "REF:l2_pr%d_%d", mi, pi) < 0))
+    # A callee whose name has no lexical declaration has nothing to stand behind the entry: it is required of
+    # the callers (l2_dyn_site refuses a chain no one supplies), and the entry goes on as it is.
+    if: l2_own_lexical(callee, l2_dn(callee, k)) < 0
+        return: (cast: (int) (c.sprintf(dest, "REF:l2_pr%d_%d", mi, pi) < 0))
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: l2_bump_ind(ind, @ deep) != 0
+        return: 1
+    if: c.sprintf(name, "l2_hfb%d", t) < 0 || l2_value_decl_text(l2_input_ft(callee, l2_m_arity[callee] + k), 0, name, decl) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%s%s\n%s@: void l2_hfr%d l2_pr%d_%d\n%sif: l2_hfr%d = 0\n", ind, decl, ind, t, mi, pi, ind, t) < 0
+        return: 1
+    lex[0]: 0
+    if: l2_hidden_lex(mi, callee, k, callee_self, deep, lex, at) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_hfb%d: %s\n%sl2_hfr%d: (cast: (@: void) (@ l2_hfb%d))\n%s---\n", deep, t, lex, deep, t, t, ind) < 0
+        return: 1
+return: (cast: (int) (c.sprintf(dest, "REF:l2_hfr%d", t) < 0))
 
 # Formal (or dynamic input) fi of mi as its code reads it here: its bound field's cell once bound
 # (l2_formal_row, -189 c3b-2), the machine argument before.
@@ -27771,6 +27834,20 @@ fn: l2_cfl_close () int
     int: f
     int: j
     int: n
+    # A library unit exports a wrapper for every method (l2_emit_library_wrappers), so every callable formal of
+    # the unit can receive an occurrence from another translation: an ingress this one does not follow.
+    if: l2_library_mode != 0
+        f: 0
+        while: f < l2_m_n
+            j: 0
+            while: j < l2_m_arity[f]
+                if: l2_cf_get(f, j) >= 0 && l2_cfr_add(f, j, 0 - 1, @ changed) != 0
+                    return: 1
+                j: j + 1
+            ---
+            f: f + 1
+        ---
+    ---
     while: changed != 0
         changed: 0
         f: 0
@@ -27818,9 +27895,10 @@ fn: l2_cfl_at (int: c; int: t; int: k) int
 return: 0 - 1
 
 # Whether methods a and b form their hidden inputs alike: the same free names in the same order, of the
-# same types, with the same lexical declarations and the same receiving schemas.  One formation then serves
-# both.  Their declared formals, result and exits are those of the one contract each was admitted to
-# (l2_method_sig_compatible), so they are not compared again here.
+# same types and the same receiving schemas.  One formation then serves both.  Their lexical declarations may
+# differ: an input no caller binds is handed absent and each method reads its own (K04 S2).  Their declared
+# formals, result and exits are those of the one contract each was admitted to (l2_method_sig_compatible), so
+# they are not compared again here.
 fn: l2_cfl_alike (int: a; int: b) int
     int: k 0
     if: a = b
@@ -27829,8 +27907,6 @@ fn: l2_cfl_alike (int: a; int: b) int
         return: 0
     while: k < l2_m_dyn[a]
         if: l2_text_same(l2_dn(a, k), l2_dn(b, k)) = 0 || l2_dt(a, k) != l2_dt(b, k)
-            return: 0
-        if: l2_own_lexical(a, l2_dn(a, k)) != l2_own_lexical(b, l2_dn(b, k))
             return: 0
         if: l2_cap_arg_ns(a, l2_m_arity[a] + k) != l2_cap_arg_ns(b, l2_m_arity[b] + k) || l2_input_schema(a, l2_m_arity[a] + k) != l2_input_schema(b, l2_m_arity[b] + k)
             return: 0
@@ -27843,7 +27919,7 @@ return: 1
 # no flow of this translation reaches the formal: the definition is dormant, asks nothing of anyone and its
 # call forms no hidden input.  The list of the method that declares the formal is used by no path.  Where the
 # formation is not built yet -- an occurrence the translation does not follow reaches the formal (a merge built
-# as the actual; any caller of a library unit, whose callers are other translations), or methods that form their
+# as the actual; an ingress from another translation, recorded by l2_cfl_close), or methods that form their
 # inputs differently do -- the call is refused where it stands: a limit of this implementation and no rule of
 # the language.
 fn: l2_cfl_formation (int: c; int: t; const: @(LmP0Node at); @: int out) int
@@ -27851,7 +27927,7 @@ fn: l2_cfl_formation (int: c; int: t; const: @(LmP0Node at); @: int out) int
     int: i 1
     int: first
     \out: 0 - 1
-    if: l2_library_mode != 0 || l2_cfr_has(c, t, 0 - 1) != 0
+    if: l2_cfr_has(c, t, 0 - 1) != 0
         return: l2_error(l2_src, at, "a call through a callable formal that receives a callable this translation does not follow is not built yet")
     n: l2_cfl_count(c, t)
     if: n = 0
@@ -27863,6 +27939,104 @@ fn: l2_cfl_formation (int: c; int: t; const: @(LmP0Node at); @: int out) int
         i: i + 1
     ---
     \out: first
+return: 0
+
+# K04 S2 (ledger section 58; Codex, FABLE-CODEX-20261004-12).  Does method m itself read free name k: is the
+# read its record keeps (l2_dyn_add takes the text of the read that makes it) in m's own body or return
+# trailer?  A name a method does not read is one it only passes on to what it calls.
+fn: l2_dyn_reads (int: m; int: k) int
+    @: LmP0Node r 0
+    if: m < 0 || m >= l2_m_n || k < 0 || k >= l2_m_dyn[m] || l2_dn(m, k) = 0
+        return: 0
+    if: l2_m_body[m] != 0 && l2_m_body[m]\as != 0
+        r: l2_node_of_text(l2_m_body[m]\as\structure, l2_dn(m, k))
+    if: r = 0 && l2_m_node[m] != 0 && l2_m_node[m]\as != 0 && l2_m_node[m]\kind = c.LM_P0_NODE_FRAME && l2_m_node[m]\as\frame != 0 && l2_m_node[m]\as\frame\trailer != 0
+        r: l2_node_of_text(l2_m_node[m]\as\frame\trailer\body, l2_dn(m, k))
+return: (cast: (int) (r != 0))
+
+# A forward-only input: a number method m does not read.  It stays its entry of refs through m's activation --
+# the typed body takes the entry itself, l2_pr<m>_<j> -- and goes on as it is, possibly absent (refs[k] = 0).
+# A reference keeps its present-pointer transport.
+fn: l2_dyn_fwd (int: m; int: k) int
+    if: m < 0 || m >= l2_m_n || m = l2_e || k < 0 || k >= l2_m_dyn[m]
+        return: 0
+    if: l2_rw_num_ty(l2_own_of_dt(l2_dt(m, k))) = 0
+        return: 0
+return: (cast: (int) (l2_dyn_reads(m, k) = 0))
+
+# Hidden input k of method m as an input m resolves itself when it arrives absent: m is a method of the unit,
+# reads the name, and the name's lexical declaration is a number field of the unit.  The own row of that field,
+# or -1.  The native entry (l2_emit_tramp_lex) and the walked body's ARG (l2_rw_arg_fb) read that cell through
+# the occurrence's own parent.
+fn: l2_hid_own_lex (int: m; int: k) int
+    int: child
+    @: LmP0Text nm
+    if: m < 0 || m >= l2_m_n || k < 0 || k >= l2_m_dyn[m] || l2_m_unit_level(m) = 0
+        return: 0 - 1
+    nm: l2_dn(m, k)
+    if: nm = 0 || l2_rw_num_ty(l2_own_of_dt(l2_dt(m, k))) = 0 || l2_dyn_reads(m, k) = 0
+        return: 0 - 1
+    child: l2_own_lexical(m, nm)
+    if: child < 0 || l2_own_mi[child] != l2_e || l2_own_is_slot(child) != 0 || l2_own_ty[child] != l2_own_of_dt(l2_dt(m, k))
+        return: 0 - 1
+return: child
+
+# Whether the callee takes its hidden input k absent: it only forwards it, or resolves it itself.
+fn: l2_hid_takes_absent (int: callee; int: k) int
+    if: l2_dyn_fwd(callee, k) != 0
+        return: 1
+return: (cast: (int) (l2_hid_own_lex(callee, k) >= 0))
+
+# One hidden input into its place among the call's refs.  ABSENT: no entry.  REF:<expr>: an entry handed on as
+# it is.  Else a value, boxed in caller-owned storage of its type (l2_emit_call_ref).
+fn: l2_emit_hidden_ref (int: ft; const: @(char value); const: @(char ind); const: @(char dest)) int
+    if: value = 0 || ind = 0 || dest = 0
+        return: 1
+    if: c.strcmp(value, "ABSENT") = 0
+        return: (cast: (int) (c.fprintf(l2_out, "%s%s: 0\n", ind, dest) < 0))
+    if: c.strncmp(value, "REF:", 4U) = 0
+        return: (cast: (int) (c.fprintf(l2_out, "%s%s: %s\n", ind, dest, value + 4) < 0))
+return: l2_emit_call_ref(ft, value, ind, dest)
+
+# The entry of method i takes hidden input k (its position among the inputs) absent: the method then reads
+# its own lexical source, a field of the unit, through its occurrence's parent -- as a walked body's ARG reads
+# its fallback.  A present entry is read as before; a present zero is present.
+fn: l2_emit_tramp_lex (int: i; int: k) int
+    int: child l2_hid_own_lex(i, k - l2_m_arity[i])
+    int: slot
+    const: @(char ty) "int"
+    const: @(char rd) "lmx_int_value_known"
+    const: @(char pre) ""
+    const: @(char suf) ""
+    # A number the method reads and cannot resolve itself is required of its callers; the translator wrote both
+    # sides, so an absent entry there is a broken promise, said and stopped (X1), never read through.
+    if: child < 0 && l2_dyn_fwd(i, k - l2_m_arity[i]) = 0 && l2_rw_num_ty(l2_own_of_dt(l2_dt(i, k - l2_m_arity[i]))) != 0
+        return: (cast: (int) (c.fprintf(l2_out, "    if: refs[%d] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a required input arrived absent\\n\")\n        c.abort()\n", k) < 0))
+    if: child < 0
+        return: 0
+    slot: l2_graph_field_child(child)
+    if: slot < 0
+        return: l2_error(l2_src, l2_m_node[i], "internal: a hidden input's lexical cell has no place")
+    if: l2_own_ty[child] = 1
+        ty: "char"
+        rd: "lmx_char_value_known"
+        pre: "(cast: (char) "
+        suf: ")"
+    ---
+    if: l2_own_ty[child] = 2
+        ty: "size_t"
+        rd: "lmx_size_value_known"
+    ---
+    if: l2_own_ty[child] = 3
+        ty: "unsigned"
+        rd: "lmx_unsigned_value_known"
+    ---
+    if: l2_own_ty[child] = 36
+        ty: "ulong"
+        rd: "lmx_ulong_value_known"
+    ---
+    if: c.fprintf(l2_out, "    %s: l2_th%d\n    if: refs[%d] != 0\n        l2_th%d: %s%s(refs[%d])%s\n    else:\n        @@: void l2_txp%d lmx_arena_ref_cell(l2_self\\parent, %uU)\n        if: l2_txp%d = 0\n            c.fprintf(c.stderr, \"lmx: invariant: a dynamic input has no cell to read\\n\")\n            c.abort()\n        l2_th%d: %s%s(l2_txp%d[0])%s\n    ---\n", ty, k, k, k, pre, rd, k, suf, k, (cast: (unsigned) slot), k, k, pre, rd, k, suf) < 0
+        return: 1
 return: 0
 
 # Whether method mi is a method of the unit itself: its occurrence's parent is the unit, which its own code
@@ -28434,7 +28608,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     ai: 0
     while: ai < nhid
         c.sprintf(ref_dest, "l2_cfr%d[%d]", t, nact + ai)
-        if: l2_emit_call_ref(l2_input_ft(hid, nact + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
+        if: l2_emit_hidden_ref(l2_input_ft(hid, nact + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
             return: l2_prep_drop(acts, hides)
         ai: ai + 1
     if: l2_emit_dyn_call(mi, idx, t, self_t, ind, nact + nhid) != 0
@@ -29153,6 +29327,17 @@ fn: l2_emit_formal (int: ft; int: mi; int: idx; int: arg) int
     int: oty
     const: @(char sig) 0
     const: @(char read) 0
+    # K04 S2: a forward-only input is its entry of refs in the typed body, under a name of its own so that no
+    # read of the value can be written against it; an input the method resolves itself comes through l2_th<idx>.
+    if: idx >= l2_m_arity[mi] && l2_dyn_fwd(mi, idx - l2_m_arity[mi]) != 0
+        if: arg = 0 && c.fprintf(l2_out, "; @: void l2_pr%d_%d", mi, idx) < 0
+            return: 1
+        if: arg = 1 && c.fprintf(l2_out, ", refs[%d]", idx) < 0
+            return: 1
+        return: 0
+    ---
+    if: arg = 1 && idx >= l2_m_arity[mi] && l2_hid_own_lex(mi, idx - l2_m_arity[mi]) >= 0
+        return: (cast: (int) (c.fprintf(l2_out, ", l2_th%d", idx) < 0))
     if: ft = 0
         sig: "; int: l2_p%d_%d"
         read: ", lmx_int_value_known(refs[%d])"
@@ -29475,6 +29660,14 @@ fn: l2_emit_trampoline (int: i; int: proto) int
         if: l2_emit_formal(l2_input_ft(i, k), i, k, 2) != 0
             return: 1
         k: k + 1
+    ---
+    # K04 S2: a hidden input the method reads may arrive absent (l2_emit_tramp_lex).
+    k: l2_m_arity[i]
+    while: k < n
+        if: l2_emit_tramp_lex(i, k) != 0
+            return: 1
+        k: k + 1
+    ---
     # Invoke the typed body first. A stopped Message supplies no value, so
     # neither initialized scalar placeholders nor uninitialized foreign storage
     # may be copied to the caller. Only normal completion reaches result stores.
@@ -34370,6 +34563,11 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
             ---
         if: l2_rw_dyn_arg(node, hid, d, holder, @ arg) != 0
             return: 1
+        # K04 S2: an input handed absent has no operand.
+        if: arg < 0
+            d: d + 1
+            continue
+        ---
         if: holder != \out
             if: l2_rw_put(holder, 3, arg) != 0
                 return: 1
@@ -34474,13 +34672,40 @@ fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: in
         oi: l2_rw_bound(nm)
         if: oi >= 0
             return: l2_rw_own(parent, oi, out)
-        return: l2_rw_arg(parent, pi, out)
+        # K04 S2: the caller's own input.  One it only forwards goes on as it is, possibly absent; where the
+        # callee cannot take it absent, the callee's lexical cell stands behind it (l2_rw_arg_lex).  One it
+        # reads is its working value: where it arrived absent, its own lexical source (l2_rw_arg_fb).
+        if: pi >= l2_m_arity[l2_rw_mi] && l2_dyn_fwd(l2_rw_mi, pi - l2_m_arity[l2_rw_mi]) != 0
+            if: l2_hid_takes_absent(idx, k) != 0 || l2_own_lexical(idx, nm) < 0
+                return: l2_rw_arg(parent, pi, out)
+            return: l2_rw_arg_lex(node, parent, pi, idx, k, out)
+        ---
+        return: l2_rw_arg_fb(parent, pi, out)
     # The root has no ARG slot for an entry formal. Do not pass the callee's cell instead.
     if: pi >= 0 && l2_rw_mi = l2_e
         return: l2_rw_refuse(node, "a call of a method with dynamic inputs")
     oi: l2_own_visible(l2_rw_mi, nm)
     if: oi >= 0 && l2_m_uses[l2_own_off(l2_rw_mi, oi)] != 0 && (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0)) && (l2_own_uchild[oi] >= 0 || l2_rw_is_hosted(oi) != 0)
         return: l2_rw_own(parent, oi, out)
+    # K04 S2: the caller has no binding of the name.  A callee that takes the input absent gets no operand:
+    # the lexical source read is the reader's own.  \out is -1 then.
+    if: l2_hid_takes_absent(idx, k) != 0
+        \out: 0 - 1
+        return: 0
+    ---
+return: l2_rw_lex_operand(node, idx, k, parent, out)
+
+# The callee's lexical cell of its input k as an operand under parent: where the callee cannot take the input
+# absent.
+fn: l2_rw_lex_operand (const: @(LmP0Node node); int: idx; int: k; int: parent; @: int out) int
+    @: LmP0Text nm
+    int: gr
+    int: oi
+    []: char msg 256
+    if: idx < 0 || k < 0 || k >= l2_m_dyn[idx]
+        return: 1
+    nm: l2_dn(idx, k)
+    gr: (cast: (int) (l2_dt(idx, k) = l2_colon_graph_ty()))
     oi: l2_own_lexical(idx, nm)
     if: oi < 0
         if: nm = 0
@@ -34493,6 +34718,18 @@ fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: in
     if: (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0)) && l2_own_uchild[oi] >= 0
         return: l2_rw_own(parent, oi, out)
 return: l2_rw_refuse(node, "a call with an input that is not a number")
+
+# The caller's forward-only input pi handed to a callee that cannot take it absent: [arg, pi, fallback], the
+# fallback the callee's lexical cell.  Present, the entry is the value; absent, that cell is read.
+fn: l2_rw_arg_lex (const: @(LmP0Node node); int: parent; int: pi; int: idx; int: k; @: int out) int
+    int: fb
+    if: l2_rw_frame(parent, "LMX_WALK_OP_ARG", 4, out) != 0 || l2_rw_input_witness(\out, 3, l2_rw_mi, pi) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, pi) < 0
+        return: 1
+    if: l2_rw_lex_operand(node, idx, k, \out, @ fb) != 0 || l2_rw_put(\out, 2, fb) != 0
+        return: 1
+return: 0
 
 # AT of method idx's own field oi: the occurrence itself, not the unit.
 fn: l2_rw_callee_at (int: parent; int: idx; int: oi; @: int out) int
@@ -34548,6 +34785,21 @@ fn: l2_rw_arg_fb (int: parent; int: j; @: int out) int
     int: slot 0 - 1
     int: kind 0 - 1
     int: ent 0 - 1
+    int: lex 0 - 1
+    # K04 S2: a unit method's hidden input it reads and resolves itself (l2_hid_own_lex) is [arg, j, fallback]
+    # too: the fallback is the unit's field, as the native entry reads it (l2_emit_tramp_lex).
+    if: l2_rw_mi != l2_e && l2_mad_host_of(l2_rw_mi) < 0 && j >= l2_m_arity[l2_rw_mi] && j < l2_m_arity[l2_rw_mi] + l2_m_dyn[l2_rw_mi]
+        lex: l2_hid_own_lex(l2_rw_mi, j - l2_m_arity[l2_rw_mi])
+    ---
+    if: lex >= 0
+        if: l2_rw_frame(parent, "LMX_WALK_OP_ARG", 4, out) != 0 || l2_rw_input_witness(\out, 3, l2_rw_mi, j) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, j) < 0
+            return: 1
+        if: l2_rw_own(\out, lex, @ fb) != 0 || l2_rw_put(\out, 2, fb) != 0
+            return: 1
+        return: 0
+    ---
     if: l2_rw_mi = l2_e || l2_mad_host_of(l2_rw_mi) < 0 || j < l2_m_arity[l2_rw_mi] || j >= l2_m_arity[l2_rw_mi] + l2_m_dyn[l2_rw_mi]
         return: l2_rw_arg(parent, j, out)
     nm: l2_dn(l2_rw_mi, j - l2_m_arity[l2_rw_mi])
@@ -39140,6 +39392,10 @@ fn: l2_held_binding (int: mi; int: model; int: k; @: char dest; @: int ty) int
     pi: l2_param_find(mi, nm)
     if: pi >= 0
         \ty: l2_own_ty_of_param(l2_input_ft(mi, pi))
+        # K04 S2: an input this caller only forwards goes to the held callable as its entry, possibly absent:
+        # the callable's ARG reads its own fallback then.
+        if: pi >= l2_m_arity[mi] && l2_dyn_fwd(mi, pi - l2_m_arity[mi]) != 0 && l2_formal_row(mi, pi) < 0
+            return: (cast: (int) (c.sprintf(dest, "REF:l2_pr%d_%d", mi, pi) < 0))
         return: l2_tok_formal(mi, pi, dest)
     ---
     oi: l2_own_visible(mi, nm)
@@ -39285,7 +39541,7 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
         if: ns >= 0 && l2_cap_src_marked(mi, l2_dn(model, k)) = 0 && l2_cap_emit_admit(ns, bv, ind) != 0
             return: 1
         c.sprintf(ref_dest, "l2_hr%d[%d]", t, 1 + n + k)
-        if: l2_emit_call_ref(l2_input_ft(model, l2_m_arity[model] + k), bv, ind, ref_dest) != 0
+        if: l2_emit_hidden_ref(l2_input_ft(model, l2_m_arity[model] + k), bv, ind, ref_dest) != 0
             return: 1
         k: k + 1
     ---
@@ -40424,7 +40680,9 @@ fn: l2_rw_ns_hidden (const: @(LmP0Node node); int: ni; int: frame) int
     if: l2_rw_method_contract(frame, l2_ns_proc[ni], @ contract) != 0 || l2_rw_put(frame, 3, contract) != 0
         return: 1
     while: d < l2_m_dyn[l2_ns_proc[ni]]
-        if: l2_rw_dyn_arg(node, l2_ns_proc[ni], d, frame, @ arg) != 0 || l2_rw_put(frame, 5 + d, arg) != 0
+        if: l2_rw_dyn_arg(node, l2_ns_proc[ni], d, frame, @ arg) != 0
+            return: 1
+        if: arg >= 0 && l2_rw_put(frame, 5 + d, arg) != 0
             return: 1
         d: d + 1
     ---
@@ -42294,7 +42552,7 @@ fn: l2_emit_ns_exec_at (int: ni; int: mi; const: @(LmP0Node node); const: @(char
         if: l2_hidden_from(mi, pr, j, 0 - 1, ind, hv, node) != 0
             return: 1
         c.sprintf(ref_dest, "l2_nsr%d[%d]", k, j)
-        if: l2_emit_call_ref(l2_input_ft(pr, j), hv, ind, ref_dest) != 0
+        if: l2_emit_hidden_ref(l2_input_ft(pr, j), hv, ind, ref_dest) != 0
             return: 1
         j: j + 1
     ---

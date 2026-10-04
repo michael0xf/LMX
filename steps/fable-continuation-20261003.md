@@ -4635,3 +4635,205 @@ reading its lexical source for an absent input as the walked body does; a
 branch per exact occurrence where formations differ. With Codex's five
 transport witnesses. Then held callables and merge nodes as actuals and the
 common admission.
+
+<a id="absent-input"></a>
+## 58. An input no caller binds travels absent to the method that reads it (second slice, part one)
+
+### Codex's seventh reply -12
+
+It reviews `5afcb650`, the disclosures of [section 57](#formal-formation)
+and the plan of the second slice.
+
+- "Proceed with S2a then S2b on the existing ABI." No new decision
+  of the author is needed.
+- The native fallback: "An absent hidden input that the selected actual
+  READS is resolved by that actual's eligible lexical path from its own
+  occurrence. A forwarding-only Consumer keeps it absent and does not eagerly
+  read its own lexical source. If the Consumer itself reads or changes that
+  input, its resulting current working value is supplied downstream
+  normally." And: "Present zero/null and present-but-incompatible
+  are not absence."
+- The comparison of lexical declarations of the first slice is "a
+  conservative proof boundary, not a language restriction"; it is to go
+  "when the actual-entry fallback makes it unnecessary". The row it
+  refused stays a required positive, and the refusal is to be disclosed:
+  ""OK->FAIL 0" is only a statement about the previous harness rows, not
+  absence of all newly discovered regressions."
+- The library: "Do not make library mode itself a semantic exception."
+  And: "If the currently exposed library ABI makes every such formal
+  externally reachable, document that concrete boundary and mark those
+  entries UNKNOWN."
+- No flow: "No flow is not a zero-hidden-input contract for a future
+  actual and not permission to dispatch it through the exemplar."
+- The branch of the next part: "Use address comparisons only for
+  identities actually proved by the flow and the supplied/current unit
+  reference, with target evaluated once." Copies, held nodes and foreign
+  unit references stay open positives until built.
+- The mutants: "Do not weaken guards simply to manufacture a killed
+  mutant."
+- The order: "native absent-input reading -> forwarding-presence transport
+  and per-actual formation -> known differing alternatives -> held/merge
+  actuals and walked consumer".
+
+### The regression of the first slice
+
+The first slice refused `unit_callable_formal_free_names_lexical_differ`, a
+program the translator before it (`375b6309`) ran right: 2 and 2. It was
+reported to Codex with that slice. The gate's figure "OK→FAIL 0" could not
+show it: no row of the earlier harness had the shape. This slice removes the
+comparison that refused it, and the row is green again, natively. The
+fixture's own comment still calls it an open positive; it is corrected with
+the next gated change, since the bytes the gate ran are the bytes committed.
+
+### What changed
+
+All in `dev/l2src_sandbox/l2trans.lm1`. The interface of a call is the one
+that was: `refs[k] = 0` is an absent input, a nonzero entry that holds zero
+is a present zero.
+
+| Step | Where | What |
+| --- | --- | --- |
+| Who reads | `l2_dyn_reads`, `l2_dyn_fwd` | A number among a method's hidden inputs is forward-only when no statement of the method's body or return trailer reads or assigns its name: the method has it only because something it calls needs it. |
+| Who takes an absent entry | `l2_hid_own_lex`, `l2_hid_takes_absent` | A method that only forwards the number; and a method of the unit that reads a number whose lexical declaration is a field of the unit. |
+| The caller | `l2_hidden_from`, `l2_emit_hidden_ref` | A caller with no binding of the name hands the entry absent where the callee takes it. A caller that only forwards its own input hands its entry on as it is (`l2_hidden_forward`). |
+| The typed body | `l2_emit_formal` | A forward-only input enters the typed body as the entry itself, a pointer that may be zero, and no longer as a value. |
+| The native entry | `l2_emit_tramp_lex` | A reader with a lexical source of its own reads a present entry as before; for an absent one it reads the unit's cell through the parent of its own occurrence. |
+| The walked body | `l2_rw_arg_fb`, `l2_rw_dyn_arg` | The same rule in the walker's terms: the reader's ARG carries the fallback, a forward-only input is a plain ARG, and a caller with no binding puts no operand. |
+| Held calls | `l2_held_binding`, `l2_prep_held_call`, `l2_emit_ns_exec_at` | The same forms through the same writer of an entry. |
+| Callees that cannot take it | `l2_hidden_lex` | Where the callee has no entry code that reads its own source (a definition inside a method, a reference, a name whose lexical declaration is not a plain field of the unit), the caller reads the callee's lexical source through the selected occurrence, as before. A forwarding caller does that only when its own entry is absent. |
+| A broken promise | `l2_emit_tramp_lex` | A number a method reads and cannot resolve itself is required of its callers. The translator writes both sides, so an absent entry there is said and stopped: `lmx: invariant: a required input arrived absent`. Before, the entry read an absent number as zero (`lmx_int_value_known` of no cell). |
+| Alike | `l2_cfl_alike` | The lexical declarations are no longer compared: each reader resolves its own. |
+| Library ingress | `l2_cfl_close`, `l2_cfl_formation` | The formation no longer tests the mode. The closure records, for every callable formal of a library unit, that an occurrence not followed reaches it. |
+
+The concrete boundary of the library, as Codex asked it to be recorded:
+`l2_emit_library_wrappers` writes an exported wrapper for every method of a
+library unit, so another translation can call any of them and hand any
+callable formal an occurrence this translation never saw. That is a fact
+about the exported interface of today, written as a flow fact. A library
+whose exported set is narrower would get fewer such facts and the same
+algorithm.
+
+An entry, absent or handed on, lives for one synchronous activation. The
+typed body of a forwarding method puts the pointer only into the entries of
+the calls it makes; a reader copies the value into its own working storage.
+Codex's witness of a returned value that outlives its transport is not
+measured by this slice.
+
+### Numbers only
+
+A reference among the hidden inputs keeps its transport: always present, and
+a caller with no binding reads the callee's lexical source through the
+selected occurrence. Nothing copies the unit, so the source is the same one.
+The absence of a reference has to travel where a copied lexical context
+makes the difference observable: the third slice, with Codex's witnesses of
+the copied lexical value.
+
+### Measured
+
+On the committed translator (`5afcb650`) and on this one, natively and with
+the methods walked.
+
+| Program | Before | Now |
+| --- | --- | --- |
+| `unit_absent_input_forward`: `inner` names no `other` and calls a definition its method returned; that calls `hop`, which calls `g1`; only `g1` reads `other` | natively a wrong value (the fixture's exit 81); walked `walk error: INVALID` | 15; after `other: 20` in the root 26; from `over`, which has `int: other 0`, 6 |
+| `unit_absent_input_reader`: `twice` reads `other` and calls `g1`; `setter` assigns `other: 3` and calls `g1` | natively a wrong value; walked `walk error: INVALID` | 2409, and the unit's `other` is still 9 |
+| `unit_absent_input_decl_order`: the root calls `hop` above the declaration of `other`, then below it | 1 and 10 | 1 and 10 |
+| `unit_callable_formal_free_names_lexical_differ` | refused | 2 and 2, natively |
+| `unit_lib_callable_formal` | refused | refused, by the recorded ingress |
+
+Of Codex's five transport witnesses these rows carry two. A supplied zero is
+present: `over`, through two forwarding hops; the first slice's `_zero` holds
+it for a formal. Forwarding over more than one hop keeps presence and value:
+the definition and `hop` in `_forward`, natively and walked; mutual recursion
+is the first slice's `_mutual`, natively only, since a consumer of a callable
+formal is not walked yet. The witness of alternatives with different names
+waits for the next part; the two of a copied lexical value and of a returned
+value outliving its transport wait for the third slice, where a held
+callable or a merge node is the actual.
+
+### Replay
+
+The slice's translator against the committed one (`5afcb650`), on the 1650
+translations recorded by `fable_full_32`: exit, messages and the generated
+L1 are the same on 1562 rows. Of the 88 others, 87 translate as before with
+another L1, and `unit_callable_formal_free_names_lexical_differ`, refused
+before, translates. What the new L1 files contain:
+
+| In the generated L1 | Files |
+| --- | --- |
+| An entry that reads the unit's cell for an absent input | 53 |
+| An entry that stops on an absent required input | 37 |
+| A typed body that takes a forward-only entry | 19 |
+| A native call that hands an entry absent | 5 |
+| A forwarding caller that reads the callee's lexical cell when its own entry is absent | 3: `unit_s7_part_callable_field`, `unit_s7_part_root_field` and its walked twin |
+
+The 88 rows were run before the gates (`fable_abs_01`): 87 pass; the one
+failure was the text pin of `unit_decl_order_u2`, written for the first
+slice's expression, which this slice moves from the caller into the entry.
+The pin is rewritten: no read of those cells in the caller by either route,
+and the read in the entry.
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart and run
+natively and with the methods walked on ten fixtures: the three new ones,
+`_lexical_differ`, `_chain`, `_zero`, `unit_decl_order_u2`,
+`unit_site_parent_fallback`, `unit_held_call_guarded` and
+`unit_nested_definition_number_override`. The three part rows that take the
+hand-off path were run under the last three mutants as well.
+
+| Mutant | What the rows say |
+| --- | --- |
+| The native entry reads its input without the absent case | `unit_absent_input_forward` and `_reader` give a wrong value natively, as on the committed translator. |
+| The walked body's ARG of a unit method has no fallback | Five rows stop walked with `walk error: INVALID`: the three new ones, `unit_decl_order_u2` and `unit_site_parent_fallback`. |
+| The lexical declarations are compared again | `_lexical_differ` is refused. |
+| A library unit's formals are not recorded as an ingress | `unit_lib_callable_formal` translates in the library profile; with the fact it is refused where the call stands. Nothing is run: a library row links and reads symbols only. |
+| A forwarded entry goes as it is to a callee that cannot take it absent | `unit_s7_part_root_field` stops natively with `lmx: invariant: a required input arrived absent`; its walked twin gives a wrong value. |
+| No input is forward-only | None of the thirteen rows changes. A probe outside the gate does: a definition that only forwards the name, whose host method has a local of that name, called above the unit's declaration. The slice gives 6 and 15 in both modes; the mutant stops with `walk error: INVALID` in both; the committed translator gives a wrong value natively and stops walked. |
+| A caller with no binding reads the callee's cell itself | None of the thirteen rows changes. |
+
+The last two are not kills by a gated row, and are said as they are. The
+probe of the forward-only input is not gate evidence: it enters the harness
+as a row with the next gated change. The last mutant reads the lexical
+source in the caller's activation in place of the reader's. That is the
+same cell wherever the callee is the reader, and nothing copies the unit;
+it would differ where the callee only forwards and its lexical source is
+another declaration than the reader's. Two program parts with roots of
+their own can give an ordinary call that shape; that witness is owed. The
+mutant's text is pinned on `unit_decl_order_u2` and by nothing else. No
+guard was weakened to make a kill.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_19` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_19` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_33` (full harness) | RED 35 of 1657. Against `fable_full_32` (RED 36 of 1651): FAIL→OK 1, `unit_callable_formal_free_names_lexical_differ`; OK→FAIL 0; added 6, all green; removed 0. |
+| `build/l2_harness/fable_abs_01` (focused, before the gates) | The 88 rows the replay shows changed: 87 pass, one text pin superseded. |
+| `build/l2_harness/fable_abs_02` (focused, before the gates) | Ten rows: the six new ones, `_lexical_differ` and `unit_decl_order_u2` green; the two labelled OPEN rows red. |
+
+The 35 red rows are the 29 of `fable_full_17` and six labelled OPEN
+positives: `unit_held_call_to_callable_formal`,
+`unit_callable_formal_free_names_self_walk`, `_differ`,
+`unit_lib_callable_formal` and the two of the caller's own Structure. The
+pre-gate hashes of the translator, the seven fixtures and the harness equal
+the live files and every staged copy (`tie.py`).
+
+A figure corrected. The plan's head carried "110 FAIL→OK against that
+baseline" for `fable_full_32`. It was the running sum of each gate's count
+against the gate before it, so it counted rows this continuation added red
+and repaired later. Counted directly against `fable_full_01` (RED 126 of
+1395), `fable_full_32` has 97 and `fable_full_33` has 97: the row repaired
+here was added after the baseline. Of the baseline's 126 red rows 97 are
+green, 24 are red and five were replaced; 267 rows were added, 11 of them
+red. The head now carries these figures.
+
+**Next.** The second part of the slice: requirements by call site, so that
+a caller is asked only for the names of the callables its own actual can
+denote and the entries of the others stay absent; a branch per exact
+occurrence where the alternatives on one formal have different names, only
+for occurrences the flow proves, with no branch for the declaring method.
+`unit_callable_formal_free_names_differ` is its required positive. Then the
+third slice: held callables and merge nodes as actuals and as callees, the
+library's ingress, the walked consumer.

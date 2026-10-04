@@ -32,11 +32,12 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_32` RED36/1651 — 110 FAIL→OK against that
-baseline, OK→FAIL 0; the seven red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_18` GREEN296 with 113 executed
-selftests; L3 `fable_l3_18`
-([gates](steps/fable-continuation-20261003.md#formal-formation)). The checkpoint gate
+continuation bytes: `fable_full_33` RED35/1657 — against that baseline 97
+FAIL→OK, OK→FAIL 0, five red rows replaced and 267 added; the 35 red rows
+are 24 of the baseline and 11 added, six of them labelled OPEN positives
+above the 29 of `fable_full_17`; kernel `fable_kernel_19` GREEN296 with 113
+executed selftests; L3 `fable_l3_19`
+([gates](steps/fable-continuation-20261003.md#absent-input)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -215,11 +216,18 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   that is a formal's value, a supplied zero, a dormant definition and the
   refusal of a missing input are gated
   ([ledger](steps/fable-continuation-20261003.md#formal-formation)).
-- [ ] The second slice, transport confirmed by Codex: an inherited input a
-  consumer only forwards stays an entry of `refs` and may be absent; the
-  native entry reads the lexical source of an absent input; a branch per
-  exact occurrence where formations differ. Red required positives:
-  `unit_callable_formal_free_names_differ`, `_lexical_differ`.
+- [x] The second slice, part one: the transport of an absent input. A
+  number no caller binds is handed absent; a method that only forwards it
+  hands its entry on as it is; the method that reads it takes its own
+  lexical source, the native entry as the walked body. The comparison of
+  lexical declarations is gone and `_lexical_differ` is green. The library's
+  ingress is a flow fact
+  ([ledger](steps/fable-continuation-20261003.md#absent-input)).
+- [ ] The second slice, part two: requirements by call site, the entries of
+  the alternatives a caller's actual cannot denote left absent; a branch per
+  exact occurrence, proved by the flow, where the alternatives on one formal
+  have different names; no branch for the declaring method. Red required
+  positive: `unit_callable_formal_free_names_differ`.
 - [ ] The third slice: held callables and merge nodes as actuals and as
   callees through the same formation, with the ordinary admission
   (`unit_held_call_to_callable_formal`,

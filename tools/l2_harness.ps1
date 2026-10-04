@@ -5367,10 +5367,11 @@ $fixtures = @(
     # construction, zero until their statements run.  f, declared below x and y, reads them; its call
     # above their declarations reads 0, below them 5 + 6 = 11 (a literal and an expression
     # initializer alike).  Natively and with f walked.
-    # The root's native code reads the unit's cell of a callee's free name through the parent of the selected
-    # occurrence, not through its own route (K04; Codex, FABLE-CODEX-20261004-12): the two pins.
+    # The root above the declarations has no binding to hand: it hands the inputs absent and f's own entry reads
+    # the unit's cells through its occurrence's parent (K04; Codex, FABLE-CODEX-20261004-12).  The pins: no read
+    # of those cells in the caller, by either route, and the read in the entry.
     [pscustomobject]@{ Name = 'unit_decl_order_u2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('l2_xp: lmx_arena_ref_cell(self, '); Debt = @('l2_xp: lmx_arena_ref_cell(l2_c') },
+        Absent = @('l2_xp: lmx_arena_ref_cell(self, ', 'l2_xp: lmx_arena_ref_cell(l2_c'); Debt = @('lmx_arena_ref_cell(l2_self\parent, ') },
     [pscustomobject]@{ Name = 'unit_walk_decl_order_u2.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     # GROK-PREGATE-20260922-01. Needles and Debt are measured on the live translator
@@ -7572,13 +7573,33 @@ $fixtures = @(
     # A required input no one supplies: the call is inadmissible before entry and is refused where it stands.
     [pscustomobject]@{ Name = 'unit_callable_formal_free_names_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_callable_formal_free_names_missing_refused.lm2:25:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
-    # OPEN positives, required before G5.  Limits of this implementation and no rules; each is refused where it
-    # stands and stays red until built.  One formal receiving callables whose inputs are formed differently:
-    # different free names (differ), one name with different lexical declarations (lexical_differ).  A library
-    # unit's callable formal: its callers are other translations, so what reaches it is not known.
-    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_differ.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+    # Two callables with one free name whose lexical declarations differ form their inputs alike: an input no
+    # caller binds is handed absent and each reads its own (K04, the transport of an absent input).
     [pscustomobject]@{ Name = 'unit_callable_formal_free_names_lexical_differ.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # The transport of an absent input (K04; Codex, FABLE-CODEX-20261004-12).  An input no caller binds is
+    # handed absent (refs[k] = 0).  A method that only forwards the name hands the entry on as it is; the method
+    # that reads it takes its own lexical source through its occurrence's parent, the native entry as the walked
+    # body's ARG.  A supplied zero is present (forward).  A method that reads or assigns the name has it as its
+    # working value and hands that on; the unit's field is not written (reader).  The root above a declaration
+    # has no binding to hand (decl_order).  Each natively and with the methods walked.
+    [pscustomobject]@{ Name = 'unit_absent_input_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_forward_walk.lm2'; Source = 'unit_absent_input_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_reader.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,5,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_reader_walk.lm2'; Source = 'unit_absent_input_reader.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_decl_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_decl_order_walk.lm2'; Source = 'unit_absent_input_decl_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # OPEN positives, required before G5.  Limits of this implementation and no rules; each is refused where it
+    # stands and stays red until built.  One formal receiving callables with different free names (differ).  A
+    # library unit's callable formal: every method of a library unit has an exported wrapper, so an occurrence
+    # from another translation can reach the formal.
+    [pscustomobject]@{ Name = 'unit_callable_formal_free_names_differ.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_lib_callable_formal.lm2'; Expect = 'library-links'; Exit = 0; Needle = '';
         With = @(); Exports = @('lib_cf_run', 'lib_cf_use'); Absent = @(); Debt = @() },

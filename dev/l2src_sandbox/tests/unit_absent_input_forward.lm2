@@ -1,0 +1,43 @@
+# An input no caller binds travels absent to the method that reads it, and
+# that method reads its own lexical source. g1 reads other. hop only hands
+# it on, and so does h0, the definition makeUse returns. inner calls it and
+# names no other: g1 reads the unit's, 9, at the call: 5 + 10. After
+# other: 20 the same call gives 5 + 21. over has its own other, 0: a
+# supplied zero is present, 5 + 1. From the root the unit's other is the
+# root's own binding. Entry 7.
+int: other 9
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: hop () int
+    return: g1()
+end: hop
+
+fn: makeUse (int: k) fn: () int
+    fn: h0 () int
+        return: k + hop()
+    return: h0
+
+u0: makeUse 5
+
+fn: inner () int
+    return: u0()
+end: inner
+
+fn: over () int
+    int: other 0
+    return: u0()
+end: over
+
+int: a inner()
+int: b over()
+other: 20
+int: c inner()
+int: d u0()
+int: ok 7
+if: a != 15 || b != 6 || c != 26 || d != 26
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

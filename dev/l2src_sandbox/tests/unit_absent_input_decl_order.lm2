@@ -1,0 +1,21 @@
+# The root calls hop above the declaration of the unit's other: at that
+# point the root has no binding to hand. hop only forwards, and g1, declared
+# below other, reads the unit's cell, zero until its statement runs: 0 + 1.
+# Below the declaration the root's own other is its binding: 9 + 1. Entry 7.
+int: first hop()
+int: other 9
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: hop () int
+    return: g1()
+end: hop
+
+int: second hop()
+int: ok 7
+if: first != 1 || second != 10
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

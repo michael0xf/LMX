@@ -1,0 +1,44 @@
+# A method that reads a name itself has it as its working value, and hands
+# that value on. twice reads other and calls g1: absent, it reads the unit's
+# 9 and g1 gets 9: 9 + 10. setter assigns other 3 before it calls g1: g1
+# gets 3, and the unit's other stays 9. Each is reached through a definition
+# its method returns, from a method that names no other. Entry 7.
+int: other 9
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: twice () int
+    return: other + g1()
+end: twice
+
+fn: setter () int
+    other: 3
+    return: g1()
+end: setter
+
+fn: makeTwice (int: k) fn: () int
+    fn: h1 () int
+        return: k + twice()
+    return: h1
+
+fn: makeSetter (int: k) fn: () int
+    fn: h2 () int
+        return: k + setter()
+    return: h2
+
+u1: makeTwice 5
+u2: makeSetter 5
+
+fn: inner () int
+    return: u1() * 100 + u2()
+end: inner
+
+int: a inner()
+int: b other
+int: ok 7
+if: a != 2409 || b != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

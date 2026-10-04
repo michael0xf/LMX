@@ -397,11 +397,21 @@ The translator follows which methods reach each formal (`l2_cfl_note`,
 `l2_cfl_close`), their free names enter the ordinary fixed point of dynamic
 inputs (`l2_dyn_site`), and the call forms their list (`l2_cfl_formation`).
 Compiler metadata only: nothing of it exists at run time. Still refused where
-they stand, as limits of the implementation: methods whose inputs are formed
-differently on one formal, an occurrence the translation does not follow (a
-merge built as the actual, any caller of a library unit), the walked consumer,
-a held callable as the actual
+they stand, as limits of the implementation: methods with different free names
+on one formal, an occurrence the translation does not follow (a merge built as
+the actual, an occurrence from another translation through a library unit's
+exported wrapper), the walked consumer, a held callable as the actual
 ([ledger](steps/fable-continuation-20261003.md#formal-formation)).
+
+A number no caller binds is handed absent, `refs[k] = 0`. A method that only
+forwards the name hands its entry on as it is (`l2_dyn_fwd`,
+`l2_hidden_forward`) and does not read a lexical source of its own. The
+method that reads the name resolves an absent entry from its own lexical
+source through the parent of its occurrence: the native entry
+(`l2_emit_tramp_lex`) as the walked body's ARG with a fallback
+(`l2_rw_arg_fb`). A present zero is present. A reference keeps its
+always-present transport for now
+([ledger](steps/fable-continuation-20261003.md#absent-input)).
 
 ### 8.3 Result, status, and stop are separate
 

@@ -1,10 +1,8 @@
-# OPEN positive. One callable formal may receive callables with different
-# free names; each call forms the inputs of the callable it has. run receives
-# g1, which reads other, and f0, which reads base. From outer, whose formal
-# other is 40: g1 gives 41 and f0 gives 5. From the root: 10 and 5. This
-# implementation forms one list for a formal and refuses the call where it
-# stands: `a call through a callable formal that receives callables whose
-# inputs are formed differently is not built yet`. Entry 7.
+# One callable formal may receive callables with different free names; each
+# call forms the inputs of the callable it has. run receives g1, which reads
+# other, and f0, which reads base. From the root: 10 and 5. From outer,
+# whose formal other is 40: g1 gives 41 and f0 gives 5. From under, whose
+# formal base is 77: g1 gives 10 and f0 gives 77. Entry 7.
 int: base 5
 int: other 9
 
@@ -24,11 +22,16 @@ fn: outer (int: other) int
     return: run(g1) * 100 + run(f0)
 end: outer
 
+fn: under (int: base) int
+    return: run(g1) * 100 + run(f0)
+end: under
+
 int: a run(g1)
 int: b run(f0)
 int: c outer(40)
+int: d under(77)
 int: ok 7
-if: a != 10 || b != 5 || c != 4105
+if: a != 10 || b != 5 || c != 4105 || d != 1077
     ok: 81
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

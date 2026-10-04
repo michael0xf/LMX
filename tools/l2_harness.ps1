@@ -7595,11 +7595,59 @@ $fixtures = @(
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_absent_input_decl_order_walk.lm2'; Source = 'unit_absent_input_decl_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
-    # OPEN positives, required before G5.  Limits of this implementation and no rules; each is refused where it
-    # stands and stays red until built.  One formal receiving callables with different free names (differ).  A
-    # library unit's callable formal: every method of a library unit has an exported wrapper, so an occurrence
-    # from another translation can reach the formal.
+    # The absent input reaches the method that reads it, and that method reads its own lexical source, never the
+    # source of a method that only handed the name on (K04 S2; Codex, FABLE-CODEX-20261004-12).  A definition
+    # that only hands the name on, whose host method has a local of that name, called above the unit's
+    # declaration (forward_host_local).  Two program parts with a root each: the reader of one, a forwarder of
+    # the other, called from a source that declares no such name -- the reader's own root, 5, not the
+    # forwarder's, 8 (parts).  Each natively and with the methods walked.
+    [pscustomobject]@{ Name = 'unit_absent_input_forward_host_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_forward_host_local_walk.lm2'; Source = 'unit_absent_input_forward_host_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_parts.lm2'; Parts = @('unit_absent_input_parts_a.lm2', 'unit_absent_input_parts_b.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_absent_input_parts_walk.lm2'; Source = 'unit_absent_input_parts.lm2'; Parts = @('unit_absent_input_parts_a.lm2', 'unit_absent_input_parts_b.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    # A required input no one can give is refused at translation, where the chain starts: the root calls a held
+    # definition that only hands the name on to a reader with no source of its own.  The local of the method that
+    # made the definition is not the definition's to give.
+    [pscustomobject]@{ Name = 'unit_absent_input_unavailable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_absent_input_unavailable_refused.lm2:23:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+    # Requirements by call site, and the formation by exact occurrence (K04 S2 part two; Codex,
+    # FABLE-CODEX-20261004-12).  One callable formal receives callables with different free names: each call
+    # forms the inputs of the callable it has (differ; the pin is the text of the class selection).  A site is
+    # asked only for the names of the callable it gives: a caller without a name of another alternative is not
+    # refused and hands that entry absent (site_names), through formals handed on and through a callee that is a
+    # formal's value (site_names_forward), through mutual recursion (site_names_mutual), and where the name is
+    # needed only while six formals hold six methods (site_conditions: no number of conditions is fixed).  A
+    # consumer of a callable formal is not walked yet: natively.
     [pscustomobject]@{ Name = 'unit_callable_formal_free_names_differ.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @('int: l2_cfk') },
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_names_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_names_mutual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_conditions.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7,8,9); Absent = @(); Debt = @() },
+    # The callable a site gives needs a name no one can give: refused where that site stands, and not where
+    # another callable is given.
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_names_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_callable_formal_site_names_missing_refused.lm2:27:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+    # OPEN positives, required before G5.  Limits of this implementation and no rules; each is refused where it
+    # stands and stays red until built.  A reference among the names of a callable a site does not give: only a
+    # number is handed absent yet (site_names_reference).  A name a held callable requires, bound by the caller
+    # of the method that calls it: a held call asks only its own caller yet (required_input_from_caller).  A
+    # merge built as the actual reaching a formal handed on: what the call needs cannot be told
+    # (unfollowed_actual).  A library unit's callable formal: every method of a library unit has an exported
+    # wrapper, so an occurrence from another translation can reach the formal.
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_names_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_required_input_from_caller.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_unfollowed_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_lib_callable_formal.lm2'; Expect = 'library-links'; Exit = 0; Needle = '';
         With = @(); Exports = @('lib_cf_run', 'lib_cf_use'); Absent = @(); Debt = @() },

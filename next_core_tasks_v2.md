@@ -32,12 +32,12 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_33` RED35/1657 — against that baseline 97
-FAIL→OK, OK→FAIL 0, five red rows replaced and 267 added; the 35 red rows
-are 24 of the baseline and 11 added, six of them labelled OPEN positives
-above the 29 of `fable_full_17`; kernel `fable_kernel_19` GREEN296 with 113
-executed selftests; L3 `fable_l3_19`
-([gates](steps/fable-continuation-20261003.md#absent-input)). The checkpoint gate
+continuation bytes: `fable_full_34` RED37/1670 — against that baseline 97
+FAIL→OK, OK→FAIL 0, five red rows replaced and 280 added; the 37 red rows
+are 24 of the baseline and 13 added, eight of them labelled OPEN positives
+above the 29 of `fable_full_17`; kernel `fable_kernel_20` GREEN296 with 113
+executed selftests; L3 `fable_l3_20`
+([gates](steps/fable-continuation-20261003.md#site-requirements)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -223,17 +223,24 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   lexical declarations is gone and `_lexical_differ` is green. The library's
   ingress is a flow fact
   ([ledger](steps/fable-continuation-20261003.md#absent-input)).
-- [ ] The second slice, part two: requirements by call site, the entries of
-  the alternatives a caller's actual cannot denote left absent; a branch per
-  exact occurrence, proved by the flow, where the alternatives on one formal
-  have different names; no branch for the declaring method. Red required
-  positive: `unit_callable_formal_free_names_differ`.
+- [x] The second slice, part two: a call site asks only for the names of the
+  callable it gives, the other entries absent; the conditions kept whole,
+  with no limit on their number; the formation selected by exact occurrence
+  where one formal has several, the last class the proven remainder; a
+  required input no one can give refused at translation where the chain
+  starts, and the entry's abort removed
+  ([ledger](steps/fable-continuation-20261003.md#site-requirements)).
 - [ ] The third slice: held callables and merge nodes as actuals and as
   callees through the same formation, with the ordinary admission
   (`unit_held_call_to_callable_formal`,
-  `unit_nested_definition_structure_override`, `unit_t7_convert`); the
-  library unit's callable formal (`unit_lib_callable_formal`); the walked
-  consumer (`unit_callable_formal_free_names_self_walk`).
+  `unit_nested_definition_structure_override`, `unit_t7_convert`,
+  `unit_callable_formal_unfollowed_actual`); the absence of a reference
+  (`unit_callable_formal_site_names_reference`); a held call's names asked
+  along the chain of callers (`unit_held_call_required_input_from_caller`);
+  the library unit's callable formal (`unit_lib_callable_formal`); the walked
+  consumer (`unit_callable_formal_free_names_self_walk`). Any new route that
+  makes an occurrence a value writes its flow fact or the row "not
+  followed".
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

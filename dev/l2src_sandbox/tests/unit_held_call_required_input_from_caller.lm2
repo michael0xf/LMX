@@ -1,0 +1,40 @@
+# OPEN positive. A name a held callable requires is asked of the callers of
+# the method that calls it, as any hidden input is. r reads zz, which the
+# unit does not declare; the definition f calls r and only hands the name
+# on. inner calls the held f and has no zz; outer, which calls inner, has
+# zz 30: r reads 30 and the call gives 5 + 31. direct has zz 40 and calls r
+# itself: 41. This implementation asks a held call's names only of the
+# method that makes the call, and refuses the call in inner where it
+# stands, as a limit and no rule. Entry 7.
+fn: r () int
+    return: zz + 1
+end: r
+
+fn: mk (int: k) fn: () int
+    fn: f () int
+        return: k + r()
+    return: f
+
+u0: mk 5
+
+fn: inner () int
+    return: u0()
+end: inner
+
+fn: outer () int
+    int: zz 30
+    return: inner()
+end: outer
+
+fn: direct () int
+    int: zz 40
+    return: r()
+end: direct
+
+int: a outer()
+int: b direct()
+int: ok 7
+if: a != 36 || b != 41
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

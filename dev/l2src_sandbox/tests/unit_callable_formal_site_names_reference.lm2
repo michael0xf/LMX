@@ -1,0 +1,32 @@
+# OPEN positive. A call site is asked only for the names of the callable it
+# gives, whatever their kind. g1 reads the number other; gs reads the
+# Structure box. Where run is given g1 the box is not needed and is left
+# out, and where it is given gs the other is. This implementation hands
+# only a number absent: a reference left out is refused where the call
+# stands, as a limit and no rule. Entry 7.
+Model:
+    int: x 0
+
+int: other 9
+Model: box
+box\x: 5
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: gs () int
+    return: box\x + 2
+end: gs
+
+fn: run (g1: q) int
+    return: q()
+end: run
+
+int: a run(g1)
+int: b run(gs)
+int: ok 7
+if: a != 10 || b != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

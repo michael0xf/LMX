@@ -397,11 +397,24 @@ The translator follows which methods reach each formal (`l2_cfl_note`,
 `l2_cfl_close`), their free names enter the ordinary fixed point of dynamic
 inputs (`l2_dyn_site`), and the call forms their list (`l2_cfl_formation`).
 Compiler metadata only: nothing of it exists at run time. Still refused where
-they stand, as limits of the implementation: methods with different free names
-on one formal, an occurrence the translation does not follow (a merge built as
-the actual, an occurrence from another translation through a library unit's
-exported wrapper), the walked consumer, a held callable as the actual
+they stand, as limits of the implementation: an occurrence the translation does
+not follow (a merge built as the actual, an occurrence from another translation
+through a library unit's exported wrapper), the walked consumer, a held
+callable as the actual
 ([ledger](steps/fable-continuation-20261003.md#formal-formation)).
+
+Where the methods that reach one formal form their inputs differently, the
+call selects the formation by the exact occurrence the formal holds, read once
+and compared with the unit's own occurrence of each reaching method; the last
+class is the proven remainder and no class serves the declaring method
+(`l2_emit_call_classes`). A call site asks its caller only for the names of the
+callable it gives: for a name a method only hands on the fixed point keeps the
+complete conditions under which it is needed (`l2_dyr_add`, `l2_site_needs`),
+and an input not needed is handed absent. A required input no one can give is
+refused at translation, where the chain starts; generated code carries no abort
+for it. A reference not needed is not handed absent yet, and a held call asks
+only its own caller: located limits
+([ledger](steps/fable-continuation-20261003.md#site-requirements)).
 
 A number no caller binds is handed absent, `refs[k] = 0`. A method that only
 forwards the name hands its entry on as it is (`l2_dyn_fwd`,

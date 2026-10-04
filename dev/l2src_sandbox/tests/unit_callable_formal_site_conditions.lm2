@@ -1,0 +1,56 @@
+# A name is needed only while six formals hold six methods. rd reads zz,
+# which the unit does not declare; nr reads nothing. h1 calls its formal;
+# h1b has the same formal and does not call it. Each level above calls its
+# first formal with the rest. zz is needed where the chain is whole and its
+# last formal holds rd: withzz has zz 30: 31. The root has no zz. With nr at
+# the end nothing reads zz: 7. With h1b in the chain rd is never called: 5.
+# Neither asks the root for zz. Entry 7.
+fn: rd () int
+    return: zz + 1
+end: rd
+
+fn: nr () int
+    return: 7
+end: nr
+
+fn: h1 (rd: p) int
+    return: p()
+end: h1
+
+fn: h1b (rd: p) int
+    return: 5
+end: h1b
+
+fn: h2 (h1: a; rd: p) int
+    return: a(p)
+end: h2
+
+fn: h3 (h2: b; h1: a; rd: p) int
+    return: b(a, p)
+end: h3
+
+fn: h4 (h3: c; h2: b; h1: a; rd: p) int
+    return: c(b, a, p)
+end: h4
+
+fn: h5 (h4: d; h3: c; h2: b; h1: a; rd: p) int
+    return: d(c, b, a, p)
+end: h5
+
+fn: h6 (h5: e; h4: d; h3: c; h2: b; h1: a; rd: p) int
+    return: e(d, c, b, a, p)
+end: h6
+
+fn: withzz () int
+    int: zz 30
+    return: h6(h5, h4, h3, h2, h1, rd)
+end: withzz
+
+int: x h6(h5, h4, h3, h2, h1, nr)
+int: y h6(h5, h4, h3, h2, h1b, rd)
+int: z withzz()
+int: ok 7
+if: x != 7 || y != 5 || z != 31
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

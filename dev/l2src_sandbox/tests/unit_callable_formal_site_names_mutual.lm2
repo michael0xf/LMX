@@ -1,0 +1,43 @@
+# Mutual recursion hands the callable on, and the names asked follow it.
+# ping and pong pass q to each other and call it at the end. g1 reads other;
+# fz reads zz, which the unit does not declare. The root has no zz and gives
+# g1: with no hop ping calls it with the root's other, 10. pong has its own
+# other, 70: with one hop pong calls it, 71; with two ping calls it with the
+# other pong handed it, 71. withzz has zz 30 and gives fz: 32. Entry 7.
+int: other 9
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: fz () int
+    return: zz + 2
+end: fz
+
+fn: ping (g1: q; int: n) int
+    if: n = 0
+        return: q()
+    return: pong(q, n - 1)
+end: ping
+
+fn: pong (g1: q; int: n) int
+    int: other 70
+    if: n = 0
+        return: q()
+    return: ping(q, n - 1)
+end: pong
+
+fn: withzz () int
+    int: zz 30
+    return: ping(fz, 2) * 100 + ping(fz, 3)
+end: withzz
+
+int: a ping(g1, 0)
+int: b ping(g1, 1)
+int: d ping(g1, 2)
+int: c withzz()
+int: ok 7
+if: a != 10 || b != 71 || d != 71 || c != 3232
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

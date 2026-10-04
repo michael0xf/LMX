@@ -1,0 +1,37 @@
+# A definition that only hands a name on does not give its host's value of
+# that name. makeUse has a local other, 50, and returns h0, which calls hop;
+# hop calls g1; only g1 reads other. The root calls inner above the unit's
+# declaration of other: no caller has the name, it arrives absent, and g1
+# reads its own lexical source, the unit's cell, zero until its statement
+# runs: 5 + 1, never 5 + 51. Below the declaration other is 9: 5 + 10.
+# Entry 7.
+fn: makeUse (int: k) fn: () int
+    int: other 50
+    fn: h0 () int
+        return: k + hop()
+    return: h0
+
+u0: makeUse 5
+int: first inner()
+int: other 9
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: hop () int
+    return: g1()
+end: hop
+
+fn: inner () int
+    return: u0()
+end: inner
+
+int: second inner()
+int: ok 7
+if: first != 6 || second != 15
+    ok: 81
+if: first = 56 || second = 56
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,37 @@
+# A call site is asked only for the names of the callable it gives. One
+# callable formal receives g1, which reads other, and fz, which reads zz.
+# The unit declares other and no zz: only a caller can bind zz. The root
+# gives run g1 and has no zz: it is asked nothing for zz, and g1 reads the
+# root's other, 9: 10. withzz has zz 30 and gives fz: 32. outer has its own
+# other, 40, and gives g1: 41. Entry 7.
+int: other 9
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: fz () int
+    return: zz + 2
+end: fz
+
+fn: run (g1: q) int
+    return: q()
+end: run
+
+fn: withzz () int
+    int: zz 30
+    return: run(fz)
+end: withzz
+
+fn: outer (int: other) int
+    return: run(g1)
+end: outer
+
+int: a run(g1)
+int: b withzz()
+int: c outer(40)
+int: ok 7
+if: a != 10 || b != 32 || c != 41
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

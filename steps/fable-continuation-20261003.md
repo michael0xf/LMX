@@ -4837,3 +4837,202 @@ for occurrences the flow proves, with no branch for the declaring method.
 `unit_callable_formal_free_names_differ` is its required positive. Then the
 third slice: held callables and merge nodes as actuals and as callees, the
 library's ingress, the walked consumer.
+
+<a id="site-requirements"></a>
+## 59. A call site asks only for the names of the callable it gives; a formal with several formations selects by exact occurrence (second slice, part two)
+
+### Codex's eighth reply -12
+
+It reviews `a5171eb3` and the plan of this part, and corrects the plan in
+four places before any byte of it was written.
+
+- No limit on conditions. "The proposed truncation after four conditions is
+  rejected, even if dropping conjuncts conservatively over-requires rather
+  than under-requires." And: "Represent the complete finite
+  source-derived conditions with the ordinary
+  dynamic-container/set/worklist machinery."
+- The unknown. "UNKNOWN is not an unconditional requirement." And:
+  "Do not issue ordinary "unbound dynamic input" for a requirement
+  invented by truncation or uncertainty." And: "Do not make "it is a
+  reference" a semantic reason to demand an input."
+- The last branch. "When alternatives and exact identities really are
+  complete, the last class may be the proven remaining class: no redundant
+  fatal check is needed merely for defensive programming." And:
+  "Never reintroduce the exemplar or a "default actual" as a
+  fallback."
+- The abort of the first part. "A valid source call whose selected
+  actual cannot obtain a required input must be refused through ordinary
+  call formation/admission before body execution, not advertised as handled
+  by a process abort." And: "Do not accumulate blanket defensive
+  checks in generated core code on the rationale that "the translator wrote
+  both sides"."
+- The transport of the first part stands: "The completed absence
+  transport is the right foundation."
+
+So the plan sent with the last checkpoint is withdrawn in four points: the
+row of at most four conditions; "not known" counted as "holds"; a reference
+counted as needed because it is a reference; a stop in the last branch. And
+one thing of the committed first part goes: the entry's abort on an absent
+required input.
+
+### What changed
+
+All in `dev/l2src_sandbox/l2trans.lm1`.
+
+| Step | Where | What |
+| --- | --- | --- |
+| A fact keeps its site | `l2_cfl_note`, `l2_cfl_site_fact` | What reaches a callable formal is recorded with the call node, so what one site's actual can denote is asked per site. |
+| The tables grow | `l2_vec_grow`, `l2_cfl_reserve`, `l2_cfr_reserve`, `l2_dyr_reserve` | The facts, the closure and the reasons are blocks that double. The two fixed sizes of the first slice, 256 facts and 512 reaching rows, are gone with their refusals. |
+| Reasons | `l2_dyr_add` | For a name a method only hands on, the fixed point keeps why the method has it: a row is the complete set of conditions "the method's callable formal t holds method a"; no condition means always. One condition per formal; a set that asks one formal to hold two methods is no row; a row whose conditions are among another's says all the other would. |
+| What a site's actual is | `l2_site_denotes` | A named unit method decides a condition. The caller's own formal handed on turns it into a condition on the caller. No fact of the site, or an occurrence the translation does not follow: not known. |
+| What a site needs | `l2_site_needs`, in `l2_dyn_site_callee` | An input the callee reads is the callee's own requirement. An input it only hands on is needed where one of its rows holds for the site's actuals. An input not needed is asked of no one: no inheritance, no check, no refusal. |
+| Not known | the same | Where a row would hold but for a condition that cannot be told, the call is refused where it stands, as a limit: `which inputs this call needs depends on a callable this translation does not follow`. Never an invented requirement. |
+| A reference left out | the same | Needing is the same for every kind of input. A number not needed is handed absent. A reference not needed is not handed absent yet, and the call is refused where it stands, as a limit. |
+| Hard rows | `l2_reader_source`, `l2_dyr_add` | A row is hard when an absent entry would reach a method that reads the name and has no source of its own: no field of the unit it sees, and, for a definition inside a method, no name of its host kept in its node. |
+| The refusal | `l2_dyn_site_callee` (the root), `l2_held_unbound` (a held call) | The root, with nothing to give, calls a chain whose hard row holds: `unbound dynamic input`, at translation, where the chain starts. A name the callee only hands on is no longer looked up in the callee's own lexical source. |
+| The abort goes | `l2_emit_tramp_lex` | The entry of a reader that cannot resolve a number itself reads it as it stands. The abort `a required input arrived absent` is no longer written. |
+| The native call | `l2_emit_call`, `l2_emit_call_hides`, `l2_emit_call_go`, `l2_emit_call_classes` | An input not needed at the site is handed absent and nothing of the caller is evaluated for it. A call through a formal that one formation reaches is as before. More than one: see below. |
+| The walked call | `l2_rw_call` | The walked caller takes the same rule. A walked body that calls through a formal with more than one formation is native only: the walk has no such operation yet. |
+| The old formation goes | `l2_cfl_classes`, `l2_cfl_class_of` | `l2_cfl_formation`, which refused callables formed differently, is removed. |
+
+### The formation by exact occurrence
+
+Where the methods that reach a formal form their inputs in more than one
+way, the call selects the formation by the occurrence the formal holds. The
+occurrence is read once. It is compared with the unit's own occurrence of
+each reaching method of every class but the last; the last class is the
+remainder. Each class then forms its own list through the same
+`l2_hidden_from` and calls. No class serves the method that declares the
+formal.
+
+What makes the last class the remainder, and not a guess:
+
+- **Every way a callable formal is given a value is one statement of the
+  translator.** A unit method becomes a value in one place only, as the
+  actual of a callable formal (`l2_cf_actual_emit`); the same loop of
+  `l2_check_call` writes the fact, or refuses the actual. A formal handed on
+  and a callee that is a formal's value pass through the same loop.
+- **The other forms of call do not translate.** Measured by probes: a held
+  definition with a callable formal is refused at its call (`a held
+  callable whose header is not numbers to a number`); a consumer bound by
+  merge is refused (`run has no argument`, `unknown method`). A merge built
+  as the actual is recorded as not followed, and so is every formal of a
+  library unit; the call through such a formal is refused.
+- **The formal's value does not leave its formal or change in it.** Measured
+  by probes: rebinding the formal, storing it in a local reference,
+  declaring a local of the contract's type from it, and returning it are
+  each refused today (`unknown type`, `more arguments than … has formals`,
+  `a callable merge needs one model`). So the value read at the call is the
+  value the call site gave.
+- **Both sides are one expression.** The caller names the method's
+  occurrence in the unit; the consumer compares with the same expression
+  through its own reference to the unit. They are the program's one unit.
+
+This is a statement about the routes of today, and the probes are not gate
+rows. A route added later, a held consumer, a merge-bound one, a formal's
+value stored or returned, has to write its fact or the row "not followed",
+or the remainder stops being proved. That is the third slice's to keep.
+
+### Measured
+
+On the committed translator (`a5171eb3`) and on this one, natively.
+
+| Program | Before | Now |
+| --- | --- | --- |
+| `unit_callable_formal_free_names_differ`: `run` receives `g1`, which reads `other`, and `f0`, which reads `base`; from the root, from `outer (int: other)` with 40, from `under (int: base)` with 77 | refused: `callables whose inputs are formed differently` | 10 and 5; 4105; 1077 |
+| `unit_callable_formal_site_names`: `g1` reads `other`; `fz` reads `zz`, which the unit does not declare; the root has no `zz` and gives `g1`; `withzz` has `zz` 30 and gives `fz`; `outer` has `other` 40 and gives `g1` | refused at the root's call that gives `g1`: `unbound dynamic input zz` | 10; 32; 41 |
+| `unit_callable_formal_site_names_forward`: the same through two formals handed on, and through a callee that is a formal's value | refused the same way | 10 by each route; 32 by each; 41 by each |
+| `unit_callable_formal_site_names_mutual`: the same through mutual recursion; `pong` has its own `other`, 70 | refused the same way | 10, 71, 71; 32 and 32 |
+| `unit_callable_formal_site_conditions`: `zz` is needed only while six formals hold six methods; the root has no `zz` | refused the same way | 7 with a callable that reads nothing at the end; 5 with a link that never calls it; 31 where the chain is whole and a caller has `zz` |
+| `unit_callable_formal_site_names_missing_refused`: the root gives `fz` and no one has `zz` | refused at 25:8, the root's call that gives `g1` | refused at 27:8, the call that gives `fz` |
+| `unit_absent_input_unavailable_refused`: the root calls a held definition that only hands `zz` on to a reader with no source; the method that made the definition has a local `zz` | translates; at run time the process stops, `a required input arrived absent`; walked `walk error: INVALID` | refused at translation, 23:8: `unbound dynamic input zz` |
+| `unit_held_call_required_input_from_caller`: the same held call from a method whose caller has `zz` | translates; the same stop at run time | refused where the call stands, as a limit: OPEN |
+| `unit_callable_formal_site_names_reference`: one alternative reads a number, the other a Structure | refused at the call through the formal | refused at the site that leaves the reference out, as a limit: OPEN |
+| `unit_callable_formal_unfollowed_actual`: a merge built as the actual reaches a formal handed on | refused at the call through the formal | refused at the site whose callable cannot be told, as a limit: OPEN |
+| `unit_absent_input_forward_host_local` | 6 and 15, natively and walked | the same; now a gated row |
+| `unit_absent_input_parts`: a forwarder of one program part, the reader of another, a source with no such name | 5 and 3, natively and walked | the same; now a gated row |
+
+The last two are the witnesses the first part owed. On `5afcb650`, before
+the transport, `unit_absent_input_parts` gives the forwarder's 8 in place of
+the reader's 5.
+
+### Replay
+
+The slice's translator against the committed one (`a5171eb3`), on the 1656
+translations recorded by `fable_full_33`: exit, messages and the generated
+L1 are the same on 1618 rows. Of the 38 others, 37 differ by the three
+lines of the removed abort and by nothing else, and
+`unit_callable_formal_free_names_differ`, refused before, translates. No row
+that translated is refused, and no message of a refusal changes.
+
+Before the gates the new rows, the 38 and the rows of callable formals,
+parts and the absent input were run together (`fable_site_01`): 77 rows, 68
+pass; the nine red ones are the labelled OPEN positives and the baseline row
+`unit_t7_convert`.
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart and run
+natively on thirteen fixtures. `differ` and `site_names_forward` were run
+again under every mutant after they gained `under` and `far`.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| Every condition holds at every site | `site_names`, `_forward`, `_mutual` and `site_conditions` are refused: `unbound dynamic input zz`. |
+| The first class's list serves every occurrence | `differ`, `site_names`, `_forward` and `_mutual` give a wrong value; `site_conditions` stops at run time: `a trampoline was called outside its method's signature`. |
+| A formal handed on denotes nothing | `site_names_forward` and `site_conditions` are refused (`unresolved name`); `site_names_mutual` and the first slice's `_higher` and `_mutual` give wrong values. |
+| A condition on the callee's formal is not carried over to the caller's | `site_names_forward`, `site_names_mutual` and `site_conditions` are refused: `unbound dynamic input zz`. |
+| No reason is hard | The three refusal rows translate and run: `site_names_missing_refused`, `unit_absent_input_unavailable_refused` and the first slice's `_missing_refused`. The OPEN row of the held call translates and gives a wrong value. |
+
+The mutants the first part left without a gated kill were run again, on the
+new rows, as copies of the first part's translator.
+
+| Mutant of the first part | What the new rows say |
+| --- | --- |
+| A caller with no binding reads the callee's cell itself | `unit_absent_input_parts` gives 8 in place of 5, natively and walked. |
+| No input is forward-only | `unit_absent_input_parts` gives 8 in place of 5 in both modes; `unit_absent_input_forward_host_local` stops with `walk error: INVALID` in both. |
+| A forwarded entry goes as it is to a callee that cannot take it absent | `unit_absent_input_parts` stops natively and gives a wrong value walked. |
+
+Every mutant of the two parts is now killed by a value or a refusal of a
+gated row. One thing is not behaviour and has no mutant: an input not
+needed at a site is handed absent in place of the caller's value, and no
+reader exists to tell the two apart. No row pins it; it is visible in the
+generated L1 of `differ`, where the callers write a zero entry. The row's
+one text pin is the selection of the class in `run`.
+
+### What is not built
+
+Coverage of the implementation, no restriction of the language. Each is a
+red required positive.
+
+- **A reference left out** (`unit_callable_formal_site_names_reference`).
+- **A held call's names asked of the callers' callers**
+  (`unit_held_call_required_input_from_caller`).
+- **An occurrence not followed** (`unit_callable_formal_unfollowed_actual`,
+  `unit_t7_convert`, `unit_lib_callable_formal`).
+- **The walked consumer**, **a held callable as the actual**, **the caller's
+  own reference of another declaration**: as before.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_20` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_20` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_34` (full harness) | RED 37 of 1670. Against `fable_full_33` (RED 35 of 1657): FAIL→OK 1, `unit_callable_formal_free_names_differ`; OK→FAIL 0; added 13, of which 10 green and three labelled OPEN rows red; removed 0. |
+| `build/l2_harness/fable_site_01` (focused, before the gates) | 77 rows: 68 pass; red only the labelled OPEN rows and `unit_t7_convert`. |
+
+Against the baseline `fable_full_01` (RED 126 of 1395), counted directly:
+97 FAIL→OK, OK→FAIL 0, five red rows replaced, 280 added of which 13 red.
+The 37 red rows are 24 of the baseline and 13 added: the five that
+`fable_full_17` had above the baseline and eight labelled OPEN positives,
+`unit_held_call_to_callable_formal`,
+`unit_callable_formal_free_names_self_walk`, `unit_lib_callable_formal`,
+the two of the caller's own Structure, and the three of this slice. The
+pre-gate hashes of the translator, the fifteen fixtures and the harness
+equal the live files and every staged copy (`tie.py`).
+
+**Next.** The third slice: held callables and merge nodes as actuals and as
+callees through this same formation, with the ordinary admission; the
+absence of a reference; a held call's names asked along the chain of
+callers; the library's ingress; the walked consumer.

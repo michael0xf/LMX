@@ -1,0 +1,35 @@
+# OPEN positive. A formal handed on may hold a callable built where the call
+# is made, and one site's merge does not change what another site gives.
+# take calls its formal; mid hands its own formal to take. The root gives
+# mid g1, which reads other: 10. passed gives mid a merge of five with its
+# y bound: 5. This implementation does not follow a merge built as an
+# actual, so what the call in mid needs cannot be told, and it is refused
+# where it stands, as a limit and no rule. Entry 7.
+int: other 9
+
+fn: five (int: y) int
+    return: y
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: take (g1: op) int
+    return: op()
+end: take
+
+fn: mid (g1: p) int
+    return: take(p)
+end: mid
+
+fn: passed () int
+    return: mid: merge(y: 5; five)
+end: passed
+
+int: a mid(g1)
+int: d passed()
+int: ok 7
+if: a != 10 || d != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

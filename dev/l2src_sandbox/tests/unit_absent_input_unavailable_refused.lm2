@@ -1,0 +1,25 @@
+# A required input no one can give is refused where the chain starts, before
+# anything runs. r reads zz; the unit does not declare it. withzz has zz 30
+# and may call r. The definition f only hands the name on: the zz of the
+# method that made f is not f's to give, and r has no source of its own. The
+# root that calls f has no zz: that call is refused.
+fn: r () int
+    return: zz + 1
+end: r
+
+fn: withzz () int
+    int: zz 30
+    return: r()
+end: withzz
+
+fn: mk (int: k) fn: () int
+    int: zz 50
+    fn: f () int
+        return: k + r()
+    return: f
+
+u0: mk 5
+int: b withzz()
+int: a u0()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

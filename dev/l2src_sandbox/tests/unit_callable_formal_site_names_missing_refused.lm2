@@ -1,0 +1,29 @@
+# The callable a site gives needs a name no one can give: the call is
+# inadmissible before entry and is refused where it stands. fz reads zz; the
+# unit does not declare it and the root has none. run only hands the name
+# on, so the refusal stands at the root's call that gives fz, not at the one
+# that gives g1.
+int: other 9
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: fz () int
+    return: zz + 2
+end: fz
+
+fn: run (g1: q) int
+    return: q()
+end: run
+
+fn: withzz () int
+    int: zz 30
+    return: run(fz)
+end: withzz
+
+int: a run(g1)
+int: b withzz()
+int: c run(fz)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

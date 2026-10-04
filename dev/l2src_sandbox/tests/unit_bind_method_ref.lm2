@@ -1,5 +1,5 @@
-# OPUS-TYPED-BINDING-20260930-20, next_core_tasks.md §3 item 207: in a method `Model: b c` with b absent and c a Model declares b
-# bound to c's descriptor -- no merge, no copy: a write through b is read through c.  Entry 7.
+# Explicit reference binding in a method: b points to c's descriptor,
+# without copying c; a write through b is read through c. Entry 7.
 Model:
     size_t: value 1U
 end: Model
@@ -11,9 +11,9 @@ end: Other
 
 fn: m () int
     int: out 0
-    Model: c
+    c: merge Model
     c\value: 5U
-    Model: b c
+    @: Model b c
     b\value: 9U
     if: c\value = 9U
         out: 7

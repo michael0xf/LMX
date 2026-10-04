@@ -1,4 +1,4 @@
-# OPUS-TYPED-BINDING-20260930-20, next_core_tasks.md §3 item 207: the candidate a formal: `Model: b c` binds b to the Structure
+# Explicit reference binding whose candidate is a formal: `@: Model b c` binds b to the Structure
 # the caller passed (Structure values are references; the formal binds the caller's) -- the caller reads the write made
 # through b.  Entry 7.
 Model:
@@ -11,14 +11,14 @@ Other:
 end: Other
 
 fn: m (Model: c) int
-    Model: b c
+    @: Model b c
     b\value: 9U
     return: 7
 end: m
 
 fn: probe () int
     int: out 0
-    Model: mo
+    mo: merge Model
     int: t m(mo)
     if: mo\value = 9U
         out: t

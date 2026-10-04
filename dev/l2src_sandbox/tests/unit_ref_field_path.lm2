@@ -9,10 +9,11 @@ end: Holder
 # D-76: a path goes on through a reference field `@: Model q` into its pointee: `h\q\value` is mo's
 # own field, read and written.  Success is 7.
 fn: check () int
-    Model: mo
-    Holder: h
+    mo: merge Model
+    h:
+        @: Model q
     size_t: v
-    h\q: @mo
+    h\q: mo
     mo\value: 9U
     v: h\q\value
     if: v != 9U

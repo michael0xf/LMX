@@ -1,0 +1,406 @@
+predef: "l2src/lmx_source_names.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_turn.lm1" "l2src/lmx_child.lm1" "l2src/lmx_post.lm1"
+predef: "l2src/lmx_thread.lm1" "l2src/lmx_schedule.lm1" "l2src/lmx_manager.lm1"
+predef: "l2src/lmx_implements.lm1" "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1" "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>" "<stdlib.h>"
+
+prototype:
+    fn: __real_calloc (size_t: count; size_t: size) @: void
+    fn: __real_malloc (size_t: size) @: void
+end: prototype
+
+int: names_fail_slots 0
+int: names_slots_seen 0
+int: names_fail_malloc 0
+int: names_malloc_seen 0
+
+fn: __wrap_malloc (size_t: size) @: void
+    if: names_fail_malloc != 0
+        names_malloc_seen: names_malloc_seen + 1
+        if: names_malloc_seen = names_fail_malloc
+            return: 0
+        ---
+    ---
+return: c.__real_malloc(size)
+
+fn: __wrap_calloc (size_t: count; size_t: size) @: void
+    if: names_fail_slots != 0 && count = 1U && size = c.sizeof(@: void)
+        names_slots_seen: names_slots_seen + 1
+        if: names_slots_seen = names_fail_slots
+            return: 0
+        ---
+    ---
+return: c.__real_calloc(count, size)
+
+fn: names_published (@: LmxArena arena) size_t
+    @: LmxPool pool arena\arrays
+    @: LmxChunk chunk
+    @: LmxSourceName row
+    size_t: i
+    size_t: n 0U
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_SOURCE_NAME
+            chunk: pool\head
+            while: chunk != 0
+                if: lmx_range_interval_pool(arena, (cast: (@: void) lmx_chunk_data(chunk))) = pool
+                    i: 0U
+                    while: i < lmx_chunk_cells(chunk, (pool\stride))
+                        row: (cast: (@: LmxSourceName) lmx_chunk_data(chunk)) + i
+                        if: row\key != 0
+                            n: n + 1U
+                        i: i + 1U
+                    ---
+                ---
+                chunk: chunk\next
+            ---
+        ---
+        pool: pool\next
+    ---
+return: n
+
+fn: names_cells (@: LmxArena arena) size_t
+    @: LmxPool pool arena\arrays
+    @: LmxChunk chunk
+    size_t: n 0U
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_SOURCE_NAME
+            chunk: pool\head
+            while: chunk != 0
+                if: lmx_range_interval_pool(arena, (cast: (@: void) lmx_chunk_data(chunk))) = pool
+                    n: n + lmx_chunk_cells(chunk, (pool\stride))
+                ---
+                chunk: chunk\next
+            ---
+        ---
+        pool: pool\next
+    ---
+return: n
+
+# Source names are independent retained payloads, not value/type metadata.
+# These tests inspect the external service and real graph addresses directly.
+sub: names_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: names_check
+
+fn: names_match (@: LmxArena arena; @: void key; const: @(char expected); size_t: length) int
+    @: VoidArray text lmx_source_name_get(arena, key)
+    if: text = 0 || text\size != length
+        return: 0
+    if: length = 0U
+        return: 1
+return: (cast: (int) (memcmp(text\data, (cast: (@: void) expected), length) = 0))
+
+fn: main () int
+    []: int counts 2
+    LmxArena: arena
+    LmxArena: copy_arena
+    LmxArena: other
+    LmxArena: borrower
+    LmxArena: weak_arena
+    LmxArena: retired
+    LmxArena: merge_arena
+    LmxArena: model_arena
+    LmxArena: cold_arena
+    @: void cold_key
+    @: void cold_literal
+    @: void cold_mutable
+    @: Lmx root
+    @: Lmx symbol_root
+    @: Lmx symbol_copy 0
+    @: void symbol1
+    @: void symbol2
+    @: Lmx copied 0
+    @: Lmx same_arena_copy 0
+    @: Lmx attached
+    @: Lmx model
+    @: Lmx empty_operand
+    @: Lmx merged 0
+    @: Lmx seed
+    @: void seed_atom
+    []: @(Lmx) operands 2
+    []: @(LmxMergePair) pairs 1
+    LmxMergePair: pair
+    size_t: published
+    int: status
+    LmxCopyMap: batch
+    @: Lmx batch_key
+    size_t: cells
+    int: failure 1
+    @: void atom
+    @: void empty_key1
+    @: void empty_key2
+    @: void live_key
+    @: void dead_key
+    @: void retired_key
+    @: LmxSourceName empty1 0
+    @: LmxSourceName empty2 0
+    @: LmxSourceName pending 0
+    @: LmxSourceName live_row 0
+    @: VoidArray text
+    @: LmxPool pool
+    @: LmxChunk chunk
+    @: LmxChunk text_chunk
+    @: void lo
+    @: void hi
+    unsigned: gen
+    counts[0]: 0
+    counts[1]: 0
+    memset((cast: (@: void) @ arena), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ copy_arena), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ other), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ borrower), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ weak_arena), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ retired), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ merge_arena), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ model_arena), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) @ cold_arena), 0, c.sizeof(c.LmxArena))
+    lmx_arena_open(@ arena)
+    lmx_arena_open(@ copy_arena)
+    lmx_arena_open(@ other)
+    lmx_arena_open(@ borrower)
+    lmx_arena_open(@ weak_arena)
+    lmx_arena_open(@ retired)
+    lmx_arena_open(@ cold_arena)
+    # A builder may publish names before its first char literal/field. Names
+    # must not occupy the literal-table interval or corrupt its byte identity.
+    cold_key: lmx_int_new_owned(@ cold_arena)
+    names_check(counts, (cold_key != 0 && lmx_source_name_set(@ cold_arena, cold_key, "cold", 4U) = 0), "name before first CHAR constructor")
+    cold_literal: lmx_char_cell(@ cold_arena, 65)
+    names_check(counts, (cold_literal != 0 && lmx_char_value_known(cold_literal) = 65), "names preserve first CHAR literal table")
+    cold_mutable: lmx_char_new_owned(@ cold_arena)
+    names_check(counts, (cold_mutable != 0 && cold_mutable != cold_literal && lmx_char_store_known(cold_mutable, 66) = 0), "mutable CHAR follows literal table")
+    names_check(counts, (lmx_char_value_known(cold_literal) = 65 && lmx_char_value_known(cold_mutable) = 66), "CHAR literal and field remain independent")
+    names_check(counts, names_match(@ cold_arena, cold_key, "cold", 4U), "spelling survives CHAR constructors")
+    lmx_arena_release(@ cold_arena)
+    # Equal spelling is not equal occurrence identity, and repeated edges to
+    # one occurrence remain shared after ordinary graph copying.
+    symbol_root: lmx_node_new_owned(@ arena)
+    names_check(counts, (symbol_root != 0 && lmx_arena_refs_open_owned(@ arena, symbol_root, 3U) = 0), "symbol holder is a real Structure")
+    symbol1: lmx_arena_take(@ arena, c.sizeof(c.char), c.LMX_KIND_SOURCE_SYMBOL, c.LMX_TYPE_SOURCE_SYMBOL)
+    symbol2: lmx_arena_take(@ arena, c.sizeof(c.char), c.LMX_KIND_SOURCE_SYMBOL, c.LMX_TYPE_SOURCE_SYMBOL)
+    names_check(counts, (symbol1 != 0 && symbol2 != 0 && symbol1 != symbol2), "symbol occurrences have distinct real cells")
+    names_check(counts, (lmx_range_classify(@ arena, symbol1) = c.LMX_KIND_SOURCE_SYMBOL && lmx_range_stride(@ arena, symbol1) = c.sizeof(c.char)), "symbol is an identity-only leaf, not an OP/header")
+    names_check(counts, (lmx_source_name_set(@ arena, symbol1, "b", 1U) = 0 && lmx_source_name_set(@ arena, symbol2, "b", 1U) = 0), "equal symbol spellings are externally retained")
+    lmx_arena_ref_store(symbol_root, 0U, symbol1)
+    lmx_arena_ref_store(symbol_root, 1U, symbol2)
+    lmx_arena_ref_store(symbol_root, 2U, symbol1)
+    names_check(counts, (lmx_graph_copy_owned(symbol_root, @ arena, @ copy_arena, @ symbol_copy) = c.LMX_GRAPH_COPY_OK && symbol_copy != 0), "symbol graph cross-arena copy")
+    if: symbol_copy = 0
+        return: 1
+    names_check(counts, (lmx_arena_ref_value(symbol_copy, 0U) != symbol1 && lmx_arena_ref_value(symbol_copy, 1U) != symbol2), "symbol copies do not share source identities")
+    names_check(counts, (lmx_arena_ref_value(symbol_copy, 0U) != lmx_arena_ref_value(symbol_copy, 1U)), "equal-spelling distinct symbols do not collapse")
+    names_check(counts, (lmx_arena_ref_value(symbol_copy, 0U) = lmx_arena_ref_value(symbol_copy, 2U)), "repeated symbol edge retains sharing")
+    names_check(counts, names_match(@ copy_arena, lmx_arena_ref_value(symbol_copy, 0U), "b", 1U), "first copied symbol name remaps")
+    names_check(counts, names_match(@ copy_arena, lmx_arena_ref_value(symbol_copy, 1U), "b", 1U), "second copied symbol name remaps independently")
+    lmx_arena_open(@ merge_arena)
+    lmx_arena_open(@ model_arena)
+    root: lmx_node_new_owned(@ arena)
+    atom: lmx_int_new_owned(@ arena)
+    empty_key1: lmx_unsigned_new_owned(@ arena)
+    empty_key2: lmx_size_new_owned(@ arena)
+    names_check(counts, (root != 0 && atom != 0 && empty_key1 != 0 && empty_key2 != 0), "typed source places allocated")
+    if: root = 0 || atom = 0 || empty_key1 = 0 || empty_key2 = 0
+        return: 1
+    lmx_int_store_known(atom, 7)
+    names_check(counts, (lmx_arena_refs_open_owned(@ arena, root, 2U) = 0), "graph slots opened")
+    lmx_arena_ref_store(root, 0U, atom)
+    lmx_arena_ref_store(root, 1U, atom)
+    names_check(counts, (lmx_source_name_prepare(@ arena, empty_key1, 0, 0U, @ empty1) = 0), "first empty pending name")
+    names_check(counts, (lmx_source_name_prepare(@ arena, empty_key2, 0, 0U, @ empty2) = 0), "second empty pending name")
+    names_check(counts, (empty1 != 0 && empty2 != 0 && empty1 != empty2), "pending empty rows never reuse one place")
+    names_check(counts, (lmx_source_name_get(@ arena, empty_key1) = 0 && lmx_source_name_get(@ arena, empty_key2) = 0), "pending names are invisible")
+    lmx_source_name_publish(empty1, empty_key1)
+    lmx_source_name_publish(empty2, empty_key2)
+    names_check(counts, names_match(@ arena, empty_key1, 0, 0U), "first empty name published")
+    names_check(counts, names_match(@ arena, empty_key2, 0, 0U), "second empty name published")
+    names_check(counts, (lmx_source_name_set(@ arena, (cast: (@: void) root), "Root", 4U) = 0), "Structure name outside header")
+    names_check(counts, (lmx_source_name_set(@ arena, atom, "value", 5U) = 0), "typed atom name outside cell")
+    names_check(counts, (lmx_source_name_set(@ arena, (cast: (@: void) lmx_arena_ref_cell(root, 0U)), "left", 4U) = 0), "first owning place spelling")
+    names_check(counts, (lmx_source_name_set(@ arena, (cast: (@: void) lmx_arena_ref_cell(root, 1U)), "right", 5U) = 0), "second owning place spelling")
+    names_check(counts, (lmx_source_name_set(@ arena, atom, "other", 5U) != 0), "one place cannot silently change spelling")
+    names_check(counts, names_match(@ arena, atom, "value", 5U), "conflict leaves established name")
+    names_check(counts, (lmx_source_name_set(@ arena, atom, "value", 5U) = 0), "same spelling is idempotent")
+    names_check(counts, (lmx_source_name_prepare(@ arena, (cast: (@: void) root), "Root", 4U, @ pending) = 0 && pending = 0), "no duplicate row for known spelling")
+    names_check(counts, (lmx_source_name_prepare(@ arena, (cast: (@: void) @ status), "raw", 3U, @ pending) != 0 && pending = 0), "raw key cannot acquire arena-owned spelling")
+    batch_key: lmx_node_new_owned(@ arena)
+    memset((cast: (@: void) @ batch), 0, c.sizeof(c.LmxCopyMap))
+    published: names_published(@ arena)
+    names_check(counts, (lmx_copy_name_prepare(@ arena, @ arena, (cast: (@: void) root), (cast: (@: void) batch_key), @ batch) = c.LMX_GRAPH_COPY_OK), "prepare transient copied name")
+    cells: names_cells(@ arena)
+    names_check(counts, (lmx_copy_name_prepare(@ arena, @ arena, (cast: (@: void) root), (cast: (@: void) batch_key), @ batch) = c.LMX_GRAPH_COPY_OK && names_cells(@ arena) = cells), "repeat pending name allocates no hidden row")
+    names_check(counts, (lmx_copy_name_prepare(@ arena, @ arena, (cast: (@: void) lmx_arena_ref_cell(root, 0U)), (cast: (@: void) batch_key), @ batch) = c.LMX_GRAPH_COPY_INVALID), "pending conflict does not overwrite first spelling")
+    names_check(counts, (lmx_source_name_get(@ arena, (cast: (@: void) batch_key)) = 0), "batch remains unpublished")
+    lmx_copy_names_finish(@ batch, 0)
+    names_check(counts, (names_published(@ arena) = published), "cancel entire batch")
+    while: failure <= 2
+        names_malloc_seen: 0
+        names_fail_malloc: failure
+        status: lmx_copy_name_prepare(@ arena, @ arena, (cast: (@: void) root), (cast: (@: void) batch_key), @ batch)
+        names_fail_malloc: 0
+        names_check(counts, (status = c.LMX_GRAPH_COPY_NOMEM && names_malloc_seen = failure), "each initial map allocation failure is safe")
+        lmx_copy_names_finish(@ batch, 0)
+        names_check(counts, (names_published(@ arena) = published), "failed map initialization publishes nothing")
+        failure: failure + 1
+    ---
+    names_check(counts, (lmx_copy_name_prepare(@ arena, @ arena, (cast: (@: void) root), (cast: (@: void) batch_key), @ batch) = c.LMX_GRAPH_COPY_OK), "batch retry after both map failures")
+    lmx_copy_names_finish(@ batch, 1)
+    names_check(counts, (names_published(@ arena) = published + 1U && names_match(@ arena, (cast: (@: void) batch_key), "Root", 4U)), "successful batch publishes exactly one name")
+
+    # Failure after a successful copied closure must not publish any names,
+    # including rows appended inside already-existing service chunks.
+    model: lmx_node_new_owned(@ model_arena)
+    lmx_arena_refs_open_owned(@ model_arena, model, 1U)
+    atom: lmx_int_new_owned(@ model_arena)
+    lmx_int_store_known(atom, 20)
+    lmx_arena_ref_store(model, 0U, atom)
+    lmx_source_name_set(@ model_arena, (cast: (@: void) model), "Model", 5U)
+    lmx_source_name_set(@ model_arena, atom, "data", 4U)
+    lmx_source_name_set(@ model_arena, (cast: (@: void) lmx_arena_ref_cell(model, 0U)), "x", 1U)
+    # Establish multi-cell pool steps BEFORE the seed. The following single
+    # allocations leave room in pre-mark chunks for copied keys/name rows.
+    lmx_arena_take_n(@ merge_arena, c.sizeof(c.Lmx), c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, 8U)
+    lmx_arena_take_n(@ merge_arena, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, 8U)
+    lmx_arena_take_n(@ merge_arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME, 16U)
+    lmx_arena_take_n(@ merge_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 64U)
+    seed: lmx_node_new_owned(@ merge_arena)
+    seed_atom: lmx_int_new_owned(@ merge_arena)
+    lmx_source_name_set(@ merge_arena, (cast: (@: void) seed), "seed", 4U)
+    lmx_source_name_set(@ merge_arena, seed_atom, "seed-data", 9U)
+    published: names_published(@ merge_arena)
+    operands[0]: model
+    # Keep the general two-operand construction's after-copy failure point.
+    # A complete one-operand copy needs no second result-root allocation.
+    empty_operand: lmx_node_new_owned(@ model_arena)
+    operands[1]: empty_operand
+    names_slots_seen: 0
+    names_fail_slots: 2
+    status: lmx_merge_owned(operands, 2U, 0, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged)
+    names_fail_slots: 0
+    names_check(counts, (names_slots_seen = 2 && status = c.LMX_MERGE_NOMEM && merged = 0), "merge failure is after the copied closure")
+    names_check(counts, (names_published(@ merge_arena) = published), "failed outer merge publishes no intermediate names")
+    names_check(counts, names_match(@ model_arena, (cast: (@: void) model), "Model", 5U), "failed merge never writes source names")
+    names_check(counts, (lmx_merge_owned(operands, 2U, 0, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged) = c.LMX_MERGE_OK), "merge retry after rollback")
+    names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 0U)), "x", 1U), "flat merge retains original owning-place name")
+    names_check(counts, names_match(@ merge_arena, lmx_arena_ref_value(merged, 0U), "data", 4U), "flat merge retains copied value name independently")
+
+    names_check(counts, (lmx_merge_owned(operands, 1U, 0, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged) = c.LMX_MERGE_OK && merged != model), "one operand returns an independent named copy")
+    names_check(counts, names_match(@ merge_arena, (cast: (@: void) merged), "Model", 5U), "one-operand completion publishes returned-root spelling")
+    names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 0U)), "x", 1U), "one-operand completion publishes owning-place spelling")
+    names_check(counts, names_match(@ merge_arena, lmx_arena_ref_value(merged, 0U), "data", 4U), "one-operand completion publishes copied-value spelling")
+
+    # Overriding a model place changes its value, not that place's spelling.
+    operands[0]: root
+    operands[1]: model
+    pair.model_slot: 0U
+    pair.operand: 1U
+    pair.field: 0U
+    pairs[0]: @ pair
+    lmx_arena_attach(@ arena, @ model_arena)
+    names_check(counts, (lmx_merge_owned(operands, 2U, 0, 0, @ arena, @ merge_arena, pairs, 1U, @ merged) = c.LMX_MERGE_OK), "mapped merge with renamed candidate field")
+    names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 0U)), "left", 4U), "override retains model name")
+    names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 1U)), "right", 5U), "untouched occurrence name retained")
+    names_check(counts, (lmx_int_value_known(lmx_arena_ref_value(merged, 0U)) = 20), "override still uses candidate value")
+    names_check(counts, (lmx_merge_into_owned(merged, model, @ merge_arena, @ merge_arena, pairs, 1U) = c.LMX_MERGE_INVALID), "foreign unimported operand rejected")
+    # Copy the operand into the target arena before merge-into.
+    names_check(counts, (lmx_graph_copy_owned(model, @ arena, @ merge_arena, @ copied) = c.LMX_GRAPH_COPY_OK), "merge-into candidate copy")
+    names_check(counts, (lmx_merge_into_owned(merged, copied, @ merge_arena, @ merge_arena, pairs, 1U) = c.LMX_MERGE_OK), "merge-into completes staged spelling batch")
+    names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 0U)), "left", 4U), "merge-into preserves existing target name")
+    names_check(counts, (lmx_graph_copy_owned(root, @ arena, @ copy_arena, @ copied) = c.LMX_GRAPH_COPY_OK), "copy graph and external names")
+    names_check(counts, (copied != 0 && copied != root), "copy is separate real Structure")
+    if: copied = 0
+        return: 1
+    names_check(counts, names_match(@ copy_arena, (cast: (@: void) copied), "Root", 4U), "copy Structure name remapped")
+    names_check(counts, names_match(@ copy_arena, lmx_arena_ref_value(copied, 0U), "value", 5U), "copy atom name remapped")
+    names_check(counts, names_match(@ copy_arena, (cast: (@: void) lmx_arena_ref_cell(copied, 0U)), "left", 4U), "copy first source place remapped")
+    names_check(counts, names_match(@ copy_arena, (cast: (@: void) lmx_arena_ref_cell(copied, 1U)), "right", 5U), "copy second source place remapped")
+    names_check(counts, (lmx_arena_ref_value(copied, 0U) = lmx_arena_ref_value(copied, 1U)), "copy sharing unchanged by aliases")
+    names_check(counts, (lmx_graph_copy_owned(root, @ arena, @ arena, @ same_arena_copy) = c.LMX_GRAPH_COPY_OK), "same-arena copy traversal terminates")
+    names_check(counts, names_match(@ arena, (cast: (@: void) same_arena_copy), "Root", 4U), "same-arena copy name")
+    attached: lmx_node_new_owned(@ other)
+    names_check(counts, (lmx_source_name_set(@ other, (cast: (@: void) attached), "Attached", 8U) = 0), "donor name installed")
+    names_check(counts, (lmx_arena_attach(@ copy_arena, @ other) = 0), "arena attach owns service pools normally")
+    names_check(counts, names_match(@ copy_arena, (cast: (@: void) attached), "Attached", 8U), "attach scans joined same-type pools")
+    lmx_arena_release(@ arena)
+    names_check(counts, names_match(@ copy_arena, lmx_arena_ref_value(symbol_copy, 0U), "b", 1U), "symbol spelling survives source release")
+    names_check(counts, (lmx_range_classify(@ copy_arena, lmx_arena_ref_value(symbol_copy, 0U)) = c.LMX_KIND_SOURCE_SYMBOL), "symbol identity survives source release")
+    names_check(counts, names_match(@ copy_arena, (cast: (@: void) copied), "Root", 4U), "copied spelling survives source release")
+    names_check(counts, (lmx_int_value_known(lmx_arena_ref_value(copied, 0U)) = 7), "copied graph survives source release")
+    pool: copy_arena.arrays
+    while: pool != 0
+        lmx_pool_seal(pool)
+        pool: pool\next
+    ---
+    names_check(counts, (lmx_range_import(@ borrower, @ copy_arena) = 0), "sealed view imported")
+    names_check(counts, names_match(@ borrower, (cast: (@: void) copied), "Root", 4U), "import consults true name owner")
+    lmx_arena_release(@ borrower)
+    names_check(counts, names_match(@ copy_arena, (cast: (@: void) copied), "Root", 4U), "borrower release does not retire owner names")
+
+    # Two-pass weak mark: first name's text shares a CHAR chunk with the
+    # second name's dead key. Marking text must not resurrect that key.
+    lmx_chars_init(@ weak_arena)
+    lmx_arena_take_n(@ weak_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, 64U)
+    live_key: lmx_arena_take(@ weak_arena, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
+    names_check(counts, (lmx_source_name_prepare(@ weak_arena, live_key, "live", 4U, @ live_row) = 0), "live weak-key name")
+    lmx_source_name_publish(live_row, live_key)
+    text: lmx_source_name_get(@ weak_arena, live_key)
+    pool: lmx_range_pool(@ weak_arena, text\data)
+    text_chunk: lmx_pool_chunk_at(pool, text\data)
+    dead_key: lmx_arena_take(@ weak_arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR)
+    names_check(counts, (lmx_pool_chunk_at(pool, dead_key) = text_chunk), "weak-key contamination witness shares CHAR chunk")
+    names_check(counts, (lmx_source_name_set(@ weak_arena, dead_key, "dead", 4U) = 0), "dead weak-key name")
+    gen: lmx_arena_generation_next(@ weak_arena)
+    names_check(counts, (lmx_gc_mark_value(@ weak_arena, live_key, gen, 0) = c.LMX_GC_OK), "ordinary mark only live key")
+    names_check(counts, (text_chunk\mark != gen), "spelling did not join ordinary mark")
+    names_check(counts, (lmx_source_names_mark(@ weak_arena, gen) = c.LMX_GC_OK), "external weak-name pass")
+    names_check(counts, names_match(@ weak_arena, live_key, "live", 4U), "live name retained")
+    names_check(counts, (lmx_source_name_get(@ weak_arena, dead_key) = 0), "dead name pruned before text can stamp its chunk")
+    names_check(counts, (text_chunk\mark = gen), "live spelling storage marked after pruning")
+    names_check(counts, (lmx_source_name_prepare(@ weak_arena, dead_key, "pending", 7U, @ pending) = 0), "unpublished cancellation witness")
+    lmx_source_name_cancel(pending)
+    gen: lmx_arena_generation_next(@ weak_arena)
+    pool: lmx_range_pool(@ weak_arena, live_key)
+    chunk: lmx_pool_chunk_at(pool, live_key)
+    names_check(counts, (lmx_gc_mark_value(@ weak_arena, (cast: (@: void) live_row), gen, 0) = c.LMX_GC_OK), "published service record can be visited")
+    names_check(counts, (chunk\mark != gen), "service record never strongly marks a key")
+    names_check(counts, (lmx_source_name_get(@ weak_arena, dead_key) = 0), "cancelled row invisible")
+    gen: lmx_arena_generation_next(@ weak_arena)
+    names_check(counts, (lmx_gc_mark_value(@ weak_arena, live_key, gen, 0) = c.LMX_GC_OK), "ordinary mark before actual sweep")
+    names_check(counts, (lmx_gc_sweep(@ weak_arena, gen) = c.LMX_GC_OK), "actual sweep runs weak-name phase")
+    names_check(counts, names_match(@ weak_arena, live_key, "live", 4U), "actual sweep retains live spelling")
+
+    retired_key: lmx_arena_take(@ retired, c.sizeof(c.int), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT)
+    names_check(counts, (lmx_source_name_set(@ retired, retired_key, "retire", 6U) = 0), "retirement witness installed")
+    text: lmx_source_name_get(@ retired, retired_key)
+    pool: lmx_range_pool(@ retired, text\data)
+    chunk: lmx_pool_chunk_at(pool, text\data)
+    lo: lmx_chunk_data(chunk)
+    hi: (cast: (@: void) ((cast: (@: char) lo) + lmx_chunk_room(chunk, (pool\stride)) * pool\stride))
+    names_check(counts, (lmx_range_drop(@ retired, lo, hi) = 0), "text interval retired before reuse")
+    names_check(counts, (lmx_source_name_get(@ retired, retired_key) = 0), "retired text removes its still-live key row")
+    names_check(counts, (lmx_source_name_set(@ retired, retired_key, "again", 5U) = 0), "new spelling after retired text")
+    pool: lmx_range_pool(@ retired, retired_key)
+    chunk: lmx_pool_chunk_at(pool, retired_key)
+    lo: lmx_chunk_data(chunk)
+    hi: (cast: (@: void) ((cast: (@: char) lo) + lmx_chunk_room(chunk, (pool\stride)) * pool\stride))
+    names_check(counts, (lmx_range_drop(@ retired, lo, hi) = 0), "key interval retired")
+    names_check(counts, (lmx_source_name_get(@ retired, retired_key) = 0), "retired key has no dangling name")
+    lmx_arena_release(@ retired)
+    lmx_arena_release(@ merge_arena)
+    lmx_arena_release(@ model_arena)
+    lmx_arena_release(@ weak_arena)
+    lmx_arena_release(@ copy_arena)
+    c.printf("source names: %d checks, %d failures\n", counts[0], counts[1])
+return: (cast: (int) (counts[1] != 0))

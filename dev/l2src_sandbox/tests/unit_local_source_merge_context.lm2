@@ -1,0 +1,18 @@
+# The hosted control remains in S's activation. Its merge must resolve the
+# original Inner declaration there, not in check's method environment.
+fn: check () int
+    int: result 0
+    S:
+        Inner:
+            int: x 2
+        int: observed 0
+        if: 1
+            R: merge Inner
+            observed: R\x
+    end: S
+    S()
+    if: S\observed = 2
+        result: 7
+return: result
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

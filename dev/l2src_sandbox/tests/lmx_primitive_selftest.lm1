@@ -335,11 +335,13 @@ fn: main () int
     # prim_hidden:  if: 0 { prim(rec_bound) } else { }   -- k.4: the SAME immutable violation,
     # but inside a branch that is never taken.  There is no separate prepare pass to scan an
     # untaken branch any more, so this one is NOT refused -- it simply never runs.
-    m_hidden: mk_m(unit, 9U, 1U)
+    m_hidden: mk_m(unit, 9U, 2U)
     record: fr(m_hidden, 0U, c.LMX_WALK_OP_IF, 4U)
     lit(record, 1U, 0)
     reference: pl(record, 2U, 1U)
-    pl(record, 3U, 0U)
+    @: Lmx hidden_else fr(m_hidden, 1U, c.LMX_WALK_OP_ELSE, 2U)
+    pl(hidden_else, 1U, 0U)
+    ref(record, 3U, hidden_else)
     record: fr(reference, 0U, c.LMX_WALK_OP_PRIM, 3U)
     ref(record, 1U, rec_bound)
 

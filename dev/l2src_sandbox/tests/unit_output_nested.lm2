@@ -1,0 +1,12 @@
+# The condition keeps reading the outer output. One inner source site keeps
+# its own occurrence across iterations; it does not assign to the outer m.
+receiveMessage: m
+int: n 0
+while: m != 0 && n < 5
+    n: n + 1
+    receiveMessage: m
+if: n != 5 || m = 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

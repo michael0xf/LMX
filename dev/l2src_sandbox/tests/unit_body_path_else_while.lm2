@@ -1,0 +1,20 @@
+# An else shell inside a while stays readable after a call publishes the cell.
+fn: nop () int
+    return: 0
+fn: read_else () int
+    int: k 0
+    int: answer 64
+    while: k < 1
+        if: 0
+            int: unused 1
+        else:
+            int: hosted 21
+        nop()
+        if: else\hosted = 21
+            answer: 7
+        k: k + 1
+    return: answer
+int: r 0
+r: read_else()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

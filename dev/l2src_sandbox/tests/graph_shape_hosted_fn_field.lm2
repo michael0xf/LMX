@@ -1,0 +1,17 @@
+# A named body's callable field is inside the actual hosted body, not the
+# method's packed prefix or a spare unit-tail child. Construction must not
+# patch the callable field through an impossible packed slot before the run.
+fn: run () int
+    int: result 0
+    if: result = 0
+        Holder:
+            int: c 3
+            fn: step
+            int: d 11
+        end: Holder
+        result: Holder\c + 4
+    return: result
+fn: step (int: n) int
+    return: n
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

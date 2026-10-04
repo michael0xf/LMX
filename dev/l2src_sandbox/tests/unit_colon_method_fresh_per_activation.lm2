@@ -2,27 +2,31 @@ Model:
     size_t: value 1U
 end: Model
 
-# FABLE-SONNET-DECL-BINDING-20260922-105 witness: build() is called TWICE
-# from main. Under the old rewrite-based mechanism the value was constructed
-# once at unit-entry (l2_entry_unit) and shared across every call to build();
-# repeated activation of the same own-field slot from two independent call
-# frames is exactly the shape that mechanism could not support. This fixture
-# exercises two independent activations of the same Model: fresh declaration
-# and requires the program to run to completion both times.
+# Each explicit merge executes at its source statement. Both calls start
+# from Model's value 1, mutate their own copy to 2, and leave Model unchanged.
+# Reusing the previous result fails the next call's initial-value check.
 fn: build () int
-    Model: fresh_branch_xyz
-    return: 0
+    fresh_branch_xyz: merge Model
+    if: fresh_branch_xyz\value != 1U
+        return: 81
+    fresh_branch_xyz\value: fresh_branch_xyz\value + 1U
+    if: fresh_branch_xyz\value != 2U
+        return: 82
+    return: 7
 end: build
 
 int: got1
 int: got2
 got1: build()
-if: got1 != 0
+if: got1 != 7
     sendMessage: exit(exit_code: 95; stdout: ""; stderr: "")
     return
 got2: build()
-if: got2 != 0
+if: got2 != 7
     sendMessage: exit(exit_code: 96; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+if: Model\value != 1U
+    sendMessage: exit(exit_code: 97; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

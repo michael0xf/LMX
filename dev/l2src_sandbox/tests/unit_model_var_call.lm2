@@ -1,14 +1,12 @@
-# `Model: m`, m bound nowhere before, declares m -- a merge of Model, which runs none of Model's body (book :928) --
-# and m is then a named Structure, callable like any (Codex's decision on the author's rule, 55c1abc: no binding is
-# non-callable by its origin).  `m()` -- one P0 Frame with `m: ()` -- is m's nullary call, Model's body run over m's
-# Structure (steps/named-struct-exec.md §10-12), as the bare atom m is: m\v, written 7, reads 2 after each -- the
-# declaration ran again (1), then the statement.  Model\v stays 1: the code ran over m's data only.  Before the ticket
-# `m()` assigned a new empty Structure to m with admission to Model, which () fails: `implements`.  Entry 7.
+# m is an explicit merge result, not an implicit Model: m construction.
+# m() and m: () are nullary calls of its current callable occurrence. Its own
+# declaration resets v to 1 and the following statement writes 2, independently
+# of Model. Neither spelling assigns an empty Structure to m. Entry 7.
 Model:
     size_t: v 1U
     v: v + 1U
 return
-Model: m
+m: merge Model
 size_t: d 9U
 d: m\v
 m\v: 7U

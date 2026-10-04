@@ -108,9 +108,13 @@ def run_one(translator, l1src, cc, test, output):
     result = translate(f'l3_interp/{test}', generated / f'{stem}.c', 'translate-selftest')
     if result.returncode:
         return result.returncode
-    result = translate('l2src/l2_libc.lm1', generated / 'l2_libc.c', 'translate-l2_libc')
-    if result.returncode:
-        return result.returncode
+    # These bodies are shared link units, not predef-expanded into each test.
+    # Arena retirement/copy/GC now use the external source-name service too.
+    link_units = ('l2_libc', 'lmx_source_names')
+    for unit in link_units:
+        result = translate(f'l2src/{unit}.lm1', generated / f'{unit}.c', f'translate-{unit}')
+        if result.returncode:
+            return result.returncode
     exe = output / (f'{stem}.exe' if os.name == 'nt' else stem)
     command = [cc, '-std=c11', '-Wall', '-Wextra', '-Wpedantic',
                '-Werror=incompatible-pointer-types', '-Werror=discarded-qualifiers',
@@ -118,7 +122,8 @@ def run_one(translator, l1src, cc, test, output):
     if os.name != 'nt':
         command += ['-pthread', '-D_POSIX_C_SOURCE=200809L']
     command += ['-I', str(generated), '-I', str(unit_root), '-o', str(exe),
-                str(generated / f'{stem}.c'), str(generated / 'l2_libc.c')]
+                str(generated / f'{stem}.c')]
+    command += [str(generated / f'{unit}.c') for unit in link_units]
     result = run(command, 'gcc')
     if result.returncode:
         return result.returncode

@@ -1,0 +1,14 @@
+# Required nullary control; no one-argument shim is an acceptable substitute.
+# This currently isolates the old fixed-arity held-call lowering debt.
+fn: get () int
+return: 7
+fn: model (int: y) int
+    S:
+        fn: get
+    return: S\get()
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+w: wrap 5
+int: result w()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -1,0 +1,11 @@
+# FIRST and LAST select their actual source cells, not declaration-prefix slots.
+Repeated: (int: x 1; int: x 7; x: 2)
+if: Repeated\[0]x != 1 || Repeated\[1]x != 7 || Repeated\x != 7
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
+Repeated
+if: Repeated\[0]x != 1 || Repeated\[1]x != 2 || Repeated\x != 2
+    sendMessage: exit(exit_code: 92; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

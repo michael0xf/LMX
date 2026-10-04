@@ -175,8 +175,9 @@ end: LmxRootExit
 # THE HOST'S TWO BUILDERS.  The settings builder makes the host's eternal settings in the host's
 # arena: an independent: const: immutable branch whose every array is profiled by `profile` and
 # sealed, returned as the branch's root (0: no settings).  The program builder installs R0's program
-# into R0's own graph, in R0's own arena, right after the host reserved R0: its descriptor in field 0,
-# its children list, the settings reference (the host's branch itself) and its fields.  0 is success.
+# into R0's own graph, in R0's own arena, right after the host reserved R0. The
+# graph contains exactly its source fields; membership stays in Thread.children
+# and settings in the host stub. The builder receives settings explicitly. 0 is success.
 fnptr: LmxRootSettings (@: LmxArena arena; @: Lmx profile) @: Lmx
 fnptr: LmxRootProgram (@: LmxArena arena; @: Lmx graph; @: Lmx settings) int
 # -182: host seam after R0 mail exists + mainArgs posted, before the manager round. 0 = skip.
@@ -280,7 +281,7 @@ prototype:
     # arena's list joined it after that point (lmx_arena_attach splices a donor's arrays in front)
     # and are marked `joined`.
     fn: lmx_root_report (@: LmxArena arena; @: LmxPool joined_end; @: void stream) int
-    # lmx_root_open with `fields` more fields in the root's graph after its children list, all empty.
+    # lmx_root_open with exactly `fields` empty source graph fields, including zero.
     fn: lmx_root_open_graph (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: fields) int
     # THE HOST'S LAUNCH -- everything a C main did.  `root` is the caller's storage for the host's
     # handle (cleared here).  R0 gets `fields` graph fields, filled by `program`; `settings` (or 0)
@@ -314,9 +315,9 @@ prototype:
     # field of a by-value record through a pointer, not through the value).
     fn: lmx_root_message (@: LmxRoot root) @: LmxMsg
     fn: lmx_root_thread (@: LmxRoot root) @: LmxThread
-    # R0's own arena: the address-range table that answers for runtime addresses, and what a caller
-    # building R0's initial graph (the settings and the input of 25 (ii)) takes its cells
-    # from -- a graph is a value of the arena it belongs to.
+    # R0's own arena: the address-range table for its runtime addresses and
+    # cells of its source graph. Launch/settings belong to the parent stub;
+    # mainArgs arrives as an ordinary letter in its own arena, not a graph field.
     fn: lmx_root_arena (@: LmxRoot root) @: LmxArena
     # R0's stepped scheduler traverses the same children Array; it owns no membership queue.
     fn: lmx_root_service (@: LmxRoot root) @: LmxService

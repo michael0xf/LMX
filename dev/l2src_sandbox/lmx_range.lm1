@@ -1,5 +1,6 @@
 predef: "l2src/lmx_arena.h.lm1"
 predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<stddef.h>"
 
@@ -179,6 +180,9 @@ fn: lmx_range_drop (@: LmxArena arena; @: void lo; @: void hi) int
     while: index < lmx_arena_index_len(arena)
         entry: lmx_arena_index_data(arena) + index
         if: entry\lo = lo && entry\hi = hi
+            # Spelling keys/text must retire while this storage is still
+            # registered and readable, before its address can be reused.
+            lmx_source_names_drop(arena, lo, hi)
             while: index + 1U < lmx_arena_index_len(arena)
                 next: entry + 1
                 entry\lo: next\lo

@@ -280,6 +280,71 @@ fn: ri_mapped_cycles (@: LmxArena arena; @: void int_cell; @: void char_cell; @:
     ri_check(counts, lmx_runtime_implements(arena, outer_partial, outer_partial, outer_full) = c.LMX_IMPLEMENTS_NO, "nested cached hole hid an explicit runtime Consumer use")
 return: 0
 
+# Declaration reception projects fields, not the algorithm between them. The
+# same physical used-tree API still requires an explicitly requested OP subtree.
+fn: ri_source_fields (@: LmxArena arena; @: void int_cell; @: void char_cell; @: void raw; @: int counts) int
+    @: Lmx model ri_struct(arena, 4U)
+    @: Lmx value ri_struct(arena, 2U)
+    @: Lmx operation ri_struct(arena, 2U)
+    @: Lmx nested ri_struct(arena, 1U)
+    @: Lmx wrong ri_struct(arena, 1U)
+    @: LmxOp role lmx_op_new_owned(arena, 8)
+    LmxImplEntry: view
+    @: LmxImplEntry pending (@ view)
+    []: size_t map 8
+    size_t: i 0U
+    if: model = 0 || value = 0 || operation = 0 || nested = 0 || wrong = 0 || role = 0
+        return: 2
+    ---
+    lmx_arena_ref_store(model, 0U, int_cell)
+    lmx_arena_ref_store(model, 1U, operation)
+    lmx_arena_ref_store(model, 2U, char_cell)
+    lmx_arena_ref_store(model, 3U, operation)
+    lmx_arena_ref_store(operation, 0U, role)
+    lmx_arena_ref_store(operation, 1U, raw)
+    lmx_arena_ref_store(value, 0U, char_cell)
+    lmx_arena_ref_store(value, 1U, int_cell)
+    while: i < 8U
+        map[i]: (cast: (size_t) -1)
+        i: i + 1U
+    ---
+    map[0]: 1U
+    map[2]: 0U
+    map[4]: 1U
+    map[6]: 0U
+    memset((cast: (@: void) pending), 0, c.sizeof(c.LmxImplEntry))
+    pending\value: value
+    pending\req: model
+    pending\map: map
+    pending\n: 4U
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_YES, "source operations became receiver fields")
+    ri_check(counts, lmx_implements_through(arena, value, model, pending) = c.LMX_IMPLEMENTS_YES, "registration compared source algorithms")
+    ri_check(counts, lmx_implements_receiver_view(arena, model, model, model, 0) = c.LMX_IMPLEMENTS_YES, "positional receiver inspected source operands")
+    ri_check(counts, lmx_implements_walk_view(arena, value, model, model, pending, 0) = c.LMX_IMPLEMENTS_NO, "interface projection changed the explicit used-tree predicate")
+    map[0]: (cast: (size_t) -1)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_NO, "ignoring source operations admitted a missing int field")
+    map[0]: 1U
+    map[2]: (cast: (size_t) -1)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_NO, "ignoring source operations admitted a missing char field")
+    map[2]: 0U
+    lmx_arena_ref_store(value, 1U, char_cell)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_NO, "interface projection ignored a mismatching real cell")
+    lmx_arena_ref_store(value, 1U, raw)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_UNKNOWN, "interface projection certified an unknown real cell")
+    lmx_arena_ref_store(value, 1U, 0)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_NO, "interface projection admitted an unset real cell")
+    lmx_arena_ref_store(value, 1U, int_cell)
+    lmx_arena_ref_store(nested, 0U, int_cell)
+    lmx_arena_ref_store(wrong, 0U, char_cell)
+    lmx_arena_ref_store(model, 2U, nested)
+    lmx_arena_ref_store(value, 0U, nested)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_YES, "plain nested field was refused with source operations")
+    lmx_arena_ref_store(value, 0U, wrong)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_NO, "interface projection skipped a plain nested mismatch")
+    map[2]: (cast: (size_t) -1)
+    ri_check(counts, lmx_implements_receiver_view(arena, value, model, model, pending) = c.LMX_IMPLEMENTS_NO, "interface projection skipped a plain nested field hole")
+return: 0
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -450,6 +515,12 @@ fn: main () int
 
     if: ri_mapped_cycles(arena_at, int_cell, char_cell, raw, mapped_slots, unused_slots, counts) != 0
         fputs("lmx_runtime_implements: mapped graph witnesses could not be built\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+
+    if: ri_source_fields(arena_at, int_cell, char_cell, raw, counts) != 0
+        fputs("lmx_runtime_implements: source-field witnesses could not be built\n", l1_stdout())
         free(counts)
         return: 2
     ---

@@ -1,0 +1,22 @@
+# The visible outer binding establishes k as a hidden input, not a new field.
+# Caller input 5 wins over lexical 3; the callee's write stays in its activation.
+unsigned: k 3U
+fn: peek () unsigned
+    if: k != 5U
+        return: 80U
+    k: 1U
+return: k
+fn: run () int
+    unsigned: k 5U
+    unsigned: got 0U
+    got: peek()
+    if: got = 1U && k = 5U
+        return: 7
+return: 81
+int: answer 0
+answer: run()
+if: answer = 7 && k = 3U
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+return

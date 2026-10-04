@@ -30,6 +30,9 @@ sub: qcheck (int: ok; const: @(char label))
     ---
 end: qcheck
 
+fn: retained_native () void
+return
+
 fn: main () int
     LmxArena: owner_a
     LmxArena: owner_b
@@ -56,6 +59,7 @@ fn: main () int
     @: Lmx b_plain 0
     @: Lmx out 0
     @: Lmx one 0
+    @: Lmx container 0
     @: LmxPool pool_a_triple 0
     @: LmxPool pool_b_triple 0
     @: LmxPool pool_a_other 0
@@ -100,6 +104,7 @@ fn: main () int
     if: a_triple = 0 || b_triple = 0 || a_other = 0 || b_plain = 0
         return: 2
     ---
+    a_triple\native: (cast: (LmxEntry) retained_native)
     pool_a_triple: lmx_arena_find_profiled(@ owner_a, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, triple_at)
     pool_b_triple: lmx_arena_find_profiled(@ owner_b, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, triple_at)
     pool_a_other: lmx_arena_find_profiled(@ owner_a, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, const_immutable_at)
@@ -158,6 +163,12 @@ fn: main () int
     status: lmx_merge_profiled_owned(@ one, 1U, 0, 0, @ borrower, @ dst, triple_at, 0, 0U, @ out)
     qcheck(status = c.LMX_MERGE_OK && out = a_triple, "exact triple merge retains physical address")
     qcheck(lmx_range_home(@ dst, (cast: (@: void) out)) = (@ owner_a) && lmx_range_profile(@ dst, (cast: (@: void) out)) = triple_at, "retained address remains classified by its true owner and physical profile")
+
+    container: lmx_node_new_owned(@ borrower)
+    qcheck(container != 0 && container != a_triple, "retained test has a distinct live nonzero execution parent")
+    out: 0
+    status: lmx_merge_profiled_owned(@ one, 1U, 0, container, @ borrower, @ dst, triple_at, 0, 0U, @ out)
+    qcheck(status = c.LMX_MERGE_OK && out = a_triple && (a_triple\parent) = 0 && (a_triple\native) = (cast: (LmxEntry) retained_native), "retained occurrence keeps original parent and native despite a different container")
 
     out: 0
     one: a_other

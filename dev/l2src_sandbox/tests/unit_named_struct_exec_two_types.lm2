@@ -1,7 +1,6 @@
-# steps/named-struct-exec.md §11, slice 4 (REVIEW dd07174; fable_pc's M36 and probe ns4_two_types): two
-# executed fields of two types -- `Other: o` then `Model: m` -- each runs its own type's code: m\v = 2,
-# o\w = 15.  With the type dropped (every field takes the first Structure's code), o runs Model's code
-# over its data and o\w reads 2.  Entry 7.
+# Two explicit merge results retain their complete, different callable bodies.
+# Each call uses the copied occurrence: m\v becomes 2, o\w becomes 15.
+# Inferring both bodies from the first declared Structure is wrong. Entry 7.
 Model:
     size_t: v 1U
     v: v + 1U
@@ -10,8 +9,8 @@ Other:
     size_t: w 10U
     w: w + 5U
 return
-Model: m
-Other: o
+m: merge Model
+o: merge Other
 o
 m
 size_t: a 0U

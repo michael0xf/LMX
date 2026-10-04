@@ -1,0 +1,22 @@
+# Each projected callable owns S and S's full source. The local name y must
+# not be substituted with the outer model's bound y while S is constructed.
+# Reusing w after constructing u checks the same outer binding is retained;
+# descriptor independence requires a separate physical-identity observer.
+fn: add (int: y; int: x) int
+    S:
+        int: y 2
+        y: y + 1
+    S
+    return: y + x + S\y
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; add)
+w: wrap 5
+u: wrap 100
+int: a (w: 1)
+int: b (u: 1)
+int: c (w: 1)
+int: ok 0
+if: a = 9 && b = 104 && c = 9
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

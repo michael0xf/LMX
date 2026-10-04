@@ -1,0 +1,22 @@
+# Point inside a while. return at the fn column is the trailer. while\pt\x is 4.
+Point:
+    int: x 0
+    int: y 0
+end: Point
+fn: nop () int
+    return: 0
+fn: test () int
+    int: answer 64
+    int: i 0
+    while: i < 1
+        pt: merge Point
+        pt\x: 4
+        nop()
+        if: while\pt\x = 4
+            answer: 7
+        i: i + 1
+return: answer
+int: r 0
+r: test()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

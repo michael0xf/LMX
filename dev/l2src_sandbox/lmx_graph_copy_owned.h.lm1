@@ -27,9 +27,10 @@ predef: "l2src/lmx_arena.h.lm1"
 # reaches is copied, wherever its parent lies -- a method occurrence included.  The former k.4
 # rule ("a Structure whose parent lies outside the copied operand subtree is a shared
 # reference") is gone: nothing outside what is copied is visible, and no Structure is shared by
-# address.  Shared by address are only code frames (a frame headed by an op or role record --
-# code, never written by execution), exact retained profiles (eternal branches, below) and the
-# terminals of lmx_copy_is_terminal_profiles.
+# address. Applications headed by OP/ROLE records are ordinary Structures: their operands
+# and parents follow the same copy map. Only the bare OP/ROLE terminal records, exact
+# retained profiles (eternal branches, below) and other terminals of
+# lmx_copy_is_terminal_profiles stay shared by address.
 #
 # A branch qualified `independent: const: immutable` is retained only when its
 # address resolves to one of the exact physical profiles supplied by the caller.  The
@@ -63,7 +64,8 @@ predef: "l2src/lmx_arena.h.lm1"
 # block chain: storage a constructor allocated is already the arena's, and
 # reverting retires its index entries together with it.
 #
-# No owner search, TLS, global registry or name table is involved.
+# Value traversal uses no TLS/global registry or name-based resolution. The
+# external source-spelling table follows the completed address map separately.
 define: LMX_GRAPH_COPY_OK 0
 define: LMX_GRAPH_COPY_INVALID 1
 define: LMX_GRAPH_COPY_NOMEM 2
@@ -87,6 +89,12 @@ struct: LmxCopyStack
 end: LmxCopyStack
 
 prototype:
+    # An enclosing constructor (merge) owns this zero-initialized, transient
+    # spelling batch. It finishes the batch exactly once before arena rollback
+    # or result publication. No pending spelling is visible through lookup.
+    fn: lmx_copy_name_prepare (@: LmxArena src_arena; @: LmxArena dst_arena; @: void source; @: void destination; @: LmxCopyMap pending) int
+    fn: lmx_copy_names_finish (@: LmxCopyMap pending; int: publish) void
+    fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs; @: LmxCopyMap pending) int
     # Several roots, one operation, one map. outs[i] receives the copy of
     # sources[i]; on failure every outs[i] stays null and dst_arena is left as
     # it was at the mark.

@@ -1,0 +1,14 @@
+# A retained local Structure has the same ordinary callable-reference field
+# as an original source model. Its selected-view slot must actually be filled.
+fn: get () int
+return: 7
+fn: model (int: y; int: x) int
+    S:
+        fn: get
+    return: S\get() + x
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; model)
+w: wrap 5
+int: result w(0)
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

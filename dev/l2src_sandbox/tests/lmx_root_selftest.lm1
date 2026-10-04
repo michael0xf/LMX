@@ -7,8 +7,8 @@ predef: "l2src/lmx_implements.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# R0 is an ordinary L3 Thread under one structural parent frame. Both graphs contain an ordinary
-# physical reference to their one growable Array<@LmxThread>; no index or fixed root slot is ABI.
+# R0 is an ordinary L3 Thread under one structural parent frame. Each Thread
+# holds its one growable child List; neither List adds a source graph field.
 
 sub: root_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -33,6 +33,8 @@ fn: main () int
     @: VoidArray upper_children
     @: Lmx graph
     @: Lmx upper_graph
+    @: VoidArray fields
+    @: VoidArray upper_fields
     @: LmxMsg upper_message
     @: Lmx source
     @: LmxThread a
@@ -61,13 +63,16 @@ fn: main () int
     graph: lmx_root_message(@ root)\graph
     upper_message: lmx_thread_message(root_p\parent)
     upper_graph: upper_message\graph
+    fields: @ graph\array
+    upper_fields: @ upper_graph\array
     root_check(counts, r0 != 0 && upper != 0 && lmx_thread_parent(r0) = upper, "R0 is not an ordinary child of its structural parent")
     root_check(counts, lmx_thread_parent(upper) = 0, "structural upper frame unexpectedly has a parent")
     root_check(counts, lmx_thread_child_count(upper) = 1U && lmx_thread_child_at(upper, 0U) = r0, "upper frame does not own R0 through its sole Array")
     root_check(counts, children != 0 && upper_children != 0 && lmx_list_cap(children) = 2U && lmx_list_cap(upper_children) = 2U, "ordinary child lists start at cap two")
-    root_check(counts, lmx_arena_ref_value(graph, 0U) = (cast: (@: void) children) && lmx_arena_ref_value(upper_graph, 0U) = (cast: (@: void) upper_children), "Thread caches differ from graph physical references")
+    root_check(counts, fields\size = 0U && fields\data = 0 && upper_fields\size = 0U && upper_fields\data = 0 && graph\parent = 0 && upper_graph\parent = 0, "empty source graphs have no hidden runtime fields")
+    root_check(counts, children != upper_children && lmx_range_home(lmx_root_arena(@ root), (cast: (@: void) children)) = lmx_root_arena(@ root) && lmx_range_home(lmx_root_arena(@ root), (cast: (@: void) upper_children)) = lmx_root_arena(@ root), "each Thread owns one distinct same-arena List")
     root_check(counts, c.sizeof(c.LmxMsg) = 16U, "Message retained numeric address storage")
-    root_check(counts, lmx_thread_children(r0) = children, "R0 did not cache its ordinary physical children descriptor")
+    root_check(counts, lmx_thread_children(r0) = children, "R0 did not retain its sole physical children descriptor")
 
     # The R0 child collection itself has no eight-child ceiling.
     a: root_thread()

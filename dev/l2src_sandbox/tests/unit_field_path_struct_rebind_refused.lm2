@@ -3,7 +3,8 @@ Model:
 end: Model
 
 Outer:
-    Model: inner
+    inner:
+        size_t: value 1U
 end: Outer
 
 # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover
@@ -16,8 +17,8 @@ end: Outer
 # path is still fail-closed, matching the plain `o\inner: a`-shaped case
 # fable already ruled on. One line of detail, no duplicate silent second
 # "translation failed" line.
-Outer: o
-Model: a
+o: merge Outer
+a: merge Model
 
 o\inner: a
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

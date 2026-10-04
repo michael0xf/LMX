@@ -1,0 +1,19 @@
+# Walked twin. One-level dedents close by themselves. --- jumps out of the inner if and the else.
+fn: nop () int
+    return: 0
+fn: read_for () int
+    int: answer 64
+    if: 0
+        int: unused 1
+    else:
+        for: int(i, 0) (i < 1) i++
+            int: hosted 21
+        nop()
+        if: for\hosted = 21
+            answer: 7
+    ---
+    return: answer
+int: r 0
+r: read_for()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

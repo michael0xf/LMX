@@ -184,6 +184,7 @@ fn: main () int
     @: LmxMsg message 0
     @: LmxThread r0 0
     @: Lmx graph 0
+    @: VoidArray fields 0
     @: Lmx source 0
     @: LmxMsg letter 0
     @: LmxMsg fail_letter 0
@@ -222,6 +223,7 @@ fn: main () int
     r0: lmx_root_thread(@ root)
     root_arena: lmx_root_arena(@ root)
     graph: message\graph
+    fields: @ graph\array
     service: lmx_root_service(@ root)
     manager: lmx_root_manager(@ root)
     app_check(counts, message != 0 && r0 != 0 && root_arena != 0 && service != 0 && manager != 0, "R0 missing pieces")
@@ -261,7 +263,7 @@ fn: main () int
     child_msg: app_child_msg
     child_t: app_child_t
     success_t: app_child_t
-    app_check(counts, lmx_thread_children(r0) != 0 && lmx_arena_ref_value(graph, 0U) = (cast: (@: void) lmx_thread_children(r0)), "R0 graph field 0 is not the children Array")
+    app_check(counts, lmx_thread_children(r0) != 0 && fields\size = 0U && fields\data = 0 && lmx_range_home(root_arena, (cast: (@: void) lmx_thread_children(r0))) = root_arena, "R0 owns membership without adding a source field")
     app_check(counts, lmx_thread_child_count(r0) = 1U, "success child not the sole Array member")
     app_check(counts, lmx_thread_child_at(r0, 0U) = child_t && lmx_thread_child_first(r0) = child_t, "success child is not the physical Array element")
     app_check(counts, lmx_range_classify(@ child_arena, (cast: (@: void) child_msg)) = c.LMX_DOMAIN_KIND_MSG_RECORD, "success child not in own arena")

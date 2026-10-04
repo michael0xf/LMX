@@ -80,6 +80,48 @@ struct: L2ValueSpan
     @: LmP0Node node
 end: L2ValueSpan
 
+# Borrowed raw-pointer indexing, distinct from a real Array descriptor's ELEM.
+# Text belongs to an original frame head; fields belong to an original operand.
+# Groups are iterated, not stored in a fixed-rank buffer.
+struct: L2RawIndex
+    LmP0Text: base
+    LmP0Text: root
+    const: @: LmP0Text text
+    @: LmP0Field first
+    int: count
+    int: groups
+    int: type
+    int: foreign
+    size_t: begin
+end: L2RawIndex
+
+# A compact head's expression is parsed by P0 once, from its original byte
+# slice. The document is translation-owned so deferred checks can borrow it.
+# No binding, runtime object, or independently invented grammar is retained.
+struct: L2HeadExpression
+    @: LmP0Node source
+    @: LmP0Document document
+    @: LmP0Structure body
+    LmP0Text: base
+    L2ValueSpan: index
+    @: LmP0Field after
+    @: L2HeadExpression allocated_next
+end: L2HeadExpression
+
+# One descriptor Array element place. The base is an ordinary own binding or
+# field path; the element contract is the Array receiver's operand contract.
+# Index expressions use the same field-span consumers as any other expression.
+struct: L2ArrayPlace
+    int: own
+    LmP0Text: base
+    int: type
+    int: model
+    @: L2HeadExpression expression
+    L2ValueSpan: index
+    int: count
+    int: allocated_base
+end: L2ArrayPlace
+
 # A borrowed source environment for deferred checks and actual call sites.
 # Names still resolve through the existing own/formal rows; this is not a
 # binding table. source_method records the source owner separately when a
@@ -99,3 +141,68 @@ struct: L2SourceSite
     @: void site
     @: LmP0Node source
 end: L2SourceSite
+
+# Translation-only physical child edges, in parent-before-child allocation order.
+# A null parent starts at the selected callable occurrence, never its lexical node.
+# These rows name existing graph places; they allocate no runtime graph objects.
+struct: L2GraphPlace
+    size_t: id
+    int: method
+    size_t: child
+    @: L2GraphPlace parent
+    @: L2GraphPlace allocated_next
+end: L2GraphPlace
+
+# A field's physical slot, independent of the lexical scope that resolves it.
+# A null holder means the field owner's selected occurrence itself.
+struct: L2GraphField
+    @: L2GraphPlace holder
+    size_t: child
+end: L2GraphField
+
+# A source container's committed producer, in one construction view. These
+# records borrow P0 identity and disappear with the translation; they are not
+# graph fields, source leaves, primitive wrappers or runtime binding metadata.
+struct: L2SourceContainer
+    size_t: id
+    int: view_kind
+    int: view_index
+    # Actual callable owner, distinct from a projection site's view index.
+    int: source_mi
+    @: LmP0Structure body
+    int: fid
+    int: inert
+    int: root
+    int: width
+    int: temp
+    int: fills
+    int: shell_state
+    @: L2GraphPlace place
+    @: L2SourceField fields
+    @: L2SourceContainer allocated_next
+end: L2SourceContainer
+
+# Original declaration cells of this actual source body, in its construction
+# view. Only compiler planning owns these records; the graph keeps real cells.
+struct: L2SourceField
+    int: own
+    int: slot
+    # PLACE handle of the existing computed-output operand, preallocated
+    # before any borrow; -1 for a separately written typed declaration cell.
+    int: storage_temp
+    L2GraphField: place
+    @: L2SourceField next
+end: L2SourceField
+
+# PLACE records actual constructor/attachment edges. Temp numbers are private
+# emission handles; only the resulting ordinary GraphPlace reaches backends.
+struct: L2ConstructionTemp
+    int: view_kind
+    int: view_index
+    int: index
+    int: parent
+    int: slot
+    int: root
+    @: L2GraphPlace place
+    @: L2ConstructionTemp allocated_next
+end: L2ConstructionTemp

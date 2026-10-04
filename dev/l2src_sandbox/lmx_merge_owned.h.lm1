@@ -15,16 +15,21 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # (operands[0]) keeps its layout; each pair stores an operand field's value into
 # a model slot; unmatched later-operand fields append; body fields append. The
 # operand ROOTS are not visible result slots; only their children are.
+# With one operand, no body and no active overrides, the completed used-graph
+# copy itself is the fresh result. It keeps native, self/back edges and names;
+# only its root parent becomes container. Exact-profile retention still returns
+# the original occurrence without changing it. General composition requires
+# separate whole-body/native selection and is not certified by this identity.
 #
 # ONE lmx_graph_copy_many_owned operation, hence one operation-local map, spans
 # every ordinary operand root and the body root together. An object reachable
 # from two operands is therefore copied ONCE and both references point at that
 # one copy; cross-operand aliases and cycles keep their shape; every copied
 # Structure's parent is rewritten to the copy of its structural parent or to zero.
-# k.4: every operand is an ordinary Structure; a shared reference (a Structure whose
-# parent lies outside the copied set -- Q22 = II) stays a terminal by address, decided
-# structurally by the copier, never by a domain classification or a list the caller
-# passes in. An operand that does not classify as a Structure is refused.
+# Every operand is an ordinary Structure. The copier includes ordinary lexical
+# trees; an outside parent does not by itself make a Structure a shared terminal.
+# Only the exact retained physical profiles and actual terminal values remain
+# shared by address. An operand that does not classify as a Structure is refused.
 #
 # Qualification is an address-domain property.  A caller may name any number of ordinary
 # graph receiver-expressions whose physical addresses denote full

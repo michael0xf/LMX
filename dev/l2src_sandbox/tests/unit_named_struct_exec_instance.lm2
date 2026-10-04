@@ -1,14 +1,13 @@
-# steps/named-struct-exec.md §10-11, slice 4 (plan §4 :401; Q19.2: "`left` голым атомом -- тело
-# заново"): a bare field of the root declared `Model: fresh` executes Model's body over fresh's value --
-# CALL(Model's procedure, the value; §12).  fresh\v was written 7 and reads 2 after: the declaration ran
-# again, then the statement.  Model\v stays 1 and another instance, other, stays 5: the code ran over
-# fresh's data only.  Executed again from an anonymous block (l2_body_inert): 2 again.  Entry 7.
+# Explicit merge copies the complete Model occurrence without executing it.
+# Calling fresh executes that occurrence's body: its own declaration resets v
+# to 1, then its assignment writes 2. Model and other remain unchanged.
+# Repeating the call from an anonymous block has the same result. Entry 7.
 Model:
     size_t: v 1U
     v: v + 1U
 return
-Model: fresh
-Model: other
+fresh: merge Model
+other: merge Model
 fresh\v: 7U
 other\v: 5U
 fresh

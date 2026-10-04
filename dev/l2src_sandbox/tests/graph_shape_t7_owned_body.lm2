@@ -1,0 +1,19 @@
+# Each returned occurrence must own its nested declaration cell. The second
+# construction must not redirect the first occurrence's body path.
+fn: add (int: y; int: x) int
+    if: 1
+        int: h 7
+        return: y + x + h
+    return: 0
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; add)
+w: wrap 5
+u: wrap 100
+int: a (w: 1)
+int: b (u: 1)
+int: c (w: 1)
+int: ok 0
+if: a = 13 && b = 108 && c = 13
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

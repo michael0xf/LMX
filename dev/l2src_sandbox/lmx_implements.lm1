@@ -101,7 +101,11 @@ fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImpl
         return: pending
 return: lmx_implements_find(arena, value, req)
 
-fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int
+# One DFS serves an explicit used tree and a declaration's interface. Only the
+# interface projection omits executable source frames: their first child belongs
+# to the existing OP address domain. Their operands describe an algorithm, not a
+# field requirement. Plain nested Structures and real typed cells remain required.
+fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused; int: interface) int
     LmxArena: temporary
     LmxPool: cells
     LmxScratch: scratch
@@ -162,6 +166,10 @@ fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lm
         current\index: index + 1U
         c: lmx_arena_ref_value(current\consumer, index)
         if: c != 0
+            kindC: lmx_domain_kind(arena, c)
+            if: interface != 0 && kindC = c.LMX_KIND_STRUCT && lmx_domain_kind(arena, lmx_arena_ref_value((cast: (@: Lmx) c), 0U)) = c.LMX_DOMAIN_KIND_OP
+                continue
+            ---
             indexA: index
             indexB: index
             if: current\viewA != 0 && lmx_implements_at(arena, current\viewA, index, @ indexA) != 0
@@ -184,7 +192,6 @@ fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lm
             ---
             kindA: lmx_domain_kind(arena, a)
             kindB: lmx_domain_kind(arena, b)
-            kindC: lmx_domain_kind(arena, c)
             if: kindA = c.LMX_KIND_NONE || kindB = c.LMX_KIND_NONE || kindC = c.LMX_KIND_NONE
                 answer: c.LMX_IMPLEMENTS_UNKNOWN
                 break
@@ -228,6 +235,14 @@ fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lm
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ temporary)
 return: answer
+
+fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int
+return: lmx_implements_walk_project(arena, varA, varB, consumer, pending, skip_unused, 0)
+
+# Full reception checks every interface field, including named holes. This is
+# independent of whether a correspondence is pending, cached or positional.
+fn: lmx_implements_receiver_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending) int
+return: lmx_implements_walk_project(arena, varA, varB, model, pending, 0, 1)
 
 fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
 return: lmx_implements_walk_view(arena, varA, varB, consumer, 0, 0)
@@ -384,7 +399,7 @@ fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxI
     ---
     pending\value: value
     pending\req: req
-return: lmx_implements_walk_view(arena, value, value, req, pending, 1)
+return: lmx_implements_walk_project(arena, value, value, req, pending, 1, 1)
 
 fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     @: LmxImplEntry e

@@ -1,0 +1,11 @@
+# The caller publishes before the call. The outer working value is 1. The base read of that cell is 1. The code is 11.
+fn: nest (int: k) int
+    int: here 0
+    if: k = 0
+        return: n
+    n: n + 1
+    here: n
+    return: here * 10 + nest(k - 1)
+int: n 0
+sendMessage: exit(exit_code: nest(1); stdout: ""; stderr: "")
+return

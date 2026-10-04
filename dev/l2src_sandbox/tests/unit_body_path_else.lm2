@@ -1,0 +1,16 @@
+# The else shell is child 0 of the IF's other body. A call publishes the cell, then else\hosted reads 21.
+fn: nop () int
+    return: 0
+fn: read_else () int
+    if: 0
+        int: unused 1
+    else:
+        int: hosted 21
+    nop()
+    if: else\hosted = 21
+        return: 7
+    return: 64
+int: r 0
+r: read_else()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

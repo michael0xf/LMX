@@ -3,14 +3,22 @@ Model:
 end: Model
 
 fn: build () int
-    Model: fresh_branch_xyz
-    return: 0
+    fresh_branch_xyz: merge Model
+    if: fresh_branch_xyz\value != 1U
+        return: 81
+    fresh_branch_xyz\value: 9U
+    if: fresh_branch_xyz\value != 9U
+        return: 82
+    return: 7
 end: build
 
 int: got
 got: build()
-if: got != 0
+if: got != 7
     sendMessage: exit(exit_code: 89; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+if: Model\value != 1U
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

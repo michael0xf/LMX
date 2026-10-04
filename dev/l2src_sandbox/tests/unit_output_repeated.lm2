@@ -1,0 +1,11 @@
+# Two written output declarations have distinct identities. Runtime alone
+# cannot prove that: the gate must also inspect their actual write places.
+receiveMessage: m
+int: code 7
+if: m = 0
+    code: 81
+receiveMessage: m
+if: m != 0
+    code: 82
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

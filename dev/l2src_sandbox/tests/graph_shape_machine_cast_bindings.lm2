@@ -1,0 +1,13 @@
+# A cast has a descriptive type child and a live value child. A C typedef
+# may have the same spelling as a language value without becoming that value
+# inside the cast type. The actual formal must retain its real ARG binding.
+predef: "l2src/tests/simple_typedef.h.lm1"
+fn: probe (size_t: n) int
+    int: L2TestByte 91
+    int: value 0
+    value: (cast: (int) (cast: (L2TestByte) n))
+    if: L2TestByte != 91
+        return: 81
+return: value + 2
+sendMessage: exit(exit_code: probe(5U); stdout: ""; stderr: "")
+return

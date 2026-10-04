@@ -17,8 +17,8 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# The sole live-direct-child membership is one ordinary growable Array<@LmxThread> physically
-# referenced by the parent's graph and cached by the same Thread.  This test pins growth beyond the
+# The sole live-direct-child membership is one growable List<@LmxThread> physically
+# held by the parent's Thread. This test pins growth beyond the
 # rejected fixed eight-child model, physical identity, ordered traversal, and compacting removal.
 
 sub: tc_check (@: int counts; int: ok; const: @(char label))
@@ -37,7 +37,9 @@ return: t
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: link_arena
+    LmxArena: foreign_arena
     @: Lmx graph 0
+    @: VoidArray fields 0
     @: VoidArray children 0
     @: VoidArray stray 0
     @: LmxMsg parent_message 0
@@ -63,7 +65,8 @@ fn: main () int
         return: 2
     ---
     memset((cast: (@: void) (@ link_arena)), 0, c.sizeof(c.LmxArena))
-    if: lmx_arena_open(@ link_arena) != 0
+    memset((cast: (@: void) (@ foreign_arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ link_arena) != 0 || lmx_arena_open(@ foreign_arena) != 0
         free(counts)
         return: 2
     ---
@@ -97,12 +100,15 @@ fn: main () int
     if: lmx_post_init(@ link_arena, parent_mail) != c.LMX_POST_OK || lmx_thread_init(@ link_arena, parent, graph, parent_mail, parent_slot) != c.LMX_THREAD_OK || lmx_schedule_init(parent_slot, @ link_arena, (cast: (@: void) parent), 1000U) != c.LMX_SCHEDULE_OK
         return: 2
     ---
-    tc_check(counts, lmx_thread_children_bind(parent, stray, @ link_arena) = c.LMX_THREAD_INVALID, "off-graph Array bound as membership")
+    fields: @ graph\array
+    tc_check(counts, lmx_thread_children_open(parent, @ foreign_arena) = c.LMX_THREAD_INVALID && lmx_thread_children(parent) = 0, "foreign arena cannot hold this Thread's membership")
+    tc_check(counts, lmx_thread_children_bind(parent, (cast: (@: void) graph), @ link_arena) = c.LMX_THREAD_INVALID, "non-List cannot become membership")
     children\size: 1U
     tc_check(counts, lmx_thread_children_bind(parent, children, @ link_arena) = c.LMX_THREAD_INVALID, "pre-populated membership Array bound")
     children\size: 0U
-    tc_check(counts, lmx_thread_children_bind(parent, children, @ link_arena) = c.LMX_THREAD_OK, "children graph Array did not bind")
-    tc_check(counts, lmx_thread_children(parent) = children && lmx_arena_ref_value(graph, 0U) = (cast: (@: void) children), "Thread did not cache the graph's exact descriptor")
+    tc_check(counts, lmx_thread_children_bind(parent, children, @ link_arena) = c.LMX_THREAD_OK, "same-arena children List did not bind")
+    tc_check(counts, lmx_thread_children(parent) = children && fields\size = 1U && lmx_arena_ref_value(graph, 0U) = (cast: (@: void) children), "binding leaves explicit application data unchanged")
+    tc_check(counts, lmx_thread_children_bind(parent, stray, @ link_arena) = c.LMX_THREAD_INVALID && lmx_thread_children(parent) = children, "second membership binding is refused")
 
     # Empty: not a child, first is null, next of null is null.
     tc_check(counts, lmx_thread_child_is(parent, a) = 0, "empty list claimed a child")
@@ -141,7 +147,7 @@ fn: main () int
     tc_check(counts, lmx_thread_child_is(parent, c) != 0, "c was not a direct child")
     tc_check(counts, lmx_thread_child_is(a, b) = 0, "cross-parent is claimed a child")
 
-    # Iterate in graph Array order: a, b, c, ...
+    # Iterate in membership List order: a, b, c, ...
     walk: lmx_thread_child_first(parent)
     tc_check(counts, walk = a, "first was not a")
     walk: lmx_thread_child_next(walk)
@@ -193,6 +199,7 @@ fn: main () int
     free(k)
     free(l)
     lmx_arena_release(@ link_arena)
+    lmx_arena_release(@ foreign_arena)
     free(counts)
     if: failures != 0
         return: 1

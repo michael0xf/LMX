@@ -66,7 +66,7 @@ define: LMX_DOMAIN_RESERVATION 26
 # A mailbox record that lives as a cell of the arena (a child's own mailbox does: its queue nodes
 # are storage of the child's arena).  Appended, like the domains before it.
 define: LMX_DOMAIN_POST 27
-# Retired ABI value. Live-child membership is now the parent's typed graph Array and no record is
+# Retired ABI value. Live-child membership is the List held by Thread.children; no record is
 # allocated in this domain. Keep the number unavailable so later domain values do not shift.
 define: LMX_DOMAIN_RESERVED_28 28
 # Reserved domain number of the former arena-backed fixed inbox ring.  The current mailbox uses
@@ -96,8 +96,8 @@ define: LMX_DOMAIN_PRIMITIVE 34
 
 # The same domains as KINDS -- what lmx_range_classify answers -- appended after
 # LmxKind 0..6.  Classification has ONE number space: no two answers share a value.
-# LmxKind's later LMX_KIND_LIST therefore sits after these (21, lmx.h.lm1); the next free
-# kind value is 22.
+# LmxKind's later List=21, SOURCE_NAME=22 and SOURCE_SYMBOL=23 sit after these
+# (lmx.h.lm1); the next free kind value is 24.
 define: LMX_DOMAIN_KIND_MSG_RECORD 7
 # Numeric kind 8 remains reserved for ABI stability. Executable Threads use the common
 # LMX_DOMAIN_KIND_MSG_RECORD kind and are distinguished by exact LMX_DOMAIN_THREAD type.
@@ -145,6 +145,9 @@ prototype:
     # for through(), whose correspondence already proves SIZE_MAX fields unused; the runtime
     # used-tree predicate instead requires every non-null Consumer child, including mapped ones.
     fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int
+    # Full declaration reception projects out OP-headed source applications, not
+    # missing fields. The explicit physical Consumer predicate above is unchanged.
+    fn: lmx_implements_receiver_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending) int
     fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending) @: LmxImplEntry
     # D-105 (the author's Q39, 2026-09-27): the `implements` table of address correspondences
     # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an

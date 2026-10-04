@@ -1,0 +1,22 @@
+# Completed local bodies retain their actual layout through A and admission
+# to B. C.y and D.y have different physical source slots; the held value,
+# not its factory prototype or its narrowed contract A, chooses the map.
+A: (int: x 1)
+B: (int: y 2)
+fn: makeC () A
+    C: (int: x 11; int: y 22; int: pad 33)
+    return: @C
+fn: makeD () A
+    D: (int: x 11; int: pad 55; int: y 44)
+    return: @D
+fn: readB (B: value) int
+    return: value\y
+@: A p makeC()
+int: first readB(p)
+p: makeD()
+int: second readB(p)
+int: ok 0
+if: first = 22 && second = 44
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,15 @@
+# A named Structure has its own real return trailer, without a fn header.
+# Construction does not run its assignment; invoking it changes only its cell.
+Counter:
+    int: x 1
+    x: 2
+return
+if: Counter\x != 1
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+Counter
+if: Counter\x != 2
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

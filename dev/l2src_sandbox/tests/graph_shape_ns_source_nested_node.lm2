@@ -1,0 +1,9 @@
+# Same name, different source slots: node selects the actual lexical parent.
+int: tag 77
+Outer: (int: pad 4; int: tag 9; in: (node\tag: node\tag + 1); in)
+Outer
+if: Outer\tag != 10 || tag != 77
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

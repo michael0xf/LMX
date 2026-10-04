@@ -1,0 +1,23 @@
+# Separate required call control: executing the copied actual must write only
+# its own canonical field, never the prototype. This remains a positive gate.
+int: hits 0
+S:
+    int: x 0
+    x: 17
+    node\hits: node\hits + 1
+until: node\hits >= 3
+@: int ph @hits
+S()
+int: result 7
+if: S\x != 17 || \ph != 3
+    result: 81
+R: merge S
+@: int ps @S\x
+\ps: 19
+@: int pr @R\x
+\pr: 23
+R()
+if: R\x != 17 || S\x != 19 || \ph != 4
+    result: 82
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

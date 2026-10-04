@@ -71,8 +71,8 @@ return: c.LMX_ROOT_INVALID
 fn: lmx_root_open (@: LmxRoot root; LmxCallEntry: entry; ulong: limit) int
 return: lmx_root_open_graph(root, entry, limit, 0U)
 
-# The root's graph is its children list and `fields` empty fields after it (the host's launch keeps
-# R0's result cell, its settings and its own record there).
+# The opened graph contains exactly `fields` empty fields. Child membership is
+# held by Thread.children; the launch puts its explicit host data in the stub.
 fn: lmx_root_open_graph (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; size_t: fields) int
     @: LmxArena arena
     @: Lmx parent_graph
@@ -140,26 +140,21 @@ fn: lmx_root_open_graph (@: LmxRoot root; LmxCallEntry: entry; ulong: limit; siz
     if: lmx_arena_open(@ root\arena) != 0
         return: c.LMX_ROOT_INVALID
     ---
-    # The parent frame and R0 use the same ordinary graph shape: one typed field that references
-    # their growable Array<@LmxThread>. The numeric position is not an ABI and is never exposed or
-    # rediscovered; construction passes the physical descriptor directly to Thread.
+    # Supervision lives in the Thread records. Neither the parent stub's
+    # membership List nor R0's List inserts a field into executable source.
     parent_graph: lmx_node_new_owned(@ root\arena)
     graph: lmx_node_new_owned(@ root\arena)
     if: parent_graph = 0 || graph = 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
-    if: lmx_arena_refs_open_owned(@ root\arena, parent_graph, 1U) != 0 || lmx_arena_refs_open_owned(@ root\arena, graph, 1U + fields) != 0
+    if: fields != 0U && lmx_arena_refs_open_owned(@ root\arena, graph, fields) != 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
     parent_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
     children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ root\arena)
     if: parent_children = 0 || children = 0
-        lmx_arena_release(@ root\arena)
-        return: c.LMX_ROOT_INVALID
-    ---
-    if: lmx_arena_ref_store(parent_graph, 0U, (cast: (@: void) parent_children)) != 0 || lmx_arena_ref_store(graph, 0U, (cast: (@: void) children)) != 0
         lmx_arena_release(@ root\arena)
         return: c.LMX_ROOT_INVALID
     ---
@@ -271,7 +266,7 @@ fn: lmx_root_cycle_at (@: LmxRoot root; unsigned: ticks; ulong: now) int
         return: c.LMX_ROOT_INVALID
     root\now: now
     # The structural parent stub performs the same liveness answer as every parent. It owns no
-    # second registry: it reaches R0 through its sole graph children Array.
+    # second registry: it reaches R0 through its sole Thread.children List.
     if: lmx_poll_answer_children(root\parent, now) != c.LMX_THREAD_OK
         return: c.LMX_ROOT_INVALID
     ---
@@ -853,11 +848,11 @@ fn: lmx_root_launch_refuse (@: LmxRoot root; @: LmxArena letter; @: char why; @:
     lmx_root_exit_write(@ done, out, err)
 return: 1
 
-# The host's graph after its children list (lmx_root_open_graph): R0's result cell, the settings
+# The host stub's explicit graph: R0's result cell, the settings
 # branch, the launch's own record.  Positions of the host's own graph, built by the launch alone.
-define: LMX_ROOT_HOST_R0 1
-define: LMX_ROOT_HOST_SETTINGS 2
-define: LMX_ROOT_HOST_LAUNCH 3
+define: LMX_ROOT_HOST_R0 0
+define: LMX_ROOT_HOST_SETTINGS 1
+define: LMX_ROOT_HOST_LAUNCH 2
 define: LMX_ROOT_HOST_FIELDS 3
 
 # THE HOST'S FIRST TURN: R0 is reserved as the host's ordinary child (lmx_child_reserve_profiled) --
@@ -879,10 +874,7 @@ fn: lmx_root_host_make (@: LmxThread host; @: Lmx graph; @: LmxRootLaunch launch
     @: LmxPost r0_mail 0
     @: LmxSchedule r0_slot 0
     @: LmxPool pool 0
-    # k.4 (authorized by fable, FABLE-SONNET-NATIVE-WORD-20260926-191 c.2): the reserved
-    # child[0] descriptor is gone, so a minimal R0 program needs only its children-list
-    # field -- the floor was 2 (descriptor + children), it is 1 now.
-    if: host = 0 || graph = 0 || launch = 0 || host\slot = 0 || launch\program = 0 || launch\fields < 1U
+    if: host = 0 || graph = 0 || launch = 0 || host\slot = 0 || launch\program = 0
         return: 1
     ---
     arena: host\slot\arena
@@ -902,7 +894,7 @@ fn: lmx_root_host_make (@: LmxThread host; @: Lmx graph; @: LmxRootLaunch launch
         launch\branch: branch
     ---
     source: lmx_node_new_owned(arena)
-    if: source = 0 || lmx_arena_refs_open_owned(arena, source, launch\fields) != 0
+    if: source = 0 || (launch\fields != 0U && lmx_arena_refs_open_owned(arena, source, launch\fields) != 0)
         return: 1
     ---
     r0_arena: @ launch\arena
@@ -1033,9 +1025,7 @@ fn: lmx_root_launch_tapped (@: LmxRoot root; int: argc; @@: char argv; LmxRootPr
     memset((cast: (@: void) (@ launch)), 0, c.sizeof(c.LmxRootLaunch))
     memset((cast: (@: void) (@ letter_arena)), 0, c.sizeof(c.LmxArena))
     at: @ launch
-    # k.4 (authorized by fable, FABLE-SONNET-NATIVE-WORD-20260926-191 c.2): see the same
-    # floor change in lmx_root_host_make -- 1, not 2, now that there is no descriptor slot.
-    if: root = 0 || argc < 1 || argv = 0 || program = 0 || fields < 1U
+    if: root = 0 || argc < 1 || argv = 0 || program = 0
         return: lmx_root_launch_refuse(0, 0, (cast: (@: char) "lmx: the host was given no root storage, no program name or no program\n"), out, err)
     ---
     at\program: program
@@ -1201,7 +1191,7 @@ fn: lmx_root_exit_admit (@: LmxArena arena; @: Lmx model; @: Lmx letter; @: LmxR
         return: c.LMX_ROOT_INVALID
     ---
     payload: lmx_arena_ref_struct(letter, 1U)
-    if: lmx_runtime_implements(arena, payload, model, model) != c.LMX_IMPLEMENTS_YES
+    if: lmx_implements_receiver_view(arena, payload, model, model, 0) != c.LMX_IMPLEMENTS_YES
         return: c.LMX_ROOT_INVALID
     ---
     out: (cast: (@: VoidArray) lmx_arena_ref_value(payload, 1U))

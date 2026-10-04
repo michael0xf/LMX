@@ -1,0 +1,15 @@
+# Repeated groups index successive pointer values, not only the last group.
+fn: write (@@: int p; size_t: i; size_t: j) int
+    p[i][j]: 41
+return: p[i][j]
+fn: check () int
+    []: int cells 2
+    cells[0]: 9
+    cells[1]: 10
+    @: int row @cells[0]
+    int: result write(@row, 0U, 1U)
+    if: result != 41 || cells[0] != 9 || cells[1] != 41
+        return: 81
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

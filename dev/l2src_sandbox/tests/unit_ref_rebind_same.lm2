@@ -1,18 +1,19 @@
 # A method's typed reference `@: Model r` (its local, D-76) is rebound only after the admission of the value to Model --
 # implements(mo, Model, Model), the interim structural admission the walked root's calls too, for a Model's own as well,
 # no shortcut (OPUS-CALLABLE-STRUCT-BINDING-20260929-16, step 2).  mo's 7 read through r, and a write through r is mo's.
+# mo is an explicit copy (`mo: merge Model`); r receives the Structure value mo, not the address of its cell.
 # Entry 7.
 Model:
     size_t: value 1U
 end: Model
 
 fn: check () int
-    Model: mo
+    mo: merge Model
     @: Model r
     size_t: v 0U
     int: out 0
     mo\value: 7U
-    r: @mo
+    r: mo
     v: r\value
     if: v = 7U
         out: 3

@@ -1,0 +1,15 @@
+# A hosted field keeps one working value. Two reads in one call sum to 10, and two later calls sum to 10.
+Holder:
+    int: a 0
+end: Holder
+fn: add (int: x; int: y) int
+    return: x + y
+fn: read () int
+    return: Holder\a
+Holder\a: 5
+int: same 0
+int: again 0
+same: add(Holder\a, Holder\a)
+again: read() + read()
+sendMessage: exit(exit_code: same + again; stdout: ""; stderr: "")
+return

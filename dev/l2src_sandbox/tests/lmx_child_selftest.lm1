@@ -124,9 +124,9 @@ fn: main () int
     raw: (cast: (@: void) (@ raw_value))
     lmx_arena_ref_store(bad, 0U, raw)
 
-    # The standard producer contract carries the children collection as an ordinary typed graph
-    # field before the Message is copied. The child constructor copies that field; Thread then
-    # discovers the unique physical descriptor by address-range type, with no reserved position.
+    # An explicitly supplied application List remains graph data after copying.
+    # The constructed Thread gets a distinct runtime membership List, never a
+    # type-based discovery or reuse of that application field.
     thread_source: lmx_node_new_owned(@ src)
     thread_source_children: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ src)
     child_check(counts, thread_source != 0 && thread_source_children != 0 && lmx_arena_refs_open_owned(@ src, thread_source, 1U) = 0 && lmx_arena_ref_store(thread_source, 0U, (cast: (@: void) thread_source_children)) = 0, "producer graph carries ordinary children Array")
@@ -141,7 +141,7 @@ fn: main () int
     child_check(counts, lmx_post_init(@ child, produced_mail) = c.LMX_POST_OK && lmx_schedule_init(produced_slot, @ child, (cast: (@: void) produced_thread), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ child, produced_thread, produced_message\graph, produced_mail, produced_slot) = c.LMX_THREAD_OK, "ordinary produced Thread initialized")
     child_check(counts, (cast: (@: void) produced_thread) = (cast: (@: void) produced_message) && lmx_thread_message(produced_thread) = produced_message, "Thread and embedded Message have one physical address")
     child_check(counts, lmx_range_classify(@ child, (cast: (@: void) produced_message)) = c.LMX_DOMAIN_KIND_MSG_RECORD && lmx_range_type_of(@ child, (cast: (@: void) produced_thread)) = c.LMX_DOMAIN_THREAD, "Thread prefix has common Message kind and exact Thread type")
-    child_check(counts, lmx_thread_children_bind_graph(produced_thread, @ child) = c.LMX_THREAD_OK && lmx_thread_children(produced_thread) = (cast: (@: VoidArray) lmx_arena_ref_value(produced_message\graph, 0U)), "ordinary produced Thread bound exact graph-resident children Array")
+    child_check(counts, lmx_thread_children_open(produced_thread, @ child) = c.LMX_THREAD_OK && lmx_thread_children(produced_thread) != (cast: (@: VoidArray) lmx_arena_ref_value(produced_message\graph, 0U)) && lmx_range_home(@ child, (cast: (@: void) lmx_thread_children(produced_thread))) = @ child, "Thread membership is distinct from explicit source List data")
     child_check(counts, lmx_child_create(@ src, @ child, lmx_arena_ref_cell(produced_message\graph, 0U), source) = 0, "a foreign physical result cell was accepted")
 
     # The turn that reserves is one by-value-prefix Thread. Its graph is the ordinary source graph,
@@ -170,7 +170,7 @@ fn: main () int
     # (lmx_turn_end), which is the honest state of a turn whose creator names no band.  A creator
     # that owns an arena names it, and the schedule-band test drives that case.
     child_check(counts, lmx_schedule_init(slot_pad, @ src, (cast: (@: void) turn_owner), 8U) = c.LMX_SCHEDULE_OK && lmx_thread_init(@ src, turn_owner, owner_graph, mail, slot_pad) = c.LMX_THREAD_OK, "the turn's record did not initialize")
-    child_check(counts, lmx_thread_children_bind_graph(turn_owner, @ src) = c.LMX_THREAD_OK, "the turn did not bind its graph-resident children Array")
+    child_check(counts, lmx_thread_children_open(turn_owner, @ src) = c.LMX_THREAD_OK && lmx_thread_children(turn_owner) != owner_children, "the turn owns its List without selecting source data by type")
     child_check(counts, lmx_child_reserve(turn_owner, @ src, @ child, lmx_arena_ref_cell(parent, 0U), source) = 0, "a reservation off a turn was accepted")
     child_check(counts, lmx_thread_enter(turn_owner) = c.LMX_THREAD_OK, "the reserving turn did not open")
 

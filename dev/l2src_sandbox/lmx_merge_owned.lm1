@@ -3,10 +3,12 @@ predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>" "<string.h>" "<limits.h>"
 
 # See lmx_merge_owned.h.lm1 for the contract. Nothing here searches for an
-# owner, consults a registry, reads a name or carries a range list: an operand
+# owner, consults a registry or carries a range list: an operand
 # is admitted by classification -- the source arena's table answers STRUCT, and
 # anything else (a METHOD record, a primitive cell, an address no array of that
 # arena contains) is refused.
+# Spelling transport is separate from admission; it follows original owning
+# places and never selects a value or computes an override correspondence.
 
 # Direct child count of a live Structure. array.size counts child slots only.
 fn: lmx_merge_width (@: Lmx x) size_t
@@ -47,6 +49,7 @@ return: LMX_MERGE_OK
 
 
 fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    LmxCopyMap: pending
     @: LmxArenaBlock mark 0
     @@: Lmx roots 0
     @@: Lmx copies 0
@@ -204,6 +207,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
     # From here the destination is all-or-nothing: the mark is the arena's own
     # head, and every refusal below reverts to it.
     mark: lmx_arena_mark(dst_arena)
+    memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
     # One operation over every root: all the operands plus the body, sharing a
     # single operation-local map, so an object reachable from two operands is
     # copied once.
@@ -240,7 +244,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
         roots[nroots]: body
         nroots: nroots + 1U
     if: nroots != 0U
-        cst: lmx_graph_copy_many_profiles_owned(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, copies)
+        cst: lmx_graph_copy_many_profiles_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, copies, @ pending)
         if: cst = LMX_GRAPH_COPY_NOMEM
             status: LMX_MERGE_NOMEM
         if: cst = LMX_GRAPH_COPY_UNSUPPORTED
@@ -248,22 +252,26 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
         if: cst != LMX_GRAPH_COPY_OK && cst != LMX_GRAPH_COPY_NOMEM && cst != LMX_GRAPH_COPY_UNSUPPORTED
             status: LMX_MERGE_INVALID
     ---
-    # Declaration via merge(E, empty) retains the exact physical branch root itself.
-    # The copier has already validated the entire profile span and destination visibility;
-    # equality here is therefore the terminal decision, not a second classification rule.
-    if: status = LMX_MERGE_OK && count = 1U && body = 0 && copies[0] = operands[0]
-        \out: operands[0]
+    # With one operand and no composition, the copier's completed occurrence
+    # is the result. Reassembling its children under another root would lose
+    # native and leave self/back edges pointing at an orphan copy-root.
+    # Exact-profile retention is still the copier's decision: never reparent
+    # or modify an operand it deliberately retained by physical identity.
+    if: status = LMX_MERGE_OK && count = 1U && body = 0 && use_map = 0
+        result: copies[0]
+        if: result != operands[0]
+            result\parent: container
+        lmx_copy_names_finish(@ pending, 1)
+        \out: result
         free((cast: (@: void) roots))
         free((cast: (@: void) copies))
         return: LMX_MERGE_OK
     ---
-    # The result root, built in the destination arena like the copies, so that
-    # the whole merge is admitted or nothing is.  k.4 (author, norm (5) / L3 §20,
-    # corrected 2026-09-26): the result of merging two Structures ALWAYS has an empty
-    # `native` -- interpretation only.  Nested methods keep their own native word,
-    # carried verbatim by the copier (lmx_graph_copy_owned.lm1) as an ordinary shared
-    # or copied Structure; nothing here inspects or selects among operand native words.
-    # lmx_node_new_owned already zeroes `native`, so no further store is needed.
+    # General composition still builds a result root in the destination arena.
+    # Whole-body selection and its native/layout proof are not implemented here;
+    # zero native is this path's current limitation, not a language rule that
+    # every merge must discard an unchanged implementation. Nested occurrences
+    # keep the native words carried by the ordinary copier.
     if: status = LMX_MERGE_OK
         result: lmx_node_new_owned(dst_arena)
         if: result = 0
@@ -298,6 +306,9 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                     if: lmx_arena_ref_store(result, at, value) != 0
                         status: LMX_MERGE_INVALID
                     ---
+                    if: status = LMX_MERGE_OK
+                        status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(src, j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                    ---
                     at: at + 1U
                 ---
                 j: j + 1U
@@ -319,6 +330,9 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                 value: \slot
                 if: lmx_arena_ref_store(result, j, value) != 0
                     status: LMX_MERGE_INVALID
+                ---
+                if: status = LMX_MERGE_OK
+                    status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(operands[0], j)), (cast: (@: void) lmx_arena_ref_cell(result, j)), @ pending)
                 ---
             ---
             j: j + 1U
@@ -351,6 +365,9 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                         if: lmx_arena_ref_store(result, at, value) != 0
                             status: LMX_MERGE_INVALID
                         ---
+                        if: status = LMX_MERGE_OK
+                            status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(operands[i], j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                        ---
                         at: at + 1U
                     ---
                 ---
@@ -382,6 +399,9 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                         value: \slot
                         if: lmx_arena_ref_store(result, at, value) != 0
                             status: LMX_MERGE_INVALID
+                        ---
+                        if: status = LMX_MERGE_OK
+                            status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(body, j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
                         ---
                         at: at + 1U
                     ---
@@ -426,6 +446,9 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
                 if: lmx_arena_ref_store(result, at, value) != 0
                     status: LMX_MERGE_INVALID
                 ---
+                if: status = LMX_MERGE_OK
+                    status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(body, j)), (cast: (@: void) lmx_arena_ref_cell(result, at)), @ pending)
+                ---
                 at: at + 1U
             ---
             j: j + 1U
@@ -462,6 +485,7 @@ fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: L
     ---
     if: status = LMX_MERGE_OK
         result\parent: container
+    lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_MERGE_OK)))
     if: status != LMX_MERGE_OK
         # Nothing stays: the arena drops every block added since the mark --
         # the copies, the result root and its slots -- and retires each one's
@@ -494,6 +518,7 @@ return: lmx_merge_profiles_owned(operands, count, body, container, src_arena, ds
 # source field or a target slot. A slot of `target` no pair names is simply untouched --
 # this is a specialization of some of `target`'s fields, not a replacement of the whole.
 fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair pairs; size_t: pair_count) int
+    LmxCopyMap: pending
     @: LmxArenaBlock mark 0
     @@: Lmx roots 0
     @@: Lmx copies 0
@@ -539,6 +564,7 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
     # observed change, and even those are only ever written after every admission check
     # above has already passed.
     mark: lmx_arena_mark(dst_arena)
+    memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
     roots: (cast: (@@: Lmx) malloc(c.sizeof(@: void)))
     copies: (cast: (@@: Lmx) malloc(c.sizeof(@: void)))
     if: roots = 0 || copies = 0
@@ -549,7 +575,7 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
         lmx_arena_revert(dst_arena, mark)
         return: LMX_MERGE_NOMEM
     roots[0]: op
-    cst: lmx_graph_copy_many_profiles_owned(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, copies)
+    cst: lmx_graph_copy_many_profiles_staged(roots, 1U, src_arena, dst_arena, retain_profiles, retain_count, copies, @ pending)
     if: cst = LMX_GRAPH_COPY_NOMEM
         status: LMX_MERGE_NOMEM
     if: cst = LMX_GRAPH_COPY_UNSUPPORTED
@@ -585,6 +611,7 @@ fn: lmx_merge_into_profiles_owned (@: Lmx target; @: Lmx op; @: LmxArena src_are
             p: p + 1U
         ---
     ---
+    lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_MERGE_OK)))
     if: status != LMX_MERGE_OK
         lmx_arena_revert(dst_arena, mark)
     ---

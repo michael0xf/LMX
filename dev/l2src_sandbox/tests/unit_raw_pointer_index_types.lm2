@@ -1,0 +1,19 @@
+# C99 pointer element contracts are not int-only or size_t-index-zero-only.
+fn: chars (@: char p) char
+    p[1]: 'B'
+return: p[1]
+fn: unsigneds (@: unsigned p) unsigned
+    p[0]: 29U
+return: p[0]
+fn: sizes (@: size_t p) size_t
+    p[1]: 31U
+return: p[1]
+fn: check () int
+    []: char letters 2
+    unsigned: number 1U
+    []: size_t counts 2
+    if: chars(@letters[0]) != 'B' || unsigneds(@number) != 29U || sizes(@counts[0]) != 31U
+        return: 81
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,21 @@
+# The same registered lexical body must participate in receive planning,
+# whether its statements belong to a frame or an explicit Structure operand.
+fn: take () int
+    if: 0
+        return: 81
+    else:
+        receiveMessage: letter
+        if: letter = 0
+            return: 82
+    ---
+    return: 7
+end: take
+
+int: result 0
+result: take()
+receiveMessage: after
+if: after != 0
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

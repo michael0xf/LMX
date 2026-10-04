@@ -1,0 +1,19 @@
+# A registered local body owns its name resolution. The local scalar f is
+# not the unit method f; named actuals must still be bound inside that body.
+fn: f (int: a; int: b) int
+return: a + b
+fn: encode (int: a; int: b) int
+return: 10 * a + b
+fn: check () int
+    int: result 0
+    S:
+        int: f 1
+        int: answer 0
+        f: 9
+        answer: encode(b: 2; a: 1)
+    S()
+    if: S\f = 9 && S\answer = 12
+        result: 7
+return: result
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

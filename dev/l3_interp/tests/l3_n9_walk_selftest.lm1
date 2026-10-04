@@ -155,12 +155,15 @@ fn: mk_if_false () @: Lmx
     @: Lmx m mk_m(3U)
     @: Lmx n 0
     @: Lmx thenb 0
+    @: Lmx otherwise 0
     @: Lmx elseb 0
     icell(m, 1U, 0)
     n: fr(m, 2U, c.LMX_WALK_OP_IF, 4U)
     lit(n, 1U, 0)
     thenb: pl(n, 2U, 1U)
-    elseb: pl(n, 3U, 1U)
+    # Keep the written else application and its body as separate Structures.
+    otherwise: fr(n, 3U, c.LMX_WALK_OP_ELSE, 2U)
+    elseb: pl(otherwise, 1U, 1U)
     n: fr(thenb, 0U, c.LMX_WALK_OP_SET, 3U)
     own(n, 1U, m, 1U)
     lit(n, 2U, 7)

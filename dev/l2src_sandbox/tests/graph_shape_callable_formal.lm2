@@ -1,0 +1,22 @@
+# A same-named unit method cannot replace a selected callable formal.
+# Frame and bare invocations use the same supplied occurrence. Forwarding
+# and the nullary actual frame transport it without executing a contract.
+fn: real () int
+    return: 7
+end: real
+
+fn: f () int
+    return: 23
+end: f
+
+fn: invoke (real: f) int
+    f()
+    return: f
+end: invoke
+
+fn: forward (real: g) int
+    return: invoke(g)
+end: forward
+
+sendMessage: exit(exit_code: forward(real()); stdout: ""; stderr: "")
+return

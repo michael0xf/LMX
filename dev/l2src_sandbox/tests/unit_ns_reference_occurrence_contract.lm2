@@ -1,0 +1,12 @@
+# Metadata selects the same LAST/[N] occurrence as physical paths. These
+# reference cells remain null: the two dormant readers verify their declared
+# pointee contracts without dereferencing a null pointer at runtime.
+First: (size_t: left 1U)
+Last: (size_t: right 7U)
+Holder: (@: First ref; @: Last ref)
+fn: readLast () size_t
+return: Holder\ref\right
+fn: readFirst () size_t
+return: Holder\[0]ref\left
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

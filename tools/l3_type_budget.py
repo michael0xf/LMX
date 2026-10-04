@@ -83,11 +83,14 @@ _WIN32_ABI = 1 if os.name == 'nt' else 0
 # 73 after portable typed evaluation: LmxWalkPlace is the activation-local
 # physical storage projection in lmx_walk.h.lm1. The measured platform closure
 # gains this one type (74 including its ABI type); capacities remain 128/8192.
+# 74 after source-name preservation: LmxSourceName is the arena's external
+# spelling-service row in lmx_source_names.h.lm1, reached by range retirement,
+# copy and GC. Measured Windows closure is 75; capacities remain 128/8192.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 73 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 73 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 73 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 73 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 74 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 74 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 74 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 74 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

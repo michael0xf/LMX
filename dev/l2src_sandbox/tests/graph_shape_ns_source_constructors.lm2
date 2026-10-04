@@ -1,0 +1,30 @@
+# A borrowed callable and an Array keep their original source places.
+# Neither constructor executes the borrowed method while Shelf is walked.
+int: calls 0
+Shelf:
+    int: first 1
+    []: int values 2
+    fn: step
+    int: last 3
+end: Shelf
+fn: step () int
+    node\calls: node\calls + 1
+return: 9
+fn: readCalls () int
+return: node\calls
+Shelf\values[0]: 4
+if: length(Shelf\values) != 2 || Shelf\values[0] != 4 || calls != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+Shelf
+if: Shelf\first != 1 || Shelf\last != 3 || Shelf\values[0] != 4 || calls != 0
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+int: answer Shelf\step()
+# Explicitly read the physical cell. The bare own name keeps this activation's
+# entry value while clean, even after another callable updates node\calls.
+if: answer != 9 || readCalls() != 1
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

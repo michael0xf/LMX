@@ -1,0 +1,27 @@
+# Field occurrence and element index are independent parts of one place.
+# The own Array distractor rejects substitution by an unrelated same-name cell.
+Shelf:
+    int: first 1
+    []: int values 3
+    int: middle 2
+    []: int values 3
+    int: last 3
+end: Shelf
+
+fn: write (size_t: i) int
+    []: int values 3
+    Shelf\[0]values[i + 1U]: 11
+    Shelf\values[i + 2U]: 22
+    if: values[1] != 0 || values[2] != 0
+        return: 81
+return: Shelf\[0]values[i + 1U] + Shelf\[1]values[i + 2U]
+
+int: answer write(0U)
+if: answer != 33 || Shelf\[0]values[1] != 11 || Shelf\[0]values[2] != 0 || Shelf\[1]values[1] != 0 || Shelf\[1]values[2] != 22
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+if: Shelf\first != 1 || Shelf\middle != 2 || Shelf\last != 3
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

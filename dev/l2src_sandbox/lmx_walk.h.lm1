@@ -246,7 +246,27 @@ define: LMX_WALK_OP_ADDRESS 42
 # [self]: the actual data occurrence of this activation (holder zero), not its
 # code and not its lexical parent. Internal operand; source `node` stays NODE.
 define: LMX_WALK_OP_SELF 43
-define: LMX_WALK_OP_COUNT 44
+# Retained source Frames whose bodies are not operands of the L3 evaluator.
+# Directives are inert. A reached machine-only operation cannot be interpreted;
+# its source tree still exists when its callable has a native implementation.
+define: LMX_WALK_OP_SOURCE_INERT 44
+define: LMX_WALK_OP_SOURCE_MACHINE 45
+# [else, owned-body]: a source sibling of its IF. The IF borrows this
+# application for its false arm; the enclosing body owns it. Encountering the
+# sibling in ordinary source order does not execute its body a second time.
+define: LMX_WALK_OP_ELSE 46
+define: LMX_WALK_OP_COUNT 47
+# Source role of an operation, separate from its execution opcode. The shared
+# role record encodes source * OP_COUNT + opcode in its existing code word.
+# Receiver materialization keeps the real typed cell; no leaf wraps that cell.
+# An explicit initializer and an implicit declaration action must not become
+# indistinguishable from a later assignment, even if their effects coincide.
+define: LMX_WALK_SOURCE_ORDINARY 0
+define: LMX_WALK_SOURCE_INITIALIZER 1
+define: LMX_WALK_SOURCE_IMPLICIT 2
+define: LMX_WALK_SOURCE_ANONYMOUS 3
+define: LMX_WALK_SOURCE_TRAILER 4
+define: LMX_WALK_SOURCE_COUNT 5
 # One temporary value, including an explicitly present null reference. type is the
 # closed source type. Numeric values occupy their actual C-width member; reference
 # values are already loaded exactly once and their pointees remain opaque.
@@ -383,6 +403,8 @@ prototype:
     # node gets the shared record of role `code` in child[0].  The caller stores the node
     # into its parent's slot.
     fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx
+    # Source identity on an existing operation; execution still uses its base opcode.
+    fn: lmx_walk_source_mark (@: Lmx roles; @: Lmx operation; int: source) int
     fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
     fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
     fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int

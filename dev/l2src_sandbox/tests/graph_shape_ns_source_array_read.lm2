@@ -1,0 +1,29 @@
+# Original namespace metadata remains visible through its execution entry.
+# This additive read witness does not replace the indexed-store witness.
+int: calls 0
+Shelf:
+    int: first 1
+    []: int values 2
+    fn: step
+    int: last 3
+end: Shelf
+fn: step () int
+    node\calls: node\calls + 1
+return: 9
+fn: readCalls () int
+return: node\calls
+if: length(Shelf\values) != 2 || Shelf\first != 1 || Shelf\last != 3 || calls != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+Shelf
+if: length(Shelf\values) != 2 || Shelf\first != 1 || Shelf\last != 3 || calls != 0
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+int: answer Shelf\step()
+# The bare own name retains this activation's entry working value. Read the
+# physical cell through an explicit lexical path, not that clean snapshot.
+if: answer != 9 || readCalls() != 1
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

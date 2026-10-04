@@ -1,0 +1,18 @@
+# A copied Structure has its own field. box\a becomes 5. Holder\a stays 0. Two reads and two later calls sum to 20.
+Holder:
+    int: a 0
+end: Holder
+Holder: box
+fn: add (int: x; int: y) int
+    return: x + y
+fn: read () int
+    return: box\a
+box\a: 5
+int: same 0
+int: again 0
+int: leaked 0
+same: add(box\a, box\a)
+again: read() + read()
+leaked: Holder\a
+sendMessage: exit(exit_code: same + again + leaked; stdout: ""; stderr: "")
+return

@@ -26,5 +26,8 @@ ignored: read_shared()
 if: ignored != 31
     sendMessage: exit(exit_code: 74; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+if: write_while_nested\while\hosted != 3 || write_while_nested\flag != 0 || shared != 3
+    sendMessage: exit(exit_code: 85; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

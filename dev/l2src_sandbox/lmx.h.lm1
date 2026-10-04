@@ -154,6 +154,12 @@ enum: LmxType
     LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR 18
     LMX_TYPE_ULONG 19
     LMX_TYPE_ARRAY_OF_ULONG 20
+    # Independent source-name service storage; never a graph child/value tag.
+    # 21..34 are the existing LMX_DOMAIN_* values; do not reuse them.
+    LMX_TYPE_SOURCE_NAME 35
+    # Identity-only source symbol occurrence. Spelling lives in the external
+    # name table, not in this cell; it is not a machine operation record.
+    LMX_TYPE_SOURCE_SYMBOL 36
     # Scalar pointer variables live in pointer cells.  The concrete source pointer
     # type is encoded as LMX_TYPE_POINTER_BASE + a closed-unit type id, so @T and @@T
     # occupy distinct address domains.
@@ -190,6 +196,9 @@ enum: LmxKind
     # so this value follows the last domain kind: 7 was LMX_DOMAIN_KIND_MSG_RECORD, and a
     # Thread/Message record classified as a List.
     LMX_KIND_LIST 21
+    # Weak address-keyed source payloads outside the graph's child arrays.
+    LMX_KIND_SOURCE_NAME 22
+    LMX_KIND_SOURCE_SYMBOL 23
 end: LmxKind
 
 # The generic native-entry function-pointer shape (cast to the real prim ABI,

@@ -1,13 +1,12 @@
-# Legacy implicit Model:b compatibility witness, pending known-head call cleanup.
-# Its old construction route is not the current declaration/reference contract,
-# and this row is not evidence of a fresh graph per activation.
+# Each reached merge copies Box. Recursion retains each activation's working
+# value, yielding 123, and none of those writes changes Box itself.
 Box:
     int: v 0
 end: Box
 
 fn: nest (int: n) int
     int: r 0
-    Box: b
+    b: merge Box
     b\v: n
     if: n > 0
         r: nest(n - 1)
@@ -15,7 +14,13 @@ fn: nest (int: n) int
 end: nest
 
 fn: probe () int
-    return: nest(3) - 123
+    int: result 0
+    result: nest(3)
+    if: result != 123
+        return: 81
+    if: Box\v != 0
+        return: 82
+    return: 7
 end: probe
 
 sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")

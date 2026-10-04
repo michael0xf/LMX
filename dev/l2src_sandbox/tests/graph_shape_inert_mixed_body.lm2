@@ -1,0 +1,21 @@
+# Both old cases: a retained hosted-cell prefix and a dropped empty prefix.
+# The anonymous content must survive in each actual body, in source order.
+sub: retained ()
+    if: 1
+        int: marker 9
+        (1 + 2; (3 + 4; ()))
+        marker: marker + 1
+    return
+sub: dropped ()
+    int: result 0
+    if: 1
+        (5 + 6; (7 + 8; ()))
+        result: result + 1
+    return
+retained
+dropped
+if: retained\if\marker != 10 || dropped\result != 1
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

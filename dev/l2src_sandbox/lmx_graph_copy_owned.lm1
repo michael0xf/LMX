@@ -1,5 +1,6 @@
 predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "l2src/lmx_array_owned.lm1" "l2src/lmx_array_ref_owned.lm1" "l2src/lmx_list_owned.lm1" "lmx_pool.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
 predef: "l1src/libc_abi.lm1"
+predef: "l2src/lmx_source_names.h.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
 
 # ---- operation-local map: source address -> destination address -------------
@@ -130,22 +131,22 @@ fn: lmx_copy_map_init (@: LmxCopyMap m) int
     size_t: i 0U
     if: m = 0
         return: 1
-    lmx_copy_map_set_keys_cap(m, 64U)
-        m\n: 0U
-    keys: (cast: (@@: void) malloc(lmx_copy_map_keys_cap(m) * c.sizeof(@: void)))
+    memset((cast: (@: void) m), 0, c.sizeof(c.LmxCopyMap))
+    keys: (cast: (@@: void) malloc(64U * c.sizeof(@: void)))
     if: keys = 0
         return: 1
-    vals: (cast: (@@: void) malloc(lmx_copy_map_keys_cap(m) * c.sizeof(@: void)))
+    vals: (cast: (@@: void) malloc(64U * c.sizeof(@: void)))
     if: vals = 0
         free(keys)
         return: 1
-    while: i < lmx_copy_map_keys_cap(m)
+    while: i < 64U
         keys[i]: 0
         vals[i]: 0
         i: i + 1U
     ---
     lmx_copy_map_set_keys_data(m, keys)
     lmx_copy_map_set_vals_data(m, vals)
+    lmx_copy_map_set_keys_cap(m, 64U)
     return: 0
 
 sub: lmx_copy_map_dispose (@: LmxCopyMap m)
@@ -440,8 +441,6 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
     int: is_ref 0
     int: pointer_element_type 0
     @: void pointee
-    @: void frame_head 0
-    int: frame_hk 0
     if: v = 0
         return: 0
     if: lmx_copy_retained_profiles(src_arena, v, retain_profiles, retain_count) != 0
@@ -467,31 +466,24 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         return: 0
     vtype: lmx_range_type_of(src_arena, v)
     if: kind = c.LMX_KIND_STRUCT
-        # Q38/Q42/Q44 (the author): every Structure the used graph reaches is copied, wherever
-        # its parent lies -- a method occurrence as well; its implementation, the `native` word,
-        # is carried verbatim by the parent fixup below.  The former k.4 test ("parent outside
-        # the copied subtree -> shared by address") is gone.  Only code frames stay shared.
-        @: Lmx occ (cast: (@: Lmx) v)
-        # K-OT1 (-194 к.5): v is itself an OP/ROLE frame (an ordinary Structure headed
-        # by an op/role record in its own child 0) -- code, kept by address regardless
-        # of its own parent, the same as lmx_copy_is_terminal_profiles above already
-        # does for a BARE role record (child v itself classified OP/ROLE), just one
-        # level up: every other Structure reached is copied (Q44), so without this test
-        # every one of M's own frame children would be deep-copied.
-        # Mutant: skip this check -> a merge result's own copied frames get fresh
-        # addresses, no longer shared code with the model they were copied from.
-        if: occ\array.size > 0U
-            frame_head: lmx_arena_ref_value(occ, 0U)
-            if: frame_head != 0
-                frame_hk: lmx_range_classify(src_arena, frame_head)
-                if: frame_hk = c.LMX_DOMAIN_KIND_OP || frame_hk = c.LMX_DOMAIN_KIND_ROLE
-                    return: v
-                ---
-            ---
-        ---
+        # Every reached Structure is copied through the same map, including an
+        # application headed by an OP/ROLE terminal. The terminal and native entry
+        # stay shared; the application, operands and lexical parents do not.
         if: lmx_copy_ensure_struct((cast: (@: Lmx) v), map, todo, dst_arena, status) != 0
             return: 0
         return: lmx_copy_map_get(map, v)
+    if: kind = c.LMX_KIND_SOURCE_SYMBOL
+        # A source leaf has only occurrence identity; its spelling is external.
+        # Unlike a shared OP/ROLE it is copied through the ordinary address map.
+        cell: lmx_arena_take(dst_arena, c.sizeof(c.char), kind, vtype)
+        if: cell = 0
+            \status: LMX_GRAPH_COPY_NOMEM
+            return: 0
+        memset(cell, 0, c.sizeof(c.char))
+        if: lmx_copy_map_put(map, v, cell) != 0
+            \status: LMX_GRAPH_COPY_NOMEM
+            return: 0
+        return: cell
     if: kind = c.LMX_KIND_PRIMITIVE
         if: vtype = c.LMX_TYPE_CHAR
             cell: lmx_char_new_owned(dst_arena)
@@ -693,7 +685,81 @@ fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; 
     ---
     return: 0
 
-fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs) int
+# Prepare the name of an actual copied place. The private map keeps pending
+# rows unpublished until the complete graph and every spelling are ready.
+fn: lmx_copy_name_prepare (@: LmxArena src_arena; @: LmxArena dst_arena; @: void source; @: void destination; @: LmxCopyMap pending) int
+    @: VoidArray text lmx_source_name_get(src_arena, source)
+    @: LmxSourceName row 0
+    if: text = 0
+        return: LMX_GRAPH_COPY_OK
+    if: lmx_copy_map_keys_data(pending) = 0
+        if: lmx_copy_map_init(pending) != 0
+            return: LMX_GRAPH_COPY_NOMEM
+        ---
+    ---
+    row: (cast: (@: LmxSourceName) lmx_copy_map_get(pending, destination))
+    if: row != 0
+        if: row\text.size != text\size || (text\size != 0U && memcmp((row\text.data), (text\data), (text\size)) != 0)
+            return: LMX_GRAPH_COPY_INVALID
+        return: LMX_GRAPH_COPY_OK
+    if: lmx_source_name_prepare(dst_arena, destination, (cast: (@: char) text\data), (text\size), @ row) != 0
+        return: LMX_GRAPH_COPY_NOMEM
+    if: row != 0
+        if: lmx_copy_map_put(pending, destination, (cast: (@: void) row)) != 0
+            lmx_source_name_cancel(row)
+            return: LMX_GRAPH_COPY_NOMEM
+        ---
+    ---
+return: LMX_GRAPH_COPY_OK
+
+fn: lmx_copy_names (@: LmxArena src_arena; @: LmxArena dst_arena; @: LmxCopyMap map; @: LmxCopyMap pending) int
+    @@: void keys lmx_copy_map_keys_data(map)
+    @@: void vals lmx_copy_map_vals_data(map)
+    @: Lmx src
+    @: Lmx dst
+    size_t: i 0U
+    size_t: j
+    int: status LMX_GRAPH_COPY_OK
+    while: i < lmx_copy_map_keys_cap(map) && status = LMX_GRAPH_COPY_OK
+        if: keys[i] != 0
+            status: lmx_copy_name_prepare(src_arena, dst_arena, keys[i], vals[i], pending)
+            if: status = LMX_GRAPH_COPY_OK && lmx_range_classify(src_arena, keys[i]) = c.LMX_KIND_STRUCT
+                src: (cast: (@: Lmx) keys[i])
+                dst: (cast: (@: Lmx) vals[i])
+                j: 0U
+                while: j < src\array.size && status = LMX_GRAPH_COPY_OK
+                    status: lmx_copy_name_prepare(src_arena, dst_arena, (cast: (@: void) lmx_arena_ref_cell(src, j)), (cast: (@: void) lmx_arena_ref_cell(dst, j)), pending)
+                    j: j + 1U
+                ---
+            ---
+        ---
+        i: i + 1U
+    ---
+return: status
+
+fn: lmx_copy_names_finish (@: LmxCopyMap pending; int: publish) void
+    @@: void keys
+    @@: void vals
+    @: LmxSourceName row
+    size_t: i 0U
+    # Publication cannot allocate/fail. The OUTERMOST constructor invokes
+    # this once; on failure it cancels before retiring any destination range.
+    keys: lmx_copy_map_keys_data(pending)
+    vals: lmx_copy_map_vals_data(pending)
+    while: i < lmx_copy_map_keys_cap(pending)
+        if: keys[i] != 0
+            row: (cast: (@: LmxSourceName) vals[i])
+            if: publish != 0
+                lmx_source_name_publish(row, keys[i])
+            else:
+                lmx_source_name_cancel(row)
+            ---
+        ---
+        i: i + 1U
+    ---
+    lmx_copy_map_dispose(pending)
+
+fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs; @: LmxCopyMap pending) int
     LmxCopyMap: map_storage
     LmxCopyStack: todo_storage
     @: LmxCopyMap map (@ map_storage)
@@ -708,7 +774,7 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: LmxAr
     int: status LMX_GRAPH_COPY_OK
     size_t: i 0U
     size_t: r 0U
-    if: sources = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || outs = 0
+    if: sources = 0 || count = 0U || src_arena = 0 || dst_arena = 0 || outs = 0 || pending = 0
         return: LMX_GRAPH_COPY_INVALID
     # Clear the complete result span before validating any one root, so every early
     # refusal satisfies the all-null output contract.
@@ -802,7 +868,11 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: LmxAr
             i: i + 1U
         ---
     ---
+    if: status = LMX_GRAPH_COPY_OK
+        status: lmx_copy_names(src_arena, dst_arena, map, pending)
+    ---
     if: status != LMX_GRAPH_COPY_OK
+        lmx_copy_names_finish(pending, 0)
         # Nothing stays: the arena drops every block added since the mark and
         # retires each one's index entry with it. Sources are never written.
         lmx_arena_revert(dst_arena, mark)
@@ -821,6 +891,14 @@ fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: LmxAr
     lmx_copy_stack_dispose(todo)
     lmx_copy_map_dispose(map)
     return: status
+
+fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs) int
+    LmxCopyMap: pending
+    int: status
+    memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
+    status: lmx_graph_copy_many_profiles_staged(sources, count, src_arena, dst_arena, retain_profiles, retain_count, outs, @ pending)
+    lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
+return: status
 
 fn: lmx_graph_copy_many_owned (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx outs) int
 return: lmx_graph_copy_many_profiles_owned(sources, count, src_arena, dst_arena, 0, 0U, outs)

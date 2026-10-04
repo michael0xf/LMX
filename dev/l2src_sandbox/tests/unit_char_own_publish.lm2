@@ -1,48 +1,46 @@
 # C99 numeric char values survive publication and explicit graph-path writes.
 # Boundary values are obtained from the target platform, not hard-coded 0..255.
-L2:
-    include: "<limits.h>"
-    char: mark 'a'
+include: "<limits.h>"
+char: mark 'a'
 
-    fn: nop () int
-        return: 0
-    end: nop
+fn: nop () int
+    return: 0
+end: nop
 
-    fn: holder (char: hi) int
-        char: kept 'A'
-        char: kept_g
-        nop()
-        kept_g: holder\kept
-        if: kept_g != kept
-            return: 0
-        kept: hi
-        nop()
-        kept_g: holder\kept
-        if: kept_g != hi
-            return: 0
-        holder\kept: 'B'
-        kept_g: holder\kept
-        if: kept_g != 'B'
-            return: 0
-        holder\kept: hi
-        kept_g: holder\kept
-        if: kept_g != hi
-            return: 0
-        return: 1
-    end: holder
-
-    char: low (cast: (char) c.CHAR_MIN)
-    char: high (cast: (char) c.CHAR_MAX)
-    char: byte (cast: (char) 200)
-    mark: low
+fn: holder (char: hi) int
+    char: kept 'A'
+    char: kept_g
     nop()
-    int: ok 0
-    if: mark = low && holder(low) = 1 && holder(high) = 1 && holder(byte) = 1
-        mark: high
-        nop()
-        if: mark = high
-            ok: 7
-    ---
-    sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
-    return
-end: L2
+    kept_g: holder\kept
+    if: kept_g != kept
+        return: 0
+    kept: hi
+    nop()
+    kept_g: holder\kept
+    if: kept_g != hi
+        return: 0
+    holder\kept: 'B'
+    kept_g: holder\kept
+    if: kept_g != 'B'
+        return: 0
+    holder\kept: hi
+    kept_g: holder\kept
+    if: kept_g != hi
+        return: 0
+    return: 1
+end: holder
+
+char: low (cast: (char) c.CHAR_MIN)
+char: high (cast: (char) c.CHAR_MAX)
+char: byte (cast: (char) 200)
+mark: low
+nop()
+int: ok 0
+if: mark = low && holder(low) = 1 && holder(high) = 1 && holder(byte) = 1
+    mark: high
+    nop()
+    if: mark = high
+        ok: 7
+---
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

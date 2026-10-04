@@ -1,0 +1,26 @@
+predef: "l2src/lmx_arena.h.lm1"
+
+# Only independent source spelling lives here. Execution never reads this table.
+# A key is the actual occurrence (Frame/leaf) or an owning child-cell address,
+# not necessarily its referent. Neither Lmx nor an atom receives a name field.
+struct: LmxSourceName
+    @: void key
+    VoidArray: text
+end: LmxSourceName
+
+prototype:
+    # A stable arena service cell. prepare leaves key zero until publication.
+    fn: lmx_source_name_prepare (@: LmxArena arena; @: void key; const: @(char text); size_t: length; @@: LmxSourceName out) int
+    fn: lmx_source_name_publish (@: LmxSourceName row; @: void key) void
+    fn: lmx_source_name_cancel (@: LmxSourceName row) void
+    fn: lmx_source_name_set (@: LmxArena arena; @: void key; const: @(char text); size_t: length) int
+    # Inspection/copy runs with exclusive ownership of the searched source
+    # inventories, including a foreign home. Sealing a key alone does not
+    # make its owner's still-mutable metadata inventory concurrent-readable.
+    fn: lmx_source_name_get (@: LmxArena arena; @: void key) @: VoidArray
+    # Retire before an address can be reused. The range has not been freed yet.
+    fn: lmx_source_names_drop (@: LmxArena arena; @: void lo; @: void hi) void
+    # Run only after a complete ordinary graph mark. Keys are weak: this pass
+    # never marks them; it keeps spelling only for already-live occurrences.
+    fn: lmx_source_names_mark (@: LmxArena arena; unsigned: gen) int
+end: prototype

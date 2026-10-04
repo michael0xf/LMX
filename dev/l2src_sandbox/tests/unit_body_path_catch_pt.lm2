@@ -1,0 +1,21 @@
+# Point inside a catch. return at the fn column is the trailer. pt\x keeps the caught 1.
+Point:
+    int: x 0
+    int: y 0
+end: Point
+fn: boom () int
+    throws: Oops
+    throw: Oops(1)
+return: 0
+fn: test () int
+    int: got 0
+    boom()
+    catch: Oops (int: x)
+        pt: merge Point
+        pt\x: x
+        got: pt\x
+return: got
+int: r 0
+r: test()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

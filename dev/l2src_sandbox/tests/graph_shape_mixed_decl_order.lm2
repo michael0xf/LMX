@@ -1,0 +1,14 @@
+sub: task ()
+    if: 1
+        int: a 3
+        (1 + 2; (3 + 4; ()))
+        int: b 4
+        a: a + 1
+        b: b + 2
+    return
+task
+if: task\if\a != 4 || task\if\b != 6
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

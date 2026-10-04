@@ -5,10 +5,10 @@
 # @: Model q (another named Structure), proving both spellings are ADMITTED.
 # p round-trips a live address at runtime (non-null after assignment,
 # pointer-identical to the address taken).
-# D-53: q round-trips too.  An own Structure field is a slot holding the
-# Structure itself (-189 c3b-3), so `@mo` is that reference, the slot's value:
-# h\q takes it, is non-null and identical to `@mo`.  (A field read THROUGH
-# h\q, `h\q\value`, is D-76, not this witness.)  Success is 7.
+# D-53: q round-trips too.  mo is an explicit copy of Model; its value is the
+# Structure reference: Holder\q takes it, is non-null and identical to `mo`.  The
+# address `@mo` of the cell holding that reference is a deeper level and is not
+# this witness.  (A field read THROUGH Holder\q, `Holder\q\value`, is D-76.)  Success is 7.
 Model:
     size_t: value 1U
 end: Model
@@ -19,23 +19,20 @@ Holder:
 end: Holder
 
 fn: check () int
-    Holder: h
-    Model: mo
+    mo: merge Model
     int: n
     @: int pn
     n: 5
     pn: @n
-    h\p: pn
-    if: h\p = 0
+    Holder\p: pn
+    if: Holder\p = 0
         return: 1
-    if: h\p != pn
+    if: Holder\p != pn
         return: 3
-    h\q: @mo
-    if: h\q = 0
+    Holder\q: mo
+    if: Holder\q = 0
         return: 4
-    if: h\q != @mo
-        return: 5
-    if: h\q != mo
+    if: Holder\q != mo
         return: 6
 return: 7
 

@@ -27,5 +27,8 @@ ignored: read_shared()
 if: ignored != 21
     sendMessage: exit(exit_code: 73; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+if: write_else_nested\else\hosted != 2 || shared != 3
+    sendMessage: exit(exit_code: 84; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

@@ -116,6 +116,62 @@ fn: gc_blocks (@: LmxArena arena) size_t
     ---
 return: total
 
+# This external Thread is a GC root, not an arena record or constructor input.
+# Its children field is the only path to membership: no source slot, scheduler
+# owner or registered Thread may accidentally keep the List alive.
+fn: gc_external_membership (@: int counts) int
+    LmxArena: probe
+    @: LmxThread probe_thread 0
+    @: LmxMsg message 0
+    @: Lmx graph 0
+    @: VoidArray fields 0
+    @: VoidArray list 0
+    @: void descriptor 0
+    @: void backing 0
+    @: void dead 0
+    int: list_live 0
+    int: backing_live 0
+    memset((cast: (@: void) (@ probe)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ probe) != 0
+        return: 1
+    probe_thread: (cast: (@: LmxThread) calloc(1U, c.sizeof(c.LmxThread)))
+    graph: lmx_node_new_owned(@ probe)
+    list: lmx_list_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD, @ probe)
+    dead: lmx_int_new_owned(@ probe)
+    if: probe_thread = 0 || graph = 0 || list = 0 || dead = 0
+        lmx_arena_release(@ probe)
+        free((cast: (@: void) probe_thread))
+        return: 1
+    descriptor: (cast: (@: void) list)
+    backing: lmx_list_data(descriptor)
+    if: backing = 0
+        lmx_arena_release(@ probe)
+        free((cast: (@: void) probe_thread))
+        return: 1
+    message: lmx_thread_message(probe_thread)
+    message\graph: graph
+    probe_thread\children: descriptor
+    gc_check(counts, lmx_range_classify(@ probe, (cast: (@: void) probe_thread)) = c.LMX_KIND_NONE && probe_thread\slot = 0 && probe_thread\mail = 0, "external membership root has no arena record or scheduler edge")
+    gc_check(counts, lmx_range_type_of(@ probe, dead) = c.LMX_TYPE_INT && lmx_range_type_of(@ probe, backing) = c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD, "dead INT is not a membership backing cell")
+    gc_check(counts, lmx_gc_collect(@ probe, probe_thread) = c.LMX_GC_OK, "external membership collection completes")
+    list_live: lmx_range_classify(@ probe, descriptor) = c.LMX_KIND_LIST && lmx_range_type_of(@ probe, descriptor) = c.LMX_TYPE_ARRAY_OF_POINTER_BASE + c.LMX_DOMAIN_THREAD && lmx_range_home(@ probe, descriptor) = (@ probe)
+    backing_live: lmx_range_classify(@ probe, backing) = c.LMX_KIND_PRIMITIVE && lmx_range_type_of(@ probe, backing) = c.LMX_TYPE_POINTER_BASE + c.LMX_DOMAIN_THREAD && lmx_range_home(@ probe, backing) = (@ probe)
+    gc_check(counts, list_live != 0, "external Thread retains children descriptor")
+    gc_check(counts, backing_live != 0, "external Thread retains children backing")
+    gc_check(counts, lmx_range_classify(@ probe, dead) = c.LMX_KIND_NONE, "unrelated INT retires despite live membership")
+    # The negative control intentionally retires these ranges. Never dereference
+    # the saved List on failed range checks, or collect through it a second time.
+    if: list_live != 0 && backing_live != 0
+        gc_check(counts, lmx_list_data(descriptor) = backing && lmx_list_len(descriptor) = 0U && lmx_list_cap(descriptor) = c.LMX_LIST_MIN_CAP, "retained membership has its original empty List and backing")
+    if: lmx_range_classify(@ probe, (cast: (@: void) graph)) = c.LMX_KIND_STRUCT
+        fields: @ graph\array
+        gc_check(counts, fields\size = 0U && fields\data = 0 && graph\parent = 0, "external membership does not add a source field")
+    else:
+        gc_check(counts, 0, "external membership lost the source graph")
+    lmx_arena_release(@ probe)
+    free((cast: (@: void) probe_thread))
+return: 0
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -156,6 +212,7 @@ fn: main () int
     int: failures
     if: counts = 0
         return: 2
+    gc_check(counts, gc_external_membership(counts) = 0, "isolated external membership witness initialized")
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ incoming)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ kept)), 0, c.sizeof(c.LmxArena))

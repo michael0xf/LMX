@@ -1,0 +1,16 @@
+# Forward visibility is evaluated at each source site, not after collection.
+# The earlier f() invokes the actual formal; the later bare f reads int cell 3.
+fn: real () unsigned
+    return: 7U
+end: real
+
+fn: choose (real: f) int
+    unsigned: before f()
+    int: f 3
+    if: before != 7U
+        return: 81
+    return: f
+end: choose
+
+sendMessage: exit(exit_code: choose(real); stdout: ""; stderr: "")
+return

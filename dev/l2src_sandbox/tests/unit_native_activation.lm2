@@ -1,4 +1,6 @@
 # Ordinary own char array + sizeof: bytes (was c.array + c.sizeof).
+# The root passes a string literal as a raw character pointer: a machine
+# conversion compiled in the root like in any body. Success is 7.
 fn: activation (@: char text) size_t
     []: char buffer 32
     size_t: used 0U
@@ -14,5 +16,5 @@ text: "x"
 if: activation(text) != 32U
     sendMessage: exit(exit_code: 5; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

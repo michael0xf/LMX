@@ -24,5 +24,8 @@ ignored: read_shared()
 if: ignored != 41
     sendMessage: exit(exit_code: 75; stdout: ""; stderr: "")
     return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+if: write_for_nested\for\hosted != 4 || write_for_nested\for\i != 1 || shared != 3
+    sendMessage: exit(exit_code: 86; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

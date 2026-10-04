@@ -1,0 +1,35 @@
+# A borrowed execution view must use the canonical declared cell of its actual
+# occurrence. A real nested declaration still owns a different source cell;
+# explicit copy owns independent cells, including when native is cleared.
+int: hits 0
+int: seen 0
+S:
+    int: x 0
+    x: 17
+    if: 1
+        int: x 91
+        x: x + 1
+        node\seen: x
+    node\hits: node\hits + 1
+until: node\hits >= 3
+@: int ph @hits
+@: int pv @seen
+S()
+int: result 7
+if: S\x != 17 || \pv != 92 || \ph != 3
+    result: 81
+@: int ps @S\x
+\ps: 19
+R: merge S
+if: R\x != 19 || S\x != 19
+    result: 82
+@: int pr @R\x
+\pr: 23
+if: R\x != 23 || S\x != 19
+    result: 83
+S()
+# The reached declaration reinitializes its same nested cell to 91, then 92.
+if: R\x != 23 || S\x != 17 || \pv != 92 || \ph != 4
+    result: 84
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -1,0 +1,53 @@
+# Possible source evidence survives pointer casts and opaque forwarding.
+# A caught failed reception must not become the field's downstream value.
+Model:
+    size_t: value 1U
+end: Model
+Good:
+    size_t: value 7U
+end: Good
+Other:
+    char: wrong 'x'
+end: Other
+fn: forward (@: void p) @: void
+return: p
+fn: good () @: void
+return: forward((cast: (@: void) Good))
+fn: bad () @: void
+return: forward((cast: (@: void) Other))
+fn: read (Model: ref) size_t
+return: ref\value
+fn: direct () int
+    @: Model field Good
+    field: (cast: (@: void) Good)
+    if: read(field) != 7U
+        return: 81
+    int: caught 0
+    ---
+        field: (cast: (@: void) Other)
+        catch: implements ()
+            caught: caught + 1
+    ---
+    if: caught != 1 || read(field) != 7U
+        return: 82
+return: 7
+fn: check () int
+    if: direct() != 7
+        return: 81
+    @: Model field Good
+    int: caught 0
+    field: good()
+    if: read(field) != 7U
+        return: 83
+    ---
+        field: bad()
+        catch: implements ()
+            caught: caught + 1
+    ---
+    if: caught != 1 || read(field) != 7U
+        return: 84
+    if: Model\value != 1U || Good\value != 7U
+        return: 85
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

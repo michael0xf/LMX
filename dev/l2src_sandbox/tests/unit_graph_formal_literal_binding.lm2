@@ -1,0 +1,21 @@
+# A signature binding likewise remains an argument; it never becomes peek\k.
+unsigned: k 3U
+fn: peek (unsigned: k) unsigned
+    if: k != 5U
+        return: 80U
+    k: 1U
+return: k
+fn: run () int
+    unsigned: k 5U
+    unsigned: got 0U
+    got: peek(k)
+    if: got = 1U && k = 5U
+        return: 7
+return: 81
+int: answer 0
+answer: run()
+if: answer = 7 && k = 3U
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+return

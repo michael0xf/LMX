@@ -2,20 +2,18 @@ Inner:
     size_t: c 5U
 end: Inner
 
-Middle:
-    Inner: inner
-    size_t: tag 7U
-end: Middle
-
 Outer:
-    Middle: mid
+    mid:
+        inner:
+            size_t: c 5U
+        size_t: tag 7U
     size_t: keep 3U
 end: Outer
 
 # FABLE-GROKBOT-NESTED-FIELD-CONSTRUCT-20260923-116: three-hop path plus a
 # primitive field on Outer that must stay at its model default (unchanged).
 fn: build () int
-    Outer: a
+    a: merge Outer
     a\mid\inner\c: 99U
     size_t: got
     size_t: kept

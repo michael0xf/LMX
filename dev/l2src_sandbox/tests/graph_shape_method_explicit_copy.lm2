@@ -1,0 +1,25 @@
+# Explicit runtime copy; no obsolete Point: box construction or @Point.
+# The test door walks the actual merge return, not a test-side copy of P0.
+include: "l2src/tests/reentry_copy_observer.h"
+Point: (int: x 1)
+fn: task () int
+    copied: merge Point
+    Holder: (int: c 3; @: Point point)
+    Holder\point: copied
+    if: Holder\c != 3 || Holder\point\x != 1
+        return: 81
+    Holder\point\x: 9
+    if: copied\x != 9 || Point\x != 1
+        return: 82
+    Point\x: 11
+    int: status c.l2_test_reentry_dispatch(0)
+    if: status != 0 || Holder\point\x != 1 || copied\x != 1 || Point\x != 11
+        return: 83
+    Holder\point\x: 13
+    Point
+    if: copied\x != 13 || Holder\point\x != 13 || Point\x != 1
+        return: 84
+return: 7
+int: result task()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

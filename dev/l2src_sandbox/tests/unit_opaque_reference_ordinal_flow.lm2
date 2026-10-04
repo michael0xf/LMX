@@ -1,0 +1,21 @@
+# A full reception visits required ORDINAL fields; LAST is a separate selector.
+# Last x is char, but Model's only ordinal x and read's [0]x are ints.
+Model:
+    int: x 1
+end: Model
+Candidate:
+    int: x 7
+    char: x 'z'
+end: Candidate
+fn: choose () @: void
+return: (cast: (@: void) Candidate)
+fn: read (Model: ref) int
+return: ref\[0]x
+fn: check () int
+    @: Model field Model
+    field: choose()
+    if: read(field) != 7 || Model\x != 1
+        return: 81
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

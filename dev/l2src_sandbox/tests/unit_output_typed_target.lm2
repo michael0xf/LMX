@@ -1,0 +1,14 @@
+# An explicit receiving reference in this body is a target, not a new
+# computed declaration. Admission retains the declared payload contract.
+MainLetter: (char: []: []: mainArgs)
+@: MainLetter m
+receiveMessage: m
+if: m = 0 || length(m\mainArgs) != 3
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+receiveMessage: m
+if: m != 0
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

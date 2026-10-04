@@ -1,0 +1,18 @@
+predef: "l2src/tests/fnptr_local_forms.h.lm1"
+include: "<stdlib.h>"
+
+# An imported C function-pointer local lives in machine activation storage,
+# never in a graph cell. Its declaration, the comparison and the call through
+# it are retained as source, and every use borrows the one leaf of the declared
+# name. The method is native-only; the allocation really runs. Entry 7.
+fn: check () int
+    L2TestAllocFn: allocate c.malloc
+    if: allocate = 0
+        return: 81
+    @: void got allocate(4U)
+    if: got = 0
+        return: 82
+    c.free(got)
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

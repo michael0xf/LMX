@@ -1,0 +1,21 @@
+# Point inside catch: merge. The merge fails, the handler runs, and pt\x is 4.
+P:
+    size_t: p 3U
+end: P
+Point:
+    int: x 0
+    int: y 0
+end: Point
+fn: test () int
+    int: answer 64
+    Q: merge: P
+    catch: merge ()
+        pt: merge Point
+        pt\x: 4
+        if: pt\x = 4
+            answer: 7
+return: answer
+int: r 0
+r: test()
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

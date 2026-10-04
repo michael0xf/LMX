@@ -1,0 +1,20 @@
+# A named UNTIL body must expose one real declared field through both the
+# ordinary Structure path and the address of its typed arena cell.
+int: hits 0
+S:
+    int: x 0
+    x: 17
+    node\hits: node\hits + 1
+until: node\hits >= 3
+S()
+int: result 7
+if: S\x != 17
+    result: 81
+@: int p @S\x
+if: \p != 17
+    result: 82
+\p: 19
+if: S\x != 19
+    result: 83
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -1,25 +1,28 @@
 # Local schemas have no unit model descriptor. Distinct module schema tokens
-# survive narrowing and returns; recursive C instances share schema, not identity.
-# Local construction bodies remain native; the caller/relay/observer also walk.
+# survive narrowing and returns. A declaration denotes its persistent source
+# occurrence; a fresh recursive value therefore uses explicit merge, not an
+# implicit per-activation clone. Native and actually walked methods agree.
 A: (int: x 1)
 B: (int: y 2)
 Stats: (int: calls 0; int: failed 0)
 fn: makeC (int: depth) A
     C: (int: x 11; int: y 22; int: pad 33)
+    fresh: merge C
     Stats\calls: Stats\calls + 1
     if: depth != 0
         @: A inner makeC(0)
-        if: inner = @C || inner\x != 11 || C\y != 22
+        if: inner = fresh || inner\x != 11 || fresh\y != 22
             Stats\failed: 1
         inner\x: 17
-        if: inner\x != 17 || C\x != 11
+        if: inner\x != 17 || fresh\x != 11
             Stats\failed: 1
     ---
-return: @C
+return: fresh
 fn: makeD () A
     D: (int: x 11; int: pad 55; int: y 44)
+    fresh: merge D
     Stats\calls: Stats\calls + 1
-return: @D
+return: fresh
 @: B shared @B
 fn: observe () int
 return: shared\y

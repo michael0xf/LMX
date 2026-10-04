@@ -2,15 +2,15 @@ Model:
     size_t: value 1U
 end: Model
 
-# D-76: a local reference `@: Model r` to a named Structure is one level, `@: Lmx`: its value is the
-# Structure `@mo` gives.  A path through it is the Structure's own field: a write to mo is read
-# through r, and a write through r is mo's.  Success is 7.
+# A local typed reference receives the existing mo occurrence through ordinary
+# Structure-to-reference conversion and admission. Model and mo have distinct
+# persistent storage. This tests alias/path reception, not unary @ depth.
 fn: check () int
     mo:
         size_t: value 1U
     @: Model r
     size_t: v
-    r: @mo
+    r: mo
     mo\value: 9U
     v: r\value
     if: v != 9U

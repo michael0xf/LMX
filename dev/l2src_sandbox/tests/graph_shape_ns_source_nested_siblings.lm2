@@ -1,0 +1,13 @@
+# Repeated child names at three levels must retain their actual source owner.
+First: (int: pad 4; mid: (int: tag 10; in: (node\tag: node\tag + 1); in); mid)
+Second: (int: pad 8; mid: (int: tag 20; in: (node\tag: node\tag + 1); in); mid)
+First
+if: First\mid\tag != 11 || Second\mid\tag != 20
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+Second
+if: First\mid\tag != 11 || Second\mid\tag != 21
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

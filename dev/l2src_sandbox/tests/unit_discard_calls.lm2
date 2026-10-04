@@ -2,30 +2,36 @@
 # own typed temporaries hold it -- a nested call, and int, size_t, unsigned and pointer results
 # (plan §3: "use the temp typing method-call lowering already has").  Each callee adds its own
 # digit: m 1 (twice), g 10, msz 100, mun 1000, mptr 10000 -- 11112.
+# Each callee writes the unit field through the explicit path `node\hits`: a bare
+# `hits` in a method is its hidden input, and assigning it changes only the
+# activation-local value (Q52).
+# The root reads the published cell through its address: its own bare `hits`
+# keeps the entry working value and is not reloaded after a call.
 int: hits 0
+@: int published @hits
 
 fn: m () int
-    hits: hits + 1
+    node\hits: node\hits + 1
     return: 2
 end: m
 
 fn: g (int: x) int
-    hits: hits + 10
+    node\hits: node\hits + 10
     return: x
 end: g
 
 fn: msz () size_t
-    hits: hits + 100
+    node\hits: node\hits + 100
     return: 3U
 end: msz
 
 fn: mun () unsigned
-    hits: hits + 1000
+    node\hits: node\hits + 1000
     return: 4U
 end: mun
 
 fn: mptr () @: char
-    hits: hits + 10000
+    node\hits: node\hits + 10000
     return: "p"
 end: mptr
 
@@ -34,5 +40,6 @@ m() * 2
 msz() + 1U
 mun() + 1U
 mptr() = 0
-sendMessage: exit(exit_code: hits; stdout: ""; stderr: "")
+int: total \published
+sendMessage: exit(exit_code: total; stdout: ""; stderr: "")
 return

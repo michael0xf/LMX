@@ -1,0 +1,220 @@
+predef: "l2src/lmx_source_names.h.lm1"
+predef: "l2src/lmx_pool.h.lm1"
+predef: "l2src/lmx_chars.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<string.h>"
+include: "<stdint.h>"
+
+# Attach can join several pools of the same service type. Lookup/retirement
+# visits their ordinary inventory; there is no owner-global shadow registry.
+fn: lmx_source_name_local (@: LmxArena arena; @: void key) @: LmxSourceName
+    @: LmxPool pool arena\arrays
+    @: LmxChunk chunk
+    @: LmxSourceName row
+    size_t: i
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
+            chunk: pool\head
+            while: chunk != 0
+                # Revert may retire storage without removing the chunk record.
+                # Only its still-registered local interval belongs to this table.
+                if: lmx_range_interval_pool(arena, (cast: (@: void) lmx_chunk_data(chunk))) = pool
+                    i: 0U
+                    while: i < lmx_chunk_cells(chunk, pool\stride)
+                        row: (cast: (@: LmxSourceName) lmx_chunk_data(chunk)) + i
+                        if: row\key = key
+                            return: row
+                        i: i + 1U
+                    ---
+                ---
+                chunk: chunk\next
+            ---
+        ---
+        pool: pool\next
+    ---
+return: 0
+
+fn: lmx_source_name_get (@: LmxArena arena; @: void key) @: VoidArray
+    @: LmxSourceName row
+    @: LmxArena home
+    if: arena = 0 || key = 0
+        return: 0
+    row: lmx_source_name_local(arena, key)
+    if: row != 0
+        return: @ row\text
+    home: lmx_range_home(arena, key)
+    if: home != 0 && home != arena
+        row: lmx_source_name_local(home, key)
+        if: row != 0
+            return: @ row\text
+        ---
+    ---
+return: 0
+
+fn: lmx_source_name_prepare (@: LmxArena arena; @: void key; const: @(char text); size_t: length; @@: LmxSourceName out) int
+    @: VoidArray known
+    @: LmxSourceName row
+    @: char data
+    if: out = 0
+        return: 1
+    \out: 0
+    if: arena = 0 || key = 0 || (length != 0U && text = 0)
+        return: 1
+    known: lmx_source_name_get(arena, key)
+    if: known != 0
+        # One actual occurrence has one spelling. Aliases use distinct source
+        # places; they do not silently overwrite the referent's name.
+        if: known\size != length || (length != 0U && memcmp(known\data, (cast: (@: void) text), length) != 0)
+            return: 1
+        return: 0
+    # New rows belong to actual local source places. An imported occurrence
+    # consults its existing true owner's table; a borrower cannot invent a
+    # second owner for the spelling of a foreign/raw key.
+    if: lmx_range_pool(arena, key) = 0
+        return: 1
+    # Append one real service cell. key=0 is unpublished, not a reusable slot:
+    # several pending names (including empty ones) must have distinct places.
+    row: (cast: (@: LmxSourceName) lmx_arena_take(arena, c.sizeof(c.LmxSourceName), c.LMX_KIND_SOURCE_NAME, c.LMX_TYPE_SOURCE_NAME))
+    if: row = 0
+        return: 1
+    row\key: 0
+    row\text.size: 0U
+    row\text.data: 0
+    data: 0
+    if: length != 0U
+        # Spelling bytes share the ordinary CHAR pool. Its first interval is
+        # the immutable literal table, just as for mutable char/Array storage.
+        if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+            return: 1
+        data: (cast: (@: char) lmx_arena_take_n(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, length))
+        if: data = 0
+            return: 1
+        memcpy((cast: (@: void) data), (cast: (@: void) text), length)
+    ---
+    row\text.size: length
+    row\text.data: (cast: (@: void) data)
+    \out: row
+return: 0
+
+fn: lmx_source_name_publish (@: LmxSourceName row; @: void key) void
+    if: row != 0
+        row\key: key
+    ---
+
+fn: lmx_source_name_cancel (@: LmxSourceName row) void
+    if: row != 0
+        row\key: 0
+        row\text.size: 0U
+        row\text.data: 0
+    ---
+
+fn: lmx_source_name_set (@: LmxArena arena; @: void key; const: @(char text); size_t: length) int
+    @: LmxSourceName row 0
+    if: lmx_source_name_prepare(arena, key, text, length, @ row) != 0
+        return: 1
+    lmx_source_name_publish(row, key)
+return: 0
+
+fn: lmx_source_names_drop (@: LmxArena arena; @: void lo; @: void hi) void
+    @: LmxPool pool arena\arrays
+    @: LmxChunk chunk
+    @: LmxSourceName row
+    size_t: i
+    uintptr_t: low (cast: (uintptr_t) lo)
+    uintptr_t: high (cast: (uintptr_t) hi)
+    uintptr_t: key
+    uintptr_t: text
+    uintptr_t: place
+    while: pool != 0
+        if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
+            chunk: pool\head
+            while: chunk != 0
+                if: lmx_range_interval_pool(arena, (cast: (@: void) lmx_chunk_data(chunk))) = pool
+                    i: 0U
+                    while: i < lmx_chunk_cells(chunk, pool\stride)
+                        row: (cast: (@: LmxSourceName) lmx_chunk_data(chunk)) + i
+                        key: (cast: (uintptr_t) row\key)
+                        text: (cast: (uintptr_t) row\text.data)
+                        place: (cast: (uintptr_t) row)
+                        # Retire both independently owned ends and the record.
+                        # Pending rows have no key, but their text still retires.
+                        if: (key >= low && key < high) || (place >= low && place < high) || (text != 0U && text < high && text + row\text.size > low)
+                            lmx_source_name_cancel(row)
+                        i: i + 1U
+                    ---
+                ---
+                chunk: chunk\next
+            ---
+        ---
+        pool: pool\next
+    ---
+
+fn: lmx_source_names_mark (@: LmxArena arena; unsigned: gen) int
+    @: LmxPool pool
+    @: LmxPool owner
+    @: LmxChunk chunk
+    @: LmxChunk held
+    @: LmxSourceName row
+    size_t: i
+    int: live
+    int: pass 0
+    int: status 0
+    # Decide every weak key against the completed ordinary mark FIRST.
+    # Marking a spelling can stamp a CHAR chunk containing another weak key;
+    # that must not turn a previously dead occurrence into a live one.
+    while: pass < 2
+        pool: arena\arrays
+        while: pool != 0
+            if: pool\kind = c.LMX_KIND_SOURCE_NAME && pool\type = c.LMX_TYPE_SOURCE_NAME
+                chunk: pool\head
+                while: chunk != 0
+                    if: lmx_range_interval_pool(arena, (cast: (@: void) lmx_chunk_data(chunk))) = pool
+                        i: 0U
+                        while: i < lmx_chunk_cells(chunk, pool\stride)
+                            row: (cast: (@: LmxSourceName) lmx_chunk_data(chunk)) + i
+                            if: row\key != 0
+                                if: pass = 0
+                                    live: 0
+                                    owner: lmx_range_pool(arena, row\key)
+                                    if: owner != 0
+                                        if: lmx_pool_is_sealed(owner) != 0
+                                            live: 1
+                                        else:
+                                            held: lmx_pool_chunk_at(owner, row\key)
+                                            if: held != 0 && held\mark = gen
+                                                live: 1
+                                            ---
+                                        ---
+                                    ---
+                                    if: live = 0
+                                        lmx_source_name_cancel(row)
+                                    ---
+                                else:
+                                    chunk\mark: gen
+                                    # The spelling owns one contiguous CHAR
+                                    # backing, not an arbitrary graph. Mark
+                                    # that existing chunk directly; do not
+                                    # pull execution/Thread dependencies into
+                                    # the arena's name-retirement service.
+                                    if: row\text.data != 0
+                                        owner: lmx_range_pool(arena, (row\text.data))
+                                        held: lmx_pool_chunk_at(owner, (row\text.data))
+                                        if: held = 0
+                                            status: 1
+                                        else:
+                                            held\mark: gen
+                                        ---
+                                    ---
+                                ---
+                            ---
+                            i: i + 1U
+                        ---
+                    ---
+                    chunk: chunk\next
+                ---
+            ---
+            pool: pool\next
+        ---
+        pass: pass + 1
+    ---
+return: status

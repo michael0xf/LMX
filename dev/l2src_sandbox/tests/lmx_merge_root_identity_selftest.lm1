@@ -1,0 +1,99 @@
+predef: "l2src/lmx_merge_owned.lm1" "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1" "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_arena.lm1" "l2src/lmx_call.h.lm1"
+predef: "l2src/lmx_root.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+# One-operand composition is a complete copied occurrence, not a second root
+# assembled from the copy's children. Observe real aliases and actual dispatch.
+int: checks 0
+int: failures 0
+@: Lmx seen_self 0
+@: Lmx seen_parent 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+end: check
+
+fn: native_entry (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    @: Lmx self (cast: (@: Lmx) owner)
+    @: void cell lmx_arena_ref_value(self, 0U)
+    seen_self: self
+    seen_parent: lmx_call_node(self)
+    lmx_int_store_known(cell, lmx_int_value_known(cell) + 1)
+    lmx_int_store_known(dest, lmx_int_value_known(cell))
+    \out: dest
+return: 0
+
+fn: main () int
+    LmxArena: source
+    LmxArena: destination
+    @: LmxArena sa @ source
+    @: LmxArena da @ destination
+    @: Lmx model 0
+    @: Lmx nested 0
+    @: Lmx container 0
+    @: Lmx result 0
+    @: Lmx copied_nested 0
+    @: Lmx empty 0
+    @: void cell 0
+    @: void copied_cell 0
+    @: void dest 0
+    @: void out 0
+    int: status
+    memset((cast: (@: void) sa), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) da), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(sa) != 0 || lmx_arena_open(da) != 0
+        return: 2
+    model: lmx_node_new_owned(sa)
+    nested: lmx_node_new_owned(sa)
+    container: lmx_node_new_owned(sa)
+    empty: lmx_node_new_owned(sa)
+    cell: lmx_int_new_owned(sa)
+    dest: lmx_int_new_owned(da)
+    if: model = 0 || nested = 0 || container = 0 || empty = 0 || cell = 0 || dest = 0
+        return: 2
+    if: lmx_arena_refs_open_owned(sa, model, 4U) != 0 || lmx_arena_refs_open_owned(sa, nested, 1U) != 0
+        return: 2
+    lmx_int_store_known(cell, 41)
+    model\native: (cast: (LmxEntry) native_entry)
+    nested\parent: model
+    lmx_arena_ref_store(model, 0U, cell)
+    lmx_arena_ref_store(model, 1U, (cast: (@: void) model))
+    lmx_arena_ref_store(model, 2U, (cast: (@: void) nested))
+    lmx_arena_ref_store(model, 3U, cell)
+    lmx_arena_ref_store(nested, 0U, (cast: (@: void) model))
+    status: lmx_merge_owned(@ model, 1U, 0, container, sa, da, 0, 0U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && result != model, "one operand gives an independent copied occurrence")
+    if: result = 0
+        return: 1
+    check((result\array.size) = 4U && (result\parent) = container, "copied root preserves width and gets the execution parent")
+    check(lmx_arena_ref_value(result, 1U) = (cast: (@: void) result), "self edge names the returned root, not an orphan copy")
+    copied_cell: lmx_arena_ref_value(result, 0U)
+    check(copied_cell != 0 && copied_cell != cell && copied_cell = lmx_arena_ref_value(result, 3U), "copied mutable cell is independent and its repeated alias is preserved")
+    check(lmx_int_value_known(copied_cell) = 41 && lmx_int_value_known(cell) = 41, "copy starts with the source value without modifying it")
+    copied_nested: lmx_arena_ref_struct(result, 2U)
+    check(copied_nested != 0 && copied_nested != nested && (copied_nested\parent) = result, "nested parent is the returned occurrence")
+    check(copied_nested != 0 && lmx_arena_ref_value(copied_nested, 0U) = (cast: (@: void) result), "nested back edge names that same returned occurrence")
+    check((result\native) != 0 && (result\native) = (model\native), "unchanged copied body retains its native entry")
+    if: result\native != 0
+        status: lmx_call_prim(da, result, result, 0, 0U, dest, @ out)
+        check(status = 0 && out = dest && lmx_int_value_known(dest) = 42, "actual native call returns the copied value")
+        check(seen_self = result && seen_parent = container, "actual adapter receives the copy and its execution parent")
+        check(lmx_int_value_known(copied_cell) = 42 && lmx_int_value_known(cell) = 41, "native execution changes only copied mutable state")
+    check((model\parent) = 0 && (nested\parent) = model && lmx_arena_ref_value(model, 1U) = (cast: (@: void) model), "source parent and cycle remain unchanged")
+    empty\native: (cast: (LmxEntry) native_entry)
+    result: 0
+    status: lmx_merge_owned(@ empty, 1U, 0, container, sa, da, 0, 0U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && result != empty && (result\array.size) = 0U && (result\native) = (empty\native), "empty copied root retains its actual native word")
+    model\native: 0
+    result: 0
+    status: lmx_merge_owned(@ model, 1U, 0, container, sa, da, 0, 0U, @ result)
+    check(status = c.LMX_MERGE_OK && result != 0 && (result\native) = 0, "copy does not invent a native implementation")
+    check(lmx_arena_release(da) = 0 && lmx_arena_release(sa) = 0, "both owners release")
+    c.printf("merge root identity checks=%d failures=%d\n", checks, failures)
+return: failures != 0

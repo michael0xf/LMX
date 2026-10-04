@@ -48,7 +48,7 @@ fn: sr_thread (@: LmxArena arena; size_t: children_field) @: LmxThread
     if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(slot, arena, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK
         return: 0
     ---
-    if: lmx_thread_init(arena, t, graph, mail, slot) != c.LMX_THREAD_OK || lmx_thread_children_bind_graph(t, arena) != c.LMX_THREAD_OK
+    if: lmx_thread_init(arena, t, graph, mail, slot) != c.LMX_THREAD_OK || lmx_thread_children_open(t, arena) != c.LMX_THREAD_OK
         return: 0
     ---
 return: t

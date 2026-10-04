@@ -1,0 +1,13 @@
+# A raw pointer indexes its real input; its retained source is native-only.
+fn: write (@: int p; size_t: i) int
+    p[0]: 23
+    p[i]: 29
+    if: p[0] != 23 || p[i] != 29
+        return: 81
+return: 7
+[]: int cells 2
+int: result write(@cells[0], 1U)
+if: result != 7 || cells[0] != 23 || cells[1] != 29
+    result: 82
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

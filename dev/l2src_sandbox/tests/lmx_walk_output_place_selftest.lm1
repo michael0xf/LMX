@@ -1,0 +1,186 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: at; int: op; size_t: width) @: Lmx
+    @: Lmx out lmx_walk_frame(arena, roles, parent, op, width)
+    if: out = 0 || lmx_arena_ref_store(parent, at, (cast: (@: void) out)) != 0
+        return: 0
+return: out
+
+fn: root_new (@: LmxArena arena; size_t: width) @: Lmx
+    @: Lmx out lmx_node_new_owned(arena)
+    if: out = 0
+        return: 0
+    if: width != 0U && lmx_arena_refs_open_owned(arena, out, width) != 0
+        return: 0
+return: out
+
+fn: main () int
+    LmxArena: arena
+    LmxScratch: scratch
+    LmxPool: pool
+    LmxWalkContext: context
+    LmxWalkFrame: activation
+    LmxWalkValue: result
+    @: Lmx roles 0
+    @: Lmx root 0
+    @: Lmx copy 0
+    @: Lmx bad 0
+    @: Lmx one 0
+    @: Lmx two 0
+    @: Lmx first 0
+    @: Lmx second 0
+    @: Lmx held_first 0
+    @: Lmx held_second 0
+    @: Lmx copied_first 0
+    @: Lmx copied_second 0
+    @: Lmx ret 0
+    @: Lmx literal 0
+    @: Lmx physical 0
+    @: Lmx physical_copy 0
+    @: Lmx copied_direct 0
+    @: Lmx profile 0
+    @: Lmx immutable_direct 0
+    @: Lmx store 0
+    @: Lmx direct 0
+    @: Lmx read 0
+    @: Lmx foreign 0
+    @: Lmx foreign_own 0
+    @: Lmx holder 0
+    @@: void slot 0
+    size_t: index 0U
+    int: status
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ pool)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ context)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0 || lmx_scratch_open(@ scratch, @ arena, @ pool, 64U) != c.LMX_SCRATCH_OK
+        return: 2
+    roles: lmx_walk_roles_open(@ arena)
+    if: roles = 0
+        return: 2
+    context.arena: @ arena
+    context.scratch: @ scratch
+    context.roles: roles
+    one: root_new(@ arena, 0U)
+    two: root_new(@ arena, 0U)
+    root: root_new(@ arena, 3U)
+    if: one = 0 || two = 0 || root = 0
+        return: 2
+
+    first: frame(@ arena, roles, root, 0U, c.LMX_WALK_OP_SET, 3U)
+    second: frame(@ arena, roles, root, 1U, c.LMX_WALK_OP_SET, 3U)
+    ret: frame(@ arena, roles, root, 2U, c.LMX_WALK_OP_RET, 2U)
+    if: first = 0 || second = 0 || ret = 0
+        return: 2
+    held_first: frame(@ arena, roles, first, 1U, c.LMX_WALK_OP_OWN, 2U)
+    held_second: frame(@ arena, roles, second, 1U, c.LMX_WALK_OP_OWN, 2U)
+    literal: frame(@ arena, roles, first, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: held_first = 0 || held_second = 0 || literal = 0 || lmx_arena_ref_store(literal, 1U, (cast: (@: void) one)) != 0
+        return: 2
+    literal: frame(@ arena, roles, second, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: literal = 0 || lmx_arena_ref_store(literal, 1U, (cast: (@: void) two)) != 0 || lmx_arena_ref_store(ret, 1U, (cast: (@: void) held_first)) != 0
+        return: 2
+    status: lmx_walk_run(@ context, root, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.present != 0 && result.ref = (cast: (@: void) one)), "cached read borrows the first output after a second output")
+    check((root\array.size = 3U && held_first\parent = first && held_second\parent = second), "only written operations occupy the body; output operands keep their owners")
+    check(lmx_arena_ref_value(held_first, 1U) = (cast: (@: void) one) && lmx_arena_ref_value(held_second, 1U) = (cast: (@: void) two), "dirty publication reaches two distinct compact descriptor places")
+
+    status: lmx_graph_copy_owned(root, @ arena, @ arena, @ copy)
+    check(status = 0 && copy != 0 && copy != root, "copy produces a separate output-bearing occurrence")
+    if: status != 0 || copy = 0
+        return: 2
+    copied_first: lmx_arena_ref_struct(lmx_arena_ref_struct(copy, 0U), 1U)
+    copied_second: lmx_arena_ref_struct(lmx_arena_ref_struct(copy, 1U), 1U)
+    check(copied_first != held_first && copied_second != held_second && lmx_arena_ref_value(lmx_arena_ref_struct(copy, 2U), 1U) = (cast: (@: void) copied_first), "copy preserves the borrowed operand alias without sharing its storage")
+    lmx_arena_ref_store(held_first, 1U, (cast: (@: void) two))
+    lmx_arena_ref_store(held_second, 1U, 0)
+    lmx_arena_ref_store(copied_first, 1U, 0)
+    lmx_arena_ref_store(copied_second, 1U, 0)
+    status: lmx_walk_activate(@ context, root, copy, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.ref = (cast: (@: void) one)), "existing unequal-occurrence ABI reads the selected copied output")
+    check(lmx_arena_ref_value(copied_first, 1U) = (cast: (@: void) one) && lmx_arena_ref_value(copied_second, 1U) = (cast: (@: void) two), "publication follows the accessed owned edge chain")
+    check(lmx_arena_ref_value(held_first, 1U) = (cast: (@: void) two) && lmx_arena_ref_value(held_second, 1U) = 0, "selected-copy execution never writes original output places")
+    bad: root_new(@ arena, 0U)
+    status: lmx_walk_activate(@ context, root, bad, 0, 0U, @ result)
+    check(status = c.LMX_WALK_INVALID && lmx_arena_ref_value(held_first, 1U) = (cast: (@: void) two), "missing replay edge refuses instead of falling back to the original")
+
+    foreign: root_new(@ arena, 1U)
+    foreign_own: lmx_walk_frame(@ arena, roles, foreign, c.LMX_WALK_OP_OWN, 3U)
+    if: foreign = 0 || foreign_own = 0 || lmx_arena_ref_store(foreign_own, 1U, (cast: (@: void) foreign)) != 0 || lmx_walk_store_size(@ arena, foreign_own, 2U, 0U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_enter(@ activation, @ context, root, copy, 0, 0U)
+    check(status = c.LMX_WALK_OK && lmx_walk_work_cell(@ activation, (cast: (@: void) foreign_own), 1, @ holder, @ index, @ slot) = c.LMX_WALK_OK && holder = foreign && slot = lmx_arena_ref_cell(foreign, 0U), "foreign fixed holder stays its actual external place")
+
+    physical: root_new(@ arena, 2U)
+    store: frame(@ arena, roles, physical, 0U, c.LMX_WALK_OP_PUT_REF, 4U)
+    ret: frame(@ arena, roles, physical, 1U, c.LMX_WALK_OP_RET, 2U)
+    if: physical = 0 || store = 0 || ret = 0
+        return: 2
+    direct: frame(@ arena, roles, store, 1U, c.LMX_WALK_OP_AT, 2U)
+    read: frame(@ arena, roles, ret, 1U, c.LMX_WALK_OP_AT, 3U)
+    if: direct = 0 || read = 0 || lmx_walk_store_size(@ arena, store, 2U, 1U) != c.LMX_WALK_OK || lmx_arena_ref_store(store, 3U, (cast: (@: void) one)) != 0 || lmx_arena_ref_store(read, 1U, (cast: (@: void) direct)) != 0 || lmx_walk_store_size(@ arena, read, 2U, 1U) != c.LMX_WALK_OK
+        return: 2
+    status: lmx_walk_run(@ context, physical, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.ref = (cast: (@: void) one) && lmx_arena_ref_value(direct, 1U) = (cast: (@: void) one)), "uncached store/read target the same intrinsic descriptor edge")
+    status: lmx_graph_copy_owned(physical, @ arena, @ arena, @ physical_copy)
+    if: status != 0 || physical_copy = 0
+        return: 2
+    copied_direct: lmx_arena_ref_struct(lmx_arena_ref_struct(physical_copy, 0U), 1U)
+    check(copied_direct != direct && lmx_arena_ref_value(lmx_arena_ref_struct(lmx_arena_ref_struct(physical_copy, 1U), 1U), 1U) = (cast: (@: void) copied_direct), "physical copy preserves the read alias to its own output operand")
+    lmx_arena_ref_store(direct, 1U, (cast: (@: void) two))
+    lmx_arena_ref_store(copied_direct, 1U, 0)
+    status: lmx_walk_activate(@ context, physical, physical_copy, 0, 0U, @ result)
+    check((status = c.LMX_WALK_OK && result.ref = (cast: (@: void) one) && lmx_arena_ref_value(copied_direct, 1U) = (cast: (@: void) one)), "uncached write and read follow the selected copied operand")
+    check(lmx_arena_ref_value(direct, 1U) = (cast: (@: void) two), "copied physical write never changes the original operand")
+
+    # An ordinary arena Structure is the exact immutable-profile identity.
+    # The attempted physical write must classify the selected holder before
+    # evaluating/storing the RHS, not a different wrapper or original holder.
+    profile: root_new(@ arena, 0U)
+    immutable_direct: lmx_node_new_profiled(@ arena, profile)
+    if: profile = 0 || immutable_direct = 0 || lmx_arena_refs_open_owned(@ arena, immutable_direct, 2U) != 0
+        return: 2
+    immutable_direct\parent: store
+    if: lmx_arena_ref_store(immutable_direct, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_AT))) != 0 || lmx_arena_ref_store(immutable_direct, 1U, (cast: (@: void) two)) != 0 || lmx_arena_ref_store(store, 1U, (cast: (@: void) immutable_direct)) != 0
+        return: 2
+    context.immutable_profile: profile
+    status: lmx_walk_run(@ context, physical, 0, 0U, @ result)
+    check(status = c.LMX_WALK_INVALID && lmx_arena_ref_value(immutable_direct, 1U) = (cast: (@: void) two), "compact immutable target refuses before overwriting its descriptor edge")
+    context.immutable_profile: 0
+    lmx_arena_ref_store(store, 1U, (cast: (@: void) direct))
+    lmx_arena_ref_store(direct, 1U, (cast: (@: void) one))
+    lmx_arena_ref_store(direct, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_DEREF)))
+    status: lmx_walk_run(@ context, physical, 0, 0U, @ result)
+    check(status = c.LMX_WALK_INVALID && lmx_arena_ref_value(direct, 1U) = (cast: (@: void) one), "arbitrary executable holder is still refused, not treated as output storage")
+
+    c.printf("output places: %d checks, %d failures\n", checks, failures)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        return: 1
+return: 0

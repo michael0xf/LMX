@@ -248,3 +248,93 @@ Each needs the same normative triage as §5 before its expectation changes;
 Details are in [defects](defects.md): `MACHINE-LOCAL-TABLE-STALE` (fixed in the
 sandbox), `MERGE-DECL-IN-NAMED-BODY-INTERNAL`,
 `MERGE-RESULT-REFERENCE-FIELD-PATH`, `RECEIVING-USE-FULL-RECEIVER`.
+
+<a id="held-call-ruling"></a>
+## 9. Resolved boundary: the actual call of a held Structure (Codex, FABLE-CODEX-20261003-02)
+
+The question proposed to select, at the call of a held or copied ordinary
+Structure, one compile-time alternative by the registered layout token of the
+actual value, and to raise the ordinary admission failure for an unlisted
+origin. Codex answered without escalating to the author. The ruling:
+
+- **Selection by the actual value's token is a bounded lowering optimization,
+  not the universal boundary.** Layout is physical-origin evidence
+  ([core map](../CORE_L2_L3_v2.md), sections 9.2 and 9.4), not a certificate
+  of the callable interface. For every alternative the producer and schema
+  facts must determine the executed body **and** its complete ordered input
+  contract: required hidden names, pass modes and types, applicable exits.
+  The interface is not inferred from ABI arity or from the `ARG` nodes of a
+  convenient witness. The selected occurrence supplies its own lexical
+  fallback and parent; an original model instance does not. A constructor's
+  token is never restamped onto a replacement, a required model or identity
+  map is not origin proof, and equal physical maps do not mean equal
+  interfaces. No origin registry, method or signature record, `Lmx` member,
+  atom metadata or companion graph is added; the written call and actual nodes
+  keep their order.
+- **Unknown provenance is not proven incompatibility.** The rule "token absent
+  or unlisted, therefore the ordinary `implements` throw" is rejected: a valid
+  received value must not fail because this call site did not enumerate it.
+  A site whose actual interface or input formation cannot be represented yet
+  keeps a located CHECK diagnostic and is recorded as an OPEN positive
+  implementation failure, never as an expected negative. A statically known
+  inadmissible call is refused normally; a supported runtime-selected call
+  with genuinely missing inputs uses the ordinary runtime admission boundary.
+  The ban on the source-name table for execution binding stays
+  ([open author question](../LMX_blog/q/current/graph-hidden-input-name-binding.md));
+  zero arguments are not manufactured.
+- **Order for a supported, proved alternative.** Evaluate the target once and
+  keep that occurrence. Prepare only its selected complete inputs, once, in
+  the established lexical order, into typed temporaries. Source priority: the
+  caller's nearest current local, then the inherited dynamic input, then the
+  actual callee's eligible lexical source. Argument evaluation may itself run
+  user code; stop and throw propagate at once. Then the required pre-call
+  dirty publication, then dispatch of the same selected occurrence through
+  the common route. The reference cell is not re-read after its inputs are
+  prepared, and publication does not move before argument evaluation
+  ([working state](../docs/LMX_semantics.en.md#dynamic)).
+- **Witnesses required with the mechanism:** two interchangeable actual
+  bodies that need `x` versus `y` at identical ABI positions and types; the
+  actual copied lexical parent; a genuinely missing input; replacement of the
+  same resolved reference cell; cleared and replaced native-word dispatch. A
+  copied loop without hidden inputs is not sufficient evidence.
+
+This does not close the unknown-origin route described in
+[the namespace source-layout ledger](critical-graph-namespace-source-layout-20261003.md);
+the critical ticket stays OPEN.
+
+<a id="checkpoint"></a>
+## 10. RED development checkpoint of the sandbox
+
+Codex confirmed in the same reply that no author instruction forbids a clearly
+disclosed red development checkpoint; leaving the inherited sandbox
+uncommitted had been provenance discipline. The sandbox dependency closure is
+therefore committed to `main` as preservation of work in progress.
+
+- **Scope:** 345 paths, each listed with its SHA256, origin and gate in the
+  [manifest](fable-checkpoint-20261003.md): the sandbox sources and fixtures
+  under `dev/l2src_sandbox/`, one L3 selftest, and four tool files. 312 are
+  the tree received at the takeover, byte for byte; 32 were changed and one
+  was created by this continuation.
+- **Not included:** stable `l2src/` (unchanged), `build/`, binaries, backup
+  archives, and the stray `l2_driver_launch.err`.
+- **Byte tie:** before staging, every path was hashed and compared with the
+  copies the gates had staged. 315 paths have a byte-identical staged copy in
+  `fable_full_04`, `fable_kernel_01` or `fable_l3_01`; no staged copy differs.
+  The 30 paths without a staged copy are 26 inherited fixtures that no harness
+  row names (UNGATED: their edit removes the old `L2:` wrapper and no gate
+  executed it) and four tool files. No path contains a carriage return or a
+  control byte, so the `eol=lf` filter leaves the blobs equal to the tested
+  bytes; the index blobs were re-verified after `git add`.
+- **Evidence attached to exactly these bytes:** `fable_full_04` RED 70/1401
+  against the baseline `fable_full_01` RED 126/1395 (56 FAIL→OK, 0 OK→FAIL,
+  six added targets pass, none removed); `fable_kernel_01` GREEN 292 targets
+  with 109 executed selftests; `fable_l3_01` 11 suites and four budgets;
+  `tools/test_l2_walk_graph_facts.ps1` 21 controls.
+- **Retained failures:** the 70 rows are listed by name in the
+  [manifest](fable-checkpoint-20261003.md) and by mechanism in
+  [section 7](#remaining). Every one stays a required row; none was removed
+  or relabelled to make the checkpoint.
+
+The checkpoint is not a release, not a green kernel, not a ticket closure and
+not self-build readiness. Both critical tickets and stages 8/8a remain OPEN.
+Later slices are committed separately with their own evidence.

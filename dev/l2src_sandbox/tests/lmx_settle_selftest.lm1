@@ -79,7 +79,7 @@ fn: st_object (@: LmxArena arena; @: LmxMsg message; @: LmxSchedule sched) @: Lm
     if: lmx_post_init(arena, mail) != c.LMX_POST_OK || lmx_schedule_init(sched, arena, (cast: (@: void) t), 8U) != c.LMX_SCHEDULE_OK || lmx_thread_init(arena, t, message\graph, mail, sched) != c.LMX_THREAD_OK
         return: 0
     ---
-    if: lmx_thread_children_bind_graph(t, arena) != c.LMX_THREAD_OK
+    if: lmx_thread_children_open(t, arena) != c.LMX_THREAD_OK
         return: 0
     ---
 return: t

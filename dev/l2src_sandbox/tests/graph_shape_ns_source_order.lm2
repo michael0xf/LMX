@@ -1,0 +1,11 @@
+# Construction initializes real cells but does not run the stored assignment.
+Holder: (int: x 1; x: 2; int: y 3)
+if: Holder\x != 1 || Holder\y != 3
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+Holder
+if: Holder\x != 2 || Holder\y != 3
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

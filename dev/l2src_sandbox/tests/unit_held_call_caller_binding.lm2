@@ -1,0 +1,39 @@
+# The caller binds a method's free name by its own binding at the call; with
+# none, the name falls back to the declaration the method sees. mid stands
+# under the store of h2 and calls it. over stands above the store and holds a
+# callable of its own under the name: mid, called from over, calls that one,
+# 300 + 12. plain stands above the store and has no h2: mid, called from
+# plain, calls the unit's, 100 + 12, as it does called from the root.
+# Entry 7.
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+
+fn: over () int
+    h2: make2 300
+    return: mid()
+end: over
+
+fn: plain () int
+    return: mid()
+end: plain
+
+h2: make2 100
+
+fn: mid () int
+    return: h2(1 2)
+end: mid
+
+int: a over()
+int: b plain()
+int: c mid()
+int: ok 7
+if: a != 312
+    ok: 81
+if: b != 112
+    ok: 82
+if: c != 112
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

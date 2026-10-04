@@ -1722,7 +1722,8 @@ prototype:
     fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
     fn: l2_mad_declaring (const: @(LmP0Node stmt); int: mi) int
-    fn: l2_mad_held (const: @(LmP0Text name)) int
+    fn: l2_call_node_body (const: @(LmP0Node node)) @: LmP0Structure
+    fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
     fn: l2_call_head_held (int: mi; const: @(LmP0Text head)) int
     fn: l2_mad_held_arity (int: oi) int
     fn: l2_mad_held_arg_ty (int: oi; int: k) int
@@ -8377,7 +8378,7 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
             return: 1
         # A held callable is called by the formals of the header of its declared
         # callable type, where the check and both emissions read it as held
-        # (l2_mad_held).
+        # (l2_call_head_held).
         if: idx < 0
             held: l2_call_head_held(mi, n\as\frame\head)
             if: held >= 0 && l2_bind_call(n, 0 - 1, held, path) != 0
@@ -24095,21 +24096,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: 0
         return: l2_error(path, node, "unresolved name")
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && l2_call_head_held(mi, node\as\frame\head) >= 0
-        # An empty argument body contains no expressions to check; signature
-        # admission still applies at the same held-call construction route.
-        if: node\as\frame\body != 0 && l2_call_actual_fields(node\as\frame\body) > 0 && l2_check_fields(l2_call_actuals(node\as\frame\body), l2_call_actual_fields(node\as\frame\body), mi, path, node) != 0
-            return: 1
-        # The call passes what the held callable's header declares, no more and no less.
-        if: l2_mad_held_arity(l2_call_head_held(mi, node\as\frame\head)) >= 0
-            idx: 0
-            if: node\as\frame\body != 0
-                idx: l2_actual_count(l2_call_actuals(node\as\frame\body))
-            if: idx != l2_mad_held_arity(l2_call_head_held(mi, node\as\frame\head))
-                return: l2_error(path, node, "a held callable takes the arguments of its header")
-        ---
-        # The same native held-call helper is needed for every compiled body.
-        l2_mad_need_held(l2_call_head_held(mi, node\as\frame\head))
-        return: 0
+        return: l2_check_held_call(node, l2_call_head_held(mi, node\as\frame\head), mi, path)
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
         return: l2_check_addr(node, mi, path)
     # A prefix sign applied to a group, `-(a + b)`: the group is checked as the
@@ -25346,6 +25333,9 @@ fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path
     idx: l2_atom_callee(stmt\as\atom, mi, @ fi)
     if: idx >= 0
         return: l2_check_call(stmt, idx, fi, 0, mi, path)
+    # A held callable named alone is its call with no actuals: the check of `p0()`.
+    if: l2_call_head_held(mi, stmt\as\atom) >= 0
+        return: l2_check_held_call(stmt, l2_call_head_held(mi, stmt\as\atom), mi, path)
     if: l2_check_primary(stmt, mi, path) != 0
         return: 1
     if: l2_bare_structure(stmt\as\atom, mi) != 0
@@ -36231,6 +36221,13 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     # steps/named-struct-exec.md, slices 2 and 4, and book §9 after 55c1abc: the nullary call of a Structure the check
     # pass took (l2_check_struct_call) -- by the bare atom, or by `f()` on the existing binding
     # (l2_empty_struct_assign_shape) -- is one step (l2_rw_struct_call), or none when the Structure's type is empty.
+    # A held callable named alone is its call with no actuals, the walk of `p0()`.
+    if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_call_head_held(l2_rw_mi, stmt\as\atom) >= 0
+        \next: l2_skip_span(field, n)
+        if: l2_rw_mad_call(stmt, l2_call_head_held(l2_rw_mi, stmt\as\atom), into, @ node) != 0
+            return: 1
+        \made: 1
+        return: l2_rw_put(into, slot, node)
     if: n = 1 && stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0 && l2_rw_struct_callee(stmt\as\atom) != 0
         \next: l2_skip_span(field, n)
         return: l2_rw_struct_call(stmt, stmt\as\atom, into, slot, made)
@@ -38106,6 +38103,33 @@ fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
         return: 0
 return: 1
 
+# The body a held callable's call gives its actuals in: the Frame's own, or none for the bare
+# name, which is the call with no actuals.
+fn: l2_call_node_body (const: @(LmP0Node node)) @: LmP0Structure
+    if: node != 0 && node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0
+        return: node\as\frame\body
+return: 0
+
+# The check of a held callable's call: its actuals as expressions, then their count against
+# its header.  The node is the call's Frame, or the bare name.
+fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
+    const: @(LmP0Structure body) l2_call_node_body(node)
+    int: given 0
+    # An empty argument body contains no expressions to check; signature
+    # admission still applies at the same held-call construction route.
+    if: body != 0 && l2_call_actual_fields(body) > 0 && l2_check_fields(l2_call_actuals(body), l2_call_actual_fields(body), mi, path, node) != 0
+        return: 1
+    # The call passes what the held callable's header declares, no more and no less.
+    if: l2_mad_held_arity(oi) >= 0
+        if: body != 0
+            given: l2_actual_count(l2_call_actuals(body))
+        if: given != l2_mad_held_arity(oi)
+            return: l2_error(path, node, "a held callable takes the arguments of its header")
+    ---
+    # The same native held-call helper is needed for every compiled body.
+    l2_mad_need_held(oi)
+return: 0
+
 # Is this statement the declaration of a held callable: the store of a callable merge that gave
 # its head its binding, which is the statement the collector reserved a row for?  A statement of
 # the same shape under a head that has a binding at its site is an application of that binding
@@ -38115,15 +38139,6 @@ fn: l2_mad_declaring (const: @(LmP0Node stmt); int: mi) int
         return: 0
 return: (cast: (int) (l2_own_by_decl(mi, stmt) >= 0))
 
-fn: l2_mad_held (const: @(LmP0Text name)) int
-    int: oi
-    if: name = 0 || l2_e < 0
-        return: 0 - 1
-    oi: l2_own_find_last(l2_e, name)
-    if: oi < 0 || l2_mad_store_stmt(l2_own_decl[oi]) = 0
-        return: 0 - 1
-return: oi
-
 # The held callable a call head names at its site, in method mi, or -1.  A formal, a slot or a
 # machine local of the name is that binding and no held callable.  Otherwise the name
 # selects a row as any name of the site does (l2_own_visible): the site's own row declared
@@ -38131,27 +38146,18 @@ return: oi
 # above it, the last of the name.  The head names a held callable when the store of a callable
 # merge declared the selected row, a field of the root and a local of a method alike; a
 # selected row of another kind is that binding, and a later declaration of the name does not
-# reach back to the site.
-#
-# DEBT (HELD-FORWARD-LOOKUP).  A method that stands above every declaration of the name
-# selects no row.  There the name is a free name of the method, and the callable is still found
-# by the entry's last declaration of the name (l2_mad_held): a lookup of held callables alone,
-# beside the ordinary selection, kept as every earlier translator answered.
+# reach back to the site.  A head that selects no row names no held callable: without a site
+# there is none to select at, and a method standing above every declaration of the name has no
+# binding of it -- the head is an unknown head there, whatever a later statement of the unit
+# declares.
 fn: l2_call_head_held (int: mi; const: @(LmP0Text head)) int
     int: own
-    if: mi < 0 || l2_e < 0
-        return: l2_mad_held(head)
-    if: head = 0 || l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
+    if: mi < 0 || head = 0 || l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
         return: -1
     own: l2_own_visible(mi, head)
-    if: own >= 0
-        if: l2_mad_store_stmt(l2_own_decl[own]) = 0
-            return: -1
-        return: own
-    ---
-    if: mi = l2_e
+    if: own < 0 || l2_mad_store_stmt(l2_own_decl[own]) = 0
         return: -1
-return: l2_mad_held(head)
+return: own
 
 # The own-type code of a result code (unsigned is 33 as a result, 3 as an own).
 fn: l2_ret_own (int: code) int
@@ -38584,13 +38590,14 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     []: char av 1024
     []: char bv 1024
     []: char ref_dest 128
+    const: @(LmP0Structure body) l2_call_node_body(node)
     n: l2_mad_held_arity(oi)
     rty: l2_mad_held_ret_ty(oi)
     if: n < 0 || rty < 0
         return: l2_error(l2_src, node, "a held callable whose header is not numbers to a number")
-    if: node\as\frame\body != 0
-        given: l2_actual_count(l2_call_actuals(node\as\frame\body))
-        bound: l2_bound_find(node\as\frame\body)
+    if: body != 0
+        given: l2_actual_count(l2_call_actuals(body))
+        bound: l2_bound_find(body)
     ---
     if: given != n
         return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
@@ -38618,7 +38625,7 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
         j: l2_bound_formal(bound, written)
         f: 0
         if: j >= 0 && j < n
-            f: l2_actual_field(l2_call_actuals(node\as\frame\body), j)
+            f: l2_actual_field(l2_call_actuals(body), j)
         if: f = 0
             return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
         span: l2_expr_span(f)
@@ -38862,7 +38869,8 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     int: rty
     int: bound 0 - 1
     int: site
-    if: node = 0 || node\as = 0 || node\as\frame = 0
+    const: @(LmP0Structure body) l2_call_node_body(node)
+    if: node = 0 || node\as = 0
         return: l2_rw_refuse(node, "this call's inputs")
     # The primitive contract carries the actual formal and result widths. The
     # common adapter forwards value storage; it does not infer type from an address.
@@ -38870,10 +38878,10 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     rty: l2_mad_held_ret_ty(oi)
     if: n < 0 || rty < 0
         return: l2_rw_refuse(node, "a held callable whose header is not numbers to a number")
-    if: node\as\frame\body != 0
-        f: l2_next_active(l2_call_actuals(node\as\frame\body))
-        given: l2_actual_count(l2_call_actuals(node\as\frame\body))
-        bound: l2_bound_find(node\as\frame\body)
+    if: body != 0
+        f: l2_next_active(l2_call_actuals(body))
+        given: l2_actual_count(l2_call_actuals(body))
+        bound: l2_bound_find(body)
     ---
     if: given != n
         return: l2_rw_refuse(node, "this call's inputs")
@@ -41708,6 +41716,9 @@ fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind))
             return: l2_emit_call(e, idx, 2, fi, 0, mi, ind, l2_tok, 0)
         if: idx >= 0
             return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok, 0)
+        # A held callable named alone is its call with no actuals: the emission of `p0()`.
+        if: l2_call_head_held(mi, e\as\atom) >= 0
+            return: l2_prep_held_call(e, l2_call_head_held(mi, e\as\atom), mi, ind, l2_tok)
         return: l2_emit_struct_call(e, e\as\atom, mi, ind)
     # A c.* or predef C call whose value is dropped is emitted as a statement.  On the value
     # path (l2_prep) l2_emit_ccall writes the call into l2_tok for its consumer, and here there is
@@ -41736,7 +41747,7 @@ fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
         e: f\value
         n: l2_discard_run(f)
         if: n > 0
-            if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_atom_callee(e\as\atom, mi, @ fi) >= 0
+            if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && (l2_atom_callee(e\as\atom, mi, @ fi) >= 0 || l2_call_head_held(mi, e\as\atom) >= 0)
                 return: 0
             # steps/named-struct-exec.md, slice 2: executing a named Structure runs its body.
             if: n = 1 && e\kind = c.LM_P0_NODE_ATOM && l2_ns_exec_any(e\as\atom, mi) >= 0

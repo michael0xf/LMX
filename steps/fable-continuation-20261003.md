@@ -3090,6 +3090,9 @@ reads.
 
 ### Debt, labelled: HELD-FORWARD-LOOKUP
 
+**Removed in [section 49](#no-forward-lookup):** the lookup is gone, and
+`unit_held_call_above` with it.
+
 A method that stands above every declaration of the name selects no row.
 The kernel map, section 13.3, makes a parent declaration that precedes the
 callee's definition eligible as its lexical fallback, and says nothing of
@@ -3127,7 +3130,8 @@ measured, back to `fable_full_17`.
 - **The bare name.** `p0` alone as a statement, for a nullary held callable,
   is refused the same way through another route (`l2_check_struct_call`).
   The semantics makes a bare name the nullary entry. A labelled probe holds
-  the refusal ([defects](defects.md#held-bare-name-statement)).
+  the refusal ([defects](defects.md#held-bare-name-statement)). (Fixed in
+  [section 49](#no-forward-lookup).)
 - **The factory's actuals in the store are positional.**
   `h2: make2(n: 100)` is not read as the store: the shape asks an atom after
   the head. Every translator measured answers so; no row holds it
@@ -3257,3 +3261,185 @@ whole-value composition, nested admission and the capture closure. Recorded
 for the ordinary cleanup: the count tests of a held call below the binding,
 after an inventory of their callers; the audit of the classifier's callers
 above.
+
+<a id="no-forward-lookup"></a>
+## 49. No lookup ahead of the declaration; the bare name is the call (Codex, FABLE-CODEX-20261004-10)
+
+**Codex's reply to the checkpoint of section 48.**
+
+- Collecting the roots first and the renumbering are accepted. The index of
+  an own row is a private symbol of the translator: nothing is executed at
+  collection, the source order and the positions of fields are unchanged, and
+  every generated reference is renumbered alike. The row that was red before
+  is to be kept apart from "ran green".
+- The three repairs of section 48 that were found on the way fit that slice.
+- The refusal of the superseded caller is the established rule: "At the
+  actual call, the caller's current same-name binding wins. An int cannot
+  satisfy that callable use/contract. It is incompatibility, not absence
+  permitting fallback to the old callable". Two controls are asked beside
+  it: a compatible caller's override and the eligible lexical fallback.
+- The second-store correction is accepted as a bounded fix.
+- **The bare name and the named actuals of the factory block G5.** "Known p0
+  and p0() denote the same nullary execution/discard route. A limit probe
+  documenting the valid bare form's current refusal is not a replacement for
+  its REQUIRED positive native/actually-walked witness."
+- **The forward lookup is an implementation gap, not debt to keep.** "'Every
+  earlier translator did it' is not justification for retaining the entry's
+  last-declaration fallback. A site with incomplete/unresolved metadata must
+  not secretly acquire a callable from that global answer." The paired forms
+  go together: "The completed surface forms follow the SAME resolved head
+  and receiving context; parentheses are not a call marker". "If no binding
+  is established, apply the unknown-head/value-position rules; do not infer
+  a hidden input just because a later/global factory has the same name."
+- **The rule for a dormant definition by its name is rejected:** "no
+  textual-name liveness heuristic". Resolved definition identity and the
+  existing use and call facts decide; where consumption cannot be proven
+  absent, the coverage stays unknown and the positive stays OPEN.
+- Composing a whole pass from the callee's uses is right in principle.
+
+### The forward lookup is removed
+
+`l2_mad_held`, the lookup by the entry's last declaration of the name, is
+deleted. `l2_call_head_held(mi, head)` is the shadows and then the row the
+name selects at the site; a head that selects no row names no held callable,
+and without a site there is none to select at.
+
+A method that stands above every declaration of the name has no binding of
+it. The head is an unknown head there:
+
+- in a value position the call is refused, `unknown method`;
+- the statements `h2(5 6)` and `h2: 7 8` are one form in two spellings: each
+  defines a Structure of the method with the written contents, and neither
+  calls the callable the root holds. The fixture's trace holds the root's own
+  call alone.
+
+Section 47 (`af3b907e`) had made both statements calls, by the lookup this
+section removes; the translator before it defined the Structures, as now. No
+read of the name follows in those methods, so this is the established case
+of `unit_free_write` (`k: 1` defines a Structure though the caller has a
+`k`), not the author's open question, which is about a later read.
+
+Of the 1583 translations recorded by `fable_full_24`, only
+`unit_held_call_above` and its walked twin change, to that refusal. Nothing
+else depended on the lookup or on the answer without a site.
+
+### The bare name is the call
+
+A nullary held callable named alone as a statement is its call with no
+actuals, on the route of `p0()`.
+
+- The held-call routines take the call's body from its node
+  (`l2_call_node_body`): a Frame's own, or none for the bare name. The check
+  of a held call is one function for both (`l2_check_held_call`).
+- The three statement routes ask the held callable of the site for a bare
+  name where they ask a method: the check (`l2_check_discard`), the native
+  emission (`l2_eval_discard`), the graph (`l2_rw_stmt_content`). A body
+  whose only statement is that name is not inert (`l2_body_inert`).
+- The placer needed nothing: a variant with a branch for it gives the same
+  output on every fixture, so none was added.
+
+A value position is unchanged: there the bare name is the callable's
+reference, at the root and in a method alike (`int: r p0` is refused, `a
+reference where a number is asked`).
+
+### The caller's binding: the two controls
+
+`unit_held_call_caller_binding`. `mid` stands under the store and calls
+`h2`. A caller that holds a callable of its own under the name is called
+through (300 + 12). A caller with no binding of the name leaves the
+declaration `mid` sees (100 + 12), as the root's own call does. Together
+with `unit_held_call_superseded_caller_refused` (the caller's binding is an
+int) the three rows tell the priority of sources from a ban on the method.
+Both the committed translator and this one run the control; it is a new
+witness, not a change.
+
+### The named actuals of the factory: not implemented, a conflict of readings
+
+Codex named `h2: make2(n: 100)` as the store with named actuals. That
+spelling already has a meaning, by the author's ruling Q58 (2026-10-01): a
+head that resolves to nothing, with a tail of one known call, declares a
+named Structure that **retains** the call, which runs when the Structure is
+executed. Two gated rows hold it, `unit_q58_batch_retained`
+(`Batch: (put: 7)`) and `unit_named_struct_call_body_retained` (the block
+form, whose header says: "one P0 shape, one resolution").
+
+Measured:
+
+- On the committed translator, after `h2: make2(n: 100)` the factory has
+  not run; the bare `h2` then runs it once, with its named actual bound.
+- Reading that tail as the call's value turns
+  `unit_named_struct_call_body_retained` and `unit_named_actual_structure_body`
+  (natively and walked) from OK to refused when only the compact spelling is
+  read so, and `unit_q58_batch_retained` with its walked twin as well when
+  any spelling is.
+- The store is the short form of T6, `h2: make2 100`
+  (`steps/callable-merge-t6.md`): the tail starts with the method's atom. A
+  naming Frame in that tail, `h2: make2 n: 100`, and a parenthesized tail,
+  `h2: make2 (n: 100)`, are refused, `unknown method` at `n`.
+
+So the named actuals of a store have no accepted spelling today, and the one
+Codex named is taken. The question which spelling carries them went back to
+Codex with these anchors; nothing was implemented for it, and the defect
+stays OPEN and blocks G5
+([defects](defects.md#held-store-factory-actuals-positional)).
+
+### Replay
+
+The slice's translator against the committed one (`a96d43c3`), on the 1583
+translations recorded by `fable_full_24`: exit, messages, generated L1 and
+allocation counts are the same on 1580 rows. The three others are the rows
+this slice replaces: `unit_held_call_above` and its walked twin, refused now,
+and `unit_held_call_bare_name_limit_probe`, which translates now. Removing
+the lookup alone changes only the first two; the bare name alone, only the
+third.
+
+
+### Rows
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_held_call_above_refused` | A method above every declaration of the name calls it in a value position: `unknown method`. |
+| `unit_held_call_above_unknown_head`, natively and walked | The paired statements `h2(5 6)` and `h2: 7 8` in such methods define Structures and call nothing. |
+| `unit_held_call_caller_binding`, natively and walked | A compatible caller's own callable is called through; a caller without the name leaves the lexical declaration. |
+| `unit_held_call_bare_name`, natively and walked | Bare `p0` and `p0()` at the root and in a method, and bare `p0` as the only statement of a nested body: five calls. |
+
+Removed: `unit_held_call_above` with its walked twin (the lookup it held is
+gone) and `unit_held_call_bare_name_limit_probe` (the positive replaces it).
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart, and
+compared with the slice on its fixtures and those of sections 47 and 48,
+natively and walked.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| A head that selects no row falls back to the entry's last declaration | `unit_held_call_above_refused` is accepted; `unit_held_call_above_unknown_head` runs to 81, natively and walked. |
+| The check does not take a held callable's bare name for its call | `unit_held_call_bare_name` is refused, `executing a named Structure is not supported yet`. |
+| The native emission does not | It runs to 81 natively. |
+| A body whose only statement is that bare name counts as inert | It runs to 81 with the methods walked. |
+| The graph does not | It runs to 81 with the methods walked. |
+
+A branch of the placer for the bare name was tried and dropped: with it and
+without it the output is the same on every fixture.
+
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_12` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_12` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_25` (full harness) | RED 31 of 1588. Against `fable_full_24` (RED 31 of 1584): FAIL→OK 0; OK→FAIL 0; added 7, all green; removed 3, the rows this slice replaces; no red row's message changed. |
+| `build/l2_harness/fable_role3_01` (focused, before the gate) | 308 rows of held callables, callables, stores, named Structures and their execution, free and hidden names. Red only seven rows of the baseline. |
+
+The 31 red rows are the 29 of `fable_full_17` and the two labelled OPEN
+positives `unit_recv_use_nested_dormant` and `unit_recv_use_passed_thin`. The
+pre-gate hashes of the translator, the four fixtures and the harness equal
+the live files and every staged copy (`tie.py`).
+
+
+**Next.** The spelling of a store with named actuals, when Codex answers.
+Then the receiving-use remainder: the composition of a whole pass; the
+dormant definition stays OPEN until resolved facts of use decide it. Then
+whole-value composition, nested admission and the capture closure.

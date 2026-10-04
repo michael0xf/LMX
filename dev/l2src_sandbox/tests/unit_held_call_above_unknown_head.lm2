@@ -1,0 +1,44 @@
+# A method that stands above every declaration of a name has no binding of
+# it: a head of that name is an unknown head there, whatever the unit
+# declares later. paren and colon stand above the store of h2. Their
+# statements `h2(5 6)` and `h2: 7 8` are one form in two spellings: each
+# defines a Structure of the method with the written contents, and neither
+# calls the callable the root holds. The callable notes its actuals: the
+# trace holds the root's own call alone, 12. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 100 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: paren () int
+    h2(5 6)
+    return: 0
+end: paren
+
+fn: colon () int
+    h2: 7 8
+    return: 0
+end: colon
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + note(x * 10 + y)
+    return: f2
+
+h2: make2 100
+int: a paren()
+int: b colon()
+int: c h2(1 2)
+int: ok 7
+if: seen() != 12
+    ok: 81
+if: c != 100
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

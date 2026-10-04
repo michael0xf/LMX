@@ -1,0 +1,40 @@
+# A held callable without formals named alone as a statement is its call with
+# no actuals: bare `p0` and `p0()` are one execution, as they are for a
+# method. The callable notes 1 at each call. The root names it alone and then
+# with the empty parentheses; the method does the same and then names it
+# alone as the only statement of a nested body. Five calls. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 10 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + note(1)
+    return: f0
+
+p0: make0 100
+p0
+p0()
+
+fn: use (int: k) int
+    p0
+    p0()
+    if: k = 1
+        p0
+    ---
+    return: 0
+end: use
+
+int: z use(1)
+int: ok 7
+if: seen() != 11111
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

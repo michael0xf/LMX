@@ -1,0 +1,42 @@
+# Calls of copies whose body is proved through more than one declaration.
+# rb is a copy of the copy ra and rc a copy of rb, all of the unit's A. h
+# defines C, copies it and calls the copy. A reads the free name x and writes
+# the unit's seen through node; C reads the free name x and h's base through
+# node. Each call hands its copy the caller's current binding of x -- h's
+# local in h, the root's changed working value at the root -- and runs that
+# copy alone: A, ra, rb and C keep their own state. Entry 7.
+int: seen 0
+A:
+    int: last 0
+    last: x
+    node\seen: node\seen + x
+int: x 11
+ra: merge A
+rb: merge ra
+rc: merge rb
+fn: h () int
+    int: x 4
+    int: base 40
+    C:
+        int: last 0
+        last: node\base + x
+    xc: merge C
+    xc
+    return: xc\last * 100 + C\last
+end: h
+@: int ps @seen
+rb
+if: rb\last != 11 || ra\last != 0 || rc\last != 0 || A\last != 0 || \ps != 11
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+int: m h()
+if: m != 4400
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+x: 5
+rc
+if: rc\last != 5 || rb\last != 11 || ra\last != 0 || A\last != 0 || \ps != 16
+    sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

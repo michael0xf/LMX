@@ -317,6 +317,16 @@ int: l2_mres_n 0
 @: int l2_mres_addressed 0
 @@: LmP0Node l2_mres_called 0
 @: int l2_mres_called_mi 0
+# Per merge result row: the own row whose value a merge of one operand without
+# a body copies whole (`rb: merge ra`; `x: merge A` with A a method's own
+# Structure), or -1. Together with l2_mres_source's layout it is the chain a
+# call of the row proves its body through (l2_own_copy_chain).
+@: int l2_mres_from 0
+# Own rows that are no merge result and whose own address is taken. A chain of
+# copies may end at the definition row of a method's own named Structure; a
+# called copy needs that row unaddressed too (l2_copy_calls_verify).
+@: int l2_addr_own 0
+int: l2_addr_own_n 0
 # R9: 1 while the merge results' rows are made again after the steps are counted (l2_mrs_rebuild_all).
 int: l2_mrs_rebuild 0
 # Ordinary named Structures declared at unit level (SPEC 19.17 example, Codex
@@ -4666,6 +4676,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_nsty_n: 0
     l2_ebr_n: 0
     l2_mres_n: 0
+    l2_addr_own_n: 0
     l2_mrs_n: 0
     l2_msrc_n: 0
     l2_bnd_n: 0
@@ -9956,6 +9967,38 @@ fn: l2_own_capture_ns (int: own) int
         ns: l2_own_copy_layout(own)
 return: ns
 
+# The named Structure whose completed occurrence own row `own` holds, proved
+# through declarations alone: a whole copy of a named Structure
+# (l2_own_copy_layout); a whole copy of a row of the same body that is proved
+# in turn (l2_mres_from); the definition row of a method's own named Structure
+# (l2_own_layout). -1 otherwise. For a merge of one operand without a body
+# the kernel returns the copier's completed occurrence, so each link holds
+# what its operand held when the merge ran. That no row of the chain was
+# replaced before then is l2_copy_calls_verify's part.
+fn: l2_own_copy_chain (int: own) int
+    int: hops 0
+    int: result
+    int: layout
+    int: mi
+    if: own < 0 || own >= l2_own_n
+        return: -1
+    mi: l2_own_mi[own]
+    while: own >= 0 && own < l2_own_n && hops <= l2_mres_n
+        if: l2_own_mi[own] != mi
+            return: -1
+        result: l2_mres_of_own(own)
+        if: result < 0
+            return: l2_own_layout(own)
+        layout: l2_own_copy_layout(own)
+        if: layout >= 0
+            return: layout
+        if: l2_mres_from = 0
+            return: -1
+        own: l2_mres_from[result]
+        hops: hops + 1
+    ---
+return: -1
+
 # The copied Structure whose procedure contract a call of own row `own`
 # uses: one proved alternative. The row is a slot filled by its one merge
 # declaration and declared in the body that lexically owns the copied
@@ -9965,7 +10008,7 @@ return: ns
 # has been read (l2_copy_calls_verify). The call itself dispatches the value
 # the row holds, never the prototype.
 fn: l2_own_copy_origin (int: own) int
-    int: layout l2_own_copy_layout(own)
+    int: layout l2_own_copy_chain(own)
     int: owner
     if: layout < 0 || l2_own_is_slot(own) = 0 || l2_ns_parent[layout] >= 0
         return: -1
@@ -24873,14 +24916,57 @@ fn: l2_copy_call_note (int: own; const: @(LmP0Node node); int: mi) int
     l2_mres_called_mi[result]: mi
 return: 0
 
-# Run once every body has been checked. A called merge copy whose own row is
-# addressed has no proof of its current value: the address reaches the
-# reference cell. The valid program is refused at its call, as an
-# implementation limit, not as an admission failure.
+fn: l2_own_addr_note (int: own) int
+    @: int grown
+    int: i 0
+    while: i < l2_addr_own_n
+        if: l2_addr_own[i] = own
+            return: 0
+        i: i + 1
+    ---
+    grown: (cast: (@: int) realloc((cast: (@: void) l2_addr_own), (cast: (size_t) (l2_addr_own_n + 1)) * c.sizeof(c.int)))
+    if: grown = 0
+        return: 1
+    l2_addr_own: grown
+    l2_addr_own[l2_addr_own_n]: own
+    l2_addr_own_n: l2_addr_own_n + 1
+return: 0
+
+# Whether a row of the chain merge result `i` copies through is addressed: the
+# row itself, every copied row before it, the definition row the chain ends at.
+fn: l2_copy_chain_addressed (int: i) int
+    int: hops 0
+    int: from
+    int: k
+    while: i >= 0 && i < l2_mres_n && hops <= l2_mres_n
+        if: l2_mres_addressed[i] != 0
+            return: 1
+        if: l2_mres_from = 0
+            return: 0
+        from: l2_mres_from[i]
+        if: from < 0
+            return: 0
+        i: l2_mres_of_own(from)
+        if: i < 0
+            k: 0
+            while: k < l2_addr_own_n
+                if: l2_addr_own[k] = from
+                    return: 1
+                k: k + 1
+            ---
+        ---
+        hops: hops + 1
+    ---
+return: 0
+
+# Run once every body has been checked. A called merge copy has no proof of
+# its current value when its own row, or a row it was copied from, is
+# addressed: the address reaches the reference cell. The valid program is
+# refused at its call, as an implementation limit, not as an admission failure.
 fn: l2_copy_calls_verify (const: @(char path)) int
     int: i 0
     while: i < l2_mres_n
-        if: l2_mres_called != 0 && l2_mres_called[i] != 0 && l2_mres_addressed[i] != 0
+        if: l2_mres_called != 0 && l2_mres_called[i] != 0 && l2_copy_chain_addressed(i) != 0
             return: l2_error(l2_method_src(l2_mres_called_mi[i], path), l2_mres_called[i], "the called Structure's reference cell is addressed: calling its current value is not supported yet")
         i: i + 1
 return: 0
@@ -25915,6 +26001,8 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
         # The address of a merge result's own row names its reference cell.
         if: kind = 0 && out\kind = 1 && l2_mres_addressed != 0 && l2_mres_of_own(out\index) >= 0
             l2_mres_addressed[l2_mres_of_own(out\index)]: 1
+        if: kind = 0 && out\kind = 1 && l2_mres_of_own(out\index) < 0 && l2_own_addr_note(out\index) != 0
+            return: 2
         return: kind
     text: l2_address_path_text(first, count)
     if: text = 0
@@ -39820,6 +39908,8 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     last: l2_next_active(fr\body\first_field)
     if: l2_reference_source(0, 0, mi, source) != 0
         return: 1
+    if: l2_mres_from != 0
+        l2_mres_from[res]: 0 - 1
     if: n = 1 && l2_merge_body(stmt) = 0
         if: l2_reference_source(last, 1, mi, source) != 0
             return: 1
@@ -39829,6 +39919,11 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
             source\layout: -1
             source\method: l2_own_mi[own]
             source\place: l2_d105_own_key(own)
+            # The whole copy of a row: the link of l2_own_copy_chain. The
+            # admission source above stays without a layout.
+            if: l2_mres_from != 0 && own != l2_mres_own[res]
+                l2_mres_from[res]: own
+            ---
         ---
     ---
     while: k < n && last != 0
@@ -39956,8 +40051,10 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
                 l2_mres_addressed: (cast: (@: int) realloc((cast: (@: void) l2_mres_addressed), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
                 l2_mres_called: (cast: (@@: LmP0Node) realloc((cast: (@: void) l2_mres_called), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(@: LmP0Node)))
                 l2_mres_called_mi: (cast: (@: int) realloc((cast: (@: void) l2_mres_called_mi), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
-                if: l2_mres_addressed = 0 || l2_mres_called = 0 || l2_mres_called_mi = 0
+                l2_mres_from: (cast: (@: int) realloc((cast: (@: void) l2_mres_from), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
+                if: l2_mres_addressed = 0 || l2_mres_called = 0 || l2_mres_called_mi = 0 || l2_mres_from = 0
                     return: 1
+                l2_mres_from[l2_mres_n]: 0 - 1
                 l2_mres_addressed[l2_mres_n]: 0
                 l2_mres_called[l2_mres_n]: 0
                 l2_mres_called_mi[l2_mres_n]: 0 - 1

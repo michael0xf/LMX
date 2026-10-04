@@ -2130,6 +2130,28 @@ int: w f(b: mark(1); a: mark(2))
 привязки по-прежнему держит список в порядке формалов; порядок записи лежит рядом, в записи
 привязки.
 
+<a id="prefix-minus-not-an-operand"></a>
+### PREFIX-MINUS-NOT-AN-OPERAND — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-02, OPEN
+
+Префиксный минус не распознаётся как начало операнда:
+
+```text
+fn: f (int: a; int: b) int
+    return: a - b
+fn: h () int
+    int: t 0
+    t: f(a: 8; b: - 1)
+    return: t
+```
+
+Производитель графа отказывает: `root operation not walkable yet: this expression`, atom `-`.
+`l2_value_spans` и `l2_operand_run` начинают операнд только с `@` и `\`; native-путь передаёт
+текст в C как есть. Грамматика (раздел об операторах) перечисляет префиксы `+` и `-`, запись
+слитно с операндом — стиль, не граница P0. Решение Codex: удержанный унарный оператор с одним
+исходным операндом, общее распознавание для выражений, возвратов и аргументов, без `SUB(LIT 0, x)`
+в графе ([журнал](fable-continuation-20261003.md#written-body-and-prefix-ruling)). Свидетель —
+красная строка `unit_named_actual_whole`.
+
 <a id="receiving-use-full-receiver"></a>
 ### RECEIVING-USE-FULL-RECEIVER — 2026-10-03, fable по ответу Codex FABLE-CODEX-20261003-01, OPEN
 

@@ -32,9 +32,10 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_12` RED34/1448 — 96 FAIL→OK against that
-baseline, no OK→FAIL; kernel `fable_kernel_03` GREEN293 with 110 executed
-selftests; L3 `fable_l3_02` 11 suites/four budgets
+continuation bytes: `fable_full_13` RED32/1454 — 96 FAIL→OK against that
+baseline, no OK→FAIL ([gate](steps/fable-continuation-20261003.md#full-13));
+kernel `fable_kernel_03` GREEN293 with 110 executed selftests; L3
+`fable_l3_02` 11 suites/four budgets
 ([gates](steps/fable-continuation-20261003.md#full-12)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
@@ -84,12 +85,20 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   copies and of local Structures, another lexical owner, a free name in a
   method, an addressed row (five red required positives `unit_copy_call_*`),
   and `unit_held_nullary_source_field`.
-- [ ] Actual-call boundary for a held/copied ordinary Structure (nine red
-  required positives). Codex ruling FABLE-CODEX-20261003-02: selection by the
-  actual value's token only as a bounded optimization with a proved complete
-  input contract per alternative; unknown origin is a located CHECK
-  diagnostic and an OPEN positive, never an admission failure
-  ([ruling](steps/fable-continuation-20261003.md#held-call-ruling)). The
+- [ ] Actual-call boundary for a held/copied ordinary Structure. Codex ruling
+  FABLE-CODEX-20261003-02: selection by the actual value's token only as a
+  bounded optimization with a proved complete input contract per alternative;
+  unknown origin is a located CHECK diagnostic and an OPEN positive, never an
+  admission failure
+  ([ruling](steps/fable-continuation-20261003.md#held-call-ruling)). Proved by
+  declarations so far: a copy called in the body that owns its Structure, a
+  chain of copies, a copy of a method's own Structure
+  ([step one](steps/fable-continuation-20261003.md#held-call-step-one),
+  [step two](steps/fable-continuation-20261003.md#held-call-step-two)). Four
+  required positives stay red: `unit_copy_call_other_owner` (the procedure
+  reaches its unit and `node` through the occurrence's parent),
+  `unit_copy_call_from_method`, `unit_copy_call_addressed`,
+  `unit_held_nullary_source_field` (fixed-arity held call). The
   unknown-origin case stays behind the open author question.
 - [ ] Receiving-use contract for explicit typed reference declarations and
   stores: Consumer-relative used paths instead of the whole model shape
@@ -106,10 +115,19 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   its written place as `NAMED [coordinate, payload]` with its written name;
   no runtime permutation table, no second graph
   ([ledger](steps/fable-continuation-20261003.md#named-actual-order)).
-- [ ] Named actuals, the remainder: the call's P0 body still holds the bound
-  projection after the binding pass, with the written order and the naming
-  Frames in the binding record; the interpreter does not yet run a callable
-  formal's invocation (`--walk-methods` excludes callable formals).
+- [ ] Named actuals, the remainder, REQUIRED before G5 (Codex ruling
+  FABLE-CODEX-20261004-02): the call's P0 body must keep its written fields,
+  wrappers and order, and every call reader must consume one common checked
+  projection explicitly; the decoder may not depend on the binding record
+  ([ruling](steps/fable-continuation-20261003.md#written-body-and-prefix-ruling)).
+  Today the body holds the bound projection after the binding pass. Also: the
+  interpreter does not yet run a callable formal's invocation
+  (`--walk-methods` excludes callable formals).
+- [ ] Prefix operators in the shared expression producer: a retained unary
+  operator with one source operand, for expressions, returns and actuals; no
+  invented zero subtraction; `unit_named_actual_whole` is the red witness
+  ([defect](steps/defects.md#prefix-minus-not-an-operand),
+  [ruling](steps/fable-continuation-20261003.md#written-body-and-prefix-ruling)).
 - [x] A path through a merge result's reference field, read and store, with
   the store admitted to the field's model
   ([ledger](steps/fable-continuation-20261003.md#merge-result-reference-field)).

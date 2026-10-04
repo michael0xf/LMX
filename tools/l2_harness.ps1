@@ -1732,6 +1732,22 @@ $criticalCopyCallPaths = @('widthpath','0','23',
     'rolepath','2','16','5','4','0','sizepath','3','16','5','2','6',
     'rolepath','1','19','35','0','samepath','2','19','2','2','8','1','sizepath','3','19','5','2','4',
     'differentpath','2','8','1','2','9','1')
+# A chain of copies. Unit children 5, 6, 7 declare ra, rb, rc: rb's merge takes
+# the very output operand of ra's declaration, rc's that of rb's, three
+# distinct rows. The calls (11: rb, 17: rc) are EXEC over the called row's own
+# operand with the caller's x (child 3) as the one hidden input. In h (unit
+# child 8) statement 7 declares xc as a copy of the row that defines C (own 6)
+# and statement 8 is EXEC over xc's operand with h's own x (own 2).
+$criticalCopyChainPaths = @(
+    'samepath','3','6','2','7','2','5','1','samepath','3','7','2','7','2','6','1',
+    'differentpath','2','5','1','2','6','1','differentpath','2','6','1','2','7','1',
+    'rolepath','1','11','35','0','widthpath','1','11','6','samepath','2','11','2','2','6','1',
+    'rolepath','2','11','5','4','0','sizepath','3','11','5','2','3',
+    'rolepath','1','17','35','0','widthpath','1','17','6','samepath','2','17','2','2','7','1',
+    'rolepath','2','17','5','4','0','sizepath','3','17','5','2','3',
+    'sizepath','5','8','7','2','7','2','6',
+    'rolepath','2','8','8','35','0','widthpath','2','8','8','6','samepath','3','8','8','2','3','8','7','1',
+    'rolepath','3','8','8','5','4','0','sizepath','4','8','8','5','2','2')
 
 # A foreign C value by value has no graph cell. Unit: predef, include, echo,
 # read, kind, probe, check, publish, return. echo's declared input part is
@@ -7196,17 +7212,40 @@ $fixtures = @(
     # required positive until the general actual-call boundary exists.
     [pscustomobject]@{ Name = 'unit_copy_call_addressed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # OPEN positives, red by design: four more valid calls of a held copy whose
+    # OPEN positives, red by design: two more valid calls of a held copy whose
     # contract the translator cannot prove yet. Each is refused as unsupported
-    # at its call; none is an expected language refusal.
+    # at its call; neither is an expected language refusal.
     [pscustomobject]@{ Name = 'unit_copy_call_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_copy_call_other_owner.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_copy_call_local_structure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    # The body a called copy holds, proved through more than one declaration: a
+    # copy of a method's own Structure and a copy of a copy. Natively and walked.
+    # Under --walk-methods the procedure of a method's own Structure keeps its
+    # native word: the walked twin runs the method's EXEC in the interpreter and
+    # the copied body natively, and says so.
+    [pscustomobject]@{ Name = 'unit_copy_call_local_structure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0,1);
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_copy_call_of_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+    [pscustomobject]@{ Name = 'unit_copy_call_local_structure_walk.lm2'; Source = 'unit_copy_call_local_structure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1);
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_of_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_of_copy_walk.lm2'; Source = 'unit_copy_call_of_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    # The chain with its inputs: rc is a copy of rb, rb of ra, ra of A; h copies
+    # and calls its own C. A reads the free x and writes the unit's seen through
+    # node, C reads the free x and h's base through node. Each call forms the
+    # inputs from its caller -- h's local x, the root's changed x -- and runs
+    # the called copy alone. A contract or a target taken from another row of
+    # the chain exits 81 or 83; a copy that ran C itself, 82.
+    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyChainPaths; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs_walk.lm2'; Source = 'unit_copy_call_chain_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyChainPaths; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs_source_mutant.lm2'; Source = 'unit_copy_call_chain_inputs.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','3','7','2','7') + $criticalCopyChainPaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs_target_mutant.lm2'; Source = 'unit_copy_call_chain_inputs.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','3','8','8','2') + $criticalCopyChainPaths; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_source_binding_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2,4);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_source_binding_context_walk.lm2'; Source = 'unit_local_source_binding_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2,4);

@@ -1247,3 +1247,191 @@ bytes before the full gate:
 | --- | --- |
 | `build/l2src/fable_kernel_03` (`build_l2src.ps1 -Run -KeepAll`) | GREEN, 293 targets; 110 selftests executed: 109 ran with exit 0, the expected-fatal close-watchdog selftest exited 3 as required. One target and one selftest more than `fable_kernel_01`: `lmx_walk_named_actual_selftest`. |
 | `build/l3_selftest/fable_l3_02` (`run_l3_selftest.py`) | all 11 suites exit 0; four type-budget units 75/128 names, 1070/8192 bytes. |
+
+<a id="written-body-and-prefix-ruling"></a>
+## 32. Resolved boundary: the written call body, prefix minus, chains of copies (Codex, FABLE-CODEX-20261004-02)
+
+After section 30 I asked whether the binding record is enough, and whether
+the prefix minus of `unit_named_actual_whole` is a language operator. Codex
+answered without escalating to the author.
+
+**The nondestructive binding stays REQUIRED before G5.** The binding record
+supports the measured written-order evaluation and the retained `NAMED`
+operands. It does not meet "preserve original P0 wrappers/order" while the
+call's body is rebound to another list: untouched detached cells do not make
+the source tree reachable through its original body. Section 30 is kept and
+not reverted; its acceptance is separate from this open item. Before the
+complete G1/G5 graph checkpoint:
+
+- the original call body keeps its written fields, wrappers and order;
+- call readers consume one common checked binding, the projection,
+  explicitly: checking, dependency and free-name scanning, native evaluation,
+  graph COUNT/PLACE/FILL. The projection is temporary compiler bookkeeping
+  over borrowed source nodes, not another persistent graph. Source traversal
+  and formal-coordinate traversal are two views and neither silently replaces
+  the other;
+- a generic walker need not read a naming Frame as a call or a declaration:
+  the call's resolved receiving context tells the shared actual traversal
+  that the Frame names an actual, and its payload is consumed as the receiver
+  specifies;
+- SourceSite, original parents and spans and a named actual's comments stay
+  with the written nodes; the projection is never the source for diagnostics,
+  preservation or an independent oracle;
+- the decoder recovers the source from the retained graph and the external
+  name and comment service after P0 and the binding records are gone, and may
+  not depend on the binding record. `NAMED` may stay if it meets that test.
+
+It is not to be moved past a claimed green graph release because the harness
+has no row for literal P0 intactness.
+
+**Prefix minus is a documented operator.**
+[Grammar, operators](../docs/LMX_grammar.en.md#operators) lists the prefixes
+`@`, `\`, `++`, `--`, `+`, `-`, `!`, `~` and says that writing a prefix
+adjacent to its operand is style, not a P0 boundary. `- 1` is valid; the
+missing support in `l2_value_spans` and `l2_operand_run` is a translator gap
+([PREFIX-MINUS-NOT-AN-OPERAND](defects.md#prefix-minus-not-an-operand)), and
+`unit_named_actual_whole` stays as it is. Direction:
+
+- a retained unary operator with ONE source operand; a backend role such as
+  NEG may encode it. No `SUB(LIT 0, x)` in the retained graph, no collapse
+  into a signed literal when P0 has an operator and an operand, no repair of
+  named actuals alone;
+- one recognition of prefix operands and spans, precedence, typing and
+  emission for ordinary expressions, returns, positional and named actuals
+  and bounded forms; repeated prefixes with no depth limit; the operand
+  evaluated once, throw and stop propagated before a result; binary minus,
+  prefix minus and decrement told apart by expression context, not by spacing
+  or by the expected signature;
+- machine primitive types keep the C99 promotions of the target
+  ([low-level scope](../docs/L2_spec_en.md#lowlevel-scope)); the negated
+  result is not forced back to the unpromoted operand type; other numeric
+  domains stay scoped debt;
+- witnesses: the original `- 1` actual, `-x`, `-(a + b)`, a binary minus
+  followed by a prefix-minus operand, an effectful operand evaluated once,
+  native and cleared-word graph execution, and a source-shape mutant that
+  rejects an invented zero subtraction although the number still matches.
+
+**Chains of copies** are within the bounded actual-call work of
+[section 9](#held-call-ruling), with its conditions unchanged. Every link and
+the exact call place must justify the actual body's complete input contract.
+The actual copy's real lexical links are followed, not a unit prototype
+substituted as fallback. The absence of an address alone is no proof against
+explicit reference rebinding, path or alias writes or opaque effects. An
+addressed or unproved chain stays a located unsupported positive; taking an
+address is not a prohibition on calling. The universal, several-caller and
+addressed positives stay OPEN, not expected refusals.
+
+<a id="held-call-step-two"></a>
+## 33. Held-call boundary, step two: a chain of copies, a method's own Structure
+
+[Section 16](#held-call-step-one) proved one case: a copy of a named
+Structure called in the body that owns that Structure. Two more are proved by
+declarations now, still one alternative per call and no selection at run
+time.
+
+**The cases.** `rb: merge ra` where `ra` is itself a proved whole copy, to
+any depth (`unit_copy_call_of_copy`); `x: merge A` where A is the calling
+method's own Structure (`unit_copy_call_local_structure`).
+
+**The link.** A merge of one operand without a body whose operand is an own
+row records that row (`l2_mres_from`). `l2_own_copy_chain` follows the links
+inside one body until it reaches a whole copy of a named Structure
+(`l2_own_copy_layout`) or the definition row of a method's own named
+Structure (`l2_own_layout`). The admission source of such a merge is
+unchanged, it stays without a layout: nothing but the origin of a call reads
+the chain.
+
+**Proof that the body is the one executed.** As in section 16, for each link:
+the kernel returns the copier's completed occurrence for a one-operand merge
+without composition, so each row holds what its operand held when the merge
+ran.
+
+**Proof that no row of the chain was replaced.** Measured on these bytes by
+probes, for a copied row `ra` between its declaration and `rb: merge ra`, and
+for the definition row of a method's own `C` before `xc: merge C`:
+
+| Form | Copied row `ra` | Definition row `C` |
+| --- | --- | --- |
+| a second `ra: merge B`, `C: merge B` | refused, `more arguments than ra has formals` | refused, the same for C |
+| `ra: o`, `C: o` | refused, the same | refused, the same |
+| `@: ra o`, `@: C o` | refused, `unknown type` | declares `o`, a reference of type C; C's row is untouched and the copy's call returns C's own result |
+| `receiveMessage: ra`, `receiveMessage: C` | a new occurrence; the merge after it is refused, `unknown merge operand` | the same |
+| the row passed to a method as an actual | the method receives the Structure, not the row; the copy's call returns A's result | not measured |
+| `@ra`, `@C` | the call of the copy is refused, below | the same |
+
+The address is the one way to the reference cell. Every address of a merge
+row was already recorded. The address of an own row that is no merge result
+is recorded now too (`l2_own_addr_note`), and `l2_copy_calls_verify` refuses
+a called copy when any row of its chain is addressed
+(`l2_copy_chain_addressed`), with the diagnostic of section 16. That is an
+implementation limit on a valid program, not a language refusal, and has no
+expected-refusal row.
+
+**Proof of the input contract and of the lexical parent.** Unchanged from
+section 16 and for the same reason. Every row of the chain is declared in the
+calling body and the accepted origin is owned by that body
+(`l2_own_copy_origin`), so the copy's parent is the parent its Structure's
+procedure was checked against. Measured: C's body reads `node\base`, the
+calling method's own field, and the copy's call returns the method's value.
+
+**What is not done, and why `unit_copy_call_other_owner` stays open.** I
+tried to accept a copy of a unit-level Structure declared and called in a
+method. The first witness failed. The copied body's `node\seen` is compiled
+as slot 0 of the unit, and over a copy whose parent is the method's
+occurrence it read and wrote slot 0 of that occurrence. The natively emitted
+procedure of a unit-level Structure reaches the unit itself through the same
+`node` (`l2_unit_ref`), so its calls of unit methods and its uses of unit
+Structures depend on the parent too. A copy in another body needs the actual
+parent's own resolution of those names, which is the universal route. The
+relaxation was removed before any gate; the row is red by design and its
+header states this reason. Also open: a method calling an outer copy by a
+free name (`unit_copy_call_from_method`, where several callers may bind the
+name), an addressed row (`unit_copy_call_addressed`), selection among
+alternatives, a body reached through a callable formal or a path, and the
+fixed-arity held call (`unit_held_nullary_source_field`).
+
+**Verification.**
+
+- Recovered: `unit_copy_call_of_copy` and `unit_copy_call_local_structure`,
+  each with a new walked twin.
+- New `unit_copy_call_chain_inputs` and its walked twin: three links (`rc` of
+  `rb` of `ra` of A) and a method's own C. A reads the free `x` and writes the
+  unit's `seen` through `node`; C reads the free `x` and its method's `base`
+  through `node`. Each call hands the copy its caller's current `x`, the
+  method's local 4 and the root's changed 5, and runs the called copy alone.
+  Path oracle: each merge of the chain takes the very output operand of the
+  previous declaration, the three rows are distinct objects, each `EXEC`
+  targets the called row's own operand and carries the caller's cell of `x`.
+  Two shape mutants: the source operand of `rc`'s declaration emptied, the
+  target of the method's `EXEC` emptied.
+- Under `--walk-methods` the procedure of a method's own Structure keeps its
+  native word. The walked twins state it (`NativeMethods`): the method's
+  `EXEC` runs in the interpreter and C's body natively. A's procedure and the
+  root are walked.
+- Translator mutants through quick builds, the live file restored and its
+  hash re-verified after each; the control build translates the three
+  witnesses and refuses both addressed probes. No link recorded: the three
+  witnesses are refused. Only the called row's own address looked at: both
+  addressed probes translate. The address of a definition row not recorded:
+  that probe alone translates.
+- Focused `fable_chain_01` (148 targets: copy-call, named-Structure
+  execution, capture, merge-result and address rows): red only the six open
+  positives of those groups and two walked twins whose assertion I had
+  written wrong (the native word above). Focused `fable_chain_02` (21
+  targets, every copy-call row): red only the three open positives.
+
+<a id="full-13"></a>
+## 34. Full gate after section 33
+
+`fable_full_13` completes **RED 32/1454** on translator SHA256
+`6CBFA5BA473888BF950752E7EB0ACB1C5975B3DA280F20C8E46897DC107B843D`
+(staged Git blob `544b103a892f4da02e1640ab38540cc1a115e530`), harness
+`26622232DCD5C3414E2448C293A784DD1FB6B07D5185DDD9FF13BCE02DA2FA29`,
+walker and driver unchanged.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_12` (RED 34/1448) | 2 | 0 | 6 | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 96 | 0 | | |
+
+The kernel and L3 gates were not rerun: no kernel source changed.

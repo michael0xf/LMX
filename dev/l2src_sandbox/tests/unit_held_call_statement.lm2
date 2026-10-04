@@ -1,0 +1,39 @@
+# A held callable applied by a statement. h2 is held by the root; a statement
+# whose head names it is its call in every form, as in an expression, and no
+# assignment, no definition of a local and no call of a Structure without
+# arguments. The callable notes its two actuals in the unit's trace: at the
+# root 12 and 34, in the method 56, 78 and, by name, 90. The method's first
+# statement is such a call: the name is known there from the root. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace * 100 + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + note(x * 10 + y)
+    return: f2
+
+h2: make2 100
+h2(1 2)
+h2: 3 4
+
+fn: use () int
+    h2(5 6)
+    h2: 7 8
+    h2(y: 0; x: 9)
+    return: 0
+end: use
+
+int: z use()
+int: ok 7
+if: seen() != 1234567890
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

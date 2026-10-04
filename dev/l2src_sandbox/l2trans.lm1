@@ -1105,7 +1105,7 @@ prototype:
     fn: l2_param_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_param_is (int: mi; const: @(LmP0Text t)) int
     fn: l2_param_ty (int: mi; const: @(LmP0Text t)) int
-    fn: l2_is_asgn (const: @(LmP0Node stmt)) int
+    fn: l2_is_asgn (const: @(LmP0Node stmt); int: mi) int
     fn: l2_colon_model (const: @(LmP0Text name)) int
     fn: l2_colon_graph_ty () int
     fn: l2_colon_is_graph_ty (int: ty) int
@@ -1722,6 +1722,9 @@ prototype:
     fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
     fn: l2_mad_held (const: @(LmP0Text name)) int
+    fn: l2_call_head_held (int: mi; const: @(LmP0Text head)) int
+    fn: l2_unit_holds_callable (const: @(LmP0Text name)) int
+    fn: l2_head_is_held (int: mi; const: @(LmP0Text head)) int
     fn: l2_mad_held_arity (int: oi) int
     fn: l2_mad_held_arg_ty (int: oi; int: k) int
     fn: l2_mad_held_arg_name (int: oi; int: k) @: LmP0Text
@@ -7795,8 +7798,11 @@ fn: l2_param_ty (int: mi; const: @(LmP0Text t)) int
         return: l2_ft_of_own(l2_own_of_dt(l2_dt(mi, di)))
 return: 0
 
-fn: l2_is_asgn (const: @(LmP0Node stmt)) int
+# Is this statement an assignment to its head?  mi is the method the statement stands in, or -1
+# for a caller that has no site.
+fn: l2_is_asgn (const: @(LmP0Node stmt); int: mi) int
     const: @: LmP0Text h
+    int: fi 0
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: 0
     if: l2_own_decl_ty(stmt) != 0
@@ -7806,7 +7812,20 @@ fn: l2_is_asgn (const: @(LmP0Node stmt)) int
         return: 0
     if: l2_frame_head(stmt, "if") || l2_frame_head(stmt, "else") || l2_frame_head(stmt, "while") || l2_frame_head(stmt, "for") || l2_frame_head(stmt, "return") || l2_frame_head(stmt, "fn") || l2_frame_head(stmt, "sub") || l2_frame_head(stmt, "end") || l2_frame_head(stmt, "char") || l2_frame_head(stmt, "int") || l2_frame_head(stmt, "size_t") || l2_frame_head(stmt, "unsigned") || l2_frame_head(stmt, "ulong") || l2_frame_head(stmt, "@") || l2_frame_head(stmt, "implements")
         return: 0
-    if: l2_find_method(h) >= 0 || l2_is_known(h) || l2_predef_receiver(h) != 0
+    # The head's role at the statement's site is the one a call head has there
+    # (l2_call_head_method).  A head that calls -- a method, or what a callable
+    # formal carries -- is no assignment in any spelling.  A binding of the site
+    # that is no callable is assigned to, though a method of the unit has its
+    # name.  A caller with no site asks the unit's methods alone.
+    if: mi >= 0 && l2_call_head_method(mi, h, @ fi) >= 0
+        return: 0
+    # So is a head that names a held callable of the site (l2_head_is_held);
+    # the statement that stores the callable merge is that binding's own.
+    if: mi >= 0 && l2_mad_store_stmt(stmt) = 0 && l2_head_is_held(mi, h) != 0
+        return: 0
+    if: mi < 0 && l2_find_method(h) >= 0
+        return: 0
+    if: l2_is_known(h) || l2_predef_receiver(h) != 0
         return: 0
     if: h\length >= 2U && h\data[0] = 99 && h\data[1] = 46
         return: 0
@@ -8357,7 +8376,7 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
         # callable type, where the check and both emissions read it as held
         # (l2_mad_held).
         if: idx < 0
-            held: l2_mad_held(n\as\frame\head)
+            held: l2_call_head_held(mi, n\as\frame\head)
             if: held >= 0 && l2_bind_call(n, 0 - 1, held, path) != 0
                 return: 1
             ---
@@ -10214,7 +10233,7 @@ return: 0
 fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     int: n
     int: target_ty
-    if: l2_is_asgn(stmt) = 0 || stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
+    if: l2_is_asgn(stmt, mi) = 0 || stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
         return: 0
     n: l2_count_active(stmt\as\frame\body)
     if: n < 1
@@ -10644,7 +10663,7 @@ return: l2_admit_consumer_at(cns, ni, name, 0, l2_m_body[mi]\as\structure, path,
 # body with no field, no trailer.  Whether it declares t or calls t is resolution's: l2_empty_struct_decl_shape,
 # l2_empty_struct_assign_shape.
 fn: l2_empty_call_shape (const: @(LmP0Node v)) int
-    if: l2_is_asgn(v) = 0
+    if: l2_is_asgn(v, 0 - 1) = 0
         return: 0
     if: v\as\frame\trailer != 0 || v\as\frame\body\trailer != 0 || l2_count_active(v\as\frame\body) != 0
         return: 0
@@ -10677,7 +10696,7 @@ return: 0
 fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     @: LmP0Frame fr
     int: existing
-    if: l2_is_asgn(stmt) = 0
+    if: l2_is_asgn(stmt, mi) = 0
         return: 0
     fr: stmt\as\frame
     if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 0
@@ -10864,7 +10883,7 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
     fr: stmt\as\frame
     h: fr\head
-    if: h = 0 || l2_ident(h) = 0 || l2_is_asgn(stmt) = 0 || fr\body = 0 || fr\body\trailer != 0
+    if: h = 0 || l2_ident(h) = 0 || l2_is_asgn(stmt, mi) = 0 || fr\body = 0 || fr\body\trailer != 0
         return: 0
     if: l2_is_char_decl(stmt) != 0 || l2_frame_head(stmt, "fn") != 0 || l2_frame_head(stmt, "const") != 0 || l2_frame_head(stmt, "immutable") != 0 || l2_frame_head(stmt, "independent") != 0
         return: 0
@@ -11885,9 +11904,9 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # where a declaration puts it).  Assigned to an argument's name -- a formal or a dynamic input -- it changes that
         # activation's value (the parameter) unless a same-name field declared in scope has bound the name; it binds no
         # field and publishes nothing (Q52: only the hidden input changes).
-        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt)
+        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi)
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt) = 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi) = 0
             field: l2_next_active(field\next)
 return: 0
 
@@ -12718,7 +12737,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             field: l2_next_active(field\next)
             continue
         ---
-        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt)
+        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi)
             # steps/free-names.md §7: the target is resolved as a read of it is (book :1182), and first, in reading
             # order -- a name no declaration of this body gives is read like any name, so a free one is a dynamic
             # input: a hidden argument of the callers, whose value the bare assignment changes in this activation only
@@ -12749,7 +12768,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             if: oi >= 0 && seen != 0
                 seen[oi]: 1
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt) = 0 && l2_own_decl_ty(stmt) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi) = 0 && l2_own_decl_ty(stmt) != 0
             # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): the check-time twin of
             # l2_emit_body's own-decl-line branch -- same Q24 fix, this statement's own row.
             fa: l2_own_decl_name(stmt)
@@ -12770,9 +12789,9 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             if: oi >= 0 && seen != 0
                 seen[oi]: 1
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt) = 0 && l2_own_decl_ty(stmt) = 0 && l2_is_char_decl(stmt)
+        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi) = 0 && l2_own_decl_ty(stmt) = 0 && l2_is_char_decl(stmt)
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt) = 0 && l2_is_char_decl(stmt) = 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi) = 0 && l2_is_char_decl(stmt) = 0
             if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
                 return: 1
             if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0 && l2_scan_fields(l2_call_actuals(stmt\as\frame\body), l2_call_actual_fields(stmt\as\frame\body), mi, seen) != 0
@@ -17761,7 +17780,7 @@ fn: l2_frame_is_call (const: @(LmP0Frame frame); int: mi) int
     int: local
     if: frame = 0 || frame\head = 0
         return: 0
-    if: l2_call_head_method(mi, frame\head, @ fi) >= 0 || l2_is_known(frame\head) != 0 || l2_mad_held(frame\head) >= 0
+    if: l2_call_head_method(mi, frame\head, @ fi) >= 0 || l2_is_known(frame\head) != 0 || l2_call_head_held(mi, frame\head) >= 0
         return: 1
     local: l2_ml_find(frame\head)
     if: local >= 0 && l2_ml_ty[local] = 40
@@ -21322,6 +21341,9 @@ fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigne
     req: l2_call_head_method(mi, t, @ fi)
     if: req >= 0
         return: 1
+    # A held callable of the site is called in every form, as a method is.
+    if: l2_head_is_held(mi, t) != 0
+        return: 1
     # c.name(...) is the raw C door (spec 6.6.6): a call in every form, an empty argument list
     # included (`c.abort()`), never an update of a field of that name.
     if: l2_c_stmt_door(t) != 0
@@ -24034,21 +24056,21 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: l2_mad_host_of(mi) >= 0 && l2_mad_host_own(l2_mad_host_of(mi), node\as\atom) >= 0
             return: 0
         return: l2_error(path, node, "unresolved name")
-    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && l2_mad_held(node\as\frame\head) >= 0
+    if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && l2_call_head_held(mi, node\as\frame\head) >= 0
         # An empty argument body contains no expressions to check; signature
         # admission still applies at the same held-call construction route.
         if: node\as\frame\body != 0 && l2_call_actual_fields(node\as\frame\body) > 0 && l2_check_fields(l2_call_actuals(node\as\frame\body), l2_call_actual_fields(node\as\frame\body), mi, path, node) != 0
             return: 1
         # The call passes what the held callable's header declares, no more and no less.
-        if: l2_mad_held_arity(l2_mad_held(node\as\frame\head)) >= 0
+        if: l2_mad_held_arity(l2_call_head_held(mi, node\as\frame\head)) >= 0
             idx: 0
             if: node\as\frame\body != 0
                 idx: l2_actual_count(l2_call_actuals(node\as\frame\body))
-            if: idx != l2_mad_held_arity(l2_mad_held(node\as\frame\head))
+            if: idx != l2_mad_held_arity(l2_call_head_held(mi, node\as\frame\head))
                 return: l2_error(path, node, "a held callable takes the arguments of its header")
         ---
         # The same native held-call helper is needed for every compiled body.
-        l2_mad_need_held(l2_mad_held(node\as\frame\head))
+        l2_mad_need_held(l2_call_head_held(mi, node\as\frame\head))
         return: 0
     if: node\kind = c.LM_P0_NODE_FRAME && l2_frame_head(node, "@")
         return: l2_check_addr(node, mi, path)
@@ -24724,7 +24746,7 @@ fn: l2_ptr_land_ty (const: @(LmP0Node at); int: mi; @: int out_ty) int
             rt: 17
         \out_ty: rt
         return: 0
-    if: l2_is_asgn(at) = 0 || at\as = 0 || at\as\frame = 0 || at\as\frame\head = 0
+    if: l2_is_asgn(at, mi) = 0 || at\as = 0 || at\as\frame = 0 || at\as\frame\head = 0
         return: 1
     return: l2_colon_bound_ty(mi, at\as\frame\head, out_ty)
 
@@ -25978,13 +26000,13 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # never assigned), and an ordinary named Structure has no arguments (Q59): the argument is the arity refusal
         # of the resolved value, l2_struct_arity_error.  (`T()` is its nullary call, above; `T: fresh`, fresh bound
         # nowhere before, declares fresh: l2_colon_decl_shape.)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt, mi) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
             return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
         # A bare colon frame whose head is not a call is an update only when
         # that head already has a typed mutable binding.  In particular,
         # `arg: 7` must not silently invent arg; the graph-construction role was
         # normalized to an explicit merge before reaching this check.
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt, mi) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0
             return: l2_error(path, stmt, "assignment target must be a declared typed mutable value")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_colon_check_assignment(stmt, mi, path) != 0
             return: 1
@@ -25993,9 +26015,9 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # a typed reference local is (the ml branch above): the emission's l2_emit_admit before the formal's store; the
         # site puts the method on the throw channel.  The condition keys on the formal's model, the same for both
         # spellings; `v: w` is not v's call (a reference binding does not auto-call its referent).
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt) != 0 && l2_formal_find(mi, stmt\as\frame\head) >= 0 && l2_input_model(mi, l2_formal_find(mi, stmt\as\frame\head)) >= 0 && l2_admit_site(mi) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt, mi) != 0 && l2_formal_find(mi, stmt\as\frame\head) >= 0 && l2_input_model(mi, l2_formal_find(mi, stmt\as\frame\head)) >= 0 && l2_admit_site(mi) != 0
             return: 1
-        if: l2_is_asgn(stmt) != 0
+        if: l2_is_asgn(stmt, mi) != 0
             cj: l2_own_visible(mi, stmt\as\frame\head)
             if: cj >= 0 && l2_own_is_slot(cj) = 0 && l2_own_nsty_get(cj) >= 0 && l2_admit_site(mi) != 0
                 return: 1
@@ -27809,8 +27831,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     # measurement (steps/gate-measure-20260927.md): the same predef arm just
     # above returns before either name could reach them.
     # A held callable (steps/merge-callable-r48.md S1): called as the walk calls it, through its l2_mad_call helper.
-    if: idx < 0 && l2_mad_held(call\head) >= 0
-        return: l2_prep_held_call(node, l2_mad_held(call\head), mi, ind, dest)
+    if: idx < 0 && l2_call_head_held(mi, call\head) >= 0
+        return: l2_prep_held_call(node, l2_call_head_held(mi, call\head), mi, ind, dest)
     # A head the check admitted and no branch above emits is a translator gap: said here, at the frame, once.
     if: idx < 0
         return: l2_said_or(l2_src, node, d0, "internal: a call the emitter does not know")
@@ -29770,8 +29792,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
         # Item 739: a held callable's call is typed by its header's result (l2_mad_held_sig), not
         # as int -- the result comes back as a cell of that type (l2_mad_call's typed variants), so
         # the root never wraps the call in a conversion edge it does not need (REVIEW e639eca-1).
-        if: l2_mad_held(node\as\frame\head) >= 0
-            ty: l2_mad_held_ret_ty(l2_mad_held(node\as\frame\head))
+        if: l2_call_head_held(l2_rw_mi, node\as\frame\head) >= 0
+            ty: l2_mad_held_ret_ty(l2_call_head_held(l2_rw_mi, node\as\frame\head))
             if: ty >= 0
                 return: ty
             return: 0
@@ -34192,7 +34214,7 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         ---
         if: l2_rw_has_slash(t) != 0
             return: l2_rw_refuse(node, "a field path")
-        oi: l2_mad_held(t)
+        oi: l2_call_head_held(l2_rw_mi, t)
         if: oi >= 0
             return: l2_rw_mad_call(node, oi, parent, out)
         if: l2_text_eq(t, "length")
@@ -36599,6 +36621,14 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: l2_rw_put(into, slot, node) != 0
             return: 1
         return: 0
+    # A held callable of the site applied by a statement: its call, as in an expression.
+    if: idx < 0 && l2_call_head_held(l2_rw_mi, h) >= 0
+        if: l2_rw_mad_call(stmt, l2_call_head_held(l2_rw_mi, h), into, @ node) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_put(into, slot, node) != 0
+            return: 1
+        return: 0
     # One Array descriptor place, before raw-pointer and scalar path stores.
     k: l2_array_place(stmt, l2_rw_mi, @ array_place)
     if: k = 3
@@ -38046,6 +38076,50 @@ fn: l2_mad_held (const: @(LmP0Text name)) int
     if: oi < 0 || l2_mad_store_stmt(l2_own_decl[oi]) = 0
         return: 0 - 1
 return: oi
+
+# The held callable a call head names at its site, in method mi, or -1.  A binding of the site
+# that is not that callable -- a formal, another own row, a slot or a machine local of its
+# name -- blocks it, as a non-callable binding blocks a method of its name (l2_call_head_method).
+fn: l2_call_head_held (int: mi; const: @(LmP0Text head)) int
+    int: oi l2_mad_held(head)
+    int: own
+    if: oi < 0 || mi < 0
+        return: oi
+    own: l2_resolved_own(mi, head)
+    if: own >= 0 && own != oi
+        return: -1
+    if: l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
+        return: -1
+return: oi
+
+# Does the unit store a callable merge under this name, `name: make 5`?  That statement is the
+# declaration of a held callable.  This reads the source, as l2_unit_declares does, for the
+# passes that classify a method's statements before the root's rows are collected.
+fn: l2_unit_holds_callable (const: @(LmP0Text name)) int
+    @: LmP0Field field
+    if: l2_cur_unit = 0 || name = 0
+        return: 0
+    field: l2_next_active(l2_cur_unit\first_field)
+    while: field != 0
+        if: l2_mad_store_stmt(field\value) != 0 && l2_text_same(field\value\as\frame\head, name) != 0
+            return: 1
+        field: l2_next_active(field\next)
+    ---
+return: 0
+
+# Does a head name a held callable at its site?  Its row says so (l2_call_head_held); before
+# the root's rows are collected the unit's own statement does, unless a binding of the site
+# has the name.
+fn: l2_head_is_held (int: mi; const: @(LmP0Text head)) int
+    int: own
+    if: l2_call_head_held(mi, head) >= 0
+        return: 1
+    if: mi < 0 || l2_mad_held(head) >= 0 || l2_unit_holds_callable(head) = 0
+        return: 0
+    own: l2_own_visible(mi, head)
+    if: (own >= 0 && l2_own_mi[own] = mi) || l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
+        return: 0
+return: 1
 
 # The own-type code of a result code (unsigned is 33 as a result, 3 as an own).
 fn: l2_ret_own (int: code) int
@@ -40741,7 +40815,7 @@ fn: l2_merge_atom_settle (const: @(LmP0Node stmt)) @: LmP0Node
         return: 0
     # The statement must be an ordinary binding's (`l2_is_asgn`): a call of a method, a C door or another
     # receiver frame is not this spelling.
-    if: l2_is_asgn(stmt) = 0
+    if: l2_is_asgn(stmt, 0 - 1) = 0
         return: 0
     # The operands are the atoms after the receiver; a trailing Structure is the result body, the same
     # sibling the frame spelling carries, and it may come only last.
@@ -40831,7 +40905,7 @@ return: l2_merge_atom_settle(stmt)
 # reserved, the exact source row preserves that decision across later passes.
 fn: l2_merge_declaration (const: @(LmP0Structure body); const: @(LmP0Node stmt); int: mi) @: LmP0Node
     @: LmP0Node mf l2_merge_frame(stmt)
-    if: mf = 0 || l2_is_asgn(stmt) = 0
+    if: mf = 0 || l2_is_asgn(stmt, mi) = 0
         return: 0
     if: l2_own_find_decl(mi, stmt\as\frame\head, stmt) >= 0
         return: mf

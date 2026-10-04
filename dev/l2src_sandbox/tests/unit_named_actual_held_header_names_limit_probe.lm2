@@ -1,0 +1,19 @@
+# OPEN, a probe of what the translator does today and not a norm. make3
+# declares its result as fn: (int: p; int: q) int and returns f3, whose own
+# formals are x and y. The call h3(q: 2; p: 1) is bound by the names of the
+# declared header and reaches f3 by coordinate: 200 + 10 + 2. Whether a named
+# use by p and q is accepted by the interface of the callable f3 actually is,
+# is not settled: the actual descriptor has the names x and y, and no rule
+# that adapts one set of names to the other has been shown. Entry 7.
+fn: make3 (int: n) fn: (int: p; int: q) int
+    fn: f3 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f3
+
+h3: make3 200
+int: r h3(q: 2; p: 1)
+int: ok 7
+if: r != 212
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

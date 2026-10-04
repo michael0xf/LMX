@@ -1,0 +1,14 @@
+# OPEN, a probe of what the translator does today and not a norm: the other
+# side of unit_named_actual_held_header_names_limit_probe. make3 declares its
+# result as fn: (int: p; int: q) int and returns f3, whose own formals are x
+# and y. The call h3(y: 2; x: 1), by the names f3 actually has, is refused:
+# the binding takes the names of the declared header, and a Frame whose head
+# is none of them is an actual by place, here a call of an unknown y.
+fn: make3 (int: n) fn: (int: p; int: q) int
+    fn: f3 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f3
+h3: make3 200
+int: r h3(y: 2; x: 1)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

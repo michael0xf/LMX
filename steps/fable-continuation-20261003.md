@@ -2684,9 +2684,11 @@ does too. It ran before the slice of section 45 and runs after it.
 A held callable, `h2: make2 100`, is called by the formals of the header of
 its declared type: `make2` declares its result as `fn: (int: x; int: y) int`,
 and `x` and `y` are the names of a call of `h2`. They are not `make2`'s own
-input `n`, and they are not the names of the definition that `make2`
-returns: where the header says `p` and `q` and the returned definition says
-`x` and `y`, the call binds by `p` and `q`.
+input `n`. Where the header says `p` and `q` and the returned definition
+says `x` and `y`, the implementation binds the call by `p` and `q`.
+**Corrected in [section 47](#site-role):** that last sentence says what the
+translator does, not an approved rule; it is an OPEN discrepancy and the
+case left the positive fixture.
 
 - `l2_bind_node_content`: a Frame whose head is no method and is a held
   callable (`l2_mad_held`, the test the check and both emissions use) is
@@ -2752,7 +2754,8 @@ named actual of a held call; payloads that read the caller's locals of the
 formals' names; and the header whose names differ from the returned
 definition's. Four refusals: a name that is no formal, a formal given by
 place and again by name, a formal left out, and the names of the returned
-definition.
+definition. (The case of differing names and the last refusal became two
+labelled probes in [section 47](#site-role).)
 
 | Mutant | The native row | The walked row |
 | --- | --- | --- |
@@ -2805,3 +2808,178 @@ seven fixtures and the harness equal the live files and every staged copy
 **Next.** The statement and head role from the binding of the site: the
 statement call of a callable formal, the store under a method's name, the
 held callable hidden by a local. Then the receiving-use remainder.
+
+<a id="site-role"></a>
+## 47. The role of a statement and of a call head from the binding of the site (Codex, FABLE-CODEX-20261004-08)
+
+**Codex's reply to the checkpoint of section 46.**
+
+- The changed wording of the count refusals is accepted: the shared binding
+  reports a missing or an excess actual, and keeping the old words by a
+  branch on the callee's kind would have been wrong. The lower count tests
+  go in the ordinary cleanup once an inventory of their callers proves them
+  redundant; "no row reaches the old words" is not that proof.
+- The probe of published state stands as bounded evidence, with its limit of
+  depth: its silence is not the absence of every side effect inside a
+  payload.
+- **A known held callable applied by a statement is not the author's open
+  question.** The semantics, section 9 (`#construction`): "An existing
+  callable Structure, directly or through its held reference, is called; a
+  call error does not become declaration or assignment." Where the binding
+  of the site is the held callable, `h: v` is its application; it does not
+  turn into a reassignment because the value lives in an own row. A binding
+  of a number or a reference follows its own contract, and a local `int: h2`
+  blocks the root's held `h2`. `l2_call_head_method`'s -1 is not a verdict
+  "assignment": it leaves other callable categories to later routes. One
+  decision from the binding of the site to the category and the operation,
+  not a method-only classification beside a lookup of a held name by name.
+- **The differing header and definition names are not an approved
+  positive.** The earlier approval was for the returned callable's
+  description against the constructor's own inputs. It did not approve a
+  renaming of formals. The semantics: the named supplies of the actual use
+  must be accepted by the candidate's actual interface, with its canonical
+  names, and an exemplar signature does not replace that interface
+  (`#three-argument-implements`); the declared result type checks the
+  resulting callable and is not a third operand of the composition
+  (`#composition`, returned nested methods). The case is to be an OPEN
+  discrepancy with its reproducer kept, not a positive and not the evidence
+  of an aliasing rule.
+
+### The correction of section 46
+
+Section 46 stated that a held call binds by the names of the declared header
+"and not the names of the definition the constructor returns", and its
+fixture held a case with the header `(p, q)` over the definition `(x, y)`.
+That was the implementation's behaviour written as a rule. The case left
+`unit_named_actual_held`; the two programs are kept as labelled probes that
+hold only what the translator does today:
+
+| Probe | Today |
+| --- | --- |
+| `unit_named_actual_held_header_names_limit_probe`: `h3(q: 2; p: 1)` | bound by the header's names, reaches the definition by coordinate, 212 |
+| `unit_named_actual_held_definition_names_limit_probe`: `h3(y: 2; x: 1)` | refused, `unknown method` |
+
+Either the named use is not admitted by the interface the callable actually
+has, or a mechanism that forms an interface with the header's names exists
+and has to be shown. Neither is decided here
+([defects](defects.md#held-header-names-not-actual-interface)).
+
+### A regression of section 46, repaired here
+
+The held slice bound every Frame whose head has the name of a held callable
+of the root, with no look at the site. In a method with a local of that name
+the store `h2: h2 + 2` was bound as a call of the root's callable and
+refused, `h2 has no argument y`. No row of the gate had the shape, so the
+gate of section 46 did not see it; the fixture `unit_held_call_shadow` does.
+
+### One decision
+
+**The statement classifier takes its site.** `l2_is_asgn(stmt, mi)` asked
+the unit's methods by name: a statement was a call exactly when a method of
+the unit had its head's name. It now asks the head's role at the site, the
+one a call head has there (`l2_call_head_method`): a head that calls, a
+method or what a callable formal carries, is no assignment; a binding of the
+site that is no callable is assigned to, though a method of the unit has its
+name. That one change answers two defects that were each other's mirror: the
+statement call of a callable formal was a store, and a store under a method's
+name escaped the check of its value.
+
+**The held callable takes its site.** `l2_call_head_held(mi, head)` gives
+the held callable a head names in a method: a formal, another own row, a
+slot or a machine local of the name blocks it, as such a binding blocks a
+method of its name. The binding, the check, both emissions and the graph ask
+it where they asked `l2_mad_held` by name.
+
+**A held callable applied by a statement is its call.** `l2_is_asgn` and
+`l2_head_is_call` ask `l2_head_is_held`; the statement that stores the
+callable merge is that binding's own and is kept apart. The check and the
+native emission then take the ordinary route of a call statement, and the
+graph gets the branch beside the method's (`l2_rw_mad_call`).
+
+**The provisional reading had published a row.** With only the above, a
+method's statement `h2: 7 8` was still refused, `more arguments than h2 has
+formals`. The collector of assignment binds visits the methods before the
+root, so at its first pass the root's row for `h2` did not exist; the
+statement was read as a definition local to the method and got an own row
+there, and that row then stood between the method and the root's callable (a
+diagnostic print shows the name resolving to a row of the method in every
+later pass). This is the side effect Codex's reply to section 45 asked about,
+one level away from where the probe of section 46 looked: the declaring node
+was the statement itself, not a call's Frame. `l2_head_is_held` therefore
+asks the unit's source when the row is not collected yet
+(`l2_unit_holds_callable`, the statement that stores a callable merge under
+the name), as `l2_unit_declares` and `l2_unit_names_method` already do for
+the unit's other declarations.
+
+**What is not changed.** `l2_local_ns_shape` is untouched; it receives the
+method index its caller already had. The heads the author's open question is
+about, with no formal, no visible binding and no earlier read, resolve as
+before: every one of the 1549 recorded translations but the
+one fixed positive gives the same output. Two callers of the classifier have
+no site and ask the unit's methods alone, as before: `l2_empty_call_shape`
+and `l2_merge_atom_settle`. A second store of a callable merge under a name
+that already holds one, `h2: make2 200`, is still a store.
+
+### Replay
+
+The slice's translator against the committed one, on the 1549 translations
+recorded by `fable_full_22`:
+
+- Exit, messages and generated L1 are the same on 1548 rows. The other is
+  `unit_callable_formal_statement`, which now translates.
+- The allocation count differs on 4 rows: that fixture; its controls, higher
+  by 2; `unit_local_source_binding_context` and its walked twin, higher by 8.
+  In that program a scalar `f` of a local Structure is stored to in a unit
+  with a method `f`: the store is an assignment for the classifier now, and
+  its value is checked.
+- The site rule of the held callable alone, without the classifier's change,
+  gives the committed output and allocation counts on every row.
+
+
+### Rows
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_callable_formal_statement` | Green now. `p: x`, `p(x)`, `p(a: x)` and the nullary `q()` of a callable formal, in a unit with no method of those names. |
+| `unit_store_method_name_refused`, `unit_store_local_method_name_refused` | A store of a string into an int formal, and into an int local, under a method's name: refused as any such store. |
+| `unit_held_call_statement`, natively and walked | A held callable applied by statements at the root and in a method, in the paren and the colon form and by name; the method's first statement is such a call. The callable notes its actuals: the trace is 1234567890. |
+| `unit_held_call_shadow`, natively and walked | A number formal and a number local of the held callable's name are read and stored to; a method with neither calls the held callable. |
+| `unit_held_call_local_shadow_refused` | The call of a number local that hides the held callable: `unknown method`, as for a local that hides a method. |
+| `unit_named_actual_held` | The case of differing names removed: six cases. |
+| The two `..._limit_probe` rows | The OPEN discrepancy above. |
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart, and
+compared with the slice on its fixtures, natively and walked.
+
+| Mutant | What the slice's fixtures say |
+| --- | --- |
+| The statement classifier asks the unit's methods by name | `unit_callable_formal_statement` is refused, `assignment value has incompatible type`; the two stores under a method's name are accepted. |
+| A callable formal is a call, but a method's name still makes a statement a call | The two stores under a method's name are accepted. |
+| The held callable is found by its name alone | `unit_held_call_local_shadow_refused` is accepted; `unit_held_call_shadow` is refused, `h2 has no argument y`. |
+| No statement role for a held callable | `unit_held_call_statement` is refused, `more arguments than h2 has formals`. |
+| The held role asked of the collected rows only, not of the unit's statement | The same refusal: the method's statement gets a row of its own before the root is collected. |
+| The graph has no branch for a held callable applied by a statement | `unit_held_call_statement` is refused, `not walkable yet`. |
+| The statement that stores the callable merge is not kept apart | Every fixture with a held callable is refused, `unresolved name`. |
+
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_10` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_10` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_23` (full harness) | RED 31 of 1558. Against `fable_full_22` (RED 32 of 1550): FAIL→OK 1, `unit_callable_formal_statement`; OK→FAIL 0; added 9, all green; removed 1, the refusal row renamed to a probe; no red row's message changed. |
+| `build/l2_harness/fable_role_01` (focused, before the gate) | 301 rows of held callables, callables, stores, local sources and named Structures: red only nine rows of the baseline. |
+
+The 31 red rows are the 29 of `fable_full_17` and two labelled OPEN
+positives: `unit_recv_use_nested_dormant`, `unit_recv_use_passed_thin`. The
+pre-gate hashes of the translator, the nine fixtures and the harness equal
+the live files and every staged copy (`tie.py`).
+
+
+**Next.** The receiving-use remainder with section 42's OPEN positives, then
+nested admission and the capture closure. Recorded for the ordinary cleanup:
+the count tests of a held call below the binding, after an inventory of
+their callers.

@@ -4,9 +4,8 @@
 # actuals named, against their order (1); one by place, one by name (2);
 # actuals with an effect, evaluated in written order: the trace is 12 (3); a
 # held call as a named actual of a held call (4); payloads that read the
-# caller's locals of the formals' names (5). The header of h3's type names
-# its formals p and q while the definition make3 returns names them x and y:
-# the call binds by the header's names (6). Entry 7.
+# caller's locals of the formals' names (5). The header and the definition
+# that make2 returns name the formals alike. Entry 7.
 int: trace 0
 
 fn: mark (int: t; int: v) int
@@ -23,13 +22,7 @@ fn: make2 (int: n) fn: (int: x; int: y) int
         return: n + x * 10 + y
     return: f2
 
-fn: make3 (int: n) fn: (int: p; int: q) int
-    fn: f3 (int: x; int: y) int
-        return: n + x * 10 + y
-    return: f3
-
 h2: make2 100
-h3: make3 200
 
 fn: named () int
     return: h2(y: 2; x: 1)
@@ -53,10 +46,6 @@ fn: names () int
     return: h2(y: x; x: y)
 end: names
 
-fn: header () int
-    return: h3(q: 2; p: 1)
-end: header
-
 int: r0 h2(y: 2; x: 1)
 int: r1 named()
 int: r2 mixed()
@@ -64,7 +53,6 @@ int: r3 order()
 int: t seen()
 int: r4 nested()
 int: r5 names()
-int: r6 header()
 int: ok 7
 if: r0 != 112
     ok: 80
@@ -80,7 +68,5 @@ if: r4 != 121
     ok: 85
 if: r5 != 187
     ok: 86
-if: r6 != 212
-    ok: 87
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

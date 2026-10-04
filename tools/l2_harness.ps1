@@ -7227,27 +7227,37 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_actual_index_growth_walk.lm2'; Source = 'unit_named_actual_index_growth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     # A held callable called with named actuals.  Its formals are those of the header of its declared
-    # callable type (the result signature its constructor declares), not the constructor's inputs and
-    # not the names of the definition the constructor returns.  The binding binds them as a method's;
+    # callable type (the result signature its constructor declares), not the constructor's inputs.
+    # The binding binds them as a method's;
     # native code evaluates the actuals in written order into their formals' places; the retained
     # PRIM_PUB keeps a named actual at its written place under NAMED with its coordinate among the
     # primitive's inputs (the callable is input 0).  The refusals are a method's, in a method's words.
+    # The header and the returned definition name the formals alike here; where they differ is OPEN,
+    # the two probes below.
     # Mutants: the binding does not bind a held call, or the check reads the written body -- "unknown
     # method"; the header's names reversed -- refused; native code in the formals' order -- the native
     # row's trace, exit 84; the graph operand at its formal's place -- the walked row's trace, exit 84;
     # NAMED with the formal's index for its coordinate -- the walk refuses, INVALID; no NAMED -- exit 87.
     [pscustomobject]@{ Name = 'unit_named_actual_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        NativeMethods = @(0,1,6,7,8,9,10,11); Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,4,5,6,7,8); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_walk.lm2'; Source = 'unit_named_actual_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,6,7,8,9,10,11); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5,6,7,8); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_actual_held_name_refused.lm2:9:17: the argument x of h2 is given by position (z:) and again by name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_again_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_actual_held_again_refused.lm2:8:13: the argument x of h2 is given by position and again by name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_actual_held_missing_refused.lm2:8:8: h2 has no argument x'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_actual_held_definition_names_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_actual_held_definition_names_refused.lm2:10:11: unknown method'; Absent = @(); Debt = @() },
+    # OPEN (Codex, FABLE-CODEX-20261004-08), two temporary probes of what the translator does and no
+    # norm: a constructor declares its result's header with the names p and q and returns a definition
+    # whose own formals are x and y.  A call by p and q is bound by the header and reaches the
+    # definition by coordinate; a call by x and y is refused.  Whether the named use is accepted by the
+    # interface the callable actually has is not settled, and no rule that adapts the names has been
+    # shown.  The probes go when the admission is decided; they are not evidence of either answer.
+    [pscustomobject]@{ Name = 'unit_named_actual_held_header_names_limit_probe.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_held_definition_names_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_held_definition_names_limit_probe.lm2:12:11: unknown method'; Absent = @(); Debt = @() },
     # The neighbour of the reading path of l2_declaration (Codex, FABLE-CODEX-20261004-07): a named
     # Structure whose body is one call with named actuals stays a definition whose body runs the call;
     # the stop at a call is the declaration reader's own nesting, not a rule for an enclosing Structure.
@@ -7255,16 +7265,37 @@ $fixtures = @(
         Says = @('f 9 2', 'f 8 3', 'f 9 2'); NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_structure_body_walk.lm2'; Source = 'unit_named_actual_structure_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Says = @('f 9 2', 'f 8 3', 'f 9 2'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0); Absent = @(); Debt = @() },
-    # OPEN (Codex, FABLE-CODEX-20261004-06): a callable formal called as a statement.  `p: x`, `p(x)` and
-    # `p(a: x)` with p a formal declared by a method's signature are the call of what p carries; in a
-    # unit with no method named p the statement is taken for a store to the formal and refused,
-    # "assignment value has incompatible type".  A required positive, red until the statement
-    # classifier asks the shared call-role decision.  The controls run today: the same call in an
-    # expression, by place and by name; a number formal of that name, which is stored to; a callable
-    # formal named like a method of the unit, which calls what the formal carries; a method called as
-    # a statement.  Native rows: the walked profile excludes callable formals.
+    # The role of a statement and of a call head comes from the binding of the site (Codex,
+    # FABLE-CODEX-20261004-06 and -08).  A callable formal called as a statement, `p: x`, `p(x)`,
+    # `p(a: x)`, `q()`, is the call of what the formal carries, though the unit has no method of that
+    # name.  A number formal or local is stored to, and its value checked, though the unit has a method
+    # of its name.  A held callable of the root applied by a statement is its call, at the root and in
+    # a method, also as the method's first statement; a local or a formal of its name hides it, and the
+    # call of such a local is refused as the call of a local that hides a method is.  The controls ran
+    # before the change.  The rows with a callable formal are native: the walked profile excludes them.
+    # Mutants: the statement classifier asks the unit's methods by name -- the formal's statement is
+    # refused and the two stores are accepted; a method's name still makes a statement a call -- the two
+    # stores are accepted; the held callable found by name alone -- the shadowed call is accepted and
+    # the store to the local refused; no statement role for a held callable, or its role asked of the
+    # collected rows only -- "more arguments than h2 has formals"; no branch of the graph for it --
+    # "not walkable yet"; the statement that stores the callable merge not kept apart -- every unit
+    # with a held callable is refused, "unresolved name".
     [pscustomobject]@{ Name = 'unit_callable_formal_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_store_method_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_store_method_name_refused.lm2:10:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_store_local_method_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_store_local_method_name_refused.lm2:9:5: assignment value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_statement_walk.lm2'; Source = 'unit_held_call_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_shadow_walk.lm2'; Source = 'unit_held_call_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_local_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_local_shadow_refused.lm2:11:13: unknown method'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     # A throw raised while an actual is evaluated (found beside the named actuals, and no matter of them):

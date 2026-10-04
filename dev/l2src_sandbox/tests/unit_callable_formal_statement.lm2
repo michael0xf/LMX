@@ -1,16 +1,21 @@
-# OPEN. A callable formal called as a statement. p is declared with note's
-# signature and is given note: `p: x`, `p(x)` and `p(a: x)` are the call of
-# what p carries, as they are in an expression. note adds its actual to the
-# trace: 7, then 8, then 9. In a unit with no method named p the statement is
-# taken for a store to the formal and refused: "assignment value has
-# incompatible type", and for the named form "assignment value has unknown
-# type". Entry 7.
+# A callable formal called as a statement. p is declared with note's signature
+# and is given note: `p: x`, `p(x)` and `p(a: x)` are the call of what p
+# carries, as they are in an expression; `q()` is the call of a formal that
+# takes nothing. note adds its actual to the trace and tick adds 3: 7, 8, 9,
+# 3. The role of the statement comes from the binding of its site: the unit
+# has no method named p or q, and the formal is no number to store to.
+# Entry 7.
 int: trace 0
 
 fn: note (int: a) int
     node\trace: node\trace * 10 + a
     return: a
 end: note
+
+fn: tick () int
+    node\trace: node\trace * 10 + 3
+    return: 3
+end: tick
 
 fn: seen () int
     return: node\trace
@@ -31,11 +36,17 @@ fn: named (note: p; int: x) int
     return: 0
 end: named
 
+fn: nullary (tick: q) int
+    q()
+    return: 0
+end: nullary
+
 int: z1 colon(note 7)
 int: z2 paren(note 8)
 int: z3 named(note 9)
+int: z4 nullary(tick)
 int: ok 7
-if: seen() != 789
+if: seen() != 7893
     ok: 81
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

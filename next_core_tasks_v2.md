@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_22` RED32/1550 — 97 FAIL→OK against that
-baseline, OK→FAIL 0; the three red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_09` GREEN296 with 113 executed
-selftests; L3 `fable_l3_09`
-([gates](steps/fable-continuation-20261003.md#held-named-binding)). The checkpoint gate
+continuation bytes: `fable_full_23` RED31/1558 — 97 FAIL→OK against that
+baseline, OK→FAIL 0; the two red rows above the 29 of `fable_full_17` are
+labelled OPEN positives; kernel `fable_kernel_10` GREEN296 with 113 executed
+selftests; L3 `fable_l3_10`
+([gates](steps/fable-continuation-20261003.md#site-role)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -148,14 +148,18 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   ([ledger](steps/fable-continuation-20261003.md#held-named-binding)). The
   interpreter does not yet run a callable formal's invocation
   (`--walk-methods` excludes callable formals).
-- [ ] The role of a statement and of a call head from the binding of the
-  site (Codex rulings FABLE-CODEX-20261004-06 and -07), one decision for
-  three defects: a callable formal called as a statement is taken for a
-  store ([defects](steps/defects.md#callable-formal-statement-store)); a
-  store to a number binding escapes its check under a method's name
-  ([defects](steps/defects.md#store-unchecked-under-method-name)); a local
-  does not hide the root's held callable
-  ([defects](steps/defects.md#held-call-ignores-site-binding)).
+- [x] The role of a statement and of a call head from the binding of the
+  site (Codex rulings FABLE-CODEX-20261004-06 and -08): a callable formal
+  called as a statement is its call; a store to a number binding is checked
+  under a method's name too; a local hides the root's held callable; a held
+  callable applied by a statement is its call
+  ([ledger](steps/fable-continuation-20261003.md#site-role)).
+- [ ] A held callable whose declared result header and returned definition
+  name their formals differently: the binding takes the header's names
+  today; whether that named use is admitted by the callable's actual
+  interface is OPEN, and G5 stays open with it (Codex ruling
+  FABLE-CODEX-20261004-08)
+  ([defects](steps/defects.md#held-header-names-not-actual-interface)).
 - [x] With the methods walked, a throw raised while an operand is evaluated
   leaves the outer CALL or PRIM with its own number, landing and payload: the
   outer operation takes the payload and applies its catch rows only for its

@@ -2146,9 +2146,9 @@ int: w f(b: mark(1); a: mark(2))
 [§43 журнала](fable-continuation-20261003.md#written-body-kept).
 
 <a id="callable-formal-statement-store"></a>
-### CALLABLE-FORMAL-STATEMENT-STORE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-06, OPEN
+### CALLABLE-FORMAL-STATEMENT-STORE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-06, FIXED в sandbox (не выпущено)
 
-Вызов callable-формала, записанный оператором, принимается за запись в формал:
+Вызов callable-формала, записанный оператором, принимался за запись в формал:
 
 ```text
 fn: note (int: a) int ...
@@ -2171,13 +2171,45 @@ fn: named (note: p; int: x) int
 форме с двоеточием или только для формалов; категория берётся из объявленного callable-контракта, а
 не из указательного транспорта; лексическое затенение сохраняется.
 
-Обязательный позитив, красный: `unit_callable_formal_statement`. Соседние контроли, зелёные:
-`unit_callable_formal_statement_controls` — вызов в выражении позиционно и по имени, числовой
-формал с тем же именем (в него действительно записывают), callable-формал с именем метода юнита,
-вызов метода оператором. Строки нативные: обход методов callable-формалы исключает.
+Исправлено: классификатор операторов получил место (`l2_is_asgn(stmt, mi)`) и спрашивает роль
+заголовка там же, где её спрашивает заголовок вызова. По тому же решению оператор с заголовком —
+удерживаемым callable — его вызов (ответ Codex -08), на корне и в методе. Позитив
+`unit_callable_formal_statement` зелёный (добавлен нульарный случай `q()`), контроли
+`unit_callable_formal_statement_controls` зелёные; `unit_held_call_statement` — вызов удерживаемого
+callable оператором. Строки с callable-формалом нативные: обход методов их исключает
+([§47 журнала](fable-continuation-20261003.md#site-role)).
+
+<a id="held-header-names-not-actual-interface"></a>
+### HELD-HEADER-NAMES-NOT-ACTUAL-INTERFACE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-08, OPEN
+
+Конструктор объявляет заголовок результата с одними именами формалов, а возвращает определение с
+другими:
+
+```text
+fn: make3 (int: n) fn: (int: p; int: q) int
+    fn: f3 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f3
+h3: make3 200
+h3(q: 2; p: 1)      # сейчас: привязано по именам заголовка, доходит до f3 по координате, 212
+h3(y: 2; x: 1)      # сейчас: отказ, unknown method
+h3(1 2)             # позиционно транслируется
+```
+
+Реализация берёт имена для привязки из объявленного заголовка. Норма этого не утверждает:
+именованные фактические действительного использования должен принимать действительный интерфейс
+кандидата с его каноническими именами, сигнатура-образец этот интерфейс не заменяет
+(`#three-argument-implements`); объявленный тип результата проверяет получившийся callable и не
+становится третьим операндом композиции (`#composition`, возвращаемые вложенные методы). Правила,
+которое переводит `p`, `q` в `x`, `y`, не показано. Либо именованное использование по `p` и `q` не
+должно допускаться интерфейсом `f3`, либо существует явный механизм, формирующий интерфейс с
+именами заголовка, и его нужно показать. Не решено. Репродьюсеры — две помеченные временные пробы
+текущего поведения, не позитив и не отказ по норме:
+`unit_named_actual_held_header_names_limit_probe`,
+`unit_named_actual_held_definition_names_limit_probe`. Пока расхождение открыто, G5 не закрывается.
 
 <a id="held-call-ignores-site-binding"></a>
-### HELD-CALL-IGNORES-SITE-BINDING — 2026-10-04, fable, OPEN
+### HELD-CALL-IGNORES-SITE-BINDING — 2026-10-04, fable, FIXED в sandbox (не выпущено)
 
 Локал, который не callable и назван как удерживаемый callable корня, его не заслоняет:
 
@@ -2189,13 +2221,17 @@ fn: use () int
 ```
 
 Метод, заслонённый таким локалом, отвергается: `unknown method` у вызова. Удерживаемый callable
-ищется по имени среди собственных строк корня (`l2_mad_held`), без привязки места. Воспроизводится
-на трансляторе до среза §46. То же семейство, что
-[CALLABLE-FORMAL-STATEMENT-STORE](#callable-formal-statement-store): роль заголовка решается без
-привязки места.
+искался по имени среди собственных строк корня (`l2_mad_held`), без привязки места.
+
+Исправлено: `l2_call_head_held(mi, head)` — формал, другая собственная строка, слот или машинный
+локал с этим именем заслоняют удерживаемый callable, как заслоняют метод. Привязка, проверка, обе
+эмиссии и граф спрашивают его. Срез §46 сделал хуже: привязка стала привязывать и запись в такой
+локал как вызов (`h2 has no argument y`); это исправлено здесь же. Свидетели —
+`unit_held_call_local_shadow_refused`, `unit_held_call_shadow`
+([§47 журнала](fable-continuation-20261003.md#site-role)).
 
 <a id="store-unchecked-under-method-name"></a>
-### STORE-UNCHECKED-UNDER-METHOD-NAME — 2026-10-04, fable, OPEN
+### STORE-UNCHECKED-UNDER-METHOD-NAME — 2026-10-04, fable, FIXED в sandbox (не выпущено)
 
 Запись в числовой формал или локал не проверяется, если в юните есть метод с тем же именем:
 
@@ -2207,9 +2243,13 @@ fn: stored (int: p; int: x) int
 
 Без метода `p` в юните та же запись отвергается: 2:5 «assignment value has incompatible type».
 Классификатор операторов `l2_is_asgn` не считает присваиванием оператор, чей заголовок совпадает с
-именем метода юнита, и проверка значения пропускается. Это вторая сторона
+именем метода юнита, и проверка значения пропускалась. Это вторая сторона
 [CALLABLE-FORMAL-STATEMENT-STORE](#callable-formal-statement-store): выбор между вызовом и записью
-делается по глобальному имени метода, а не по привязке места.
+делался по глобальному имени метода, а не по привязке места.
+
+Исправлено: `l2_is_asgn(stmt, mi)` спрашивает роль заголовка на месте (`l2_call_head_method`).
+Свидетели — `unit_store_method_name_refused`, `unit_store_local_method_name_refused`
+([§47 журнала](fable-continuation-20261003.md#site-role)).
 
 <a id="named-actual-binding-reach"></a>
 ### NAMED-ACTUAL-BINDING-REACH — 2026-10-04, fable, FIXED в sandbox (не выпущено)
@@ -2232,8 +2272,10 @@ h2(y: 2; x: 1)               # h2 — удерживаемый callable с за�
 метод, и `l2_call_head_method` возвращает -1; формалы у такого вызова есть — это формалы заголовка
 объявленного callable-типа. Привязка теперь берёт их имена оттуда и привязывает вызов так же, как
 вызов метода; нативный код и удержанный граф сохраняют порядок записи. Позитив
-`unit_named_actual_held` переписан (семь случаев, нативно и с обходом), четыре отказа — словами
-вызова метода ([§46 журнала](fable-continuation-20261003.md#held-named-binding)).
+`unit_named_actual_held` переписан (шесть случаев, нативно и с обходом), три отказа — словами
+вызова метода ([§46 журнала](fable-continuation-20261003.md#held-named-binding)). Случай разных
+имён у заголовка и определения вынесен в открытое расхождение
+[HELD-HEADER-NAMES-NOT-ACTUAL-INTERFACE](#held-header-names-not-actual-interface).
 
 <a id="declaration-cache-outlives-role"></a>
 ### DECLARATION-CACHE-OUTLIVES-ROLE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-05, FIXED в sandbox (не выпущено)

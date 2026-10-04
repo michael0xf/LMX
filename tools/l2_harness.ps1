@@ -7200,14 +7200,23 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    # Found beside them, and no matter of named actuals: a throwing call that is an actual of another
-    # call.  Natively its payload reaches the handler.  OPEN with the methods walked: the payload is
-    # lost and the run stops at the kernel's "catch payload" invariant; the walked row is a required
-    # positive and stays red.
+    # A throw raised while an actual is evaluated (found beside the named actuals, and no matter of them):
+    # it reaches the caller's handler with the payload it was thrown with, and neither the actuals after it
+    # nor the callee run.  With the methods walked the outer CALL or PRIM used to replace the payload with
+    # its own empty result and to apply its own catch rows to a throw that was not its callee's; the run
+    # stopped at the kernel's "catch payload" invariant.  Controls: the same throw returned directly and
+    # through a local.  Cases: an actual of a call, of an actual, of a named call inside a named call, between
+    # two marked actuals (the trace says which ran), of a held callable's call (a PRIM), and of a callee
+    # with a throw name of its own inside a block that catches both names (the outer call's row would
+    # send the throw to the other handler: 53).  boom and wide keep their native word in the walked row:
+    # a throw with a payload is machine text.  Kernel mutants (lmx_walk_catch_selftest kills all six;
+    # this fixture's walked row in an isolated copy): the old code and the payload replaced, for CALL and
+    # for PRIM -- the "catch payload" invariant, exit 3; the CALL's rows applied -- exit 89; the PRIM's
+    # rows applied -- the selftest alone.
     [pscustomobject]@{ Name = 'unit_throw_nested_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2,3,4,5,6,7,8,9,10,11,12,14,15,16,17); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_throw_nested_actual_walk.lm2'; Source = 'unit_throw_nested_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5,6,7,8,9,10,11,12,14,16,17); NativeMethods = @(4,15); Absent = @(); Debt = @() },
     # A free name under the type checks (book :1180, :1182; steps/free-names.md): a dynamic input is a value of its
     # binding's type, under the rule a local of that type is under.  The check reads types before l2_dyn_close gives
     # the inputs theirs, so a check whose value (or the hidden argument it assigns) reads an input without a type

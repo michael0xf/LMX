@@ -1,12 +1,34 @@
-# A throwing call that is an actual of another call: thrower returns
-# f(boom(3 3) 0), boom throws Oops(3), and catcher's handler takes the
-# payload: 3 + 4. Natively it runs. OPEN with the methods walked: the payload
-# does not reach the handler and the run stops at "lmx: invariant: catch
-# payload". The same throw written `return: boom(3 3)` or through a local
-# reaches it. Entry 7.
+# A throw raised while an actual is evaluated reaches the caller's handler with
+# the payload it was thrown with, wherever the throwing call stands. boom(3 3)
+# throws Oops(3) and the handler gives 3 + 4. The controls: the call returned
+# directly (1) and through a local (2). The cases: an actual of another call
+# (3), an actual of an actual (4), a named actual of a call that is itself
+# named (5), and an actual between two others (6): mark(1) runs, mark(2) and
+# the callee g do not, so the trace is 1 and not 12 or 129. calm (7) passes
+# the same places without a throw: 9 - 2. An actual of a held callable's call
+# (8): the callable does not run. An actual of a callee with a throw name of
+# its own, in a block that catches both (9): wide's Other and boom's Oops are
+# each the first name of its method, and the throw stays boom's Oops; taken
+# for wide's, it would reach the other handler and give 53. Entry 7.
+int: trace 0
+
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
 fn: f (int: a; int: b) int
     return: a - b
 end: f
+
+fn: g (int: a; int: b; int: c) int
+    node\trace: node\trace * 10 + 9
+    return: a + b + c
+end: g
 
 fn: boom (int: a; int: b) int
     throws: Oops
@@ -15,24 +37,128 @@ fn: boom (int: a; int: b) int
     return: a - b
 end: boom
 
-fn: thrower () int
+fn: direct () int
+    throws: Oops
+    return: boom(3 3)
+end: direct
+
+fn: local () int
+    throws: Oops
+    int: t boom(3 3)
+    return: f(t 0)
+end: local
+
+fn: nested () int
     throws: Oops
     return: f(boom(3 3) 0)
-end: thrower
+end: nested
 
-fn: catcher () int
+fn: deeper () int
+    throws: Oops
+    return: f(f(boom(3 3) 0) 1)
+end: deeper
+
+fn: named () int
+    throws: Oops
+    return: f(b: 0; a: boom(b: 3; a: 3))
+end: named
+
+fn: order () int
+    throws: Oops
+    return: g(mark(1) boom(3 3) mark(2))
+end: order
+
+fn: calm () int
+    throws: Oops
+    return: f(boom(9 2) 0)
+end: calm
+
+fn: make (int: n) fn: (int: x) int
+    fn: add (int: x) int
+        return: n + x
+    return: add
+
+h: make 100
+
+fn: held () int
+    throws: Oops
+    return: h(boom(3 3))
+end: held
+
+fn: wide (int: a; int: b) int
+    throws: Other
+    if: a > 100
+        throw: Other(a)
+    return: a - b
+end: wide
+
+fn: both () int
     int: got 0
     ---
-        got: thrower()
+        got: wide(boom(3 3) 0)
+        catch: Oops (int: v)
+            got: v + 4
+        catch: Other (int: w)
+            got: w + 50
+    ---
+    return: got
+end: both
+
+fn: caught (int: which) int
+    int: got 0
+    ---
+        if: which = 1
+            got: direct()
+        if: which = 2
+            got: local()
+        if: which = 3
+            got: nested()
+        if: which = 4
+            got: deeper()
+        if: which = 5
+            got: named()
+        if: which = 6
+            got: order()
+        if: which = 7
+            got: calm()
+        if: which = 8
+            got: held()
         catch: Oops (int: v)
             got: v + 4
     ---
     return: got
-end: catcher
+end: caught
 
-int: r0 catcher()
+int: r1 caught(1)
+int: r2 caught(2)
+int: r3 caught(3)
+int: r4 caught(4)
+int: r5 caught(5)
+int: r6 caught(6)
+int: r7 caught(7)
+int: r8 caught(8)
+int: r9 both()
+int: t seen()
 int: ok 7
-if: r0 != 7
-    ok: 80
+if: r1 != 7
+    ok: 81
+if: r2 != 7
+    ok: 82
+if: r3 != 7
+    ok: 83
+if: r4 != 7
+    ok: 84
+if: r5 != 7
+    ok: 85
+if: r6 != 7
+    ok: 86
+if: r7 != 7
+    ok: 87
+if: r8 != 7
+    ok: 88
+if: r9 != 7
+    ok: 89
+if: t != 1
+    ok: 90
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

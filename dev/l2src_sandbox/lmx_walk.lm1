@@ -1403,6 +1403,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     size_t: arg_at 5U
     int: status c.LMX_WALK_OK
     int: said 0
+    int: called 0
     int: short_ok 0
     int: exec (cast: (int) (lmx_walk_op(f, (cast: (@: void) code)) = c.LMX_WALK_OP_EXEC))
     @: void third 0
@@ -1491,6 +1492,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: status = c.LMX_WALK_OK
         status: lmx_walk_publish(f)
     if: status = c.LMX_WALK_OK
+        called: 1
         if: addr != 0
             entry: (cast: (LmxPrimitiveEntry) addr)
             dest: lmx_walk_native_dest(f, rtype, @ temp)
@@ -1512,7 +1514,11 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     # A void body may execute valued statements, but does not return their value.
     if: status = c.LMX_WALK_OK && rtype = 0
         lmx_walk_value_clear(out)
-    if: status >= c.LMX_WALK_THROWN
+    # The callee's own throw: its payload is this call's, and this call's catch
+    # rows map its number.  A throw raised while an operand was evaluated is the
+    # operand's: the callee did not run, the payload and the number are already
+    # the ones the throwing operation set, and they leave unchanged.
+    if: status >= c.LMX_WALK_THROWN && called != 0
         f\payload: out\ref
         if: catch_n != 0U
             status: lmx_walk_catch_scan(f, code, arg_at + n, catch_n, status)
@@ -1536,6 +1542,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     size_t: catch_n 0U
     int: status c.LMX_WALK_OK
     int: said 0
+    int: called 0
     lmx_walk_value_clear(out)
     if: code\array.size < 3U
         return: c.LMX_WALK_INVALID
@@ -1558,6 +1565,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: status = c.LMX_WALK_OK && lmx_walk_node(f, (cast: (@: void) code)) = c.LMX_WALK_OP_PRIM_PUB
         status: lmx_walk_publish(f)
     if: status = c.LMX_WALK_OK
+        called: 1
         dest: lmx_walk_native_dest(f, witness, @ temp)
         said: record\fn(record\owner, refs, n, dest, @ raw)
         if: lmx_msg_poll_escape() != 0
@@ -1577,7 +1585,9 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
             ---
         ---
     ---
-    if: status >= c.LMX_WALK_THROWN
+    # As in lmx_walk_call: only the primitive's own throw takes its payload and
+    # its catch rows; an operand's throw leaves as the operand set it.
+    if: status >= c.LMX_WALK_THROWN && called != 0
         f\payload: raw
         lmx_walk_value_ref(out, c.LMX_TYPE_LMX, raw)
         if: catch_n != 0U

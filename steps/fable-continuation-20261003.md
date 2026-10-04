@@ -2266,3 +2266,134 @@ and `fable_full_19` is the gate of the committed bytes. Between the two: three
 rows added, all green, nothing else changed. The pre-gate hashes of the
 translator, the 15 fixtures and the harness equal the live files and every
 staged copy (`tie.py`).
+
+<a id="operand-throw"></a>
+## 44. A throw raised while an operand is evaluated; the order after section 43 (Codex, FABLE-CODEX-20261004-05)
+
+Codex inspected `3e5db011` and took it as a bounded development checkpoint:
+it closes neither G5 nor the decoder and comments obligations. Its reply,
+given without escalation to the author:
+
+- **Views.** Semantic readers stay on the actuals. Source order,
+  containment, source diagnostics and the codec's traversal stay on the
+  written body. A count of fields and the bounds of a traversal refer to the
+  same chosen view, and neither the physical field count nor the count of
+  written actuals is by itself a callable's arity.
+- **The role in `l2_declaration`.** The early answer for a resolved call is
+  right. Its criterion is the established call role, not the named syntax,
+  and an earlier cached classification must not override a later resolved
+  role: today the cache lookup stands before the test. The phase and cache
+  invariant is to be verified, not covered by guessed checks per field or by
+  an exception for named calls.
+- **The binding's memory** is an exact owner: compiler-owned binding storage,
+  with one reset and release boundary on success and on failure.
+- **Containment** stays source-only. A synthetic projection operation is
+  diagnosed through the written wrapper, payload or span it comes from.
+- **Both binding-reach positives are required before G5**, through the shared
+  expression and body entry and the resolved actual signature of the
+  callable: no reparser for indexes alone, no branch by name, not the
+  constructor's own prototype, no invented adapter of no inputs. Written
+  evaluation order and transport by formal coordinate are kept.
+- **Order.** First
+  [WALK-THROW-PAYLOAD-NESTED-ACTUAL](defects.md#walk-throw-payload-nested-actual)
+  and the expression-head reach, as separate bounded slices. Then the held
+  call's named binding through its actual signature; a real capture or
+  signature prerequisite is to be named exactly and done first. Then the
+  receiving-use remainder with [section 42](#receiving-use-follow-up)'s OPEN
+  positives, then nested admission and the capture closure in dependency
+  order. UNKNOWN does not become EMPTY or a claimed normative
+  incompatibility. No pointer implementation, stable promotion or self-build
+  on RED34/1534. The super-linear translation time stays a measured debt.
+- **Process.** A stop request is not proof that descendants stopped: they are
+  verified to have exited before the stage is reused.
+
+This section is the first of those slices.
+
+**The defect.** With the methods walked, `return: f(boom(3 3) 0)` lost the
+payload of boom's `Oops(3)` and the run stopped at the kernel's
+`catch payload` invariant. Written as `return: boom(3 3)` or through a local,
+the same throw reached its handler, and natively all three ran.
+
+**The cause is in the kernel.** `lmx_walk_call` (CALL, EXEC) and
+`lmx_walk_prim` (PRIM, PRIM_PUB) evaluate their operands and then run their
+callee. After both they asked one question, whether the operation ended in a
+throw, and took the answer for the callee's throw: the frame's payload was
+set from the operation's own result, and the operation's catch rows were
+applied to the number. A throw raised while an operand was evaluated is not
+the callee's. The callee did not run and the operation's result is empty:
+that is the lost payload. The operation's rows are keyed by its callee's
+throw numbers, while the number that arrives from the operand is already the
+caller's: the operand's own rows mapped it to a pad of the caller or
+renumbered it to the caller's exit. Applied to it, the rows of another
+callee send the throw to another handler or renumber it once more.
+
+**The fix.** Each of the two operations notes that it reached its callee and
+takes the payload and applies its rows only then. An operand's throw leaves
+the operation as the operand set it: the same number, the same landing, the
+same payload. No operation is added and none is special:
+`lmx_walk_actuals` already stopped at the first operand that did not return
+OK, so the remaining operands and the callee were already not run. The third
+place that sets a payload and scans rows, the admission check, raises only
+its own throw and returns an operand's status before that. The translator is
+unchanged.
+
+**Witnesses.** The kernel selftest `lmx_walk_catch_selftest` gains nine
+checks, 34 in all. With a PRIM and with a CALL as the outer operation: an
+operand's throw lands on its pad, the handler reads the operand's payload,
+the outer callee is not run; with no pad the operand's renumbered throw
+passes the outer operation's rows unchanged, though a row for that number
+stands there; an operand written after the one that threw is not evaluated.
+
+The fixture `unit_throw_nested_actual` holds nine cases, natively and with
+the root and the methods walked:
+
+| Case | What it holds |
+| --- | --- |
+| 1, 2 | Controls: the throwing call returned directly and through a local. |
+| 3, 4 | The throwing call as an actual, and as an actual of an actual. |
+| 5 | The throwing call as a named actual of a call that is itself named. |
+| 6 | The throwing call between two actuals with an effect: the first runs, the second and the callee do not. The trace is 1. |
+| 7 | The same places with no throw. |
+| 8 | An actual of a held callable's call, a PRIM: the callable does not run. |
+| 9 | An actual of a callee with a throw name of its own, in a block that catches both names. Both names are the first of their methods; taken for the callee's, the throw would reach the other handler. |
+
+The walked row walks every method but `boom` and `wide`, whose throw with a
+payload is machine text; the row names them.
+
+**Mutants.** Six mutants of the kernel, three for each operation. Each was
+run against the kernel selftest, and against the fixture's walked row in an
+isolated copy of the tree with nothing else running there.
+
+| Mutant | Kernel selftest | The fixture's walked row |
+| --- | --- | --- |
+| None | 34 checks, no failure | green |
+| CALL as before the fix: the payload and the rows taken for any throw | exit 3, `lmx: invariant: catch payload` | exit 3, the same invariant |
+| CALL: the payload kept, the rows applied to an operand's throw | 1 of 34 fails: `operand throw is not renumbered by the CALL's rows` | exit 89: case 9 reaches the other handler |
+| CALL: the rows kept apart, the payload replaced | exit 3, the invariant | exit 3, the invariant |
+| PRIM as before the fix | exit 3, the invariant | exit 3, the invariant |
+| PRIM: the payload kept, the rows applied to an operand's throw | 1 of 34 fails: `operand throw is not renumbered by the outer PRIM's rows` | green: the translator emits a held call's PRIM with no catch rows, and the selftest alone tells |
+| PRIM: the rows kept apart, the payload replaced | exit 3, the invariant | exit 3, the invariant |
+
+The native row is green under every mutant: a method's native code raises
+and catches its throws without these operations, and the walked root's calls
+there have no throwing operand. The first focused run of the mutants had no case
+that told the CALL's rows applied: its two-name case stood in a method with
+no handler, where a wrong renumbering is not seen. Case 9 replaced it.
+
+**Evidence.**
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_07` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. `lmx_walk_catch_selftest`: 34 checks, no failure. |
+| `build/l3_selftest/fable_l3_07` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_20` (full harness) | RED 33 of 1534. Against `fable_full_19` (RED 34 of 1534): FAIL→OK 1, `unit_throw_nested_actual_walk`; OK→FAIL 0; no row added or removed; no red row's message changed. |
+
+The 33 red rows are the 29 of `fable_full_17` and four labelled OPEN
+positives: `unit_recv_use_nested_dormant`, `unit_recv_use_passed_thin`,
+`unit_named_actual_head_index`, `unit_named_actual_held`. The pre-gate hashes
+of the kernel source, its selftest, the fixture, the translator and the
+harness equal the live files and every staged copy (`tie.py`).
+
+**Next, in the order of the reply.** The expression-head reach, with the
+phase and cache invariant of `l2_declaration`; the held call's named binding;
+the receiving-use remainder; nested admission and the capture closure.

@@ -213,10 +213,15 @@ Fable принял единственный writer/build-слот по [to_fable
   полный `fable_full_25` RED31/1588: ни одного FAIL→OK и ни одного OK→FAIL, семь новых строк, все
   зелёные, три заменённые удалены; из 31 красной две — помеченные открытые позитивы
   ([§49 журнала](fable-continuation-20261003.md#no-forward-lookup)).
-- Открыто, блокер G5: именованные фактические фабрики в записи callable merge. Запись, которую назвал
-  Codex, `h2: make2(n: 100)`, по решению автора Q58 — определение именованной Structure, удерживающей
-  вызов; вопрос о записи возвращён Codex
+- Открыто, блокер G5, ждёт автора: именованные фактические фабрики в записи callable merge. Запись
+  `h2: make2(n: 100)` Codex отозвал (ответ -11): по Q58 это определение именованной Structure,
+  удерживающей вызов. Не установлено и значение короткой записи `add5: makeAdder 5`; вопрос автору
+  записан в `LMX_blog/q/current/held-factory-initialization-versus-body-definition.md`
   ([HELD-STORE-FACTORY-ACTUALS-POSITIONAL](defects.md#held-store-factory-actuals-positional)).
+- Открыто, блокер G5: голое имя нульарного удерживаемого callable там, где принимается результат
+  (`r: p0`, `return: p0`, фактический `int`-формала), отвергается как ссылка; по норме callable
+  исполняется ([HELD-BARE-NAME-RESULT-RECEIPT](defects.md#held-bare-name-result-receipt),
+  [§50 журнала](fable-continuation-20261003.md#result-receipt-open)).
 - Открыто: аудит вызывающих классификатора без места
   ([§48 журнала](fable-continuation-20261003.md#site-selection)).
 - Дальше: остаток контракта использования (композиция целой передачи; спящее определение остаётся

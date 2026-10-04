@@ -2283,9 +2283,37 @@ p0                 # отказ: executing a named Structure is not supported ye
 Исправлено по ответу Codex FABLE-CODEX-20261004-10 (блокер G5): подпрограммы вызова удерживаемого
 callable берут тело вызова из узла (`l2_call_node_body`: тело Frame или ничего для голого имени), а
 три маршрута оператора — проверка, нативная эмиссия, граф — спрашивают удерживаемый callable места
-для голого имени так же, как спрашивают метод. В позиции значения голое имя остаётся ссылкой на
-callable. Свидетель — `unit_held_call_bare_name` (нативно и с обходом); временная проба удалена
-([§49 журнала](fable-continuation-20261003.md#no-forward-lookup)).
+для голого имени так же, как спрашивают метод. Свидетель — `unit_held_call_bare_name` (нативно и с
+обходом); временная проба удалена
+([§49 журнала](fable-continuation-20261003.md#no-forward-lookup)). Позиция значения — отдельный
+открытый дефект [HELD-BARE-NAME-RESULT-RECEIPT](#held-bare-name-result-receipt).
+
+<a id="held-bare-name-result-receipt"></a>
+### HELD-BARE-NAME-RESULT-RECEIPT — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-11, OPEN (блокер G5)
+
+Голое имя нульарного удерживаемого callable там, где принимается результат, отвергается как ссылка:
+
+```text
+p0: make0 7
+int: r 0
+r: p0              # отказ: assignment value has incompatible type
+fn: use () int
+    return: p0     # отказ: return value has incompatible type
+end: use
+fn: id (int: a) int
+    return: a
+end: id
+int: s id(p0)      # отказ: a reference where a number is asked
+```
+
+По норме (`#callables`) результат или ссылку выбирает контракт получателя: явно объявленный
+callable-формал получает ссылку на вхождение; когда принимается результат, callable, возвращающий
+значение, исполняется. Значит, `int`, принимающий `p0`, получает то же, что даёт `p0()`: в записи
+`r: p0`, в `return: p0` метода с результатом `int`, в фактическом `int`-формала. Там, где контракт
+требует вхождение, callable не исполняется. §49 журнала называл нынешнее поведение правилом; это
+исправлено в §50. Обязательный позитив с красной строкой добавляется со следующим гейтом; чинить
+через общее решение контракта получателя и категорию места, не исполнением любой ссылки
+([§50 журнала](fable-continuation-20261003.md#result-receipt-open)).
 
 <a id="held-forward-lookup"></a>
 ### HELD-FORWARD-LOOKUP — 2026-10-04, fable по ответам Codex FABLE-CODEX-20261004-09 и -10, FIXED в sandbox (не выпущено)
@@ -2328,6 +2356,12 @@ T6, `h2: make2 100` (`steps/callable-merge-t6.md`): хвост начинает�
 Codex назвал записью с именованными фактическими именно `h2: make2(n: 100)`; это расходится с Q58.
 Вопрос, какая запись их несёт, возвращён Codex с этими якорями. Ничего не реализовано
 ([§49 журнала](fable-continuation-20261003.md#no-forward-lookup)).
+
+Ответ Codex FABLE-CODEX-20261004-11: запись `h2: make2(n: 100)` отозвана, Q58 не отменяется. Не
+установлено и значение самой короткой записи `add5: makeAdder 5`: вопрос автору задан и записан в
+[`LMX_blog/q/current/held-factory-initialization-versus-body-definition.md`](../LMX_blog/q/current/held-factory-initialization-versus-body-definition.md).
+До ответа ни одна запись именованных фактических не реализуется
+([§50 журнала](fable-continuation-20261003.md#result-receipt-open)).
 
 <a id="held-header-names-not-actual-interface"></a>
 ### HELD-HEADER-NAMES-NOT-ACTUAL-INTERFACE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-08, OPEN

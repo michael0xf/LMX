@@ -3338,9 +3338,12 @@ actuals, on the route of `p0()`.
 - The placer needed nothing: a variant with a branch for it gives the same
   output on every fixture, so none was added.
 
-A value position is unchanged: there the bare name is the callable's
-reference, at the root and in a method alike (`int: r p0` is refused, `a
-reference where a number is asked`).
+A value position is unchanged: there the translator takes the bare name for
+the callable's reference, at the root and in a method alike (`int: r p0` is
+refused, `a reference where a number is asked`). **Corrected in
+[section 50](#result-receipt-open):** that is what the translator does, not
+the rule; where a result is received the callable executes, and the refusal
+is an OPEN defect.
 
 ### The caller's binding: the two controls
 
@@ -3381,7 +3384,9 @@ So the named actuals of a store have no accepted spelling today, and the one
 Codex named is taken. The question which spelling carries them went back to
 Codex with these anchors; nothing was implemented for it, and the defect
 stays OPEN and blocks G5
-([defects](defects.md#held-store-factory-actuals-positional)).
+([defects](defects.md#held-store-factory-actuals-positional)). Codex's
+answer is in [section 50](#result-receipt-open): the spelling is withdrawn
+and the question is the author's.
 
 ### Replay
 
@@ -3443,3 +3448,55 @@ the live files and every staged copy (`tie.py`).
 Then the receiving-use remainder: the composition of a whole pass; the
 dormant definition stays OPEN until resolved facts of use decide it. Then
 whole-value composition, nested admission and the capture closure.
+
+<a id="result-receipt-open"></a>
+## 50. Codex's reply FABLE-CODEX-20261004-11: one question to the author, one correction
+
+No gated byte changes with this section.
+
+**The store of a factory's result is an open question of the author's.**
+Codex accepts the Q58 evidence of section 49 and withdraws
+`h2: make2(n: 100)` as the store: "Do NOT implement option (b), and do NOT
+branch by compact flag or by 'returns a callable' to reverse Q58." The short
+form too is not settled by its code and its old gates: "There is a real
+unresolved boundary between the historical short factory-result binding and
+the later general dormant named-body rule." Codex asked the author whether
+`add5: makeAdder 5` keeps its meaning of binding the call's result, with
+`add5: makeAdder n: 5` as its named form, or follows the definition of a
+dormant named body with the result received explicitly. Until the author
+answers, neither spelling of named actuals is implemented, Q58 and the rows
+of the short form stay as they are, and the question stands in
+[`LMX_blog/q/current/held-factory-initialization-versus-body-definition.md`](../LMX_blog/q/current/held-factory-initialization-versus-body-definition.md)
+with the two author sources, the anchors, the P0 trees and what was
+measured.
+
+**Correction of section 49: a bare held name where a result is received.**
+Section 49 said that in a value position the bare name of a held callable is
+its reference. That is the translator's behaviour written as a rule. Codex:
+"A known value-returning held callable is not universally reference-valued
+merely because it is held." The semantics, `#callables`: "In argument
+position the receiving contract selects a result or the reference itself: an
+explicitly declared callable formal receives a reference to the callable
+occurrence, not the result of executing it; when a result is received, a
+value-returning callable is executed; a callable with no returned value,
+including `sub`, is passed by reference."
+
+So an int that receives known nullary `p0` gets what `p0()` gives: in
+`r: p0` after `int: r`, in `return: p0` of an int method, and as the actual
+of an int formal. Where the receiving contract asks for the occurrence, the
+callable is not executed. The translator refuses the three receiving forms
+today: `assignment value has incompatible type`, `return value has
+incompatible type`, `a reference where a number is asked`. That is an OPEN
+defect with a required positive, to be repaired
+through the common decision of the receiving contract and the category of
+the site, not by executing every reference
+([defects](defects.md#held-bare-name-result-receipt)). Its red row comes
+with the next gate.
+
+**Also from that reply.** The removal of the forward lookup and the bare
+statement are accepted as bounded changes. For the receiving-use remainder:
+the facts of a definition's identity prove it unconsumed only as far as the
+routes that set them are modelled, and an unmodelled route leaves the
+coverage unknown; the flow of types prunes a source only where the
+incompatibility is structurally proven, and a rejected store must not
+delete the value the place held before it.

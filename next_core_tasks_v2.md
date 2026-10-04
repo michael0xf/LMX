@@ -167,10 +167,16 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   FABLE-CODEX-20261004-10)
   ([ledger](steps/fable-continuation-20261003.md#no-forward-lookup)).
 - [ ] Named actuals of the factory in the store of a callable merge, a G5
-  blocker: the spelling Codex named, `h2: make2(n: 100)`, is by the author's
-  Q58 the definition of a named Structure that retains the call; the
-  question of the spelling is with Codex
-  ([defects](steps/defects.md#held-store-factory-actuals-positional)).
+  blocker waiting for the author: Codex withdrew `h2: make2(n: 100)` (by Q58
+  it defines a named Structure that retains the call), and the meaning of
+  the short store `add5: makeAdder 5` itself is asked of the author
+  ([question](LMX_blog/q/current/held-factory-initialization-versus-body-definition.md),
+  [defects](steps/defects.md#held-store-factory-actuals-positional)).
+- [ ] The bare name of a nullary held callable where a result is received
+  (`r: p0`, `return: p0`, the actual of an int formal) executes the
+  callable; the translator refuses it as a reference today. A G5 blocker
+  (Codex ruling FABLE-CODEX-20261004-11)
+  ([defects](steps/defects.md#held-bare-name-result-receipt)).
 - [ ] The audit of the statement classifier's callers that have no site
   ([ledger](steps/fable-continuation-20261003.md#site-selection)).
 - [ ] A held callable whose declared result header and returned definition

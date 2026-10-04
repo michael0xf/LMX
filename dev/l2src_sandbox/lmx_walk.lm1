@@ -2234,6 +2234,9 @@ return: c.LMX_WALK_OK
 # null passes before source-view lookup. NO is the implicit implements throw.
 fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     LmxImplEntry: view
+    LmxImplUses: cover
+    @: LmxImplUses uses 0
+    size_t: uses_n 0U
     @: LmxImplEntry v 0
     @: LmxImplEntry known 0
     @: Lmx model 0
@@ -2282,15 +2285,26 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     width: model\array.size
     if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 5U), @ choices) != c.LMX_WALK_OK || lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 6U), @ default_n) != c.LMX_WALK_OK
         return: c.LMX_WALK_INVALID
-    if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 8U), @ full_receiver) != c.LMX_WALK_OK || full_receiver > 1U
+    if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 8U), @ full_receiver) != c.LMX_WALK_OK || full_receiver > 2U
         return: c.LMX_WALK_INVALID
+    # The coverage of this receiving instruction, read in place: its first cell
+    # is its count of cells, and the maps follow it.
+    if: full_receiver = 2U
+        if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, 9U), @ uses_n) != c.LMX_WALK_OK || uses_n < 2U || uses_n > catch_at - 9U
+            return: c.LMX_WALK_INVALID
+        uses: @ cover
+        memset((cast: (@: void) uses), 0, c.sizeof(c.LmxImplUses))
+        uses\frame: code
+        uses\at: 9U
+        at: 9U + uses_n
+    ---
     # default_n is the PHYSICAL cell count of an explicit map: two per required field (K01,
     # the ordinal half then the LAST half), or zero for the compact identity case.  The
     # registered entry's n stays the semantic width.
-    if: (default_n != 0U && default_n != width * 2U) || default_n > catch_at - 9U || width = (cast: (size_t) -1)
+    if: (default_n != 0U && default_n != width * 2U) || default_n > catch_at - at || width = (cast: (size_t) -1)
         return: c.LMX_WALK_INVALID
     stride: width * 2U + 1U
-    n: catch_at - 9U - default_n
+    n: catch_at - at - default_n
     if: n / stride != choices || n % stride != 0U
         return: c.LMX_WALK_INVALID
     status: lmx_walk_eval(f, lmx_arena_ref_value(code, 3U), out)
@@ -2334,7 +2348,7 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         if: full_receiver != 0U
             v\value: (cast: (@: Lmx) out\ref)
             v\req: model
-            answer: lmx_implements_receiver_view(f\arena, (cast: (@: Lmx) out\ref), model, model, v)
+            answer: lmx_implements_receiving_use(f\arena, (cast: (@: Lmx) out\ref), model, model, v, uses)
         if: answer = c.LMX_IMPLEMENTS_YES
             answer: lmx_implements_register(f\arena, (cast: (@: Lmx) out\ref), model, v)
     ---
@@ -2342,8 +2356,10 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         known: lmx_implements_find(f\arena, (cast: (@: Lmx) out\ref), model)
         if: known != 0
             # An old correspondence is not proof for a new consumer. Without
-            # a selected compile-proved map, check this full receiver first.
-            answer: lmx_implements_receiver_view(f\arena, (cast: (@: Lmx) out\ref), model, model, 0)
+            # a selected compile-proved map, check this receiver first: by its
+            # own coverage when the instruction carries one, else in full. The
+            # record gives the places and no permission.
+            answer: lmx_implements_receiving_use(f\arena, (cast: (@: Lmx) out\ref), model, model, 0, uses)
             if: answer = c.LMX_IMPLEMENTS_YES
                 memcpy((cast: (@: void) v), (cast: (@: void) known), c.sizeof(c.LmxImplEntry))
                 v\layout: layout

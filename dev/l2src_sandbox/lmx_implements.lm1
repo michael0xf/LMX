@@ -101,11 +101,47 @@ fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImpl
         return: pending
 return: lmx_implements_find(arena, value, req)
 
+# Cell k of a receiving instruction's coverage: the translator's static cells, or
+# the size cells of the walked instruction. Cell 0 is the count of cells and
+# bounds every read.
+fn: lmx_implements_use_cell (@: LmxArena arena; @: LmxImplUses uses; size_t: k; @: size_t out) int
+    @: void cell
+    @: size_t at
+    if: uses = 0 || out = 0
+        return: 1
+    if: uses\map != 0
+        if: k >= uses\map[0]
+            return: 1
+        \out: uses\map[k]
+        return: 0
+    ---
+    if: uses\frame = 0 || uses\at + k < uses\at
+        return: 1
+    cell: lmx_arena_ref_value(uses\frame, uses\at)
+    if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+        return: 1
+    at: (cast: (@: size_t) cell)
+    if: k >= at[0]
+        return: 1
+    cell: lmx_arena_ref_value(uses\frame, uses\at + k)
+    if: cell = 0 || lmx_domain_type(arena, cell) != c.LMX_TYPE_SIZE_T
+        return: 1
+    at: (cast: (@: size_t) cell)
+    \out: at[0]
+return: 0
+
 # One DFS serves an explicit used tree and a declaration's interface. Only the
 # interface projection omits executable source frames: their first child belongs
 # to the existing OP address domain. Their operands describe an algorithm, not a
 # field requirement. Plain nested Structures and real typed cells remain required.
-fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused; int: interface) int
+#
+# `uses` is the coverage of the receiving instruction being run, or null. With
+# it the consumer stays the index space, but a frame walks the fields its level
+# names instead of every field: a field the level does not name is not looked
+# at, present or missing, and a field it names is required whatever skip_unused
+# says. Each edge selects its own half of the correspondence. A frame below a
+# field consumed whole walks every field again.
+fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused; int: interface; @: LmxImplUses uses) int
     LmxArena: temporary
     LmxPool: cells
     LmxScratch: scratch
@@ -118,6 +154,15 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
     size_t: index
     size_t: indexA
     size_t: indexB
+    size_t: count 0U
+    size_t: edge 0U
+    size_t: below 0U
+    size_t: level 0U
+    size_t: width
+    int: last
+    int: enter
+    int: named
+    int: lost
     @: void a
     @: void b
     @: void c
@@ -138,7 +183,7 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
     if: lmx_domain_kind(arena, (cast: (@: void) varA)) != c.LMX_KIND_STRUCT || lmx_domain_kind(arena, (cast: (@: void) varB)) != c.LMX_KIND_STRUCT
         return: c.LMX_IMPLEMENTS_NO
     ---
-    if: consumer\array.size = 0U
+    if: consumer\array.size = 0U && uses = 0
         return: c.LMX_IMPLEMENTS_YES
     memset((cast: (@: void) (@ temporary)), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
@@ -155,16 +200,62 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
     current\viewA: lmx_implements_view(arena, varA, consumer, pending)
     current\viewB: lmx_implements_view(arena, varB, consumer, pending)
     current\index: 0U
+    current\level: 0U
+    if: uses != 0
+        current\level: 1U
     current\caller: 0
     current\seen_next: 0
     while: current != 0
-        if: current\index = current\consumer\array.size
-            current: current\caller
-            continue
+        last: 0
+        enter: 1
+        named: 0
+        level: 0U
+        if: current\level = 0U
+            if: current\index = current\consumer\array.size
+                current: current\caller
+                continue
+            ---
+            index: current\index
+            current\index: index + 1U
+        else:
+            # A level of the coverage: its pairs, never the consumer's width.
+            named: 1
+            if: lmx_implements_use_cell(arena, uses, current\level, @ count) != 0
+                answer: c.LMX_IMPLEMENTS_UNKNOWN
+                break
+            if: current\index >= count
+                current: current\caller
+                continue
+            ---
+            index: current\index
+            current\index: index + 1U
+            if: index > ((cast: (size_t) -1) - current\level - 2U) / 2U
+                answer: c.LMX_IMPLEMENTS_UNKNOWN
+                break
+            index: current\level + 1U + index * 2U
+            if: lmx_implements_use_cell(arena, uses, index, @ edge) != 0 || lmx_implements_use_cell(arena, uses, index + 1U, @ below) != 0
+                answer: c.LMX_IMPLEMENTS_UNKNOWN
+                break
+            width: current\consumer\array.size
+            index: edge
+            if: edge >= width
+                if: edge - width >= width
+                    answer: c.LMX_IMPLEMENTS_UNKNOWN
+                    break
+                index: edge - width
+                last: 1
+            ---
+            if: below = 0U
+                enter: 0
+            if: below != 0U && below != (cast: (size_t) -1)
+                level: below
         ---
-        index: current\index
-        current\index: index + 1U
         c: lmx_arena_ref_value(current\consumer, index)
+        # A field the coverage names has to be there in the model: an edge that
+        # lands on an empty place of it certifies nothing.
+        if: c = 0 && named != 0
+            answer: c.LMX_IMPLEMENTS_UNKNOWN
+            break
         if: c != 0
             kindC: lmx_domain_kind(arena, c)
             if: interface != 0 && kindC = c.LMX_KIND_STRUCT && lmx_domain_kind(arena, lmx_arena_ref_value((cast: (@: Lmx) c), 0U)) = c.LMX_DOMAIN_KIND_OP
@@ -172,14 +263,22 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
             ---
             indexA: index
             indexB: index
-            if: current\viewA != 0 && lmx_implements_at(arena, current\viewA, index, @ indexA) != 0
-                answer: c.LMX_IMPLEMENTS_NO
-                break
-            if: current\viewB != 0 && lmx_implements_at(arena, current\viewB, index, @ indexB) != 0
+            lost: 0
+            if: current\viewA != 0 && last = 0 && lmx_implements_at(arena, current\viewA, index, @ indexA) != 0
+                lost: 1
+            if: current\viewA != 0 && last != 0 && lmx_implements_at_last(arena, current\viewA, index, @ indexA) != 0
+                lost: 1
+            if: current\viewB != 0 && last = 0 && lmx_implements_at(arena, current\viewB, index, @ indexB) != 0
+                lost: 1
+            if: current\viewB != 0 && last != 0 && lmx_implements_at_last(arena, current\viewB, index, @ indexB) != 0
+                lost: 1
+            if: lost != 0
                 answer: c.LMX_IMPLEMENTS_NO
                 break
             if: indexA = (cast: (size_t) -1) || indexB = (cast: (size_t) -1)
-                if: skip_unused != 0
+                # A field the coverage names is required: only a walk of every
+                # field may pass over one that is not carried.
+                if: skip_unused != 0 && named = 0
                     continue
                 answer: c.LMX_IMPLEMENTS_NO
                 break
@@ -201,9 +300,13 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
                 break
             ---
             if: kindC = c.LMX_KIND_STRUCT
+                # A reference the coverage holds and does not enter is consumed
+                # by its presence in the Structure domain alone.
+                if: enter = 0
+                    continue
                 found: seen
                 while: found != 0
-                    if: found\varA = (cast: (@: Lmx) a) && found\varB = (cast: (@: Lmx) b) && found\consumer = (cast: (@: Lmx) c)
+                    if: found\varA = (cast: (@: Lmx) a) && found\varB = (cast: (@: Lmx) b) && found\consumer = (cast: (@: Lmx) c) && found\level = level
                         break
                     found: found\seen_next
                 ---
@@ -219,6 +322,7 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
                     child\viewA: lmx_implements_view(arena, child\varA, child\consumer, pending)
                     child\viewB: lmx_implements_view(arena, child\varB, child\consumer, pending)
                     child\index: 0U
+                    child\level: level
                     child\caller: current
                     child\seen_next: seen
                     seen: child
@@ -237,12 +341,18 @@ fn: lmx_implements_walk_project (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @:
 return: answer
 
 fn: lmx_implements_walk_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer; @: LmxImplEntry pending; int: skip_unused) int
-return: lmx_implements_walk_project(arena, varA, varB, consumer, pending, skip_unused, 0)
+return: lmx_implements_walk_project(arena, varA, varB, consumer, pending, skip_unused, 0, 0)
 
 # Full reception checks every interface field, including named holes. This is
 # independent of whether a correspondence is pending, cached or positional.
 fn: lmx_implements_receiver_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending) int
-return: lmx_implements_walk_project(arena, varA, varB, model, pending, 0, 1)
+return: lmx_implements_walk_project(arena, varA, varB, model, pending, 0, 1, 0)
+
+# Reception by the coverage of the instruction being run. The coverage is this
+# call's argument and nothing else's: the record of the pair, pending or kept,
+# gives physical places and no permission. Null coverage is the full reception.
+fn: lmx_implements_receiving_use (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending; @: LmxImplUses uses) int
+return: lmx_implements_walk_project(arena, varA, varB, model, pending, 0, 1, uses)
 
 fn: lmx_implements_walk (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx consumer) int
 return: lmx_implements_walk_view(arena, varA, varB, consumer, 0, 0)
@@ -399,7 +509,7 @@ fn: lmx_implements_through (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxI
     ---
     pending\value: value
     pending\req: req
-return: lmx_implements_walk_project(arena, value, value, req, pending, 1, 1)
+return: lmx_implements_walk_project(arena, value, value, req, pending, 1, 1, 0)
 
 fn: lmx_implements_register (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry view) int
     @: LmxImplEntry e

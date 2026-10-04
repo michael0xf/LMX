@@ -10,9 +10,36 @@ struct: LmxImplementsFrame
     @: LmxImplEntry viewA
     @: LmxImplEntry viewB
     size_t: index
+    # Where this frame's level starts in the instruction's coverage (LmxImplUses),
+    # or 0: every field of the consumer at this frame is walked.
+    size_t: level
     @: LmxImplementsFrame caller
     @: LmxImplementsFrame seen_next
 end: LmxImplementsFrame
+
+# The coverage of ONE receiving instruction: what the Consumer of the place it
+# binds reads through that place. Non-owning and read only while the instruction
+# runs: the translator's static cells (map), or the size cells of the walked
+# instruction itself (frame, at). No Structure is made for it and it is never
+# kept with a correspondence: another instruction brings its own.
+#
+# The cells are levels packed flat. Cell 0 is the count of cells; the root level
+# starts at cell 1. A level is [count, then count pairs (edge, below)]:
+#   edge  -- a field of the model at that level, in that model's own index space:
+#            j < width is field j through its ORDINAL half (an explicit `[N]name`
+#            use), width + j the LAST half of field j (a bare `name` use) -- the
+#            numbering of lmx_implements_slot (K01);
+#   below -- 0: the field is consumed and nothing below it (a number, or a
+#            reference that is held and not entered); SIZE_MAX: everything below
+#            it is consumed, the full interface from there; otherwise the cell
+#            where the nested level starts, in the nested model's index space.
+# A root level of count 0 is a Consumer that reads no field: the identity of the
+# reference is all it consumes.
+struct: LmxImplUses
+    @: size_t map
+    @: Lmx frame
+    size_t: at
+end: LmxImplUses
 
 # The object domains this level knows, and the compatibility primitive
 # `implements(varA, varB, Consumer)`.
@@ -148,6 +175,16 @@ prototype:
     # Full declaration reception projects out OP-headed source applications, not
     # missing fields. The explicit physical Consumer predicate above is unchanged.
     fn: lmx_implements_receiver_view (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending) int
+    # Reception by the current Consumer's coverage: the model stays the index
+    # space, and only the fields this instruction's coverage names are required --
+    # a field it does not name is neither required nor compared, present or not.
+    # A null coverage is unknown coverage, which is the full reception above and
+    # never an empty one. The answer is this instruction's alone: nothing of it is
+    # kept with the pair, whose record holds physical places only.
+    # UNKNOWN on a coverage that cannot be read.
+    fn: lmx_implements_receiving_use (@: LmxArena arena; @: Lmx varA; @: Lmx varB; @: Lmx model; @: LmxImplEntry pending; @: LmxImplUses uses) int
+    # Cell k of a coverage. 0 and *out, or 1: no such cell, or a cell that is no size.
+    fn: lmx_implements_use_cell (@: LmxArena arena; @: LmxImplUses uses; size_t: k; @: size_t out) int
     fn: lmx_implements_view (@: LmxArena arena; @: Lmx value; @: Lmx req; @: LmxImplEntry pending) @: LmxImplEntry
     # D-105 (the author's Q39, 2026-09-27): the `implements` table of address correspondences
     # (LmxArena.impl, LmxImplEntry).  A value admitted to a named Structure `req` it is not an

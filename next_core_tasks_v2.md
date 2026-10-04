@@ -32,11 +32,10 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_15` RED30/1468 — 98 FAIL→OK against that
-baseline, no OK→FAIL ([gate](steps/fable-continuation-20261003.md#full-15));
-kernel `fable_kernel_04` GREEN294 with 111 executed selftests; L3
-`fable_l3_03` 11 suites/four budgets
-([gates](steps/fable-continuation-20261003.md#full-14)). The checkpoint gate
+continuation bytes: `fable_full_17` RED29/1494 — 97 FAIL→OK against that
+baseline, OK→FAIL 0; kernel `fable_kernel_05` GREEN296 with 113 executed
+selftests; L3 `fable_l3_05`
+([gates](steps/fable-continuation-20261003.md#full-16)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -101,14 +100,22 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   procedure reaches its unit and `node` through the occurrence's parent),
   `unit_copy_call_from_method`, `unit_copy_call_addressed`. The
   unknown-origin case stays behind the open author question.
-- [ ] Receiving-use contract for explicit typed reference declarations and
-  stores: Consumer-relative used paths instead of the whole model shape
-  (Codex ruling FABLE-CODEX-20261003-01; norm is explicit). Migrate the two
-  false-green no-use refusal rows with the mechanism. Mechanism boundary
-  (Codex ruling FABLE-CODEX-20261004-01): the shared walk takes the model as
-  index space and the current receiving-use projection; no waiver cached on
-  the pair; eight required witnesses
-  ([ledger](steps/fable-continuation-20261003.md#receiving-use-mechanism)).
+- [x] Receiving-use contract, the mechanism and its first producer (Codex
+  rulings FABLE-CODEX-20261003-01 and -20261004-01): the shared walk takes
+  the model as index space and the coverage of the instruction being run;
+  nothing of the answer is kept with the pair; the walker carries the
+  coverage in the instruction's cells; the translator gives it for an own
+  typed reference of a plain method. The eight witnesses run natively and
+  walked; the two false-green refusal rows are migrated
+  ([ledger](steps/fable-continuation-20261003.md#receiving-use-coverage)).
+- [ ] Receiving-use contract, the rest. Coverage is unknown, and the
+  reception full, for: a reference of the root or of a named Structure's
+  procedure; a reference used whole (an actual, a return, a copy, an
+  address); a definition inside the method that reads through it; a rebound
+  formal, a field store, an element store, a return; a candidate of unknown
+  layout. Held and invoked are not told apart for a callable at the end of a
+  path. These are limits of the implementation, not rules, and no row
+  expects them as refusals of valid programs.
 - [ ] Merge-result declaration inside a named Structure body (internal error)
   ([defects](steps/defects.md#merge-decl-in-named-body-internal)).
 - [x] Named actuals: evaluated once in written order, transported by the

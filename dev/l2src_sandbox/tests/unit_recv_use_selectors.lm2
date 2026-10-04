@@ -1,0 +1,53 @@
+# The selector of a path is part of what the Consumer reads. Model has two
+# fields named a and a tail; Cand has one a, in another place. In reads, b
+# reads the bare a -- the candidate's last a -- and [0]a, its first: both are
+# Cand's one a, and Cand is received with the second occurrence and the tail
+# unasked. In second, b reads [1]a: the second occurrence, which Cand lacks,
+# and the reception is refused where it is reached. Entry 7.
+Model:
+    int: a 1
+    int: a 2
+    size_t: tail 9U
+end: Model
+
+Cand:
+    size_t: other 3U
+    int: a 5
+end: Cand
+
+fn: reads () int
+    o: merge Cand
+    @: Model b o
+    int: last b\a
+    int: first b\[0]a
+    if: last != 5
+        return: 81
+    if: first != 5
+        return: 82
+    if: b != o
+        return: 83
+    return: 0
+end: reads
+
+fn: second () int
+    o: merge Cand
+    int: caught 0
+    @: Model b o
+    catch: implements ()
+        caught: caught + 1
+    ---
+    if: caught != 1
+        return: 84
+    if: b != 0
+        return: 85
+    if: b != 0 && b\[1]a = 5
+        return: 86
+    return: 7
+end: second
+
+int: got reads()
+if: got != 0
+    sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: second(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,30 @@
+# Unknown coverage is never an empty one. b is passed whole to take, which
+# reads value through its formal. What take reads is part of what b's Consumer
+# needs, and it is not composed into b's coverage: b's coverage is unknown, b
+# receives by the whole of Model, and the Other, which has no value, is refused
+# at the declaration -- the implicit throw implements, uncaught, stops R0. An
+# empty coverage here would receive the Other and hand take a Structure with no
+# value to read.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: take (Model: v) int
+    if: v\value = 1U
+        return: 7
+    return: 1
+end: take
+
+fn: m () int
+    o: merge Other
+    @: Model b o
+    return: take(b)
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,26 @@
+# A definition inside the method is another Consumer of the method's reference.
+# read, defined in make and returned, reads value through b. That read is not
+# part of the coverage this analysis gives b: b's coverage is unknown, b
+# receives by the whole of Model, and the Other, which has no value, is refused
+# at the declaration -- the implicit throw implements, uncaught, stops R0.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: make () fn: () size_t
+    o: merge Other
+    @: Model b o
+    fn: read () size_t
+        return: b\value
+    return: read
+end: make
+
+r: make
+size_t: got r()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

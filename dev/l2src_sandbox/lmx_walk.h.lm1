@@ -208,7 +208,8 @@ define: LMX_WALK_OP_EXEC 35
 # returned node was made (a merge result's parent).  OF / PUT_OF go on from it by the slots of that space's body.
 define: LMX_WALK_OP_NODE 36
 # [admit_as, sourceToken, catchCount, value, targetModel, alternativesCount,
-# defaultMapCount, directLayout, fullReceiver, defaultTargetMap[defaultMapCount],
+# defaultMapCount, directLayout, fullReceiver, coverage[coverage[0]] (only when
+# fullReceiver is 2), defaultTargetMap[defaultMapCount],
 # (layoutToken, targetMap[targetWidth]) * alternativesCount, catchRows...].
 # Counts/map entries are inline SIZE_T constants; targetModel is a descriptor.
 # Tokens are CHAR_PTR cells holding module-lifetime metadata addresses, never
@@ -220,8 +221,12 @@ define: LMX_WALK_OP_NODE 36
 # Alternatives select by exact layout identity, never by equal partial maps.
 # fullReceiver is 1 for ordinary reference/return reception, which checks the
 # selected pending map with every receiving field required before publication.
-# It is 0 only when the compiler proved this Consumer's used fields. This
-# operation-local requirement is not cached as a global Consumer approval.
+# It is 0 only when the compiler proved this Consumer's used fields. It is 2
+# when the instruction carries the coverage of its own receiving place: the
+# cells that follow are that coverage (LmxImplUses, lmx_implements.h; its first
+# cell is its count of cells), read in place, and the reception requires the
+# fields it names and no other. This operation-local requirement is not cached
+# as a global Consumer approval: the record of the pair keeps places only.
 # Unknown layout uses ordinary admission. An existing target correspondence
 # may be reused only after admission for the current receiver; this also applies
 # to known unlisted layouts, which cannot guess a map. ImplEntry

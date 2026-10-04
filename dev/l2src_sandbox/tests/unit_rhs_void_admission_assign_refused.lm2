@@ -1,3 +1,6 @@
+# An opaque pointer result stored into a typed reference: check reads value through ref, and the Other behind the
+# pointer has none -- the reception refuses it by the field ref's Consumer reads (the receiving-use contract), the
+# implicit throw `implements`, uncaught, stops R0.  Without the read the Other would be received.
 Model:
     size_t: value 1U
 end: Model
@@ -10,6 +13,8 @@ return: (cast: (@: void) @ Other)
 fn: check () int
     @: Model ref
     ref: raw()
-return: 7
+    if: ref\value = 1U
+        return: 7
+return: 1
 sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
 return

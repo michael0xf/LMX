@@ -1,0 +1,26 @@
+# A method's typed reference rebound to a Structure of another shape: `r: o` with o an Other (two ints) where r is a
+# reference to Model (one size_t).  The native admission before the binding is by what r's Consumer reads through r
+# (the receiving-use contract, Codex FABLE-CODEX-20261003-01): check compares r by identity and reads no field through
+# it, so the Other is received, and r is o.  This row was a refusal by Model's whole shape; that expectation was wrong.
+# The store is written `r: o`: the explicit rebinding `@: r o` belongs to the reference-application stage.  Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+Other:
+    int: a 1
+    int: b 2
+end: Other
+
+fn: check () int
+    o: merge Other
+    @: Model r
+    r: o
+    if: r != o
+        return: 81
+    if: o\a != 1 || o\b != 2
+        return: 82
+    return: 7
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

@@ -1,3 +1,6 @@
+# A call's result of another shape, received by an explicit initializer: check reads value through ref, and the Other
+# make returns has none -- the reception refuses it by the field ref's Consumer reads (the receiving-use contract), the
+# implicit throw `implements`, uncaught, stops R0.  Without the read the Other would be received.
 Model:
     size_t: value 1U
 end: Model
@@ -9,6 +12,8 @@ fn: make () Other
 return: @ Other
 fn: check () int
     @: Model ref make()
-return: 7
+    if: ref\value = 1U
+        return: 7
+return: 1
 sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
 return

@@ -1658,3 +1658,322 @@ walker and driver unchanged.
 | `fable_full_01` (RED 126/1395, baseline) | 98 | 0 | | |
 
 The kernel and L3 gates were not rerun: no kernel source changed.
+
+<a id="receiving-use-coverage"></a>
+## 39. The receiving-use contract: the coverage of a method's own typed reference
+
+[Section 3](#receiving-use-contract) fixed the rule and
+[section 29](#receiving-use-mechanism) the boundary of its mechanism. This
+slice builds the mechanism in the kernel and the walker, and its first,
+bounded producer in the translator.
+
+**What was.** A typed reference received every candidate by the whole shape
+of its model: native code and the walked instruction asked
+`lmx_implements_receiver_view(…, candidate, Model, Model, …)`.
+`unit_bind_method_thin_other`, a required positive, threw `implements`, and
+two rows whose reference is never read were green as refusals.
+
+**Kernel: the coverage of one receiving instruction.** `LmxImplUses`
+(`lmx_implements.h.lm1`) holds what the Consumer of the place being received
+into reads through that place. It is the argument of one call: non-owning,
+read while the instruction runs, never kept with the pair. No Structure is
+made for it. Its cells are levels packed flat: cell 0 is the count of cells,
+the root level starts at cell 1, and a level is a count of pairs followed by
+`(edge, below)` per field the Consumer reads.
+
+- An edge is a field of the model at that level in the model's own index
+  space, with its half: `j` below the width is field `j` through the ORDINAL
+  half (an explicit `[N]name` use), `width + j` its LAST half (a bare `name`
+  use). This is the edge numbering of `lmx_implements_slot` (K01).
+- `below` is 0 for a field consumed and not entered (a number, a reference
+  that is held), `SIZE_MAX` for a field consumed whole (the full interface
+  from there), otherwise the cell where the nested level starts, in the
+  nested model's index space.
+- A root level of no pair is a Consumer that reads no field: the identity of
+  the reference is all it consumes.
+
+`lmx_implements_receiving_use(arena, value, model, model, pending, uses)` is
+the shared walk with that argument. The model stays the index space.
+
+- A field the coverage does not name is not looked at: not required when it
+  is missing, not compared when it is there with another type.
+- A field it names is required whatever the walk's `skip_unused` says, and
+  each edge reads its own half of the correspondence.
+- A nested level is walked in the nested model's index space through the
+  nested pair's own correspondence.
+- Null coverage is unknown coverage: the full reception, as before.
+- A coverage that cannot be read, a level longer than its cells, an edge past
+  both halves of the model, or an edge that lands on an empty place of the
+  model answers UNKNOWN, which no reception takes for YES.
+- The answer changes nothing in the table. The record of the pair, pending or
+  kept, gives physical places and no permission: a later instruction brings
+  its own coverage.
+
+**Walker.** `ADMIT_AS` child 8 is the reception mode: 0 as before, 1 the full
+reception, 2 a reception by the instruction's own coverage. With mode 2 the
+coverage stands in the instruction's cells from child 9, self-delimited by
+its first cell; the maps and the catch rows follow it. The coverage is used
+where the candidate's layout selected a map and where the candidate already
+has a record; a record alone never answers.
+
+**Translator: the analysis.** `l2_ruse_of(own)` gives the coverage of an own
+typed reference of a method: known with its entries, or unknown. It reads the
+method's body as written and classifies every spelling of the name where it
+stands. A spelling it cannot classify makes the coverage unknown, which is
+the full reception and never an empty one. The classes:
+
+- the place being received into: the name atom of its declaration, a store
+  into it written with its colon;
+- an operand of an identity comparison (`=`, `!=`), which consumes the
+  reference and none of its fields;
+- the root of a path below the place, in value position or as the head of a
+  frame. The path is resolved on the model level by level: a number or a
+  reference cell is consumed as it stands; a nested Structure the path goes
+  on through gets a level of its own; a Structure or a callable the path
+  ends at is consumed whole. The selector is kept: a bare name and `[N]name`
+  are different edges of one required field;
+- the whole candidate of another typed reference of the method, whose own
+  receiving instruction admits the value by that reference's coverage.
+
+The analysis runs once per row and is the same fact for the flow of types,
+for native emission and for both passes of the graph producer. The cells are
+computed where the layout is known: an edge is the field's placed slot, plus
+the model's width for a bare name's half.
+
+- Native code declares the cells and the view at the instruction and calls
+  `lmx_implements_receiving_use` in the two branches named above.
+- The graph producer writes mode 2 and the same cells into `ADMIT_AS`.
+- `l2_d105_receiving_flow` does not prune the sources of a place of known
+  coverage. Such a place is then marked, and its fields are read at the slot
+  the candidate's record gives. What the place refuses is decided where it
+  is reached.
+
+**Bounds of this slice.** These are limits of the implementation, not rules
+of the language.
+
+- Coverage is known only for an own typed reference of a plain method, with a
+  named Structure as its model, in a program. A reference of the root or of
+  a named Structure's procedure is a field reached by path and by bare name
+  from other bodies; a library unit does not see its users.
+- A pass as an actual, a return, a copy, an address of the place and any
+  application of it without its colon are unknown: their downstream
+  receiving contract is not composed.
+- A spelling of the name as a segment below another root anywhere in the
+  program is unknown (`while\b`, `m\b`, `node\b`). So is a spelling inside a
+  definition within the method, a nested callable or a named Structure.
+- Same-named declarations of one method are not told apart: the uses of all
+  are the coverage of each, which only asks for more.
+- A formal that is rebound, a field store, an element store and a return
+  have no place of this kind and keep the full reception.
+- A candidate whose layout is unknown and that has no record is still
+  received by the full positional check.
+- A Structure or a callable at the end of a path is consumed whole: held and
+  invoked are not told apart yet. The cells and the walk already express the
+  difference (`below` 0).
+- A nested level is produced and run for a nested Structure of the model's
+  own definition. A candidate whose nested Structure is another definition
+  is refused at translation as before: the nested correspondence maps are a
+  separate open item.
+- The explicit rebinding `@: r o` is not built (measured: `unknown type`).
+  The store is written `r: o`.
+- The bound rests on a measured fact: the occurrence of a plain method is not
+  a value in this translator (`merge m` is an unknown merge operand, `y: m`
+  an unresolved name). When it becomes one, a spelling of the method's name
+  as a value is a use of every reference the method owns.
+
+**A defect found on the way, fixed.** A path rooted at another method's name
+that goes through that method's admitted reference (`keep\held\value`)
+produced C that did not compile: `l2_dslot` was declared only in a method
+with an admitted place of its own. It is declared in every method of a
+program that has such a place
+([PATH-FROM-METHOD-SLOT-TEMP](defects.md#path-from-method-slot-temp)).
+
+**Verification: kernel.** `lmx_implements_use_selftest` (47 checks) and
+`lmx_walk_admit_use_selftest` (20 checks). Mutants, each selftest rebuilt
+against the mutated kernel source:
+
+| Mutant | Checks that fail |
+| --- | --- |
+| a named field passed over when not carried | 6 |
+| every edge reads the ORDINAL half | 3 |
+| a nested level ignored | 2 |
+| a held reference entered | 1 |
+| cell 0 does not bound the reads | 4 |
+| a named field of another type admitted | 2 |
+| an edge on an empty place of the model passed over | 1 |
+| walker: the coverage not handed to the reception | 5 |
+| walker: a recorded candidate received in full | 1 |
+| walker: a recorded candidate received by its record | 2 |
+
+**Verification: programs.** Each program is a native row and a row with its
+methods walked.
+
+| Witness of [section 29](#receiving-use-mechanism) | Row |
+| --- | --- |
+| Root identity, the exact candidate | `unit_recv_use_identity` (declaration and store), `unit_bind_method_thin_other` |
+| A missing unused field | `unit_recv_use_unused_field`, method `missing` |
+| A present unused field of another type | `unit_recv_use_unused_field`, method `another` |
+| A missing used field: thrown where reached, the candidate evaluated once, the destination kept | `unit_recv_use_used_field_refused` (a read, and a store through the place) |
+| Thin, then a Consumer that needs the omitted field | `unit_recv_use_later_consumer`, method `needs` |
+| Thin, then consumed more fully, one correspondence | `unit_recv_use_later_consumer`, method `fuller` |
+| A nested partial path, bare and `[N]` selectors | `unit_recv_use_nested_path` (a nested level, with path facts on every cell), `unit_recv_use_selectors` (`[1]` refused where the bare name is received) |
+| Unknown coverage never empty | `unit_recv_use_unknown_refused`, `unit_recv_use_nested_reader_refused`, `unit_recv_use_path_from_method_refused` |
+
+- Native rows require `lmx_implements_receiving_use(` in the generated text;
+  the four unknown-coverage programs forbid it.
+- Path facts hold the instruction's mode and cells for the empty coverage,
+  for the nested coverage and for the full reception. Three shape mutants:
+  the mode emptied, an edge emptied, the start of the nested level emptied.
+- `unit_recv_use_path_from_method` is the positive of the fixed defect: the
+  other method reads both fields through the reference's correspondence.
+- Migrated: `unit_ref_rebind_other_refused` is now
+  `unit_ref_rebind_other_thin`, and `unit_struct_return_ref_admit_refused` is
+  `unit_struct_return_ref_admit_thin`. The programs are the same with a real
+  observation added: the reference is the candidate, and a reference to
+  `Other` received from it reads what the callee wrote into its result.
+  `unit_ref_formal_rebind_other_refused` and
+  `unit_formal_spelling_rebind_other_refused` read `v\value` and stay
+  refusals.
+- Four more rows of the same class, found by the first full gate
+  ([section 40](#full-16)): `unit_local_init_graph_ref_admit_refused`,
+  `unit_rhs_returned_model_refused`, `unit_rhs_void_admission_assign_refused`
+  and `unit_rhs_void_admission_init_refused` refused a candidate through a
+  reference that was never read. Their subject is the route of the
+  right-hand side, so they stay refusals: each method now reads the field
+  its candidate lacks, and the refusal is by that field.
+- `unit_ref_local_path` spells the native text of a local reference's
+  reception; its pattern names `lmx_implements_receiving_use` with the
+  coverage view now.
+
+Translator mutants through a focused harness run of 26 rows, the live file
+restored and its hash re-verified after each (`fable_use_mut_<name>`):
+
+| Mutant | Red rows |
+| --- | --- |
+| `emptyunknown`: unknown recorded as known empty | `unit_recv_use_unknown_refused` (not translated), `unit_recv_use_nested_reader_refused` (by the forbidden text) |
+| `wholeignored`: a whole-value use passed over | `unit_recv_use_unknown_refused` (not translated) |
+| `nopath`: a path in value position not recorded | `used_field_refused`, `later_consumer`, `selectors`, `nested_path` |
+| `nohead`: a path that heads a frame not recorded | `used_field_refused` |
+| `noselector`: every edge a bare name's | `selectors`, `nested_path` |
+| `nonested`: a nested Structure consumed whole | `nested_path` |
+| `flowfull`: sources pruned by the whole model | `unused_field`, `later_consumer`, `selectors` |
+| `norecv`: the place as a candidate not classified | `later_consumer`, `unit_struct_return_ref_admit_thin` |
+| `noidentity`: an identity comparison not classified | every row that compares its reference by identity |
+| `nodefs`: a definition inside the method read as body | `nested_reader_refused` (by the forbidden text only: the read is found either way) |
+| `nosegscan`: paths below another root not looked for | `path_from_method`, `path_from_method_refused` |
+| `nativefull`: native code never carries a coverage | the nine native thin rows |
+| `graphfull`: the graph never carries a coverage | the walked thin rows, and the native rows with path facts |
+| `nativestore`: the native store site names no place | `identity`, `unit_ref_rebind_other_thin`, `unit_struct_return_ref_admit_thin` |
+| `nativedecl`: the native declaration site names no place | `unit_bind_method_thin_other`, `identity`, `unused_field`, `later_consumer`, `selectors`, `nested_path` |
+| `nodslot`: the slot temporary only where the method has a place | `path_from_method` (gcc fails) |
+
+Focused `fable_use_03` (35 rows: every row above with the neighbouring
+reference rows): all green.
+
+<a id="full-16"></a>
+## 40. Full, kernel and L3 gates after section 39
+
+The first full gate, `fable_full_16`, completed RED 34/1494 with five rows
+from OK to FAIL and none of them a regression of behaviour: the four
+never-read refusals named in section 39 received their candidates, and
+`unit_ref_local_path` no longer found its native text. The rows were
+corrected as that section says and the gate was run again on the same kernel
+and translator bytes.
+
+`fable_full_17` completes **RED 29/1494** on translator SHA256
+`E58A8F18BDD8F2DD6DAA16DBA664B6CD144B07196AA14FE4B411C346162071A5`
+(staged Git blob `af2bbd93bd5505c3d14df1b051948cde4a3f0459`), harness
+`B32C33BA08F6026F48A1177E9B6682D438292F2B038ABF307DD25296FDCEF32D`,
+walker `15327217577E09F2B5F0D00C08A4F6520C818E04103DF32A74A87D6A92917460`,
+admission kernel `DED5518EFB6A1BCBDE05E033E73548729D4FB63A10389A9ADB6C0994AA6184BF`.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_15` (RED 30/1468) | 1 | 0 | 28 | 2 |
+| `fable_full_01` (RED 126/1395, baseline) | 97 | 0 | | |
+
+The two removed rows are the two migrated ones, present under their new names
+among the added. Against the baseline they were recoveries in
+[section 38](#full-15) and are added rows here, so the count there is one
+less with one more recovery (`unit_bind_method_thin_other`).
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_05` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_05` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+
+The first L3 run, `fable_l3_04`, had every suite at exit 0 and failed its
+type budget: the new header type `LmxImplUses` took the Thread units' closure
+from 75 to 76 names against a pinned count. `tools/l3_type_budget.py` records
+the new count with its reason, as that tool requires; the capacities stay
+128 names and 8192 bytes. The kernel gate ran before that change on the same
+kernel bytes.
+
+<a id="written-body-mechanism"></a>
+## 41. Resolved boundary: how the written call body is kept (Codex, FABLE-CODEX-20261004-03)
+
+[Section 32](#written-body-and-prefix-ruling) requires the call's P0 body to
+keep its written fields, wrappers and order. I asked which mechanism may do
+it and gave the measure of the readers: the only destructive write is in
+`l2_bind_call_in`, and `l2trans.lm1` has 538 reads of `frame\body`, 323 of
+`\body\first_field` and 903 calls of the field iterator `l2_next_active`.
+Codex answered without escalating to the author. Nothing of it is
+implemented yet; this section is the boundary the implementation must keep.
+
+**Refused: a redirect inside the iterator.** I proposed to leave the written
+list in the body and to make `l2_next_active` yield the projection when it is
+handed the first written cell of a bound body, with a second iterator for the
+source. That is not explicit: the switch of list happens by the address of a
+field, the caller supplies no receiver and no context, and direct reads of
+first, last and count, suffix scans and diagnostics could then describe
+different lists. No lookup by field address and no ambient current view in
+the iterator.
+
+**Direction.** The view is chosen once, where a Frame's body is entered, from
+its resolved role and its call or binding context:
+
+- a source traversal takes the written body;
+- an analysis by formal coordinate takes the checked projection where it
+  needs it;
+- a traversal of the payload of a named actual knows it stands inside an
+  actual's wrapper, not at a declaration of the caller's scope.
+
+A shared accessor may give the bounds of the chosen list, borrowing the
+compiler's binding record. After that the iterator only advances and filters.
+The work is to centralise the choice at the real shared entry points and to
+inventory the direct reads of a body that bypass them: the count of iterator
+calls is not the count of changes. Two iterator names are fine while each
+stays honest. No list-kind tag in the language graph, no runtime registry, no
+permanent helper graph, no assertion per field; a check at the choice may
+validate the migration.
+
+**Order stays as written.** The check by formal coordinate may use the
+projection. Evaluation of the actuals and the retained graph keep the written
+order, with resolved coordinates for transport, and COUNT, PLACE and FILL
+agree on that one plan with its `NAMED` wrappers. The fix of
+[section 30](#named-actual-order) is not to be undone by an accessor.
+
+**Staging is allowed.** First the formal checks, native preparation and the
+graph passes; then the generic scanners, the shared recursion and the
+remaining direct readers. The body's storage need not change at the first
+checkpoint. While the rewrite stays it is to be named OPEN and destructive,
+with the whole written list, its wrappers and spans kept before the
+replacement as borrowed compiler references and not as a second source
+graph. No intermediate stage claims G1 or the ticket closed.
+
+**End state.** When every dependent reader chooses its view, the rewrite is
+removed: the P0 first, last, count, links, wrappers and containment stay as
+written, and the compiler's binding data is disposed before the independent
+decoder runs. No hidden fallback.
+
+**Verification asked.** Side effects in named order, whole-Structure actuals,
+empty payloads, nesting, mixed positional and named actuals, source
+diagnostics, and unchanged neighbouring rows. Semantic checks stay in the
+ordinary resolved algorithm; assertions do not make up for a confused view.
+
+**On [section 39](#receiving-use-coverage).** Codex takes it as a progress
+report. The distinction stands: unknown coverage is not empty and is not a
+proven incompatibility of the candidate. Where the full reception refuses a
+candidate that fits its actual Consumer, that is an OPEN limit of the
+coverage, not a new normative `implements` refusal, and the absence of rows
+that expect it does not show the limit absent.

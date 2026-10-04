@@ -1843,6 +1843,35 @@ $heldArityShape = @(
     'rolepath','3','23','2','4','3','0','sizepath','4','23','2','4','1','7','rolepath','3','23','2','5','9','0',
     'rolepath','3','23','2','6','3','0','sizepath','4','23','2','6','1','9','nullpath','3','23','2','7')
 
+# The receiving instruction of a method's own typed reference: ADMIT_AS (37).
+# Child 8 is its reception mode -- 2 when it carries the coverage of the place
+# it receives into, 1 for the full reception of unknown coverage -- and with
+# mode 2 the coverage stands from child 9: its count of cells, then each level
+# as a count of pairs and (edge, below) per field the Consumer reads.
+# declared: `@: Model b o`, b compared by identity alone -- a root level of no
+# pair.  stored: `r: o` into a declared reference, the same.
+$recvUseEmptyShape = @(
+    'rolepath','3','2','4','2','37','0','widthpath','3','2','4','2','20',
+    'sizepath','4','2','4','2','8','2','sizepath','4','2','4','2','9','2','sizepath','4','2','4','2','10','0',
+    'rolepath','3','3','6','2','37','0','widthpath','3','3','6','2','20',
+    'sizepath','4','3','6','2','8','2','sizepath','4','3','6','2','9','2','sizepath','4','3','6','2','10','0')
+# reads: b reads in\x, [0]a and the bare a of a Model of width 7. The root level
+# has three pairs: in through its LAST half (7 + 0) with its nested level at
+# cell 8; [0]a through its ORDINAL half (slot 1); the bare a through its LAST
+# half (7 + 3). The nested level has one pair: x through the LAST half of the
+# nested Structure's own width (4 + 0).
+$recvUseNestedShape = @(
+    'rolepath','3','1','4','2','37','0','widthpath','3','1','4','2','49',
+    'sizepath','4','1','4','2','8','2','sizepath','4','1','4','2','9','11','sizepath','4','1','4','2','10','3',
+    'sizepath','4','1','4','2','11','7','sizepath','4','1','4','2','12','8',
+    'sizepath','4','1','4','2','13','1','sizepath','4','1','4','2','14','0',
+    'sizepath','4','1','4','2','15','10','sizepath','4','1','4','2','16','0',
+    'sizepath','4','1','4','2','17','1','sizepath','4','1','4','2','18','4','sizepath','4','1','4','2','19','0')
+# m: b is passed whole to a callee -- unknown coverage, the full reception, and
+# no coverage cell: the maps start at child 9.
+$recvUseUnknownShape = @(
+    'rolepath','3','3','4','2','37','0','widthpath','3','3','4','2','18','sizepath','4','3','4','2','8','1')
+
 # Formal invocations select ARG, not the unit method of the same spelling.
 # Native words stay selected; these facts certify retained source, not the
 # currently excluded --walk-methods callable-formal execution profile.
@@ -3788,6 +3817,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_rhs_returned_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rhs_pointer_contract.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_rhs_fnptr_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # The three refusals below receive a candidate of another shape through a reference that reads the field the
+    # candidate lacks: the refusal is by that field (the receiving-use contract).  Each was a refusal by Model's whole
+    # shape of a reference never read, which is a valid program.
     [pscustomobject]@{ Name = 'unit_rhs_void_admission_init_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_receiver_view(') },
     [pscustomobject]@{ Name = 'unit_rhs_void_admission_assign_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_receiver_view(') },
     [pscustomobject]@{ Name = 'unit_rhs_returned_model_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; Absent = @(); Debt = @('lmx_implements_receiver_view(') },
@@ -3900,7 +3932,79 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_bind_root_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_bind_method_thin_other_walk.lm2'; Source = 'unit_bind_method_thin_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # The receiving-use contract (Codex, FABLE-CODEX-20261003-01 and -20261004-01): a method's own typed reference
+    # receives a candidate by what its Consumer reads through it.  Each program natively and with its methods walked.
+    # The native text must call the reception by coverage; the graph facts hold the instruction's mode and its cells.
+    # A Consumer that compares the reference by identity and reads no field: the exact candidate, at a declaration with
+    # its initializer and at a later store.
+    [pscustomobject]@{ Name = 'unit_recv_use_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseEmptyShape; Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_identity_walk.lm2'; Source = 'unit_recv_use_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseEmptyShape; Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_identity_mode_mutant.lm2'; Source = 'unit_recv_use_identity.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','4','2','4','2','8') + $recvUseEmptyShape; Entry = 7; Absent = @(); Debt = @() },
+    # A field the Consumer does not read: missing in one candidate, there with another type in the other.
+    [pscustomobject]@{ Name = 'unit_recv_use_unused_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_unused_field_walk.lm2'; Source = 'unit_recv_use_unused_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # A field the Consumer reads and the candidate lacks: refused where the store is reached, the candidate evaluated
+    # once, the reference still holding what it held.  A store through the place asks for its field as a read does.
+    [pscustomobject]@{ Name = 'unit_recv_use_used_field_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_used_field_refused_walk.lm2'; Source = 'unit_recv_use_used_field_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    # One candidate received thin, then by a second reference: refused when that Consumer reads the field it lacks,
+    # received through the same correspondence when it reads fields it carries.
+    [pscustomobject]@{ Name = 'unit_recv_use_later_consumer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_later_consumer_walk.lm2'; Source = 'unit_recv_use_later_consumer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # The selector is part of the requirement: a bare name and [0] reach the candidate's one field of that name, [1]
+    # asks for an occurrence it lacks.
+    [pscustomobject]@{ Name = 'unit_recv_use_selectors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_selectors_walk.lm2'; Source = 'unit_recv_use_selectors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # A path below the place: a nested level in the nested Structure's own index space, one edge per selector.  The
+    # facts hold every cell of the instruction's coverage; two shape mutants: an edge emptied, the nested level's
+    # start emptied.
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseNestedShape; Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_path_walk.lm2'; Source = 'unit_recv_use_nested_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseNestedShape; Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_path_edge_mutant.lm2'; Source = 'unit_recv_use_nested_path.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','4','1','4','2','15') + $recvUseNestedShape; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_path_level_mutant.lm2'; Source = 'unit_recv_use_nested_path.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','4','1','4','2','12') + $recvUseNestedShape; Entry = 7; Absent = @(); Debt = @() },
+    # Unknown coverage is the full reception: a reference passed whole to a callee that reads the field the Other
+    # lacks refuses the Other at its declaration.  The native text has no reception by coverage and the instruction's
+    # mode is 1.
+    [pscustomobject]@{ Name = 'unit_recv_use_unknown_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseUnknownShape; Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0,1); Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_unknown_refused_walk.lm2'; Source = 'unit_recv_use_unknown_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $recvUseUnknownShape; Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # A definition inside the method that reads through the reference is another Consumer: the same full reception,
+    # refusing the Other the nested read could not be served by.
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_reader_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @('lmx_implements_receiving_use('); Debt = @('lmx_implements_receiver_view(') },
+    [pscustomobject]@{ Name = 'unit_recv_use_nested_reader_refused_walk.lm2'; Source = 'unit_recv_use_nested_reader_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @('lmx_implements_receiving_use('); Debt = @() },
+    # A path rooted at the method's name reaches its reference from another method: a use the method's own body does
+    # not show, so the coverage is unknown and the reception full.  A candidate with every field in its own places is
+    # received and read through the reference's correspondence from the other method; one that lacks the field read
+    # there is refused at the declaration.
+    [pscustomobject]@{ Name = 'unit_recv_use_path_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @('lmx_implements_receiving_use('); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_path_from_method_walk.lm2'; Source = 'unit_recv_use_path_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_path_from_method_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0,1); Absent = @('lmx_implements_receiving_use('); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_use_path_from_method_refused_walk.lm2'; Source = 'unit_recv_use_path_from_method_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_root_used_other_refused.lm2:14:1: implements is false in a typed binding'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -4806,7 +4910,8 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_local_init_graph_place_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_init_graph_place_refused.lm2:15:5: more arguments than '; Absent = @(); Debt = @() },
     # Its explicit-reference sibling (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): `@: Box b; b: mk` binds after the
-    # admission of mk's result to Box; an Other of another shape is refused -- the implicit throw `implements` stops R0.
+    # admission of mk's result to Box; an Other of another shape is refused by the field w reads through b -- the
+    # implicit throw `implements` stops R0.
     [pscustomobject]@{ Name = 'unit_local_init_graph_ref_admit_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         Absent = @(); Debt = @() },
     # OPUS-BODYSEG-20260929-05 (the 7b-3 path rule one level down; L2 §10 `M\for\y`; Q51): after a method's name, and
@@ -5585,8 +5690,12 @@ $fixtures = @(
     # of another shape is refused -- the method's implicit throw `implements`, uncaught, stops R0.  It was a plain store.
     [pscustomobject]@{ Name = 'unit_ref_rebind_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lmx_implements_receiver_view(') },
-    [pscustomobject]@{ Name = 'unit_ref_rebind_other_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
-        Absent = @(); Debt = @() },
+    # It was `unit_ref_rebind_other_refused`: a refusal by Model's whole shape of a reference the method never reads.
+    # That expectation was wrong (the receiving-use contract): the Other is received, and r is o.
+    [pscustomobject]@{ Name = 'unit_ref_rebind_other_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_ref_rebind_other_thin_walk.lm2'; Source = 'unit_ref_rebind_other_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     # A reference formal `@: Model v` is rebound the same way (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): a Model is
     # admitted, no shortcut (pinned), read through v: 7; an Other is refused, the implicit throw stops R0.  It was a plain
     # store.  A value formal `Model: v` is callable: `v: w` its call, refused where it stands -- told apart by the
@@ -5703,9 +5812,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_struct_return_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'more arguments than '; Absent = @(); Debt = @() },
     # Its explicit-reference sibling (OPUS-CALLABLE-STRUCT-BINDING-20260929-16): `@: Model b; b: other(a)` binds after the
-    # admission of the call's result to Model; an Other of another shape is refused -- the implicit throw stops R0.
-    [pscustomobject]@{ Name = 'unit_struct_return_ref_admit_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
-        Absent = @(); Debt = @() },
+    # admission of the call's result to Model.  It was `unit_struct_return_ref_admit_refused`, a refusal by Model's whole
+    # shape of a reference the method never reads; that expectation was wrong (the receiving-use contract).  The Other
+    # is received, and a reference to Other received from b reads what the callee wrote into its result.
+    [pscustomobject]@{ Name = 'unit_struct_return_ref_admit_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @('lmx_implements_receiving_use(') },
+    [pscustomobject]@{ Name = 'unit_struct_return_ref_admit_thin_walk.lm2'; Source = 'unit_struct_return_ref_admit_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # FABLE-SONNET-DEFECTS-20260924-141 D-15: an int: field in a named
     # Structure goes through the same field-kind table as size_t (kind 7) --
     # own declaration, a nested path, a formal parameter and a merge copy
@@ -5915,7 +6028,7 @@ $fixtures = @(
             'rolepath','3','1','2','1','8','1','rolepath','2','1','6','8','0',
             'postpaths','sizepath','2','0','0','1','sizepath','3','1','2','0','11','endpostpaths');
         Absent = @('lmx_struct_new_owned(self, l2_program_arena)'); Debt = @();
-        NativePatterns = @('(?s)@: Lmx (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: Lmx\) lmx_pointer_value_known\(\k<ref>_from\[0\]\)\).*?(?<model>(?!\k<ref>\b)l2_q\d+): \(cast: \(@: Lmx\) (?<cell>l2_q\d+_from)\[0\]\).*?@: Lmx (?<candidate>l2_t\d+) \k<model>\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiver_view\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: Lmx\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
+        NativePatterns = @('(?s)@: Lmx (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: Lmx\) lmx_pointer_value_known\(\k<ref>_from\[0\]\)\).*?(?<model>(?!\k<ref>\b)l2_q\d+): \(cast: \(@: Lmx\) (?<cell>l2_q\d+_from)\[0\]\).*?@: Lmx (?<candidate>l2_t\d+) \k<model>\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiving_use\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>, @ l2_rusev\d+\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: Lmx\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
     [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @('@@: Lmx l2_p'); Debt = @('@: Lmx l2_p0_0') },
     [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');

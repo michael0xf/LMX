@@ -444,6 +444,8 @@ It is not a new language graph or a runtime name registry. A map records corresp
 
 This distinction preserves reached timing. A function producing a value must run before an ordinary runtime receiver throws `implements`; a premature compile-time refusal based on a conservative full map is not equivalent execution. Conversely, turning missing required slots into unused holes and registering YES is not an admissible repair.
 
+**Implementation, 2026-10-04 (sandbox).** The full receiver is the reception of *unknown coverage*, not the norm: the norm is Consumer-relative used paths. A receiving instruction may carry the coverage of the place it receives into (`LmxImplUses`): the shared walk then keeps the model as its index space and requires the fields the coverage names, each through its own half of the correspondence, and no other field. The coverage is the argument of that one call and is never kept with the pair, whose record holds physical places only. The translator gives a coverage for an own typed reference of a plain method; every other receiving place is still received in full. The bounds are listed in [the continuation ledger](steps/fable-continuation-20261003.md#receiving-use-coverage).
+
 ### 9.4 Layout tokens solve origin ambiguity, not type semantics
 
 Two actual layouts can have the same map for an intermediate requirement yet require different maps for a later one. Therefore map equality cannot identify the physical origin. The source-site/provenance repair uses nullable **opaque module-lifetime tokens** for existing declaration schemas. `LmxImplEntry.layout` is `void *`, not an Lmx graph reference. It is never traversed, dereferenced as a Structure, or mistaken for a required model.
@@ -467,8 +469,9 @@ The inspected implementation has one flat encoding, not an old/new fallback deco
 5   alternative count
 6   default-map count
 7   boxed genuine direct-source token
-8   full-receiver flag
-9.. default map
+8   reception mode: 0 none, 1 full, 2 by the coverage that follows
+9.. coverage cells (mode 2 only; the first cell is their count)
+    default map
     repeated (boxed origin token, target-width map)
     catch operands
 ```

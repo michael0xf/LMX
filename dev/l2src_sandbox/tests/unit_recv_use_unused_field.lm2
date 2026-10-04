@@ -1,0 +1,48 @@
+# A field the Consumer does not read is not required of the candidate when it
+# is missing, and not compared when it is there with another type. b reads
+# value alone. Short has no extra; Typed has an extra of another type, and its
+# value in another place. Both are received, and value is read where each
+# candidate holds it. Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+Short:
+    size_t: value 5U
+end: Short
+
+Typed:
+    size_t: extra 9U
+    size_t: value 6U
+end: Typed
+
+fn: missing () int
+    o: merge Short
+    @: Model b o
+    size_t: got b\value
+    if: got != 5U
+        return: 81
+    if: b != o
+        return: 82
+    return: 0
+end: missing
+
+fn: another () int
+    o: merge Typed
+    @: Model b o
+    size_t: got b\value
+    if: got != 6U
+        return: 83
+    b\value: 8U
+    if: o\value != 8U || o\extra != 9U
+        return: 84
+    return: 7
+end: another
+
+int: first missing()
+if: first != 0
+    sendMessage: exit(exit_code: first; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: another(); stdout: ""; stderr: "")
+return

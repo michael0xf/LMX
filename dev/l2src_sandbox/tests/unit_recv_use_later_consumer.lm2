@@ -1,0 +1,65 @@
+# The answer of a reception is that instruction's alone. b reads no field and
+# receives o thin. c is received from b: its own instruction asks for what c
+# reads. In needs, c reads extra, which the Short behind b lacks: the store
+# c: b is refused, and c keeps g. In fuller, the Turned behind b carries value
+# and extra in its own places and lacks only more, which c does not read: c
+# receives it and reads both through the same correspondence. Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+    int: more 0
+end: Model
+
+Good:
+    size_t: value 7U
+    int: extra 3
+    int: more 4
+end: Good
+
+Short:
+    size_t: value 5U
+end: Short
+
+Turned:
+    int: extra 6
+    size_t: value 8U
+end: Turned
+
+fn: needs () int
+    o: merge Short
+    g: merge Good
+    @: Model b o
+    @: Model c g
+    int: caught 0
+    c: b
+    catch: implements ()
+        caught: caught + 1
+    ---
+    if: caught != 1
+        return: 81
+    if: c != g || c\extra != 3
+        return: 82
+    if: b != o
+        return: 83
+    return: 0
+end: needs
+
+fn: fuller () int
+    o: merge Turned
+    @: Model b o
+    @: Model c b
+    if: c != o || b != c
+        return: 84
+    if: c\value != 8U
+        return: 85
+    if: c\extra != 6
+        return: 86
+    return: 7
+end: fuller
+
+int: first needs()
+if: first != 0
+    sendMessage: exit(exit_code: first; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: fuller(); stdout: ""; stderr: "")
+return

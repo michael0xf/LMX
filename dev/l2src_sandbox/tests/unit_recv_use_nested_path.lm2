@@ -1,0 +1,33 @@
+# A path below the place is a requirement of its own depth. b reads in\x -- of
+# the nested Structure only x -- then [0]a and the bare a, which are two fields
+# of Model: the receiving instruction carries a nested level for in, in the
+# nested Structure's own index space, and one edge per selector. The candidate
+# is a Model: every read finds its field, 4, 1 and 2. Entry 7.
+Model:
+    in:
+        size_t: x 4U
+        int: y 6
+    int: a 1
+    int: a 2
+    size_t: tail 9U
+end: Model
+
+fn: reads () int
+    g: merge Model
+    @: Model b g
+    size_t: gx b\in\x
+    int: first b\[0]a
+    int: last b\a
+    if: gx != 4U
+        return: 81
+    if: first != 1
+        return: 82
+    if: last != 2
+        return: 83
+    if: b != g
+        return: 84
+    return: 7
+end: reads
+
+sendMessage: exit(exit_code: reads(); stdout: ""; stderr: "")
+return

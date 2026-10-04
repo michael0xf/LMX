@@ -1,0 +1,33 @@
+# A method's own reference is reached from another method by a path rooted at
+# the method's name: peek reads keep\held\value. That read is a use of held
+# that keep's own body does not show, so held's coverage is unknown and held
+# receives by the whole of Model. The Other has no value: it is refused at the
+# declaration -- the implicit throw implements, uncaught, stops R0 -- and peek
+# is never handed a Structure with no value to read.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: keep () int
+    o: merge Other
+    @: Model held o
+    return: 0
+end: keep
+
+fn: peek () int
+    if: keep\held\value != 1U
+        return: 81
+    return: 7
+end: peek
+
+int: k keep()
+if: k != 0
+    sendMessage: exit(exit_code: k; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

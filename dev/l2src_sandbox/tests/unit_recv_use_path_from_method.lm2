@@ -1,0 +1,36 @@
+# A method's own reference is reached from another method by a path rooted at
+# the method's name: peek reads keep\held\value and keep\held\extra. Those
+# reads are uses of held that keep's own body does not show, so held's coverage
+# is unknown and held receives by the whole of Model. Turned carries both
+# fields in its own places: it is received, and peek reads each field where
+# Turned holds it, through held's correspondence. Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+Turned:
+    int: extra 6
+    size_t: value 8U
+end: Turned
+
+fn: keep () int
+    o: merge Turned
+    @: Model held o
+    return: 0
+end: keep
+
+fn: peek () int
+    if: keep\held\value != 8U
+        return: 81
+    if: keep\held\extra != 6
+        return: 82
+    return: 7
+end: peek
+
+int: k keep()
+if: k != 0
+    sendMessage: exit(exit_code: k; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: peek(); stdout: ""; stderr: "")
+return

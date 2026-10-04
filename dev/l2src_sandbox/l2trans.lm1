@@ -262,6 +262,29 @@ int: l2_d105t_n 0
 # How many pair maps were declared (module scope); a pair asked for later has no array.
 int: l2_d105t_declared 0 - 1
 int: l2_d105_seq 0
+# The coverage of a method's own typed reference (the receiving-use contract;
+# l2_ruse_of): per own row its state -- 0 not asked, 1 unknown, 2 known -- and,
+# when known, its entries: one per field of the model its Consumer reads, at the
+# level of the path it stands on. An entry names the model's field by its
+# declaration row and the half its selector chose (a bare name: the LAST one);
+# `below` is 0 for a field consumed and not entered, -1 for one consumed whole,
+# else the level its nested fields stand on. Compiler metadata only: the cells a
+# receiving instruction carries are computed from it where the layout is known.
+int: l2_ruse_cap 0
+@: int l2_ruse_state 0
+@: int l2_ruse_first 0
+@: int l2_ruse_count 0
+@: int l2_ruse_levels 0
+int: l2_ruse_e_n 0
+int: l2_ruse_e_cap 0
+@: int l2_ruse_e_level 0
+@: int l2_ruse_e_row 0
+@: int l2_ruse_e_last 0
+@: int l2_ruse_e_below 0
+int: l2_ruse_unknown 0
+int: l2_ruse_cur_first 0
+int: l2_ruse_cur_levels 0
+const: @: LmP0Structure l2_ruse_unit 0
 # The flag steps of the statement being built (-196): a short-circuit `a && b` / `a || b` is an IF
 # step that runs before its statement and leaves the value in a cell (l2_rw_sc); l2_rw_stmts puts
 # them in front of the statement's own steps.
@@ -958,6 +981,7 @@ prototype:
     fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
     fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @: int out) int
     fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
+    fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out) int
     fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int out) int
@@ -984,7 +1008,12 @@ prototype:
     fn: l2_d105_any (int: mi) int
     fn: l2_d105_tnode (int: p; @: char dest) int
     fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind)) int
-    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw) int
+    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own) int
+    fn: l2_ruse_reset () int
+    fn: l2_ruse_of (int: own) int
+    fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0Text name)) int
+    fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
     fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
     fn: l2_d105_emit_tables () int
@@ -996,7 +1025,7 @@ prototype:
     fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: char dest) int
     fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; @: int out) int
-    fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; @: int out) int
+    fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; @: int out) int
     fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
@@ -1409,9 +1438,10 @@ prototype:
     fn: l2_admit_site (int: mi) int
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
     fn: l2_emit_positional_admit (int: mi; const: @(char inst); const: @(char value); const: @(char ind)) int
-    fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: char value; @: L2ReferenceSource source) int
+    fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: char value; @: L2ReferenceSource source; int: place) int
     fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: char value) int
+    fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: char value; int: place) int
     fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
     fn: l2_throws_frame (int: mi) @: LmP0Node
@@ -3734,7 +3764,7 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
     if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
         return: 1
     # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).
-    if: l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0) != 0
+    if: l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1) != 0
         return: 1
     # §7b: the value is evaluated above; what is marked is published before the return (book §14).
     if: l2_emit_publish(ind) != 0
@@ -4696,6 +4726,8 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_m_n: 0
     l2_own_n: 0
     l2_own_free()
+    l2_ruse_reset()
+    l2_ruse_unit: unit
     l2_application_free()
     l2_loop_depth: 0
     l2_scope_n: 0
@@ -27709,7 +27741,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_prep_drop(acts, hides)
         # D-105 native (steps/d105-native.md): the actual of a formal admitted by name is recorded before
         # the call (l2_d105_emit_admit). An occurrence already registered its pair map above.
-        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0) != 0
+        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0, -1) != 0
             return: l2_prep_drop(acts, hides)
         written: written + 1
     ---
@@ -30665,10 +30697,736 @@ fn: l2_d105_prepare_pair (int: cand; int: req; const: @(LmP0Node at)) int
         return: l2_error(l2_src, at, "too many pairs of types admitted by name (D-105)")
 return: 0
 
+# THE COVERAGE OF A RECEIVING PLACE (the receiving-use contract: Codex,
+# FABLE-CODEX-20261003-01 and -20261004-01; steps/fable-continuation-20261003.md,
+# sections 3 and 29).  A typed reference receives a candidate by what the Consumer
+# of that place reads through it, not by the whole shape of its model.  The
+# Consumer of a method's own reference is the method's body, and this analysis
+# reads it as written: every spelling of the place's name is classified where it
+# stands, and one that is not classified makes the coverage UNKNOWN -- which is
+# the full reception, never an empty one.
+#
+# Known coverage is a bounded fact:
+#   * the place is an own typed reference of a plain method -- not of the root or
+#     of a named Structure's procedure, whose fields are reached by path from
+#     elsewhere -- with a named Structure as its model, in a program (a library
+#     unit does not see its users);
+#   * no path anywhere in the program has the name as a segment below another
+#     root: a method's own field is reached that way too;
+#   * no definition inside the method -- a nested callable, a named Structure --
+#     spells the name: such a definition is another Consumer;
+#   * in the method's own body each spelling is the place being received into, an
+#     operand of an identity comparison, the root of a path below the place, or
+#     the whole candidate of another typed reference of the method -- whose own
+#     receiving instruction admits the value by that reference's coverage.
+# A pass as an actual, a return, a copy, an address of the place and every other
+# whole-value use are UNKNOWN in this slice: their downstream receiving contract
+# is not composed.  Same-named declarations of the method are not told apart: the
+# uses of all of them are the coverage of each, which only asks for more.
+#
+# What the bound rests on: the cells of a plain method's occurrence are read by
+# that method's body and by paths that spell their names, and by nothing else.
+# The occurrence of a plain method is not a value in this translator -- it is no
+# merge operand, no copy and no actual (measured 2026-10-04: `merge m` is an
+# unknown merge operand, `y: m` an unresolved name).  When it becomes one, a
+# spelling of the method's name as a value is a use of every reference the
+# method owns, and belongs in this analysis.
+#
+# A path below the place is resolved on the model, level by level: a number or a
+# reference cell is consumed as it stands; a nested Structure the path goes on
+# through gets a level of its own; a Structure or a callable the path ends at is
+# consumed whole.  The selector is kept: a bare name and `[N]name` are different
+# edges of one required field.
+fn: l2_ruse_reset () int
+    if: l2_ruse_state != 0
+        free((cast: (@: void) l2_ruse_state))
+    if: l2_ruse_first != 0
+        free((cast: (@: void) l2_ruse_first))
+    if: l2_ruse_count != 0
+        free((cast: (@: void) l2_ruse_count))
+    if: l2_ruse_levels != 0
+        free((cast: (@: void) l2_ruse_levels))
+    if: l2_ruse_e_level != 0
+        free((cast: (@: void) l2_ruse_e_level))
+    if: l2_ruse_e_row != 0
+        free((cast: (@: void) l2_ruse_e_row))
+    if: l2_ruse_e_last != 0
+        free((cast: (@: void) l2_ruse_e_last))
+    if: l2_ruse_e_below != 0
+        free((cast: (@: void) l2_ruse_e_below))
+    l2_ruse_state: 0
+    l2_ruse_first: 0
+    l2_ruse_count: 0
+    l2_ruse_levels: 0
+    l2_ruse_cap: 0
+    l2_ruse_e_level: 0
+    l2_ruse_e_row: 0
+    l2_ruse_e_last: 0
+    l2_ruse_e_below: 0
+    l2_ruse_e_n: 0
+    l2_ruse_e_cap: 0
+    l2_ruse_unknown: 0
+    l2_ruse_unit: 0
+return: 0
+
+# One int table grown to `want` cells, the new ones zero.  1 when there is no room.
+fn: l2_ruse_grow (@@: int table; int: have; int: want) int
+    @: int grown
+    int: i have
+    grown: (cast: (@: int) realloc((cast: (@: void) (\table)), (cast: (size_t) want) * c.sizeof(c.int)))
+    if: grown = 0
+        return: 1
+    while: i < want
+        grown[i]: 0
+        i: i + 1
+    ---
+    \table: grown
+return: 0
+
+# The per-row tables hold own row `own`; a row not asked before starts at 0.
+fn: l2_ruse_room (int: own) int
+    int: want l2_ruse_cap * 2
+    if: own < l2_ruse_cap
+        return: 0
+    if: want < 64
+        want: 64
+    while: want <= own
+        want: want * 2
+    ---
+    if: l2_ruse_grow(@ l2_ruse_state, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_first, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_count, l2_ruse_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_levels, l2_ruse_cap, want) != 0
+        return: 1
+    l2_ruse_cap: want
+return: 0
+
+# The entry of (level, row, half) in the analysis in progress, added when it is
+# not there.  -1 when there is no room.
+fn: l2_ruse_entry (int: level; int: row; int: last) int
+    int: i l2_ruse_cur_first
+    int: want l2_ruse_e_cap * 2
+    while: i < l2_ruse_e_n
+        if: l2_ruse_e_level[i] = level && l2_ruse_e_row[i] = row && l2_ruse_e_last[i] = last
+            return: i
+        i: i + 1
+    ---
+    if: l2_ruse_e_n >= l2_ruse_e_cap
+        if: want < 64
+            want: 64
+        if: l2_ruse_grow(@ l2_ruse_e_level, l2_ruse_e_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_e_row, l2_ruse_e_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_e_last, l2_ruse_e_cap, want) != 0 || l2_ruse_grow(@ l2_ruse_e_below, l2_ruse_e_cap, want) != 0
+            return: -1
+        l2_ruse_e_cap: want
+    ---
+    l2_ruse_e_level[l2_ruse_e_n]: level
+    l2_ruse_e_row[l2_ruse_e_n]: row
+    l2_ruse_e_last[l2_ruse_e_n]: last
+    l2_ruse_e_below[l2_ruse_e_n]: 0
+    l2_ruse_e_n: l2_ruse_e_n + 1
+return: l2_ruse_e_n - 1
+
+# One use of the place through the path pd[0..pn): the segments written below
+# the place's own name.  A segment the model does not declare, or one that
+# cannot be read, makes the coverage unknown.
+fn: l2_ruse_path (int: req; const: @(char pd); size_t: pn) int
+    int: segs
+    int: i 0
+    int: level 0
+    int: model req
+    int: row
+    int: kind
+    int: ent
+    int: occ
+    int: e
+    size_t: off 0U
+    size_t: len 0U
+    if: l2_ruse_unknown != 0
+        return: 0
+    segs: l2_seg_count(pd, pn)
+    if: segs < 1
+        l2_ruse_unknown: 1
+    while: i < segs && l2_ruse_unknown = 0
+        kind: -1
+        ent: -1
+        occ: -1
+        row: -1
+        if: l2_seg_at(pd, pn, i, @ off, @ len) = 0 && len != 0U && l2_seg_occurrence(pd, off, len, @ occ) = 0
+            row: l2_ns_named_row(model, pd, off, len, @ kind, @ ent)
+        e: -1
+        if: row >= 0
+            e: l2_ruse_entry(level, row, (cast: (int) (occ < 0)))
+        if: e < 0
+            l2_ruse_unknown: 1
+            return: 0
+        # A number, or a reference cell, is the field itself and nothing below
+        # it: a path that goes on through a reference cell goes on in another
+        # value, received in full where it was stored.
+        if: kind = 0 || kind = 1 || kind = 7 || kind = 8 || kind = 9 || kind = 10 || kind = 11
+            return: 0
+        # A Structure or a callable the path ends at is consumed whole.
+        if: i + 1 = segs || (kind != 2 && kind != 3) || ent < 0
+            l2_ruse_e_below[e]: -1
+            return: 0
+        if: l2_ruse_e_below[e] = -1
+            return: 0
+        if: l2_ruse_e_below[e] = 0
+            l2_ruse_e_below[e]: l2_ruse_cur_levels
+            l2_ruse_cur_levels: l2_ruse_cur_levels + 1
+        ---
+        level: l2_ruse_e_below[e]
+        model: ent
+        i: i + 1
+    ---
+return: 0
+
+# How a text spells the name: 0 not at all, 1 exactly, 2 with a mark in front of
+# it (`@`, `\`) or a foreign member behind it (`.`) -- a use this analysis does
+# not classify.
+fn: l2_ruse_spells (const: @(LmP0Text t); const: @(LmP0Text name)) int
+    const: @(char d)
+    size_t: n
+    size_t: skip 0U
+    if: t = 0 || t\data = 0 || name = 0 || name\data = 0 || name\length = 0U
+        return: 0
+    if: l2_uses_name_eq(t, name) != 0
+        return: 1
+    d: t\data
+    n: t\length
+    while: skip < n && (d[skip] = 64 || d[skip] = 92)
+        skip: skip + 1U
+    ---
+    if: n - skip < name\length || memcmp(d + skip, name\data, name\length) != 0
+        return: 0
+    if: n - skip = name\length
+        return: 2
+    if: d[skip + name\length] = 46
+        return: 2
+return: 0
+
+# Which segment of a head spells the name: -1 none, 0 its root exactly, 1 any
+# other way -- a later segment, a marked root.
+fn: l2_ruse_head_at (const: @(LmP0Text head); const: @(LmP0Text name)) int
+    LmP0Text: seg
+    int: n
+    int: i 0
+    int: occ 0
+    int: how
+    size_t: off 0U
+    size_t: len 0U
+    size_t: noff 0U
+    size_t: nlen 0U
+    if: head = 0 || head\data = 0 || head\length = 0U || name = 0
+        return: -1
+    n: l2_seg_count(head\data, head\length)
+    while: i < n
+        if: l2_seg_at(head\data, head\length, i, @ off, @ len) = 0 && len != 0U
+            noff: off
+            nlen: len
+            if: l2_seg_split(head\data, off, len, @ occ, @ noff, @ nlen) != 0
+                noff: off
+                nlen: len
+            seg.data: head\data + noff
+            seg.length: nlen
+            how: l2_ruse_spells(@ seg, name)
+            if: how != 0
+                if: i = 0 && how = 1 && noff = off
+                    return: 0
+                return: 1
+            ---
+        ---
+        i: i + 1
+    ---
+return: -1
+
+# Is the field an atom of the one character `ch`?
+fn: l2_ruse_one (const: @(LmP0Field f); int: ch) int
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0
+        return: 0
+return: f\value\as\atom\length = 1U && (cast: (int) f\value\as\atom\data[0]) = ch
+
+# Is the field `=` or `!=`: a comparison of identity, for a reference?
+fn: l2_ruse_cmp (const: @(LmP0Field f)) int
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 0
+return: l2_text_eq(f\value\as\atom, "=") != 0 || l2_text_eq(f\value\as\atom, "!=") != 0
+
+# The far side of a compared operand: nothing, `&&`, `||`, or -- behind the
+# comparison -- the block of the statement the condition heads.  Anything else
+# may bind the operand before the comparison does.
+fn: l2_ruse_far (const: @(LmP0Field f); int: behind) int
+    if: f = 0 || f\value = 0
+        return: 1
+    if: behind != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE
+        return: 1
+    if: f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+        return: 0
+return: l2_text_eq(f\value\as\atom, "&&") != 0 || l2_text_eq(f\value\as\atom, "||") != 0
+
+# Any path in this text with the name as a segment below another root?  The
+# program-wide half of the analysis: such a path reaches the place from outside
+# its method's body.
+fn: l2_ruse_seg_struct (const: @(LmP0Structure body); const: @(LmP0Text name)) int
+    @: LmP0Field f
+    @: LmP0Field g
+    if: body = 0
+        return: 0
+    f: l2_next_active(body\first_field)
+    while: f != 0
+        if: l2_ruse_one(f, 92) != 0
+            g: l2_next_active(f\next)
+            if: l2_ruse_one(g, 91) != 0
+                while: g != 0 && l2_ruse_one(g, 93) = 0
+                    g: l2_next_active(g\next)
+                if: g != 0
+                    g: l2_next_active(g\next)
+            ---
+            if: g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_ruse_spells(g\value\as\atom, name) != 0
+                return: 1
+        ---
+        if: l2_ruse_seg_node(f\value, name) != 0
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+    if: body\trailer != 0
+        return: l2_ruse_seg_struct(body\trailer\body, name)
+return: 0
+
+fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    if: node = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        return: l2_ruse_seg_struct(node\as\structure, name)
+    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
+        return: 0
+    if: l2_ruse_head_at(node\as\frame\head, name) = 1
+        return: 1
+    if: l2_ruse_seg_struct(node\as\frame\body, name) != 0
+        return: 1
+    if: node\as\frame\trailer != 0
+        return: l2_ruse_seg_struct(node\as\frame\trailer\body, name)
+return: 0
+
+# Does this text spell the name anywhere, in any way?
+fn: l2_ruse_mentions_struct (const: @(LmP0Structure body); const: @(LmP0Text name)) int
+    @: LmP0Field f
+    if: body = 0
+        return: 0
+    f: l2_next_active(body\first_field)
+    while: f != 0
+        if: l2_ruse_mentions(f\value, name) != 0
+            return: 1
+        f: l2_next_active(f\next)
+    ---
+    if: body\trailer != 0
+        return: l2_ruse_mentions_struct(body\trailer\body, name)
+return: 0
+
+fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
+    if: node = 0 || node\as = 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_ATOM
+        return: l2_ruse_spells(node\as\atom, name) != 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        return: l2_ruse_mentions_struct(node\as\structure, name)
+    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
+        return: 0
+    if: l2_ruse_head_at(node\as\frame\head, name) >= 0
+        return: 1
+    if: l2_ruse_mentions_struct(node\as\frame\body, name) != 0
+        return: 1
+    if: node\as\frame\trailer != 0
+        return: l2_ruse_mentions_struct(node\as\frame\trailer\body, name)
+return: 0
+
+# Is this node the definition of a callable or of a named Structure?
+fn: l2_ruse_is_definition (const: @(LmP0Node node)) int
+    int: i 0
+    if: l2_source_is_callable_definition(node) != 0
+        return: 1
+    while: i < l2_ns_n
+        if: l2_ns_at[i] = node
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# The name atom of the declaration this statement is, when it declares an own
+# row of the method under this name; else null.  That atom is the place being
+# declared, not a use of it.
+fn: l2_ruse_declared (int: mi; const: @(LmP0Node node); const: @(LmP0Text name)) @: LmP0Text
+    int: i 0
+    while: i < l2_own_n
+        if: l2_own_decl[i] = node && l2_own_mi[i] = mi && l2_uses_name_eq(l2_own_name[i], name) != 0
+            return: l2_own_name[i]
+        i: i + 1
+    ---
+return: 0
+
+# Is own row i of method mi a typed reference with a model: a place whose every
+# reception runs its own admission?
+fn: l2_ruse_typed (int: mi; int: i) int
+return: i >= 0 && i < l2_own_n && l2_own_mi[i] = mi && l2_own_is_pointer(l2_own_ty[i]) != 0 && l2_own_is_slot(i) = 0 && l2_own_nsty_get(i) >= 0
+
+# The name atom of the typed reference this statement declares, or null.
+fn: l2_ruse_decl_place (int: mi; const: @(LmP0Node node)) @: LmP0Text
+    int: i 0
+    while: i < l2_own_n
+        if: l2_own_decl[i] = node && l2_ruse_typed(mi, i) != 0
+            return: l2_own_name[i]
+        i: i + 1
+    ---
+return: 0
+
+# Does this head name typed references of the method and nothing else of it:
+# at least one own row of that name, every one of them a typed reference with a
+# model, and no formal or hidden input of that name?
+fn: l2_ruse_place_named (int: mi; const: @(LmP0Text head)) int
+    int: i 0
+    int: n 0
+    if: head = 0 || l2_param_find(mi, head) >= 0
+        return: 0
+    while: i < l2_own_n
+        if: l2_own_mi[i] = mi && l2_uses_name_eq(l2_own_name[i], head) != 0
+            if: l2_ruse_typed(mi, i) = 0
+                return: 0
+            n: n + 1
+        ---
+        i: i + 1
+    ---
+return: n > 0
+
+# The path written after a name in value position: `\` name, or `\` `[` N `]`
+# name, repeated.  Its text goes to path[0..*out_n); the result is the field
+# after it.  *bad is set when it cannot be read or does not fit.
+fn: l2_ruse_follow (@: LmP0Field slash; @: char path; size_t: cap; @: size_t out_n; @: int bad) @: LmP0Field
+    @: LmP0Field f slash
+    @: LmP0Text t
+    size_t: used 0U
+    \out_n: 0U
+    \bad: 0
+    while: f != 0 && l2_ruse_one(f, 92) != 0
+        f: l2_next_active(f\next)
+        if: used != 0U
+            if: used + 1U >= cap
+                \bad: 1
+                return: f
+            path[used]: 92
+            used: used + 1U
+        ---
+        if: l2_ruse_one(f, 91) != 0
+            while: f != 0 && l2_ruse_one(f, 93) = 0
+                if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0 || used + f\value\as\atom\length >= cap
+                    \bad: 1
+                    return: f
+                t: f\value\as\atom
+                memcpy(path + used, t\data, t\length)
+                used: used + t\length
+                f: l2_next_active(f\next)
+            ---
+            if: f = 0 || used + 1U >= cap
+                \bad: 1
+                return: f
+            path[used]: 93
+            used: used + 1U
+            f: l2_next_active(f\next)
+        ---
+        if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || f\value\as\atom\data = 0 || f\value\as\atom\length = 0U || used + f\value\as\atom\length >= cap
+            \bad: 1
+            return: f
+        t: f\value\as\atom
+        memcpy(path + used, t\data, t\length)
+        used: used + t\length
+        f: l2_next_active(f\next)
+    ---
+    \out_n: used
+return: f
+
+# The fields of one body, as statements and as expressions alike: every
+# spelling of the name is classified where it stands.  `declared` is the name
+# atom of the declaration this body belongs to, or null.  `recv` says the body
+# is the candidate of a typed reference of the method: 1 its declaration, whose
+# name atom is `place` and whose candidate follows it, 2 a store into it, whose
+# whole body is the candidate.
+fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const: @(LmP0Text name); const: @(LmP0Text declared); int: recv; const: @(LmP0Text place)) int
+    @: LmP0Field f
+    @: LmP0Field prev 0
+    @: LmP0Field next
+    []: char path 256
+    size_t: used 0U
+    int: bad 0
+    int: how
+    int: left
+    int: right
+    if: body = 0
+        return: 0
+    f: l2_next_active(body\first_field)
+    while: f != 0 && l2_ruse_unknown = 0
+        next: l2_next_active(f\next)
+        how: 0
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
+            how: l2_ruse_spells(f\value\as\atom, name)
+            if: how = 1 && f\value\as\atom = declared
+                how: 0
+            if: how = 2 || (how = 1 && l2_ruse_one(prev, 92) != 0)
+                l2_ruse_unknown: 1
+                return: 0
+            if: how = 1 && l2_ruse_one(next, 92) != 0
+                # The root of a path below the place.
+                next: l2_ruse_follow(next, path, 256U, @ used, @ bad)
+                if: bad != 0 || used = 0U
+                    l2_ruse_unknown: 1
+                    return: 0
+                l2_ruse_path(req, path, used)
+                how: 0
+            ---
+            if: how = 1
+                # The place itself as a value: only as an operand of a
+                # comparison of identity, which consumes none of its fields.
+                left: l2_ruse_cmp(prev)
+                right: l2_ruse_cmp(next)
+                if: (right != 0 && left = 0 && l2_ruse_far(prev, 0) != 0) || (left != 0 && right = 0 && l2_ruse_far(next, 1) != 0)
+                    how: 0
+                # The whole candidate of another typed reference: that
+                # reference's instruction receives the value by its own coverage.
+                if: recv = 1 && next = 0 && place != 0 && prev != 0 && prev\value != 0 && prev\value\kind = c.LM_P0_NODE_ATOM && prev\value\as != 0 && prev\value\as\atom = place
+                    how: 0
+                if: recv = 2 && next = 0 && prev = 0
+                    how: 0
+                if: how != 0
+                    l2_ruse_unknown: 1
+                    return: 0
+            ---
+        else:
+            l2_ruse_scan_node(mi, req, f\value, name)
+        ---
+        prev: f
+        f: next
+    ---
+    if: body\trailer != 0 && l2_ruse_unknown = 0
+        return: l2_ruse_scan_struct(mi, req, body\trailer\body, name, 0, 0, 0)
+return: 0
+
+fn: l2_ruse_scan_node (int: mi; int: req; const: @(LmP0Node node); const: @(LmP0Text name)) int
+    @: LmP0Frame fr
+    @: LmP0Text place 0
+    int: recv 0
+    int: at
+    size_t: k 0U
+    if: node = 0 || node\as = 0 || l2_ruse_unknown != 0
+        return: 0
+    if: node\kind = c.LM_P0_NODE_STRUCTURE
+        return: l2_ruse_scan_struct(mi, req, node\as\structure, name, 0, 0, 0)
+    if: node\kind != c.LM_P0_NODE_FRAME || node\as\frame = 0
+        return: 0
+    fr: node\as\frame
+    # A definition inside the method is another Consumer: it is not read here,
+    # and a spelling of the name inside it is a use this analysis cannot place.
+    if: l2_ruse_is_definition(node) != 0
+        if: l2_ruse_mentions(node, name) != 0
+            l2_ruse_unknown: 1
+        return: 0
+    at: l2_ruse_head_at(fr\head, name)
+    if: at = 1
+        l2_ruse_unknown: 1
+        return: 0
+    if: at = 0
+        while: k < fr\head\length && fr\head\data[k] != 92
+            k: k + 1U
+        if: k < fr\head\length
+            # A path below the place heads the frame: a store to that field, or its call.
+            l2_ruse_path(req, fr\head\data + k + 1U, fr\head\length - k - 1U)
+        else:
+            # The place itself heads the frame.  Written with its colon it is
+            # the store that receives into the place; any other application of
+            # it is a use this analysis does not classify.
+            if: (fr\flags & c.LM_P0_FRAME_COLON) = 0U
+                l2_ruse_unknown: 1
+                return: 0
+        ---
+    ---
+    # A typed reference of the method received into here: by its declaration,
+    # or by a store written with its colon.
+    place: l2_ruse_decl_place(mi, node)
+    if: place != 0
+        recv: 1
+    if: place = 0 && (fr\flags & c.LM_P0_FRAME_COLON) != 0U && l2_ruse_place_named(mi, fr\head) != 0
+        recv: 2
+    l2_ruse_scan_struct(mi, req, fr\body, name, l2_ruse_declared(mi, node, name), recv, place)
+    if: fr\trailer != 0 && l2_ruse_unknown = 0
+        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0)
+return: 0
+
+# The analysis of own row `own`: 2 with its entries recorded, or 1.
+fn: l2_ruse_analyse (int: own) int
+    int: mi
+    int: req
+    int: k 0
+    @: LmP0Node node
+    @: LmP0Frame fr
+    @: LmP0Field f
+    @: LmP0Text name
+    if: own < 0 || own >= l2_own_n || l2_library_mode != 0
+        return: 1
+    mi: l2_own_mi[own]
+    name: l2_own_name[own]
+    req: l2_own_nsty_get(own)
+    if: mi < 0 || mi >= l2_m_n || mi = l2_e || name = 0 || l2_m_nsof(mi) >= 0
+        return: 1
+    if: l2_own_is_pointer(l2_own_ty[own]) = 0 || l2_own_is_slot(own) != 0 || req < 0 || l2_schema_kind(req) != 1
+        return: 1
+    if: l2_param_find(mi, name) >= 0
+        return: 1
+    node: l2_m_node[mi]
+    if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+        return: 1
+    if: l2_ruse_unit = 0 || l2_ruse_seg_struct(l2_ruse_unit, name) != 0
+        return: 1
+    while: k < l2_part_n
+        if: l2_part_doc != 0 && l2_part_doc[k] != 0 && l2_ruse_seg_node(lm_p0_document_root(l2_part_doc[k]), name) != 0
+            return: 1
+        k: k + 1
+    ---
+    l2_ruse_unknown: 0
+    l2_ruse_cur_first: l2_ruse_e_n
+    l2_ruse_cur_levels: 1
+    fr: node\as\frame
+    # Past the method's own name and its formals: the rest of the header, then the body.
+    f: l2_next_active(fr\body\first_field)
+    if: f != 0
+        f: l2_next_active(f\next)
+    if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_STRUCTURE
+        f: l2_next_active(f\next)
+    while: f != 0 && l2_ruse_unknown = 0
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
+            if: l2_ruse_mentions(f\value, name) != 0
+                l2_ruse_unknown: 1
+            ---
+        else:
+            l2_ruse_scan_node(mi, req, f\value, name)
+        ---
+        f: l2_next_active(f\next)
+    ---
+    if: l2_ruse_unknown = 0 && fr\body\trailer != 0
+        l2_ruse_scan_struct(mi, req, fr\body\trailer\body, name, 0, 0, 0)
+    if: l2_ruse_unknown = 0 && fr\trailer != 0
+        l2_ruse_scan_struct(mi, req, fr\trailer\body, name, 0, 0, 0)
+    if: l2_ruse_unknown != 0
+        l2_ruse_e_n: l2_ruse_cur_first
+        l2_ruse_unknown: 0
+        return: 1
+    l2_ruse_first[own]: l2_ruse_cur_first
+    l2_ruse_count[own]: l2_ruse_e_n - l2_ruse_cur_first
+    l2_ruse_levels[own]: l2_ruse_cur_levels
+return: 2
+
+# The coverage of own row `own`: 2 known, 1 unknown.  Asked once per row: the
+# answer is a fact of the source, the same for the flow of types, for native
+# emission and for both passes of the graph producer.
+fn: l2_ruse_of (int: own) int
+    if: own < 0 || own >= l2_own_n || l2_ruse_room(own) != 0
+        return: 1
+    if: l2_ruse_state[own] = 0
+        l2_ruse_state[own]: l2_ruse_analyse(own)
+return: l2_ruse_state[own]
+
+# The cells a receiving instruction carries for the known coverage of own row
+# `own` (LmxImplUses, lmx_implements.h): the count of cells, then each level --
+# its count of pairs, then (edge, below) per entry.  An edge is the field's
+# placed slot in its model, plus the model's width for a bare name's half.
+fn: l2_ruse_level_count (int: own; int: level) int
+    int: i l2_ruse_first[own]
+    int: end l2_ruse_first[own] + l2_ruse_count[own]
+    int: n 0
+    while: i < end
+        if: l2_ruse_e_level[i] = level
+            n: n + 1
+        i: i + 1
+    ---
+return: n
+
+# The cell a level starts at; for the count of levels, the count of cells.
+fn: l2_ruse_level_at (int: own; int: level) int
+    int: at 1
+    int: lv 0
+    while: lv < level
+        at: at + 1 + 2 * l2_ruse_level_count(own, lv)
+        lv: lv + 1
+    ---
+return: at
+
+fn: l2_ruse_cells (int: own) int
+return: l2_ruse_level_at(own, l2_ruse_levels[own])
+
+# Cell k: \whole is set for the cell that says "everything below", else \value
+# is the cell.  1 when the row has no such cell or a field has no place yet.
+fn: l2_ruse_cell (int: own; int: k; @: int whole; @: int value) int
+    int: i
+    int: end l2_ruse_first[own] + l2_ruse_count[own]
+    int: lv 0
+    int: at 1
+    int: ix
+    int: slot
+    \whole: 0
+    \value: 0
+    if: k = 0
+        \value: l2_ruse_cells(own)
+        return: 0
+    while: lv < l2_ruse_levels[own]
+        if: k = at
+            \value: l2_ruse_level_count(own, lv)
+            return: 0
+        ix: 0
+        i: l2_ruse_first[own]
+        while: i < end
+            if: l2_ruse_e_level[i] = lv
+                if: k = at + 1 + 2 * ix
+                    slot: l2_nsf_slot(l2_ruse_e_row[i])
+                    if: slot < 0
+                        return: 1
+                    if: l2_ruse_e_last[i] != 0
+                        slot: slot + l2_d105_width(l2_nsf_owner[l2_ruse_e_row[i]])
+                    \value: slot
+                    return: 0
+                if: k = at + 2 + 2 * ix
+                    if: l2_ruse_e_below[i] < 0
+                        \whole: 1
+                    if: l2_ruse_e_below[i] > 0
+                        \value: l2_ruse_level_at(own, l2_ruse_e_below[i])
+                    return: 0
+                ix: ix + 1
+            ---
+            i: i + 1
+        ---
+        at: at + 1 + 2 * ix
+        lv: lv + 1
+    ---
+return: 1
+
+# Native: the coverage as the instruction's own cells, and the view over them.
+fn: l2_ruse_emit_native (int: own; int: seq; const: @(char ind)) int
+    int: n l2_ruse_cells(own)
+    int: k 0
+    int: whole 0
+    int: value 0
+    if: c.fprintf(l2_out, "%s[]: size_t l2_ruse%d %d\n", ind, seq, n) < 0
+        return: 1
+    while: k < n
+        if: l2_ruse_cell(own, k, @ whole, @ value) != 0
+            return: l2_error(l2_src, 0, "internal: a coverage cell has no place")
+        if: whole != 0 && c.fprintf(l2_out, "%sl2_ruse%d[%d]: (cast: (size_t) -1)\n", ind, seq, k) < 0
+            return: 1
+        if: whole = 0 && c.fprintf(l2_out, "%sl2_ruse%d[%d]: %dU\n", ind, seq, k, value) < 0
+            return: 1
+        k: k + 1
+    ---
+    if: c.fprintf(l2_out, "%sLmxImplUses: l2_rusev%d\n%sl2_rusev%d.map: l2_ruse%d\n%sl2_rusev%d.frame: 0\n%sl2_rusev%d.at: 0U\n", ind, seq, ind, seq, seq, ind, seq, ind, seq) < 0
+        return: 1
+return: 0
+
 # A full reference reception publishes a value only after successful
 # admission. Prune only definitely missing/incompatible named fields from
 # downstream source facts. Unnamed operations and unresolved crossings are
 # not interface rejection; ordinary formal edges retain used-field admission.
+# A place whose Consumer's coverage is known is not pruned here: what it
+# refuses is decided where it is reached, by the fields its coverage names, and
+# its value goes on only into another typed reference, which admits it itself.
 fn: l2_d105_receiving_flow (int: cand; int: mi; int: key) int
     L2SchemaField: needed
     L2SchemaField: actual
@@ -30680,6 +31438,8 @@ fn: l2_d105_receiving_flow (int: cand; int: mi; int: key) int
     int: prior
     int: occurrence
     if: own < 0 || req = -1 || cand = req || l2_schema_kind(cand) = 0
+        return: 1
+    if: l2_ruse_of(own) = 2
         return: 1
     width: l2_schema_width(req)
     while: slot < width
@@ -30952,15 +31712,17 @@ fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: 
     source.place: sk
     if: smi < 0
         source.layout: cand
-return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0)
+return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1)
 
 # The candidate has already been evaluated once. Its physical layout is either
 # direct producer evidence or a completed source admission, never its declared
 # required type. Only the reached target admission may publish a new proof.
-fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw) int
+fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own) int
     int: i 0
     int: p
     int: seq l2_d105_seq
+    const: @(char receive) "lmx_implements_receiver_view"
+    []: char cover 64
     []: char rinst 320
     []: char sinst 128
     []: char origin 128
@@ -31002,10 +31764,20 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
         ---
         i: i + 1
     ---
+    # The instruction carries the coverage of the place it receives into when
+    # that coverage is known: the reception then asks for the fields it names.
+    # Unknown coverage stays the full reception.
+    cover[0]: 0
+    if: full_receiver != 0 && uses_own >= 0 && l2_ruse_of(uses_own) = 2
+        if: l2_ruse_emit_native(uses_own, seq, ind) != 0
+            return: 1
+        receive: "lmx_implements_receiving_use"
+        c.sprintf(cover, ", @ l2_rusev%d", seq)
+    ---
     if: c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n%sif: %s != 0\n%s    if: l2_layout_found%d != 0\n", ind, seq, ind, value, ind, seq) < 0
         return: 1
     if: full_receiver != 0
-        if: c.fprintf(l2_out, "%s        LmxImplEntry: l2_pending%d\n%s        l2_pending%d.frame: 0\n%s        l2_pending%d.at: 0U\n%s        l2_pending%d.holes: 0\n%s        l2_pending%d.value: (cast: (@: Lmx) %s)\n%s        l2_pending%d.req: %s\n%s        l2_pending%d.map: l2_d105t%d\n%s        l2_pending%d.n: %dU\n%s        l2_pending%d.layout: l2_layout%d\n%s        l2_admission%d: lmx_implements_receiver_view(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, @ l2_pending%d)\n", ind, seq, ind, seq, ind, seq, ind, seq, ind, seq, value, ind, seq, rinst, ind, seq, seq, ind, seq, l2_d105_width(req), ind, seq, seq, ind, seq, value, rinst, rinst, seq) < 0
+        if: c.fprintf(l2_out, "%s        LmxImplEntry: l2_pending%d\n%s        l2_pending%d.frame: 0\n%s        l2_pending%d.at: 0U\n%s        l2_pending%d.holes: 0\n%s        l2_pending%d.value: (cast: (@: Lmx) %s)\n%s        l2_pending%d.req: %s\n%s        l2_pending%d.map: l2_d105t%d\n%s        l2_pending%d.n: %dU\n%s        l2_pending%d.layout: l2_layout%d\n%s        l2_admission%d: %s(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, @ l2_pending%d%s)\n", ind, seq, ind, seq, ind, seq, ind, seq, ind, seq, value, ind, seq, rinst, ind, seq, seq, ind, seq, l2_d105_width(req), ind, seq, seq, ind, seq, receive, value, rinst, rinst, seq, cover) < 0
             return: 1
     ---
     if: c.fprintf(l2_out, "%s        if: l2_admission%d = c.LMX_IMPLEMENTS_YES\n%s            l2_admission%d: lmx_implements_register_map(l2_program_arena, (cast: (@: Lmx) %s), %s, l2_d105t%d, %dU, l2_layout%d)\n%s        ---\n%s    else:\n%s        @: LmxImplEntry l2_known%d lmx_implements_find(l2_program_arena, (cast: (@: Lmx) %s), %s)\n", ind, seq, ind, seq, value, rinst, seq, l2_d105_width(req), seq, ind, ind, ind, seq, value, rinst) < 0
@@ -31014,7 +31786,7 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
         return: 1
     if: c.fprintf(l2_out, "%s            if: l2_admission%d = c.LMX_IMPLEMENTS_YES\n%s                l2_admission%d: lmx_implements_register_map(l2_program_arena, (cast: (@: Lmx) %s), %s, 0, 0U, 0)\n%s        ---\n", ind, seq, ind, seq, value, rinst, ind) < 0
         return: 1
-    if: c.fprintf(l2_out, "%s        if: l2_known%d != 0\n%s            l2_admission%d: lmx_implements_receiver_view(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, 0)\n%s            if: l2_admission%d = c.LMX_IMPLEMENTS_YES\n%s                LmxImplEntry: l2_known_view%d (\\l2_known%d)\n%s                l2_known_view%d.layout: l2_layout%d\n%s                l2_admission%d: lmx_implements_register(l2_program_arena, (cast: (@: Lmx) %s), %s, @ l2_known_view%d)\n%s---\n", ind, seq, ind, seq, value, rinst, rinst, ind, seq, ind, seq, seq, ind, seq, seq, ind, seq, value, rinst, seq, ind) < 0
+    if: c.fprintf(l2_out, "%s        if: l2_known%d != 0\n%s            l2_admission%d: %s(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, 0%s)\n%s            if: l2_admission%d = c.LMX_IMPLEMENTS_YES\n%s                LmxImplEntry: l2_known_view%d (\\l2_known%d)\n%s                l2_known_view%d.layout: l2_layout%d\n%s                l2_admission%d: lmx_implements_register(l2_program_arena, (cast: (@: Lmx) %s), %s, @ l2_known_view%d)\n%s---\n", ind, seq, ind, seq, receive, value, rinst, rinst, cover, ind, seq, ind, seq, seq, ind, seq, seq, ind, seq, value, rinst, seq, ind) < 0
         return: 1
     if: c.fprintf(l2_out, "%sif: l2_admission%d != c.LMX_IMPLEMENTS_YES\n", ind, seq) < 0
         return: 1
@@ -31088,7 +31860,7 @@ fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     source.layout: -1
     source.method: -1
     source.place: -1
-return: l2_rw_admit_project(parent, ni, @ source, 0, out)
+return: l2_rw_admit_project(parent, ni, @ source, 0, -1, out)
 
 # D105 map constants are ordinary instruction operands with the same lifetime
 # as the admitting frame. They are never executable source-level values.  The
@@ -31138,11 +31910,18 @@ fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: s
     source.place: source_input
     if: source_mi < 0
         source.layout: cand
-return: l2_rw_admit_project(parent, req, @ source, 0, out)
+return: l2_rw_admit_project(parent, req, @ source, 0, -1, out)
 
-fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; @: int out) int
+# `uses_own` is the own row the instruction receives into, or -1.  When its
+# coverage is known the instruction carries it in its own cells (fullReceiver 2,
+# lmx_walk.h) between the fixed nine and the maps.
+fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; @: int out) int
     int: i 0
     int: count 0
+    int: cover 0
+    int: mode full_receiver
+    int: whole 0
+    int: cell 0
     int: model_frame
     int: model_own -1
     int: width l2_d105_width(req)
@@ -31169,14 +31948,29 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
             count: count + 1
         i: i + 1
     ---
-    extent: 9 + default_n + count * (1 + width * 2)
+    if: full_receiver != 0 && uses_own >= 0 && l2_ruse_of(uses_own) = 2
+        cover: l2_ruse_cells(uses_own)
+        mode: 2
+    ---
+    extent: 9 + cover + default_n + count * (1 + width * 2)
     if: l2_rw_catch_fixed(-1, 0, 2, "implements", @ nc) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_ADMIT_AS", extent + 3 * nc, out) != 0
         return: 1
+    i: 0
+    while: i < cover
+        if: l2_ruse_cell(uses_own, i, @ whole, @ cell) != 0
+            return: l2_error(l2_src, 0, "internal: a coverage cell has no place")
+        if: l2_rw_emit != 0 && whole != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, (cast: (size_t) -1)) != c.LMX_WALK_OK\n            return: 1\n", \out, 9 + i) < 0
+            return: 1
+        if: l2_rw_emit != 0 && whole = 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, 9 + i, cell) < 0
+            return: 1
+        i: i + 1
+    ---
+    slot: 9 + cover
     if: l2_rw_emit != 0 && source\schema != -1 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 1U, l2_layout_tokens + %d) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_schema_token_slot(source\schema)) < 0
         return: 1
     if: l2_rw_emit != 0 && source\layout != -1 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 7U, l2_layout_tokens + %d) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_schema_token_slot(source\layout)) < 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 8U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, full_receiver) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 8U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, mode) < 0
         return: 1
     # The model: a named Structure's unit child (l2_nsp) -- or, K02c, a merge result's own Structure, read where the
     # op runs (an AT of its slot: the result does not exist when the frames are built); the kernel evaluates a frame
@@ -31332,6 +32126,10 @@ return: l2_rw_texpr(first, n, ty, parent, out)
 # Declarations and later assignments share the same admitted value/store chain.
 # The existing write helper selects working SET/SET_OF or physical PUT.
 fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
+return: l2_rw_reference_receive_at(first, n, ty, model, parent, -1, out)
+
+# The same, received into own row `place` (-1: no such place).
+fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out) int
     int: raw
     L2ReferenceSource: source
     int: source_ty l2_rw_fields_ty(first, n)
@@ -31347,7 +32145,7 @@ fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; in
             return: 1
         ---
     else:
-        if: l2_rw_admit_project(parent, model, @ source, 1, out) != 0
+        if: l2_rw_admit_project(parent, model, @ source, 1, place, out) != 0
             return: 1
         ---
     ---
@@ -31360,7 +32158,7 @@ fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: in
     int: vs
     if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0
         return: 1
-    if: l2_rw_reference_receive(first, n, l2_own_ty[oi], l2_own_nsty_get(oi), \out, @ adm) != 0
+    if: l2_rw_reference_receive_at(first, n, l2_own_ty[oi], l2_own_nsty_get(oi), \out, oi, @ adm) != 0
         return: 1
 return: l2_rw_put(\out, vs, adm)
 
@@ -31459,7 +32257,7 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
     source.layout: ni
     source.method: -1
     source.place: -1
-    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit_project(\out, ni, @ source, 0, @ admission) != 0 || l2_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0
+    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit_project(\out, ni, @ source, 0, -1, @ admission) != 0 || l2_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
         return: 1
@@ -32715,7 +33513,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                     reference_source.method: -1
                     reference_source.place: -1
                 ---
-                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(idx, k), @ reference_source, 0, @ holder) != 0
+                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(idx, k), @ reference_source, 0, -1, @ holder) != 0
                     return: 1
                 if: l2_empty_actual(a, idx, k) != 0
                     if: l2_rw_empty_arg(l2_nsty_get(idx, k), holder, @ arg) != 0
@@ -39404,7 +40202,7 @@ return: 0
 
 # Evaluate once into the receiving machine pointer before referent admission.
 # The temporary is activation storage, not a new graph or binding.
-fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: char value; @: L2ReferenceSource source) int
+fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: char value; @: L2ReferenceSource source; int: place) int
     int: t
     []: char type_text 1024
     []: char temp 128
@@ -39414,7 +40212,7 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
     l2_tn: l2_tn + 1
     if: c.sprintf(temp, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(ty), 0, temp, type_text) != 0 || c.fprintf(l2_out, "%s%s %s\n", ind, type_text, value) < 0
         return: 1
-    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1) != 0
+    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1, place) != 0
         return: 1
     if: source = 0 && l2_emit_admit(mi, model, temp, ind) != 0
         return: 1
@@ -39422,6 +40220,11 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
 return: 0
 
 fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: char value) int
+return: l2_emit_reference_value_at(first, n, ty, model, mi, ind, value, -1)
+
+# The same, received into own row `place` of the method (-1: no such place): the
+# instruction then carries the coverage of that place when it is known.
+fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: char value; int: place) int
     L2Address: descriptor_value
     @: L2Address descriptor @ descriptor_value
     L2ReferenceSource: source
@@ -39441,7 +40244,7 @@ fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; in
     ---
     if: model >= 0 && l2_is_letter_value(mi, first, n) != 0 && l2_payload_expr(value) != 0
         return: 1
-return: l2_emit_receiving_admit(ty, model, mi, ind, value, @ source)
+return: l2_emit_receiving_admit(ty, model, mi, ind, value, @ source, place)
 
 fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     @: L2Declaration declaration l2_declaration(stmt)
@@ -39610,7 +40413,7 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     # native admission (implements, consumer T), a refusal the implicit throw `implements`; a null passes.
     if: l2_ml_ns[l2_ml_find(fr\head)] >= 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(l2_tok) != 0
         return: 2
-    if: l2_emit_receiving_admit(l2_ml_ty[l2_ml_find(fr\head)], l2_ml_ns[l2_ml_find(fr\head)], mi, ind, l2_tok, 0) != 0
+    if: l2_emit_receiving_admit(l2_ml_ty[l2_ml_find(fr\head)], l2_ml_ns[l2_ml_find(fr\head)], mi, ind, l2_tok, 0, -1) != 0
         return: 2
     if: c.fprintf(l2_out, "%s", ind) < 0
         return: 2
@@ -40725,7 +41528,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: oi >= 0
             declaration: l2_declaration(stmt)
             l2_own_excl: oi
-            pret: l2_emit_reference_value(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok)
+            pret: l2_emit_reference_value_at(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi)
             l2_own_excl: -1
             if: pret != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
                 return: 1
@@ -41560,7 +42363,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_publish(ind) != 0
             return: 1
@@ -41601,7 +42404,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             si: 0 - 1
             fi: 0 - 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0
-            if: l2_emit_reference_value(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok) != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
+            if: l2_emit_reference_value_at(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi) != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -42345,8 +43148,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
         if: (l2_ns_n != 0 || l2_mres_n != 0 || l2_uses_node_for_root != 0) && fputs("    @: Lmx l2_pst 0\n    @@: void l2_pxp 0\n", l2_out) < 0
             fclose(l2_out)
             return: 1
-        # D-105 native: a formal admitted by name reads its fields at the slot its value's record gives.
-        if: l2_d105_any(i) != 0 && fputs("    size_t: l2_dslot 0U\n", l2_out) < 0
+        # D-105 native: a place admitted by name reads its fields at the slot its value's record gives.  The
+        # place need not be this method's: a path rooted at another method's name goes through that method's
+        # own reference, so every method of a program with such a place has the slot temporary.
+        if: l2_d105_n != 0 && fputs("    size_t: l2_dslot 0U\n", l2_out) < 0
             fclose(l2_out)
             return: 1
         l2_tn: 0

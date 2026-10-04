@@ -1,0 +1,42 @@
+# The receiving-use contract: a typed reference receives a candidate by what
+# its Consumer reads through it. b is compared by identity and never read: its
+# Consumer consumes the reference and none of its fields, so an Other with no
+# field of Model is received. The observation is the exact candidate: b is o,
+# and o still holds what it held. At a declaration with its initializer and at
+# a later store into a declared reference. Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 41
+    int: q 2
+end: Other
+
+fn: declared () int
+    o: merge Other
+    @: Model b o
+    if: b != o
+        return: 81
+    if: o\p != 41 || o\q != 2
+        return: 82
+    return: 0
+end: declared
+
+fn: stored () int
+    o: merge Other
+    @: Model r
+    if: r != 0
+        return: 83
+    r: o
+    if: r != o
+        return: 84
+    return: 7
+end: stored
+
+int: first declared()
+if: first != 0
+    sendMessage: exit(exit_code: first; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: stored(); stdout: ""; stderr: "")
+return

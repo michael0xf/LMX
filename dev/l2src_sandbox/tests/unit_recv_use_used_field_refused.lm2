@@ -1,0 +1,75 @@
+# A field the Consumer reads is required. In m, b reads extra, and Short has
+# none: the store b: other() is refused where it is reached. The candidate is
+# evaluated once (calls), the refusal is the implicit throw implements, and b
+# still holds what it held: g, read through b afterwards. In writes, b only
+# stores into extra: a store through the place asks for the field as a read
+# does, and the same store is refused the same way. Entry 7.
+Model:
+    size_t: value 1U
+    int: extra 2
+end: Model
+
+Good:
+    size_t: value 7U
+    int: extra 3
+end: Good
+
+Short:
+    size_t: value 5U
+end: Short
+
+int: calls 0
+
+fn: other () Short
+    node\calls: node\calls + 1
+    t: merge Short
+    return: t
+end: other
+
+fn: seen () int
+    return: node\calls
+end: seen
+
+fn: m () int
+    g: merge Good
+    @: Model b g
+    int: caught 0
+    b: other()
+    catch: implements ()
+        caught: caught + 1
+    ---
+    if: caught != 1
+        return: 81
+    if: seen() != 1
+        return: 82
+    if: b != g
+        return: 83
+    if: b\extra != 3
+        return: 84
+    return: 7
+end: m
+
+fn: writes () int
+    g: merge Good
+    @: Model b g
+    int: caught 0
+    b: other()
+    catch: implements ()
+        caught: caught + 1
+    ---
+    if: caught != 1
+        return: 85
+    if: seen() != 2
+        return: 86
+    b\extra: 9
+    if: b != g || g\extra != 9
+        return: 87
+    return: 7
+end: writes
+
+int: first m()
+if: first != 7
+    sendMessage: exit(exit_code: first; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: writes(); stdout: ""; stderr: "")
+return

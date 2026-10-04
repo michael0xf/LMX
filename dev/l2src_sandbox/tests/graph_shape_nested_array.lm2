@@ -1,0 +1,28 @@
+# An Array declared in a nested body has its descriptor in that body's own
+# field place. Element stores, element reads and length name it through that
+# body; the method's Array of the same name is another place and keeps its
+# contents. The root declares one in a nested body too. Entry 7.
+fn: check () int
+    []: int values 3
+    values[0]: 11
+    int: seen 0
+    if: 1
+        []: int values 4
+        values[0]: 23
+        values[3]: 29
+        if: length(values) != 4U || values[0] != 23 || values[3] != 29
+            return: 81
+        seen: values[3]
+    ---
+    if: length(values) != 3U || values[0] != 11 || seen != 29
+        return: 82
+return: 7
+int: result check()
+if: result = 7
+    []: char marks 2
+    marks[1]: 'k'
+    if: length(marks) != 2U || marks[1] != 'k'
+        result: 83
+    ---
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

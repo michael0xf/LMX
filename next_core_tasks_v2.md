@@ -32,9 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_04` RED70/1401 — 56 FAIL→OK, no OK→FAIL, six
-added targets pass; kernel `fable_kernel_01` GREEN292 with 109 executed
-selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
+continuation bytes: `fable_full_06` RED54/1426 — 77 FAIL→OK against that
+baseline, no OK→FAIL
+([gate](steps/fable-continuation-20261003.md#full-06)). The checkpoint gate
+was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
+executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
 ([scope and byte tie](steps/fable-continuation-20261003.md#checkpoint),
 [manifest](steps/fable-checkpoint-20261003.md)). Not a release: stable `l2src`
@@ -68,8 +70,19 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   by an early definition row (`unit_own_dirty_rhs`); audit
   `unit_arg_addr_dyn_types`; three rows wait for the author
   ([ruling and split](steps/fable-continuation-20261003.md#head-role)).
-- [ ] `NATIVE-RAW-INDEX-LITERAL-TYPE`: an unknown foreign raw index is opaque,
+- [x] `NATIVE-RAW-INDEX-LITERAL-TYPE`: an unknown foreign raw index is opaque,
   not an int literal (`unit_indent_stack_field_index`).
+- [x] Arrays declared in nested bodies in the retained graph and in the
+  interpreter; witness `graph_shape_nested_array`
+  ([ledger](steps/fable-continuation-20261003.md#nested-array)).
+- [x] Held-call boundary, step one: one proved alternative for the whole copy
+  `R: merge S` called in the body that owns S; witness
+  `unit_copy_call_hidden_inputs` with a contract-confusion translator mutant
+  ([ledger](steps/fable-continuation-20261003.md#held-call-step-one)).
+- [ ] Held-call boundary, the rest: selection among alternatives, copies of
+  copies and of local Structures, another lexical owner, a free name in a
+  method, an addressed row (five red required positives `unit_copy_call_*`),
+  and `unit_held_nullary_source_field`.
 - [ ] Actual-call boundary for a held/copied ordinary Structure (nine red
   required positives). Codex ruling FABLE-CODEX-20261003-02: selection by the
   actual value's token only as a bounded optimization with a proved complete

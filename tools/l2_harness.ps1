@@ -1702,6 +1702,37 @@ $criticalMachineAddressPaths = @('widthpath','0','4','namepath','1','0','bump','
     'rolepath','5','1','5','2','1','1','3','0','intpath','6','1','5','2','1','1','1','2',
     'nativepath','1','0','1','nativepath','1','1','1')
 
+# An Array declared in a nested body. Unit: check, result, its store, IF,
+# publish, return. check: header parts, values, a store into it, seen and its
+# initialization, two IFs, the return trailer. The first IF's body holds its
+# own values descriptor at child 0; a store into it names that body as the
+# holder of its AT, while the method-level store's AT names no holder. The two
+# descriptors are distinct objects. The root's IF body holds marks the same way.
+$criticalNestedArrayPaths = @('widthpath','0','6','namepath','1','0','check','widthpath','1','0','9',
+    'rolepath','2','0','3','26','0','rolepath','3','0','3','1','6','0',
+    'nullpath','4','0','3','1','1','sizepath','4','0','3','1','2','2',
+    'widthpath','3','0','6','2','5',
+    'rolepath','4','0','6','2','1','26','0','rolepath','5','0','6','2','1','1','6','0',
+    'samepath','6','0','6','2','1','1','1','3','0','6','2','sizepath','6','0','6','2','1','1','2','0',
+    'differentpath','4','0','6','2','0','2','0','2',
+    'widthpath','2','3','2','3',
+    'samepath','5','3','2','1','1','1','2','3','2','sizepath','5','3','2','1','1','2','0')
+
+# Calls of two copied Structures with different hidden inputs. Unit: seen and
+# its initialization, A, B, x, y and their initializations, the declarations
+# of ra and rb, ps, result, then call ra, IF, call rb, IF, the store into x,
+# call ra, IF, publish, return. Each call is EXEC over the very output
+# operand its row's declaration produced; its one hidden input is the
+# caller's own cell of the name that copy's body needs: x (child 4) for ra,
+# y (child 6) for rb. The two rows are distinct objects.
+$criticalCopyCallPaths = @('widthpath','0','23',
+    'rolepath','1','14','35','0','widthpath','1','14','6','samepath','2','14','2','2','8','1',
+    'widthpath','3','14','3','0','1','rolepath','2','14','5','4','0','sizepath','3','14','5','2','4',
+    'rolepath','1','16','35','0','widthpath','1','16','6','samepath','2','16','2','2','9','1',
+    'rolepath','2','16','5','4','0','sizepath','3','16','5','2','6',
+    'rolepath','1','19','35','0','samepath','2','19','2','2','8','1','sizepath','3','19','5','2','4',
+    'differentpath','2','8','1','2','9','1')
+
 # A foreign C value by value has no graph cell. Unit: predef, include, echo,
 # read, kind, probe, check, publish, return. echo's declared input part is
 # one named empty place; after its `throws` line, its read of that input is
@@ -2035,7 +2066,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_indent_stack_field_index.lm2'; Expect = 'translates'; Exit = 0; Needle = '';
         NativePatterns = @('(?ms)@: LmP0IndentStack (?<cell>l2_q\d+)\s.*?if: \k<cell>\\columns\[2\] != 7U');
         Absent = @(); Debt = @('l2_p0_0\columns[l2_p0_1]') },
-    [pscustomobject]@{ Name = 'entry_array_leading_zero.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
+    # `08` is not a C99 integer literal (a leading zero starts an octal literal). The old
+    # index-only decimal reading accepted it; the refusal is located at the literal.
+    [pscustomobject]@{ Name = 'entry_array_leading_zero.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'entry_array_leading_zero.lm2:5:8: not an integer literal: a leading zero starts an octal literal'; Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'entry_nul.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); Absent = @('c.array'); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     # THE UNIT IS THE ENTRY (FABLE-OPUS-S2-UNIT-IS-ENTRY-20260923-112).  Every non-callable is
     # visible only after its declaration, methods both ways.  unit_s2_vis_dynamic: a method ABOVE a
@@ -2551,6 +2584,18 @@ $fixtures = @(
         Args = @('0','mutate','null-path','5','1','5','2','1','1') + $criticalMachineAddressPaths; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_machine_address_element_mutant.lm2'; Source = 'graph_shape_machine_address.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','5','0','4','2','1','0') + $criticalMachineAddressPaths; Entry = 7; Absent = @(); Debt = @() },
+    # An Array declared in a nested body: its descriptor is that body's child and
+    # every element operation names the body as holder. The method runs
+    # natively and, under the method-walk knob, in the interpreter; the root's
+    # nested Array is walked in both.
+    [pscustomobject]@{ Name = 'graph_shape_nested_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $criticalNestedArrayPaths; Entry = 7; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_walk_nested_array.lm2'; Source = 'graph_shape_nested_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0') + $criticalNestedArrayPaths; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_nested_array_holder_mutant.lm2'; Source = 'graph_shape_nested_array.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','6','0','6','2','1','1','1') + $criticalNestedArrayPaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_nested_array_root_mutant.lm2'; Source = 'graph_shape_nested_array.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','5','3','2','1','1','1') + $criticalNestedArrayPaths; Entry = 7; Absent = @(); Debt = @() },
     # A foreign C value by value: retained calls, an empty witness place,
     # native words kept in both modes -- probe's only machine operation is the
     # by-value call. The witness mutant moves the input ordinal into the
@@ -6998,6 +7043,39 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_until_copy_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_until_copy_call_walk.lm2'; Source = 'unit_named_until_copy_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 1; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    # The call of a copy forms the hidden inputs of the body that copy holds:
+    # A needs x, B needs y, same type and position. Natively and with both
+    # procedures walked. A contract taken from another row's declaration would
+    # hand rb the caller's x and exit 82.
+    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyCallPaths; Entry = 7; WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs_walk.lm2'; Source = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyCallPaths; Entry = 7; WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs_input_mutant.lm2'; Source = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','2','14','5') + $criticalCopyCallPaths; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs_target_mutant.lm2'; Source = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','2','16','2') + $criticalCopyCallPaths; Entry = 7; Absent = @(); Debt = @() },
+    # A genuinely missing input: the copied body needs z, which neither the
+    # caller nor the copy's lexical parent has. Refused, located at the name.
+    [pscustomobject]@{ Name = 'unit_copy_call_missing_input_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_copy_call_missing_input_refused.lm2:6:11: unresolved name'; Absent = @(); Debt = @() },
+    # OPEN positive, red by design: a valid program whose copy's own row is
+    # addressed before the call. The translator cannot yet prove the row's
+    # current value and refuses the call as unsupported; the row stays a
+    # required positive until the general actual-call boundary exists.
+    [pscustomobject]@{ Name = 'unit_copy_call_addressed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # OPEN positives, red by design: four more valid calls of a held copy whose
+    # contract the translator cannot prove yet. Each is refused as unsupported
+    # at its call; none is an expected language refusal.
+    [pscustomobject]@{ Name = 'unit_copy_call_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_other_owner.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_local_structure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_copy_call_of_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_source_binding_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2,4);
         Absent = @(); Debt = @() },

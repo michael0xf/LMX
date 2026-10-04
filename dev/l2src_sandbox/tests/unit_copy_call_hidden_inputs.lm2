@@ -1,0 +1,32 @@
+# Two copied Structures with different bodies: A needs the free name x, B the
+# free name y, both int, each at the same input position of its own contract.
+# Each call of a copy forms the inputs of the body that copy really holds --
+# the caller's current x for ra, its current y for rb, a changed working value
+# included -- and runs the copy, never the prototype. Entry 7.
+int: seen 0
+A:
+    int: last 0
+    last: x
+    node\seen: node\seen + x
+B:
+    int: last 0
+    last: y
+    node\seen: node\seen + y
+int: x 11
+int: y 29
+ra: merge A
+rb: merge B
+@: int ps @seen
+int: result 7
+ra
+if: ra\last != 11 || A\last != 0 || \ps != 11
+    result: 81
+rb
+if: rb\last != 29 || B\last != 0 || \ps != 40
+    result: 82
+x: 5
+ra
+if: ra\last != 5 || rb\last != 29 || \ps != 45
+    result: 83
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

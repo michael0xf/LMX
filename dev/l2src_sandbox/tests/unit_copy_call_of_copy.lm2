@@ -1,0 +1,15 @@
+# A valid program: a copy of a copy is called. Both copies hold the complete
+# body of A; calling rb runs it over rb alone.
+# OPEN positive: only a copy made directly from a named Structure has a
+# proved contract today. Entry 7.
+A:
+    int: last 0
+    last: 17
+ra: merge A
+rb: merge ra
+rb
+int: result 81
+if: rb\last = 17 && ra\last = 0 && A\last = 0
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

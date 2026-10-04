@@ -499,3 +499,137 @@ Other triage recorded while the gate ran, no code change:
 - `unit_s7_ret_field`, `unit_s7_ret_deep`, `unit_s7_arg_deep` still carry the
   legacy `Rich: p` setup inside a definition and need the same deliberate
   migration as section 2 before their producer is judged.
+
+<a id="nested-array"></a>
+## 15. Arrays in nested bodies, an opaque foreign index, a located literal
+
+**An Array declared in a nested body.** The one layout (`l2_layout_owns`)
+already gives every field of a nested body a child place in that body, an
+Array's descriptor included, and the native emission reads it there. The
+graph producers named only method-level Arrays. `l2_rw_array_placed` is the
+single relation "this own field has a physical place for a descriptor"; the
+declaration statement and the element producers use it, and the element
+operations name the nested body as the holder of their `AT`. The interpreter
+capability follows: such an Array no longer keeps its method out of the walk
+(`l2_rw_may`), so under the method-walk knob the body really runs in the
+interpreter.
+
+- Recovered: `unit_array_index_shadow`, `unit_address_array_descriptor`,
+  `unit_array_value_projection`.
+- New witness `graph_shape_nested_array` (206 checks) and its walked twin
+  (`WalkedMethods`): the nested body's descriptor at its child 0, the store's
+  `AT` holding that very body (`samepath`), the method-level store's `AT`
+  with no holder (`nullpath`), the two descriptors distinct, and the same at
+  the root, which is walked in both rows. Two shape mutants null a holder.
+
+**An unknown foreign raw index is opaque** (`NATIVE-RAW-INDEX-LITERAL-TYPE`,
+fixed in the sandbox). The native span typing returned "literal" for a raw
+index whose element type L2 does not know, so `return: stack\columns[idx]` in
+a `size_t` method asked for an `int` to `size_t` converter. It is now untyped
+there, as every other foreign path is; the C compiler checks it. Recovered:
+`unit_indent_stack_field_index`.
+
+**A located literal diagnostic.** `08` is not a C99 integer literal
+([grammar](../docs/LMX_grammar.en.md)); the earlier ledger already records
+that the old index-only decimal reading must not come back. The refusal was
+the generic `unsupported body`. It is now said at the literal: an invalid
+octal digit, a valid octal literal without a producer (debt, not a rule), or
+another token that starts as a number. `entry_array_leading_zero` is migrated
+from a positive to that refusal.
+
+<a id="held-call-step-one"></a>
+## 16. Held-call boundary, step one: one proved alternative
+
+This is the bounded lowering the ruling of [section 9](#held-call-ruling)
+allows, for one case only.
+
+**The case.** `R: merge S`, with exactly one named Structure and no body,
+then a call of `R` in the body that declares it.
+
+**Proof that the declaration determines the executed body.** For a merge of
+one operand without composition the kernel returns the copier's completed
+occurrence (`lmx_merge_profiles_owned`): S's body, its nested occurrences and
+its native word (`lmx_graph_copy_owned` carries `native` verbatim). The merge
+record keeps that operand's layout (`l2_mres_source`, set only for this
+form).
+
+**Proof that the row still holds that value at the call.** Measured on the
+current translator: a second `R: merge T` is an argument-bearing call of the
+existing R and is refused; `@: R other` is not a rebinding form; a
+`receiveMessage: R` after it is a new occurrence whose call stays refused;
+whole-Structure assignment through a path is refused. The one remaining way
+to the reference cell is its address. Every address-of that names a merge
+result row is recorded (`l2_address_target`), every call of such a row is
+recorded (`l2_copy_call_note`), and when all bodies are read a called row
+that is addressed is refused at the call (`l2_copy_calls_verify`) with
+`the called Structure's reference cell is addressed: calling its current
+value is not supported yet`.
+
+**Proof of the input contract and of the lexical parent.** The inputs are
+the hidden inputs of S's procedure, formed in order from the caller's
+bindings and then S's lexical source, as for a call of S. The copy's lexical
+parent is the body the merge is reached in; the row is accepted only when
+that body is the one that lexically owns S (`l2_own_copy_origin`), so both
+parents are the same Structure. The call dispatches the value the row holds
+(`lmx_call_prim` over the slot, `EXEC` over the row's own output operand),
+never the prototype.
+
+**What is not done.** Selection among several alternatives, a body reached
+through a callable formal or a path, a copy of a copy, a copy of a method's
+own Structure, a copy declared in another body than its Structure's owner, a
+method calling an outer copy by a free name, an addressed row. Each keeps a
+located diagnostic and is a required positive, red by design:
+`unit_copy_call_from_method`, `unit_copy_call_other_owner`,
+`unit_copy_call_local_structure`, `unit_copy_call_of_copy`,
+`unit_copy_call_addressed`. The universal route still waits for
+[the author's answer](../LMX_blog/q/current/graph-hidden-input-name-binding.md).
+The critical ticket stays OPEN.
+
+**Verification.**
+
+- Recovered: `unit_named_until_copy_call` (+ walk),
+  `graph_shape_ns_source_nested_copy` (+ walk_methods: the copied child runs
+  over the copied parent, the prototype's tag stays 9),
+  `unit_named_struct_exec_instance`, `unit_named_struct_exec_two_types`,
+  `unit_model_var_call`, `unit_empty_type_call_method` (a copy of an empty
+  Structure runs nothing).
+- New witness `unit_copy_call_hidden_inputs` and its walked twin: A needs the
+  free name x, B the free name y, same type and position; each call hands its
+  copy the caller's current value of the right name, a changed working value
+  included. Path oracle: each `EXEC` targets the very output operand its
+  row's declaration produced and carries the caller's cell of that name as
+  its one hidden input; two shape mutants.
+- Translator mutant (`fable_held_mut_03`): every copy takes the first merge
+  result's layout. Both hidden-input rows go red (rb receives x). The older
+  `unit_named_struct_exec_two_types` stays green under the same mutant: it
+  has no hidden input, so it cannot see a wrong contract. The live file was
+  restored and its hash re-verified.
+- `unit_copy_call_missing_input_refused`: the copied body needs z, which
+  nothing supplies; refused at the name (`unresolved name`).
+
+<a id="full-06"></a>
+## 17. Full gate after sections 15 and 16
+
+`fable_full_06` completes **RED 54/1426** on translator SHA256
+`02EA78FD4C25A942C5FCB9B0899CEA99E39C2F6E066455D58DE1875F9CA282F4`
+(staged Git blob `37a45a8f3d8dc8f8270144b6e0ea4db4208cf18b`), harness
+`4A55E9C1D4D8C2A5E99E13239F611499AE36CA5548E81B41053D7339D79F94B1`, driver
+unchanged from section 14.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_05` (RED 62/1412) | 13 | 0 | 14: 9 OK, 5 open positives red by design | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 77 | 0 | 31 | 0 |
+
+No retained failure changed its message. The kernel and L3 gates were not
+rerun: no kernel source changed.
+
+The 54 red rows: the five open held-call positives above and
+`unit_held_nullary_source_field`; nested admission maps (3); capture of a
+merge-result local (2); the `1U` rows (4, K08); the head-role family (5 and
+`unit_asgn_fallback`, [section 13](#head-role)); the letter Array-of-Array
+element contract (5); reception into a model (3); a Structure value in a
+return or argument (3); `unit_t7_convert`, `unit_named_actual_whole`,
+`unit_eternal_shape`; `unit_bind_method_thin_other`; and 18 stale oracle
+rows. A triage of those 18 against the norm was prepared while this gate ran
+and is applied as the next slice.

@@ -1996,7 +1996,7 @@ identity-with-holes. Поэтому голое чтение `v\x` внутри �
 [журнал продолжения](fable-continuation-20261003.md#foreign-value).
 
 <a id="native-raw-index-literal-type"></a>
-### NATIVE-RAW-INDEX-LITERAL-TYPE — 2026-10-03, fable, OPEN
+### NATIVE-RAW-INDEX-LITERAL-TYPE — 2026-10-03, fable, FIXED в sandbox (не выпущено)
 
 `l2_native_span_ty` возвращает `-1` для сырого индекса, тип элемента которого L2 неизвестен
 (`stack\columns[idx]` у `c.LmP0IndentStack`). В нативной типизации `-1` означает «литерал без
@@ -2004,8 +2004,9 @@ identity-with-holes. Поэтому голое чтение `v\x` внутри �
 в методе с результатом `size_t` требует конвертер `lm_stg_convert_int_size_t`, которого в программе
 нет. Строка `unit_indent_stack_field_index` из-за этого красная. Значение неизвестного C-типа —
 непрозрачное (его проверяет C), а не целочисленный литерал: вернуть «не типизировано» (`-99`),
-как для остальных чужих путей. Исправление не сделано: меняет нативную типизацию и требует
-отдельного полного гейта.
+как для остальных чужих путей. Исправлено так: `l2_native_span_ty` возвращает `-99`; строка
+зелёная, полный гейт `fable_full_06` без регрессий
+([журнал](fable-continuation-20261003.md#nested-array)).
 
 <a id="machine-local-table-stale"></a>
 ### MACHINE-LOCAL-TABLE-STALE — 2026-10-03, fable, FIXED в sandbox (не выпущено)

@@ -1,0 +1,17 @@
+# A valid program: the address of the copy's own row is passed, then the copy
+# is called. Nothing replaces the row, so the call runs the copy's body.
+# OPEN positive: the translator cannot yet prove the current value of an
+# addressed row and refuses the call as unsupported. Entry 7.
+A:
+    int: last 0
+    last: 17
+fn: keep (@: Lmx p) int
+return: 0
+ra: merge A
+int: k keep(@ra)
+ra
+int: result 81
+if: ra\last = 17 && A\last = 0
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

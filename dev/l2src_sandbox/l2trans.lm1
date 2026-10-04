@@ -311,6 +311,12 @@ int: l2_mres_n 0
 @: int l2_mres_own 0
 @: int l2_mres_width 0
 @: L2ReferenceSource l2_mres_source 0
+# Per merge result row: 1 once an address-of names the row itself, and the
+# first source place that calls the row (with its method), for the one check
+# that runs when every body has been read (l2_copy_calls_verify).
+@: int l2_mres_addressed 0
+@@: LmP0Node l2_mres_called 0
+@: int l2_mres_called_mi 0
 # R9: 1 while the merge results' rows are made again after the steps are counted (l2_mrs_rebuild_all).
 int: l2_mrs_rebuild 0
 # Ordinary named Structures declared at unit level (SPEC 19.17 example, Codex
@@ -826,6 +832,7 @@ prototype:
     fn: l2_rw_cell (int: node; int: oi) int
     fn: l2_rw_own (int: parent; int: oi; @: int out) int
     fn: l2_rw_elem_of (const: @(LmP0Text t); @: size_t index) int
+    fn: l2_rw_array_placed (int: oi) int
     fn: l2_rw_elem_ty (int: oi) int
     fn: l2_rw_size_index (int: elem; size_t: index) int
     fn: l2_rw_elem (int: parent; int: oi; int: field; size_t: index; @: int out) int
@@ -1097,6 +1104,9 @@ prototype:
     fn: l2_d105_key_method (int: mi; int: key) int
     fn: l2_own_layout (int: own) int
     fn: l2_own_call_origin (int: own) int
+    fn: l2_own_copy_layout (int: own) int
+    fn: l2_own_copy_origin (int: own) int
+    fn: l2_copy_calls_verify (const: @(char path)) int
     fn: l2_own_source_layout (int: own) int
     fn: l2_emit_constructed_layout (int: model; const: @(char value); const: @(char req); const: @(char ind)) int
     fn: l2_layout_token (int: ni; @: char dest) int
@@ -3289,6 +3299,23 @@ fn: l2_num (const: @(LmP0Text text)) int
         i: i + 1U
 return: 1
 
+# Every character of `text`, with an optional U suffix, is an octal digit.
+fn: l2_octal_digits (const: @(LmP0Text text)) int
+    size_t: n
+    size_t: i 0U
+    if: text = 0 || text\data = 0 || text\length = 0U
+        return: 0
+    n: text\length
+    if: text\data[n - 1U] = 85 || text\data[n - 1U] = 117
+        n: n - 1U
+    if: n = 0U
+        return: 0
+    while: i < n
+        if: text\data[i] < 48 || text\data[i] > 55
+            return: 0
+        i: i + 1U
+return: 1
+
 fn: l2_signed_num (const: @(LmP0Text text)) int
     size_t: i 1U
     if: text = 0 || text\data = 0 || text\length < 2U || text\data[0] != 45
@@ -4816,6 +4843,8 @@ fn: l2_parse_library (const: @(char path)) int
         return: 1
     # steps/free-names.md M2/M3: the checks that waited for the dynamic inputs' types run now.
     if: l2_wait_run(path) != 0
+        return: 1
+    if: l2_copy_calls_verify(path) != 0
         return: 1
     if: l2_collect_asgn_binds(path) != 0
         return: 1
@@ -9744,9 +9773,47 @@ return: -1
 # at the source site; immutable constructor evidence alone cannot select them.
 fn: l2_own_call_origin (int: own) int
     int: origin l2_own_layout(own)
+    if: origin < 0
+        origin: l2_own_copy_origin(own)
     if: origin < 0 || origin >= l2_ns_n || l2_ns_proc[origin] < 0
         return: -1
 return: origin
+
+# The named Structure whose whole copy own row `own` holds by its one
+# declaration: `own: merge S` with exactly S and no body. For such a merge
+# the kernel returns the copier's completed occurrence -- S's body, its
+# nested occurrences and its native word (lmx_merge_profiles_owned). -1 for
+# any other row. This is a fact about the declaration, not yet about the
+# value a later call finds there.
+fn: l2_own_copy_layout (int: own) int
+    int: result l2_mres_of_own(own)
+    @: L2ReferenceSource source
+    if: result < 0 || l2_mres_source = 0
+        return: -1
+    source: @ l2_mres_source[result]
+    if: source\layout < 0 || source\layout >= l2_ns_n || l2_ns_eternal[source\layout] >= 0
+        return: -1
+return: source\layout
+
+# The copied Structure whose procedure contract a call of own row `own`
+# uses: one proved alternative. The row is a slot filled by its one merge
+# declaration and declared in the body that lexically owns the copied
+# Structure, so the copy's lexical parent is that prototype's parent. No
+# statement form stores another Structure into such a row; an address of the
+# row, the one way a store could reach its cell, is refused once every body
+# has been read (l2_copy_calls_verify). The call itself dispatches the value
+# the row holds, never the prototype.
+fn: l2_own_copy_origin (int: own) int
+    int: layout l2_own_copy_layout(own)
+    int: owner
+    if: layout < 0 || l2_own_is_slot(own) = 0 || l2_ns_parent[layout] >= 0
+        return: -1
+    owner: l2_ns_local[layout]
+    if: owner < 0
+        owner: l2_e
+    if: l2_own_mi[own] != owner
+        return: -1
+return: layout
 
 # A constructor contributes a possible source to its existing own-row key.
 # This is compile-time reachability, NOT evidence about a later held value:
@@ -10089,6 +10156,9 @@ fn: l2_struct_call_inert (const: @(LmP0Text t); int: mi) int
     if: oi < 0 || l2_colon_is_graph_ty(l2_ft_of_own(l2_own_ty[oi])) = 0
         return: 0
     ni: l2_own_nsty_get(oi)
+    # The whole copy of an empty named Structure runs nothing either.
+    if: ni < 0 && l2_own_copy_layout(oi) >= 0
+        return: l2_ns_empty(l2_own_copy_layout(oi))
     if: ni < 0
         return: l2_own_self_typed(oi)
 return: l2_ns_empty(ni)
@@ -23237,6 +23307,16 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: 0
         if: node\as\atom\length >= 2U && node\as\atom\data[0] = 99 && node\as\atom\data[1] = 46
             return: 0
+        # A token that starts as a number and is none of the supported integer
+        # spellings is a literal error at the literal. A leading zero starts a
+        # C99 octal literal: 8 and 9 are not octal digits, and a valid octal
+        # literal has no producer yet.
+        if: node\as\atom\length > 1U && node\as\atom\data[0] = 48 && node\as\atom\data[1] >= 48 && node\as\atom\data[1] <= 57
+            if: l2_octal_digits(node\as\atom) = 0
+                return: l2_error(path, node, "not an integer literal: a leading zero starts an octal literal")
+            return: l2_error(path, node, "an octal integer literal is not supported yet")
+        if: node\as\atom\length > 0U && node\as\atom\data[0] >= 48 && node\as\atom\data[0] <= 57
+            return: l2_error(path, node, "not a number literal")
         if: l2_ident(node\as\atom) = 0
             return: l2_error(path, node, "unsupported body")
         # A callable named where a value is consumed gives its result (plan §3 native gate (в);
@@ -24518,9 +24598,32 @@ return: 0
 # type is the empty Structure runs nothing (l2_struct_call_inert).  Any other Structure's call -- a Structure-typed
 # field or local of a method, a nested or qualified Structure, a nested method's bare Structure, a value whose type is
 # not declared -- is not built yet: refused where it stands.
+# The first source place that calls merge result row `own`, kept for
+# l2_copy_calls_verify.
+fn: l2_copy_call_note (int: own; const: @(LmP0Node node); int: mi) int
+    int: result l2_mres_of_own(own)
+    if: result < 0 || l2_mres_called = 0 || l2_mres_called[result] != 0
+        return: 0
+    l2_mres_called[result]: (cast: (@: LmP0Node) node)
+    l2_mres_called_mi[result]: mi
+return: 0
+
+# Run once every body has been checked. A called merge copy whose own row is
+# addressed has no proof of its current value: the address reaches the
+# reference cell. The valid program is refused at its call, as an
+# implementation limit, not as an admission failure.
+fn: l2_copy_calls_verify (const: @(char path)) int
+    int: i 0
+    while: i < l2_mres_n
+        if: l2_mres_called != 0 && l2_mres_called[i] != 0 && l2_mres_addressed[i] != 0
+            return: l2_error(l2_method_src(l2_mres_called_mi[i], path), l2_mres_called[i], "the called Structure's reference cell is addressed: calling its current value is not supported yet")
+        i: i + 1
+return: 0
+
 fn: l2_check_struct_call (const: @(LmP0Node node); const: @(LmP0Text t); int: mi; const: @(char path)) int
     int: idx
     int: origin
+    l2_copy_call_note(l2_resolved_own(mi, t), node, mi)
     idx: l2_ns_exec_any(t, mi)
     if: idx >= 0 && l2_ns_proc[idx] < 0
         return: l2_error(path, node, "internal: a named Structure executed without its procedure")
@@ -25295,6 +25398,8 @@ fn: l2_parse_unit (const: @(char path)) int
     # steps/free-names.md M2/M3: the checks that waited for the dynamic inputs' types run now.
     if: l2_wait_run(path) != 0
         return: 1
+    if: l2_copy_calls_verify(path) != 0
+        return: 1
     if: l2_collect_asgn_binds(path) != 0
         return: 1
     # The entry has no caller, so nothing can hand it a dynamic input: a name it
@@ -25541,7 +25646,11 @@ fn: l2_address_target (@: LmP0Field first; int: count; int: mi; @: L2Address out
     if: count = 1 && f\value\kind = c.LM_P0_NODE_STRUCTURE && f\value\as\structure != 0
         return: l2_address_target(f\value\as\structure\first_field, l2_count_active(f\value\as\structure), mi, out)
     if: count = 1 && f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0
-        return: l2_address_name(mi, f\value\as\atom, out)
+        kind: l2_address_name(mi, f\value\as\atom, out)
+        # The address of a merge result's own row names its reference cell.
+        if: kind = 0 && out\kind = 1 && l2_mres_addressed != 0 && l2_mres_of_own(out\index) >= 0
+            l2_mres_addressed[l2_mres_of_own(out\index)]: 1
+        return: kind
     text: l2_address_path_text(first, count)
     if: text = 0
         return: 2
@@ -29125,8 +29234,10 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
             return: 0 - 5
         return: ty
     if: l2_raw_index_span(span, mi, @ raw_index) = 0
+        # An element whose C type L2 does not know is opaque: the C compiler
+        # checks it. It is not a literal that takes its place's type.
         if: raw_index.type < 0
-            return: -1
+            return: 0 - 99
         ty: raw_index.type
         if: l2_pointer_depth(ty) > 0
             return: -5
@@ -31039,9 +31150,19 @@ fn: l2_rw_elem_of (const: @(LmP0Text t); @: size_t index) int
     int: oi 0 - 1
     if: t = 0 || l2_own_index_head(t, l2_rw_mi, @ oi, index) != 0 || oi < 0
         return: 0 - 1
-    if: l2_rw_seen(oi) = 0 || l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0 || l2_rw_elem_ty(oi) < 0
+    if: l2_rw_seen(oi) = 0 || l2_rw_array_placed(oi) = 0 || l2_rw_elem_ty(oi) < 0
         return: 0 - 1
 return: oi
+
+# Own field oi has a physical place for an Array descriptor: a child of the
+# body being built, or a child of the nested body that declares it. Both are
+# assigned by the one layout (l2_layout_owns); neither is a working value.
+fn: l2_rw_array_placed (int: oi) int
+    if: oi < 0 || oi >= l2_own_n
+        return: 0
+    if: l2_own_host[oi] = 0
+        return: (cast: (int) (l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0))
+return: (cast: (int) (l2_own_fid[oi] >= 0 && l2_own_fchild[oi] >= 0))
 
 # The declared element's closed value type, projected to ordinary storage.
 fn: l2_rw_elem_ty (int: oi) int
@@ -34685,7 +34806,7 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_rw_mi)
             oi: oi + 1
         ---
-        if: oi < l2_own_n && l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0 && l2_rw_elem_ty(oi) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) = 3
+        if: oi < l2_own_n && l2_rw_array_placed(oi) != 0 && l2_rw_elem_ty(oi) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) = 3
             return: 0
         return: l2_rw_refuse(stmt, "an array")
     # A declaration of the root's own field: a number (int, char, size_t, unsigned, ulong), set by
@@ -35029,9 +35150,11 @@ fn: l2_rw_may (int: mi) int
         j: j + 1
     ---
     while: oi < l2_own_n
-        # Class 3 admits a numeric field of a nested body, including a catch parameter.
-        # An array or a Structure field declared there still keeps the method out.
-        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0
+        # Class 3 admits a numeric field of a nested body, including a catch parameter,
+        # and an Array of a walked element type: its descriptor is a placed child of
+        # that body, read through AT. A Structure field declared there still keeps
+        # the method out.
+        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0 && (l2_own_is_array(l2_own_ty[oi]) = 0 || l2_rw_elem_ty(oi) < 0)
             return: 0
         # A method-level numeric field named like an argument -- a formal or a dynamic input -- is class 2. A pointer or
         # a Structure field of that name stays out. A hosted numeric field is class 3.
@@ -35058,7 +35181,7 @@ fn: l2_rw_may_why (int: mi) const: @: char
         j: j + 1
     ---
     while: oi < l2_own_n
-        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0
+        if: l2_own_mi[oi] = mi && l2_own_host[oi] != 0 && l2_rw_is_hosted(oi) = 0 && (l2_own_is_array(l2_own_ty[oi]) = 0 || l2_rw_elem_ty(oi) < 0)
             return: "a field of a nested body that is not a number"
         if: l2_own_mi[oi] = mi && l2_param_find(mi, l2_own_name[oi]) >= 0 && l2_rw_is_hosted(oi) = 0 && ((l2_rw_num_ty(l2_own_ty[oi]) = 0 && l2_own_is_pointer(l2_own_ty[oi]) = 0) || l2_own_uchild[oi] < 0)
             return: "a field named like an argument that is not a number"
@@ -39476,6 +39599,14 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
                 if: sources = 0
                     return: 1
                 l2_mres_source: sources
+                l2_mres_addressed: (cast: (@: int) realloc((cast: (@: void) l2_mres_addressed), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
+                l2_mres_called: (cast: (@@: LmP0Node) realloc((cast: (@: void) l2_mres_called), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(@: LmP0Node)))
+                l2_mres_called_mi: (cast: (@: int) realloc((cast: (@: void) l2_mres_called_mi), (cast: (size_t) (l2_mres_n + 1)) * c.sizeof(c.int)))
+                if: l2_mres_addressed = 0 || l2_mres_called = 0 || l2_mres_called_mi = 0
+                    return: 1
+                l2_mres_addressed[l2_mres_n]: 0
+                l2_mres_called[l2_mres_n]: 0
+                l2_mres_called_mi[l2_mres_n]: 0 - 1
                 l2_mres_width[l2_mres_n]: 0
                 res: l2_mres_n
                 l2_mres_own[res]: own

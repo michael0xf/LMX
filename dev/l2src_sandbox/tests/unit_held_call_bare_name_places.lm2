@@ -1,0 +1,67 @@
+# The bare name of a held callable that returns a value is executed wherever a
+# number is received, as `p0()` is. p0 gives 100 and notes 1 at each call. In
+# the method: the initializer of a local and a later store to it, a number
+# field written through a path, an element of an Array, and two places of
+# another number type, where the result takes the place's ordinary
+# conversion -- a size_t initializer and a size_t field through a path. At
+# the root: the initializer of a field. Eight receipts, eight calls, and the
+# bare name passed nothing. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + note(1)
+    return: f0
+
+Box:
+    int: v 0
+    size_t: z 0U
+end: Box
+
+p0: make0 100
+int: first p0
+
+fn: inner () int
+    int: loc p0
+    int: again 0
+    again: p0
+    b: merge Box
+    b\v: p0
+    b\z: p0
+    []: int buf 3
+    buf[1]: p0
+    size_t: wide p0
+    if: loc != 100
+        return: 81
+    if: again != 100
+        return: 82
+    if: b\v != 100
+        return: 83
+    if: b\z != 100U
+        return: 84
+    if: buf[1] != 100
+        return: 85
+    if: wide != 100U
+        return: 86
+    return: 7
+end: inner
+
+int: ok inner()
+if: first != 100
+    ok: 87
+if: seen() != 7
+    ok: 88
+int: last p0
+if: last != 100 || seen() != 8
+    ok: 89
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

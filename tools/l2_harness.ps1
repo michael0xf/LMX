@@ -7436,12 +7436,40 @@ $fixtures = @(
         NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_walk.lm2'; Source = 'unit_held_call_bare_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4); Absent = @(); Debt = @() },
-    # OPEN positive, required before G5 (Codex, FABLE-CODEX-20261004-11; HELD-BARE-NAME-RESULT-RECEIPT).  Where a
-    # result is received -- a store to an int, an int formal's actual, the value an int method returns -- the bare
-    # name of a held callable that returns a value executes it, as the name with () does.  This implementation
-    # takes the bare name for the callable's reference in each of the three places and refuses the program.  Red
-    # until the receiving decision is repaired; never to be turned into an expected refusal.
+    # The bare name of a held callable where a result is received (Codex, FABLE-CODEX-20261004-11 and -12; semantics,
+    # #callables): a place whose receiving contract is a number receives what the call gives -- a store, an int
+    # formal's actual, the value an int method returns (the first program); an initializer, a method's local, a
+    # number field through a path, an element, a place of another number type through its conversion (the second);
+    # a number field of a message (the third).  A place that receives a reference takes the occurrence and executes
+    # nothing: an opaque reference declared with the name, an opaque formal's actual, a cast (the fourth; its method
+    # holds machine operations and stays native under the knob, the root's receipts are walked).  The bare name
+    # passes no argument: a header whose formals have no defaults is refused as the call without actuals is.
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_result_walk.lm2'; Source = 'unit_held_call_bare_name_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_places.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_places_walk.lm2'; Source = 'unit_held_call_bare_name_places.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_message.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_occurrence_walk.lm2'; Source = 'unit_held_call_bare_name_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4); NativeMethods = @(5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_bare_name_args_refused.lm2:12:4: a held callable takes the arguments of its header'; Absent = @(); Debt = @() },
+    # OPEN positives, required before G5 (Codex, FABLE-CODEX-20261004-12).  Red until repaired; never to be turned
+    # into expected refusals.  The first: an operand of arithmetic, of an ordering and of an equality receives a
+    # result, so the bare name of a held callable is executed there and `z0 = 0` compares what z0 gives, not its
+    # occurrence (HELD-BARE-NAME-OPERAND-RESULT).  This implementation refuses the arithmetic and the ordering and
+    # compares the occurrence in the equalities.  The second: an explicitly declared callable formal receives the
+    # occurrence of a held callable whose header it admits (HELD-CALLABLE-TO-CALLABLE-FORMAL).  This implementation
+    # refuses the call, `incompatible entry signature`.
+    [pscustomobject]@{ Name = 'unit_held_call_bare_name_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_to_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },

@@ -1,0 +1,55 @@
+# Where the receiving contract asks for a reference, the bare name of a held
+# callable is its occurrence and the callable is not executed. p0 gives 100
+# and notes 1 at each call. An opaque reference receives the name three ways:
+# declared with it, as the actual of an opaque formal, and under a cast. None
+# calls p0: the trace stays 0. Each received the same occurrence, and it is
+# not null. The call p0() after them is the first call. Entry 7.
+int: trace 0
+
+fn: note (int: v) int
+    node\trace: node\trace + v
+    return: 0
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + note(1)
+    return: f0
+
+fn: forward (@: void p) @: void
+    return: p
+end: forward
+
+p0: make0 100
+
+fn: inner () int
+    @: void k p0
+    @: void m forward(p0)
+    @: void c (cast: (@: void) p0)
+    if: seen() != 0
+        return: 81
+    if: k = 0
+        return: 82
+    if: k != m
+        return: 83
+    if: k != c
+        return: 84
+    return: 7
+end: inner
+
+int: ok inner()
+@: void rk p0
+@: void rm forward(p0)
+if: seen() != 0
+    ok: 85
+if: rk = 0 || rk != rm
+    ok: 86
+int: r p0()
+if: r != 100 || seen() != 1
+    ok: 87
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

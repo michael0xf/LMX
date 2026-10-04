@@ -2289,7 +2289,21 @@ callable берут тело вызова из узла (`l2_call_node_body`: т
 открытый дефект [HELD-BARE-NAME-RESULT-RECEIPT](#held-bare-name-result-receipt).
 
 <a id="held-bare-name-result-receipt"></a>
-### HELD-BARE-NAME-RESULT-RECEIPT — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-11, OPEN (блокер G5)
+### HELD-BARE-NAME-RESULT-RECEIPT — 2026-10-04, fable по ответам Codex FABLE-CODEX-20261004-11 и -12, FIXED в sandbox (не выпущено) для целого значения
+
+Исправлено: место, чей контракт получателя — число, спрашивает одно общее решение
+(`l2_held_result_receive`) о целом значении. Если это голое имя удерживаемого callable места,
+заголовок которого даёт число, место принимает результат вызова: вызов проверяется проверкой
+удерживаемого вызова, узел значения записывается, и типизаторы с обеими эмиссиями читают категорию
+места из записи. Спрашивают: общая грань потребляемого значения (инициализатор, фактический
+числового формала, возврат, элемент), запись, запись в числовое поле по пути, типизированное место
+графа (поле сообщения). Преобразование результата — обычная грань. Места, принимающие ссылку, не
+спрашивают: имя остаётся вхождением (`unit_held_call_bare_name_occurrence`). Свидетели —
+`unit_held_call_bare_name_result`, `unit_held_call_bare_name_places`,
+`unit_held_call_bare_name_message`, `unit_held_call_bare_name_args_refused`
+([§52 журнала](fable-continuation-20261003.md#result-receipt)). Операнды — отдельный открытый
+дефект [HELD-BARE-NAME-OPERAND-RESULT](#held-bare-name-operand-result). Ниже — запись, как она
+стояла.
 
 Голое имя нульарного удерживаемого callable там, где принимается результат, отвергается как ссылка:
 
@@ -2314,6 +2328,55 @@ callable-формал получает ссылку на вхождение; к�
 исправлено в §50. Обязательный позитив с красной строкой добавляется со следующим гейтом; чинить
 через общее решение контракта получателя и категорию места, не исполнением любой ссылки
 ([§50 журнала](fable-continuation-20261003.md#result-receipt-open)).
+
+<a id="held-bare-name-operand-result"></a>
+### HELD-BARE-NAME-OPERAND-RESULT — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+
+Операнд арифметики, упорядочивающего сравнения и равенства — место, принимающее результат. Голое
+имя удерживаемого callable, возвращающего значение, там исполняется, как исполняется названный так
+же метод единицы:
+
+```text
+p0: make0 100          # заголовок () int
+z0: make0 0
+int: a p0 + 1          # отказ сегодня: a reference where a number is asked
+if: p0 < 500           # отказ сегодня: a reference compared with a number other than 0
+if: z0 = 0             # сегодня сравнивается вхождение (не null), по норме — результат 0
+```
+
+Codex: «p0 = 0 and p0 != 0 compare the returned int with numeric zero, just as the corresponding
+unit-method expressions do. Do NOT choose occurrence/null comparison merely because the callable is
+held in a reference or the other operand happens to be zero.» Сравнение ссылки остаётся под явным
+принимающим ссылку контрактом: непрозрачная ссылка, получившая имя (`@: void k p0`), сравнивается
+с null без вызова. Обязательный позитив, красный: `unit_held_call_bare_name_operand` — callable с
+ненулевым вхождением и нулевым результатом, счётчик вызовов, контроли короткого замыкания, явное
+сравнение ссылки. Чинить через общий маршрут выражения и запись категории места, как целое
+значение ([§52 журнала](fable-continuation-20261003.md#result-receipt)).
+
+<a id="held-callable-to-callable-formal"></a>
+### HELD-CALLABLE-TO-CALLABLE-FORMAL — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+
+Удерживаемый callable, поданный явно объявленному callable-формалу, отвергается:
+
+```text
+fn: f0 () int
+    return: 1
+end: f0
+fn: run (f0: q) int
+    return: q() + q()
+end: run
+p0: make0 100          # заголовок () int
+int: r run(p0)         # отказ: incompatible entry signature
+```
+
+По норме (`#callables`) явно объявленный callable-формал получает ссылку на вхождение callable и не
+исполняет его при приёме. Codex: «An explicitly declared callable formal receives the entire actual
+callable occurrence by reference, without executing it on reception. Admission must use its real
+accepted interface and the Consumer's use, with the full input/result/exit contract; then execution
+inside run invokes that actual occurrence normally.» Настоящие отказы по несовместимой сигнатуре
+остаются; допуск не ослабляется, переименование заголовок/фактическое имя не возвращается.
+Обязательный позитив, красный: `unit_held_call_to_callable_formal`
+([§52 журнала](fable-continuation-20261003.md#result-receipt)).
 
 <a id="held-forward-lookup"></a>
 ### HELD-FORWARD-LOOKUP — 2026-10-04, fable по ответам Codex FABLE-CODEX-20261004-09 и -10, FIXED в sandbox (не выпущено)

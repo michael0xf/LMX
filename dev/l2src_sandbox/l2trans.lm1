@@ -289,6 +289,11 @@ int: l2_ruse_cur_levels 0
 @: int l2_ruse_chain_k 0
 int: l2_ruse_chain_n 0
 int: l2_ruse_chain_cap 0
+# The value sites where the bare name of a held callable is received as its result
+# (l2_held_result_receive): their nodes, in the order they were found.
+@@: LmP0Node l2_hres_node 0
+int: l2_hres_n 0
+int: l2_hres_cap 0
 const: @: LmP0Structure l2_ruse_unit 0
 # The flag steps of the statement being built (-196): a short-circuit `a && b` / `a || b` is an IF
 # step that runs before its statement and leaves the value in a cell (l2_rw_sc); l2_rw_stmts puts
@@ -1735,6 +1740,9 @@ prototype:
     fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
     fn: l2_call_head_held (int: mi; const: @(LmP0Text head)) int
     fn: l2_mad_held_arity (int: oi) int
+    fn: l2_hres_reset () int
+    fn: l2_held_result_site (const: @(LmP0Node value)) int
+    fn: l2_held_result_receive (int: mi; @: LmP0Field field; int: n; int: number; const: @(char path)) int
     fn: l2_mad_held_arg_ty (int: oi; int: k) int
     fn: l2_mad_held_arg_name (int: oi; int: k) @: LmP0Text
     fn: l2_mad_held_formals (int: oi) int
@@ -4764,6 +4772,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_own_free()
     l2_ruse_reset()
     l2_ruse_unit: unit
+    l2_hres_reset()
     l2_application_free()
     l2_loop_depth: 0
     l2_scope_n: 0
@@ -8002,6 +8011,9 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         return: 0
     if: value\kind = c.LM_P0_NODE_ATOM
         atom: value\as\atom
+        # A held callable's bare name received as its result has the type of that result.
+        if: l2_held_result_site(value) != 0
+            return: l2_mad_held_value_ty(l2_call_head_held(mi, atom), out_ty)
         if: l2_deref_word(atom, mi, @ base, @ levels, out_ty) = 0
             return: 0
         if: l2_num(atom) || l2_signed_num(atom) || (atom != 0 && atom\length >= 3U && atom\data[0] = 39 && atom\data[atom\length - 1U] = 39)
@@ -9836,6 +9848,9 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
     only: l2_next_active(field)
     if: only = 0
         return: 0
+    # A number place: the bare name of a held callable is received as its result.
+    if: l2_held_result_receive(mi, field, n, 1, path) != 0
+        return: 1
     if: n = 1
         return: l2_check_value_convert(only\value, to_ft, mi, path)
     if: n > 1
@@ -9981,6 +9996,9 @@ fn: l2_check_ret_kind (int: mi; const: @(LmP0Structure body); const: @(char path
     to_ft: l2_ret_ft(mi)
     if: to_ft = 8 || l2_prim_code_name(to_ft) = 0
         return: 0
+    # A number place: the bare name of a held callable is received as its result.
+    if: l2_held_result_receive(mi, body\first_field, 1, 1, path) != 0
+        return: 1
     only: l2_next_active(body\first_field)
     if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
         return: 0
@@ -10159,6 +10177,9 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     else:
         if: n = 1
             if: only != 0 && l2_prefix_kind_refused(only\value, mi, path) != 0
+                return: 1
+            # A number place: the bare name of a held callable is received as its result.
+            if: l2_held_result_receive(mi, first, n, (cast: (int) (l2_prim_code_name(target_ty) != 0)), path) != 0
                 return: 1
             if: only = 0 || l2_colon_value_ty(only\value, mi, @ value_ty) != 0
                 return: l2_error(path, stmt, "assignment value has unknown type")
@@ -25177,6 +25198,9 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
         only: l2_next_active(stmt\as\frame\body\first_field)
         if: only != 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && only\value\as != 0 && l2_check_literal_kind(only\value\as\atom, l2_lit_kind_from_ft(to_ft), path, stmt) != 0
             return: 1
+        # A number place: the bare name of a held callable is received as its result.
+        if: l2_held_result_receive(mi, stmt\as\frame\body\first_field, n, (cast: (int) (l2_prim_code_name(to_ft) != 0)), path) != 0
+            return: 1
         if: only = 0 || only\value = 0 || l2_colon_value_ty(only\value, mi, @ vt) != 0
             return: 0
         if: vt = 0 - 11
@@ -27646,6 +27670,11 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
         return: 1
     if: l2_indexed_node(node, mi, indexed) = 0
         return: l2_emit_indexed(indexed, mi, ind, dest)
+    # A held callable's bare name received as its result: its call, as `name()` is emitted.
+    if: node\kind = c.LM_P0_NODE_ATOM && l2_held_result_site(node) != 0
+        if: l2_call_head_held(mi, node\as\atom) < 0
+            return: l2_error(l2_src, node, "internal: a result site whose held callable is not selected at its emission")
+        return: l2_prep_held_call(node, l2_call_head_held(mi, node\as\atom), mi, ind, dest)
     if: node\kind = c.LM_P0_NODE_ATOM
         k: l2_occ_head(node\as\atom, @ occ, @ onm)
         if: k = 2
@@ -29839,6 +29868,9 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: node\kind != c.LM_P0_NODE_ATOM || node\as = 0
         return: 0 - 1
     t: node\as\atom
+    # A held callable's bare name received as its result has the type of that result.
+    if: l2_held_result_site(node) != 0
+        return: l2_mad_held_ret_ty(l2_call_head_held(l2_rw_mi, t))
     if: l2_raw_index_text(t, l2_rw_mi, @ raw_index) = 0
         if: raw_index.type < 0
             return: -1
@@ -31879,9 +31911,8 @@ return: 0
 # admission. Prune only definitely missing/incompatible named fields from
 # downstream source facts. Unnamed operations and unresolved crossings are
 # not interface rejection; ordinary formal edges retain used-field admission.
-# A place whose Consumer's coverage is known is not pruned here: what it
-# refuses is decided where it is reached, by the fields its coverage names, and
-# its value goes on only into another typed reference, which admits it itself.
+# A place whose Consumer's coverage is known prunes by the fields that coverage
+# names at the root; a place of unknown coverage, by every field.
 fn: l2_d105_receiving_flow (int: cand; int: mi; int: key) int
     L2SchemaField: needed
     L2SchemaField: actual
@@ -34433,6 +34464,11 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     if: node\kind != c.LM_P0_NODE_ATOM || node\as = 0
         return: l2_rw_refuse(node, "this operand")
     t: node\as\atom
+    # A held callable's bare name received as its result: its call, as `name()` is built.
+    if: l2_held_result_site(node) != 0
+        if: l2_call_head_held(l2_rw_mi, t) < 0
+            return: l2_error(l2_src, node, "internal: a result site whose held callable is not selected at its emission")
+        return: l2_rw_mad_call(node, l2_call_head_held(l2_rw_mi, t), parent, out)
     if: l2_raw_index_text(t, l2_rw_mi, @ indexed) = 0
         return: l2_rw_machine_index(@ indexed, 0, 0, parent, out)
     if: t != 0 && t\length > 0U && t\data[0] = 92
@@ -34906,6 +34942,9 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
     int: result
     if: f != 0
         at: f\value
+    # A number place: the bare name of a held callable is received as its result.
+    if: want >= 0 && l2_held_result_receive(l2_rw_mi, field, n, l2_rw_num_ty(want), l2_src) != 0
+        return: 1
     tok: l2_value_spans(field, n, @ m)
     if: tok = 0
         return: l2_rw_refuse(at, "this expression")
@@ -38469,6 +38508,69 @@ fn: l2_mad_held_arity (int: oi) int
         k: k + 1
     ---
 return: n
+
+fn: l2_hres_reset () int
+    if: l2_hres_node != 0
+        free((cast: (@: void) l2_hres_node))
+    l2_hres_node: 0
+    l2_hres_n: 0
+    l2_hres_cap: 0
+return: 0
+
+# Is this value site one where the bare name of a held callable is received as its result?
+fn: l2_held_result_site (const: @(LmP0Node value)) int
+    int: i 0
+    while: i < l2_hres_n
+        if: l2_hres_node[i] = value
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# THE BARE NAME OF A HELD CALLABLE WHERE A RESULT IS RECEIVED (semantics, #callables: "the
+# receiving contract selects a result or the reference itself ... when a result is received, a
+# value-returning callable is executed").  The run of n fields from `field` is the whole value
+# given to a place, and `number` says that the place's contract is a number: only such a place
+# asks.  When the value is one bare name that selects a held callable at the site
+# (l2_call_head_held) whose header gives a number, the place receives what the call `name()`
+# gives: the call is checked by the check of that call, whatever it accepts or refuses, and
+# the site is recorded.  Every later reader of the site takes its category from the record:
+# the typers give the header's result, to which the place's ordinary conversion applies, and
+# both emissions emit the call.  A place that receives a reference -- a pointer, a Structure,
+# a callable formal -- does not ask, and the name stays the occurrence there.
+# 0: recorded, or no such value.  1: refused.
+fn: l2_held_result_receive (int: mi; @: LmP0Field field; int: n; int: number; const: @(char path)) int
+    @: LmP0Field only
+    @: LmP0Node value
+    @@: LmP0Node grown
+    int: oi
+    int: want
+    if: mi < 0 || field = 0 || n != 1 || number = 0
+        return: 0
+    only: l2_next_active(field)
+    if: only = 0 || only\value = 0 || only\value\kind != c.LM_P0_NODE_ATOM || only\value\as = 0 || only\value\as\atom = 0
+        return: 0
+    value: only\value
+    oi: l2_call_head_held(mi, value\as\atom)
+    if: oi < 0 || l2_mad_held_ret_ty(oi) < 0
+        return: 0
+    if: l2_check_held_call(value, oi, mi, path) != 0
+        return: 1
+    if: l2_held_result_site(value) != 0
+        return: 0
+    if: l2_hres_n >= l2_hres_cap
+        want: l2_hres_cap * 2
+        if: want < 16
+            want: 16
+        grown: (cast: (@@: LmP0Node) realloc((cast: (@: void) l2_hres_node), (cast: (size_t) want) * c.sizeof(@: LmP0Node)))
+        if: grown = 0
+            return: l2_error(path, value, "out of memory")
+        l2_hres_node: grown
+        l2_hres_cap: want
+    ---
+    l2_hres_node[l2_hres_n]: value
+    l2_hres_n: l2_hres_n + 1
+return: 0
 
 fn: l2_mad_hdr_arity (int: mi) int
     @: LmP0Field f

@@ -218,10 +218,21 @@ Fable принял единственный writer/build-слот по [to_fable
   удерживающей вызов. Не установлено и значение короткой записи `add5: makeAdder 5`; вопрос автору
   записан в `LMX_blog/q/current/held-factory-initialization-versus-body-definition.md`
   ([HELD-STORE-FACTORY-ACTUALS-POSITIONAL](defects.md#held-store-factory-actuals-positional)).
-- Открыто, блокер G5: голое имя нульарного удерживаемого callable там, где принимается результат
-  (`r: p0`, `return: p0`, фактический `int`-формала), отвергается как ссылка; по норме callable
-  исполняется ([HELD-BARE-NAME-RESULT-RECEIPT](defects.md#held-bare-name-result-receipt),
-  [§50 журнала](fable-continuation-20261003.md#result-receipt-open)).
+- Восьмой срез (ответы Codex -11 и -12): голое имя удерживаемого callable там, где место принимает
+  число, исполняет callable — запись, инициализатор, фактический числового формала, возврат, поле по
+  пути, элемент, поле сообщения; преобразование результата — обычная грань; места, принимающие
+  ссылку, получают вхождение без вызова
+  ([HELD-BARE-NAME-RESULT-RECEIPT](defects.md#held-bare-name-result-receipt)).
+  Гейт ядра `fable_kernel_14` GREEN 296 целей и 113 самотестов, L3 `fable_l3_14` — 11 наборов,
+  полный `fable_full_27` RED31/1612: один FAIL→OK, ни одного OK→FAIL, девять новых строк — семь
+  зелёных и два помеченных открытых позитива
+  ([§52 журнала](fable-continuation-20261003.md#result-receipt)).
+- Открыто, блокер G5: операнды арифметики, сравнений и равенства принимают результат удерживаемого
+  callable, названного голым именем; `p0 = 0` сравнивает результат, а не вхождение
+  ([HELD-BARE-NAME-OPERAND-RESULT](defects.md#held-bare-name-operand-result)).
+- Открыто, блокер G5: удерживаемый callable, поданный явно объявленному callable-формалу, отвергается
+  (`incompatible entry signature`); по норме формал получает вхождение
+  ([HELD-CALLABLE-TO-CALLABLE-FORMAL](defects.md#held-callable-to-callable-formal)).
 - Открыто: аудит вызывающих классификатора без места
   ([§48 журнала](fable-continuation-20261003.md#site-selection)).
 - Седьмой срез (ответ Codex -11, пункты 3 и 4): покрытие ссылки составляется через вызов — то, что
@@ -234,8 +245,9 @@ Fable принял единственный writer/build-слот по [to_fable
   полный `fable_full_26` RED30/1603: два FAIL→OK, ни одного OK→FAIL, 19 новых строк — 18 зелёных и
   помеченный открытый позитив `unit_held_call_bare_name_result`, четыре заменённые удалены
   ([§51 журнала](fable-continuation-20261003.md#coverage-composed)).
-- Дальше: приём результата по голому имени удерживаемого callable; композиция целого значения;
-  вложенные карты допуска и замыкание захватов; остальные группы до G5.
+- Дальше: операнды и условия для голого имени удерживаемого callable; удерживаемый callable в
+  callable-формале; композиция целого значения; вложенные карты допуска и замыкание захватов;
+  остальные группы до G5.
 
 ## Действующее поручение — 2026-10-03: передача Fable
 

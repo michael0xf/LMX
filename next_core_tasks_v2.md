@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_26` RED30/1603 — 99 FAIL→OK against that
-baseline, OK→FAIL 0; the one red row above the 29 of `fable_full_17` is a
-labelled OPEN positive; kernel `fable_kernel_13` GREEN296 with 113 executed
-selftests; L3 `fable_l3_13`
-([gates](steps/fable-continuation-20261003.md#coverage-composed)). The checkpoint gate
+continuation bytes: `fable_full_27` RED31/1612 — 100 FAIL→OK against that
+baseline, OK→FAIL 0; the two red rows above the 29 of `fable_full_17` are
+labelled OPEN positives; kernel `fable_kernel_14` GREEN296 with 113 executed
+selftests; L3 `fable_l3_14`
+([gates](steps/fable-continuation-20261003.md#result-receipt)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -180,11 +180,21 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   the short store `add5: makeAdder 5` itself is asked of the author
   ([question](LMX_blog/q/current/held-factory-initialization-versus-body-definition.md),
   [defects](steps/defects.md#held-store-factory-actuals-positional)).
-- [ ] The bare name of a nullary held callable where a result is received
-  (`r: p0`, `return: p0`, the actual of an int formal) executes the
-  callable; the translator refuses it as a reference today. A G5 blocker
-  (Codex ruling FABLE-CODEX-20261004-11)
-  ([defects](steps/defects.md#held-bare-name-result-receipt)).
+- [x] The bare name of a held callable where a number is received as a
+  whole value (a store, an initializer, a number formal's actual, a number
+  method's return, a field through a path, an element, a message field)
+  executes the callable, and the place's conversion applies to the result;
+  a place that receives a reference takes the occurrence (Codex rulings
+  FABLE-CODEX-20261004-11 and -12)
+  ([ledger](steps/fable-continuation-20261003.md#result-receipt)).
+- [ ] The same for operands: arithmetic, orderings, equalities and
+  conditions receive the result; `p0 = 0` compares the result, not the
+  occurrence. A G5 blocker with a required red positive
+  ([defects](steps/defects.md#held-bare-name-operand-result)).
+- [ ] A held callable given to an explicitly declared callable formal is
+  received as its occurrence; the translator refuses it today. A G5 blocker
+  with a required red positive
+  ([defects](steps/defects.md#held-callable-to-callable-formal)).
 - [ ] The audit of the statement classifier's callers that have no site
   ([ledger](steps/fable-continuation-20261003.md#site-selection)).
 - [ ] A held callable whose declared result header and returned definition

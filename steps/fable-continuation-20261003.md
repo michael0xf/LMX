@@ -3643,7 +3643,7 @@ The comment above `l2_d105_receiving_flow` still describes the earlier
 behaviour ("A place whose Consumer's coverage is known is not pruned
 here"); the comment inside the function is the current one. The stale lines
 go with the next change of the translator: the gated bytes are not edited
-after their gate.
+after their gate. (Corrected in [section 52](#result-receipt).)
 
 ### Replay
 
@@ -3726,3 +3726,191 @@ copy (`tie.py`).
 ([section 50](#result-receipt-open)), through the receiving contract of the
 place. Then whole-value composition, nested admission and the capture
 closure. The store of a factory's result waits for the author.
+
+<a id="result-receipt"></a>
+## 52. The bare name of a held callable where a number is received (Codex, FABLE-CODEX-20261004-11 and -12)
+
+The OPEN positive of [section 50](#result-receipt-open) is green. The
+kernel and the walker are not touched.
+
+### The rule and the rulings
+
+The semantics, `#callables`: "In argument position the receiving contract
+selects a result or the reference itself: an explicitly declared callable
+formal receives a reference to the callable occurrence, not the result of
+executing it; when a result is received, a value-returning callable is
+executed; a callable with no returned value, including `sub`, is passed by
+reference."
+
+Codex's reply -12 on the bounds of this slice:
+
+> Implementation boundary for the whole-value slice: request the result
+> under the ordinary receiving contract, then apply the ordinary conversion
+> to it (e.g. int -> size_t). Do not require every input type to be numeric
+> just because the requested result is numeric. Preserve the actual
+> occurrence/self, dynamic and lexical inputs, defaults, effects and throws.
+> A bare call has no explicit actuals, but ordinary input formation may
+> still supply defaults/hidden inputs; do not replace that with an
+> unconditional arity>0 refusal or an invented zero-input wrapper. Any valid
+> route not supported in this bounded slice remains an OPEN positive, not a
+> language prohibition.
+
+### One decision, asked by the place
+
+`l2_held_result_receive` is asked by a place whose receiving contract is a
+number, about the whole value it is given. When that value is one bare name
+that selects a held callable at the site (`l2_call_head_held`) and the
+callable's header gives a number, the place receives what the call gives:
+the call is checked by the check every held call has
+(`l2_check_held_call`), and the value site, its P0 node, is recorded. A
+place that receives a reference does not ask.
+
+The places that ask:
+
+- the common edge of a consumed value (`l2_check_value_convert_field`): a
+  typed initializer, a number formal's actual, the value a number method
+  returns, an Array element's initializer;
+- a store (`l2_check_receiving_value`): to a field, a local, an element;
+- the return's kind check (`l2_check_ret_kind`);
+- a number field written through a path (`l2_check_path_write`);
+- the graph's typed place (`l2_rw_texpr`): an own field's, a formal's, a
+  message field's.
+
+The readers of the record, four, each at the one value:
+
+- the typer of one value (`l2_colon_simple_ty`) gives the header's result;
+  every native typer of a value reads a leaf through it;
+- the native emission (`l2_prep`) emits the call as `name()` is emitted;
+- the graph's typer of an operand (`l2_rw_opty`) and the graph's operand
+  (`l2_rw_operand`) do the same for the walked root and walked methods.
+
+Nothing else is special. The place's conversion is the ordinary edge,
+because the typer gives the result's type: an int result into a `size_t`
+place calls the conversion's receiver, whose own formal receives the bare
+name in its turn. The record is emptied with every translation of a unit.
+
+A site that is recorded and whose callable is not selected when it is
+emitted is an internal error in both emissions; no program reaches it.
+
+### What the reference places keep
+
+`unit_held_call_bare_name_occurrence`: an opaque reference declared with the
+name, the actual of an opaque formal, a cast. The trace stays 0, the three
+received the same occurrence, and it is not null. The committed translator
+and this one both run it: it is a control, not a change.
+
+### What is refused, and whose refusal it is
+
+- A header whose formals have no defaults, named bare where a number is
+  received: `a held callable takes the arguments of its header`, from the
+  held call's own check. The call written `h2()` is refused earlier, by the
+  binder: `h2 has no argument x`. Both say that required arguments are
+  missing. This is not a rule that a held callable with formals cannot be
+  named bare.
+- Default values of formals: the spelling `(int: x 5)` is refused for every
+  callable today, a unit method too, `incompatible entry signature`, at the
+  header. So the formation of inputs from defaults cannot be shown with
+  either spelling of a held call. It is a limit that stood before this
+  slice; when a header can carry a default, the held call's check must form
+  the inputs for the bare name and for `name()` alike.
+- A header with a formal that is no number, `(Model: m) int`: the bare name
+  is the call, and the call is refused by its own limit, as `hm(Model)` is:
+  `a held callable whose header is not numbers to a number`.
+- A definition that throws is not accepted as a callable merge today (`a
+  callable merge needs a walkable body`), so the throw of a held call
+  received by a bare name has no witness.
+
+### OPEN after reply -12
+
+**Operands.** Codex: "arithmetic and numeric ordering operands are
+result-receiving places. This is the same receiving-contract rule as the
+whole-value edge, not a special held-name rule." And for the equalities:
+"For your p0, whose accepted header is () int, p0 = 0 and p0 != 0 compare
+the returned int with numeric zero, just as the corresponding unit-method
+expressions do. Do NOT choose occurrence/null comparison merely because the
+callable is held in a reference or the other operand happens to be zero."
+The translator refuses `p0 + 1` and `p0 < 500` today and compares the
+occurrence in `p0 = 0`. Required positive, red:
+`unit_held_call_bare_name_operand`, with a callable whose occurrence is not
+null and whose result is 0, the short-circuit controls and the explicit
+reference comparison
+([defects](defects.md#held-bare-name-operand-result)).
+
+**A held callable given to a callable formal.** Codex: "Record
+HELD-CALLABLE-TO-CALLABLE-FORMAL as a REQUIRED positive OPEN defect,
+separately from result receipt and blocking G5. An explicitly declared
+callable formal receives the entire actual callable occurrence by
+reference, without executing it on reception." The translator refuses
+`run(p0)`, `incompatible entry signature`. Required positive, red:
+`unit_held_call_to_callable_formal`
+([defects](defects.md#held-callable-to-callable-formal)).
+
+### Tried and dropped
+
+A branch that counted a recorded site as a value that calls
+(`l2_node_has_call`) changed nothing on any fixture: a whole value is
+evaluated by the call path in every place of this slice. It is not in the
+slice. It belongs to the operands, where a short-circuit reaches it.
+
+### Replay
+
+The slice's translator against the committed one (`cb7b1e03`), on the 1602
+translations recorded by `fable_full_26`: exit, messages, generated L1 and
+allocation counts are the same on 1601 rows. The one other is the OPEN row
+itself, `unit_held_call_bare_name_result`, refused before and translated
+now.
+
+### Rows
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_held_call_bare_name_result`, natively and walked | A store, an int formal's actual, an int method's return, and `p0()` beside them: four calls. Was the OPEN positive. |
+| `unit_held_call_bare_name_places`, natively and walked | A local's initializer and store, a number field through a path, an element, a `size_t` initializer and a `size_t` field through a path with the conversion, a field's initializer at the root: eight calls. |
+| `unit_held_call_bare_name_message` | A number field of a message: the exit code is the result. |
+| `unit_held_call_bare_name_occurrence`, natively and walked | The reference places take the occurrence and call nothing. Its method holds machine operations and stays native under the knob; the root's receipts are walked. |
+| `unit_held_call_bare_name_args_refused` | A header with two formals and no defaults, named bare at an int place: refused where the name stands. |
+| `unit_held_call_bare_name_operand` | OPEN required positive: red. |
+| `unit_held_call_to_callable_formal` | OPEN required positive: red. |
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart, and
+compared with the slice on the fixtures of the family, natively and walked.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| The common edge of a consumed value does not ask | `unit_held_call_bare_name_result` and `unit_held_call_bare_name_places` are refused by the translator. |
+| A store does not ask | The same two are refused. |
+| A store asks whatever it receives, a reference too | `unit_held_call_bare_name_occurrence` is refused by the translator. |
+| The return's kind check does not ask | `unit_held_call_bare_name_result` is refused. |
+| A write through a path does not ask | `unit_held_call_bare_name_places` is refused. |
+| The graph's typed place does not ask | `unit_held_call_bare_name_message` is refused. |
+| The graph's typed place asks whatever it receives | `unit_held_call_bare_name_occurrence` is refused. |
+| The typer of one value does not read the record | `unit_held_call_bare_name_result` and `unit_held_call_bare_name_places` are refused. |
+| The native emission does not read it | Natively `unit_held_call_bare_name_result` and `unit_held_call_bare_name_places` each fail one check; walked, both run. |
+| The graph's typer does not read it | `unit_held_call_bare_name_result`, `unit_held_call_bare_name_places` and `unit_held_call_bare_name_message` are refused. |
+| The graph's operand does not read it | The same three are refused. |
+
+The two internal errors of a recorded site without its callable have no
+witness: no program reaches them.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_14` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_14` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_27` (full harness) | RED 31 of 1612. Against `fable_full_26` (RED 30 of 1603): FAIL→OK 1, the former OPEN positive; OK→FAIL 0; added 9, of which 7 green and the two labelled OPEN positives red; removed 0; no red row's message changed. |
+| `build/l2_harness/fable_hres_01` (focused, before the gate) | 106 rows of held callables, callable formals and conversions. Red only the two new OPEN rows. |
+
+The 31 red rows are the 29 of `fable_full_17` and the two labelled OPEN
+positives `unit_held_call_bare_name_operand` and
+`unit_held_call_to_callable_formal`. The pre-gate hashes of the translator,
+the seven fixtures and the harness equal the live files and every staged
+copy (`tie.py`).
+
+**Next.** The operands: arithmetic, orderings, equalities and conditions
+receive the result of a held callable named bare, with the short-circuit
+controls. Then the held callable given to a callable formal. Then
+whole-value composition, nested admission and the capture closure. The
+store of a factory's result waits for the author.

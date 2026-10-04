@@ -32,9 +32,10 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_14` RED31/1462 — 97 FAIL→OK against that
-baseline, no OK→FAIL; kernel `fable_kernel_04` GREEN294 with 111 executed
-selftests; L3 `fable_l3_03` 11 suites/four budgets
+continuation bytes: `fable_full_15` RED30/1468 — 98 FAIL→OK against that
+baseline, no OK→FAIL ([gate](steps/fable-continuation-20261003.md#full-15));
+kernel `fable_kernel_04` GREEN294 with 111 executed selftests; L3
+`fable_l3_03` 11 suites/four budgets
 ([gates](steps/fable-continuation-20261003.md#full-14)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
@@ -93,11 +94,12 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   declarations so far: a copy called in the body that owns its Structure, a
   chain of copies, a copy of a method's own Structure
   ([step one](steps/fable-continuation-20261003.md#held-call-step-one),
-  [step two](steps/fable-continuation-20261003.md#held-call-step-two)). Four
-  required positives stay red: `unit_copy_call_other_owner` (the procedure
-  reaches its unit and `node` through the occurrence's parent),
-  `unit_copy_call_from_method`, `unit_copy_call_addressed`,
-  `unit_held_nullary_source_field` (fixed-arity held call). The
+  [step two](steps/fable-continuation-20261003.md#held-call-step-two)). The
+  held call of a callable merge takes the arguments of its header at any
+  count ([ledger](steps/fable-continuation-20261003.md#held-call-arity)).
+  Three required positives stay red: `unit_copy_call_other_owner` (the
+  procedure reaches its unit and `node` through the occurrence's parent),
+  `unit_copy_call_from_method`, `unit_copy_call_addressed`. The
   unknown-origin case stays behind the open author question.
 - [ ] Receiving-use contract for explicit typed reference declarations and
   stores: Consumer-relative used paths instead of the whole model shape

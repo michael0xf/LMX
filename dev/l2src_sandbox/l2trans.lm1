@@ -1670,7 +1670,9 @@ prototype:
     fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
     fn: l2_mad_held (const: @(LmP0Text name)) int
-    fn: l2_mad_held_sig (int: oi; @: int aty; @: int rty) int
+    fn: l2_mad_held_arity (int: oi) int
+    fn: l2_mad_held_arg_ty (int: oi; int: k) int
+    fn: l2_mad_held_ret_ty (int: oi) int
     fn: l2_mad_need_held (int: oi) int
     fn: l2_emit_mad_call_protos () int
     fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char ind); @: char dest) int
@@ -23767,6 +23769,14 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         # admission still applies at the same held-call construction route.
         if: node\as\frame\body != 0 && l2_count_active(node\as\frame\body) > 0 && l2_check_fields(node\as\frame\body\first_field, l2_count_active(node\as\frame\body), mi, path, node) != 0
             return: 1
+        # The call passes what the held callable's header declares, no more and no less.
+        if: l2_mad_held_arity(l2_mad_held(node\as\frame\head)) >= 0
+            idx: 0
+            if: node\as\frame\body != 0
+                idx: l2_actual_count(node\as\frame\body\first_field)
+            if: idx != l2_mad_held_arity(l2_mad_held(node\as\frame\head))
+                return: l2_error(path, node, "a held callable takes the arguments of its header")
+        ---
         # The same native held-call helper is needed for every compiled body.
         l2_mad_need_held(l2_mad_held(node\as\frame\head))
         return: 0
@@ -29490,7 +29500,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
         # as int -- the result comes back as a cell of that type (l2_mad_call's typed variants), so
         # the root never wraps the call in a conversion edge it does not need (REVIEW e639eca-1).
         if: l2_mad_held(node\as\frame\head) >= 0
-            if: l2_mad_held_sig(l2_mad_held(node\as\frame\head), @ v, @ ty) = 0
+            ty: l2_mad_held_ret_ty(l2_mad_held(node\as\frame\head))
+            if: ty >= 0
                 return: ty
             return: 0
         return: 0 - 1
@@ -37005,17 +37016,16 @@ fn: l2_ret_own (int: code) int
 return: code
 
 # The header a root own's held callable was declared with -- `fn: wrap (int: k) fn: (int: x) int`,
-# its third field (l2_mad_sig checked it when the host was read): the own-type codes of its one
-# formal and of its result (item 739).  The header, not the model: a merge may bind some of the
-# model's formals (T5/T7), and the header is what a call of the held node passes and gets.
-# 0 when read; 1 when oi holds none or the header is not one number to a number.
-fn: l2_mad_held_sig (int: oi; @: int aty; @: int rty) int
+# its third field (l2_mad_sig checked it when the host was read): the Structure of its formals and
+# the atom of its result. The header, not the model: a merge may bind some of the model's formals
+# (T5/T7), and the header is what a call of the held node passes and gets. 0 when read; 1 when oi
+# holds no such callable. A header of no formals is `()`: \formals is then a Structure of no field.
+fn: l2_mad_held_header (int: oi; @@: LmP0Node formals; @@: LmP0Node result) int
     @: LmP0Field f
     @: LmP0Field g
     @: LmP0Node h
     int: host
-    int: code 0
-    if: oi < 0 || aty = 0 || rty = 0 || l2_mad_store_stmt(l2_own_decl[oi]) = 0
+    if: oi < 0 || formals = 0 || result = 0 || l2_mad_store_stmt(l2_own_decl[oi]) = 0
         return: 1
     f: l2_next_active(l2_own_decl[oi]\as\frame\body\first_field)
     host: l2_find_method(f\value\as\atom)
@@ -37030,19 +37040,67 @@ fn: l2_mad_held_sig (int: oi; @: int aty; @: int rty) int
         return: 1
     h: f\value
     f: l2_next_active(h\as\frame\body\first_field)
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE || f\value\as = 0 || l2_count_active(f\value\as\structure) != 1
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_STRUCTURE
         return: 1
-    g: l2_next_active(f\value\as\structure\first_field)
-    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_FRAME || g\value\as = 0 || g\value\as\frame = 0 || l2_ret_type_word(g\value\as\frame\head, 0, 0, @ code) != 0
-        return: 1
-    \aty: l2_ret_own(code)
     g: l2_next_active(f\next)
-    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || l2_ret_type_word(g\value\as\atom, 0, 0, @ code) != 0
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0
         return: 1
-    \rty: l2_ret_own(code)
-    if: l2_rw_num_ty(\aty) = 0 || l2_rw_num_ty(\rty) = 0
-        return: 1
+    \formals: f\value
+    \result: g\value
 return: 0
+
+# The own-type code of formal k of that header, a number's; -1 when the header has no such formal
+# or the formal is no number.
+fn: l2_mad_held_arg_ty (int: oi; int: k) int
+    @: LmP0Node formals 0
+    @: LmP0Node result 0
+    @: LmP0Field g
+    int: code 0
+    int: own
+    if: k < 0 || l2_mad_held_header(oi, @ formals, @ result) != 0 || formals\as = 0 || formals\as\structure = 0
+        return: -1
+    g: l2_next_active(formals\as\structure\first_field)
+    while: g != 0 && k > 0
+        g: l2_next_active(g\next)
+        k: k - 1
+    ---
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_FRAME || g\value\as = 0 || g\value\as\frame = 0 || l2_ret_type_word(g\value\as\frame\head, 0, 0, @ code) != 0
+        return: -1
+    own: l2_ret_own(code)
+    if: l2_rw_num_ty(own) = 0
+        return: -1
+return: own
+
+# The own-type code of that header's result, a number's; -1 otherwise.
+fn: l2_mad_held_ret_ty (int: oi) int
+    @: LmP0Node formals 0
+    @: LmP0Node result 0
+    int: code 0
+    int: own
+    if: l2_mad_held_header(oi, @ formals, @ result) != 0 || l2_ret_type_word(result\as\atom, 0, 0, @ code) != 0
+        return: -1
+    own: l2_ret_own(code)
+    if: l2_rw_num_ty(own) = 0
+        return: -1
+return: own
+
+# How many formals that header declares, zero included; -1 when oi holds no such callable or the
+# header is not numbers to a number (item 739: each formal and the result a number).
+fn: l2_mad_held_arity (int: oi) int
+    @: LmP0Node formals 0
+    @: LmP0Node result 0
+    int: n 0
+    int: k 0
+    if: l2_mad_held_header(oi, @ formals, @ result) != 0 || l2_mad_held_ret_ty(oi) < 0
+        return: -1
+    if: formals\as != 0 && formals\as\structure != 0
+        n: l2_count_active(formals\as\structure)
+    while: k < n
+        if: l2_mad_held_arg_ty(oi, k) < 0
+            return: -1
+        k: k + 1
+    ---
+return: n
 
 fn: l2_mad_hdr_arity (int: mi) int
     @: LmP0Field f
@@ -37206,7 +37264,7 @@ fn: l2_emit_mad_call () int
         return: 0
     if: l2_emit_mad_inputs() != 0
         return: 1
-    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    if: nargs < 2U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 1U, refs + 2, nargs - 2U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
+    if: c.fprintf(l2_out, "fn: l2_mad_call (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_code 0\n    []: @(void) l2_all %d\n    size_t: l2_n 0U\n    if: nargs < 1U || refs = 0 || refs[0] = 0 || dest = 0 || out = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    l2_code: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_inputs(l2_code, refs + 1, 0U, refs + 1, nargs - 1U, l2_all, %dU, @ l2_n) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge was called outside its header\\n\")\n        c.abort()\n    if: lmx_call_prim((cast: (@: LmxArena) owner), l2_code, l2_code, l2_all, l2_n, dest, out) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge call failed\\n\")\n        c.abort()\n    if: lmx_msg_poll_escape() != 0\n        \\out: 0\n        return: 0\n    \\out: dest\n    return: 0\nend: l2_mad_call\n\n", l2_mad_max_inputs(), l2_mad_max_inputs()) < 0
         return: 1
 return: 0
 
@@ -37233,9 +37291,7 @@ return: 0
 
 # Mark the single held-call adapter before native method prototypes are emitted.
 fn: l2_mad_need_held (int: oi) int
-    int: aty 0
-    int: rty 0
-    if: l2_mad_held_sig(oi, @ aty, @ rty) != 0
+    if: l2_mad_held_arity(oi) < 0
         return: 0
     l2_mad_need_call: 1
 return: 0
@@ -37322,8 +37378,10 @@ return: l2_rw_own(parent, oi, out)
 # (l2_rw_mad_call), using declared-width argument and result storage. The numeric
 # result remains in this caller's local after the nested activation returns.
 fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char ind); @: char dest) int
-    int: aty 0
-    int: rty 0
+    int: n
+    int: rty
+    int: j 0
+    int: given 0
     int: t
     int: span
     int: model
@@ -37332,15 +37390,21 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     int: bty
     int: ns
     int: oty
-    @: LmP0Field f
+    @: LmP0Field f 0
     []: char hv 1024
     []: char av 1024
     []: char bv 1024
     []: char ref_dest 128
-    if: l2_mad_held_sig(oi, @ aty, @ rty) != 0
-        return: l2_error(l2_src, node, "a held callable whose header is not one number to a number")
-    if: node\as\frame\body = 0 || l2_count_active(node\as\frame\body) != 1
-        return: l2_error(l2_src, node, "a held callable takes its one argument")
+    n: l2_mad_held_arity(oi)
+    rty: l2_mad_held_ret_ty(oi)
+    if: n < 0 || rty < 0
+        return: l2_error(l2_src, node, "a held callable whose header is not numbers to a number")
+    if: node\as\frame\body != 0
+        f: l2_next_active(node\as\frame\body\first_field)
+        given: l2_actual_count(node\as\frame\body\first_field)
+    ---
+    if: given != n
+        return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
     # In a method the held callable's name is a hidden input (Q52): its value is the parameter.
     if: l2_param_find(mi, l2_own_name[oi]) >= 0
         if: l2_tok_formal(mi, l2_param_find(mi, l2_own_name[oi]), hv) != 0
@@ -37350,31 +37414,36 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
         if: l2_own_load(oi, hv) != 0
             return: l2_error(l2_src, node, "internal: a held callable's node could not be read")
     ---
-    f: l2_next_active(node\as\frame\body\first_field)
-    span: l2_expr_span(f)
-    if: span < 1
-        return: l2_error(l2_src, node, "a held callable takes its one argument")
-    av[0]: 0
-    if: l2_eval_fields(f, span, mi, ind, av) != 0
-        return: 1
     l2_mad_need_held(oi)
     model: l2_mad_held_model(oi)
     if: model >= 0
         nh: l2_m_dyn[model]
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s[]: @(void) l2_hr%d %d\n%s@: void l2_hcode%d (cast: (@: void) %s)\n%sl2_hr%d[0]: (cast: (@: void) (@ l2_hcode%d))\n%s@: void l2_ho%d 0\n", ind, t, 2 + nh, ind, t, hv, ind, t, t, ind, t) < 0
+    if: c.fprintf(l2_out, "%s[]: @(void) l2_hr%d %d\n%s@: void l2_hcode%d (cast: (@: void) %s)\n%sl2_hr%d[0]: (cast: (@: void) (@ l2_hcode%d))\n%s@: void l2_ho%d 0\n", ind, t, 1 + n + nh, ind, t, hv, ind, t, t, ind, t) < 0
         return: 1
-    c.sprintf(ref_dest, "l2_hr%d[1]", t)
-    if: l2_emit_call_ref(l2_ft_of_own(aty), av, ind, ref_dest) != 0
-        return: 1
+    # The declared arguments, each evaluated once in the order they are written, each a value of
+    # its formal's type.
+    while: j < n
+        span: l2_expr_span(f)
+        if: span < 1
+            return: l2_error(l2_src, node, "a held callable takes the arguments of its header")
+        av[0]: 0
+        if: l2_eval_fields(f, span, mi, ind, av) != 0
+            return: 1
+        c.sprintf(ref_dest, "l2_hr%d[%d]", t, 1 + j)
+        if: l2_emit_call_ref(l2_ft_of_own(l2_mad_held_arg_ty(oi, j)), av, ind, ref_dest) != 0
+            return: 1
+        f: l2_skip_span(f, span)
+        j: j + 1
+    ---
     # Reading 1: per hidden input of the model, this caller's own binding of its name, or nothing.
     k: 0
     while: k < nh
         bv[0]: 0
         bty: 0 - 1
         if: l2_held_binding(mi, model, k, bv, @ bty) != 0
-            if: c.fprintf(l2_out, "%sl2_hr%d[%d]: 0\n", ind, t, 2 + k) < 0
+            if: c.fprintf(l2_out, "%sl2_hr%d[%d]: 0\n", ind, t, 1 + n + k) < 0
                 return: 1
             k: k + 1
             continue
@@ -37387,15 +37456,15 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
             return: l2_error(l2_src, node, "a caller's binding of a held callable's free name is of another type")
         if: ns >= 0 && l2_cap_src_marked(mi, l2_dn(model, k)) = 0 && l2_cap_emit_admit(ns, bv, ind) != 0
             return: 1
-        c.sprintf(ref_dest, "l2_hr%d[%d]", t, 2 + k)
+        c.sprintf(ref_dest, "l2_hr%d[%d]", t, 1 + n + k)
         if: l2_emit_call_ref(l2_input_ft(model, l2_m_arity[model] + k), bv, ind, ref_dest) != 0
             return: 1
         k: k + 1
     ---
-    # §7b: the held callable runs after its argument is evaluated -- what is marked is published before it.
+    # §7b: the held callable runs after its arguments are evaluated -- what is marked is published before it.
     if: l2_emit_publish(ind) != 0
         return: 1
-    if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sif: l2_mad_call(l2_program_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d) != 0\n%s    c.abort()\n", ind, l2_own_ty_word(rty), t, ind, t, 2 + nh, t, t, ind) < 0
+    if: c.fprintf(l2_out, "%s%s: l2_hd%d 0\n%sif: l2_mad_call(l2_program_arena, l2_hr%d, %dU, (cast: (@: void) (@ l2_hd%d)), @ l2_ho%d) != 0\n%s    c.abort()\n", ind, l2_own_ty_word(rty), t, ind, t, 1 + n + nh, t, t, ind) < 0
         return: 1
     if: c.sprintf(dest, "l2_hd%d", t) < 0
         return: 1
@@ -37581,8 +37650,11 @@ fn: l2_rw_mad_store (const: @(LmP0Node stmt); int: into; @: int out) int
 return: 0
 
 fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) int
-    @: LmP0Field f
+    @: LmP0Field f 0
     int: n
+    int: j 0
+    int: given 0
+    int: span
     int: arg
     int: at
     int: model
@@ -37592,27 +37664,27 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
     int: holder
     int: contract
     int: inputs
-    if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
-        return: l2_rw_refuse(node, "this call's inputs")
-    int: aty 0
-    int: rty 0
-    n: l2_count_active(node\as\frame\body)
-    if: n != 1
+    int: rty
+    if: node = 0 || node\as = 0 || node\as\frame = 0
         return: l2_rw_refuse(node, "this call's inputs")
     # The primitive contract carries the actual formal and result widths. The
     # common adapter forwards value storage; it does not infer type from an address.
-    if: l2_mad_held_sig(oi, @ aty, @ rty) != 0
-        return: l2_rw_refuse(node, "a held callable whose header is not one number to a number")
-    # This existing held-call route supports numeric declared results.
-    if: l2_rw_num_ty(rty) = 0
-        return: l2_rw_refuse(node, "a held callable whose result is not a number")
+    n: l2_mad_held_arity(oi)
+    rty: l2_mad_held_ret_ty(oi)
+    if: n < 0 || rty < 0
+        return: l2_rw_refuse(node, "a held callable whose header is not numbers to a number")
+    if: node\as\frame\body != 0
+        f: l2_next_active(node\as\frame\body\first_field)
+        given: l2_actual_count(node\as\frame\body\first_field)
+    ---
+    if: given != n
+        return: l2_rw_refuse(node, "this call's inputs")
     l2_mad_need_call: 1
-    f: l2_next_active(node\as\frame\body\first_field)
     model: l2_mad_held_model(oi)
     if: model >= 0
         nh: l2_m_dyn[model]
     # §7b: a held callable is LMX code -- PRIM_PUB publishes after its operands, before the call.
-    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 5 + nh, out) != 0
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + n + nh, out) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, "l2_mad_call", \out, \out, \out, \out) < 0
         return: 1
@@ -37625,8 +37697,16 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
         if: l2_rw_own(\out, oi, @ at) != 0 || l2_rw_put(\out, 3, at) != 0
             return: 1
     ---
-    if: l2_rw_texpr(f, n, aty, \out, @ arg) != 0 || l2_rw_put(\out, 4, arg) != 0
-        return: 1
+    # The declared arguments in the order they are written, each of its formal's type.
+    while: j < n
+        span: l2_expr_span(f)
+        if: span < 1
+            return: l2_rw_refuse(node, "this call's inputs")
+        if: l2_rw_texpr(f, span, l2_mad_held_arg_ty(oi, j), \out, @ arg) != 0 || l2_rw_put(\out, 4 + j, arg) != 0
+            return: 1
+        f: l2_skip_span(f, span)
+        j: j + 1
+    ---
     # Reading 1: per hidden input of the model, this caller's own binding of its name (item 738: a Structure admitted as
     # the capture's type, unless the caller's formal is admitted by name already), or nothing -- an empty operand.
     k: 0
@@ -37643,16 +37723,22 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
                     return: 1
                 arg: holder
             ---
-            if: l2_rw_put(\out, 5 + k, arg) != 0
+            if: l2_rw_put(\out, 4 + n + k, arg) != 0
                 return: 1
         ---
         k: k + 1
     ---
-    if: l2_rw_contract(\out, 2 + nh, rty, 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0 || l2_rw_witness(inputs, 1, aty, 0) != 0
+    if: l2_rw_contract(\out, 1 + n + nh, rty, 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0
         return: 1
+    j: 0
+    while: j < n
+        if: l2_rw_witness(inputs, 1 + j, l2_mad_held_arg_ty(oi, j), 0) != 0
+            return: 1
+        j: j + 1
+    ---
     k: 0
     while: k < nh
-        if: l2_rw_input_witness(inputs, 2 + k, model, l2_m_arity[model] + k) != 0
+        if: l2_rw_input_witness(inputs, 1 + n + k, model, l2_m_arity[model] + k) != 0
             return: 1
         k: k + 1
     ---

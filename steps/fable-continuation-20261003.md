@@ -1561,3 +1561,100 @@ bytes before the full gate:
 | --- | --- |
 | `build/l2src/fable_kernel_04` (`build_l2src.ps1 -Run -KeepAll`) | GREEN, 294 targets; 111 selftests executed, all but the expected-fatal close-watchdog selftest with exit 0, that one with exit 3 as required. One target and one selftest more than `fable_kernel_03`: `lmx_walk_prefix_sign_selftest`. |
 | `build/l3_selftest/fable_l3_03` (`run_l3_selftest.py`) | all 11 suites exit 0; four type-budget units 75/128 names, 1070/8192 bytes. |
+
+<a id="held-call-arity"></a>
+## 37. The held call takes the arguments of its header
+
+`unit_held_nullary_source_field` is a required positive of
+[to_fable](../to_fable.md): `w: wrap 5` holds a callable whose header is
+`fn: () int`, and `w()` calls it. It was refused as `root operation not
+walkable yet: this call's inputs`. Measured on the committed translator: the
+same words for a nullary held call in a method, and for a one-argument held
+call whose argument is more than one field, `add5(x + 1)`. The native call
+site carried the same limit in other words (`...is not one number to a
+number`), which no program reached, the graph producer refusing first.
+
+**Where "exactly one number" was written.** In four places of the held-call
+route, none of them a rule of the language:
+
+- the header reader `l2_mad_held_sig` took the Structure of formals only when
+  it had one field;
+- the native call site `l2_prep_held_call` evaluated one argument and built
+  the references `[node, argument, hidden...]`;
+- the graph producer `l2_rw_mad_call` took a body of exactly one field and
+  built `PRIM_PUB` with one argument place;
+- the generated adapter `l2_mad_call` refused fewer than two references. Its
+  copy of the inputs was already positional.
+
+**Mechanism.** No zero-input adapter and no shim: the same route, counted by
+the header.
+
+- `l2_mad_held_arity`, `l2_mad_held_arg_ty` and `l2_mad_held_ret_ty` read the
+  header the host declared, `fn: (formals) T`, at any count of formals, each
+  formal and the result a number.
+- Native code evaluates the declared arguments once each in the order they
+  are written (`l2_expr_span` gives each argument its fields), each into a
+  cell of its formal's type: `[node, declared..., hidden...]`.
+- The graph keeps `PRIM_PUB` of width 4 + declared + hidden: the held
+  callable's own row, the declared arguments in their written places, each
+  built as an expression of its formal's type, then the model's hidden
+  inputs. The primitive contract has one witness per declared argument.
+- The adapter takes every reference after the node as an input, in order.
+- The check pass compares the count of actuals with the header and refuses
+  another count where the call stands (`a held callable takes the arguments
+  of its header`).
+
+**What is not done.** The header is still numbers to a number (item 739). A
+callable formal, a Structure or a reference in a held callable's header keeps
+its refusal. A held callable named bare, without parentheses, is not a call
+of this route. The universal actual-call boundary of
+[section 9](#held-call-ruling) is not this slice.
+
+**Verification.**
+
+- Recovered: `unit_held_nullary_source_field`, with a new walked twin (the
+  two unit methods walked; the host keeps its native word).
+- New `unit_held_call_arity` and its walked twin: held callables of no
+  formal, of two ints and of a size_t, an int and a size_t, called at the
+  root and in a method, as values and under `+`. `mark` shows each argument
+  evaluated once in written order (trace 1234), the middle argument of the
+  three is an expression of three operands. Path facts on the root's three
+  calls: width, the held row as the target, each argument in its place with
+  its literal or its role, the empty hidden place. Two shape mutants: the two
+  arguments of a call exchanged, an argument emptied.
+- New `unit_held_call_count_refused`: one actual for a header of two.
+- Changed with the mechanism: `unit_t6_root_held_arity_refused` pinned the
+  words of the old limit (`...is not one number to a number`) for a program
+  that passes one actual to a header of two. The program is still refused;
+  the row now requires the located count refusal.
+- Translator mutants through a focused harness run, the live file restored
+  and its hash re-verified after each. The graph takes one argument only
+  (`fable_held_mut2_oneonly`): the nullary and the arity rows are refused.
+  The graph puts the arguments in reverse (`fable_held_mut2_graphswap`): the
+  arity rows red, natively by their path facts and the walked root. Native
+  code puts them in reverse (`fable_held_mut2_nativeswap`): the native arity
+  row red, the walked half of its twin still exit 0. No count check
+  (`fable_held_mut2_nocount`): both count refusals fail with another
+  message. The adapter asks at least one declared argument
+  (`fable_held_mut2_adapterone`): the nullary rows stop on its invariant; the
+  arity rows stay green, which is the measure that the adapter's copy was
+  positional before.
+- Focused `fable_held_10` (125 targets: every held, make-adder, callable and
+  capture row): red the seven known open rows of those groups and
+  `unit_t6_root_held_arity_refused`, whose pinned words changed as above.
+
+<a id="full-15"></a>
+## 38. Full gate after section 37
+
+`fable_full_15` completes **RED 30/1468** on translator SHA256
+`ECCAF2B02E277A7E91C5B6B76634A5EE2DD64FECAEF5CEE73E61322DE64FB823`
+(staged Git blob `2d595f6d4eac41d7d0482392f2cd142c712cf823`), harness
+`428A4E8FA507D56E6E00C4A7E40FEC1C3E54154D22DA7EF51AF99C0E0E049EA1`,
+walker and driver unchanged.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_14` (RED 31/1462) | 1 | 0 | 6 | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 98 | 0 | | |
+
+The kernel and L3 gates were not rerun: no kernel source changed.

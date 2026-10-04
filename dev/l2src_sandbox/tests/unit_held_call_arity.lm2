@@ -1,0 +1,70 @@
+# A held callable is called with the arguments its header declares, whatever
+# their count: none, two of one type, three of two types. Each argument is
+# evaluated once, in the order written, as a value of its formal's type, and
+# reaches the formal of its position. The calls stand at the root and in a
+# method, as values and under an operator. mark appends its argument to the
+# unit's trace: the trace of the three root calls with marks is 1234. Entry 7.
+int: trace 0
+
+fn: mark (int: v) int
+    node\trace: node\trace * 10 + v
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + 1
+    return: f0
+
+fn: make2 (int: n) fn: (int: x; int: y) int
+    fn: f2 (int: x; int: y) int
+        return: n + x * 10 + y
+    return: f2
+
+fn: make3 (size_t: n) fn: (size_t: x; int: y; size_t: z) size_t
+    fn: f3 (size_t: x; int: y; size_t: z) size_t
+        if: y > 0
+            return: n + x * 10U + z
+        return: 0U
+    return: f3
+
+h0: make0 6
+h2: make2 100
+h3: make3 1000U
+
+fn: go () int
+    int: a h0()
+    int: b h2(3; 4)
+    size_t: c h3(5U; 1; 6U)
+    if: a != 7
+        return: 81
+    if: b != 134
+        return: 82
+    if: c != 1056U
+        return: 83
+    if: h2(1; 2) + h0() != 119
+        return: 84
+    return: 7
+end: go
+
+int: r0 h0()
+if: r0 != 7
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
+int: r2 h2(mark(1); mark(2))
+int: t2 seen()
+if: r2 != 112 || t2 != 12
+    sendMessage: exit(exit_code: 92; stdout: ""; stderr: "")
+    return
+size_t: r3 h3(7U; mark(3) - mark(4) + 2; 9U)
+int: t3 seen()
+if: r3 != 1079U || t3 != 1234
+    sendMessage: exit(exit_code: 93; stdout: ""; stderr: "")
+    return
+int: g go()
+sendMessage: exit(exit_code: g; stdout: ""; stderr: "")
+return

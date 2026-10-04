@@ -1829,6 +1829,20 @@ $prefixSignNamedActualShape = @(
     'rolepath','5','1','4','2','3','2','48','0','widthpath','5','1','4','2','3','2','2',
     'rolepath','6','1','4','2','3','2','1','3','0','intpath','7','1','4','2','3','2','1','1','1')
 
+# The root's calls of held callables: PRIM_PUB (33) of width 4 + declared +
+# hidden inputs. Child 3 is the held callable's own row, the declared
+# arguments follow in the order written, the model's hidden input the root
+# does not bind is an empty place. 15: h0(), no argument. 18: h2(mark(1);
+# mark(2)). 23: h3(7U; <an int expression>; 9U), a size_t, an int, a size_t.
+$heldArityShape = @(
+    'rolepath','2','15','2','33','0','widthpath','2','15','2','5','rolepath','3','15','2','3','4','0','nullpath','3','15','2','4',
+    'rolepath','2','18','2','33','0','widthpath','2','18','2','7','rolepath','3','18','2','3','4','0',
+    'rolepath','3','18','2','4','2','0','intpath','5','18','2','4','2','1','1',
+    'rolepath','3','18','2','5','2','0','intpath','5','18','2','5','2','1','2','nullpath','3','18','2','6',
+    'rolepath','2','23','2','33','0','widthpath','2','23','2','8','rolepath','3','23','2','3','4','0',
+    'rolepath','3','23','2','4','3','0','sizepath','4','23','2','4','1','7','rolepath','3','23','2','5','9','0',
+    'rolepath','3','23','2','6','3','0','sizepath','4','23','2','6','1','9','nullpath','3','23','2','7')
+
 # Formal invocations select ARG, not the unit method of the same spelling.
 # Native words stay selected; these facts certify retained source, not the
 # currently excluded --walk-methods callable-formal execution profile.
@@ -3243,7 +3257,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_make_adder_native_note.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         WalkedMethods = @(0); Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t6_root_held_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'a held callable whose header is not one number to a number'; Absent = @(); Debt = @() },
+        Needle = 'unit_t6_root_held_arity_refused.lm2:10:9: a held callable takes the arguments of its header'; Absent = @(); Debt = @() },
     # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
     # dropped the statements with the host's body; nested_call it refused with the old phrase.
     # (D-93/D-94, 2026-09-27: after_return and nested_call now run -- rows below; the note that
@@ -5021,6 +5035,22 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_nullary_source_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_nullary_source_field_walk.lm2'; Source = 'unit_held_nullary_source_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    # A held callable called with the arguments of its header at any count: none, two ints, a size_t, an
+    # int and a size_t. Each argument is evaluated once in the order written (the trace of mark) and
+    # reaches the formal of its position. At the root (walked) and in a method, natively and walked.
+    # The path facts hold each call's width, its target and its arguments in their places.
+    [pscustomobject]@{ Name = 'unit_held_call_arity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $heldArityShape; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,8);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_arity_walk.lm2'; Source = 'unit_held_call_arity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $heldArityShape; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,8);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_arity_order_mutant.lm2'; Source = 'unit_held_call_arity.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','move-path-field','2','18','2','4','5') + $heldArityShape; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_arity_argument_mutant.lm2'; Source = 'unit_held_call_arity.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
+        Args = @('0','mutate','null-path','3','23','2','5') + $heldArityShape; Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_count_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_count_refused.lm2:8:8: a held callable takes the arguments of its header'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 99;
         Absent = @(); Debt = @() },
     # Slice 2c-1: the method executes its own named Structure -- `S()`, `S: ()`, the bare `S` -- S's procedure (§12), a

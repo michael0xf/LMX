@@ -1,0 +1,27 @@
+# The thin counterpart of unit_local_init_graph_ref_admit_refused: the same candidate by the same route -- `b: mk`,
+# mk's call, callable-first, into the explicit reference `@: Box b` -- and w reads no field through b.  b's Consumer
+# consumes the reference and nothing of Box, so the Other mk returns is received (the receiving-use contract).  The
+# observation is the candidate itself: b is the Other, and the Other still holds what it held.  Entry 7.
+Box:
+    int: v 0
+end: Box
+Other:
+    size_t: p 1U
+    size_t: q 2U
+end: Other
+fn: mk () Other
+    return: @Other
+end: mk
+fn: w () int
+    @: Box b
+    b: mk
+    if: b = 0
+        return: 81
+    if: b != @Other
+        return: 82
+    if: Other\p != 1U || Other\q != 2U
+        return: 83
+    return: 7
+end: w
+sendMessage: exit(exit_code: w(); stdout: ""; stderr: "")
+return

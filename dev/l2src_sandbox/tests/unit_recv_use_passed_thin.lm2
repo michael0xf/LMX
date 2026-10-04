@@ -1,0 +1,32 @@
+# A reference handed whole to a callee whose formal reads no field asks for
+# nothing more. take compares its formal by identity with the candidate's own
+# address and reads nothing through it; m compares b by identity. The whole
+# Consumer of b consumes the reference and no field of Model, so the Other is
+# received. OPEN positive: this implementation gives b no coverage when it is
+# passed whole, receives by the whole of Model and refuses the Other at the
+# declaration. Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+fn: take (Model: v) int
+    if: v = 0
+        return: 81
+    return: 7
+end: take
+
+fn: m () int
+    o: merge Other
+    @: Model b o
+    if: b != o
+        return: 82
+    return: take(b)
+end: m
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

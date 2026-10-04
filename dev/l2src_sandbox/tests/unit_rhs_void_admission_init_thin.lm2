@@ -1,0 +1,24 @@
+# The thin counterpart of unit_rhs_void_admission_init_refused: the same candidate by the same route -- an opaque
+# pointer result received by an explicit initializer -- and check reads no field through ref.  ref's Consumer consumes
+# the reference and nothing of Model, so the Other behind the pointer is received (the receiving-use contract).  The
+# observation is the candidate itself: ref is the Other.  Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+Other:
+    int: a 1
+    int: b 2
+end: Other
+fn: raw () @: void
+return: (cast: (@: void) @ Other)
+fn: check () int
+    @: Model ref raw()
+    if: ref = 0
+        return: 81
+    if: ref != @ Other
+        return: 82
+    if: Other\a != 1 || Other\b != 2
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

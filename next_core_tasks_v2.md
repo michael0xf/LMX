@@ -115,7 +115,13 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   formal, a field store, an element store, a return; a candidate of unknown
   layout. Held and invoked are not told apart for a callable at the end of a
   path. These are limits of the implementation, not rules, and no row
-  expects them as refusals of valid programs.
+  expects them as refusals of valid programs. Two valid programs the limit
+  refuses are required positives that stay red:
+  `unit_recv_use_nested_dormant` and `unit_recv_use_passed_thin`. Four
+  `..._limit_probe` rows hold the present conservative mode by generated
+  text; they are temporary implementation probes and go when the coverage
+  is composed
+  ([follow-up](steps/fable-continuation-20261003.md#receiving-use-follow-up)).
 - [ ] Merge-result declaration inside a named Structure body (internal error)
   ([defects](steps/defects.md#merge-decl-in-named-body-internal)).
 - [x] Named actuals: evaluated once in written order, transported by the

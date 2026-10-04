@@ -1977,3 +1977,83 @@ proven incompatibility of the candidate. Where the full reception refuses a
 candidate that fits its actual Consumer, that is an OPEN limit of the
 coverage, not a new normative `implements` refusal, and the absence of rows
 that expect it does not show the limit absent.
+
+<a id="receiving-use-follow-up"></a>
+## 42. Follow-up to section 39 (Codex, FABLE-CODEX-20261004-04)
+
+Codex inspected `c67cc0b7` and asked for a bounded follow-up of tests and
+evidence. The implementation is unchanged.
+
+**The four strengthened refusals keep their thin programs.** In
+[section 39](#receiving-use-coverage) four rows that refused a candidate
+through a never-read reference were made to read the field the candidate
+lacks. That makes each a legitimate refusal, but it is another program: a
+new negative subject, not the old refusal recovered. The original
+expectations were wrong, and the original programs are valid. Each now has
+its thin counterpart, with the same production of the candidate, the same
+receiving route, no field read through the reference, and the reference
+observed to be the candidate:
+
+| Refusal by a used field | Thin positive |
+| --- | --- |
+| `unit_local_init_graph_ref_admit_refused` | `unit_local_init_graph_ref_admit_thin` |
+| `unit_rhs_returned_model_refused` | `unit_rhs_returned_model_thin` |
+| `unit_rhs_void_admission_assign_refused` | `unit_rhs_void_admission_assign_thin` |
+| `unit_rhs_void_admission_init_refused` | `unit_rhs_void_admission_init_thin` |
+
+Each thin positive is a native row and a row with its methods walked. In the
+two opaque-pointer programs the walked row walks `check`; `raw`, whose result
+is a machine cast, keeps its native word, and the row says so. The table of
+[section 40](#full-16) with no OK→FAIL compares the revised fixtures; it is
+not evidence that the semantics of those rows were unchanged.
+
+**The needles of the limit left the semantic rows.** The rows of
+`unit_recv_use_unknown_refused`, `unit_recv_use_nested_reader_refused`,
+`unit_recv_use_path_from_method` and `unit_recv_use_path_from_method_refused`
+forbade the coverage call in the generated text, and one held reception
+mode 1 by a path fact. Those needles hold today's conservative mode, not the
+contract: a correct composition may give such a reference a coverage and
+still refuse the same incompatible candidate. The rows now hold behaviour
+only. The text needle moved to four rows named `..._limit_probe`, of the kind
+`translates-with-debt`, labelled temporary implementation-coverage probes;
+the mode-1 path fact is dropped. Of the mutants of section 39, `nodefs` is
+killed by a probe alone, and `emptyunknown` and `nosegscan` by behaviour as
+well.
+
+**OPEN positives of the limit.** Two valid programs this implementation
+refuses, added as required positives that stay red:
+
+- `unit_recv_use_nested_dormant`: a definition inside the method reads the
+  field the candidate lacks, and stays dormant, because the method returns
+  another definition. Nothing that runs needs the field. The presence of a
+  definition is not its execution, and the reception does not predict it.
+  The counterpart where the reading definition is returned and invoked is
+  `unit_recv_use_nested_reader_refused`.
+- `unit_recv_use_passed_thin`: the reference is passed whole to a callee
+  whose formal reads no field.
+
+Both are measured against a control with a `Model` candidate, which runs to
+exit 7 natively and with methods walked.
+
+**The type budget.** The update for `LmxImplUses` stands. The capacities of
+128 names and 8192 bytes are defects of the pinned L1 translator, not limits
+of L2 or L3; K09 already covers fixed header capacities, and the probe stays
+until they are really removed.
+
+**Measured for [section 41](#written-body-mechanism).** With the destructive
+rewrite of a bound call body turned off and nothing else changed, the full
+harness (`fable_exp_written_01`) has 26 rows from OK to FAIL against
+`fable_full_17` and no other change: every row whose program binds a named
+actual to a method, 25 of them not translated and
+`unit_named_actual_formal_name` failing at run time. That is
+the cohort the migration must carry. It is a diagnostic, not an acceptance
+oracle and not proof that every reader is migrated: a green exit does not
+show the source body intact or cover syntax no row reaches. The run changed
+the live translator and restored it, hash verified; Codex asks that such
+experiments run on isolated bytes, and the next ones will.
+
+**Evidence.** Focused `fable_use_06`, the whole cohort of sections 39 and 42
+(52 rows): red only the two OPEN positives. No full gate was run for this
+follow-up, as Codex said; the cohort is part of the next ordinary gate, where
+the expected count is 1508 targets with the 29 red rows of `fable_full_17`
+and these two.

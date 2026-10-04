@@ -1,0 +1,41 @@
+# A definition inside the method that is not consumed asks for nothing. read is
+# defined in make and reads value through b, but make returns plain: read is
+# never formed into a value and never runs, so what it reads is no requirement
+# of the Consumer that runs. b is compared by identity alone and the Other,
+# which has no value, is received. OPEN positive: this implementation gives b
+# no coverage when a definition inside the method spells its name, receives by
+# the whole of Model and refuses the Other at the declaration. Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+Other:
+    int: p 1
+    int: q 2
+end: Other
+
+int: made 0
+
+fn: count () int
+    return: node\made
+end: count
+
+fn: make () fn: () size_t
+    o: merge Other
+    @: Model b o
+    if: b = o
+        node\made: node\made + 1
+    fn: read () size_t
+        return: b\value
+    fn: plain () size_t
+        return: 7U
+    return: plain
+end: make
+
+r: make
+size_t: got r()
+int: result 81
+if: got = 7U && count() = 1
+    result: 7
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

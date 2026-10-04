@@ -1,0 +1,27 @@
+# A required input no one supplies makes the call inadmissible before entry.
+# g3 reads zz, which withzz gives it as its own. Through run's formal nobody
+# has zz: run has none, the root has none and the unit declares none. The
+# call of run with g3 is refused where it stands.
+int: base 5
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g3 () int
+    return: zz + 1
+end: g3
+
+fn: withzz () int
+    int: zz 4
+    return: g3()
+end: withzz
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+int: a withzz()
+int: r run(g3)
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

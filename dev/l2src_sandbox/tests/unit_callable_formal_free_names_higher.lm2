@@ -1,0 +1,35 @@
+# The callee of a call may itself be the value of a callable formal. apply2
+# calls h with q; h is run, which calls its own q. g1 reaches run's formal
+# through both, and reads other where run calls it: the unit's 9 from the
+# root, and 40 when outer, which has other as its formal, starts the chain.
+# Entry 7.
+int: base 5
+int: other 9
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: apply2 (run: h; f0: q) int
+    return: h(q)
+end: apply2
+
+fn: outer (int: other) int
+    return: apply2(run g1)
+end: outer
+
+int: a apply2(run g1)
+int: b outer(40)
+int: ok 7
+if: a != 10 || b != 41
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

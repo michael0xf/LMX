@@ -111,6 +111,25 @@ int: l2_last_cf_req 0 - 1
 @: LmP0Text l2_collect_anon_name 0
 int: l2_cf_n 0
 int: l2_cf_cap 0
+# K04 (ledger section 57; Codex, FABLE-CODEX-20261004-12): which methods reach each callable formal.
+# A fact is written where an actual meets a callable formal (l2_check_call): formal t of the callee
+# receives method a (kind 1), the caller's own formal a_fi of method a handed on (kind 2), or an
+# occurrence this translation does not follow (kind 3: a merge built as the actual).  The callee is
+# method `callee`, or, when the call itself goes through a formal, whichever method reaches formal
+# via_fi of method via.  The closure (l2_cfr_*) says: method m reaches formal t of consumer c; m = -1
+# says an unfollowed occurrence does.  Compiler metadata: nothing of it exists at run time.
+[]: int l2_cfl_callee 256
+[]: int l2_cfl_via 256
+[]: int l2_cfl_via_fi 256
+[]: int l2_cfl_t 256
+[]: int l2_cfl_kind 256
+[]: int l2_cfl_a 256
+[]: int l2_cfl_a_fi 256
+int: l2_cfl_n 0
+[]: int l2_cfr_c 512
+[]: int l2_cfr_t 512
+[]: int l2_cfr_m 512
+int: l2_cfr_n 0
 @: int l2_cf_omi 0
 @: int l2_cf_fk 0
 @: int l2_cf_req 0
@@ -1360,6 +1379,12 @@ prototype:
     fn: l2_occ_actual (int: mi; const: @(LmP0Field a0); int: span) int
     fn: l2_emit_occ_admit (int: mi; int: req; int: cand; const: @(char value); const: @(char ind)) int
     fn: l2_cf_get (int: omi; int: fk) int
+    fn: l2_cfl_note (int: callee; int: caller; int: caller_fi; int: t; int: kind; int: a; int: a_fi; const: @(LmP0Node at)) int
+    fn: l2_cfl_close () int
+    fn: l2_cfl_count (int: c; int: t) int
+    fn: l2_cfl_at (int: c; int: t; int: k) int
+    fn: l2_cfl_formation (int: c; int: t; const: @(LmP0Node at); @: int out) int
+    fn: l2_m_unit_level (int: mi) int
     fn: l2_method_sig_compatible (int: cand; int: req) int
     fn: l2_uses_is_slash (const: @(LmP0Text text)) int
     fn: l2_uses_slash_off (const: @(char data); size_t: length) size_t
@@ -2262,6 +2287,8 @@ fn: l2_release () int
     l2_cf_req: 0
     l2_cf_n: 0
     l2_cf_cap: 0
+    l2_cfl_n: 0
+    l2_cfr_n: 0
     l2_e_free()
 return: 0
 
@@ -4764,6 +4791,8 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_msrc_n: 0
     l2_bound_free()
     l2_cf_n: 0
+    l2_cfl_n: 0
+    l2_cfr_n: 0
     l2_lp_n: 0
     l2_pad_n: 0
     l2_pad_seq: 0
@@ -12967,10 +12996,9 @@ fn: l2_dyn_local (const: @(char path)) int
         l2_xfree((cast: (@: void) seen))
 return: 0
 
-fn: l2_dyn_site (const: @(L2SourceSite site); const: @(char path); @: int changed) int
+fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; const: @(char path); @: int changed) int
     []: char missing 256
     int: m site\method
-    int: cidx site\target
     int: k 0
     int: src
     int: own
@@ -13060,6 +13088,24 @@ fn: l2_dyn_site (const: @(L2SourceSite site); const: @(char path); @: int change
                 return: 1
             ---
         k: k + 1
+return: 0
+
+# One call site in the fixed point.  A call of a method asks that method's dynamic inputs of its caller.  A
+# call through a callable formal (count = formal + 1, l2_check_call) asks those of every method that reaches
+# the formal, and nothing on behalf of the method that only declares it (K04; Codex,
+# FABLE-CODEX-20261004-12): the reaching methods' free names propagate as any statically known requirement.
+fn: l2_dyn_site (const: @(L2SourceSite site); const: @(char path); @: int changed) int
+    int: fi (cast: (int) site\count) - 1
+    int: i 0
+    int: n
+    if: fi < 0
+        return: l2_dyn_site_callee(site, site\target, path, changed)
+    n: l2_cfl_count(site\method, fi)
+    while: i < n
+        if: l2_dyn_site_callee(site, l2_cfl_at(site\method, fi, i), path, changed) != 0
+            return: 1
+        i: i + 1
+    ---
 return: 0
 
 fn: l2_dyn_step (const: @(char path); @: int changed) int
@@ -13163,6 +13209,9 @@ return: 0
 
 fn: l2_dyn_close (const: @(char path)) int
     int: changed 1
+    # Every check has run: what reaches each callable formal is closed before the requirements propagate.
+    if: l2_cfl_close() != 0
+        return: 1
     # Each successful step can only add one of the finite method/name/type
     # facts collected from this unit. Iterate to the actual fixed point; an
     # arbitrary pass count rejects valid long call chains.
@@ -24562,7 +24611,12 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     ---
     if: l2_check_throws_handled(mi, idx, path, node) != 0
         return: 1
-    if: l2_note_call(mi, idx, node, path) != 0
+    # A call through callable formal fi is noted as such (its count is fi + 1): in the fixed point of
+    # dynamic inputs the methods that reach the formal stand in the place of its declaring method
+    # (l2_dyn_site).
+    if: fi < 0 && l2_note_call(mi, idx, node, path) != 0
+        return: 1
+    if: fi >= 0 && l2_wait_add(4, mi, (cast: (@: void) node), fi + 1, idx, node, path) != 0
         return: 1
     actual_i: 0
     while: a0 != 0
@@ -24573,6 +24627,8 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
         if: req_mi >= 0
             if: actual_span = 1 && a0\value != 0 && l2_frame_head(a0\value, "merge") != 0
                 if: l2_t7_from_actual(mi, idx, actual_i, a0\value, path) != 0
+                    return: 1
+                if: l2_cfl_note(idx, mi, fi, actual_i, 3, 0 - 1, 0 - 1, node) != 0
                     return: 1
                 ---
             else:
@@ -24585,6 +24641,12 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 # here -- the caller of THIS method chose it.
                 if: cf_kind = 1
                     l2_m_value_used[cand_mi]: 1
+                # K04: what reaches the formal is recorded (l2_cfl_note): the method named, or the caller's
+                # own formal handed on.
+                if: cf_kind = 1 && l2_cfl_note(idx, mi, fi, actual_i, 1, cand_mi, 0 - 1, node) != 0
+                    return: 1
+                if: cf_kind = 2 && l2_cfl_note(idx, mi, fi, actual_i, 2, mi, cf_fi, node) != 0
+                    return: 1
             ---
         ---
         # A callable WITHOUT a result is a REFERENCE value (docs #callables: a nonreturning callable
@@ -26381,7 +26443,15 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
         return: l2_error(l2_src, at, l2_hf_msg)
     if: l2_graph_field_child(child) < 0 || l2_call_node = 0
         return: 1
-    if: l2_own_from_expr(child, l2_hf_msg) != 0 || c.fprintf(l2_out, "%sl2_xp: %s\n%sif: l2_xp = 0\n", ind, l2_hf_msg, ind) < 0
+    if: l2_own_from_expr(child, l2_hf_msg) != 0
+        return: 1
+    # The cell is reached in the lexical tree of the SELECTED occurrence (Codex, FABLE-CODEX-20261004-12): a
+    # field of the unit through the parent of a unit method's occurrence, as the Structure above is.
+    if: callee_self >= 0 && l2_m_unit_level(callee) != 0 && l2_own_mi[child] = l2_e && l2_graph_field(child) != 0 && l2_graph_field(child)\holder = 0
+        if: c.sprintf(l2_hf_msg, "lmx_arena_ref_cell(l2_c%d\\parent, %zuU)", callee_self, l2_graph_field(child)\child) < 0
+            return: 1
+    ---
+    if: c.fprintf(l2_out, "%sl2_xp: %s\n%sif: l2_xp = 0\n", ind, l2_hf_msg, ind) < 0
         return: 1
     # A missing cell of a bound hidden input is a broken promise (D-87, as D-05 for a loaded own
     # field): X1, not a return of 0 that the caller would read as the callee's value.
@@ -27631,6 +27701,183 @@ fn: l2_emit_occ_admit (int: mi; int: req; int: cand; const: @(char value); const
         return: 1
 return: 0
 
+fn: l2_cfl_note (int: callee; int: caller; int: caller_fi; int: t; int: kind; int: a; int: a_fi; const: @(LmP0Node at)) int
+    int: i 0
+    int: via 0 - 1
+    int: via_fi 0 - 1
+    if: caller_fi >= 0
+        via: caller
+        via_fi: caller_fi
+    ---
+    while: i < l2_cfl_n
+        if: l2_cfl_callee[i] = callee && l2_cfl_via[i] = via && l2_cfl_via_fi[i] = via_fi && l2_cfl_t[i] = t && l2_cfl_kind[i] = kind && l2_cfl_a[i] = a && l2_cfl_a_fi[i] = a_fi
+            return: 0
+        i: i + 1
+    ---
+    if: l2_cfl_n >= 256
+        return: l2_error(l2_src, at, "too many callable actuals of callable formals")
+    l2_cfl_callee[l2_cfl_n]: callee
+    l2_cfl_via[l2_cfl_n]: via
+    l2_cfl_via_fi[l2_cfl_n]: via_fi
+    l2_cfl_t[l2_cfl_n]: t
+    l2_cfl_kind[l2_cfl_n]: kind
+    l2_cfl_a[l2_cfl_n]: a
+    l2_cfl_a_fi[l2_cfl_n]: a_fi
+    l2_cfl_n: l2_cfl_n + 1
+return: 0
+
+fn: l2_cfr_has (int: c; int: t; int: m) int
+    int: i 0
+    while: i < l2_cfr_n
+        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] = m
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+fn: l2_cfr_add (int: c; int: t; int: m; @: int changed) int
+    if: c < 0 || l2_cfr_has(c, t, m) != 0
+        return: 0
+    if: l2_cfr_n >= 512
+        return: l2_error(l2_src, 0, "too many callables reach callable formals")
+    l2_cfr_c[l2_cfr_n]: c
+    l2_cfr_t[l2_cfr_n]: t
+    l2_cfr_m[l2_cfr_n]: m
+    l2_cfr_n: l2_cfr_n + 1
+    \changed: 1
+return: 0
+
+# What fact f brings to its formal of consumer c.
+fn: l2_cfl_bring (int: f; int: c; @: int changed) int
+    int: j 0
+    int: n
+    if: l2_cfl_kind[f] = 1
+        return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], changed)
+    if: l2_cfl_kind[f] = 3
+        return: l2_cfr_add(c, l2_cfl_t[f], 0 - 1, changed)
+    # A formal handed on: whatever reaches it, an unfollowed occurrence included.  The table may grow under
+    # the loop; its first n rows serve this round, and the closure repeats until nothing is added.
+    n: l2_cfr_n
+    while: j < n
+        if: l2_cfr_c[j] = l2_cfl_a[f] && l2_cfr_t[j] = l2_cfl_a_fi[f] && l2_cfr_add(c, l2_cfl_t[f], l2_cfr_m[j], changed) != 0
+            return: 1
+        j: j + 1
+    ---
+return: 0
+
+# The closure of the facts: finite, each round only adds rows.
+fn: l2_cfl_close () int
+    int: changed 1
+    int: f
+    int: j
+    int: n
+    while: changed != 0
+        changed: 0
+        f: 0
+        while: f < l2_cfl_n
+            if: l2_cfl_via[f] < 0
+                if: l2_cfl_bring(f, l2_cfl_callee[f], @ changed) != 0
+                    return: 1
+                ---
+            else:
+                # The callee is the value of a formal: each method that reaches that formal is a consumer.
+                j: 0
+                n: l2_cfr_n
+                while: j < n
+                    if: l2_cfr_c[j] = l2_cfl_via[f] && l2_cfr_t[j] = l2_cfl_via_fi[f] && l2_cfr_m[j] >= 0 && l2_cfl_bring(f, l2_cfr_m[j], @ changed) != 0
+                        return: 1
+                    j: j + 1
+                ---
+            ---
+            f: f + 1
+        ---
+    ---
+return: 0
+
+# The methods that reach formal t of consumer c: how many, and the k-th.
+fn: l2_cfl_count (int: c; int: t) int
+    int: i 0
+    int: n 0
+    while: i < l2_cfr_n
+        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] >= 0
+            n: n + 1
+        i: i + 1
+    ---
+return: n
+
+fn: l2_cfl_at (int: c; int: t; int: k) int
+    int: i 0
+    while: i < l2_cfr_n
+        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] >= 0
+            if: k = 0
+                return: l2_cfr_m[i]
+            k: k - 1
+        ---
+        i: i + 1
+    ---
+return: 0 - 1
+
+# Whether methods a and b form their hidden inputs alike: the same free names in the same order, of the
+# same types, with the same lexical declarations and the same receiving schemas.  One formation then serves
+# both.  Their declared formals, result and exits are those of the one contract each was admitted to
+# (l2_method_sig_compatible), so they are not compared again here.
+fn: l2_cfl_alike (int: a; int: b) int
+    int: k 0
+    if: a = b
+        return: 1
+    if: l2_m_dyn[a] != l2_m_dyn[b]
+        return: 0
+    while: k < l2_m_dyn[a]
+        if: l2_text_same(l2_dn(a, k), l2_dn(b, k)) = 0 || l2_dt(a, k) != l2_dt(b, k)
+            return: 0
+        if: l2_own_lexical(a, l2_dn(a, k)) != l2_own_lexical(b, l2_dn(b, k))
+            return: 0
+        if: l2_cap_arg_ns(a, l2_m_arity[a] + k) != l2_cap_arg_ns(b, l2_m_arity[b] + k) || l2_input_schema(a, l2_m_arity[a] + k) != l2_input_schema(b, l2_m_arity[b] + k)
+            return: 0
+        k: k + 1
+    ---
+return: 1
+
+# The formation of a call through callable formal t of consumer c.  \out is the method whose list of hidden
+# inputs the call forms: any of the methods that reach the formal, when all form theirs alike.  It is -1 when
+# no flow of this translation reaches the formal: the definition is dormant, asks nothing of anyone and its
+# call forms no hidden input.  The list of the method that declares the formal is used by no path.  Where the
+# formation is not built yet -- an occurrence the translation does not follow reaches the formal (a merge built
+# as the actual; any caller of a library unit, whose callers are other translations), or methods that form their
+# inputs differently do -- the call is refused where it stands: a limit of this implementation and no rule of
+# the language.
+fn: l2_cfl_formation (int: c; int: t; const: @(LmP0Node at); @: int out) int
+    int: n
+    int: i 1
+    int: first
+    \out: 0 - 1
+    if: l2_library_mode != 0 || l2_cfr_has(c, t, 0 - 1) != 0
+        return: l2_error(l2_src, at, "a call through a callable formal that receives a callable this translation does not follow is not built yet")
+    n: l2_cfl_count(c, t)
+    if: n = 0
+        return: 0
+    first: l2_cfl_at(c, t, 0)
+    while: i < n
+        if: l2_cfl_alike(first, l2_cfl_at(c, t, i)) = 0
+            return: l2_error(l2_src, at, "a call through a callable formal that receives callables whose inputs are formed differently is not built yet")
+        i: i + 1
+    ---
+    \out: first
+return: 0
+
+# Whether method mi is a method of the unit itself: its occurrence's parent is the unit, which its own code
+# reaches as `node` (the choice of l2_unit_ref).
+fn: l2_m_unit_level (int: mi) int
+    if: mi < 0 || mi >= l2_m_n || mi = l2_e
+        return: 0
+    if: l2_m_part(mi) >= 0 && l2_part_ns[l2_m_part(mi)] >= 0
+        return: 0
+    if: l2_mad_host_of(mi) >= 0
+        return: 0
+    if: l2_m_nsof(mi) >= 0 && (l2_ns_parent[l2_m_nsof(mi)] >= 0 || l2_ns_local[l2_m_nsof(mi)] >= 0)
+        return: 0
+return: 1
+
 fn: l2_cf_get (int: omi; int: fk) int
     int: i 0
     if: omi < 0 || fk < 0
@@ -27973,6 +28220,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     int: er
     int: occ_mi
     int: mcall 0
+    int: hid
     []: char ref_dest 128
     # Capture the selected physical occurrence before evaluating actuals: a
     # nested call may reuse l2_pst, but `self` for this call must remain the
@@ -28013,6 +28261,17 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     t: 0
     nact: l2_m_arity[idx]
     nhid: l2_m_dyn[idx]
+    # K04: a call through a callable formal forms the hidden inputs of the methods that reach the
+    # formal (l2_cfl_formation), never the list of the method that declares it.  A dormant definition's
+    # call forms none.
+    hid: idx
+    if: sel = 2 && mcall = 0
+        if: l2_cfl_formation(mi, fi, node, @ hid) != 0
+            return: 1
+        nhid: 0
+        if: hid >= 0
+            nhid: l2_m_dyn[hid]
+    ---
     acts: 0
     hides: 0
     l2_alloc_kind: 4
@@ -28111,13 +28370,13 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         memset((cast: (@: void) hides), 0, (cast: (size_t) nhid) * 1024U)
         ai: 0
         while: ai < nhid
-            if: l2_hidden_from(mi, idx, ai, self_t, ind, l2_act_at(hides, ai), node) != 0
+            if: l2_hidden_from(mi, hid, ai, self_t, ind, l2_act_at(hides, ai), node) != 0
                 return: l2_prep_drop(acts, hides)
-            if: l2_cap_arg_ns(idx, nact + ai) < 0 && l2_hidden_emit_admit(mi, idx, ai, l2_act_at(hides, ai), ind) != 0
+            if: l2_cap_arg_ns(hid, nact + ai) < 0 && l2_hidden_emit_admit(mi, hid, ai, l2_act_at(hides, ai), ind) != 0
                 return: l2_prep_drop(acts, hides)
             # Capturing nested/PAP occurrences retain their existing admission
             # role, but admission completes before this call's publication.
-            if: mcall != 0 && l2_cap_arg_ns(idx, nact + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(idx, ai)) = 0 && l2_cap_emit_admit(l2_cap_arg_ns(idx, nact + ai), l2_act_at(hides, ai), ind) != 0
+            if: mcall != 0 && l2_cap_arg_ns(hid, nact + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(hid, ai)) = 0 && l2_cap_emit_admit(l2_cap_arg_ns(hid, nact + ai), l2_act_at(hides, ai), ind) != 0
                 return: l2_prep_drop(acts, hides)
             ai: ai + 1
         ---
@@ -28175,7 +28434,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     ai: 0
     while: ai < nhid
         c.sprintf(ref_dest, "l2_cfr%d[%d]", t, nact + ai)
-        if: l2_emit_call_ref(l2_input_ft(idx, nact + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
+        if: l2_emit_call_ref(l2_input_ft(hid, nact + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
             return: l2_prep_drop(acts, hides)
         ai: ai + 1
     if: l2_emit_dyn_call(mi, idx, t, self_t, ind, nact + nhid) != 0
@@ -33885,6 +34144,8 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
     int: source_input
     int: bound 0 - 1
     int: site
+    int: hid
+    int: dynn
     L2ReferenceSource: reference_source
     l2_rw_conv: 0
     if: conv = 0 && node != 0 && node\as != 0
@@ -33946,6 +34207,17 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
     ---
     if: n != l2_m_arity[idx]
         return: l2_rw_refuse(node, "this call's inputs")
+    # K04: the hidden inputs of a call through a callable formal are those of the methods that reach the
+    # formal (l2_cfl_formation), as the native call forms them.
+    hid: idx
+    dynn: l2_m_dyn[idx]
+    if: formal_call >= 0
+        if: l2_cfl_formation(l2_rw_mi, formal_call, node, @ hid) != 0
+            return: 1
+        dynn: 0
+        if: hid >= 0
+            dynn: l2_m_dyn[hid]
+    ---
     # [call, code, data, rtype, args...] (-188 k.3c; -189 c4). A direct call stores the callee
     # once, at slot 1; the walker uses that occurrence as both code and data. EXEC still
     # evaluates slot 2. One activation is not a second graph node (the author, 2026-09-28).
@@ -33958,14 +34230,14 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
         return: 1
     # A direct call with no catch and no hidden input keeps only the callee and
     # those inputs. Path calls, catches, and hidden inputs keep the long frame.
-    if: path_call = 0 && l2_m_nsof(idx) < 0 && nc = 0 && l2_m_dyn[idx] = 0
+    if: path_call = 0 && l2_m_nsof(idx) < 0 && nc = 0 && dynn = 0
         arg0: 2
     ---
-    if: l2_rw_frame(parent, call_op, arg0 + n + l2_m_dyn[idx] + 3 * nc, out) != 0
+    if: l2_rw_frame(parent, call_op, arg0 + n + dynn + 3 * nc, out) != 0
         return: 1
-    if: arg0 = 5 && conv = 0 && l2_rw_catch_call(\out, 5 + n + l2_m_dyn[idx], idx, @ nc) != 0
+    if: arg0 = 5 && conv = 0 && l2_rw_catch_call(\out, 5 + n + dynn, idx, @ nc) != 0
         return: 1
-    if: arg0 = 5 && conv != 0 && l2_rw_catch_edge(\out, 5 + n + l2_m_dyn[idx], idx, @ nc) != 0
+    if: arg0 = 5 && conv != 0 && l2_rw_catch_edge(\out, 5 + n + dynn, idx, @ nc) != 0
         return: 1
     # EXEC obtains the selected occurrence from the caller's actual formal;
     # the signature row supplies the contract, never a substitute callee.
@@ -34072,18 +34344,18 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
         a: l2_skip_span(a, span)
     ---
     d: 0
-    while: d < l2_m_dyn[idx]
+    while: d < dynn
         # A3 with item 738: the host's own Structure handed to its nested method is admitted as the capture's type
         # itself -- the method reads it through that type's table (path kind 7) -- unless the host's formal is one a
         # call site fills by name (D-105): that value is admitted already, with its table.
         holder: \out
-        if: l2_cap_arg_ns(idx, n + d) >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(idx, d)) = 0 && l2_rw_admit_as(\out, l2_cap_arg_ns(idx, n + d), l2_cap_arg_ns(idx, n + d), @ holder) != 0
+        if: l2_cap_arg_ns(hid, n + d) >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(hid, d)) = 0 && l2_rw_admit_as(\out, l2_cap_arg_ns(hid, n + d), l2_cap_arg_ns(hid, n + d), @ holder) != 0
             return: 1
-        hidden_model: l2_input_schema(idx, n + d)
-        if: l2_cap_arg_ns(idx, n + d) < 0 && hidden_model != -1
-            cand: l2_hidden_model_source(l2_rw_mi, idx, d, @ hidden_source)
+        hidden_model: l2_input_schema(hid, n + d)
+        if: l2_cap_arg_ns(hid, n + d) < 0 && hidden_model != -1
+            cand: l2_hidden_model_source(l2_rw_mi, hid, d, @ hidden_source)
             if: cand = -1
-                if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(idx, d)), @ holder) != 0
+                if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(hid, d)), @ holder) != 0
                     return: 1
                 ---
             else:
@@ -34096,7 +34368,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                     return: 1
                 ---
             ---
-        if: l2_rw_dyn_arg(node, idx, d, holder, @ arg) != 0
+        if: l2_rw_dyn_arg(node, hid, d, holder, @ arg) != 0
             return: 1
         if: holder != \out
             if: l2_rw_put(holder, 3, arg) != 0

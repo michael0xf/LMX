@@ -392,6 +392,17 @@ substitute the exemplar's interface, infer it from ARG usage, or invent a
 zero-argument exception for a convenient witness. These positive call failures
 are preserved in full32 and the current plan.
 
+A call through a callable formal no longer uses the declaring method's list.
+The translator follows which methods reach each formal (`l2_cfl_note`,
+`l2_cfl_close`), their free names enter the ordinary fixed point of dynamic
+inputs (`l2_dyn_site`), and the call forms their list (`l2_cfl_formation`).
+Compiler metadata only: nothing of it exists at run time. Still refused where
+they stand, as limits of the implementation: methods whose inputs are formed
+differently on one formal, an occurrence the translation does not follow (a
+merge built as the actual, any caller of a library unit), the walked consumer,
+a held callable as the actual
+([ledger](steps/fable-continuation-20261003.md#formal-formation)).
+
 ### 8.3 Result, status, and stop are separate
 
 The callback's C `int` is control/status, not the language's numeric return value. Numeric or foreign by-value results use `dest` and the out protocol; reference results preserve the held pointer value; void results do not acquire a made-up numeric payload. Throwing adapters must not publish a successful result on a thrown status.

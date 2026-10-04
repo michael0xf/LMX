@@ -4473,3 +4473,165 @@ every staged copy (`tie.py`).
 
 **Next.** The first slice of the common route, with the chain witness, the
 controls and the mutants; then the second.
+
+<a id="formal-formation"></a>
+## 57. A call through a callable formal forms the inputs of the methods that reach the formal (first slice)
+
+### Codex's sixth reply -12
+
+It answers the corrected design of [section 56](#nested-references).
+
+- The transport of the second slice is confirmed: "YES: keeping a
+  forward-only inherited input as the existing refs entry, possibly absent,
+  during this synchronous activation is the intended ordinary activation/ABI
+  transport." With its conditions: absence is preserved across
+  consumers that only forward; a present zero or boxed null is not absent; a
+  consumer that reads or assigns the name itself uses the ordinary
+  working-input rule; a box of the activation is never a persistent cell.
+- The first slice is accepted "as the stated bounded optimization: only
+  proven reaching actuals whose FULL formation is the same, target evaluated
+  once, actual-relative physical sources, ordinary fixed-point propagation,
+  and no exemplar fallback." Its boundary is to be recorded "as
+  implementation coverage, never a language restriction."
+- One correction, taken before any byte was written: ""no flow reaches
+  the formal" does not itself authorize an X1 invariant. An unused definition
+  can legitimately contain q() even when no current call supplies q." So
+  a dormant definition is neither refused nor given an abort.
+- The limit of the caller's own reference stays
+  ([section 56](#nested-references)): "do not remove that limit guard
+  merely to obtain 45 while a missing-field candidate reads 6."
+
+### What changed
+
+All in `dev/l2src_sandbox/l2trans.lm1`.
+
+| Step | Where | What |
+| --- | --- | --- |
+| Facts | `l2_check_call`, where an actual meets a callable formal (`l2_cfl_note`) | The formal receives a named unit method, the caller's own formal handed on, or an occurrence not followed (a merge built as the actual). The callee is a method, or the value of a formal. |
+| Closure | `l2_cfl_close`, at the head of `l2_dyn_close` | Which methods reach each formal of each consumer; an unfollowed occurrence reaches as such. Finite; repeated whenever the fixed point is. |
+| Propagation | `l2_dyn_site` | At a call through a formal the reaching methods stand in the place of the declaring method. The consumer inherits what they need and it does not bind. The declaring method's names are asked of no one. |
+| Formation | `l2_cfl_formation`, in `l2_emit_call` and `l2_rw_call` | The call forms the list of the reaching methods through the existing `l2_hidden_from`, the selected occurrence as its callee. |
+| Dormant | the same | No flow reaches the formal: the call forms no hidden input, asks nothing and is not refused. |
+| Limits | the same | Methods whose inputs are formed differently, an unfollowed occurrence, a library unit: refused where the call stands. |
+| Lexical cell | `l2_hidden_from` | A number's cell in the unit is reached through the parent of the selected occurrence of a unit method, as a Structure's was. |
+
+Nothing is compared at run time in this slice, so no claim about the
+identity of an occurrence is made. Methods form their inputs alike when
+their free names, in order, their types, their lexical declarations and
+their receiving schemas are the same; their declared formals, result and
+exits are those of the one contract each was admitted to.
+
+The tables are compiler metadata. Nothing of them exists at run time: no
+name, no table, no record.
+
+### Measured
+
+On the committed translator (`375b6309`) and on this one, natively.
+
+| Program | Before | Now |
+| --- | --- | --- |
+| `run(g1)`, `g1` reads `other`, the formal is declared by `f0` | 6 | 10 |
+| The same with `int: other 40` in `run` | 6 | 41 |
+| An actual with two free names; with none; a formal declared without any | stops at run time | their values |
+| A formal handed on | 6 | 10 |
+| `outer (int: other)` calls `run(g1)`, 40 given | a wrong value | 41 |
+| The same with one more method between them | a wrong value | 41 |
+| Mutual recursion handing the callable on; `pong` has its own `other` 70 | wrong values | 10, 71, 71, 71 |
+| The callee is the value of a formal (`apply2 (run: h; f0: q)`: `h(q)`) | wrong values | 10, and 41 from `outer` |
+| `int: other 0` in `run`; 0 given to `outer` | wrong values | 1; 1 |
+| A free name no one supplies and the unit does not declare | accepted; 6 | refused before entry: `unbound dynamic input zz` |
+| A consumer no call supplies | translates | translates |
+| One formal receives `g1` and `f0` | wrong values | refused: OPEN |
+| One formal receives two callables with one name, declared twice in the unit | 2 and 2 | refused: OPEN |
+| A library unit with a callable formal | translates | refused: OPEN |
+
+The last three are the cost of the slice's boundary. The second of them
+translated and gave the right values before; no row of the harness had that
+shape. Each is a red required positive now.
+
+### What is not built
+
+Coverage of the implementation, no restriction of the language.
+
+- **Inputs formed differently on one formal.** A branch per exact occurrence
+  and an inherited input that may be absent: the second slice.
+- **The lexical fallback at the top of a chain.** Where no caller up the
+  chain binds the name, the cell read is the one the called method's lexical
+  lookup names. For a unit method that is the actual's own cell. For an
+  occurrence with a lexical context of its own, a node a merge builds, the
+  absence has to travel to the actual: the second and third slices. That is
+  why two callables whose lexical declarations differ are refused on one
+  formal now.
+- **Occurrences not followed.** A merge built as the actual
+  (`unit_t7_convert`, a baseline red row, now fails at the call through the
+  formal, 17:13, with the limit; before it failed at 20:19 in the walk) and
+  every caller of a library unit.
+- **A held callable as the actual**, with the copied lexical values Codex's
+  witnesses ask for; **the walked consumer**; **the caller's own reference of
+  another declaration**.
+
+### Replay
+
+The slice's translator against the committed one (`375b6309`), on the 1641
+translations recorded by `fable_full_31`: exit, messages and the generated
+L1 are the same on 1630 rows. The eleven others:
+
+- five rows of the callable formal's free names, whose L1 changes: the
+  consumer's hidden input is the actual's name, and its callers supply that;
+- five rows whose root reads a unit cell for a callee in its native code,
+  now through the parent of the selected occurrence: `unit_decl_order_u2`,
+  `unit_walk_decl_order_u2`, `unit_held_call_guarded`,
+  `unit_walk_held_call_guarded`, `unit_site_parent_fallback`. One expression
+  changes in each; the cell is the same;
+- `unit_t7_convert`, a baseline red row, refused with another message.
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart and run
+natively on the fourteen fixtures of the callable formal.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| A unit method named as the actual is not recorded | Every row that calls through a formal stops at run time: `a trampoline was called outside its method's signature`. |
+| A formal handed on is not recorded | `_forward`, `_higher` and `_mutual` stop at run time the same way. |
+| A callee that is a formal's value does not pass its actual on | `_higher` stops at run time. |
+| The fixed point keeps the declaring method | `_chain`, `_higher`, `_mutual` and `_zero` give wrong values. |
+| The emitted call keeps the declaring method's list | Nine rows give wrong values or stop at run time. |
+| The formations of the reaching methods are not compared | The OPEN row `_differ` translates and gives wrong values in place of the located limit; `_lexical_differ` translates and gives its 2 and 2. |
+| The lexical declarations are not compared | `_lexical_differ` translates and gives its 2 and 2. |
+| A library unit's formals are taken as followed | `unit_lib_callable_formal` translates. |
+| The number's cell keeps the caller's route | No value changes. The generated text of `unit_decl_order_u2` has the old expression twice and the new one nowhere: the row's two pins fail. |
+| A merge built as the actual is not recorded as unfollowed | No row changes its verdict. `unit_t7_convert` is red either way: with the fact it is refused at the call through the formal (17:13), without it at the walk of the merge (20:19). |
+
+Three of these are not kills by a value, and are said as they are. The
+comparison of lexical declarations refuses a program that this slice would
+run right, since the root binds the name; no program was constructed in
+which that comparison prevents a wrong value. It stays because the
+formation's lexical source is not yet the actual's own in every chain, and
+goes with the second slice. The cell's route is the same cell today: nothing
+copies the unit, so the pins are of the text only. And the fact of an
+unfollowed merge cannot be reached by a running program: a merge built as
+an actual does not translate at all yet.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_18` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_18` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_32` (full harness) | RED 36 of 1651. Against `fable_full_31` (RED 38 of 1642): FAIL→OK 5, the callable formal's free names; OK→FAIL 0; added 9, of which 6 green and three labelled OPEN rows red; removed 0. |
+| `build/l2_harness/fable_cfl_01` (focused, before the gates) | 152 rows of callable formals, hidden inputs, held calls and library units. Red only baseline and labelled OPEN rows. |
+
+The 36 red rows are the 29 of `fable_full_17` and seven labelled OPEN
+positives: `unit_held_call_to_callable_formal`,
+`unit_callable_formal_free_names_self_walk`, `_differ`, `_lexical_differ`,
+`unit_lib_callable_formal` and the two of the caller's own Structure. The
+pre-gate hashes of the translator, the sixteen fixtures and the harness
+equal the live files and every staged copy (`tie.py`).
+
+**Next.** The second slice: an inherited input kept as its entry of `refs`,
+possibly absent, through a consumer that only forwards it; the native entry
+reading its lexical source for an absent input as the walked body does; a
+branch per exact occurrence where formations differ. With Codex's five
+transport witnesses. Then held callables and merge nodes as actuals and the
+common admission.

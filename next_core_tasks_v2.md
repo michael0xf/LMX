@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_31` RED38/1642 — 105 FAIL→OK against that
-baseline, OK→FAIL 0; the nine red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_17` GREEN296 with 113 executed
-selftests; L3 `fable_l3_17`
-([gates](steps/fable-continuation-20261003.md#nested-references)). The checkpoint gate
+continuation bytes: `fable_full_32` RED36/1651 — 110 FAIL→OK against that
+baseline, OK→FAIL 0; the seven red rows above the 29 of `fable_full_17` are
+labelled OPEN positives; kernel `fable_kernel_18` GREEN296 with 113 executed
+selftests; L3 `fable_l3_18`
+([gates](steps/fable-continuation-20261003.md#formal-formation)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -207,21 +207,25 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   the rules it comes first. A G5 blocker with a red required positive; it
   waits for the admission of K04's common formation
   ([defects](steps/defects.md#held-free-reference-other-declaration)).
-- [ ] A call through a callable formal forms the actual's free names from
-  the list of the formal's declaring method (K04,
-  CALLABLE-FORMAL-HIDDEN-CONTRACT): measured, an accepted program gives a
-  wrong value or aborts when the actual's free names are not that method's.
-  A G5 blocker with required red positives. The semantics is confirmed. The
-  author's answer of 2026-10-04 forbids a name table at run time: the
-  correspondence of the actual's inputs to their sources is resolved at
-  translation, and run time follows references and positions
-  ([record](LMX_blog/2026-10-04.md#no-runtime-name-table),
-  [defects](steps/defects.md#callable-formal-hidden-contract)). The design
-  is reviewed by Codex and corrected: no path through the declaring
-  method's list, the reaching methods' free names in the ordinary fixed
-  point, exact identity only, the lexical fallback through the selected
-  occurrence ([ledger](steps/fable-continuation-20261003.md#nested-references)).
-  The held callable given to a callable formal waits for it.
+- [x] A call through a callable formal forms the inputs of the methods that
+  reach the formal, never the declaring method's list (K04,
+  CALLABLE-FORMAL-HIDDEN-CONTRACT, first slice). Flow facts at the call
+  check, their closure, the reaching methods' free names in the ordinary
+  fixed point, the formation at the call. Chain, mutual recursion, a callee
+  that is a formal's value, a supplied zero, a dormant definition and the
+  refusal of a missing input are gated
+  ([ledger](steps/fable-continuation-20261003.md#formal-formation)).
+- [ ] The second slice, transport confirmed by Codex: an inherited input a
+  consumer only forwards stays an entry of `refs` and may be absent; the
+  native entry reads the lexical source of an absent input; a branch per
+  exact occurrence where formations differ. Red required positives:
+  `unit_callable_formal_free_names_differ`, `_lexical_differ`.
+- [ ] The third slice: held callables and merge nodes as actuals and as
+  callees through the same formation, with the ordinary admission
+  (`unit_held_call_to_callable_formal`,
+  `unit_nested_definition_structure_override`, `unit_t7_convert`); the
+  library unit's callable formal (`unit_lib_callable_formal`); the walked
+  consumer (`unit_callable_formal_free_names_self_walk`).
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

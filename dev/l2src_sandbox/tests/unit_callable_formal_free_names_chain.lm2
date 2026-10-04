@@ -1,0 +1,41 @@
+# What a callable given to a callable formal needs is asked of the callers as
+# any known requirement is. run has no other of its own and calls g1 through
+# q. outer has other as its own formal, 40, and calls run: g1 reads 40 + 1.
+# From the root the unit's other is the root's own binding: 9 + 1. hop adds
+# one more method between them and changes nothing: 41. Entry 7.
+int: base 5
+int: other 9
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: hop () int
+    return: run(g1)
+end: hop
+
+fn: outer (int: other) int
+    return: run(g1)
+end: outer
+
+fn: outerHop (int: other) int
+    return: hop()
+end: outerHop
+
+int: a outer(40)
+int: b run(g1)
+int: c outerHop(40)
+int: d hop()
+int: ok 7
+if: a != 41 || b != 10 || c != 41 || d != 10
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

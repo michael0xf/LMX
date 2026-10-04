@@ -1,0 +1,19 @@
+# A definition nothing consumes asks for nothing. run calls its callable
+# formal and no call in the program supplies one. The program translates and
+# runs; the definition stays whole in its unit. Entry 7.
+int: base 5
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: run (f0: q) int
+    return: q() + 1
+end: run
+
+int: r f0()
+int: ok 7
+if: r != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

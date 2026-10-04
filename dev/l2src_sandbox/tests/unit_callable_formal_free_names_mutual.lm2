@@ -1,0 +1,37 @@
+# A callable handed on through mutual recursion keeps its own free names, and
+# each call forms them where it is made. ping has no other; pong has its own,
+# 70. g1 called in ping from the root reads the root's 9. Called in pong it
+# reads 70. Called in ping after pong it reads the 70 pong supplied. Entry 7.
+int: base 5
+int: other 9
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: ping (f0: q; int: n) int
+    if: n = 0
+        return: q()
+    return: pong(q; n - 1)
+end: ping
+
+fn: pong (f0: q; int: n) int
+    int: other 70
+    if: n = 0
+        return: q()
+    return: ping(q; n - 1)
+end: pong
+
+int: a ping(g1; 0)
+int: b ping(g1; 1)
+int: c ping(g1; 2)
+int: d ping(g1; 3)
+int: ok 7
+if: a != 10 || b != 71 || c != 71 || d != 71
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

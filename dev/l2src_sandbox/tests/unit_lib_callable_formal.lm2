@@ -1,0 +1,17 @@
+# OPEN positive. A library unit may call a callable formal. lib_cf_run calls
+# its q; lib_cf_use hands it lib_cf_one. The callers of a library unit are
+# other translations, so this implementation does not know what reaches the
+# formal and refuses the call where it stands: `a call through a callable
+# formal that receives a callable this translation does not follow is not
+# built yet`. A limit of the implementation and no rule.
+fn: lib_cf_one () int
+    return: 1
+end: lib_cf_one
+
+fn: lib_cf_run (lib_cf_one: q) int
+    return: q() + 1
+end: lib_cf_run
+
+fn: lib_cf_use () int
+    return: lib_cf_run(lib_cf_one)
+end: lib_cf_use

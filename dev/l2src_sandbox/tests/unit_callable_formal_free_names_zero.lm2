@@ -1,0 +1,35 @@
+# A supplied zero is present. run has its own other, 0, and calls g1 through
+# q: 0 + 1, not the unit's 9 + 1. outer hands 0 as its formal: the same.
+# Entry 7.
+int: base 5
+int: other 9
+
+fn: f0 () int
+    return: base
+end: f0
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: run (f0: q) int
+    int: other 0
+    return: q()
+end: run
+
+fn: plain (f0: q) int
+    return: q()
+end: plain
+
+fn: outer (int: other) int
+    return: plain(g1)
+end: outer
+
+int: a run(g1)
+int: b outer(0)
+int: c plain(g1)
+int: ok 7
+if: a != 1 || b != 1 || c != 10
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

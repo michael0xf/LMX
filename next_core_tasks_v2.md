@@ -32,11 +32,11 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_20` RED33/1534 — 97 FAIL→OK against that
+continuation bytes: `fable_full_21` RED33/1542 — 97 FAIL→OK against that
 baseline, OK→FAIL 0; the four red rows above the 29 of `fable_full_17` are
-labelled OPEN positives; kernel `fable_kernel_07` GREEN296 with 113 executed
-selftests; L3 `fable_l3_07`
-([gates](steps/fable-continuation-20261003.md#operand-throw)). The checkpoint gate
+labelled OPEN positives; kernel `fable_kernel_08` GREEN296 with 113 executed
+selftests; L3 `fable_l3_08`
+([gates](steps/fable-continuation-20261003.md#head-binding-reach)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -136,16 +136,22 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   reader of a call's actuals takes it through one accessor where it enters
   the body; the binding's memory is released when the translation ends
   ([ledger](steps/fable-continuation-20261003.md#written-body-kept)).
-- [ ] Named actuals, what the binding does not reach, both REQUIRED before
-  G5 (Codex ruling FABLE-CODEX-20261004-05): an index inside a store's head
-  and a held callable's call are refused as `unknown method`
-  ([defects](steps/defects.md#named-actual-binding-reach)). The head goes
-  first, through the shared expression entry, with the phase and cache
-  invariant of `l2_declaration` verified; then the held call, through the
-  callable's actual signature
-  ([order](steps/fable-continuation-20261003.md#operand-throw)). Also: the
+- [x] Named actuals inside the index of a store's head: the binding walks the
+  head expression kept by its statement, the tree every reader of the head
+  takes. The reader of declarations asks the call role before its cache and
+  for a Frame its reading passes through; the binding's records are found
+  through an index
+  ([ledger](steps/fable-continuation-20261003.md#head-binding-reach)).
+- [ ] Named actuals, a held callable's call, REQUIRED before G5 (Codex ruling
+  FABLE-CODEX-20261004-05): refused as `unknown method`; to be bound through
+  the header of the callable's declared type
+  ([defects](steps/defects.md#named-actual-binding-reach)). Also: the
   interpreter does not yet run a callable formal's invocation
   (`--walk-methods` excludes callable formals).
+- [ ] A callable formal called as a statement, `p: x`, is taken for a store
+  to the formal (Codex ruling FABLE-CODEX-20261004-06: an ordinary call, a
+  defect of resolution order, not the author's open head-role question)
+  ([defects](steps/defects.md#callable-formal-statement-store)).
 - [x] With the methods walked, a throw raised while an operand is evaluated
   leaves the outer CALL or PRIM with its own number, landing and payload: the
   outer operation takes the payload and applies its catch rows only for its

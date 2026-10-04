@@ -1,0 +1,41 @@
+# OPEN. A callable formal called as a statement. p is declared with note's
+# signature and is given note: `p: x`, `p(x)` and `p(a: x)` are the call of
+# what p carries, as they are in an expression. note adds its actual to the
+# trace: 7, then 8, then 9. In a unit with no method named p the statement is
+# taken for a store to the formal and refused: "assignment value has
+# incompatible type", and for the named form "assignment value has unknown
+# type". Entry 7.
+int: trace 0
+
+fn: note (int: a) int
+    node\trace: node\trace * 10 + a
+    return: a
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: colon (note: p; int: x) int
+    p: x
+    return: 0
+end: colon
+
+fn: paren (note: p; int: x) int
+    p(x)
+    return: 0
+end: paren
+
+fn: named (note: p; int: x) int
+    p(a: x)
+    return: 0
+end: named
+
+int: z1 colon(note 7)
+int: z2 paren(note 8)
+int: z3 named(note 9)
+int: ok 7
+if: seen() != 789
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

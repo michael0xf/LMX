@@ -1,0 +1,15 @@
+# The unresolved name is the b read in a's body inside the index of the head,
+# not the b that names pick's formal: put has no b and nothing hands it one.
+# The diagnostic stands at the read, column 24.
+fn: pick (size_t: a; size_t: b) size_t
+    return: a * 2U + b
+end: pick
+
+fn: put () int
+    []: int row 3
+    row[pick(b: 1U; a: b)]: 5
+    return: row[1]
+end: put
+
+sendMessage: exit(exit_code: put(); stdout: ""; stderr: "")
+return

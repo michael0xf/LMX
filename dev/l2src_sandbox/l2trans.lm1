@@ -479,6 +479,10 @@ int: l2_mrs_n 0
 @: int l2_bnd_off 0
 @: int l2_bnd_nf 0
 int: l2_bnd_n 0
+# The records by their body's address: an open-addressed table of record numbers plus one,
+# 0 for an empty place; a power of two in size and at most half full.
+@: int l2_bnd_index 0
+size_t: l2_bnd_index_size 0U
 @: int l2_bnd_rank 0
 @@: LmP0Node l2_bnd_wrap 0
 int: l2_bnd_cells 0
@@ -7256,6 +7260,23 @@ fn: l2_contract_supply (@: L2TypeContract target; @: L2TypeContract supplied) @:
         return: 0
 return: l2_contract_new(target\kind, target\depth, target\word, operand)
 
+# 1 when no declaration is read from frame: the binding resolved it as a call, or resolved as
+# one a Frame its reading passes through -- the single field of a Frame, when that is a Frame,
+# as l2_declaration reads a nested declaration.
+fn: l2_declaration_meets_call (const: @(LmP0Frame frame)) int
+    @: LmP0Field first
+    if: l2_bnd_n = 0
+        return: 0
+    while: frame != 0 && frame\body != 0
+        if: l2_bound_find(frame\body) >= 0
+            return: 1
+        first: l2_next_active(frame\body\first_field)
+        if: first = 0 || first\value = 0 || l2_next_active(first\next) != 0
+            return: 0
+        frame: l2_application(first\value)
+    ---
+return: 0
+
 # Derive a receiving contract without choosing an operation. Lexical resolution
 # decides whether the proposed binding is absent or names an existing value.
 fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
@@ -7272,6 +7293,12 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     int: n
     int: kind 0
     int: depth
+    # A Frame the binding resolved as a call has that role for every reader: it
+    # declares nothing, and the Frames that name its actuals are not a type, a
+    # name and a candidate.  The role is asked before the cache: a classification
+    # made before the binding does not outlive it, nor does one read through it.
+    if: l2_declaration_meets_call(frame) != 0
+        return: 0
     while: result != 0
         if: result\source = node
             return: result
@@ -7280,10 +7307,6 @@ fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     if: frame = 0
         return: 0
     if: frame\head = 0 || frame\body = 0 || frame\trailer != 0 || frame\body\trailer != 0
-        return: 0
-    # A call bound with named actuals is resolved: it declares nothing, and the
-    # Frames that name its actuals are not a type, a name and a candidate.
-    if: l2_bound_find(frame\body) >= 0
         return: 0
     first: l2_next_active(frame\body\first_field)
     n: l2_count_active(frame\body)
@@ -8313,6 +8336,8 @@ return: status
 fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) int
     int: idx
     int: fi 0
+    int: status 0
+    @: L2HeadExpression expression
     if: n = 0 || n\as = 0
         return: 0
     if: n\kind = c.LM_P0_NODE_STRUCTURE
@@ -8326,6 +8351,14 @@ fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) in
         if: idx >= 0 && idx != l2_e && l2_bind_call(n, idx, path) != 0
             return: 1
     ---
+    # An indexed head, `row[i]: v`, is an expression of its own, parsed apart from
+    # the body and kept by its statement (l2_head_expression): every reader of the
+    # head takes that one tree, and its calls are bound here as any call's.
+    expression: l2_head_expression(n, @ status)
+    if: status = 2
+        return: 1
+    if: expression != 0 && l2_bind_struct(expression\body, mi, path) != 0
+        return: 1
     # A frame's trailer holds no call to bind: a valued `return:` closes only an fn (P0), whose trailer
     # l2_bind_calls binds; every other trailer is a cutter, or an `until:` the check refuses (REVIEW 3ed919e, M55).
     if: l2_bind_struct(n\as\frame\body, mi, path) != 0
@@ -8396,16 +8429,43 @@ return: node
 
 # The written-order record of a bound call body, or -1: a call with no named actual has none,
 # and its written order is the order of its formals.
+# Where body's record number stands in the index, or the empty place it would take.  The
+# index is never full (l2_bound_add), so the search ends.
+fn: l2_bound_place (const: @(LmP0Structure body)) size_t
+    size_t: h (cast: (size_t) body)
+    h: ((h >> 4) * 2654435761U) & (l2_bnd_index_size - 1U)
+    while: l2_bnd_index[h] != 0 && l2_bnd_body[l2_bnd_index[h] - 1] != body
+        h: (h + 1U) & (l2_bnd_index_size - 1U)
+    ---
+return: h
+
 fn: l2_bound_find (const: @(LmP0Structure body)) int
-    int: i 0
-    if: body = 0
+    if: body = 0 || l2_bnd_index_size = 0U
         return: -1
+return: l2_bnd_index[l2_bound_place(body)] - 1
+
+# Twice the index, every record placed again.  0, or 1 with the index as it was.
+fn: l2_bound_index_grow () int
+    @: int grown
+    @: int old l2_bnd_index
+    size_t: old_size l2_bnd_index_size
+    size_t: size l2_bnd_index_size * 2U
+    int: i 0
+    if: size < 64U
+        size: 64U
+    if: size < old_size || l2_mul_ok(size, c.sizeof(c.int)) = 0
+        return: 1
+    grown: (cast: (@: int) calloc(size, c.sizeof(c.int)))
+    if: grown = 0
+        return: 1
+    l2_bnd_index: grown
+    l2_bnd_index_size: size
     while: i < l2_bnd_n
-        if: l2_bnd_body[i] = body
-            return: i
+        l2_bnd_index[l2_bound_place(l2_bnd_body[i])]: i + 1
         i: i + 1
     ---
-return: -1
+    free((cast: (@: void) old))
+return: 0
 
 # The rank of formal k's actual among the actuals as written.
 fn: l2_bound_rank (int: bi; int: k) int
@@ -8477,6 +8537,9 @@ fn: l2_bound_add (const: @(LmP0Structure body); int: nf; @: int rank; @@: LmP0No
         l2_bnd_wrap[l2_bnd_cells + k]: wrap[k]
         k: k + 1
     ---
+    if: ((cast: (size_t) l2_bnd_n) + 1U) * 2U > l2_bnd_index_size && l2_bound_index_grow() != 0
+        return: 1
+    l2_bnd_index[l2_bound_place(body)]: l2_bnd_n + 1
     l2_bnd_cells: l2_bnd_cells + nf
     l2_bnd_n: l2_bnd_n + 1
 return: 0
@@ -8562,6 +8625,9 @@ fn: l2_bound_free () int
     free((cast: (@: void) l2_bnd_wrap))
     free((cast: (@: void) l2_bnd_first))
     free((cast: (@: void) l2_bnd_count))
+    free((cast: (@: void) l2_bnd_index))
+    l2_bnd_index: 0
+    l2_bnd_index_size: 0U
     l2_bnd_body: 0
     l2_bnd_off: 0
     l2_bnd_nf: 0

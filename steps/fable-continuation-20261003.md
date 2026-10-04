@@ -2397,3 +2397,223 @@ harness equal the live files and every staged copy (`tie.py`).
 **Next, in the order of the reply.** The expression-head reach, with the
 phase and cache invariant of `l2_declaration`; the held call's named binding;
 the receiving-use remainder; nested admission and the capture closure.
+
+<a id="head-binding-reach"></a>
+## 45. The binding reaches an indexed head; the reader of declarations answers by the call role (Codex, FABLE-CODEX-20261004-06)
+
+**Codex's reply to the checkpoint of section 44.**
+
+- The operand-throw repair is accepted as a bounded checkpoint. The limit
+  stays documented: the mutant that applies a PRIM's rows is told by the
+  kernel selftest and not by the translator's fixture. Not every throw
+  producer and not the graph checkpoint are closed by it.
+- The head reach goes through the single cached head-expression tree and the
+  ordinary recursion of the binding. No second head parser and no rule for a
+  call in an index.
+- A correction of what I reported as part of the author's open question. A
+  formal declared with a callable signature is not the head-role question in
+  `LMX_blog/q/current/`: that one is about a head with no formal, no visible
+  binding and no earlier read. For a declared callable formal `p`, the
+  statement `p: x` is the ordinary call of what `p` carries. Equivalent
+  completed spellings choose one operation. The category comes from the
+  declared callable contract, not from a pointer-shaped transport, and
+  lexical shadowing is kept. A classifier or collector that selects a store
+  before this role is a defect of resolution order: the common decision
+  (`l2_call_head_method`, `l2_head_is_call`) is to be reused, with no
+  exception by name, by colon form or for formals only. It is recorded below
+  as an OPEN required positive and goes with the held-call slice or right
+  after it.
+- The hidden-input examples that wait for the author stay as they are.
+
+### The reach
+
+`l2_head_expression` already parsed the head of `row[i]: v` apart, once per
+statement, and kept the tree by the statement: the free-name scan, the array
+place, the check, the native text and the graph all take that one tree. The
+binding did not walk it, so a call there with a named actual was read with no
+record and refused as `unknown method`.
+
+`l2_bind_node_content` now asks for the statement's head expression and walks
+its body through `l2_bind_struct`, the recursion that walks any body. A head
+that does not parse is said by `l2_head_expression`, as it was at the first
+reader that asked. Nothing else changed for the head: the check, both
+emissions and the diagnostics already read a call's actuals through
+`l2_call_actuals`.
+
+### The role and the cache
+
+Codex asked for the phase and cache invariant of `l2_declaration` to be
+verified. It was measured on isolated bytes, by replay of the
+1533 translator commands that `fable_full_20` recorded.
+
+**The invariant "no Frame is classified before it is bound" does not hold,
+and cannot.** A diagnostic variant reports, when a call's record is made,
+every declaration already cached for the call's Frame or for a Frame that
+names one of its actuals. It reports on 8 of them, four fixtures: on 2 rows the call's own Frame was
+read and kept (`unit_named_actual_scope_names` and its walked twin), on 6 a
+Frame that names an actual (`unit_named_actual_facts` and its twin,
+`unit_named_actual_formal`, `unit_named_actual_reference_whole` with its twin
+and its probe row). A debugger
+trace puts every one of them on one path: the collector of own rows
+(`l2_collect_decls`, `l2_own_decl_ty`). It runs before the binding and has
+to, because the binding resolves a call's head against those rows. It reads
+each statement by its shape, and `l2_declaration` reads a Frame that holds a
+single Frame through that Frame: for `r: f(v: v)` the Frame `v: v` is read
+and kept as "type v, name v", and for a call whose first actual is a name
+and whose later ones are named, `f(x b: 1)`, the call itself is kept as
+"type f, name x".
+
+**What has to hold is that the cache is transparent**: with the cache
+switched off, the reader gives the same answers. A second variant never
+answers from the cache. On the 1533 rows it gives the output
+of its cached twin, for the committed translator and for this slice's. One
+program is not transparent on the committed translator:
+
+```text
+fn: use (int: x) int
+    @: f(x b: 1)
+    return: x
+```
+
+It is refused either way, as it should be: the address of a call is no
+statement. But the committed translator names `f` an unknown type at the
+call (the kept reading, "a pointer to f named x"), and with the cache off it
+says `unsupported body` at the statement. The test in `l2_declaration` that a
+bound call declares nothing stood after the cache lookup, and it looked at
+the Frame alone, not at a Frame read through it.
+
+**The fix.** `l2_declaration` asks the role first, before the cache, through
+`l2_declaration_meets_call`: the Frame itself, or a Frame its reading passes
+through, has a record of the binding. The path is the one the reader itself
+takes, the single field of a Frame when that field is a Frame. With it the
+program above is refused in the same words with and without the cache, and
+the row `unit_named_actual_address_statement_refused` holds that. The row
+holds the independence from the cache, not the wording.
+
+Two things are left as they are and said here. A Frame that names an actual
+keeps its cached shape; no reader of the actuals reaches it and the readers
+of the written body do not classify, and the transparency holds on every
+row. And the role is recorded for a call with a named actual only, so the
+positional `@: f(x 1)` is still refused as an unknown type `f`: the two
+spellings are both refused, in different words. The role of a positional
+call is decided where the statement is classified, by the common decision
+named in Codex's correction above; that is the follow-up, not this slice.
+
+**The index.** Asking the role before the cache put the lookup of a record
+on every call of the reader, and the lookup was a linear search over the
+records. That cost was measured before it was kept:
+
+| A generated unit, each method with ten named calls | Committed translator | Role asked first, linear lookup | This slice |
+| --- | --- | --- | --- |
+| 300 methods, 3000 records | 9.8 s, 9.3 s | 11.9 s, 11.4 s | 9.4 s, 9.2 s |
+| 600 methods, 6000 records | 44.5 s | 51.8 s | 41.9 s |
+
+The generated L1 is the same from all three.
+
+
+The records are now found by their body's address through an index, an
+open-addressed table of record numbers that starts at 64 places and is kept
+at most half full (`l2_bound_place`, `l2_bound_index_grow`), as the kernel's
+copy map does it. It is the binding's own storage and is released with it.
+Every reader of a call's actuals goes through the same lookup, so the debt
+recorded in [section 43](#written-body-kept) for the accessor's linear
+search is paid with it; the growth of translation time with the size of a
+program stays a debt.
+
+### Replay and census
+
+The slice's translator against the committed one, on the 1533 recorded
+translations:
+
+- Exit, messages and generated L1 are the same on 1532 rows. The one other is
+  `unit_named_actual_head_index`, which now translates.
+- The allocation count differs on 130 rows. The binding asks every Frame for
+  its head expression, and the head `[]` of an Array declaration is parsed
+  and found to be no indexed head: one allocation, released at once. A
+  measuring variant that does not ask a head that starts with `[` leaves 5
+  rows of the 130: the head-index fixture; `unit_named_actual_machine` and
+  its walked twin, higher by 5, the working arrays of binding the positional
+  call in `row[g(1U 1U)]`; and `unit_named_actual_scope_names` and its twin,
+  lower by 169, the role asked before the cache. The other 125 rows are
+  higher by 1 to 6 and by nothing else.
+- No body is bound a second time: the diagnostic variant says nothing on any
+  row or new fixture.
+- With the index and with the role asked of the Frame alone, the output and
+  the allocation counts are those of the slice on every row. The reading
+  path shows only in the program above.
+
+
+### Rows
+
+| Fixture | What it holds |
+| --- | --- |
+| `unit_named_actual_head_index`, natively and walked | Rewritten. Its callee was `a + b`, which gives one result bound by name and by place. It is `a * 2 + b` now: bound by place every case writes another cell. Seven cases: the call alone as the index; named calls as the named actuals of the index; the call beside an operator, on either side; actuals with an effect, in written order (the trace is 12); payloads that read the caller's locals of the formals' names; an indexed field of a Structure; a store of the root. |
+| `unit_named_actual_head_index_name_refused` | A name that is no formal, inside the head: the ordinary refusal, at its own column. |
+| `unit_named_actual_head_index_free_refused` | A free name inside a named actual of the head: said at the read, not at the naming Frame of the same name. |
+| `unit_named_actual_address_statement_refused` | The transparency of the cache, above. |
+| `unit_named_actual_index_growth`, natively and walked | 90 named calls in one unit: the index grows twice. |
+| `unit_callable_formal_statement` | OPEN, red, required: see below. |
+| `unit_callable_formal_statement_controls` | The neighbours that run today, see below. |
+
+### Mutants
+
+Each is a copy of the slice's translator with one change, built apart; the
+rows' verdicts follow from the translator's exit and message.
+
+| Mutant | What the slice's fixtures say |
+| --- | --- |
+| The binding does not walk an indexed head | `unit_named_actual_head_index` is refused, natively and walked, as `unknown method`; the two refusals in the head get that message in place of their own. |
+| The cache is asked before the role | `unit_named_actual_address_statement_refused`: `unknown type` at 12:8. |
+| The role is asked of the Frame alone, not along the reading path | The same row, the same refusal. |
+| The index grows without placing the earlier records again | `unit_named_actual_index_growth` is refused, natively and walked, as `unknown method`: a record is not found. |
+| The index does not search past an occupied place | The head-index and the index-growth fixtures are refused, each run in another way: a body is given another body's record. |
+
+
+### OPEN: a callable formal called as a statement
+
+Measured on the committed translator, and unchanged by this slice:
+
+```text
+fn: note (int: a) int ...
+fn: colon (note: p; int: x) int
+    p: x            # 20:5 assignment value has incompatible type
+fn: paren (note: p; int: x) int
+    p(x)            # the same tree, the same refusal
+fn: named (note: p; int: x) int
+    p(a: x)         # assignment value has unknown type
+```
+
+`p` is a formal declared by the signature of the method `note`, and each
+statement is the call of what `p` carries. The statement is taken for a
+store to the formal. The same call in an expression, `r: p(x)` and
+`return: p(a: x)`, translates and runs. When the unit also has a method
+named `p`, the statement translates and calls what the formal carries, not
+the method: the classification of the statement depends on whether a method
+of that name exists, though the callee does not. A formal of a number type
+of that name is stored to, as it should be.
+
+The positive `unit_callable_formal_statement` is red and required. The
+controls are in `unit_callable_formal_statement_controls`: the call in an
+expression by place and by name, the number formal that is stored to, the
+callable formal named like a method of the unit, and a method called as a
+statement. They are native rows: the walked profile excludes callable
+formals ([defects](defects.md#callable-formal-statement-store)).
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_08` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_08` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units 76/128 names, 1082/8192 bytes. |
+| `build/l2_harness/fable_full_21` (full harness) | RED 33 of 1542. Against `fable_full_20` (RED 33 of 1534): FAIL→OK 1, `unit_named_actual_head_index`; OK→FAIL 0; added 8, of which one is red, the OPEN positive `unit_callable_formal_statement`; no row removed; no red row's message changed. |
+
+The 33 red rows are the 29 of `fable_full_17` and four labelled OPEN
+positives: `unit_recv_use_nested_dormant`, `unit_recv_use_passed_thin`,
+`unit_named_actual_held`, `unit_callable_formal_statement`. The pre-gate
+hashes of the translator, the seven fixtures and the harness equal the live
+files and every staged copy (`tie.py`).
+
+
+**Next.** The held call's named binding through the header of its declared
+callable type, with the statement call of a callable formal in the same
+resolution work or right after it; then the receiving-use remainder.

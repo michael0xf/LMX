@@ -7192,14 +7192,51 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5,6); NativeMethods = @(2,3,7); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_free_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_actual_free_name_refused.lm2:9:24: unresolved name'; Absent = @(); Debt = @() },
-    # OPEN: valid programs the binding does not reach yet.  A named actual inside the index of a store's
-    # head (the head is parsed apart and its calls are not bound) and a held callable called with named
-    # actuals (its head resolves to an own field, not to a method) are refused as "unknown method".  They
-    # are required positives and stay red until the binding reaches them.
+    # A named actual inside the index of a store's head.  The head is an expression of its own, parsed
+    # apart and kept by its statement; the binding walks that one tree as it walks a body, so a call
+    # there is bound as any call's.  The callee is a * 2 + b: bound by place every case writes another
+    # cell.  The refusals are the ordinary ones, each at its own place in the head: a name that is no
+    # formal, and a free name inside a named actual.  Mutant (the binding does not walk the head): the
+    # three are refused as "unknown method".
     [pscustomobject]@{ Name = 'unit_named_actual_head_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_head_index_walk.lm2'; Source = 'unit_named_actual_head_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_head_index_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_head_index_name_refused.lm2:10:21: the argument a of pick is given by position (c:) and again by name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_head_index_free_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_head_index_free_refused.lm2:10:24: unresolved name'; Absent = @(); Debt = @() },
+    # The reader of declarations answers by the call role the binding established, before its cache and
+    # for a Frame its reading passes through.  The own rows are collected before the binding and read
+    # statements by shape, so the cache holds `@: f(x b: 1)` as a pointer to f named x.  Mutants (the
+    # cache asked first; the role asked of the Frame alone): the refusal names f an unknown type, 12:8.
+    # The row holds that the answer does not depend on the cache, not the wording of the refusal.
+    [pscustomobject]@{ Name = 'unit_named_actual_address_statement_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_actual_address_statement_refused.lm2:12:5: unsupported body'; Absent = @(); Debt = @() },
+    # The binding's records are found by their body's address through an index that starts at 64 places
+    # and is kept at most half full: 90 named calls make it grow twice.  Mutants (the index grows without
+    # placing the earlier records again; it does not search past an occupied place): refused or wrong.
+    [pscustomobject]@{ Name = 'unit_named_actual_index_growth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_actual_index_growth_walk.lm2'; Source = 'unit_named_actual_index_growth.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    # OPEN: a valid program the binding does not reach yet.  A held callable called with named actuals
+    # (its head resolves to an own field, not to a method) is refused as "unknown method".  A required
+    # positive: it stays red until the binding reaches it.
     [pscustomobject]@{ Name = 'unit_named_actual_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # OPEN (Codex, FABLE-CODEX-20261004-06): a callable formal called as a statement.  `p: x`, `p(x)` and
+    # `p(a: x)` with p a formal declared by a method's signature are the call of what p carries; in a
+    # unit with no method named p the statement is taken for a store to the formal and refused,
+    # "assignment value has incompatible type".  A required positive, red until the statement
+    # classifier asks the shared call-role decision.  The controls run today: the same call in an
+    # expression, by place and by name; a number formal of that name, which is stored to; a callable
+    # formal named like a method of the unit, which calls what the formal carries; a method called as
+    # a statement.  Native rows: the walked profile excludes callable formals.
+    [pscustomobject]@{ Name = 'unit_callable_formal_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     # A throw raised while an actual is evaluated (found beside the named actuals, and no matter of them):
     # it reaches the caller's handler with the payload it was thrown with, and neither the actuals after it
     # nor the callee run.  With the methods walked the outer CALL or PRIM used to replace the payload with

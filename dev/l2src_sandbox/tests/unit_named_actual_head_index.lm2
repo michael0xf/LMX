@@ -1,19 +1,118 @@
-# OPEN. A named actual inside the index of a store's head. The index is an
-# expression like any other and g(b: 1U; a: 0U) is 1: the store writes row[1].
-# The binding does not reach an expression inside a head yet, and the call is
-# refused as "unknown method". Entry 7.
-fn: g (size_t: a; size_t: b) size_t
-    return: a + b
-end: g
+# A named actual inside the index of a store's head. The index is an
+# expression like any other and its calls are bound as any call's. pick(a b)
+# is a * 2 + b: pick(b: 1U; a: 0U) is 1 and, taken by place, 2. Each case
+# fills a row of three with 1 and stores by such an index; the digits of the
+# row say which cell was written. The cases: the call alone (1), named calls
+# as the named actuals of the index (2), the call beside an operator, on
+# either side (3), actuals with an effect, evaluated in written order: the
+# trace is 12 (4), payloads that read the caller's locals of the formals'
+# names (5), an indexed field of a Structure (6), and a store of the root (7).
+# Entry 7.
+Shelf:
+    []: int buf 3
+end: Shelf
 
-fn: put () int
+int: trace 0
+
+fn: pick (size_t: a; size_t: b) size_t
+    return: a * 2U + b
+end: pick
+
+fn: mark (int: t; size_t: v) size_t
+    node\trace: node\trace * 10 + t
+    return: v
+end: mark
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: alone () int
     []: int row 3
-    row[g(b: 1U; a: 0U)]: 5
-    return: row[1]
-end: put
+    row[0]: 1
+    row[1]: 1
+    row[2]: 1
+    row[pick(b: 1U; a: 0U)]: 5
+    return: row[0] * 100 + row[1] * 10 + row[2]
+end: alone
 
+fn: nested () int
+    []: int row 3
+    row[0]: 1
+    row[1]: 1
+    row[2]: 1
+    row[pick(b: pick(b: 0U; a: 0U); a: pick(b: 1U; a: 0U))]: 5
+    return: row[0] * 100 + row[1] * 10 + row[2]
+end: nested
+
+fn: beside () int
+    []: int row 3
+    row[0]: 1
+    row[1]: 1
+    row[2]: 1
+    row[pick(b: 1U; a: 0U) - 1U]: 5
+    row[2U - pick(b: 1U; a: 0U)]: 6
+    return: row[0] * 100 + row[1] * 10 + row[2]
+end: beside
+
+fn: order () int
+    []: int row 3
+    row[0]: 1
+    row[1]: 1
+    row[2]: 1
+    row[pick(b: mark(1 1U); a: mark(2 0U))]: 5
+    return: row[0] * 100 + row[1] * 10 + row[2]
+end: order
+
+fn: names () int
+    []: int row 3
+    size_t: a 2U
+    size_t: b 0U
+    row[0]: 1
+    row[1]: 1
+    row[2]: 1
+    row[pick(b: a - 1U; a: b)]: 5
+    return: row[0] * 100 + row[1] * 10 + row[2]
+end: names
+
+fn: field () int
+    s: merge Shelf
+    s\buf[0]: 1
+    s\buf[1]: 1
+    s\buf[2]: 1
+    s\buf[pick(b: 1U; a: 0U)]: 5
+    return: s\buf[0] * 100 + s\buf[1] * 10 + s\buf[2]
+end: field
+
+int: r1 alone()
+int: r2 nested()
+int: r3 beside()
+int: r4 order()
+int: t seen()
+int: r5 names()
+int: r6 field()
+[]: int top 3
+top[0]: 1
+top[1]: 1
+top[2]: 1
+top[pick(b: 1U; a: 0U)]: 5
+int: r7 top[0] * 100 + top[1] * 10 + top[2]
 int: ok 7
-if: put() != 5
+if: r1 != 151
     ok: 81
+if: r2 != 115
+    ok: 82
+if: r3 != 561
+    ok: 83
+if: r4 != 151
+    ok: 84
+if: t != 12
+    ok: 85
+if: r5 != 151
+    ok: 86
+if: r6 != 151
+    ok: 87
+if: r7 != 151
+    ok: 88
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

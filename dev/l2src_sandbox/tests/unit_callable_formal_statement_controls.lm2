@@ -1,0 +1,63 @@
+# The neighbours of unit_callable_formal_statement that run today. A callable
+# formal called in an expression, by place and by name (1, 2). A formal of a
+# number type named like a method of the unit: `p: x` stores to it (3). A
+# callable formal named like a method of the unit: the statement calls what
+# the formal carries, not the method, and the trace gains 4 and not 9 (4). A
+# method called as a statement (5). Entry 7.
+int: trace 0
+
+fn: note (int: a) int
+    node\trace: node\trace * 10 + a
+    return: a
+end: note
+
+fn: seen () int
+    return: node\trace
+end: seen
+
+fn: p (int: a) int
+    node\trace: node\trace * 10 + 9
+    return: a
+end: p
+
+fn: placed (note: q; int: x) int
+    int: r 0
+    r: q(x)
+    return: r
+end: placed
+
+fn: named (note: q; int: x) int
+    return: q(a: x)
+end: named
+
+fn: stored (int: p; int: x) int
+    p: x
+    return: p
+end: stored
+
+fn: shadowed (note: p; int: x) int
+    p: x
+    return: 0
+end: shadowed
+
+fn: method (int: x) int
+    note: x
+    return: 0
+end: method
+
+int: r1 placed(note 1)
+int: r2 named(note 2)
+int: r3 stored(5 3)
+int: z4 shadowed(note 4)
+int: z5 method(5)
+int: ok 7
+if: r1 != 1
+    ok: 81
+if: r2 != 2
+    ok: 82
+if: r3 != 3
+    ok: 83
+if: seen() != 1245
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

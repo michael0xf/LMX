@@ -1,0 +1,17 @@
+# The address of a call is no statement and declares nothing. Read by its
+# shape, before the calls are bound, `@: f(x b: 1)` is a pointer to f named x.
+# The binding then resolves f(x b: 1) as a call, and the reader of
+# declarations answers by that role whether or not it kept the earlier
+# reading: the statement is refused as a body that is no declaration. Answered
+# from the kept reading, the refusal would name f an unknown type at column 8.
+fn: f (int: a; int: b) int
+    return: a * 2 + b
+end: f
+
+fn: use (int: x) int
+    @: f(x b: 1)
+    return: x
+end: use
+
+sendMessage: exit(exit_code: use(3); stdout: ""; stderr: "")
+return

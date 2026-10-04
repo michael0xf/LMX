@@ -32,9 +32,9 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_06` RED54/1426 — 77 FAIL→OK against that
+continuation bytes: `fable_full_07` RED43/1426 — 86 FAIL→OK against that
 baseline, no OK→FAIL
-([gate](steps/fable-continuation-20261003.md#full-06)). The checkpoint gate
+([gate](steps/fable-continuation-20261003.md#full-07)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -100,7 +100,15 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [ ] Nested correspondence maps across distinct nested definitions; capture of
   a merge-result local; foreign by-value call producer; address-arithmetic and
   nested-body Array producers; C99 common arithmetic (K08) for the `1U` rows.
-- [ ] Normative triage of the 19 remaining stale negative/text-pin rows.
+- [x] Normative triage of the stale negative/text-pin rows
+  ([ledger](steps/fable-continuation-20261003.md#triage)). Left: the three
+  `unit_arr_path_*_refused` letter rows (with K06/K07) and `unit_asgn_fallback`
+  (author question).
+- [ ] Indexed field path whose root is a merge result (`unit_arr_path_read`,
+  `unit_array_write_general_root_real_field`).
+- [ ] Letter Array-of-Array element contract for a typed letter reference
+  (`entry_arg_len`, `entry_index`, `entry_strcmp`, `entry_parse_min`,
+  `unit_charpp_return`, `unit_l2_puts_library`).
 
 <a id="before-critical-graph-bug"></a>
 ## Before critical_graph_bug — acceptance still required

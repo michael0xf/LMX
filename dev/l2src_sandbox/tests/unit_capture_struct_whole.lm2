@@ -1,0 +1,29 @@
+# Item 738: a captured Structure used whole (`probe(loc)`). The reader keeps
+# the copy the host made; probe is admitted the whole Structure and reads its
+# value field: 40 + 2. The norm does not forbid the whole use; the earlier
+# refusal pinned an implementation limit. Entry 7.
+Model:
+    int: other 5
+    box:
+        int: c 5
+    int: count 0
+    int: value 0
+end: Model
+
+fn: probe (Model: q) int
+    return: q\value
+
+fn: makeReader (int: n) fn: (int: x) int
+    loc: merge Model
+    loc\value: n
+    fn: read (int: x) int
+        return: probe(loc) + x
+    return: read
+
+r40: makeReader 40
+int: a (r40: 2)
+int: ok 7
+if: a != 42
+    ok: 1
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

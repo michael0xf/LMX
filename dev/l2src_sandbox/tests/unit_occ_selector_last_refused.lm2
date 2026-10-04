@@ -7,11 +7,11 @@
 # unit_occ_selector_first_refused, where the ORDINAL half was the bad one.
 Model: (size_t: x 10U)
 Cand: (size_t: x 10U; char: x 'q')
-fn: rdLast (Model: v) size_t
+fn: rdLast (Model: v) int
     size_t: got
     got: v\x
-    return: got
+    return: (cast: (int) (got))
 end: rdLast
-Cand: c
+c: merge Cand
 sendMessage: exit(exit_code: rdLast(c); stdout: ""; stderr: "")
 return

@@ -633,3 +633,111 @@ return or argument (3); `unit_t7_convert`, `unit_named_actual_whole`,
 `unit_eternal_shape`; `unit_bind_method_thin_other`; and 18 stale oracle
 rows. A triage of those 18 against the norm was prepared while this gate ran
 and is applied as the next slice.
+
+<a id="triage"></a>
+## 18. Normative triage of the stale oracle rows
+
+No translator, walker or driver byte changes in this slice: fixtures and
+harness rows only. Each row's expectation was compared with the norm before it
+was changed; a red row was never repinned to what the translator happens to
+say.
+
+**Norms used.**
+
+- Head resolution ([dictionary](../next_core_tasks_dictionary_v2.md#head)):
+  an unknown ordinary head in definition position defines a named Structure
+  and retains its tail without executing it. The earlier reading "an absent
+  head with a literal tail is an unresolved call" is historical
+  ([status note](free-names.md), [section C](generated-diagnostic-migration-20260930.md#unknown-head-10)).
+- The root is compiled like every body
+  ([scope](../docs/LMX_semantics.en.md#scope)); `L2 operation outside a method
+  body` is withdrawn.
+- For an existing named Structure `A`, `A: b` in a body selects the call
+  route and is a call error (a named Structure has no arguments); it declares
+  nothing. The setups now say what they mean: a copy `b: merge A`, and for the
+  letter a typed reference, `@: MainLetter m`.
+- A refusal that pins an implementation limit is not a rule. The valid program
+  becomes a required positive and stays red until its mechanism exists.
+
+**Rows that are green now.**
+
+| Row | Was | Decision |
+| --- | --- | --- |
+| `unit_next_message_word_refused` → `unit_next_message_word_definition` | refusal `6:18: unresolved name` | `nextMessage` is not a language word: `nextMessage: m` defines a named Structure, nothing runs. Entry 7. |
+| `entry_ret_tr_bad` | refusal `1:1: unresolved name` | `idle: 1` at the root defines `idle`. Entry 7. |
+| `unit_s7_part_root_below_refused` → `unit_s7_part_root_below_definition` | refusal `4:5: unresolved name` in the part | `bump` stands above the part's field `k` and has no established `k`: its `k: 7` defines a Structure, the field keeps 5 (read by `peek` below the declaration). The same rule as `unit_free_write`. New part file; the old part stays with `unit_site_part_caller`. |
+| `unit_puts_main_beside_method` | refusal `L2 operation outside a method body` | The line is printed (`Says`), exit 0. |
+| `unit_addr_slot_structure_projection` | the same withdrawn refusal | Positive again, unchanged text. |
+| `unit_addr_entry_name_collision` | the same withdrawn refusal | Positive with `fresh: merge Model`; the five locals print `1 2 3 4 5`. |
+| `unit_root_model_field` | three generated-text pins of the legacy `Model: m` lowering | `m: merge Model`, `n: merge Model`; the behaviour (entry 15) is the witness, one text pin names the merge primitive. |
+| `unit_field_path_unit_colon` | two text pins of the legacy lowering | `fresh: merge Model`; behaviour and the merge primitive. |
+| `unit_matrix_callable_struct_identity` | one text pin of an `OWN` frame | `m: merge Model`; three `samepath` facts: each call admits the very output operand `m`'s declaration produced. |
+| `unit_make_adder_activation` | pin `lmx_arena_ref_store(l2_madc, 2U, …)` | The copied host field `k` stands at its source slot 3: the statement before its declaration is a retained child too. The pin follows the source-faithful layout. |
+| `unit_occ_selector_last_refused` | red: refused first at `16:30`, for a `size_t` to `int` conversion of its own result that the program does not supply | The fixture's own defect repaired (the method returns `int` through an explicit cast), setup `c: merge Cand`; it now refuses with its intended admission message. |
+| `unit_occ_selector_first_refused` | green | Setup migrated to `t: merge Tri`; refuses as before. |
+
+The `samepath` facts of `unit_matrix_callable_struct_identity` can fail: on the
+staged binary of `fable_triage_01` the same pair claimed `differentpath` is
+red, and the admitted operand compared with the neighbouring operand `(2,2)` is
+red as `samepath` and green as `differentpath`. The program itself exits 90
+when a call receives a copy.
+
+**Required positives that stay red** (setup migrated, mechanism open):
+
+| Row | Refusal now | Mechanism |
+| --- | --- | --- |
+| `unit_arr_path_read` | `16:5: an indexed field path needs a root of a declared Structure type` | an indexed field path whose root is a merge result |
+| `unit_array_write_general_root_real_field` (redesigned: a store into the copy, the model's Array and an own Array as controls) | `12:5: unsupported index` | the same |
+| `unit_capture_struct_whole_refused` → `unit_capture_struct_whole` (redesigned: `probe(loc)` reads the captured copy, 40 + 2) | `20:23: … not walkable yet: this operand` | capture closure for a merge-result local |
+| `entry_arg_len`, `entry_parse_min`, `unit_charpp_return`, `unit_l2_puts_library` (setup `@: MainLetter m`) | `the Array element has no supported value contract` | the letter's Array-of-Array element contract (K06/K07) |
+
+**Left as they are.** `unit_arr_path_variable_index_refused`,
+`unit_arr_path_inner_value_refused`, `unit_arr_path_three_refused` belong to
+the letter element contract and change with it. `unit_asgn_fallback` waits for
+[the author](../LMX_blog/q/current/head-role-hidden-input-fixed-point.md).
+`unit_bind_method_thin_other` is a runtime failure, not an oracle question.
+
+**A control for section 15's literal row.** Mutant M4 (`fable_lit_mut_04`)
+makes `l2_num` accept a leading zero as decimal again.
+`entry_array_leading_zero` goes red and `entry_array` stays green. The literal
+is still refused under the mutant, by the `size_t` representability check
+(`5:8: literal not representable as size_t`), so the row witnesses the located
+message; a decimal reading of `08` is closed in two places. The live file was
+restored and its hash re-verified.
+
+<a id="full-07"></a>
+## 19. Full gate after section 18
+
+`fable_full_07` completes **RED 43/1426**. Translator, walker and driver are
+the bytes of section 17 (staged translator blob
+`37a45a8f3d8dc8f8270144b6e0ea4db4208cf18b`); harness SHA256
+`A0472D5C50ACE10713D12011F50D157C0D41E3EC54EB1C5661CF9602F5D1F107`. Every
+changed fixture was hashed before the run, and the staged copy and the
+committed file have that hash.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_06` (RED 54/1426) | 9 | 0 | 3 renamed: 2 OK, 1 open positive | 3 (their old names, all red) |
+
+Three retained failures changed their message, by design: `entry_parse_min`,
+`unit_arr_path_read` and `unit_array_write_general_root_real_field` were
+`refused, but not with …` and are now positives the translator refuses. The
+kernel and L3 gates were not rerun: no kernel source changed.
+
+The 43 red rows by mechanism:
+
+| Mechanism | Rows |
+| --- | --- |
+| held-call boundary, the rest | five `unit_copy_call_*` open positives, `unit_held_nullary_source_field` |
+| letter Array-of-Array element contract | `entry_arg_len`, `entry_index`, `entry_strcmp`, `entry_parse_min`, `unit_charpp_return`, `unit_l2_puts_library`; the three `unit_arr_path_*_refused` rows |
+| head role of a dynamically supplied name | `unit_free_conv`, `unit_walk_free_conv`, `unit_colon_hidden_update`, `unit_own_dirty_rhs`, `unit_arg_addr_dyn_types`, `unit_asgn_fallback` |
+| C99 common arithmetic (K08) | `unit_callable_forward`, `unit_callable_nullary_forms`, `unit_callable_returning_two_contracts`, `unit_callable_sub_transport` |
+| nested admission maps | `unit_d112_nested_return`, `unit_d113_nested_expr`, `unit_s7_nested_shape` |
+| capture of a merge-result local | `unit_capture_struct_own`, `unit_capture_struct_call_arg`, `unit_capture_struct_whole` |
+| reception into a model | `unit_receive_letter_model`, `unit_send_ref_method`, `unit_send_ref_driver_tap` |
+| Structure value in a return or argument | `unit_s7_ret_field`, `unit_s7_ret_deep`, `unit_s7_arg_deep` |
+| indexed field path with a merge-result root | `unit_arr_path_read`, `unit_array_write_general_root_real_field` |
+| single rows | `unit_t7_convert`, `unit_named_actual_whole`, `unit_eternal_shape`, `unit_bind_method_thin_other` |
+
+No stale negative expectation is left among them except the three letter rows
+and `unit_asgn_fallback` named above.

@@ -1,0 +1,15 @@
+# `nextMessage` is not a language word: the mail receiver is `receiveMessage`
+# (LMX_blog/2026-09-24.md). An unknown head keeps the construction of a named
+# Structure with its written contents and executes nothing, so `nextMessage: m`
+# defines one in test; the free name m inside it is never read. Entry 7.
+fn: test () int
+    nextMessage: m
+    return: 0
+end: test
+
+int: r test()
+int: result 7
+if: r != 0
+    result: 81
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

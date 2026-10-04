@@ -13,9 +13,12 @@ predef: "mixa_manager/mixa_shell_native.lm1"
 predef: "mixa_manager/mixa_shell_start.lm1"
 include: "<stdio.h>" "<string.h>" "<stdlib.h>"
 
-# Host sketch retired. Canonical entry is mixa_shell_start / MixaShellOwner.
-# This witness keeps the shell-entry label for old runners and calls the
-# same letter the product uses. Full coverage is mixa_shell_start_selftest.
+# One entry, Mixa\start. The letter lists a directory and moves the
+# snapshot onto Shell. A missing path is note_refused and leaves that
+# snapshot. The headless backend is Shell's native word. This unit
+# pastes each body once. It does not call mixa_app_main.
+
+int: g_alloc_live
 
 fn: mixa_backend_ctors_count () size_t
 return: 1U
@@ -25,8 +28,6 @@ fn: mixa_backend_ctors_get (size_t: i) const: @(MixaBackendVTable)
         return: mixa_backend_headless_table()
     ---
 return: 0
-
-int: g_alloc_live
 
 fn: t_alloc (size_t: n) @: void
     @: void p
@@ -44,6 +45,19 @@ sub: t_free (@: void p)
     c.free(p)
 end: t_free
 
+fn: t_has (@: MixaFmEntry rows; size_t: count; const: @(char name)) int
+    size_t: i
+    i: 0U
+    while: i < count
+        if: (rows + i)\name != 0
+            if: c.strcmp((rows + i)\name, name) = 0
+                return: 1
+            ---
+        ---
+        i: i + 1U
+    ---
+return: 0
+
 fn: main (int: argc; @: @(char) argv) int
     []: char base 520
     []: char root 1040
@@ -52,9 +66,15 @@ fn: main (int: argc; @: @(char) argv) int
     []: (@: void) fh 1
     @: MixaCellMetrics metrics
     @: MixaShellOwner shell
-    @: MixaFmAllocVTable av
     MixaFm: fm
+    @: MixaFmAllocVTable av
     const: @(MixaBackendVTable vt)
+    const: @(MixaBackendVTable saved)
+    @: MixaFmEntry rows
+    const: @(char dir_before)
+    []: size_t count_slot 1
+    const: @(MixaBackendTableRef list)
+    size_t: count
     int: events
     int: checks
     int: failures
@@ -66,7 +86,7 @@ fn: main (int: argc; @: @(char) argv) int
         c.snprintf(base, 520U, "%s", argv[1])
     ---
     if: argc < 2
-        c.snprintf(base, 520U, "build/mixa/tmp_shell_entry")
+        c.snprintf(base, 520U, "build/mixa/tmp_shell_start")
     ---
     c.snprintf(cmd, 2400U, "cmd /c rmdir /s /q \"%s\" 2>nul & mkdir \"%s\" 2>nul", base, base)
     c.system(cmd)
@@ -91,39 +111,72 @@ fn: main (int: argc; @: @(char) argv) int
     av: (cast: (@: MixaFmAllocVTable) c.calloc(1U, c.sizeof(c.MixaFmAllocVTable)))
     av\alloc: t_alloc
     av\free: t_free
-    c.memset(@ fm, 0, c.sizeof(c.MixaFm))
+    rc: mixa_shell_start(0, @ fm, vt, root, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc = 0
+        failures: failures + 1
+        c.printf("shell-start: null owner was accepted\n")
+    ---
     rc: mixa_fm_init(@ fm, root, 0, av)
     checks: checks + 1
     if: rc != MIXA_FM_OK
         failures: failures + 1
-        c.printf("shell-entry: init %d\n", rc)
+        c.printf("shell-start: init %d\n", rc)
+    ---
+    rc: mixa_shell_start(shell, @ fm, 0, root, 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc = 0 || shell\refused != 0 || shell\rows != 0 || shell\native != 0
+        failures: failures + 1
+        c.printf("shell-start: missing word sent the letter\n")
     ---
     rc: mixa_shell_start(shell, @ fm, vt, root, 4U, 4U, metrics)
+    rows: (cast: (@: MixaFmEntry) shell\rows)
+    count: shell\row_count
     checks: checks + 1
-    if: rc != 0 || shell\shown != 1 || shell\rows = 0 || shell\native != vt
+    if: rc != 0 || shell\shown != 1 || shell\refused != 0 || rows = 0 || count = 0U || mixa_fm_count(@ fm) != 0U || t_has(rows, count, "a.txt") = 0
         failures: failures + 1
-        c.printf("shell-entry: start rc %d shown %d\n", rc, shell\shown)
+        c.printf("shell-start: list did not move the snapshot rc %d\n", rc)
     ---
+    count_slot[0]: 0U
+    list: mixa_backend_tables(count_slot)
+    saved: 0
+    if: shell\native = vt && list != 0 && list[0] = vt
+        saved: shell\native
+        shell\native: 0
+    ---
+    checks: checks + 1
+    if: shell\surface = 0 || saved = 0 || shell\native != 0 || list[0] != saved
+        failures: failures + 1
+        c.printf("shell-start: native is not the owner's word\n")
+    ---
+    shell\native: saved
     events: -1
     rc: mixa_shell_turn(shell\pump, shell\surface, @ events)
     checks: checks + 1
     if: rc != 0 || events != 0
         failures: failures + 1
-        c.printf("shell-entry: turn rc %d events %d\n", rc, events)
+        c.printf("shell-start: turn rc %d events %d\n", rc, events)
+    ---
+    dir_before: mixa_fm_cur_dir(@ fm)
+    rc: mixa_shell_start(shell, @ fm, vt, "Z:\\no\\such\\mixa_shell_start", 4U, 4U, metrics)
+    checks: checks + 1
+    if: rc = 0 || shell\refused != 1 || shell\shown != 1 || shell\rows != (cast: (@: void) rows) || shell\row_count != count || mixa_fm_cur_dir(@ fm) != dir_before
+        failures: failures + 1
+        c.printf("shell-start: refused letter replaced the snapshot rc %d\n", rc)
     ---
     mixa_shell_drop_rows(shell, @ fm)
     mixa_shell_native_close(shell)
     mixa_fm_release(@ fm)
     checks: checks + 1
-    if: shell\native != 0 || shell\surface != 0 || g_alloc_live != 0
+    if: g_alloc_live != 0 || shell\native != 0
         failures: failures + 1
-        c.printf("shell-entry: close left native/surface/live=%d\n", g_alloc_live)
+        c.printf("shell-start: %d allocations still live\n", g_alloc_live)
     ---
     c.free(shell)
     c.free(av)
     c.free(metrics)
-    c.printf("shell-entry: %d checks, %d failures\n", checks, failures)
-    if: failures != 0
+    c.printf("shell-start: %d checks, %d failures\n", checks, failures)
+    if: checks != 8 || failures != 0
         return: 1
     ---
 return: 0

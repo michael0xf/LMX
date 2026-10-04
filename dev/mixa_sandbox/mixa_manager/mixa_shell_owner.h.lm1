@@ -1,0 +1,20 @@
+predef: "mixa_manager/mixa_pump.h.lm1"
+
+# Shell owner. native is a word of this Structure: the Win32 backend
+# or the headless backend. It is not a slot of the seam registry and
+# not a mail method. mixa_backend_table stays the registry of that seam.
+
+struct: MixaShellOwner
+    const: @: MixaBackendVTable native
+    @: MixaBackend surface
+    @: MixaPump pump
+    @: void rows
+    size_t: row_count
+    int: shown
+    int: refused
+end: MixaShellOwner
+
+prototype:
+    fn: mixa_shell_native_bind (@: MixaShellOwner shell; const: @(MixaBackendVTable native); size_t: cols; size_t: rows; @: MixaCellMetrics metrics) int
+    sub: mixa_shell_native_close (@: MixaShellOwner shell)
+end: prototype

@@ -1,0 +1,21 @@
+# `receiveMessage: m MainLetter` at the root, which the interpreter runs in
+# both modes: the take, then the admission of the whole letter to the
+# synthesized letter model {sender; payload: MainLetter} that types m. The
+# sender is the host and the payload's mainArgs is read through the letter.
+# The exit is posted to that sender explicitly. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+receiveMessage: m MainLetter
+if: m = 0
+    sendMessage: exit(exit_code: 90; stdout: ""; stderr: "")
+    return
+if: m\sender = 0
+    sendMessage: exit(exit_code: 91; stdout: ""; stderr: "")
+    return
+if: length(m\payload\mainArgs) = 0
+    sendMessage: exit(exit_code: 92; stdout: ""; stderr: "")
+    return
+sendMessage: m\sender exit(exit_code: 7; stdout: ""; stderr: "")
+return

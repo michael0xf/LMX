@@ -2126,7 +2126,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_next_message_one_name.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'receiveMessage: unknown payload model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_receive_letter_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0'); Absent = @(); Debt = @() },
+        Args = @('0'); NativeMethods = @(0); Absent = @(); Debt = @() },
+    # The same reception run by the interpreter: the method walked, and at the root, where the
+    # letter's sender is also the explicit addressee of the exit.
+    [pscustomobject]@{ Name = 'unit_receive_letter_model_walk.lm2'; Source = 'unit_receive_letter_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_receive_letter_model_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` inside a method body --
     # explicit addressee (m\sender) instead of the implicit lmx_thread_parent(t). R0's own
     # mainArgs letter's sender is the host, the same destination the implicit form already
@@ -2181,6 +2187,10 @@ $fixtures = @(
         Args = @('0', 'ref', '1');
         Says = @('reply-to-sender 1', 'reply-to-parent 1');
         Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_send_ref_driver_tap_walk.lm2'; Source = 'unit_send_ref_driver_tap.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 0; Needle = '';
+        Args = @('0', 'ref', '1');
+        Says = @('reply-to-sender 1', 'reply-to-parent 1');
+        WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 1: `nextMessage` is no longer a language
     # word (renamed to `receiveMessage`) -- `nextMessage: m` is now an ordinary colon-assignment
     # to an undeclared name, refused like any other (measured: not "unknown method" -- the shape
@@ -3104,6 +3114,9 @@ $fixtures = @(
     # Triage 2026-10-03: a captured Structure used whole is a required positive; the pinned
     # refusal was an implementation limit, not a rule. OPEN positive (capture closure).
     [pscustomobject]@{ Name = 'unit_capture_struct_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # A captured copy of two operands has no one named Structure for its type. OPEN positive
+    # (capture closure: a capture typed by a merge result's own schema).
+    [pscustomobject]@{ Name = 'unit_capture_struct_merge_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # REVIEW 9256c3b: one cause, one line -- a model's refusal said by the scan is not followed by
     # "unsupported body" (the at-most-one-line check above holds every refusal row to it).
     # D-108: an actual admitted to a Structure-typed formal is checked as any actual is (l2_check_call) --

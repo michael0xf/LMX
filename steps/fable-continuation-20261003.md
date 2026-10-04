@@ -842,3 +842,75 @@ walker and driver unchanged.
 | `fable_full_01` (RED 126/1395, baseline) | 90 | 0 | | |
 
 The kernel and L3 gates were not rerun: no kernel source changed.
+
+<a id="receive-model"></a>
+## 23. Reception into a letter model, `receiveMessage: m T`
+
+**The form.** The two-name receive types `m` with the synthesized letter
+model `{sender; payload: T}` and `m` holds the whole letter. The native
+emission takes the next letter and admits the whole letter to that model.
+The graph producer (`l2_rw_take`) built the one-name form only, where a
+pre-typed `m` receives the letter's payload, and refused the two-name form
+as `an admission to a Structure type`.
+
+**The producer.** The same two steps as natively:
+`PUT(m, admit(take, letter model))`. The kernel already has both admissions,
+of a whole value (`lmx_walk_admit`) and of a letter's payload
+(`lmx_walk_admit_letter`); the form selects one. No kernel change.
+
+**A defect found by the first interpreter run**
+([RECEIVE-MODEL-ROOT-STEP-DROPPED](defects.md#receive-model-root-step-dropped),
+fixed in the sandbox). At the root the statement was absent from the retained
+graph. The synthesized model is a unit-level Structure whose recorded place
+is the receive statement that first names it; the root's statement list took
+that statement for the model's definition, stored the model's instance at the
+statement's source child and built no step. The native root ran correctly;
+the interpreter, run over the same root with its native word cleared, read an
+`m` nothing had assigned. Two smaller probes passed by accident (`m = 0` and
+`m\sender = 0` read the Structure that happened to stand at that child); the
+read of `m\payload\mainArgs` failed with `walk error: INVALID`. A synthesized
+letter model is not a source definition (`l2_ns_synthesized`): the statement
+keeps its own child and step, and the model's instance stands in the unit's
+tail, as it already did for a receive written in a method.
+
+**Verification.**
+
+- Recovered: `unit_receive_letter_model`, `unit_send_ref_method`,
+  `unit_send_ref_driver_tap` (natively).
+- The interpreter runs the new step: `unit_receive_letter_model_walk`
+  (`WalkedMethods` 0), `unit_send_ref_driver_tap_walk` (the reply reaches the
+  sender, `reply-to-sender 1`), and the new `unit_receive_letter_model_root`,
+  where the root takes the letter, reads `m\sender` and
+  `m\payload\mainArgs`, and posts its exit to the sender explicitly
+  (`sendMessage: m\sender exit(...)`, entry 7). That row is the first
+  positive of an explicit addressee at the root; the harness comment that
+  none was possible is now out of date and is kept as history.
+- Translator mutant `fable_recv_mut_payload` (the two-name form admits the
+  payload, as the one-name form does): the three interpreter rows red, exit
+  1; the native rows stay green, they do not run the graph. Mutant
+  `fable_recv_mut_source` (a synthesized model is a source definition again):
+  the root row red, `walk error: INVALID`, exit 3; the method rows stay
+  green, their statement was never a root child. The live file was restored
+  and its hash re-verified after each.
+- Focused `fable_recv_02`: 26 targets with every receive, send-reference and
+  letter row; the two open letter-contract rows red, nothing else.
+
+**Also in this slice.** `unit_capture_struct_merge_two` is the required
+positive promised in [section 21](#capture-copy): a captured copy of two
+operands, refused at the read (`a field path`), red by design.
+
+<a id="full-09"></a>
+## 24. Full gate after section 23
+
+`fable_full_09` completes **RED 37/1432** on translator SHA256
+`EBCBFF5821200A5F8B417A2CD70EEE562754A5FFF1524682CF42EA5A96A4E781`
+(staged Git blob `397083c9a74a4cef24ed0fb2e102410e716e9405`), harness
+`07DFB656A269C6C0534BF8C11916D67AF48BDABD1B9553F1B9C389EB4A2B3481`,
+walker and driver unchanged.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_08` (RED 39/1428) | 3 | 0 | 4: 3 OK, 1 open positive red by design | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 93 | 0 | | |
+
+The kernel and L3 gates were not rerun: no kernel source changed.

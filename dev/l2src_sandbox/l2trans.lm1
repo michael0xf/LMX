@@ -1332,6 +1332,7 @@ prototype:
     fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_row (int: res; int: slot) int
+    fn: l2_ns_synthesized (int: ns) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
     fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
@@ -15774,6 +15775,17 @@ return: -1
 
 # Existing producers are matched by source identity, never by another
 # resolution/name pass after the lexical collector has changed its state.
+# Is ns a synthesized letter model (l2_letter_ns_for)? Its `at` is the receive
+# statement that first named it: a place for diagnostics, not a definition.
+fn: l2_ns_synthesized (int: ns) int
+    int: k 0
+    while: k < l2_letter_model_n
+        if: l2_letter_model_ns[k] = ns
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
 fn: l2_source_unit_declaration (const: @(LmP0Node node)) int
     int: i 0
     while: i < l2_m_n
@@ -15782,7 +15794,7 @@ fn: l2_source_unit_declaration (const: @(LmP0Node node)) int
         i: i + 1
     i: 0
     while: i < l2_ns_n
-        if: l2_ns_at[i] = node && l2_ns_parent[i] < 0 && l2_ns_local[i] < 0
+        if: l2_ns_at[i] = node && l2_ns_parent[i] < 0 && l2_ns_local[i] < 0 && l2_ns_synthesized(i) = 0
             return: 1
         i: i + 1
     i: 0
@@ -15816,7 +15828,7 @@ fn: l2_ns_tail_rank (int: ns) int
     int: i 0
     int: count 0
     while: i < ns
-        if: l2_ns_parent[i] < 0 && l2_ns_local[i] < 0 && l2_ns_eternal[i] < 0 && l2_source_unit_slot(l2_ns_at[i]) < 0
+        if: l2_ns_parent[i] < 0 && l2_ns_local[i] < 0 && l2_ns_eternal[i] < 0 && (l2_ns_synthesized(i) != 0 || l2_source_unit_slot(l2_ns_at[i]) < 0)
             count: count + 1
         i: i + 1
 return: count
@@ -30908,10 +30920,6 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     int: inputs
     if: l2_receive_msg_shape(stmt, @ cname, @ cmodel) != 0 || cname = 0
         return: l2_rw_refuse(stmt, "this receiveMessage")
-    # `receiveMessage: m Model` (-172 c2, the two-name form) at the walked root is the receive-if
-    # admission (-178 c3), not this take.
-    if: cmodel != 0
-        return: l2_rw_refuse(stmt, "an admission to a Structure type")
     if: l2_receiver_output_place(stmt, l2_rw_mi, @ receiver_place) != 0
         return: l2_rw_refuse(stmt, "an unresolved receiver output place")
     oi: receiver_place.index
@@ -30925,11 +30933,12 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     holder: \out
     # m of a declared Structure type T takes the NEXT letter and admits it to T -- its payload, the
     # user's model describes the payload -- a refusal being the implicit throw `implements`
-    # (-178 commit 3; the pre-typed form, not the selective `receiveMessage: m T`):
-    # PUT(m, admit_letter(take, T)).
+    # (-178 commit 3): PUT(m, admit_letter(take, T)). The two-name form `receiveMessage: m T`
+    # types m with the synthesized letter model: m holds the whole letter, admitted to that
+    # model as it is (-172 c2), PUT(m, admit(take, letter model)).
     ni: l2_own_nsty_get(oi)
     if: ni >= 0
-        if: l2_rw_admit(holder, ni, 1, l2_own_ty[oi], @ adm) != 0 || l2_rw_put(holder, slotv, adm) != 0
+        if: l2_rw_admit(holder, ni, (cast: (int) (cmodel = 0)), l2_own_ty[oi], @ adm) != 0 || l2_rw_put(holder, slotv, adm) != 0
             return: 1
         holder: adm
         slotv: 3
@@ -36848,7 +36857,9 @@ fn: l2_ns_unit_slot (int: ns) int
         return: 0 - 1
     if: l2_ns_eternal[ns] >= 0
         return: l2_ebr_unit_slot(l2_ns_eternal[ns])
-    slot: l2_source_unit_slot(l2_ns_at[ns])
+    slot: -1
+    if: l2_ns_synthesized(ns) = 0
+        slot: l2_source_unit_slot(l2_ns_at[ns])
     if: slot >= 0
         return: slot
 return: l2_ns_base + l2_ns_tail_rank(ns)

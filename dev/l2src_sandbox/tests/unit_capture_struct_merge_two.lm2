@@ -1,0 +1,25 @@
+# Item 738: the host declares `loc: merge A B`, a copy of two operands, writes
+# `loc\value` and returns a nested method that reads it. The copy has no one
+# named Structure for its type; its schema is the merge result's own. The
+# reader of 40 gives 42. Entry 7.
+A:
+    int: value 0
+end: A
+B:
+    int: other 5
+end: B
+
+fn: makeReader (int: n) fn: (int: x) int
+    loc: merge A B
+    loc\value: n
+    fn: read (int: x) int
+        return: loc\value + x
+    return: read
+
+r40: makeReader 40
+int: a (r40: 2)
+int: ok 7
+if: a != 42
+    ok: 1
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

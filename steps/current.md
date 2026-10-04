@@ -76,6 +76,11 @@ Fable принял единственный writer/build-слот по [to_fable
   (запись вызываемого видна в самом листе), у каждой обходимый двойник, три мутанта транслятора.
   Гейт `fable_full_10` RED34/1436 — 3 FAIL→OK, ни одного OK→FAIL
   ([§25–§26 журнала](fable-continuation-20261003.md#structure-path-value)).
+- Reference-поле результата merge: путь через него читается и пишется, запись в него допускает
+  значение к модели поля. Закрыты два дефекта, второй найден пробой этого среза
+  ([MERGE-RESULT-REFERENCE-STORE-UNCHECKED](defects.md#merge-result-reference-store-unchecked)).
+  Гейт `fable_full_11` RED34/1440 — ни одного OK→FAIL
+  ([§27–§28 журнала](fable-continuation-20261003.md#merge-result-reference-field)).
 - Дальше: контракт использования принимающего места (решение -01), вложенные карты допуска и
   остальные группы.
 

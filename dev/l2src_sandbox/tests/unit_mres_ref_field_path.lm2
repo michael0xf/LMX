@@ -1,0 +1,43 @@
+# A reference field `@: Model q` of a merge result leads into its pointee, as
+# the same field of a declared Structure does. In a method: a copy of Holder,
+# the reference stored, read and written through; the write is seen in the
+# Structure the reference holds and not in Model. At the root: the same
+# through a copy of a copy, whose slot keeps the declaration that contributed
+# it. Entry 7.
+Model: (size_t: value 1U)
+Holder:
+    size_t: tag 3U
+    @: Model q
+end: Holder
+
+fn: check () int
+    h: merge Holder
+    mo: merge Model
+    size_t: v
+    mo\value: 7U
+    h\q: mo
+    v: h\q\value
+    if: v != 7U
+        return: 81
+    h\q\value: 9U
+    if: mo\value != 9U || Model\value != 1U || h\tag != 3U
+        return: 82
+    return: 0
+end: check
+
+g: merge Holder
+k: merge g
+mo: merge Model
+int: ok 7
+int: r check()
+if: r != 0
+    ok: r
+mo\value: 5U
+k\q: mo
+if: k\q\value != 5U
+    ok: 83
+k\q\value: 6U
+if: mo\value != 6U
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

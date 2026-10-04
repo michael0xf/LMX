@@ -991,3 +991,135 @@ walker and driver unchanged.
 | `fable_full_01` (RED 126/1395, baseline) | 96 | 0 | | |
 
 The kernel and L3 gates were not rerun: no kernel source changed.
+
+<a id="merge-result-reference-field"></a>
+## 27. A reference field of a merge result
+
+Two defects of one cause. The path walkers follow a reference field
+`@: T q` into its pointee by asking the declared Structure for the field's
+type word; for a slot of a merge result they asked nothing.
+
+- **Read** ([MERGE-RESULT-REFERENCE-FIELD-PATH](defects.md#merge-result-reference-field-path)):
+  `h\q\value` with `h: merge Holder` was refused, `unknown field path
+  segment`.
+- **Store** ([MERGE-RESULT-REFERENCE-STORE-UNCHECKED](defects.md#merge-result-reference-store-unchecked),
+  found by a probe of this slice): `h\q: o` stored an `o` of another shape
+  into `@: Model q` with no admission and the program ran on; the same store
+  through the declared Structure, `Holder\q: o`, is refused by the method's
+  implicit throw `implements`.
+
+**Mechanism.** `l2_mrs_ref_pointee(res, slot)` reads the pointee from the
+field row that contributed the slot (section 20's `l2_mrs_row`). The three
+walkers use it where the container is a merge result: the contract walk
+(`l2_path_resolve_contract`, a step and the leaf's receiving model), the
+native walk (`l2_emit_path_to`) and the graph walk
+(`l2_rw_path_resolve_sized`).
+
+**Verification.**
+
+- New `unit_mres_ref_field_path` and its walked twin: in a method the
+  reference is stored, read and written through, the write is seen in the
+  Structure the reference holds and not in Model; at the root the same
+  through a copy of a copy.
+- New `unit_mres_ref_field_store_refused` and its walked twin: the store of
+  another shape stops R0 with the implicit throw (`Fails 1`, `Stopped 1`,
+  `Thrown 2`), natively and in the interpreter. On the committed translator
+  the same program ran to its exit 7 (probe).
+- Translator mutant `fable_mref_mut_nopointee` (a merge result's reference
+  slot names no pointee): the two path rows do not translate and the two
+  store rows run on, all four red. Mutant `fable_mref_mut_noleaf` (the leaf
+  model of such a store is unknown again): the two store rows red, the path
+  rows green. `unit_ref_rebind_same` and `unit_ref_rebind_other_refused`
+  unchanged under both. The live file was restored and its hash re-verified.
+- Focused `fable_mref_01`: 77 targets with every merge, reference and path
+  row; the three letter rows red, nothing else.
+
+<a id="full-11"></a>
+## 28. Full gate after section 27
+
+`fable_full_11` completes **RED 34/1440** on translator SHA256
+`3876FDD16BCC02C7097378773B7C9E2EF9E9307078922BC56CE4FFF49F88D634`
+(staged Git blob `d8ac3c131071f3509f1913084aee2bf989cdc2c4`), harness
+`3B44DE1A907D379A0C009A31A97075D6096609D89422CF5B801C72DA1E57BE45`,
+walker and driver unchanged.
+
+| Against | FAIL→OK | OK→FAIL | Added | Removed |
+| --- | --- | --- | --- | --- |
+| `fable_full_10` (RED 34/1436) | 0 | 0 | 4, all OK | 0 |
+| `fable_full_01` (RED 126/1395, baseline) | 96 | 0 | | |
+
+The kernel and L3 gates were not rerun: no kernel source changed.
+
+<a id="receiving-use-mechanism"></a>
+## 29. Resolved boundary: the mechanism of the receiving-use contract (Codex, FABLE-CODEX-20261004-01)
+
+[Section 3](#receiving-use-contract) fixed the rule. Before implementing it I
+asked about the mechanism and proposed to mark, in the correspondence map, a
+required field that the candidate lacks and that this receiving instruction
+does not use, with a second "not carried" cell value. Codex answered without
+escalating to the author. Nothing is implemented yet; this section is the
+boundary the implementation must keep.
+
+**The proposal is not approved as the whole mechanism.** Two gaps:
+
+- An unused field that is present is not compared either. A candidate whose
+  ignored field exists with another kind is admissible for a Consumer that
+  reads only another field. A marker for missing unused fields leaves that
+  case to the full interface walk; turning every unused mapping into a marker
+  loses physical positions that exist.
+- "Unused by this instruction" must not become a permission attached to the
+  cached pair of value and model. The walk takes cached views, nested ones
+  included, and the unselected path of the instruction checks a cached
+  receiver with no new pending map: an old waiver could skip a newly required
+  field, and an erased present field could conflict with a later complete
+  map of the same unchanged value.
+
+**Direction.** The shared walk receives both the correspondence's model as
+its index space and the current receiving-use projection. The projection may
+borrow the instruction's or the compiler's use data. No Structure made per
+view, no base field, no name registry, no second graph. A packed map
+annotation stays possible only if it shows all of: real physical positions
+kept; unused expressed for present and for missing fields; only the current
+instruction's coverage consulted; absence normalized for every read, store
+and address accessor; ORDINAL and LAST kept apart; nested paths with their
+own child index spaces.
+
+**Coverage facts** (the translator's, for a bounded first slice):
+
+- proven uses, empty, unknown. Unknown is never empty; a later Consumer
+  applies its own requirements.
+- The resolved place and its source occurrences are analysed, not matches of
+  a name: shadows, repeated declarations, explicit occurrence paths and the
+  exact receiving statement. A rebinding in a loop cannot ignore a read
+  written earlier in the body that the next iteration reaches. Visible
+  alternative branches are included. No analysis of the algorithm or of
+  predicted values.
+- A comparison of the reference's identity consumes the reference and none of
+  its fields: proven root consumption with no field requirement, by the
+  general comparison contract, not by a special case for one spelling.
+- Prefixes keep the actual nested leaf consumption and the selector's
+  identity; `b\x` as a held reference and `b\x()` as an invocation do not
+  require the same of a callable. A flat bitmap of root fields is not the
+  arbitrary-depth mechanism.
+- A pass as an actual or a return whose downstream receiving contract is not
+  composed yet may be unknown in the bounded implementation. That is a
+  documented conservative limit, not a rule of the language and not a new
+  expected negative. Unknown origin or layout and unknown Consumer coverage
+  are different facts.
+
+**Timing.** The executed receiving operation keeps conversion, then the
+reached admission, then the store: the candidate is evaluated once with its
+effects, the current Consumer's used requirements are checked, and a genuine
+failure is the existing implicit throw `implements` before the destination or
+its dirty state changes. The failure does not move to translation because
+formal call sites are checked statically; the two are different observations.
+
+**Required verification**, natively and actually walked: a known-empty or
+root-identity thin positive observing the exact candidate; a missing unused
+field accepted; a present incompatible unused field accepted; a missing used
+field throwing at the reached binding with the candidate's side effect seen
+once and the previous destination kept; one candidate admitted thin, then
+received by a Consumer that requires the omitted field and refused; one
+candidate with a present compatible field admitted thin, then consumed more
+fully with no spurious map conflict; a nested partial path with distinct bare
+and `[N]` selectors; unknown coverage never promoted to empty.

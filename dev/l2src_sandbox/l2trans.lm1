@@ -1332,6 +1332,7 @@ prototype:
     fn: l2_ns_slot_named (int: ni; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_named (int: res; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
     fn: l2_mrs_slot_row (int: res; int: slot) int
+    fn: l2_mrs_ref_pointee (int: res; int: slot) int
     fn: l2_ns_synthesized (int: ns) int
     fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; @: int out_oi; @: int out_root; @: int out_fi) int
     fn: l2_path_in_eternal (const: @(char pd); size_t: pn) int
@@ -21203,6 +21204,14 @@ fn: l2_mrs_slot_row (int: res; int: slot) int
     ---
 return: -1
 
+# The named Structure a reference field `@: T q` at slot `slot` of merge result res points
+# at -- the pointee the contributing declaration names -- or -1.
+fn: l2_mrs_ref_pointee (int: res; int: slot) int
+    int: row l2_mrs_slot_row(res, slot)
+    if: row >= 0 && l2_nsf_kind[row] = 10 && l2_nsf_name[row] != 0
+        return: l2_ns_find(l2_nsf_name[row])
+return: -1
+
 # Occurrence occ (0 = the first) of field `name` of bound merge result res: its slot, with the
 # field kind and entry; -1 when there is no such occurrence.  Only the model's own repeats
 # are occurrences past the first.
@@ -21818,10 +21827,13 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
         ---
         bh: nb
         bm: 0 - 1
-        # Through a reference field `@: T q` (D-76): on into its pointee T.
+        # Through a reference field `@: T q` (D-76): on into its pointee T. A merge result's
+        # slot has the pointee its contributing declaration names.
         if: i + 1 < segs && kind = 10 && res < 0
             ent: l2_field_pointee(ni, field_own, pd, off, len)
-        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || res >= 0 || ent < 0)
+        if: i + 1 < segs && kind = 10 && res >= 0
+            ent: l2_mrs_ref_pointee(res, slot)
+        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || ent < 0)
             return: 0 - 1
         if: i + 1 < segs
             ni: ent
@@ -21845,6 +21857,8 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
         \out_mi: ent
         if: out_model != 0
             \out_model: l2_field_pointee(ni, field_own, pd, off, len)
+        if: out_model != 0 && res >= 0
+            \out_model: l2_mrs_ref_pointee(res, slot)
 return: kind
 
 # A resolved named root denotes this activation's occurrence when it names
@@ -22053,12 +22067,14 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
         ---
         if: i + 1 < segs && kind = 10 && res < 0
             ent: l2_field_pointee(ni, field_own, pd, off, len)
+        if: i + 1 < segs && kind = 10 && res >= 0
+            ent: l2_mrs_ref_pointee(res, slot)
         view_key: -1
         if: i + 1 < segs && kind = 10 && field_own >= 0
             view_mi: l2_own_mi[field_own]
             view_key: l2_d105_own_key(field_own)
         ---
-        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || res >= 0 || ent < 0)
+        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || ent < 0)
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
         # Through a reference field (D-76): its pointer cell holds the pointee Structure.
         if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
@@ -29697,6 +29713,8 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         model: ent
         if: last = 0 && kind = 10
             model: l2_field_pointee(ni, field_own, t\data, b, i - b)
+        if: last = 0 && kind = 10 && res >= 0
+            model: l2_mrs_ref_pointee(res, slot)
         # Item 738: the same words as the capture's own check (l2_cap_add).
         if: slot < 0 && path[0] = 7
             if: say != 0

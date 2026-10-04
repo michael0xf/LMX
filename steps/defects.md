@@ -2051,7 +2051,7 @@ namespace (место — child1 существующего операнда OWN
 Свидетеля в harness пока нет: миграции этого среза намеренно обошли форму вложенными определениями.
 
 <a id="merge-result-reference-field-path"></a>
-### MERGE-RESULT-REFERENCE-FIELD-PATH — 2026-10-03, fable, OPEN
+### MERGE-RESULT-REFERENCE-FIELD-PATH — 2026-10-03, fable, FIXED в sandbox (не выпущено)
 
 Чтение пути через reference-поле результата merge в его pointee не разрешается:
 
@@ -2070,7 +2070,35 @@ return: 7
 `unknown field path segment`, `atom=h`. Запись `h\q: mo` через тот же путь транслируется; тот же
 трёхсегментный путь от локального определения `h: (@: Model q)` или от unit-уровня `Holder` читается.
 Пробел — проекция схемы результата merge через reference-поле (потребители, считающие каждую схему
-именованной моделью; словарь v2 §10). Свидетеля в harness пока нет.
+именованной моделью; словарь v2 §10). Исправлено: слот результата merge хранит строку поля, из
+которого пришёл, и pointee reference-поля берётся из неё (`l2_mrs_ref_pointee`). Свидетель
+`unit_mres_ref_field_path` с обходимым двойником
+([журнал](fable-continuation-20261003.md#merge-result-reference-field)).
+
+<a id="merge-result-reference-store-unchecked"></a>
+### MERGE-RESULT-REFERENCE-STORE-UNCHECKED — 2026-10-04, fable, FIXED в sandbox (не выпущено)
+
+Запись в reference-поле результата merge не допускала значение к модели поля:
+
+```text
+Model: (size_t: value 1U)
+Other: (int: p 1; int: q 2)
+Holder:
+    @: Model q
+end: Holder
+fn: check () int
+    h: merge Holder
+    o: merge Other
+    h\q: o
+    return: 7
+end: check
+```
+
+Программа доходила до 7. Та же запись через объявленную Structure, `Holder\q: o`, отказывает
+неявным throw `implements`. Причина та же, что у чтения: модель листа пути спрашивалась у
+объявленной Structure, а для слота результата merge оставалась неизвестной, и запись шла без
+допуска. Исправлено тем же `l2_mrs_ref_pointee`. Свидетель `unit_mres_ref_field_store_refused`
+с обходимым двойником, мутант `fable_mref_mut_noleaf`.
 
 <a id="receiving-use-full-receiver"></a>
 ### RECEIVING-USE-FULL-RECEIVER — 2026-10-03, fable по ответу Codex FABLE-CODEX-20261003-01, OPEN

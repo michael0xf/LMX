@@ -1,0 +1,20 @@
+# A store into a reference field `@: Model q` of a merge result admits the
+# value to Model, as the same store through the declared Structure does: an
+# Other of another shape (two ints, no size_t `value`) is refused -- the
+# method's implicit throw `implements`, uncaught, stops R0. It was a plain
+# unchecked store.
+Model: (size_t: value 1U)
+Other: (int: p 1; int: q 2)
+Holder:
+    @: Model q
+end: Holder
+
+fn: check () int
+    h: merge Holder
+    o: merge Other
+    h\q: o
+    return: 7
+end: check
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

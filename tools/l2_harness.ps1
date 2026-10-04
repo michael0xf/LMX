@@ -6095,6 +6095,19 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_arr_path_merge_result_walk.lm2'; Source = 'unit_arr_path_merge_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2);
         Absent = @(); Debt = @() },
+    # A reference field of a merge result leads into its pointee: read and written through, in
+    # a method and at the root through a copy of a copy. Natively and with the method and the
+    # root walked.
+    [pscustomobject]@{ Name = 'unit_mres_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_mres_ref_field_path_walk.lm2'; Source = 'unit_mres_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    # A store into that reference field admits the value to the field's model: another shape
+    # is refused by the method's implicit throw `implements`. Natively and walked.
+    [pscustomobject]@{ Name = 'unit_mres_ref_field_store_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_mres_ref_field_store_refused_walk.lm2'; Source = 'unit_mres_ref_field_store_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_undeclared_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = (& $criticalLiteralMethod 'broken' 'arg' 7); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @() },
     # missing_value is a free name no caller binds: "unresolved name" at the name (l2_dyn_typed), before the

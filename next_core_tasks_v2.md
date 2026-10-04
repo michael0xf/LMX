@@ -32,9 +32,9 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_10` RED34/1436 — 96 FAIL→OK against that
+continuation bytes: `fable_full_11` RED34/1440 — 96 FAIL→OK against that
 baseline, no OK→FAIL
-([gate](steps/fable-continuation-20261003.md#full-10)). The checkpoint gate
+([gate](steps/fable-continuation-20261003.md#full-11)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -93,10 +93,16 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [ ] Receiving-use contract for explicit typed reference declarations and
   stores: Consumer-relative used paths instead of the whole model shape
   (Codex ruling FABLE-CODEX-20261003-01; norm is explicit). Migrate the two
-  false-green no-use refusal rows with the mechanism.
-- [ ] Merge-result declaration inside a named Structure body (internal error),
-  and a path read through a merge result's reference field
+  false-green no-use refusal rows with the mechanism. Mechanism boundary
+  (Codex ruling FABLE-CODEX-20261004-01): the shared walk takes the model as
+  index space and the current receiving-use projection; no waiver cached on
+  the pair; eight required witnesses
+  ([ledger](steps/fable-continuation-20261003.md#receiving-use-mechanism)).
+- [ ] Merge-result declaration inside a named Structure body (internal error)
   ([defects](steps/defects.md#merge-decl-in-named-body-internal)).
+- [x] A path through a merge result's reference field, read and store, with
+  the store admitted to the field's model
+  ([ledger](steps/fable-continuation-20261003.md#merge-result-reference-field)).
 - [ ] Nested correspondence maps across distinct nested definitions; capture of
   a merge-result local; foreign by-value call producer; address-arithmetic and
   nested-body Array producers; C99 common arithmetic (K08) for the `1U` rows.

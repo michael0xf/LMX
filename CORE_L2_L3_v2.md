@@ -503,9 +503,13 @@ Built (2026-10-05): the node's constructor copies its model's lexical tree --
 the unit's, every model being a method of the unit -- with the one traversal
 merge and Message creation share, the qualified branches retained; the node
 hangs under the copy, and its body reads the copy where no caller gives a name
-and through `node\x`. The view's models are the program's: a value a caller
-gives was admitted to the program's Structure, not to its copy. The whole tree
-is copied, not only what the body uses: the cost is step A
+and through `node\x`. The view's model operands -- the model of a path's
+crossing, of an admission, an input's witness -- are read from the program's
+unit, not from the copy: the kernel keys a record of admission by the
+requirement's address. That this is the right source of every model operand is
+not shown
+([T7-MODEL-OPERAND-SOURCE](steps/defects.md#t7-model-operand-source)). The
+whole tree is copied, not only what the body uses: the cost is step A
 ([ledger](steps/fable-continuation-20261003.md#t7-copy),
 [T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)).
 The node's interface keeps the unbound formals only, against L3 §20: an open

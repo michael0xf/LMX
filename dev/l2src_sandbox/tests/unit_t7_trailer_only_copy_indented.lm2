@@ -1,0 +1,41 @@
+# unit_t7_trailer_only_copy with r's return written in its body, indented: the same program, the same
+# values (T7-TRAILER-ONLY-MODEL-CRASH).  w's copy reads 9 before and after bump, which writes 11 after the
+# merge; make's own k is 50; the original r reads 11.  Entry 7.
+int: z0 prep()
+@: w make()
+int: c1 (plain())
+int: z1 bump()
+int: c2 (plain())
+int: o (orig())
+int: k 9
+
+fn: r () int
+    return: k
+
+fn: make () fn: () int
+    int: k 50
+    return: merge(r)
+
+fn: plain () int
+    return: w()
+end: plain
+
+fn: orig () int
+    return: r()
+end: orig
+
+fn: prep () int
+    node\k: 9
+    return: 0
+end: prep
+
+fn: bump () int
+    node\k: 11
+    return: 0
+end: bump
+
+int: ok 81
+if: c1 = 9 && c2 = 9 && o = 11
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

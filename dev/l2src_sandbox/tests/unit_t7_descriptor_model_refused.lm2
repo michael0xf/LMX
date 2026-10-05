@@ -1,0 +1,15 @@
+# A descriptor with neither an executable body nor a trailer stays without an implementation as the model of
+# a callable merge (T7-TRAILER-ONLY-MODEL-CRASH: it crashed the translator as a trailer-only model did).  Its
+# direct call is refused as not callable (unit_callable_descriptor_direct_refused); merge(test3), invoked
+# through w, has nothing to walk and is refused at the merge, not given an invented step.
+fn: test3 () int
+end: test3
+
+fn: make () fn: () int
+    return: merge(test3)
+
+@: w make()
+int: v (w())
+int: ok 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

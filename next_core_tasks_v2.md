@@ -84,15 +84,22 @@ RED40/1836 — against `opus_full_04` FAIL→OK 0, OK→FAIL 2 (the two former
 expected refusals), nine rows added, seven green.
 T7: the node of a callable merge hangs under a copy of its model's lexical
 tree, made at the merge by the copier merge and Message creation share, and
-its body reads the copy where no caller gives a name; the view's models stay
-the program's ([T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links),
+its body reads the copy where no caller gives a name; the view's model
+operands are read from the program's unit, a boundary not yet shown
+([T7-MODEL-OPERAND-SOURCE](steps/defects.md#t7-model-operand-source);
+[T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links),
 [section 77](steps/fable-continuation-20261003.md#t7-copy)). Gates on its
 bytes: kernel `opus_kernel_05` GREEN296 with 113 executed selftests, L3
 `opus_l3_05` 11 suites/four budgets, full `opus_full_07` RED40/1842 — against
 `opus_full_06` FAIL→OK 0, OK→FAIL 0, six rows added, all green. A model
-whose body is only its `return:` crashes the translator, before T7 too
-([T7-TRAILER-ONLY-MODEL-CRASH](steps/defects.md#t7-trailer-only-model-crash)):
-the next checkpoint, before A.
+whose body is only its `return:` crashed the translator, before T7 too; the
+T7 passes now walk its trailer alone, and a descriptor with neither body nor
+trailer stays without an implementation
+([T7-TRAILER-ONLY-MODEL-CRASH](steps/defects.md#t7-trailer-only-model-crash),
+[section 78](steps/fable-continuation-20261003.md#t7-trailer-only)). Gates on
+its bytes: kernel `opus_kernel_06` GREEN296 with 113 executed selftests, L3
+`opus_l3_06` 11 suites/four budgets, full `opus_full_08` RED40/1851 -- against
+`opus_full_07` FAIL→OK 0, OK→FAIL 0, nine rows added, all green.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical
@@ -353,6 +360,13 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   shared targets/cycles and native/walk parity
   ([answer](LMX_blog/q/merge-lexical-copy-and-root-placement.md),
   [T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)).
+- [ ] Show the source of every model operand in a merge's view -- a path's
+  crossing, an admission, an input's witness: the receiving declaration's
+  schema witness, a value read from the copied lexical graph, or the actual
+  candidate. A paired control with and without an earlier admission record
+  observes the physical model source and the candidate's field; a genuinely
+  dynamic requirement takes its physical source
+  ([T7-MODEL-OPERAND-SOURCE](steps/defects.md#t7-model-operand-source)).
 - [ ] The written shape of a callable merge: the translator reads
   `merge(y: k; add)` as `merge(add; y: k)`, against three rules of
   `#composition`. By Codex's fourteenth reply no author decision is needed:

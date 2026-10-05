@@ -7623,6 +7623,35 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_t7_copy_parent_walk.lm2'; Source = 'graph_shape_t7_copy_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $criticalT7CopyPost; Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # T7-TRAILER-ONLY-MODEL-CRASH: a model whose only line is its trailer `return:` has no body Structure, and the T7
+    # count and frame passes read one: the translator crashed, whether or not anything called the merge.  The node
+    # walks the trailer alone, as a merge result's steps and a walked method's do.  trailer_only_copy: make's own k is
+    # 50, the copy reads the unit's 9 before and after bump writes 11, and the original r reads 11;
+    # trailer_only_copy_indented is the same program with the return in r's body; trailer_only_never_invoked is the
+    # defect's program; trailer_only_formals has a bound and a given formal beside the free name.  A descriptor with
+    # neither a body nor a trailer stays without an implementation: merge(test3), invoked, is refused at the merge
+    # (descriptor_model_refused; its direct call is unit_callable_descriptor_direct_refused).  Natively, with the root
+    # walked and with the methods walked.  Mutants: the crash turned into a refusal -- the three trailer-only programs
+    # refused; an empty step invented where there is no trailer -- descriptor_model_refused translates and runs; the
+    # emission pass skipping a body-less model's trailer -- "a method's steps changed between the passes".
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_copy_walk.lm2'; Source = 'unit_t7_trailer_only_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_copy_indented.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_copy_indented_walk.lm2'; Source = 'unit_t7_trailer_only_copy_indented.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_never_invoked.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_never_invoked_walk.lm2'; Source = 'unit_t7_trailer_only_never_invoked.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_formals_walk.lm2'; Source = 'unit_t7_trailer_only_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_descriptor_model_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_t7_descriptor_model_refused.lm2:9:13: a callable merge needs a walkable body'; Absent = @(); Debt = @() },
     # K04 S3, step four (Codex -12, twelfth to fifteenth reply): a merge's node is built by one constructor of the
     # generated module, which the native body calls and the walked body's step calls through its primitive entry;
     # under the knob the method that returns the merge is walked (the four _walk rows above, and these).  A method
@@ -7631,7 +7660,8 @@ $fixtures = @(
     # unit's (host_body); a field named like the bound formal (host_bound_field).  The rows are written with the
     # model first and call the node with its bound formal at its default: a bounded case, not the whole of a
     # callable merge (steps/defects.md, MERGE-KEEPS-MODEL-INTERFACE).  The node's parent and the source of a name
-    # no caller gives are as before: the author's answer is awaited (steps/defects.md, T7-NODE-LEXICAL-LINKS).
+    # no caller gives: the copy of the model's lexical tree, the T7 rows above (steps/defects.md,
+    # T7-NODE-LEXICAL-LINKS).
     # Mutants, each run natively, with the root walked and with the methods walked: the native body hands 0 for
     # the bound formal -- host_body and host_bound_field red natively, green walked; the walked step hands 0 --
     # both red walked, green natively; the formal as it was received, not the value its name has at the merge --

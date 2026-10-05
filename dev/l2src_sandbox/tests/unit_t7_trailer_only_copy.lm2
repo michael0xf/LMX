@@ -1,0 +1,44 @@
+# A callable merge's model whose only line is its trailer `return:` (T7-TRAILER-ONLY-MODEL-CRASH: the
+# translator crashed on it).  r reads k, a field of the unit.  make, whose own k is 50, returns merge(r): the
+# node walks r's trailer alone and reads k in the copy of the unit made at the merge.  prep wrote 9 before
+# the merge; bump writes 11 after it.  w's copy reads 9 before and after bump; the original r, called by orig
+# after bump, reads 11.  The root calls are above the unit's declaration of k: no caller binding reaches them.
+# The same program with r's return indented is unit_t7_trailer_only_copy_indented.  Entry 7.
+int: z0 prep()
+@: w make()
+int: c1 (plain())
+int: z1 bump()
+int: c2 (plain())
+int: o (orig())
+int: k 9
+
+fn: r () int
+return: k
+
+fn: make () fn: () int
+    int: k 50
+    return: merge(r)
+
+fn: plain () int
+    return: w()
+end: plain
+
+fn: orig () int
+    return: r()
+end: orig
+
+fn: prep () int
+    node\k: 9
+    return: 0
+end: prep
+
+fn: bump () int
+    node\k: 11
+    return: 0
+end: bump
+
+int: ok 81
+if: c1 = 9 && c2 = 9 && o = 11
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

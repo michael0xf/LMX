@@ -7926,8 +7926,12 @@ model"): every model is a method of the unit.
 3. **The models are the program's.** A model operand of the view -- the model
    of an `OF` or a `PUT_OF`, of an admission, a witness of an input -- is read
    from the program's unit (`l2_nst`, `l2_rw_model_own` under
-   `l2_rw_type_base`). A model is a type: a value a caller gives was admitted to
-   the program's Structure, and its copy is no record of that admission. The
+   `l2_rw_type_base`). The kernel keys a record of admission by the
+   requirement's address: a value admitted before the merge has its record
+   against the program's Structure and none against the copy's. That this is
+   the right source of every model operand is not shown (corrected after
+   Codex's review, [section 78](#t7-trailer-only);
+   [T7-MODEL-OPERAND-SOURCE](defects.md#t7-model-operand-source)). The
    first build took the models from the copy too, and the three rows whose node
    reads a reference the caller gives (`unit_t7_reference_held`,
    `unit_t7_actual_reference`, `unit_t7_actual_typed_reference`) stopped with
@@ -7989,3 +7993,127 @@ Each is built on this step's translator and driver, in a stage of its own.
 **Next.** A: the cost of a merge, diagnosed and repaired over this copy
 ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)); then
 the remainder in the order of section 74.
+
+<a id="t7-trailer-only"></a>
+## 78. A trailer-only model of a callable merge; the source of the view's model operands (Codex's review OPUS-CODEX-20261005-01)
+
+Codex's review of section 77: "The 9/50/11 controls and physical parent
+witnesses support closure of the specific live-source/merge-site-parent defect
+in the supported unit-method route. [...] Keep T7-MODEL-ONLY-UNIT-METHOD and
+the other disclosed producer/reception limits OPEN. Do not erase those limits
+under the broad T7 FIXED label." On the crash found while probing it: "This is
+an ordinary legal source representation, not malformed input requiring
+defensive recovery. Count zero body steps when there is no body, and process
+the written trailer by the same optional-body/trailer contract as
+l2_pap_steps/l2_rw_methods_count. Count and emission must agree on the same
+source identities and ordering. Do not manufacture a body, require a trailer
+generally, rewrite the source spelling, return zero, or turn the crash into an
+"unsupported body" refusal." And: "Keep a truly descriptor-only fn with
+neither executable body nor trailer distinct: its direct invocation still
+gains no invented implementation."
+
+### What was measured
+
+A method whose only line is its trailer `return:` (`fn: r () int`, then
+`return: k` at column 0) has no body Structure: `l2_m_body[r]` is 0. As the
+model of a callable merge it crashed the translator (SIGSEGV), whether or not
+anything called the merge, on `62ef45df` and on `f6a3d277` alike. A debug
+build under gdb stops in `l2_t7_count`, at the source container it builds from
+`l2_m_body[model]\as\structure`; `l2_t7_emit_frames` builds one the same way.
+The passes that walk a merge result's steps (`l2_pap_steps`) and a method's
+own steps (`l2_rw_methods_count`) take the same method: no body, the trailer
+alone. With the return indented the program translated. A descriptor with
+neither a body nor a trailer crashed as a model too, in both its spellings
+(`fn: d () int`; `fn: test3 () int` with `end: test3`); its direct call is
+refused, "not callable".
+
+### What is built
+
+1. **The trailer alone.** The count and frame passes take a model with no body
+   Structure as the two other passes do: no source container, zero body steps,
+   the written trailer walked. Both passes decide by the one condition,
+   `l2_m_body[model]`, and the existing check of `l2_t7_steps` compares the
+   number of steps they made. No body is made, no trailer is required, the
+   source is not respelled.
+2. **A descriptor stays without an implementation.** With neither a body nor a
+   trailer the model makes no step, and the merge is refused where it stands,
+   "a callable merge needs a walkable body"; the direct call stays "not
+   callable".
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_t7_trailer_only_never_invoked`, walked twin | The defect's program translates and runs. |
+| `unit_t7_trailer_only_copy`, walked twin | `make`'s own `k` is 50; the copy reads the unit's 9 before and after `bump` writes 11, and the original `r` reads 11; no caller gives `k`. |
+| `unit_t7_trailer_only_copy_indented`, walked twin | The same program with the return in `r`'s body: the same values. |
+| `unit_t7_trailer_only_formals`, walked twin | A bound and a given formal beside the free name: 5 + 1 + 9 in the copy, 5 + 1 + 11 in the original. |
+| `unit_t7_descriptor_model_refused` | `merge(test3)` of a descriptor, invoked through `w`, is refused at 9:13. |
+
+Each positive row runs natively, with the root walked and with the methods
+walked.
+
+### Mutants
+
+Each is built on this step's translator in a stage of its own and run over the
+five programs, natively, with the root walked and with the methods walked.
+
+| Mutant | Puts back | Result |
+| --- | --- | --- |
+| `f6a3d277` itself | no fix | every trailer-only program and the descriptor: the translator crashes (139); the indented twin runs |
+| `tr_refuse` | the crash turned into a refusal | the three trailer-only programs refused; the indented twin runs |
+| `tr_invent` | an empty step made where there is no trailer | `unit_t7_descriptor_model_refused` translates and runs |
+| `tr_emit_skip` | the frame pass skips a body-less model's trailer | "internal: a method's steps changed between the passes" on the trailer-only programs |
+
+A replay of the 1841 translations recorded by `opus_full_07`, with the fixed
+translator and with the fixed translator whose comments were corrected: no
+exit, message or L1 byte differs.
+
+### The source of the view's model operands
+
+Codex: "Please replace "A model is a type; a copy is state" in your
+commentary/ledger with the precise distinction you actually implement. L2
+#copy-merge/#type-by-range/#lowlevel-address: model names denote ordinary
+Structures used as requirements, not a separate nominal type category.
+#composition copies ordinary used targets and rewrites their links; retained
+native implementations and admitted qualified eternal branches are the stated
+sharing contracts. Merely being used as a model is not another semantic
+sharing exemption. [...] Absence of a record is an implementation/proof issue,
+not evidence that the copy is inadmissible or that the source model must be
+selected. [...] If that boundary is not yet demonstrated, record the
+model-source/provenance obligation OPEN separately rather than claiming that
+INVALID plus an L1 hand edit proved the language design."
+
+What section 77 built is this, and no more: in a merge's view the model of a
+path's crossing, the model of an admission and an input's witness are read
+from the program's unit, not from the copy. The kernel keys a record of
+admission by the requirement's address, so a value a caller admitted before
+the merge has its record against the program's Structure and none against the
+copy's; that is why the three rows reading a caller's reference stopped with
+`INVALID` while the models came from the copy. Section 77's item 3, CORE,
+`steps/defects.md`, `steps/current.md` and the translator's comments now say
+this, without "a model is a type". That the program's Structure is the right
+source of every such operand is not shown. It is registered OPEN on its own,
+with the sites, the three categories Codex named -- the receiving
+declaration's schema witness, a value read from the copied lexical graph, the
+actual candidate -- and the paired control
+([T7-MODEL-OPERAND-SOURCE](defects.md#t7-model-operand-source)). The sharpest
+case is a merge result used as a requirement: its place was read when the
+operation runs, in the view's unit, which is now the copy, while the operand
+is read from the program's.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_06` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/opus_l3_06` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_08` (full harness) | RED40/1851: against `opus_full_07` FAIL→OK 0, OK→FAIL 0; nine rows added, all green; no red row's words changed. The staged translator is the git blob `2bc78137` of the bytes committed with this section; the seven declared paths were hashed before the run, and the live and the staged bytes are those. |
+| `build/l2_harness/opus_focus_trl` (focused) | The nine added rows and `unit_callable_descriptor_direct_refused`: 10 green. |
+
+**Next.** A: the cost of a merge, measured first -- block-list pushes and
+their walked lengths, array-list comparisons, copied nodes, edges and bytes,
+allocations, separated by initial arena size, unit size and number of merges
+-- then the list link made constant-time under its ownership invariant, with
+every entry path audited
+([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)).

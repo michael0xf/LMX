@@ -292,8 +292,10 @@ int: l2_mcap_room 0
 int: l2_t7_n 0
 int: l2_t7_walk 0
 # Set while a model operand of a merge's view is written (l2_rw_model_own): the unit its place is reached from is
-# the program's own, not the copy the view's state is read from.  A model is a type: a value a caller gives was
-# admitted to the program's Structure, and the copy of that Structure is no record of it.
+# the program's own, not the copy the view's state is read from.  The kernel keys a record of admission by the
+# requirement's address: a value admitted before the merge has its record against the program's Structure and
+# none against the copy's.  That the program's Structure is the right source of every such operand is not shown
+# (steps/defects.md, T7-MODEL-OPERAND-SOURCE).
 int: l2_rw_type_base 0
 int: l2_t7b_n 0
 int: l2_t7h_n 0
@@ -31740,7 +31742,8 @@ return: 0
 fn: l2_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
     int: model l2_nsty_get(mi, j)
     int: callable l2_cf_get(mi, j)
-    # A witness is a type: in a merge's view the program's occurrence and Structure (l2_rw_types_nsp).
+    # In a merge's view the witness is the program's occurrence or Structure (l2_rw_types_unit, l2_rw_types_nsp),
+    # not the copy's (steps/defects.md, T7-MODEL-OPERAND-SOURCE).
     if: l2_rw_emit != 0 && callable >= 0
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(%s, %uU))) != 0\n            return: 1\n", parent, slot, l2_rw_types_unit(), (cast: (unsigned) (l2_occ_slot(callable)))) < 0))
     if: l2_rw_emit != 0 && model >= 0 && l2_input_is_descriptor(mi, j) != 0
@@ -33140,7 +33143,9 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
 return: 0
 
 # A model operand written at child `slot` of `parent` from own row oi, a merge result's own Structure (K02c): in a
-# merge's view the place is reached from the program's unit (l2_rw_type_base), elsewhere as any own field's.
+# merge's view the place is reached from the program's unit (l2_rw_type_base) -- the program's merge result, not
+# the copy's; whether that is its right source is open (steps/defects.md, T7-MODEL-OPERAND-SOURCE) -- elsewhere
+# as any own field's.
 fn: l2_rw_model_own (int: parent; int: slot; int: oi) int
     int: frame 0
     int: st
@@ -43577,12 +43582,21 @@ fn: l2_t7_count () int
         one: 0
         bad: 0
         base: 2 + l2_t7_nb[s]
-        source: l2_source_container(l2_m_body[model]\as\structure, 0)
-        if: source = 0
-            return: l2_alloc_or(l2_src, l2_t7_at[s], "a source view could not be allocated")
-        source\root: 1
-        if: l2_rw_stmts(source\body\first_field, 0 - 2, base, source, @ made) != 0
-            bad: 1
+        # A model whose only line is its trailer `return:` has no body Structure: no source view and no body
+        # steps, the trailer walked alone -- as a merge result's steps (l2_pap_steps) and a walked method's
+        # (l2_rw_methods_count) take it.
+        source: 0
+        if: l2_m_body[model] != 0
+            if: l2_m_body[model]\kind != c.LM_P0_NODE_STRUCTURE || l2_m_body[model]\as = 0 || l2_m_body[model]\as\structure = 0
+                return: l2_error(l2_src, l2_t7_at[s], "internal: a callable merge's model has no Structure body producer")
+            source: l2_source_container(l2_m_body[model]\as\structure, 0)
+            if: source = 0
+                return: l2_alloc_or(l2_src, l2_t7_at[s], "a source view could not be allocated")
+            source\root: 1
+            if: l2_rw_stmts(source\body\first_field, 0 - 2, base, source, @ made) != 0
+                bad: 1
+            ---
+        ---
         if: bad = 0 && l2_rw_trailer(model, 0 - 2, base + made, @ one) != 0
             bad: 1
         l2_t7_walk: 0
@@ -43593,7 +43607,8 @@ fn: l2_t7_count () int
         if: bad != 0 || made + one <= 0 || l2_rw_machine != 0
             return: l2_error(l2_src, l2_t7_at[s], "a callable merge needs a walkable body")
         l2_t7_steps[s]: made + one
-        source\width: base + made + one
+        if: source != 0
+            source\width: base + made + one
         if: l2_source_definition_roots(1, s, 0) != 0
             return: 1
         if: l2_m_value_used != 0
@@ -43633,11 +43648,16 @@ fn: l2_t7_emit_frames (int: phase) int
         made: 0
         one: 0
         bad: 0
-        source: l2_source_container(l2_m_body[model]\as\structure, 0)
-        if: source = 0
-            return: l2_error(l2_src, l2_t7_at[s], "internal: a projected source root is missing")
-        if: phase = 1
-            source\temp: t
+        # A trailer-only model has no source view (l2_t7_count).
+        source: 0
+        if: l2_m_body[model] != 0
+            source: l2_source_container(l2_m_body[model]\as\structure, 0)
+            if: source = 0
+                return: l2_error(l2_src, l2_t7_at[s], "internal: a projected source root is missing")
+            if: phase = 1
+                source\temp: t
+            ---
+        ---
         if: l2_construct_temp(t, -1, 1) != 0
             bad: 1
         if: phase = 2
@@ -43663,8 +43683,8 @@ fn: l2_t7_emit_frames (int: phase) int
                     ---
                     ns: ns + 1
                 ---
-                # The models of the view are the program's Structures (l2_rw_types_nsp): the same places, from the
-                # program's unit.
+                # The model operands of the view are read from the program's unit (l2_rw_types_nsp): the places
+                # l2_nsp holds in the copy (steps/defects.md, T7-MODEL-OPERAND-SOURCE).
                 if: c.fprintf(l2_out, "        []: @(Lmx) l2_nst %d\n", l2_ns_n) < 0
                     return: 1
                 ns: 0
@@ -43687,11 +43707,11 @@ fn: l2_t7_emit_frames (int: phase) int
             ---
             if: l2_merge_build != 0 && fputs("        []: @(Lmx) l2_mops 1\n        int: l2_mstatus 0\n        @: Lmx l2_mresult 0\n        @: Lmx l2_mbody 0\n", l2_out) < 0
                 return: 1
-            if: l2_source_cells_emit(1, s, "target") != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d target\n", t) < 0 || l2_source_fill(source) != 0
+            if: l2_source_cells_emit(1, s, "target") != 0 || c.fprintf(l2_out, "        @: Lmx l2_rw%d target\n", t) < 0 || (source != 0 && l2_source_fill(source) != 0)
                 return: 1
             ---
         ---
-        if: bad = 0 && l2_rw_stmts(source\body\first_field, t, base, source, @ made) != 0
+        if: bad = 0 && source != 0 && l2_rw_stmts(source\body\first_field, t, base, source, @ made) != 0
             bad: 1
         if: bad = 0 && l2_rw_trailer(model, t, base + made, @ one) != 0
             bad: 1

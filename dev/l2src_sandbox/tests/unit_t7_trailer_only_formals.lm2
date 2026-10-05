@@ -1,0 +1,43 @@
+# A trailer-only model with formals (T7-TRAILER-ONLY-MODEL-CRASH).  add has no body but its return; it reads
+# y, x and other, a field of the unit.  wrap returns merge(y: k; add): the node walks the trailer alone, with
+# y bound and x given, and other read from the copy of the unit made at the merge.  prep wrote 9 before the
+# merge; bump writes 11 after it.  w's copy reads 9 before and after bump: 5 + 1 + 9; the original add, called
+# by orig after bump, reads 11: 5 + 1 + 11.  The root calls are above the unit's declaration of other: no
+# caller binding reaches them.  Entry 7.
+int: z0 prep()
+@: w wrap(5)
+int: a1 (plain())
+int: z1 bump()
+int: a2 (plain())
+int: o (orig())
+int: other 9
+
+fn: add (int: y; int: x) int
+return: y + x + other
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; add)
+
+fn: plain () int
+    return: (w: 1)
+end: plain
+
+fn: orig () int
+    return: add(5 1)
+end: orig
+
+fn: prep () int
+    node\other: 9
+    return: 0
+end: prep
+
+fn: bump () int
+    node\other: 11
+    return: 0
+end: bump
+
+int: ok 81
+if: a1 = 15 && a2 = 15 && o = 17
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

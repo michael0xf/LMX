@@ -1,0 +1,33 @@
+# OPEN positive (FORWARDER-BINDINGS-OF-TWO-TYPES). A method that only hands a
+# name on keeps each caller's value with that caller's type: hop is called by
+# small, whose n is an int 40, and by wide, whose n is a size_t 7. hop hands n
+# to h3, whose n is a size_t: from small it is converted, 40U, and h3 gives
+# 41; from wide it goes as it is, 8. This implementation gives a method's
+# input one type, and the second caller's binding is refused where its call
+# stands: "incompatible entry signature", a limit and no rule. Entry 7.
+fn: make3 (size_t: n) fn: () size_t
+    fn: f3 () size_t
+        return: n + 1U
+    return: f3
+
+@: h3 make3(1000U)
+
+fn: hop () size_t
+    return: h3()
+end: hop
+
+fn: small () size_t
+    int: n 40
+    return: hop()
+end: small
+
+fn: wide () size_t
+    size_t: n 7U
+    return: hop()
+end: wide
+
+int: ok 7
+if: small() != 41U || wide() != 8U
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -183,6 +183,15 @@ that cannot grow
 Gates: kernel `opus_kernel_14` GREEN296 with 113 executed selftests, L3
 `opus_l3_14`, full `opus_full_16` RED39/1890 -- against `opus_full_15`
 FAIL→OK 0, OK→FAIL 0.
+The receiving numeric conversion, part one (HELD-FREE-NAME-OTHER-TYPE): a
+value of another numeric type that a held call hands is converted by that
+call, by the ordinary row; absent stays absent and calls nothing; walked, a
+general presence guard (GUARD/GUARDED); a handed-on input takes its type
+from its callers' bindings, not from its consumer
+([section 87](steps/fable-continuation-20261003.md#held-conversion)).
+Gates: kernel `opus_kernel_16` GREEN297 with 114 executed selftests, L3
+`opus_l3_15`, full `opus_full_17` RED39/1896 -- against `opus_full_16`
+FAIL→OK 1, OK→FAIL 0, added 6.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical
@@ -471,8 +480,11 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   ([HELD-REFERENCE-NOT-ASKED-ALONG-CHAIN](steps/defects.md#held-reference-chain)),
   its admission through a held call
   (`unit_nested_definition_structure_override`), and through a Structure the
-  unit holds, read by a merge's node (`unit_t7_actual_reference`); the
-  conversion of a handed-on input (`unit_held_call_free_name_converted`);
+  unit holds, read by a merge's node (`unit_t7_actual_reference`); a
+  handed-on name its callers give two types
+  (`unit_held_call_free_name_two_types`, FORWARDER-BINDINGS-OF-TWO-TYPES; the
+  conversion of a handed-on input is built,
+  [section 87](steps/fable-continuation-20261003.md#held-conversion));
   the library unit's callable formal (`unit_lib_callable_formal`); the walked
   consumer (`unit_callable_formal_free_names_self_walk`) and a merge's node
   built in a walked body (`unit_t7_actual_from_root`); the complete copy of

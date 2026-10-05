@@ -549,6 +549,13 @@ Fable принял единственный writer/build-слот по [to_fable
   ([DUPLICATE-ADMISSION-STOP](defects.md#duplicate-admission-stop),
   [§86 журнала](fable-continuation-20261003.md#duplicate-stop-static)). Гейты `opus_kernel_14`,
   `opus_l3_14`, `opus_full_16` RED39/1890: против `opus_full_15` FAIL→OK 0, OK→FAIL 0.
+- Шаг числового преобразования на принимающем крае, первая часть: значение другого числового типа,
+  которое вызов подаёт удерживаемому определению, преобразует этот вызов обычной строкой; отсутствие
+  остаётся отсутствием, приёмник не вызывается; при обходе — действия ядра GUARD и GUARDED. Вход,
+  который метод только передаёт, типизируют привязки вызывающих, а не потребитель
+  ([HELD-FREE-NAME-OTHER-TYPE](defects.md#held-free-name-other-type),
+  [§87 журнала](fable-continuation-20261003.md#held-conversion)). Гейты `opus_kernel_16` GREEN297
+  (114 селфтестов), `opus_l3_15`, `opus_full_17` RED39/1896: против `opus_full_16` FAIL→OK 1, OK→FAIL 0.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
   эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
   callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который
@@ -568,8 +575,8 @@ Fable принял единственный writer/build-слот по [to_fable
   Codex подтвердил, что программа верна
   ([HELD-DEFINITION-UNDECLARED-NAME](defects.md#held-definition-undeclared-name)).
 - Открыто, блокер G5, пределы реализации с отказом на месте и красными обязательными позитивами:
-  одно имя, нужное двум удерживаемым определениям как два типа
-  ([HELD-FREE-NAME-OTHER-TYPE](defects.md#held-free-name-other-type)); узел, построенный при
+  имя, которому вызывающие одного пересылающего метода дают два типа
+  ([FORWARDER-BINDINGS-OF-TWO-TYPES](defects.md#forwarder-bindings-of-two-types)); узел, построенный при
   исполнении, — возвращённого определения или merge — среди callable другого формирования у одного
   формала ([HELD-ACTUAL-NODE-CLASS](defects.md#held-actual-node-class)); возврат merge из вложенного
   тела метода ([T7-HOST-NESTED-RETURN](defects.md#t7-host-nested-return)); до формала доходит

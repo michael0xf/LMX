@@ -281,7 +281,15 @@ define: LMX_WALK_OP_NAMED 47
 # operand: it is never a subtraction from an invented zero.
 define: LMX_WALK_OP_NEG 48
 define: LMX_WALK_OP_POS 49
-define: LMX_WALK_OP_COUNT 50
+# [guard, source, continuation], [guarded]: a presence guard.  The source is evaluated once.  Absent, the guard's
+# value is absent and the continuation does not run.  Present, the continuation runs, and inside it [guarded] is that
+# value, held by the activation while the continuation runs; a guard inside the continuation holds its own and gives
+# the outer one back when it ends.  The guard does not look at what the value is: it is the presence of a value that
+# may arrive absent -- an input a method hands on -- at an edge whose operation, the continuation, needs it present.
+# [guarded] outside every continuation is not a node the walker runs.
+define: LMX_WALK_OP_GUARD 50
+define: LMX_WALK_OP_GUARDED 51
+define: LMX_WALK_OP_COUNT 52
 # Source role of an operation, separate from its execution opcode. The shared
 # role record encodes source * OP_COUNT + opcode in its existing code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.
@@ -373,6 +381,9 @@ struct: LmxWalkFrame
     # payload is the thrown record (0 for an implicit throw).
     @: Lmx landing
     @: void payload
+    # [guard]: the value of the innermost guard whose continuation is running (the guard's own evaluation holds it),
+    # read by [guarded]; 0 outside every continuation.
+    @: LmxWalkValue guarded
     # §7b: the working table the entry loaded (0 before it): nwork rows linked from work, in this activation's
     # scratch slice.
     @: LmxWalkWork work

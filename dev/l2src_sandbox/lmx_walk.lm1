@@ -1610,6 +1610,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
     LmxWalkValue: value
     LmxWalkValue: other
     LmxWalkPlace: place
+    @: LmxWalkValue outer 0
     @: Lmx code (cast: (@: Lmx) node)
     @: LmxWalkWork work 0
     @: Lmx wholder 0
@@ -1652,6 +1653,25 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         if: root = 0
             return: c.LMX_WALK_INVALID
         return: lmx_walk_value_cell(f\arena, root, out)
+    # [guard, source, continuation] (lmx_walk.h.lm1): the source once; an absent one leaves the guard's value absent.
+    if: op = c.LMX_WALK_OP_GUARD
+        if: code\array.size != 3U
+            return: c.LMX_WALK_INVALID
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ value)
+        if: status != c.LMX_WALK_OK
+            return: status
+        if: value.present = 0
+            return: c.LMX_WALK_OK
+        outer: f\guarded
+        f\guarded: @ value
+        status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), out)
+        f\guarded: outer
+        return: status
+    if: op = c.LMX_WALK_OP_GUARDED
+        if: code\array.size != 1U || f\guarded = 0
+            return: c.LMX_WALK_INVALID
+        memcpy((cast: (@: void) out), (cast: (@: void) f\guarded), c.sizeof(c.LmxWalkValue))
+        return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_OWN || op = c.LMX_WALK_OP_OWN_OF
         status: lmx_walk_work_cell(f, node, 0, @ wholder, @ index, @ slot)
         if: status != c.LMX_WALK_OK

@@ -8369,14 +8369,31 @@ $fixtures = @(
         NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_site_reference_unasked.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    # HELD-FREE-NAME-OTHER-TYPE: a caller's value of another numeric type for a held definition's free name is
+    # converted by the call that hands it, by the ordinary row (the receivers are the program's: convert_impl);
+    # absent, it stays absent and the definition reads its own copy.  A value handed on keeps its type and its
+    # presence: an untaken conversion does not run, a taken one's refusal is the forming caller's catchable
+    # `convert`, a present zero is read.  Natively, and with the methods walked through the presence guard.
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_converted.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_converted_walk.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(4,5);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_untaken.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_untaken_walk.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(4,5,6,7,8);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_own_binding.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_own_binding_walk.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3);
+        Absent = @(); Debt = @() },
     # OPEN positives, required before G5.  Limits of this implementation and no rules; each is refused where it
-    # stands and stays red until built.  A caller's value of another numeric type for a held
-    # definition's free name: one input of a name is handed on with one type and is not converted
-    # (free_name_converted).  A merge built as the actual reaching a formal handed on, where a method formed
-    # differently reaches it too: the node a merge builds is no occurrence of the unit, and its class is not
-    # told where the formal is called (unfollowed_actual).  A library unit's callable formal: every method of
-    # a library unit has an exported wrapper, so an occurrence from another translation can reach the formal.
-    [pscustomobject]@{ Name = 'unit_held_call_free_name_converted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+    # stands and stays red until built.  A method that only hands a name on has one type for it, so a second
+    # caller binding it as another type is refused (FORWARDER-BINDINGS-OF-TWO-TYPES, two_types).  A merge built
+    # as the actual reaching a formal handed on, where a method formed differently reaches it too: the node a
+    # merge builds is no occurrence of the unit, and its class is not told where the formal is called
+    # (unfollowed_actual).  A library unit's callable formal: every method of a library unit has an exported
+    # wrapper, so an occurrence from another translation can reach the formal.
+    [pscustomobject]@{ Name = 'unit_held_call_free_name_two_types.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_unfollowed_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },

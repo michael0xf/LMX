@@ -1,0 +1,74 @@
+# The walked twin of unit_held_call_free_name_untaken: every method walked.
+# HELD-FREE-NAME-OTHER-TYPE (Codex, OPUS-HANDOFF-20261005-103112, item 5): a
+# value handed on keeps its own type and presence, and is converted only by
+# the call that gives it to a definition reading another type. pick hands n
+# to h3, whose n is a size_t, only when asked to. neg has an int n of -1:
+# not asked, nothing is converted and nothing is thrown, 5; asked, int -1 to
+# size_t is refused by its row, pick's implicit `convert`, caught by neg, 9.
+# zero has an int n of 0: a present zero is converted and read, not passed
+# over for the copy, 0 + 1. pick0 hands n to h0, whose n is an int. wide has
+# a size_t n of 2^32 + 40: not asked, 5; asked, it is wider than an int and
+# refused, 9, never read as its low 40. Entry 7.
+fn: make3 (size_t: n) fn: () size_t
+    fn: f3 () size_t
+        return: n + 1U
+    return: f3
+
+fn: make0 (int: n) fn: () int
+    fn: f0 () int
+        return: n + 1
+    return: f0
+
+@: h3 make3(1000U)
+@: h0 make0(6)
+
+fn: pick (int: ask) size_t
+    if: ask = 0
+        return: 5U
+    return: h3()
+end: pick
+
+fn: pick0 (int: ask) int
+    if: ask = 0
+        return: 5
+    return: h0()
+end: pick0
+
+fn: neg (int: ask) int
+    int: n -1
+    int: r 3
+    size_t: got 0U
+    got: pick(ask)
+    catch: convert ()
+        r: 9
+    if: r = 3 && got = 5U
+        r: 5
+    return: r
+end: neg
+
+fn: zero () size_t
+    int: n 0
+    return: pick(1)
+end: zero
+
+fn: wide (int: ask) int
+    size_t: n 4294967336U
+    int: r 3
+    int: got 0
+    got: pick0(ask)
+    catch: convert ()
+        r: 9
+    if: r = 3 && got = 5
+        r: 5
+    return: r
+end: wide
+
+int: ok 7
+if: neg(0) != 5 || neg(1) != 9
+    ok: 81
+if: zero() != 1U
+    ok: 82
+if: wide(0) != 5 || wide(1) != 9
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

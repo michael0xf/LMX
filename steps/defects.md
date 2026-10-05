@@ -2644,7 +2644,7 @@ end: outer
 ([§59 журнала](fable-continuation-20261003.md#site-requirements)).
 
 <a id="held-free-name-other-type"></a>
-### HELD-FREE-NAME-OTHER-TYPE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+### HELD-FREE-NAME-OTHER-TYPE — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, FIXED 2026-10-05 (Opus)
 
 Метод передаёт дальше один вход одного имени с одним типом. Если двум удерживаемым определениям одного
 метода имя нужно как два числовых типа, то значение вызывающего, присутствующее для одного, для
@@ -2656,6 +2656,34 @@ end: outer
 callable's free name is of another type`. Это предел реализации, не правило. Обязательный позитив,
 красный: `unit_held_call_free_name_converted` (по норме 1001 и 141)
 ([§60 журнала](fable-continuation-20261003.md#held-chain)).
+
+**Исправлено 2026-10-05 (Opus)** по передаче Codex OPUS-HANDOFF-20261005-103112, пункт 5: «a reached
+present value invokes the ordinary converter; absent stays absent without calling it». Привязку другого
+числового типа, которая может прийти присутствующей, преобразует вызов, который её подаёт, обычной
+строкой `primitive.convert`. Отказ приёмника — неявный `convert` этого метода. Отсутствующая запись
+остаётся отсутствующей, приёмник не вызывается, определение читает свою копию. Нативно перед вызовом
+стоит проверка присутствия. При обходе — два новых действия ядра, GUARD и GUARDED: источник вычисляется
+один раз, продолжение (вызов приёмника) читает его значение и не выполняется, если значения нет. Вход,
+который метод только передаёт, больше не берёт тип у удерживаемого определения: его типизируют привязки
+вызывающих. Раньше такой метод, вызванный с int, отвергался `incompatible entry signature`, потому что
+его единственный потребитель читает size_t. `unit_held_call_free_name_converted` даёт 1001 и 141,
+нативно и с обходом. `unit_held_call_free_name_untaken`: непроизошедшее сужение не бросает ни для int
+-1, ни для size_t 2^32 + 40; произошедшее — перехватываемый `convert` вызывающего; присутствующий ноль
+читается. Собственная привязка корня и метода — `unit_held_call_free_name_own_binding`. Мутанты — в [§87 журнала](fable-continuation-20261003.md#held-conversion). Вызывающие одного
+пересылающего метода, давшие имени два типа, остаются пределом:
+[FORWARDER-BINDINGS-OF-TWO-TYPES](#forwarder-bindings-of-two-types).
+
+<a id="forwarder-bindings-of-two-types"></a>
+### FORWARDER-BINDINGS-OF-TWO-TYPES — 2026-10-05, Opus, OPEN (вопрос Codex, блокер G5)
+
+Метод, который только передаёт имя дальше, имеет для него один тип. Если два его вызывающих связывают
+имя двумя типами, второй вызов отвергается: `incompatible entry signature`. По словам Codex («Pure
+forwarders must preserve ORIGINAL resolved type + presence losslessly») значение каждого вызывающего
+идёт со своим типом, и вызов, который подаёт его определению другого типа, преобразует по типу, с
+которым оно пришло. Для этого нужен тип записи при исполнении или трансляция, которая знает его для
+каждого вызова. Спрошено у Codex. Обязательный позитив, красный: `unit_held_call_free_name_two_types` —
+`small` даёт int 40, `wide` — size_t 7 через один `hop`; по норме 41 и 8
+([§87 журнала](fable-continuation-20261003.md#held-conversion)).
 
 <a id="site-reference-not-left-out"></a>
 ### SITE-REFERENCE-NOT-LEFT-OUT — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, FIXED 2026-10-05

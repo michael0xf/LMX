@@ -183,6 +183,15 @@ int: l2_dys_cap 0
 @@: LmP0Text l2_dyp_nm 0
 int: l2_dyp_n 0
 int: l2_dyp_cap 0
+# HELD-FREE-NAME-OTHER-TYPE: an input a method gained only to hand a name on to a held definition that reads it as a
+# number, with the model's type.  A value handed on keeps the type its callers' bindings give it; the model's type
+# applies only where none gives one, to an input that can never arrive present (l2_dyk_close).  Compiler metadata:
+# nothing of it exists at run time.
+@: int l2_dyk_m 0
+@@: LmP0Text l2_dyk_nm 0
+@: int l2_dyk_ty 0
+int: l2_dyk_n 0
+int: l2_dyk_cap 0
 # K04, the path through an undeclared free name (ledger section 70).  A row says: hidden input nm of method m,
 # which nothing in m's sight declares and through which m reads a path, has declaration ns as the coordinate
 # space of those paths -- one of the declarations that reach the input, which has every path m uses -- or -1
@@ -241,6 +250,9 @@ int: l2_rw_mi 0 - 1
 int: l2_rw_cache_on 0
 # implements-port slice 13: the next l2_rw_call is the receiver call of a conversion edge.
 int: l2_rw_conv 0
+# HELD-FREE-NAME-OTHER-TYPE: that receiver call's one operand is the value of the guard it stands under
+# (LMX_WALK_OP_GUARDED), not an expression of the source (l2_rw_held_convert).
+int: l2_rw_conv_guarded 0
 int: l2_rw_quiet 0
 # 1 while l2_rw_body is reading a nested list. Those statements are children of that
 # list, not method steps, so they do not take the method's source slots.
@@ -873,7 +885,10 @@ const: @: char l2_q_path 0
 
 prototype:
     fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
+    fn: l2_check_held_convert (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
     fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
+    fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
+    fn: l2_dyk_close (@: int changed) int
     fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     fn: l2_head_is_method_call (int: mi; const: @(LmP0Text head)) int
     fn: l2_head_is_callable_formal (int: mi; const: @(LmP0Text head)) int
@@ -4996,6 +5011,7 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_dyr_n: 0
     l2_dyc_n: 0
     l2_dyp_n: 0
+    l2_dyk_n: 0
     l2_anc_n: 0
     l2_anc_on: 0
     l2_lp_n: 0
@@ -13564,6 +13580,7 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
     int: asked
     int: cand
     int: src
+    int: hty
     @: LmP0Text nm
     if: m < 0 || model < 0
         return: 0
@@ -13597,15 +13614,24 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
                 pres: 1
             # A name inherited along the chain at all: not a named Structure of the unit, not an eternal branch.
             asked: (cast: (int) (ty != l2_colon_graph_ty() || ((l2_ns_find(nm) < 0 || l2_ns_parent[l2_ns_find(nm)] >= 0) && l2_ebr_find(nm) < 0)))
-            # The method's own input of the name, of this type or not yet typed: it hands it on.  One it has as
-            # another type stays as it is.
-            if: asked != 0 && (pi < 0 || (pi >= l2_m_arity[m] && (l2_dt(m, pi - l2_m_arity[m]) = 0 || l2_dt(m, pi - l2_m_arity[m]) = ty)))
+            # The method's own input of the name hands it on: one of this type or not yet typed, and, where the model
+            # reads a number, one of another numeric type, which the held call converts (HELD-FREE-NAME-OTHER-TYPE).
+            # A new one takes no type from a model that reads a number: a value handed on keeps the type its callers'
+            # bindings give it (Codex, OPUS-HANDOFF-20261005-103112, item 5: "first-seen consumer type is not an
+            # unobservable carrier"); the model's applies only where none gives one (l2_dyk_close).  One it has as
+            # another kind stays as it is.
+            hty: ty
+            if: l2_rw_num_ty(l2_own_of_dt(ty)) != 0
+                hty: 0
+            if: asked != 0 && (pi < 0 || (pi >= l2_m_arity[m] && (l2_dt(m, pi - l2_m_arity[m]) = 0 || l2_dt(m, pi - l2_m_arity[m]) = ty || (hty = 0 && l2_rw_num_ty(l2_own_of_dt(l2_dt(m, pi - l2_m_arity[m]))) != 0))))
                 before: l2_m_dyn[m]
-                if: l2_dyn_add(m, nm, ty) != 0
+                if: l2_dyn_add(m, nm, hty) != 0
                     return: l2_alloc_or(path, site\source, "unsupported body")
                 if: l2_m_dyn[m] != before
                     \changed: 1
                 pi: l2_param_find(m, nm)
+                if: hty = 0 && ty != 0 && pi >= l2_m_arity[m] && l2_dt(m, pi - l2_m_arity[m]) = 0 && l2_dyk_note(m, nm, ty) != 0
+                    return: l2_alloc_or(path, site\source, "out of memory")
                 if: l2_site_needs(m, site\source, 0 - 1, model, k, 1, changed, path) < 0
                     return: 1
                 if: pi >= l2_m_arity[m] && (l2_dyn_fwd(m, pi - l2_m_arity[m]) = 0 || l2_dyp_has(m, nm) != 0)
@@ -13772,10 +13798,15 @@ fn: l2_dyn_close (const: @(char path)) int
     # Each successful step can only add one of the finite method/name/type
     # facts collected from this unit. Iterate to the actual fixed point; an
     # arbitrary pass count rejects valid long call chains.
+    # HELD-FREE-NAME-OTHER-TYPE: once the sites change nothing, an input no binding typed takes the type of the held
+    # model that asked it (l2_dyk_close), and the sites are visited again, so that the type reaches the methods that
+    # hand the name on -- and the models those ask in turn.
     while: changed != 0
         changed: 0
         if: l2_dyn_step(path, @ changed) != 0
             return: 1
+        if: changed = 0 && l2_dyk_close(@ changed) != 0
+            return: l2_alloc_or(path, 0, "out of memory")
     ---
     # What reaches each input is closed: the coordinate space of a path through an undeclared free name is found
     # (l2_anchor_close).  Such an input has a schema from here on, so the sites are visited once more: what a
@@ -13969,6 +14000,8 @@ fn: l2_wait_run (const: @(char path)) int
             rc: l2_check_fields((cast: (@: LmP0Field) l2_wait[w].site), (cast: (int) l2_wait[w].count), mi, l2_method_src(mi, path), (cast: (@: LmP0Node) l2_wait[w].source))
         if: rc = 0 && l2_wait[w].kind = 7
             rc: l2_check_path_write((cast: (@: LmP0Node) l2_wait[w].site), mi, l2_method_src(mi, path))
+        if: rc = 0 && l2_wait[w].kind = 8
+            rc: l2_check_held_convert((cast: (@: LmP0Node) l2_wait[w].site), (cast: (int) l2_wait[w].count), mi, l2_method_src(mi, path))
         w: w + 1
     restored: l2_source_restore(@ saved)
     l2_xfree((cast: (@: void) saved.scopes))
@@ -28861,6 +28894,14 @@ fn: l2_flow_free () int
     l2_dyp_nm: 0
     l2_dyp_n: 0
     l2_dyp_cap: 0
+    l2_xfree((cast: (@: void) l2_dyk_m))
+    l2_dyk_m: 0
+    l2_xfree((cast: (@: void) l2_dyk_nm))
+    l2_dyk_nm: 0
+    l2_xfree((cast: (@: void) l2_dyk_ty))
+    l2_dyk_ty: 0
+    l2_dyk_n: 0
+    l2_dyk_cap: 0
     l2_xfree((cast: (@: void) l2_d105_mi))
     l2_d105_mi: 0
     l2_xfree((cast: (@: void) l2_d105_k))
@@ -29583,6 +29624,63 @@ fn: l2_dyp_mark (int: m; const: @(LmP0Text nm); @: int changed) int
     l2_dyp_n: l2_dyp_n + 1
     if: changed != 0
         \changed: 1
+return: 0
+
+# HELD-FREE-NAME-OTHER-TYPE: method m gained input nm only to hand it to a held definition that reads it as type ty
+# (l2_dyn_site_held); the input itself has no type until a caller's binding gives it one.
+fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
+    int: cap
+    int: r 0
+    size_t: isz
+    size_t: psz
+    @: void p
+    while: r < l2_dyk_n
+        if: l2_dyk_m[r] = m && l2_text_same(l2_dyk_nm[r], nm) != 0
+            return: 0
+        r: r + 1
+    ---
+    if: l2_dyk_n >= l2_dyk_cap
+        cap: l2_cap_next(l2_dyk_cap, l2_dyk_n + 1)
+        if: cap < 0
+            l2_alloc_err: 2
+            return: 1
+        isz: c.sizeof(c.int)
+        psz: c.sizeof(@: char)
+        p: l2_vec_grow((cast: (@: void) l2_dyk_m), l2_dyk_n, cap, isz)
+        if: p = 0
+            return: 1
+        l2_dyk_m: (cast: (@: int) p)
+        p: l2_vec_grow((cast: (@: void) l2_dyk_nm), l2_dyk_n, cap, psz)
+        if: p = 0
+            return: 1
+        l2_dyk_nm: (cast: (@@: LmP0Text) p)
+        p: l2_vec_grow((cast: (@: void) l2_dyk_ty), l2_dyk_n, cap, isz)
+        if: p = 0
+            return: 1
+        l2_dyk_ty: (cast: (@: int) p)
+        l2_dyk_cap: cap
+    ---
+    l2_dyk_m[l2_dyk_n]: m
+    l2_dyk_nm[l2_dyk_n]: (cast: (@: LmP0Text) nm)
+    l2_dyk_ty[l2_dyk_n]: ty
+    l2_dyk_n: l2_dyk_n + 1
+return: 0
+
+# The inputs l2_dyk_note recorded that no binding has typed take the type of the model that asked them.  None of
+# them can arrive present: a present value comes from a binding, and a binding types the input it reaches.  So the
+# type carries nothing; it is what their entries and the methods that hand them on are written with.
+fn: l2_dyk_close (@: int changed) int
+    int: r 0
+    int: k
+    while: r < l2_dyk_n
+        k: l2_dyn_find(l2_dyk_m[r], l2_dyk_nm[r])
+        if: k >= 0 && l2_dt(l2_dyk_m[r], k) = 0
+            if: l2_dt_set(l2_dyk_m[r], k, l2_dyk_ty[r]) != 0
+                return: 1
+            \changed: 1
+        ---
+        r: r + 1
+    ---
 return: 0
 
 # A held call in method mi whose model requires name k as another type than the input of that name mi hands
@@ -37240,7 +37338,9 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
     int: dynn
     int: sneed
     L2ReferenceSource: reference_source
+    int: guarded l2_rw_conv_guarded
     l2_rw_conv: 0
+    l2_rw_conv_guarded: 0
     if: conv = 0 && node != 0 && node\as != 0
         if: node\kind = c.LM_P0_NODE_FRAME && node\as\frame != 0
             head: node\as\frame\head
@@ -37434,8 +37534,14 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                     return: 1
                 ---
             else:
-                if: l2_rw_reference_receive(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, site, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
-                    return: 1
+                if: guarded != 0
+                    if: l2_rw_frame(site, "LMX_WALK_OP_GUARDED", 1, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
+                        return: 1
+                    ---
+                else:
+                    if: l2_rw_reference_receive(a, span, l2_own_ty_of_param(l2_input_ft(idx, k)), -1, site, @ arg) != 0 || l2_rw_put_actual(\out, site, arg0 + l2_bound_rank(bound, k), arg) != 0
+                        return: 1
+                    ---
                 ---
             ---
         ---
@@ -41970,6 +42076,39 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
     # model needs is asked along the chain of callers, as for a call of a method.
     if: l2_mad_held_model(oi) >= 0 && l2_wait_add(4, mi, (cast: (@: void) node), 0 - 1, l2_mad_held_model(oi), node, path) != 0
         return: 1
+    # HELD-FREE-NAME-OTHER-TYPE: whether a binding the call hands is converted is known once the inputs are typed.
+    if: l2_mad_held_model(oi) >= 0 && l2_wait_add(8, mi, (cast: (@: void) node), oi, l2_mad_held_model(oi), node, path) != 0
+        return: 1
+return: 0
+
+# HELD-FREE-NAME-OTHER-TYPE (Codex, OPUS-HANDOFF-20261005-103112 §5: "a reached present value invokes the ordinary
+# converter; absent stays absent without calling it"; "Conversion/failure belongs to the executing forming caller").
+# A held call in method mi hands each name its model reads from mi's binding of the name.  Where that binding can
+# arrive present (l2_held_never) and is a number of another type than the model's, it is converted where the call
+# stands, by the ordinary conversion of its row: the check here records the edge to the row's receiver, so that mi
+# is a method that can throw `convert` before its signature is written.  Asked once the inputs are typed
+# (l2_wait_run, kind 8): an input's type is its callers'.  A binding of another kind is refused where the call stands.
+fn: l2_check_held_convert (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
+    []: char bv 1024
+    int: model
+    int: k 0
+    int: bty
+    int: oty
+    model: l2_mad_held_model(oi)
+    if: model < 0
+        return: 0
+    while: k < l2_m_dyn[model]
+        bty: 0 - 1
+        bv[0]: 0
+        if: l2_held_binding(mi, model, k, bv, @ bty) = 0 && l2_held_never(mi, model, k) = 0 && l2_held_cap_same(mi, model, k) = 0
+            oty: l2_own_of_dt(l2_dt(model, k))
+            if: bty != oty && (l2_rw_num_ty(bty) = 0 || l2_rw_num_ty(oty) = 0)
+                return: l2_error(path, node, "a caller's binding of a held callable's free name is of another type")
+            if: bty != oty && l2_check_value_convert_core(node, l2_ft_of_own(bty), l2_ft_of_own(oty), mi, path) != 0
+                return: 1
+        ---
+        k: k + 1
+    ---
 return: 0
 
 # Is this statement the declaration of a held callable: the store of a callable merge that gave
@@ -42470,6 +42609,93 @@ fn: l2_held_cap_same (int: mi; int: model; int: k) int
     oi: l2_own_visible(mi, nm)
 return: (cast: (int) (oi >= 0 && l2_own_nsty_get(oi) = ns))
 
+# The value a number cell of own type ty holds, read through the pointer text p, into dest: what a hidden input's
+# entry carries (l2_emit_tramp_lex reads the same cells).
+fn: l2_num_read_text (int: ty; const: @(char p); @: char dest; size_t: room) int
+    if: ty = 1
+        return: (cast: (int) (c.snprintf(dest, room, "(cast: (char) lmx_char_value_known(%s))", p) < 0))
+    if: ty = 2
+        return: (cast: (int) (c.snprintf(dest, room, "lmx_size_value_known(%s)", p) < 0))
+    if: ty = 3
+        return: (cast: (int) (c.snprintf(dest, room, "lmx_unsigned_value_known(%s)", p) < 0))
+    if: ty = 36
+        return: (cast: (int) (c.snprintf(dest, room, "lmx_ulong_value_known(%s)", p) < 0))
+return: (cast: (int) (c.snprintf(dest, room, "lmx_int_value_known(%s)", p) < 0))
+
+# The receiver of the conversion row from own type bty to oty, called on a value method mi already holds -- value,
+# an expression of type bty its caller evaluated once -- its result's token into dest.  A refusal of the receiver is
+# mi's implicit throw `convert`, as at every conversion edge (l2_emit_call, edge 1).
+fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); const: @(LmP0Node node); const: @(char ind); @: char dest) int
+    int: idx
+    int: self_t
+    int: t
+    int: rc
+    @: char acts 0
+    if: l2_convert_hit(l2_own_ty_word(bty), l2_own_ty_word(oty)) = 0
+        return: l2_error(l2_src, node, "internal: a conversion site was not checked")
+    idx: l2_convert_method()
+    if: idx < 0 || l2_m_arity[idx] != 1 || l2_m_dyn[idx] != 0
+        return: l2_error(l2_src, node, "internal: a conversion site was not checked")
+    self_t: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_occ_slot(idx)))) < 0
+        return: 1
+    acts: (cast: (@: char) l2_xmalloc(1024U))
+    if: acts = 0
+        return: l2_error(l2_src, node, "out of memory")
+    memset((cast: (@: void) acts), 0, 1024U)
+    if: c.snprintf(acts, 1024U, "%s", value) >= 1024
+        l2_xfree((cast: (@: void) acts))
+        return: l2_error(l2_src, node, "internal: a converted value's text does not fit its actual")
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    rc: l2_emit_call_result(idx, t, ind)
+    if: rc = 0
+        rc: l2_emit_call_go(mi, idx, idx, t, self_t, ind, 1, 0, acts, 0)
+    l2_xfree((cast: (@: void) acts))
+    if: rc != 0
+        return: 1
+    if: l2_m_throws[idx] != 0
+        if: c.fprintf(l2_out, "%sif: l2_ts%d != 0\n", ind, t) < 0 || l2_emit_implicit_throw(mi, "convert", ind) != 0
+            return: 1
+        ---
+return: l2_tok_temp(t, dest)
+
+# HELD-FREE-NAME-OTHER-TYPE: method mi's binding bv of a name a held call hands -- a value of own type bty, or an
+# entry mi only hands on (REF:), which may be absent -- converted to the model's type oty (l2_check_held_convert made
+# the edge).  The value is evaluated once; the receiver's result goes into a cell of oty in this activation; an
+# absent entry stays absent and calls nothing.  bv becomes that cell's entry.
+fn: l2_held_convert_emit (int: mi; int: bty; int: oty; const: @(LmP0Node node); const: @(char ind); @: char bv) int
+    int: t
+    @: char deep 0
+    []: char val 1100
+    []: char res 1024
+    t: l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s%s: l2_hcv%d\n", ind, l2_own_ty_word(oty), t) < 0
+        return: 1
+    if: c.strncmp(bv, "REF:", 4U) = 0
+        if: c.fprintf(l2_out, "%s@: void l2_hcr%d %s\n%sif: l2_hcr%d != 0\n", ind, t, bv + 4, ind, t) < 0
+            return: 1
+        if: l2_bump_ind(ind, @ deep) != 0
+            return: 1
+        val[0]: 0
+        c.sprintf(res, "l2_hcr%d", t)
+        if: l2_num_read_text(bty, res, val, 1100U) != 0
+            return: 1
+        if: l2_emit_convert_raw(mi, bty, oty, val, node, deep, res) != 0
+            return: 1
+        if: c.fprintf(l2_out, "%sl2_hcv%d: %s\n%sl2_hcr%d: (cast: (@: void) (@ l2_hcv%d))\n%s---\n", deep, t, res, deep, t, t, ind) < 0
+            return: 1
+        ---
+    else:
+        if: l2_emit_convert_raw(mi, bty, oty, bv, node, ind, res) != 0
+            return: 1
+        if: c.fprintf(l2_out, "%sl2_hcv%d: %s\n%s@: void l2_hcr%d (cast: (@: void) (@ l2_hcv%d))\n", ind, t, res, ind, t, t) < 0
+            return: 1
+        ---
+return: (cast: (int) (c.sprintf(bv, "REF:l2_hcr%d", t) < 0))
+
 # Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28): native caller mi's own binding of
 # hidden input k of model -- its input of that name, or its own field of that name it uses -- as its code reads it
 # here, into dest, its type in *ty (own-type code).  0, or 1 when it has none: the model then reads the node's copied
@@ -42497,6 +42723,42 @@ fn: l2_held_binding (int: mi; int: model; int: k; @: char dest; @: int ty) int
     ---
 return: 1
 
+# HELD-FREE-NAME-OTHER-TYPE in the walk: the binding of type bty -- input pi of the running caller (ARG, or the own
+# field oi it is bound to), or its own field oi -- converted to oty where a held call hands it, under parent into
+# *out: GUARD [guard, the binding, CALL receiver [GUARDED]].  The binding is evaluated once; an absent one leaves the
+# operand absent and calls nothing; a present one is the receiver's result, its refusal the caller's implicit
+# `convert` (the edge's catch rows, as at every conversion edge: l2_rw_call with l2_rw_conv).
+fn: l2_rw_held_convert (const: @(LmP0Node node); int: bty; int: oty; int: pi; int: oi; int: parent; @: int out) int
+    LmP0Field: one
+    int: cidx
+    int: src
+    int: call
+    if: l2_rw_num_ty(bty) = 0 || l2_rw_num_ty(oty) = 0
+        return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
+    if: l2_convert_hit(l2_own_ty_word(bty), l2_own_ty_word(oty)) = 0
+        return: l2_error(l2_src, node, "internal: a conversion site was not checked")
+    cidx: l2_convert_method()
+    if: cidx < 0
+        return: l2_error(l2_src, node, "internal: a conversion site was not checked")
+    if: l2_rw_frame(parent, "LMX_WALK_OP_GUARD", 3, out) != 0
+        return: 1
+    if: oi >= 0 && l2_rw_own(\out, oi, @ src) != 0
+        return: 1
+    if: oi < 0 && l2_rw_arg(\out, pi, @ src) != 0
+        return: 1
+    if: l2_rw_put(\out, 1, src) != 0
+        return: 1
+    memset((cast: (@: void) (@ one)), 0, c.sizeof(c.LmP0Field))
+    one.value: (cast: (@: LmP0Node) node)
+    l2_rw_conv: 1
+    l2_rw_conv_guarded: 1
+    if: l2_rw_call(node, cidx, -1, @ one, \out, @ call) != 0
+        l2_rw_conv: 0
+        l2_rw_conv_guarded: 0
+        return: 1
+    ---
+return: l2_rw_put(\out, 2, call)
+
 # The same in the walk, as an operand under parent into *out: the caller's input (ARG, or the field it is bound to), its
 # own field (the root's are its declared fields); 1 with nothing built when it has none, or refused (a type the input
 # does not have).
@@ -42521,7 +42783,7 @@ fn: l2_rw_held_binding (const: @(LmP0Node node); int: model; int: k; int: parent
     same: l2_held_cap_same(l2_rw_mi, model, k)
     if: pi >= 0
         if: same = 0 && l2_own_ty_of_param(l2_input_ft(l2_rw_mi, pi)) != oty
-            return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
+            return: l2_rw_held_convert(node, l2_own_ty_of_param(l2_input_ft(l2_rw_mi, pi)), oty, pi, l2_rw_bound(nm), parent, out)
         oi: l2_rw_bound(nm)
         if: oi >= 0
             return: l2_rw_own(parent, oi, out)
@@ -42533,7 +42795,7 @@ fn: l2_rw_held_binding (const: @(LmP0Node node); int: model; int: k; int: parent
     if: same != 0
         return: l2_rw_mad_host_struct(parent, l2_rw_mi, nm, out)
     if: l2_own_ty[oi] != oty
-        return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
+        return: l2_rw_held_convert(node, l2_own_ty[oi], oty, -1, oi, parent, out)
     # A reference of another declaration than the one the model's lexical source names is another value: it is
     # admitted to the model's use by the ordinary admission, where the model's input has a schema to admit to
     # (l2_rw_mad_call).  A held callable under the name has none: its admission is not built, a limit of this
@@ -42668,12 +42930,14 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
             k: k + 1
             continue
         ---
-        # A capture given as a Structure of the capture's own type is admitted as itself.  Anything else must
-        # travel as the model's input does: a value of another transport is not converted here, a limit said
-        # where it stands.
+        # A capture given as a Structure of the capture's own type is admitted as itself.  A number of another
+        # type is converted here, its absence kept (HELD-FREE-NAME-OTHER-TYPE, l2_held_convert_emit); a binding of
+        # another kind was refused where the call stands (l2_check_held_convert).
         same: l2_held_cap_same(mi, model, k)
-        if: same = 0 && bty != oty
+        if: same = 0 && bty != oty && (l2_rw_num_ty(bty) = 0 || l2_rw_num_ty(oty) = 0)
             return: l2_error(l2_src, node, "a caller's binding of a held callable's free name is of another type")
+        if: same = 0 && bty != oty && l2_held_convert_emit(mi, bty, oty, node, ind, bv) != 0
+            return: 1
         if: same != 0 && l2_cap_src_marked(mi, l2_dn(model, k)) = 0 && l2_admit_entry(mi, model, k, ns, bv, ind) != 0
             return: 1
         # Any other reference the method gives -- a Structure of another declaration, an input it only hands

@@ -1,0 +1,202 @@
+predef: "l2src/lmx_walk.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/tests/walk_contract_fixture.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_arena_blocks.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>" "<limits.h>"
+
+# A presence guard: GUARD [guard, source, continuation] and GUARDED [guarded].
+# The source is evaluated once. Absent, the guard's value is absent and the
+# continuation does not run. Present, the continuation runs and GUARDED in it
+# is the source's one value; a guard inside the continuation gives the outer
+# value back when it ends. GUARDED outside every continuation, and a guard
+# without its two operands, are not nodes the walker runs.
+
+sub: gd_check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: gd_check
+
+fn: gd_fr (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: op; size_t: children) @: Lmx
+    @: Lmx n 0
+    if: parent = 0
+        return: 0
+    n: lmx_walk_frame(arena, roles, parent, op, children)
+    if: n = 0 || lmx_arena_ref_store(parent, slot, (cast: (@: void) n)) != 0
+        return: 0
+return: n
+
+# A fresh body of one statement, RET [ret, <child 1>]; its holder in \caller.
+fn: gd_ret (@: LmxArena arena; @: Lmx roles; @@: Lmx caller) @: Lmx
+    @: Lmx holder lmx_node_new_owned(arena)
+    \caller: 0
+    if: holder = 0 || lmx_arena_refs_open_owned(arena, holder, 1U) != 0
+        return: 0
+    \caller: holder
+return: gd_fr(arena, roles, holder, 0U, c.LMX_WALK_OP_RET, 2U)
+
+fn: gd_lit (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: v) @: Lmx
+    @: Lmx n gd_fr(arena, roles, parent, slot, c.LMX_WALK_OP_LIT, 2U)
+    if: n = 0 || lmx_walk_store_int(arena, n, 1U, v) != c.LMX_WALK_OK
+        return: 0
+return: n
+
+# ARG [arg, index, no fallback, int witness]: the activation's input 0.
+fn: gd_arg (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot) @: Lmx
+    @: Lmx n gd_fr(arena, roles, parent, slot, c.LMX_WALK_OP_ARG, 4U)
+    if: n = 0 || lmx_walk_store_size(arena, n, 1U, 0U) != c.LMX_WALK_OK
+        return: 0
+    if: lmx_arena_ref_store(n, 3U, wt_witness(arena, c.LMX_TYPE_INT)) != 0
+        return: 0
+return: n
+
+# ADD [add, GUARDED, LIT k] at a slot.
+fn: gd_plus (@: LmxArena arena; @: Lmx roles; @: Lmx parent; size_t: slot; int: k) @: Lmx
+    @: Lmx add gd_fr(arena, roles, parent, slot, c.LMX_WALK_OP_ADD, 3U)
+    if: add = 0 || gd_fr(arena, roles, add, 1U, c.LMX_WALK_OP_GUARDED, 1U) = 0 || gd_lit(arena, roles, add, 2U, k) = 0
+        return: 0
+return: add
+
+# 0: a number, in \value. 1: INVALID. 2: anything else. 3: OK with no value.
+fn: gd_run (@: LmxWalkContext ctx; @: Lmx caller; @@: void args; size_t: nargs; @: LmxWalkValue value) int
+    int: st
+    if: caller = 0
+        return: 2
+    st: lmx_walk_activate(ctx, caller, caller, args, nargs, value)
+    if: st = c.LMX_WALK_INVALID
+        return: 1
+    if: st = c.LMX_WALK_OK && value\present = 0
+        return: 3
+    if: st != c.LMX_WALK_OK || value\kind != c.LMX_WALK_VALUE_NUMBER
+        return: 2
+return: 0
+
+fn: main () int
+    @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
+    LmxArena: arena
+    LmxScratch: scratch
+    LmxPool: cells
+    LmxWalkContext: ctx
+    LmxWalkValue: value
+    []: @(void) args 1
+    int: five 5
+    @: Lmx roles 0
+    @: Lmx caller 0
+    @: Lmx ret 0
+    @: Lmx guard 0
+    @: Lmx inner 0
+    @: Lmx add 0
+    @: Lmx set 0
+    int: failures 0
+
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ scratch)), 0, c.sizeof(c.LmxScratch))
+    memset((cast: (@: void) (@ cells)), 0, c.sizeof(c.LmxPool))
+    memset((cast: (@: void) (@ ctx)), 0, c.sizeof(c.LmxWalkContext))
+    if: lmx_arena_open(@ arena) != 0
+        fputs("lmx: arena open failed\n", l1_stdout())
+        free(counts)
+        return: 2
+    ---
+    if: lmx_scratch_open(@ scratch, @ arena, @ cells, 64U) != c.LMX_SCRATCH_OK
+        lmx_arena_release(@ arena)
+        free(counts)
+        return: 2
+    ---
+    roles: lmx_walk_roles_open(@ arena)
+    gd_check(counts, roles != 0, "roles opened")
+    ctx.arena: @ arena
+    ctx.scratch: @ scratch
+    ctx.roles: roles
+
+    # -- RET [ret, GUARD [guard, ARG 0, ADD [add, GUARDED, LIT 1]]].
+    ret: gd_ret(@ arena, roles, @ caller)
+    guard: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    gd_check(counts, guard != 0 && gd_arg(@ arena, roles, guard, 1U) != 0 && gd_plus(@ arena, roles, guard, 2U, 1) != 0, "a guard of an input built")
+    args[0]: (cast: (@: void) (@ five))
+    gd_check(counts, gd_run(@ ctx, caller, args, 1U, @ value) = 0 && (value.type) = c.LMX_TYPE_INT && (value.number) = 6, "a present input: the continuation over its value, 6")
+    args[0]: 0
+    gd_check(counts, gd_run(@ ctx, caller, args, 1U, @ value) = 3, "an absent input: the guard's value is absent")
+
+    # -- The continuation does not run for an absent source: here it would be
+    # refused (a number and a reference added).
+    ret: gd_ret(@ arena, roles, @ caller)
+    guard: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    add: gd_fr(@ arena, roles, guard, 2U, c.LMX_WALK_OP_ADD, 3U)
+    gd_check(counts, guard != 0 && gd_arg(@ arena, roles, guard, 1U) != 0 && add != 0 && gd_fr(@ arena, roles, add, 1U, c.LMX_WALK_OP_GUARDED, 1U) != 0 && gd_fr(@ arena, roles, add, 2U, c.LMX_WALK_OP_SELF, 1U) != 0, "a guard with a refused continuation built")
+    args[0]: 0
+    gd_check(counts, gd_run(@ ctx, caller, args, 1U, @ value) = 3, "an absent input does not run the continuation")
+    args[0]: (cast: (@: void) (@ five))
+    gd_check(counts, gd_run(@ ctx, caller, args, 1U, @ value) = 1, "a present input runs it, and it is refused")
+
+    # -- The source once: GUARD [guard, SET_ARG [set_arg, 0, ADD [ARG 0, LIT 1], witness],
+    # ADD [add, GUARDED, ARG 0]]. The source makes the input 6 and gives 6: 12. A
+    # source evaluated again would give 7 and make the input 7.
+    ret: gd_ret(@ arena, roles, @ caller)
+    guard: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    set: gd_fr(@ arena, roles, guard, 1U, c.LMX_WALK_OP_SET_ARG, 4U)
+    inner: gd_fr(@ arena, roles, set, 2U, c.LMX_WALK_OP_ADD, 3U)
+    add: gd_fr(@ arena, roles, guard, 2U, c.LMX_WALK_OP_ADD, 3U)
+    gd_check(counts, set != 0 && lmx_walk_store_size(@ arena, set, 1U, 0U) = c.LMX_WALK_OK && lmx_arena_ref_store(set, 3U, wt_witness(@ arena, c.LMX_TYPE_INT)) = 0, "a source that writes the input built")
+    gd_check(counts, inner != 0 && gd_arg(@ arena, roles, inner, 1U) != 0 && gd_lit(@ arena, roles, inner, 2U, 1) != 0, "the source's sum built")
+    gd_check(counts, add != 0 && gd_fr(@ arena, roles, add, 1U, c.LMX_WALK_OP_GUARDED, 1U) != 0 && gd_arg(@ arena, roles, add, 2U) != 0, "the continuation over the guarded value and the input built")
+    args[0]: (cast: (@: void) (@ five))
+    gd_check(counts, gd_run(@ ctx, caller, args, 1U, @ value) = 0 && (value.number) = 12, "the source is evaluated once: 6 + 6")
+
+    # -- A guard inside a continuation gives the outer value back:
+    # GUARD [guard, LIT 2, ADD [add, GUARD [guard, LIT 3, GUARDED], GUARDED]] is 3 + 2.
+    ret: gd_ret(@ arena, roles, @ caller)
+    guard: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    add: gd_fr(@ arena, roles, guard, 2U, c.LMX_WALK_OP_ADD, 3U)
+    inner: gd_fr(@ arena, roles, add, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    gd_check(counts, guard != 0 && gd_lit(@ arena, roles, guard, 1U, 2) != 0 && add != 0 && inner != 0 && gd_lit(@ arena, roles, inner, 1U, 3) != 0 && gd_fr(@ arena, roles, inner, 2U, c.LMX_WALK_OP_GUARDED, 1U) != 0 && gd_fr(@ arena, roles, add, 2U, c.LMX_WALK_OP_GUARDED, 1U) != 0, "a guard in a guard built")
+    gd_check(counts, gd_run(@ ctx, caller, 0, 0U, @ value) = 0 && (value.number) = 5, "the inner guard's value, then the outer one: 3 + 2")
+
+    # -- An absent source of a guard that is itself a source: absence goes on.
+    ret: gd_ret(@ arena, roles, @ caller)
+    guard: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    inner: gd_fr(@ arena, roles, guard, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    gd_check(counts, guard != 0 && inner != 0 && gd_arg(@ arena, roles, inner, 1U) != 0 && gd_fr(@ arena, roles, inner, 2U, c.LMX_WALK_OP_GUARDED, 1U) != 0 && gd_plus(@ arena, roles, guard, 2U, 1) != 0, "a guard over a guard built")
+    args[0]: 0
+    gd_check(counts, gd_run(@ ctx, caller, args, 1U, @ value) = 3, "an absent input through two guards is absent")
+    args[0]: (cast: (@: void) (@ five))
+    gd_check(counts, gd_run(@ ctx, caller, args, 1U, @ value) = 0 && (value.number) = 6, "a present one is 6")
+
+    # -- Refusals.
+    ret: gd_ret(@ arena, roles, @ caller)
+    gd_check(counts, ret != 0 && gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARDED, 1U) != 0, "a guarded value outside a guard built")
+    gd_check(counts, gd_run(@ ctx, caller, 0, 0U, @ value) = 1, "a guarded value outside every continuation is refused")
+    ret: gd_ret(@ arena, roles, @ caller)
+    guard: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARD, 2U)
+    gd_check(counts, guard != 0 && gd_lit(@ arena, roles, guard, 1U, 2) != 0, "a guard with no continuation built")
+    gd_check(counts, gd_run(@ ctx, caller, 0, 0U, @ value) = 1, "a guard with no continuation is refused")
+    ret: gd_ret(@ arena, roles, @ caller)
+    guard: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARD, 3U)
+    gd_check(counts, guard != 0 && gd_lit(@ arena, roles, guard, 1U, 2) != 0, "a guard with an empty continuation built")
+    gd_check(counts, gd_run(@ ctx, caller, 0, 0U, @ value) = 1, "a present source with an empty continuation is refused")
+    ret: gd_ret(@ arena, roles, @ caller)
+    add: gd_fr(@ arena, roles, ret, 1U, c.LMX_WALK_OP_GUARDED, 2U)
+    gd_check(counts, add != 0 && gd_lit(@ arena, roles, add, 1U, 2) != 0, "a guarded value with an operand built")
+    gd_check(counts, gd_run(@ ctx, caller, 0, 0U, @ value) = 1, "a guarded value with an operand is refused")
+
+    failures: counts[1]
+    c.printf("lmx_walk_guard_selftest: %d checks, %d failed\n", counts[0], failures)
+    free(counts)
+    lmx_scratch_close(@ scratch)
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        return: 1
+return: 0

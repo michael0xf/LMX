@@ -8973,3 +8973,109 @@ hook to make an allocation fail.
 **Next.** The numeric conversion at the receiving edge
 (FIELD-CONSUMPTION-CONVERSION); LETTER-THROUGH-OPAQUE-PLACE and the form of
 this remainder by Codex's answers.
+
+<a id="held-conversion"></a>
+## 87. A value handed on is converted by the call that gives it to a definition reading another type (HELD-FREE-NAME-OTHER-TYPE)
+
+### The ruling
+
+Codex's handoff OPUS-HANDOFF-20261005-103112, item 5: "Receiving numeric
+conversion: a reached present value invokes the ordinary converter; absent
+stays absent without calling it. A small GENERAL internal presence-guard
+operation is acceptable (evaluate source once, conditional continuation
+reuses its value in activation storage). No sentinel equality trick
+(present NaN is not absence) or conversion-only CALL flag. Pure forwarders
+must preserve ORIGINAL resolved type + presence losslessly: first-seen
+consumer type is not an unobservable carrier (untaken size_t narrowing must
+not throw on int -1, nor untaken int narrowing on a wide size_t).
+Conversion/failure belongs to the executing forming caller; ordinary CALL
+still requires its explicit formals."
+
+### What is built
+
+- **The check** (`l2_check_held_convert`, a waited check of kind 8). A
+  held call hands each name its definition reads from the calling method's
+  binding of it. Once the inputs are typed, a binding that is a number of
+  another type than the definition's, and that can arrive present, gets the
+  edge to its conversion row's receiver (`l2_check_value_convert_core`, the
+  words of every conversion edge). The calling method is then one that can
+  throw `convert`. A binding of another kind is refused where the call
+  stands, as before.
+- **The native formation** (`l2_held_convert_emit`, `l2_emit_convert_raw`).
+  The binding is evaluated once. An entry the method only hands on is tested
+  for presence. A present value is read at its own type and given to the
+  receiver, and the receiver's result goes into a cell of the definition's
+  type in this activation, whose address the held call takes. A refusal of
+  the receiver is the calling method's implicit `convert`. An absent entry
+  stays absent and calls nothing, and the definition reads its own copy.
+- **The walk** (`l2_rw_held_convert`): `GUARD [guard, the binding, CALL
+  receiver [GUARDED]]`. Two new walker operations (`lmx_walk.h.lm1`,
+  `lmx_walk_eval`). GUARD evaluates its source once. Absent, its value is
+  absent and the continuation does not run. Present, the continuation runs,
+  and GUARDED in it reads that value, which the activation holds while the
+  continuation runs (the frame's `guarded`). A guard inside the continuation
+  gives the outer value back when it ends. The receiver's CALL is the
+  ordinary conversion edge's, with its catch rows. Its one operand is the
+  GUARDED, which `l2_rw_call` takes in place of an expression of the source.
+- **The type of a value handed on** (`l2_dyn_site_held`, `l2_dyk_note`,
+  `l2_dyk_close`). A method that gains an input only to hand a name to a
+  held definition reading a number no longer takes the definition's type.
+  Its callers' bindings type it. Before, `pick`, called by a method with an
+  int `n`, was refused at that call with "incompatible entry signature",
+  because its only consumer reads a size_t. An input that no binding types
+  can never arrive present; it takes the definition's type once the sites
+  change nothing, and the sites are visited again.
+
+### Witnesses
+
+| Row | What it shows |
+| --- | --- |
+| `unit_held_call_free_name_converted` (+`_walk`) | From the root, with no `n`: each definition reads its copy, 7 and 1001. `outer` has an int `n` of 40: `h0` reads 40, and `h3` reads it converted, 40U, so 41 + 100. |
+| `unit_held_call_free_name_untaken` (+`_walk`) | Not asked to call the definition: no conversion and no throw, for an int -1 handed to a size_t and for a size_t 2^32 + 40 handed to an int. Asked: the row refuses, the forming caller's `convert`, caught by its caller. A present zero is converted and read: 1, not the copy's 1001. |
+| `unit_held_call_free_name_own_binding` (+`_walk`) | A binding of the calling body's own. The root calls `h3` above its own int `n`, where it has none yet: the copy, 1001; and below it: 40 converted, 41. A method with its own int `n` of 40: 41. One with -1: the row refuses it, that method's `convert`, caught by the root, 9. Natively the value the body holds is converted; walked, its own cell under the guard. |
+| `lmx_walk_guard_selftest` (kernel) | 24 checks: a present source, an absent one, the continuation not run on absence, the source evaluated once, a guard inside a guard, and the shapes that are refused. |
+
+The walked twins pin the methods that run walked (`WalkedMethods`), so the
+GUARD the rows exercise is the interpreter's.
+
+### Mutants
+
+| Mutant | Takes out | Result |
+| --- | --- | --- |
+| `G` | the native presence test | `unit_held_call_free_name_converted`: exit 81; from the root an absent entry is read as 0 and converted |
+| `N` | the native conversion | `_converted`: 81; `_untaken`: 83, the size_t 2^32 + 40 read as an int's 40; `_own_binding`: 81 |
+| `F` | the forwarder's type from its callers | `_untaken` refused at translation in both modes: "incompatible entry signature" |
+| kernel `absent` | the guard's test of absence | `_converted_walk`: 81 |
+| kernel `nokeep` | the outer guard's value given back | the guard selftest's guard-in-a-guard check fails |
+| kernel `twice` | the source evaluated once | the guard selftest's source-once check fails |
+
+A replay of the 1889 translations recorded by `opus_full_15`, against the
+translator of section 86, changes one row: `unit_held_call_free_name_converted`,
+refused before as a limit. That row and the new ones name
+`convert_impl.lm2` among their parts, as every conversion row does, since
+the receivers are methods of the program.
+
+### Registered: a forwarder whose callers give two types
+
+A method that only hands a name on still has one type for it. Where two of
+its callers bind the name with two types, the second call is refused:
+"incompatible entry signature". By Codex's words above the forwarder keeps
+each caller's value with that caller's type; then the forming caller would
+convert by the type the value arrived with. That needs the type of the entry
+when the program runs, or a translation that knows it per call. It is asked
+of Codex. The red required positive is `unit_held_call_free_name_two_types`:
+`small` gives an int 40 and `wide` a size_t 7 through one `hop`, by the norm
+41 and 8 ([FORWARDER-BINDINGS-OF-TWO-TYPES](defects.md#forwarder-bindings-of-two-types)).
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_16` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest), `lmx_walk_guard_selftest` among them: 24 checks, 0 failed. |
+| `build/l2src/opus_kernel_15` | Stopped in its kernel phase, before the harness, to add the own-binding rows; the partial directory remains. |
+| `build/l3_selftest/opus_l3_15` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_17` (full harness) | RED39/1896: against `opus_full_16` FAIL→OK 1, OK→FAIL 0, added 6, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_hc1` (focused, before the gates) | 15 rows: those of this section and the held-call rows beside them, all green but the registered red positive `unit_held_call_free_name_two_types` and the two walked twins, whose method pins named definitions (which have no trampoline); with the pins corrected both ran green in `opus_focus_hc2`, the own-binding rows in `opus_focus_hc3`. |
+
+**Next.** FIELD-CONSUMPTION-CONVERSION: a field read at the type of its
+cell's own range, converted at the consuming edge.

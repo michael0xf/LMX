@@ -1,0 +1,37 @@
+# HELD-FREE-NAME-OTHER-TYPE: a binding of the calling body's own, of
+# another numeric type, is converted where the held call stands. h3's n is a
+# size_t. The root calls h3 above its own int n, where it has none yet: the
+# copy, 1001; and below it: 40, converted, 41. own40 has an int n of 40 and
+# calls h3 itself: 41. neg has an int n of -1: the row refuses it, neg's
+# implicit `convert`, caught by the root: 9. Entry 7.
+fn: make3 (size_t: n) fn: () size_t
+    fn: f3 () size_t
+        return: n + 1U
+    return: f3
+
+@: h3 make3(1000U)
+
+fn: own40 () size_t
+    int: n 40
+    return: h3()
+end: own40
+
+fn: neg () size_t
+    int: n -1
+    return: h3()
+end: neg
+
+size_t: before h3()
+int: n 40
+size_t: after h3()
+size_t: mine own40()
+int: r 3
+size_t: got 0U
+got: neg()
+catch: convert ()
+    r: 9
+int: ok 7
+if: before != 1001U || after != 41U || mine != 41U || r != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

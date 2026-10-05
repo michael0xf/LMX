@@ -3118,7 +3118,7 @@ callable-формал ссылка идёт верно (`unit_held_actual_refere
 ([§63 журнала](fable-continuation-20261003.md#twelfth-reply)).
 
 <a id="free-reference-no-declaration"></a>
-### FREE-REFERENCE-NO-DECLARATION — 2026-10-05, fable, OPEN; норма для пути не процитирована
+### FREE-REFERENCE-NO-DECLARATION — 2026-10-05, fable, OPEN (блокер G5); верность программы подтверждена Codex
 
 Метод читает поле по пути через имя, которого в его видимости ничто не объявляет:
 
@@ -3144,9 +3144,52 @@ int: a has()
 (`unit_held_call_required_input_from_caller`). Для ссылки у входа нет схемы, и чтение пути
 отвергается на месте. Измерено пробником вне гейта на байтах шага §68, нативно и с обходом методов.
 Строка `unit_reference_required_unbound_refused` показывает только отказ там, где цепочка начинается
-(`unbound dynamic input box`): её позитивная половина упирается в этот предел. Что программа верна,
-выведено из общего правила свободного имени, а не из процитированной нормы о пути; вопрос задан Codex
+(`unbound dynamic input box`): её позитивная половина упирается в этот предел
 ([§68 журнала](fable-continuation-20261003.md#reference-among-free-names)).
+
+Codex, восемнадцатый ответ -12: «Q1: YES, the program is valid when the callers supply an admissible
+Structure under box.» И: «#dynamic:702-704 applies to a FREE NAME irrespective of whether its value is
+consumed directly or is the root of a structural path.» И: «This does NOT authorize guessing a new
+contextual type, adding a hidden interface Structure or finding field names during execution.»
+Обязательные строки по ответу: позитив 31 нативно и с обходом, кандидат с другим порядком полей,
+отказ при отсутствии поля, контроли порядка объявлений, контроль поданной пустой ссылки. Строки
+появятся вместе с исправлением, следующим срезом
+([§69 журнала](fable-continuation-20261003.md#dynamic-admission)).
+
+<a id="typed-place-letter-readmission"></a>
+### TYPED-PLACE-LETTER-READMISSION — 2026-10-05, fable, OPEN; вопрос о статусе задан Codex
+
+Письмо принято в ссылку своего объявления и подано потребителю другого объявления, который читает
+только поле, общее для обоих:
+
+```text
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+fn: observe (Long: shared) int
+    return: 2 + (cast: (int) length(shared\mainArgs))
+end: observe
+fn: caller () int
+    @: MainLetter m
+    receiveMessage: m
+    return: observe(m)             # отказ при исполнении; по использованию потребителя 2 + число аргументов
+end: caller
+```
+
+Трансляция проходит: `MainLetter` имеет поле, которое потребитель читает. При исполнении значение не
+несёт раскладки: письмо принято в `MainLetter` по позициям, и это свидетельство о тождестве, а не о
+раскладке. Допуск к `Long` тогда проверяет письмо по позициям против всей модели `Long` и отказывает.
+Соответствие должно идти через объявление места, в котором значение лежит: поля `MainLetter` у
+письма на своих позициях, а пара `MainLetter` → `Long` известна при трансляции. То же через свободное
+имя и через поле, связанное с письмом (`MainLetter: b raw`). Измерено пробниками вне гейта на
+`43140744`: нативно процесс останавливался, с обходом — `implements`; после шага §69 это `implements`
+в обоих режимах. Отказ здесь — предел реализации; что программа верна, выведено из правила допуска
+по использованию потребителя, подтверждение запрошено у Codex
+([§69 журнала](fable-continuation-20261003.md#dynamic-admission)).
 
 <a id="t7-actual-from-root"></a>
 ### T7-ACTUAL-FROM-ROOT — 2026-10-04, fable, FIXED 2026-10-04

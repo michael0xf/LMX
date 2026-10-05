@@ -7717,12 +7717,59 @@ $fixtures = @(
     # its place.
     [pscustomobject]@{ Name = 'unit_held_capture_chain_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_capture_chain_other_refused.lm2:25:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # Three more kinds of name the chain reaches.  A Structure field of the host itself is a free name of the
+    # definition as a Structure the host takes is: 35, and 55 with a caller's own (capture_host_field).  A typed
+    # reference of the unit, with a caller's reference to another declaration two methods above: 9 and 65
+    # (reference_typed_chain).  A definition that writes through the reference writes the Structure it was
+    # given: the caller's own, and the unit's is as the root's call left it (reference_write_chain).
+    [pscustomobject]@{ Name = 'unit_held_capture_host_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_capture_host_field_walk.lm2'; Source = 'unit_held_capture_host_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_reference_typed_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_reference_typed_chain_walk.lm2'; Source = 'unit_held_reference_typed_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_reference_write_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_reference_write_chain_walk.lm2'; Source = 'unit_held_reference_write_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
     # A reference that is present and holds nothing, through two methods that only hand it on: it stays present
     # and is not replaced by the lexical value an absent one falls back to (7, not 11).
     [pscustomobject]@{ Name = 'unit_site_hidden_null_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_hidden_null_chain_walk.lm2'; Source = 'unit_site_hidden_null_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    # The admission of a candidate the translation has no layout for, where an input is formed, can fail when the
+    # program runs: the failure is the implicit `implements` of the method that forms the input, natively as
+    # walked, and never a stop of the process (Codex, FABLE-CODEX-20261004-12, the eighteenth reply).  A letter
+    # through an opaque formal to a Structure formal: the handler of the forming method takes it, the callee is
+    # not entered, the candidate is produced once, and a refused admission records nothing (actual_catch).  With
+    # no handler the Message is stopped with no value (actual_uncaught).  Under a free name, through two methods
+    # that only hand it on, beside a caller whose Structure fits: refused where the last of them forms the
+    # definition's input, taken by the handler of the method that received the letter (hidden_catch).  That
+    # method stays native where the methods are walked; the two that hand the name on, and so the admission and
+    # the way of its refusal, are walked.
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_catch_walk.lm2'; Source = 'unit_admit_dynamic_actual_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,7); NativeMethods = @(6); Absent = @(); Debt = @() },
+    # The refusal is thrown with the statuses and handlers of the method that forms the input, whatever the callee
+    # declares: the callee has a throw of its own, and the forming method's handler of `implements` takes the
+    # refusal, not its handler of the callee's name (43, not 44).  A method that declares a throw stays native
+    # where the methods are walked; the forming method is walked.
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_context_walk.lm2'; Source = 'unit_admit_dynamic_actual_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_uncaught_walk.lm2'; Source = 'unit_admit_dynamic_actual_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_hidden_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_admit_dynamic_hidden_catch_walk.lm2'; Source = 'unit_admit_dynamic_hidden_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5,6); NativeMethods = @(7); Absent = @(); Debt = @() },
     # A reference a method requires, which nothing in its sight declares and no caller of the chain has: refused
     # at the root's call of the method that hands it on, where the chain starts, as a number is.
     [pscustomobject]@{ Name = 'unit_reference_required_unbound_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

@@ -490,6 +490,18 @@ value reaches a reader's schema it is admitted by the declaration it carries,
 among those recorded; with none recorded the positional admission stands
 ([ledger](steps/fable-continuation-20261003.md#reference-among-free-names)).
 
+An input is formed in the calling method, before the callee is entered. Where
+the candidate is a dynamic one -- read from a reference place, which holds
+what was given to it, a letter among them -- its admission can fail when the
+program runs, and the failure is the implicit `implements` of the method that
+forms the input, with that method's statuses, handlers and publication,
+natively as walked (`l2_emit_model_admit`, `l2_d105_dynamic`). The context the
+receiving model is found in, the callee for a hidden input, is a separate
+input of that text. The forming method is recorded as one that can throw. A
+Structure a merge or a declaration made, held by value, is no dynamic
+candidate
+([ledger](steps/fable-continuation-20261003.md#dynamic-admission)).
+
 Formation is not transport. The value a reading method so forms is its
 activation's value of the name, and it is what its own callees receive,
 whichever source gave it; a method that only forwards forms nothing and hands

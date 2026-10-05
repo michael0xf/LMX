@@ -1,0 +1,68 @@
+# The same under a free name, through methods that only hand it on. g0, a
+# definition its method returns, reads box\value of the Structure the method
+# took. near calls the held u0 and far calls near; neither has a box. good
+# has its own box, a Model with value 7: 7. letter receives its letter under
+# the name box and calls far: the letter is no Model, so its admission to
+# g0's use is refused where near forms the input, before g0 is entered. The
+# refusal leaves near and far and is taken by letter's handler: 42. From
+# the root, with no box anywhere, g0 reads what its node keeps: 1. g0
+# counts its entries through tick: two, and the refused call is not one.
+# Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+int: entered 0
+
+fn: tick () size_t
+    node\entered: node\entered + 1
+return: 0U
+
+fn: entries () int
+return: node\entered
+
+fn: makeUse (Model: box) fn: () size_t
+    fn: g0 () size_t
+        return: box\value + tick()
+    return: g0
+
+kept: merge Model
+u0: makeUse kept
+
+fn: near () size_t
+    return: u0()
+end: near
+
+fn: far () size_t
+    return: near()
+end: far
+
+fn: good () size_t
+    box: merge Model
+    box\value: 7U
+    return: far()
+end: good
+
+fn: letter () int
+    receiveMessage: box
+    int: r 0
+    r: (cast: (int) far())
+    catch: implements ()
+        r: 42
+    ---
+return: r
+
+size_t: a good()
+int: b letter()
+size_t: c far()
+int: ok 7
+if: a != 7U
+    ok: 81
+if: b != 42
+    ok: 82
+if: c != 1U
+    ok: 83
+if: entries() != 2
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

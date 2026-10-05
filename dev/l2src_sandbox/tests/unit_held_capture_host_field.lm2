@@ -1,0 +1,39 @@
+# A Structure field of the host itself, read by the definition the host
+# returns, is a free name of the definition as a Structure the host takes
+# is. makeUse has its own box, with v 30, and returns g0, which reads
+# box\v. near calls the held u0 and has no box: it only hands the name on.
+# From the root, with no box anywhere: g0 reads what its node keeps,
+# 5 + 30. has has its own box with v 50 and calls near: the caller's
+# binding comes first, 55. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+fn: makeUse (int: k) fn: () int
+    box: merge Model
+    box\v: 30
+    fn: g0 () int
+        return: k + box\v
+    return: g0
+
+u0: makeUse 5
+
+fn: near () int
+    return: u0()
+end: near
+
+fn: has () int
+    box: merge Model
+    box\v: 50
+    return: near()
+end: has
+
+int: a near()
+int: b has()
+int: ok 7
+if: a != 35
+    ok: 81
+if: b != 55
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

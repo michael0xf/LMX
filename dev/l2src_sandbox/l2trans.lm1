@@ -1104,8 +1104,8 @@ prototype:
     fn: l2_d105_close () int
     fn: l2_d105_any (int: mi) int
     fn: l2_d105_tnode (int: p; @: char dest) int
-    fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind)) int
-    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own) int
+    fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi) int
+    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi) int
     fn: l2_ruse_reset () int
     fn: l2_ruse_of (int: own) int
     fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
@@ -1116,6 +1116,8 @@ prototype:
     fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
+    fn: l2_d105_place_dynamic (int: mi; int: key) int
+    fn: l2_d105_dynamic (@: L2ReferenceSource source) int
     fn: l2_d105_place_sources (int: mi; int: k) int
     fn: l2_input_undeclared (int: mi; int: j) int
     fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
@@ -3919,7 +3921,7 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
     if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
         return: 1
     # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).
-    if: l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1) != 0
+    if: l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1) != 0
         return: 1
     # §7b: the value is evaluated above; what is marked is published before the return (book §14).
     if: l2_emit_publish(ind) != 0
@@ -13218,6 +13220,9 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
             ---
             if: model = -1 && l2_input_schema(cidx, l2_m_arity[cidx] + k) != -1 && l2_admit_site(m) != 0
                 return: 1
+            # A dynamic candidate handed under the name: its refusal is m's implicit `implements`.
+            if: model != -1 && src != -1 && l2_input_schema(cidx, l2_m_arity[cidx] + k) != -1 && l2_d105_place_dynamic(m, src) != 0 && l2_admit_site(m) != 0
+                return: 1
             ---
         k: k + 1
 return: 0
@@ -13310,6 +13315,8 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
                 ---
             ---
             if: cand = -1 && l2_admit_site(m) != 0
+                return: 1
+            if: cand != -1 && src != -1 && l2_d105_place_dynamic(m, src) != 0 && l2_admit_site(m) != 0
                 return: 1
             ---
         k: k + 1
@@ -24989,6 +24996,15 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 ---
             ---
         ---
+        # A candidate read from a reference place -- a formal, an input handed on, an own reference, a call's
+        # result -- can be a value the translation has no layout for, a letter among them.  Its admission to a
+        # Structure formal can then fail when the program runs, and the failure is this method's implicit
+        # `implements`: the input is formed here (l2_emit_model_admit).
+        if: req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_cf_get(idx, actual_i) < 0 && l2_empty_actual(a0, idx, actual_i) = 0
+            l2_reference_source(a0, actual_span, mi, @ source)
+            if: l2_d105_dynamic(@ source) != 0 && l2_admit_site(mi) != 0
+                return: l2_error(path, node, "internal: admission outside a method")
+            ---
         # Opaque pointer formals carry possible source facts too. Their lack
         # of a receiving model does not erase a later forwarding admission.
         if: req_mi < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
@@ -29503,6 +29519,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
     int: hid
     int: ncls 0
     int: cfi 0 - 1
+    int: dyn_mi
     # Capture the selected physical occurrence before evaluating actuals: a
     # nested call may reuse l2_pst, but `self` for this call must remain the
     # originally selected callable. Source `node` is self\parent; own storage
@@ -29640,7 +29657,11 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_prep_drop(acts, hides)
         # D-105 native (steps/d105-native.md): the actual of a formal admitted by name is recorded before
         # the call (l2_d105_emit_admit). An occurrence already registered its pair map above.
-        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0, -1) != 0
+        # A dynamic candidate's refusal is this method's implicit `implements`: the input is formed here.
+        dyn_mi: 0 - 1
+        if: l2_d105_dynamic(@ source) != 0
+            dyn_mi: mi
+        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0, -1, dyn_mi) != 0
             return: l2_prep_drop(acts, hides)
         written: written + 1
     ---
@@ -33709,6 +33730,28 @@ fn: l2_d105_declare_maps () int
     l2_d105t_declared: l2_d105t_n
 return: 0
 
+# Whether a candidate read from place `key` of method mi -- an input's index, or an own key -- can be a value the
+# translation has no layout for.  A reference place holds what was given to it: an input of the method, an own
+# reference, a field bound when the program runs can hold a letter, or a value no site of this translation gave.
+# A Structure a merge or a declaration made, held by value, is that one and no other.
+fn: l2_d105_place_dynamic (int: mi; int: key) int
+    int: own l2_d105_key_own(key)
+    if: own < 0 || own >= l2_own_n
+        return: 1
+    if: l2_mres_of_own(own) >= 0
+        return: 0
+return: (cast: (int) (l2_own_is_slot(own) = 0 || l2_own_source_layout(own) = -1))
+
+# The same for a candidate as its expression gives it (l2_reference_source).  Direct producer evidence -- a named
+# Structure, the leaf of a path -- is no dynamic candidate.  A place is what l2_d105_place_dynamic says.  A
+# candidate with no place and no evidence is one.
+fn: l2_d105_dynamic (@: L2ReferenceSource source) int
+    if: source = 0 || source\layout != -1
+        return: 0
+    if: source\method < 0
+        return: 1
+return: l2_d105_place_dynamic(source\method, source\place)
+
 # How many declarations the translation records as reaching place k of method mi (l2_d105_close).
 fn: l2_d105_place_sources (int: mi; int: k) int
     int: i 0
@@ -33737,6 +33780,7 @@ fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const
     int: req l2_input_schema(idx, l2_m_arity[idx] + k)
     int: source_input -1
     int: source_method -1
+    int: at_mi -1
     int: cand
     if: req = -1
         return: 0
@@ -33749,9 +33793,15 @@ fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const
         return: l2_emit_admit(mi, req, value, ind)
     if: source_input != -1
         source_method: l2_d105_key_method(mi, source_input)
-return: l2_d105_emit_source(idx, l2_m_arity[idx] + k, cand, source_method, source_input, value, ind)
+        # The input is formed in mi: a dynamic candidate's refusal is mi's implicit `implements`.
+        if: l2_d105_place_dynamic(mi, source_input) != 0
+            at_mi: mi
+    ---
+return: l2_d105_emit_source(idx, l2_m_arity[idx] + k, cand, source_method, source_input, value, ind, at_mi)
 
-fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind)) int
+# idx is the callee, whose input's schema the value is admitted to; at_mi the method that hands it, where the
+# candidate is a dynamic one, or -1.
+fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi) int
     L2ReferenceSource: source
     source.schema: cand
     source.layout: -1
@@ -33759,12 +33809,16 @@ fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: 
     source.place: sk
     if: smi < 0
         source.layout: cand
-return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1)
+return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1, at_mi)
 
 # The candidate has already been evaluated once. Its physical layout is either
 # direct producer evidence or a completed source admission, never its declared
 # required type. Only the reached target admission may publish a new proof.
-fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own) int
+# mi is the context the receiving model is found in.  at_mi is the method whose activation executes the admission
+# where the candidate is a dynamic one (l2_d105_dynamic), or -1: an input is formed in the calling method before
+# the callee is entered, so a refusal there is that method's implicit `implements`, with its own result and
+# status, its handlers and its publication -- as the walked instruction throws it (LMX_WALK_OP_ADMIT_AS).
+fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi) int
     int: i 0
     int: p
     int: seq l2_d105_seq
@@ -33839,6 +33893,11 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
         return: 1
     if: implicit_throw != 0
         return: l2_emit_implicit_throw(mi, "implements", ind)
+    if: at_mi >= 0
+        if: l2_m_throws = 0 || l2_m_throws[at_mi] = 0
+            return: l2_error(l2_src, 0, "internal: the admission of a dynamic candidate was not checked")
+        return: l2_emit_implicit_throw(at_mi, "implements", ind)
+    ---
     if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: an admission by name was refused\\n\")\n%s    c.abort()\n", ind, ind) < 0
         return: 1
 return: 0
@@ -43082,7 +43141,7 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
     l2_tn: l2_tn + 1
     if: c.sprintf(temp, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(ty), 0, temp, type_text) != 0 || c.fprintf(l2_out, "%s%s %s\n", ind, type_text, value) < 0
         return: 1
-    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1, place) != 0
+    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1, place, -1) != 0
         return: 1
     if: source = 0 && l2_emit_admit(mi, model, temp, ind) != 0
         return: 1
@@ -45240,7 +45299,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_publish(ind) != 0
             return: 1

@@ -6385,3 +6385,160 @@ gives 83, the caller's Structure lost with no refusal;
 ingress; walked consumers with a callable formal; the complete copy of a
 node built when the program runs and its own contract route; then the open
 merge obligations of sections 64 to 66.
+
+<a id="dynamic-admission"></a>
+## 69. The admission of a dynamic candidate where an input is formed is the forming method's implicit `implements` (Codex's eighteenth reply -12)
+
+### The reply
+
+"Q2: build the reachability witness NOW as connected admission work, not
+parked behind receiving-edge conversion. I read l2_d105_emit_source and
+l2_emit_model_admit: implicit_throw=0 leads to the exact invariant abort
+you reported. A genuinely runtime-failable ordinary admission must follow
+the same implicit implements failure in native and walked execution."
+
+"First distinguish YES/NO/UNKNOWN and prove which supported source can
+reach that branch. Do not build an invalid-memory witness merely to force a
+failure, and do not reinterpret UNKNOWN as proved incompatibility or assume
+positional acceptance without proof. If a particular admission is genuinely
+compile-time guaranteed, a duplicate invariant abort is unnecessary;
+document that proof rather than retaining defensive validation."
+
+"Do not mechanically flip implicit_throw 0 to 1 while passing the CALLEE
+index as the failure context. l2_d105_emit_source currently passes idx into
+l2_emit_model_admit. Input formation happens in the CURRENT caller before
+callee entry; failure must use that activation's correct result/status ABI,
+catch location and cleanup/publication path. Keep the receiving-model
+context distinct from the executing failure context."
+
+"Q1: YES, the program is valid when the callers supply an admissible
+Structure under box. Add the positive returning 31 beside
+unit_reference_required_unbound_refused, native and genuinely walked; keep
+FREE-REFERENCE-NO-DECLARATION OPEN/G5-blocking until it passes." That is the
+next slice; this section is Q2 and the three probe rows.
+
+### What reaches the branch
+
+The admission of a value to a Structure input, as the native body writes
+it (`l2_emit_model_admit`), has three outcomes when the program runs.
+
+- The value carries a layout that is among those the translation records
+  for the place it was read from: the correspondence of that layout is
+  recorded. YES.
+- The value carries a layout that is not among them: UNKNOWN. I have no
+  program of one translation that reaches this. An ingress from another
+  translation would.
+- The value carries no layout. A letter is such a value. It is checked
+  against the whole receiving model by position: YES or NO.
+
+Before this step every outcome but the first stopped the process:
+`lmx: invariant: an admission by name was refused`. The walked instruction
+throws `implements` there. Three supported programs reach the third
+outcome, measured on the committed translator `43140744`.
+
+| Program | Native | Walked |
+| --- | --- | --- |
+| A letter given through an opaque formal to a Structure formal, with a handler in the forming method. | the process stops | the handler takes it |
+| The same with no handler. | the process stops | the process stops: `a callable that cannot throw reported a status`. The forming method was not recorded as one that can throw. |
+| A letter under a free name, through two methods that only hand it on, beside a caller whose Structure of a known declaration reaches the same input. This is the route section 68 added. | the process stops | the handler takes it |
+
+### What is changed
+
+1. **The admitting text takes the method whose activation executes it**
+   (`l2_emit_model_admit`, its last input). Its first input stays the
+   context the receiving model is found in, which for a hidden input is
+   the callee. Where the candidate is a dynamic one a refusal is the
+   implicit `implements` of the executing method, with that method's
+   statuses, handlers and publication.
+2. **Which candidate is a dynamic one is said in one place**
+   (`l2_d105_place_dynamic`, `l2_d105_dynamic`). A reference place holds
+   what was given to it: an input of the method, an own reference, a field
+   bound when the program runs, a call's result, a candidate with no
+   evidence at all. A Structure a merge or a declaration made, held by
+   value, is that one and no other; so is direct producer evidence, a
+   named Structure or the leaf of a path.
+3. **The method that forms an input from a dynamic candidate is recorded
+   as one that can throw**: for an explicit actual in the check of the
+   call, for a hidden input in the fixed point, at a call of a method and
+   at a held call. This also repairs the walked uncaught case.
+
+A candidate that is not dynamic keeps the text it had, the stop of the
+process included. For such a place the stop is unreachable: the place
+holds the Structure its declaration or merge made, and the layouts of that
+Structure are the ones the translation records for it. The text is one
+emitter's for both kinds and I have not split it in this step. That stop is
+a duplicate of the proof and is the next cleanup; it is named here so that
+it is not taken for a decision to keep it.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_admit_dynamic_actual_catch`, `_walk` | The handler of the forming method takes the refusal, 42. The callee is not entered. The candidate is produced once for each call, before it is admitted. A refused admission records nothing: a second call is refused as the first, and the letter is then admitted to a formal of its own declaration. |
+| `unit_admit_dynamic_actual_context`, `_walk` | The callee declares a throw of its own. The refusal is the forming method's `implements`, taken by its handler of that name and not by its handler of the callee's name: 43, not 44. |
+| `unit_admit_dynamic_actual_uncaught`, `_walk` | With no handler the refusal leaves the forming method and the root; the Message is stopped with no value, its failure counted, thrown 2. The process is not stopped. |
+| `unit_admit_dynamic_hidden_catch`, `_walk` | Under a free name through two methods that only hand it on: refused where the last of them forms the definition's input, taken by the handler of the method that received the letter, 42. The definition is entered twice, by the two calls that are admitted. |
+
+Where the methods are walked, a method that declares a throw and the
+method that receives the letter stay native; the forming methods are
+walked, and the rows pin which is which.
+
+Three rows that section 68 left as probes are rows now, natively and with
+the methods walked: `unit_held_capture_host_field`,
+`unit_held_reference_typed_chain`, `unit_held_reference_write_chain`.
+
+### Mutants
+
+| Mutant | Changes | Result |
+| --- | --- | --- |
+| `abort` | a dynamic candidate's refusal stops the process again | the three catch rows and the uncaught row stop natively; the walked variants pass |
+| `calleectx` | an explicit actual's refusal is thrown in the callee's context | `unit_admit_dynamic_actual_context` red natively: the handler does not take it |
+| `hiddenstatic` | a hidden input's candidate is never dynamic | `unit_admit_dynamic_hidden_catch` stops natively |
+| `actualstatic` | an explicit actual's candidate is never dynamic | `unit_admit_dynamic_actual_catch` and the uncaught row stop natively |
+| `nomark` | the forming method is not recorded as one that can throw | the uncaught row does not compile |
+
+`calleectx` is told by behaviour only where the callee can throw too: on
+the other rows the emitter's own check refuses the translation, which is a
+check of the translator and not of the program. `nomark` passes the rows
+whose forming method has a handler: a refusal taken inside the method needs
+no way out of it. The walked variants have their own route, which this step
+does not change.
+
+### Measured
+
+The translator against the committed one, on the 1724 translations recorded
+by `fable_full_40`: exit and messages are the same on every row; 76 rows
+differ in the generated L1 only, by the methods that can now throw.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_27` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_27` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_41` (full harness) | RED 35 of 1739. Against `fable_full_40`: FAIL→OK 0, OK→FAIL 0, added 14, all green, removed 0, no message of a red row changed. |
+| `build/l2_harness/fable_s7p_02`, `_03`, `_05` (focused, before the gates) | The 76 changed rows and the new ones; all pass after two corrections of the walked pins. |
+
+### Found beside it, measured, not repaired
+
+- **A letter held in a typed place is refused where it should be
+  admitted.** A letter received into a reference of its own declaration and
+  given to a consumer of another declaration that reads only a field both
+  have is refused: by position against the whole receiving model. Its
+  correspondence should come through the declaration of the place it is
+  held in. Natively and walked alike, and since this step an ordinary
+  `implements` in both
+  ([TYPED-PLACE-LETTER-READMISSION](defects.md#typed-place-letter-readmission)).
+- **Four refusals at translation whose class I have not settled**, put to
+  Codex: the result of a call of opaque type given directly to a Structure
+  formal (`implements is false in function argument`, while the same value
+  through a local or a formal is admitted when the program runs); a
+  candidate chosen when the program runs among two declarations, one of
+  which does not fit, refused for the possibility; a caller's opaque
+  reference under a free name the reader declares as a typed one
+  (`incompatible entry signature`); a letter returned through an opaque
+  formal as a typed result (`implements is false in return value`).
+
+**Next.** A path through a free name that nothing in the method's sight
+declares ([FREE-REFERENCE-NO-DECLARATION](defects.md#free-reference-no-declaration)),
+with the rows the reply names; the duplicate stop of a candidate that is
+not dynamic; then the receiving-edge conversion and the rest of the order of
+section 68.

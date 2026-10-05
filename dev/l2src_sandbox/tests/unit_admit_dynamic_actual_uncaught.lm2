@@ -1,0 +1,18 @@
+# The same refusal with no handler anywhere: it leaves pass, which forms the
+# input, and then the root, and the Message is stopped with no value. The
+# process is not stopped: the entry has no value, its failure is counted
+# and the implicit throw is the one of `implements`.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: get (Model: x) int
+return: 5
+
+fn: pass (@: void p) int
+return: get(p)
+
+receiveMessage: m
+int: a pass(m)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

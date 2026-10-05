@@ -1,0 +1,48 @@
+# A typed reference among the free names of a held definition is asked
+# along the chain of callers. r is declared a reference to Model and bound
+# to m, whose v is 4. g0, a definition its method returns, reads r\v. near
+# calls the held u0, far calls near; neither has an r. From the root: 5 + 4.
+# has has its own r, a reference to Wide, which has v at another position,
+# with 60: the caller's binding comes first and is admitted by the field
+# g0 reads, 65. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 60
+end: Wide
+
+m: merge Model
+@: Model r m
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + r\v
+    return: g0
+
+u0: makeUse 5
+
+fn: near () int
+    return: u0()
+end: near
+
+fn: far () int
+    return: near()
+end: far
+
+fn: has () int
+    @: Wide r @Wide
+    return: far()
+end: has
+
+int: a far()
+int: b has()
+int: ok 7
+if: a != 9
+    ok: 81
+if: b != 65
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

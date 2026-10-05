@@ -1,0 +1,43 @@
+# The refusal of a dynamic candidate belongs to the method that forms the
+# input, with that method's own statuses and handlers, whatever the callee
+# declares. strict declares a throw of its own, range. pass gives its
+# opaque reference to strict's Model formal. The root's letter is no Model:
+# the admission is refused in pass, before strict is entered, as pass's
+# implicit `implements`, and pass's handler of that name takes it: 43. Its
+# handler of strict's own name does not: 44 would be that. Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+int: entered 0
+
+fn: strict (Model: x) int
+    throws: range
+    node\entered: node\entered + 1
+    if: x\value > 100U
+        throw: range
+return: 6
+
+fn: entries () int
+return: node\entered
+
+fn: pass (@: void p) int
+    int: r 0
+    r: strict(p)
+    catch: implements ()
+        r: 43
+    ---
+    catch: range ()
+        r: 44
+    ---
+return: r
+
+receiveMessage: m
+int: d pass(m)
+int: ok 7
+if: d != 43
+    ok: 81
+if: entries() != 0
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -2710,6 +2710,77 @@ reads a cell held in a nested body of the unit is not built yet`. Предел �
 работает (`unit_t7_actual_typed_reference`)
 ([§62 журнала](fable-continuation-20261003.md#merge-actual)).
 
+<a id="t7-host-body"></a>
+### T7-HOST-BODY — 2026-10-04, fable, OPEN (блокер G5)
+
+Метод, у которого до `return: merge(...)` есть оператор, отвергается на месте merge:
+
+```text
+fn: wrap (int: k) fn: (int: x) int
+    int: other 50
+    return: merge(y: k; add)      # отказ: assignment value has unknown type
+```
+
+Возвращающим merge признаётся только метод, всё тело которого — этот `return`: тогда `return` висит
+на сигнатуре, и проверка значения возврата до него не доходит. С телом тот же `return` проверяется
+как обычное значение, и выражение merge там не имеет типа. Это предел производителя и
+классификации, не правило языка. Codex: «The current inability to put an earlier statement/field before return: merge is
+implementation debt, not evidence that both readings are equally valid.» Измерено на `0a52fe7d` пробником вне гейта.
+Обязательный позитив появится строкой харнесса вместе с исправлением
+([§63 журнала](fable-continuation-20261003.md#twelfth-reply)).
+
+<a id="t7-node-lexical-links"></a>
+### T7-NODE-LEXICAL-LINKS — 2026-10-04, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+
+Узел, который строит merge, получает родителем `node` метода, давшего merge, а не место выражения
+merge. Запасной источник свободного имени модели в теле узла — ячейка единицы, впечатанная адресом
+при построении узла. По норме лексический родитель нового корня следует месту выражения merge
+(`#composition`), а свободное имя после привязок и унаследованных входов вызывающих ищется по
+реальным связям выбранного вхождения (`#dynamic`): одноимённое поле места построения идёт раньше
+поля единицы. Codex: «An address baked into generated code is correct only if it denotes the source that
+those real links select for THAT occurrence; a model's unit cell is not automatically the source of
+every constructed/captured copy.» Это не выбор между
+двумя равноправными чтениями. Сегодня различие не наблюдается только потому, что метод, дающий
+merge, не может объявить поле ([T7-HOST-BODY](#t7-host-body)). После снятия того предела гейтом
+разводятся три значения — единицы модели, места построения и скопированного контекста — без входа
+от вызывающего, с перекрытием вызывающим, с явным доступом через `node` и с независимостью от
+последующих изменений. Если в графе нет нужной связи, чинится существующее построение копии и
+связей: без имён при исполнении, без добавочного графа контекста, без новой записи идентичности
+([§63 журнала](fable-continuation-20261003.md#twelfth-reply)).
+
+<a id="held-reference-chain"></a>
+### HELD-REFERENCE-NOT-ASKED-ALONG-CHAIN — 2026-10-04, fable, OPEN (блокер G5), неверное значение
+
+Ссылка, которую читает удерживаемое определение, не спрашивается по цепочке вызывающих. Программа
+транслируется и даёт неверное значение, без отказа:
+
+```text
+m: merge Model                     # v 4
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + m\v
+    return: g0
+u0: makeUse 5
+fn: inner () int
+    return: u0()
+end: inner
+fn: outer () int
+    m: merge Model
+    m\v: 40
+    return: inner()                # по норме 45; даёт 9
+end: outer
+```
+
+`inner` не связывает `m` и для ссылки не получает входа, поэтому определение читает `m` единицы, а
+ближайшая привязка вызывающего теряется. Для чисел это исправлено в §60; про ссылку там сказано
+словами, что она по цепочке ещё не спрашивается, но измеренного неверного значения в записи не
+было. Измерено на `0a52fe7d`, нативно и с обходом методов, пробником вне гейта. Прямой вызов из
+метода со своей ссылкой отвергается пределом
+([HELD-FREE-REFERENCE-OTHER-DECLARATION](#held-free-reference-other-declaration)); через
+callable-формал ссылка идёт верно (`unit_held_actual_reference`). Обязательный позитив появится
+строкой харнесса вместе с исправлением, в шаге о ссылке
+([§63 журнала](fable-continuation-20261003.md#twelfth-reply)).
+
 <a id="t7-actual-from-root"></a>
 ### T7-ACTUAL-FROM-ROOT — 2026-10-04, fable, OPEN (блокер G5)
 
@@ -2719,6 +2790,20 @@ reads a cell held in a nested body of the unit is not built yet`. Предел �
 given as the actual of a callable formal by the root is not built yet`. Обязательный позитив,
 красный: `unit_t7_actual_from_root` (по норме 5). Чинится вместе с обходимым построением узла merge
 ([§62 журнала](fable-continuation-20261003.md#merge-actual)).
+
+**Уточнено 2026-10-04 по двенадцатому ответу Codex.** Здесь два обязательства, и оба закрываются до
+G5 общим путём компиляции и диспетчеризации тела, без конструктора только для корня и без смены
+смысла по месту. Первое — обходимое построение узла merge. Второе — нативное тело корня: Codex:
+«L2 #call expressly says that every statically compiled executable body, including
+the file root, has a native implementation, with no special interpreter-only root.» И: «Building the merge in the walker is needed for the portable route, but doing only
+that does not discharge the native-root obligation.» Слова «тело корня
+обходится» в этой записи и в комментарии транслятора описывают текущий долг, не разрешённое
+различие корня. Измерено на `0a52fe7d` со снятым пределом: артефакт исполняет корень дважды,
+нативно и через граф. Нативный корень останавливает процесс (`a callable merge could not be
+built`): узел merge строится под `node` дающего метода, а у корня `node` пуст. Обходимый корень
+даёт `walk error: UNSUPPORTED`: сохранённая машинная операция не исполняется обходом. Тот же
+позитив должен пройти у корня и в методе, нативно и с настоящим обходом
+([§63 журнала](fable-continuation-20261003.md#twelfth-reply)).
 
 <a id="t7-model-free-name"></a>
 ### T7-MODEL-FREE-NAME — 2026-10-04, fable, FIXED 2026-10-04

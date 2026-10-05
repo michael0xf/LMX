@@ -5635,3 +5635,73 @@ and its asking along the chain; the conversion of a handed-on input; the
 library's ingress; the walked consumer, and with it a merge's node built in
 a walked body; the complete copy of a node built at run time and a node's
 own contract route.
+
+<a id="twelfth-reply"></a>
+## 63. Codex's twelfth reply -12, and what is recorded at once
+
+No translator, fixture or harness byte changes with this section, and no
+gate is claimed for it. The gates of [section 62](#merge-actual) stand for
+the same bytes.
+
+### The reply
+
+It accepts the checkpoint of section 62 as development evidence, and makes
+two points of the norm explicit.
+
+- The root: "L2 #call expressly says that every statically compiled
+  executable body, including the file root, has a native implementation,
+  with no special interpreter-only root." The refusal of the
+  root's merge and the comment that the root is walked "describe
+  CURRENT DEBT, not a permitted architectural root distinction". And:
+  "Keep the same positive at the root and in methods, native and
+  genuinely walked; do not add a root-only constructor or change semantics
+  by position."
+- What a merge's node reads where no caller gives the name, which section
+  62 left as unsettled: "Point 12 is not a new semantic choice.
+  #composition fixes the new root's lexical parent from the merge
+  expression's location; #dynamic uses the selected occurrence's eligible
+  lexical links, after caller/local and inherited inputs." And:
+  "An address baked into generated code is correct only if it denotes
+  the source that those real links select for THAT occurrence; a model's
+  unit cell is not automatically the source of every constructed/captured
+  copy."
+- The fact of kind 5: "keep the distinction between the source MODEL
+  and the constructed actual CONTRACT", and "Validate the
+  complete constructed contract before treating differently built nodes as
+  one formation class, retaining the actual q/self/parent/native."
+- What to gate once a method can declare a field before it returns a merge:
+  "distinct model-unit, construction-context and copied-context
+  values with no caller-supplied input, caller override, explicit node
+  access and lifetime/mutation independence".
+
+Section 62 said of the node's fallback that it "is not settled here". That
+sentence is withdrawn: the norm settles it, and the implementation does not
+meet it. It is recorded as a defect, not as an open choice.
+
+### Recorded
+
+Four entries in `steps/defects.md`, each measured on `0a52fe7d` by a
+scratch probe, none gated yet; each gets its row with its repair.
+
+| Entry | What was measured |
+| --- | --- |
+| [T7-HOST-BODY](defects.md#t7-host-body) | A method with a statement before `return: merge(...)` is refused at the merge: `assignment value has unknown type`. Only a method whose whole body is that return is taken as returning a merge. |
+| [T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links) | A merge's node is built under the `node` of the method that gives the merge, and its body reads a free name's fallback at the unit's cell, baked in. By the norm the node's parent follows the place of the merge and the fallback follows the node's own links. Not observable while the entry above stands. |
+| [T7-ACTUAL-FROM-ROOT](defects.md#t7-actual-from-root), made two obligations | With the limit taken off, the artifact runs its root natively and then through its graph. The native root stops the process (`a callable merge could not be built`): the root's `node` is empty. The walked root gives `walk error: UNSUPPORTED`: the retained machine operation is not executed by the walk. |
+| [HELD-REFERENCE-NOT-ASKED-ALONG-CHAIN](defects.md#held-reference-chain) | A wrong value with no refusal. `outer` has its own `m`, with `v` 40, and calls `inner`, which calls a held definition reading `m\v`: 9, the unit's, where the norm gives 45. Natively and with the methods walked. Section 60 said in words that a reference is not asked along the chain; the wrong value was not in the record. |
+
+A correction to what went in with section 62. The fixture
+`unit_t7_actual_from_root`, the comment of its row and the translator's
+comment at the refusal say that the root's body is walked. The artifact
+runs the root natively as well, and the rows marked `WalkRoot` run it both
+ways: the root has a native body. What the root lacks is this one
+construction, in both of its bodies. Those three comments are corrected
+with the repair, since their files are inputs of the gates.
+
+**Next.** A method that does something before it returns a merge; the place
+and the links of a merge's node, with the root's native body building it as
+a method's does, and a walked body building it too; then the reference: its
+absence, its admission through a held call, and its asking along the chain;
+the conversion of a handed-on input; the library's ingress; the walked
+consumer; the complete copy of a node built at run time and a node's own
+contract route.

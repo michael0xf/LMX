@@ -246,9 +246,20 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   node of its model; the tables of merges growing with the program;
   `unit_t7_convert` green
   ([ledger](steps/fable-continuation-20261003.md#merge-actual)).
+- [ ] The third slice, a merge's node, by Codex's twelfth reply: a method
+  that does something before it returns a merge
+  ([T7-HOST-BODY](steps/defects.md#t7-host-body)); the node built under the
+  place of the merge and reading by its own links
+  ([T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)); the
+  same positive at the root and in a method, natively and genuinely walked,
+  the root's native body included
+  ([T7-ACTUAL-FROM-ROOT](steps/defects.md#t7-actual-from-root),
+  [ledger](steps/fable-continuation-20261003.md#twelfth-reply)).
 - [ ] The third slice, the rest: the reference: its absence
-  (`unit_callable_formal_site_names_reference`), its admission through a
-  held call and its asking along the chain
+  (`unit_callable_formal_site_names_reference`), its asking along the chain
+  through a held call, which gives a wrong value today
+  ([HELD-REFERENCE-NOT-ASKED-ALONG-CHAIN](steps/defects.md#held-reference-chain)),
+  its admission through a held call
   (`unit_nested_definition_structure_override`), and through a Structure the
   unit holds, read by a merge's node (`unit_t7_actual_reference`); the
   conversion of a handed-on input (`unit_held_call_free_name_converted`);

@@ -1,0 +1,33 @@
+# A pointer cast given directly to a Structure formal keeps its operand's sources (l2_reference_source), and they
+# reach the formal as a call's result does (RECEPTION-EDGE-DEBTS (c)): the formal's reads take them by name.  run's
+# p is an opaque formal.  The root gives it an Other whose `value` is its second field: 9.  Until 2026-10-05 the
+# formal was read by position and gave the Other's first field, 1, with no refusal.  A Model: 4.  Entry 7.
+Model:
+    size_t: value 4U
+end: Model
+
+Other:
+    size_t: pad 1U
+    size_t: value 9U
+end: Other
+
+Model: base
+Other: wide
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: run (@: void p) size_t
+return: get((cast: (@: void) p))
+
+size_t: a run(wide)
+size_t: b run(base)
+int: ok 7
+if: a = 1U
+    ok: 61
+if: a != 9U && a != 1U
+    ok: 81
+if: b != 4U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

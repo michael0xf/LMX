@@ -3654,7 +3654,7 @@ a signed type` (16:17). Это предел производителя сохр�
 ([§75 журнала](fable-continuation-20261003.md#head-role-established)).
 
 <a id="reception-edge-debts"></a>
-### RECEPTION-EDGE-DEBTS — 2026-10-05, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+### RECEPTION-EDGE-DEBTS — 2026-10-05, fable по ответу Codex FABLE-CODEX-20261004-12; пункт (c) исправлен 2026-10-05 (Opus), (d)–(f) OPEN (блокер G5)
 
 Четыре отказа при трансляции, измеренные в §69, Codex классифицировал как долги реализации, не
 правила языка. Позитивы и контроли появятся вместе с исправлением каждого.
@@ -3663,6 +3663,19 @@ a signed type` (16:17). Это предел производителя сохр�
   false in function argument`. То же значение через локальную ссылку допускается при исполнении.
   Codex, пункт (c): «implementation LIMIT/defect, not a language rule requiring a named result model.
   Ordinary result reception must apply the same conversion/admission, evaluating the producer once.»
+  **Исправлено 2026-10-05 (Opus).** Результат вызова непрозрачного типа (`@: void`), как и имя такого
+  типа, не считается фактическим параметром Structure по своему типу. Проверка берёт сам вызов,
+  кандидат динамический (место результата вызываемого), допуск — там, где формируется вход. Вызов
+  вычисляется один раз, в свой временный. Место результата доходит до формала (`l2_d105_note`), и
+  формал читает по имени источники, которые дают возвраты вызываемого. Результат другого типа (число,
+  ссылка на уровень глубже) отвергается, как прежде. Тем же ребром исправлено приведение указателя,
+  поданное прямо
+  ([CAST-ACTUAL-READ-BY-POSITION](#cast-actual-read-by-position)). Свидетели и мутанты — в
+  [§81 журнала](fable-continuation-20261003.md#inline-opaque-result). Через локальную ссылку
+  непрозрачного типа Structure другого объявления остаётся UNKNOWN и отвергается при исполнении: это
+  класс OPAQUE-ACTUAL-KNOWN-LAYOUT, он идёт с пунктом (d). Гейты: ядро `opus_kernel_09` GREEN296,
+  113 исполненных селфтестов; L3 `opus_l3_09` 11 наборов; полный `opus_full_11` RED39/1864 — против
+  `opus_full_10` FAIL→OK 0, OK→FAIL 0, добавлено 8, все зелёные.
 - Кандидат, выбранный при исполнении среди двух объявлений, одно из которых не подходит, отвергается
   за саму возможность. Codex: «d) A merely POSSIBLE incompatible dynamic source is not proof that
   every call is incompatible. Keep the actual runtime selection and ordinary admission: the good
@@ -3687,7 +3700,7 @@ declaration/merge" is not alone proof that a subsequently READ reference still d
 ([§70 журнала](fable-continuation-20261003.md#free-name-path)).
 
 <a id="opaque-actual-known-layout"></a>
-### OPAQUE-ACTUAL-KNOWN-LAYOUT — 2026-10-05, fable, OPEN; внутренняя ошибка транслятора
+### OPAQUE-ACTUAL-KNOWN-LAYOUT — 2026-10-05, fable, OPEN; внутренняя ошибка транслятора, а с подходящим объявлением другого порядка полей — неверное значение без отказа (Opus, 2026-10-05)
 
 Structure известного объявления подана через непрозрачный формал в Structure-формал:
 
@@ -3713,6 +3726,84 @@ int: a via(m)                      # по общему правилу допус
 везде. Ни одна строка харнесса такой формы не имеет. Это тот же край, что пункт (d) выше, и чинится
 вместе с ним
 ([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+**Неверное значение без отказа, измерено 2026-10-05 (Opus).** Если объявление с другим порядком
+полей подходит, программа той же формы транслируется и читает не то поле:
+
+```text
+Model:
+    size_t: value 4U
+end: Model
+Other:
+    size_t: pad 1U
+    size_t: value 9U
+end: Other
+fn: get (Model: x) size_t
+    return: x\value
+fn: run (@: void p) int
+    return: (cast: (int) get(p))
+int: a run(good)                   # Model: 4
+int: b run(wide)                   # Other: 1 вместо 9
+```
+
+Измерено на зафиксированном трансляторе `14e8d29f`: native, с обходом корня, с обходом методов —
+везде 1. Источники формала `p` (Model, Other) записаны, и допуск в `run` находит раскладку Other и её
+таблицу пар. Но ребра от места `p` к формалу `get` нет: `get` не помечен как читающий по имени и
+читает по позиции. С Thin (без поля) та же программа даёт внутреннюю ошибку выше: пару, которую нельзя
+построить, просят при эмиссии. Причина одна: фактический параметр — имя непрозрачного типа — не
+записывает ребро D-105 к формалу. У приведения указателя этот недостаток исправлен шагом (c)
+([CAST-ACTUAL-READ-BY-POSITION](#cast-actual-read-by-position)), у имени он чинится с пунктом (d).
+
+**Рядом измерено 2026-10-05 (Opus).** Тот же класс через локальную ссылку. `@: void q same(wide)`,
+затем `get(q)` со Structure другого объявления (её `value` — второе поле) отвергается при исполнении
+как `implements` формирующего метода: обработчик берёт отказ (42, native и с обходом методов).
+При этом `get(same(wide))` в той же программе читает 9. Локальная ссылка не записывает источников
+своего инициализатора и не отдаёт их формалу. Допуск встречает раскладку, о которой у трансляции нет
+записи (UNKNOWN), и считает её отказом. В §69 программы одной трансляции, доходящей до UNKNOWN, не
+нашлось; это она. То же объявление проходит по своей записи построения. Чинится с пунктом (d)
+([§81 журнала](fable-continuation-20261003.md#inline-opaque-result)).
+
+<a id="cast-actual-read-by-position"></a>
+### CAST-ACTUAL-READ-BY-POSITION — 2026-10-05, Opus, FIXED 2026-10-05; был неверный код без отказа транслятора
+
+Приведение указателя, поданное прямо в Structure-формал, читалось по позиции:
+
+```text
+fn: get (Model: x) size_t
+    return: x\value
+fn: run (@: void p) size_t
+    return: get((cast: (@: void) p))   # p держит Other: pad, value
+```
+
+`run(wide)`, где у Other поле `value` второе, давал 1 — первое поле Other — без отказа. Измерено на
+зафиксированном трансляторе `14e8d29f`: native, с обходом корня и с обходом методов. Приведение
+сохраняет источники операнда (`l2_reference_source`), но до формала они не доходили, и формал не
+читался по имени. Исправлено шагом (c) [RECEPTION-EDGE-DEBTS](#reception-edge-debts): если фактический
+параметр — Frame и не Structure по своему типу, место его источника доходит до формала
+(`l2_d105_note`). Свидетель — `unit_recv_cast_actual_by_name` с двойником; мутант без ребра даёт 61
+во всех режимах ([§81 журнала](fable-continuation-20261003.md#inline-opaque-result)).
+
+<a id="argument-edge-reference-type"></a>
+### ARGUMENT-EDGE-REFERENCE-TYPE — 2026-10-05, Opus, OPEN (блокер G5; с пунктом (e) RECEPTION-EDGE-DEBTS)
+
+Край аргумента не проверяет тип ссылки имени, поданного в Structure-формал. Локальная `@@: void` или
+`@: char` допускается при трансляции:
+
+```text
+fn: deeper (@: void p) @@: void
+    return: @ p
+@@: void q deeper(base)
+size_t: r get(q)                   # get (Model: x): процесс остановлен у чтения
+```
+
+Присваивание типизированной ссылке отвергает ту же пару: «assignment value has incompatible type».
+Программа с `@@: void` останавливает процесс у чтения: «lmx: invariant: a field path met no
+Structure», exit 3. Это остановка в сгенерированном коде там, где нужен отказ трансляции. Результат
+вызова того же типа отвергается при трансляции, «implements is false in function argument» (строка
+`unit_recv_call_depth_result_refused`). Измерено на зафиксированном трансляторе `14e8d29f`. Codex о
+пункте (e) RECEPTION-EDGE-DEBTS: «provided actual reference depth/type is correct». Проверка глубины и
+типа ссылки на крае аргумента одна для имени, вызова и скрытого входа; чинится с пунктом (e)
+([§81 журнала](fable-continuation-20261003.md#inline-opaque-result)).
 
 <a id="write-only-path-root"></a>
 ### WRITE-ONLY-PATH-ROOT — 2026-10-05, fable, FIXED 2026-10-05; был неверный код без отказа транслятора

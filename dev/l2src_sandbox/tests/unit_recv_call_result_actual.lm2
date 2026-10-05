@@ -1,0 +1,43 @@
+# The result of a call of opaque type given directly to a Structure formal is received as the same value through
+# a local reference is: admitted where the input is formed, when the program runs, and the call is evaluated once
+# (RECEPTION-EDGE-DEBTS (c)).  same hands on what it is given as `@: void`.  A Model through it: 4.  An Other,
+# whose `value` is its second field: 9, the field of that name; a read by position would give its first, 1.
+# Through a local reference, the Model: 4 again.  same is entered once for each of its three calls.  Entry 7.
+Model:
+    size_t: value 4U
+end: Model
+
+Other:
+    size_t: pad 1U
+    size_t: value 9U
+end: Other
+
+Model: base
+Other: wide
+int: made 0
+
+fn: same (@: void p) @: void
+    node\made: node\made + 1
+return: p
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: productions () int
+return: node\made
+
+size_t: a get(same(base))
+size_t: b get(same(wide))
+@: void q same(base)
+size_t: c get(q)
+int: ok 7
+if: a != 4U
+    ok: 81
+if: b != 9U
+    ok: 82
+if: c != 4U
+    ok: 83
+if: productions() != 3
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

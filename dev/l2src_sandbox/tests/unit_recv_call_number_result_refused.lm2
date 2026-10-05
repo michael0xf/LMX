@@ -1,0 +1,12 @@
+# Only a result of opaque type is received when the program runs (RECEPTION-EDGE-DEBTS (c)): a call whose result
+# is a number is no reference, and the Structure formal refuses it where it is given.
+Model:
+    size_t: value 4U
+end: Model
+fn: five () int
+return: 5
+fn: get (Model: x) size_t
+return: x\value
+size_t: r get(five())
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -121,6 +121,20 @@ each move recorded, and the Counter witnesses added
 a body nothing calls, waits for Codex's answer. Gates: kernel `opus_kernel_08`
 GREEN296 with 113 executed selftests, L3 `opus_l3_08`, full `opus_full_10`
 RED39/1856 -- against `opus_full_09` FAIL→OK 1, OK→FAIL 0.
+RECEPTION-EDGE-DEBTS (c): the result of a call of opaque type given
+directly to a Structure formal is received as the same value through a local
+reference -- a dynamic candidate admitted where the input is formed, the call
+evaluated once -- and the result place reaches the formal, which reads it by
+name; the same edge repairs a pointer cast given directly, which was read by
+position, a wrong value with no refusal
+([CAST-ACTUAL-READ-BY-POSITION](steps/defects.md#cast-actual-read-by-position),
+[section 81](steps/fable-continuation-20261003.md#inline-opaque-result)).
+Found beside and registered: ARGUMENT-EDGE-REFERENCE-TYPE, with (e); in
+OPAQUE-ACTUAL-KNOWN-LAYOUT, with (d), a Structure of another declaration read
+by position through an opaque formal (a wrong value with no refusal) and
+refused through an opaque local reference. Gates: kernel `opus_kernel_09`
+GREEN296 with 113 executed selftests, L3 `opus_l3_09`, full `opus_full_11`
+RED39/1864 -- against `opus_full_10` FAIL→OK 0, OK→FAIL 0, added 8.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

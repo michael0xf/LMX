@@ -8377,3 +8377,126 @@ of Codex; the four positives stay registered OPEN.
 
 **Next.** Part 2 by Codex's answer; A2 and the data merge's parent by his
 review.
+
+<a id="inline-opaque-result"></a>
+## 81. The result of a call of opaque type given directly to a Structure formal (RECEPTION-EDGE-DEBTS (c))
+
+Codex's classification, recorded with the debts: "implementation
+LIMIT/defect, not a language rule requiring a named result model. Ordinary
+result reception must apply the same conversion/admission, evaluating the
+producer once." His order names the step "(c) inline opaque result vs named
+temp".
+
+### What was measured
+
+On the translator of section 80: `get(same(base))`, where `same` returns
+`@: void` and `get` takes `Model: x`, was refused at translation,
+"implements is false in function argument". The check took the actual's type
+from the callee's result, and a result with no Structure was refused whatever
+it was. The same value through a local reference, `@: void q same(base)` and
+then `get(q)`, was admitted when the program ran.
+
+At the other receiving places the two spellings already agreed. An assignment
+to a typed reference admits both. A return of result Model refuses both,
+"implements is false in return value": the class of (f). A typed binding
+refuses both: `Model: y same(base)` with "a typed binding whose candidate is
+not a name is not built yet", `Model: y q` with "a typed binding's candidate
+is not a Structure value", the interim admission of item 474.
+
+### What is built
+
+1. **The actual.** `l2_actual_ns` says that a call whose result is of opaque
+   type (`@: void`) is not a Structure actual by its type (2), as it says of
+   a name of that type. The check then takes the call as it takes the name:
+   it checks the call itself, and the candidate is a dynamic one -- the
+   callee's result place (`l2_reference_source`) -- so the forming method is
+   recorded as one that can throw. The emission evaluates the call once, into
+   its temporary, and admits that temporary (`l2_emit_model_admit`), natively
+   and in the walk.
+2. **The sources.** The callee's result place reaches the formal
+   (`l2_d105_note`). The declarations its returns give
+   (`l2_d105_note_return`) are the formal's sources, and the formal's reads
+   take them by name.
+
+A result of any other type keeps its refusal: a number, and a reference one
+level deeper than the formal.
+
+The same edge reaches a pointer cast given directly to a Structure formal,
+`get((cast: (@: void) p))`. The check already took it as a candidate of no
+Structure. The cast keeps its operand's sources, but they did not reach the
+formal, and the formal was read by position. An Other held by `p` then gave
+its first field, 1, where its `value` is 9. That was a wrong value with no
+refusal, on the committed translator, natively and walked
+([CAST-ACTUAL-READ-BY-POSITION](defects.md#cast-actual-read-by-position)). The
+note of item 2 is taken for every actual that is a Frame and no Structure
+actual by its type, so the cast's sources now reach the formal as a call's
+result does.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_recv_call_result_actual`, `_walk` | A Model given through `same`: 4. An Other whose `value` is its second field: 9, read by name; a read by position would give its first field, 1. The Model through a local reference: 4. `same` is entered once for each of its three calls. |
+| `unit_recv_call_result_actual_catch`, `_walk` | `unit_admit_dynamic_actual_catch` with `get(same(p))`: the letter's admission is refused where `pass` forms the input, 42 for both calls, and `get` is not entered. `same` is entered three times. The refusal of `strict(same(p))` is `pass2`'s own `implements`: 43, not 44. |
+| `unit_recv_cast_actual_by_name`, `_walk` | A pointer cast of an opaque formal holding an Other: 9, by name; a Model: 4. Where the methods are walked, `run`, which holds the cast, keeps its native word, and `get`, which reads the formal, is walked. |
+| `unit_recv_call_number_result_refused` | A result that is a number: refused where it is given, 10:11. |
+| `unit_recv_call_depth_result_refused` | A `@@: void` result: refused, 11:11. |
+
+### Mutants
+
+| Mutant | Changes | Result |
+| --- | --- | --- |
+| the translator of section 80 | the call's result refused by its type | both positives refused at translation, 29:11 and 39:8 |
+| `noedge` | the result place does not reach the formal | `unit_recv_call_result_actual` exits 82 and `unit_recv_cast_actual_by_name` 61, natively, with the root walked and with the methods walked: the Other's first field is read |
+| `anyresult` | every result with no Structure is received when the program runs | the number row says "root operation not walkable yet: mixed numeric types (a conversion)" at 10:15; the depth row translates, runs and stops at the read, "lmx: invariant: a field path met no Structure" |
+
+### Measured beside, not repaired
+
+- **A Structure of another declaration through an opaque formal is read by
+  position.** `fn: run (@: void p)` with `get(p)` inside, where the root
+  calls `run(good)` with a Model and `run(wide)` with an Other whose `value`
+  is its second field: the second call gives 1, the Other's first field, with
+  no refusal. Measured on the committed translator `14e8d29f`, natively, with
+  the root walked and with the methods walked. The sources of `p` are
+  recorded, and the admission in `run` finds the Other's layout and its pair
+  table. But nothing leads from `p`'s place to `get`'s formal, so `get` is
+  not marked as one that reads by name and reads by position. With a Thin
+  that lacks the field the same program meets the internal error of
+  OPAQUE-ACTUAL-KNOWN-LAYOUT: a pair that cannot be built is asked for at
+  emission. One cause: an actual that is a name of opaque type records no
+  D-105 edge to the formal. The cast's form of it is repaired above; the
+  name's goes with (d)
+  ([OPAQUE-ACTUAL-KNOWN-LAYOUT](defects.md#opaque-actual-known-layout)).
+- **A Structure of another declaration through a local reference of opaque
+  type.** `@: void q same(wide)` and then `get(q)` is refused when the
+  program runs, as the forming method's `implements`: a handler takes it, 42,
+  natively and with the methods walked, while `get(same(wide))` in the same
+  program reads 9. The local reference records no source from its
+  initializer and gives none to the formal. The admission therefore meets a
+  layout the translation has no record of, UNKNOWN, and takes it as a
+  refusal. Section 69 had found no program of one translation that reaches
+  UNKNOWN; this is one. The same declaration passes, by its record of
+  construction. This is the class of OPAQUE-ACTUAL-KNOWN-LAYOUT, a known
+  layout through an opaque place, and it goes with (d)
+  ([OPAQUE-ACTUAL-KNOWN-LAYOUT](defects.md#opaque-actual-known-layout)).
+- **The argument edge does not check the reference type of a name.** A
+  local `@@: void` or `@: char` is admitted to a Structure formal at
+  translation. An assignment to a typed reference refuses the same pair,
+  "assignment value has incompatible type". The `@@: void` one stops the
+  process at the read, "lmx: invariant: a field path met no Structure",
+  exit 3
+  ([ARGUMENT-EDGE-REFERENCE-TYPE](defects.md#argument-edge-reference-type)).
+
+### Measured
+
+A replay of the 1850 translations recorded by `opus_full_09` with this
+translator changes no row: exit, messages and generated L1 are the same.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_09` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_09` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_11` (full harness) | RED39/1864: against `opus_full_10` FAIL→OK 0, OK→FAIL 0, added 8, all green, removed 0, no red row's words changed. The seven declared paths were hashed before the run; the staged translator is their bytes. |
+
+**Next.** (d): dynamic alternatives, with the pair-map reservation of
+OPAQUE-ACTUAL-KNOWN-LAYOUT and the local reference measured above.

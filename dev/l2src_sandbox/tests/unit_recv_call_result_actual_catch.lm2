@@ -1,0 +1,80 @@
+# unit_admit_dynamic_actual_catch with the call's result given directly, not through a local reference: the
+# same admission, refused the same way (RECEPTION-EDGE-DEBTS (c)).  The root's letter goes to pass as an opaque
+# reference, and pass gives same(p) to get's Model formal: the letter is no Model, so the admission is refused
+# where pass forms the input, before get is entered, and pass's handler takes it: 42.  same is entered once for
+# each call, before the admission.  A refused admission records nothing: the second call is refused as the first
+# was.  The letter is then given to a formal of its own declaration, which admits it: 1.  strict declares a throw
+# of its own: the refusal of pass2's same(p) is pass2's `implements`, taken by pass2's handler of that name and
+# not by its handler of strict's name: 43, not 44.  Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+int: entered 0
+int: made 0
+
+fn: get (Model: x) int
+    node\entered: node\entered + 1
+return: 5
+
+fn: present (MainLetter: letter) int
+return: 1
+
+fn: same (@: void p) @: void
+    node\made: node\made + 1
+return: p
+
+fn: entries () int
+return: node\entered
+
+fn: productions () int
+return: node\made
+
+fn: pass (@: void p) int
+    int: r 0
+    r: get(same(p))
+    catch: implements ()
+        r: 42
+    ---
+return: r
+
+fn: strict (Model: x) int
+    throws: range
+    node\entered: node\entered + 1
+    if: x\value > 100U
+        throw: range
+return: 6
+
+fn: pass2 (@: void p) int
+    int: r 0
+    r: strict(same(p))
+    catch: implements ()
+        r: 43
+    ---
+    catch: range ()
+        r: 44
+    ---
+return: r
+
+receiveMessage: m
+int: a pass(m)
+int: b pass(m)
+int: c present(m)
+int: d pass2(m)
+int: ok 7
+if: a != 42 || b != 42
+    ok: 81
+if: entries() != 0
+    ok: 82
+if: productions() != 3
+    ok: 83
+if: c != 1
+    ok: 84
+if: d != 43
+    ok: 85
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

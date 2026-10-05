@@ -7844,6 +7844,31 @@ $fixtures = @(
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_admit_dynamic_actual_catch_walk.lm2'; Source = 'unit_admit_dynamic_actual_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,7); NativeMethods = @(6); Absent = @(); Debt = @() },
+    # RECEPTION-EDGE-DEBTS (c) (Codex, FABLE-CODEX-20261004-12): the result of a call of opaque type given directly
+    # to a Structure formal is received as the same value through a local reference is -- a dynamic candidate,
+    # admitted where the input is formed, the call evaluated once.  call_result_actual: a Model 4, an Other whose
+    # `value` is its second field 9 by name, the Model through a local reference 4, three productions.
+    # call_result_actual_catch: the catch row above with get(same(p)) -- 42 twice, get not entered, 43 for pass2's
+    # own `implements`.  A number and a deeper reference stay refused where they are given.
+    [pscustomobject]@{ Name = 'unit_recv_call_result_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_call_result_actual_walk.lm2'; Source = 'unit_recv_call_result_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_call_result_actual_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_call_result_actual_catch_walk.lm2'; Source = 'unit_recv_call_result_actual_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,7); NativeMethods = @(6); Absent = @(); Debt = @() },
+    # The same edge reaches a pointer cast given directly: its operand's sources reach the formal, read by name (9);
+    # until 2026-10-05 the formal was read by position, the Other's first field (1), with no refusal.  run keeps its
+    # native word where the methods are walked; get, which reads the formal, is walked.
+    [pscustomobject]@{ Name = 'unit_recv_cast_actual_by_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_cast_actual_by_name_walk.lm2'; Source = 'unit_recv_cast_actual_by_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_call_number_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_call_number_result_refused.lm2:10:11: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_call_depth_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_call_depth_result_refused.lm2:11:11: implements is false in function argument'; Absent = @(); Debt = @() },
     # The refusal is thrown with the statuses and handlers of the method that forms the input, whatever the callee
     # declares: the callee has a throw of its own, and the forming method's handler of `implements` takes the
     # refusal, not its handler of the callee's name (43, not 44).  A method that declares a throw stays native

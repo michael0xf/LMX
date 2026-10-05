@@ -25181,6 +25181,12 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
         if: cmi < 0
             return: 2
         owner: l2_nsty_get(cmi, 0 - 1)
+        # RECEPTION-EDGE-DEBTS (c) (Codex, FABLE-CODEX-20261004-12): a result of opaque type (`@: void`) names no
+        # Structure, and that is no rule asking for one.  It is the value the same call gives through a local
+        # reference: no Structure actual by its type (2), a dynamic candidate (l2_reference_source: the callee's
+        # result place), admitted where the input is formed; the call is evaluated once, into its temporary.
+        if: owner < 0 && l2_m_ret[cmi] = 16
+            return: 2
         if: owner < 0
             return: l2_error(path, at, "implements is false in function argument")
         \out_ni: owner
@@ -25389,6 +25395,12 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                         return: 1
                     handled: 1
                 ---
+                # (c): an actual that is a Frame and no Structure actual by its type -- a call's result of opaque type
+                # (l2_actual_ns), a pointer cast -- reaches the formal from its source's place: the callee's result
+                # place, whose sources its returns give (l2_d105_note_return), or the cast's operand.  The formal's
+                # reads take them by name; before, they were read by position (CAST-ACTUAL-READ-BY-POSITION).
+                if: ast = 2 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_FRAME && l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
+                    return: 1
             ---
             # D-108: an actual admitted to a Structure-typed formal is checked as any other actual is --
             # a call in it records its edge (the throw closure reaches this caller) and meets the static

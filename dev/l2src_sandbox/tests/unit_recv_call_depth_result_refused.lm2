@@ -1,0 +1,13 @@
+# Only a result of opaque type is received when the program runs (RECEPTION-EDGE-DEBTS (c)): a result one
+# reference deeper than the formal is refused where it is given, as before.
+Model:
+    size_t: value 4U
+end: Model
+Model: base
+fn: deeper (@: void p) @@: void
+return: @ p
+fn: get (Model: x) size_t
+return: x\value
+size_t: r get(deeper(base))
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -447,6 +447,21 @@ the located limit above is set by that record. The tables of merges grow with
 the program
 ([ledger](steps/fable-continuation-20261003.md#merge-actual)).
 
+A merge's node is built by one function of the generated module,
+`l2_t7_make_<site>`. A native body calls it with its own occurrence and the
+value each bound formal has there; a walked body's step reaches it through
+its primitive entry, `l2_t7_construct_<site>` (`l2_rw_t7_build`). The root's
+two bodies build the node as a method's do, and so does a body that is always
+walked. A method that returns a merge runs its body first and builds the node
+where the body ends; a nested body of a host is its statements, not its
+build. Under what the node hangs, and what its body reads where no caller
+gives a name, are as they were and wait for the author
+([question](LMX_blog/q/current/merge-lexical-copy-and-root-placement.md)).
+The node's interface keeps the unbound formals only, against L3 §20: an open
+obligation
+([MERGE-KEEPS-MODEL-INTERFACE](steps/defects.md#merge-keeps-model-interface),
+[ledger](steps/fable-continuation-20261003.md#merge-node-construction)).
+
 A number no caller binds is handed absent, `refs[k] = 0`. A method that only
 forwards the name hands its entry on as it is (`l2_dyn_fwd`,
 `l2_hidden_forward`) and does not read a lexical source of its own. The

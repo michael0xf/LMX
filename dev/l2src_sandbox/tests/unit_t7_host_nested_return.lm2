@@ -1,0 +1,23 @@
+# OPEN positive. A method returns a merge from a nested body of it, and
+# another at its end. wrap 5 returns merge(add; y: k) from its if: 5 + 1.
+# wrap 2 returns merge(add; y: 1): 1 + 1. This implementation builds a
+# method's returned merge at one place, a statement of the method's own
+# body: the merge in the if is refused where it stands, as a limit and no
+# rule. Entry 7.
+fn: add (int: y; int: x) int
+    return: y + x
+
+fn: wrap (int: k) fn: (int: x) int
+    if: k > 3
+        return: merge(add; y: k)
+    return: merge(add; y: 1)
+
+w: wrap 5
+u: wrap 2
+int: a (w: 1)
+int: b (u: 1)
+int: ok 7
+if: a != 6 || b != 2
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

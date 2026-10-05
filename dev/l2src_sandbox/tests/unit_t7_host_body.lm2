@@ -1,0 +1,41 @@
+# A method that does something before it returns a merge. wrap declares a
+# field of its own, counts in a loop, changes its formal, and then returns
+# merge(add; y: k): the node is built once, where the body ends, with the
+# value k has there. wrap 5 binds 8 and wrap 200 binds 0. add reads other,
+# a field of the unit, 9: from the root 8 + 1 + 9 and 0 + 1 + 9. under has
+# other 20: 29. A second call of the first node gives its own value: 19.
+# The merge is written with the model first and the node is called with its
+# bound formal left at its default: a bounded case, not the whole of a
+# callable merge (steps/defects.md, MERGE-KEEPS-MODEL-INTERFACE). Entry 7.
+int: other 9
+
+fn: add (int: y; int: x) int
+    return: y + x + other
+
+fn: wrap (int: k) fn: (int: x) int
+    int: n 0
+    while: n < 3
+        k: k + 1
+        n: n + 1
+    ---
+    if: k > 100
+        k: 0
+    return: merge(add; y: k)
+
+w: wrap 5
+u: wrap 200
+
+fn: under () int
+    int: other 20
+    return: (w: 1)
+end: under
+
+int: a (w: 1)
+int: b (u: 1)
+int: c under()
+int: d (w: 2)
+int: ok 7
+if: a != 18 || b != 10 || c != 29 || d != 19
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

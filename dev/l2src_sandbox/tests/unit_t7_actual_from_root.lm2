@@ -1,9 +1,20 @@
-# OPEN positive. The root gives a merge as the actual of a callable formal.
-# take calls its formal: merge(y: 5; five) gives 5. This implementation
-# builds a merge's node by native code only, and the root's body is walked:
-# the merge is refused where it stands, as a limit and no rule. Entry 7.
+# The root gives a merge as the actual of a callable formal, and so does
+# a method: the same merge, built by the same constructor. take calls its
+# formal. five reads other, a field of the unit, 9. The root gives
+# merge(five; y: 5): 14. passed, a method, gives the same merge: 14. under
+# has other 20 and calls passed: 25. The root gives a merge of the same
+# model with another value: 109, and the first again: 14. The root has a
+# native body and a walked one; each builds the node. The merge is written
+# with the model first and the bound formal is left at its default: a
+# bounded case (steps/defects.md, MERGE-KEEPS-MODEL-INTERFACE). Source
+# change, 2026-10-04: this fixture was written merge(y: 5; five), the data
+# first, and was red at a limit of the root; it is moved to the model
+# first, and the method, the free name and the second merge are added
+# (steps/defects.md, T7-DATA-FIRST-SHAPE). Entry 7.
+int: other 9
+
 fn: five (int: y) int
-    return: y
+    return: y + other
 
 fn: bin () int
     return: 0
@@ -11,9 +22,20 @@ fn: bin () int
 fn: take (bin: op) int
     return: op()
 
-int: d (take: merge(y: 5; five))
+fn: passed () int
+    return: take: merge(five; y: 5)
+
+fn: under () int
+    int: other 20
+    return: passed()
+
+int: a (take: merge(five; y: 5))
+int: b passed()
+int: c under()
+int: d (take: merge(five; y: 100))
+int: e (take: merge(five; y: 5))
 int: ok 7
-if: d != 5
+if: a != 14 || b != 14 || c != 25 || d != 109 || e != 14
     ok: 81
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

@@ -1,0 +1,41 @@
+# A body that is always walked gives a merge as the actual of a callable
+# formal. inner is a definition nested in maker and returned by it: it
+# reads maker's n, so it has no native body, and its node's body is walked
+# wherever it is called. inner gives take merge(five; y: q): the step of
+# the walked body builds the merge's node by the constructor a native body
+# calls, and no native body builds this one. five reads other, a field of
+# the unit, 9. g holds maker 100: (g: 5) is 100 + 5 + 9 and (g: 7) is 116.
+# under has other 20: 125. The merge is written with the model first and
+# the bound formal is left at its default: a bounded case
+# (steps/defects.md, MERGE-KEEPS-MODEL-INTERFACE). Entry 7.
+int: other 9
+
+fn: five (int: y) int
+    return: y + other
+
+fn: bin () int
+    return: 0
+
+fn: take (bin: op) int
+    return: op()
+
+fn: maker (int: n) fn: (int: q) int
+    fn: inner (int: q) int
+        return: n + (take: merge(five; y: q))
+    return: inner
+
+g: maker 100
+
+fn: under () int
+    int: other 20
+    return: (g: 5)
+end: under
+
+int: a (g: 5)
+int: b (g: 7)
+int: c under()
+int: ok 7
+if: a != 114 || b != 116 || c != 125
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

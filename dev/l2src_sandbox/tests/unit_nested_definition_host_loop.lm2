@@ -1,0 +1,27 @@
+# A method that returns a nested definition builds its node where its own
+# body ends, not where a nested body of it ends. makeAdder counts in a
+# loop, adding 1 to n three times, takes n back to 0 when it is above 100,
+# and returns addN, which reads n. makeAdder 5 holds 8: 8 + 1. makeAdder
+# 200 holds 0: 0 + 1. Built at the end of the loop's body, the node held 6
+# and gave 7. Entry 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    int: i 0
+    while: i < 3
+        n: n + 1
+        i: i + 1
+    ---
+    if: n > 100
+        n: 0
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+add5: makeAdder 5
+add0: makeAdder 200
+int: a (add5: 1)
+int: b (add0: 1)
+int: ok 7
+if: a != 9 || b != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

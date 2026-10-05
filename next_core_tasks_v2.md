@@ -32,12 +32,12 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_37` RED39/1707 — against that baseline 98
-FAIL→OK, OK→FAIL 0, five red rows replaced and 317 added; the 39 red rows
+continuation bytes: `fable_full_38` RED39/1715 — against that baseline 98
+FAIL→OK, OK→FAIL 0, five red rows replaced and 325 added; the 39 red rows
 are 23 of the baseline and 16 added, eleven of them labelled OPEN positives
-above the 29 of `fable_full_17`; kernel `fable_kernel_23` GREEN296 with 113
-executed selftests; L3 `fable_l3_23`
-([gates](steps/fable-continuation-20261003.md#merge-actual)). The checkpoint gate
+above the 29 of `fable_full_17`; kernel `fable_kernel_24` GREEN296 with 113
+executed selftests; L3 `fable_l3_24`
+([gates](steps/fable-continuation-20261003.md#merge-node-construction)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -246,13 +246,20 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   node of its model; the tables of merges growing with the program;
   `unit_t7_convert` green
   ([ledger](steps/fable-continuation-20261003.md#merge-actual)).
-- [ ] The third slice, a merge's node, by Codex's twelfth reply: a method
-  that does something before it returns a merge
-  ([T7-HOST-BODY](steps/defects.md#t7-host-body)); the same positive at the
-  root and in a method, natively and genuinely walked, the root's native
-  body included
-  ([T7-ACTUAL-FROM-ROOT](steps/defects.md#t7-actual-from-root),
-  [ledger](steps/fable-continuation-20261003.md#twelfth-reply)).
+- [x] The third slice, step four, a merge's node: one constructor for a
+  native and a walked body; a method that does something before it returns
+  a merge ([T7-HOST-BODY](steps/defects.md#t7-host-body)); the root's two
+  bodies build the node as a method's do
+  ([T7-ACTUAL-FROM-ROOT](steps/defects.md#t7-actual-from-root)); a body
+  that is always walked gives a merge as an actual; a host's nested body is
+  its statements, a wrong native value found and repaired
+  ([HOST-BUILDS-IN-NESTED-BODY](steps/defects.md#host-builds-in-nested-body),
+  [ledger](steps/fable-continuation-20261003.md#merge-node-construction)).
+  A bounded case: the rows call the node with its bound formal at its
+  default.
+- [ ] A merge returned from a nested body of its method
+  ([T7-HOST-NESTED-RETURN](steps/defects.md#t7-host-nested-return)); the
+  consumer of a merge given as an actual, walked.
 - [ ] Held for the author's answer, by Codex's thirteenth reply: what a
   merge's node reads where no caller gives the name, the model's copied
   lexical state or a field of the place of the merge

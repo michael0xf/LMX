@@ -7561,19 +7561,71 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_t7_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_free_name_walk.lm2'; Source = 'unit_t7_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_two_formals_walk.lm2'; Source = 'unit_t7_two_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_reference_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_reference_held_walk.lm2'; Source = 'unit_t7_reference_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_model_calls_reader.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_model_calls_reader_walk.lm2'; Source = 'unit_t7_model_calls_reader.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # K04 S3, step four (Codex -12, twelfth to fifteenth reply): a merge's node is built by one constructor of the
+    # generated module, which the native body calls and the walked body's step calls through its primitive entry;
+    # under the knob the method that returns the merge is walked (the four _walk rows above, and these).  A method
+    # that does something before it returns a merge builds the node once, where its own body ends, with the value
+    # each bound name has there: a field, a loop and an if before the return, and a caller's value before the
+    # unit's (host_body); a field named like the bound formal (host_bound_field).  The rows are written with the
+    # model first and call the node with its bound formal at its default: a bounded case, not the whole of a
+    # callable merge (steps/defects.md, MERGE-KEEPS-MODEL-INTERFACE).  The node's parent and the source of a name
+    # no caller gives are as before: the author's answer is awaited (steps/defects.md, T7-NODE-LEXICAL-LINKS).
+    # Mutants, each run natively, with the root walked and with the methods walked: the native body hands 0 for
+    # the bound formal -- host_body and host_bound_field red natively, green walked; the walked step hands 0 --
+    # both red walked, green natively; the formal as it was received, not the value its name has at the merge --
+    # host_bound_field red, in the body that was mutated.
+    [pscustomobject]@{ Name = 'unit_t7_host_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @('LMX_WALK_OP_SOURCE_MACHINE'); Debt = @('l2_t7n0: l2_t7_make_0(self, (', '\fn: l2_t7_construct_0', 'lmx_int_value_known(refs[1U])') },
+    [pscustomobject]@{ Name = 'unit_t7_host_body_walk.lm2'; Source = 'unit_t7_host_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @('LMX_WALK_OP_SOURCE_MACHINE'); Debt = @('\fn: l2_t7_construct_0') },
+    [pscustomobject]@{ Name = 'unit_t7_host_bound_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_host_bound_field_walk.lm2'; Source = 'unit_t7_host_bound_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # A host builds its node where its own body ends: a nested body of it -- a loop, an if -- is its statements.
+    # Routed as the host's body, the loop's body built the node, and returned it, at its own end: 7 where the
+    # norm gives 9, natively, with no refusal; the walked host was right (steps/defects.md,
+    # HOST-BUILDS-IN-NESTED-BODY).  Mutant: the routing back -- this row and host_body red natively, their _walk
+    # rows green.
+    [pscustomobject]@{ Name = 'unit_nested_definition_host_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_definition_host_loop_walk.lm2'; Source = 'unit_nested_definition_host_loop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    # The root gives a merge as the actual of a callable formal, and so does a method: the same merge, the same
+    # constructor.  The root has a native body and a walked one, and each builds the node: the row runs the
+    # artifact natively and then through its graph (WalkRoot), the root's leaf carries its native word
+    # (NativeRoot), the native bodies call the constructor and the graph's steps name its primitive entry, and no
+    # machine operation is retained for a merge.  Source change of 2026-10-04: the fixture was written with the
+    # data first and was red at a limit of the root; it is moved to the model first (steps/defects.md,
+    # T7-DATA-FIRST-SHAPE).  The methods are not walked here: a method with a callable formal is outside the
+    # knob's subset (unit_walk_methods_callable_formal_refused), which the walked consumer's step takes away.
+    # Mutants: the primitive entry gives no node -- red with the root walked, green natively; no place for a body
+    # with nothing above it -- red in both, the root's native body stops; the root's limit back -- refused.
+    [pscustomobject]@{ Name = 'unit_t7_actual_from_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeRoot = 5; NativeMethods = @(0,1,2,3,4); Absent = @('LMX_WALK_OP_SOURCE_MACHINE');
+        Debt = @('l2_t7n0: l2_t7_make_0(self)', 'l2_t7n3: l2_t7_make_3(self)', '\fn: l2_t7_construct_0', '\fn: l2_t7_construct_3') },
+    # A body that is always walked gives a merge as an actual: a definition nested in a method and returned by
+    # it reads the method's formal, so it has no native body, and its node's body is walked wherever it is called.
+    # The walked step builds the merge's node by the constructor a native body calls; no native body builds this
+    # one (Absent: no native call of the constructor).  Before step four the definition was refused: its graph
+    # retained the merge as a machine operation.  Mutants: the walked step hands 0 for the bound formal -- red;
+    # the primitive entry gives no node -- red; the native body hands 0 -- green, no native body is involved.
+    [pscustomobject]@{ Name = 'unit_t7_actual_in_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,5); Absent = @('l2_t7n0: l2_t7_make_0(self', 'LMX_WALK_OP_SOURCE_MACHINE');
+        Debt = @('\fn: l2_t7_construct_0', 'l2_t7_made: l2_t7_make_0(l2_t7_at, lmx_int_value_known(refs[1U]))') },
     # A merge given as the actual of a callable formal is followed as a node of its model: its model's free
     # names are formed where the formal is called, a number and a size_t each at the model's own place
     # (actual_free_name); a merge and a method of the unit that form alike are one formation, through a formal
@@ -7590,11 +7642,11 @@ $fixtures = @(
     # OPEN positives, required before G5.  Limits of this implementation and no rules; red until built, never to
     # be turned into expected refusals.  A merge given as the actual whose model reads a reference admitted
     # through a Structure the unit holds: a merge's node is built by a constructor of its own, which cannot
-    # reach that Structure yet (actual_reference).  The root giving a merge as an actual: a merge's node is
-    # built by native code only and the root's body is walked (actual_from_root).
+    # reach that Structure yet (actual_reference).  A merge returned from a nested body of its method: a method's
+    # returned merge is built at one place, a statement of the method's own body (host_nested_return).
     [pscustomobject]@{ Name = 'unit_t7_actual_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_t7_actual_from_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+    [pscustomobject]@{ Name = 'unit_t7_host_nested_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     # A reference among the free names of a definition its method returns (HELD-CALL-FROM-NESTED-DEFINITION; Codex,
     # FABLE-CODEX-20261004-12).  The caller that names no such reference supplies nothing, and the definition reads

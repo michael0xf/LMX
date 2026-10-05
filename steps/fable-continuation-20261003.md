@@ -5898,3 +5898,180 @@ waits for [T7-HOST-BODY](defects.md#t7-host-body).
 **Next.** Unchanged from section 64. The rows of that step are written
 with the model first and are a bounded case: they call the node with the
 defaults only.
+
+<a id="merge-node-construction"></a>
+## 66. One construction of a merge's node; a body before the returned merge; the root gives a merge (third slice, step four)
+
+Codex's replies twelve to fifteen under -12 direct this step. It builds
+what does not depend on the author's answer
+([section 64](#thirteenth-reply)): under what the node hangs, and what its
+body reads where no caller gives a name, are left exactly as they were.
+
+### What is built
+
+**One constructor.** The node of a merge is built by one function of the
+generated module, `l2_t7_make_<site>`, for a native body and for a walked
+one. A native body calls it with its own occurrence and the value each bound
+formal has there (`l2_t7_write`). A walked body builds a step, `[prim,
+record, contract, self, bound values]`, whose record names the primitive
+entry over the same function, `l2_t7_construct_<site>` (`l2_rw_t7_build`).
+Before this step the node was written inline into the native body only, and
+a walked body kept the written merge as a machine operation it could not
+execute.
+
+**Where the node hangs.** As before: in the lexical space above the
+performing body, which is that body's `node`. A body with nothing above it,
+the root, is that space itself. At the root this chooses no reading of the
+author's question: the model's lexical parent, the place of the merge and
+the unit are one Structure there.
+
+**A body before the returned merge**
+([T7-HOST-BODY](defects.md#t7-host-body)). A method recorded with the merge
+it returns runs the statements of its body and builds the node once, where
+the body ends, with the value each bound name has there. Its `return` is
+taken as a statement of the body by the merge recorded
+(`l2_t7_return_stmt`): the check passes it by as it passes `return: model`,
+the native body ends with the construction, and the walked body builds it
+as the step of the return. Such a method is walked under `--walk-methods`
+now. It stayed native before, without a word.
+
+**A host's nested body**
+([HOST-BUILDS-IN-NESTED-BODY](defects.md#host-builds-in-nested-body)),
+found on the way and there before this step. A method that returns a nested
+definition built its node at the end of the first nested body of its body,
+a loop or an if, and returned it from there: a wrong value natively, with
+no refusal, and the right one walked. `l2_emit_body_in` routed every body
+of a host as the host's body. The host's body is the method's own now, and
+a nested body of it is its statements.
+
+**The root** ([T7-ACTUAL-FROM-ROOT](defects.md#t7-actual-from-root)). The
+limit is taken off. The root's native body calls the constructor as a
+method's does, and its walked body builds the step. Both obligations of the
+twelfth reply are met by the one construction, with no constructor of the
+root's own.
+
+**A body that is always walked.** A definition nested in a method and
+returned by it has no native body when it reads the method's names. It can
+give a merge as an actual now. Before, its graph kept the merge as a
+machine operation and the definition was refused: `a callable merge needs a
+walkable body: retained machine operation has no interpreted
+implementation`.
+
+**A limit said in its own words**
+([T7-HOST-NESTED-RETURN](defects.md#t7-host-nested-return)). A merge
+returned from a nested body of its method is refused where it stands as
+what it is, not as a value without a type.
+
+### Measured
+
+| Program | Before, on `0781bf65` | Now |
+| --- | --- | --- |
+| `unit_t7_host_body`: a field, a loop and an if before `return: merge(add; y: k)`; two nodes; under a caller's `other` 20; the first node again | refused: `assignment value has unknown type` | 18 and 10; 29; 19. Natively and with the method walked |
+| `unit_t7_host_bound_field`: a field named like the bound formal, 7 | refused the same way | 8 and 8 |
+| `unit_nested_definition_host_loop`: a loop and an if before the nested definition and its return | natively 7 where 9 is due, no refusal; walked 9 | 9 and 1, natively and walked |
+| `unit_t7_actual_from_root`, moved to the model first: the root and a method give the same merge; under a caller's `other` 20; a second merge of the root; the first again | refused at the root's limit | 14 and 14; 25; 109; 14. The root natively and through its graph |
+| `unit_t7_actual_in_definition`: a returned nested definition gives a merge as an actual; under a caller's `other` 20 | refused: the retained machine operation | 114 and 116; 125 |
+| `unit_t7_host_nested_return`: a merge returned from an if of its method | refused: `assignment value has unknown type` | refused as a limit, in its own words: OPEN |
+| The four `_walk` rows of the merges held and called | the method that returns the merge is native | it is walked: `WalkedMethods` names it |
+
+The step's rows are written with the model first and call the node with
+its bound formal left at its default. That is a bounded case, not the whole
+of a callable merge:
+[MERGE-KEEPS-MODEL-INTERFACE](defects.md#merge-keeps-model-interface)
+stays open. `unit_t7_actual_from_root` was written with the data first and
+was red; its source is changed to the model first and extended, and the
+change is named in the fixture and in
+[T7-DATA-FIRST-SHAPE](defects.md#t7-data-first-shape). No other row's
+source is changed.
+
+### The witness of the author's question, again
+
+The probe of [section 65](#fourteenth-reply) gives 9, 11, 9 with this
+step's translator as before it. Its variant with a field of `make`'s own,
+`int: other 50` before `return: merge(add)`, can be run now: 9, 11, 9,
+natively, with the root walked and with every method walked, `make` among
+them. The calls come after `make` has returned. Both programs are kept
+byte for byte in
+[T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links). The 11 is not
+an expectation, and no row is made of either before the author answers.
+
+### Replay
+
+The step's translator against the committed one, on the 1706 translations
+recorded by `fable_full_37`: exit, messages and the generated L1 are the
+same on 1680 rows. Of the 26 others, 21 are units that build a merge's node
+and differ in L1 only, by the constructor; four are hosts with a nested
+body, `unit_make_adder_char`, `unit_walk_make_adder_char`,
+`unit_recv_use_nested_dormant` and its `_walk`, whose nested body no longer
+carries a construction; and `unit_t7_actual_from_root`, refused before,
+translates.
+
+The replay, the mutants and the focused runs used a build whose generated C
+equals, byte for byte, that of the source committed with this step; the two
+sources differ in one comment.
+
+The changed and the new rows were run before the gates
+(`fable_s4p_01`, `fable_s4p_02`): 81 rows and 2 rows; 79 pass, and the four
+red ones are labelled OPEN rows, three of them known and
+`unit_t7_host_nested_return` new.
+
+### Mutants
+
+Each is a copy of the step's translator with one change, built apart and
+run on the step's fixtures three ways: natively, with the root walked too,
+and with the methods walked too.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| A nested body of a host is routed as the host's body again | `unit_t7_host_body` and `unit_nested_definition_host_loop` give a wrong value natively; with the methods walked they pass. |
+| The native body hands 0 for a bound formal | `unit_t7_host_body` and `unit_t7_host_bound_field` fail natively and pass with the methods walked. `unit_t7_actual_in_definition` passes: no native body builds its merge. |
+| The native body hands the formal as it was received | `unit_t7_host_bound_field` fails natively and passes walked. |
+| The walked step hands 0 for a bound formal | `unit_t7_host_body` and `unit_t7_host_bound_field` fail with the methods walked and pass natively. `unit_t7_actual_in_definition` fails. |
+| The walked step hands the formal as it was received | `unit_t7_host_bound_field` fails with the methods walked. |
+| The primitive entry gives no node | With the methods walked the two host rows stop the process: `a callable merge was called outside its header`. `unit_t7_actual_from_root` stops with the root walked, `a dynamic call of a value that is not a Structure`, and passes natively. `unit_t7_actual_in_definition` stops the same way. |
+| No place for a body with nothing above it | `unit_t7_actual_from_root` stops in the root's native body: `a callable merge could not be built`. The rows whose merges stand in methods pass. |
+| The root's limit back | `unit_t7_actual_from_root` is refused. |
+| The walked body of a method builds its returned merge as a statement too | The two host rows are refused: `root operation not walkable yet: merge`. |
+
+Every mutant is killed by the fixture of a gated row, in the body it changes.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_24` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_24` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_38` (full harness) | RED 39 of 1715. Against `fable_full_37` (RED 39 of 1707): FAIL→OK 1, `unit_t7_actual_from_root`, an OPEN row of the step before; OK→FAIL 0; added 8, of which seven green and the labelled OPEN row `unit_t7_host_nested_return` red; removed 0. |
+| `build/l2_harness/fable_s4p_01`, `fable_s4p_02` (focused, before the gates) | 83 rows, 79 pass; see the replay above. |
+
+Against the baseline `fable_full_01` (RED 126 of 1395), counted directly:
+98 FAIL→OK, OK→FAIL 0, five red rows replaced, 325 added of which 16 red.
+The 39 red rows are 23 of the baseline and 16 added: the five that
+`fable_full_17` had above the baseline and eleven labelled OPEN positives.
+The pre-gate hashes of the translator, the six fixtures and the harness
+equal the live files and every staged copy (`tie.py`).
+
+### Not claimed
+
+- Under what the node hangs and what its body reads where no caller gives
+  a name are unchanged:
+  [T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links) is open, and
+  the author is asked.
+- The interface of a merge's node still holds the unbound formals only,
+  and the shape with the data first is still read as the one with the
+  model first in the rows written so:
+  [MERGE-KEEPS-MODEL-INTERFACE](defects.md#merge-keeps-model-interface),
+  [T7-DATA-FIRST-SHAPE](defects.md#t7-data-first-shape).
+- The method that receives a merge through a callable formal is native in
+  every row: a method with a callable formal is outside what
+  `--walk-methods` walks. The walked consumer is a later step.
+- A merge binds a literal or a formal of the performing method. A field of
+  that method as the bound value is still refused, as a limit.
+- The body of a node is built anew at each construction, in the program's
+  arena, as it was.
+
+**Next.** The reference: its absence, its admission through a held call,
+and its asking along the chain; the conversion of a handed-on input; the
+library's ingress; the walked consumer; the complete copy of a node built
+at run time and a node's own contract route. The node's lexical source
+follows the author's answer.

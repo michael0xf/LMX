@@ -1915,6 +1915,9 @@ prototype:
     fn: l2_t7_arg_of (const: @(LmP0Text name)) int
     fn: l2_t7_arg_ty (const: @(LmP0Text name)) int
     fn: l2_t7_host_site (int: mi) int
+    fn: l2_t7_make_sig (int: site) int
+    fn: l2_rw_t7_build (int: site; int: parent; @: int out) int
+    fn: l2_t7_return_stmt (int: mi; const: @(LmP0Node stmt)) int
     fn: l2_t7_from_return (int: mi; const: @(LmP0Node node); const: @(char path)) int
     fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); const: @(char path)) int
     fn: l2_t7_actual_model (int: mi; const: @(LmP0Node node)) int
@@ -10116,8 +10119,15 @@ return: l2_error(path, only\value, "return value has incompatible type")
 # Slice 4: `return: v` with one value or a composite, in a body or a trailer.  A Structure result
 # is admitted (l2_admit_return), never converted.
 fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
+    @: LmP0Field only
     if: body = 0 || l2_m_ret[mi] = 8 || l2_nsty_get(mi, 0 - 1) >= 0
         return: 0
+    # A method returns its merge at one place, a statement of its body (l2_t7_return_stmt, which the check passes
+    # by).  A merge returned from a nested body of the method is not built yet: a limit of this implementation and
+    # no rule, said where the merge stands and not as a type error of its value.
+    only: l2_next_active(body\first_field)
+    if: l2_m_ret[mi] = 16 && l2_count_active(body) = 1 && only != 0 && only\value != 0 && l2_frame_head(only\value, "merge") != 0
+        return: l2_error(path, only\value, "a merge returned from a nested body of its method is not built yet")
     if: l2_check_ret_kind(mi, body, path) != 0
         return: 1
 return: l2_check_value_convert_field(body\first_field, l2_count_active(body), l2_ret_ft(mi), mi, path)
@@ -20111,7 +20121,8 @@ fn: l2_emit_body_in (const: @(LmP0Structure body); int: mi; const: @(char ind)) 
         return: 0
     # T6: the host builds the node; the nested model is walked, not compiled as C.  T6b: the
     # host's own statements run first (l2_mad_host_body).
-    if: l2_mad_on(mi) != 0
+    # The host's body is the method's own; a nested body of it is its statements, as any block's.
+    if: l2_mad_on(mi) != 0 && l2_m_body[mi] != 0 && l2_m_body[mi]\as != 0 && body = l2_m_body[mi]\as\structure
         return: l2_mad_host_body(body, mi, ind)
     if: l2_mad_host_of(mi) >= 0 && l2_mcap_count(mi) > 0
         if: l2_m_ret[mi] != 8 && c.fprintf(l2_out, "%sreturn: 0\n", ind) < 0
@@ -25829,6 +25840,11 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # statements, so not hung on the model's frame) is its build (l2_mad_host_body), not a call
         # of the model -- checked as a call, it was refused ("incompatible entry signature").
         if: l2_mad_on(mi) != 0 && l2_mad_is_return(stmt, l2_mad_model[mi]) != 0
+            field: l2_next_active(field\next)
+            continue
+        # A method that returns a merge may do something first: that return is its build too, a statement of
+        # its body.  The merge was checked where the method was recorded with it (l2_t7_fill).
+        if: l2_t7_return_stmt(mi, stmt) != 0
             field: l2_next_active(field\next)
             continue
         if: l2_mad_declaring(stmt, mi) != 0
@@ -35575,44 +35591,16 @@ fn: l2_rw_put_actual (int: call; int: site; int: place; int: arg) int
     ---
 return: l2_rw_put(call, place, arg)
 
-# A merge given as the actual of a callable formal, in the graph of the method that gives it.  The node is
-# built by that method's native code (l2_t7_emit_actual): the written merge is retained as a machine operation
-# of its own name, holding, in source order, each binding under its name with its value resolved as any
-# actual's, and the model as the occurrence it names, which nothing calls here.  The method that holds it is
-# native-only.
+# A merge given as the actual of a callable formal, in the graph of the body that gives it: the step that builds
+# its node (l2_rw_t7_build), the construction that body's native code calls (l2_t7_emit_actual).
 fn: l2_rw_merge_actual (const: @(LmP0Node node); int: parent; @: int out) int
-    @: LmP0Field f
-    int: n 0
-    int: slot 0
-    int: body
-    int: child
-    if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
-        return: 1
-    l2_rw_machine: 1
-    f: l2_next_active(node\as\frame\body\first_field)
-    while: f != 0
-        n: n + 1
-        f: l2_next_active(f\next)
+    int: s 0
+    while: s < l2_t7_n
+        if: l2_t7_kind[s] = 2 && l2_t7_at[s] = node && l2_t7_host[s] = l2_rw_mi
+            return: l2_rw_t7_build(s, parent, out)
+        s: s + 1
     ---
-    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, node\as\frame\head) != 0 || l2_rw_plain(\out, n, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
-        return: 1
-    f: l2_next_active(node\as\frame\body\first_field)
-    while: f != 0
-        if: l2_pap_method_of(f\value) >= 0
-            if: l2_rw_callable_actual(f, 1, body, @ child) != 0
-                return: 1
-            ---
-        else:
-            if: l2_rw_machine_application(f\value, body, @ child) != 0
-                return: 1
-            ---
-        ---
-        if: l2_rw_put(body, slot, child) != 0
-            return: 1
-        slot: slot + 1
-        f: l2_next_active(f\next)
-    ---
-return: 0
+return: l2_rw_refuse(node, "an unresolved callable occurrence")
 
 # Callable receiving contexts share the native resolver's exact occurrence
 # classification. Nullary frames and paths do not execute here; a forwarded
@@ -38865,7 +38853,12 @@ fn: l2_rw_mad_ret (int: mi; int: into; @: int out) int
     int: prim
     if: l2_mad_model[mi] < 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost its model")
-    if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0 || l2_rw_mad_build(mi, \out, @ prim) != 0
+    if: l2_rw_frame(into, "LMX_WALK_OP_RET", 2, out) != 0
+        return: 1
+    # A method that returns a merge builds that merge's node (l2_rw_t7_build); any other host, its model's.
+    if: l2_t7_host_site(mi) >= 0 && l2_rw_t7_build(l2_t7_host_site(mi), \out, @ prim) != 0
+        return: 1
+    if: l2_t7_host_site(mi) < 0 && l2_rw_mad_build(mi, \out, @ prim) != 0
         return: 1
 return: l2_rw_put(\out, 1, prim)
 
@@ -38878,6 +38871,61 @@ fn: l2_rw_mad_host_struct (int: parent; int: mi; const: @(LmP0Text name); @: int
     if: oi < 0
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost a captured name")
 return: l2_rw_own(parent, oi, out)
+
+# The step that builds the node of the merge at `site`, under `parent`: [prim, record, contract, self, bound
+# values].  The record's function is the site's constructor (l2_t7_construct_<site>), the construction the native
+# body calls (l2_t7_write).  The first operand is the occurrence this body runs over; then, in the order the merge
+# writes them, the value each formal of the performing method that the merge binds to has where the merge stands.
+fn: l2_rw_t7_build (int: site; int: parent; @: int out) int
+    []: char cname 64
+    int: prim
+    int: occ
+    int: v
+    int: j 0
+    int: nv 0
+    int: ci 0
+    int: at
+    int: contract
+    int: inputs
+    if: site < 0 || site >= l2_t7_n
+        return: 1
+    while: j < l2_t7_nb[site]
+        if: l2_t7b_how[l2_t7_b0[site] + j] != 0
+            nv: nv + 1
+        j: j + 1
+    ---
+    if: c.sprintf(cname, "l2_t7_construct_%d", site) < 0
+        return: 1
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 4 + nv, @ prim) != 0 || l2_rw_frame(prim, "LMX_WALK_OP_SELF", 1, @ occ) != 0 || l2_rw_put(prim, 3, occ) != 0
+        return: 1
+    j: 0
+    while: j < l2_t7_nb[site]
+        at: l2_t7_b0[site] + j
+        if: l2_t7b_how[at] != 0
+            if: l2_rw_bound(l2_fn(l2_rw_mi, l2_t7b_val[at])) >= 0 && l2_rw_own(prim, l2_rw_bound(l2_fn(l2_rw_mi, l2_t7b_val[at])), @ v) != 0
+                return: 1
+            if: l2_rw_bound(l2_fn(l2_rw_mi, l2_t7b_val[at])) < 0 && l2_rw_arg(prim, l2_t7b_val[at], @ v) != 0
+                return: 1
+            if: l2_rw_put(prim, 4 + ci, v) != 0
+                return: 1
+            ci: ci + 1
+        ---
+        j: j + 1
+    ---
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", prim, prim, prim, cname, prim, prim, prim, prim) < 0
+        return: 1
+    if: l2_rw_contract(prim, 1 + nv, 0, 1, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, 0, 1) != 0
+        return: 1
+    ci: 0
+    while: ci < nv
+        if: l2_rw_witness(inputs, 1 + ci, 0, 0) != 0
+            return: 1
+        ci: ci + 1
+    ---
+    if: l2_rw_primitive_contract(prim, contract) != 0
+        return: 1
+    \out: prim
+return: 0
 
 # The PRIM that builds host mi's node under parent (the return's operand above).  The values of the host's body the
 # model uses are evaluated where it stands: the activation's, there.
@@ -39141,7 +39189,7 @@ fn: l2_mad_return_point (const: @(LmP0Structure body); int: mi; @: LmP0Field fie
     model: l2_mad_model[mi]
     if: model < 0
         return: 0
-    if: l2_mad_is_return(field\value, model) != 0
+    if: l2_mad_is_return(field\value, model) != 0 || l2_t7_return_stmt(mi, field\value) != 0
         return: 1
     if: l2_frame_head(field\value, "fn") = 0 || field\value != l2_m_node[model]
         return: 0
@@ -39263,6 +39311,9 @@ return: l2_mad_tr_is(l2_ret_tr(f\value\as\frame), model)
 # l2_rw_may/l2_rw_mad_trailer call.
 fn: l2_mad_return_confirmed (int: mi; int: model) int
     @: LmP0Field f
+    # A method recorded with the merge it returns: that return is its one exit, wherever it stands.
+    if: l2_t7_host_site(mi) >= 0
+        return: 1
     if: l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure = 0
         return: l2_mad_trailer_return(mi, model)
     f: l2_next_active(l2_m_body[mi]\as\structure\first_field)
@@ -39762,7 +39813,7 @@ fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind))
         return: l2_mad_emit(mi, ind)
     f: l2_next_active(body\first_field)
     while: f != 0
-        if: l2_mad_is_return(f\value, model) != 0
+        if: l2_mad_is_return(f\value, model) != 0 || l2_t7_return_stmt(mi, f\value) != 0
             at_fn: 0
         f: l2_next_active(f\next)
     ---
@@ -39781,7 +39832,7 @@ fn: l2_mad_host_body (const: @(LmP0Structure body); int: mi; const: @(char ind))
             if: at_fn != 0 && stmt = l2_m_node[model]
                 cut: 2
             ---
-        if: l2_mad_is_return(stmt, model) != 0
+        if: l2_mad_is_return(stmt, model) != 0 || l2_t7_return_stmt(mi, stmt) != 0
             cut: 2
         if: cut = 0 && l2_mad_names_nested(stmt, mi) != 0
             return: l2_error(l2_src, stmt, "a callable merge host names a nested method outside the return")
@@ -40760,8 +40811,10 @@ return: 0
 
 # Once per translation, after every method's own trampoline/body is emitted (l2_mad_call's own
 # emission point): every T6/T6b host that actually walked (l2_m_steps[i] > 0, set only when
-# l2_rw_may admitted it) gets its own constructor. A host l2_rw_may excluded (T7, or a malformed
-# mad shape) never reaches here -- l2_m_steps stays -1 for it. NOT conditioned on l2_walk_methods:
+# l2_rw_may admitted it) gets its own constructor. A host l2_rw_may excluded (a malformed mad
+# shape) never reaches here -- l2_m_steps stays -1 for it. A method that returns a merge is walked
+# too, and the node it builds is the merge's, by the merge's constructor (l2_t7_emit_makes), not
+# one of these. NOT conditioned on l2_walk_methods:
 # l2_rw_methods_count/l2_rw_methods_emit (:25860/:26703) build the op-tree unconditionally, the
 # same way a method's native trampoline is always emitted regardless of the knob -- the knob picks
 # which one an entry uses, not whether the walked one compiles. Gating this behind the knob while
@@ -40770,7 +40823,7 @@ return: 0
 fn: l2_emit_mad_constructs () int
     int: i 0
     while: i < l2_m_n
-        if: l2_library_mode = 0 && l2_mad_on(i) != 0 && l2_m_steps != 0 && l2_m_steps[i] > 0
+        if: l2_library_mode = 0 && l2_mad_on(i) != 0 && l2_t7_host_site(i) < 0 && l2_m_steps != 0 && l2_m_steps[i] > 0
             if: l2_emit_mad_construct_one(i) != 0
                 return: 1
             ---
@@ -41038,6 +41091,18 @@ fn: l2_t7_host_site (int: mi) int
         s: s + 1
     ---
 return: 0 - 1
+
+# stmt is the `return:` whose value is the merge method mi returns: the one the method was recorded with
+# (l2_t7_from_return), which checked it there.
+fn: l2_t7_return_stmt (int: mi; const: @(LmP0Node stmt)) int
+    @: LmP0Field only
+    int: site l2_t7_host_site(mi)
+    if: site < 0 || stmt = 0 || l2_frame_head(stmt, "return") = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) != 1
+        return: 0
+    only: l2_next_active(stmt\as\frame\body\first_field)
+    if: only = 0 || only\value = 0
+        return: 0
+return: (cast: (int) (l2_t7_at[site] = only\value))
 
 fn: l2_t7_name_bound (int: b0; int: nb; const: @(LmP0Text name)) int
     int: i 0
@@ -41410,10 +41475,6 @@ fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); c
     int: req
     if: mi < 0
         return: l2_error(path, node, "incompatible entry signature")
-    # The root's body is walked, and a merge's node is built by native code only: a limit of this
-    # implementation, and no incompatibility of the merge with the formal.
-    if: mi = l2_e
-        return: l2_error(path, node, "a merge given as the actual of a callable formal by the root is not built yet")
     req: l2_cf_get(callee, fi)
     if: req < 0
         return: l2_error(path, node, "incompatible entry signature")
@@ -41424,12 +41485,54 @@ fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); c
         return: 1
 return: 0
 
-fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
+# The header of the constructor of the merge at `site`: the occurrence the performing body runs over, then, in
+# the order the merge writes them, one int per formal of the performing method that the merge binds to.
+fn: l2_t7_make_sig (int: site) int
+    int: j 0
+    if: c.fprintf(l2_out, "fn: l2_t7_make_%d (@: Lmx l2_t7_at", site) < 0
+        return: 1
+    while: j < l2_t7_nb[site]
+        if: l2_t7b_how[l2_t7_b0[site] + j] != 0 && c.fprintf(l2_out, "; int: l2_t7b%d", j) < 0
+            return: 1
+        j: j + 1
+    ---
+    if: fputs(") @: Lmx\n", l2_out) < 0
+        return: 1
+return: 0
+
+# The walked body's entry to the same construction: the primitive entry over l2_t7_make_<site>.  refs[0] is the
+# occurrence the performing body runs over; refs[1..] are the bound values, in the order of the constructor's header.
+fn: l2_t7_emit_construct (int: site) int
+    int: j 0
+    int: nv 0
+    while: j < l2_t7_nb[site]
+        if: l2_t7b_how[l2_t7_b0[site] + j] != 0
+            nv: nv + 1
+        j: j + 1
+    ---
+    if: c.fprintf(l2_out, "fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_t7_at 0\n    @: Lmx l2_t7_made 0\n    \\out: 0\n    if: nargs != %uU || refs = 0 || refs[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge construct was called outside its header\\n\")\n        c.abort()\n    l2_t7_at: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_t7_made: l2_t7_make_%d(l2_t7_at", site, (cast: (unsigned) (1 + nv)), site) < 0
+        return: 1
+    j: 0
+    while: j < nv
+        if: c.fprintf(l2_out, ", lmx_int_value_known(refs[%uU])", (cast: (unsigned) (1 + j))) < 0
+            return: 1
+        j: j + 1
+    ---
+    if: c.fprintf(l2_out, ")\n    \\out: (cast: (@: void) l2_t7_made)\n    return: c.LMX_PRIMITIVE_OK\nend: l2_t7_construct_%d\n\n", site) < 0
+        return: 1
+return: 0
+
+# The node of the merge at `site` is built in one place, by one function of the generated module, for the native
+# body and for the walked one: l2_t7_make_<site>.  The native body calls it (l2_t7_write); the walked body's step
+# calls it through its primitive entry (l2_rw_t7_build, l2_t7_emit_construct).  The node hangs where it hung
+# before this function was one: in the lexical space above the performing body, which is that body's `node`; a
+# body with no space above it, the root, is that space itself.  What the node's body reads where no caller gives
+# a name is not touched here (steps/defects.md, T7-NODE-LEXICAL-LINKS).
+fn: l2_t7_emit_make (int: site; const: @(char ind)) int
     int: steps
     int: nb
     int: arity
     int: width
-    int: host
     int: j 0
     int: at
     int: slot
@@ -41448,16 +41551,19 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
         return: l2_error(l2_src, l2_t7_at[site], "a callable merge needs a walkable body")
     nb: l2_t7_nb[site]
     arity: l2_t7_argc[site]
-    host: l2_t7_host[site]
     b0: l2_t7_b0[site]
     width: 2 + nb + steps
     # The node's args part is its complete contract: the declared formals, then the model's hidden inputs.
     nh: l2_m_dyn[l2_t7_model[site]]
-    if: c.fprintf(l2_out, "%s@: Lmx l2_t7n%d 0\n%s@: Lmx l2_t7p%d 0\n%s@: void l2_t7c%d 0\n", ind, site, ind, site, ind, site) < 0
+    if: l2_t7_make_sig(site) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%s@: Lmx l2_t7_up 0\n%s@: Lmx l2_t7n%d 0\n%s@: Lmx l2_t7p%d 0\n%s@: void l2_t7c%d 0\n", ind, ind, site, ind, site, ind, site) < 0
         return: 1
     if: nh > 0 && c.fprintf(l2_out, "%s@@: void l2_t7s%d 0\n", ind, site) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_t7n%d: lmx_struct_new_owned(node, l2_program_arena)\n%sif: l2_t7n%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7n%d, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) width), ind, ind) < 0
+    if: c.fprintf(l2_out, "%sif: l2_t7_at = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge was built outside an occurrence\\n\")\n%s    c.abort()\n%sl2_t7_up: l2_t7_at\\parent\n%sif: l2_t7_up = 0\n%s    l2_t7_up: l2_t7_at\n", ind, ind, ind, ind, ind, ind) < 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_t7n%d: lmx_struct_new_owned(l2_t7_up, l2_program_arena)\n%sif: l2_t7n%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7n%d, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) width), ind, ind) < 0
         return: 1
     if: arity + nh > 0 && c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7p%d, %uU) != 0 || lmx_arena_ref_store(l2_t7n%d, 0U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, (cast: (unsigned) (arity + nh)), site, site, ind) < 0
         return: 1
@@ -41488,15 +41594,51 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
         slot: l2_t7b_slot[at]
         if: how = 0 && c.fprintf(l2_out, "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, %d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, val, site, (cast: (unsigned) slot), site, ind) < 0
             return: 1
-        if: how != 0 && c.fprintf(l2_out, "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, l2_p%d_%d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, host, val, site, (cast: (unsigned) slot), site, ind) < 0
+        if: how != 0 && c.fprintf(l2_out, "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_int_store_known(l2_t7c%d, l2_t7b%d) != 0 || lmx_arena_ref_store(l2_t7n%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, j, site, (cast: (unsigned) slot), site, ind) < 0
             return: 1
         j: j + 1
     ---
-    if: c.fprintf(l2_out, "%sif: l2_view_build_%d(%s, l2_t7n%d) != 0\n%s    c.abort()\n", ind, site, l2_unit_ref, site, ind) < 0
+    if: c.fprintf(l2_out, "%sif: l2_view_build_%d(l2_program_unit, l2_t7n%d) != 0\n%s    c.abort()\n%sreturn: l2_t7n%d\nend: l2_t7_make_%d\n\n", ind, site, site, ind, ind, site, site) < 0
+        return: 1
+return: l2_t7_emit_construct(site)
+
+# Every merge's constructor, once, after the methods' bodies.
+fn: l2_t7_emit_makes () int
+    int: s 0
+    while: s < l2_t7_n
+        if: l2_t7_emit_make(s, "    ") != 0
+            return: 1
+        s: s + 1
+    ---
+return: 0
+
+# The merge at `site`, where the performing body stands: one call of the site's constructor (l2_t7_emit_make) over
+# the occurrence this body runs over, with the value each bound formal of this method has here.
+fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
+    int: j 0
+    int: at
+    []: char tok 1024
+    if: site < 0 || site >= l2_t7_n
+        return: 1
+    if: l2_t7_ret[site] != 0 || l2_t7_steps[site] < 1
+        return: l2_error(l2_src, l2_t7_at[site], "a callable merge needs a walkable body")
+    if: c.fprintf(l2_out, "%s@: Lmx l2_t7n%d 0\n%sl2_t7n%d: l2_t7_make_%d(self", ind, site, ind, site, site) < 0
+        return: 1
+    while: j < l2_t7_nb[site]
+        at: l2_t7_b0[site] + j
+        if: l2_t7b_how[at] != 0
+            tok[0]: 0
+            if: l2_tok_formal(l2_t7_host[site], l2_t7b_val[at], tok) != 0 || c.fprintf(l2_out, ", (%s)", tok) < 0
+                return: 1
+            ---
+        j: j + 1
+    ---
+    if: fputs(")\n", l2_out) < 0
         return: 1
     if: do_ret != 0 && c.fprintf(l2_out, "%sreturn: (cast: (@: void) l2_t7n%d)\n", ind, site) < 0
         return: 1
 return: 0
+
 
 fn: l2_t7_emit_actual (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     int: s 0
@@ -41963,7 +42105,7 @@ fn: l2_rw_methods_count () int
                 return: 1
             ---
         ---
-        present: (cast: (int) (i = l2_e || l2_m_body[i] != 0))
+        present: (cast: (int) (i = l2_e || l2_m_body[i] != 0 || l2_t7_host_site(i) >= 0))
         if: l2_m_node[i] != 0 && l2_m_node[i]\kind = c.LM_P0_NODE_FRAME && l2_m_node[i]\as != 0 && l2_m_node[i]\as\frame != 0 && l2_m_node[i]\as\frame\trailer != 0
             present: 1
         if: l2_library_mode = 0 && l2_pap_on(i) = 0 && present != 0
@@ -45564,7 +45706,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         return: 1
     i: 0
     while: i < l2_t7_n
-        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target) int\n", i) < 0
+        if: c.fprintf(l2_out, "    fn: l2_view_build_%d (@: Lmx l2_entry_unit; @: Lmx target) int\n    ", i) < 0 || l2_t7_make_sig(i) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -45769,6 +45911,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
         fclose(l2_out)
         return: 1
     if: l2_emit_mad_constructs() != 0
+        fclose(l2_out)
+        return: 1
+    if: l2_t7_emit_makes() != 0
         fclose(l2_out)
         return: 1
     if: l2_t7_emit_builders() != 0

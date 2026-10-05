@@ -7882,3 +7882,110 @@ starts and when the scan reaches the declaration of an empty definition.
 remainder in the order of section 74, with
 [DORMANT-BODY-FREE-INPUT](defects.md#dormant-body-free-input) among the G5
 blockers.
+
+<a id="t7-copy"></a>
+## 77. A merge's node under the copy of its model's lexical tree (Codex's reply OPUS-CODEX-20261005-01, T7)
+
+The reply: "T7-NODE-LEXICAL-LINKS (and directly necessary complete-copy
+dependency): implement the AUTHOR's source-copy/remapped-parent rule, not
+merge-site reparenting or re-resolution. Required asymmetric 9 / 50 / original
+mutation 11 witness: with no dynamic input the copy reads 9 before and after
+original mutation; the original observes 11; explicit node follows its copied
+source relation. Also test shared targets/cycles, immutable/native retention,
+actual graph address targets and native/walker parity. Include the full
+necessary used mutable lexical closure, not an extra environment graph." The
+author: "merge делает копию используемой части дерева, при этом parent
+переписываются *внутри копии*, какое это имеет отношение к месту копирования?"
+([the author's words](../LMX_blog/2026-10-05.md#merge-parent)).
+
+### What was measured
+
+On `62ef45df`, the two programs of the defect entry, written with the receiver
+`@:`, natively, with the root walked and with the methods walked: the copy
+reads `9 11 9` where the original reads 11 (`T7 9 11 9 11`), and through
+`node\other` `T7 9 11 11`. The node was built under the `node` of the method
+that performed the merge (`l2_t7_at\parent`), and its body was a view built
+over the live unit (`l2_view_build_<site>(l2_program_unit, node)`): the
+fallback of a free name was an `AT` of the unit's own cell. A merge of a model
+nested in a method is refused at translation ("a callable merge needs one
+model"): every model is a method of the unit.
+
+### What is built
+
+1. **The copy.** The node's constructor (`l2_t7_make_<site>`) copies the
+   model's lexical tree at every merge. The model is a method of the unit, and
+   its lexical tree is the unit's: `l2_t7_emit_lex_copy` copies it with the one
+   traversal merge and Message creation share (`lmx_graph_copy_profiles_owned`).
+   Shared targets and cycles keep their shape; every copied Structure's parent
+   is the copy of its own; a reference field's cell is copied and its pointee
+   shared (-186 k3); the program's qualified branches are retained by their
+   exact profiles, as a merge retains its operands'.
+2. **The node under the copy.** The node hangs under the copy of the unit, not
+   at the place of the merge. Its view is built over the copy: the fallback of
+   a free name and `node\x` read the state of the merge.
+3. **The models are the program's.** A model operand of the view -- the model
+   of an `OF` or a `PUT_OF`, of an admission, a witness of an input -- is read
+   from the program's unit (`l2_nst`, `l2_rw_model_own` under
+   `l2_rw_type_base`). A model is a type: a value a caller gives was admitted to
+   the program's Structure, and its copy is no record of that admission. The
+   first build took the models from the copy too, and the three rows whose node
+   reads a reference the caller gives (`unit_t7_reference_held`,
+   `unit_t7_actual_reference`, `unit_t7_actual_typed_reference`) stopped with
+   `walk error: INVALID`: `lmx_implements_slot` found no record of the caller's
+   value against the copy of its model. The focused run caught it.
+4. **The test driver.** A physical path climbs to a Structure's parent by the
+   step `up`. A row with qualified roots may carry post paths: the root facts
+   skip `postpaths ... endpostpaths`.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_t7_copy_lexical_formal`, walked twin | `make`'s own formal `other` is 50; the copy reads the unit's 9 before and after `bump` writes 11, and the original `add` reads 11: `T7 9 9 9 11`. |
+| `unit_t7_copy_lexical_node`, walked twin | The same through `node\other`, the node's parent: `T7 9 9 11`. |
+| `graph_shape_t7_copy_parent`, walked twin | From `w`'s cell (`deref`, `up`): the node's parent is a distinct copy of the unit; its `other` and `m` are distinct objects, `other` 9 and `m\v` 4; the copied `m`'s parent is the copy, as the original's is the unit; the qualified branch `E` is the same object. |
+
+### Mutants
+
+Each is built on this step's translator and driver, in a stage of its own.
+
+| Mutant | Puts back | Result |
+| --- | --- | --- |
+| `t_live` | the view over the live unit | `T7 9 11 9 11` |
+| `t_site` | the node at the merge's place | `T7 9 11 11`; the copy's paths fail |
+| `t_nokeep` | no qualified branch retained | `samepath` of `E` fails |
+
+### Limits
+
+- The whole lexical tree of the unit is copied, not only what the body uses:
+  the cost of a merge grows with the unit, step A
+  ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)).
+- A failed copy stops the program, as every other failure of this
+  constructor does: the throw named `merge` from building a node is not built.
+- Records of admission are not copied with values. The reads probed do not
+  need one (scratch programs outside the gate, on this step's stage).
+  `node\m\v` in a node reads 4 from the copy natively, with the root walked
+  and with the methods walked: its steps go through own slots, without a
+  model. A letter the unit received stays shared, its cell copied: the node
+  gives the copy's `m` to a typed formal, and the letter is admitted to the
+  program's `MainLetter` by the record of its reception -- natively. With the
+  root walked the same program stops at `walk error: UNSUPPORTED` with no
+  merge in it too, on `62ef45df` as well.
+- A method whose body is only its `return:` crashes the translator as the
+  model of a callable merge, before this step as after it
+  ([T7-TRAILER-ONLY-MODEL-CRASH](defects.md#t7-trailer-only-model-crash)):
+  the next checkpoint.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_05` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/opus_l3_05` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_07` (full harness) | RED40/1842: against `opus_full_06` FAIL→OK 0, OK→FAIL 0; six rows added, all green; the other red rows and their words unchanged. The staged translator is the git blob `177ba95d` of the bytes committed with this section; the six declared paths were hashed before the run, and the live and the staged bytes are those. |
+| `build/l2_harness/opus_focus_t7c` (focused) | The 28 rows whose translation changes and the six added: 34 green. |
+| Replay of the 1835 translations recorded by `opus_full_06` | The 28 rows that build a merge's node change their L1, and only their L1: no exit and no message differs. |
+
+**Next.** A: the cost of a merge, diagnosed and repaired over this copy
+([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)); then
+the remainder in the order of section 74.

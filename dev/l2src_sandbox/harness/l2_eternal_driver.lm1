@@ -457,8 +457,16 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
                     if: (c.strcmp(gargv[at], "entry") = 0 || c.strcmp(gargv[at], "letters") = 0 || c.strcmp(gargv[at], "fails") = 0 || c.strcmp(gargv[at], "mergefail") = 0 || c.strcmp(gargv[at], "stopped") = 0 || c.strcmp(gargv[at], "thrown") = 0 || c.strcmp(gargv[at], "ref") = 0 || c.strcmp(gargv[at], "walkroot") = 0) && at + 1 < gargc
                         at: at + 2
                     else:
-                        check(0, "all driver fact arguments are recognized")
-                        at: gargc
+                        # `postpaths ... endpostpaths` are the service post's (shape_paths_check), not root facts.
+                        if: c.strcmp(gargv[at], "postpaths") = 0
+                            while: at < gargc && c.strcmp(gargv[at], "endpostpaths") != 0
+                                at: at + 1
+                            ---
+                            at: at + 1
+                        else:
+                            check(0, "all driver fact arguments are recognized")
+                            at: gargc
+                        ---
                     ---
                 ---
             ---
@@ -712,8 +720,10 @@ return: found
 # Test-only physical path: a count followed by that many steps. A step is a child
 # index, or `deref`: the reference a typed pointer cell holds -- a reference field
 # (`@: T x`, the receiver `@: h f(a)`) is such a cell in its slot (q26), and the
-# path crosses it only where the step says so (`ref N` is main's own option).
-# Its depth is supplied by the command, never a fixed-size observation buffer.
+# path crosses it only where the step says so (`ref N` is main's own option) --
+# or `up`: the Structure's parent, where a merge's node hangs under the copy of
+# its model's lexical tree (T7). Its depth is supplied by the command, never a
+# fixed-size observation buffer.
 fn: shape_path (@: LmxArena arena; @: Lmx graph; @: int at; int: omit_last) @: void
     int: n arg(\at)
     int: j 0
@@ -734,6 +744,14 @@ fn: shape_path (@: LmxArena arena; @: Lmx graph; @: int at; int: omit_last) @: v
             if: ty < c.LMX_TYPE_POINTER_BASE || ty >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
                 return: 0
             value: lmx_pointer_value_known(value)
+            j: j + 1
+            continue
+        if: c.strcmp(gargv[\at + j + 1], "up") = 0
+            check(value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT, "physical path climbs from an actual Structure")
+            if: value = 0 || lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
+                return: 0
+            holder: (cast: (@: Lmx) value)
+            value: (cast: (@: void) holder\parent)
             j: j + 1
             continue
         check(value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT, "physical path crosses an actual Structure")

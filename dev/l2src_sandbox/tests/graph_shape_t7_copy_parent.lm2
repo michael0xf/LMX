@@ -1,0 +1,33 @@
+# The node a callable merge builds hangs under the copy of its model's lexical tree (the author, 2026-10-05;
+# T7-NODE-LEXICAL-LINKS); the post paths walk to it from the receiver's cell (`deref`, then `up`).  The node's
+# parent is a distinct copy of the unit.  Its other is a distinct cell that holds 9.  Its m, a Structure field,
+# is a distinct Structure whose parent is the copy and whose v holds 4.  The qualified branch E is the same
+# object, retained by its profile.  add reads other + m\v: w() gives 13.  Entry 7.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+Model:
+    int: v 4
+end: Model
+m: merge Model
+int: other 9
+
+fn: add () int
+    return: other + m\v
+
+fn: make () fn: () int
+    return: merge(add)
+
+@: w make()
+int: got (w())
+int: ok 80
+if: got = 13
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

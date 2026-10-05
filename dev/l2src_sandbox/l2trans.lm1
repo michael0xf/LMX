@@ -291,6 +291,10 @@ int: l2_mcap_room 0
 # The three tables grow with the program (K09): its merges, their bindings, their declared headers.
 int: l2_t7_n 0
 int: l2_t7_walk 0
+# Set while a model operand of a merge's view is written (l2_rw_model_own): the unit its place is reached from is
+# the program's own, not the copy the view's state is read from.  A model is a type: a value a caller gives was
+# admitted to the program's Structure, and the copy of that Structure is no record of it.
+int: l2_rw_type_base 0
 int: l2_t7b_n 0
 int: l2_t7h_n 0
 int: l2_t7_cap 0
@@ -1775,6 +1779,9 @@ prototype:
     fn: l2_emit_graph_places (int: mi) int
     fn: l2_emit_graph_build_place (@: L2GraphPlace place; int: root_mi) int
     fn: l2_emit_graph_unit_place (@: L2GraphPlace place) int
+    fn: l2_rw_model_own (int: parent; int: slot; int: oi) int
+    fn: l2_rw_types_nsp () const: @: char
+    fn: l2_rw_types_unit () const: @: char
     fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind)) int
     fn: l2_rw_graph_place (int: parent; @: L2GraphPlace place; @: int out) int
     fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; @: int out) int
@@ -2018,6 +2025,7 @@ prototype:
     fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); const: @(char path)) int
     fn: l2_t7_actual_model (int: mi; const: @(LmP0Node node)) int
     fn: l2_t7_emit_actual (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
+    fn: l2_t7_emit_lex_copy (const: @(char ind)) int
     fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
     fn: l2_t7_count () int
     fn: l2_t7_emit_frames (int: phase) int
@@ -16762,6 +16770,8 @@ return: (cast: (int) (c.fprintf(l2_out, "%s%s: lmx_arena_ref_struct(%s, %zuU)\n"
 # code built after the unit is -- a merge's node, built when the merge runs -- which has none of the aliases the
 # unit's constructor names its holders by (l2_emit_graph_build_place).
 fn: l2_emit_graph_unit_place (@: L2GraphPlace place) int
+    if: place = 0 && l2_rw_type_base != 0
+        return: (cast: (int) (fputs("l2_program_unit", l2_out) < 0))
     if: place = 0
         return: (cast: (int) (fputs("l2_entry_unit", l2_out) < 0))
     if: fputs("lmx_arena_ref_struct(", l2_out) < 0 || l2_emit_graph_unit_place(place\parent) != 0
@@ -31730,10 +31740,11 @@ return: 0
 fn: l2_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
     int: model l2_nsty_get(mi, j)
     int: callable l2_cf_get(mi, j)
+    # A witness is a type: in a merge's view the program's occurrence and Structure (l2_rw_types_nsp).
     if: l2_rw_emit != 0 && callable >= 0
-        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", parent, slot, (cast: (unsigned) (l2_occ_slot(callable)))) < 0))
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(%s, %uU))) != 0\n            return: 1\n", parent, slot, l2_rw_types_unit(), (cast: (unsigned) (l2_occ_slot(callable)))) < 0))
     if: l2_rw_emit != 0 && model >= 0 && l2_input_is_descriptor(mi, j) != 0
-        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", parent, slot, model) < 0))
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", parent, slot, l2_rw_types_nsp(), model) < 0))
     # A foreign by-value input is native C storage with no graph cell. Its
     # witness place stays empty, as its place in the method's own declared
     # part does, and the body that transports it is native-only.
@@ -33121,12 +33132,37 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
         return: 1
     # The crossing's receiving model: a named Structure's unit child (l2_nsp) -- or, K02c, a merge result's own
     # Structure, read where the op runs (a frame in the model's place: lmx_walk_model_operand).
-    if: l2_schema_kind(req) = 1 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", raw, req) < 0
+    if: l2_schema_kind(req) = 1 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", raw, l2_rw_types_nsp(), req) < 0
         return: 1
-    if: l2_schema_kind(req) = 2 && (l2_rw_own(raw, l2_mres_own[l2_schema_index(req)], @ model_frame) != 0 || l2_rw_put(raw, 3, model_frame) != 0)
+    if: l2_schema_kind(req) = 2 && l2_rw_model_own(raw, 3, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
     \out: raw
 return: 0
+
+# A model operand written at child `slot` of `parent` from own row oi, a merge result's own Structure (K02c): in a
+# merge's view the place is reached from the program's unit (l2_rw_type_base), elsewhere as any own field's.
+fn: l2_rw_model_own (int: parent; int: slot; int: oi) int
+    int: frame 0
+    int: st
+    l2_rw_type_base: (cast: (int) (l2_t7_walk != 0))
+    st: l2_rw_own(parent, oi, @ frame)
+    l2_rw_type_base: 0
+    if: st != 0
+        return: 1
+return: l2_rw_put(parent, slot, frame)
+
+# The unit a witness occurrence is read from: in a merge's view the program's, elsewhere the entry unit.
+fn: l2_rw_types_unit () const: @: char
+    if: l2_t7_walk != 0
+        return: "l2_program_unit"
+return: "l2_entry_unit"
+
+# The array a named Structure's model operand is read from: in a merge's view the program's own Structures
+# (l2_nst), not the copy's (l2_nsp); elsewhere they are one.
+fn: l2_rw_types_nsp () const: @: char
+    if: l2_t7_walk != 0
+        return: "l2_nst"
+return: "l2_nsp"
 
 # A path read `a\b...` as an operand: the last field's cell (OF over the way to it).
 fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
@@ -35590,11 +35626,11 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     # The model: a named Structure's unit child (l2_nsp) -- or, K02c, a merge result's own Structure, read where the
     # op runs (an AT of its slot: the result does not exist when the frames are built); the kernel evaluates a frame
     # standing in the model's place (lmx_walk_model_operand).
-    if: model_own >= 0 && (l2_rw_own(\out, model_own, @ model_frame) != 0 || l2_rw_put(\out, 4, model_frame) != 0)
+    if: model_own >= 0 && l2_rw_model_own(\out, 4, model_own) != 0
         return: 1
-    if: model_own < 0 && l2_schema_kind(req) = 1 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, req) < 0
+    if: model_own < 0 && l2_schema_kind(req) = 1 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, l2_rw_types_nsp(), req) < 0
         return: 1
-    if: l2_schema_kind(req) = 2 && (l2_rw_own(\out, l2_mres_own[l2_schema_index(req)], @ model_frame) != 0 || l2_rw_put(\out, 4, model_frame) != 0)
+    if: l2_schema_kind(req) = 2 && l2_rw_model_own(\out, 4, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 5U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 6U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, count, \out, default_n) < 0
         return: 1
@@ -36132,6 +36168,8 @@ fn: l2_rw_cell (int: node; int: oi) int
     k: l2_m_file(l2_own_mi[oi])
     if: k >= 0 && l2_part_ns[k] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, l2_part_ns[k], node, field\child) < 0))
+    if: l2_rw_type_base != 0
+        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_program_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, node, field\child) < 0))
 return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, node, field\child) < 0))
 
 # The walker op that binds the root's own field oi (-189 c3b-3; grok_bot -186): an own Structure
@@ -43360,10 +43398,12 @@ return: 0
 
 # The node of the merge at `site` is built in one place, by one function of the generated module, for the native
 # body and for the walked one: l2_t7_make_<site>.  The native body calls it (l2_t7_write); the walked body's step
-# calls it through its primitive entry (l2_rw_t7_build, l2_t7_emit_construct).  The node hangs where it hung
-# before this function was one: in the lexical space above the performing body, which is that body's `node`; a
-# body with no space above it, the root, is that space itself.  What the node's body reads where no caller gives
-# a name is not touched here (steps/defects.md, T7-NODE-LEXICAL-LINKS).
+# calls it through its primitive entry (l2_rw_t7_build, l2_t7_emit_construct).  The author's rule (2026-10-05,
+# T7-NODE-LEXICAL-LINKS): merge copies the used part of the tree and rewrites the parent links inside the copy;
+# the place of the merge gives the copy no parent and resolves nothing there.  The model is a method of the unit,
+# and its lexical tree is the unit's: l2_t7_emit_lex_copy copies it at the merge, and the node hangs under the
+# copy.  Its body reads that copy where no caller gives a name -- the fallback of a free name (AT of the entry
+# unit, l2_rw_arg_fb) and `node\x` (the node's parent) -- the state of the merge, not the live one.
 fn: l2_t7_emit_make (int: site; const: @(char ind)) int
     int: steps
     int: nb
@@ -43397,7 +43437,9 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
         return: 1
     if: nh > 0 && c.fprintf(l2_out, "%s@@: void l2_t7s%d 0\n", ind, site) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sl2_t7_up: l2_t7_at\\parent\n%sif: l2_t7_up = 0\n%s    l2_t7_up: l2_t7_at\n", ind, ind, ind) < 0
+    if: l2_m_unit_level(l2_t7_model[site]) = 0
+        return: l2_error(l2_src, l2_t7_at[site], "internal: a callable merge's model is not a method of the unit")
+    if: l2_t7_emit_lex_copy(ind) != 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_t7n%d: lmx_struct_new_owned(l2_t7_up, l2_program_arena)\n%sif: l2_t7n%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7n%d, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) width), ind, ind) < 0
         return: 1
@@ -43434,9 +43476,28 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
             return: 1
         j: j + 1
     ---
-    if: c.fprintf(l2_out, "%sif: l2_view_build_%d(l2_program_unit, l2_t7n%d) != 0\n%s    c.abort()\n%sreturn: l2_t7n%d\nend: l2_t7_make_%d\n\n", ind, site, site, ind, ind, site, site) < 0
+    if: c.fprintf(l2_out, "%sif: l2_view_build_%d(l2_t7_lex, l2_t7n%d) != 0\n%s    c.abort()\n%sreturn: l2_t7n%d\nend: l2_t7_make_%d\n\n", ind, site, site, ind, ind, site, site) < 0
         return: 1
 return: l2_t7_emit_construct(site)
+
+# The copy of the unit's lexical tree a callable merge's node hangs under (l2_t7_emit_make): the one traversal
+# merge and Message creation share (lmx_graph_copy_profiles_owned) -- shared targets and cycles keep their shape,
+# every copied Structure's parent is the copy of its own, a reference field's cell is copied and its pointee
+# shared (-186 k3) -- with the program's qualified branches retained by their exact profiles, as a merge retains
+# its operands'.  `l2_t7_up` is the copy; `l2_t7_lex` names it for the view.  A failed copy stops the program, as
+# every other failure of this constructor does.
+fn: l2_t7_emit_lex_copy (const: @(char ind)) int
+    int: q 0
+    if: c.fprintf(l2_out, "%s[]: @(Lmx) l2_t7_keep %d\n%ssize_t: l2_t7_kn 0U\n%s@: Lmx l2_t7_lex 0\n", ind, (cast: (int) (l2_ebr_n + 1)), ind, ind) < 0
+        return: 1
+    while: q < l2_ebr_n
+        if: c.fprintf(l2_out, "%sl2_t7_keep[l2_t7_kn]: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_program_qualified_at(%dU)))\n%sif: l2_t7_keep[l2_t7_kn] != 0\n%s    l2_t7_kn: l2_t7_kn + 1U\n", ind, q, ind, ind) < 0
+            return: 1
+        q: q + 1
+    ---
+    if: c.fprintf(l2_out, "%sif: lmx_graph_copy_profiles_owned(l2_program_unit, l2_program_arena, l2_program_arena, l2_t7_keep, l2_t7_kn, @ l2_t7_lex) != 0 || l2_t7_lex = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not copy its lexical tree\\n\")\n%s    c.abort()\n%sl2_t7_up: l2_t7_lex\n", ind, ind, ind, ind) < 0
+        return: 1
+return: 0
 
 # Every merge's constructor, once, after the methods' bodies.
 fn: l2_t7_emit_makes () int
@@ -43596,6 +43657,27 @@ fn: l2_t7_emit_frames (int: phase) int
                             ---
                         else:
                             if: c.fprintf(l2_out, "        l2_nsp[%d]: lmx_arena_ref_struct(l2_entry_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
+                                return: 1
+                            ---
+                        ---
+                    ---
+                    ns: ns + 1
+                ---
+                # The models of the view are the program's Structures (l2_rw_types_nsp): the same places, from the
+                # program's unit.
+                if: c.fprintf(l2_out, "        []: @(Lmx) l2_nst %d\n", l2_ns_n) < 0
+                    return: 1
+                ns: 0
+                while: ns < l2_ns_n
+                    if: c.fprintf(l2_out, "        l2_nst[%d]: 0\n", ns) < 0
+                        return: 1
+                    if: l2_ns_local[ns] < 0
+                        if: l2_ns_parent[ns] >= 0
+                            if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_nst[%d], %uU)\n", ns, l2_ns_parent[ns], (cast: (unsigned) l2_ns_field_in_parent(ns))) < 0
+                                return: 1
+                            ---
+                        else:
+                            if: c.fprintf(l2_out, "        l2_nst[%d]: lmx_arena_ref_struct(l2_program_unit, %uU)\n", ns, (cast: (unsigned) l2_ns_unit_slot(ns))) < 0
                                 return: 1
                             ---
                         ---
@@ -47360,7 +47442,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: (l2_library_mode = 0 || l2_need_admit != 0) && c.fprintf(l2_out, "predef: \"%slmx_implements.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
-    if: l2_merge_max != 0 && c.fprintf(l2_out, "predef: \"%slmx_merge_owned.h.lm1\"\n", l2_rt_root) < 0
+    if: (l2_merge_max != 0 || l2_t7_n > 0) && c.fprintf(l2_out, "predef: \"%slmx_merge_owned.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     # Qualified immutable storage uses the ordinary owner arena's profiled pools.

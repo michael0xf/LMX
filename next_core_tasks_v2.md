@@ -82,6 +82,17 @@ Gates on its bytes: kernel `opus_kernel_04` GREEN296 with 113 executed
 selftests, L3 `opus_l3_04` 11 suites/four budgets, full `opus_full_05`
 RED40/1836 — against `opus_full_04` FAIL→OK 0, OK→FAIL 2 (the two former
 expected refusals), nine rows added, seven green.
+T7: the node of a callable merge hangs under a copy of its model's lexical
+tree, made at the merge by the copier merge and Message creation share, and
+its body reads the copy where no caller gives a name; the view's models stay
+the program's ([T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links),
+[section 77](steps/fable-continuation-20261003.md#t7-copy)). Gates on its
+bytes: kernel `opus_kernel_05` GREEN296 with 113 executed selftests, L3
+`opus_l3_05` 11 suites/four budgets, full `opus_full_07` RED40/1842 — against
+`opus_full_06` FAIL→OK 0, OK→FAIL 0, six rows added, all green. A model
+whose body is only its `return:` crashes the translator, before T7 too
+([T7-TRAILER-ONLY-MODEL-CRASH](steps/defects.md#t7-trailer-only-model-crash)):
+the next checkpoint, before A.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical
@@ -333,7 +344,7 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [ ] A merge returned from a nested body of its method
   ([T7-HOST-NESTED-RETURN](steps/defects.md#t7-host-nested-return)); the
   consumer of a merge given as an actual, walked.
-- [ ] Repair copied lexical links under the author's settled rule: merge
+- [x] Repair copied lexical links under the author's settled rule: merge
   copies the used source tree and rewrites parent links inside that copy.
   The execution site supplies no lexical parent or re-resolution of names.
   Gate a source value 9 against merge-site value 50 with no dynamic input:

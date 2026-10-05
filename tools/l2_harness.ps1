@@ -2111,6 +2111,20 @@ $criticalLocalProjectionPost = @('postpaths',
     'namepath','3','2','deref','3','S','namepath','3','4','deref','3','S')
 $criticalLocalProjectionNative = @('nativepath','3','2','deref','3','1','nativepath','3','4','deref','3','1','nativepath','2','0','2','1','endpostpaths')
 $criticalLocalProjectionWalk = @('nativepath','3','2','deref','3','0','nativepath','3','4','deref','3','0','nativepath','2','0','2','0','endpostpaths')
+# graph_shape_t7_copy_parent: the unit's slots are E 0 (a qualified branch), the root's body 2 (m at 2 1 1, whose
+# parent is the unit: a merge's container), other 3, w 7; from w's cell, `deref` is the node and `up` its parent, the
+# copy of the unit (T7).
+$criticalT7CopyPost = @('postpaths',
+    'differentpath','0','3','7','deref','up',
+    'differentpath','1','3','4','7','deref','up','3',
+    'intpath','4','7','deref','up','3','9',
+    'differentpath','3','2','1','1','6','7','deref','up','2','1','1',
+    'intpath','7','7','deref','up','2','1','1','0','4',
+    'parentpath','3','2','1','1','0',
+    'parentpath','6','7','deref','up','2','1','1','3','7','deref','up',
+    'parentpath','5','7','deref','up','2','1','4','7','deref','up','2',
+    'samepath','1','0','4','7','deref','up','0',
+    'endpostpaths')
 
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
@@ -7587,6 +7601,28 @@ $fixtures = @(
         NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_model_calls_reader_walk.lm2'; Source = 'unit_t7_model_calls_reader.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # T7 (T7-NODE-LEXICAL-LINKS; the author, 2026-10-05: merge copies the used part of the tree and rewrites the parent
+    # links inside the copy; the place of the merge gives no parent).  The node hangs under a copy of its model's
+    # lexical tree, made at the merge, and its body reads the copy where no caller gives a name.  copy_lexical_formal:
+    # make's own other is 50, the copy reads the unit's 9 before and after bump writes 11 into the unit, and the
+    # original add reads 11 (the fallback of a free name).  copy_lexical_node: the same through `node\other` (the node's
+    # parent).  copy_parent: the post paths from w's cell (`deref`, `up`) find the node's parent a distinct copy of the
+    # unit, its other and m distinct, m's parent the copy as the original m's is the unit, the qualified branch E the
+    # same object.  Natively, with the root walked and with the methods walked.  Mutants: the body over the live unit --
+    # formal, T7 9 11 9 11; the node at the merge's place -- node, T7 9 11 11; no qualified branch retained --
+    # copy_parent's samepath.
+    [pscustomobject]@{ Name = 'unit_t7_copy_lexical_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Says = @('T7 9 9 9 11'); NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_t7_copy_lexical_formal.lm2'; Source = 'unit_t7_copy_lexical_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('T7 9 9 9 11'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); NativeMethods = @(6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_copy_lexical_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Says = @('T7 9 9 11'); NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_t7_copy_lexical_node.lm2'; Source = 'unit_t7_copy_lexical_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('T7 9 9 11'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); NativeMethods = @(6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_t7_copy_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $criticalT7CopyPost; Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'graph_shape_t7_copy_parent_walk.lm2'; Source = 'graph_shape_t7_copy_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $criticalT7CopyPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # K04 S3, step four (Codex -12, twelfth to fifteenth reply): a merge's node is built by one constructor of the
     # generated module, which the native body calls and the walked body's step calls through its primitive entry;
     # under the knob the method that returns the merge is walked (the four _walk rows above, and these).  A method

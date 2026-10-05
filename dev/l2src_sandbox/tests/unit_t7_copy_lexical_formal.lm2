@@ -1,0 +1,51 @@
+# A merge copies the used part of the tree and rewrites the parent links inside the copy; the place of the
+# merge gives the copy no parent and resolves nothing there (the author, 2026-10-05; T7-NODE-LEXICAL-LINKS).
+# add reads other, a field of the unit.  make, whose formal other is 50, returns merge(add): the copy holds
+# the unit's other as it was at the merge, 9.  prep wrote 9 before the merge; bump writes 11 after it.  w's
+# copy reads 9 before and after bump, and with no caller giving other; the original add, called by orig after
+# bump, reads 11.  The root calls are above the unit's declaration of other: no caller binding reaches them.
+# say prints T7 9 9 9 11.  Entry 7.
+int: z0 prep()
+@: w make(50)
+int: c1 (plain())
+int: z1 bump()
+int: c2 (plain())
+int: o (orig())
+int: other 9
+
+fn: add () int
+    return: other
+
+fn: make (int: other) fn: () int
+    return: merge(add)
+
+fn: plain () int
+    return: w()
+end: plain
+
+fn: orig () int
+    return: add()
+end: orig
+
+fn: prep () int
+    node\other: 9
+    return: 0
+end: prep
+
+fn: bump () int
+    node\other: 11
+    return: 0
+end: bump
+
+fn: say (int: a; int: b; int: c; int: e) int
+    c.printf: "T7 %d %d %d %d\n" a b c e
+    return: 0
+end: say
+
+int: d (plain())
+int: s say(c1 c2 d o)
+int: ok 80
+if: c1 = 9 && c2 = 9 && d = 9 && o = 11
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,49 @@
+# An explicit `node\other` in the copy follows the copied lexical link (the author, 2026-10-05;
+# T7-NODE-LEXICAL-LINKS): add reads node\other, the field of its lexical parent.  The copy merge(add) makes in
+# make (whose own other is 50) has for its parent the copy of the used part of the unit, other as it was at
+# the merge, 9; the original add's parent is the unit itself.  After bump writes 11, the copy reads 9 and the
+# original 11.  say prints T7 9 9 11.  Entry 7.
+int: z0 prep()
+@: w make()
+int: c1 (plain())
+int: z1 bump()
+int: c2 (plain())
+int: o (orig())
+int: other 9
+
+fn: add () int
+    return: node\other
+
+fn: make () fn: () int
+    int: other 50
+    return: merge(add)
+
+fn: plain () int
+    return: w()
+end: plain
+
+fn: orig () int
+    return: add()
+end: orig
+
+fn: prep () int
+    node\other: 9
+    return: 0
+end: prep
+
+fn: bump () int
+    node\other: 11
+    return: 0
+end: bump
+
+fn: say (int: a; int: b; int: e) int
+    c.printf: "T7 %d %d %d\n" a b e
+    return: 0
+end: say
+
+int: s say(c1 c2 o)
+int: ok 80
+if: c1 = 9 && c2 = 9 && o = 11
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

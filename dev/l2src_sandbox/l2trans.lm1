@@ -35608,7 +35608,10 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
             return: l2_error(l2_src, 0, "internal: the admission of a dynamic candidate was not checked")
         return: l2_emit_implicit_throw(at_mi, "implements", ind)
     ---
-    if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: an admission by name was refused\\n\")\n%s    c.abort()\n", ind, ind) < 0
+    # DUPLICATE-STOP: here the candidate is static and its admission proved by the translation -- a refusal is no
+    # outcome.  What can still fail is the record the reads by name need: a broken invariant, or the arena's table
+    # of records that cannot grow.  That is said as such.
+    if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: the record of a proved admission was not kept\\n\")\n%s    c.abort()\n", ind, ind) < 0
         return: 1
 return: 0
 

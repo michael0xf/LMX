@@ -8895,3 +8895,81 @@ other than YES only for a broken invariant of the translator, or when the
 arena's table of records cannot grow. The form of that remainder is asked of
 Codex: drop the check, keep a stop that says what failed, or route it to a
 status.
+
+<a id="duplicate-stop-static"></a>
+## 86. The duplicate stop, the static part: a stop that says what failed
+
+At a static site of section 85 (an own Structure held by value, a merge
+result, direct producer evidence) the translation has proved the admission.
+The emitted text "lmx: invariant: an admission by name was refused" named an
+outcome that such a program cannot have. What the site still does is write
+the record that the reads by name need (`lmx_implements_register`,
+`lmx_implements_register_map`). That call answers other than YES only in
+two cases:
+
+- NO, for a broken invariant of the translator: a second correspondence of
+  the same value to the same type, or a layout that contradicts the value's
+  record. A broken pair map gives this; the `n3` mutant of the native D-105
+  step stopped here.
+- UNKNOWN, when the arena's table of records cannot grow
+  (`lmx_arena_impl_room`), or for a null argument.
+
+The question to Codex offered three forms: drop the check, keep a stop that
+says what failed, or route the failure to a status. The default, stated to
+Codex with the question, was the second unless Codex chose otherwise. No
+answer has come yet, so that form is built.
+
+- **The translator** (`l2_emit_model_admit`). At a site with no implicit
+  throw and no dynamic candidate, the check and the stop stay. The stop's
+  text is now "lmx: invariant: the record of a proved admission was not
+  kept". CORE_L2_L3_v2 §8.2 says of the tables of the admission by name:
+  "A failed allocation is reported as one and is never a refusal of the
+  program." The old text reported it as a refusal.
+- **Why not drop the check.** Without it, a lost record would surface at
+  the first read by name of that value. That read checks the record itself
+  (`l2_d105_emit_slot`), and stops at "a field of a formal admitted by name
+  is not carried by its value (no record, or a hole)". The program would
+  still stop, but farther from the cause.
+- **Why not a status.** The walker refuses the same non-YES answer through
+  `implements`, because there the admission itself is decided when the
+  program runs. At a static site nothing is undecided. Routing an exhausted
+  table to `implements` would make every method with such a site one that
+  can throw, from a fact of memory and not of the program.
+
+### Witnesses and mutants
+
+A replay of the 1889 translations recorded by `opus_full_15` changes the L1 of
+150 rows, all by the stop's text alone. No exit or message changes.
+
+- `unit_site_model_shadow` now pins the new text (`Debt`). In that row a
+  formal is given a declared Structure, a static site.
+- `unit_merge_value_schema` pins its absence (`Absent`): its six dynamic
+  returns of section 85 have no such stop. Its earlier pin on the old text
+  could no longer fail, because no translator path emits that text now.
+
+The two pins were checked on the replayed L1 of both rows, under the build
+and under three mutants:
+
+| Translator | `unit_site_model_shadow` (new text) | `unit_merge_value_schema` (new text) | Pins |
+| --- | --- | --- | --- |
+| the build | 1 | 0 | green |
+| the old text (the tree of section 85) | 0 | 0 | the `Debt` pin is red |
+| no check at a static site (form (a)) | 0 | 0 | the `Debt` pin is red |
+| form (b) without section 85's dynamic part | 1 | 6 | the `Absent` pin is red |
+
+These are text pins. The stop is reached only through an exhausted table or
+a broken translator. No row can exhaust the table, and the kernel has no
+hook to make an allocation fail.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_14` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_14` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_16` (full harness) | RED39/1890: against `opus_full_15` FAIL→OK 0, OK→FAIL 0, added 0, removed 0, no red row's words changed. Its generated L1 differs from `opus_full_15`'s in the 150 rows of the replay, by the stop's text alone, and in three library rows only by the module hash their path gives. The two declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_dupb1` (focused, before the gates) | The two pinned rows and six rows with static sites, all green. |
+
+**Next.** The numeric conversion at the receiving edge
+(FIELD-CONSUMPTION-CONVERSION); LETTER-THROUGH-OPAQUE-PLACE and the form of
+this remainder by Codex's answers.

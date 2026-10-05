@@ -174,6 +174,15 @@ Codex's answer on the form of what remains when the refusal is removed
 Gates: kernel `opus_kernel_13` GREEN296 with 113 executed selftests, L3
 `opus_l3_13`, full `opus_full_15` RED39/1890 -- against `opus_full_14`
 FAIL→OK 0, OK→FAIL 0.
+DUPLICATE-ADMISSION-STOP, the static part, in the default form until Codex
+answers: at the 286 static sites the check of the admission's record and its
+stop stay, and the stop now says what failed -- "the record of a proved
+admission was not kept", a broken translator invariant or an arena table
+that cannot grow
+([section 86](steps/fable-continuation-20261003.md#duplicate-stop-static)).
+Gates: kernel `opus_kernel_14` GREEN296 with 113 executed selftests, L3
+`opus_l3_14`, full `opus_full_16` RED39/1890 -- against `opus_full_15`
+FAIL→OK 0, OK→FAIL 0.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

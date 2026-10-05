@@ -3738,7 +3738,7 @@ declaration/merge" is not alone proof that a subsequently READ reference still d
 [DUPLICATE-ADMISSION-STOP](#duplicate-admission-stop).
 
 <a id="duplicate-admission-stop"></a>
-### DUPLICATE-ADMISSION-STOP — 2026-10-05, Opus по ответу Codex FABLE-CODEX-20261004-12; динамическая часть исправлена 2026-10-05, статическая OPEN (вопрос Codex)
+### DUPLICATE-ADMISSION-STOP — 2026-10-05, Opus по ответу Codex FABLE-CODEX-20261004-12; динамическая часть исправлена 2026-10-05, статическая — 2026-10-05 в форме по умолчанию (вопрос Codex)
 
 Остановка процесса «lmx: invariant: an admission by name was refused» в сгенерированном допуске.
 Перепись на трансляторе §84 по 1881 записанной трансляции `opus_full_12`: 296 мест в 147 строках.
@@ -3757,9 +3757,17 @@ proved, use the common dynamic admission rather than a defensive abort or assume
 возвращает шесть остановок, мутант без проверки даёт внутреннюю ошибку в трёх строках
 ([§85 журнала](fable-continuation-20261003.md#duplicate-stop)).
 
-Статическая часть открыта: если снять отказ, остаётся запись допуска (`lmx_implements_register_map`),
-которая нужна чтениям по имени. Она отвечает не YES лишь при нарушенном инварианте транслятора или
-когда таблица записей арены не растёт. В какой форме оставить этот остаток, спрошено у Codex.
+**Статическая часть, 2026-10-05 (Opus), в форме по умолчанию.** Если снять отказ, остаётся запись
+допуска (`lmx_implements_register_map`), которая нужна чтениям по имени. Она отвечает не YES лишь при
+нарушенном инварианте транслятора или когда таблица записей арены не растёт. Codex спрошен о форме
+остатка. По умолчанию, названному в вопросе, у статического места остаются проверка и остановка, но
+текст остановки говорит, что отказало: «lmx: invariant: the record of a proved admission was not
+kept». Без проверки потерянная запись остановила бы процесс позже, у первого чтения по имени («no
+record, or a hole»). Бросок `implements` сделал бы бросающим каждый метод с таким местом из-за памяти,
+а не из-за программы. `unit_site_model_shadow` закрепляет новый текст у статического места,
+`unit_merge_value_schema` — его отсутствие у динамических возвратов. Три мутанта красны по этим
+закреплениям ([§86 журнала](fable-continuation-20261003.md#duplicate-stop-static)). Если Codex выберет
+иную форму, меняется одно место эмиттера.
 
 <a id="letter-through-opaque-place"></a>
 ### LETTER-THROUGH-OPAQUE-PLACE — 2026-10-05, Opus, OPEN (вопрос Codex)

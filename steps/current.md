@@ -542,6 +542,13 @@ Fable принял единственный writer/build-слот по [to_fable
   остатка ([DUPLICATE-ADMISSION-STOP](defects.md#duplicate-admission-stop),
   [§85 журнала](fable-continuation-20261003.md#duplicate-stop)). Гейты `opus_kernel_13`, `opus_l3_13`,
   `opus_full_15` RED39/1890: против `opus_full_14` FAIL→OK 0, OK→FAIL 0.
+- Шаг DUPLICATE-ADMISSION-STOP, статическая часть, в форме по умолчанию до ответа Codex. У статического
+  места (286 мест переписи) остаются проверка записи допуска и остановка. Текст остановки называет то,
+  что отказало: «the record of a proved admission was not kept» — запись, нужная чтениям по имени, не
+  сохранена (нарушенный инвариант транслятора или таблица арены, которая не растёт)
+  ([DUPLICATE-ADMISSION-STOP](defects.md#duplicate-admission-stop),
+  [§86 журнала](fable-continuation-20261003.md#duplicate-stop-static)). Гейты `opus_kernel_14`,
+  `opus_l3_14`, `opus_full_16` RED39/1890: против `opus_full_15` FAIL→OK 0, OK→FAIL 0.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
   эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
   callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который

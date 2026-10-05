@@ -3079,7 +3079,7 @@ $fixtures = @(
     # DUPLICATE-STOP (Codex, FABLE-CODEX-20261004-12: "If current origin is not proved, use the common dynamic
     # admission rather than a defensive abort"): make returns its own typed references, places that hold what was
     # given to them; the return's admission is make's implicit `implements`, and the process stop is gone.
-    [pscustomobject]@{ Name = 'unit_merge_value_schema.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @('an admission by name was refused'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_value_schema.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @('the record of a proved admission was not kept'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # An existing head retains its call/assignment role; a nested merge frame
     # does not redeclare it. The present receiver lowering refuses this call.
@@ -3714,8 +3714,10 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_loop_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2);
         Absent = @(); Debt = @() },
+    # DUPLICATE-ADMISSION-STOP (b): the formal's admission of a declared Structure is proved by the translation;
+    # what is left is the record the reads by name need, checked with a stop that says so.
     [pscustomobject]@{ Name = 'unit_site_model_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0);
-        Absent = @(); Debt = @() },
+        Absent = @(); Debt = @('lmx: invariant: the record of a proved admission was not kept') },
     [pscustomobject]@{ Name = 'unit_site_hidden_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 8; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_hidden_model_views.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 9; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_hidden_model_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 5; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },

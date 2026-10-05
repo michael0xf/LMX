@@ -2321,7 +2321,14 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: status != c.LMX_WALK_OK
         return: status
     ---
-    if: out\present = 0 || out\kind != c.LMX_WALK_VALUE_REFERENCE
+    # An operand that evaluates absent -- an input its caller left out, handed on as it is -- has no candidate
+    # to admit: the result stays absent, and nothing is viewed, recorded or thrown.  A present value that is
+    # no reference is not a candidate either, and stays the instruction's error.  A present null reference is
+    # present, below.
+    if: out\present = 0
+        return: c.LMX_WALK_OK
+    ---
+    if: out\kind != c.LMX_WALK_VALUE_REFERENCE
         return: c.LMX_WALK_INVALID
     ---
     if: out\ref = 0

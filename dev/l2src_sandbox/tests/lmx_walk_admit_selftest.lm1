@@ -36,6 +36,10 @@ fn: produce (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void
     \out: produced_value
 return: 0
 
+fn: produce_throw (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
+    \out: 0
+return: c.LMX_PRIMITIVE_THROW_MERGE
+
 sub: check (int: ok; const: @(char label))
     checks: checks + 1
     if: ok = 0
@@ -140,6 +144,10 @@ fn: main () int
     @: Lmx place 0
     @: Lmx pad 0
     @: LmxPrimitive producer 0
+    @: LmxPrimitive thrower 0
+    @: Lmx argn 0
+    @: void null_box 0
+    []: @(void) entry_refs 1
     []: size_t source_map 2
     []: size_t partial_map 2
     size_t: selected_slot 0U
@@ -171,7 +179,7 @@ fn: main () int
         return: 2
 
     unit: lmx_node_new_owned(ga)
-    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 32U) != 0
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 33U) != 0
         return: 2
     ---
     # model {x}: 1 int slot; model {y}: 2 int slots (mismatch vs 1-slot value)
@@ -570,6 +578,51 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) fresh_known))), "same virgin candidate admits through its exact alternative")
     check((cast: (int) (lmx_implements_slot(ga, fresh_known, target_model, 0U, @ selected_slot) = 0 && selected_slot = 0U && lmx_implements_slot(ga, fresh_known, target_model, 1U, @ selected_slot) = 0 && selected_slot = 1U && lmx_implements_layout(ga, fresh_known) = (cast: (@: void) (schema_tokens + 1)) && lmx_int_value_known(lmx_arena_ref_value(fresh_known, 0U)) = 88 && lmx_int_value_known(lmx_arena_ref_value(fresh_known, 1U)) = 22)), "successful alternative records physical slots without changing candidate cells or layout")
+
+    # An operand that evaluates absent has no candidate to admit: the result stays absent and nothing is
+    # recorded.  The operand is input 0 of the activation, with no fallback: the caller leaves it out, then
+    # hands a present reference that holds nothing, then a candidate.  A present null stays present.  The
+    # operand's own failures -- an input the activation has not, a thrown status, a present value that is no
+    # reference -- go on as they were.
+    m: mk_m(unit, 32U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 9U)
+    token(pn, 1U, 0U)
+    ref(pn, 4U, target_model)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 0U)
+    sz(pn, 8U, 1U)
+    argn: fr(pn, 3U, c.LMX_WALK_OP_ARG, 4U)
+    sz(argn, 1U, 0U)
+    ref(argn, 3U, unit)
+    entry_refs[0]: 0
+    st: lmx_walk_run(gctx, m, entry_refs, 1U, gv)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present = 0)), "an absent operand stays absent through ADMIT_AS")
+    null_box: 0
+    entry_refs[0]: (cast: (@: void) (@ null_box))
+    st: lmx_walk_run(gctx, m, entry_refs, 1U, gv)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\kind = c.LMX_WALK_VALUE_REFERENCE && gv\ref = 0)), "a present null reference stays present through ADMIT_AS")
+    null_box: (cast: (@: void) mapped_value)
+    st: lmx_walk_run(gctx, m, entry_refs, 1U, gv)
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) mapped_value))), "a present candidate handed as an input is admitted as before")
+    sz(argn, 1U, 3U)
+    entry_refs[0]: 0
+    st: lmx_walk_run(gctx, m, entry_refs, 1U, gv)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "an input the activation has not is still an error of the operand")
+    thrower: (cast: (@: LmxPrimitive) lmx_arena_take(ga, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))
+    if: thrower = 0
+        return: 2
+    thrower\fn: produce_throw
+    thrower\signature: wt_contract_same(ga, 0U, c.LMX_TYPE_LMX, c.LMX_TYPE_LMX)
+    thrower\owner: (cast: (@: Lmx) ga)
+    argn: fr(pn, 3U, c.LMX_WALK_OP_PRIM, 3U)
+    ref(argn, 1U, (cast: (@: Lmx) thrower))
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 1)), "a throw of the operand goes on with its own status")
+    litn: fr(pn, 3U, c.LMX_WALK_OP_LIT, 2U)
+    lmx_walk_store_int(ga, litn, 1U, 7)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "a present number is still no candidate")
 
     c.printf("lmx_walk_admit_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

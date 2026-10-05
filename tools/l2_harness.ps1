@@ -7639,13 +7639,15 @@ $fixtures = @(
         NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29); Absent = @(); Debt = @() },
-    # OPEN positives, required before G5.  Limits of this implementation and no rules; red until built, never to
-    # be turned into expected refusals.  A merge given as the actual whose model reads a reference admitted
-    # through a Structure the unit holds: a merge's node is built by a constructor of its own, which cannot
-    # reach that Structure yet (actual_reference).  A merge returned from a nested body of its method: a method's
-    # returned merge is built at one place, a statement of the method's own body (host_nested_return).
+    # A merge given as the actual whose model reads a reference admitted through a Structure the unit holds in a
+    # nested body.  A merge's node is built when the merge runs, by a constructor of its own, which has none of
+    # the aliases the unit's constructor names its holders by: it reaches that Structure from the unit along the
+    # unit's own edges (the pin).  9, and 45 with the caller's own m.
     [pscustomobject]@{ Name = 'unit_t7_actual_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @('1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, ') },
+    # OPEN positive, required before G5.  A limit of this implementation and no rule; red until built, never to
+    # be turned into an expected refusal.  A merge returned from a nested body of its method: a method's
+    # returned merge is built at one place, a statement of the method's own body (host_nested_return).
     [pscustomobject]@{ Name = 'unit_t7_host_nested_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     # A reference among the free names of a definition its method returns (HELD-CALL-FROM-NESTED-DEFINITION; Codex,
@@ -7680,18 +7682,51 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_nested_definition_number_override_walk.lm2'; Source = 'unit_nested_definition_number_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
     # A caller's own Structure under the definition's free name, with no field the definition reads: present and
-    # not fitting, so the call is refused and the unit's Structure is not read in its place.  The words are those
-    # of the limit below: this implementation does not yet tell a reference that fits from one that does not.
+    # not fitting.  It is a candidate for the definition's use of the name and is refused by the ordinary
+    # admission, by the field the definition reads; the unit's Structure is not read in its place.
     [pscustomobject]@{ Name = 'unit_nested_definition_structure_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_nested_definition_structure_other_refused.lm2:24:13: root operation not walkable yet: a caller''s own reference under a held callable''s free name is not admitted to its use yet'; Absent = @(); Debt = @() },
-    # OPEN positive, required before G5.  A caller's own Structure of the same type under the definition's free
-    # name is the caller's nearest binding and comes first: 5 + 40.  This implementation supplies a caller's own
-    # reference only when it is the very declaration the definition's lexical source names, and refuses this call
-    # where it stands.  A limit of the implementation and no rule; red until the admission is built.
+        Needle = 'unit_nested_definition_structure_other_refused.lm2:24:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # A caller's own Structure of the same type under the definition's free name is the caller's nearest binding
+    # and comes first: 5 + 40.  It is another declaration than the one the definition's lexical source names, and
+    # is admitted to the definition's use as a call of a method admits a hidden input.
     [pscustomobject]@{ Name = 'unit_nested_definition_structure_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
+        NativeMethods = @(0,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_definition_structure_override_walk.lm2'; Source = 'unit_nested_definition_structure_override.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+    # A reference among a held definition's free names is asked along the chain of callers, as a number is
+    # (Codex, FABLE-CODEX-20261004-12, the seventeenth reply).  A method that makes the held call and has no
+    # binding of the name only hands it on; the caller's nearest binding comes first, of the same declaration
+    # (45) or of another, with the field at another position, two methods above the held call (65) and at the
+    # held call itself (75); from the root the unit's own is read (9).
+    [pscustomobject]@{ Name = 'unit_held_reference_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_reference_chain_walk.lm2'; Source = 'unit_held_reference_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3,4,5,6); Absent = @(); Debt = @() },
+    # The same for a Structure the definition takes from its host, whose own source is the copy its node keeps.
+    # With no binding anywhere the name arrives absent through two methods that only hand it on, and through
+    # the instruction that admits it where the methods are walked (LMX_WALK_OP_ADMIT_AS keeps an absent operand
+    # absent): the definition reads its node's copy, 35.  A caller's own Structure of the same declaration, 25;
+    # of another, with the field at another position, admitted by the declaration it carries among those the
+    # translation records as reaching the input, 45.  The definition's own Structure is as it was after them.
+    [pscustomobject]@{ Name = 'unit_held_capture_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_capture_chain_walk.lm2'; Source = 'unit_held_capture_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3,4,5); Absent = @(); Debt = @('c.LMX_WALK_OP_ADMIT_AS') },
+    # A Structure with no field the definition reads, given two methods above the held call: refused by the
+    # ordinary admission where the value is admitted to the definition's use; the node's copy is not read in
+    # its place.
+    [pscustomobject]@{ Name = 'unit_held_capture_chain_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_capture_chain_other_refused.lm2:25:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # A reference that is present and holds nothing, through two methods that only hand it on: it stays present
+    # and is not replaced by the lexical value an absent one falls back to (7, not 11).
+    [pscustomobject]@{ Name = 'unit_site_hidden_null_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_site_hidden_null_chain_walk.lm2'; Source = 'unit_site_hidden_null_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    # A reference a method requires, which nothing in its sight declares and no caller of the chain has: refused
+    # at the root's call of the method that hands it on, where the chain starts, as a number is.
+    [pscustomobject]@{ Name = 'unit_reference_required_unbound_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_reference_required_unbound_refused.lm2:25:8: unbound dynamic input box'; Absent = @(); Debt = @() },
     # The callable given to a callable formal is called with its own free names (CALLABLE-FORMAL-HIDDEN-CONTRACT,
     # K04; Codex, FABLE-CODEX-20261004-12).  The translator follows which methods reach each formal and the call
     # forms their list, never the list of the method that declares the formal: another name of the same count
@@ -7816,16 +7851,24 @@ $fixtures = @(
     # makes the held call, where the chain starts.
     [pscustomobject]@{ Name = 'unit_held_call_required_input_unavailable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_required_input_unavailable_refused.lm2:27:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+    # A reference among the names of a callable a site does not give is left out, as a number is: whether an
+    # input is formed does not depend on how it is represented.  Through a method that only hands the callable
+    # on, the reference left out stays absent (site_reference_forwarded).  A caller whose own Structure under
+    # the name has no field the other callable reads gives the callable that does not read it: its Structure
+    # is neither asked nor admitted to the other's use (site_reference_unasked: 10, with 22 and 7 beside it).
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_names_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_reference_forwarded.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_callable_formal_site_reference_unasked.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     # OPEN positives, required before G5.  Limits of this implementation and no rules; each is refused where it
-    # stands and stays red until built.  A reference among the names of a callable a site does not give: only a
-    # number is handed absent yet (site_names_reference).  A caller's value of another numeric type for a held
+    # stands and stays red until built.  A caller's value of another numeric type for a held
     # definition's free name: one input of a name is handed on with one type and is not converted
     # (free_name_converted).  A merge built as the actual reaching a formal handed on, where a method formed
     # differently reaches it too: the node a merge builds is no occurrence of the unit, and its class is not
     # told where the formal is called (unfollowed_actual).  A library unit's callable formal: every method of
     # a library unit has an exported wrapper, so an occurrence from another translation can reach the formal.
-    [pscustomobject]@{ Name = 'unit_callable_formal_site_names_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_free_name_converted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_unfollowed_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;

@@ -1,0 +1,72 @@
+# A reference among the free names of a held definition is asked along the
+# chain of callers, as a number is. g0, a definition its method returns,
+# reads m\v; m is a field of the unit made from Model, with v 4. inner
+# calls the held u0 and has no m: it only hands the name on. From the root,
+# whose m is the unit's: 5 + 4. same has its own m of the same declaration,
+# with v 40, and calls inner: the caller's nearest binding comes first, 45.
+# wide has its own m of another declaration, which has v at another
+# position, and calls through hop, which hands the name on too: the value
+# is admitted by the field the definition reads, 5 + 60. direct has such
+# an m too and calls the held u0 itself: 5 + 70. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+m: merge Model
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + m\v
+    return: g0
+
+u0: makeUse 5
+
+fn: inner () int
+    return: u0()
+end: inner
+
+fn: hop () int
+    return: inner()
+end: hop
+
+fn: same () int
+    m: merge Model
+    m\v: 40
+    return: inner()
+end: same
+
+fn: wide () int
+    m: merge Wide
+    m\v: 60
+    return: hop()
+end: wide
+
+fn: direct () int
+    m: merge Wide
+    m\v: 70
+    return: u0()
+end: direct
+
+int: a inner()
+int: b same()
+int: c wide()
+int: d hop()
+int: e direct()
+int: ok 7
+if: a != 9
+    ok: 81
+if: b != 45
+    ok: 82
+if: c != 65
+    ok: 83
+if: d != 9
+    ok: 84
+if: e != 75
+    ok: 85
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

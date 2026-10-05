@@ -1,0 +1,68 @@
+# A Structure a returned definition takes from its host is a free name of
+# the definition as any other: asked along the chain of callers, and read
+# from the definition's own source where no one gives it. makeUse takes
+# box and returns g0, which reads box\v; u0 is made over kept, whose v is
+# 30. near calls the held u0, far calls near; neither has a box, and each
+# only hands the name on. From the root, with no box anywhere, the name
+# arrives absent through both and g0 reads what its node keeps: 5 + 30.
+# same has its own box of the same declaration, with v 20: the caller's
+# binding comes first, 25. wide has its own box of another declaration,
+# which has v at another position: it is admitted by the field g0 reads,
+# 5 + 40, and its pad is not read in its place. After the calls the root
+# calls u0 itself: the node's own Structure is as it was, 35. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+fn: makeUse (Model: box) fn: () int
+    fn: g0 () int
+        return: 5 + box\v
+    return: g0
+
+kept: merge Model
+kept\v: 30
+u0: makeUse kept
+
+fn: near () int
+    return: u0()
+end: near
+
+fn: far () int
+    return: near()
+end: far
+
+fn: same () int
+    box: merge Model
+    box\v: 20
+    return: far()
+end: same
+
+fn: wide () int
+    box: merge Wide
+    box\v: 40
+    return: far()
+end: wide
+
+int: a far()
+int: b same()
+int: c wide()
+int: d u0()
+int: e near()
+int: ok 7
+if: a != 35
+    ok: 81
+if: b != 25
+    ok: 82
+if: c != 45
+    ok: 83
+if: d != 35
+    ok: 84
+if: e != 35
+    ok: 85
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

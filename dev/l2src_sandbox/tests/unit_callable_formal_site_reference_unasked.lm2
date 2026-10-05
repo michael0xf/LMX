@@ -1,0 +1,58 @@
+# A call site that does not give a callable asks nothing for that
+# callable's names, and admits nothing to them. g1 reads the number other;
+# gs reads the Structure box. via takes a callable and gives it to run,
+# which calls it. odd has its own box, a Structure with no x, and gives
+# g1: g1 does not read box, so odd's box is neither asked nor admitted to
+# gs's use, and the call gives 9 + 1. own has its own box with x 20 and
+# gives gs: the caller's binding comes first, 22. The root gives gs with
+# the unit's box: 7. Entry 7.
+Model:
+    int: x 0
+
+Other:
+    int: w 3
+end: Other
+
+int: other 9
+Model: box
+box\x: 5
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: gs () int
+    return: box\x + 2
+end: gs
+
+fn: run (g1: q) int
+    return: q()
+end: run
+
+fn: via (g1: q) int
+    return: run(q)
+end: via
+
+fn: odd () int
+    box: merge Other
+    return: via(g1)
+end: odd
+
+fn: own () int
+    box: merge Model
+    box\x: 20
+    return: via(gs)
+end: own
+
+int: a odd()
+int: b own()
+int: c via(gs)
+int: ok 7
+if: a != 10
+    ok: 81
+if: b != 22
+    ok: 82
+if: c != 7
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,42 @@
+# A reference that is present and holds nothing is present: it is not
+# replaced by the lexical value an absent one falls back to. observe reads
+# shared, a reference of the unit to Model, whose value is 11. near calls
+# observe and far calls near; neither has a shared, and each only hands the
+# name on. From the root the unit's reference arrives: 11. nonnull has its
+# own shared, to Other, which has value at another position: 22. empty has
+# its own shared that holds nothing: observe sees that it holds nothing
+# and gives 7, where the unit's Model would have given 11. Entry 7.
+Model: (int: value 11; int: spare 99)
+Other: (int: spare 88; int: value 22)
+@: Model shared @Model
+fn: observe () int
+    if: shared = 0
+        return: 7
+    return: shared\value
+end: observe
+fn: near () int
+    return: observe()
+end: near
+fn: far () int
+    return: near()
+end: far
+fn: nonnull () int
+    @: Other shared @Other
+    return: far()
+end: nonnull
+fn: empty () int
+    @: Model shared
+    return: far()
+end: empty
+int: a far()
+int: b nonnull()
+int: c empty()
+int: ok 7
+if: a != 11
+    ok: 81
+if: b != 22
+    ok: 82
+if: c != 7
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

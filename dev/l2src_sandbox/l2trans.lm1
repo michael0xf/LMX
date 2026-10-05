@@ -1116,6 +1116,9 @@ prototype:
     fn: l2_ruse_mentions (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_ruse_seg_node (const: @(LmP0Node node); const: @(LmP0Text name)) int
     fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const: @(char ind)) int
+    fn: l2_d105_place_sources (int: mi; int: k) int
+    fn: l2_input_undeclared (int: mi; int: j) int
+    fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
     fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
     fn: l2_d105_emit_tables () int
     fn: l2_d105_width (int: req) int
@@ -1684,6 +1687,7 @@ prototype:
     fn: l2_graph_body_place (int: fid) @: L2GraphPlace
     fn: l2_emit_graph_places (int: mi) int
     fn: l2_emit_graph_build_place (@: L2GraphPlace place; int: root_mi) int
+    fn: l2_emit_graph_unit_place (@: L2GraphPlace place) int
     fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind)) int
     fn: l2_rw_graph_place (int: parent; @: L2GraphPlace place; @: int out) int
     fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; @: int out) int
@@ -1893,6 +1897,7 @@ prototype:
     fn: l2_mad_cap_emit (int: mi; int: model; int: j; const: @(char tgt); const: @(char ind); int: slot) int
     fn: l2_madc_slot (int: mi; int: k) int
     fn: l2_mad_held_model (int: oi) int
+    fn: l2_held_cap_same (int: mi; int: model; int: k) int
     fn: l2_held_binding (int: mi; int: model; int: k; @: char dest; @: int ty) int
     fn: l2_rw_held_binding (const: @(LmP0Node node); int: model; int: k; int: parent; @: int out) int
     fn: l2_rw_held_bound (int: model; int: k) int
@@ -13196,7 +13201,11 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
             if: l2_dt_set(cidx, k, sdt) != 0
                 return: 1
             \changed: 1
-        if: l2_input_schema(cidx, l2_m_arity[cidx] + k) != -1
+        # What reaches an input is recorded where the input has a schema to admit it to -- and where it is a
+        # reference with no declaration in the callee's sight, which the callee can only hand on: the
+        # declarations that reach it are then known where a reader's schema admits it, by the one the value
+        # carries (l2_hidden_emit_admit).  No admission stands at this call then.
+        if: l2_input_schema(cidx, l2_m_arity[cidx] + k) != -1 || (l2_dt(cidx, k) = l2_colon_graph_ty() && l2_input_undeclared(cidx, l2_m_arity[cidx] + k) != 0)
             model: l2_hidden_model_source(m, cidx, k, @ src)
             if: src != -1
                 if: l2_d105_edge(l2_d105_key_method(m, src), src, cidx, l2_m_arity[cidx] + k, site\source) != 0
@@ -13207,20 +13216,22 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                     return: 1
                 ---
             ---
-            if: model = -1 && l2_admit_site(m) != 0
+            if: model = -1 && l2_input_schema(cidx, l2_m_arity[cidx] + k) != -1 && l2_admit_site(m) != 0
                 return: 1
             ---
         k: k + 1
 return: 0
 
-# One held call in the fixed point (K04 S3; Codex, FABLE-CODEX-20261004-12).  A number the model needs that
-# the calling method does not bind becomes the method's own input, which it only hands on: its callers give it
+# One held call in the fixed point (K04 S3; Codex, FABLE-CODEX-20261004-12).  A name the model needs that the
+# calling method does not bind becomes the method's own input, which it only hands on: its callers give it
 # along the chain, as for a call of a method, and where no one does it arrives absent and the model's readers
-# resolve it, each from its own source -- for a name of the model's host, the value kept in its node.  The
-# root has no caller: what it cannot give is refused or left to the readers where the call is formed
+# resolve it, each from its own source -- for a name of the model's host, the value kept in its node.  A number
+# and a reference alike: whether a name is asked does not depend on how its value is represented.  The root
+# has no caller: what it cannot give is refused or left to the readers where the call is formed
 # (l2_held_unbound).  Where the method already hands on the name as another type nothing is added: see
-# l2_held_never.  A reference keeps the calling method's own binding or the node's copy: it is not asked of the
-# callers yet.
+# l2_held_never.  A named Structure of the unit, or an eternal branch, is reached through the unit and asked
+# of no one, as at a call of a method (l2_dyn_site_callee).  A reference the calling method gives is recorded
+# for its admission to the model's use, as a call of a method records it (l2_d105_edge, l2_d105_source).
 fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char path); @: int changed) int
     int: m site\method
     int: k 0
@@ -13230,13 +13241,17 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
     int: before
     int: ty
     int: pres
+    int: gives
+    int: asked
+    int: cand
+    int: src
     @: LmP0Text nm
     if: m < 0 || model < 0
         return: 0
     while: k < l2_m_dyn[model]
         nm: l2_dn(model, k)
         ty: l2_dt(model, k)
-        if: nm = 0 || ty = 0 || l2_rw_num_ty(l2_own_of_dt(ty)) = 0
+        if: nm = 0 || ty = 0
             k: k + 1
             continue
         need: l2_site_needs(m, site\source, 0 - 1, model, k, 0, 0, path)
@@ -13247,17 +13262,21 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
             continue
         own: l2_resolved_own(m, nm)
         pres: 0
+        gives: 0
         # The root's every declared field of the name is its binding (l2_rw_held_bound); a method's, the one it
         # uses.
         if: own >= 0 && (m = l2_e || l2_m_uses[l2_own_off(m, own)] != 0)
             pres: 1
+            gives: 1
         if: pres = 0 && m != l2_e
             pi: l2_param_find(m, nm)
             if: pi >= 0 && pi < l2_m_arity[m]
                 pres: 1
+            # A name inherited along the chain at all: not a named Structure of the unit, not an eternal branch.
+            asked: (cast: (int) (ty != l2_colon_graph_ty() || ((l2_ns_find(nm) < 0 || l2_ns_parent[l2_ns_find(nm)] >= 0) && l2_ebr_find(nm) < 0)))
             # The method's own input of the name, of this type or not yet typed: it hands it on.  One it has as
             # another type stays as it is.
-            if: pi < 0 || (pi >= l2_m_arity[m] && (l2_dt(m, pi - l2_m_arity[m]) = 0 || l2_dt(m, pi - l2_m_arity[m]) = ty))
+            if: asked != 0 && (pi < 0 || (pi >= l2_m_arity[m] && (l2_dt(m, pi - l2_m_arity[m]) = 0 || l2_dt(m, pi - l2_m_arity[m]) = ty)))
                 before: l2_m_dyn[m]
                 if: l2_dyn_add(m, nm, ty) != 0
                     return: l2_alloc_or(path, site\source, "unsupported body")
@@ -13269,9 +13288,30 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
                 if: pi >= l2_m_arity[m] && (l2_dyn_fwd(m, pi - l2_m_arity[m]) = 0 || l2_dyp_has(m, nm) != 0)
                     pres: 1
             ---
+            if: pi >= 0
+                gives: 1
         ---
         if: pres != 0 && l2_dyp_mark(model, nm, changed) != 0
             return: 1
+        # What the calling method gives under the name -- its own field, its formal, its own input -- is a
+        # candidate for the model's use of the name: its source is recorded, as at a call of a method.  A
+        # capture of the model's host given as a Structure of the capture's own type keeps the admission it
+        # has, as itself (l2_held_cap_same).
+        if: gives != 0 && l2_held_cap_same(m, model, k) = 0 && l2_input_schema(model, l2_m_arity[model] + k) != -1
+            src: 0 - 1
+            cand: l2_hidden_model_source(m, model, k, @ src)
+            if: src != -1
+                if: l2_d105_edge(l2_d105_key_method(m, src), src, model, l2_m_arity[model] + k, site\source) != 0
+                    return: 1
+                ---
+            else:
+                if: cand >= 0 && l2_d105_source(model, l2_m_arity[model] + k, cand, site\source) != 0
+                    return: 1
+                ---
+            ---
+            if: cand = -1 && l2_admit_site(m) != 0
+                return: 1
+            ---
         k: k + 1
     ---
 return: 0
@@ -16404,6 +16444,16 @@ fn: l2_emit_graph_field_value (int: own; const: @(char ind); @: char dest) int
     if: l2_emit_graph_holder(field\holder, dest, ind) != 0
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "%s%s: lmx_arena_ref_struct(%s, %zuU)\n", ind, dest, dest, field\child) < 0))
+
+# A place of the unit as an expression over the complete unit: each edge from the unit down to the place.  For
+# code built after the unit is -- a merge's node, built when the merge runs -- which has none of the aliases the
+# unit's constructor names its holders by (l2_emit_graph_build_place).
+fn: l2_emit_graph_unit_place (@: L2GraphPlace place) int
+    if: place = 0
+        return: (cast: (int) (fputs("l2_entry_unit", l2_out) < 0))
+    if: fputs("lmx_arena_ref_struct(", l2_out) < 0 || l2_emit_graph_unit_place(place\parent) != 0
+        return: 1
+return: (cast: (int) (c.fprintf(l2_out, ", %zuU)", place\child) < 0))
 
 # A construction-time field holder is an already allocated physical body.
 # Runtime addressing follows its edges; construction uses that body's actual
@@ -26657,6 +26707,8 @@ fn: l2_hidden_lex (int: mi; int: callee; int: k; int: callee_self; const: @(char
     int: ty
     int: child
     int: t
+    int: h
+    []: char cur 64
     []: char l2_hf_msg 1024
     if: mi < 0 || dest = 0 || callee < 0 || k < 0 || k >= l2_m_dyn[callee]
         return: 1
@@ -26676,6 +26728,27 @@ fn: l2_hidden_lex (int: mi; int: callee; int: k; int: callee_self; const: @(char
     # field of the unit through the parent of a unit method's occurrence, as the Structure above is.
     if: callee_self >= 0 && l2_m_unit_level(callee) != 0 && l2_own_mi[child] = l2_e && l2_graph_field(child) != 0 && l2_graph_field(child)\holder = 0
         if: c.sprintf(l2_hf_msg, "lmx_arena_ref_cell(l2_c%d\\parent, %zuU)", callee_self, l2_graph_field(child)\child) < 0
+            return: 1
+    ---
+    # A field held in a nested body of another occurrence has no alias in this activation: a method's aliases
+    # are of its own places (l2_emit_graph_places).  Its holder is reached edge by edge from the occurrence that
+    # owns it -- the unit through the selected occurrence's parent, as above, or as this method reaches that
+    # owner (l2_own_ctr).
+    if: l2_own_mi[child] != mi && l2_graph_field(child) != 0 && l2_graph_field(child)\holder != 0
+        h: l2_tn
+        l2_tn: l2_tn + 1
+        if: c.sprintf(cur, "l2_lexh%d", h) < 0
+            return: 1
+        if: callee_self >= 0 && l2_m_unit_level(callee) != 0 && l2_own_mi[child] = l2_e
+            if: c.fprintf(l2_out, "%s@: Lmx %s l2_c%d\\parent\n", ind, cur, callee_self) < 0
+                return: 1
+            ---
+        else:
+            if: c.fprintf(l2_out, "%s@: Lmx %s %s\n", ind, cur, l2_own_ctr(child)) < 0
+                return: 1
+            ---
+        ---
+        if: l2_emit_graph_holder(l2_graph_field(child)\holder, cur, ind) != 0 || c.sprintf(l2_hf_msg, "lmx_arena_ref_cell(%s, %zuU)", cur, l2_graph_field(child)\child) < 0
             return: 1
     ---
     if: c.fprintf(l2_out, "%sl2_xp: %s\n%sif: l2_xp = 0\n", ind, l2_hf_msg, ind) < 0
@@ -28701,8 +28774,7 @@ return: 0
 # formal fi when the call goes through it.  0 not needed: the entry is handed absent and the caller is asked
 # nothing.  1 needed.  2 needed and hard: an absent entry would reach a method that reads the name and has no
 # lexical source of its own, so a caller with nothing to give makes the call inadmissible.  -1: said -- a
-# limit of this implementation, where what the site's callable is cannot be told, or the input left out is a
-# reference, which is not handed absent yet.
+# limit of this implementation, where what the site's callable is cannot be told.
 # An input x reads is x's own requirement, and so is one no site gave x.  An input x only forwards is needed
 # when one of x's reasons holds for this site's actuals.  With add != 0 the reasons m then has for the name are
 # recorded: m hands it on from its own input.
@@ -28788,9 +28860,6 @@ fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: x; int: k; int
     if: unknown != 0
         l2_error(path, node, "which inputs this call needs depends on a callable this translation does not follow: not built yet")
         return: 0 - 1
-    if: need = 0 && ty != 0 && l2_rw_num_ty(l2_own_of_dt(ty)) = 0
-        l2_error(path, node, "an input that is a reference, of a callable this call does not give, is not left out yet")
-        return: 0 - 1
 return: need
 
 # K04 S2 (ledger section 58; Codex, FABLE-CODEX-20261004-12).  Does method m itself read free name k: is the
@@ -28806,13 +28875,11 @@ fn: l2_dyn_reads (int: m; int: k) int
         r: l2_node_of_text(l2_m_node[m]\as\frame\trailer\body, l2_dn(m, k))
 return: (cast: (int) (r != 0))
 
-# A forward-only input: a number method m does not read.  It stays its entry of refs through m's activation --
-# the typed body takes the entry itself, l2_pr<m>_<j> -- and goes on as it is, possibly absent (refs[k] = 0).
-# A reference keeps its present-pointer transport.
+# A forward-only input: one method m does not read, a number or a reference alike -- whether an input is formed
+# does not depend on how it is represented.  It stays its entry of refs through m's activation -- the typed body
+# takes the entry itself, l2_pr<m>_<j> -- and goes on as it is, possibly absent (refs[k] = 0).
 fn: l2_dyn_fwd (int: m; int: k) int
     if: m < 0 || m >= l2_m_n || m = l2_e || k < 0 || k >= l2_m_dyn[m]
-        return: 0
-    if: l2_rw_num_ty(l2_own_of_dt(l2_dt(m, k))) = 0
         return: 0
 return: (cast: (int) (l2_dyn_reads(m, k) = 0))
 
@@ -29256,11 +29323,11 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
             continue
         if: l2_hidden_from(mi, hid, ai, self_t, ind, l2_act_at(hides, ai), node) != 0
             return: 1
-        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) < 0 && l2_hidden_emit_admit(mi, hid, ai, l2_act_at(hides, ai), ind) != 0
+        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) < 0 && l2_admit_entry(mi, hid, ai, 0 - 1, l2_act_at(hides, ai), ind) != 0
             return: 1
         # Capturing nested/PAP occurrences retain their existing admission
         # role, but admission completes before this call's publication.
-        if: mcall != 0 && l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(hid, ai)) = 0 && l2_cap_emit_admit(l2_cap_arg_ns(hid, l2_m_arity[hid] + ai), l2_act_at(hides, ai), ind) != 0
+        if: mcall != 0 && l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(hid, ai)) = 0 && l2_admit_entry(mi, hid, ai, l2_cap_arg_ns(hid, l2_m_arity[hid] + ai), l2_act_at(hides, ai), ind) != 0
             return: 1
         ai: ai + 1
     ---
@@ -33642,6 +33709,24 @@ fn: l2_d105_declare_maps () int
     l2_d105t_declared: l2_d105t_n
 return: 0
 
+# How many declarations the translation records as reaching place k of method mi (l2_d105_close).
+fn: l2_d105_place_sources (int: mi; int: k) int
+    int: i 0
+    int: n 0
+    while: i < l2_d105s_n
+        if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = k
+            n: n + 1
+        i: i + 1
+    ---
+return: n
+
+# Input j of method mi is a hidden input whose name nothing in mi's sight declares: it has no schema of its own,
+# mi can only hand it on, and the declarations that reach it are the translation's record.
+fn: l2_input_undeclared (int: mi; int: j) int
+    if: mi < 0 || mi >= l2_m_n || mi = l2_e || j < l2_m_arity[mi] || j >= l2_m_arity[mi] + l2_m_dyn[mi]
+        return: 0
+return: (cast: (int) (l2_own_lexical(mi, l2_dn(mi, j - l2_m_arity[mi])) < 0))
+
 # Explicit and hidden actuals share the reached admission of an already evaluated
 # candidate. Compiler-known producer schema tokens select immutable pair maps;
 # forwarded values retain genuine schema evidence in the existing implements
@@ -33656,7 +33741,11 @@ fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const
     if: req = -1
         return: 0
     cand: l2_hidden_model_source(mi, idx, k, @ source_input)
-    if: cand = -1
+    # A value with no schema is admitted by position.  An input the method has no declaration of in sight has
+    # no schema either, but the declarations that reach it are the translation's record (l2_d105_close): its
+    # value is admitted by the one it carries, as a value of a known schema is.  Where the record has none the
+    # value carries no layout to tell, and its admission is the positional one.
+    if: cand = -1 && (l2_input_undeclared(mi, source_input) = 0 || l2_d105_place_sources(mi, source_input) = 0)
         return: l2_emit_admit(mi, req, value, ind)
     if: source_input != -1
         source_method: l2_d105_key_method(mi, source_input)
@@ -34433,9 +34522,19 @@ fn: l2_rw_cell (int: node; int: oi) int
     @: L2GraphField field l2_graph_field(oi)
     # A merge's node is built by a constructor of its own, when the merge runs.  A holder the unit's
     # constructor allocated is named there by that constructor's own alias (l2_emit_graph_build_place), which
-    # the node's constructor does not have: such a cell is not reached from a merge's node yet.
+    # the node's constructor does not have.  The unit is complete when a merge runs: a cell it holds in a nested
+    # body is reached from the unit along the edges of its places, as a native body reaches it
+    # (l2_emit_graph_holder).  A holder of another owner -- a method, a program part -- is not reached from a
+    # merge's node yet.
     if: l2_t7_walk != 0 && l2_t7_walk <= l2_t7_n && field != 0 && field\holder != 0
-        return: l2_error(l2_src, l2_t7_at[l2_t7_walk - 1], "a callable merge whose body reads a cell held in a nested body of the unit is not built yet")
+        if: l2_own_mi[oi] != l2_e
+            return: l2_error(l2_src, l2_t7_at[l2_t7_walk - 1], "a callable merge whose body reads a cell held in a nested body of a method or a program part is not built yet")
+        if: l2_rw_emit = 0
+            return: 0
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", node) < 0 || l2_emit_graph_unit_place(field\holder) != 0
+            return: 1
+        return: (cast: (int) (c.fprintf(l2_out, ")) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, field\child) < 0))
+    ---
     if: l2_rw_emit = 0
         return: 0
     if: field = 0
@@ -35549,7 +35648,11 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
         hidden_model: l2_input_schema(hid, l2_m_arity[hid] + d)
         if: l2_cap_arg_ns(hid, l2_m_arity[hid] + d) < 0 && hidden_model != -1
             cand: l2_hidden_model_source(l2_rw_mi, hid, d, @ hidden_source)
-            if: cand = -1
+            # An input the method has no declaration of in sight is admitted by the declaration its value
+            # carries, among those the translation records as reaching it, and may be absent: the admitting
+            # instruction takes both (LMX_WALK_OP_ADMIT_AS).  Any other value with no schema is admitted by
+            # position.
+            if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0
                 if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(hid, d)), @ holder) != 0
                     return: 1
                 ---
@@ -40488,6 +40591,25 @@ fn: l2_mad_held_model (int: oi) int
         return: 0 - 1
 return: l2_mad_model[host]
 
+# Whether what method mi gives under the name of hidden input k of `model` is a capture of the model's host given
+# as a Structure of the capture's own type: it is admitted as itself then (l2_cap_emit_admit, l2_rw_admit_as).
+# Anything else the method gives -- a Structure of another declaration, an input it only hands on, whose
+# declaration is its giver's -- is a candidate for the ordinary admission to the input's schema.
+fn: l2_held_cap_same (int: mi; int: model; int: k) int
+    int: ns
+    int: oi
+    @: LmP0Text nm
+    if: mi < 0 || model < 0 || k < 0 || k >= l2_m_dyn[model]
+        return: 0
+    ns: l2_cap_arg_ns(model, l2_m_arity[model] + k)
+    nm: l2_dn(model, k)
+    if: ns < 0 || nm = 0
+        return: 0
+    if: mi != l2_e && l2_param_find(mi, nm) >= 0
+        return: (cast: (int) (l2_bound_nsty(mi, nm) = ns))
+    oi: l2_own_visible(mi, nm)
+return: (cast: (int) (oi >= 0 && l2_own_nsty_get(oi) = ns))
+
 # Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28): native caller mi's own binding of
 # hidden input k of model -- its input of that name, or its own field of that name it uses -- as its code reads it
 # here, into dest, its type in *ty (own-type code).  0, or 1 when it has none: the model then reads the node's copied
@@ -40524,6 +40646,7 @@ fn: l2_rw_held_binding (const: @(LmP0Node node); int: model; int: k; int: parent
     int: pi
     int: ns
     int: oty
+    int: same
     nm: l2_dn(model, k)
     ns: l2_cap_arg_ns(model, l2_m_arity[model] + k)
     oty: l2_own_of_dt(l2_dt(model, k))
@@ -40532,10 +40655,12 @@ fn: l2_rw_held_binding (const: @(LmP0Node node); int: model; int: k; int: parent
     pi: 0 - 1
     if: l2_rw_mi != l2_e
         pi: l2_param_find(l2_rw_mi, nm)
+    # A capture given as a Structure of the capture's own type is the Structure itself.  Anything else must
+    # travel as the model's input does: a value of another transport is not converted here, a limit said where
+    # it stands.
+    same: l2_held_cap_same(l2_rw_mi, model, k)
     if: pi >= 0
-        if: ns >= 0 && l2_bound_nsty(l2_rw_mi, nm) != ns
-            return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
-        if: ns < 0 && l2_own_ty_of_param(l2_input_ft(l2_rw_mi, pi)) != oty
+        if: same = 0 && l2_own_ty_of_param(l2_input_ft(l2_rw_mi, pi)) != oty
             return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
         oi: l2_rw_bound(nm)
         if: oi >= 0
@@ -40545,19 +40670,46 @@ fn: l2_rw_held_binding (const: @(LmP0Node node); int: model; int: k; int: parent
     oi: l2_own_visible(l2_rw_mi, nm)
     if: oi < 0 || (l2_rw_mi != l2_e && l2_m_uses[l2_own_off(l2_rw_mi, oi)] = 0) || l2_own_uchild[oi] < 0
         return: 1
-    if: ns >= 0 && l2_own_nsty_get(oi) != ns
-        return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
-    if: ns >= 0
+    if: same != 0
         return: l2_rw_mad_host_struct(parent, l2_rw_mi, nm, out)
     if: l2_own_ty[oi] != oty
         return: l2_rw_refuse(node, "a caller's binding of a held callable's free name is of another type")
-    # A reference -- a held callable, a Structure -- is supplied when its declaration is the one the
-    # model's own lexical source names: the same occurrence, so its contract is the model's.  Another
-    # declaration of the name is another value.  Its admission to the model's use is not built: a
-    # limit of this implementation and no rule, said where it stands.
-    if: l2_rw_num_ty(oty) = 0 && l2_own_visible(model, nm) != oi
+    # A reference of another declaration than the one the model's lexical source names is another value: it is
+    # admitted to the model's use by the ordinary admission, where the model's input has a schema to admit to
+    # (l2_rw_mad_call).  A held callable under the name has none: its admission is not built, a limit of this
+    # implementation and no rule, said where it stands.
+    if: l2_rw_num_ty(oty) = 0 && l2_own_visible(model, nm) != oi && l2_input_schema(model, l2_m_arity[model] + k) = -1
         return: l2_rw_refuse(node, "a caller's own reference under a held callable's free name is not admitted to its use yet")
 return: l2_rw_own(parent, oi, out)
+
+# The admission of hidden input k of the selected callable `callee`, as the body of method mi hands it: `value`
+# as it was formed (l2_hidden_from, l2_held_binding).  An input handed absent has no value to admit.  An entry
+# handed on as it is (REF:) is admitted as the value it carries, where it carries one: an absent entry goes on
+# absent.  ns is the type of a capture of the callee's host (l2_cap_emit_admit), or -1: the callee's own input
+# schema then (l2_hidden_emit_admit).
+fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
+    @: char deep 0
+    []: char pay 1100
+    if: value = 0 || ind = 0
+        return: 1
+    if: c.strcmp(value, "ABSENT") = 0
+        return: 0
+    if: c.strncmp(value, "REF:", 4U) != 0
+        if: ns >= 0
+            return: l2_cap_emit_admit(ns, value, ind)
+        return: l2_hidden_emit_admit(mi, callee, k, value, ind)
+    ---
+    if: ns < 0 && l2_input_schema(callee, l2_m_arity[callee] + k) = -1
+        return: 0
+    if: l2_bump_ind(ind, @ deep) != 0
+        return: 1
+    if: c.snprintf(pay, 1100U, "lmx_pointer_value_known(%s)", value + 4) < 0 || c.fprintf(l2_out, "%sif: %s != 0\n", ind, value + 4) < 0
+        return: 1
+    if: ns >= 0 && l2_cap_emit_admit(ns, pay, deep) != 0
+        return: 1
+    if: ns < 0 && l2_hidden_emit_admit(mi, callee, k, pay, deep) != 0
+        return: 1
+return: (cast: (int) (c.fprintf(l2_out, "%s---\n", ind) < 0))
 
 # steps/merge-callable-r48.md S1: the held callable of own oi called from a native method as the walk's PRIM calls it
 # (l2_rw_mad_call), using declared-width argument and result storage. The numeric
@@ -40575,6 +40727,7 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
     int: bty
     int: ns
     int: oty
+    int: same
     int: bound 0 - 1
     int: written 0
     @: LmP0Field f 0
@@ -40655,11 +40808,18 @@ fn: l2_prep_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char 
             k: k + 1
             continue
         ---
-        if: ns >= 0 && l2_bound_nsty(mi, l2_dn(model, k)) != ns
+        # A capture given as a Structure of the capture's own type is admitted as itself.  Anything else must
+        # travel as the model's input does: a value of another transport is not converted here, a limit said
+        # where it stands.
+        same: l2_held_cap_same(mi, model, k)
+        if: same = 0 && bty != oty
             return: l2_error(l2_src, node, "a caller's binding of a held callable's free name is of another type")
-        if: ns < 0 && bty != oty
-            return: l2_error(l2_src, node, "a caller's binding of a held callable's free name is of another type")
-        if: ns >= 0 && l2_cap_src_marked(mi, l2_dn(model, k)) = 0 && l2_cap_emit_admit(ns, bv, ind) != 0
+        if: same != 0 && l2_cap_src_marked(mi, l2_dn(model, k)) = 0 && l2_admit_entry(mi, model, k, ns, bv, ind) != 0
+            return: 1
+        # Any other reference the method gives -- a Structure of another declaration, an input it only hands
+        # on -- is admitted to the model's use as a call of a method admits a hidden input, a present entry as
+        # the value it carries.
+        if: same = 0 && l2_admit_entry(mi, model, k, 0 - 1, bv, ind) != 0
             return: 1
         c.sprintf(ref_dest, "l2_hr%d[%d]", t, 1 + n + k)
         if: l2_emit_hidden_ref(l2_input_ft(model, l2_m_arity[model] + k), bv, ind, ref_dest) != 0
@@ -40771,6 +40931,13 @@ fn: l2_emit_mad_construct_one (int: mi) int
     int: ty
     if: model < 0 || l2_m_steps = 0 || l2_m_steps[model] <= 0 || l2_m_walkable[model] = 0
         return: l2_mad_unwalkable(mi, model)
+    # The constructor reaches the host's `node` through the model's occurrence, whose parent the unit's builder
+    # sets to the host's occurrence for every method recorded under a host (l2_mad_host_of).  That record is
+    # the translation's own, and it is verified here, once, where the constructor is written: the constructor
+    # itself checks neither it nor the count and presence of its operands, which the step naming it is built
+    # with (l2_rw_mad_build).
+    if: l2_mad_host_of(model) != mi
+        return: l2_error(l2_src, l2_m_node[mi], "internal: a returned definition is not recorded under the method that returns it")
     # Same physical range as the native producer: cells are source-ordered.
     kids: l2_m_width(model)
     mw: l2_m_width(model)
@@ -40786,7 +40953,7 @@ fn: l2_emit_mad_construct_one (int: mi) int
         return: 1
     # C, the copied lexical context, under the host's `node` -- the model's occurrence hangs under its host (book §3),
     # whose parent that is.
-    if: c.fprintf(l2_out, "    \\out: 0\n    if: nargs != %uU || refs = 0 || refs[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge construct was called outside its header\\n\")\n        c.abort()\n    l2_mad_src: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    if: l2_mad_src\\parent = 0\n        c.abort()\n    l2_madc: lmx_struct_new_owned(l2_mad_src\\parent\\parent, (cast: (@: LmxArena) owner))\n    if: l2_madc = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_madc, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", (cast: (unsigned) (1 + nc)), (cast: (unsigned) (hw + l2_m_arity[mi]))) < 0
+    if: c.fprintf(l2_out, "    l2_mad_src: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_madc: lmx_struct_new_owned(l2_mad_src\\parent\\parent, (cast: (@: LmxArena) owner))\n    if: l2_madc = 0 || lmx_arena_refs_open_owned((cast: (@: LmxArena) owner), l2_madc, %uU) != 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n        c.abort()\n", (cast: (unsigned) (hw + l2_m_arity[mi]))) < 0
         return: 1
     k: 0
     while: k < l2_mcap_n
@@ -40858,6 +41025,11 @@ return: 0
 
 fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) int
     @: LmP0Field f 0
+    int: hidden_model
+    int: hidden_source
+    int: cand
+    int: source_mi
+    int: same
     int: n
     int: j 0
     int: given 0
@@ -40944,8 +41116,30 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
         if: hb != 0
             holder: \out
             ns: l2_cap_arg_ns(model, l2_m_arity[model] + k)
-            if: ns >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(model, k)) = 0 && l2_rw_admit_as(\out, ns, ns, @ holder) != 0
+            # A capture given as a Structure of the capture's own type is admitted as itself.
+            same: l2_held_cap_same(l2_rw_mi, model, k)
+            if: same != 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(model, k)) = 0 && l2_rw_admit_as(\out, ns, ns, @ holder) != 0
                 return: 1
+            # Any other reference the method gives -- a Structure of another declaration, an input it only
+            # hands on -- is admitted to the model's use as a call of a method admits a hidden input
+            # (l2_rw_call).
+            hidden_model: l2_input_schema(model, l2_m_arity[model] + k)
+            if: same = 0 && hidden_model != -1
+                hidden_source: 0 - 1
+                cand: l2_hidden_model_source(l2_rw_mi, model, k, @ hidden_source)
+                if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0
+                    if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(model, k)), @ holder) != 0
+                        return: 1
+                    ---
+                else:
+                    source_mi: 0 - 1
+                    if: hidden_source != -1
+                        source_mi: l2_d105_key_method(l2_rw_mi, hidden_source)
+                    if: l2_rw_admit_source(\out, hidden_model, cand, source_mi, hidden_source, @ holder) != 0
+                        return: 1
+                    ---
+                ---
+            ---
             if: l2_rw_held_binding(node, model, k, holder, @ arg) != 0
                 return: 1
             if: holder != \out

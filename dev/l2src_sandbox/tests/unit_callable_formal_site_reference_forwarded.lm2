@@ -1,0 +1,35 @@
+# A reference a call site does not give stays absent through a method that
+# only hands it on. g1 reads the number other; gs reads the Structure box.
+# via takes a callable and gives it to run, which calls it. Where via is
+# given g1 the box is left out at the root's call, goes through via absent
+# and is asked of no one; where it is given gs the other is. Entry 7.
+Model:
+    int: x 0
+
+int: other 9
+Model: box
+box\x: 5
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: gs () int
+    return: box\x + 2
+end: gs
+
+fn: run (g1: q) int
+    return: q()
+end: run
+
+fn: via (g1: q) int
+    return: run(q)
+end: via
+
+int: a via(g1)
+int: b via(gs)
+int: ok 7
+if: a != 10 || b != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

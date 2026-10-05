@@ -6159,3 +6159,229 @@ mixed formation, of the reference, of conversion, of ingress and of the
 complete copy stand.
 
 **Next.** As in section 66.
+
+<a id="reference-among-free-names"></a>
+## 68. The reference among the free names: asked along the chain, left out where a site does not need it, admitted by the declaration it carries (Codex's seventeenth reply -12)
+
+### The reply
+
+"YES: apply the same compiler-proven invariant cleanup to
+l2_mad_construct_<method> in the next safely bounded slice. The older
+origin of identical redundant header/parent guards is not an exemption from
+the author's general rule. Verify the source/host relation at translation
+and preserve the walked returned-definition witnesses."
+
+"YES: ADMIT_AS should preserve an ABSENT evaluated operand at this
+forwarding edge." And: "An absent result has no candidate value to admit:
+return ordinary OK with the result still absent, without creating a view,
+registering correspondence, throwing implements-NO, storing a value or
+fabricating null. A PRESENT non-reference retains the existing
+receiving-contract behavior; this is not permission to admit arbitrary
+scalar values as Structures. A present reference whose payload is null
+remains PRESENT under the existing null-reference route. Do not use payload
+zero to infer absence."
+
+"The reference plan follows the same universal value/presence rule as
+numbers: pure forwarding preserves absence; the consuming reader forms its
+value from ordinary sources; current caller bindings precede the actual
+occurrence's lexical fallback; a present incompatible binding is an
+admission failure, not absence."
+
+The reply lists seven required witnesses. They are named with their rows
+under [Witnesses](#reference-witnesses) below.
+
+### What is changed
+
+Whether an input is formed does not depend on how its value is
+represented. Before this step that held for a number only.
+
+1. **A method that does not read a name only hands it on, a reference as a
+   number** (`l2_dyn_fwd`). The input stays its entry of the call's
+   references through the method's activation and goes on as it is,
+   possibly absent. Before, a reference was formed where the chain starts,
+   from the lexical source of the method called there, and travelled
+   present.
+2. **An entry handed on is admitted as the value it carries, where it
+   carries one** (`l2_admit_entry`). The generated text admits under a test
+   of the entry itself; an absent entry is admitted to nothing.
+3. **A call site leaves out a reference it does not need**, as it leaves
+   out a number. The limit `an input that is a reference, of a callable
+   this call does not give, is not left out yet` is removed
+   (`l2_site_needs`).
+4. **A held call asks its model's references along the chain of callers**
+   (`l2_dyn_site_held`). A name the model needs that the calling method
+   does not bind becomes the method's own handed-on input. A named
+   Structure of the unit, or an eternal branch, is reached through the unit
+   and asked of no one, as at a call of a method.
+5. **What the calling method gives is admitted to the model's use**, as a
+   call of a method admits a hidden input: natively (`l2_prep_held_call`)
+   and walked (`l2_rw_mad_call`), with its source recorded in the fixed
+   point. A reference of another declaration than the one the model's
+   lexical source names is a candidate and no longer a limit. The limit `a
+   caller's own reference under a held callable's free name is not admitted
+   to its use yet` stays only where the model's input has no schema to
+   admit to: a held callable under the name.
+6. **A Structure a returned definition takes from its host is a free name
+   as any other.** It was never asked along the chain: a caller's binding
+   two methods above the held call was lost with no refusal. Given as a
+   Structure of the capture's own type it is admitted as itself, as before
+   (`l2_held_cap_same`); anything else the method gives, a Structure of
+   another declaration or an input it only hands on, goes through the
+   ordinary admission.
+7. **An input with no declaration in the method's sight has no schema, and
+   the declarations that reach it are recorded.** Such an input is one the
+   method can only hand on. The fixed point records what each site gives it
+   (`l2_dyn_site_callee`, `l2_input_undeclared`), and where its value
+   reaches a reader's schema it is admitted by the declaration it carries,
+   among those recorded (`l2_hidden_emit_admit`, `l2_d105_place_sources`),
+   natively and walked. Where nothing is recorded the value carries no
+   layout to tell and the positional admission stands, as before.
+8. **The walker's admitting instruction keeps an absent operand absent**
+   (`lmx_walk_admit_op`). Before, an absent operand and a present value
+   that is no reference were one refusal, INVALID. They are split: absent
+   returns ordinary OK with the result absent; a present value that is no
+   reference stays INVALID; a present reference that holds nothing stays
+   present.
+9. **The constructor of a returned nested definition does not check again
+   what the translation establishes** (`l2_emit_mad_construct_one`). The
+   check of the count and presence of its operands and the check of the
+   source occurrence's parent are removed, with nothing in their place. The
+   relation it relied on, that the model is recorded under the method that
+   returns it, is verified once where the constructor is written. The
+   checks of a node or a cell that could not be allocated stay.
+10. **A merge's node reaches a cell the unit holds in a nested body along
+    the unit's own edges** (`l2_rw_cell`, `l2_emit_graph_unit_place`). The
+    node's constructor has none of the aliases the unit's constructor names
+    its holders by. The unit is complete when a merge runs. This is
+    [T7-ACTUAL-REFERENCE](defects.md#t7-actual-reference), and item 5 needs
+    it: with the admission recorded at a held call the model reads the name
+    through its schema's own Structure, which is such a cell.
+
+### What the step got wrong on the way
+
+These were measured on bytes of this step that were never committed.
+
+- The first version of item 4 refused a capturing definition called from a
+  method that binds nothing: `a caller's binding of a held callable's free
+  name is of another type`. The committed translator translates that
+  program, and no gated row has its shape, so the replay of every recorded
+  translation showed nothing. A probe of the smallest program of each kind
+  of name the rule newly reaches found it. Row `unit_held_capture_chain`
+  now has the shape.
+- With the chain built and item 7 not yet, the last method before the
+  reader admitted the handed-on Structure by position. A Structure with the
+  field at another position gave 6 for 45: its first field was read. A
+  Structure with no such field was accepted and gave 6. Both are refused or
+  right now, and the rows below pin both.
+- Recording the admission at a held call made
+  `unit_t7_reference_held` stop at the limit of item 10. The replay showed
+  it; item 10 is the repair.
+
+<a id="reference-witnesses"></a>
+### Witnesses
+
+| The reply's witness | Rows |
+| --- | --- |
+| An absent reference through at least two forwarding methods and an ADMIT_AS edge reaches the actual reader's lexical source. | `unit_held_capture_chain`, `unit_held_capture_chain_walk`: no caller has the name, two methods hand it on, the definition reads its node's copy, 35. With the committed kernel the walked row stops at INVALID. |
+| A present null reference is not replaced by that lexical value. | `unit_site_hidden_null_chain`, `unit_site_hidden_null_chain_walk`: 7, where the unit's Structure would give 11. `lmx_walk_admit_selftest`, six new checks. |
+| A supplied compatible candidate of a different declaration/layout reaches its own selected field, native and genuinely walked. | `unit_held_reference_chain` and `_walk`: 45, 65 through two methods, 75 at the held call itself. `unit_held_capture_chain` and `_walk`: 25 and 45. `unit_nested_definition_structure_override` and `_walk`: 45. |
+| A supplied incompatible candidate fails by ordinary Consumer-relative admission before use. | `unit_nested_definition_structure_other_refused` and `unit_held_capture_chain_other_refused`: `implements is false in function argument`, at translation. |
+| A site which does not supply that alternative's reference preserves absence. | `unit_callable_formal_site_names_reference`, `unit_callable_formal_site_reference_forwarded`, `unit_callable_formal_site_reference_unasked`. |
+| An unavailable required input with no eligible fallback is still refused at its real formation boundary. | `unit_reference_required_unbound_refused`: `unbound dynamic input box`, at the root's call. |
+| Existing thrown/stop/admission-failure behavior remains unchanged. | `lmx_walk_admit_selftest`: a throw of the operand goes on with its own status; a present number is still no candidate. The full gate, row for row. |
+
+### Mutants
+
+Each was built from the bytes of this step and run natively (N), with the
+root walked (R) and with the methods walked (W).
+
+| Mutant | Changes | Result |
+| --- | --- | --- |
+| kernel `nullabsent` | a present null reference is taken for absent | `unit_site_hidden_null_chain` W stops; selftest: two checks fail |
+| kernel `fabricate` | an absent operand becomes a present null | `unit_held_capture_chain` W stops; selftest: one check fails |
+| kernel `numberok` | a present value that is no reference passes | selftest: one check fails |
+| `nochain` | a held call asks only a number along the chain | `unit_held_reference_chain` and `unit_held_capture_chain` red in N, R, W |
+| `noflow` | what reaches an undeclared input is not recorded | `unit_held_capture_chain` red in N, R, W; `unit_held_capture_chain_other_refused` translates |
+| `natpos` | the native body admits an undeclared input by position | `unit_held_capture_chain` red in N and R |
+| `walkpos` | the walked body admits it by the positional primitive | `unit_held_capture_chain` W stops |
+| `nullabs` | a method handing an entry on takes a present null for absent | `unit_site_hidden_null_chain` red in N and R |
+| `natnoadmit` | the native held call hands a reference unadmitted | `unit_held_reference_chain` and `unit_nested_definition_structure_override` stop in N and R |
+| `walknoadmit` | the walked held call hands it unadmitted | the same two rows stop in W |
+| `capsame` | every capture a caller gives is taken for its own type | `unit_held_capture_chain` red in N, R, W |
+| `t7unit` | a merge's node names the unit itself for a held cell | `unit_t7_actual_reference` and `unit_t7_reference_held` stop |
+| `sitegive` | a reference a site does not need is formed all the same | `unit_callable_formal_site_reference_unasked` does not translate |
+| `refabsent` | a required reference with no source is handed absent | `unit_reference_required_unbound_refused`: another message |
+
+Three results are narrower than they look. `sitegive` passes
+`unit_callable_formal_site_names_reference` and
+`unit_callable_formal_site_reference_forwarded`: the callable given there
+does not read the reference, so a reference formed all the same changes no
+value. It is told only by the third row, where the caller's own Structure
+does not fit, and there the mutant fails at translation, by an internal
+error, and not by a wrong value. `natnoadmit` and `walknoadmit` pass the
+shapes where the candidate came through a method that admitted it to the
+same schema: the earlier admission serves the reader. They are told by the
+shapes where the method that makes the held call has the candidate itself.
+`natpos`, `nullabs` and `natnoadmit` pass the walked variant, and `walkpos`
+and `walknoadmit` the native ones: each route has its own mutant.
+
+### Measured
+
+The translator against the committed one, on the 1714 translations recorded
+by `fable_full_39`: exit, messages and the generated L1 are the same on
+1545 rows; 164 differ in L1 only; five change their message. Four of the
+five are the rows that turn green, and the fifth is the refusal that now
+names the ordinary admission.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_26` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. `lmx_walk_admit_selftest`: 46 checks, none failed. |
+| `build/l3_selftest/fable_l3_26` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_40` (full harness) | RED 35 of 1725. Against `fable_full_39`: FAIL→OK 4 (`unit_callable_formal_site_names_reference`, `unit_nested_definition_structure_override` and its `_walk`, `unit_t7_actual_reference`), OK→FAIL 0, added 10, all green, removed 0, no message of a red row changed. |
+| `build/l2_harness/fable_s6p_05` (focused, before the gates) | 180 rows, every row the replay showed changed and the new ones; one red, the labelled OPEN `unit_t7_host_nested_return`. |
+| `build/l2_harness/fable_s6p_06` (focused, before the gates) | The seven rows touched after it; all pass. |
+
+The pre-gate hashes of every changed path equal the live files and every
+staged copy (`tie.py`).
+
+The committed translator on the new rows, outside the gate, natively, with
+the root walked and with the methods walked: `unit_held_capture_chain`
+gives 83, the caller's Structure lost with no refusal;
+`unit_held_reference_chain` is refused by the limit item 5 removes.
+
+### Kept in view
+
+- **A reference read with no declaration in sight is not built.** The
+  method of `unit_reference_required_unbound_refused` that has the name and
+  calls down the chain would give 31; with the root's call removed the unit
+  is refused at the read, `a field path`. So the row shows the refusal
+  where the chain starts and not the positive beside it
+  ([FREE-REFERENCE-NO-DECLARATION](defects.md#free-reference-no-declaration)).
+- **Three kinds of name the chain rule newly reaches are probed and are not
+  rows yet.** A Structure field of the host itself (35, and 55 with a
+  caller's own); a typed reference of the unit, with a caller's reference
+  to another declaration two methods above (9 and 65); a definition that
+  writes through the reference (the caller's Structure is written, the
+  unit's is not). Each passes natively, with the root walked and with the
+  methods walked, on the translator of `fable_full_40`; the committed
+  translator gives a wrong value on each, with no refusal. Outside the gate
+  they are no coverage: they become rows in the next slice.
+- **A consumer with a callable formal is not walked.** The three site rows
+  run natively and with the root walked. With the methods walked they are
+  outside the walkable subset, as before.
+- **A captured Structure used whole is refused**, as before (item 738). The
+  witness of a present null therefore uses a reference of the unit, which a
+  method can compare with nothing.
+- **An incompatible candidate is refused where it is admitted to the
+  reader's use**, the held call, and not where its caller gives it.
+- **A by-name admission that fails when the program runs** stops the
+  process natively and throws `implements` walked. That is as before this
+  step for a hidden input with a declaration in sight
+  (`l2_d105_emit_source`); the step adds a route to it and not the
+  difference. Whether a program reaches it was not measured.
+- The lexical source of a merge's node waits for the author. G5 stays OPEN.
+
+**Next.** The receiving-edge conversion of a handed-on input; the library
+ingress; walked consumers with a callable formal; the complete copy of a
+node built when the program runs and its own contract route; then the open
+merge obligations of sections 64 to 66.

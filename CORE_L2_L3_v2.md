@@ -412,19 +412,25 @@ callable it gives: for a name a method only hands on the fixed point keeps the
 complete conditions under which it is needed (`l2_dyr_add`, `l2_site_needs`),
 and an input not needed is handed absent. A required input no one can give is
 refused at translation, where the chain starts; generated code carries no abort
-for it. A reference not needed is not handed absent yet: a located limit
-([ledger](steps/fable-continuation-20261003.md#site-requirements)).
+for it. A reference not needed is left out as a number is
+([ledger](steps/fable-continuation-20261003.md#site-requirements),
+[the reference](steps/fable-continuation-20261003.md#reference-among-free-names)).
 
-A held call is a site of the same fixed point (`l2_dyn_site_held`): a number
-its model needs that the calling method does not bind becomes the method's own
+A held call is a site of the same fixed point (`l2_dyn_site_held`): a name
+its model needs that the calling method does not bind, a number or a reference,
+becomes the method's own
 handed-on input, so a binding of the caller's caller reaches the definition,
 and the value kept in the definition's node is its own source, read only where
 no caller gives the name. Which inputs can arrive present at all is recorded
 per site (`l2_dyp_mark`). One name required as two numeric types through one
 method is handed on with one type and not converted: where it can be present
-for the other type the call is a located limit. A reference through a held call
-is not asked along the chain yet
-([ledger](steps/fable-continuation-20261003.md#held-chain)).
+for the other type the call is a located limit. What the calling method gives
+under a reference's name is admitted to the model's use as a call of a method
+admits a hidden input. A Structure the definition takes from its host is such
+a name too: given as a Structure of the capture's own type it is admitted as
+itself, anything else by the ordinary admission (`l2_held_cap_same`)
+([ledger](steps/fable-continuation-20261003.md#held-chain),
+[the reference](steps/fable-continuation-20261003.md#reference-among-free-names)).
 
 A held definition is an actual of a callable formal as a method of the unit is:
 admitted by its model's signature, handed as the node itself, followed as the
@@ -468,9 +474,21 @@ forwards the name hands its entry on as it is (`l2_dyn_fwd`,
 method that reads the name resolves an absent entry from its own lexical
 source through the parent of its occurrence: the native entry
 (`l2_emit_tramp_lex`) as the walked body's ARG with a fallback
-(`l2_rw_arg_fb`). A present zero is present. A reference keeps its
-always-present transport for now
+(`l2_rw_arg_fb`). A present zero is present
 ([ledger](steps/fable-continuation-20261003.md#absent-input)).
+
+A reference no caller binds is absent in the same way, and a method that only
+forwards it hands its entry on as it is. An entry handed on is admitted as the
+value it carries, where it carries one (`l2_admit_entry`). A method that reads
+a reference does not resolve an absent entry itself: the method that hands the
+entry to it reads the reader's lexical cell where the entry arrived absent
+(`l2_hidden_forward`, `l2_hidden_lex`); a returned definition reads what its
+node keeps. A present reference that holds nothing is present. An input whose
+name nothing in the method's sight declares has no schema: the fixed point
+records the declarations that reach it (`l2_input_undeclared`), and where its
+value reaches a reader's schema it is admitted by the declaration it carries,
+among those recorded; with none recorded the positional admission stands
+([ledger](steps/fable-continuation-20261003.md#reference-among-free-names)).
 
 Formation is not transport. The value a reading method so forms is its
 activation's value of the name, and it is what its own callees receive,
@@ -563,7 +581,7 @@ The inspected implementation has one flat encoding, not an old/new fallback deco
     catch operands
 ```
 
-Token boxes use the declared pointer witness; they are metadata operands, not source-model bodies to execute during preload. The candidate is evaluated once. Null is handled before correspondence lookup. Default-map count zero is the compact identity representation where justified, not a proof that an unknown value implements every requirement. Frame-backed maps borrow the instruction's ordinary graph storage and obey its lifetime/copy rules.
+Token boxes use the declared pointer witness; they are metadata operands, not source-model bodies to execute during preload. The candidate is evaluated once. A candidate that evaluates absent, an input handed on that its caller left out, stays absent: the instruction returns OK and views, records and throws nothing. A present value that is no reference is the instruction's error. Null is present and is handled before correspondence lookup. Default-map count zero is the compact identity representation where justified, not a proof that an unknown value implements every requirement. Frame-backed maps borrow the instruction's ordinary graph storage and obey its lifetime/copy rules.
 
 ### 9.6 Remaining admission boundaries
 

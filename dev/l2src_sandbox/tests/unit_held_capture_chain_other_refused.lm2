@@ -1,0 +1,39 @@
+# A caller's binding that is present and does not fit is not absence,
+# along a chain too. g0 reads box\v. other has its own box, a Structure
+# with no v, and calls far, which calls near, which calls the held u0:
+# each only hands the name on. The value would reach g0's use of box, and
+# is refused where it is admitted to it; the Structure the node keeps is
+# not read in its place.
+Model:
+    int: v 4
+end: Model
+
+Other:
+    int: w 1
+end: Other
+
+fn: makeUse (Model: box) fn: () int
+    fn: g0 () int
+        return: 5 + box\v
+    return: g0
+
+kept: merge Model
+kept\v: 30
+u0: makeUse kept
+
+fn: near () int
+    return: u0()
+end: near
+
+fn: far () int
+    return: near()
+end: far
+
+fn: other () int
+    box: merge Other
+    return: far()
+end: other
+
+int: b other()
+sendMessage: exit(exit_code: b; stdout: ""; stderr: "")
+return

@@ -1,0 +1,27 @@
+# A reference a method requires and no one can give is refused where the
+# chain starts, as a number is. r reads box\v, and nothing in its sight
+# declares box: the name has no lexical source. mid calls r and only hands
+# the name on. has has a box and calls mid. The root calls mid with no box
+# anywhere: that call is refused where it stands.
+Model:
+    int: v 4
+end: Model
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: mid () int
+    return: r()
+end: mid
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: mid()
+end: has
+
+int: a has()
+int: b mid()
+sendMessage: exit(exit_code: a + b; stdout: ""; stderr: "")
+return

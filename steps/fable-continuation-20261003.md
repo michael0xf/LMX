@@ -6,8 +6,10 @@ release record. Earlier evidence stays in
 [the namespace source-layout ledger](critical-graph-namespace-source-layout-20261003.md).
 Both critical tickets and stages 8/8a remain OPEN. Stable `l2src/` is unchanged.
 
-Roles: Fable is the single writer/build owner; Codex answers questions through
-`lmx_uds`. Every gate below ran alone, one compiler chain at a time.
+Roles: Fable was the single writer/build owner through section 71; from
+section 72 Opus is (the author's assignment, 2026-10-05). Codex answers
+questions through `lmx_uds`. Every gate below ran alone, one compiler chain at
+a time.
 
 <a id="takeover"></a>
 ## 1. Takeover checks and baseline
@@ -7000,3 +7002,330 @@ typed place as coordinate space and the route of a letter alone under a
 free name; then the order of section 70, with the read of a field by
 conversion joined to the receiving-edge conversion, and the returned
 definition's own free name on the route of the required inputs.
+
+<a id="letter-typed-place"></a>
+## 72. A letter held in a typed place, admitted to another declaration through the record of its reception (Opus; Codex's nineteenth reply (b), the twenty-second reply, OPUS-HANDOFF-20261005-103112)
+
+> Opus continues from this section. Fable's session ended at its quota after
+> `045d6ea2` and Codex's reply to it; the author made Opus the single
+> writer/build owner on 2026-10-05, and Codex's handoff to Opus
+> (OPUS-HANDOFF-20261005-103112) set this slice first. Codex answers questions
+> through `lmx_uds` as before.
+
+### The rulings
+
+The nineteenth reply, (b): the program is valid "by the Consumer's use of
+mainArgs", and the repair is to "Reuse/compose an ACTUALLY ESTABLISHED
+value->MainLetter correspondence with the translation-resolved MainLetter->Long
+used-path mapping. Merely declaring the source place MainLetter is not such a
+proof." The twenty-second reply checked the existing records and accepted the
+design as a read of them: "Reading an actually completed positional
+correspondence and composing it with the translator-resolved declaration ->
+receiving-model pair map is within the earlier ruling." And: "For your bounded
+fast route, no frame, no map and no holes mean an established positional
+correspondence. It is NOT proof that the actual value's source layout equals
+that declaration."
+
+The reply to Opus's start corrected two points of the design before it was
+built. On holes: "Do not let SIZE_MAX mean "unused" without that exact use
+proof." On several anchors: "Giving-place-first is defensible only where that
+precise current source view is established by an actual completed
+correspondence, not by the place's annotation alone." Otherwise "Agreement is
+about the current Consumer's USED selectors/paths and their resulting physical
+targets", and "If two qualifying proofs differ on a target the Consumer
+actually uses, do not silently choose one by registration/list order." "Nor may
+disagreement simply disappear into positional success." On the case of a letter
+given before any reception recorded it: "A before case that the implementation
+cannot yet establish must be labelled an evidence/coverage limit, not a
+normative required negative".
+
+### Fable's draft, audited
+
+Fable left `patch_s10.py` in its scratchpad, written and never applied or
+built. Its kernel query is kept. Two gaps were found before anything was
+built:
+
+1. It offered the identity through the giving place's default map with no
+   proof of the current Consumer's uses. That map is reserved for every
+   modeled edge without a consumer check (`l2_d105_prepare_pair`), and an
+   admission by the Consumer's uses (fullReceiver 0) skips its `SIZE_MAX`
+   cells as proved unused when it registers. A consumer that reads a field the
+   place's declaration has not would have admitted the letter and stopped the
+   process at the read, the shape `LONG-USE-LEFT-OUT` had.
+2. It covered only the giving place's own declaration. A typed place's
+   declaration is no source of D-105 -- only the layouts of producers are --
+   so nothing reached a consumer through a place with no declaration.
+
+### The record that is read
+
+A reception into a place of a declaration checks a value with no layout of its
+own against the whole declaration by position and registers
+`lmx_implements_register_map(value, declaration, 0, 0U, 0)`: a record of
+(value, declaration) with neither frame nor map and no holes. The receptions
+that do so are `receiveMessage:` into a typed place, the binding of a typed
+reference (`m: @raw`), and the admission of a letter to a formal of its own
+declaration. That record is what is reused. The declaration's own record --
+its self-registration with its layout token -- is read only to recognise the
+declaration by that token; it certifies no other value. No record is made by
+the new route except the ordinary one of the admission it ends in, and the
+value's layout stays unknown.
+
+### What is built
+
+1. **The query** (`lmx_implements_identity`, kernel). 1 when a record of
+   (value, declaration) with neither frame nor map and no holes exists for the
+   declaration whose own record carries the token, else 0. A value's record
+   with itself is never asked. It reads the arena's records under their
+   existing lifetime (they are pruned where storage leaves) and hands no
+   record out.
+2. **Possible anchors** (`l2_d105a_close`). After the checks, the declaration
+   of each giving place reaches the place it hands to, and so does every
+   anchor of the giving place, along the edges of D-105 and along anchor edges
+   (`l2_d105x_add`): the way a held value comes from a place of the caller to a
+   Structure formal, recorded where the checks see the site, apart from the
+   edges of D-105 so that the layouts and their static checks do not change.
+   The tables grow with the program; a cycle of methods ends because an
+   anchor joins a place once. An anchor is no source, no layout and no
+   admission.
+3. **Identity entries of a reception** (`l2_identity_list`). Where a
+   candidate the translation has no layout for (`l2_d105_dynamic`), read from
+   a place, is formed into a formal or a hidden input admitted by the
+   Consumer's uses (fullReceiver 0) along a recorded edge: the giving place's
+   own declaration first, then the anchors that reach the giving place. A
+   declaration is offered only where it gives every path that Consumer reads
+   (`l2_anchor_offer`: `l2_uses_walk_frame` and `l2_descriptor_used`, the check
+   D-105 applies to recorded sources) and its correspondence to the model can
+   be built; one that does not is left out and condemns no value. The giving
+   place's own declaration is class 0; the others share a class where they
+   give every first step the Consumer reads the same place. The list is
+   computed once per site, once the model's width is known, and its pair maps
+   are reserved in `l2_d105_close` before the maps are declared.
+4. **The native text and ADMIT_AS select the same way.** Only for a value
+   with no layout of its own: the giving place's own declaration decides when
+   its record answers; otherwise the first entry that answers is taken, and an
+   entry of another class that answers too refuses the reception (native
+   `l2_idsel` 2, walked `ambiguous`) -- neither the order of the entries nor
+   the positional check decides. ADMIT_AS carries the entries after its
+   alternatives as (token, class, map), their count given by the cells up to
+   the catch rows (`lmx_walk.h`). A value with a layout of its own keeps its
+   layout's route. The selected map registers as any map does.
+5. **A typed reference as a coordinate witness** (`l2_anchor_reach`). The
+   declaration of a typed reference that hands a free name on is among the
+   declarations that reach the name (the twenty-first reply, Q3). It is no
+   type of the name and no evidence of the value: the reader's admission asks
+   the value's own record.
+
+### Found beside it and repaired
+
+The walked call admitted a candidate the translation could not name twice: a
+whole-model structural admission (`l2_rw_struct_arg` ->
+`l2_rw_reference_receive`) before the site's admission by the Consumer's uses,
+which the native text alone makes. Through an opaque formal the first one
+refused what the second admits, walked only. The first admission is now made
+only where the site has no admission of its own, and for a letter named as the
+actual, which that reception takes as its payload (D-57), as the native text
+does
+([WALKED-UNKNOWN-ACTUAL-DOUBLE-ADMISSION](defects.md#walked-unknown-actual-double-admission)).
+A first form of the repair dropped the letter case too and three rows went
+red walked (`unit_admit_dynamic_actual_catch` and its twin,
+`unit_site_constructor_reception`); the focused run caught it before any gate.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_letter_place_other`, `_walk` | The letter held in a MainLetter reference given to a Long formal that reads only mainArgs: 2 + n; the same letter again, and once through a MainLetter formal that hands it on. observe entered three times. |
+| `unit_letter_place_hidden`, `_walk` | The same into a hidden input whose lexical source is a Long reference, from a reference and from a MainLetter formal of that name. |
+| `unit_letter_place_forward`, `_walk` | Through two opaque formals in a chain, a method that hands it to itself and two that hand it to each other; then the root's Long Structure through the same sites, admitted by its own layout: 2. |
+| `unit_letter_place_missing_field`, `_walk` | A consumer that reads Long's size, after the letter was admitted to Long by one that does not: refused where the input is formed and caught, 42; the consumer not entered; no process stop. |
+| `unit_letter_place_free_name`, `_walk` | The letter alone under a free name, directly and through a method that only hands the name on: the typed reference's declaration is the coordinate space. |
+| `unit_letter_alias_after`, `_walk` | An untyped alias after a binding: the reference through an opaque formal, and the alias to a MainLetter formal that takes it as its payload. |
+| `unit_letter_place_two_anchors`, `_walk` | The letter bound to a MainLetter and to an Other reference, both handed to one opaque formal: both declarations reach it, both records answer, one class, the first taken: 2 + n both times. |
+| `unit_letter_alias_before` | OPEN required positive, red: the letter given untyped to the Long formal before any reception recorded it. |
+
+Where the methods are walked, the consumers that read a formal admitted by name
+and the methods that receive the letter stay native, and the methods that form
+the inputs are walked; the rows pin which.
+
+The reply to Opus's start asked for "a fixture probing multiple available
+anchors: unused-target disagreement must not impose an extra requirement;
+used-target disagreement must not produce an arbitrary positional success."
+`unit_letter_place_two_anchors` has two anchors that both answer. Neither kind
+of disagreement can be built today: the only value with no layout of its own is
+the argv letter, of one field, a declaration identical with it by position has
+that one field, and two such declarations place every path a consumer reads,
+and every target it does not, alike. The refusal of two classes has the
+walker's selftest; the native branch is reached by no program.
+
+`unit_letter_place_free_name` does not need the identity route: its reader's
+coordinate space is MainLetter itself, so the letter's record answers the
+ordinary query of a record (`lmx_implements_find`), and its generated L1 is the
+same without identity entries. It witnesses the coordinate space alone.
+
+### Mutants
+
+Translator mutants are built each in its own stage, replayed over the
+recorded translations of the focus set, and run on the slice's fixtures
+natively, with the root walked and with the methods walked. Kernel mutants
+are run against the two selftests on a copy of the kernel gate's staged
+sources; the control without a mutant is green there (88 and 58 checks).
+
+| Mutant | Takes away | Result |
+| --- | --- | --- |
+| `noid` | no identity entry is offered | `other`, `hidden`, `forward`, `alias_after`: R0 stopped, exit 1, in all three modes; `missing_field`: 81, the admission to `first` refused too. `free_name` green, see above. `two_anchors` was written after this run. |
+| `noconsumer` | an anchor is offered without the current Consumer's uses | `missing_field`: the process stops, exit 3, `lmx: invariant: a field path met no Structure`, in all three modes. Six other rows of the focus set change their L1; not run under the mutant. |
+| `noanchors` | the anchors of a giving place do not travel on along an edge | `forward`: exit 1 in all three modes. The first form put `i < 0` after the call that adds the anchor: the anchor was still added, no row changed, and it was corrected and run again. |
+| `noxedge` | the way a held value comes to a Structure formal from an opaque place is not recorded | `forward` and `alias_after`: exit 1 in all three modes. |
+| `innerkeep` | the walked call admits an unknown candidate twice again | `forward` and `alias_after`: exit 1 with the methods walked only; the six `unit_admit_dynamic_actual_*` rows get back their old L1. |
+| `nowitness` | a typed reference that hands a free name on is no coordinate witness | `free_name` is refused at translation: `length requires one known primitive own array`. |
+| `nos` | the giving place's own declaration is not offered | `other`, `hidden`, `alias_after`: exit 1; `missing_field`: 81. `forward` and `free_name` green: at their consumers' sites the giving place has no declaration of its own. |
+| `nosameclass` | every anchor that answers is a class of its own | `two_anchors`: exit 1 in all three modes; the other fixtures green. |
+| `k_mapok` | the identity takes a record admitted through a map | table selftest: `a value admitted through a map was identical by position`. |
+| `k_self` | the identity takes the declaration's own record | table selftest: `the declaration's own record was taken for its identity with itself`. |
+| `k_never` | no record answers | table selftest 2 failures; walker selftest 4. |
+| `k_noclass` | the walker does not tell classes apart | walker: `two classes that both answer refuse, with no positional success and nothing recorded`. |
+| `k_noown` | the giving place's own declaration does not decide | walker: `the giving place's own declaration decides when its entry answers`. |
+| `k_rescue` | a value with a layout of its own is asked for its identity too | walker: `a value with a layout of its own is not admitted through an identity entry`. |
+| `k_fallthrough` | two classes that answer fall through to the record and the positional check | walker: the refusal of two classes and the selection within one class fail. |
+
+No mutant reaches the native refusal of two classes: no program builds it.
+
+### Measured
+
+The translator against the committed one (`045d6ea2`), on the 1787
+translations recorded by `fable_full_43`: exit and messages are the same on
+every row, and the generated L1 on 1756. Of the 31 others, 25 gain identity
+entries in the native text and in ADMIT_AS -- at sites where a candidate with
+no layout the translation knows is formed into an input admitted by the
+Consumer's uses; a value with a layout of its own there keeps its layout's
+route -- and six (`unit_admit_dynamic_actual_*`) lose the walked whole-model
+admission.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_01` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. `lmx_implements_table` 88 checks (73 before), `lmx_walk_admit_selftest` 58 (46 before). |
+| `build/l3_selftest/opus_l3_01` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_02` (full harness) | RED 40 of 1803. Against `fable_full_43`: FAIL→OK 0, OK→FAIL 0, added 15, of them 14 green and `unit_letter_alias_before` red, the OPEN required positive; none removed; no message of a red row changed. The staged translator is the committed blob `d5a9a7a9`; every declared path is the same before and after the run. |
+| `build/l2_harness/opus_focus_b2` (focused, before the gates) | 130 rows: the new rows pass; the three red rows are `unit_letter_alias_before` and the two required positives of section 71 (`unit_free_path_field_converted`, `_swapped`). |
+
+The first full run, `opus_full_01`, was stopped by Opus a few minutes after it
+began, to add `unit_letter_place_two_anchors`; its directory was removed. The
+kernel and L3 gates are not repeated: the kernel and translator bytes are the
+same, hash for hash, in both runs.
+
+### What is not built
+
+- **A reception that receives in full or by coverage** (fullReceiver 1 and 2:
+  the binding of a typed reference of another declaration, a return value) is
+  offered no identity entry. A letter held in a MainLetter place and bound to
+  a Long reference is refused as before.
+- **A value no reception recorded** is admitted by position against the whole
+  model, not by the Consumer's uses: `unit_letter_alias_before`
+  ([UNRECORDED-LETTER-WHOLE-MODEL](defects.md#unrecorded-letter-whole-model)).
+- **Only a record by position serves.** A letter admitted to a declaration
+  through a map is not composed again; along a chain of typed places the
+  anchors of the earlier places carry it.
+- **A site with no recorded edge** offers no entries.
+- **A Structure of a known layout through an opaque formal** still stops the
+  translation ([OPAQUE-ACTUAL-KNOWN-LAYOUT](defects.md#opaque-actual-known-layout));
+  the anchor edge now recorded at that site carries possibilities only.
+
+<a id="author-decisions-20261005"></a>
+## 73. The author's three decisions of 2026-10-05: what they supersede here, what they leave to build
+
+No translator, fixture or harness byte changes with this section. The author
+answered the three open questions, and Codex relayed the answers
+(AUTHOR-MERGE-PARENT-20261005-114321, AUTHOR-FACTORY-REF-20261005-114610,
+DOC-BATON-AUTHOR-20261005-115300). The author's words are archived in
+[the blog of 2026-10-05](../LMX_blog/2026-10-05.md), and the three questions
+are closed in `LMX_blog/q/`. The quotations below are Codex's, from those
+messages. Earlier sections are not rewritten: what they measured stands, and
+what they said of the norm is superseded as marked here.
+
+### The parent of a merge's copy
+
+The author's words: [blog](../LMX_blog/2026-10-05.md#merge-parent); the rule:
+[semantics #composition](../docs/LMX_semantics.en.md#composition). Codex: "merge copies the USED part of the existing tree and rewrites parent
+links INSIDE THE COPY, preserving the copied source relationships. The place
+that executes merge does not supply/redefine its lexical parent or trigger
+free-name resolution in that place." In the question's example, where no
+caller gives `other`, "the copied lexical value is 9, not the merge-site's 50;
+later mutation of the original is not observed". "Ordinary dynamic input
+priority is unchanged." And: "Do not infer that every copied node gets
+parent=0: rewrite the actual source links under the existing source-to-copy
+relation, respecting the established qualified immutable/native retention
+rules."
+
+Superseded: the twelfth reply's sentence quoted in
+[section 63](#twelfth-reply), "#composition fixes the new root's lexical
+parent from the merge expression's location", and that section's table cell
+"By the norm the node's parent follows the place of the merge". The choice
+that [section 64](#thirteenth-reply) left between the place of the merge and
+the model's copied state is decided for the copy
+([the closed question](../LMX_blog/q/merge-lexical-copy-and-root-placement.md)).
+
+What was measured stands, and it is the defect: the node hangs under the
+`node` of the method that gives the merge, and its body reads the live cell
+of the unit's field, 9, 11, 9 where the copy gives 9, 9, 9.
+[T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links) stays OPEN and no
+longer waits for the author. Its witness is the entry's second program,
+asymmetric: the model's lexical `other` 9, the executing method's own `other`
+50, no caller giving it; the copy reads 9 before and after the original is
+changed to 11, and a read of the original sees 11. `node\other` in the copy
+follows the copied lexical link. The rows come with the repair, natively and
+walked, with a shared target, a cycle and the ordinary priority of a caller's
+input beside them.
+
+### The receiver of a factory's result
+
+The author's words: [blog](../LMX_blog/2026-10-05.md#factory-reference-result);
+the rule: [semantics](../docs/LMX_semantics.en.md#factory-reference-result).
+Codex: "the old result-binding example must be REWRITTEN using the explicit @:
+receiver. The general dormant named-body rule remains; do not preserve a
+magic factory-initialization meaning for an unknown ordinary head just because
+its tail starts with a known method name, nor distinguish
+short/parenthesized/block spellings to rescue it." Codex's rewriting of the
+example, which it calls "NOT a verbatim author quote and NOT a new
+unary-address rule", receives the results as `@: add5 makeAdder(5)` and
+`@: add100 makeAdder(100)`; `[add5(1); add100(1); add5(1)]` gives `[6 101 6]`.
+
+Superseded: the question that [section 50](#result-receipt-open) sent to the
+author, whether the short form `add5: makeAdder 5` keeps its meaning of
+binding the call's result, and with it the hold on a factory's named actuals:
+they are the named actuals of the call in `@: h2 make2(n: 100)`
+([the closed question](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)).
+
+Measured on this ledger's translator (`f8ef5d8b…`), translation only, outside
+any gate: `@: add5 makeAdder(5)` is refused at the root and in a method,
+`unsupported body` (frame `@`). The short form still translates with its old
+meaning: the factory is called where the statement stands. The rows of T6 and
+of held callables are built on it
+([FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)).
+
+### A head that no binding established
+
+The author's words: [blog](../LMX_blog/2026-10-05.md#unknown-head-return).
+Codex: "return: x is plainly a type-conversion error in the supplied
+example." And: "The example's x: j has no established primitive/free-input
+binding, so it defines named Structure x; later return: x does not
+retroactively make x a hidden primitive input. There is no valid int result."
+And: "A caller's same-name variable alone cannot change the source head's
+role."
+
+Superseded: the tie-break that [section 13](#head-role) asked of the author
+for `unit_colon_hidden_update`, `unit_free_conv` and `unit_walk_free_conv`,
+and the note of [section 18](#triage) that `unit_asgn_fallback` waits for the
+author ([the closed question](../LMX_blog/q/head-role-hidden-input-fixed-point.md)).
+`unit_free_conv` and its walked twin have the question's shape in `target`
+(`k: j`, then `return: k`): by the decision a refusal at the return, no
+required positive. `unit_colon_hidden_update` reads its head in its own tail
+(`hidden: hidden + 1`, then `return: hidden`); whether the decision covers
+that read is put to Codex before its expectation changes. The expectations
+change with the step that carries the rows into a gate
+([HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows)).
+
+**Next.** The rows of these three decisions and the order of the plan come
+from Codex's reply to this checkpoint. Codex's handoff order stands until
+then: the ceilings of path and admission text, the cost of a merge in a large
+unit, the receiving-edge debts (c) to (f), the duplicate stop of a static
+producer and the numeric conversion at the receiving edge.

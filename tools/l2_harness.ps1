@@ -7938,6 +7938,58 @@ $fixtures = @(
         NativeMethods = @(0..2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_formal_wide_model_walk.lm2'; Source = 'unit_formal_wide_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..2); Absent = @(); Debt = @() },
+    # A letter held in a place of its own declaration and admitted to a formal of another declaration by what
+    # the formal's method reads (TYPED-PLACE-LETTER-READMISSION; Codex, FABLE-CODEX-20261004-12, the nineteenth
+    # reply (b), and OPUS-HANDOFF-20261005-103112).  Where the input is formed, the letter's own record of its
+    # reception by position (lmx_implements_identity) and the pair map of the two declarations give the formal's
+    # fields; the declaration of a place is a possible anchor and no evidence.  Explicit actual, the same letter
+    # twice and through a MainLetter formal (other); a hidden input (hidden); two opaque formals, a method that
+    # hands it to itself and two that hand it to each other, then a Structure with a layout of its own at the
+    # same sites (forward); a field the declaration has not, newly demanded after an admission that did not ask
+    # for it: refused where the input is formed and caught, 42 (missing_field); the letter alone under a free
+    # name, the typed reference's declaration the coordinate space (free_name); an untyped alias after a
+    # binding (alias_after).  Where the methods are walked, the consumers that read a formal admitted by name
+    # and the methods that receive the letter stay native; the methods that form the inputs are walked.
+    [pscustomobject]@{ Name = 'unit_letter_place_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_other_walk.lm2'; Source = 'unit_letter_place_other.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_hidden_walk.lm2'; Source = 'unit_letter_place_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); NativeMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_forward_walk.lm2'; Source = 'unit_letter_place_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1,2,3,4,5); NativeMethods = @(0,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_missing_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_missing_field_walk.lm2'; Source = 'unit_letter_place_missing_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Argv = @('a', 'b'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3,4); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_free_name_walk.lm2'; Source = 'unit_letter_place_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Argv = @('a', 'b'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); NativeMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_alias_after.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_alias_after_walk.lm2'; Source = 'unit_letter_alias_after.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1,2); NativeMethods = @(0,3); Absent = @(); Debt = @() },
+    # Two declarations whose records both answer for the letter (Codex's reply to OPUS-HANDOFF-20261005-103112:
+    # a fixture probing multiple available anchors).  The letter is bound to a MainLetter and to an Other
+    # reference, both handed to hop's opaque formal: both reach hop's place, both records answer where observe's
+    # input is formed, and both give observe's one used path the same place of the value -- one class, the first
+    # entry taken, 2 + n both times.  A disagreement on a used target cannot be built while the only value with
+    # no layout of its own is the one-field argv letter; the walker's selftest has it.
+    [pscustomobject]@{ Name = 'unit_letter_place_two_anchors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_letter_place_two_anchors_walk.lm2'; Source = 'unit_letter_place_two_anchors.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Argv = @('a', 'b'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1); NativeMethods = @(0,2); Absent = @(); Debt = @() },
+    # OPEN positive, required before G5 (OPUS-HANDOFF-20261005-103112, point 6).  The letter given untyped to a
+    # Long formal before anything admitted it to MainLetter is valid by the consumer's uses, as it is after the
+    # binding.  It has no record of a reception to ask, and a value with no layout of its own is still admitted
+    # by position against the whole model: refused, red until that admission is by the consumer's uses.
+    [pscustomobject]@{ Name = 'unit_letter_alias_before.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Argv = @('a', 'b'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     # A path of two steps through the name (31, 42).
     [pscustomobject]@{ Name = 'unit_free_path_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },

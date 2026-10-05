@@ -206,6 +206,10 @@ prototype:
     # admissions, never inferred from req/map. No map or Consumer proof transfers.
     fn: lmx_implements_layout (@: LmxArena arena; @: Lmx value) @: void
     fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImplEntry
+    # 1 when a completed reception proved value identical, by position, with the declaration whose own
+    # layout token is `layout` (a record with neither frame nor map and no holes), else 0.  The
+    # declaration's own record certifies no other value; the value's layout stays unknown.  Read only.
+    fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) int
     # The value's slot for EDGE j through its record (K01): j < width is req's field j through
     # the ordinal half, width <= j < 2*width the LAST half of field j - width (a bare name).
     # 0 and *out, or 1 when the value has no record for req -- a value that reached a place of

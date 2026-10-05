@@ -1,0 +1,32 @@
+# The letter alone under a free name (TYPED-PLACE-LETTER-READMISSION;
+# Codex, FABLE-CODEX-20261004-12, the twenty-first reply Q3). r reads
+# box\mainArgs, and nothing in r's sight declares box. The only value
+# that reaches the name is the letter take holds in its MainLetter
+# reference named box, given to r directly and through relay, which
+# only hands the name on. The declaration of that typed reference is the
+# coordinate space of r's path: no type of the name and no evidence of
+# the value. Where r's input is formed the letter's own record of its
+# reception is asked: 2 + n both times. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: r () int
+return: 2 + (cast: (int) length(box\mainArgs))
+
+fn: relay () int
+return: r()
+
+fn: take () int
+    @: MainLetter box
+    receiveMessage: box
+    int: n (cast: (int) length(box\mainArgs))
+    int: a r()
+    int: b relay()
+    if: n < 1 || a != 2 + n || b != a
+        return: 81
+return: 7
+
+int: ok take()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

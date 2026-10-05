@@ -343,6 +343,32 @@ int: l2_d105t_cap 0
 int: l2_d105_tcap 0
 # How many pair maps were declared (module scope); a pair asked for later has no array.
 int: l2_d105t_declared 0 - 1
+# Possible anchors of a value's positional identity (TYPED-PLACE-LETTER-READMISSION; l2_d105a_close): declaration ty
+# of a place a value passes through on its way to place k of method mi.  Translation metadata only, grown with the
+# program; what a value was admitted to is asked of its own records when the program runs.
+int: l2_d105a_n 0
+int: l2_d105a_cap 0
+@: int l2_d105a_mi 0
+@: int l2_d105a_k 0
+@: int l2_d105a_ty 0
+int: l2_d105a_done 0
+# Anchor edges (l2_d105x_add): the way a held value came to a Structure formal from a place of its caller.
+int: l2_d105x_n 0
+int: l2_d105x_cap 0
+@: int l2_d105x_fmi 0
+@: int l2_d105x_fk 0
+@: int l2_d105x_tmi 0
+@: int l2_d105x_tk 0
+# The identity entries of each reception site, computed once (l2_identity_list): a marker row (ty -2) for the key
+# (giving place fmi/fk -> input tk of tmi), then its entries in order, each a declaration and its class.
+int: l2_ide_n 0
+int: l2_ide_cap 0
+@: int l2_ide_fmi 0
+@: int l2_ide_fk 0
+@: int l2_ide_tmi 0
+@: int l2_ide_tk 0
+@: int l2_ide_ty 0
+@: int l2_ide_cls 0
 int: l2_d105_seq 0
 # The coverage of a method's own typed reference (the receiving-use contract;
 # l2_ruse_of): per own row its state -- 0 not asked, 1 unknown, 2 known -- and,
@@ -1129,7 +1155,7 @@ prototype:
     fn: l2_d105_any (int: mi) int
     fn: l2_d105_tnode (int: p; @: char dest) int
     fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi) int
-    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi) int
+    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk) int
     fn: l2_ruse_reset () int
     fn: l2_ruse_of (int: own) int
     fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
@@ -1144,6 +1170,13 @@ prototype:
     fn: l2_d105_dynamic (@: L2ReferenceSource source) int
     fn: l2_d105_place_sources (int: mi; int: k) int
     fn: l2_input_undeclared (int: mi; int: j) int
+    fn: l2_d105a_close () int
+    fn: l2_place_declaration (int: mi; int: k) int
+    fn: l2_d105_edge_known (int: fmi; int: fk; int: tmi; int: tk) int
+    fn: l2_d105x_add (int: fmi; int: fk; int: tmi; int: tk) int
+    fn: l2_ide_reserve (int: fmi; int: fk; int: tmi; int: tk) int
+    fn: l2_d105_pair_find (int: cand; int: req) int
+    fn: l2_identity_list (int: req; @: L2ReferenceSource source; int: tmi; int: tk; int: full_receiver; @: int first; @: int count) int
     fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
     fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
     fn: l2_d105_emit_tables () int
@@ -1154,8 +1187,8 @@ prototype:
     fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); size_t: n; @: int out_kind) int
     fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: char dest) int
     fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
-    fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; @: int out) int
-    fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; @: int out) int
+    fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; int: tmi; int: tk; @: int out) int
+    fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out) int
     fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
@@ -3949,7 +3982,7 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
     if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
         return: 1
     # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).
-    if: l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1) != 0
+    if: l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
         return: 1
     # §7b: the value is evaluated above; what is marked is published before the return (book §14).
     if: l2_emit_publish(ind) != 0
@@ -13523,6 +13556,14 @@ fn: l2_dyn_close (const: @(char path)) int
         changed: 0
         if: l2_dyn_step(path, @ changed) != 0
             return: 1
+    ---
+    # Every site has recorded its edges: the possible anchors of a value's positional identity are closed over them
+    # (l2_d105a_close), and the identity entries of the receptions are found from these (l2_identity_list).  The
+    # waited checks end here again, and both are found again.
+    l2_d105a_done: 0
+    l2_ide_n: 0
+    if: l2_d105a_close() != 0
+        return: 1
 return: l2_dyn_typed(path)
 
 # steps/free-names.md M2: is t a dynamic input of mi that the closure has not typed yet?  Never while the waited
@@ -25097,6 +25138,11 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
             if: l2_d105_dynamic(@ source) != 0 && l2_admit_site(mi) != 0
                 return: l2_error(path, node, "internal: admission outside a method")
             ---
+            # The way such a candidate comes to the formal from a place of this method is an anchor edge
+            # (l2_d105x_add): the identity entries of the reception follow the places it passed through.
+            if: source.method >= 0 && l2_d105_dynamic(@ source) != 0 && l2_d105x_add((source.method), (source.place), idx, actual_i) != 0
+                return: l2_alloc_or(path, node, "out of memory")
+            ---
         # Opaque pointer formals carry possible source facts too. Their lack
         # of a receiving model does not erase a later forwarding admission.
         if: req_mi < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
@@ -28472,6 +28518,39 @@ fn: l2_flow_free () int
     l2_d105t_req: 0
     l2_d105t_n: 0
     l2_d105t_cap: 0
+    l2_xfree((cast: (@: void) l2_d105a_mi))
+    l2_d105a_mi: 0
+    l2_xfree((cast: (@: void) l2_d105a_k))
+    l2_d105a_k: 0
+    l2_xfree((cast: (@: void) l2_d105a_ty))
+    l2_d105a_ty: 0
+    l2_d105a_n: 0
+    l2_d105a_cap: 0
+    l2_d105a_done: 0
+    l2_xfree((cast: (@: void) l2_ide_fmi))
+    l2_ide_fmi: 0
+    l2_xfree((cast: (@: void) l2_ide_fk))
+    l2_ide_fk: 0
+    l2_xfree((cast: (@: void) l2_ide_tmi))
+    l2_ide_tmi: 0
+    l2_xfree((cast: (@: void) l2_ide_tk))
+    l2_ide_tk: 0
+    l2_xfree((cast: (@: void) l2_ide_ty))
+    l2_ide_ty: 0
+    l2_xfree((cast: (@: void) l2_ide_cls))
+    l2_ide_cls: 0
+    l2_ide_n: 0
+    l2_ide_cap: 0
+    l2_xfree((cast: (@: void) l2_d105x_fmi))
+    l2_d105x_fmi: 0
+    l2_xfree((cast: (@: void) l2_d105x_fk))
+    l2_d105x_fk: 0
+    l2_xfree((cast: (@: void) l2_d105x_tmi))
+    l2_d105x_tmi: 0
+    l2_xfree((cast: (@: void) l2_d105x_tk))
+    l2_d105x_tk: 0
+    l2_d105x_n: 0
+    l2_d105x_cap: 0
     l2_xfree((cast: (@: void) l2_d105_tbuf))
     l2_d105_tbuf: 0
     l2_d105_tcap: 0
@@ -28913,6 +28992,12 @@ sub: l2_anchor_reach (int: mi; int: key; @: int set; @: int n; @: int seen_m; @:
         key: seen_k[at]
         if: l2_d105_key_own(key) >= 0
             l2_anchor_add(set, n, l2_anchor_own_layout(l2_d105_key_own(key)))
+        # The declaration of a typed reference that hands the name on is a coordinate witness of the paths too
+        # (Codex, FABLE-CODEX-20261004-12, the twenty-first reply Q3): what the reference holds was admitted to that
+        # declaration, and the admission where the reader's input is formed asks the held value's own record when
+        # the program runs.  The declaration proves nothing about the value by itself.
+        if: l2_d105_key_own(key) >= 0 && l2_own_is_slot(l2_d105_key_own(key)) = 0 && l2_schema_kind(l2_own_nsty_get(l2_d105_key_own(key))) = 1
+            l2_anchor_add(set, n, l2_own_nsty_get(l2_d105_key_own(key)))
         i: 0
         while: i < l2_d105s_n
             if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = key && l2_schema_kind(l2_d105s_ty[i]) = 1
@@ -30127,7 +30212,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         dyn_mi: 0 - 1
         if: l2_d105_dynamic(@ source) != 0
             dyn_mi: mi
-        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0, -1, dyn_mi) != 0
+        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_at(acts, t), ind, 0, 0, -1, dyn_mi, idx, t) != 0
             return: l2_prep_drop(acts, hides)
         written: written + 1
     ---
@@ -32983,6 +33068,10 @@ fn: l2_d105_reset () int
     l2_d105s_n: 0
     l2_d105e_n: 0
     l2_d105t_n: 0
+    l2_d105a_n: 0
+    l2_d105a_done: 0
+    l2_ide_n: 0
+    l2_d105x_n: 0
 return: 0
 
 # Is named type ty already a source of formal k of mi?
@@ -34252,6 +34341,20 @@ fn: l2_d105_close () int
             return: 1
         e: e + 1
     ---
+    # The identity entries of every reception along a recorded edge (l2_identity_list) have their pair maps among
+    # the program's, reserved here before the maps are declared.  An entry is no admission: the record is asked.
+    e: 0
+    while: e < l2_d105e_n
+        if: l2_ide_reserve(l2_d105e_fmi[e], l2_d105e_fk[e], l2_d105e_tmi[e], l2_d105e_tk[e]) != 0
+            return: 1
+        e: e + 1
+    ---
+    e: 0
+    while: e < l2_d105x_n
+        if: l2_ide_reserve(l2_d105x_fmi[e], l2_d105x_fk[e], l2_d105x_tmi[e], l2_d105x_tk[e]) != 0
+            return: 1
+        e: e + 1
+    ---
 return: 0
 
 # Has method mi a formal admitted by name?
@@ -34337,6 +34440,446 @@ fn: l2_d105_place_sources (int: mi; int: k) int
     ---
 return: n
 
+# POSSIBLE ANCHORS (TYPED-PLACE-LETTER-READMISSION; Codex, FABLE-CODEX-20261004-12, replies nineteen (b) and
+# twenty-two, OPUS-HANDOFF-20261005-103112).  A value with no layout of its own -- a letter -- that the positional
+# check admitted into a place of a declaration carries the record of that reception (lmx_implements_identity): the
+# declaration's fields are where they are in the value.  Which declarations a value may carry such a record of is
+# known to the translation only as a possibility: the declarations of the places it passes through.  An anchor is
+# that possibility and nothing else -- no source, no layout, no admission; when the program runs the value's own
+# records are asked.
+
+# Room for one more anchor.
+fn: l2_d105a_room () int
+    int: want
+    if: l2_d105a_n < l2_d105a_cap
+        return: 0
+    want: l2_cap_next(l2_d105a_cap, l2_d105a_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_d105a_mi, l2_d105a_n, want) != 0 || l2_d105_ints(@ l2_d105a_k, l2_d105a_n, want) != 0 || l2_d105_ints(@ l2_d105a_ty, l2_d105a_n, want) != 0
+        return: 1
+    l2_d105a_cap: want
+return: 0
+
+fn: l2_d105a_has (int: mi; int: k; int: ty) int
+    int: i 0
+    while: i < l2_d105a_n
+        if: l2_d105a_mi[i] = mi && l2_d105a_k[i] = k && l2_d105a_ty[i] = ty
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# Declaration ty is an anchor of place k of method mi, once; *changed when it is new.  1 when there is no memory.
+fn: l2_d105a_add (int: mi; int: k; int: ty; @: int changed) int
+    if: mi < 0 || ty = -1 || l2_d105a_has(mi, k, ty) != 0
+        return: 0
+    if: l2_d105a_room() != 0
+        return: 1
+    l2_d105a_mi[l2_d105a_n]: mi
+    l2_d105a_k[l2_d105a_n]: k
+    l2_d105a_ty[l2_d105a_n]: ty
+    l2_d105a_n: l2_d105a_n + 1
+    \changed: 1
+return: 0
+
+# The declaration of place k of method mi, where the place has one of its own and it is a named Structure: an own
+# reference's or field's, a formal's, a hidden input's lexical source's, a result's.  -1 otherwise, a hidden input
+# nothing in its method's sight declares among them: the coordinate space of its paths declares no place.
+fn: l2_place_declaration (int: mi; int: k) int
+    int: s
+    if: mi < 0 || mi >= l2_m_n
+        return: -1
+    if: k >= l2_m_arity[mi] && l2_input_undeclared(mi, k) != 0
+        return: -1
+    s: l2_input_schema(mi, k)
+    if: l2_schema_kind(s) != 1
+        return: -1
+return: s
+
+# ANCHOR EDGES.  A held value given to a Structure formal from a place of the caller is an edge of the way it
+# came (l2_d105x_add), recorded where the checks see the site: the formal's admission asks for the identity entries
+# of the places the value passed through.  Recorded apart from the edges of D-105 (l2_d105_edge): those carry
+# layouts and their checks, and an anchor edge carries possibilities only.
+fn: l2_d105x_room () int
+    int: want
+    if: l2_d105x_n < l2_d105x_cap
+        return: 0
+    want: l2_cap_next(l2_d105x_cap, l2_d105x_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_d105x_fmi, l2_d105x_n, want) != 0 || l2_d105_ints(@ l2_d105x_fk, l2_d105x_n, want) != 0
+        return: 1
+    if: l2_d105_ints(@ l2_d105x_tmi, l2_d105x_n, want) != 0 || l2_d105_ints(@ l2_d105x_tk, l2_d105x_n, want) != 0
+        return: 1
+    l2_d105x_cap: want
+return: 0
+
+# The anchor edge from place fk of fmi to input tk of tmi, once, where no edge of D-105 is that edge already.  1
+# when there is no memory.
+fn: l2_d105x_add (int: fmi; int: fk; int: tmi; int: tk) int
+    if: fmi < 0 || tmi < 0 || l2_d105_edge_known(fmi, fk, tmi, tk) != 0
+        return: 0
+    if: l2_d105x_room() != 0
+        return: 1
+    l2_d105x_fmi[l2_d105x_n]: fmi
+    l2_d105x_fk[l2_d105x_n]: fk
+    l2_d105x_tmi[l2_d105x_n]: tmi
+    l2_d105x_tk[l2_d105x_n]: tk
+    l2_d105x_n: l2_d105x_n + 1
+return: 0
+
+# Along one edge, from place fk of fmi to place tk of tmi: the giving place's own declaration and every anchor of
+# the giving place reach the place it hands to.  1 when there is no memory.
+fn: l2_d105a_along (int: fmi; int: fk; int: tmi; int: tk; @: int changed) int
+    int: i 0
+    int: n l2_d105a_n
+    if: fmi < 0 || tmi < 0
+        return: 0
+    if: l2_d105a_add(tmi, tk, l2_place_declaration(fmi, fk), changed) != 0
+        return: 1
+    while: i < n
+        if: l2_d105a_mi[i] = fmi && l2_d105a_k[i] = fk && l2_d105a_add(tmi, tk, l2_d105a_ty[i], changed) != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# The anchors over the edges every site recorded -- of D-105 (l2_d105_edge) and the anchor edges (l2_d105x_add) --
+# to the fixed point.  An anchor joins a place once, so a cycle of methods ends; the tables grow with the program.
+fn: l2_d105a_close () int
+    int: changed 1
+    int: e
+    l2_d105a_n: 0
+    while: changed != 0
+        changed: 0
+        e: 0
+        while: e < l2_d105e_n
+            if: l2_d105a_along(l2_d105e_fmi[e], l2_d105e_fk[e], l2_d105e_tmi[e], l2_d105e_tk[e], @ changed) != 0
+                return: l2_alloc_or(l2_src, l2_d105e_at[e], "out of memory")
+            e: e + 1
+        ---
+        e: 0
+        while: e < l2_d105x_n
+            if: l2_d105a_along(l2_d105x_fmi[e], l2_d105x_fk[e], l2_d105x_tmi[e], l2_d105x_tk[e], @ changed) != 0
+                return: l2_alloc_or(l2_src, 0, "out of memory")
+            e: e + 1
+        ---
+    ---
+    l2_d105a_done: 1
+return: 0
+
+# Whether the checks recorded the edge from place fk of fmi to input tk of tmi: an edge of D-105 or an anchor edge.
+fn: l2_d105_edge_known (int: fmi; int: fk; int: tmi; int: tk) int
+    int: e 0
+    while: e < l2_d105e_n
+        if: l2_d105e_fmi[e] = fmi && l2_d105e_fk[e] = fk && l2_d105e_tmi[e] = tmi && l2_d105e_tk[e] = tk
+            return: 1
+        e: e + 1
+    ---
+    e: 0
+    while: e < l2_d105x_n
+        if: l2_d105x_fmi[e] = fmi && l2_d105x_fk[e] = fk && l2_d105x_tmi[e] = tmi && l2_d105x_tk[e] = tk
+            return: 1
+        e: e + 1
+    ---
+return: 0
+
+# The index of the program's pair map cand -> req, or -1 when it is not among them.  Asks, adds nothing.
+fn: l2_d105_pair_find (int: cand; int: req) int
+    int: i 0
+    while: i < l2_d105t_n
+        if: l2_d105t_cand[i] = cand && l2_d105t_req[i] = req
+            return: i
+        i: i + 1
+    ---
+return: -1
+
+# Room for one more row of identity entries.
+fn: l2_ide_room () int
+    int: want
+    if: l2_ide_n < l2_ide_cap
+        return: 0
+    want: l2_cap_next(l2_ide_cap, l2_ide_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_ide_fmi, l2_ide_n, want) != 0 || l2_d105_ints(@ l2_ide_fk, l2_ide_n, want) != 0 || l2_d105_ints(@ l2_ide_tmi, l2_ide_n, want) != 0
+        return: 1
+    if: l2_d105_ints(@ l2_ide_tk, l2_ide_n, want) != 0 || l2_d105_ints(@ l2_ide_ty, l2_ide_n, want) != 0 || l2_d105_ints(@ l2_ide_cls, l2_ide_n, want) != 0
+        return: 1
+    l2_ide_cap: want
+return: 0
+
+fn: l2_ide_push (int: fmi; int: fk; int: tmi; int: tk; int: ty; int: cls) int
+    if: l2_ide_room() != 0
+        return: 1
+    l2_ide_fmi[l2_ide_n]: fmi
+    l2_ide_fk[l2_ide_n]: fk
+    l2_ide_tmi[l2_ide_n]: tmi
+    l2_ide_tk[l2_ide_n]: tk
+    l2_ide_ty[l2_ide_n]: ty
+    l2_ide_cls[l2_ide_n]: cls
+    l2_ide_n: l2_ide_n + 1
+return: 0
+
+# The first step of each path the Consumer reads (the uses just collected, l2_uses_walk_frame) as an edge of req, of
+# width w: field j through its ordinal half for an explicit `[N]name`, the LAST half (w + j) for a bare name.  A step
+# req does not declare is no part of this Consumer.  Each edge once, into used (room for 2 * w), *n.
+sub: l2_anchor_used (int: req; int: w; @: int used; @: int n)
+    size_t: off 0U
+    @: char slot
+    size_t: len
+    size_t: cut
+    size_t: name_at
+    int: occurrence
+    int: j
+    int: edge
+    int: k
+    LmP0Text: name
+    \n: 0
+    if: l2_uses_buf = 0
+        return
+    while: off < (cast: (size_t) l2_uses_len)
+        slot: l2_uses_buf + off
+        len: strlen(slot)
+        cut: 0U
+        while: cut < len && slot[cut] != 92
+            cut: cut + 1U
+        occurrence: -1
+        name_at: 0U
+        if: cut > 0U && slot[0] = 91
+            occurrence: 0
+            name_at: 1U
+            while: name_at < cut && slot[name_at] >= 48 && slot[name_at] <= 57
+                occurrence: occurrence * 10 + (cast: (int) (slot[name_at] - 48))
+                name_at: name_at + 1U
+            if: name_at >= cut || slot[name_at] != 93
+                name_at: cut
+            else:
+                name_at: name_at + 1U
+            ---
+        ---
+        if: name_at < cut
+            name.data: slot + name_at
+            name.length: cut - name_at
+            j: l2_schema_named(req, @ name, occurrence, 0)
+            if: j >= 0 && j < w
+                edge: j
+                if: occurrence < 0
+                    edge: w + j
+                k: 0
+                while: k < \n && used[k] != edge
+                    k: k + 1
+                if: k = \n
+                    used[\n]: edge
+                    \n: \n + 1
+                ---
+            ---
+        ---
+        off: off + len + 1U
+    ---
+end: l2_anchor_used
+
+# Whether declaration a is an identity entry where the Consumer whose uses were just collected reads a value admitted
+# to req: a named declaration other than req whose correspondence to req the translation builds (l2_d105_table) and
+# that gives every path the Consumer reads (l2_descriptor_used: the admission by the consumer's uses).  Its places for
+# the Consumer's used first steps go to row.  1, 0, or -1 when there is no memory.  A declaration that is no entry
+# condemns no value: it is only not offered.
+fn: l2_anchor_offer (int: a; int: req; @: int used; int: used_n; @: int row) int
+    int: ok 0
+    int: tn 0
+    int: u 0
+    int: status
+    @: int t
+    if: a = -1 || a = req || l2_schema_kind(a) != 1
+        return: 0
+    if: l2_descriptor_used(a, req, @ ok) != 0 || ok = 0
+        return: 0
+    t: l2_d105_cells(req)
+    if: t = 0
+        return: -1
+    status: l2_d105_table(a, req, t, l2_d105_tcap, @ tn, 1)
+    if: status != 0
+        return: 0
+    while: u < used_n
+        row[u]: -1
+        if: used[u] < tn
+            row[u]: t[used[u]]
+        u: u + 1
+    ---
+return: 1
+
+# The identity entries of the reception where a candidate with no layout of its own, read from place fk of fmi, is
+# formed into input tk of tmi and admitted to req by the Consumer's uses (fullReceiver 0): the giving place's own
+# declaration s first, then the anchors that reach the giving place, each offered by l2_anchor_offer.  Class 0 is s;
+# the others share a class where they give every used first step the same place, so that entries of one class place
+# what the Consumer reads alike.  Rows are added after a marker row of the key.
+fn: l2_ide_compute (int: req; int: s; int: fmi; int: fk; int: tmi; int: tk; @: int first; @: int count) int
+    int: w l2_d105_width(req)
+    int: anchors 0
+    int: i 0
+    int: k
+    int: j
+    int: u
+    int: a
+    int: ok
+    int: cls
+    int: next_cls 1
+    int: used_n 0
+    int: others 0
+    int: rc 0
+    int: base
+    int: lead
+    size_t: isz
+    @: int used 0
+    @: int proj 0
+    @: LmP0Text nm
+    \first: 0
+    \count: 0
+    # Before the model's width is known -- when the walked frames are first counted -- there is nothing to compute
+    # and nothing is kept: the entries are found once the width is there.
+    if: w < 1
+        return: 0
+    if: l2_ide_push(fmi, fk, tmi, tk, -2, 0) != 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
+    base: l2_ide_n
+    \first: base
+    if: l2_m_node[tmi] = 0 || l2_m_node[tmi]\as = 0 || l2_m_node[tmi]\as\frame = 0
+        return: 0
+    nm: l2_input_name(tmi, tk)
+    if: nm = 0
+        return: 0
+    while: i < l2_d105a_n
+        if: l2_d105a_mi[i] = fmi && l2_d105a_k[i] = fk
+            anchors: anchors + 1
+        i: i + 1
+    ---
+    isz: c.sizeof(c.int)
+    if: l2_mul_ok((cast: (size_t) w) * 2U, isz) = 0 || l2_mul_ok(((cast: (size_t) anchors) + 1U) * (cast: (size_t) w) * 2U, isz) = 0
+        l2_alloc_err: 2
+        return: l2_alloc_or(l2_src, 0, "out of memory")
+    l2_alloc_kind: 5
+    used: (cast: (@: int) l2_xmalloc((cast: (size_t) w) * 2U * isz))
+    proj: (cast: (@: int) l2_xmalloc(((cast: (size_t) anchors) + 1U) * (cast: (size_t) w) * 2U * isz))
+    if: used = 0 || proj = 0
+        rc: l2_alloc_or(l2_src, 0, "out of memory")
+    if: rc = 0
+        l2_uses_reset()
+        if: l2_uses_walk_frame(nm, l2_m_node[tmi]\as\frame) != 0 || l2_uses_oom != 0
+            rc: l2_alloc_or(l2_src, l2_m_node[tmi], "out of memory")
+        ---
+    ---
+    if: rc = 0
+        l2_anchor_used(req, w, used, @ used_n)
+        ok: l2_anchor_offer(s, req, used, used_n, proj)
+        if: ok < 0
+            rc: l2_alloc_or(l2_src, 0, "out of memory")
+        if: ok > 0 && l2_ide_push(fmi, fk, tmi, tk, s, 0) != 0
+            rc: l2_alloc_or(l2_src, 0, "out of memory")
+        lead: l2_ide_n
+    ---
+    i: 0
+    while: rc = 0 && i < l2_d105a_n
+        a: l2_d105a_ty[i]
+        if: l2_d105a_mi[i] = fmi && l2_d105a_k[i] = fk && a != s && a != req
+            ok: l2_anchor_offer(a, req, used, used_n, proj + others * used_n)
+            if: ok < 0
+                rc: l2_alloc_or(l2_src, 0, "out of memory")
+            if: ok > 0
+                cls: 0
+                k: 0
+                while: cls = 0 && k < others
+                    j: 1
+                    u: 0
+                    while: u < used_n
+                        if: proj[k * used_n + u] != proj[others * used_n + u]
+                            j: 0
+                        u: u + 1
+                    ---
+                    if: j != 0
+                        cls: l2_ide_cls[lead + k]
+                    k: k + 1
+                ---
+                if: cls = 0
+                    cls: next_cls
+                    next_cls: next_cls + 1
+                ---
+                if: l2_ide_push(fmi, fk, tmi, tk, a, cls) != 0
+                    rc: l2_alloc_or(l2_src, 0, "out of memory")
+                others: others + 1
+            ---
+        ---
+        i: i + 1
+    ---
+    l2_uses_reset()
+    l2_xfree((cast: (@: void) used))
+    l2_xfree((cast: (@: void) proj))
+    \count: l2_ide_n - base
+return: rc
+
+# The identity entries of a reception (lmx_walk_admit_op, l2_emit_model_admit): rows first .. first + count - 1 of
+# the identity entries, or none.  Only a candidate the translation has no layout for (l2_d105_dynamic), read from a
+# place, formed into an input admitted by the Consumer's uses (fullReceiver 0), along an edge the checks recorded --
+# so that the native text finds its pair maps among the program's (l2_d105_close) and the walked instruction and
+# the native text offer the same entries.  Computed once per site; 1 when there is no memory.
+fn: l2_identity_list (int: req; @: L2ReferenceSource source; int: tmi; int: tk; int: full_receiver; @: int first; @: int count) int
+    int: r 0
+    int: fmi
+    int: fk
+    \first: 0
+    \count: 0
+    if: full_receiver != 0 || req = -1 || source = 0 || source\method < 0 || tmi < 0 || tmi >= l2_m_n || tk < 0
+        return: 0
+    if: l2_d105_dynamic(source) = 0
+        return: 0
+    fmi: source\method
+    fk: source\place
+    if: l2_d105_edge_known(fmi, fk, tmi, tk) = 0 || l2_input_schema(tmi, tk) != req
+        return: 0
+    if: l2_d105a_done = 0 && l2_d105a_close() != 0
+        return: 1
+    while: r < l2_ide_n
+        if: l2_ide_ty[r] = -2 && l2_ide_fmi[r] = fmi && l2_ide_fk[r] = fk && l2_ide_tmi[r] = tmi && l2_ide_tk[r] = tk
+            \first: r + 1
+            r: r + 1
+            while: r < l2_ide_n && l2_ide_ty[r] != -2
+                \count: \count + 1
+                r: r + 1
+            ---
+            return: 0
+        ---
+        r: r + 1
+    ---
+return: l2_ide_compute(req, source\schema, fmi, fk, tmi, tk, first, count)
+
+# The pair maps of the identity entries of the reception along the edge from place fk of fmi to input tk of tmi,
+# reserved among the program's (l2_d105_close, before the maps are declared).  1 when there is no memory.
+fn: l2_ide_reserve (int: fmi; int: fk; int: tmi; int: tk) int
+    L2ReferenceSource: source
+    int: req
+    int: first 0
+    int: count 0
+    int: i
+    if: fmi < 0 || tmi < 0 || tk < 0
+        return: 0
+    source.schema: l2_input_schema(fmi, fk)
+    source.layout: -1
+    source.method: fmi
+    source.place: fk
+    req: l2_input_schema(tmi, tk)
+    if: l2_identity_list(req, @ source, tmi, tk, 0, @ first, @ count) != 0
+        return: 1
+    i: first
+    while: i < first + count
+        if: l2_d105_pair(l2_ide_ty[i], req) < 0
+            return: l2_alloc_or(l2_src, 0, "out of memory")
+        i: i + 1
+    ---
+return: 0
+
 # Input j of method mi is a hidden input whose name nothing in mi's sight declares: it has no schema of its own,
 # mi can only hand it on, and the declarations that reach it are the translation's record.
 fn: l2_input_undeclared (int: mi; int: j) int
@@ -34383,7 +34926,7 @@ fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: 
     source.place: sk
     if: smi < 0
         source.layout: cand
-return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1, at_mi)
+return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1, at_mi, idx, k)
 
 # The candidate has already been evaluated once. Its physical layout is either
 # direct producer evidence or a completed source admission, never its declared
@@ -34392,9 +34935,15 @@ return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 
 # where the candidate is a dynamic one (l2_d105_dynamic), or -1: an input is formed in the calling method before
 # the callee is entered, so a refusal there is that method's implicit `implements`, with its own result and
 # status, its handlers and its publication -- as the walked instruction throws it (LMX_WALK_OP_ADMIT_AS).
-fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi) int
+# tmi/tk name the input the value is formed into where it is one -- a formal or a hidden input -- else -1.
+fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk) int
     int: i 0
     int: p
+    int: r
+    int: pi
+    int: id_first 0
+    int: id_n 0
+    int: amb 0
     int: seq l2_d105_seq
     const: @(char receive) "lmx_implements_receiver_view"
     []: char cover 64
@@ -34439,6 +34988,35 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
         ---
         i: i + 1
     ---
+    # Identity entries (TYPED-PLACE-LETTER-READMISSION; lmx_walk_admit_op does the same for ADMIT_AS).  A candidate
+    # with no layout of its own is asked, when the program runs, whether a completed reception proved it identical
+    # by position with an entry's declaration (lmx_implements_identity); the entry's pair map then gives the model's
+    # fields among that declaration's places.  The giving place's own declaration (class 0) decides when it answers.
+    # Otherwise the first entry that answers is taken, and an entry of another class that answers too makes l2_idsel
+    # 2: the reception is refused, and neither the order of the entries nor the positional check decides which
+    # places the Consumer reads.  No layout is published for the value.
+    if: l2_identity_list(req, source, tmi, tk, full_receiver, @ id_first, @ id_n) != 0
+        return: 1
+    r: id_first
+    while: r < id_first + id_n
+        pi: l2_d105_pair_find(l2_ide_ty[r], req)
+        if: pi < 0
+            return: l2_error(l2_src, 0, "internal: the pair map of an identity entry was not reserved")
+        if: l2_d105_tnode(pi, table) != 0 || l2_layout_token(l2_ide_ty[r], origin) != 0
+            return: 1
+        if: l2_ide_cls[r] = 0 && c.fprintf(l2_out, "%sif: l2_layout%d = 0 && l2_layout_found%d = 0 && %s != 0 && lmx_implements_identity(l2_program_arena, (cast: (@: Lmx) %s), %s) != 0\n%s    l2_d105t%d: %s\n%s    l2_layout_found%d: 1\n", ind, seq, seq, value, value, origin, ind, seq, table, ind, seq) < 0
+            return: 1
+        if: l2_ide_cls[r] != 0
+            if: amb = 0 && c.fprintf(l2_out, "%sint: l2_idsel%d 0\n%sint: l2_idcls%d 0\n", ind, seq, ind, seq) < 0
+                return: 1
+            amb: 1
+            if: c.fprintf(l2_out, "%sif: l2_layout%d = 0 && l2_layout_found%d = 0 && %s != 0 && lmx_implements_identity(l2_program_arena, (cast: (@: Lmx) %s), %s) != 0\n%s    if: l2_idsel%d != 0 && l2_idcls%d != %d\n%s        l2_idsel%d: 2\n%s    if: l2_idsel%d = 0\n%s        l2_d105t%d: %s\n%s        l2_idcls%d: %d\n%s        l2_idsel%d: 1\n%s    ---\n", ind, seq, seq, value, value, origin, ind, seq, seq, l2_ide_cls[r], ind, seq, ind, seq, ind, seq, table, ind, seq, l2_ide_cls[r], ind, seq, ind) < 0
+                return: 1
+        ---
+        r: r + 1
+    ---
+    if: amb != 0 && c.fprintf(l2_out, "%sif: l2_layout_found%d = 0 && l2_idsel%d = 1\n%s    l2_layout_found%d: 1\n", ind, seq, seq, ind, seq) < 0
+        return: 1
     # The instruction carries the coverage of the place it receives into when
     # that coverage is known: the reception then asks for the fields it names.
     # Unknown coverage stays the full reception.
@@ -34449,7 +35027,9 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
         receive: "lmx_implements_receiving_use"
         c.sprintf(cover, ", @ l2_rusev%d", seq)
     ---
-    if: c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n%sif: %s != 0\n%s    if: l2_layout_found%d != 0\n", ind, seq, ind, value, ind, seq) < 0
+    if: amb = 0 && c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n%sif: %s != 0\n%s    if: l2_layout_found%d != 0\n", ind, seq, ind, value, ind, seq) < 0
+        return: 1
+    if: amb != 0 && c.fprintf(l2_out, "%sint: l2_admission%d c.LMX_IMPLEMENTS_YES\n%sif: l2_idsel%d = 2\n%s    l2_admission%d: c.LMX_IMPLEMENTS_UNKNOWN\n%sif: %s != 0 && l2_idsel%d != 2\n%s    if: l2_layout_found%d != 0\n", ind, seq, ind, seq, ind, seq, ind, value, seq, ind, seq) < 0
         return: 1
     if: full_receiver != 0
         if: c.fprintf(l2_out, "%s        LmxImplEntry: l2_pending%d\n%s        l2_pending%d.frame: 0\n%s        l2_pending%d.at: 0U\n%s        l2_pending%d.holes: 0\n%s        l2_pending%d.value: (cast: (@: Lmx) %s)\n%s        l2_pending%d.req: %s\n%s        l2_pending%d.map: l2_d105t%d\n%s        l2_pending%d.n: %dU\n%s        l2_pending%d.layout: l2_layout%d\n%s        l2_admission%d: %s(l2_program_arena, (cast: (@: Lmx) %s), %s, %s, @ l2_pending%d%s)\n", ind, seq, ind, seq, ind, seq, ind, seq, ind, seq, value, ind, seq, rinst, ind, seq, seq, ind, seq, l2_d105_width(req), ind, seq, seq, ind, seq, receive, value, rinst, rinst, seq, cover) < 0
@@ -34543,7 +35123,7 @@ fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     source.layout: -1
     source.method: -1
     source.place: -1
-return: l2_rw_admit_project(parent, ni, @ source, 0, -1, out)
+return: l2_rw_admit_project(parent, ni, @ source, 0, -1, -1, -1, out)
 
 # D105 map constants are ordinary instruction operands with the same lifetime
 # as the admitting frame. They are never executable source-level values.  The
@@ -34589,7 +35169,8 @@ fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     ---
 return: 0
 
-fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; @: int out) int
+# tmi/tk name the input the value is formed into.
+fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; int: tmi; int: tk; @: int out) int
     L2ReferenceSource: source
     source.schema: cand
     source.layout: -1
@@ -34597,13 +35178,17 @@ fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: s
     source.place: source_input
     if: source_mi < 0
         source.layout: cand
-return: l2_rw_admit_project(parent, req, @ source, 0, -1, out)
+return: l2_rw_admit_project(parent, req, @ source, 0, -1, tmi, tk, out)
 
 # `uses_own` is the own row the instruction receives into, or -1.  When its
 # coverage is known the instruction carries it in its own cells (fullReceiver 2,
 # lmx_walk.h) between the fixed nine and the maps.
-fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; @: int out) int
+# tmi/tk name the input the value is formed into where it is one -- a formal or a hidden input -- else -1.
+fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out) int
     int: i 0
+    int: r
+    int: id_first 0
+    int: id_n 0
     int: count 0
     int: cover 0
     int: mode full_receiver
@@ -34639,7 +35224,10 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
         cover: l2_ruse_cells(uses_own)
         mode: 2
     ---
-    extent: 9 + cover + default_n + count * (1 + width * 2)
+    # The identity entries of this reception (l2_identity_list), after the alternatives: (token, class, map) each.
+    if: l2_identity_list(req, source, tmi, tk, full_receiver, @ id_first, @ id_n) != 0
+        return: 1
+    extent: 9 + cover + default_n + count * (1 + width * 2) + id_n * (2 + width * 2)
     if: l2_rw_catch_fixed(-1, 0, 2, "implements", @ nc) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_ADMIT_AS", extent + 3 * nc, out) != 0
         return: 1
     i: 0
@@ -34682,6 +35270,15 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
                 return: 1
             slot: slot + 1 + width * 2
         i: i + 1
+    ---
+    r: id_first
+    while: r < id_first + id_n
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, %dU, l2_layout_tokens + %d) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, %dU, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, slot, l2_schema_token_slot(l2_ide_ty[r]), \out, slot + 1, l2_ide_cls[r]) < 0
+            return: 1
+        if: l2_rw_map_inline(\out, slot + 2, l2_ide_ty[r], req) != 0
+            return: 1
+        slot: slot + 2 + width * 2
+        r: r + 1
     ---
 return: l2_rw_catch_fixed(\out, extent, 2, "implements", @ nc)
 
@@ -34832,7 +35429,7 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
             return: 1
         ---
     else:
-        if: l2_rw_admit_project(parent, model, @ source, 1, place, out) != 0
+        if: l2_rw_admit_project(parent, model, @ source, 1, place, -1, -1, out) != 0
             return: 1
         ---
     ---
@@ -34944,7 +35541,7 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
     source.layout: ni
     source.method: -1
     source.place: -1
-    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit_project(\out, ni, @ source, 0, -1, @ admission) != 0 || l2_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0
+    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit_project(\out, ni, @ source, 0, -1, -1, -1, @ admission) != 0 || l2_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
         return: 1
@@ -36235,7 +36832,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                     reference_source.method: -1
                     reference_source.place: -1
                 ---
-                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(idx, k), @ reference_source, 0, -1, @ holder) != 0
+                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(idx, k), @ reference_source, 0, -1, idx, k, @ holder) != 0
                     return: 1
                 if: l2_empty_actual(a, idx, k) != 0
                     if: l2_rw_empty_arg(l2_nsty_get(idx, k), holder, @ arg) != 0
@@ -36302,7 +36899,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
                 source_mi: -1
                 if: hidden_source != -1
                     source_mi: l2_d105_key_method(l2_rw_mi, hidden_source)
-                if: l2_rw_admit_source(\out, hidden_model, cand, source_mi, hidden_source, @ holder) != 0
+                if: l2_rw_admit_source(\out, hidden_model, cand, source_mi, hidden_source, hid, l2_m_arity[hid] + d, @ holder) != 0
                     return: 1
                 ---
             ---
@@ -36533,8 +37130,14 @@ fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: n
     if: candidate = -1 && span = 1 && a != 0 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
         candidate: l2_bound_nsty(l2_rw_mi, a\value\as\atom)
     # Known candidates use the correspondence already selected by the common
-    # receiving contract. Unknown candidates retain ordinary structural admission.
-    if: candidate = -1
+    # receiving contract. An unknown candidate is admitted by the admission that
+    # forms this input (other_ok: the site's ADMIT_AS, by the Consumer's uses, as
+    # the native text admits it -- l2_emit_model_admit); a second, whole-model
+    # structural admission before it would refuse what that one admits. A letter
+    # named here is received first all the same: the reception takes it as its
+    # payload (D-57), as the native text does. Without that admission the
+    # candidate keeps the ordinary structural admission.
+    if: candidate = -1 && (other_ok = 0 || l2_is_letter_value(l2_rw_mi, a, span) != 0)
         return: l2_rw_reference_receive(a, span, ty, ni, parent, out)
     if: candidate != ni && other_ok = 0
         return: l2_rw_refuse(node, "an admission to a Structure type")
@@ -41775,7 +42378,7 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
                     source_mi: 0 - 1
                     if: hidden_source != -1
                         source_mi: l2_d105_key_method(l2_rw_mi, hidden_source)
-                    if: l2_rw_admit_source(\out, hidden_model, cand, source_mi, hidden_source, @ holder) != 0
+                    if: l2_rw_admit_source(\out, hidden_model, cand, source_mi, hidden_source, model, l2_m_arity[model] + k, @ holder) != 0
                         return: 1
                     ---
                 ---
@@ -43722,7 +44325,7 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
     l2_tn: l2_tn + 1
     if: c.sprintf(temp, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(ty), 0, temp, type_text) != 0 || c.fprintf(l2_out, "%s%s %s\n", ind, type_text, value) < 0
         return: 1
-    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1, place, -1) != 0
+    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1, place, -1, -1, -1) != 0
         return: 1
     if: source = 0 && l2_emit_admit(mi, model, temp, ind) != 0
         return: 1
@@ -45882,7 +46485,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_publish(ind) != 0
             return: 1

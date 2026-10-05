@@ -241,7 +241,8 @@ Fable принял единственный writer/build-слот по [to_fable
   удерживающей вызов. Короткая запись `add5: makeAdder 5` также не исполняет фабрику;
   её результат принимается как `@: add5 makeAdder(5)`
   ([ответ](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)); реализация остаётся долгом
-  ([HELD-STORE-FACTORY-ACTUALS-POSITIONAL](defects.md#held-store-factory-actuals-positional)).
+  ([HELD-STORE-FACTORY-ACTUALS-POSITIONAL](defects.md#held-store-factory-actuals-positional),
+  теперь [FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)).
 - Восьмой срез (ответы Codex -11 и -12): голое имя удерживаемого callable там, где место принимает
   число, исполняет callable — запись, инициализатор, фактический числового формала, возврат, поле по
   пути, элемент, поле сообщения; преобразование результата — обычная грань; места, принимающие
@@ -420,9 +421,26 @@ Fable принял единственный writer/build-слот по [to_fable
 - Открыто: копия Structure в методе стоит тем дороже, чем больше единица
   ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)); в трансляторе остаются блоки
   постоянного размера вне этого маршрута ([FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit)).
-- Открыто, блокер G5: письмо, принятое в ссылку своего объявления, не допускается к потребителю
-  другого объявления, хотя потребитель читает только общее поле; Codex подтвердил, что программа верна
+- Девятнадцатый ответ Codex -12 (b) и передача работы Opus (OPUS-HANDOFF-20261005-103112), шаг о
+  письме в типизированном месте. Письмо, принятое в место своего объявления по позициям, допускается
+  к формалу или скрытому входу другого объявления по тому, что читает метод входа: запись приёма
+  (`lmx_implements_identity`) и карта пары объявлений, известная при трансляции. Спросить можно
+  объявление отдающего места и возможные якоря, дошедшие до него по рёбрам; объявление предлагается,
+  только если даёт все пути потребителя. Ответившие объявления разных классов дают отказ; порядок и
+  проверка по позициям не решают. Рядом исправлен дефект: вызов с обходом допускал неизвестного
+  кандидата дважды ([WALKED-UNKNOWN-ACTUAL-DOUBLE-ADMISSION](defects.md#walked-unknown-actual-double-admission)).
+  Гейты `opus_kernel_01`, `opus_l3_01`, `opus_full_02` RED40/1803: ни одна прежняя строка не
+  изменилась; пятнадцать новых строк, из них четырнадцать зелёных и один обязательный позитив красный
+  ([§72 журнала](fable-continuation-20261003.md#letter-typed-place)).
+- Открыто, блокер G5: письмо, которого ни один приём не записал, допускается по позициям против всей
+  модели, а не по использованию потребителя
+  ([UNRECORDED-LETTER-WHOLE-MODEL](defects.md#unrecorded-letter-whole-model)); приём целиком и по
+  покрытию записей тождества не предлагает
   ([TYPED-PLACE-LETTER-READMISSION](defects.md#typed-place-letter-readmission)).
+- Решения автора 2026-10-05 в собственных записях Opus: что они отменяют в журнале и какие долги
+  реализации оставляют — [§73 журнала](fable-continuation-20261003.md#author-decisions-20261005);
+  [FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver) (приёмник `@:` транслятор сегодня
+  отвергает) и [HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows).
 - Открыто, блокер G5: четыре отказа при трансляции на принимающем крае, которые Codex назвал долгами
   реализации ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts)); внутренняя ошибка транслятора
   на Structure известного объявления, поданной через непрозрачный формал

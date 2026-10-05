@@ -45,7 +45,7 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #   * a copy -- a merge's graph copy of an admitted value, a clone of the admitting frame, a clone of a capture's copy --
 #     brings no record: the copy is admitted where it is used, the original's record stays as it was.
 
-[]: char schema_tokens 4
+[]: char schema_tokens 6
 
 sub: it_check (@: int counts; int: ok; const: @(char label))
     counts[0]: counts[0] + 1
@@ -134,6 +134,12 @@ fn: main () int
     @: Lmx late 0
     @: Lmx lent 0
     @: Lmx dmodel 0
+    @: Lmx idecl 0
+    @: Lmx ilong 0
+    @: Lmx iletter 0
+    @: Lmx inone 0
+    @: Lmx iperm 0
+    @: Lmx ihole 0
     # A correspondence map carries 2 * width cells (K01): the ORDINAL half (the value's
     # field named as the required model's field j), then the LAST half (what a bare name
     # reads).  `wide` stays a map of another width, which registration refuses.
@@ -382,6 +388,42 @@ fn: main () int
     memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
     v\holes: 1
     it_check(counts, lmx_implements_register(ea, hclone, hmodel, v) = c.LMX_IMPLEMENTS_YES && lmx_implements_slot(ea, hclone, hmodel, 1U, @ slot) = 0 && slot = 1U && lmx_implements_slot(ea, hclone, hmodel, 0U, @ slot) != 0, "the clone admitted with holes does not read as the copy")
+
+    # The record of a reception by position (TYPED-PLACE-LETTER-READMISSION).  D is (a: size_t, b: int) with its
+    # own record and token 4; R has the same fields in the other order, token 5.  A value with no layout of its
+    # own received into a place of D by position has a record with neither frame nor map: lmx_implements_identity
+    # finds it by D's token.  Nothing else answers.
+    idecl: it_pair(ea, 0, 1)
+    ilong: it_pair(ea, 1, 0)
+    iletter: it_pair(ea, 0, 1)
+    inone: it_pair(ea, 0, 1)
+    iperm: it_pair(ea, 1, 0)
+    ihole: it_pair(ea, 0, 1)
+    if: idecl = 0 || ilong = 0 || iletter = 0 || inone = 0 || iperm = 0 || ihole = 0
+        free(counts)
+        return: 2
+    ---
+    it_check(counts, lmx_implements_register_map(ea, idecl, idecl, 0, 0U, (cast: (@: void) (schema_tokens + 4))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(ea, ilong, ilong, 0, 0U, (cast: (@: void) (schema_tokens + 5))) = c.LMX_IMPLEMENTS_YES, "a declaration did not register its own layout")
+    it_check(counts, lmx_implements_identity(ea, iletter, (cast: (@: void) (schema_tokens + 4))) = 0, "a value received nowhere was identical with a declaration")
+    it_check(counts, lmx_implements_register_map(ea, iletter, idecl, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES, "a value laid out as D was not received into D by position")
+    it_check(counts, lmx_implements_identity(ea, iletter, (cast: (@: void) (schema_tokens + 4))) = 1, "the record of a reception by position was not found by the declaration's token")
+    it_check(counts, lmx_implements_layout(ea, iletter) = 0, "asking for the identity gave the value a layout")
+    it_check(counts, lmx_implements_identity(ea, iletter, (cast: (@: void) (schema_tokens + 5))) = 0, "identity with D answered for another declaration")
+    it_check(counts, lmx_implements_identity(ea, inone, (cast: (@: void) (schema_tokens + 4))) = 0, "a value with no record answered: the declaration's own record certifies no other value")
+    it_check(counts, lmx_implements_identity(ea, iletter, 0) = 0 && lmx_implements_identity(ea, 0, (cast: (@: void) (schema_tokens + 4))) = 0, "a null token or a null value answered")
+    it_check(counts, lmx_implements_identity(ea, idecl, (cast: (@: void) (schema_tokens + 4))) = 0, "the declaration's own record was taken for its identity with itself")
+    # A value admitted through a map is not identical by position; neither is a copy with holes.
+    it_check(counts, lmx_implements_register_map(ea, iperm, idecl, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_identity(ea, iperm, (cast: (@: void) (schema_tokens + 4))) = 0, "a value admitted through a map was identical by position")
+    memset((cast: (@: void) v), 0, c.sizeof(c.LmxImplEntry))
+    v\holes: 1
+    it_check(counts, lmx_implements_register(ea, ihole, idecl, v) = c.LMX_IMPLEMENTS_YES && lmx_implements_identity(ea, ihole, (cast: (@: void) (schema_tokens + 4))) = 0, "a copy with holes was identical by position")
+    # What the admitting text does with it: R's fields through the pair map D -> R, the value's layout unknown as
+    # before, and the same admission again answered from the records.
+    it_check(counts, lmx_implements_register_map(ea, iletter, ilong, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES, "the value was not admitted to R through D's record and the pair map")
+    slot: 99U
+    it_check(counts, lmx_implements_slot(ea, iletter, ilong, 0U, @ slot) = 0 && slot = 1U && lmx_implements_slot(ea, iletter, ilong, 1U, @ slot) = 0 && slot = 0U, "R's fields are not read at D's places in the value")
+    it_check(counts, lmx_implements_layout(ea, iletter) = 0, "the admission through an identity published a layout")
+    it_check(counts, lmx_implements_register_map(ea, iletter, ilong, perm, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_identity(ea, iletter, (cast: (@: void) (schema_tokens + 4))) = 1, "a second admission did not answer from the records")
     lmx_arena_release(ea)
 
     lmx_arena_release(at)

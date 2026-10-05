@@ -35,6 +35,19 @@ The [author's decisions](LMX_blog/2026-10-05.md) require source-copy parent
 rewriting, explicit `@: add5 makeAdder(5)` result receipt, and ordinary result
 type checking for an unknown-head Structure returned as int.
 
+**Continuation, 2026-10-05 (Opus).** The first slice of Codex's handoff
+(OPUS-HANDOFF-20261005-103112): a letter held in a place of its own declaration
+is admitted to an input of another declaration by what the input's method
+reads, through the record of its reception and the pair map of the two
+declarations ([TYPED-PLACE-LETTER-READMISSION](steps/defects.md#typed-place-letter-readmission)).
+Latest gates on its bytes: kernel `opus_kernel_01` GREEN296 with 113 executed
+selftests, L3 `opus_l3_01` 11 suites/four budgets, full `opus_full_02`
+RED40/1803 — against `fable_full_43` FAIL→OK 0, OK→FAIL 0, fifteen rows added,
+fourteen green and one OPEN required positive red
+([gates](steps/fable-continuation-20261003.md#letter-typed-place)). What the
+author's three decisions of 2026-10-05 supersede in the ledger and leave to
+build: [section 73](steps/fable-continuation-20261003.md#author-decisions-20261005).
+
 Historical runs and intermediate task descriptions below are not restart
 instructions where a later measured slice supersedes them.
 
@@ -200,7 +213,7 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   and gate both native and genuinely walked execution. This is implementation
   debt, not an unanswered language question
   ([answer](LMX_blog/q/held-factory-initialization-versus-body-definition.md),
-  [defects](steps/defects.md#held-store-factory-actuals-positional)).
+  [defects](steps/defects.md#factory-result-receiver)).
 - [x] The bare name of a held callable where a number is received as a
   whole value (a store, an initializer, a number formal's actual, a number
   method's return, a field through a path, an element, a message field)

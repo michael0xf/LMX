@@ -210,7 +210,15 @@ define: LMX_WALK_OP_NODE 36
 # [admit_as, sourceToken, catchCount, value, targetModel, alternativesCount,
 # defaultMapCount, directLayout, fullReceiver, coverage[coverage[0]] (only when
 # fullReceiver is 2), defaultTargetMap[defaultMapCount],
-# (layoutToken, targetMap[targetWidth]) * alternativesCount, catchRows...].
+# (layoutToken, targetMap[targetWidth]) * alternativesCount,
+# (identityToken, class, targetMap[targetWidth]) * identities, catchRows...].
+# The identity entries fill the cells up to the catch rows; their count is not
+# stored. They are consulted only for a held value with no layout of its own:
+# an entry is selected when a completed reception proved the value identical,
+# by position, with the entry's declaration (lmx_implements_identity). The
+# entry naming sourceToken decides when it answers; otherwise the entries that
+# answer must be of one class (the compiler gives one class to correspondences
+# that place the Consumer's used paths alike), and two classes refuse.
 # Counts/map entries are inline SIZE_T constants; targetModel is a descriptor.
 # Tokens are CHAR_PTR cells holding module-lifetime metadata addresses, never
 # raw foreign graph children. Missing source/direct cells mean unknown tokens.

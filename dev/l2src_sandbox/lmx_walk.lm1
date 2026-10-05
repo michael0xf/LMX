@@ -2238,7 +2238,8 @@ fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int
 return: c.LMX_WALK_OK
 
 # ADMIT_AS carries one flat immutable instruction: source schema token/target model,
-# default target map, alternatives keyed by exact physical layout, then catches.
+# default target map, alternatives keyed by exact physical layout, identity entries
+# for a value with no layout, then catches.
 # Existing ImplEntry views borrow this instruction and an offset; there is no
 # correspondence-only Structure or allocated/composed map. Candidate once;
 # null passes before source-view lookup. NO is the implicit implements throw.
@@ -2253,9 +2254,20 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     @: void source_layout 0
     @: void layout 0
     @: void token_cell 0
+    @: void entry_token 0
     int: selected 0
+    int: own_hit 0
+    int: first 0
+    int: clash 0
+    int: ambiguous 0
     size_t: choice 0U
     size_t: choices 0U
+    size_t: identities 0U
+    size_t: id_stride
+    size_t: ident_at
+    size_t: first_at 0U
+    size_t: cls 0U
+    size_t: entry_cls 0U
     size_t: at 9U
     size_t: full_receiver 0U
     size_t: default_n 0U
@@ -2314,9 +2326,12 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: (default_n != 0U && default_n != width * 2U) || default_n > catch_at - at || width = (cast: (size_t) -1)
         return: c.LMX_WALK_INVALID
     stride: width * 2U + 1U
+    id_stride: stride + 1U
     n: catch_at - at - default_n
-    if: n / stride != choices || n % stride != 0U
+    # The identity entries fill the cells between the alternatives and the catch rows: (token, class, map).
+    if: choices > n / stride || (n - choices * stride) % id_stride != 0U
         return: c.LMX_WALK_INVALID
+    identities: (n - choices * stride) / id_stride
     status: lmx_walk_eval(f, lmx_arena_ref_value(code, 3U), out)
     if: status != c.LMX_WALK_OK
         return: status
@@ -2347,6 +2362,7 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         v\n: width
     ---
     at: at + default_n
+    ident_at: at + choices * stride
     while: layout != 0 && choice < choices
         token_cell: lmx_arena_ref_value(code, at)
         if: lmx_domain_kind(f\arena, token_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, token_cell) != c.LMX_TYPE_CHAR_PTR
@@ -2359,6 +2375,52 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         at: at + stride
         choice: choice + 1U
     ---
+    # A value with no layout of its own -- a letter -- is asked whether a completed reception proved it identical,
+    # by position, with the declaration of an identity entry (lmx_implements_identity).  The entries are the
+    # translator's possible anchors of this reception, each with its correspondence to the model; a declaration
+    # an entry names is no evidence, the record is.  The giving place's own declaration (sourceToken) decides
+    # when its entry answers: the value is read from a place of it.  Otherwise the entries that answer have to be
+    # of one class -- entries are of one class where their correspondences give the Consumer's used paths the
+    # same places -- and the first of them is selected.  Entries of two classes that both answer select nothing,
+    # and the reception is refused: neither the order of the entries nor a positional check decides which places
+    # the Consumer reads.  A value with a layout of its own keeps that layout's route.  The value's layout stays
+    # unknown.
+    if: selected = 0 && layout = 0 && identities != 0U
+        choice: 0U
+        while: choice < identities
+            token_cell: lmx_arena_ref_value(code, ident_at)
+            if: lmx_domain_kind(f\arena, token_cell) != c.LMX_KIND_PRIMITIVE || lmx_domain_type(f\arena, token_cell) != c.LMX_TYPE_CHAR_PTR
+                return: c.LMX_WALK_INVALID
+            if: lmx_walk_load_numeric(f\arena, lmx_arena_ref_value(code, ident_at + 1U), @ entry_cls) != c.LMX_WALK_OK
+                return: c.LMX_WALK_INVALID
+            entry_token: (cast: (@: void) lmx_charptr_value_known(token_cell))
+            if: own_hit = 0 && lmx_implements_identity(f\arena, (cast: (@: Lmx) out\ref), entry_token) != 0
+                if: source_layout != 0 && entry_token = source_layout
+                    own_hit: 1
+                    first_at: ident_at + 2U
+                else:
+                    if: first = 0
+                        first: 1
+                        first_at: ident_at + 2U
+                        cls: entry_cls
+                    else:
+                        if: entry_cls != cls
+                            clash: 1
+                    ---
+                ---
+            ---
+            ident_at: ident_at + id_stride
+            choice: choice + 1U
+        ---
+        if: own_hit != 0 || (first != 0 && clash = 0)
+            v\frame: code
+            v\at: first_at
+            v\n: width
+            selected: 1
+        ---
+        if: own_hit = 0 && first != 0 && clash != 0
+            ambiguous: 1
+    ---
     answer: c.LMX_IMPLEMENTS_UNKNOWN
     if: selected != 0
         answer: c.LMX_IMPLEMENTS_YES
@@ -2369,7 +2431,7 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         if: answer = c.LMX_IMPLEMENTS_YES
             answer: lmx_implements_register(f\arena, (cast: (@: Lmx) out\ref), model, v)
     ---
-    if: selected = 0
+    if: selected = 0 && ambiguous = 0
         known: lmx_implements_find(f\arena, (cast: (@: Lmx) out\ref), model)
         if: known != 0
             # An old correspondence is not proof for a new consumer. Without

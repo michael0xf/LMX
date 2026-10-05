@@ -1,0 +1,55 @@
+# A field the letter's declaration has not, newly demanded
+# (TYPED-PLACE-LETTER-READMISSION). first reads only mainArgs and admits
+# the letter held in tryboth's MainLetter formal to its Long formal:
+# 2 + n. sized reads Long's size, which MainLetter has not. The
+# declaration of the place is no anchor for that consumer, and the
+# letter's record of its admission to Long has that field as a hole: a
+# previous consumer's correspondence asks nothing of a new one and
+# certifies nothing for it. The admission is refused where sized's input
+# is formed, as tryboth's implicit `implements`, and tryboth's handler
+# takes it: 42. sized is not entered, and nothing stops the process.
+# Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+
+int: entered 0
+
+fn: first (Long: shared) int
+return: 2 + (cast: (int) length(shared\mainArgs))
+
+fn: sized (Long: shared) int
+    node\entered: node\entered + 1
+return: 2 + (cast: (int) shared\size)
+
+fn: entries () int
+return: node\entered
+
+fn: tryboth (MainLetter: held) int
+    int: r 0
+    int: a first(held)
+    r: sized(held)
+    catch: implements ()
+        r: 42
+    ---
+    if: a < 3
+        return: 80
+return: r
+
+fn: take () int
+    @: MainLetter m
+    receiveMessage: m
+return: tryboth(m)
+
+int: ok 7
+if: take() != 42
+    ok: 81
+if: entries() != 0
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

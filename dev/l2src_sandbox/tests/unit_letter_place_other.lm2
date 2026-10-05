@@ -1,0 +1,49 @@
+# A letter held in a place of its own declaration is admitted to a
+# formal of another declaration by what that formal's method reads
+# (TYPED-PLACE-LETTER-READMISSION). take receives the argv letter into a
+# MainLetter reference: the reception checks it by position against
+# MainLetter and records that. observe's formal is a Long and reads only
+# mainArgs. The letter has no layout of its own; where it is formed into
+# observe's input the record of its reception says where MainLetter's
+# fields are in it, and the pair map MainLetter -> Long says where Long's
+# mainArgs is among them: 2 + the count of arguments. Long's size, which
+# observe does not read, asks nothing. The letter is given twice, and once
+# more through give, whose MainLetter formal hands it on: 2 + n each
+# time, and observe is entered three times. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+
+int: seen 0
+
+fn: observe (Long: shared) int
+    node\seen: node\seen + 1
+return: 2 + (cast: (int) length(shared\mainArgs))
+
+fn: give (MainLetter: held) int
+return: observe(held)
+
+fn: entries () int
+return: node\seen
+
+fn: take () int
+    @: MainLetter m
+    receiveMessage: m
+    int: n (cast: (int) length(m\mainArgs))
+    int: a observe(m)
+    int: b observe(m)
+    int: c give(m)
+    if: n < 1 || a != 2 + n || b != a || c != a
+        return: 81
+return: 7
+
+int: ok take()
+if: entries() != 3
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

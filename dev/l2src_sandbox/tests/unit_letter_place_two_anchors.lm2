@@ -1,0 +1,47 @@
+# Two declarations whose records both answer for the letter
+# (TYPED-PLACE-LETTER-READMISSION; Codex's reply to
+# OPUS-HANDOFF-20261005-103112: a fixture probing multiple available
+# anchors). take receives the argv letter under raw and binds a
+# MainLetter reference and an Other reference to it: each binding checks
+# it by position against the whole declaration and records that. Both
+# references are handed to hop's opaque formal, so MainLetter and Other
+# both reach hop's place, and where observe's input is formed both
+# records answer. Both declarations give observe's one used path,
+# mainArgs, the same place of the value: one class, and the first entry
+# is taken. Long's size, which neither has, is used by nobody and asks
+# nothing. 2 + n both times. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Other:
+    char: []: []: mainArgs
+end: Other
+
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+
+fn: observe (Long: shared) int
+return: 2 + (cast: (int) length(shared\mainArgs))
+
+fn: hop (@: void p) int
+return: observe(p)
+
+fn: take () int
+    receiveMessage: raw
+    @: MainLetter m
+    m: @raw
+    @: Other o
+    o: @raw
+    int: n (cast: (int) length(m\mainArgs))
+    int: a hop(m)
+    int: b hop(o)
+    if: n < 1 || a != 2 + n || b != a
+        return: 81
+return: 7
+
+int: ok take()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

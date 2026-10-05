@@ -1,0 +1,40 @@
+# An untyped alias of the letter after it is bound into a MainLetter
+# reference (TYPED-PLACE-LETTER-READMISSION). take receives the letter
+# under raw, an untyped name, and binds a MainLetter reference to it:
+# the binding admits it by position and records that. It gives the
+# reference through hop's opaque formal, and raw itself to present's
+# MainLetter formal, which takes the letter as its payload -- the same
+# value -- and hands it on. That value's own record answers where
+# observe's input is formed, both times: 2 + n. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+
+fn: observe (Long: shared) int
+return: 2 + (cast: (int) length(shared\mainArgs))
+
+fn: hop (@: void p) int
+return: observe(p)
+
+fn: present (MainLetter: held) int
+return: observe(held)
+
+fn: take () int
+    receiveMessage: raw
+    @: MainLetter m
+    m: @raw
+    int: n (cast: (int) length(m\mainArgs))
+    int: a hop(m)
+    int: b present(raw)
+    if: n < 1 || a != 2 + n || b != a
+        return: 81
+return: 7
+
+int: ok take()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

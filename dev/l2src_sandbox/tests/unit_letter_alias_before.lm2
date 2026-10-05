@@ -1,0 +1,38 @@
+# OPEN required positive: the evidence boundary of
+# TYPED-PLACE-LETTER-READMISSION (Codex, OPUS-HANDOFF-20261005-103112,
+# point 6). take receives the letter under raw, an untyped name, and
+# gives it to observe's Long formal, which takes it as its payload,
+# before anything admitted it to MainLetter; then it binds a MainLetter
+# reference to it and gives that. observe reads only mainArgs, which the
+# letter carries in its one field: by the consumer's uses the program is
+# valid both times, 2 + n, and a record made in between changes nothing
+# about that. The first admission has no record of a reception to ask,
+# and a value with no layout of its own is still checked by position
+# against the whole of Long, which has a field more: refused, red until
+# that admission is by the consumer's uses. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+
+fn: observe (Long: shared) int
+return: 2 + (cast: (int) length(shared\mainArgs))
+
+fn: take () int
+    receiveMessage: raw
+    int: a observe(raw)
+    @: MainLetter m
+    m: @raw
+    int: n (cast: (int) length(m\mainArgs))
+    int: b observe(m)
+    if: n < 1 || a != 2 + n || b != a
+        return: 81
+return: 7
+
+int: ok take()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

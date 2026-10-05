@@ -1,0 +1,59 @@
+# The letter held in a MainLetter place, handed on by places with no
+# declaration of their own before observe's Long formal takes it
+# (TYPED-PLACE-LETTER-READMISSION): two opaque formals in a chain, a
+# method that hands it to itself while a count runs down, and two
+# methods that hand it to each other. The declaration of the place the
+# letter was received into reaches observe's formal along the ways it is
+# handed, as a possible anchor and no evidence: what is asked where
+# observe's input is formed is the letter's own record. 2 + n by each
+# way. The same forwarders then hand on the root's Long Structure, which
+# has a layout of its own and is admitted by it at the same sites:
+# observe reads its empty mainArgs, 2. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+
+fn: observe (Long: shared) int
+return: 2 + (cast: (int) length(shared\mainArgs))
+
+fn: hop2 (@: void p) int
+return: observe(p)
+
+fn: hop1 (@: void p) int
+return: hop2(p)
+
+fn: bounce (@: void p; int: k) int
+    if: k > 0
+        return: bounce(p, k - 1)
+return: observe(p)
+
+fn: ping (@: void p; int: k) int
+    if: k > 0
+        return: pong(p, k - 1)
+return: observe(p)
+
+fn: pong (@: void p; int: k) int
+return: ping(p, k)
+
+fn: take (@: void kept) int
+    @: MainLetter m
+    receiveMessage: m
+    int: n (cast: (int) length(m\mainArgs))
+    int: a hop1(m)
+    int: b bounce(m, 3)
+    int: c ping(m, 4)
+    int: d hop1(kept)
+    int: e bounce(kept, 2)
+    if: n < 1 || a != 2 + n || b != a || c != a || d != 2 || e != 2
+        return: 81
+return: 7
+
+Long: kept
+int: ok take(kept)
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

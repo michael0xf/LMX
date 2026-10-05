@@ -445,6 +445,28 @@ fn: lmx_implements_find (@: LmxArena arena; @: Lmx value; @: Lmx req) @: LmxImpl
     ---
 return: 0
 
+# Whether a completed reception proved value identical, by position, with the declaration whose own layout token
+# is `layout`: a record of (value, that declaration) with neither frame nor map and no holes.  A value with no
+# layout of its own -- a letter -- that the positional check admitted into a place of a declaration has that
+# record.  It is evidence of where that declaration's fields are in this value and of nothing else: the value's
+# own layout stays unknown.  The declaration is the one whose own record carries the token; that record is its
+# self-registration and certifies no other value, and a value's record with itself is never asked.  Read only:
+# nothing is recorded or published, and no record is handed out -- the table moves when it grows.  1 or 0.
+fn: lmx_implements_identity (@: LmxArena arena; @: Lmx value; @: void layout) int
+    size_t: i 0U
+    @: LmxImplEntry e
+    if: arena = 0 || arena\impl = 0 || value = 0 || layout = 0
+        return: 0
+    while: i < arena\impl_len
+        e: arena\impl + i
+        if: e\value = value && e\req != 0 && e\req != value && e\frame = 0 && e\map = 0 && e\holes = 0
+            if: lmx_implements_layout(arena, e\req) = layout
+                return: 1
+            ---
+        i: i + 1U
+    ---
+return: 0
+
 # Genuine schema evidence is a property of the held value. Looking across its
 # completed correspondences supplies only that identity, never another receiver's
 # map or Consumer proof. Register keeps all known evidence for one value consistent.

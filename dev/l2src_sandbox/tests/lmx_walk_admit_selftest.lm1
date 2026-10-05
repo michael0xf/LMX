@@ -29,7 +29,7 @@ int: checks 0
 int: failures 0
 int: producer_calls 0
 @: void produced_value 0
-[]: char schema_tokens 3
+[]: char schema_tokens 5
 
 fn: produce (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int
     producer_calls: producer_calls + 1
@@ -147,6 +147,13 @@ fn: main () int
     @: LmxPrimitive thrower 0
     @: Lmx argn 0
     @: void null_box 0
+    @: Lmx idecl 0
+    @: Lmx iedecl 0
+    @: Lmx iletter 0
+    @: Lmx iplain 0
+    @: Lmx iboth 0
+    @: Lmx iboth2 0
+    @: Lmx iknown 0
     []: @(void) entry_refs 1
     []: size_t source_map 2
     []: size_t partial_map 2
@@ -179,7 +186,7 @@ fn: main () int
         return: 2
 
     unit: lmx_node_new_owned(ga)
-    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 33U) != 0
+    if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 41U) != 0
         return: 2
     ---
     # model {x}: 1 int slot; model {y}: 2 int slots (mismatch vs 1-slot value)
@@ -623,6 +630,93 @@ fn: main () int
     lmx_walk_store_int(ga, litn, 1U, 7)
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "a present number is still no candidate")
+
+    # Identity entries (TYPED-PLACE-LETTER-READMISSION).  D and E are declarations of two int fields with their
+    # own records, tokens 3 and 4; the model is target_model.  An entry is (token, class, map): D's map gives the
+    # model's field 0 at D's slot 1 and field 1 at slot 0, E's map keeps the order.  A value with no layout of its
+    # own is selected through an entry only where a completed reception proved it identical by position with the
+    # entry's declaration.
+    idecl: pl(unit, 33U, 2U)
+    iedecl: pl(unit, 34U, 2U)
+    iletter: pl(unit, 35U, 2U)
+    iplain: pl(unit, 36U, 2U)
+    iboth: pl(unit, 37U, 2U)
+    iboth2: pl(unit, 38U, 2U)
+    iknown: pl(unit, 39U, 2U)
+    if: idecl = 0 || iedecl = 0 || iletter = 0 || iplain = 0 || iboth = 0 || iboth2 = 0 || iknown = 0
+        return: 2
+    lmx_walk_store_int(ga, idecl, 0U, 1)
+    lmx_walk_store_int(ga, idecl, 1U, 2)
+    lmx_walk_store_int(ga, iedecl, 0U, 1)
+    lmx_walk_store_int(ga, iedecl, 1U, 2)
+    lmx_walk_store_int(ga, iletter, 0U, 5)
+    lmx_walk_store_int(ga, iletter, 1U, 6)
+    lmx_walk_store_int(ga, iplain, 0U, 5)
+    lmx_walk_store_int(ga, iplain, 1U, 6)
+    lmx_walk_store_int(ga, iboth, 0U, 5)
+    lmx_walk_store_int(ga, iboth, 1U, 6)
+    lmx_walk_store_int(ga, iboth2, 0U, 5)
+    lmx_walk_store_int(ga, iboth2, 1U, 6)
+    lmx_walk_store_int(ga, iknown, 0U, 5)
+    lmx_walk_store_int(ga, iknown, 1U, 6)
+    check((cast: (int) (lmx_implements_register_map(ga, idecl, idecl, 0, 0U, (cast: (@: void) (schema_tokens + 3))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(ga, iedecl, iedecl, 0, 0U, (cast: (@: void) (schema_tokens + 4))) = c.LMX_IMPLEMENTS_YES)), "the declarations record their own layouts")
+    check((cast: (int) (lmx_implements_register_map(ga, iletter, idecl, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(ga, iboth, idecl, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(ga, iboth, iedecl, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(ga, iboth2, idecl, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(ga, iboth2, iedecl, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES)), "the receptions by position are recorded")
+    check((cast: (int) (lmx_implements_register_map(ga, iknown, source_model, source_map, 2U, (cast: (@: void) (schema_tokens + 1))) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(ga, iknown, idecl, 0, 0U, 0) = c.LMX_IMPLEMENTS_YES)), "a value with a layout of its own is also received into D by position")
+    m: mk_m(unit, 40U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 21U)
+    ref(pn, 3U, iletter)
+    ref(pn, 4U, target_model)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 0U)
+    sz(pn, 8U, 0U)
+    token(pn, 9U, 3U)
+    sz(pn, 10U, 1U)
+    sz(pn, 11U, 1U)
+    sz(pn, 12U, 0U)
+    sz(pn, 13U, 1U)
+    sz(pn, 14U, 0U)
+    token(pn, 15U, 4U)
+    sz(pn, 16U, 2U)
+    sz(pn, 17U, 0U)
+    sz(pn, 18U, 1U)
+    sz(pn, 19U, 0U)
+    sz(pn, 20U, 1U)
+    st: go(m)
+    selected_slot: 9U
+    check((cast: (int) (st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) iletter) && lmx_implements_slot(ga, iletter, target_model, 0U, @ selected_slot) = 0 && selected_slot = 1U)), "a value identical with D is admitted through D's entry")
+    check((cast: (int) (lmx_implements_layout(ga, iletter) = 0)), "the identity route gives the value no layout")
+    st: go(m)
+    selected_slot: 9U
+    check((cast: (int) (st = c.LMX_WALK_OK && lmx_implements_slot(ga, iletter, target_model, 0U, @ selected_slot) = 0 && selected_slot = 1U)), "the same admission again answers from the record")
+    ref(pn, 3U, iplain)
+    st: go(m)
+    selected_slot: 9U
+    check((cast: (int) (st = c.LMX_WALK_OK && lmx_implements_slot(ga, iplain, target_model, 0U, @ selected_slot) = 0 && selected_slot = 0U)), "a value with no record is checked by position: an entry's declaration is no evidence")
+    ref(pn, 3U, iboth)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, iboth, target_model) = 0)), "two classes that both answer refuse, with no positional success and nothing recorded")
+    sz(pn, 16U, 1U)
+    st: go(m)
+    selected_slot: 9U
+    check((cast: (int) (st = c.LMX_WALK_OK && lmx_implements_slot(ga, iboth, target_model, 0U, @ selected_slot) = 0 && selected_slot = 1U)), "entries of one class that both answer select the first")
+    sz(pn, 16U, 2U)
+    token(pn, 1U, 4U)
+    ref(pn, 3U, iboth2)
+    st: go(m)
+    selected_slot: 9U
+    check((cast: (int) (st = c.LMX_WALK_OK && lmx_implements_slot(ga, iboth2, target_model, 0U, @ selected_slot) = 0 && selected_slot = 0U)), "the giving place's own declaration decides when its entry answers")
+    ref(pn, 3U, iknown)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, iknown, target_model) = 0 && lmx_implements_layout(ga, iknown) = (cast: (@: void) (schema_tokens + 1)))), "a value with a layout of its own is not admitted through an identity entry")
+    pn: fr(n, 1U, c.LMX_WALK_OP_ADMIT_AS, 20U)
+    ref(pn, 3U, iletter)
+    ref(pn, 4U, target_model)
+    sz(pn, 5U, 0U)
+    sz(pn, 6U, 0U)
+    sz(pn, 8U, 0U)
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "identity cells that are not whole entries are a malformed instruction")
 
     c.printf("lmx_walk_admit_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

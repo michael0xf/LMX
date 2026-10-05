@@ -442,6 +442,23 @@ with its model by address is the partial copy of `l2_mad_emit`, an open
 obligation against L2 §13, so nothing selects by it
 ([ledger](steps/fable-continuation-20261003.md#held-actual)).
 
+**Debt (2026-10-05).** A factory's result is received by the explicit
+receiver `@:`, as in `@: add5 makeAdder(5)`
+([semantics](docs/LMX_semantics.en.md#factory-reference-result),
+[the author's words](LMX_blog/2026-10-05.md#factory-reference-result)). An
+unknown head whose tail begins with a known method's name defines a dormant
+named Structure in every spelling (Q58), and the contract of the returned
+callable is unchanged. The translator still reads the short form
+`add5: makeAdder 5` as the call's result, and the held-callable rows above are
+built on it; it refuses `@: add5 makeAdder(5)` at the root and in a method
+(`unsupported body`)
+([FACTORY-RESULT-RECEIVER](steps/defects.md#factory-result-receiver)).
+A head that no binding established defines a named Structure even when the
+name is read later: `x: j` then `return: x` is a conversion error, not a
+hidden input ([the author's words](LMX_blog/2026-10-05.md#unknown-head-return));
+the rows that expect the other reading are listed in
+[HEAD-ROLE-UNESTABLISHED-ROWS](steps/defects.md#head-role-unestablished-rows).
+
 A merge given as an actual is followed the same way (kind 5): the node it
 builds is formed as its model is. That node carries its own complete contract
 in its args part, the formals the merge leaves unbound and then the model's
@@ -460,9 +477,19 @@ its primitive entry, `l2_t7_construct_<site>` (`l2_rw_t7_build`). The root's
 two bodies build the node as a method's do, and so does a body that is always
 walked. A method that returns a merge runs its body first and builds the node
 where the body ends; a nested body of a host is its statements, not its
-build. Under what the node hangs, and what its body reads where no caller
-gives a name, are as they were and wait for the author
-([question](LMX_blog/q/merge-lexical-copy-and-root-placement.md)).
+build. The author decided on 2026-10-05 what the copy's lexical links are
+([the author's words](LMX_blog/2026-10-05.md#merge-parent),
+[the closed question](LMX_blog/q/merge-lexical-copy-and-root-placement.md),
+[semantics](docs/LMX_semantics.en.md#composition)): `merge` copies the used
+part of the tree and rewrites `parent` inside the copy, preserving the copied
+source relationships; the place that executes the merge neither gives the copy
+its lexical parent nor resolves its free names. Where no caller gives a name,
+the copy's body reads the copied lexical state, and a later change of the
+original is not seen; the ordinary priority of a dynamic input is unchanged.
+The implementation does not do this yet: the node hangs under the `node` of
+the method that gives the merge, and its body reads the live cell of the
+unit's field
+([T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)).
 The node's interface keeps the unbound formals only, against L3 §20: an open
 obligation
 ([MERGE-KEEPS-MODEL-INTERFACE](steps/defects.md#merge-keeps-model-interface),
@@ -597,6 +624,8 @@ Only a genuine producer may establish origin: direct construction, a successful 
 
 Across the table, conflicting nonnull tokens for the same physical value are refused before mutation. Known-to-unknown registration preserves known evidence; unknown-to-known may enrich only from genuine producer evidence. Copying a graph does not copy the source's admission entries. Attach/revert/GC prune lifetime-dependent graph references and borrowed map frames; tokens themselves are module-lifetime non-graph payloads.
 
+**Implementation, 2026-10-05 (sandbox).** A value with no layout of its own that a completed reception checked by position against a whole declaration has a record of (value, declaration) with neither frame nor map and no holes. Such a record proves that the value is identical, by position, with that declaration; it proves no layout, and none is stamped. Where such a value is formed into an input admitted by the Consumer's used paths, the admission may read that record (`lmx_implements_identity`) and compose it with the pair map from that declaration to the receiving model that the translation resolved. The declarations it may ask are the giving place's own declaration and the declarations that reach the giving place along the recorded edges ("possible anchors": compile-time candidates, no layout, no evidence of the value). One is offered only when it gives every path the Consumer reads. When the giving place's own declaration answers it decides. Otherwise the answers must agree on the targets of the Consumer's used first steps; two that disagree refuse, and neither registration order nor the positional check decides. The declaration's own record certifies no other value. Bounds: [the continuation ledger](steps/fable-continuation-20261003.md#letter-typed-place).
+
 ### 9.5 Current flat ADMIT_AS layout
 
 The inspected implementation has one flat encoding, not an old/new fallback decoder:
@@ -614,8 +643,11 @@ The inspected implementation has one flat encoding, not an old/new fallback deco
 9.. coverage cells (mode 2 only; the first cell is their count)
     default map
     repeated (boxed origin token, target-width map)
+    repeated (boxed declaration token, class, target-width map): identity entries
     catch operands
 ```
+
+The identity entries fill the cells up to the catch operands; their count is not stored. They are consulted only for a value with no layout of its own (§9.4): the entry naming the declared-source token decides when its record answers; otherwise the entries that answer must share one class, and two classes refuse the reception. A value with a layout of its own keeps its layout's route.
 
 Token boxes use the declared pointer witness; they are metadata operands, not source-model bodies to execute during preload. The candidate is evaluated once. A candidate that evaluates absent, an input handed on that its caller left out, stays absent: the instruction returns OK and views, records and throws nothing. A present value that is no reference is the instruction's error. Null is present and is handled before correspondence lookup. Default-map count zero is the compact identity representation where justified, not a proof that an unknown value implements every requirement. Frame-backed maps borrow the instruction's ordinary graph storage and obey its lifetime/copy rules.
 
@@ -624,6 +656,8 @@ Token boxes use the declared pointer witness; they are metadata operands, not so
 **Debt.** Complete transitive `uses`/capture analysis and every directed conversion are not certified. A source capture whose body indirectly invokes a consumer of `y` may need `y` in its captured closure; it is wrong to encode an incomplete syntactic scanner as a normative expected refusal. A deliberately partial runtime value sent to a new consumer requiring missing `y` is a different, legitimate negative.
 
 **Debt.** Cross-count repeated-field selection remains a measured design boundary: if a requirement has two `x` occurrences and an actual has three, bare-last and explicit `[1]x` can collapse to the same requirement slot while needing different actual slots. One `(value, required-model) -> slot map` is not automatically a complete Consumer-use correspondence for both selectors. This is not solved by positional zipping or forbidding the valid program. See [selector collapse](steps/defects.md#admission-occurrence-selector-collapse).
+
+**Debt (2026-10-05).** The identity route of §9.4 serves only admissions by the Consumer's used paths. A reception in full or by coverage (a typed reference of another declaration, a return value) offers no identity entry. A value that no reception has recorded is still admitted by position against the whole model, not by the Consumer's uses ([UNRECORDED-LETTER-WHOLE-MODEL](steps/defects.md#unrecorded-letter-whole-model)). Only a record by position serves; a record through a map is not composed again.
 
 <a id="copy-and-merge"></a>
 ## 10. Copy, merge, retained branches, and ordinary result storage

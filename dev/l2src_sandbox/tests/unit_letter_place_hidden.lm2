@@ -1,0 +1,40 @@
+# The letter held in a MainLetter place, formed into a hidden input of
+# another declaration (TYPED-PLACE-LETTER-READMISSION). r reads
+# shared\mainArgs and takes no formal: shared is r's input from the place
+# its caller has under that name, and r's lexical source of the name is
+# the root's Long reference, so the input is admitted to Long. relay
+# holds the letter in its MainLetter formal of that name and calls r;
+# take holds it in its own MainLetter reference of that name, calls r
+# itself and calls relay. Where r's input is formed, the record of the
+# letter's reception into MainLetter and the pair map MainLetter -> Long
+# give Long's mainArgs: 2 + n both times. Entry 7.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+Long:
+    char: []: []: mainArgs
+    size_t: size 0U
+end: Long
+
+@: Long shared
+
+fn: r () int
+return: 2 + (cast: (int) length(shared\mainArgs))
+
+fn: relay (MainLetter: shared) int
+return: r()
+
+fn: take () int
+    @: MainLetter shared
+    receiveMessage: shared
+    int: n (cast: (int) length(shared\mainArgs))
+    int: a r()
+    int: b relay(shared)
+    if: n < 1 || a != 2 + n || b != a
+        return: 81
+return: 7
+
+int: ok take()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

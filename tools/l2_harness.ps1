@@ -7835,20 +7835,35 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_free_path_null_read_walk.lm2'; Source = 'unit_free_path_null_read.lm2'; Expect = 'walk-x1'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true;
         WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
-    # Two declarations that reach the name give the field the method reads different types.  Neither is the
-    # other's measure: the path is refused where it stands, with the same words at the same statement in either
-    # order of the two declarations.
-    [pscustomobject]@{ Name = 'unit_free_path_types_differ_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_free_path_types_differ_refused.lm2:14:5: the declarations reaching a free name disagree in a field the method uses through it'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_free_path_types_differ_swapped_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_free_path_types_differ_swapped_refused.lm2:12:5: the declarations reaching a free name disagree in a field the method uses through it'; Absent = @(); Debt = @() },
+    # OPEN positives, required before G5 (Codex, FABLE-CODEX-20261004-12, the twenty-first reply).  Limits of this
+    # implementation and no rules; red until built, never to be turned into expected refusals.  What a method
+    # consumes at a read decides, not equality of the field's type in one declaration and another: a reader that
+    # forms an int from a field reads an int field as it is and a size_t field at its own type, through the
+    # ordinary converter: 31 and 41, in either order of the two declarations (field_converted, _swapped), and for
+    # a declared formal as for a free name (unit_formal_field_converted).  Under a free name the path is refused
+    # where it stands, with the same words in either order; for the formal the candidate is refused by the
+    # difference of the types.  The walked twins come with the mechanism: the conversion at the receiving edge.
+    [pscustomobject]@{ Name = 'unit_free_path_field_converted.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_field_converted_swapped.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_field_converted.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    # OPEN positive, required before G5 (the same reply).  A returned definition that itself reads a name nothing
+    # declares takes it from the caller, as a method of the unit does: 45.  It is refused with the words of a
+    # merge's binding, which are about another thing.
+    [pscustomobject]@{ Name = 'unit_held_definition_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # No declaration that reaches the name has the field the method reads.  The programs are not valid whatever
     # is built -- the only caller gives a Structure without the field -- and the words are those of the limit
     # that stands where no coordinate space is established: values with no layout may reach such a name too.
-    # A read in an expression (none_refused), a method that only writes, whose check waits for the callers
-    # (write_none_refused), a path of two steps (deep_none_refused).
+    # A read in an expression (none_refused), a path that is the whole of a value (value_none_refused), a method
+    # that only writes, whose check waits for the callers (write_none_refused), a path of two steps
+    # (deep_none_refused).
     [pscustomobject]@{ Name = 'unit_free_path_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_free_path_none_refused.lm2:10:13: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_value_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_value_none_refused.lm2:8:5: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_free_path_write_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_free_path_write_none_refused.lm2:9:5: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_free_path_deep_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -7879,6 +7894,50 @@ $fixtures = @(
         NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_free_path_argument_walk.lm2'; Source = 'unit_free_path_argument.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    # No ceiling on this route (Codex, the twenty-first reply: the translation's own tables are no place for an
+    # arbitrary count or length).  The search for a coordinate space holds its candidates and the places it
+    # reaches in storage sized from the program; a path's steps are joined and compared at their own length; the
+    # tables of the admission by name grow.  Each row is past a count or a length the translator once stopped
+    # at, and gives its real result.
+    # Seventy declarations reach one name, at one call that forms the reader's input (64 candidates, 64 pairs).
+    [pscustomobject]@{ Name = 'unit_free_path_many_declarations.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0..71); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_many_declarations_walk.lm2'; Source = 'unit_free_path_many_declarations.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..71); Absent = @(); Debt = @() },
+    # The name passes through 262 methods that only hand it on, two of them in a cycle (256 places; 128 edges;
+    # 256 sources).
+    [pscustomobject]@{ Name = 'unit_free_path_many_places.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0..264); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_many_places_walk.lm2'; Source = 'unit_free_path_many_places.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..264); Absent = @(); Debt = @() },
+    # A field whose name is 141 bytes long, read and written through the name (a 128-byte copy of a step).  A
+    # Structure whose field has that name and one byte more has not the field (long_step_other_refused).
+    [pscustomobject]@{ Name = 'unit_free_path_long_step.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0..5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_long_step_walk.lm2'; Source = 'unit_free_path_long_step.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_long_step_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_long_step_other_refused.lm2:24:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # The same for a declared formal.  The uses of a method were collected into 128 bytes, and a path that did
+    # not fit was left out: a candidate without the long field was admitted (long_field_other_refused translated
+    # before this step, and is refused now).
+    [pscustomobject]@{ Name = 'unit_formal_long_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0..2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_long_field_walk.lm2'; Source = 'unit_formal_long_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_long_field_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_formal_long_field_other_refused.lm2:19:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # Seventy formals each filled with another declaration than its own (64 formals admitted by name).
+    [pscustomobject]@{ Name = 'unit_formal_many_admitted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0..70); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_many_admitted_walk.lm2'; Source = 'unit_formal_many_admitted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..70); Absent = @(); Debt = @() },
+    # A declaration of seventy fields admitted to one with the same fields in the opposite order (a
+    # correspondence of 128 cells).
+    [pscustomobject]@{ Name = 'unit_formal_wide_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0..2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_wide_model_walk.lm2'; Source = 'unit_formal_wide_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..2); Absent = @(); Debt = @() },
     # A path of two steps through the name (31, 42).
     [pscustomobject]@{ Name = 'unit_free_path_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },

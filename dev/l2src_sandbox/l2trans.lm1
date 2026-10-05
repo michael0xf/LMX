@@ -309,29 +309,38 @@ int: l2_t7h_cap 0
 # formal's field reads and writes carry its type (OF/PUT_OF req), and every call site into it
 # admits its value through the walker's ADMIT_AS -- another type with its correspondence in the frame's own
 # cells, the formal's own type with none -- so a value that reaches the place unadmitted is X1, never slot j.
-[]: int l2_d105_mi 64
-[]: int l2_d105_k 64
+@: int l2_d105_mi 0
+@: int l2_d105_k 0
 int: l2_d105_n 0
+int: l2_d105_cap 0
 # D-105 native (steps/d105-native.md; REVIEW 9c34b3b): a source -- named type ty reaching formal k of
 # method mi at a call site -- and an edge -- formal fk of fmi passed on, as it is, to formal tk of tmi.
 # After the checks and the root's count, l2_d105_close carries the sources along the edges, marks every
 # formal a source of another type reaches (l2_d105_mark: its fields are read through the arena's
 # implements table), and lists the pair maps S -> R the program carries, one per pair of types: static
 # `l2_d105m<p>` arrays (compiled metadata, not the graph), filled once by the builder.
+# The tables grow with the program (l2_d105_room, l2_d105s_room, l2_d105e_room, l2_d105t_room): how many formals
+# are admitted by name, how many types reach them, along how many edges, in how many pairs, is the program's own.
 int: l2_d105s_n 0
-[]: int l2_d105s_mi 256
-[]: int l2_d105s_k 256
-[]: int l2_d105s_ty 256
-[]: @(LmP0Node) l2_d105s_at 256
+int: l2_d105s_cap 0
+@: int l2_d105s_mi 0
+@: int l2_d105s_k 0
+@: int l2_d105s_ty 0
+@@: LmP0Node l2_d105s_at 0
 int: l2_d105e_n 0
-[]: int l2_d105e_fmi 128
-[]: int l2_d105e_fk 128
-[]: int l2_d105e_tmi 128
-[]: int l2_d105e_tk 128
-[]: @(LmP0Node) l2_d105e_at 128
+int: l2_d105e_cap 0
+@: int l2_d105e_fmi 0
+@: int l2_d105e_fk 0
+@: int l2_d105e_tmi 0
+@: int l2_d105e_tk 0
+@@: LmP0Node l2_d105e_at 0
 int: l2_d105t_n 0
-[]: int l2_d105t_cand 64
-[]: int l2_d105t_req 64
+int: l2_d105t_cap 0
+@: int l2_d105t_cand 0
+@: int l2_d105t_req 0
+# The cells of one pair map while it is built or written out (l2_d105_cells): two per field of the required type.
+@: int l2_d105_tbuf 0
+int: l2_d105_tcap 0
 # How many pair maps were declared (module scope); a pair asked for later has no array.
 int: l2_d105t_declared 0 - 1
 int: l2_d105_seq 0
@@ -448,6 +457,10 @@ int: l2_ns_n 0
 int: l2_uses_cap 0
 int: l2_uses_len 0
 int: l2_uses_oom 0
+# One path while its steps are joined (l2_uses_scan_follow): it grows with the path, as the list of paths does.
+@: char l2_uses_tmp 0
+size_t: l2_uses_tmp_cap 0U
+size_t: l2_uses_tmp_n 0U
 @@: LmP0Text l2_ns_name 0
 @: int l2_ns_first 0
 @: int l2_ns_count 0
@@ -18977,7 +18990,49 @@ fn: l2_uses_reset () int
     l2_uses_cap: 0
     l2_uses_len: 0
     l2_uses_oom: 0
+    if: l2_uses_tmp != 0
+        l2_xfree((cast: (@: void) l2_uses_tmp))
+    ---
+    l2_uses_tmp: 0
+    l2_uses_tmp_cap: 0U
+    l2_uses_tmp_n: 0U
 return: 0
+
+# n more bytes of the path being joined.  No memory: l2_uses_oom, which every walk of uses is asked for.
+sub: l2_uses_tmp_put (const: @(char data); size_t: n)
+    size_t: want
+    @: char grown
+    if: data = 0 || n = 0U || l2_uses_oom != 0
+        return
+    if: n > (cast: (size_t) -1) - l2_uses_tmp_n
+        l2_uses_oom: 1
+        return
+    if: l2_uses_tmp_n + n > l2_uses_tmp_cap
+        want: l2_uses_tmp_cap
+        if: want < 256U
+            want: 256U
+        while: want < l2_uses_tmp_n + n
+            if: want > (cast: (size_t) -1) / 2U
+                l2_uses_oom: 1
+                return
+            want: want * 2U
+        ---
+        l2_alloc_kind: 5
+        grown: (cast: (@: char) l2_xmalloc(want))
+        if: grown = 0
+            l2_uses_oom: 1
+            return
+        if: l2_uses_tmp_n > 0U && l2_uses_tmp != 0
+            memcpy(grown, l2_uses_tmp, l2_uses_tmp_n)
+        if: l2_uses_tmp != 0
+            l2_xfree((cast: (@: void) l2_uses_tmp))
+        ---
+        l2_uses_tmp: grown
+        l2_uses_tmp_cap: want
+    ---
+    memcpy(l2_uses_tmp + l2_uses_tmp_n, data, n)
+    l2_uses_tmp_n: l2_uses_tmp_n + n
+end: l2_uses_tmp_put
 
 # Room for `extra` more bytes: the buffer doubles, never a fixed ceiling.
 fn: l2_uses_ensure (size_t: extra) int
@@ -19051,8 +19106,6 @@ return: memcmp(ad, bd, an) = 0
 fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: LmP0Field start) @: LmP0Field
     @: LmP0Field field
     @: LmP0Text name
-    []: char path 128
-    size_t: used 0U
     int: tracked
     int: closed
     int: digits
@@ -19063,35 +19116,26 @@ fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: LmP0Field start) @: LmP0Fie
     field: start\next
     if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || l2_uses_is_slash(field\value\as\atom) = 0
         return: start
+    # The steps are joined at their own length: a step is as long as its name is.
+    l2_uses_tmp_n: 0U
     while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && l2_uses_is_slash(field\value\as\atom) != 0
         field: field\next
         if: field = 0 || field\value = 0 || field\value\kind != c.LM_P0_NODE_ATOM || field\value\as\atom = 0
             return: start
         name: field\value\as\atom
         if: tracked != 0 && name\length > 0U
-            if: used != 0U && used + 1U < 128U
-                path[used]: 92
-                used: used + 1U
+            if: l2_uses_tmp_n != 0U
+                l2_uses_tmp_put("\\", 1U)
             # `[N]name` arrives as separate atoms; one segment `[N]name` is what
             # the used-edge check parses (the occurrence selector is part of it).
             if: name\length = 1U && name\data[0] = 91
                 closed: 0
-                if: used + 1U < 128U
-                    path[used]: 91
-                    used: used + 1U
-                else:
-                    closed: 1
-                ---
+                l2_uses_tmp_put("[", 1U)
                 digits: 0
                 field: field\next
                 while: field != 0 && field\value != 0 && field\value\kind = c.LM_P0_NODE_ATOM && field\value\as\atom != 0 && closed = 0
                     name: field\value\as\atom
-                    if: used + name\length < 128U
-                        memcpy(path + used, name\data, name\length)
-                        used: used + name\length
-                    else:
-                        closed: 1
-                    ---
+                    l2_uses_tmp_put(name\data, name\length)
                     if: name\length = 1U && name\data[0] = 93
                         closed: 1
                     ---
@@ -19102,20 +19146,14 @@ fn: l2_uses_scan_follow (const: @(LmP0Text varb); @: LmP0Field start) @: LmP0Fie
                     return: start
                 ---
                 name: field\value\as\atom
-                if: used + name\length < 128U
-                    memcpy(path + used, name\data, name\length)
-                    used: used + name\length
-                ---
+                l2_uses_tmp_put(name\data, name\length)
             else:
-                if: used + name\length < 128U
-                    memcpy(path + used, name\data, name\length)
-                    used: used + name\length
-                ---
+                l2_uses_tmp_put(name\data, name\length)
             ---
         ---
         field: field\next
-    if: tracked != 0 && used > 0U
-        l2_uses_path_add(path, used)
+    if: tracked != 0 && l2_uses_tmp_n > 0U && l2_uses_oom = 0
+        l2_uses_path_add(l2_uses_tmp, l2_uses_tmp_n)
 return: field
 
 fn: l2_uses_walk_frame (const: @(LmP0Text varb); const: @(LmP0Frame frame)) int
@@ -19187,7 +19225,6 @@ return: 0
 fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
     size_t: off 0U
     @: char slot
-    []: char buf 128
     size_t: n
     size_t: at
     size_t: cut
@@ -19220,26 +19257,24 @@ fn: l2_descriptor_used (int: cand; int: req; @: int out_result) int
             cut: at
             while: cut < n && slot[cut] != 92
                 cut: cut + 1U
-            if: cut = at || cut - at >= 128U
+            if: cut = at
                 \out_result: 0
                 return: 0
-            memcpy(buf, slot + at, cut - at)
-            buf[cut - at]: 0
             more: 0
             if: cut < n
                 more: 1
             occurrence: -1
             name_at: 0U
-            if: buf[0] = 91
+            if: slot[at] = 91
                 occurrence: 0
                 name_at: 1U
-                while: name_at < cut - at && buf[name_at] >= 48 && buf[name_at] <= 57
-                    occurrence: occurrence * 10 + (cast: (int) (buf[name_at] - 48))
+                while: name_at < cut - at && slot[at + name_at] >= 48 && slot[at + name_at] <= 57
+                    occurrence: occurrence * 10 + (cast: (int) (slot[at + name_at] - 48))
                     name_at: name_at + 1U
-                if: name_at >= cut - at || buf[name_at] != 93
+                if: name_at >= cut - at || slot[at + name_at] != 93
                     return: 1
                 name_at: name_at + 1U
-            name.data: buf + name_at
+            name.data: slot + at + name_at
             name.length: cut - at - name_at
             rk: l2_schema_named_meta(ri, @ name, occurrence, @ needed)
             if: rk < 0
@@ -28403,6 +28438,43 @@ fn: l2_flow_free () int
     l2_dyp_nm: 0
     l2_dyp_n: 0
     l2_dyp_cap: 0
+    l2_xfree((cast: (@: void) l2_d105_mi))
+    l2_d105_mi: 0
+    l2_xfree((cast: (@: void) l2_d105_k))
+    l2_d105_k: 0
+    l2_d105_n: 0
+    l2_d105_cap: 0
+    l2_xfree((cast: (@: void) l2_d105s_mi))
+    l2_d105s_mi: 0
+    l2_xfree((cast: (@: void) l2_d105s_k))
+    l2_d105s_k: 0
+    l2_xfree((cast: (@: void) l2_d105s_ty))
+    l2_d105s_ty: 0
+    l2_xfree((cast: (@: void) l2_d105s_at))
+    l2_d105s_at: 0
+    l2_d105s_n: 0
+    l2_d105s_cap: 0
+    l2_xfree((cast: (@: void) l2_d105e_fmi))
+    l2_d105e_fmi: 0
+    l2_xfree((cast: (@: void) l2_d105e_fk))
+    l2_d105e_fk: 0
+    l2_xfree((cast: (@: void) l2_d105e_tmi))
+    l2_d105e_tmi: 0
+    l2_xfree((cast: (@: void) l2_d105e_tk))
+    l2_d105e_tk: 0
+    l2_xfree((cast: (@: void) l2_d105e_at))
+    l2_d105e_at: 0
+    l2_d105e_n: 0
+    l2_d105e_cap: 0
+    l2_xfree((cast: (@: void) l2_d105t_cand))
+    l2_d105t_cand: 0
+    l2_xfree((cast: (@: void) l2_d105t_req))
+    l2_d105t_req: 0
+    l2_d105t_n: 0
+    l2_d105t_cap: 0
+    l2_xfree((cast: (@: void) l2_d105_tbuf))
+    l2_d105_tbuf: 0
+    l2_d105_tcap: 0
     l2_xfree((cast: (@: void) l2_anc_m))
     l2_anc_m: 0
     l2_xfree((cast: (@: void) l2_anc_nm))
@@ -28777,15 +28849,16 @@ return: (cast: (int) (r >= 0 && l2_anc_ns[r] = -2))
 
 # A path through input j of method mi, where j is a free name that nothing in mi's sight declares and no
 # coordinate space is established for its paths: refused where the path stands, with which of the two it is --
-# the declarations that reach the name disagree, or none of them is known to give the fields; the second is a
-# limit of this implementation.  0 where j is no such input.  The expression pass would copy the path verbatim.
+# the declarations that reach the name give a used field different types, or none of them is known to give the
+# fields.  Both are limits of this implementation.  0 where j is no such input.  The expression pass would copy
+# the path verbatim.
 fn: l2_free_path_refused (int: mi; int: j; const: @(char path); const: @(LmP0Node at)) int
     if: mi < 0 || mi >= l2_m_n || mi = l2_e || j < l2_m_arity[mi] || l2_input_undeclared(mi, j) = 0
         return: 0
     if: l2_dt(mi, j - l2_m_arity[mi]) != l2_colon_graph_ty() || l2_input_schema(mi, j) != -1
         return: 0
     if: l2_anchor_differ(mi, l2_input_name(mi, j)) != 0
-        return: l2_error(path, at, "the declarations reaching a free name disagree in a field the method uses through it")
+        return: l2_error(path, at, "the declarations reaching a free name give a field the method uses different types; reading it by conversion is not built yet")
 return: l2_error(path, at, "a path through a free name that no declaration reaching it gives its fields to is not built yet")
 
 # The named declaration whose layout the Structure own field `own` holds has, where `own` is the result of a merge
@@ -28806,61 +28879,67 @@ fn: l2_anchor_own_layout (int: own) int
         return: ly
 return: 0 - 1
 
-# One more named declaration among the candidates (set, of *n, at most cap).
-fn: l2_anchor_add (@: int set; @: int n; int: cap; int: ns) int
+# One more named declaration among the candidates (set, of *n).  The set has room for every named declaration
+# of the unit (l2_anchor_close), and each is in it once.
+sub: l2_anchor_add (@: int set; @: int n; int: ns)
     int: i 0
     if: ns < 0
-        return: 0
+        return
     while: i < \n
         if: set[i] = ns
-            return: 0
+            return
         i: i + 1
     ---
-    if: \n >= cap
-        return: 1
     set[\n]: ns
     \n: \n + 1
-return: 0
+end: l2_anchor_add
 
-# The named declarations that reach place key of method mi: what its own field's declaration makes, what a site
+# The named declarations that reach place key of method mi: what a merge makes in its own field, what a site
 # records for it, and what reaches every place handed on to it -- the edges the fixed point recorded
-# (l2_d105_edge), followed against their direction.  seen_m/seen_k are the places already followed.  1 when a
-# list is full: nothing is established then.
-fn: l2_anchor_reach (int: mi; int: key; @: int set; @: int n; int: cap; @: int seen_m; @: int seen_k; @: int seen_n; int: seen_cap) int
-    int: i 0
-    int: e 0
-    while: i < \seen_n
-        if: seen_m[i] = mi && seen_k[i] = key
-            return: 0
-        i: i + 1
+# (l2_d105_edge), followed against their direction.  seen_m/seen_k are the places reached, in the order they are
+# met, and the list of work: each is visited once, so a cycle of methods that hand the name to one another ends.
+# A place joins the list as the giving end of an edge, so the edges and the place asked about bound it
+# (l2_anchor_close gives that room).
+sub: l2_anchor_reach (int: mi; int: key; @: int set; @: int n; @: int seen_m; @: int seen_k)
+    int: at 0
+    int: seen_n 1
+    int: i
+    int: e
+    int: j
+    seen_m[0]: mi
+    seen_k[0]: key
+    while: at < seen_n
+        mi: seen_m[at]
+        key: seen_k[at]
+        if: l2_d105_key_own(key) >= 0
+            l2_anchor_add(set, n, l2_anchor_own_layout(l2_d105_key_own(key)))
+        i: 0
+        while: i < l2_d105s_n
+            if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = key && l2_schema_kind(l2_d105s_ty[i]) = 1
+                l2_anchor_add(set, n, l2_d105s_ty[i])
+            i: i + 1
+        ---
+        e: 0
+        while: e < l2_d105e_n
+            if: l2_d105e_tmi[e] = mi && l2_d105e_tk[e] = key && l2_d105e_fmi[e] >= 0
+                j: 0
+                while: j < seen_n && (seen_m[j] != l2_d105e_fmi[e] || seen_k[j] != l2_d105e_fk[e])
+                    j: j + 1
+                if: j = seen_n
+                    seen_m[seen_n]: l2_d105e_fmi[e]
+                    seen_k[seen_n]: l2_d105e_fk[e]
+                    seen_n: seen_n + 1
+                ---
+            e: e + 1
+        ---
+        at: at + 1
     ---
-    if: \seen_n >= seen_cap
-        return: 1
-    seen_m[\seen_n]: mi
-    seen_k[\seen_n]: key
-    \seen_n: \seen_n + 1
-    if: l2_d105_key_own(key) >= 0 && l2_anchor_add(set, n, cap, l2_anchor_own_layout(l2_d105_key_own(key))) != 0
-        return: 1
-    i: 0
-    while: i < l2_d105s_n
-        if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = key && l2_schema_kind(l2_d105s_ty[i]) = 1 && l2_anchor_add(set, n, cap, l2_d105s_ty[i]) != 0
-            return: 1
-        i: i + 1
-    ---
-    while: e < l2_d105e_n
-        if: l2_d105e_tmi[e] = mi && l2_d105e_tk[e] = key && l2_d105e_fmi[e] >= 0
-            if: l2_anchor_reach(l2_d105e_fmi[e], l2_d105e_fk[e], set, n, cap, seen_m, seen_k, seen_n, seen_cap) != 0
-                return: 1
-            ---
-        e: e + 1
-    ---
-return: 0
+end: l2_anchor_reach
 
 # Whether declaration ns has every path of the uses just collected (l2_uses_walk_frame), each to its end.
 fn: l2_anchor_covers (int: ns) int
     size_t: off 0U
     @: char slot
-    []: char buf 128
     size_t: n
     size_t: at
     size_t: cut
@@ -28880,22 +28959,20 @@ fn: l2_anchor_covers (int: ns) int
             cut: at
             while: cut < n && slot[cut] != 92
                 cut: cut + 1U
-            if: cut = at || cut - at >= 128U || si < 0
+            if: cut = at || si < 0
                 return: 0
-            memcpy(buf, slot + at, cut - at)
-            buf[cut - at]: 0
             occurrence: -1
             name_at: 0U
-            if: buf[0] = 91
+            if: slot[at] = 91
                 occurrence: 0
                 name_at: 1U
-                while: name_at < cut - at && buf[name_at] >= 48 && buf[name_at] <= 57
-                    occurrence: occurrence * 10 + (cast: (int) (buf[name_at] - 48))
+                while: name_at < cut - at && slot[at + name_at] >= 48 && slot[at + name_at] <= 57
+                    occurrence: occurrence * 10 + (cast: (int) (slot[at + name_at] - 48))
                     name_at: name_at + 1U
-                if: name_at >= cut - at || buf[name_at] != 93
+                if: name_at >= cut - at || slot[at + name_at] != 93
                     return: 0
                 name_at: name_at + 1U
-            name.data: buf + name_at
+            name.data: slot + at + name_at
             name.length: cut - at - name_at
             if: l2_schema_named_meta(si, @ name, occurrence, @ meta) < 0
                 return: 0
@@ -28920,17 +28997,18 @@ return: 1
 # one to another by those paths is then the same either way.  Where two of them disagree -- a field the method
 # reads is a number of one type in one and of another type in the other -- none is the coordinate space, and
 # the row says so (-2): to take the first would refuse the second by the first's type, and the other order
-# would refuse the other.  A declaration that reaches the input and has not a path the method uses is no
+# would refuse the other.  That refusal is a limit: what the method consumes at the read decides, and a field of
+# another type is to be read at its own type and converted there (the receiving-edge conversion, not built).
+# A declaration that reaches the input and has not a path the method uses is no
 # coordinate space, and is refused where it is handed, by the ordinary admission.  Where none is established
 # the path is refused where it stands (l2_check_fields, l2_check_path_write).
 # The fixed point runs again after the waited checks (l2_wait_run): the rows are found again, and a coordinate
 # space a checked path relied on cannot be lost.
 fn: l2_anchor_close () int
-    []: int set 64
-    []: int seen_m 256
-    []: int seen_k 256
+    @: int set 0
+    @: int seen_m 0
+    @: int seen_k 0
     int: n
-    int: seen_n
     int: m 0
     int: k
     int: i
@@ -28938,11 +29016,25 @@ fn: l2_anchor_close () int
     int: row
     int: same
     int: was l2_anc_on
+    int: status 0
+    size_t: isz
     @: LmP0Text nm
     l2_anc_on: 0
-    while: m < l2_m_n
+    # The room of one search, from the program itself: a candidate is a named declaration of the unit, each once;
+    # a place reached is the place asked about or the giving end of a recorded edge.  No count is assumed.
+    isz: c.sizeof(c.int)
+    if: l2_mul_ok((cast: (size_t) l2_ns_n) + 1U, isz) = 0 || l2_mul_ok((cast: (size_t) l2_d105e_n) + 1U, isz) = 0
+        l2_alloc_err: 2
+        return: l2_alloc_or(l2_src, 0, "out of memory")
+    l2_alloc_kind: 5
+    set: (cast: (@: int) l2_xmalloc(((cast: (size_t) l2_ns_n) + 1U) * isz))
+    seen_m: (cast: (@: int) l2_xmalloc(((cast: (size_t) l2_d105e_n) + 1U) * isz))
+    seen_k: (cast: (@: int) l2_xmalloc(((cast: (size_t) l2_d105e_n) + 1U) * isz))
+    if: set = 0 || seen_m = 0 || seen_k = 0
+        status: l2_alloc_or(l2_src, 0, "out of memory")
+    while: status = 0 && m < l2_m_n
         k: 0
-        while: m != l2_e && k < l2_m_dyn[m]
+        while: status = 0 && m != l2_e && k < l2_m_dyn[m]
             nm: l2_dn(m, k)
             if: nm = 0 || l2_dt(m, k) != l2_colon_graph_ty() || l2_input_undeclared(m, l2_m_arity[m] + k) = 0 || l2_m_node[m] = 0 || l2_m_node[m]\as = 0
                 k: k + 1
@@ -28950,37 +29042,37 @@ fn: l2_anchor_close () int
             l2_uses_reset()
             if: l2_uses_walk_frame(nm, l2_m_node[m]\as\frame) != 0 || l2_uses_oom != 0
                 l2_uses_reset()
-                return: l2_alloc_or(l2_src, l2_m_node[m], "out of memory")
+                status: l2_alloc_or(l2_src, l2_m_node[m], "out of memory")
+                continue
             # A name the method only hands on has no path of its own: it needs no coordinate space.
             if: l2_uses_len = 0
                 l2_uses_reset()
                 k: k + 1
                 continue
             n: 0
-            seen_n: 0
             best: 0 - 1
-            if: l2_anchor_reach(m, l2_m_arity[m] + k, set, @ n, 64, seen_m, seen_k, @ seen_n, 256) = 0
-                i: 0
-                while: i < n
-                    if: (best < 0 || set[i] < best) && l2_anchor_covers(set[i]) != 0
-                        best: set[i]
-                    i: i + 1
-                ---
-                i: 0
-                while: best >= 0 && i < n
-                    if: set[i] != best && l2_anchor_covers(set[i]) != 0
-                        same: 0
-                        if: l2_descriptor_used(set[i], best, @ same) != 0 || same = 0
-                            best: 0 - 2
-                        ---
-                    i: i + 1
-                ---
+            l2_anchor_reach(m, l2_m_arity[m] + k, set, @ n, seen_m, seen_k)
+            i: 0
+            while: i < n
+                if: (best < 0 || set[i] < best) && l2_anchor_covers(set[i]) != 0
+                    best: set[i]
+                i: i + 1
+            ---
+            i: 0
+            while: best >= 0 && i < n
+                if: set[i] != best && l2_anchor_covers(set[i]) != 0
+                    same: 0
+                    if: l2_descriptor_used(set[i], best, @ same) != 0 || same = 0
+                        best: 0 - 2
+                    ---
+                i: i + 1
             ---
             l2_uses_reset()
             row: l2_anc_row(m, nm)
             if: row < 0
                 if: l2_anc_reserve() != 0
-                    return: l2_alloc_or(l2_src, l2_m_node[m], "out of memory")
+                    status: l2_alloc_or(l2_src, l2_m_node[m], "out of memory")
+                    continue
                 row: l2_anc_n
                 l2_anc_m[row]: m
                 l2_anc_nm[row]: nm
@@ -28988,13 +29080,19 @@ fn: l2_anchor_close () int
                 l2_anc_n: l2_anc_n + 1
             else:
                 if: was != 0 && l2_anc_ns[row] >= 0 && best < 0
-                    return: l2_error(l2_src, l2_m_node[m], "internal: the coordinate space of a free name was lost after its paths were checked")
+                    status: l2_error(l2_src, l2_m_node[m], "internal: the coordinate space of a free name was lost after its paths were checked")
+                    continue
                 l2_anc_ns[row]: best
             ---
             k: k + 1
         ---
         m: m + 1
     ---
+    l2_xfree((cast: (@: void) set))
+    l2_xfree((cast: (@: void) seen_m))
+    l2_xfree((cast: (@: void) seen_k))
+    if: status != 0
+        return: status
     l2_anc_on: 1
 return: 0
 
@@ -32683,11 +32781,113 @@ fn: l2_d105_sub (int: mi; int: k) int
     ---
 return: 0
 
-# Record it (once).  1 when the table is full.
+# The tables of the admission by name grow one entry at a time, their blocks doubling.  One block of ints carried
+# into `want` entries of room, n of them used.  1 when there is no memory.
+fn: l2_d105_ints (@@: int block; int: n; int: want) int
+    @: void p
+    p: l2_vec_grow((cast: (@: void) (\block)), n, want, c.sizeof(c.int))
+    if: p = 0
+        return: 1
+    \block: (cast: (@: int) p)
+return: 0
+
+# Room for one more formal admitted by name.
+fn: l2_d105_room () int
+    int: want
+    if: l2_d105_n < l2_d105_cap
+        return: 0
+    want: l2_cap_next(l2_d105_cap, l2_d105_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_d105_mi, l2_d105_n, want) != 0 || l2_d105_ints(@ l2_d105_k, l2_d105_n, want) != 0
+        return: 1
+    l2_d105_cap: want
+return: 0
+
+# Room for one more source.
+fn: l2_d105s_room () int
+    int: want
+    @: void p
+    if: l2_d105s_n < l2_d105s_cap
+        return: 0
+    want: l2_cap_next(l2_d105s_cap, l2_d105s_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_d105s_mi, l2_d105s_n, want) != 0 || l2_d105_ints(@ l2_d105s_k, l2_d105s_n, want) != 0 || l2_d105_ints(@ l2_d105s_ty, l2_d105s_n, want) != 0
+        return: 1
+    p: l2_vec_grow((cast: (@: void) l2_d105s_at), l2_d105s_n, want, c.sizeof(@: char))
+    if: p = 0
+        return: 1
+    l2_d105s_at: (cast: (@@: LmP0Node) p)
+    l2_d105s_cap: want
+return: 0
+
+# Room for one more edge.
+fn: l2_d105e_room () int
+    int: want
+    @: void p
+    if: l2_d105e_n < l2_d105e_cap
+        return: 0
+    want: l2_cap_next(l2_d105e_cap, l2_d105e_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_d105e_fmi, l2_d105e_n, want) != 0 || l2_d105_ints(@ l2_d105e_fk, l2_d105e_n, want) != 0
+        return: 1
+    if: l2_d105_ints(@ l2_d105e_tmi, l2_d105e_n, want) != 0 || l2_d105_ints(@ l2_d105e_tk, l2_d105e_n, want) != 0
+        return: 1
+    p: l2_vec_grow((cast: (@: void) l2_d105e_at), l2_d105e_n, want, c.sizeof(@: char))
+    if: p = 0
+        return: 1
+    l2_d105e_at: (cast: (@@: LmP0Node) p)
+    l2_d105e_cap: want
+return: 0
+
+# Room for one more pair of types.
+fn: l2_d105t_room () int
+    int: want
+    if: l2_d105t_n < l2_d105t_cap
+        return: 0
+    want: l2_cap_next(l2_d105t_cap, l2_d105t_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_d105t_cand, l2_d105t_n, want) != 0 || l2_d105_ints(@ l2_d105t_req, l2_d105t_n, want) != 0
+        return: 1
+    l2_d105t_cap: want
+return: 0
+
+# Room for the cells of one pair map of required type req: two per field.  0 when there is no memory.
+fn: l2_d105_cells (int: req) @: int
+    int: need l2_schema_width(req)
+    int: want
+    @: void p
+    if: need < 1
+        need: 1
+    if: need > c.INT_MAX / 2
+        l2_alloc_err: 2
+        return: 0
+    need: need * 2
+    if: need <= l2_d105_tcap
+        return: l2_d105_tbuf
+    want: l2_cap_next(l2_d105_tcap, need)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 0
+    p: l2_vec_grow((cast: (@: void) l2_d105_tbuf), 0, want, c.sizeof(c.int))
+    if: p = 0
+        return: 0
+    l2_d105_tbuf: (cast: (@: int) p)
+    l2_d105_tcap: want
+return: l2_d105_tbuf
+
+# Record it (once).  1 when there is no memory.
 fn: l2_d105_mark (int: mi; int: k) int
     if: l2_d105_sub(mi, k) != 0
         return: 0
-    if: l2_d105_n >= 64
+    if: l2_d105_room() != 0
         return: 1
     l2_d105_mi[l2_d105_n]: mi
     l2_d105_k[l2_d105_n]: k
@@ -32800,8 +33000,8 @@ return: 0
 fn: l2_d105_source (int: mi; int: k; int: ty; const: @(LmP0Node at)) int
     if: mi < 0 || ty = -1 || l2_d105_has(mi, k, ty) != 0
         return: 0
-    if: l2_d105s_n >= 256
-        return: l2_error(l2_src, at, "too many named types admitted to Structure formals (D-105)")
+    if: l2_d105s_room() != 0
+        return: l2_alloc_or(l2_src, at, "out of memory")
     l2_d105s_mi[l2_d105s_n]: mi
     l2_d105s_k[l2_d105s_n]: k
     l2_d105s_ty[l2_d105s_n]: ty
@@ -32817,8 +33017,8 @@ fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) i
             return: 0
         i: i + 1
     ---
-    if: l2_d105e_n >= 128
-        return: l2_error(l2_src, at, "too many formals passed on to Structure formals (D-105)")
+    if: l2_d105e_room() != 0
+        return: l2_alloc_or(l2_src, at, "out of memory")
     l2_d105e_fmi[l2_d105e_n]: fmi
     l2_d105e_fk[l2_d105e_n]: fk
     l2_d105e_tmi[l2_d105e_n]: tmi
@@ -32827,7 +33027,7 @@ fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) i
     l2_d105e_n: l2_d105e_n + 1
 return: 0
 
-# D-105 native: the unit's pair table cand -> req -- its index (added once), or -1 when the list is full.
+# D-105 native: the unit's pair table cand -> req -- its index (added once), or -1 when there is no memory.
 fn: l2_d105_pair (int: cand; int: req) int
     int: i 0
     while: i < l2_d105t_n
@@ -32835,7 +33035,7 @@ fn: l2_d105_pair (int: cand; int: req) int
             return: i
         i: i + 1
     ---
-    if: l2_d105t_n >= 64
+    if: l2_d105t_room() != 0
         return: 0 - 1
     l2_d105t_cand[l2_d105t_n]: cand
     l2_d105t_req[l2_d105t_n]: req
@@ -32931,18 +33131,21 @@ return: 0
 # Run only after physical schemas are complete. Unsupported table projection
 # stays a located translation refusal, never a later internal emission error.
 fn: l2_d105_prepare_pair (int: cand; int: req; const: @(LmP0Node at)) int
-    []: int table 128
+    @: int table
     int: length 0
     int: status
     if: cand = -1 || req = -1 || cand = req
         return: 0
-    status: l2_d105_table(cand, req, table, 128, @ length, 1)
+    table: l2_d105_cells(req)
+    if: table = 0
+        return: l2_alloc_or(l2_src, at, "out of memory")
+    status: l2_d105_table(cand, req, table, l2_d105_tcap, @ length, 1)
     if: status = 2
         return: l2_error(l2_src, at, "an admission to a Structure type through a Structure field of another type")
     if: status != 0
         return: l2_error(l2_src, at, "an admission to a Structure type")
     if: l2_d105_pair(cand, req) < 0
-        return: l2_error(l2_src, at, "too many pairs of types admitted by name (D-105)")
+        return: l2_alloc_or(l2_src, at, "out of memory")
 return: 0
 
 # THE COVERAGE OF A RECEIVING PLACE (the receiving-use contract: Codex,
@@ -33915,7 +34118,7 @@ fn: l2_d105_close () int
     int: ty
     int: why
     int: tn 0
-    []: int t 128
+    @: int t 0
     i: 0
     while: i < l2_own_n
         ty: l2_own_source_layout(i)
@@ -33964,7 +34167,7 @@ fn: l2_d105_close () int
                     req: l2_input_schema(l2_d105e_tmi[e], l2_d105e_tk[e])
                     ty: l2_d105s_ty[i]
                     if: req != -1 && ty != req && l2_d105_pair(ty, req) < 0
-                        return: l2_error(l2_src, l2_d105e_at[e], "too many pairs of types admitted by name (D-105)")
+                        return: l2_alloc_or(l2_src, l2_d105e_at[e], "out of memory")
                     if: l2_d105_receiving_flow(ty, l2_d105e_tmi[e], l2_d105e_tk[e]) = 0
                         i: i + 1
                         continue
@@ -34008,15 +34211,18 @@ fn: l2_d105_close () int
             # An ordinary reference binding checks its full receiver only
             # when reached, after evaluating the candidate. Recording layout
             # alternatives must not turn that runtime refusal into a check here.
-            why: l2_d105_table(ty, req, t, 128, @ tn, 1)
+            t: l2_d105_cells(req)
+            if: t = 0
+                return: l2_alloc_or(l2_src, l2_d105s_at[i], "out of memory")
+            why: l2_d105_table(ty, req, t, l2_d105_tcap, @ tn, 1)
             if: why = 2
                 return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type through a Structure field of another type")
             if: why != 0
                 return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type")
             if: l2_d105_mark(l2_d105s_mi[i], l2_d105s_k[i]) != 0
-                return: l2_error(l2_src, l2_d105s_at[i], "too many formals admitted by name")
+                return: l2_alloc_or(l2_src, l2_d105s_at[i], "out of memory")
             if: l2_d105_pair(ty, req) < 0
-                return: l2_error(l2_src, l2_d105s_at[i], "too many pairs of types admitted by name (D-105)")
+                return: l2_alloc_or(l2_src, l2_d105s_at[i], "out of memory")
         ---
         i: i + 1
     ---
@@ -34297,9 +34503,12 @@ fn: l2_d105_emit_tables () int
     int: n 0
     int: w
     int: cells
-    []: int t 128
+    @: int t 0
     while: p < l2_d105t_n
-        if: l2_d105_table(l2_d105t_cand[p], l2_d105t_req[p], t, 128, @ n, 1) != 0
+        t: l2_d105_cells(l2_d105t_req[p])
+        if: t = 0
+            return: l2_alloc_or(l2_src, 0, "out of memory")
+        if: l2_d105_table(l2_d105t_cand[p], l2_d105t_req[p], t, l2_d105_tcap, @ n, 1) != 0
             return: l2_error(l2_src, 0, "internal: a pair table of D-105 could not be built")
         w: l2_d105_width(l2_d105t_req[p])
         cells: w * 2
@@ -34341,7 +34550,7 @@ return: l2_rw_admit_project(parent, ni, @ source, 0, -1, out)
 # frame carries the pair map's 2*width cells: the ordinal half then the last
 # half (K01); an identity admission writes the same slot on both halves.
 fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
-    []: int slots 128
+    @: int slots 0
     int: n 0
     int: width l2_d105_width(req)
     int: j 0
@@ -34352,7 +34561,11 @@ fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     if: l2_construct_phase = 0
         return: 0
     if: cand != req
-        status: l2_d105_table(cand, req, slots, 128, @ n, 1)
+        slots: l2_d105_cells(req)
+        if: slots = 0
+            return: l2_alloc_or(l2_src, l2_here_node, "out of memory")
+        status: l2_d105_table(cand, req, slots, l2_d105_tcap, @ n, 1)
+    ---
     if: status = 2
         return: l2_rw_refuse(l2_here_node, "an admission to a Structure type through a Structure field of another type")
     if: status != 0

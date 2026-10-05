@@ -3123,15 +3123,20 @@ callable-формал ссылка идёт верно (`unit_held_actual_refere
 **Исправлено 2026-10-05.** Среди объявлений, которые доходят до такого имени, одно, имеющее все пути
 метода, служит координатным пространством этих путей (`l2_anchor_close`). Это не тип имени: Structure
 другого объявления допускается к нему только по путям, которые метод использует, обычным допуском.
-Какое объявление взято, на результат не влияет; где два объявления расходятся в типе читаемого поля,
-путь отвергается на месте одними словами при любом порядке. Запись по такому пути ждёт замыкания, как
-чтение. Программа ниже даёт 31 нативно и с обходом. Строки: `unit_free_path_read`, `_order`,
-`_order_swapped`, `_first_lacks`, `_other_refused`, `_other_chain_refused`, `_write`, `_null`,
-`_null_read_walk`, `_types_differ_refused`, `_types_differ_swapped_refused`, `_none_refused`,
-`_write_none_refused`, `_deep_none_refused`, `_letter`, `_typed_place`, `_two_readers`, `_argument`,
-`_deep`, с парами `_walk` у позитивов. Остаётся пределом, с отказом на месте: до имени доходят только
-значения без раскладки
+Какое объявление взято, на результат не влияет. Запись по такому пути ждёт замыкания, как чтение.
+Программа ниже даёт 31 нативно и с обходом. Строки: `unit_free_path_read`, `_order`, `_order_swapped`,
+`_first_lacks`, `_other_refused`, `_other_chain_refused`, `_write`, `_null`, `_null_read_walk`,
+`_none_refused`, `_value_none_refused`, `_write_none_refused`, `_deep_none_refused`, `_letter`,
+`_typed_place`, `_two_readers`, `_argument`, `_deep`, с парами `_walk` у позитивов
 ([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+Поправка того же дня по двадцать первому ответу Codex -12. Поиск координатного пространства имел
+жёсткие потолки и отвергал программу за ними; они убраны
+([ANCHOR-FIXED-CEILINGS](#anchor-fixed-ceilings)). Отказ там, где два объявления дают читаемому полю
+разные типы, был записан как правило; это предел, и его программы стали обязательными позитивами
+([FIELD-CONSUMPTION-CONVERSION](#field-consumption-conversion)). Остаётся пределом, с отказом на
+месте: до имени доходят только значения без раскладки
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
 
 Запись до исправления:
 
@@ -3307,7 +3312,7 @@ undeclared` на программе выше, измерено на `bfeef8cc`).
 ([§70 журнала](fable-continuation-20261003.md#free-name-path)).
 
 <a id="held-definition-undeclared-name"></a>
-### HELD-DEFINITION-UNDECLARED-NAME — 2026-10-05, fable, OPEN; статус выведен из общего правила
+### HELD-DEFINITION-UNDECLARED-NAME — 2026-10-05, fable, OPEN (блокер G5); верность программы подтверждена Codex
 
 Возвращённое определение само читает имя, которого ничто не объявляет:
 
@@ -3326,10 +3331,134 @@ end: same
 Определение, которое вызывает метод единицы, читающий такое имя, работает
 (`unit_held_call_required_input_from_caller`). Когда имя читает само определение, трансляция
 отказывает словами, которые читаются как правило о связывании merge. Для ссылки с путём то же.
-Измерено транслятором вне гейта на `bfeef8cc`. Что программа верна, выведено из общего правила
-свободного имени (книга §12), а не из процитированной нормы об определении; подтверждение запрошено
-у Codex
+Измерено транслятором вне гейта на `bfeef8cc`
 ([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+Codex, двадцать первый ответ -12: «Confirm HELD-DEFINITION-UNDECLARED-NAME is a valid OPEN positive and
+G5 debt.» И: «same() must return 45: k retains its ordinary captured value, n is a required dynamic
+input supplied from the caller's available context.» И: «The old T7 prohibition concerns
+unsupported/invalid BINDING operands of a callable specialization; it does not prohibit a model body's
+free name.» Чинить по ответу надо обычным замыканием требуемых входов и формированием вызова, не
+захватом. Обязательный позитив, красный: `unit_held_definition_free_name` (по норме 45). Вместе с
+исправлением нужны строки: число и ссылка с путём, пересылка, поданные ноль и пустая ссылка остаются
+присутствующими, отказ при отсутствии источника
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
+
+<a id="anchor-fixed-ceilings"></a>
+### ANCHOR-FIXED-CEILINGS — 2026-10-05, найдено Codex в `752f87c8`, FIXED 2026-10-05
+
+Поиск координатного пространства (§70) держал кандидатов в 64 ячейках, достигнутые места в 256 и
+сравнивал шаг пути через копию в 128 байт. Программа за любым из трёх потолков отвергалась словами
+предела, называвшими другую причину. Ошибка моя. Codex, двадцать первый ответ -12: «These are precisely
+the arbitrary length/count limits the author has already forbidden, including in translation metadata.
+They are not justified by being compile-time-only, nor by diagnosing the result as an implementation
+limit.»
+
+**Исправлено 2026-10-05.** Блоки поиска имеют размер из самой программы: кандидат — именованное
+объявление единицы, место — заданное место или дающий конец записанного ребра. Достигнутые места
+служат списком работы, каждое посещается один раз, поэтому цикл методов заканчивается без максимума.
+Шаг пути сравнивается на месте по своей длине. Отказ аллокации остаётся отказом аллокации. Строки:
+`unit_free_path_many_declarations` (70 объявлений), `unit_free_path_many_places` (262 пересылающих
+метода, два в цикле), `unit_free_path_long_step` и `_long_step_other_refused` (имя поля 141 байт), с
+парами `_walk` у позитивов
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
+
+<a id="d105-fixed-ceilings"></a>
+### D105-FIXED-CEILINGS — 2026-10-05, fable, FIXED 2026-10-05
+
+Таблицы допуска по имени были блоками постоянного размера: 64 формала, допущенных по имени, 256
+источников, 128 рёбер, 64 пары типов, 128 ячеек одного соответствия (объявление не шире 64 полей).
+За потолком трансляция отказывала: `too many formals admitted by name`, `too many named types admitted
+to Structure formals (D-105)`, `too many formals passed on to Structure formals (D-105)`, `too many
+pairs of types admitted by name (D-105)`; для объявления шире 64 полей —
+`internal: an admission map has no completed physical schema`. Найдено свидетелями шага §71: каждый из
+них, пройдя потолок поиска, упирался в один из этих.
+
+**Исправлено 2026-10-05.** Таблицы растут вместе с программой; ячейки соответствия имеют размер по
+ширине требуемого объявления. Строки: `unit_formal_many_admitted` (70 формалов),
+`unit_formal_wide_model` (70 полей), и те же `unit_free_path_many_declarations` и `_many_places`
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
+
+<a id="long-use-left-out"></a>
+### LONG-USE-LEFT-OUT — 2026-10-05, fable, FIXED 2026-10-05; был принят неверный кандидат без отказа
+
+Использования метода собирались в 128 байт. Путь, который не помещался, молча опускался: чтение поля с
+именем длиннее 127 байт через формал не входило в использования, и кандидат без этого поля допускался.
+
+```text
+fn: r (Model: box) int
+    return: box\<имя в 141 байт> + 1
+end: r
+fn: bad () int
+    box: merge Near                # у Near такого поля нет
+    return: r(box)                 # транслировалось; по норме отказ
+end: bad
+```
+
+Измерено транслятором `752f87c8`: трансляция проходит, а при исполнении процесс останавливается:
+`lmx: invariant: a field of a formal admitted by name is not carried by its value (no record, or a
+hole)`, код 3. Ни одна программа гейтов такого имени не имела.
+
+**Исправлено 2026-10-05.** Путь собирается по своей длине (`l2_uses_scan_follow`), и проверка кандидата
+сравнивает шаг на месте (`l2_descriptor_used`). Строки: `unit_formal_long_field` (31 и 41) и
+`unit_formal_long_field_other_refused` (отказ `implements is false in function argument`). Мутант
+`usesdrop`
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
+
+<a id="field-consumption-conversion"></a>
+### FIELD-CONSUMPTION-CONVERSION — 2026-10-05, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+
+Два объявления дают полю, которое метод читает, разные типы: `Model` с `int: v` и `Wide` с
+`size_t: v`; метод пишет `int: got box\v`. Под свободным именем путь отвергается на месте одинаково
+при любом порядке объявлений. Для объявленного формала кандидат отвергается: `implements is false in
+function argument`. Я записал первый отказ как правило. Codex, двадцать первый ответ -12: «Do not
+promote the symmetric disagreement refusal into a language rule. Semantics #three-argument-implements
+requires leaf_consumption_admitted(actual.p, Consumer, p), not equality of the anchor's primitive
+field spelling.» И: «Wide's size_t field must be read at its REAL type/width, then processed by the
+existing ordinary size_t -> int converter if the program's supplied primitive.convert context admits
+that edge.» И: «YES, the same criterion applies to the DECLARED analogue.» И: «This is NOT a
+universal promise that all differing numeric fields are interchangeable.» Адрес поля и запись в поле
+по ответу сохраняют настоящий тип поля.
+
+Отказ под свободным именем остаётся пределом и так себя называет: `the declarations reaching a free
+name give a field the method uses different types; reading it by conversion is not built yet`.
+Обязательные позитивы, красные: `unit_free_path_field_converted`, `_swapped` и
+`unit_formal_field_converted` (по норме 31 и 41). Исправление зависит от преобразования на принимающем
+крае (двадцатый ответ) и строится вместе с ним. Вместе с ним нужны строки по ответу: пары с обходом,
+отказ конвертера и отсутствующий конвертер, отдельно точный адрес и тип указуемого
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
+
+<a id="merge-cost-grows-with-unit"></a>
+### MERGE-COST-GROWS-WITH-UNIT — 2026-10-05, fable, OPEN; измерено, причина не найдена
+
+Копия именованной Structure в методе стоит тем дороже, чем больше единица. N объявлений и N методов,
+каждый копирует одно объявление и читает поле; свободных имён нет.
+
+| Транслятор | N = 8 | N = 12 | N = 16 | N = 20 |
+| --- | --- | --- | --- | --- |
+| `bfeef8cc`, без свободного имени | 3 с | | 43 с | |
+| шаг §71, со свободным именем | 4 с | 20 с | 65 с | больше 120 с |
+
+Время исполнения программы, без трансляции и компиляции. Стек показывает копию графа ядром под
+`lmx_merge_profiles_owned`: `lmx_graph_copy_many_profiles_staged`, `lmx_copy_process`,
+`lmx_arena_blocks_tail`. Рост близок к четвёртой степени N. Первая форма свидетеля с 70 объявлениями
+делала 70 копий и не закончилась за одиннадцать минут. Причину я не искал: это не маршрут этого
+шага. Свидетели шага дают вызывающим ссылку на Structure объявления и копий не делают
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
+
+<a id="fixed-blocks-audit"></a>
+### FIXED-BLOCKS-AUDIT — 2026-10-05, fable, OPEN; перечень, порядок не решён
+
+В `l2trans.lm1` после шага §71 остаются блоки постоянного размера: 200 символьных и 14 целочисленных
+в функциях, 29 на уровне единицы. Шаг убрал те, что стоят на маршруте пути через свободное имя и в
+таблицах допуска по имени. Один из оставшихся программа встречает: путь, текст которого длиннее 255
+байт, отвергается словами `unresolved name`, и через объявленный формал, и через свободное имя.
+Измерено: имя поля 300 байт отвергается, 250 проходит. Блоки старше этой работы; среди них на
+маршрутах пути и допуска: `l2_check_fields` (`chbuf` 256), `l2_emit_fields` (`pbuf` и `chbuf` 256),
+`l2_ruse_scan_struct` (`path` 256), `l2_descriptor_implements`, `l2_actual_ns`, `l2_actual_path`,
+`l2_emit_actual_path` (`buf` 128), `l2_emit_path_to` (`l2_proot` 64). Нужен отдельный шаг; порядок
+запрошен у Codex
+([§71 журнала](fable-continuation-20261003.md#no-ceiling)).
 
 <a id="t7-actual-from-root"></a>
 ### T7-ACTUAL-FROM-ROOT — 2026-10-04, fable, FIXED 2026-10-04

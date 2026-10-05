@@ -1,0 +1,19 @@
+# The same where the path is the whole of a value: nothing that reaches
+# box has the field r reads into got.
+Other:
+    int: w 1
+end: Other
+
+fn: r () int
+    int: got box\v
+    return: got + 1
+end: r
+
+fn: bad () int
+    box: merge Other
+    return: r()
+end: bad
+
+int: b bad()
+sendMessage: exit(exit_code: b; stdout: ""; stderr: "")
+return

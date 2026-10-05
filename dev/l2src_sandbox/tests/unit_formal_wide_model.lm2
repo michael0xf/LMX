@@ -1,0 +1,175 @@
+# A declaration has more fields than the buffer of a correspondence once
+# held. Model has seventy fields f00 to f69, each holding its number; Wide
+# has the same seventy in the opposite order, each holding 100 and its
+# number. rd reads the first, the middle and the last through a formal of
+# Model. Given Model's own Structure: 0, 35 and 69. Given Wide's, whose
+# fields stand at other positions: 100, 135 and 169. Entry 7.
+Model:
+    int: f00 0
+    int: f01 1
+    int: f02 2
+    int: f03 3
+    int: f04 4
+    int: f05 5
+    int: f06 6
+    int: f07 7
+    int: f08 8
+    int: f09 9
+    int: f10 10
+    int: f11 11
+    int: f12 12
+    int: f13 13
+    int: f14 14
+    int: f15 15
+    int: f16 16
+    int: f17 17
+    int: f18 18
+    int: f19 19
+    int: f20 20
+    int: f21 21
+    int: f22 22
+    int: f23 23
+    int: f24 24
+    int: f25 25
+    int: f26 26
+    int: f27 27
+    int: f28 28
+    int: f29 29
+    int: f30 30
+    int: f31 31
+    int: f32 32
+    int: f33 33
+    int: f34 34
+    int: f35 35
+    int: f36 36
+    int: f37 37
+    int: f38 38
+    int: f39 39
+    int: f40 40
+    int: f41 41
+    int: f42 42
+    int: f43 43
+    int: f44 44
+    int: f45 45
+    int: f46 46
+    int: f47 47
+    int: f48 48
+    int: f49 49
+    int: f50 50
+    int: f51 51
+    int: f52 52
+    int: f53 53
+    int: f54 54
+    int: f55 55
+    int: f56 56
+    int: f57 57
+    int: f58 58
+    int: f59 59
+    int: f60 60
+    int: f61 61
+    int: f62 62
+    int: f63 63
+    int: f64 64
+    int: f65 65
+    int: f66 66
+    int: f67 67
+    int: f68 68
+    int: f69 69
+end: Model
+
+Wide:
+    int: f69 169
+    int: f68 168
+    int: f67 167
+    int: f66 166
+    int: f65 165
+    int: f64 164
+    int: f63 163
+    int: f62 162
+    int: f61 161
+    int: f60 160
+    int: f59 159
+    int: f58 158
+    int: f57 157
+    int: f56 156
+    int: f55 155
+    int: f54 154
+    int: f53 153
+    int: f52 152
+    int: f51 151
+    int: f50 150
+    int: f49 149
+    int: f48 148
+    int: f47 147
+    int: f46 146
+    int: f45 145
+    int: f44 144
+    int: f43 143
+    int: f42 142
+    int: f41 141
+    int: f40 140
+    int: f39 139
+    int: f38 138
+    int: f37 137
+    int: f36 136
+    int: f35 135
+    int: f34 134
+    int: f33 133
+    int: f32 132
+    int: f31 131
+    int: f30 130
+    int: f29 129
+    int: f28 128
+    int: f27 127
+    int: f26 126
+    int: f25 125
+    int: f24 124
+    int: f23 123
+    int: f22 122
+    int: f21 121
+    int: f20 120
+    int: f19 119
+    int: f18 118
+    int: f17 117
+    int: f16 116
+    int: f15 115
+    int: f14 114
+    int: f13 113
+    int: f12 112
+    int: f11 111
+    int: f10 110
+    int: f09 109
+    int: f08 108
+    int: f07 107
+    int: f06 106
+    int: f05 105
+    int: f04 104
+    int: f03 103
+    int: f02 102
+    int: f01 101
+    int: f00 100
+end: Wide
+
+fn: rd (Model: m) int
+    return: m\f00 * 1000000 + m\f35 * 1000 + m\f69
+end: rd
+
+fn: own () int
+    @: Model x @Model
+    return: rd(x)
+end: own
+
+fn: other () int
+    @: Wide x @Wide
+    return: rd(x)
+end: other
+
+int: a own()
+int: b other()
+int: ok 7
+if: a != 35069
+    ok: 81
+if: b != 100135169
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

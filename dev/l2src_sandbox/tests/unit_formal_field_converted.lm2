@@ -1,0 +1,39 @@
+# OPEN positive. The same for a declared formal: a formal described by
+# Model asks of a candidate what its method consumes, and r forms an int
+# from box\v. A Structure made from Wide, whose v is a size_t, is read at
+# its own type and converted: 41, as one made from Model gives 31. This
+# implementation refuses the candidate by the difference of the two types.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    size_t: v 4U
+end: Wide
+
+fn: r (Model: box) int
+    int: got box\v
+    return: got + 1
+end: r
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: r(box)
+end: has
+
+fn: wide () int
+    box: merge Wide
+    box\v: 40U
+    return: r(box)
+end: wide
+
+int: a has()
+int: b wide()
+int: ok 7
+if: a != 31
+    ok: 81
+if: b != 41
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

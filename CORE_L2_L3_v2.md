@@ -497,12 +497,22 @@ the coordinate space of those paths (`l2_anchor_close`), and the input's
 schema. It is no type of the name and is not there when the program runs: a
 Structure of another declaration is admitted to it by the paths the method
 uses, by the ordinary admission, and its unused fields ask nothing. Which of
-the declarations is taken does not change what is accepted or read; where two
-of them give a used field different types the path is refused where it
-stands. Where none is established the path is refused where it stands, a
-limit. The root of a written path is read as the root of a read one is: a
-method that only writes through a name takes the name from its caller
+the declarations is taken does not change what is accepted or read. Where
+none is established the path is refused where it stands, a limit. Where two
+of them give a used field different types the path is refused where it stands
+too, and that is a limit as well: what the method consumes at the read
+decides, and a field of another type is to be read at its own type and
+converted at the receiving edge. The root of a written path is read as the
+root of a read one is: a method that only writes through a name takes the
+name from its caller
 ([ledger](steps/fable-continuation-20261003.md#free-name-path)).
+
+Nothing on this route has a ceiling. The search for a coordinate space holds
+its candidates and the places it reaches in storage sized from the program; a
+step of a path is joined and compared at its own length; the tables of the
+admission by name grow with the program. A failed allocation is reported as
+one and is never a refusal of the program
+([ledger](steps/fable-continuation-20261003.md#no-ceiling)).
 
 An input is formed in the calling method, before the callee is entered. Where
 the candidate is a dynamic one -- read from a reference place, which holds

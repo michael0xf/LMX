@@ -1,0 +1,30 @@
+# A name that differs from the long one in its last byte is another name.
+# Near has a field whose name is the long name and one byte more, and none
+# of the long name itself: its Structure has not the field r reads, and
+# bad's call of r is refused.
+Near:
+    int: a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_endx 9
+end: Near
+
+Model:
+    int: a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end 4
+end: Model
+
+fn: r () int
+    return: box\a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end + 1
+end: r
+
+fn: has () int
+    box: merge Model
+    return: r()
+end: has
+
+fn: bad () int
+    box: merge Near
+    return: r()
+end: bad
+
+int: a has()
+int: b bad()
+sendMessage: exit(exit_code: a + b; stdout: ""; stderr: "")
+return

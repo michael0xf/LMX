@@ -1,0 +1,58 @@
+# A step of a path is as long as its field's name. The field of Model and
+# of Wide that r reads and set writes has a name of 141 bytes; nothing in
+# their sight declares box. has gives a Structure made from Model through
+# mid: 31. wide gives one made from Wide, which has the field at another
+# position: 41. only calls set, which writes 3 through the name: 13.
+# Entry 7.
+Model:
+    int: a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end 4
+end: Wide
+
+fn: r () int
+    return: box\a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end + 1
+end: r
+
+fn: set () int
+    box\a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end: 3
+    return: 1
+end: set
+
+fn: mid () int
+    return: r()
+end: mid
+
+fn: has () int
+    box: merge Model
+    box\a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end: 30
+    return: mid()
+end: has
+
+fn: wide () int
+    box: merge Wide
+    box\a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end: 40
+    return: mid()
+end: wide
+
+fn: only () int
+    box: merge Wide
+    int: got set()
+    return: got * 10 + box\a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end
+end: only
+
+int: a has()
+int: b wide()
+int: c only()
+int: ok 7
+if: a != 31
+    ok: 81
+if: b != 41
+    ok: 82
+if: c != 13
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

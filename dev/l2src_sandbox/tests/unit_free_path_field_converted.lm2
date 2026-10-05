@@ -1,0 +1,40 @@
+# OPEN positive. What a method consumes at a read decides, not the type the
+# field has in one declaration or another. r forms an int from box\v;
+# nothing in its sight declares box. Model has v an int: read as it is, 31.
+# Wide has v a size_t: read at its own type and given to the ordinary
+# converter of size_t to int, 41. This implementation does not read a field
+# by conversion yet and refuses the path where it stands.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    size_t: v 4U
+end: Wide
+
+fn: r () int
+    int: got box\v
+    return: got + 1
+end: r
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: r()
+end: has
+
+fn: wide () int
+    box: merge Wide
+    box\v: 40U
+    return: r()
+end: wide
+
+int: a has()
+int: b wide()
+int: ok 7
+if: a != 31
+    ok: 81
+if: b != 41
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

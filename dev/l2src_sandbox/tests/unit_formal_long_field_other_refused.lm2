@@ -1,0 +1,24 @@
+# A Structure without the long field a formal's method reads is refused.
+# The read was not among the method's uses while a use was copied into a
+# buffer of 128 bytes: a path that did not fit was left out, and a
+# candidate without the field was admitted.
+Near:
+    int: a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_endx 9
+end: Near
+
+Model:
+    int: a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end 4
+end: Model
+
+fn: r (Model: box) int
+    return: box\a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_a_field_whose_name_is_longer_than_one_hundred_and_twenty_seven_bytes_end + 1
+end: r
+
+fn: bad () int
+    box: merge Near
+    return: r(box)
+end: bad
+
+int: b bad()
+sendMessage: exit(exit_code: b; stdout: ""; stderr: "")
+return

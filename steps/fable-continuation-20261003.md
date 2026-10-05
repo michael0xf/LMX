@@ -6546,6 +6546,10 @@ section 68.
 <a id="free-name-path"></a>
 ## 70. A path through a free name that nothing in the method's sight declares (Codex's eighteenth and nineteenth replies -12)
 
+> Corrected by [section 71](#no-ceiling). The search of this section had fixed ceilings, which are gone. The
+> refusal where two declarations give a used field different types is a limit and no rule: its two rows are
+> required positives now, under other names.
+
 ### The replies
 
 The eighteenth: "Q1: YES, the program is valid when the callers supply an
@@ -6820,3 +6824,179 @@ result of an opaque call given directly; the possible source, with the
 internal error above; the opaque reference under a typed free name; the
 letter as a typed result; the duplicate stop. Then the receiving-edge
 conversion by the twentieth reply, and the rest of the order of section 68.
+
+<a id="no-ceiling"></a>
+## 71. No ceiling on the route of a path through a free name (Codex's twenty-first reply -12)
+
+### The reply
+
+"NEWLY OBSERVED BOUNDEDNESS DEFECT — FIX BEFORE EXTENDING THIS SLICE. The new
+anchor route has hard-coded ceilings in the committed code". "These are
+precisely the arbitrary length/count limits the author has already
+forbidden, including in translation metadata. They are not justified by
+being compile-time-only, nor by diagnosing the result as an implementation
+limit. Use storage sized from the actual finite graph/metadata counts, or
+the existing dynamically sized work-list/span machinery. Cycle tracking
+remains ordinary algorithm state; an arbitrary maximum is not the cycle
+algorithm." A genuine allocation failure, the reply goes on, remains an
+allocation failure and is never a result that says no coordinate space
+was found. "Add witnesses beyond 64 reaching
+declarations, beyond 256 reached (method,input) places including a cycle,
+and beyond 127 bytes in a path component; each should produce its real
+positive result rather than a limit refusal. Also inspect this anchor
+addition for any other fixed ceilings introduced with it."
+
+The reply is right, and the fault is mine: section 70's search held its
+candidates in 64 cells and its places in 256, and compared a step of a path
+through a copy of 128 bytes. A program past any of the three was refused
+with the words of a limit that named another cause.
+
+### What the witnesses met
+
+Removing my three ceilings was not enough for the witnesses to pass. Each
+one met an older ceiling on the same route.
+
+| Witness | Section 70's ceiling | What it met next |
+| --- | --- | --- |
+| Seventy declarations reach one name | 64 candidates | 64 pairs of types admitted by name: `too many pairs of types admitted by name (D-105)` |
+| The name passes through 262 methods, two in a cycle | 256 places | 128 edges: `too many formals passed on to Structure formals (D-105)`; then 256 sources |
+| A field's name of 141 bytes | a step copied into 128 bytes | the uses of a method were joined in 128 bytes, and a path that did not fit was left out; the check of a candidate by those uses copied a step into 128 bytes |
+
+The middle column of the last row was more than a ceiling. A read through a
+declared formal whose path did not fit was not among the method's uses at
+all, so a candidate without that field was admitted, and the process
+stopped at the read. No program of the gates had such a name
+([LONG-USE-LEFT-OUT](defects.md#long-use-left-out)).
+
+### What is changed
+
+1. **The search for a coordinate space** (`l2_anchor_close`,
+   `l2_anchor_reach`). Its candidates are named declarations of the unit,
+   each once, and its places are the place asked about and the giving ends
+   of recorded edges: the two blocks are sized from those counts. The
+   places reached are the list of work, each visited once, so a cycle of
+   methods ends without a maximum. No list can be full; a failed allocation
+   is reported as one.
+2. **A step of a path is compared where it stands**, at its own length, in
+   the list of a method's uses (`l2_anchor_covers`, `l2_descriptor_used`):
+   no copy.
+3. **A used path is joined at its own length** (`l2_uses_scan_follow`): the
+   block grows with the path, as the list of paths already did.
+4. **The tables of the admission by name grow with the program**: formals
+   admitted by name (were 64), sources (256), edges (128), pairs of types
+   (64). The cells of one correspondence while it is built or written out
+   are sized by the required declaration's width (were 128, a declaration
+   of at most 64 fields).
+
+### Witnesses
+
+| Row | Past which ceiling | Shows |
+| --- | --- | --- |
+| `unit_free_path_many_declarations`, `_walk` | 64 candidates, 64 pairs | Seventy declarations reach one name at one call that forms the reader's input; each caller reads its own Structure, 101 to 170. |
+| `unit_free_path_many_places`, `_walk` | 256 places, 128 edges, 256 sources | The name passes through 260 forwarders in a chain and two in a cycle; 31, and 41 with the field at another position. |
+| `unit_free_path_long_step`, `_walk`; `_long_step_other_refused` | 128 bytes of a step | A field's name of 141 bytes read and written through the name: 31, 41, 13. A field whose name is that and one byte more is another field: refused by the ordinary admission. |
+| `unit_formal_long_field`, `_walk`; `_long_field_other_refused` | 128 bytes of a method's uses | The same for a declared formal: 31, 41; a candidate without the long field is refused. The second row translated before this step. |
+| `unit_formal_many_admitted`, `_walk` | 64 formals admitted by name | Seventy formals each filled with another declaration than its own. |
+| `unit_formal_wide_model`, `_walk` | 128 cells of a correspondence | A declaration of seventy fields admitted to one with the same fields in the opposite order. |
+
+The two largest fixtures give their callers a reference to the Structure of
+a declaration and make no copy: see the cost of a copy below.
+
+### Mutants
+
+Each puts one old ceiling back into this translator. Method as in section
+70, on the 51 rows of `fable_s9_01`.
+
+| Mutant | Puts back | Result |
+| --- | --- | --- |
+| `cap64` | more than 64 declarations establish nothing | `unit_free_path_many_declarations` and its walked twin are refused with the words of the limit |
+| `cap256` | the search stops joining places at 256 | `unit_free_path_many_places` and its walked twin are refused with the words of the limit |
+| `step127` | a step of 128 bytes or more is in no declaration | `unit_free_path_long_step` and its walked twin are refused; `_long_step_other_refused` is refused with other words at another place |
+| `used127` | the check of a candidate refuses such a step | `unit_formal_long_field` and its walked twin are refused, `implements is false`; `unit_free_path_long_step` is refused |
+| `usesdrop` | a step that does not fit 128 bytes is left out of a method's uses | `unit_formal_long_field_other_refused` translates, and the program stops when it runs: `a field of a formal admitted by name is not carried by its value`; `unit_free_path_long_step` is refused |
+| `edges128` | 128 edges | `unit_free_path_many_places` and its walked twin are refused |
+| `sources256` | 256 sources | the same two rows are refused |
+| `pairs64` | 64 pairs of types | `unit_free_path_many_declarations` and its walked twin are refused |
+| `marks64` | 64 formals admitted by name | `unit_formal_many_admitted` and its walked twin are refused |
+| `cells128` | 128 cells of a correspondence | `unit_formal_wide_model` and its walked twin are refused |
+
+`usesdrop` is the old behaviour of the uses, and its result is what the
+committed translator did with that fixture: the candidate without the field
+was admitted, and the process stopped at the read.
+
+A cycle of methods has no mutant of its own. Without the list of places
+visited the search would not end; the row with the cycle shows that it
+does.
+
+### Measured
+
+The translator against the committed one (`752f87c8`), on the 1770
+translations recorded by `fable_full_42`: exit, messages and the generated L1 are the same on 1768 rows. The two others are the rows of the disagreement, refused as before with the new words.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_29` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_29` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_43` (full harness) | RED 39 of 1788. Against `fable_full_42`: FAIL→OK 0, OK→FAIL 0, added 19, of them 15 green and the four required positives red; removed 2, the two rows renamed; no message of a red row changed. |
+| `build/l2_harness/fable_s9_01` (focused, before the gates) | 51 rows: the new rows pass; the four red rows are the required positives below. |
+
+### What the reply reclassified
+
+- **Declarations that give a used field different types** (Q1). "Do not
+  promote the symmetric disagreement refusal into a language rule.
+  Semantics #three-argument-implements requires
+  leaf_consumption_admitted(actual.p, Consumer, p), not equality of the
+  anchor's primitive field spelling. The anchor supplies coordinates; it
+  must not silently supply an additional requirement." And: "YES, the same
+  criterion applies to the DECLARED analogue." The refusal stays where it
+  was and says that it is a limit: `the declarations reaching a free name
+  give a field the method uses different types; reading it by conversion
+  is not built yet`. Its two rows are no expected refusals any more: the
+  programs are required positives, `unit_free_path_field_converted` and
+  `_swapped`, with the declared analogue `unit_formal_field_converted`, red
+  until a field is read at its own type and converted at the receiving
+  edge
+  ([FIELD-CONSUMPTION-CONVERSION](defects.md#field-consumption-conversion)).
+  With the rows goes the hold on that refusal's words: no row pins them
+  now.
+- **A returned definition that itself reads a name nothing declares**
+  (Q2). "Confirm HELD-DEFINITION-UNDECLARED-NAME is a valid OPEN positive
+  and G5 debt." "The old T7 prohibition concerns unsupported/invalid
+  BINDING operands of a callable specialization; it does not prohibit a
+  model body's free name." The required positive is a row now, red:
+  `unit_held_definition_free_name`.
+- **A typed place's declaration as the coordinate space** (Q3): to be
+  settled with the letter held in a typed place, "using a genuinely
+  established value -> MainLetter correspondence and a live native/walk
+  positive".
+
+`unit_free_path_value_none_refused` is added: the limit of a name that
+nothing gives its fields to, where the path is the whole of a value. That
+site had its words held only by the two rows that are positives now.
+
+### Found beside it, measured, not repaired
+
+- **The cost of a copy in a method grows steeply with the unit.** N named
+  Structures and N methods that each copy one and read its field, with no
+  free name anywhere, on the translator of `bfeef8cc`: 3 seconds of run
+  for N = 8, 43 for N = 16. With a free name, on this translator: 4, 20, 65
+  seconds for N = 8, 12, 16, and more than 120 for N = 20. The time is in
+  the kernel's copy of the graph under `lmx_merge_profiles_owned`. The
+  first form of the seventy-declaration witness made seventy copies and
+  did not finish in eleven minutes; it gives references now. This is a
+  defect of its own and no part of this route
+  ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)).
+- **Fixed blocks remain elsewhere in the translator.** `l2trans.lm1` has
+  200 fixed character blocks and 14 fixed blocks of ints in its functions,
+  and 29 fixed blocks at unit level. One that a program meets: a path whose
+  text is longer than 255 bytes is refused, `unresolved name`, through a
+  declared formal as through a free name (measured with a field's name of
+  300 bytes; 250 passes). They are older than this work and outside this
+  route; they are listed for the order to be decided
+  ([FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit)).
+
+**Next.** The letter held in a typed place, with the declaration of a
+typed place as coordinate space and the route of a letter alone under a
+free name; then the order of section 70, with the read of a field by
+conversion joined to the receiving-edge conversion, and the returned
+definition's own free name on the route of the required inputs.

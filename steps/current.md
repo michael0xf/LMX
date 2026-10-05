@@ -536,6 +536,12 @@ Fable принял единственный writer/build-слот по [to_fable
   [LETTER-THROUGH-OPAQUE-PLACE](defects.md#letter-through-opaque-place), вопрос Codex
   ([§84 журнала](fable-continuation-20261003.md#opaque-return)). Гейты шагов (e) и (f), один пункт:
   `opus_kernel_12`, `opus_l3_12`, `opus_full_14` RED39/1890: против `opus_full_12` FAIL→OK 0, OK→FAIL 0.
+- Шаг DUPLICATE-ADMISSION-STOP, динамическая часть. Возврат значения из места, которое держит то, что
+  ему дали (формал, собственная ссылка, результат вызова), допускается неявным `implements`
+  возвращающего метода, а не остановкой процесса. Статическая часть (286 мест) ждёт ответа Codex о форме
+  остатка ([DUPLICATE-ADMISSION-STOP](defects.md#duplicate-admission-stop),
+  [§85 журнала](fable-continuation-20261003.md#duplicate-stop)). Гейты `opus_kernel_13`, `opus_l3_13`,
+  `opus_full_15` RED39/1890: против `opus_full_14` FAIL→OK 0, OK→FAIL 0.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
   эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
   callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который

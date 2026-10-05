@@ -4042,11 +4042,12 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
         ---
     if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
         return: 1
-    # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).  A value of
-    # opaque type is refused there as this method's implicit `implements` (RECEPTION-EDGE-DEBTS (f)).
-    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) != 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, mi, mi, -1) != 0
+    # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).  A dynamic
+    # candidate -- a value of opaque type (RECEPTION-EDGE-DEBTS (f)), a formal, an own reference, a call's result --
+    # is refused there as this method's implicit `implements` (DUPLICATE-STOP).
+    if: l2_input_model(mi, -1) >= 0 && (l2_return_opaque(body\first_field, n, mi) != 0 || l2_d105_dynamic(@ source) != 0) && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, mi, mi, -1) != 0
         return: 1
-    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
+    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) = 0 && l2_d105_dynamic(@ source) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
         return: 1
     # §7b: the value is evaluated above; what is marked is published before the return (book §14).
     if: l2_emit_publish(ind) != 0
@@ -25258,6 +25259,10 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
             # D-105 native: the result of cmi reaches this method's result.
             if: l2_d105_note(mi, mi, 0 - 1, first, n, at) != 0
                 return: 1
+            # DUPLICATE-STOP: the result of a call is a place that holds what its callee returned -- no proof of
+            # its origin here; its admission when the program runs is this method's implicit `implements`.
+            if: source.method >= 0 && l2_d105_dynamic(@ source) != 0
+                return: l2_admit_site(mi)
             if: source.method >= 0
                 return: 0
             return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
@@ -25285,6 +25290,11 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
     # D-105 native: the value's type reaches this method's result (or its formal, passed on as it is).
     if: l2_d105_note(mi, mi, 0 - 1, first, n, at) != 0
         return: 1
+    # DUPLICATE-STOP (Codex, FABLE-CODEX-20261004-12: "If current origin is not proved, use the common dynamic
+    # admission rather than a defensive abort or assumed YES"): a formal or an own reference holds what was given to
+    # it; its admission to the result when the program runs is this method's implicit `implements`.
+    if: source.method >= 0 && l2_d105_dynamic(@ source) != 0
+        return: l2_admit_site(mi)
     if: source.method >= 0
         return: 0
 return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
@@ -47153,9 +47163,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         # A value of opaque type is refused there as this method's implicit `implements` (RECEPTION-EDGE-DEBTS (f)),
         # as at a trailer's return (l2_emit_ret_tr).
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) != 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, mi, mi, -1) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && (l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) != 0 || l2_d105_dynamic(@ return_source) != 0) && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, mi, mi, -1) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) = 0 && l2_d105_dynamic(@ return_source) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_publish(ind) != 0
             return: 1

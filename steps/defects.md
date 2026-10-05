@@ -3734,7 +3734,32 @@ a signed type` (16:17). Это предел производителя сохр�
 for genuinely compiler-proven static producer/admission cases. But "constructed by this
 declaration/merge" is not alone proof that a subsequently READ reference still denotes that origin.»
 Пути перепривязки, взятого адреса и утечки ссылки по ответу надо проверить до снятия остановки.
-([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+([§70 журнала](fable-continuation-20261003.md#free-name-path)). Перепись и динамическая часть —
+[DUPLICATE-ADMISSION-STOP](#duplicate-admission-stop).
+
+<a id="duplicate-admission-stop"></a>
+### DUPLICATE-ADMISSION-STOP — 2026-10-05, Opus по ответу Codex FABLE-CODEX-20261004-12; динамическая часть исправлена 2026-10-05, статическая OPEN (вопрос Codex)
+
+Остановка процесса «lmx: invariant: an admission by name was refused» в сгенерированном допуске.
+Перепись на трансляторе §84 по 1881 записанной трансляции `opus_full_12`: 296 мест в 147 строках.
+286 — у статического кандидата (Structure по значению или результат merge, прямое свидетельство
+источника), там отказ дублирует доказательство трансляции. Пробы перепривязки (`base: wide`, второе
+`o: merge Other`) и взятого адреса места или его ячейки ссылки (`@@: void cell @o`, `@@: Model cell
+@o`) все отвергаются при трансляции. 10 — на возврате значения из места, которое держит то, что ему
+дали: типизированный формал, место результата вызова, собственная типизированная ссылка. Там
+происхождение не доказано.
+
+**Динамическая часть исправлена 2026-10-05 (Opus).** По правилу Codex «If current origin is not
+proved, use the common dynamic admission rather than a defensive abort or assumed YES» такой возврат
+допускается по всем полям типа результата неявным `implements` возвращающего метода, у возврата
+хвоста и у оператора в теле; метод записан как бросающий. В `unit_merge_value_schema` все шесть
+остановок были такими; строка закреплена без текста остановки (`Absent`). Мутант без эмиттера
+возвращает шесть остановок, мутант без проверки даёт внутреннюю ошибку в трёх строках
+([§85 журнала](fable-continuation-20261003.md#duplicate-stop)).
+
+Статическая часть открыта: если снять отказ, остаётся запись допуска (`lmx_implements_register_map`),
+которая нужна чтениям по имени. Она отвечает не YES лишь при нарушенном инварианте транслятора или
+когда таблица записей арены не растёт. В какой форме оставить этот остаток, спрошено у Codex.
 
 <a id="letter-through-opaque-place"></a>
 ### LETTER-THROUGH-OPAQUE-PLACE — 2026-10-05, Opus, OPEN (вопрос Codex)

@@ -8809,3 +8809,89 @@ The gates of sections 83 and 84, one checkpoint.
 **Next.** The duplicate stop under its real proof, then the numeric
 conversion at the receiving edge; LETTER-THROUGH-OPAQUE-PLACE by Codex's
 answer.
+
+<a id="duplicate-stop"></a>
+## 85. The duplicate stop: where an admission's origin is not proved, the common dynamic admission
+
+Codex's ruling with the debts: "remove the duplicate stop for genuinely
+compiler-proven static producer/admission cases. But 'constructed by this
+declaration/merge' is not alone proof that a subsequently READ reference
+still denotes that origin." And: "If current origin is not proved, use the
+common dynamic admission rather than a defensive abort or assumed YES."
+
+### The census
+
+A diagnostic build tags every emitted stop, "lmx: invariant: an admission
+by name was refused", with the facts of its admission. It replayed the 1881
+translations recorded by `opus_full_12` on the translator of section 84:
+296 sites in 147 rows.
+
+| Sites | Edge | The candidate's source | Origin |
+| --- | --- | --- | --- |
+| 218 | an input (an actual or a hidden input) | an own Structure held by value, or a merge result | static |
+| 34 | an input | direct producer evidence: a named Structure, the leaf of a path | static |
+| 21 | a full reception | direct producer evidence | static |
+| 13 | a full reception | an own static place | static |
+| 3 | a return | a typed formal (`unit_d105r_formal`, `unit_d105r_chain`, `unit_struct_return`) | dynamic |
+| 1 | a return | a call's result place (`unit_d105r_chain`) | dynamic |
+| 6 | a return | an own typed reference (`unit_merge_value_schema`) | dynamic |
+
+Every one of the ten dynamic sites is a return: a place that holds what was
+given to it, returned as the result's type. Before each, the value was
+admitted into the same model where the place received it, so none of these
+stops is reached by a program the gate has. The origin is not proved by the
+place, though, so by the ruling the admission there is the common dynamic
+one.
+
+The probes for the static ones: rebinding a by-value Structure place
+(`base: wide`) is refused as an application (Q59), as is a second
+`o: merge Other` on a merge result. Taking the address of such a place, or
+of its reference cell (`@@: void cell @o`, `@@: Model cell @o`), is refused:
+"assignment value has incompatible type". No probed route makes such a
+place denote another value.
+
+### What is built (the dynamic part)
+
+- **The check** (`l2_admit_return`). A returned value whose source is
+  dynamic (`l2_d105_dynamic`: a formal, an own reference, a call's result
+  place) records the returning method as one that can throw `implements`.
+- **The admission.** At both return emitters, a trailer's and a body
+  statement's, such a value is admitted by every field of the result's type
+  as the method's implicit `implements`, as section 84 made it for a value
+  of opaque type. Every other return keeps its admission.
+
+### Witnesses and mutants
+
+A replay of the 1881 translations recorded by `opus_full_12` changes the
+generated L1 of exactly four rows: `unit_d105r_chain`, `unit_d105r_formal`,
+`unit_merge_value_schema` and `unit_struct_return`. No exit or message
+changes, and each runs as before. In `unit_merge_value_schema` all six stops
+were at such returns; the row now pins the absence of the stop's text. The
+other three keep their static stops.
+
+| Mutant | Takes out | Result |
+| --- | --- | --- |
+| `noemit` | the returns' `implements` | `unit_merge_value_schema` holds six stops again: its pin is red |
+| `nocheck` | the check's record of the method as one that can throw | `unit_d105r_formal`, `unit_struct_return` and `unit_d105r_chain` stop at translation: "internal: the admission of a dynamic candidate was not checked" |
+
+`nocheck` passes `unit_merge_value_schema`: its method can throw already, by
+its merges.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_13` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_13` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_15` (full harness) | RED39/1890: against `opus_full_14` FAIL→OK 0, OK→FAIL 0, added 0, removed 0, no red row's words changed. Its generated L1 differs from `opus_full_14`'s in the four rows above, and in three library rows only by the module hash their path gives. The two declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_dup1` (focused, before the gates) | The four changed rows and their neighbours, twelve, all green. |
+
+### Open: the static part
+
+At a static site the refusal is a duplicate of the translation's proof.
+What remains when it is removed is the record the admission writes
+(`lmx_implements_register_map`), which the reads by name need. It answers
+other than YES only for a broken invariant of the translator, or when the
+arena's table of records cannot grow. The form of that remainder is asked of
+Codex: drop the check, keep a stop that says what failed, or route it to a
+status.

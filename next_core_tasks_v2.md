@@ -164,6 +164,16 @@ return (LETTER-THROUGH-OPAQUE-PLACE, asked of Codex;
 Gates of (e) and (f), one checkpoint: kernel `opus_kernel_12` GREEN296
 with 113 executed selftests, L3 `opus_l3_12`, full `opus_full_14`
 RED39/1890 -- against `opus_full_12` FAIL→OK 0, OK→FAIL 0, added 8.
+DUPLICATE-ADMISSION-STOP, the dynamic part: of the 296 emitted stops "an
+admission by name was refused" (census over opus_full_12), the ten at a
+return of a value from a place that holds what was given to it are now the
+returning method's implicit `implements`; the 286 static ones wait for
+Codex's answer on the form of what remains when the refusal is removed
+([DUPLICATE-ADMISSION-STOP](steps/defects.md#duplicate-admission-stop),
+[section 85](steps/fable-continuation-20261003.md#duplicate-stop)).
+Gates: kernel `opus_kernel_13` GREEN296 with 113 executed selftests, L3
+`opus_l3_13`, full `opus_full_15` RED39/1890 -- against `opus_full_14`
+FAIL→OK 0, OK→FAIL 0.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

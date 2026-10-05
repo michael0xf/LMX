@@ -8195,6 +8195,18 @@ made by a request for one cell keeps that count as the size of every chunk it
 grows by, so every cell is a chunk of its own, two blocks and an interval --
 and the copy of the field's name with the place (`lmx_copy_names`).
 
+Corrected the same day: no program sees the copied E. With one operand, no
+body and no map, the data merge's result is the copy of its operand, and the
+kernel gives it the container -- the place that executes the merge -- for its
+parent (`result\parent: container`), so the copied lexical chain, the unit with
+E, is unreachable at once. Driver path facts on a root-level `loc: merge D`
+whose D holds a nested Structure: the result is a distinct copy of D with a
+distinct copy of the nested one, hanging under the unit itself, and the E it
+reaches is the original. Whether the result should hang under the copy of
+its operand's lexical parent, as section 77 hangs a callable merge's node, is
+asked of Codex: the semantics' composition section, the author's words and
+CORE 10.2 do not say the same.
+
 | N = K, R = 1 | time before | push steps | sweep steps |
 | --- | --- | --- | --- |
 | 4 | 156 ms | 8.0M | |

@@ -240,9 +240,9 @@ Fable принял единственный writer/build-слот по [to_fable
   `h2: make2(n: 100)` Codex отозвал (ответ -11): по Q58 это определение именованной Structure,
   удерживающей вызов. Короткая запись `add5: makeAdder 5` также не исполняет фабрику;
   её результат принимается как `@: add5 makeAdder(5)`
-  ([ответ](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)); реализация остаётся долгом
+  ([ответ](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)); реализация — шаг FACTORY
   ([HELD-STORE-FACTORY-ACTUALS-POSITIONAL](defects.md#held-store-factory-actuals-positional),
-  теперь [FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)).
+  [FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)).
 - Восьмой срез (ответы Codex -11 и -12): голое имя удерживаемого callable там, где место принимает
   число, исполняет callable — запись, инициализатор, фактический числового формала, возврат, поле по
   пути, элемент, поле сообщения; преобразование результата — обычная грань; места, принимающие
@@ -439,8 +439,8 @@ Fable принял единственный writer/build-слот по [to_fable
   ([TYPED-PLACE-LETTER-READMISSION](defects.md#typed-place-letter-readmission)).
 - Решения автора 2026-10-05 в собственных записях Opus: что они отменяют в журнале и какие долги
   реализации оставляют — [§73 журнала](fable-continuation-20261003.md#author-decisions-20261005);
-  [FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver) (приёмник `@:` транслятор сегодня
-  отвергает) и [HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows).
+  [FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver) (приёмник `@:` транслятор тогда
+  отвергал; исправлено шагом FACTORY) и [HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows).
 - Ответ Codex OPUS-CODEX-20261005-01, шаг B. Текст пути или имени — любой длины на маршрутах чтения,
   записи, адреса, индексного поля, вызова через путь, использований типизированной ссылки и
   статической проверки кандидата; обходимый путь — с любым числом имён. Рядом исправлен дефект:
@@ -459,6 +459,17 @@ Fable принял единственный writer/build-слот по [to_fable
   остаются красными на независимом пределе ([FREE-CONV-U-LITERAL-WALK](defects.md#free-conv-u-literal-walk)).
   Гейты `opus_kernel_03`, `opus_l3_03`, `opus_full_04` RED36/1827:
   против `opus_full_03` FAIL→OK 4, OK→FAIL 0, четырнадцать новых строк зелёные.
+- Шаг FACTORY. Приёмник `@: h f(a)` исполняет записанный вызов, связывает его фактические, как у
+  любого вызова, и хранит ссылку на callable, который вызов вернул: в слоте `h` ячейка-указатель.
+  Неизвестная голова, хвост которой начинается именем метода, определяет именованную Structure и
+  ничего не вызывает (Q58). 171 фикстура перенесена с `h: f a` на `@:`, добавлены три фикстуры (пять строк)
+  ([FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver),
+  [§76 журнала](fable-continuation-20261003.md#factory-receiver)). По ревью Codex тело, которое никто
+  не вызывает, сохраняет свободные имена; транслятор его отвергает. Два прежних ожидаемых отказа стали
+  обязательными позитивами, добавлены два контроля; все красные до исправления
+  ([DORMANT-BODY-FREE-INPUT](defects.md#dormant-body-free-input)).
+  Гейты `opus_kernel_04`, `opus_l3_04`, `opus_full_05` RED40/1836: против `opus_full_04`
+  FAIL→OK 0, OK→FAIL 2 (два бывших ожидаемых отказа), девять новых строк, семь зелёные.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
   эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
   callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который

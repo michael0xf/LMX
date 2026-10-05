@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # A method that reads a free name forms its own value of it, and that value
 # is what its callees receive; a method that only hands the name on forms
 # nothing. mk's formal n is a free name of the definition f it returns: u5
@@ -13,7 +14,7 @@ fn: mk (int: n) fn: () int
         return: n + 1
     return: f
 
-u5: mk 5
+@: u5 mk(5)
 
 fn: mkreads (int: n) fn: () int
     fn: g () int
@@ -31,9 +32,9 @@ fn: mkwrites (int: n) fn: () int
         return: n * 1000 + u5()
     return: w
 
-vg: mkreads 70
-vh: mkhands 70
-vw: mkwrites 70
+@: vg mkreads(70)
+@: vh mkhands(70)
+@: vw mkwrites(70)
 int: a vg()
 int: b vh()
 int: c vw()

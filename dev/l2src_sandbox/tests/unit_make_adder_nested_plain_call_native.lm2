@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # D-93, native twin of unit_make_adder_nested_plain_call.lm2 (whose row runs under --walk-methods,
 # where the host is walked and twice with it -- the native stub never runs there, so that row alone
 # cannot see a stubbed twice).  Natively the host calls twice's own native body: k = 6, add5(1) = 7.
@@ -10,7 +11,7 @@ fn: makeAdder (int: n) fn: (int: x) int
         return: k + x
     return: addN
 
-add5: makeAdder 3
+@: add5 makeAdder(3)
 int: a (add5: 1)
 sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
 return

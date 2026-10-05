@@ -1,0 +1,15 @@
+# The call of a named body with no source of its free name fails at a call
+# (docs/LMX_semantics.en.md#dynamic): make calls y, whose z nothing binds -- not
+# a caller, not an inherited input, not y's lexical space. make only hands z on,
+# and the root's call of make, where the chain starts, has no source of it: that
+# call is refused, as any required input that no one can give, and not the
+# definition of y.
+fn: make () int
+    y: z + 1
+    y()
+    return: 7
+end: make
+
+int: got make()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

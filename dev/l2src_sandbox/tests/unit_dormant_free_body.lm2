@@ -1,0 +1,14 @@
+# A named body that is never executed keeps its free names unresolved
+# (docs/LMX_semantics.en.md#construction: "free names may resolve later"):
+# y reads z, which nothing in the program binds, and nothing calls y. Defining y
+# executes nothing and requires no source of z; make runs and returns 7, which
+# the root says. Entry 7.
+fn: make () int
+    y: z + 1
+    return: 7
+end: make
+
+int: got make()
+c.printf: "MADE %d\n" got
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28 and 2026-10-04): a free name of a
 # returned method takes the nearest binding of its callers first; the node's copied lexical context is only the
 # fallback.  add5 copied n 5 at makeAdder's return.  The root, with its own n 100, calls add5(1): 101.  go, with its
@@ -9,7 +10,7 @@ fn: makeAdder (int: n) fn: (int: x) int
         return: n + x
     return: addN
 
-add5: makeAdder 5
+@: add5 makeAdder(5)
 fn: go (int: n) int
     return: add5: 1
 fn: plain () int

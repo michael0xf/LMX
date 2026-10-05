@@ -68,6 +68,20 @@ Gates on its bytes: kernel `opus_kernel_03` GREEN296 with 113 executed
 selftests, L3 `opus_l3_03` 11 suites/four budgets, full `opus_full_04`
 RED36/1827 — against `opus_full_03` FAIL→OK 4, OK→FAIL 0, fourteen rows
 added, all green.
+FACTORY: the receiver `@: h f(a)` evaluates the written call, binds its
+actuals as any call's, and stores the reference to the callable it returns;
+`h`'s slot holds a pointer cell. An unknown head whose tail begins with a
+method's name defines a named Structure and calls nothing (Q58). 171 fixtures
+are migrated from `h: f a` to `@:`, and three fixtures are added (five rows). The bodies that
+nothing calls keep their free names by the norm but are refused by this
+translator: two former expected refusals are required positives now, and two
+controls are added, red until built
+([DORMANT-BODY-FREE-INPUT](steps/defects.md#dormant-body-free-input),
+[section 76](steps/fable-continuation-20261003.md#factory-receiver)).
+Gates on its bytes: kernel `opus_kernel_04` GREEN296 with 113 executed
+selftests, L3 `opus_l3_04` 11 suites/four budgets, full `opus_full_05`
+RED40/1836 — against `opus_full_04` FAIL→OK 0, OK→FAIL 2 (the two former
+expected refusals), nine rows added, seven green.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

@@ -3307,7 +3307,7 @@ evidence/coverage limit, not a normative required negative». Обязатель
 ([§72 журнала](fable-continuation-20261003.md#letter-typed-place)).
 
 <a id="factory-result-receiver"></a>
-### FACTORY-RESULT-RECEIVER — 2026-10-05, Opus по решению автора (Codex, AUTHOR-FACTORY-REF-20261005-114610), OPEN (блокер G5)
+### FACTORY-RESULT-RECEIVER — 2026-10-05, Opus по решению автора (Codex, AUTHOR-FACTORY-REF-20261005-114610), FIXED 2026-10-05 (Opus)
 
 Решение автора 2026-10-05 ([журнал автора](../LMX_blog/2026-10-05.md#factory-reference-result), вопрос закрыт:
 [запись результата фабрики и определение именованного тела](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)):
@@ -3345,6 +3345,36 @@ fn: makeAdder (int: n) fn: (int: x) int
 переносятся на `@:`, и у каждой названа миграция. Парные свидетели: обычное именованное тело фабрику
 сразу не вызывает, нативно и с обходом
 ([§73 журнала](fable-continuation-20261003.md#author-decisions-20261005)).
+
+**Исправлено 2026-10-05 (Opus)**, по ответу Codex OPUS-CODEX-20261005-01, шаг FACTORY. Приёмник
+`@: h f(a)` — оператор с головой `@`: первое поле — имя `h`, второе — кадр вызова метода
+(`l2_receiver_call`). Вызов — обычный кадр: связывание связывает его фактические, именованные тоже;
+проверка — `l2_check_call` этого кадра; нативный код — `l2_emit_call` и запись в поле `h`; обход
+строит тот же вызов (`l2_rw_mad_store`). Механизм хранения callable-merge, который раньше узнавал
+форму `h: f a`, теперь узнаёт приёмник (`l2_mad_store_stmt`, `l2_store_host`, `l2_store_name`).
+Поле `h` объявлено через `@`, поэтому это ссылка: в слоте ячейка-указатель (q26), и ячейка держит
+callable, который вернул вызов. Унарный `@` не добавляется.
+
+Короткая запись — определение. `l2_call_value` удалён из `l2_unit_role` и `l2_local_ns_shape`:
+неизвестная голова, хвост которой начинается именем метода, определяет именованную Structure и
+ничего не вызывает (Q58). Голое имя метода в её теле — применение без фактических.
+
+Порядок единицы. Приёмник выше элемента корня объявляет имя для этого элемента (`l2_head_absent`):
+`h2: 3 4` ниже приёмника применяет `h2`. Метод выше приёмника привязки `h2` не имеет
+(`unit_held_call_above_unknown_head`).
+
+Перенос: 171 фикстура (233 строки гейта, 246 приёмников) переписана с `h: f a` на `@: h f(a)`, и
+первая строка каждой называет миграцию. Перечень снят классификацией самого транслятора
+(инструментированная сборка), не поиском по тексту. Перепись считала операторы верхнего уровня
+единицы и операторы методов. Две фикстуры с записью во вложенном теле корня (`if:`-блок,
+`unit_held_call_block` и `unit_held_call_block_refused`) нашло воспроизведение всех 1826 трансляций
+`opus_full_04` новым транслятором: вне перечня изменились только их три строки. Иглы с номером
+строки сдвинуты на строку заголовка. В `graph_shape_t7_local_definition` физические пути проходят ячейку ссылки явным шагом
+драйвера `deref`. Новые строки: `unit_factory_receiver_named` — именованный фактический в приёмнике
+метода, `OUTER 101 7`; `unit_factory_short_dormant` — `s: shout` ничего не печатает нативно, с
+обходом корня и с обходом методов; `unit_factory_short_args_refused` — голое имя метода с
+обязательным аргументом в теле определения отвергается, 11:7
+([§76 журнала](fable-continuation-20261003.md#factory-receiver)).
 
 <a id="head-role-unestablished-rows"></a>
 ### HEAD-ROLE-UNESTABLISHED-ROWS — 2026-10-05, Opus по решению автора (Codex, DOC-BATON-AUTHOR-20261005-115300), FIXED 2026-10-05 (Opus)
@@ -3392,6 +3422,54 @@ incompatible type`. `unit_asgn_fallback` — отказ 17:8 `unresolved name`: 
 `unit_head_chain_read` с обходимыми двойниками; отказы `unit_head_unestablished_return_refused`,
 `unit_head_later_read_refused`, `unit_head_label_refused`, `unit_head_shadow_refused`
 ([§75 журнала](fable-continuation-20261003.md#head-role-established)).
+
+**Поправка 2026-10-05 (ревью Codex, OPUS-CODEX-20261005-01).** Решение автора задаёт роль головы в
+`inc`: у `inc` нет входа `x`. Отказ 17:8 у `x` в теле Structure `x` решением автора не был. Codex:
+«the author's return:x answer ALONE does not make unit_asgn_fallback a normative negative». Тело `x`
+никто не вызывает, а его `x` — свободный вход этого тела, и его мог бы дать вызывающий `x`. Отказ —
+предел реализации [DORMANT-BODY-FREE-INPUT](#dormant-body-free-input). Строка теперь обязательный
+позитив с наблюдаемым результатом хоста: `inc` возвращает 7 обоим вызывающим. Она красная до
+исправления.
+
+<a id="dormant-body-free-input"></a>
+### DORMANT-BODY-FREE-INPUT — 2026-10-05, Opus по ревью Codex (OPUS-CODEX-20261005-01), OPEN (блокер G5)
+
+Codex: «Defining a named body does not execute it; the spec permits unresolved/free names to be
+retained and resolves required inputs at actual calls (semantics #construction and #dynamic).» И: «If
+it is a potentially supplied free value and only the current translator cannot lower that generic
+body, record a located implementation/coverage limit, not an author-approved language prohibition. A
+later explicit call without an admissible source is a CALL failure; don't hoist it onto inc's inert
+definition.»
+
+Измерено отладочной сборкой транслятора шага FACTORY, по стеку на `l2_error`. Тело именованной
+Structure, определённой в методе, получает свою строку вызываемого, после строки корня. Свободное
+имя тела — вход этой строки. Тело никто не вызывает, поэтому ни один источник не даёт входу тип. А
+замыкание входов (`l2_dyn_close` → `l2_dyn_typed`) требует тип у каждого входа каждой строки. Отсюда
+отказ `unresolved name` у свободного имени. `unit_asgn_fallback`: строка 4 из 5 (Structure `x` в
+`inc`), вход `x`, 17:8 при `01ecd69b`. `unit_local_ns_stmt_unresolved`: строка 2 из 3 (`S` в `m`),
+вход `nosuch`, 7:12. Имя здесь не неразрешено по норме и не указывает на саму Structure. Это
+свободный вход вложенного вызываемого, и его мог бы дать вызывающий.
+
+Тем же способом разобраны все 38 строк гейта, которые ожидают `unresolved name`:
+
+- 2 строки — тела никем не вызываемых именованных Structure (выше);
+- 4 строки — свободное имя корня: вызывающего нет, отказ по норме;
+- 18 строк — вход метода или Structure единицы без типа (`l2_dyn_typed`). Почти везде метод
+  вызывается без источника: отказ верен по норме, но стоит у использования имени, а не у вызова, с
+  которого начинается цепочка. Метод `broken` в `unit_colon_graph_unknown_value_refused` не
+  вызывается вовсе. В `unit_named_struct_dead_tail_refused` имя читается только в мёртвом хвосте
+  после голого `return`. Обе строки — к той же классификации, в этом шаге не меняются;
+- 14 строк — сегмент пути, который ничего не называет (`l2_check_fields`, `l2_check_primary`):
+  другой механизм.
+
+Что нужно. Тело, которое никто не вызывает, не требует типа своих входов. Вызов без источника
+отвергается у вызова, с которого начинается цепочка, как вход, который никто не может дать
+(`unit_held_call_required_input_unavailable_refused`). Строки, все красные до исправления:
+`unit_asgn_fallback` и `unit_local_ns_stmt_unresolved` — обязательные позитивы (были ожидаемыми
+отказами); `unit_dormant_free_body` — `y: z + 1` в `make`, никто не связывает `z`, корень говорит
+`MADE 7`; `unit_dormant_free_body_call_refused` — `y()` вызван, источника `z` нет, отказ у вызова
+`make()` в корне, 13:10, `unbound dynamic input z`. Сегодня он отвергается у `z`, 8:8
+([§76 журнала](fable-continuation-20261003.md#dormant-body-free-input)).
 
 <a id="free-conv-u-literal-walk"></a>
 ### FREE-CONV-U-LITERAL-WALK — 2026-10-05, Opus, OPEN; обязательные позитивы красные на пределе реализации

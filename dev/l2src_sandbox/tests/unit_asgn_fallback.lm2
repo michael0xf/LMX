@@ -2,9 +2,10 @@
 # no x in its sight (first_x's is a local of first_x, not visible outward -- Q51), and inc reads x only in the
 # tail of `x: x + 1` itself.  By the author's decision of 2026-10-05 (LMX_blog/2026-10-05.md#unknown-head-return;
 # HEAD-ROLE-UNESTABLISHED-ROWS) that statement defines a named Structure x; the read in its own tail establishes
-# nothing.  So inc has no input x, and neither call of inc needs one.  The tail is the body of x, checked whether
-# or not x runs, and the x it reads is a free name that nothing binds: refused where it stands, as in
-# unit_local_ns_stmt_unresolved.
+# nothing.  So inc has no input x, and neither call of inc needs one: not the root's, not with_caller's, whose
+# formal x is no input of inc.  The body of x is inert -- nothing calls x -- and the x it reads is a free name of
+# that body, which a caller of x could give (#construction, #dynamic): nothing is missing.  inc returns 7 to both
+# callers, and the root sees 7 and 7.  Entry 7.
 # Until 2026-10-05 this row expected x to be inc's hidden input (bafca4c, the author 2026-09-28) and the root's
 # call inc() refused, "unbound dynamic input x": the reading the author rejected.  Before bafca4c the assignment
 # fell back to making x a field of inc, and the program ran.
@@ -15,12 +16,16 @@ fn: first_x () int
 end: first_x
 fn: inc () int
     x: x + 1
-    return: 0
+    return: 7
 end: inc
 fn: with_caller (int: x) int
     return: inc()
 end: with_caller
 first_x()
-inc()
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+int: a inc()
+int: b with_caller(5)
+int: ok 80
+if: a = 7 && b = 7
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

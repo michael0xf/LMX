@@ -2093,21 +2093,24 @@ $criticalForShape = @('shape','exact','intvalue','0','owned','init','SET','field
 $criticalMethodFnShape = @('shape','exact','method','struct','struct','owned','struct','fields','int') +
     (& $criticalNsInit 0 3) + @('struct','int') + (& $criticalNsInit 3 11) +
     @('endfields','RET','endmethod','same','CALL','PRIM_PUB','RET','endshape')
+# w and u are receivers (`@: w wrap(5)`, FACTORY, the author 2026-10-05): each root slot (2, 4) is
+# the pointer cell of a reference (q26), and `deref` crosses it to the callable the call returned.
 $criticalLocalProjectionPost = @('postpaths',
     'differentpath','1','2','1','4',
-    'differentpath','2','2','3','2','4','3',
-    'differentpath','2','2','3','2','0','2',
-    'differentpath','2','4','3','2','0','2',
-    'differentpath','3','2','3','0','3','4','3','0',
-    'parentpath','2','2','3','1','2',
-    'parentpath','2','4','3','1','4',
-    'widthpath','2','2','3','3','widthpath','2','4','3','3',
-    'intpath','2','2','2','5','intpath','2','4','2','100',
-    'intpath','3','2','3','0','3','intpath','3','4','3','0','3',
+    'differentpath','2','2','deref','2','4','deref',
+    'differentpath','3','2','deref','3','3','4','deref','3',
+    'differentpath','3','2','deref','3','2','0','2',
+    'differentpath','3','4','deref','3','2','0','2',
+    'differentpath','4','2','deref','3','0','4','4','deref','3','0',
+    'parentpath','3','2','deref','3','2','2','deref',
+    'parentpath','3','4','deref','3','2','4','deref',
+    'widthpath','3','2','deref','3','3','widthpath','3','4','deref','3','3',
+    'intpath','3','2','deref','2','5','intpath','3','4','deref','2','100',
+    'intpath','4','2','deref','3','0','3','intpath','4','4','deref','3','0','3',
     'intpath','3','0','2','0','2',
-    'namepath','2','2','3','S','namepath','2','4','3','S')
-$criticalLocalProjectionNative = @('nativepath','2','2','3','1','nativepath','2','4','3','1','nativepath','2','0','2','1','endpostpaths')
-$criticalLocalProjectionWalk = @('nativepath','2','2','3','0','nativepath','2','4','3','0','nativepath','2','0','2','0','endpostpaths')
+    'namepath','3','2','deref','3','S','namepath','3','4','deref','3','S')
+$criticalLocalProjectionNative = @('nativepath','3','2','deref','3','1','nativepath','3','4','deref','3','1','nativepath','2','0','2','1','endpostpaths')
+$criticalLocalProjectionWalk = @('nativepath','3','2','deref','3','0','nativepath','3','4','deref','3','0','nativepath','2','0','2','0','endpostpaths')
 
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
@@ -2917,12 +2920,15 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    # The author's decision of 2026-10-05 (HEAD-ROLE-UNESTABLISHED-ROWS): nothing establishes x in inc, so
-    # `x: x + 1` defines a named Structure x; inc has no input x, and the body's x is a free name nothing binds,
-    # refused where it stands.  (Was, after bafca4c, "21:1: unbound dynamic input x" at the root's call: the
-    # reading the author rejected.  Before bafca4c it was eternal-runs: the assignment made x a field of inc.)
-    [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_asgn_fallback.lm2:17:8: unresolved name'; Absent = @(); Debt = @() },
+    # The author's decision of 2026-10-05 (HEAD-ROLE-UNESTABLISHED-ROWS) settles the host's role: nothing
+    # establishes x in inc, so `x: x + 1` defines a named Structure x and inc has no input x.  The body of x is
+    # inert and its x a free name of that body (Codex, OPUS-CODEX-20261005-01, the HEAD checkpoint review): OPEN,
+    # required before G5, red until built (DORMANT-BODY-FREE-INPUT).  Refused at 01ecd69b at that x, "17:8:
+    # unresolved name": the body's callable row has the input x, and no caller gives it a type (l2_dyn_typed).
+    # (Was, after bafca4c, "21:1: unbound dynamic input x" at the root's call: the reading the author rejected.
+    # Before bafca4c it was eternal-runs: the assignment made x a field of inc.)
+    [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: sendMessage: X inside a method body --
     # a method called from the root sends exit(exit_code: 7; ...) directly (l2_msend<k>).
     [pscustomobject]@{ Name = 'unit_send_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
@@ -3222,13 +3228,13 @@ $fixtures = @(
     # in its host's refusal (l2_mad_unwalkable); before, the host's header alone.  Update-position paths
     # resolve their root (l2_scan_path_root); a passed-on field is the capture's to check (l2_actual_path);
     # a field that is not a number or a char is refused at translation, not by the host's abort at run.
-    [pscustomobject]@{ Name = 'unit_capture_struct_past_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':22:17: a path through a captured Structure goes past its field'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_past_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':17:9: a path through a captured Structure goes past its field'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':19:21: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':15:9: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_field_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':21:27: a captured Structure''s Structure field is not copied yet (item 738: value fields)'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_field_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':13:21: a captured Structure''s field that is not a number or a char is not copied yet (item 738: value fields)'; Args = @('0'); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_call_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':13:17: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_past_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':23:17: a path through a captured Structure goes past its field'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_past_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':18:9: a path through a captured Structure goes past its field'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':20:21: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_nofield_write_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':16:9: unknown field path segment'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_field_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':22:27: a captured Structure''s Structure field is not copied yet (item 738: value fields)'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_field_array_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:21: a captured Structure''s field that is not a number or a char is not copied yet (item 738: value fields)'; Args = @('0'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_call_head_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:17: a path through a captured Structure names no field of its type'; Args = @('0'); Absent = @(); Debt = @() },
     # Triage 2026-10-03: a captured Structure used whole is a required positive; the pinned
     # refusal was an implementation limit, not a rule. OPEN positive (capture closure).
     [pscustomobject]@{ Name = 'unit_capture_struct_whole.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
@@ -3283,7 +3289,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_make_adder_native_note.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         WalkedMethods = @(0); Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t6_root_held_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_t6_root_held_arity_refused.lm2:10:9: p5 has no argument y'; Absent = @(); Debt = @() },
+        Needle = 'unit_t6_root_held_arity_refused.lm2:11:9: p5 has no argument y'; Absent = @(); Debt = @() },
     # T6b (D-92): the build is the host's one exit. The base translator accepted these three and
     # dropped the statements with the host's body; nested_call it refused with the old phrase.
     # (D-93/D-94, 2026-09-27: after_return and nested_call now run -- rows below; the note that
@@ -4076,9 +4082,9 @@ $fixtures = @(
     # two routes below -- a path from outside the method, a copy of the method -- are refused by this
     # implementation today.  A row that goes red means the route opened: the analysis must model it first.
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:29:11: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:30:11: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_copy_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:29:10: unknown merge operand'; Absent = @(); Debt = @() },
+        Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:10: unknown merge operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_root_used_other_refused.lm2:14:1: implements is false in a typed binding'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -5239,9 +5245,9 @@ $fixtures = @(
     # actual past the last formal at that actual.  The rule and the place of the first are what these
     # rows held before; the words were the check's, "a held callable takes the arguments of its header".
     [pscustomobject]@{ Name = 'unit_held_call_count_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_count_refused.lm2:8:8: h2 has no argument y'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_count_refused.lm2:9:8: h2 has no argument y'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_more_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_more_refused.lm2:8:15: more arguments than h2 has formals'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_more_refused.lm2:9:15: more arguments than h2 has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 99;
         Absent = @(); Debt = @() },
     # Slice 2c-1: the method executes its own named Structure -- `S()`, `S: ()`, the bare `S` -- S's procedure (§12), a
@@ -5265,8 +5271,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_local_ns_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(2);
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_local_ns_stmt_unresolved.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_local_ns_stmt_unresolved.lm2:7:12: unresolved name'; Absent = @(); Debt = @() },
+    # OPEN, required before G5, red until built (DORMANT-BODY-FREE-INPUT; Codex, OPUS-CODEX-20261005-01: this row's
+    # refusal was implementation evidence, no rule).  S is never executed and its free name nosuch is missing
+    # nowhere; m returns 7.  Refused at 01ecd69b at nosuch, "7:12: unresolved name" (l2_dyn_typed: S's callable
+    # row has the input nosuch, which no caller types).
+    [pscustomobject]@{ Name = 'unit_local_ns_stmt_unresolved.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     # Slice 2c-3: S's control bodies are Structures of its occurrence, built with S at its statement (R9) -- the `if:`
     # body with a cell for its field t: w 0 after the declaration, 10 after `S()` (was unit_local_ns_ctl_refused);
     # under the knob the method stays native (pinned); S declared in the method's `while:` gets new bodies each pass:
@@ -7289,11 +7299,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_actual_held_walk.lm2'; Source = 'unit_named_actual_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5,6,7,8); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_actual_held_name_refused.lm2:9:17: the argument x of h2 is given by position (z:) and again by name'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_actual_held_name_refused.lm2:10:17: the argument x of h2 is given by position (z:) and again by name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_again_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_actual_held_again_refused.lm2:8:13: the argument x of h2 is given by position and again by name'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_actual_held_again_refused.lm2:9:13: the argument x of h2 is given by position and again by name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_actual_held_missing_refused.lm2:8:8: h2 has no argument x'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_actual_held_missing_refused.lm2:9:8: h2 has no argument x'; Absent = @(); Debt = @() },
     # OPEN (Codex, FABLE-CODEX-20261004-08), two temporary probes of what the translator does and no
     # norm: a constructor declares its result's header with the names p and q and returns a definition
     # whose own formals are x and y.  A call by p and q is bound by the header and reaches the
@@ -7303,7 +7313,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_actual_held_header_names_limit_probe.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_held_definition_names_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_actual_held_definition_names_limit_probe.lm2:12:11: unknown method'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_actual_held_definition_names_limit_probe.lm2:13:11: unknown method'; Absent = @(); Debt = @() },
     # The neighbour of the reading path of l2_declaration (Codex, FABLE-CODEX-20261004-07): a named
     # Structure whose body is one call with named actuals stays a definition whose body runs the call;
     # the stop at a call is the declaration reader's own nesting, not a rule for an enclosing Structure.
@@ -7341,9 +7351,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_held_call_shadow_walk.lm2'; Source = 'unit_held_call_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_local_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_local_shadow_refused.lm2:11:13: unknown method'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_local_shadow_refused.lm2:12:13: unknown method'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_formal_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_formal_shadow_refused.lm2:10:13: unknown method'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_formal_shadow_refused.lm2:11:13: unknown method'; Absent = @(); Debt = @() },
     # The held callable a head names is the row the name selects at its site (Codex,
     # FABLE-CODEX-20261004-09): the site's own row declared last before it, or in a method the unit's
     # field visible from the method.  The store of a callable merge declares its head only where the
@@ -7387,15 +7397,15 @@ $fixtures = @(
     # intercepting by shape.  No program the check accepts carries the storing shape under a bound
     # head, so neither point is entered with one.
     [pscustomobject]@{ Name = 'unit_held_call_reapplied_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_reapplied_refused.lm2:11:5: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_reapplied_refused.lm2:12:5: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_reapplied_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_reapplied_method_refused.lm2:11:9: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_reapplied_method_refused.lm2:12:9: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_callable_over_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_store_callable_over_number_refused.lm2:10:5: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_callable_over_local_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_store_callable_over_local_refused.lm2:12:9: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_store_callable_over_local_refused.lm2:13:9: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_callable_over_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_store_callable_over_formal_refused.lm2:11:9: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_store_callable_over_formal_refused.lm2:12:9: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_failed_application_walk.lm2'; Source = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -7405,11 +7415,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_held_call_superseded_walk.lm2'; Source = 'unit_held_call_superseded.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_superseded_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_superseded_refused.lm2:12:13: unknown method'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_superseded_refused.lm2:13:13: unknown method'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_superseded_caller_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_superseded_caller_refused.lm2:17:30: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_superseded_caller_refused.lm2:18:30: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_above_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_above_refused.lm2:6:13: unknown method'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_above_refused.lm2:7:13: unknown method'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_above_unknown_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_above_unknown_head_walk.lm2'; Source = 'unit_held_call_above_unknown_head.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -7423,19 +7433,19 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_held_call_block_walk.lm2'; Source = 'unit_held_call_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_block_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_block_refused.lm2:11:30: unknown method'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_block_refused.lm2:12:30: unknown method'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_method_local_walk.lm2'; Source = 'unit_held_call_method_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_other_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_other_method_refused.lm2:14:13: unknown method'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_other_method_refused.lm2:15:13: unknown method'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_assigned.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,2,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_assigned_walk.lm2'; Source = 'unit_held_call_assigned.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_assigned_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_assigned_type_refused.lm2:11:1: assignment value has incompatible type'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_assigned_type_refused.lm2:12:1: assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_nullary_statement_walk.lm2'; Source = 'unit_held_call_nullary_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -7467,7 +7477,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_occurrence_walk.lm2'; Source = 'unit_held_call_bare_name_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4); NativeMethods = @(5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_bare_name_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_bare_name_args_refused.lm2:12:4: a held callable takes the arguments of its header'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_bare_name_args_refused.lm2:13:4: a held callable takes the arguments of its header'; Absent = @(); Debt = @() },
     # The operands of an operation and the one value of a condition receive a number too (Codex,
     # FABLE-CODEX-20261004-12): the bare name of a held callable there is executed, and `z0 = 0` compares what z0
     # gives, not its occurrence.  The first program: arithmetic, an ordering, equalities with a zero result and a
@@ -7518,7 +7528,7 @@ $fixtures = @(
         NativeMethods = @(0,1,2,4,5); Absent = @(); Debt = @() },
     # A held definition is admitted to a callable formal by the signature of its model.
     [pscustomobject]@{ Name = 'unit_held_actual_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_actual_signature_refused.lm2:20:8: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_actual_signature_refused.lm2:21:8: incompatible entry signature'; Absent = @(); Debt = @() },
     # OPEN positives, required before G5.  A limit of this implementation and no rule; red until built, never to
     # be turned into expected refusals.  A definition's node at a formal that also receives callables formed in
     # another way -- methods of the unit (among_methods), the nodes of another definition (two_models) -- is
@@ -7553,7 +7563,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_held_actual_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_actual_reference_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_actual_reference_refused.lm2:27:13: implements is false in function argument'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_actual_reference_refused.lm2:28:13: implements is false in function argument'; Absent = @(); Debt = @() },
     # The node a merge builds carries its own complete contract (T7-MODEL-FREE-NAME): the formals the merge
     # leaves unbound, then the model's hidden inputs, and its body reads each at its place there.  A model that
     # reads a number of the unit, held: the root, another copy, a caller's value (free_name).  Two formals left
@@ -7688,7 +7698,7 @@ $fixtures = @(
     # not fitting.  It is a candidate for the definition's use of the name and is refused by the ordinary
     # admission, by the field the definition reads; the unit's Structure is not read in its place.
     [pscustomobject]@{ Name = 'unit_nested_definition_structure_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_nested_definition_structure_other_refused.lm2:24:13: implements is false in function argument'; Absent = @(); Debt = @() },
+        Needle = 'unit_nested_definition_structure_other_refused.lm2:25:13: implements is false in function argument'; Absent = @(); Debt = @() },
     # A caller's own Structure of the same type under the definition's free name is the caller's nearest binding
     # and comes first: 5 + 40.  It is another declaration than the one the definition's lexical source names, and
     # is admitted to the definition's use as a call of a method admits a hidden input.
@@ -7719,7 +7729,7 @@ $fixtures = @(
     # ordinary admission where the value is admitted to the definition's use; the node's copy is not read in
     # its place.
     [pscustomobject]@{ Name = 'unit_held_capture_chain_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_capture_chain_other_refused.lm2:25:13: implements is false in function argument'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_capture_chain_other_refused.lm2:26:13: implements is false in function argument'; Absent = @(); Debt = @() },
     # Three more kinds of name the chain reaches.  A Structure field of the host itself is a free name of the
     # definition as a Structure the host takes is: 35, and 55 with a caller's own (capture_host_field).  A typed
     # reference of the unit, with a caller's reference to another declaration two methods above: 9 and 65
@@ -8103,7 +8113,7 @@ $fixtures = @(
     # definition that only hands the name on to a reader with no source of its own.  The local of the method that
     # made the definition is not the definition's to give.
     [pscustomobject]@{ Name = 'unit_absent_input_unavailable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_absent_input_unavailable_refused.lm2:23:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+        Needle = 'unit_absent_input_unavailable_refused.lm2:24:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
     # Requirements by call site, and the formation by exact occurrence (K04 S2 part two; Codex,
     # FABLE-CODEX-20261004-12).  One callable formal receives callables with different free names: each call
     # forms the inputs of the callable it has (differ; the pin is the text of the class selection).  A site is
@@ -8154,7 +8164,7 @@ $fixtures = @(
     # A name a held definition requires that no one can give: refused at the root's call of the method that
     # makes the held call, where the chain starts.
     [pscustomobject]@{ Name = 'unit_held_call_required_input_unavailable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_required_input_unavailable_refused.lm2:27:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_required_input_unavailable_refused.lm2:28:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
     # A reference among the names of a callable a site does not give is left out, as a number is: whether an
     # input is formed does not depend on how it is represented.  Through a method that only hands the callable
     # on, the reference left out stays absent (site_reference_forwarded).  A caller whose own Structure under
@@ -8630,6 +8640,41 @@ $fixtures = @(
         Needle = 'unit_head_label_refused.lm2:17:13: return value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_head_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_head_shadow_refused.lm2:12:13: return value has incompatible type'; Absent = @(); Debt = @() },
+    # The read is found past an empty definition: `note()` defines a named Structure, whose row the collection
+    # makes before it asks the role of the head below it; the probe passes that statement and makes nothing.
+    [pscustomobject]@{ Name = 'unit_head_after_empty_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); NativeMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_head_after_empty_decl.lm2'; Source = 'unit_head_after_empty_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # OPEN, required before G5 (Codex, OPUS-CODEX-20261005-01, the HEAD checkpoint review): a limit of this
+    # implementation and no rule, red until built (DORMANT-BODY-FREE-INPUT).  A named body never executed keeps
+    # its free names (#construction): `y: z + 1` in make, nothing binds z, nothing calls y, make returns 7 and the
+    # root says MADE 7.  The translator gives the body its own callable row with the input z, and types every
+    # input of every row at the closure (l2_dyn_typed): z has no type, and the definition is refused at its
+    # free name, 7:8 unresolved name.  With y called and no source of z the call fails, where the chain starts
+    # (the root's call of make, as unit_held_call_required_input_unavailable_refused); today the definition is
+    # refused first, 8:8.
+    [pscustomobject]@{ Name = 'unit_dormant_free_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('MADE 7'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_dormant_free_body_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_dormant_free_body_call_refused.lm2:13:10: unbound dynamic input z'; Absent = @(); Debt = @() },
+    # FACTORY (FACTORY-RESULT-RECEIVER; the author, 2026-10-05; docs/LMX_semantics.en.md#factory-reference-result):
+    # the receiver `@: h f(a)` evaluates the written call and stores the reference to the callable it returns; the
+    # call binds its actuals as any call does, a named one included (receiver_named, in a method).  An unknown head
+    # whose tail begins with a known method defines a named Structure and executes nothing (short_dormant: shout
+    # prints nothing, natively and with the root and the methods walked); a bare method name in that body is its
+    # application with no actual, and a method that requires one is refused in the body where it stands
+    # (short_args_refused, the check of any call that misses a required argument).
+    [pscustomobject]@{ Name = 'unit_factory_receiver_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 101 7'); NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_factory_receiver_named.lm2'; Source = 'unit_factory_receiver_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 101 7'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_factory_short_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('DONE'); NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_factory_short_dormant.lm2'; Source = 'unit_factory_short_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('DONE'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_factory_short_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_factory_short_args_refused.lm2:11:7: incompatible entry signature'; Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:14:5: more arguments than bar has formals'; Absent = @(); Debt = @() },

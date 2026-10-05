@@ -1924,6 +1924,10 @@ prototype:
     fn: l2_mad_sig (const: @(LmP0Node node)) int
     fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
+    fn: l2_receiver_frame (const: @(LmP0Node stmt); @@: LmP0Text out_name) @: LmP0Node
+    fn: l2_receiver_call (const: @(LmP0Node stmt); @@: LmP0Text out_name) @: LmP0Node
+    fn: l2_store_host (const: @(LmP0Node stmt)) int
+    fn: l2_store_name (const: @(LmP0Node stmt)) @: LmP0Text
     fn: l2_mad_declaring (const: @(LmP0Node stmt); int: mi) int
     fn: l2_call_node_body (const: @(LmP0Node node)) @: LmP0Structure
     fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
@@ -4313,6 +4317,7 @@ return: (cast: (int) (fr != 0 && fr\body != 0))
 # classifies the unit's items -- a count before the named Structures exist, a fill after -- gets one answer.
 fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     @: LmP0Field f
+    @: LmP0Text got
     if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_find_method(t) >= 0
         return: 0
     if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_receiver_word(t) != 0
@@ -4321,6 +4326,10 @@ fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
         return: 1
     f: l2_next_active(l2_cur_unit\first_field)
     while: f != 0 && f\value != item
+        # The receiver `@: t f(a)` of a factory's result above the item declares t (l2_receiver_frame): `t: 3 4`
+        # below it applies t.  A method above the receiver has no binding of t (unit_held_call_above_unknown_head).
+        if: l2_receiver_frame(f\value, @ got) != 0 && l2_text_same(got, t) != 0
+            return: 0
         # `Model: fresh` above the field definition is a use, not the binding.
         # `A: b` with no later field definition is the binding.
         if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0 && l2_text_same(f\value\as\frame\head, t) != 0 && l2_retained_body(f\value\as\frame) != 0 && (l2_ident_only_tail(f\value\as\frame) = 0 || l2_struct_defined_below(f\value\as\frame\head, f\value) = 0)
@@ -4345,22 +4354,6 @@ fn: l2_receiver_value (const: @(LmP0Frame fr)) int
         return: 1
 return: 0
 
-# 1 when the tail begins with a call of a method declared in this unit
-# (`add5: makeAdder 5`). The name is read from the source, so both walks agree.
-fn: l2_call_value (const: @(LmP0Frame fr)) int
-    @: LmP0Field f
-    if: fr = 0 || fr\body = 0
-        return: 0
-    f: l2_next_active(fr\body\first_field)
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0
-        return: 0
-    if: l2_unit_names_method(f\value\as\atom) = 0
-        return: 0
-return: 1
-
-# 1 when a later unit item defines this head as a field Structure.
-# `Model: fresh` above `Model:` + fields is a use (unresolved until the definition).
-# `A: b` with no later definition is the definition. Source order, both walks agree.
 fn: l2_struct_defined_below (const: @(LmP0Text name); const: @(LmP0Node item)) int
     @: LmP0Field f
     int: seen 0
@@ -4407,9 +4400,11 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
     # An absent head declares a named Structure whose tail is a Structure or identifier
     # atoms (semantics: unknown A: b). A literal tail (`x: 7`) declares nothing.
     # A receiver's value is the statement even when that tail is nonempty: `R: merge: A B`.
-    # So is a call of a method declared above: `add5: makeAdder 5`.
+    # A tail that begins with a known method declares the Structure too and calls nothing,
+    # in every spelling (Q58): `add5: makeAdder 5` is a definition.  A factory's result is
+    # received by `@: add5 makeAdder(5)` (the author, 2026-10-05; l2_receiver_call).
     if: l2_head_absent(fr\head, item) != 0 && l2_retained_body(fr) != 0
-        if: l2_receiver_value(fr) != 0 || l2_call_value(fr) != 0
+        if: l2_receiver_value(fr) != 0
             return: 0
         if: l2_ident_only_tail(fr) != 0 && l2_struct_defined_below(fr\head, item) != 0
             return: 0
@@ -11231,7 +11226,7 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
     if: fr\trailer != 0 && (fr\trailer\spelling = 0 || l2_text_eq(fr\trailer\spelling, "end") = 0)
         return: 0
-    if: l2_retained_body(fr) = 0 || l2_receiver_value(fr) != 0 || l2_call_value(fr) != 0
+    if: l2_retained_body(fr) = 0 || l2_receiver_value(fr) != 0
         return: 0
     if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_find_method(h) >= 0 || l2_is_known(h) != 0
         return: 0
@@ -12242,11 +12237,10 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
-        # The store of a callable merge declares its head where the head has no binding at
-        # this site (or this statement has its row from an earlier pass).  Under a head that
-        # has a binding the shape is an application of it, left to the statements below.
-        if: l2_mad_store_stmt(stmt) != 0 && (l2_own_by_decl(mi, stmt) >= 0 || l2_colon_bound_ty(mi, stmt\as\frame\head, @ k) != 0)
-            cj: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+        # The store of a callable merge, `@: h f(a)`: the receiver declares h, which holds the node the call
+        # returns (l2_receiver_call).
+        if: l2_mad_store_stmt(stmt) != 0
+            cj: l2_own_add(mi, l2_store_name(stmt), l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_off(mi, cj) = (cast: (size_t) -1)
@@ -13034,6 +13028,12 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             scanned: l2_scan_fields(fr\body\first_field, l2_merge_arity(l2_merge_frame(stmt)), mi, seen)
             l2_own_excl: excluded
             if: scanned != 0 || l2_scan_bound(mi, oi, seen) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
+        # `@: h f(a)` (l2_mad_store_stmt): h is declared here and read nowhere; the call is read as any call.
+        if: l2_mad_store_stmt(stmt) != 0
+            if: l2_scan_node(l2_receiver_call(stmt, 0), mi, seen) != 0 || l2_scan_bound(mi, l2_own_by_decl(mi, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -26360,17 +26360,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
             continue
         if: l2_mad_declaring(stmt, mi) != 0
-            last: l2_next_active(stmt\as\frame\body\first_field)
-            k: l2_find_method(last\value\as\atom)
-            call_body: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(c.LmP0Structure)))
-            if: call_body = 0
-                return: l2_error(path, stmt, "out of memory")
-            call_body\first_field: l2_next_active(last\next)
-            call_body\last_field: stmt\as\frame\body\last_field
-            call_body\field_count: (cast: (size_t) (l2_count_active(stmt\as\frame\body) - 1))
-            call_result: l2_check_call(stmt, k, 0 - 1, call_body, mi, path)
-            free((cast: (@: void) call_body))
-            if: call_result != 0
+            if: l2_check_call(l2_receiver_call(stmt, 0), l2_store_host(stmt), 0 - 1, l2_receiver_call(stmt, 0)\as\frame\body, mi, path) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -35698,7 +35688,9 @@ return: 0 - 1
 # receiving model, if any, remains independent of the closed pointer type.
 fn: l2_own_ref_decl (const: @(LmP0Node stmt); int: mi) int
     int: oi 0
-    if: stmt = 0
+    # The receiver of a factory's result, `@: h f(a)`, has its row from the store (l2_mad_store_stmt): its value
+    # is the call's, not a declaration's candidate.
+    if: stmt = 0 || l2_mad_store_stmt(stmt) != 0
         return: 0 - 1
     while: oi < l2_own_n
         if: l2_own_decl[oi] = stmt && l2_own_mi[oi] = mi && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0
@@ -39832,6 +39824,15 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     if: stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
         return: l2_rw_refuse(stmt, "this statement")
     h: stmt\as\frame\head
+    # The receiver of a factory's result, `@: h f(a)` (l2_mad_declaring): the call, its node put into h's place.
+    # Read here, before a head that begins with `@` is taken for a machine source below.
+    if: l2_mad_declaring(stmt, l2_rw_mi) != 0
+        if: l2_rw_mad_store(stmt, into, @ node) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_put(into, slot, node) != 0
+            return: 1
+        return: 0
     if: l2_text_eq(h, "return")
         if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) != 0
             if: l2_rw_mi = l2_e
@@ -40155,13 +40156,6 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: k != 0
             return: 1
         if: l2_rw_formal_slot(l2_own_name[oi]) = oi && l2_rw_bseq_mark(oi) != 0
-            return: 1
-        \made: 1
-        if: l2_rw_put(into, slot, node) != 0
-            return: 1
-        return: 0
-    if: l2_mad_declaring(stmt, l2_rw_mi) != 0
-        if: l2_rw_mad_store(stmt, into, @ node) != 0
             return: 1
         \made: 1
         if: l2_rw_put(into, slot, node) != 0
@@ -41671,20 +41665,60 @@ fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
     l2_mad_host[model]: mi
 return: 0
 
-fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
+# `@: h f(a)` by its shape: the receiver `@:` of a call, its first field the name h it declares, its second the
+# call's Frame.  Read without the method table, it answers the same in every pass: l2_head_absent asks it in
+# the count and fill walks of the unit's roles.  The call's Frame, or 0.
+fn: l2_receiver_frame (const: @(LmP0Node stmt); @@: LmP0Text out_name) @: LmP0Node
     @: LmP0Field f
-    int: idx
-    if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0
+    @: LmP0Field g
+    if: out_name != 0
+        \out_name: 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || stmt\as\frame\body = 0 || stmt\as\frame\trailer != 0
         return: 0
-    if: l2_ident(stmt\as\frame\head) = 0 || l2_find_method(stmt\as\frame\head) >= 0
+    if: l2_text_eq(stmt\as\frame\head, "@") = 0 || l2_count_active(stmt\as\frame\body) != 2
         return: 0
     f: l2_next_active(stmt\as\frame\body\first_field)
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0
+    g: l2_next_active(f\next)
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || l2_ident(f\value\as\atom) = 0
         return: 0
-    idx: l2_find_method(f\value\as\atom)
-    if: l2_mad_on(idx) = 0
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_FRAME || g\value\as = 0 || g\value\as\frame = 0 || g\value\as\frame\head = 0 || g\value\as\frame\trailer != 0
         return: 0
-return: 1
+    if: out_name != 0
+        \out_name: f\value\as\atom
+return: g\value
+
+# `@: h f(a)`: the receiver `@:` takes the reference the call of method f returns (the author, 2026-10-05;
+# docs/LMX_semantics.en.md#factory-reference-result).  h is the name it declares, the call is its value, a Frame
+# of its own: the binding binds its actuals as any call's.  The call's Frame, or 0 when stmt is no such receiver.
+fn: l2_receiver_call (const: @(LmP0Node stmt); @@: LmP0Text out_name) @: LmP0Node
+    @: LmP0Node g
+    g: l2_receiver_frame(stmt, out_name)
+    if: g != 0 && l2_find_method(g\as\frame\head) >= 0
+        return: g
+    if: out_name != 0
+        \out_name: 0
+return: 0
+
+# The store of a callable merge: the receiver `@:` of a call of its host (l2_receiver_call).
+fn: l2_mad_store_stmt (const: @(LmP0Node stmt)) int
+    const: @(LmP0Node call) l2_receiver_call(stmt, 0)
+    if: call = 0
+        return: 0
+return: l2_mad_on(l2_find_method(call\as\frame\head))
+
+# The host a store of a callable merge calls, or -1.
+fn: l2_store_host (const: @(LmP0Node stmt)) int
+    const: @(LmP0Node call) l2_receiver_call(stmt, 0)
+    if: call = 0
+        return: -1
+return: l2_find_method(call\as\frame\head)
+
+# The name a store of a callable merge declares, or 0.
+fn: l2_store_name (const: @(LmP0Node stmt)) @: LmP0Text
+    @: LmP0Text name 0
+    if: l2_receiver_call(stmt, @ name) = 0
+        return: 0
+return: name
 
 # The body a held callable's call gives its actuals in: the Frame's own, or none for the bare
 # name, which is the call with no actuals.
@@ -41764,8 +41798,7 @@ fn: l2_mad_held_header (int: oi; @@: LmP0Node formals; @@: LmP0Node result) int
     int: host
     if: oi < 0 || formals = 0 || result = 0 || l2_mad_store_stmt(l2_own_decl[oi]) = 0
         return: 1
-    f: l2_next_active(l2_own_decl[oi]\as\frame\body\first_field)
-    host: l2_find_method(f\value\as\atom)
+    host: l2_store_host(l2_own_decl[oi])
     if: host < 0 || l2_m_node[host] = 0 || l2_m_node[host]\as = 0 || l2_m_node[host]\as\frame = 0 || l2_m_node[host]\as\frame\body = 0
         return: 1
     f: l2_next_active(l2_m_node[host]\as\frame\body\first_field)
@@ -42189,12 +42222,10 @@ return: 0
 
 # The model of the node the held callable own oi holds -- its host's, the method its store statement calls -- or -1.
 fn: l2_mad_held_model (int: oi) int
-    @: LmP0Field f
     int: host
     if: oi < 0 || l2_mad_store_stmt(l2_own_decl[oi]) = 0
         return: 0 - 1
-    f: l2_next_active(l2_own_decl[oi]\as\frame\body\first_field)
-    host: l2_find_method(f\value\as\atom)
+    host: l2_store_host(l2_own_decl[oi])
     if: host < 0 || l2_mad_on(host) = 0
         return: 0 - 1
 return: l2_mad_model[host]
@@ -42613,21 +42644,22 @@ fn: l2_rw_mad_at (int: parent; int: slot; @: int out) int
 return: 0
 
 fn: l2_rw_mad_store (const: @(LmP0Node stmt); int: into; @: int out) int
-    @: LmP0Field f
+    const: @(LmP0Node made) l2_receiver_call(stmt, 0)
+    @: LmP0Field f 0
     int: idx
     int: oi
     int: call
     int: vs
-    f: l2_next_active(stmt\as\frame\body\first_field)
-    idx: l2_find_method(f\value\as\atom)
-    oi: l2_own_visible(l2_rw_mi, stmt\as\frame\head)
-    if: oi < 0 || idx < 0
+    idx: l2_store_host(stmt)
+    oi: l2_own_by_decl(l2_rw_mi, stmt)
+    if: oi < 0 || idx < 0 || made = 0
         return: l2_rw_refuse(stmt, "a callable merge")
-    f: l2_next_active(f\next)
+    if: made\as\frame\body != 0
+        f: l2_call_actuals(made\as\frame\body)
     # §7b: the node goes to the field's working value when it has one (SET), else to its slot (l2_rw_write).
     if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0
         return: 1
-    if: l2_rw_call(stmt, idx, -1, f, \out, @ call) != 0 || l2_rw_put(\out, vs, call) != 0
+    if: l2_rw_call(made, idx, -1, f, \out, @ call) != 0 || l2_rw_put(\out, vs, call) != 0
         return: 1
 return: 0
 
@@ -46038,16 +46070,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             ---
             if: oi >= l2_own_n
                 return: l2_error(l2_src, stmt, "callable result field was not reserved")
-            call_head: l2_next_active(stmt\as\frame\body\first_field)
-            call_idx: l2_find_method(call_head\value\as\atom)
-            call_body: (cast: (@: LmP0Structure) calloc(1U, c.sizeof(c.LmP0Structure)))
-            if: call_body = 0
-                return: l2_error(l2_src, stmt, "out of memory")
-            call_body\first_field: l2_next_active(call_head\next)
-            call_body\last_field: stmt\as\frame\body\last_field
-            call_body\field_count: (cast: (size_t) (l2_count_active(stmt\as\frame\body) - 1))
-            call_result: l2_emit_call(stmt, call_idx, 0, 0 - 1, call_body, mi, ind, l2_tok, 0)
-            free((cast: (@: void) call_body))
+            call_result: l2_emit_call(l2_receiver_call(stmt, 0), l2_store_host(stmt), 0, 0 - 1, l2_receiver_call(stmt, 0)\as\frame\body, mi, ind, l2_tok, 0)
             if: call_result != 0 || l2_own_store(mi, oi, ind, l2_tok) != 0
                 return: 1
             field: l2_next_active(field\next)

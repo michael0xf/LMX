@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # T6b. The parser hangs `return: addN` on the model's own frame; `n: 5` follows it in the text.
 # D-94: a statement after the return of a callable merge is dead -- checked, never emitted, natively
 # or in the walk (before: refused).  n stays 5 for the build: add5(1) = 6.
@@ -7,7 +8,7 @@ fn: makeAdder (int: n) fn: (int: x) int
     return: addN
     n: 5
 
-add5: makeAdder 5
+@: add5 makeAdder(5)
 int: a (add5: 1)
 sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
 return

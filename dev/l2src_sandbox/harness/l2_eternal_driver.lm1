@@ -709,19 +709,33 @@ fn: shape_add_owner (@: LmxArena arena; @: Lmx roles; @: Lmx holder; int: left; 
     ---
 return: found
 
-# Test-only physical path: a count followed by that many child indices. Its
-# depth is supplied by the command, never a fixed-size observation buffer.
+# Test-only physical path: a count followed by that many steps. A step is a child
+# index, or `deref`: the reference a typed pointer cell holds -- a reference field
+# (`@: T x`, the receiver `@: h f(a)`) is such a cell in its slot (q26), and the
+# path crosses it only where the step says so (`ref N` is main's own option).
+# Its depth is supplied by the command, never a fixed-size observation buffer.
 fn: shape_path (@: LmxArena arena; @: Lmx graph; @: int at; int: omit_last) @: void
     int: n arg(\at)
     int: j 0
     int: limit n - omit_last
     int: index
+    int: ty
     @: void value (cast: (@: void) graph)
     @: Lmx holder
     check(\at >= 0 && \at < gargc && n >= 0 && limit >= 0 && n <= gargc - \at - 1, "physical path supplies its complete nonnegative depth")
     if: \at < 0 || \at >= gargc || n < 0 || limit < 0 || n > gargc - \at - 1
         return: 0
     while: j < limit
+        if: c.strcmp(gargv[\at + j + 1], "deref") = 0
+            ty: 0 - 1
+            if: value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_PRIMITIVE
+                ty: lmx_domain_type(arena, value)
+            check(ty >= c.LMX_TYPE_POINTER_BASE && ty < c.LMX_TYPE_ARRAY_OF_POINTER_BASE, "physical path crosses the reference of an actual pointer cell")
+            if: ty < c.LMX_TYPE_POINTER_BASE || ty >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                return: 0
+            value: lmx_pointer_value_known(value)
+            j: j + 1
+            continue
         check(value != 0 && lmx_domain_kind(arena, value) = c.LMX_KIND_STRUCT, "physical path crosses an actual Structure")
         if: value = 0 || lmx_domain_kind(arena, value) != c.LMX_KIND_STRUCT
             return: 0

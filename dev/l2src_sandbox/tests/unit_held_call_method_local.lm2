@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # A callable merge stored in a method's local is held by that local, and is
 # called there as the root's is: in an expression, by a statement in both
 # forms, and by its formals' names. Each activation of a holds its own: the
@@ -21,7 +22,7 @@ fn: make2 (int: n) fn: (int: x; int: y) int
     return: f2
 
 fn: a (int: k) int
-    h: make2 k
+    @: h make2(k)
     h(1 2)
     h: 3 1
     return: h(y: 1; x: 4)
@@ -30,10 +31,10 @@ end: a
 fn: pick (int: c) int
     int: q 0
     if: c = 1
-        h: make2 300
+        @: h make2(300)
         q: h(0 0)
     else:
-        h: make2 400
+        @: h make2(400)
         q: h(0 0)
     ---
     return: q

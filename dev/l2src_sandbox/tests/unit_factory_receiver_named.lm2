@@ -1,0 +1,27 @@
+# The receiver `@:` of a factory's result in a method, the factory called with a named
+# actual (the author, 2026-10-05; docs/LMX_semantics.en.md#factory-reference-result):
+# `@: h make2(n: 100)` evaluates the call, binds n by name as any call does, and
+# stores the reference to the returned callable in h; h(1) is 101. outer says
+# OUTER 101 7, run returns 7. Entry 7.
+fn: make2 (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+fn: run () int
+    @: h make2(n: 100)
+    int: got (h: 1)
+    if: got != 101
+        return: 80
+    return: got - 94
+end: run
+
+fn: outer () int
+    int: r run()
+    int: g (r + 94)
+    c.printf: "OUTER %d %d\n" g r
+    return: r
+end: outer
+
+sendMessage: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

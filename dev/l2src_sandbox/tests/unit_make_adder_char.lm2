@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # Item 738. A char capture is a fresh typed cell preserving the target C99 value.
 # makeTag captures its char formal c: tagA carries 'A', tagB carries (char)200,
 # tagZ 'Z'; tagOf tells them apart: 101, 201, 1. makeHi captures h, a char field the host
@@ -32,11 +33,11 @@ char: high200 (cast: (char) 200)
 char: high250 (cast: (char) 250)
 int: numeric200 (cast: (int) high200)
 int: numeric250 (cast: (int) high250)
-tagA: makeTag 'A' numeric200
-tagB: makeTag high200 numeric200
-tagZ: makeTag 'Z' numeric200
-hi1: makeHi 1 high250 numeric250
-hi0: makeHi 0 high250 numeric250
+@: tagA makeTag('A'; numeric200)
+@: tagB makeTag(high200; numeric200)
+@: tagZ makeTag('Z'; numeric200)
+@: hi1 makeHi(1; high250; numeric250)
+@: hi0 makeHi(0; high250; numeric250)
 int: a (tagA: 1)
 int: b (tagB: 1)
 int: z (tagZ: 1)

@@ -442,17 +442,18 @@ with its model by address is the partial copy of `l2_mad_emit`, an open
 obligation against L2 §13, so nothing selects by it
 ([ledger](steps/fable-continuation-20261003.md#held-actual)).
 
-**Debt (2026-10-05).** A factory's result is received by the explicit
+**Built (2026-10-05).** A factory's result is received by the explicit
 receiver `@:`, as in `@: add5 makeAdder(5)`
 ([semantics](docs/LMX_semantics.en.md#factory-reference-result),
-[the author's words](LMX_blog/2026-10-05.md#factory-reference-result)). An
-unknown head whose tail begins with a known method's name defines a dormant
-named Structure in every spelling (Q58), and the contract of the returned
-callable is unchanged. The translator still reads the short form
-`add5: makeAdder 5` as the call's result, and the held-callable rows above are
-built on it; it refuses `@: add5 makeAdder(5)` at the root and in a method
-(`unsupported body`)
-([FACTORY-RESULT-RECEIVER](steps/defects.md#factory-result-receiver)).
+[the author's words](LMX_blog/2026-10-05.md#factory-reference-result)). The
+receiver's call is an ordinary call, its named actuals bound as any call's,
+and `add5` is a reference: its slot holds a pointer cell, the cell the
+callable the call returned. An unknown head whose tail begins with a known
+method's name defines a dormant named Structure in every spelling (Q58) and
+calls nothing; the contract of the returned callable is unchanged. The
+held-callable rows above receive their callables through `@:`
+([ledger](steps/fable-continuation-20261003.md#factory-receiver),
+[FACTORY-RESULT-RECEIVER](steps/defects.md#factory-result-receiver)).
 A head `h: tail` is established by a formal, by a declaration in sight, or
 by a read of `h` as a free name before the statement; then the statement
 assigns the method's input, in its activation only. A head that nothing
@@ -465,6 +466,11 @@ probe that makes nothing and ends at the statement, and every pass gets the
 one answer collection found
 ([ledger](steps/fable-continuation-20261003.md#head-role-established),
 [HEAD-ROLE-UNESTABLISHED-ROWS](steps/defects.md#head-role-unestablished-rows)).
+**Debt (2026-10-05).** A named body that nothing calls keeps its free names:
+a caller of it could give them, and a call with no source fails at the call.
+The translator gives such a body a callable row and requires a type for its
+every input, so the definition is refused at the free name
+([DORMANT-BODY-FREE-INPUT](steps/defects.md#dormant-body-free-input)).
 
 A merge given as an actual is followed the same way (kind 5): the node it
 builds is formed as its model is. That node carries its own complete contract

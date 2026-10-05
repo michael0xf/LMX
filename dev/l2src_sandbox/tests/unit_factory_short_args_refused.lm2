@@ -1,0 +1,13 @@
+# The short form `add5: makeAdder 5` no longer receives a factory's result (the author,
+# 2026-10-05): the unknown head defines a named Structure add5 whose body is the
+# written fields `makeAdder` and `5`. A bare method name is its application with no
+# actual, and makeAdder requires n: the body is refused where it stands, as any call
+# that misses a required argument. The receiver is `@: add5 makeAdder(5)`.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+add5: makeAdder 5
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

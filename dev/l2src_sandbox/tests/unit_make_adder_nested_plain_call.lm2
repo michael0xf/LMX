@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # D-93: twice is nested in the host but captures nothing of it -- an ordinary method with its own
 # native body, which the host calls before its return (before: its native function was the stub
 # returning 0, and the call was refused).  k = twice(3) = 6, addN captures k: add5(1) = 7.
@@ -9,7 +10,7 @@ fn: makeAdder (int: n) fn: (int: x) int
         return: k + x
     return: addN
 
-add5: makeAdder 3
+@: add5 makeAdder(3)
 int: a (add5: 1)
 sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
 return

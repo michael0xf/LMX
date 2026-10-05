@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # T6b. A capture keeps its type: n is a size_t formal of the host, and the node's field n is a
 # size_t cell. addBig carries 2^32, addSmall 2^32 - 1; addN tells them apart: 101 and 2.
 # The base translator refused ("a callable merge needs a walkable body"). Mutant: the capture
@@ -9,8 +10,8 @@ fn: makeAdder (size_t: n) fn: (int: x) int
         return: x + 1
     return: addN
 
-addBig: makeAdder 4294967296U
-addSmall: makeAdder 4294967295U
+@: addBig makeAdder(4294967296U)
+@: addSmall makeAdder(4294967295U)
 int: a (addBig: 1)
 int: b (addSmall: 1)
 int: ok 0

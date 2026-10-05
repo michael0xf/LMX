@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # Gate 3 (book, "Returned nested methods" and "Dynamic sources and the lexical fallback"; Codex, 2026-09-28): in a
 # returned method `node\name` reads the node's copied lexical context -- its `node` is that context, the node's
 # parent -- while a bare name takes the caller's binding first.  read's node copied k 42 (40 + n) and n 2 at the
@@ -20,10 +21,10 @@ fn: makeValue (Model: m) fn: (int: x) int
         return: node\m\value + x
     return: val
 
-r: makeReader 2
+@: r makeReader(2)
 Model: left
 left\value: 7
-v: makeValue left
+@: v makeValue(left)
 left\value: 9
 int: n 100
 int: a (r: 1)

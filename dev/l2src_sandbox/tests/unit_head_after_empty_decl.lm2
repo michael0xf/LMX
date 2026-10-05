@@ -1,0 +1,29 @@
+# A head whose read is found past an empty definition (HEAD-ROLE-UNESTABLISHED-ROWS):
+# `note()` defines the named Structure note, whose row the collection makes before
+# it asks for the role of `hidden: hidden + 1`; the probe that finds the read of
+# hidden passes that statement and makes nothing.  hidden is bump's input, the
+# statement assigns it: 5 returned, outer's hidden stays 4, outer says OUTER 5 4.
+# Entry 7.
+fn: bump () int
+    int: was hidden
+    note()
+    hidden: hidden + 1
+    if: was != 4
+        return: 80
+    return: hidden
+end: bump
+
+fn: outer () int
+    int: hidden 4
+    int: got
+    got: bump()
+    c.printf: "OUTER %d %d\n" got hidden
+    if: got != 5
+        return: 83
+    if: hidden != 4
+        return: 84
+    return: 7
+end: outer
+
+sendMessage: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

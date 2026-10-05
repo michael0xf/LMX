@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # Item 739: a held callable's result has the header's number type at the root -- size_t, unsigned,
 # ulong and char through one adapter and caller-owned declared-width destinations.
 # s(1) = 2^32 + 1, u(4000000000) = 4000000005, l(1) = 6;
@@ -26,11 +27,11 @@ fn: makeC (char: n) fn: (char: x) char
         return: x
     return: pickC
 
-s5: makeS 4294967296U
-u5: makeU 5U
-l5: makeL 5U
+@: s5 makeS(4294967296U)
+@: u5 makeU(5U)
+@: l5 makeL(5U)
 char: expectedChar (cast: (char) 200)
-pc: makeC expectedChar
+@: pc makeC(expectedChar)
 size_t: a (s5: 1U)
 unsigned: b (u5: 4000000000U)
 ulong: c (l5: 1U)

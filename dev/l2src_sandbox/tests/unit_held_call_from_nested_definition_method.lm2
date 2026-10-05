@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # OPEN positive. A definition inside a method that returns it may call another
 # held callable. g0, defined in makeUse and returned by it, calls p0 and adds
 # what makeUse was given: 100 + 5, called from a method that names p0
@@ -8,14 +9,14 @@ fn: make0 (int: n) fn: () int
         return: n
     return: f0
 
-p0: make0 100
+@: p0 make0(100)
 
 fn: makeUse (int: k) fn: () int
     fn: g0 () int
         return: k + p0()
     return: g0
 
-u0: makeUse 5
+@: u0 makeUse(5)
 
 fn: inner () int
     return: u0()

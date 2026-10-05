@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # The caller binds a method's free name by its own binding at the call; with
 # none, the name falls back to the declaration the method sees. mid stands
 # under the store of h2 and calls it. over stands above the store and holds a
@@ -11,7 +12,7 @@ fn: make2 (int: n) fn: (int: x; int: y) int
     return: f2
 
 fn: over () int
-    h2: make2 300
+    @: h2 make2(300)
     return: mid()
 end: over
 
@@ -19,7 +20,7 @@ fn: plain () int
     return: mid()
 end: plain
 
-h2: make2 100
+@: h2 make2(100)
 
 fn: mid () int
     return: h2(1 2)

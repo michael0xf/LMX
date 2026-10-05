@@ -7690,3 +7690,174 @@ registered.
 ([FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)); then T7, A
 and the remainder in the order of section 74. Before G5, the fixed sizes that
 step B left are bounded cleanup subtasks of the plan.
+
+<a id="factory-receiver"></a>
+## 76. The receiver of a factory's result; a dormant body's free names (Codex's reply OPUS-CODEX-20261005-01, FACTORY, and its review of the HEAD checkpoint)
+
+The reply set FACTORY after HEAD: "implement the ordinary @: receiver's
+evaluated value/result route and explicit reference store in both native and
+retained-graph execution. [...] @: takes the returned ordinary reference; do
+not insert unary @, collapse reference depth, introduce a factory
+object/registry, or add args to ordinary named Structures. Explicit
+named-actual calls follow the same path. With the implementation, migrate old
+short-form factory-result fixtures to @:, and gate dormant plain named-body
+controls so an unknown ordinary definition does NOT execute its body. [...] A
+new incompatible outcome outside those identified migrations remains a real
+regression." Its review of the HEAD checkpoint repeated it -- "Continue FACTORY
+through the common @: receiver/result/value/reference-store route and
+documented migrations, with dormant-body controls and ordinary named actual
+binding" -- and opened the question of the body of `x` in
+`unit_asgn_fallback`, answered [below](#dormant-body-free-input).
+
+FACTORY did not need T7 first: the receiver stores the reference that the
+existing construction of the returned callable gives.
+
+### What is built
+
+1. **The receiver.** `@: h f(a)` is a statement whose head is `@`, whose
+   first field is the name `h` and whose second is the Frame of a call of a
+   method (`l2_receiver_call`). The call is an ordinary Frame: the binding
+   binds its actuals, a named one among them; the check is `l2_check_call` of
+   that Frame; native code is `l2_emit_call` and the store into `h`; the walk
+   builds the same call (`l2_rw_mad_store`). The machinery of a callable
+   merge's store, which recognized the shape `h: f a`, recognizes the receiver
+   now (`l2_mad_store_stmt`, `l2_store_host`, `l2_store_name`).
+2. **The receiver's field is a reference.** `h` is declared by `@`, so its
+   slot holds a pointer cell (q26), and the cell holds the callable the call
+   returned. No unary `@` is inserted. The test driver's physical paths cross
+   such a cell only by an explicit step, `deref` (`ref N` is the driver's own
+   option); `graph_shape_t7_local_definition` observes the copies through it.
+3. **The short form is a definition.** `l2_call_value` is gone from
+   `l2_unit_role` and `l2_local_ns_shape`: an unknown head whose tail begins
+   with a method's name defines a named Structure and calls nothing (Q58). A
+   bare method name in its body is the method's application with no actual.
+4. **The unit's order.** A receiver above an item of the root declares its
+   name for that item (`l2_head_absent`): `h2: 3 4` below `@: h2 make2(100)`
+   applies `h2`. A method above the receiver has no binding of `h2`
+   (`unit_held_call_above_unknown_head`). A first version put the receiver in
+   `l2_unit_declares`, which `l2_local_ns_shape` asks over the whole unit; it
+   gave the methods above the receiver a binding, and the focused run caught
+   that row.
+
+### Migrations
+
+171 fixtures -- 233 rows of the gate, 246 receivers -- are rewritten from
+`h: f a` to `@: h f(a)`, and the first line of each names the migration. The
+census was taken by the translator's own classification (an instrumented
+build), not by a text search. It counted the unit's top-level statements and
+the statements of methods; two fixtures with the store in a nested body of
+the root (an `if:` block), `unit_held_call_block` and
+`unit_held_call_block_refused`, were found by replaying the 1826 translations
+recorded by `opus_full_04` with this translator: outside the census only
+their three rows changed. Needles with a line number moved down by the header
+line. The seven rows that were red at `opus_full_04` are red with the same
+words.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_factory_receiver_named`, walked twin | `@: h make2(n: 100)` in a method: the call binds its named actual as any call; `h(1)` is 101; `OUTER 101 7`. |
+| `unit_factory_short_dormant`, walked twin | `s: shout` defines `s` and calls nothing: only `DONE` is printed, natively, with the root walked and with the methods walked. |
+| `unit_factory_short_args_refused` | `add5: makeAdder 5`: the bare `makeAdder` in the body is an application with no actual, refused where it stands, 11:7, as any call that misses a required argument (`l2_check_body` -> `l2_check_discard` -> `l2_check_call`). |
+| the migrated rows | `unit_make_adder*`, `unit_held_call_*`, `unit_t6_*`, `unit_named_actual_held*` and the rest receive the factory's result through `@:`. |
+
+### Mutants
+
+Each is built from this step's translator in a stage of its own; the
+translations recorded by the focused run `opus_focus_factory3` are replayed
+with it.
+
+| Mutant | Puts back | Rows that change |
+| --- | --- | --- |
+| `f_short` | the short form stores the call's result again | `unit_factory_short_dormant` and its twin: refused, `unresolved name` at `s` |
+| `f_norecv` | the receiver is not recognized | 219 rows refused, `unsupported body` (frame `@`) |
+| `f_noscan` | the receiver's call is not read by the scan of free names | 203 rows refused, `unresolved name` at the receiver's name |
+| `f_nodecl` | a receiver above declares nothing for the root's items | `unit_held_call_statement`, `_nullary_statement`, `_bare_name` and their twins refused |
+
+<a id="dormant-body-free-input"></a>
+### A dormant body's free names
+
+Codex, on `unit_asgn_fallback`: "the author's return:x answer ALONE does not
+make unit_asgn_fallback a normative negative. [...] Defining a named body does
+not execute it; the spec permits unresolved/free names to be retained and
+resolves required inputs at actual calls (semantics #construction and
+#dynamic)." And: "If it is a potentially supplied free value and only the
+current translator cannot lower that generic body, record a located
+implementation/coverage limit, not an author-approved language prohibition. A
+later explicit call without an admissible source is a CALL failure; don't
+hoist it onto inc's inert definition."
+
+Measured with a debug build of this step's translator, by the stack at
+`l2_error`. The body of a named Structure defined in a method gets a callable
+row of its own, after the root's row, and a free name of the body is an input
+of that row. Nothing calls the body, so no source gives the input a type, and
+the closure of the inputs (`l2_dyn_close` -> `l2_dyn_typed`) requires a type
+for every input of every row: `unresolved name` at the free name. In
+`unit_asgn_fallback` it is row 4 of 5 (the Structure `x` in `inc`), input
+`x`, 17:8 at `01ecd69b`; in `unit_local_ns_stmt_unresolved` row 2 of 3 (`S`
+in `m`), input `nosuch`, 7:12. The name is neither unresolved by the norm nor
+the Structure itself: it is a free input of the nested callable, which a
+caller of it could give.
+
+The same trace over the 38 rows of the gate that expect `unresolved name`:
+
+| Class | Rows | Reading |
+| --- | --- | --- |
+| a body nothing calls | 2 | the two above: the limit ([DORMANT-BODY-FREE-INPUT](defects.md#dormant-body-free-input)) |
+| a free name of the root | 4 | no caller can exist: refused by the norm |
+| an untyped input of a method or of a unit Structure (`l2_dyn_typed`) | 18 | mostly called with no source: refused by the norm, but at the use of the name, not at the call that starts the chain. `broken` in `unit_colon_graph_unknown_value_refused` is never called; `unit_named_struct_dead_tail_refused` reads its name only after a bare `return`. Both belong to the same classification and are not changed in this step. |
+| a path segment that names nothing (`l2_check_fields`, `l2_check_primary`) | 14 | another mechanism |
+
+The rows. `unit_asgn_fallback` and `unit_local_ns_stmt_unresolved` were
+expected refusals; they are required positives now, with an observable
+result: `inc` returns 7 to both of its callers, `m` returns 7. Two controls
+are new: `unit_dormant_free_body` (`y: z + 1` in `make`, nothing binds `z`,
+nothing calls `y`; the root says `MADE 7`) and
+`unit_dormant_free_body_call_refused` (`y()` called with no source of `z`:
+refused at the root's call of `make`, where the chain starts, 13:10,
+`unbound dynamic input z`, as
+`unit_held_call_required_input_unavailable_refused`; today it is refused at
+`z`, 8:8). The four are red until the limit is built.
+
+### The probe makes nothing, before the real scan
+
+Codex asked for "a focused compiler-level before/after probe check with that
+empty definition preceding a later queried head; assert no
+declaration/input/capture/use-mark publication, even BEFORE the real scan".
+A build kept in the scratchpad and never committed counts, around every probe,
+the own rows, the inputs of every row, the captures and the use marks of the
+method, and says any difference; a second instrumentation says when a probe
+starts and when the scan reaches the declaration of an empty definition.
+
+- `unit_head_after_empty_decl` (`note()` before the queried head
+  `hidden: hidden + 1`; `OUTER 5 4`, with a walked twin) shows that section
+  75 said too much: `note()` is a named Structure whose row collection makes,
+  before it asks the role of `hidden`, so the probe meets an existing row.
+- The scan's own declaration of an empty definition (`l2_empty_struct_decl_shape`
+  in `l2_scan_body`) is reached by none of the 1826 translations of
+  `opus_full_04` and none of the 260 of `opus_focus_factory3`. It is reached
+  where the head of `f()` was read before as a free name -- `int: k f`, then
+  `f()`, then the queried head -- and there inside the probe, before the real
+  scan; that program is refused afterwards, `unsupported body` at `f()`.
+- On that program the gated probe changes nothing (`own 0 dyn 0 cap 0 uses
+  0`), and the mutant `m_add`, which takes the gate off the declaration routes,
+  adds one own row during the probe (`own 1`). Over the 145 probes of the
+  1826 translations and the 6 of the focused run no count changes, with the
+  gate or with `m_add`: no gated program reaches that route.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_04` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/opus_l3_04` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_05` (full harness) | RED40/1836: against `opus_full_04` FAIL→OK 0; OK→FAIL 2, `unit_asgn_fallback` and `unit_local_ns_stmt_unresolved`, the two expected refusals that are required positives now; nine rows added, seven green and the two controls of the dormant body red; the other red rows and their words unchanged. The staged translator is the git blob `5c15e0d6` of the bytes committed with this section; the 182 declared paths were hashed before the run, and the live and the staged bytes are those. |
+| `build/l2_harness/opus_focus_factory3` (focused) | 260 rows, 11 red: the seven red at `opus_full_04`, with the same words, and the four rows of the dormant body. |
+| Replay of the 1826 translations recorded by `opus_full_04` | The migrated rows and the three rows of the two fixtures with the store in a block change; no other row. |
+
+**Next.** T7: the source-copy rule of the author for a merge's lexical links
+([T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links)); then A and the
+remainder in the order of section 74, with
+[DORMANT-BODY-FREE-INPUT](defects.md#dormant-body-free-input) among the G5
+blockers.

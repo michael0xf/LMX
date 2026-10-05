@@ -1,3 +1,4 @@
+# FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # D-94 (REVIEW e8b8a8d, fable_pc's probe): a declaration and an assignment after the host's return is dead -- checked,
 # never emitted, natively or in the walk (l2_mad_return_point).  Before this row the walk built the
 # tail BEFORE the host's trailer build, so it ran (a call or a return broke the run, exit 3).
@@ -9,7 +10,7 @@ fn: makeAdder (int: n) fn: (int: x) int
     int: k 3
     k: k + 1
 
-add5: makeAdder 5
+@: add5 makeAdder(5)
 int: a (add5: 1)
 sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
 return

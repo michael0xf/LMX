@@ -7758,7 +7758,7 @@ words.
 | Row | Shows |
 | --- | --- |
 | `unit_factory_receiver_named`, walked twin | `@: h make2(n: 100)` in a method: the call binds its named actual as any call; `h(1)` is 101; `OUTER 101 7`. |
-| `unit_factory_short_dormant`, walked twin | `s: shout` defines `s` and calls nothing: only `DONE` is printed, natively, with the root walked and with the methods walked. |
+| `unit_factory_short_dormant`, walked twin | `s: shout` and `t: shout()` define `s` and `t` and call nothing: only `DONE` is printed, natively, with the root walked and with the methods walked (the parenthesized spelling joined in the next commit). |
 | `unit_factory_short_args_refused` | `add5: makeAdder 5`: the bare `makeAdder` in the body is an application with no actual, refused where it stands, 11:7, as any call that misses a required argument (`l2_check_body` -> `l2_check_discard` -> `l2_check_call`). |
 | the migrated rows | `unit_make_adder*`, `unit_held_call_*`, `unit_t6_*`, `unit_named_actual_held*` and the rest receive the factory's result through `@:`. |
 
@@ -7806,7 +7806,7 @@ The same trace over the 38 rows of the gate that expect `unresolved name`:
 | --- | --- | --- |
 | a body nothing calls | 2 | the two above: the limit ([DORMANT-BODY-FREE-INPUT](defects.md#dormant-body-free-input)) |
 | a free name of the root | 4 | no caller can exist: refused by the norm |
-| an untyped input of a method or of a unit Structure (`l2_dyn_typed`) | 18 | mostly called with no source: refused by the norm, but at the use of the name, not at the call that starts the chain. `broken` in `unit_colon_graph_unknown_value_refused` is never called; `unit_named_struct_dead_tail_refused` reads its name only after a bare `return`. Both belong to the same classification and are not changed in this step. |
+| an untyped input of a method or of a unit Structure (`l2_dyn_typed`) | 18 | mostly called with no source: refused by the norm, but at the use of the name, not at the call that starts the chain. `broken` in `unit_colon_graph_unknown_value_refused` is never called: the class of the bodies above. `Counter` in `unit_named_struct_dead_tail_refused` is called, and reads its name only after a bare `return`: not that class (Codex's answer below; the first version of this table put the two together). |
 | a path segment that names nothing (`l2_check_fields`, `l2_check_primary`) | 14 | another mechanism |
 
 The rows. `unit_asgn_fallback` and `unit_local_ns_stmt_unresolved` were
@@ -7819,6 +7819,26 @@ refused at the root's call of `make`, where the chain starts, 13:10,
 `unbound dynamic input z`, as
 `unit_held_call_required_input_unavailable_refused`; today it is refused at
 `z`, 8:8). The four are red until the limit is built.
+
+Codex's answer to the question this section sent (the review of the FACTORY
+checkpoint): "Yes: use one admission rule for typed and still-untyped free
+inputs. A required input with no admissible source makes the CALL
+inadmissible. A type learned elsewhere must not decide whether this failing
+call is reported as an unresolved use or a missing binding." The rows of the
+third class move their expected primary location to the inadmissible call
+"after the SAME completed source/requirement closure used for typed inputs";
+an original read may be a secondary location. On the two rows: `broken` is
+never called, "the same dormant-callable problem", and becomes a required
+positive with an observable host result beside an explicit call without a
+source, refused; of `Counter`, "Do NOT convert it to a positive merely
+because the read is after return. Counter IS explicitly called. Its written
+callable body contains g; #dynamic says free names change the interface." Its
+call with no source of `g` is refused at that call, and two witnesses go
+beside it: a caller that gives `g` (the call is admitted, the tail does not
+run, the retained graph holds it) and an intrinsically invalid dead tail.
+These migrations come with the repair; the locations measured at `1b86feaf`
+stay as dated evidence
+([DORMANT-BODY-FREE-INPUT](defects.md#dormant-body-free-input)).
 
 ### The probe makes nothing, before the real scan
 
@@ -7855,6 +7875,7 @@ starts and when the scan reaches the declaration of an empty definition.
 | `build/l2_harness/opus_full_05` (full harness) | RED40/1836: against `opus_full_04` FAIL→OK 0; OK→FAIL 2, `unit_asgn_fallback` and `unit_local_ns_stmt_unresolved`, the two expected refusals that are required positives now; nine rows added, seven green and the two controls of the dormant body red; the other red rows and their words unchanged. The staged translator is the git blob `5c15e0d6` of the bytes committed with this section; the 182 declared paths were hashed before the run, and the live and the staged bytes are those. |
 | `build/l2_harness/opus_focus_factory3` (focused) | 260 rows, 11 red: the seven red at `opus_full_04`, with the same words, and the four rows of the dormant body. |
 | Replay of the 1826 translations recorded by `opus_full_04` | The migrated rows and the three rows of the two fixtures with the store in a block change; no other row. |
+| `build/l2_harness/opus_full_06` (the next commit: the parenthesized spelling `t: shout()` in `unit_factory_short_dormant`) | RED40/1836, against `opus_full_05` no row changed. The translator and the driver are the bytes of the gates above. The mutant `f_paren`, the parenthesized spelling the call's value again, refuses the row at `t`, 17:1. |
 
 **Next.** T7: the source-copy rule of the author for a merge's lexical links
 ([T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links)); then A and the

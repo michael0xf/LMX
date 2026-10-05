@@ -1,8 +1,9 @@
 # An unknown head whose tail begins with a known method defines a named Structure and
-# calls nothing (Q58; the author, 2026-10-05; docs/LMX_semantics.en.md#construction):
-# `s: shout` retains the application of shout in the body of s without executing it,
-# so shout prints nothing. report prints DONE (a C door keeps it native when the root
-# is walked) and gives 7. The program says only DONE. Entry 7.
+# calls nothing, in every spelling (Q58; the author, 2026-10-05;
+# docs/LMX_semantics.en.md#construction): `s: shout` and `t: shout()` retain the
+# application of shout in their bodies without executing it, so shout prints nothing.
+# report prints DONE (a C door keeps it native when the root is walked) and gives 7.
+# The program says only DONE. Entry 7.
 fn: shout () int
     c.printf: "called\n"
     return: 1
@@ -13,5 +14,6 @@ fn: report () int
 end: report
 
 s: shout
+t: shout()
 sendMessage: exit(exit_code: report(); stdout: ""; stderr: "")
 return

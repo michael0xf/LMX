@@ -8661,8 +8661,9 @@ $fixtures = @(
     # FACTORY (FACTORY-RESULT-RECEIVER; the author, 2026-10-05; docs/LMX_semantics.en.md#factory-reference-result):
     # the receiver `@: h f(a)` evaluates the written call and stores the reference to the callable it returns; the
     # call binds its actuals as any call does, a named one included (receiver_named, in a method).  An unknown head
-    # whose tail begins with a known method defines a named Structure and executes nothing (short_dormant: shout
-    # prints nothing, natively and with the root and the methods walked); a bare method name in that body is its
+    # whose tail begins with a known method defines a named Structure and executes nothing, in every spelling
+    # (short_dormant: neither `s: shout` nor `t: shout()` prints, natively and with the root and the methods walked;
+    # the block spelling is unit_named_struct_call_body_retained); a bare method name in that body is its
     # application with no actual, and a method that requires one is refused in the body where it stands
     # (short_args_refused, the check of any call that misses a required argument).
     [pscustomobject]@{ Name = 'unit_factory_receiver_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -8670,9 +8671,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_factory_receiver_named.lm2'; Source = 'unit_factory_receiver_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Says = @('OUTER 101 7'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); NativeMethods = @(3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_factory_short_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Says = @('DONE'); NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+        Says = @('DONE'); NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_factory_short_dormant.lm2'; Source = 'unit_factory_short_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Says = @('DONE'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        Says = @('DONE'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3); NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_factory_short_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_factory_short_args_refused.lm2:11:7: incompatible entry signature'; Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.

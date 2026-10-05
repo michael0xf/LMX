@@ -32,12 +32,12 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_38` RED39/1715 — against that baseline 98
+continuation bytes: `fable_full_39` RED39/1715 — against that baseline 98
 FAIL→OK, OK→FAIL 0, five red rows replaced and 325 added; the 39 red rows
 are 23 of the baseline and 16 added, eleven of them labelled OPEN positives
-above the 29 of `fable_full_17`; kernel `fable_kernel_24` GREEN296 with 113
-executed selftests; L3 `fable_l3_24`
-([gates](steps/fable-continuation-20261003.md#merge-node-construction)). The checkpoint gate
+above the 29 of `fable_full_17`; kernel `fable_kernel_25` GREEN296 with 113
+executed selftests; L3 `fable_l3_25`
+([gates](steps/fable-continuation-20261003.md#constructor-guards)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint

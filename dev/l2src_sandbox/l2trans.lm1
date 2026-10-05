@@ -41502,6 +41502,8 @@ return: 0
 
 # The walked body's entry to the same construction: the primitive entry over l2_t7_make_<site>.  refs[0] is the
 # occurrence the performing body runs over; refs[1..] are the bound values, in the order of the constructor's header.
+# How many operands there are, and that each is present, is what the step naming this entry is built with
+# (l2_rw_t7_build) and what the primitive's contract says: the entry does not check it again.
 fn: l2_t7_emit_construct (int: site) int
     int: j 0
     int: nv 0
@@ -41510,7 +41512,7 @@ fn: l2_t7_emit_construct (int: site) int
             nv: nv + 1
         j: j + 1
     ---
-    if: c.fprintf(l2_out, "fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_t7_at 0\n    @: Lmx l2_t7_made 0\n    \\out: 0\n    if: nargs != %uU || refs = 0 || refs[0] = 0\n        c.fprintf(c.stderr, \"lmx: invariant: a callable merge construct was called outside its header\\n\")\n        c.abort()\n    l2_t7_at: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_t7_made: l2_t7_make_%d(l2_t7_at", site, (cast: (unsigned) (1 + nv)), site) < 0
+    if: c.fprintf(l2_out, "fn: l2_t7_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_t7_at 0\n    @: Lmx l2_t7_made 0\n    l2_t7_at: (cast: (@: Lmx) lmx_pointer_value_known(refs[0]))\n    l2_t7_made: l2_t7_make_%d(l2_t7_at", site, site) < 0
         return: 1
     j: 0
     while: j < nv
@@ -41561,7 +41563,7 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
         return: 1
     if: nh > 0 && c.fprintf(l2_out, "%s@@: void l2_t7s%d 0\n", ind, site) < 0
         return: 1
-    if: c.fprintf(l2_out, "%sif: l2_t7_at = 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge was built outside an occurrence\\n\")\n%s    c.abort()\n%sl2_t7_up: l2_t7_at\\parent\n%sif: l2_t7_up = 0\n%s    l2_t7_up: l2_t7_at\n", ind, ind, ind, ind, ind, ind) < 0
+    if: c.fprintf(l2_out, "%sl2_t7_up: l2_t7_at\\parent\n%sif: l2_t7_up = 0\n%s    l2_t7_up: l2_t7_at\n", ind, ind, ind) < 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_t7n%d: lmx_struct_new_owned(l2_t7_up, l2_program_arena)\n%sif: l2_t7n%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7n%d, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) width), ind, ind) < 0
         return: 1

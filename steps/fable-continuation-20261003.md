@@ -6075,3 +6075,87 @@ and its asking along the chain; the conversion of a handed-on input; the
 library's ingress; the walked consumer; the complete copy of a node built
 at run time and a node's own contract route. The node's lexical source
 follows the author's answer.
+
+<a id="constructor-guards"></a>
+## 67. The constructor of a merge's node checked again what its step establishes: removed (Codex's sixteenth reply -12)
+
+### The reply
+
+"l2_t7_emit_construct ... emits `if: nargs != <site count> || refs
+= 0 || refs[0] = 0 ... c.abort()` for the generated internal constructor
+primitive. This is not an ordinary language/admission refusal. When the
+constructor's transport shape/presence is established by the common
+translator/step contract, rechecking it in this per-site helper and
+aborting is redundant defensive programming". And: "Remove that
+compiler-proven duplicate guard in the next safely bounded slice; do not
+replace it with another per-site safety layer, shim or special error
+policy." And: "Keep allocation/resource-failure contracts separate;
+this is not an instruction to blindly remove every error check in the
+repository."
+
+### What was wrong, and what is changed
+
+[Section 66](#merge-node-construction) introduced two checks that repeat
+what the translator itself establishes. Both are mine, of that step.
+
+- The primitive entry `l2_t7_construct_<site>` stopped the process when its
+  operand count was not the site's, or its first operand was absent. The
+  count and the presence of each operand are what the step naming the entry
+  is built with (`l2_rw_t7_build`) and what the primitive's contract says.
+- The constructor `l2_t7_make_<site>` stopped the process when the occurrence
+  it was given was empty. A native body gives its own occurrence, which it
+  has, and the walked step gives the occurrence of its activation.
+
+Both are removed, with nothing in their place. The checks of a node or a
+cell that could not be allocated stay: they are the contract of a failed
+allocation, as before this step. I had copied the first check from the
+constructor of a returned nested definition, `l2_mad_construct_<method>`,
+which was there before and carries the same check still. It is not touched
+by this section: the reply bounds the correction, and that guard is named
+here so that it is decided on its own.
+
+Coding instruction 12.2: "Do not add defensive runtime validation after
+compiler metadata has already established an invariant merely to compensate
+for missing type propagation."
+
+### Measured
+
+The translator against the committed one, on the 1714 translations recorded
+by `fable_full_38`: exit, messages and the generated L1 are the same on
+1687 rows; the 27 others are the units that build a merge's node, and
+differ in L1 only, by the lines removed. No refusal changes: the refusals of
+a merge that has no model, two models or a header that does not match stand
+where they stood, at translation.
+
+The route is pinned by the rows it had. Three mutants were built again on
+this translator and run natively, with the root walked and with the methods
+walked, on `unit_t7_host_body`, `unit_t7_actual_from_root` and
+`unit_t7_actual_in_definition`: the native body handing 0 for a bound
+formal fails the first natively and passes it walked; the walked step
+handing 0 fails the first walked and the third, and passes the first
+natively; the primitive entry giving no node stops the first walked, the
+second with the root walked and the third, and passes the first two
+natively. As in section 66.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_25` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_25` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_39` (full harness) | RED 39 of 1715. Against `fable_full_38`: FAIL→OK 0, OK→FAIL 0, added 0, removed 0, no message of a red row changed. |
+| `build/l2_harness/fable_s5p_01` (focused, before the gates) | 33 rows, 31 pass; the two red ones are labelled OPEN rows. |
+
+The pre-gate hashes of the translator and the harness equal the live files
+and every staged copy (`tie.py`).
+
+### Kept in view
+
+The reply names what the step of section 66 does not show. Passing a formal
+that has a default is legal and not built
+([MERGE-KEEPS-MODEL-INTERFACE](defects.md#merge-keeps-model-interface)).
+A node built when the program runs is not necessarily walked. The root's
+native body is shown for these witnesses, and that does not certify every
+construct of a root. The obligations of the body and field producer, of
+mixed formation, of the reference, of conversion, of ingress and of the
+complete copy stand.
+
+**Next.** As in section 66.

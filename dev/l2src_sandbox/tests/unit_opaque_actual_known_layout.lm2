@@ -1,0 +1,21 @@
+# OPAQUE-ACTUAL-KNOWN-LAYOUT's program: a Structure of a known declaration given through an opaque formal to a
+# Structure formal.  The reservation of its pair map happens with the checks now (RECEPTION-EDGE-DEBTS (d)): via's
+# p reaches c's box, and a = 5 by the ordinary admission.  Until 2026-10-05 the translator stopped at "internal: a
+# pair map of D-105 was asked for after the maps were declared".  Entry 5.
+Model:
+    int: a 1
+    int: v 4
+end: Model
+
+fn: c (Model: box) int
+    return: box\v + 1
+end: c
+
+fn: via (@: void p) int
+    return: c(p)
+end: via
+
+m: merge Model
+int: a via(m)
+sendMessage: exit(exit_code: a; stdout: ""; stderr: "")
+return

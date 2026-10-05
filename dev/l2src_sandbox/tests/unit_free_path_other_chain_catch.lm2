@@ -1,0 +1,43 @@
+# unit_free_path_other_chain_refused with a handler where the refusal arrives (RECEPTION-EDGE-DEBTS (d)): the
+# Model from has passes, 31; bad's Other is refused where mid forms r's input, and bad's handler takes it, 42.
+Other:
+    int: w 1
+end: Other
+
+Model:
+    int: v 4
+end: Model
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: mid () int
+    return: r()
+end: mid
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: mid()
+end: has
+
+fn: bad () int
+    int: got 0
+    box: merge Other
+    got: mid()
+    catch: implements ()
+        got: 42
+    ---
+    return: got
+end: bad
+
+int: a has()
+int: b bad()
+int: ok 7
+if: a != 31
+    ok: 81
+if: b != 42
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

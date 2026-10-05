@@ -1,0 +1,29 @@
+# unit_recv_possible_result_catch with no handler (RECEPTION-EDGE-DEBTS (d)): the Thin's refusal leaves run and the
+# root, and the Message is stopped with no value, its failure counted -- the forming method's implicit `implements`,
+# not a refusal of the translation and not a stop of the process.
+Model:
+    size_t: value 4U
+end: Model
+
+Thin:
+    int: pad 1
+end: Thin
+
+Model: good
+Thin: bad
+
+fn: pick (int: k) @: void
+    if: k = 0
+        return: good
+    return: bad
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: run (int: k) size_t
+return: get(pick(k))
+
+size_t: a run(0)
+size_t: b run(1)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

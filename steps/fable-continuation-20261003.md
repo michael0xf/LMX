@@ -8500,3 +8500,141 @@ translator changes no row: exit, messages and generated L1 are the same.
 
 **Next.** (d): dynamic alternatives, with the pair-map reservation of
 OPAQUE-ACTUAL-KNOWN-LAYOUT and the local reference measured above.
+
+<a id="possible-candidate"></a>
+## 82. A possible candidate the formal cannot admit is refused when the program runs (RECEPTION-EDGE-DEBTS (d))
+
+Codex's ruling, recorded with the debts: "d) A merely POSSIBLE incompatible
+dynamic source is not proof that every call is incompatible. Keep the actual
+runtime selection and ordinary admission: the good branch succeeds, the
+incompatible branch fails catchably at the receiving edge." His order puts
+the pair-map reservation of OPAQUE-ACTUAL-KNOWN-LAYOUT with it. Section 81
+found two more forms of that defect, both measured on the committed
+translator `14e8d29f`. Through an opaque formal, a fitting Structure of
+another declaration was read by position: a wrong value, with no refusal.
+Through an opaque local reference, the same Structure was refused when the
+program ran.
+
+### What was measured
+
+On the translator of section 81, in every mode (natively, with the root
+walked, with the methods walked, with both):
+
+| Program | Before |
+| --- | --- |
+| `get(pick(k))`, where `pick` returns a Model or a Thin as `@: void` | refused at translation at the call, "implements is false in function argument" |
+| `get(p)` in `run (@: void p)`, called with a Model and with a Thin | "internal: a pair map of D-105 was asked for after the maps were declared" |
+| the same with a Model and an Other whose `value` is its second field | the Other's first field, 1 |
+| `@: void q same(wide)`, then `get(q)` | the Other refused when the program ran, 42 by a handler |
+| OPAQUE-ACTUAL-KNOWN-LAYOUT's own program | the internal error |
+| `unit_free_path_typed_place` with a Thin in the letter's place (the class section 70 measured under a free name) | refused at translation at `far`'s call of `r` |
+
+The spelling Codex asked to verify first: the probes give a Structure as
+`@: void` by its name (`return: good`, `run(good)`), a reference of depth
+one. None writes the unary `@`, which would add a level and address the
+reference cell.
+
+Three causes:
+
+- An actual that is a name of opaque type recorded no D-105 edge to the
+  Structure formal. The formal therefore had no source but its own model:
+  it was not marked as one that reads by name, and the pair of another
+  declaration was first asked for at emission.
+- A local reference of opaque type recorded no source of its initializer.
+- `l2_d105_close` refused, at translation, every source of an input that
+  the input's Consumer cannot admit, whatever brought it there.
+
+### What is built
+
+1. **The name's edge.** The edge that section 81 takes for a Frame actual
+   with no Structure type is taken for a name too (`l2_check_call`).
+2. **The local's sources.** An opaque reference place holds what was given
+   to it: the sources of its initializer, and of a value assigned to it,
+   are the place's (`l2_check_receiving_value`), as an opaque formal's and
+   an opaque result's are.
+3. **The possible candidate.** At an input, a source the Consumer does not
+   admit (`l2_d105_fits`, which answers without saying anything) is a
+   *possible* candidate when every edge that brings it brings, from the same
+   place, a candidate the Consumer admits (`l2_d105_possible`). No call
+   through such an edge is proved incompatible. A possible candidate gets
+   no pair map and marks nothing (`l2_d105s_no`). The admissions formed into
+   that input offer it no alternative, natively (`l2_emit_model_admit`) and
+   walked (`l2_rw_admit_project`); `l2_d105_refused` says which. When the
+   program runs, its value meets no record and no alternative, and the
+   admission refuses it as the forming method's `implements`, which section
+   69 built. Any other source the Consumer does not admit is definite and is
+   refused at translation, as before. That covers a source no edge brings
+   (the checks recorded it at the input and refused it there) and a source
+   an edge brings with nothing admissible beside it (every call through
+   that edge is incompatible).
+
+The rule is per edge, not per input. An input that receives one fitting
+Structure from one caller, and an unfitting one from another caller
+directly, still refuses the second call at translation:
+`unit_free_path_other_refused` stays at 25:13.
+
+Section 70's class with the Thin alone is still refused at translation, at
+`far`'s call of `r`. That program is `unit_free_path_typed_place` with a Thin
+in the letter's place and no Model; it is a probe, not a row. The coverage of
+`typed`'s reference `box` is known and does not name `value`, so the record
+lets the Thin through the reference: the D-105 dump shows it at `box`, at
+`far`'s input and at `r`'s. The edge from `far` to `r` brings the Thin alone,
+so every call of `r` through it is incompatible. With the Model beside it,
+the same program runs (`unit_free_path_typed_place_thin`).
+
+A first draft also exempted the sources the checks recorded at the input.
+That exemption changed nothing: no row of 1855 and no witness. The check of
+the call refuses such a source before the close sees it. It was taken out.
+
+### The migration
+
+A replay of the 1855 translations recorded by `opus_full_10` changes exactly
+one row, `unit_free_path_other_chain_refused`. `has` gives a Model and `bad`
+gives an Other, both through `mid`, to `r`'s free `box`. The edge from `mid`
+to `r` brings both, so the Other is a possible candidate there. Until this
+step the translation refused it at 17:13. Now `has` gives 31, and `bad`'s
+call is refused when the program runs, where `mid` forms `r`'s input. With
+no handler the refusal leaves the root: the Message is stopped, its failure
+counted, thrown 2. The row expects that now, and it has a walked twin. Its
+three header lines say so, with the line count kept.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_recv_possible_result_catch`, `_walk` | `pick` returns either: the Model 4; the Thin refused where `run` forms the input, taken by `run`'s handler, 42. `pick` is entered twice, `get` once. |
+| `unit_recv_possible_result_uncaught`, `_walk` | No handler: the Message is stopped, thrown 2. The process is not stopped. |
+| `unit_recv_possible_result_only_refused` | `pick` returns only the Thin: every call through the edge is incompatible, refused at translation, 22:8. |
+| `unit_recv_possible_formal_catch`, `_walk` | The same choice through an opaque formal: 4, 42. |
+| `unit_recv_opaque_formal_by_name`, `_walk` | A Model 4 and an Other 9 through an opaque formal, by name. |
+| `unit_recv_opaque_local_by_name`, `_walk` | An Other through an opaque local: 9, as through the call directly. |
+| `unit_opaque_actual_known_layout`, `_walk` | OPAQUE-ACTUAL-KNOWN-LAYOUT's program: 5. |
+| `unit_free_path_other_chain_refused`, `_walk` | The migrated row: 31 for `has`, then `bad`'s refusal uncaught. |
+| `unit_free_path_other_chain_catch`, `_walk` | The same with a handler in `bad`: 31, 42. |
+| `unit_free_path_typed_place_thin`, `_walk` | The class section 70 measured under a free name: `unit_free_path_typed_place` with a Structure made from Thin in the letter's place. The edge to `r` brings the Model too: the Thin is refused when the program runs, 42, and the Model gives 9. Before, the translation refused the Thin at `far`'s call of `r`. |
+
+Where the methods are walked, every method of these fixtures is walked, the
+forming ones included. Their first drafts converted the result with a cast,
+which kept the forming method native; they use `size_t` instead.
+
+### Mutants
+
+| Mutant | Changes | Result |
+| --- | --- | --- |
+| `noposs` | no candidate is a possible one | `unit_recv_possible_result_catch` 38:8, `unit_recv_possible_formal_catch` 21:8 and `unit_free_path_other_chain_catch` 16:13 refused at translation |
+| `place` | a source is possible when anything at its input fits, whatever edge brings it | `unit_free_path_other_refused` translates, and its run stops: "lmx: invariant: a field of a formal admitted by name is not carried by its value (no record, or a hole)" |
+| `noskip` | the admissions offer a refused candidate its alternative | `unit_recv_possible_result_catch` exits 84 (`get` entered for the Thin), `unit_recv_possible_formal_catch` 82, `unit_free_path_other_chain_catch` stops at the same invariant |
+| `noname` | no edge for a name | `unit_recv_possible_formal_catch` and `unit_opaque_actual_known_layout` meet the internal error; `unit_recv_opaque_formal_by_name` exits 61 |
+| `nolocal` | an opaque local records no source | `unit_recv_opaque_local_by_name` exits 62 |
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_10` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_10` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_12` (full harness) | RED39/1882: against `opus_full_11` FAIL→OK 0, OK→FAIL 0, added 18, all green, removed 0, the one migrated row green under its new expectation, no red row's words changed. The 12 declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_d2` (focused, before the gates) | The 21 rows of the step and its neighbours, all green. |
+
+**Next.** (e): an opaque reference under a free name of a typed reference,
+with ARGUMENT-EDGE-REFERENCE-TYPE.

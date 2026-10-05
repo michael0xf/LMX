@@ -1,0 +1,44 @@
+# A local reference of opaque type holds what was given to it (RECEPTION-EDGE-DEBTS (d)): the sources of its
+# initializer are its, and they reach the formal it is given to.  q holds an Other through same: get(q) reads its
+# `value`, 9, as get(same(wide)) does.  Until 2026-10-05 the local recorded no source, its admission met a layout
+# the translation had no record of, and the Other was refused when the program ran.  Entry 7.
+Model:
+    size_t: value 4U
+end: Model
+
+Other:
+    size_t: pad 1U
+    size_t: value 9U
+end: Other
+
+Other: wide
+
+fn: same (@: void p) @: void
+return: p
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: run () size_t
+    size_t: r 0U
+    @: void q same(wide)
+    r: get(q)
+    catch: implements ()
+        r: 42U
+    ---
+return: r
+
+fn: direct () size_t
+return: get(same(wide))
+
+size_t: a run()
+size_t: b direct()
+int: ok 7
+if: a = 42U
+    ok: 62
+if: a != 9U && a != 42U
+    ok: 81
+if: b != 9U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

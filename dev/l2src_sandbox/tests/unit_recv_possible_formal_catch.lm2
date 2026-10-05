@@ -1,0 +1,35 @@
+# The same choice through an opaque formal (RECEPTION-EDGE-DEBTS (d)): run's p holds a Model in one call and a Thin
+# in the other.  get(p) admits the Model, 4; the Thin is refused where run forms the input and run's handler takes
+# it, 42.  Until 2026-10-05 this program met the internal error of OPAQUE-ACTUAL-KNOWN-LAYOUT, "a pair map of D-105
+# was asked for after the maps were declared".  Entry 7.
+Model:
+    size_t: value 4U
+end: Model
+
+Thin:
+    int: pad 1
+end: Thin
+
+Model: good
+Thin: bad
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: run (@: void p) size_t
+    size_t: r 0U
+    r: get(p)
+    catch: implements ()
+        r: 42U
+    ---
+return: r
+
+size_t: a run(good)
+size_t: b run(bad)
+int: ok 7
+if: a != 4U
+    ok: 81
+if: b != 42U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

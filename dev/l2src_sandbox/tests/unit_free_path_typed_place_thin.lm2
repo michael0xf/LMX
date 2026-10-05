@@ -1,0 +1,42 @@
+# unit_free_path_typed_place with a Structure made from Thin, which has no `value`, in the letter's place
+# (RECEPTION-EDGE-DEBTS (d), the class section 70 measured under a free name).  The edge that hands the name on to
+# r brings the Model too, so the Thin is a possible candidate: refused when the program runs, taken by typed's
+# handler, 42; the Model reaches r's box and r reads 9.  Until 2026-10-05 the translation refused the Thin at
+# far's call of r, for the possibility.  Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+Thin:
+    int: pad 1
+end: Thin
+
+fn: r () size_t
+    return: box\value
+end: r
+
+fn: far () size_t
+    return: r()
+end: far
+
+fn: typed (@: void p) int
+    int: got 0
+    @: Model box p
+    got: (cast: (int) far())
+    catch: implements ()
+        got: 42
+    ---
+return: got
+
+kept: merge Model
+kept\value: 9U
+thin: merge Thin
+int: b typed(thin)
+int: c typed(kept)
+int: ok 7
+if: b != 42
+    ok: 82
+if: c != 9
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

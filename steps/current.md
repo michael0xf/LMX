@@ -514,6 +514,16 @@ Fable принял единственный writer/build-слот по [to_fable
   локальную ссылку ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts),
   [§81 журнала](fable-continuation-20261003.md#inline-opaque-result)). Гейты `opus_kernel_09`,
   `opus_l3_09`, `opus_full_11` RED39/1864: против `opus_full_10` FAIL→OK 0, OK→FAIL 0.
+- Шаг RECEPTION-EDGE-DEBTS (d). Кандидат, которого Consumer входа не допускает, — возможный, если
+  каждое ребро, которое его приносит, приносит рядом и допустимого: его отказ — при исполнении, у
+  формирующего метода, как пойманный или непойманный `implements`; иначе отказ при трансляции, как
+  прежде. Имя непрозрачного типа записывает ребро к формалу, непрозрачная локальная ссылка — источники
+  своего значения. Исправлен OPAQUE-ACTUAL-KNOWN-LAYOUT целиком: внутренняя ошибка, неверное значение без
+  отказа, отказ через локальную ссылку. Перенесена строка `unit_free_path_other_chain_refused`: отказ
+  при исполнении вместо отказа при трансляции
+  ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts),
+  [§82 журнала](fable-continuation-20261003.md#possible-candidate)). Гейты `opus_kernel_10`,
+  `opus_l3_10`, `opus_full_12` RED39/1882: против `opus_full_11` FAIL→OK 0, OK→FAIL 0.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
   эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
   callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который
@@ -527,13 +537,9 @@ Fable принял единственный writer/build-слот по [to_fable
   исправление на правильной копии ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)).
   Затем долги принимающего края (c)–(f), дублирующая остановка по её настоящему доказательству,
   числовое преобразование на принимающем крае, остальные зависимости K/G5, чистое ядро, стадии 8 и 8a.
-- Открыто, блокер G5: три отказа при трансляции на принимающем крае, которые Codex назвал долгами
-  реализации, (d)–(f) ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts)); внутренняя ошибка
-  транслятора на Structure известного объявления, поданной через непрозрачный формал, неверное
-  значение без отказа, когда такое объявление подходит, и отказ при исполнении той же Structure через
-  непрозрачную локальную ссылку
-  ([OPAQUE-ACTUAL-KNOWN-LAYOUT](defects.md#opaque-actual-known-layout)); край аргумента без проверки
-  типа ссылки имени ([ARGUMENT-EDGE-REFERENCE-TYPE](defects.md#argument-edge-reference-type)).
+- Открыто, блокер G5: два отказа при трансляции на принимающем крае, которые Codex назвал долгами
+  реализации, (e) и (f) ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts)); край аргумента без
+  проверки типа ссылки имени ([ARGUMENT-EDGE-REFERENCE-TYPE](defects.md#argument-edge-reference-type)).
 - Открыто, блокер G5: возвращённое определение, которое само читает имя без объявления, отвергается;
   Codex подтвердил, что программа верна
   ([HELD-DEFINITION-UNDECLARED-NAME](defects.md#held-definition-undeclared-name)).

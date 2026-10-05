@@ -347,6 +347,10 @@ int: l2_d105s_cap 0
 @: int l2_d105s_k 0
 @: int l2_d105s_ty 0
 @@: LmP0Node l2_d105s_at 0
+# RECEPTION-EDGE-DEBTS (d): l2_d105s_no[i] -- source i is a possible candidate of its input (l2_d105_possible) that
+# the input's Consumer cannot admit (l2_d105_close): it has no pair map, and its value is refused where the program
+# forms the input (l2_d105_refused).
+@: int l2_d105s_no 0
 int: l2_d105e_n 0
 int: l2_d105e_cap 0
 @: int l2_d105e_fmi 0
@@ -10496,6 +10500,16 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
                 return: 1
             ---
         return: l2_admit_site(mi)
+    # RECEPTION-EDGE-DEBTS (d): an opaque reference place holds what was given to it, as an opaque formal and an
+    # opaque result do (l2_d105_note_return): the sources of the value given are the place's.
+    if: receiving_name != 0 && l2_pointer_depth(target_ty) = 1
+        receiving_own: l2_own_find_decl(mi, receiving_name, stmt)
+        if: receiving_own < 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_text_same(stmt\as\frame\head, receiving_name) != 0
+            receiving_own: l2_resolved_own(mi, receiving_name)
+        ---
+        if: receiving_own >= 0 && l2_d105_note(mi, l2_own_mi[receiving_own], l2_d105_own_key(receiving_own), first, n, stmt) != 0
+            return: 1
+    ---
 return: 0
 
 # Resolution chooses the target act; the receiving-value contract is shared
@@ -25399,7 +25413,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                 # (l2_actual_ns), a pointer cast -- reaches the formal from its source's place: the callee's result
                 # place, whose sources its returns give (l2_d105_note_return), or the cast's operand.  The formal's
                 # reads take them by name; before, they were read by position (CAST-ACTUAL-READ-BY-POSITION).
-                if: ast = 2 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_FRAME && l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
+                if: ast = 2 && actual_span = 1 && a0\value != 0 && (a0\value\kind = c.LM_P0_NODE_FRAME || a0\value\kind = c.LM_P0_NODE_ATOM) && l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
                     return: 1
             ---
             # D-108: an actual admitted to a Structure-typed formal is checked as any other actual is --
@@ -28808,6 +28822,8 @@ fn: l2_flow_free () int
     l2_d105s_k: 0
     l2_xfree((cast: (@: void) l2_d105s_ty))
     l2_d105s_ty: 0
+    l2_xfree((cast: (@: void) l2_d105s_no))
+    l2_d105s_no: 0
     l2_xfree((cast: (@: void) l2_d105s_at))
     l2_d105s_at: 0
     l2_d105s_n: 0
@@ -33290,6 +33306,8 @@ fn: l2_d105s_room () int
         return: 1
     if: l2_d105_ints(@ l2_d105s_mi, l2_d105s_n, want) != 0 || l2_d105_ints(@ l2_d105s_k, l2_d105s_n, want) != 0 || l2_d105_ints(@ l2_d105s_ty, l2_d105s_n, want) != 0
         return: 1
+    if: l2_d105_ints(@ l2_d105s_no, l2_d105s_n, want) != 0
+        return: 1
     p: l2_vec_grow((cast: (@: void) l2_d105s_at), l2_d105s_n, want, c.sizeof(@: char))
     if: p = 0
         return: 1
@@ -33482,6 +33500,7 @@ fn: l2_d105_source (int: mi; int: k; int: ty; const: @(LmP0Node at)) int
     l2_d105s_mi[l2_d105s_n]: mi
     l2_d105s_k[l2_d105s_n]: k
     l2_d105s_ty[l2_d105s_n]: ty
+    l2_d105s_no[l2_d105s_n]: 0
     l2_d105s_at[l2_d105s_n]: (cast: (@: LmP0Node) at)
     l2_d105s_n: l2_d105s_n + 1
 return: 0
@@ -34586,6 +34605,70 @@ fn: l2_d105_callee (int: mi; @: LmP0Field a0; int: span) int
         return: 0 - 1
 return: l2_call_head_method(mi, a0\value\as\frame\head, @ formal)
 
+# Whether the Consumer of place k of mi admits named type ty to req, said nowhere: 1 yes, 0 no, -1 when the question
+# cannot be answered quietly (the check that says it is then the ordinary one).
+fn: l2_d105_fits (int: ty; int: req; int: mi; int: k) int
+    int: compatible 0
+    int: status
+    if: k >= 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0
+        l2_uses_reset()
+        if: l2_uses_walk_frame(l2_input_name(mi, k), l2_m_node[mi]\as\frame) != 0 || l2_uses_oom != 0
+            l2_uses_reset()
+            return: -1
+        status: l2_descriptor_used(ty, req, @ compatible)
+        l2_uses_reset()
+    else:
+        status: l2_descriptor_implements(ty, req, req, @ compatible)
+    ---
+    if: status != 0
+        return: -1
+return: compatible
+
+# RECEPTION-EDGE-DEBTS (d) (Codex, FABLE-CODEX-20261004-12: "A merely POSSIBLE incompatible dynamic source is not
+# proof that every call is incompatible.  Keep the actual runtime selection and ordinary admission: the good branch
+# succeeds, the incompatible branch fails catchably at the receiving edge.").  Source i, a type ty at input k of mi
+# that the input's Consumer does not admit, is a possible candidate there when every edge that brings ty to the
+# input brings, from the same place, a candidate the Consumer admits: no call through such an edge is proved
+# incompatible.  A source no edge brings -- the checks recorded it at the input, and refused it there when it does
+# not fit -- is a definite one, and so is one an edge brings with nothing admissible beside it: every call through
+# that edge is incompatible.
+fn: l2_d105_possible (int: i; int: req) int
+    int: e 0
+    int: j
+    int: alt
+    int: found 0
+    if: l2_d105s_k[i] < 0
+        return: 0
+    while: e < l2_d105e_n
+        if: l2_d105e_tmi[e] = l2_d105s_mi[i] && l2_d105e_tk[e] = l2_d105s_k[i] && l2_d105e_fmi[e] >= 0 && l2_d105_has(l2_d105e_fmi[e], l2_d105e_fk[e], l2_d105s_ty[i]) != 0
+            found: 1
+            alt: 0
+            j: 0
+            while: j < l2_d105s_n && alt = 0
+                if: l2_d105s_mi[j] = l2_d105e_fmi[e] && l2_d105s_k[j] = l2_d105e_fk[e] && (l2_d105s_ty[j] = req || l2_d105_fits(l2_d105s_ty[j], req, l2_d105s_mi[i], l2_d105s_k[i]) = 1)
+                    alt: 1
+                j: j + 1
+            ---
+            if: alt = 0
+                return: 0
+        ---
+        e: e + 1
+    ---
+return: found
+
+# Whether named type ty is a possible candidate of input tk of tmi that its Consumer refused (l2_d105_close): an
+# admission formed into that input offers it no pair map, and its value is refused when the program runs.
+fn: l2_d105_refused (int: tmi; int: tk; int: ty) int
+    int: i 0
+    if: tmi < 0
+        return: 0
+    while: i < l2_d105s_n
+        if: l2_d105s_mi[i] = tmi && l2_d105s_k[i] = tk && l2_d105s_ty[i] = ty && l2_d105s_no[i] != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
 # D-105 native (REVIEW 9c34b3b: marking is transitive; the tables are the unit's, one per pair of types):
 # after the checks and the root's count, before any layout.  The sources flow along the edges to a fixed
 # point; a formal that a source of another type reaches is marked (l2_d105_mark), and the pair table
@@ -34676,6 +34759,13 @@ fn: l2_d105_close () int
         if: req != -1 && ty != req
             if: l2_library_mode != 0
                 return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type by name in a library unit (D-105: the pair tables are a program's)")
+            # RECEPTION-EDGE-DEBTS (d): a possible candidate an input's Consumer cannot admit is refused when the
+            # program runs, where the input is formed, and not here: it gets no pair map and marks nothing.
+            if: l2_d105s_k[i] >= 0 && l2_d105_fits(ty, req, l2_d105s_mi[i], l2_d105s_k[i]) = 0 && l2_d105_possible(i, req) != 0
+                l2_d105s_no[i]: 1
+                i: i + 1
+                continue
+            ---
             # Admission is by the consumer's uses (book: a field the formal's method never reads need not
             # be there): the same check a direct call site had, for every source -- one carried along an
             # edge too; a field the source has not is a hole of the pair table.
@@ -35373,7 +35463,9 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
             return: 1
     ---
     while: i < l2_d105s_n
-        if: source\method >= 0 && l2_d105s_mi[i] = source\method && l2_d105s_k[i] = source\place && l2_d105s_ty[i] != source\schema
+        # RECEPTION-EDGE-DEBTS (d): a candidate the input's Consumer refused has no alternative; its value meets no
+        # record and no alternative, and the admission refuses it.
+        if: source\method >= 0 && l2_d105s_mi[i] = source\method && l2_d105s_k[i] = source\place && l2_d105s_ty[i] != source\schema && l2_d105_refused(tmi, tk, l2_d105s_ty[i]) = 0
             if: l2_layout_token(l2_d105s_ty[i], origin) != 0
                 return: 1
             strcpy(table, "0")
@@ -35612,7 +35704,7 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
         # physical cell count doubles, so the walker's `default_n` is read as cells.
         default_n: width * 2
     while: i < l2_d105s_n
-        if: source\method >= 0 && l2_d105s_mi[i] = source\method && l2_d105s_k[i] = source\place && l2_d105s_ty[i] != source\schema
+        if: source\method >= 0 && l2_d105s_mi[i] = source\method && l2_d105s_k[i] = source\place && l2_d105s_ty[i] != source\schema && l2_d105_refused(tmi, tk, l2_d105s_ty[i]) = 0
             count: count + 1
         i: i + 1
     ---
@@ -35659,7 +35751,7 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     slot: slot + default_n
     i: 0
     while: i < l2_d105s_n
-        if: source\method >= 0 && l2_d105s_mi[i] = source\method && l2_d105s_k[i] = source\place && l2_d105s_ty[i] != source\schema
+        if: source\method >= 0 && l2_d105s_mi[i] = source\method && l2_d105s_k[i] = source\place && l2_d105s_ty[i] != source\schema && l2_d105_refused(tmi, tk, l2_d105s_ty[i]) = 0
             if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, %dU, l2_layout_tokens + %d) != c.LMX_WALK_OK\n            return: 1\n", \out, slot, l2_schema_token_slot(l2_d105s_ty[i])) < 0
                 return: 1
             if: l2_rw_map_inline(\out, slot + 1, l2_d105s_ty[i], req) != 0

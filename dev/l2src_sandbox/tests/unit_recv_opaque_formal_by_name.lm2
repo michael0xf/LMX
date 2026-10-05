@@ -1,0 +1,33 @@
+# A Structure of another declaration through an opaque formal is read by name (RECEPTION-EDGE-DEBTS (d)): the
+# formal p's place reaches get's formal, so get reads the field its value carries under that name.  The Other's
+# `value` is its second field: 9.  Until 2026-10-05 get was not marked as one that reads by name and read by
+# position: 1, the Other's first field, with no refusal.  A Model: 4.  Entry 7.
+Model:
+    size_t: value 4U
+end: Model
+
+Other:
+    size_t: pad 1U
+    size_t: value 9U
+end: Other
+
+Model: good
+Other: wide
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: run (@: void p) size_t
+return: get(p)
+
+size_t: a run(good)
+size_t: b run(wide)
+int: ok 7
+if: a != 4U
+    ok: 81
+if: b = 1U
+    ok: 61
+if: b != 9U && b != 1U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

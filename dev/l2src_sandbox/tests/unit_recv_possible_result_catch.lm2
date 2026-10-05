@@ -1,0 +1,56 @@
+# A candidate chosen when the program runs, between a declaration that fits and one that does not, is admitted by
+# the one it is (RECEPTION-EDGE-DEBTS (d); Codex: "the good branch succeeds, the incompatible branch fails catchably
+# at the receiving edge").  pick returns either Structure as `@: void`.  run gives pick(k) to get's Model formal: a
+# Model is admitted, 4; a Thin, which has no `value`, is refused where run forms the input, before get is entered,
+# and run's handler takes it, 42.  Until 2026-10-05 the translation refused the call for the possibility.  pick is
+# entered once for each call, get once.  Entry 7.
+Model:
+    size_t: value 4U
+end: Model
+
+Thin:
+    int: pad 1
+end: Thin
+
+Model: good
+Thin: bad
+int: picked 0
+int: entered 0
+
+fn: pick (int: k) @: void
+    node\picked: node\picked + 1
+    if: k = 0
+        return: good
+    return: bad
+
+fn: get (Model: x) size_t
+    node\entered: node\entered + 1
+return: x\value
+
+fn: picks () int
+return: node\picked
+
+fn: entries () int
+return: node\entered
+
+fn: run (int: k) size_t
+    size_t: r 0U
+    r: get(pick(k))
+    catch: implements ()
+        r: 42U
+    ---
+return: r
+
+size_t: a run(0)
+size_t: b run(1)
+int: ok 7
+if: a != 4U
+    ok: 81
+if: b != 42U
+    ok: 82
+if: picks() != 2
+    ok: 83
+if: entries() != 1
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

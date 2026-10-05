@@ -1,0 +1,30 @@
+# The definite side of RECEPTION-EDGE-DEBTS (d): when every candidate an edge brings is one the Consumer cannot
+# admit, every call through it is incompatible, and the translation refuses it where the input is formed.  pick
+# returns only the Thin, which has no `value`.
+Model:
+    size_t: value 4U
+end: Model
+
+Thin:
+    int: pad 1
+end: Thin
+
+Thin: bad
+
+fn: pick (int: k) @: void
+return: bad
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: run (int: k) size_t
+    size_t: r 0U
+    r: get(pick(k))
+    catch: implements ()
+        r: 42U
+    ---
+return: r
+
+size_t: b run(1)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

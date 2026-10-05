@@ -7869,6 +7869,42 @@ $fixtures = @(
         Needle = 'unit_recv_call_number_result_refused.lm2:10:11: implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_call_depth_result_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_recv_call_depth_result_refused.lm2:11:11: implements is false in function argument'; Absent = @(); Debt = @() },
+    # RECEPTION-EDGE-DEBTS (d) (Codex, FABLE-CODEX-20261004-12: "the good branch succeeds, the incompatible branch
+    # fails catchably at the receiving edge"): a candidate chosen when the program runs, among one that fits and one
+    # that does not, is admitted by the one it is.  possible_result: pick returns either -- 4; the Thin refused where
+    # run forms the input, taken by run's handler, 42, get entered once; with no handler the Message is stopped
+    # (uncaught).  possible_formal: the same through an opaque formal (until 2026-10-05 the internal error of
+    # OPAQUE-ACTUAL-KNOWN-LAYOUT).  possible_result_only_refused: every candidate the edge brings is refused, so is
+    # the call, at translation.  opaque_formal_by_name, opaque_local_by_name: an Other through an opaque formal and
+    # through an opaque local reads its `value` by name, 9 (until 2026-10-05 the formal read by position, 1, and the
+    # local was refused when the program ran).  opaque_actual_known_layout: OPAQUE-ACTUAL-KNOWN-LAYOUT's own
+    # program, 5.  Where the methods are walked, every method of these fixtures is.
+    [pscustomobject]@{ Name = 'unit_recv_possible_result_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_possible_result_catch_walk.lm2'; Source = 'unit_recv_possible_result_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_possible_result_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_possible_result_uncaught_walk.lm2'; Source = 'unit_recv_possible_result_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_possible_result_only_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_possible_result_only_refused.lm2:22:8: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_possible_formal_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_possible_formal_catch_walk.lm2'; Source = 'unit_recv_possible_formal_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_opaque_formal_by_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_opaque_formal_by_name_walk.lm2'; Source = 'unit_recv_opaque_formal_by_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_opaque_local_by_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_opaque_local_by_name_walk.lm2'; Source = 'unit_recv_opaque_local_by_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_opaque_actual_known_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_opaque_actual_known_layout_walk.lm2'; Source = 'unit_opaque_actual_known_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # The refusal is thrown with the statuses and handlers of the method that forms the input, whatever the callee
     # declares: the callee has a throw of its own, and the forming method's handler of `implements` takes the
     # refusal, not its handler of the callee's name (43, not 44).  A method that declares a throw stays native
@@ -7919,12 +7955,21 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_free_path_first_lacks_walk.lm2'; Source = 'unit_free_path_first_lacks.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     # A Structure with no field the method reads through the name is refused by the ordinary admission where it
-    # is handed to the reader: at its giver's call (other_refused), and at the call of the method that hands it
-    # on to the reader (other_chain_refused).
+    # is handed to the reader.  At its giver's call (other_refused) the edge brings nothing else: every call through
+    # it is incompatible, refused at translation.  Through a method that hands the name on (other_chain_refused) the
+    # edge brings has's Model too: a possible candidate, refused when the program runs where mid forms r's input
+    # (RECEPTION-EDGE-DEBTS (d); until 2026-10-05 at translation, 17:13) -- has gives 31, bad's refusal leaves the
+    # root uncaught; with bad's handler, 42 (other_chain_catch).
     [pscustomobject]@{ Name = 'unit_free_path_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_free_path_other_refused.lm2:25:13: implements is false in function argument'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_free_path_other_chain_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_free_path_other_chain_refused.lm2:17:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_other_chain_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_other_chain_refused_walk.lm2'; Source = 'unit_free_path_other_chain_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
+        WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_other_chain_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_other_chain_catch_walk.lm2'; Source = 'unit_free_path_other_chain_catch.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     # A write through such a path changes the Structure the caller gave, through a method that only hands the
     # name on, with the field at another position.  A method that only writes through the name reads the name
     # as one that reads through it does: the root of a written path is read (4142, 808, 13, 14).
@@ -7997,6 +8042,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_free_path_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_free_path_typed_place_walk.lm2'; Source = 'unit_free_path_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # The same with a Structure made from Thin in the letter's place (RECEPTION-EDGE-DEBTS (d)): the edge to r
+    # brings the Model too, so the Thin is refused when the program runs, 42, and the Model gives 9; until
+    # 2026-10-05 the translation refused the Thin at far's call of r.
+    [pscustomobject]@{ Name = 'unit_free_path_typed_place_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_typed_place_thin_walk.lm2'; Source = 'unit_free_path_typed_place_thin.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
     # Each method that reads through the name has its own uses: a method that hands the name on and reads
     # another field of it (341), a reader given a Structure without that other field (31).

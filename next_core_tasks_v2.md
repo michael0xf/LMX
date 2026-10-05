@@ -135,6 +135,19 @@ by position through an opaque formal (a wrong value with no refusal) and
 refused through an opaque local reference. Gates: kernel `opus_kernel_09`
 GREEN296 with 113 executed selftests, L3 `opus_l3_09`, full `opus_full_11`
 RED39/1864 -- against `opus_full_10` FAIL→OK 0, OK→FAIL 0, added 8.
+RECEPTION-EDGE-DEBTS (d): at an input, a candidate its Consumer does not
+admit is a possible one when every edge that brings it brings an admissible
+candidate from the same place beside it -- refused when the program runs, as
+the forming method's `implements`; any other is refused at translation as
+before. A name of opaque type records its edge to the formal, an opaque local
+the sources of its value: OPAQUE-ACTUAL-KNOWN-LAYOUT is fixed in all three
+forms. One row migrated: `unit_free_path_other_chain_refused` is refused when
+the program runs
+([RECEPTION-EDGE-DEBTS](steps/defects.md#reception-edge-debts),
+[section 82](steps/fable-continuation-20261003.md#possible-candidate)).
+Gates: kernel `opus_kernel_10` GREEN296 with 113 executed selftests, L3
+`opus_l3_10`, full `opus_full_12` RED39/1882 -- against `opus_full_11`
+FAIL→OK 0, OK→FAIL 0, added 18.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

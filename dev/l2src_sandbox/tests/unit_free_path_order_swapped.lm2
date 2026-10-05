@@ -1,0 +1,42 @@
+# The same program in another order: r and the method that hands the name
+# on stand above the declarations, Thin is declared before Rich, the
+# callers stand below. The results are the same: 21 and 31. Entry 7.
+fn: mid () int
+    return: r()
+end: mid
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+Thin:
+    int: v 4
+end: Thin
+
+Rich:
+    int: a 1
+    int: v 4
+    int: b 2
+end: Rich
+
+fn: rich () int
+    box: merge Rich
+    box\v: 20
+    return: mid()
+end: rich
+
+fn: thin () int
+    box: merge Thin
+    box\v: 30
+    return: mid()
+end: thin
+
+int: a rich()
+int: b thin()
+int: ok 7
+if: a != 21
+    ok: 81
+if: b != 31
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

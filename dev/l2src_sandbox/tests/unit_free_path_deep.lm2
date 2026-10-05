@@ -1,0 +1,31 @@
+# A path of two steps through the free name: rd reads box\in\x and box\a,
+# and no declaration of box is in its sight. one gives a Structure made
+# from Outer through mid: 30 + 1. two gives another and calls rd itself:
+# 40 + 2. Entry 7.
+Outer:
+    in:
+        size_t: x 5U
+    size_t: a 1U
+end: Outer
+fn: rd () size_t
+    return: box\in\x + box\a
+fn: mid () size_t
+    return: rd()
+fn: one () size_t
+    box: merge Outer
+    box\in\x: 30U
+    return: mid()
+fn: two () size_t
+    box: merge Outer
+    box\in\x: 40U
+    box\a: 2U
+    return: rd()
+size_t: a one()
+size_t: b two()
+int: ok 7
+if: a != 31U
+    ok: 81
+if: b != 42U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

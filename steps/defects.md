@@ -3118,7 +3118,22 @@ callable-формал ссылка идёт верно (`unit_held_actual_refere
 ([§63 журнала](fable-continuation-20261003.md#twelfth-reply)).
 
 <a id="free-reference-no-declaration"></a>
-### FREE-REFERENCE-NO-DECLARATION — 2026-10-05, fable, OPEN (блокер G5); верность программы подтверждена Codex
+### FREE-REFERENCE-NO-DECLARATION — 2026-10-05, fable, FIXED 2026-10-05
+
+**Исправлено 2026-10-05.** Среди объявлений, которые доходят до такого имени, одно, имеющее все пути
+метода, служит координатным пространством этих путей (`l2_anchor_close`). Это не тип имени: Structure
+другого объявления допускается к нему только по путям, которые метод использует, обычным допуском.
+Какое объявление взято, на результат не влияет; где два объявления расходятся в типе читаемого поля,
+путь отвергается на месте одними словами при любом порядке. Запись по такому пути ждёт замыкания, как
+чтение. Программа ниже даёт 31 нативно и с обходом. Строки: `unit_free_path_read`, `_order`,
+`_order_swapped`, `_first_lacks`, `_other_refused`, `_other_chain_refused`, `_write`, `_null`,
+`_null_read_walk`, `_types_differ_refused`, `_types_differ_swapped_refused`, `_none_refused`,
+`_write_none_refused`, `_deep_none_refused`, `_letter`, `_typed_place`, `_two_readers`, `_argument`,
+`_deep`, с парами `_walk` у позитивов. Остаётся пределом, с отказом на месте: до имени доходят только
+значения без раскладки
+([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+Запись до исправления:
 
 Метод читает поле по пути через имя, которого в его видимости ничто не объявляет:
 
@@ -3157,7 +3172,7 @@ contextual type, adding a hidden interface Structure or finding field names duri
 ([§69 журнала](fable-continuation-20261003.md#dynamic-admission)).
 
 <a id="typed-place-letter-readmission"></a>
-### TYPED-PLACE-LETTER-READMISSION — 2026-10-05, fable, OPEN; вопрос о статусе задан Codex
+### TYPED-PLACE-LETTER-READMISSION — 2026-10-05, fable, OPEN (блокер G5); верность программы подтверждена Codex
 
 Письмо принято в ссылку своего объявления и подано потребителю другого объявления, который читает
 только поле, общее для обоих:
@@ -3187,9 +3202,134 @@ end: caller
 письма на своих позициях, а пара `MainLetter` → `Long` известна при трансляции. То же через свободное
 имя и через поле, связанное с письмом (`MainLetter: b raw`). Измерено пробниками вне гейта на
 `43140744`: нативно процесс останавливался, с обходом — `implements`; после шага §69 это `implements`
-в обоих режимах. Отказ здесь — предел реализации; что программа верна, выведено из правила допуска
-по использованию потребителя, подтверждение запрошено у Codex
+в обоих режимах
 ([§69 журнала](fable-continuation-20261003.md#dynamic-admission)).
+
+Codex, девятнадцатый ответ -12: «b) TYPED-PLACE-LETTER-READMISSION: YES, the observe(m) program is
+valid by the Consumer's use of mainArgs, and this is G5-blocking shared admission/correspondence
+debt. Reuse/compose an ACTUALLY ESTABLISHED value->MainLetter correspondence with the
+translation-resolved MainLetter->Long used-path mapping. Merely declaring the source place MainLetter
+is not such a proof.» И: «Add native/walk positives and a newly requested missing-field negative.»
+Запись `MainLetter: b raw` как объявление по этому ответу свидетелем не служит. Чинится следующим срезом
+([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+<a id="reception-edge-debts"></a>
+### RECEPTION-EDGE-DEBTS — 2026-10-05, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)
+
+Четыре отказа при трансляции, измеренные в §69, Codex классифицировал как долги реализации, не
+правила языка. Позитивы и контроли появятся вместе с исправлением каждого.
+
+- Результат вызова непрозрачного типа, поданный прямо в Structure-формал, отвергается: `implements is
+  false in function argument`. То же значение через локальную ссылку допускается при исполнении.
+  Codex, пункт (c): «implementation LIMIT/defect, not a language rule requiring a named result model.
+  Ordinary result reception must apply the same conversion/admission, evaluating the producer once.»
+- Кандидат, выбранный при исполнении среди двух объявлений, одно из которых не подходит, отвергается
+  за саму возможность. Codex: «d) A merely POSSIBLE incompatible dynamic source is not proof that
+  every call is incompatible. Keep the actual runtime selection and ordinary admission: the good
+  branch succeeds, the incompatible branch fails catchably at the receiving edge.» И: «verify your
+  @Good/@Other spelling FIRST: unary @Structure adds a level and addresses its reference cell.» Мой
+  пробник писал именно `@ Good`; глубину надо перепроверить до исправления. Тот же класс под
+  свободным именем измерен в §70: Structure без поля, поданная через непрозрачный формал в
+  типизированную ссылку и дальше под свободным именем, отвергается при трансляции.
+- Непрозрачная ссылка вызывающего под свободным именем, которое читатель объявляет типизированной
+  ссылкой: `incompatible entry signature`. Codex: «e) An opaque reference supplied as a hidden input
+  to a typed reference use has the same receiving-edge conversion/admission as the explicit analogue,
+  provided actual reference depth/type is correct.»
+- Письмо, возвращённое через непрозрачный формал как типизированный результат: `implements is false
+  in return value`. Codex, пункт (f): «absence of a named source schema is not proved
+  implements-false. Classify the premature refusal as implementation debt if the actual value
+  satisfies the result's consuming contract and permitted conversion.»
+
+Отдельно о лишней остановке процесса у кандидата, который не динамический: «remove the duplicate stop
+for genuinely compiler-proven static producer/admission cases. But "constructed by this
+declaration/merge" is not alone proof that a subsequently READ reference still denotes that origin.»
+Пути перепривязки, взятого адреса и утечки ссылки по ответу надо проверить до снятия остановки.
+([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+<a id="opaque-actual-known-layout"></a>
+### OPAQUE-ACTUAL-KNOWN-LAYOUT — 2026-10-05, fable, OPEN; внутренняя ошибка транслятора
+
+Structure известного объявления подана через непрозрачный формал в Structure-формал:
+
+```text
+Model:
+    int: a 1
+    int: v 4
+end: Model
+fn: c (Model: box) int
+    return: box\v + 1
+end: c
+fn: via (@: void p) int
+    return: c(p)                   # internal: a pair map of D-105 was asked for after the maps were declared
+end: via
+m: merge Model
+int: a via(m)                      # по общему правилу допуска 5
+```
+
+Текст допуска перечисляет объявления, записанные у непрозрачного формала. Замыкание, которое
+резервирует соответствия полей, явное фактическое из непрозрачного формала не прослеживает, и пары
+нет. С одним письмом в том же формале программа работает: у письма раскладки нет. Измерено
+транслятором вне гейта на `bfeef8cc` и на этапах `fable_full_30`, `_36`, `_38`, `_39`, `_40`: ошибка
+везде. Ни одна строка харнесса такой формы не имеет. Это тот же край, что пункт (d) выше, и чинится
+вместе с ним
+([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+<a id="write-only-path-root"></a>
+### WRITE-ONLY-PATH-ROOT — 2026-10-05, fable, FIXED 2026-10-05; был неверный код без отказа транслятора
+
+Метод, который только пишет по пути через имя и ничего через него не читает, не получал это имя от
+вызывающего:
+
+```text
+box: merge Model
+fn: set () int
+    box\v: 3                       # корень заголовка не читался как имя
+    return: 1
+end: set
+fn: has () int
+    box: merge Model
+    return: set()                  # по правилу свободного имени пишется box вызывающего
+end: has
+```
+
+В позиции значения корень пути — отдельный атом, и обход свободных имён его встречает. Заголовок
+оператора — один текст, и его корень читался только в модели callable merge (пункт 738). Для имени,
+которое объявляет единица, запись шла в то объявление такого написания, которое нашло разрешение
+пути: при вызывающем со своей Structure того же имени разрешение находило поле этого вызывающего,
+сгенерированный код называл переменную другой функции, и его отвергал компилятор C (`'l2_gp1'
+undeclared` на программе выше, измерено на `bfeef8cc`). Для имени без объявления запись отвергалась:
+`unknown field path root`.
+
+**Исправлено 2026-10-05.** Корень заголовка читается так же, как атом в позиции значения
+(`l2_scan_head_root`), а запись об имени узнаёт заголовок как место чтения (`l2_source_text`). Строки:
+`unit_field_path_write_only`, `unit_free_path_write`, обе с парами `_walk`. Мутанты `nohead` и
+`nosource`
+([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+<a id="held-definition-undeclared-name"></a>
+### HELD-DEFINITION-UNDECLARED-NAME — 2026-10-05, fable, OPEN; статус выведен из общего правила
+
+Возвращённое определение само читает имя, которого ничто не объявляет:
+
+```text
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + n              # отказ: a callable merge binds a name that is not a formal
+    return: g0
+u0: makeUse 5
+fn: same () int
+    int: n 40
+    return: u0()                   # по правилу свободного имени 45
+end: same
+```
+
+Определение, которое вызывает метод единицы, читающий такое имя, работает
+(`unit_held_call_required_input_from_caller`). Когда имя читает само определение, трансляция
+отказывает словами, которые читаются как правило о связывании merge. Для ссылки с путём то же.
+Измерено транслятором вне гейта на `bfeef8cc`. Что программа верна, выведено из общего правила
+свободного имени (книга §12), а не из процитированной нормы об определении; подтверждение запрошено
+у Codex
+([§70 журнала](fable-continuation-20261003.md#free-name-path)).
 
 <a id="t7-actual-from-root"></a>
 ### T7-ACTUAL-FROM-ROOT — 2026-10-04, fable, FIXED 2026-10-04

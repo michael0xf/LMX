@@ -1,0 +1,29 @@
+# A read through a reference that holds nothing stops where a read through
+# a declared one does: the reference is present, it is admitted, and the
+# path meets no Structure. r reads box\v without asking; empty gives a
+# reference that holds nothing. No handler takes this: it is no refusal of
+# an admission.
+Model: (int: v 11; int: spare 99)
+fn: r () int
+    return: box\v
+end: r
+fn: mid () int
+    return: r()
+end: mid
+fn: has () int
+    @: Model box @Model
+    return: mid()
+end: has
+fn: empty () int
+    @: Model box
+    int: got 0
+    got: mid()
+    catch: implements ()
+        got: 42
+    ---
+    return: got
+end: empty
+int: a has()
+int: b empty()
+sendMessage: exit(exit_code: a + b; stdout: ""; stderr: "")
+return

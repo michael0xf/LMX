@@ -1,0 +1,31 @@
+# The same with the two declarations in the other order: the same refusal
+# at the same place.
+Wide:
+    size_t: v 4U
+end: Wide
+
+Model:
+    int: v 4
+end: Model
+
+fn: r () int
+    int: got box\v
+    return: got + 1
+end: r
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: r()
+end: has
+
+fn: wide () int
+    box: merge Wide
+    box\v: 40U
+    return: r()
+end: wide
+
+int: a has()
+int: b wide()
+sendMessage: exit(exit_code: a + b; stdout: ""; stderr: "")
+return

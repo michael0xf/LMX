@@ -484,11 +484,25 @@ a reference does not resolve an absent entry itself: the method that hands the
 entry to it reads the reader's lexical cell where the entry arrived absent
 (`l2_hidden_forward`, `l2_hidden_lex`); a returned definition reads what its
 node keeps. A present reference that holds nothing is present. An input whose
-name nothing in the method's sight declares has no schema: the fixed point
-records the declarations that reach it (`l2_input_undeclared`), and where its
-value reaches a reader's schema it is admitted by the declaration it carries,
-among those recorded; with none recorded the positional admission stands
+name nothing in the method's sight declares has no schema of its own: the
+fixed point records the declarations that reach it (`l2_input_undeclared`),
+and where its value reaches a reader's schema it is admitted by the
+declaration it carries, among those recorded; with none recorded the
+positional admission stands
 ([ledger](steps/fable-continuation-20261003.md#reference-among-free-names)).
+
+A method reads and writes a path through such a name. Among the named
+declarations that reach the input, one that has every path the method uses is
+the coordinate space of those paths (`l2_anchor_close`), and the input's
+schema. It is no type of the name and is not there when the program runs: a
+Structure of another declaration is admitted to it by the paths the method
+uses, by the ordinary admission, and its unused fields ask nothing. Which of
+the declarations is taken does not change what is accepted or read; where two
+of them give a used field different types the path is refused where it
+stands. Where none is established the path is refused where it stands, a
+limit. The root of a written path is read as the root of a read one is: a
+method that only writes through a name takes the name from its caller
+([ledger](steps/fable-continuation-20261003.md#free-name-path)).
 
 An input is formed in the calling method, before the callee is entered. Where
 the candidate is a dynamic one -- read from a reference place, which holds

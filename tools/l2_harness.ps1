@@ -7774,6 +7774,116 @@ $fixtures = @(
     # at the root's call of the method that hands it on, where the chain starts, as a number is.
     [pscustomobject]@{ Name = 'unit_reference_required_unbound_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_reference_required_unbound_refused.lm2:25:8: unbound dynamic input box'; Absent = @(); Debt = @() },
+    # A path through a free name that nothing in the method's sight declares (FREE-REFERENCE-NO-DECLARATION; Codex,
+    # FABLE-CODEX-20261004-12, the eighteenth and nineteenth replies).  Such a name has no type of its own.  Among
+    # the declarations the translation records as reaching it, one that has every path the method uses is the
+    # coordinate space of those paths; a Structure of another declaration is admitted to it by those paths only,
+    # as to a declared requirement.  No type is made up, and nothing of it exists when the program runs.
+    # Through a method that only hands the name on (31), with the field at another position (41), from a caller
+    # that calls the reader itself (51); natively and with the reader and the forwarder walked.
+    [pscustomobject]@{ Name = 'unit_free_path_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_read_walk.lm2'; Source = 'unit_free_path_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    # What is accepted and what is read do not depend on the order of the unit, on fields the method does not
+    # use, or on which declaration is taken.  The declaration with unused fields first and the callers above the
+    # reader (order); the reader above the declarations and the declaration with only the field first
+    # (order_swapped): 21 and 31 in both.
+    [pscustomobject]@{ Name = 'unit_free_path_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_order_walk.lm2'; Source = 'unit_free_path_order.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_order_swapped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_order_swapped_walk.lm2'; Source = 'unit_free_path_order_swapped.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    # A declaration that has not the field one method reads, declared first, reaching another method's name only,
+    # does not decide for the declarations that have it: each method reads what its caller gave (31, 52).
+    [pscustomobject]@{ Name = 'unit_free_path_first_lacks.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_first_lacks_walk.lm2'; Source = 'unit_free_path_first_lacks.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    # A Structure with no field the method reads through the name is refused by the ordinary admission where it
+    # is handed to the reader: at its giver's call (other_refused), and at the call of the method that hands it
+    # on to the reader (other_chain_refused).
+    [pscustomobject]@{ Name = 'unit_free_path_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_other_refused.lm2:25:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_other_chain_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_other_chain_refused.lm2:17:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # A write through such a path changes the Structure the caller gave, through a method that only hands the
+    # name on, with the field at another position.  A method that only writes through the name reads the name
+    # as one that reads through it does: the root of a written path is read (4142, 808, 13, 14).
+    [pscustomobject]@{ Name = 'unit_free_path_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_write_walk.lm2'; Source = 'unit_free_path_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    # The same for a name the unit declares: a method that only writes box\v took no box from its caller, and
+    # the write went to whichever declaration of that spelling the path's resolution found -- another method's
+    # own field, in generated code the C compiler refused.  The root's call writes the unit's Structure; a
+    # caller's own Structure is written from a caller that has one, and the unit's is as the root left it.
+    [pscustomobject]@{ Name = 'unit_field_path_write_only.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_field_path_write_only_walk.lm2'; Source = 'unit_field_path_write_only.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    # A reference that is present and holds nothing stays present under such a name: no Structure is made up and
+    # no declaration's default is read in its place (11, 22, 7).  A read through it stops where a read through a
+    # declared reference does -- the path meets no Structure (the pin; walked, the walker's X1 below) -- and is
+    # no refusal of an admission: the handler of `implements` in null_read does not take it.
+    [pscustomobject]@{ Name = 'unit_free_path_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @('c.fprintf(c.stderr, "lmx: invariant: a field path met no Structure\n")') },
+    [pscustomobject]@{ Name = 'unit_free_path_null_walk.lm2'; Source = 'unit_free_path_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_null_read_walk.lm2'; Source = 'unit_free_path_null_read.lm2'; Expect = 'walk-x1'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true;
+        WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    # Two declarations that reach the name give the field the method reads different types.  Neither is the
+    # other's measure: the path is refused where it stands, with the same words at the same statement in either
+    # order of the two declarations.
+    [pscustomobject]@{ Name = 'unit_free_path_types_differ_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_types_differ_refused.lm2:14:5: the declarations reaching a free name disagree in a field the method uses through it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_types_differ_swapped_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_types_differ_swapped_refused.lm2:12:5: the declarations reaching a free name disagree in a field the method uses through it'; Absent = @(); Debt = @() },
+    # No declaration that reaches the name has the field the method reads.  The programs are not valid whatever
+    # is built -- the only caller gives a Structure without the field -- and the words are those of the limit
+    # that stands where no coordinate space is established: values with no layout may reach such a name too.
+    # A read in an expression (none_refused), a method that only writes, whose check waits for the callers
+    # (write_none_refused), a path of two steps (deep_none_refused).
+    [pscustomobject]@{ Name = 'unit_free_path_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_none_refused.lm2:10:13: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_write_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_write_none_refused.lm2:9:5: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_deep_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_deep_none_refused.lm2:7:13: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
+    # A value the translation has no layout for, under such a name, beside a caller whose Structure fits: admitted
+    # where the reader's input is formed, when the program runs; refused there as the forming method's implicit
+    # `implements`, before the reader is entered (7, 42, one entry).  The method that receives the letter stays
+    # native where the methods are walked; the reader and the forming method are walked.
+    [pscustomobject]@{ Name = 'unit_free_path_letter.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_letter_walk.lm2'; Source = 'unit_free_path_letter.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeMethods = @(5); Absent = @(); Debt = @() },
+    # Through an opaque formal and a typed reference: a letter is refused where the reference takes it (42); a
+    # Structure made from a declaration reaches the name by that declaration, through the formal and the
+    # reference (9).  The method with the reference stays native where the methods are walked.
+    [pscustomobject]@{ Name = 'unit_free_path_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_typed_place_walk.lm2'; Source = 'unit_free_path_typed_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # Each method that reads through the name has its own uses: a method that hands the name on and reads
+    # another field of it (341), a reader given a Structure without that other field (31).
+    [pscustomobject]@{ Name = 'unit_free_path_two_readers.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_two_readers_walk.lm2'; Source = 'unit_free_path_two_readers.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    # The path as the argument of a call and by its address (9135, 12145).
+    [pscustomobject]@{ Name = 'unit_free_path_argument.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_argument_walk.lm2'; Source = 'unit_free_path_argument.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    # A path of two steps through the name (31, 42).
+    [pscustomobject]@{ Name = 'unit_free_path_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_path_deep_walk.lm2'; Source = 'unit_free_path_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     # The callable given to a callable formal is called with its own free names (CALLABLE-FORMAL-HIDDEN-CONTRACT,
     # K04; Codex, FABLE-CODEX-20261004-12).  The translator follows which methods reach each formal and the call
     # forms their list, never the list of the method that declares the formal: another name of the same count

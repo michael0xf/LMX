@@ -6542,3 +6542,281 @@ declares ([FREE-REFERENCE-NO-DECLARATION](defects.md#free-reference-no-declarati
 with the rows the reply names; the duplicate stop of a candidate that is
 not dynamic; then the receiving-edge conversion and the rest of the order of
 section 68.
+
+<a id="free-name-path"></a>
+## 70. A path through a free name that nothing in the method's sight declares (Codex's eighteenth and nineteenth replies -12)
+
+### The replies
+
+The eighteenth: "Q1: YES, the program is valid when the callers supply an
+admissible Structure under box." "#dynamic:702-704 applies to a FREE NAME
+irrespective of whether its value is consumed directly or is the root of a
+structural path. #admission/#fields then govern the used box\v path and its
+exact field/type. Requiring a lexical declaration just for a
+reference/path, while allowing the same caller-supplied mechanism for a
+number, would be an invented type-specific exception." "This does NOT
+authorize guessing a new contextual type, adding a hidden interface
+Structure or finding field names during execution. Obtain the input's
+physical type/source/layout evidence through the existing fixed point and
+supplied typed Structures; record the Consumer's used path and resolve its
+source/field correspondence during translation. Do not mistake a receiving
+requirement for actual layout."
+
+I put the design to Codex before building it: among the declarations that
+reach such a name, take one as the coordinate space of the method's paths
+(A), or give the method an instruction of its own that finds each field in
+the value's own layout (B). The nineteenth reply: "A is within the earlier
+ruling as an EXISTING COORDINATE SPACE ONLY, under proof; B is not mandatory
+and a new opcode is not needed merely to duplicate existing correspondence
+machinery." It adds that this does not mean picking any first candidate and
+declaring its entire type the requirement. "Resolve r's used paths first.
+Choose a
+reachable existing declaration which supplies a proved coordinate/type
+witness for those paths, then use the existing Consumer-relative
+correspondence. Unused fields/methods of that anchor impose no
+requirements. Selection must not make accepted programs/results depend on
+unit order, unused extra fields, or which admissible candidate happened to
+be chosen as anchor. If the first reaching declaration lacks v, that is not
+permission to make r or every other candidate invalid; find a suitable
+existing coordinate witness or retain an honest implementation limit where
+none is established." "The chosen declaration is not the actual candidate's
+layout. The current supplied value and its verified correspondence
+determine its physical field, LAST versus explicit ordinal and primitive
+type; existing conversion rules apply, not the anchor's bytes reinterpreted
+as another type. A missing field or incompatible consumed type is ordinary
+admission failure."
+
+### What is built
+
+1. **The coordinate space of a method's paths through such a name**
+   (`l2_anchor_close`). The name is a hidden input with no schema of its
+   own. Once the fixed point has closed what each site hands, the
+   translation collects the named declarations that reach the input
+   (`l2_anchor_reach`): what a merge of one Structure made in a caller's
+   own field, what a site records for a place, and what reaches every
+   place handed on to it, along the edges the fixed point recorded,
+   against their direction. Among them, one that has every path the method
+   uses, each to its end (`l2_anchor_covers`), is the coordinate space of
+   those paths. The input's schema is that declaration
+   (`l2_input_schema`), and the sites are visited once more, so that what a
+   site records by the schema of the input it hands to is recorded: the
+   edge, the admission, the method that can throw.
+2. **It is a coordinate space and no type.** A Structure of another
+   declaration is admitted to it by the paths the method uses, as to a
+   declared requirement: the existing admission by the consumer's uses and
+   the existing correspondences of fields. Fields of the chosen
+   declaration that the method does not use ask nothing of a candidate.
+   The model of the input is not changed (`l2_input_model`): a copy of the
+   Structure under such a name is refused as before, and nothing reads the
+   chosen declaration as the type of the name. Nothing of this exists when
+   the program runs.
+3. **Which declaration is taken does not matter.** Those that have every
+   path are admitted to one another by those paths the same way in either
+   direction, as long as they agree in each. The first in the unit's order
+   is taken. Where two of them disagree, a field the method reads being of
+   one type in one and of another in the other, none is taken: the path is
+   refused where it stands, with the same words in either order of the
+   declarations. Taking the first there would refuse the second by the
+   first's type, and the other order would refuse the other.
+4. **A declaration that has not a path the method uses is no coordinate
+   space.** It is refused by the ordinary admission where it is handed to
+   the reader. Where no coordinate space is established the path is
+   refused where it stands (`l2_free_path_refused`), at each of the four
+   sites that check a path: a read in an expression, a path that is the
+   whole of a value, a path of more than one step, a write.
+5. **A write through the path is checked once its root is typed.** The
+   check of a written path ran in the first pass, before the fixed point,
+   and refused such a root. It waits now as an assignment's check does
+   (a wait record of its own, `l2_wait_run`).
+6. **The root of a written path is read.** In value position the root of a
+   path is an atom and the scan of free names meets it; the head of a
+   statement is one text, and its root was read only in the model of a
+   callable merge. A method that only writes through a name therefore took
+   no such name from its caller. For a name nothing declares the write was
+   refused, `unknown field path root`. For a name the unit declares the
+   write went to whichever declaration of that spelling the path's
+   resolution found: with a caller that has a Structure of that name of its
+   own, the resolution found that caller's own field, the generated code
+   named a variable of another function, and the C compiler refused it. The
+   root of a head is now read as the atom would be
+   (`l2_scan_head_root`), and the record of the name knows the head as the
+   place it is read (`l2_source_text`); without the second the input was
+   taken for one the method only hands on.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_free_path_read`, `_walk` | The program of the defect: 31 through a method that only hands the name on, 41 with the field at another position, 51 from a caller that calls the reader itself. |
+| `unit_free_path_order`, `unit_free_path_order_swapped`, `_walk` | The same results, 21 and 31, with the declaration that has unused fields first and the callers above the reader, and with the reader above the declarations and the thin declaration first. A candidate that lacks the unused fields of the chosen declaration is admitted. |
+| `unit_free_path_first_lacks`, `_walk` | A declaration without the field, declared first, reaches another method's name only and decides nothing for this one: 31 and 52. |
+| `unit_free_path_other_refused`, `unit_free_path_other_chain_refused` | A Structure without the field is refused by the ordinary admission, `implements is false in function argument`: at its giver's call of the reader, and at the call of the method that hands it on. |
+| `unit_free_path_write`, `_walk` | A write changes the caller's Structure, through a forwarder and with the field at another position: 4142, 808. A method that only writes: 13, 14. |
+| `unit_field_path_write_only`, `_walk` | The same defect for a name the unit declares. The root's call writes the unit's Structure; a caller's own Structure is written from a caller that has one, and the unit's is as the root left it. |
+| `unit_free_path_null`, `_walk`; `unit_free_path_null_read_walk` | A reference that is present and holds nothing stays present: 11, 22, and 7 where the reader asks. A read through it stops where a read through a declared reference does. Walked, that is the walker's stop, exit 3; natively the row pins the text of the same boundary in the reader. |
+| `unit_free_path_types_differ_refused`, `_swapped_refused` | Two declarations give the field different types: the same refusal at the same statement in either order. |
+| `unit_free_path_none_refused`, `_write_none_refused`, `_deep_none_refused` | No declaration that reaches the name has the field: the words of the limit, at a read, at a write that waited, at a path of two steps. |
+| `unit_free_path_letter`, `_walk` | A letter under the name beside a caller whose Structure fits: refused when the program runs, where the reader's input is formed, as the forming method's `implements`; the reader is entered once. |
+| `unit_free_path_typed_place`, `_walk` | Through an opaque formal and a typed reference: a letter is refused where the reference takes it, 42; a Structure made from a declaration reaches the name by that declaration, 9. |
+| `unit_free_path_two_readers`, `_walk` | A method that hands the name on and reads another field of it has its own coordinate space: 341, and 31 for a reader given a Structure without that field. |
+| `unit_free_path_argument`, `_walk` | The path as the argument of a call and by its address: 9135, 12145. |
+| `unit_free_path_deep`, `_walk` | A path of two steps: 31, 42. |
+
+Where the methods are walked every method of these fixtures is walked,
+except the one that receives the letter and the one with the typed
+reference; the rows pin which.
+
+`unit_reference_required_unbound_refused` stands as it was: with no caller
+that has the name the chain is refused where it starts.
+
+### Mutants
+
+Each is a copy of this translator with one change, built apart. Its
+translations of the 34 rows of the slice (`fable_s8_02`) are compared with
+this translator's, and every fixture whose generated text changed is run
+natively, with the root walked and with the methods walked.
+
+| Mutant | Changes | Result |
+| --- | --- | --- |
+| `coversany` | any declaration that reaches the name is its coordinate space | the two `other` rows and the three `none` rows are refused with other words at other places |
+| `nodiffer` | declarations that disagree are not told apart | the two `types_differ` rows are refused with other words: in one order `implements is false` at the other caller's call, in the other order the read asks for a conversion from the first declaration's type |
+| `noedges` | what reaches a place handed on is not followed | every positive is refused with the words of the limit |
+| `noown` | what a merge makes in a caller's own field is no candidate | the same |
+| `nosecond` | the sites are not visited again once the coordinate spaces are found | `_letter`, `_null` and `_null_read` do not compile |
+| `nowait` | a write is checked before its root is typed | `_write` is refused, `unknown field path segment` |
+| `noreplay` | the waited write is never checked | `_write_none_refused` is refused with other words |
+| `nohead` | the root of a written path is not read | `_write` is refused; `unit_field_path_write_only` does not compile |
+| `nosource` | the head is not where the name is read | `_write` and `unit_field_path_write_only` do not compile |
+| `norefuse` | a path with no coordinate space is not refused by the common words at any site | the three `none` rows and the two `types_differ` rows are refused with other words |
+| `nochain` | the same at a path of more than one step only | `_deep_none_refused` is refused, `unknown field path segment` |
+| `novalue` | the same at a path that is the whole of a value only | the two `types_differ` rows are refused, `unknown field path root` |
+
+`bestlast` is a control and no mutant to kill: it takes the last
+declaration that has every path where the translator takes the first. The
+generated text of 14 rows changes; every one of the seven fixtures passes
+natively, with the root walked and with the methods walked.
+
+`coversany` can be told only by a refusal's words and place. In a program
+that is accepted every named declaration that reaches the name has every
+path, so taking any of them is taking one that has. `nodiffer`,
+`noreplay`, `norefuse`, `nochain` and `novalue` are told by words too: the
+programs are refused either way, and what the rows hold is which refusal is
+said, and where.
+
+One check is reached by no row: the fixed point runs again after the waited
+checks, the rows of the coordinate spaces are found again, and a coordinate
+space lost between the two is an internal error. I have no program in which
+the second run finds less than the first.
+
+### Measured
+
+The translator against the committed one (`bfeef8cc`), on the 1738
+translations recorded by `fable_full_41`: exit, messages and the generated
+L1 are the same on every row.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_28` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_28` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_42` (full harness) | RED 35 of 1771. Against `fable_full_41`: FAIL→OK 0, OK→FAIL 0, added 32, all green, removed 0, no message of a red row changed. |
+| `build/l2_harness/fable_s8_01`, `_02` (focused, before the gates) | 189 rows with the neighbours of the slice, then the 34 rows of the slice on the final bytes: the new rows pass; the six red rows of the first run are red in `fable_full_41` with the same words. |
+
+### What is not built
+
+Coverage of the implementation, no restriction of the language. Each is a
+refusal at translation, located.
+
+- **A value with no layout alone.** Where only a letter, or only a typed
+  place whose value arrives opaque, reaches the name, no coordinate space
+  is established: `a path through a free name that no declaration reaching
+  it gives its fields to is not built yet`. A place's own declaration, a
+  typed reference's or a formal's, is not taken for one: what the place
+  holds was given to it, and a formal's value was admitted by its method's
+  uses only. With a letter that route is the next item below.
+- **A Structure a declaration makes in a method** (`Model: box`) as the
+  giver is not followed as a candidate: the path is refused with the words
+  of the limit. The declared analogue is refused too, at that declaration:
+  `a Structure-typed field in a method`. Measured on `bfeef8cc`.
+- **A path of two steps where the candidates' inner Structures are of two
+  declarations**: `an admission to a Structure type through a Structure
+  field of another type`, as for a declared formal reached through a
+  forwarder. Measured on `bfeef8cc`.
+- **A copy of the Structure under such a name** (`c: merge box`): `unknown
+  merge operand`. The words are an older refusal's and read as a rule;
+  it is a limit. Handing the whole Structure on to a declared formal works,
+  and each declaration that reaches the name is admitted there by that
+  formal's uses; measured by two probes outside the gate, a positive and a
+  refusal.
+- **A returned definition that itself reads a name nothing declares**: `a
+  callable merge binds a name that is not a formal`, for a number as for a
+  reference. A definition that calls a unit method which reads such a name
+  works (`unit_held_call_required_input_from_caller`). Measured on
+  `bfeef8cc`
+  ([HELD-DEFINITION-UNDECLARED-NAME](defects.md#held-definition-undeclared-name)).
+
+### Found beside it, measured, not repaired
+
+- **A Structure of a known declaration given through an opaque formal to a
+  Structure formal stops the translation**: `internal: a pair map of D-105
+  was asked for after the maps were declared`. The admitting text
+  enumerates the declarations recorded at the opaque formal; the closure
+  that reserves the correspondences does not follow the explicit actual
+  from an opaque formal. Every translator since `fable_full_30` at least
+  does this; no row has the shape
+  ([OPAQUE-ACTUAL-KNOWN-LAYOUT](defects.md#opaque-actual-known-layout)).
+- **A Structure that merely may reach a reader is refused for the
+  possibility under a free name too.** A Structure without the field,
+  given through an opaque formal into a typed reference and on under a
+  free name, is refused at translation where the name is handed to the
+  reader; with the reader's formal declared, the same program runs and
+  the reference refuses it when the program runs. This is the class the
+  nineteenth reply names in (d) below.
+
+### The nineteenth reply on the refusals of section 69
+
+Codex classified the five things section 69 left measured. All are debts
+of the implementation.
+
+- The letter held in a typed place: "b) TYPED-PLACE-LETTER-READMISSION:
+  YES, the observe(m) program is valid by the Consumer's use of mainArgs,
+  and this is G5-blocking shared admission/correspondence debt.
+  Reuse/compose an ACTUALLY ESTABLISHED value->MainLetter correspondence
+  with the translation-resolved MainLetter->Long used-path mapping. Merely
+  declaring the source place MainLetter is not such a proof."
+- The result of an opaque call given directly, (c): "implementation
+  LIMIT/defect, not a language rule requiring a named result model.
+  Ordinary result reception must apply the same conversion/admission,
+  evaluating the producer once."
+- The candidate chosen when the program runs: "d) A merely POSSIBLE
+  incompatible dynamic source is not proof that every call is
+  incompatible. Keep the actual runtime selection and ordinary admission:
+  the good branch succeeds, the incompatible branch fails catchably at the
+  receiving edge." With a caution about my probe: "verify your @Good/@Other
+  spelling FIRST: unary @Structure adds a level and addresses its reference
+  cell. It is NOT ordinary Structure reception."
+- The opaque reference under a free name of a typed reference: "e) An
+  opaque reference supplied as a hidden input to a typed reference use has
+  the same receiving-edge conversion/admission as the explicit analogue,
+  provided actual reference depth/type is correct."
+- The letter returned as a typed result, (f): "absence of a named source
+  schema is not proved implements-false. Classify the premature refusal as
+  implementation debt if the actual value satisfies the result's consuming
+  contract and permitted conversion."
+
+And on the duplicate stop of a candidate that is not dynamic: "remove the
+duplicate stop for genuinely compiler-proven static producer/admission
+cases." That a Structure was constructed by a declaration or a merge is not
+alone proof that a reference read later still denotes that origin; the
+routes of rebinding, of a taken address and of escape are to be checked.
+"If current origin is not proved, use the common dynamic admission rather
+than a defensive abort or assumed YES."
+
+They are recorded as
+[RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts).
+
+**Next.** The reception debts in the reply's order: the letter held in a
+typed place, with the route of a letter alone under a free name; the
+result of an opaque call given directly; the possible source, with the
+internal error above; the opaque reference under a typed free name; the
+letter as a typed result; the duplicate stop. Then the receiving-edge
+conversion by the twentieth reply, and the rest of the order of section 68.

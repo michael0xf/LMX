@@ -1,0 +1,45 @@
+# What such a path reads does not depend on the order of the unit. Two
+# declarations reach r's box. Rich, declared first, has fields r does not
+# use, before v and after it; Thin has only v. The callers stand above the
+# method that hands the name on and above r. A Structure made from Rich:
+# 21. One made from Thin, which has none of the fields r does not use: 31.
+# Entry 7.
+Rich:
+    int: a 1
+    int: v 4
+    int: b 2
+end: Rich
+
+Thin:
+    int: v 4
+end: Thin
+
+fn: rich () int
+    box: merge Rich
+    box\v: 20
+    return: mid()
+end: rich
+
+fn: thin () int
+    box: merge Thin
+    box\v: 30
+    return: mid()
+end: thin
+
+fn: mid () int
+    return: r()
+end: mid
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+int: a rich()
+int: b thin()
+int: ok 7
+if: a != 21
+    ok: 81
+if: b != 31
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

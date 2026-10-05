@@ -1,0 +1,76 @@
+# A write through such a path changes the Structure the caller gave. bump
+# reads box\v, adds one and writes it back; set only writes box\v and reads
+# nothing through the name. Neither has a declaration of box in its sight.
+# has, with a box made from Wide, calls bump through mid: bump gives 41 and
+# has's own box\v is 41 after the call, its pad untouched: 4142. plain,
+# with one made from Model: 808. only calls set through mid2: its box\v is
+# 3 after the call, 13. far, with a box made from Wide, calls set itself:
+# 14. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+fn: bump () int
+    box\v: box\v + 1
+    return: box\v
+end: bump
+
+fn: set () int
+    box\v: 3
+    return: 1
+end: set
+
+fn: mid () int
+    return: bump()
+end: mid
+
+fn: mid2 () int
+    return: set()
+end: mid2
+
+fn: has () int
+    box: merge Wide
+    box\v: 40
+    int: got mid()
+    return: got * 100 + box\v + box\pad
+end: has
+
+fn: plain () int
+    box: merge Model
+    box\v: 7
+    int: got mid()
+    return: got * 100 + box\v
+end: plain
+
+fn: only () int
+    box: merge Model
+    int: got mid2()
+    return: got * 10 + box\v
+end: only
+
+fn: far () int
+    box: merge Wide
+    int: got set()
+    return: got * 10 + box\v + box\pad
+end: far
+
+int: a has()
+int: b plain()
+int: c only()
+int: d far()
+int: ok 7
+if: a != 4142
+    ok: 81
+if: b != 808
+    ok: 82
+if: c != 13
+    ok: 83
+if: d != 14
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

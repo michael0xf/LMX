@@ -1,0 +1,43 @@
+# Each method that reads through the free name has its own uses. mid
+# reads box\pad and calls r; r reads box\v. wide gives a Structure made
+# from Wide, which has both: 341. has gives one made from Model, which has
+# no pad, to r alone: 31. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: mid () int
+    return: r() + box\pad * 100
+end: mid
+
+fn: wide () int
+    box: merge Wide
+    box\v: 40
+    box\pad: 3
+    return: mid()
+end: wide
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: r()
+end: has
+
+int: a wide()
+int: b has()
+int: ok 7
+if: a != 341
+    ok: 81
+if: b != 31
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

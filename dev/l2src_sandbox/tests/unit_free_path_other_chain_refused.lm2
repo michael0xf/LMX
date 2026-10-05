@@ -1,0 +1,34 @@
+# The same through a method that only hands the name on: the Structure
+# made from Other reaches r's box through mid, and is refused where mid
+# hands it to r, the edge at which it is admitted to r's use.
+Other:
+    int: w 1
+end: Other
+
+Model:
+    int: v 4
+end: Model
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: mid () int
+    return: r()
+end: mid
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: mid()
+end: has
+
+fn: bad () int
+    box: merge Other
+    return: mid()
+end: bad
+
+int: a has()
+int: b bad()
+sendMessage: exit(exit_code: a + b; stdout: ""; stderr: "")
+return

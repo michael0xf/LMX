@@ -1,0 +1,31 @@
+# A Structure with no field the method reads through the free name is
+# refused where it is handed, by the ordinary admission. r reads box\v.
+# has gives a Structure made from Model, which has v. bad gives one made
+# from Other, declared first, which has none: bad's call of r is refused.
+Other:
+    int: w 1
+end: Other
+
+Model:
+    int: v 4
+end: Model
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: r()
+end: has
+
+fn: bad () int
+    box: merge Other
+    return: r()
+end: bad
+
+int: a has()
+int: b bad()
+sendMessage: exit(exit_code: a + b; stdout: ""; stderr: "")
+return

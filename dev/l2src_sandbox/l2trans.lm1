@@ -169,6 +169,17 @@ int: l2_dys_cap 0
 @@: LmP0Text l2_dyp_nm 0
 int: l2_dyp_n 0
 int: l2_dyp_cap 0
+# K04, the path through an undeclared free name (ledger section 70).  A row says: hidden input nm of method m,
+# which nothing in m's sight declares and through which m reads a path, has declaration ns as the coordinate
+# space of those paths -- one of the declarations that reach the input, which has every path m uses -- or -1
+# where none is established.  The rows are made once the fixed point has closed what reaches each input
+# (l2_anchor_close); until then no such input has a schema.  Compiler metadata: nothing of it exists at run time.
+@: int l2_anc_m 0
+@@: LmP0Text l2_anc_nm 0
+@: int l2_anc_ns 0
+int: l2_anc_n 0
+int: l2_anc_cap 0
+int: l2_anc_on 0
 @: int l2_cf_omi 0
 @: int l2_cf_fk 0
 @: int l2_cf_req 0
@@ -1446,6 +1457,10 @@ prototype:
     fn: l2_held_unbound (const: @(LmP0Node node); int: mi; int: model; int: k) int
     fn: l2_held_never (int: mi; int: model; int: k) int
     fn: l2_dyp_has (int: m; const: @(LmP0Text nm)) int
+    fn: l2_anchor_of (int: m; const: @(LmP0Text nm)) int
+    fn: l2_anchor_differ (int: m; const: @(LmP0Text nm)) int
+    fn: l2_free_path_refused (int: mi; int: j; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_anchor_close () int
     fn: l2_dyp_mark (int: m; const: @(LmP0Text nm); @: int changed) int
     fn: l2_site_needs (int: m; const: @(LmP0Node node); int: fi; int: x; int: k; int: add; @: int changed; const: @(char path)) int
     fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; const: @(char ind); const: @(LmP0Node node); int: mcall; int: cfi; @@: char out) int
@@ -4879,6 +4894,8 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     l2_dyr_n: 0
     l2_dyc_n: 0
     l2_dyp_n: 0
+    l2_anc_n: 0
+    l2_anc_on: 0
     l2_lp_n: 0
     l2_pad_n: 0
     l2_pad_seq: 0
@@ -12396,6 +12413,27 @@ fn: l2_dyn_add (int: mi; const: @(LmP0Text t); int: ty) int
     l2_m_dyn[mi]: l2_m_dyn[mi] + 1
 return: 0
 
+# The root of a frame head `name\f` in any method, as l2_scan_path_root reads it in a callable merge's model.  In
+# value position the root is an atom of its own and l2_scan_ident meets it; a head is one text, so a method that
+# only writes through a name (`box\v: 3`) did not read the name: a free one was no input of the method, and the
+# write went to whichever declaration of that spelling the path's resolution found.  The root is read as that
+# atom would be.
+fn: l2_scan_head_root (int: mi; const: @(LmP0Text t); @: int seen) int
+    size_t: e 0U
+    LmP0Text: root
+    if: mi < 0 || t = 0 || t\data = 0
+        return: 0
+    while: e < t\length && t\data[e] != 92
+        e: e + 1U
+    ---
+    if: e = 0U || e >= t\length
+        return: 0
+    root.data: t\data
+    root.length: e
+    if: l2_ident(@ root) = 0
+        return: 0
+return: l2_scan_ident(mi, @ root, seen)
+
 fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     int: oi
     int: ty
@@ -12406,6 +12444,8 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     # Item 738: a frame head `name\f` in a callable merge's model -- an update through a capture.
     if: mi >= 0 && t != 0 && l2_ident(t) = 0 && l2_mad_host_of(mi) >= 0
         return: l2_scan_path_root(mi, t, seen)
+    if: mi >= 0 && t != 0 && l2_ident(t) = 0
+        return: l2_scan_head_root(mi, t, seen)
     if: mi < 0 || t = 0 || l2_ident(t) = 0
         return: 0
     if: l2_formal_find(mi, t) >= 0
@@ -13377,6 +13417,9 @@ fn: l2_source_text (const: @(LmP0Text original); const: @(LmP0Text view)) int
         return: 1
     if: l2_deref_name(original, @ base, @ levels) = 0
         return: (cast: (int) (base.data = view\data && base.length = view\length))
+    # The root of a head `name\f` (l2_scan_head_root): the same bytes, the head going on with the path's `\`.
+    if: original\data != 0 && original\data = view\data && view\length > 0U && view\length < original\length && original\data[view\length] = 92
+        return: 1
 return: 0
 
 fn: l2_node_of_text (const: @(LmP0Structure s); const: @(LmP0Text t)) @: LmP0Node
@@ -13451,6 +13494,18 @@ fn: l2_dyn_close (const: @(char path)) int
     # Each successful step can only add one of the finite method/name/type
     # facts collected from this unit. Iterate to the actual fixed point; an
     # arbitrary pass count rejects valid long call chains.
+    while: changed != 0
+        changed: 0
+        if: l2_dyn_step(path, @ changed) != 0
+            return: 1
+    ---
+    # What reaches each input is closed: the coordinate space of a path through an undeclared free name is found
+    # (l2_anchor_close).  Such an input has a schema from here on, so the sites are visited once more: what a
+    # site records by the schema of the input it hands to -- the admission it stands for, the method it marks
+    # -- is recorded now.  Nothing a site recorded before is taken back.
+    if: l2_anchor_close() != 0
+        return: 1
+    changed: 1
     while: changed != 0
         changed: 0
         if: l2_dyn_step(path, @ changed) != 0
@@ -13626,6 +13681,8 @@ fn: l2_wait_run (const: @(char path)) int
             rc: l2_check_indirect_write((cast: (@: LmP0Node) l2_wait[w].site), mi, l2_method_src(mi, path))
         if: rc = 0 && l2_wait[w].kind = 6
             rc: l2_check_fields((cast: (@: LmP0Field) l2_wait[w].site), (cast: (int) l2_wait[w].count), mi, l2_method_src(mi, path), (cast: (@: LmP0Node) l2_wait[w].source))
+        if: rc = 0 && l2_wait[w].kind = 7
+            rc: l2_check_path_write((cast: (@: LmP0Node) l2_wait[w].site), mi, l2_method_src(mi, path))
         w: w + 1
     restored: l2_source_restore(@ saved)
     l2_xfree((cast: (@: void) saved.scopes))
@@ -25233,6 +25290,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         # as C member access.
         # K02c: a hidden input whose schema is a merge result's has no NAMED type (cpni < 0) but a slot map (cpres).
         if: cpfi >= 0 && cpni < 0 && cpres < 0 && cpoi < 0
+            if: l2_free_path_refused(mi, cpfi, path, at) != 0
+                return: 1
             return: l2_error(path, at, "unknown field path root")
         # The root resolves; so must every name after it (l2_path_kind, the walk the emitter makes) -- a name that
         # names nothing is refused where the path stands, not left to the emitter, whose read fails without a word; in
@@ -25332,6 +25391,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             cck: l2_path_chain_check(mi, f\value\as\atom, chbuf, chn, @ fpk)
             if: cck = 1
                 return: l2_error(path, f\value, "a field path must end at a primitive field")
+            if: cck = 2 && l2_wait_name(mi, f\value\as\atom) = 0 && l2_free_path_refused(mi, l2_param_find(mi, f\value\as\atom), path, f\value) != 0
+                return: 1
             if: cck = 2
                 return: l2_error(path, f\value, "unknown field path segment")
             if: cck = 0
@@ -25431,6 +25492,10 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         # became `l2_p0_0\length`, and only gcc caught it.
         if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && f\value\kind = c.LM_P0_NODE_ATOM && (l2_formal_find(mi, f\value\as\atom) >= 0 || l2_slot_find(mi, f\value\as\atom) >= 0 || l2_ml_find(f\value\as\atom) >= 0)
             return: l2_error(path, f\value, "unknown field path root")
+        # A path through a free name that nothing in the method's sight declares, where no coordinate space is
+        # established for the method's paths: refused where the path stands (l2_free_path_refused).
+        if: p1 != 0 && p1\value != 0 && p1\value\kind = c.LM_P0_NODE_ATOM && l2_is_slash(p1\value\as\atom) && p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && f\value\kind = c.LM_P0_NODE_ATOM && l2_ident(f\value\as\atom) != 0 && l2_wait_name(mi, f\value\as\atom) = 0 && l2_free_path_refused(mi, l2_param_find(mi, f\value\as\atom), path, f\value) != 0
+            return: 1
         if: l2_addr_tail(f, @ p1, @ p2) = 0
             i: i + 2
             f: p2
@@ -25513,6 +25578,17 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
         return: 0
     if: l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) != 0
         return: 0
+    # The root may be a free name the closure has not typed yet: the check waits for it, as an assignment's does
+    # (l2_wait_run).  Typed, with no declaration in the method's sight and no coordinate space established, it
+    # is refused as a read of such a path is (l2_free_path_refused).
+    if: l2_seg_at(h\data, h\length, 0, @ root_off, @ root_len) = 0
+        root.data: h\data + root_off
+        root.length: root_len
+        if: l2_wait_name(mi, @ root) != 0
+            return: l2_wait_add(7, mi, (cast: (@: void) stmt), 0, 0, stmt, path)
+        if: l2_free_path_refused(mi, l2_param_find(mi, @ root), path, stmt) != 0
+            return: 1
+    ---
     kind: l2_path_contract(h\data, h\length, @ leaf_mi, @ model)
     if: kind < 0 && l2_seg_at(h\data, h\length, 0, @ root_off, @ root_len) = 0
         root.data: h\data + root_off
@@ -28327,6 +28403,15 @@ fn: l2_flow_free () int
     l2_dyp_nm: 0
     l2_dyp_n: 0
     l2_dyp_cap: 0
+    l2_xfree((cast: (@: void) l2_anc_m))
+    l2_anc_m: 0
+    l2_xfree((cast: (@: void) l2_anc_nm))
+    l2_anc_nm: 0
+    l2_xfree((cast: (@: void) l2_anc_ns))
+    l2_anc_ns: 0
+    l2_anc_n: 0
+    l2_anc_cap: 0
+    l2_anc_on: 0
     l2_xfree((cast: (@: void) l2_cfl_callee))
     l2_cfl_callee: 0
     l2_xfree((cast: (@: void) l2_cfl_via))
@@ -28629,6 +28714,289 @@ fn: l2_cfl_site_fact (const: @(LmP0Node node); int: m; int: fi; int: x; int: t) 
         f: f + 1
     ---
 return: 0 - 1
+
+fn: l2_anc_reserve () int
+    int: cap
+    size_t: isz
+    size_t: psz
+    @: void p
+    if: l2_anc_n < l2_anc_cap
+        return: 0
+    cap: l2_cap_next(l2_anc_cap, l2_anc_n + 1)
+    if: cap < 0
+        l2_alloc_err: 2
+        return: 1
+    isz: c.sizeof(c.int)
+    psz: c.sizeof(@: char)
+    p: l2_vec_grow((cast: (@: void) l2_anc_m), l2_anc_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_anc_m: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_anc_nm), l2_anc_n, cap, psz)
+    if: p = 0
+        return: 1
+    l2_anc_nm: (cast: (@@: LmP0Text) p)
+    p: l2_vec_grow((cast: (@: void) l2_anc_ns), l2_anc_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_anc_ns: (cast: (@: int) p)
+    l2_anc_cap: cap
+return: 0
+
+# The row of hidden input nm of method m, or -1.
+fn: l2_anc_row (int: m; const: @(LmP0Text nm)) int
+    int: r 0
+    if: nm = 0
+        return: 0 - 1
+    while: r < l2_anc_n
+        if: l2_anc_m[r] = m && l2_text_same(l2_anc_nm[r], nm) != 0
+            return: r
+        r: r + 1
+    ---
+return: 0 - 1
+
+# The coordinate space of hidden input nm of method m (l2_anchor_close), or -1: no row, or none established, or
+# the rows are not made yet.
+fn: l2_anchor_of (int: m; const: @(LmP0Text nm)) int
+    int: r
+    if: l2_anc_on = 0
+        return: 0 - 1
+    r: l2_anc_row(m, nm)
+    if: r < 0 || l2_anc_ns[r] < 0
+        return: 0 - 1
+return: l2_anc_ns[r]
+
+# Whether no coordinate space is established for hidden input nm of method m because the declarations that
+# reach it, each having every path the method uses, disagree in one of them.
+fn: l2_anchor_differ (int: m; const: @(LmP0Text nm)) int
+    int: r
+    if: l2_anc_on = 0
+        return: 0
+    r: l2_anc_row(m, nm)
+return: (cast: (int) (r >= 0 && l2_anc_ns[r] = -2))
+
+# A path through input j of method mi, where j is a free name that nothing in mi's sight declares and no
+# coordinate space is established for its paths: refused where the path stands, with which of the two it is --
+# the declarations that reach the name disagree, or none of them is known to give the fields; the second is a
+# limit of this implementation.  0 where j is no such input.  The expression pass would copy the path verbatim.
+fn: l2_free_path_refused (int: mi; int: j; const: @(char path); const: @(LmP0Node at)) int
+    if: mi < 0 || mi >= l2_m_n || mi = l2_e || j < l2_m_arity[mi] || l2_input_undeclared(mi, j) = 0
+        return: 0
+    if: l2_dt(mi, j - l2_m_arity[mi]) != l2_colon_graph_ty() || l2_input_schema(mi, j) != -1
+        return: 0
+    if: l2_anchor_differ(mi, l2_input_name(mi, j)) != 0
+        return: l2_error(path, at, "the declarations reaching a free name disagree in a field the method uses through it")
+return: l2_error(path, at, "a path through a free name that no declaration reaching it gives its fields to is not built yet")
+
+# The named declaration whose layout the Structure own field `own` holds has, where `own` is the result of a merge
+# of one Structure: that operand's.  -1 otherwise.  A place's own declaration -- a typed reference's, a formal's
+# -- is not taken: what the place holds was given to it, and what is given is followed (l2_anchor_reach).
+fn: l2_anchor_own_layout (int: own) int
+    int: res
+    int: ly
+    @: L2ReferenceSource source
+    if: own < 0 || own >= l2_own_n || l2_mres_source = 0
+        return: 0 - 1
+    res: l2_mres_of_own(own)
+    if: res < 0
+        return: 0 - 1
+    source: @ l2_mres_source[res]
+    ly: source\layout
+    if: ly != -1 && l2_schema_kind(ly) = 1
+        return: ly
+return: 0 - 1
+
+# One more named declaration among the candidates (set, of *n, at most cap).
+fn: l2_anchor_add (@: int set; @: int n; int: cap; int: ns) int
+    int: i 0
+    if: ns < 0
+        return: 0
+    while: i < \n
+        if: set[i] = ns
+            return: 0
+        i: i + 1
+    ---
+    if: \n >= cap
+        return: 1
+    set[\n]: ns
+    \n: \n + 1
+return: 0
+
+# The named declarations that reach place key of method mi: what its own field's declaration makes, what a site
+# records for it, and what reaches every place handed on to it -- the edges the fixed point recorded
+# (l2_d105_edge), followed against their direction.  seen_m/seen_k are the places already followed.  1 when a
+# list is full: nothing is established then.
+fn: l2_anchor_reach (int: mi; int: key; @: int set; @: int n; int: cap; @: int seen_m; @: int seen_k; @: int seen_n; int: seen_cap) int
+    int: i 0
+    int: e 0
+    while: i < \seen_n
+        if: seen_m[i] = mi && seen_k[i] = key
+            return: 0
+        i: i + 1
+    ---
+    if: \seen_n >= seen_cap
+        return: 1
+    seen_m[\seen_n]: mi
+    seen_k[\seen_n]: key
+    \seen_n: \seen_n + 1
+    if: l2_d105_key_own(key) >= 0 && l2_anchor_add(set, n, cap, l2_anchor_own_layout(l2_d105_key_own(key))) != 0
+        return: 1
+    i: 0
+    while: i < l2_d105s_n
+        if: l2_d105s_mi[i] = mi && l2_d105s_k[i] = key && l2_schema_kind(l2_d105s_ty[i]) = 1 && l2_anchor_add(set, n, cap, l2_d105s_ty[i]) != 0
+            return: 1
+        i: i + 1
+    ---
+    while: e < l2_d105e_n
+        if: l2_d105e_tmi[e] = mi && l2_d105e_tk[e] = key && l2_d105e_fmi[e] >= 0
+            if: l2_anchor_reach(l2_d105e_fmi[e], l2_d105e_fk[e], set, n, cap, seen_m, seen_k, seen_n, seen_cap) != 0
+                return: 1
+            ---
+        e: e + 1
+    ---
+return: 0
+
+# Whether declaration ns has every path of the uses just collected (l2_uses_walk_frame), each to its end.
+fn: l2_anchor_covers (int: ns) int
+    size_t: off 0U
+    @: char slot
+    []: char buf 128
+    size_t: n
+    size_t: at
+    size_t: cut
+    int: si
+    int: occurrence
+    size_t: name_at
+    LmP0Text: name
+    L2SchemaField: meta
+    if: ns < 0 || l2_uses_buf = 0
+        return: 0
+    while: off < (cast: (size_t) l2_uses_len)
+        slot: l2_uses_buf + off
+        n: strlen(slot)
+        si: ns
+        at: 0U
+        while: at < n
+            cut: at
+            while: cut < n && slot[cut] != 92
+                cut: cut + 1U
+            if: cut = at || cut - at >= 128U || si < 0
+                return: 0
+            memcpy(buf, slot + at, cut - at)
+            buf[cut - at]: 0
+            occurrence: -1
+            name_at: 0U
+            if: buf[0] = 91
+                occurrence: 0
+                name_at: 1U
+                while: name_at < cut - at && buf[name_at] >= 48 && buf[name_at] <= 57
+                    occurrence: occurrence * 10 + (cast: (int) (buf[name_at] - 48))
+                    name_at: name_at + 1U
+                if: name_at >= cut - at || buf[name_at] != 93
+                    return: 0
+                name_at: name_at + 1U
+            name.data: buf + name_at
+            name.length: cut - at - name_at
+            if: l2_schema_named_meta(si, @ name, occurrence, @ meta) < 0
+                return: 0
+            si: 0 - 1
+            if: cut < n
+                if: (meta.kind != 2 && meta.kind != 3) || meta.model < 0
+                    return: 0
+                si: meta.model
+            ---
+            at: cut + 1U
+        ---
+        off: off + n + 1U
+    ---
+return: 1
+
+# The fixed point has closed which names each method needs and what each site hands.  For every hidden input
+# that nothing in its method's sight declares and through which the method reads a path, find the coordinate
+# space of those paths: among the named declarations that reach the input, one that has every path the method
+# uses.  Every such declaration serves alike -- a candidate is admitted to it by the method's uses only, as to a
+# declared requirement, so what is accepted and what is read do not depend on which one is taken; the first in
+# the unit's order is.  That holds while the declarations that have every path agree in each: the admission of
+# one to another by those paths is then the same either way.  Where two of them disagree -- a field the method
+# reads is a number of one type in one and of another type in the other -- none is the coordinate space, and
+# the row says so (-2): to take the first would refuse the second by the first's type, and the other order
+# would refuse the other.  A declaration that reaches the input and has not a path the method uses is no
+# coordinate space, and is refused where it is handed, by the ordinary admission.  Where none is established
+# the path is refused where it stands (l2_check_fields, l2_check_path_write).
+# The fixed point runs again after the waited checks (l2_wait_run): the rows are found again, and a coordinate
+# space a checked path relied on cannot be lost.
+fn: l2_anchor_close () int
+    []: int set 64
+    []: int seen_m 256
+    []: int seen_k 256
+    int: n
+    int: seen_n
+    int: m 0
+    int: k
+    int: i
+    int: best
+    int: row
+    int: same
+    int: was l2_anc_on
+    @: LmP0Text nm
+    l2_anc_on: 0
+    while: m < l2_m_n
+        k: 0
+        while: m != l2_e && k < l2_m_dyn[m]
+            nm: l2_dn(m, k)
+            if: nm = 0 || l2_dt(m, k) != l2_colon_graph_ty() || l2_input_undeclared(m, l2_m_arity[m] + k) = 0 || l2_m_node[m] = 0 || l2_m_node[m]\as = 0
+                k: k + 1
+                continue
+            l2_uses_reset()
+            if: l2_uses_walk_frame(nm, l2_m_node[m]\as\frame) != 0 || l2_uses_oom != 0
+                l2_uses_reset()
+                return: l2_alloc_or(l2_src, l2_m_node[m], "out of memory")
+            # A name the method only hands on has no path of its own: it needs no coordinate space.
+            if: l2_uses_len = 0
+                l2_uses_reset()
+                k: k + 1
+                continue
+            n: 0
+            seen_n: 0
+            best: 0 - 1
+            if: l2_anchor_reach(m, l2_m_arity[m] + k, set, @ n, 64, seen_m, seen_k, @ seen_n, 256) = 0
+                i: 0
+                while: i < n
+                    if: (best < 0 || set[i] < best) && l2_anchor_covers(set[i]) != 0
+                        best: set[i]
+                    i: i + 1
+                ---
+                i: 0
+                while: best >= 0 && i < n
+                    if: set[i] != best && l2_anchor_covers(set[i]) != 0
+                        same: 0
+                        if: l2_descriptor_used(set[i], best, @ same) != 0 || same = 0
+                            best: 0 - 2
+                        ---
+                    i: i + 1
+                ---
+            ---
+            l2_uses_reset()
+            row: l2_anc_row(m, nm)
+            if: row < 0
+                if: l2_anc_reserve() != 0
+                    return: l2_alloc_or(l2_src, l2_m_node[m], "out of memory")
+                row: l2_anc_n
+                l2_anc_m[row]: m
+                l2_anc_nm[row]: nm
+                l2_anc_ns[row]: best
+                l2_anc_n: l2_anc_n + 1
+            else:
+                if: was != 0 && l2_anc_ns[row] >= 0 && best < 0
+                    return: l2_error(l2_src, l2_m_node[m], "internal: the coordinate space of a free name was lost after its paths were checked")
+                l2_anc_ns[row]: best
+            ---
+            k: k + 1
+        ---
+        m: m + 1
+    ---
+    l2_anc_on: 1
+return: 0
 
 # Whether some call of method m can hand a value for name nm (K04 S3).  A library unit's methods are called
 # from other translations, which may bind anything.
@@ -43736,7 +44104,9 @@ fn: l2_input_schema (int: mi; int: k) int
     own: l2_own_lexical(mi, l2_input_name(mi, k))
     if: own >= 0
         return: l2_own_schema(own)
-return: -1
+# No declaration in sight: the coordinate space of the method's paths through the name, where one is
+# established (l2_anchor_close).
+return: l2_anchor_of(mi, l2_input_name(mi, k))
 
 fn: l2_mres_of_own (int: own) int
     int: i 0

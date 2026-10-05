@@ -1,0 +1,40 @@
+# What reaches the free name through an opaque formal and a typed
+# reference. r reads box\value; far only hands the name on. typed declares
+# `@: Model box p`, p an opaque reference, and calls far. The root gives
+# typed its letter, which is no Model: refused where the reference takes
+# it, taken by typed's handler, 42. It gives a Structure made from Model
+# with value 9: that declaration reaches r's box through the opaque formal
+# and the reference, and r reads 9. Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: r () size_t
+    return: box\value
+end: r
+
+fn: far () size_t
+    return: r()
+end: far
+
+fn: typed (@: void p) int
+    int: got 0
+    @: Model box p
+    got: (cast: (int) far())
+    catch: implements ()
+        got: 42
+    ---
+return: got
+
+receiveMessage: m
+kept: merge Model
+kept\value: 9U
+int: b typed(m)
+int: c typed(kept)
+int: ok 7
+if: b != 42
+    ok: 82
+if: c != 9
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

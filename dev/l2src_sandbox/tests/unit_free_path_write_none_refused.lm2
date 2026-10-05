@@ -1,0 +1,20 @@
+# The same where the method only writes through the name: nothing that
+# reaches box has the field set writes. The write is checked once the
+# callers are known, and refused where it stands.
+Other:
+    int: w 1
+end: Other
+
+fn: set () int
+    box\v: 3
+    return: 1
+end: set
+
+fn: bad () int
+    box: merge Other
+    return: set()
+end: bad
+
+int: b bad()
+sendMessage: exit(exit_code: b; stdout: ""; stderr: "")
+return

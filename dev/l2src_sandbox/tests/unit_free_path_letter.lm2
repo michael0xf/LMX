@@ -1,0 +1,54 @@
+# A value the translation has no layout for, under such a name, is
+# admitted where the input is formed, when the program runs. r reads
+# box\value; far calls r and only hands the name on. good has a box made
+# from Model with value 7: 7. letter receives its letter under the name
+# box and calls far: the letter is no Model, the admission is refused
+# where far forms r's input, before r is entered, and letter's handler
+# takes it: 42. r counts its entries through tick: one. Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+int: entered 0
+
+fn: tick () size_t
+    node\entered: node\entered + 1
+return: 0U
+
+fn: entries () int
+return: node\entered
+
+fn: r () size_t
+    return: box\value + tick()
+end: r
+
+fn: far () size_t
+    return: r()
+end: far
+
+fn: good () size_t
+    box: merge Model
+    box\value: 7U
+    return: far()
+end: good
+
+fn: letter () int
+    receiveMessage: box
+    int: got 0
+    got: (cast: (int) far())
+    catch: implements ()
+        got: 42
+    ---
+return: got
+
+size_t: a good()
+int: b letter()
+int: ok 7
+if: a != 7U
+    ok: 81
+if: b != 42
+    ok: 82
+if: entries() != 1
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

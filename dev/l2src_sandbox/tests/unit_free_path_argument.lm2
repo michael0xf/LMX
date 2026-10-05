@@ -1,0 +1,60 @@
+# The path is read wherever a value is: as the argument of a call, and
+# by its address. r gives box\v to twice and to sum; put takes the address
+# of box\v and adds 5 through it. Nothing in r's sight declares box. has
+# gives a Structure made from Model with v 30, through mid: 60 + 31, and
+# 35 is in has's box after the call. wide gives one made from Wide, which
+# has v at another position: 80 + 41, and 45. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+fn: twice (int: x) int
+    return: x * 2
+end: twice
+
+fn: sum (int: x; int: y) int
+    return: x + y
+end: sum
+
+fn: put (@: int p) int
+    \p: \p + 5
+    return: 0
+end: put
+
+fn: r () int
+    int: got twice(box\v) + sum(box\v, 1)
+    return: got + put(@box\v)
+end: r
+
+fn: mid () int
+    return: r()
+end: mid
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    int: got mid()
+    return: got * 100 + box\v
+end: has
+
+fn: wide () int
+    box: merge Wide
+    box\v: 40
+    int: got mid()
+    return: got * 100 + box\v
+end: wide
+
+int: a has()
+int: b wide()
+int: ok 7
+if: a != 9135
+    ok: 81
+if: b != 12145
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

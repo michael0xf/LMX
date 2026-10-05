@@ -1,0 +1,61 @@
+# The root of a path that is written is read as the root of a path that is
+# read: a method that only writes through a name takes the name from its
+# caller. box is a field of the unit made from Model. set writes box\v and
+# reads nothing through the name. From the root the unit's box is written:
+# its v is 3 after the call. has has its own box and calls set through
+# mid: has's box is written, 13, and the unit's is as the root left it.
+# wide has one made from Wide, which has v at another position, and calls
+# set itself: 14. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+box: merge Model
+
+fn: set () int
+    box\v: 3
+    return: 1
+end: set
+
+fn: mid () int
+    return: set()
+end: mid
+
+fn: has () int
+    box: merge Model
+    int: got mid()
+    return: got * 10 + box\v
+end: has
+
+fn: wide () int
+    box: merge Wide
+    int: got set()
+    return: got * 10 + box\v + box\pad
+end: wide
+
+fn: unitv () int
+return: box\v
+
+int: before unitv()
+int: r0 set()
+int: after unitv()
+box\v: 9
+int: a has()
+int: b wide()
+int: last unitv()
+int: ok 7
+if: before != 4 || r0 != 1 || after != 3
+    ok: 81
+if: a != 13
+    ok: 82
+if: b != 14
+    ok: 83
+if: last != 9
+    ok: 84
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

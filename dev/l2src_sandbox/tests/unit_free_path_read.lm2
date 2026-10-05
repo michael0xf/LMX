@@ -1,0 +1,54 @@
+# A path through a free name that nothing in the method's sight declares is
+# read in the Structure the caller gives. r reads box\v, and no declaration
+# of box is in its sight: the name is a hidden input of r, and the
+# declarations that reach it are the callers'. mid calls r and only hands
+# the name on. has has a box made from Model, with v 30, and calls mid: 31.
+# wide has one made from Wide, which has v at another position: the value
+# is admitted by the field r reads, 41. direct calls r itself: 51. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: mid () int
+    return: r()
+end: mid
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: mid()
+end: has
+
+fn: wide () int
+    box: merge Wide
+    box\v: 40
+    return: mid()
+end: wide
+
+fn: direct () int
+    box: merge Model
+    box\v: 50
+    return: r()
+end: direct
+
+int: a has()
+int: b wide()
+int: c direct()
+int: ok 7
+if: a != 31
+    ok: 81
+if: b != 41
+    ok: 82
+if: c != 51
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

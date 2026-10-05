@@ -1,0 +1,40 @@
+# A reference that is present and holds nothing is present under such a
+# name: no Structure is made up for it, and no declaration's default is
+# read in its place. r asks whether box holds anything before it reads
+# box\v. has gives a reference to Model: 11. other gives one to Other,
+# which has v at another position: 22. empty gives a reference that holds
+# nothing: r sees that it holds nothing, 7. Entry 7.
+Model: (int: v 11; int: spare 99)
+Other: (int: spare 88; int: v 22)
+fn: r () int
+    if: box = 0
+        return: 7
+    return: box\v
+end: r
+fn: mid () int
+    return: r()
+end: mid
+fn: has () int
+    @: Model box @Model
+    return: mid()
+end: has
+fn: other () int
+    @: Other box @Other
+    return: mid()
+end: other
+fn: empty () int
+    @: Model box
+    return: mid()
+end: empty
+int: a has()
+int: b other()
+int: c empty()
+int: ok 7
+if: a != 11
+    ok: 81
+if: b != 22
+    ok: 82
+if: c != 7
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

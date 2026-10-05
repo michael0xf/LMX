@@ -1,0 +1,20 @@
+# No declaration that reaches the free name has the field the method
+# reads: the only caller's Structure is made from Other, which has no v.
+# Nothing gives the path its fields; the translation says so where the
+# path stands.
+Other:
+    int: w 1
+end: Other
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: bad () int
+    box: merge Other
+    return: r()
+end: bad
+
+int: b bad()
+sendMessage: exit(exit_code: b; stdout: ""; stderr: "")
+return

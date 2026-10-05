@@ -1,0 +1,42 @@
+# A declaration that has not the field a method reads through the free
+# name does not decide for the declarations that have it. Other, declared
+# first, has no v; it reaches q's box only, and q reads w. Model reaches
+# r's box, and r reads v. Each method reads the Structure its caller gave:
+# 31 and 52. Entry 7.
+Other:
+    int: w 1
+end: Other
+
+Model:
+    int: v 4
+end: Model
+
+fn: r () int
+    return: box\v + 1
+end: r
+
+fn: q () int
+    return: box\w + 2
+end: q
+
+fn: has () int
+    box: merge Model
+    box\v: 30
+    return: r()
+end: has
+
+fn: other () int
+    box: merge Other
+    box\w: 50
+    return: q()
+end: other
+
+int: a has()
+int: b other()
+int: ok 7
+if: a != 31
+    ok: 81
+if: b != 52
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

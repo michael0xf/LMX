@@ -1,0 +1,53 @@
+# A held definition with a reference among its free names is given to a
+# callable formal, and the reference travels as any method's input does.
+# g0 reads m\v; m is a field of the unit made from Model, with v 4. From the
+# root: 5 + 4. inner has its own m of the same declaration, with v 40: the
+# caller's nearest binding comes first, 45. wide has its own m of another
+# declaration, which has v at another position: it is admitted by the field
+# the definition reads, 45. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+m: merge Model
+
+Wide:
+    int: pad 1
+    int: v 4
+end: Wide
+
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + m\v
+    return: g0
+
+u0: makeUse 5
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: inner () int
+    m: merge Model
+    m\v: 40
+    return: run(u0)
+end: inner
+
+fn: wide () int
+    m: merge Wide
+    m\v: 40
+    return: run(u0)
+end: wide
+
+int: s run(u0)
+int: r inner()
+int: t wide()
+int: ok 7
+if: s != 9 || r != 45 || t != 45
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

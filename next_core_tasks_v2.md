@@ -32,12 +32,12 @@ instructions where a later measured slice supersedes them.
 **Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
-continuation bytes: `fable_full_36` RED38/1686 — against that baseline 97
-FAIL→OK, OK→FAIL 0, five red rows replaced and 296 added; the 38 red rows
-are 24 of the baseline and 14 added, nine of them labelled OPEN positives
-above the 29 of `fable_full_17`; kernel `fable_kernel_22` GREEN296 with 113
-executed selftests; L3 `fable_l3_22`
-([gates](steps/fable-continuation-20261003.md#held-actual)). The checkpoint gate
+continuation bytes: `fable_full_37` RED39/1707 — against that baseline 98
+FAIL→OK, OK→FAIL 0, five red rows replaced and 317 added; the 39 red rows
+are 23 of the baseline and 16 added, eleven of them labelled OPEN positives
+above the 29 of `fable_full_17`; kernel `fable_kernel_23` GREEN296 with 113
+executed selftests; L3 `fable_l3_23`
+([gates](steps/fable-continuation-20261003.md#merge-actual)). The checkpoint gate
 was `fable_full_04` RED70/1401; kernel `fable_kernel_01` GREEN292 with 109
 executed selftests; L3 `fable_l3_01` 11 suites/four budgets. Those bytes are committed
 as a disclosed RED development checkpoint
@@ -239,19 +239,27 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   itself, its free names formed where the formal is called; the presence
   record of step one closed by enumeration and by an instrument over the
   corpus ([ledger](steps/fable-continuation-20261003.md#held-actual)).
-- [ ] The third slice, the rest: a merge built as the actual, from the graph
-  it really makes (`unit_t7_convert`,
-  `unit_callable_formal_unfollowed_actual`); the reference: its absence
-  (`unit_callable_formal_site_names_reference`), its admission and its
-  asking along the chain (`unit_nested_definition_structure_override`); the
+- [x] The third slice, step three: formation against transport, with the
+  book's §12 clarified from the existing norm; a definition's assignment to
+  a name of its method; a merge's node with its complete contract, its body
+  reading each input at its place; a merge given as the actual followed as a
+  node of its model; the tables of merges growing with the program;
+  `unit_t7_convert` green
+  ([ledger](steps/fable-continuation-20261003.md#merge-actual)).
+- [ ] The third slice, the rest: the reference: its absence
+  (`unit_callable_formal_site_names_reference`), its admission through a
+  held call and its asking along the chain
+  (`unit_nested_definition_structure_override`), and through a Structure the
+  unit holds, read by a merge's node (`unit_t7_actual_reference`); the
   conversion of a handed-on input (`unit_held_call_free_name_converted`);
   the library unit's callable formal (`unit_lib_callable_formal`); the walked
-  consumer (`unit_callable_formal_free_names_self_walk`); the complete copy
-  of a returned definition's node against L2 §13 and a node's own contract
-  route, by which its class is told among callables formed differently
-  (`unit_held_actual_among_methods`, `unit_held_actual_two_models`). Any new
-  route that makes an occurrence a value writes its flow fact or the row
-  "not followed".
+  consumer (`unit_callable_formal_free_names_self_walk`) and a merge's node
+  built in a walked body (`unit_t7_actual_from_root`); the complete copy of
+  a node built at run time against L2 §13 and a node's own contract route,
+  by which its class is told among callables formed differently
+  (`unit_held_actual_among_methods`, `unit_held_actual_two_models`,
+  `unit_callable_formal_unfollowed_actual`). Any new route that makes an
+  occurrence a value writes its flow fact or the row "not followed".
 - [ ] A held callable given to an explicitly declared callable formal is
   received as its occurrence; the translator refuses it today. A G5 blocker
   with a required red positive

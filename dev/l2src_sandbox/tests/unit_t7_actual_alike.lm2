@@ -1,0 +1,39 @@
+# A merge and a method of the unit that form their inputs alike reach one
+# formal handed on, and one formation serves both. five and g1 each read
+# the one name other, a field of the unit, 9. take calls its formal; mid
+# hands its own formal to take. The root gives mid g1: 10. passed gives mid
+# merge(y: 5; five): 14. under has other 20: 25 and 21. Entry 7.
+int: other 9
+
+fn: five (int: y) int
+    return: y + other
+
+fn: g1 () int
+    return: other + 1
+end: g1
+
+fn: take (g1: op) int
+    return: op()
+end: take
+
+fn: mid (g1: p) int
+    return: take(p)
+end: mid
+
+fn: passed () int
+    return: mid: merge(y: 5; five)
+end: passed
+
+fn: under () int
+    int: other 20
+    return: passed() * 100 + mid(g1)
+end: under
+
+int: a mid(g1)
+int: d passed()
+int: e under()
+int: ok 7
+if: a != 10 || d != 14 || e != 2521
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

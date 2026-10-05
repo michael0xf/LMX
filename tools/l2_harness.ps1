@@ -3392,6 +3392,7 @@ $fixtures = @(
         Needle = 'a callable result returns a number'; Absent = @(); Debt = @() },
     # T7: return merge and a merge actual of a callable formal. wrap(5)(1)=6,
     # wrap(100)(1)=101, the first again 6, passed()=5. Entry 7. take: bin stays native.
+    # The merge given as the actual is followed as a node of its model (K04 S3).
     [pscustomobject]@{ Name = 'unit_t7_convert.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_AT, 3U)') },
     # §6 (steps/interpreters-callable-parity-t6t7.md): a T6/T6b callable-merge host (l2_mad_on)
@@ -7523,6 +7524,78 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_actual_two_models.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
+    # Formation against transport (K04 S3; Codex, FABLE-CODEX-20261004-12, eleventh reply).  A method that reads
+    # a free name forms its own value of it, from its own lexical source where no caller gives one, and its
+    # callees receive that value; a method that only hands the name on forms nothing, and the reader uses its
+    # own source; an assignment changes the value of that activation and no node (formed_input).  Natively and
+    # with the methods walked; the definitions are walked in both.
+    [pscustomobject]@{ Name = 'unit_held_call_formed_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,4,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_formed_input_walk.lm2'; Source = 'unit_held_call_formed_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4,6); Absent = @(); Debt = @() },
+    # A definition's assignment to a name of the method that holds it -- a formal, a field declared at method
+    # level -- assigns the definition's own value of that free name; it is no declaration of a Structure of the
+    # definition.
+    [pscustomobject]@{ Name = 'unit_nested_definition_assigns_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,2,4,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_definition_assigns_free_name_walk.lm2'; Source = 'unit_nested_definition_assigns_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4,6); Absent = @(); Debt = @() },
+    # Held definitions at a callable formal, further.  Two definitions of two methods that form alike are one
+    # formation (two_alike).  A reference among the definition's free names travels as any method's input: the
+    # root's, a caller's own of the same declaration, a caller's own of another declaration admitted by the field
+    # read (reference); a caller's own without that field is refused where the formal is called
+    # (reference_refused).  Natively only: a method with a callable formal is outside the walkable subset.
+    [pscustomobject]@{ Name = 'unit_held_actual_two_alike.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,3,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_reference_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_actual_reference_refused.lm2:27:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # The node a merge builds carries its own complete contract (T7-MODEL-FREE-NAME): the formals the merge
+    # leaves unbound, then the model's hidden inputs, and its body reads each at its place there.  A model that
+    # reads a number of the unit, held: the root, another copy, a caller's value (free_name).  Two formals left
+    # unbound (two_formals).  A model that reads a reference of the unit, held (reference_held).  A model that
+    # calls a method reading, as free names, the formal the merge binds and the one it leaves
+    # (model_calls_reader).  Natively and with the methods walked; the method that returns the merge stays
+    # native in both.
+    [pscustomobject]@{ Name = 'unit_t7_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_free_name_walk.lm2'; Source = 'unit_t7_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_two_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_two_formals_walk.lm2'; Source = 'unit_t7_two_formals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_reference_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_reference_held_walk.lm2'; Source = 'unit_t7_reference_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_model_calls_reader.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_model_calls_reader_walk.lm2'; Source = 'unit_t7_model_calls_reader.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # A merge given as the actual of a callable formal is followed as a node of its model: its model's free
+    # names are formed where the formal is called, a number and a size_t each at the model's own place
+    # (actual_free_name); a merge and a method of the unit that form alike are one formation, through a formal
+    # handed on (actual_alike); a typed reference of the unit reaches the node as a reference
+    # (actual_typed_reference).  The merges of a unit are not counted against a fixed size (many).  Natively only.
+    [pscustomobject]@{ Name = 'unit_t7_actual_free_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_actual_alike.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_actual_typed_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29); Absent = @(); Debt = @() },
+    # OPEN positives, required before G5.  Limits of this implementation and no rules; red until built, never to
+    # be turned into expected refusals.  A merge given as the actual whose model reads a reference admitted
+    # through a Structure the unit holds: a merge's node is built by a constructor of its own, which cannot
+    # reach that Structure yet (actual_reference).  The root giving a merge as an actual: a merge's node is
+    # built by native code only and the root's body is walked (actual_from_root).
+    [pscustomobject]@{ Name = 'unit_t7_actual_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_actual_from_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     # A reference among the free names of a definition its method returns (HELD-CALL-FROM-NESTED-DEFINITION; Codex,
     # FABLE-CODEX-20261004-12).  The caller that names no such reference supplies nothing, and the definition reads
     # its lexical source at the call: a held callable of the unit (root, method), with an argument and two in one
@@ -7695,9 +7768,10 @@ $fixtures = @(
     # stands and stays red until built.  A reference among the names of a callable a site does not give: only a
     # number is handed absent yet (site_names_reference).  A caller's value of another numeric type for a held
     # definition's free name: one input of a name is handed on with one type and is not converted
-    # (free_name_converted).  A merge built as the actual reaching a formal handed on: what the call needs
-    # cannot be told (unfollowed_actual).  A library unit's callable formal: every method of a library unit has
-    # an exported wrapper, so an occurrence from another translation can reach the formal.
+    # (free_name_converted).  A merge built as the actual reaching a formal handed on, where a method formed
+    # differently reaches it too: the node a merge builds is no occurrence of the unit, and its class is not
+    # told where the formal is called (unfollowed_actual).  A library unit's callable formal: every method of
+    # a library unit has an exported wrapper, so an occurrence from another translation can reach the formal.
     [pscustomobject]@{ Name = 'unit_callable_formal_site_names_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_free_name_converted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;

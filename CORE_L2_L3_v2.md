@@ -436,6 +436,17 @@ with its model by address is the partial copy of `l2_mad_emit`, an open
 obligation against L2 §13, so nothing selects by it
 ([ledger](steps/fable-continuation-20261003.md#held-actual)).
 
+A merge given as an actual is followed the same way (kind 5): the node it
+builds is formed as its model is. That node carries its own complete contract
+in its args part, the formals the merge leaves unbound and then the model's
+hidden inputs, and its body reads each input at its place there
+(`l2_rw_arg_pos`); the hidden inputs of whatever callable a call selects are
+found at that callable's own arity. The closure records whether a method
+reaches a formal as a node built when the program runs (`l2_cfr_built`), and
+the located limit above is set by that record. The tables of merges grow with
+the program
+([ledger](steps/fable-continuation-20261003.md#merge-actual)).
+
 A number no caller binds is handed absent, `refs[k] = 0`. A method that only
 forwards the name hands its entry on as it is (`l2_dyn_fwd`,
 `l2_hidden_forward`) and does not read a lexical source of its own. The
@@ -445,6 +456,13 @@ source through the parent of its occurrence: the native entry
 (`l2_rw_arg_fb`). A present zero is present. A reference keeps its
 always-present transport for now
 ([ledger](steps/fable-continuation-20261003.md#absent-input)).
+
+Formation is not transport. The value a reading method so forms is its
+activation's value of the name, and it is what its own callees receive,
+whichever source gave it; a method that only forwards forms nothing and hands
+absence on. An assignment changes that activation's value only. This restates
+L3 §12 as clarified from the existing norm, and is no new rule
+([ledger](steps/fable-continuation-20261003.md#merge-actual)).
 
 ### 8.3 Result, status, and stop are separate
 

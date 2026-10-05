@@ -1,0 +1,46 @@
+# A method that reads a free name forms its own value of it, and that value
+# is what its callees receive; a method that only hands the name on forms
+# nothing. mk's formal n is a free name of the definition f it returns: u5
+# holds f with n 5. No caller anywhere has an n. g, made with n 70, reads n
+# and calls u5: g's own value, 70, read from its node, is the value f
+# receives: 70 and 71. h, made with n 70 as well, does not read n and only
+# calls u5: nothing is formed, and f reads its own 5: 6. w, made with n 70,
+# adds 2 to its n and calls u5: 72 and 73, and again 72 and 73: the
+# assignment changes the value of that activation and neither node. After
+# all of them f's own n is still 5: 6. Entry 7.
+fn: mk (int: n) fn: () int
+    fn: f () int
+        return: n + 1
+    return: f
+
+u5: mk 5
+
+fn: mkreads (int: n) fn: () int
+    fn: g () int
+        return: n * 1000 + u5()
+    return: g
+
+fn: mkhands (int: n) fn: () int
+    fn: h () int
+        return: u5()
+    return: h
+
+fn: mkwrites (int: n) fn: () int
+    fn: w () int
+        n: n + 2
+        return: n * 1000 + u5()
+    return: w
+
+vg: mkreads 70
+vh: mkhands 70
+vw: mkwrites 70
+int: a vg()
+int: b vh()
+int: c vw()
+int: d vw()
+int: e u5()
+int: ok 7
+if: a != 70071 || b != 6 || c != 72073 || d != 72073 || e != 6
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

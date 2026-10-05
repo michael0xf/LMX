@@ -1,0 +1,35 @@
+# A merge given as the actual of a callable formal, whose model reads a
+# typed reference of the unit. r is declared `@: Model r` and bound to m,
+# whose v is 4. fiver reads r\v. Called by name: 9. Given to take as
+# merge(y: 5; fiver): the reference reaches the node as a reference, at
+# its own place among the model's inputs, 9. Entry 7.
+Model:
+    int: v 4
+end: Model
+
+m: merge Model
+@: Model r m
+
+fn: fiver (int: y) int
+    return: y + r\v
+
+fn: bin () int
+    return: 0
+
+fn: take (bin: op) int
+    return: op()
+
+fn: passed () int
+    return: take: merge(y: 5; fiver)
+
+fn: direct () int
+    return: fiver(5)
+end: direct
+
+int: c direct()
+int: b passed()
+int: ok 7
+if: c != 9 || b != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

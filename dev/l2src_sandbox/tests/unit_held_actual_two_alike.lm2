@@ -1,0 +1,40 @@
+# One callable formal receives definitions made by two methods that form
+# their inputs alike: ga and gc each read the one name n, of their own
+# method. Their signatures are the same and nothing is told apart where the
+# formal is called: one formation serves both, and each reads its own n
+# where no caller has one. pa holds ga with n 100, pc holds gc with n 30:
+# 105 and 60. under has n 1: 6 and 2. Entry 7.
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: makeA (int: n) fn: () int
+    fn: ga () int
+        return: n + 5
+    return: ga
+
+fn: makeC (int: n) fn: () int
+    fn: gc () int
+        return: n * 2
+    return: gc
+
+pa: makeA 100
+pc: makeC 30
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: under () int
+    int: n 1
+    return: run(pa) * 100 + run(pc)
+end: under
+
+int: a run(pa)
+int: b run(pc)
+int: c under()
+int: ok 7
+if: a != 105 || b != 60 || c != 602
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

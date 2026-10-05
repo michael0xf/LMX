@@ -234,7 +234,12 @@ rebind node. `self` is an internal occurrence context, not a new language name.
 Named Structure definitions are inert. If/while/for/until bodies control execution
 within the current activation; they do not automatically become procedures.
 
-Free inputs use caller sources before the permitted lexical fallback. Assigning
+Free inputs use caller sources before the permitted lexical fallback. A method
+that consumes a free input forms its activation's value from those sources, its
+own lexical fallback included, and that formed value is what its callees
+receive; a method that only forwards the name forms nothing and hands absence
+on, so the eventual consumer uses its own fallback (a clarification derived
+from L3 §12 as it stands, not a new rule). Assigning
 such an input changes the local value, not its source, and creates no own field.
 Q52's procedure incrementing hidden y leaves the caller's y unchanged. An explicit
 `node\y` or other resolved path deliberately accesses the graph.

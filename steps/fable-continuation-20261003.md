@@ -5446,3 +5446,192 @@ reference: its absence, its admission, and its asking along the chain; the
 conversion of a handed-on input; the library's ingress; the walked
 consumer; the complete copy of a returned definition's node and a node's
 own contract route.
+
+<a id="merge-actual"></a>
+## 62. Formation against transport; a merge's node and its contract; a merge as the actual (third slice, step three)
+
+### Codex's eleventh reply -12
+
+It answers the question sent with the last checkpoint: a method that reads
+a free name and receives no value for it resolves the name from its own
+lexical source; what do its own callees receive?
+
+- "Answer to your measured question: B." And the reason:
+  "The lexical source is how g forms ITS missing input n. Once g's
+  own input is resolved to 70, that is g's activation-local value of n.
+  Calling f then supplies that value."
+- Transport: "A method that only transports an absent entry and has no
+  consuming binding for that name forwards absence, so the eventual reader
+  can use its OWN lexical fallback."
+- Formation: "A method whose contract consumes the name forms its
+  activation-local hidden argument from the ordinary available sources. That
+  formed value is available to its callees. No assignment is required to
+  make a value exist."
+- No flag: "Do not introduce a runtime "has this expression read n
+  yet?" flag or make the rule depend on incidental native evaluation
+  order."
+- The text: "Mark this as a clarification derived from the existing
+  norm, NOT a verbatim author quotation or a newly accepted language
+  feature."
+- The merge whose model reads a free name: "Fix the common
+  actual-input formation and graph's input coordinates rather than changing
+  the language, treating the additional hidden input as an extra explicit
+  argument, dropping it, or padding a special T7 header. The reusable body
+  must receive the selected node's complete contract and sources." And:
+  "No invariant abort is acceptable as the successful behavior of
+  this valid call."
+- The copy: "Preserve RETURNED-NODE-PARTIAL-COPY as an architectural
+  obligation: absence of a wrong-value example is not proof of full
+  copying."
+
+The implementation already gave B, natively and walked, since
+[section 58](#absent-input). Nothing of it changed. The three fixtures Codex
+asks for are one fixture, `unit_held_call_formed_input`: the forming reader,
+the control that only transports, and the assignment. The third needed the
+first change below.
+
+### The book
+
+[§12](../docs/LMX_semantics.en.md#dynamic) lists three sources of a free
+name. Its compressed wording could be read as saying that a value a method
+read from its own lexical source is nothing its callees can receive. Three
+sentences are added to that paragraph, in both languages, beginning "It
+follows that": a method that consumes the name forms its activation's value
+from those same sources and its callees receive it; a method that only
+forwards it forms nothing; an assignment changes that activation's value
+only and an explicit `node\x` read forms no binding. This is a
+clarification derived from the existing norm by Codex's reply. It is no
+quotation of the author and no new feature of the language, and it is not
+archived in `LMX_blog/`. The kernel map carries the same sentence at its
+existing place.
+
+### What changed
+
+All in `dev/l2src_sandbox/l2trans.lm1`.
+
+| Part | Where | What |
+| --- | --- | --- |
+| An assignment in a definition | `l2_local_ns_shape` | A head that names a formal, or a field declared at method level, of the method that holds the definition is a binding the head resolves to. The statement assigns the definition's own value of that free name. Before, it was read as the declaration of a Structure of the definition, and the definition was refused. |
+| A merge's node: its contract | `l2_t7_write`, `l2_mad_max_inputs` | The node's args part is the node's complete contract: the formals the merge leaves unbound, then the model's hidden inputs, a cell of each one's type made by the emitter a method's own args part uses (`l2_emit_cell_new_ty`). The widest input list of a held node counts a merge's node. |
+| A merge's node: its body | `l2_rw_arg_pos`, `l2_rw_arg`, `l2_rw_arg_fb`, `l2_rw_arg_lex` | The body reads each input at its place in the node's contract. Before, a hidden input was read at the model's own place, past the end of what the call hands. A formal the merge binds, reached by its place among the model's inputs, is the field of the node that holds its value. |
+| A merge's node: what it cannot name | `l2_rw_cell` | A cell held in a nested body of the unit is named, where the unit is built, by that constructor's own alias. A merge's node is built by a constructor of its own. Such a read is a located limit at the merge. |
+| The tables of merges | `l2_t7_reserve`, `l2_t7b_reserve`, `l2_t7h_reserve` | They grow with the program. Before: 8 merges, 16 bindings, 16 entries of declared headers, and the ninth merge refused as `out of memory`. |
+| A merge as the actual: the fact | `l2_check_call`, `l2_t7_actual_model`, `l2_cfl_note` with kind 5 | The fact says: a node the merge builds of model M. It is followed as a held definition's node is. One merge is one site, however often its call is checked. |
+| Nodes built at run time | `l2_cfr_built`, `l2_cfr_any_built`, `l2_cfl_classes` | The closure records whether a method reaches a formal as a node built when the program runs: by a return or by a merge. The limit of [section 61](#held-actual) is set by that record, with new words, and no longer by the method's being a definition's model. |
+| The hidden inputs of the selected callable | `l2_emit_call_hides`, `l2_emit_call_go`, `l2_rw_call` | They are found at that callable's own arity. Before, they were looked up after the call's declared actuals: the same place for a method and for a definition, another one for a merge's node, whose model has more formals than the call gives. |
+| The written merge in the graph | `l2_rw_merge_actual`, `l2_rw_callable_actual` | The merge given as an actual is retained in the graph of the method that gives it as a machine operation: each binding under its name with its value resolved as any actual's, and the model as the occurrence it names. The method is native-only. Before, the pass that builds every method's graph refused the method. |
+| The root | `l2_t7_from_actual` | The root's merge given as an actual is refused as the limit it is, no longer as `incompatible entry signature`. |
+
+The node a merge builds keeps the header its method declares: nothing is
+added to what a caller writes. What changed is the node's own args part,
+which every callable has for all its inputs, and the places its body reads.
+
+### Defects met on the way
+
+Each was there before this step; each is recorded in `steps/defects.md`.
+
+- Fixed: [T7-MODEL-FREE-NAME](defects.md#t7-model-free-name), and with it a
+  merge that leaves two formals unbound, a model that reads a reference, and
+  a model that calls a reader of its bound formal;
+  [NESTED-DEFINITION-ASSIGNS-HOST-NAME](defects.md#nested-definition-assigns-host-name);
+  [T7-TABLES-FIXED-SIZE](defects.md#t7-tables-fixed-size).
+- Open, each a located limit with a red required positive:
+  [T7-ACTUAL-REFERENCE](defects.md#t7-actual-reference);
+  [T7-ACTUAL-FROM-ROOT](defects.md#t7-actual-from-root).
+- `unit_t7_convert`, red since the baseline, is green.
+
+### Measured
+
+On the committed translator (`5c492ca7`) and on this one, natively; the
+rows that have a walked twin give the same with the methods walked.
+
+| Program | Before | Now |
+| --- | --- | --- |
+| `unit_held_call_formed_input`: `f` reads `n`, its copy 5; `g`, with its own copy 70, reads `n` and calls it; `h` only calls it; `w` adds 2 to its `n` and calls it, twice; then `f` alone | refused: the assignment in `w` was read as a declaration (`a reference where a number is asked`) | 70 and 71; 6; 72 and 73, twice; 6 |
+| `unit_nested_definition_assigns_free_name`: a definition adds to a formal of its method, twice; to a field its method declares, twice; sets the formal before reading it; reads it into a local and then assigns it | refused: `return value has incompatible type` | 72 and 72; 141 and 141; 7; 75 |
+| `unit_held_actual_two_alike`: two definitions of two methods, each reading `n`, at one formal; then under a caller's `n` 1 | 105 and 60; 6 and 2 | the same; now a row |
+| `unit_held_actual_reference`: a definition reading `m\v` at a formal; from the root, under a caller's `m` of the same declaration, under one of another declaration with `v` elsewhere | 9; 45; 45 | the same; now a row |
+| `unit_held_actual_reference_refused`: under a caller's `m` of a declaration without `v` | refused at 27:13: `implements is false in function argument` | the same; now a row |
+| `unit_t7_free_name`: a held merge whose model reads the unit's `other`, 9; two copies; under a caller's `other` 20 | the process stops: `a callable merge was called outside its header` | 15 and 110; 26 |
+| `unit_t7_two_formals`: a held merge that leaves two formals unbound, the only callable result of its unit | the process stops, the same way | 215 |
+| `unit_t7_reference_held`: a held merge whose model reads `m\v` | the process stops, the same way | 10 |
+| `unit_t7_model_calls_reader`: the model calls a method that reads, as free names, the formal the merge binds and the one it leaves | `walk error: INVALID` | 507 and 1000 |
+| `unit_t7_convert`, red since the baseline: `passed` gives `take` a merge | refused: at the baseline the merge had no place in the graph of `passed` (`an unresolved callable occurrence`); since section 57 the call through the formal, as one not followed | 6, 101, 6 and 5 |
+| `unit_t7_actual_free_name`: a merge given as an actual whose model reads `other`; bound to a literal and to the giving method's formal; under a caller's `other` 20; a model reading a `size_t` | refused: not followed | 14; 16 and 109; 25 and 27; 6 |
+| `unit_t7_actual_alike`: a merge and a method of the unit, each reading only `other`, at a formal handed on; under a caller's `other` 20 | refused: not followed | 10 and 14; 25 and 21 |
+| `unit_t7_actual_typed_reference`: the model reads `r\v`, `r` a typed reference of the unit | refused: not followed | 9 by name; 9 through the formal |
+| `unit_t7_many`: 26 merges, 26 bindings, 18 entries of declared headers | refused at the ninth merge: `out of memory` | 153 and 1935 |
+| `unit_t7_actual_reference`: the model reads `m\v`, `m` a merge result of the unit, and the merge is given as an actual | refused: not followed | refused at the merge, as a limit: OPEN |
+| `unit_t7_actual_from_root`: the root gives a merge as an actual | refused: `incompatible entry signature` | refused at the merge, as a limit and in those words: OPEN |
+| `unit_callable_formal_unfollowed_actual`: a merge's node and a method formed differently at one formal handed on | refused: what the call needs cannot be told | refused where the formal is called: the class of a node built at run time is not told. Still OPEN |
+
+What a merge's node reads where no caller gives the name is the unit's
+cell, the lexical source of its model, baked into the node's body where the
+node is built. Whether the node's own parent, the method that built it,
+should come before the unit in that lookup is not settled here: no row
+depends on it, and it belongs with the complete copy of a built node.
+
+Not carried: a walked consumer. With the methods walked a method with a
+callable formal is refused whole, as before.
+
+### Replay
+
+The step's translator against the committed one (`5c492ca7`), on the 1685
+translations recorded by `fable_full_36`: exit, messages and the generated
+L1 are the same on 1681 rows. Of the four others three are refused as
+before with the limit's new wording, and `unit_t7_convert`, refused before,
+translates. No L1 of any other row changes: a merge's node whose model has
+no hidden input is built as it was, byte for byte.
+
+The replay, the mutants and the focused run used a build whose generated C
+equals, byte for byte, that of the source committed with this step; the two
+sources differ in two comments.
+
+The step's rows and the four refusals of the merge forms were run before
+the gates (`fable_s3cp_01`): 29 rows, 24 pass, the five labelled OPEN rows
+are red.
+
+### Mutants
+
+Each is a copy of the step's translator with one change, built apart and run
+natively on the sixteen new fixtures and on five rows that were there.
+
+| Mutant | What the fixtures say |
+| --- | --- |
+| A definition's assignment to a name of its method is read as before | `unit_held_call_formed_input` and `unit_nested_definition_assigns_free_name` are refused. |
+| The body of a merge's node reads an input at the model's own place | Nine rows end in `walk error: INVALID`: `unit_t7_convert`, `_free_name`, `_two_formals`, `_reference_held`, `_model_calls_reader`, `_actual_free_name`, `_actual_alike`, `_actual_typed_reference`, `_many`. |
+| A formal the merge binds, reached by its place among the model's inputs, is read as an input | `unit_t7_model_calls_reader` ends in `walk error: INVALID`. |
+| The args part of a merge's node holds the declared formals only | `unit_t7_free_name` and `_reference_held` stop the process: `a callable merge was called outside its header`. |
+| The widest input list of a held node does not count a merge's node | `unit_t7_free_name`, `_two_formals`, `_reference_held` and `_many` stop the process the same way. |
+| The tables of merges keep their fixed sizes | `unit_t7_many` is refused: `out of memory`. |
+| A merge given as an actual writes the fact "not followed" | `unit_t7_convert`, `_actual_free_name`, `_actual_alike`, `_actual_typed_reference` and `_many` are refused. |
+| The written merge is not retained in the graph of the method that gives it | The same five rows are refused: `an unresolved callable occurrence`. |
+| A hidden input of the selected callable is looked up after the call's declared actuals | `unit_t7_actual_typed_reference` ends in `walk error: INVALID`: the reference is handed as the `int` the merge binds. |
+| A node built at run time reaches a formal as if it were the unit's occurrence of its model | No gated row changes. Of the three OPEN rows of the limit two end in `walk error: INVALID` and in a wrong value, and `unit_callable_formal_unfollowed_actual` gives the right values by the order of its classes. |
+| A merge's node names a holder only the unit's constructor can name | No gated row changes. The OPEN row `unit_t7_actual_reference` translates into C that does not compile, in place of the located limit. |
+
+The last two are not kills by gated rows, and are said as they are. Each is
+a limit whose only witnesses are red required positives; they become gated
+kills when the route is built.
+
+### Evidence
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/fable_kernel_23` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/fable_l3_23` (`run_l3_selftest.py`) | All 11 suites exit 0; four type-budget units. |
+| `build/l2_harness/fable_full_37` (full harness) | RED 39 of 1707. Against `fable_full_36` (RED 38 of 1686): FAIL→OK 1, `unit_t7_convert`, a row of the baseline; OK→FAIL 0; added 21, of which 19 green and two labelled OPEN rows red; removed 0. |
+| `build/l2_harness/fable_s3cp_01` (focused, before the gates) | 29 rows, 24 pass; see the replay above. |
+
+Against the baseline `fable_full_01` (RED 126 of 1395), counted directly:
+98 FAIL→OK, OK→FAIL 0, five red rows replaced, 317 added of which 16 red.
+The 39 red rows are 23 of the baseline and 16 added: the five that
+`fable_full_17` had above the baseline and eleven labelled OPEN positives.
+The pre-gate hashes of the translator, the sixteen fixtures and the harness
+equal the live files and every staged copy (`tie.py`).
+
+**Next.** The reference: its absence, its admission through a held call,
+and its asking along the chain; the conversion of a handed-on input; the
+library's ingress; the walked consumer, and with it a merge's node built in
+a walked body; the complete copy of a node built at run time and a node's
+own contract route.

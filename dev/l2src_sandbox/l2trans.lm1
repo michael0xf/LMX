@@ -113,11 +113,14 @@ int: l2_cf_n 0
 int: l2_cf_cap 0
 # K04 (ledger section 57; Codex, FABLE-CODEX-20261004-12): which methods reach each callable formal.
 # A fact is written where an actual meets a callable formal (l2_check_call): formal t of the callee
-# receives method a (kind 1), the caller's own formal a_fi of method a handed on (kind 2), or an
-# occurrence this translation does not follow (kind 3: a merge built as the actual).  The callee is
-# method `callee`, or, when the call itself goes through a formal, whichever method reaches formal
-# via_fi of method via.  The closure (l2_cfr_*) says: method m reaches formal t of consumer c; m = -1
-# says an unfollowed occurrence does.  Compiler metadata: nothing of it exists at run time.
+# receives method a (kind 1), the caller's own formal a_fi of method a handed on (kind 2), a node of
+# model a that the held name a_fi holds (kind 4), a node a merge builds of model a (kind 5), or an
+# occurrence this translation does not follow (kind 3: no route writes it today; a route not yet
+# followed has to).  The callee is method `callee`, or, when the call itself goes through a formal,
+# whichever method reaches formal via_fi of method via.  The closure (l2_cfr_*) says: method m reaches
+# formal t of consumer c, as the unit's occurrence of it or as a node built when the program runs
+# (l2_cfr_built); m = -1 says an unfollowed occurrence does.  Compiler metadata: nothing of it exists
+# at run time.
 # A fact keeps its call site (l2_cfl_node): what one site's actual can denote is asked per site.  The tables
 # grow (l2_cfl_reserve, l2_cfr_reserve): no count of facts or of reaching methods is fixed.
 @: int l2_cfl_callee 0
@@ -133,6 +136,7 @@ int: l2_cfl_cap 0
 @: int l2_cfr_c 0
 @: int l2_cfr_t 0
 @: int l2_cfr_m 0
+@: int l2_cfr_built 0
 int: l2_cfr_n 0
 int: l2_cfr_cap 0
 # K04 S2 part two (ledger section 59; Codex, FABLE-CODEX-20261004-12): why a method that does not read a name
@@ -259,27 +263,31 @@ int: l2_mcap_room 0
 # T7: one merge into an already-declared callable type. Kind 1 is `return: merge`
 # of a host whose result is `fn:`. Kind 2 is that merge as a callable formal's actual.
 # Frames of the model are walked once with the binding in effect and shared by address.
+# The three tables grow with the program (K09): its merges, their bindings, their declared headers.
 int: l2_t7_n 0
 int: l2_t7_walk 0
 int: l2_t7b_n 0
 int: l2_t7h_n 0
-[]: int l2_t7_kind 8
-[]: int l2_t7_host 8
-[]: int l2_t7_model 8
-[]: int l2_t7_ret 8
-[]: int l2_t7_argc 8
-[]: int l2_t7_h0 8
-[]: int l2_t7_nb 8
-[]: int l2_t7_b0 8
-[]: int l2_t7_steps 8
-[]: int l2_t7_anchor 8
-[]: @(LmP0Node) l2_t7_at 8
-[]: int l2_t7b_how 16
-[]: int l2_t7b_val 16
-[]: int l2_t7b_slot 16
-[]: @(LmP0Text) l2_t7b_nm 16
-[]: int l2_t7h_ty 16
-[]: @(LmP0Text) l2_t7h_nm 16
+int: l2_t7_cap 0
+int: l2_t7b_cap 0
+int: l2_t7h_cap 0
+@: int l2_t7_kind 0
+@: int l2_t7_host 0
+@: int l2_t7_model 0
+@: int l2_t7_ret 0
+@: int l2_t7_argc 0
+@: int l2_t7_h0 0
+@: int l2_t7_nb 0
+@: int l2_t7_b0 0
+@: int l2_t7_steps 0
+@: int l2_t7_anchor 0
+@@: LmP0Node l2_t7_at 0
+@: int l2_t7b_how 0
+@: int l2_t7b_val 0
+@: int l2_t7b_slot 0
+@@: LmP0Text l2_t7b_nm 0
+@: int l2_t7h_ty 0
+@@: LmP0Text l2_t7h_nm 0
 # Where the static typing of a root expression first met two numeric types (l2_rw_tyof), for the
 # located refusal.
 @: LmP0Node l2_rw_mix_at 0
@@ -1013,6 +1021,7 @@ prototype:
     fn: l2_rw_carry (int: into; int: oi; @: int out) int
     fn: l2_rw_seen (int: oi) int
     fn: l2_rw_arg (int: parent; int: j; @: int out) int
+    fn: l2_rw_arg_pos (int: j) int
     fn: l2_rw_ret (@: LmP0Field first; int: n; int: into; @: int out) int
     fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
     fn: l2_rw_mad_trailer (int: mi; int: into; int: slot; @: int made) int
@@ -1071,6 +1080,8 @@ prototype:
     fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int out) int
+    fn: l2_rw_merge_actual (const: @(LmP0Node node); int: parent; @: int out) int
+    fn: l2_pap_method_of (const: @(LmP0Node node)) int
     fn: l2_rw_path_reference (const: @(LmP0Node node); const: @(LmP0Text head); int: parent; @: int out) int
     fn: l2_d105_sub (int: mi; int: k) int
     fn: l2_d105_mark (int: mi; int: k) int
@@ -1906,6 +1917,7 @@ prototype:
     fn: l2_t7_host_site (int: mi) int
     fn: l2_t7_from_return (int: mi; const: @(LmP0Node node); const: @(char path)) int
     fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); const: @(char path)) int
+    fn: l2_t7_actual_model (int: mi; const: @(LmP0Node node)) int
     fn: l2_t7_emit_actual (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
     fn: l2_t7_count () int
@@ -11029,6 +11041,10 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
     if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_find_method(h) >= 0 || l2_is_known(h) != 0
         return: 0
     if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_receiver_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h, 0) != 0
+        return: 0
+    # A definition inside a method sees that method's names: its formal, or a field it declares at method
+    # level, is a binding the head resolves to (l2_colon_bound_ty), and the statement assigns it.
+    if: l2_mad_host_of(mi) >= 0 && (l2_formal_find(l2_mad_host_of(mi), h) >= 0 || l2_mad_host_own(l2_mad_host_of(mi), h) >= 0)
         return: 0
     oi: l2_own_find(mi, h)
     if: oi >= 0 && l2_own_decl[oi] != stmt
@@ -24791,7 +24807,8 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
             if: actual_span = 1 && a0\value != 0 && l2_frame_head(a0\value, "merge") != 0
                 if: l2_t7_from_actual(mi, idx, actual_i, a0\value, path) != 0
                     return: 1
-                if: l2_cfl_note(idx, mi, fi, actual_i, 3, 0 - 1, 0 - 1, node) != 0
+                # K04 S3: the node the merge builds is formed as its model is (kind 5).
+                if: l2_cfl_note(idx, mi, fi, actual_i, 5, l2_t7_actual_model(mi, a0\value), 0 - 1, node) != 0
                     return: 1
                 ---
             else:
@@ -28046,6 +28063,10 @@ fn: l2_cfr_reserve () int
     if: p = 0
         return: 1
     l2_cfr_m: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_cfr_built), l2_cfr_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_cfr_built: (cast: (@: int) p)
     l2_cfr_cap: cap
 return: 0
 
@@ -28155,6 +28176,46 @@ fn: l2_dyp_reserve () int
 return: 0
 
 fn: l2_flow_free () int
+    l2_xfree((cast: (@: void) l2_t7_kind))
+    l2_t7_kind: 0
+    l2_xfree((cast: (@: void) l2_t7_host))
+    l2_t7_host: 0
+    l2_xfree((cast: (@: void) l2_t7_model))
+    l2_t7_model: 0
+    l2_xfree((cast: (@: void) l2_t7_ret))
+    l2_t7_ret: 0
+    l2_xfree((cast: (@: void) l2_t7_argc))
+    l2_t7_argc: 0
+    l2_xfree((cast: (@: void) l2_t7_h0))
+    l2_t7_h0: 0
+    l2_xfree((cast: (@: void) l2_t7_nb))
+    l2_t7_nb: 0
+    l2_xfree((cast: (@: void) l2_t7_b0))
+    l2_t7_b0: 0
+    l2_xfree((cast: (@: void) l2_t7_steps))
+    l2_t7_steps: 0
+    l2_xfree((cast: (@: void) l2_t7_anchor))
+    l2_t7_anchor: 0
+    l2_xfree((cast: (@: void) l2_t7_at))
+    l2_t7_at: 0
+    l2_xfree((cast: (@: void) l2_t7b_how))
+    l2_t7b_how: 0
+    l2_xfree((cast: (@: void) l2_t7b_val))
+    l2_t7b_val: 0
+    l2_xfree((cast: (@: void) l2_t7b_slot))
+    l2_t7b_slot: 0
+    l2_xfree((cast: (@: void) l2_t7b_nm))
+    l2_t7b_nm: 0
+    l2_xfree((cast: (@: void) l2_t7h_ty))
+    l2_t7h_ty: 0
+    l2_xfree((cast: (@: void) l2_t7h_nm))
+    l2_t7h_nm: 0
+    l2_t7_n: 0
+    l2_t7b_n: 0
+    l2_t7h_n: 0
+    l2_t7_cap: 0
+    l2_t7b_cap: 0
+    l2_t7h_cap: 0
     l2_xfree((cast: (@: void) l2_dyp_m))
     l2_dyp_m: 0
     l2_xfree((cast: (@: void) l2_dyp_nm))
@@ -28181,6 +28242,8 @@ fn: l2_flow_free () int
     l2_cfr_t: 0
     l2_xfree((cast: (@: void) l2_cfr_m))
     l2_cfr_m: 0
+    l2_xfree((cast: (@: void) l2_cfr_built))
+    l2_cfr_built: 0
     l2_xfree((cast: (@: void) l2_dyr_m))
     l2_dyr_m: 0
     l2_xfree((cast: (@: void) l2_dyr_at))
@@ -28247,31 +28310,59 @@ fn: l2_cfr_has (int: c; int: t; int: m) int
     ---
 return: 0
 
-fn: l2_cfr_add (int: c; int: t; int: m; @: int changed) int
-    if: c < 0 || l2_cfr_has(c, t, m) != 0
+# Method m reaches formal t of consumer c.  built: as a node made when the program runs -- by the return of the
+# method that holds a definition, or by a merge -- and not as the one occurrence the unit has of m.  One row
+# says both when both happen.
+fn: l2_cfr_add (int: c; int: t; int: m; int: built; @: int changed) int
+    int: i 0
+    if: c < 0
         return: 0
+    while: i < l2_cfr_n
+        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] = m
+            if: built != 0 && l2_cfr_built[i] = 0
+                l2_cfr_built[i]: 1
+                \changed: 1
+            ---
+            return: 0
+        i: i + 1
+    ---
     if: l2_cfr_reserve() != 0
         return: l2_alloc_or(l2_src, 0, "out of memory")
     l2_cfr_c[l2_cfr_n]: c
     l2_cfr_t[l2_cfr_n]: t
     l2_cfr_m[l2_cfr_n]: m
+    l2_cfr_built[l2_cfr_n]: built
     l2_cfr_n: l2_cfr_n + 1
     \changed: 1
 return: 0
 
-# What fact f brings to its formal of consumer c.
+# Whether a node built when the program runs reaches formal t of consumer c.
+fn: l2_cfr_any_built (int: c; int: t) int
+    int: i 0
+    while: i < l2_cfr_n
+        if: l2_cfr_c[i] = c && l2_cfr_t[i] = t && l2_cfr_m[i] >= 0 && l2_cfr_built[i] != 0
+            return: 1
+        i: i + 1
+    ---
+return: 0
+
+# What fact f brings to its formal of consumer c.  A method named (1) is the unit's occurrence of it.  A held
+# name (4) is a node of its model, and a merge given as the actual (5) a node the merge builds of its model:
+# each is formed as its model is and is no occurrence of the unit.
 fn: l2_cfl_bring (int: f; int: c; @: int changed) int
     int: j 0
     int: n
-    if: l2_cfl_kind[f] = 1 || l2_cfl_kind[f] = 4
-        return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], changed)
+    if: l2_cfl_kind[f] = 1
+        return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], 0, changed)
+    if: l2_cfl_kind[f] = 4 || l2_cfl_kind[f] = 5
+        return: l2_cfr_add(c, l2_cfl_t[f], l2_cfl_a[f], 1, changed)
     if: l2_cfl_kind[f] = 3
-        return: l2_cfr_add(c, l2_cfl_t[f], 0 - 1, changed)
+        return: l2_cfr_add(c, l2_cfl_t[f], 0 - 1, 0, changed)
     # A formal handed on: whatever reaches it, an unfollowed occurrence included.  The table may grow under
     # the loop; its first n rows serve this round, and the closure repeats until nothing is added.
     n: l2_cfr_n
     while: j < n
-        if: l2_cfr_c[j] = l2_cfl_a[f] && l2_cfr_t[j] = l2_cfl_a_fi[f] && l2_cfr_add(c, l2_cfl_t[f], l2_cfr_m[j], changed) != 0
+        if: l2_cfr_c[j] = l2_cfl_a[f] && l2_cfr_t[j] = l2_cfl_a_fi[f] && l2_cfr_add(c, l2_cfl_t[f], l2_cfr_m[j], l2_cfr_built[j], changed) != 0
             return: 1
         j: j + 1
     ---
@@ -28290,7 +28381,7 @@ fn: l2_cfl_close () int
         while: f < l2_m_n
             j: 0
             while: j < l2_m_arity[f]
-                if: l2_cf_get(f, j) >= 0 && l2_cfr_add(f, j, 0 - 1, @ changed) != 0
+                if: l2_cf_get(f, j) >= 0 && l2_cfr_add(f, j, 0 - 1, 0, @ changed) != 0
                     return: 1
                 j: j + 1
             ---
@@ -28400,9 +28491,9 @@ return: l2_error(l2_src, node, missing)
 # formal: the definition is dormant, asks nothing of anyone and its call forms no hidden input.  One class is
 # formed as it is.  More than one is selected by exact occurrence (l2_emit_call_classes).  The list of the
 # method that declares the formal is used by no path.  Where an occurrence the translation does not follow
-# reaches the formal (a merge built as the actual; an ingress from another translation, recorded by
-# l2_cfl_close) the call is refused where it stands: a limit of this implementation and no rule of the
-# language.
+# reaches the formal (an ingress from another translation, recorded by l2_cfl_close) the call is refused
+# where it stands, and so is a call that would have to tell a node built when the program runs from a
+# callable formed differently: limits of this implementation and no rules of the language.
 fn: l2_cfl_classes (int: c; int: t; const: @(LmP0Node at); @: int out) int
     int: n
     int: i 0
@@ -28416,14 +28507,10 @@ fn: l2_cfl_classes (int: c; int: t; const: @(LmP0Node at); @: int out) int
             k: k + 1
         i: i + 1
     ---
-    # K04 S3: a node of a model is no occurrence of the unit; telling its class from another's at run time is
-    # not built yet.
-    i: 0
-    while: k > 1 && i < n
-        if: l2_mad_host_of(l2_cfl_at(c, t, i)) >= 0
-            return: l2_error(l2_src, at, "a call through a callable formal that receives a held callable among callables formed differently is not built yet")
-        i: i + 1
-    ---
+    # K04 S3: a node built when the program runs is no occurrence of the unit; telling its class from
+    # another's where the formal is called is not built yet.
+    if: k > 1 && l2_cfr_any_built(c, t) != 0
+        return: l2_error(l2_src, at, "a call through a callable formal that receives a callable built at run time among callables formed differently is not built yet")
     \out: k
 return: 0
 
@@ -28566,7 +28653,7 @@ fn: l2_site_denotes (int: m; const: @(LmP0Node node); int: fi; int: x; int: t; i
     f: l2_cfl_site_fact(node, m, fi, x, t)
     if: f < 0
         return: 2
-    if: l2_cfl_kind[f] = 1 || l2_cfl_kind[f] = 4
+    if: l2_cfl_kind[f] = 1 || l2_cfl_kind[f] = 4 || l2_cfl_kind[f] = 5
         return: (cast: (int) (l2_cfl_a[f] = a))
     if: l2_cfl_kind[f] = 2 && l2_cfl_a[f] = m
         if: l2_cfr_has(m, l2_cfl_a_fi[f], 0 - 1) != 0
@@ -29153,11 +29240,11 @@ fn: l2_emit_call_hides (int: mi; int: hid; int: nhid; int: nact; int: self_t; co
             continue
         if: l2_hidden_from(mi, hid, ai, self_t, ind, l2_act_at(hides, ai), node) != 0
             return: 1
-        if: l2_cap_arg_ns(hid, nact + ai) < 0 && l2_hidden_emit_admit(mi, hid, ai, l2_act_at(hides, ai), ind) != 0
+        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) < 0 && l2_hidden_emit_admit(mi, hid, ai, l2_act_at(hides, ai), ind) != 0
             return: 1
         # Capturing nested/PAP occurrences retain their existing admission
         # role, but admission completes before this call's publication.
-        if: mcall != 0 && l2_cap_arg_ns(hid, nact + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(hid, ai)) = 0 && l2_cap_emit_admit(l2_cap_arg_ns(hid, nact + ai), l2_act_at(hides, ai), ind) != 0
+        if: mcall != 0 && l2_cap_arg_ns(hid, l2_m_arity[hid] + ai) >= 0 && l2_cap_src_marked(mi, l2_dn(hid, ai)) = 0 && l2_cap_emit_admit(l2_cap_arg_ns(hid, l2_m_arity[hid] + ai), l2_act_at(hides, ai), ind) != 0
             return: 1
         ai: ai + 1
     ---
@@ -29226,7 +29313,7 @@ fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(
     ai: 0
     while: ai < nhid
         c.sprintf(ref_dest, "l2_cfr%d[%d]", t, nact + ai)
-        if: l2_emit_hidden_ref(l2_input_ft(hid, nact + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
+        if: l2_emit_hidden_ref(l2_input_ft(hid, l2_m_arity[hid] + ai), l2_act_at(hides, ai), ind, ref_dest) != 0
             return: 1
         ai: ai + 1
     if: l2_emit_dyn_call(mi, idx, t, self_t, ind, nact + nhid) != 0
@@ -34328,6 +34415,11 @@ return: l2_rw_put(\out, value_slot, prim)
 fn: l2_rw_cell (int: node; int: oi) int
     int: k
     @: L2GraphField field l2_graph_field(oi)
+    # A merge's node is built by a constructor of its own, when the merge runs.  A holder the unit's
+    # constructor allocated is named there by that constructor's own alias (l2_emit_graph_build_place), which
+    # the node's constructor does not have: such a cell is not reached from a merge's node yet.
+    if: l2_t7_walk != 0 && l2_t7_walk <= l2_t7_n && field != 0 && field\holder != 0
+        return: l2_error(l2_src, l2_t7_at[l2_t7_walk - 1], "a callable merge whose body reads a cell held in a nested body of the unit is not built yet")
     if: l2_rw_emit = 0
         return: 0
     if: field = 0
@@ -35436,10 +35528,10 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
         # itself -- the method reads it through that type's table (path kind 7) -- unless the host's formal is one a
         # call site fills by name (D-105): that value is admitted already, with its table.
         holder: \out
-        if: l2_cap_arg_ns(hid, n + d) >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(hid, d)) = 0 && l2_rw_admit_as(\out, l2_cap_arg_ns(hid, n + d), l2_cap_arg_ns(hid, n + d), @ holder) != 0
+        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + d) >= 0 && l2_cap_src_marked(l2_rw_mi, l2_dn(hid, d)) = 0 && l2_rw_admit_as(\out, l2_cap_arg_ns(hid, l2_m_arity[hid] + d), l2_cap_arg_ns(hid, l2_m_arity[hid] + d), @ holder) != 0
             return: 1
-        hidden_model: l2_input_schema(hid, n + d)
-        if: l2_cap_arg_ns(hid, n + d) < 0 && hidden_model != -1
+        hidden_model: l2_input_schema(hid, l2_m_arity[hid] + d)
+        if: l2_cap_arg_ns(hid, l2_m_arity[hid] + d) < 0 && hidden_model != -1
             cand: l2_hidden_model_source(l2_rw_mi, hid, d, @ hidden_source)
             if: cand = -1
                 if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(hid, d)), @ holder) != 0
@@ -35483,6 +35575,45 @@ fn: l2_rw_put_actual (int: call; int: site; int: place; int: arg) int
     ---
 return: l2_rw_put(call, place, arg)
 
+# A merge given as the actual of a callable formal, in the graph of the method that gives it.  The node is
+# built by that method's native code (l2_t7_emit_actual): the written merge is retained as a machine operation
+# of its own name, holding, in source order, each binding under its name with its value resolved as any
+# actual's, and the model as the occurrence it names, which nothing calls here.  The method that holds it is
+# native-only.
+fn: l2_rw_merge_actual (const: @(LmP0Node node); int: parent; @: int out) int
+    @: LmP0Field f
+    int: n 0
+    int: slot 0
+    int: body
+    int: child
+    if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
+        return: 1
+    l2_rw_machine: 1
+    f: l2_next_active(node\as\frame\body\first_field)
+    while: f != 0
+        n: n + 1
+        f: l2_next_active(f\next)
+    ---
+    if: l2_rw_frame(parent, "LMX_WALK_OP_SOURCE_MACHINE", 2, out) != 0 || l2_rw_source_name(\out, node\as\frame\head) != 0 || l2_rw_plain(\out, n, @ body) != 0 || l2_rw_put(\out, 1, body) != 0
+        return: 1
+    f: l2_next_active(node\as\frame\body\first_field)
+    while: f != 0
+        if: l2_pap_method_of(f\value) >= 0
+            if: l2_rw_callable_actual(f, 1, body, @ child) != 0
+                return: 1
+            ---
+        else:
+            if: l2_rw_machine_application(f\value, body, @ child) != 0
+                return: 1
+            ---
+        ---
+        if: l2_rw_put(body, slot, child) != 0
+            return: 1
+        slot: slot + 1
+        f: l2_next_active(f\next)
+    ---
+return: 0
+
 # Callable receiving contexts share the native resolver's exact occurrence
 # classification. Nullary frames and paths do not execute here; a forwarded
 # formal is the value the caller supplied, not a borrowed signature row.
@@ -35505,6 +35636,9 @@ fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int ou
             return: l2_rw_arg_fb(parent, l2_param_find(l2_rw_mi, l2_own_name[formal]), out)
         return: l2_rw_own(parent, formal, out)
     ---
+    # K04 S3: a merge given as the actual, where the check made it a site (l2_t7_from_actual).
+    if: candidate < 0 && span = 1 && first\value != 0 && l2_frame_head(first\value, "merge") != 0 && l2_t7_actual_model(l2_rw_mi, first\value) >= 0
+        return: l2_rw_merge_actual(first\value, parent, out)
     if: candidate < 0 || candidate = l2_e
         return: l2_rw_refuse((first\value), "an unresolved callable occurrence")
     if: kind = 2
@@ -35626,7 +35760,7 @@ fn: l2_rw_arg_lex (const: @(LmP0Node node); int: parent; int: pi; int: idx; int:
     int: fb
     if: l2_rw_frame(parent, "LMX_WALK_OP_ARG", 4, out) != 0 || l2_rw_input_witness(\out, 3, l2_rw_mi, pi) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, pi) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_rw_arg_pos(pi)) < 0
         return: 1
     if: l2_rw_lex_operand(node, idx, k, \out, @ fb) != 0 || l2_rw_put(\out, 2, fb) != 0
         return: 1
@@ -35695,7 +35829,7 @@ fn: l2_rw_arg_fb (int: parent; int: j; @: int out) int
     if: lex >= 0
         if: l2_rw_frame(parent, "LMX_WALK_OP_ARG", 4, out) != 0 || l2_rw_input_witness(\out, 3, l2_rw_mi, j) != 0
             return: 1
-        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, j) < 0
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_rw_arg_pos(j)) < 0
             return: 1
         if: l2_rw_own(\out, lex, @ fb) != 0 || l2_rw_put(\out, 2, fb) != 0
             return: 1
@@ -35706,7 +35840,7 @@ fn: l2_rw_arg_fb (int: parent; int: j; @: int out) int
     nm: l2_dn(l2_rw_mi, j - l2_m_arity[l2_rw_mi])
     if: l2_rw_frame(parent, "LMX_WALK_OP_ARG", 4, out) != 0 || l2_rw_input_witness(\out, 3, l2_rw_mi, j) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, j) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_rw_arg_pos(j)) < 0
         return: 1
     if: nm != 0 && nm\data != 0 && l2_node_seg(l2_rw_mi, nm\data, 0U, nm\length, @ slot, @ kind, @ ent, 0) = 0
         if: slot < 0 && l2_construct_phase != 0
@@ -35735,12 +35869,32 @@ fn: l2_rw_node_read (int: parent; int: slot; int: kind; @: int out) int
     \out: of
 return: 0
 
+# The place, among the references a call hands, of input j of the method whose body is being built: j.  A
+# merge builds a node of its own of its model's body (T7), and that node has its own contract: the formals
+# the merge leaves unbound, in their order, then the model's hidden inputs, as in any callable's args part
+# (l2_emit_parts).  The body reads each input at its place in the node's contract, never at the model's.  A
+# formal the merge binds is no input of the node: -1.
+fn: l2_rw_arg_pos (int: j) int
+    int: site
+    int: model
+    if: l2_t7_walk = 0 || j < 0
+        return: j
+    site: l2_t7_walk - 1
+    if: site < 0 || site >= l2_t7_n
+        return: j
+    model: l2_t7_model[site]
+    if: j >= l2_m_arity[model]
+        return: l2_t7_argc[site] + (j - l2_m_arity[model])
+return: l2_t7_arg_of(l2_fn(model, j))
+
 # Input j of the method being built (-193 T4a): [arg, j], the reference its caller passed (the
-# walker's ARG reads f\args[j]).
+# walker's ARG reads f\args[j]).  In a merge's node a formal the merge binds is the field that holds its value.
 fn: l2_rw_arg (int: parent; int: j; @: int out) int
+    if: l2_t7_walk != 0 && j >= 0 && j < l2_m_arity[l2_rw_mi] && l2_t7_bound_slot(l2_fn(l2_rw_mi, j)) >= 0
+        return: l2_rw_mad_at(parent, l2_t7_bound_slot(l2_fn(l2_rw_mi, j)), out)
     if: l2_rw_frame(parent, "LMX_WALK_OP_ARG", 4, out) != 0 || l2_rw_input_witness(\out, 3, l2_rw_mi, j) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, j) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, l2_rw_arg_pos(j)) < 0
         return: 1
 return: 0
 
@@ -35997,8 +36151,8 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         if: idx >= 0
             return: l2_rw_mad_at(parent, idx, out)
         idx: l2_t7_arg_of(t)
-        if: idx >= 0
-            return: l2_rw_arg(parent, idx, out)
+        if: idx >= 0 && l2_formal_find(l2_rw_mi, t) >= 0
+            return: l2_rw_arg(parent, l2_formal_find(l2_rw_mi, t), out)
         ---
     # Item 738: a captured Structure is read through its fields -- used whole, the node's copy (the fields read, through
     # its table) would travel where its type's own layout is read.
@@ -40243,7 +40397,7 @@ fn: l2_mad_max_inputs () int
     int: i 0
     int: w 1
     while: i < l2_m_n
-        if: l2_mad_on(i) != 0 && l2_mad_model[i] >= 0 && l2_t7_host_site(i) < 0 && l2_mad_node_arity(i) + l2_m_dyn[l2_mad_model[i]] > w
+        if: l2_mad_on(i) != 0 && l2_mad_model[i] >= 0 && l2_mad_node_arity(i) + l2_m_dyn[l2_mad_model[i]] > w
             w: l2_mad_node_arity(i) + l2_m_dyn[l2_mad_model[i]]
         i: i + 1
     ---
@@ -40935,6 +41089,123 @@ fn: l2_t7_host_sig (int: mi) @: LmP0Node
 return: f\value
 
 # Writes the declared fn: header at l2_t7h_n. Returns its arity, or -1.
+# Room for one more merge, one more binding, one more entry of a declared header.
+fn: l2_t7_reserve () int
+    int: cap
+    size_t: isz
+    size_t: psz
+    @: void p
+    if: l2_t7_n < l2_t7_cap
+        return: 0
+    cap: l2_cap_next(l2_t7_cap, l2_t7_n + 1)
+    if: cap < 0
+        l2_alloc_err: 2
+        return: 1
+    isz: c.sizeof(c.int)
+    psz: c.sizeof(@: char)
+    p: l2_vec_grow((cast: (@: void) l2_t7_kind), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_kind: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_host), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_host: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_model), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_model: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_ret), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_ret: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_argc), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_argc: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_h0), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_h0: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_nb), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_nb: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_b0), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_b0: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_steps), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_steps: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_anchor), l2_t7_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7_anchor: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7_at), l2_t7_n, cap, psz)
+    if: p = 0
+        return: 1
+    l2_t7_at: (cast: (@@: LmP0Node) p)
+    l2_t7_cap: cap
+return: 0
+
+fn: l2_t7b_reserve () int
+    int: cap
+    size_t: isz
+    size_t: psz
+    @: void p
+    if: l2_t7b_n < l2_t7b_cap
+        return: 0
+    cap: l2_cap_next(l2_t7b_cap, l2_t7b_n + 1)
+    if: cap < 0
+        l2_alloc_err: 2
+        return: 1
+    isz: c.sizeof(c.int)
+    psz: c.sizeof(@: char)
+    p: l2_vec_grow((cast: (@: void) l2_t7b_how), l2_t7b_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7b_how: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7b_val), l2_t7b_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7b_val: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7b_slot), l2_t7b_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7b_slot: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7b_nm), l2_t7b_n, cap, psz)
+    if: p = 0
+        return: 1
+    l2_t7b_nm: (cast: (@@: LmP0Text) p)
+    l2_t7b_cap: cap
+return: 0
+
+fn: l2_t7h_reserve () int
+    int: cap
+    size_t: isz
+    size_t: psz
+    @: void p
+    if: l2_t7h_n < l2_t7h_cap
+        return: 0
+    cap: l2_cap_next(l2_t7h_cap, l2_t7h_n + 1)
+    if: cap < 0
+        l2_alloc_err: 2
+        return: 1
+    isz: c.sizeof(c.int)
+    psz: c.sizeof(@: char)
+    p: l2_vec_grow((cast: (@: void) l2_t7h_ty), l2_t7h_n, cap, isz)
+    if: p = 0
+        return: 1
+    l2_t7h_ty: (cast: (@: int) p)
+    p: l2_vec_grow((cast: (@: void) l2_t7h_nm), l2_t7h_n, cap, psz)
+    if: p = 0
+        return: 1
+    l2_t7h_nm: (cast: (@@: LmP0Text) p)
+    l2_t7h_cap: cap
+return: 0
+
 fn: l2_t7_take_sig (const: @(LmP0Node sig); const: @(char path); @: int out_ret) int
     @: LmP0Field args
     @: LmP0Field retf
@@ -40955,7 +41226,7 @@ fn: l2_t7_take_sig (const: @(LmP0Node sig); const: @(char path); @: int out_ret)
     saved: l2_last_cf_req
     p: l2_next_active(args\value\as\structure\first_field)
     while: p != 0
-        if: l2_t7h_n >= 16
+        if: l2_t7h_reserve() != 0
             l2_last_cf_req: saved
             return: 0 - 1
         nm: 0
@@ -40979,7 +41250,7 @@ fn: l2_t7_take_contract (int: req; @: int out_ret) int
         return: 0 - 1
     \out_ret: l2_m_ret[req]
     while: j < l2_m_arity[req]
-        if: l2_t7h_n >= 16
+        if: l2_t7h_reserve() != 0
             return: 0 - 1
         l2_t7h_nm[l2_t7h_n]: l2_fn(req, j)
         l2_t7h_ty[l2_t7h_n]: l2_ft(req, j)
@@ -41078,10 +41349,10 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
                 l2_t7h_n: h_save
                 l2_t7b_n: b_save
                 return: l2_error(path, f\value, "a callable merge binds an int formal")
-            if: l2_t7b_n >= 16
+            if: l2_t7b_reserve() != 0
                 l2_t7h_n: h_save
                 l2_t7b_n: b_save
-                return: l2_error(path, f\value, "out of memory")
+                return: l2_alloc_or(path, f\value, "out of memory")
             slot: 2 + l2_t7b_n - b_save
             at: l2_t7b_n
             l2_t7b_nm[at]: nm
@@ -41096,10 +41367,10 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
         l2_t7h_n: h_save
         l2_t7b_n: b_save
         return: l2_error(path, node, "a callable merge header does not match the model")
-    if: l2_t7_n >= 8
+    if: l2_t7_reserve() != 0
         l2_t7h_n: h_save
         l2_t7b_n: b_save
-        return: l2_error(path, node, "out of memory")
+        return: l2_alloc_or(path, node, "out of memory")
     at: l2_t7_n
     l2_t7_kind[at]: kind
     l2_t7_host[at]: host
@@ -41125,13 +41396,30 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
 fn: l2_t7_from_return (int: mi; const: @(LmP0Node node); const: @(char path)) int
 return: l2_t7_fill(node, mi, 1, 0 - 1, path)
 
+# The model of the merge at `node`, given as an actual in method mi, or -1.
+fn: l2_t7_actual_model (int: mi; const: @(LmP0Node node)) int
+    int: s 0
+    while: s < l2_t7_n
+        if: l2_t7_kind[s] = 2 && l2_t7_at[s] = node && l2_t7_host[s] = mi
+            return: l2_t7_model[s]
+        s: s + 1
+    ---
+return: 0 - 1
+
 fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); const: @(char path)) int
     int: req
-    if: mi < 0 || mi = l2_e
+    if: mi < 0
         return: l2_error(path, node, "incompatible entry signature")
+    # The root's body is walked, and a merge's node is built by native code only: a limit of this
+    # implementation, and no incompatibility of the merge with the formal.
+    if: mi = l2_e
+        return: l2_error(path, node, "a merge given as the actual of a callable formal by the root is not built yet")
     req: l2_cf_get(callee, fi)
     if: req < 0
         return: l2_error(path, node, "incompatible entry signature")
+    # One merge is one site, however often its call is checked.
+    if: l2_t7_actual_model(mi, node) >= 0
+        return: 0
     if: l2_t7_fill(node, mi, 2, req, path) != 0
         return: 1
 return: 0
@@ -41148,6 +41436,9 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
     int: b0
     int: how
     int: val
+    int: nh 0
+    int: ty
+    []: char cell 64
     if: site < 0 || site >= l2_t7_n
         return: 1
     if: l2_t7_ret[site] != 0
@@ -41160,17 +41451,31 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
     host: l2_t7_host[site]
     b0: l2_t7_b0[site]
     width: 2 + nb + steps
+    # The node's args part is its complete contract: the declared formals, then the model's hidden inputs.
+    nh: l2_m_dyn[l2_t7_model[site]]
     if: c.fprintf(l2_out, "%s@: Lmx l2_t7n%d 0\n%s@: Lmx l2_t7p%d 0\n%s@: void l2_t7c%d 0\n", ind, site, ind, site, ind, site) < 0
+        return: 1
+    if: nh > 0 && c.fprintf(l2_out, "%s@@: void l2_t7s%d 0\n", ind, site) < 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_t7n%d: lmx_struct_new_owned(node, l2_program_arena)\n%sif: l2_t7n%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7n%d, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) width), ind, ind) < 0
         return: 1
-    if: arity > 0 && c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7p%d, %uU) != 0 || lmx_arena_ref_store(l2_t7n%d, 0U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, (cast: (unsigned) arity), site, site, ind) < 0
+    if: arity + nh > 0 && c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7p%d, %uU) != 0 || lmx_arena_ref_store(l2_t7n%d, 0U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, (cast: (unsigned) (arity + nh)), site, site, ind) < 0
         return: 1
-    if: arity = 0 && c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_ref_store(l2_t7n%d, 0U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, site, ind) < 0
+    if: arity + nh = 0 && c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_ref_store(l2_t7n%d, 0U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, site, ind) < 0
         return: 1
     while: j < arity
         if: c.fprintf(l2_out, "%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_arena_ref_store(l2_t7p%d, %uU, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) j), site, ind) < 0
             return: 1
+        j: j + 1
+    ---
+    # A cell of each hidden input's type, as a method's own args part has (l2_emit_parts).
+    j: 0
+    while: j < nh
+        ty: l2_own_of_dt(l2_dt(l2_t7_model[site], j))
+        if: ty >= 0
+            if: c.sprintf(cell, "l2_t7s%d", site) < 0 || c.fprintf(l2_out, "%sl2_t7s%d: lmx_arena_ref_cell(l2_t7p%d, %uU)\n%sif: l2_t7s%d = 0\n%s    c.abort()\n", ind, site, site, (cast: (unsigned) (arity + j)), ind, site, ind) < 0 || l2_emit_cell_new_ty(ty, 0U, ind, cell, "c.abort()", 0) != 0
+                return: 1
+            ---
         j: j + 1
     ---
     if: c.fprintf(l2_out, "%sl2_t7p%d: lmx_struct_new_owned(l2_t7n%d, l2_program_arena)\n%sif: l2_t7p%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7p%d, 1U) != 0 || lmx_arena_ref_store(l2_t7n%d, 1U, (cast: (@: void) l2_t7p%d)) != 0\n%s    c.abort()\n%sl2_t7c%d: lmx_int_new_owned(l2_program_arena)\n%sif: l2_t7c%d = 0 || lmx_arena_ref_store(l2_t7p%d, 0U, l2_t7c%d) != 0\n%s    c.abort()\n", ind, site, site, ind, site, site, site, site, ind, ind, site, ind, site, site, site, ind) < 0

@@ -1,0 +1,38 @@
+# A caller's reference under a held definition's free name is admitted to
+# the definition's use where the formal is called. g0 reads m\v. inner's
+# own m is of a declaration that has no v: it is no such value, and the
+# call through the formal is refused.
+Model:
+    int: v 4
+end: Model
+
+m: merge Model
+
+Other:
+    int: w 4
+end: Other
+
+fn: f0 () int
+    return: 1
+end: f0
+
+fn: makeUse (int: k) fn: () int
+    fn: g0 () int
+        return: k + m\v
+    return: g0
+
+u0: makeUse 5
+
+fn: run (f0: q) int
+    return: q()
+end: run
+
+fn: inner () int
+    m: merge Other
+    m\w: 40
+    return: run(u0)
+end: inner
+
+int: r inner()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

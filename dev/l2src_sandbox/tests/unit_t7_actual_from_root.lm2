@@ -1,0 +1,19 @@
+# OPEN positive. The root gives a merge as the actual of a callable formal.
+# take calls its formal: merge(y: 5; five) gives 5. This implementation
+# builds a merge's node by native code only, and the root's body is walked:
+# the merge is refused where it stands, as a limit and no rule. Entry 7.
+fn: five (int: y) int
+    return: y
+
+fn: bin () int
+    return: 0
+
+fn: take (bin: op) int
+    return: op()
+
+int: d (take: merge(y: 5; five))
+int: ok 7
+if: d != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

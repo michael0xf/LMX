@@ -1,0 +1,50 @@
+# A merge given as the actual of a callable formal is followed as a node
+# of its model, and its model's free names are formed where the formal is
+# called. five reads other, a field of the unit, 9. passed gives take
+# merge(y: 5; five): 14. pk binds y to its own formal: 16 and 109. under
+# has other 20, two methods above the call: 25 and 27. six reads big, a
+# size_t above the range of an int, and goes to a formal of its own: the
+# name arrives as a size_t, 6. Entry 7.
+int: other 9
+size_t: big 4294967297
+
+fn: five (int: y) int
+    return: y + other
+
+fn: six (int: y) int
+    if: big = 4294967297
+        return: y + 1
+    return: y
+
+fn: bin () int
+    return: 0
+
+fn: take (bin: op) int
+    return: op()
+
+fn: passed () int
+    return: take: merge(y: 5; five)
+
+fn: pk (int: k) int
+    return: take: merge(y: k; five)
+
+fn: under () int
+    int: other 20
+    return: passed() * 100 + pk(7)
+
+fn: take6 (bin: op) int
+    return: op()
+
+fn: passed6 () int
+    return: take6: merge(y: 5; six)
+
+int: a passed()
+int: b pk(7)
+int: c pk(100)
+int: d under()
+int: e passed6()
+int: ok 7
+if: a != 14 || b != 16 || c != 109 || d != 2527 || e != 6
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

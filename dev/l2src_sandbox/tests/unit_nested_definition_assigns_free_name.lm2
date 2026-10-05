@@ -1,0 +1,49 @@
+# A definition inside a method assigns a name of that method. The name is
+# a free name of the definition, resolved in the method that holds it, and
+# the statement assigns the definition's own value of it for that
+# activation: it declares nothing and writes no node. w adds 2 to n, a
+# formal of mkw: 72, and 72 again, since the copy kept in the node is still
+# 70. wb adds 1 to base, a field mkb declares, 140: 141 and 141. ws sets n
+# before it reads it: 7. wl reads n into a local of its own first and then
+# assigns it: 75. Entry 7.
+fn: mkw (int: n) fn: () int
+    fn: w () int
+        n: n + 2
+        return: n
+    return: w
+
+fn: mkb (int: n) fn: () int
+    int: base n * 2
+    fn: wb () int
+        base: base + 1
+        return: base
+    return: wb
+
+fn: mks (int: n) fn: () int
+    fn: ws () int
+        n: 7
+        return: n
+    return: ws
+
+fn: mkl (int: n) fn: () int
+    fn: wl () int
+        int: t n
+        n: t + 5
+        return: n
+    return: wl
+
+vw: mkw 70
+vb: mkb 70
+vs: mks 70
+vl: mkl 70
+int: a vw()
+int: b vw()
+int: c vb()
+int: d vb()
+int: e vs()
+int: f vl()
+int: ok 7
+if: a != 72 || b != 72 || c != 141 || d != 141 || e != 7 || f != 75
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

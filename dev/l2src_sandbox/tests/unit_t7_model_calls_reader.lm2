@@ -1,0 +1,22 @@
+# The model of a merge calls a method that reads, as free names, the formal
+# the merge binds and the formal it leaves unbound. helper reads y and x;
+# add, whose formals they are, calls it. w holds merge(y: 5; add): in the
+# node the merge builds y is the field that holds 5 and x is the node's one
+# declared input, and helper receives both from there: 5 * 100 + 7, and
+# 1000. Entry 7.
+fn: helper () int
+    return: y * 100 + x
+
+fn: add (int: y; int: x) int
+    return: helper() + 1000
+
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(y: k; add)
+
+w: wrap 5
+int: a (w: 7)
+int: ok 7
+if: a != 1507
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

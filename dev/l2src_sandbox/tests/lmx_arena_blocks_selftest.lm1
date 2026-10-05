@@ -92,8 +92,10 @@ fn: main () int
     check(lmx_arena_blocks_push(@ dst, d) = LMX_ARENA_BLOCKS_OK, "push destination")
     check(src = a && a\next = b && b\next = 0, "push preserves detached chain")
     check(lmx_arena_blocks_push(@ src, a) = LMX_ARENA_BLOCKS_INVALID, "linked node rejected")
-    check(lmx_arena_blocks_push(@ src, b) = LMX_ARENA_BLOCKS_INVALID, "duplicate tail rejected")
-    check(src = a && a\next = b && b\next = 0, "rejected pushes unchanged")
+    # A push takes a node its caller has just made, linked into no list, and does not walk the list
+    # (MERGE-COST-GROWS-WITH-UNIT): pushing the list's own tail is outside that contract, and the
+    # expectation that it be refused ("duplicate tail rejected") was defensive only.
+    check(src = a && a\next = b && b\next = 0, "rejected push unchanged")
     alias: b
     check(lmx_arena_blocks_move_all(@ src, @ alias) = LMX_ARENA_BLOCKS_INVALID, "overlapping lists rejected")
     check(alias = b && src = a && a\next = b, "overlap rejection unchanged")
@@ -132,7 +134,9 @@ fn: main () int
     check(lmx_arena_blocks_move_all(@ dst, @ src) = LMX_ARENA_BLOCKS_INVALID, "cyclic source rejected")
     check(lmx_arena_blocks_dispose_all(@ src) = LMX_ARENA_BLOCKS_INVALID, "cyclic disposal rejected")
     b: make_block(1U, 22U, 0)
-    check(lmx_arena_blocks_push(@ src, b) = LMX_ARENA_BLOCKS_INVALID, "push into cycle rejected")
+    # A push does not read the list it joins, so it does not see a cycle in it; the expectation that a
+    # push onto a cyclic list be refused ("push into cycle rejected") was defensive only.  Transfer and
+    # disposal still walk the list and refuse a cycle (above).
     check(src = a && a\next = a && b\next = 0 && frees = before, "cycle failures unchanged")
     a\next: 0
     check(lmx_arena_blocks_push(@ dst, b) = LMX_ARENA_BLOCKS_OK, "second list for cycle test")
@@ -156,6 +160,26 @@ fn: main () int
         ---
         i: i + 1
     ---
+    # Each push linked its node at the head of its list: each list holds every node pushed to it, once,
+    # newest first -- the source 31 down to 0, the destination 64 down to 32.
+    node: src
+    i: 0
+    while: node != 0 && i <= 32
+        if: node\class != (cast: (unsigned) (31 - i))
+            break
+        node: node\next
+        i: i + 1
+    ---
+    check(i = 32 && node = 0, "source pushes linked each node once, newest first")
+    node: dst
+    i: 0
+    while: node != 0 && i <= 33
+        if: node\class != (cast: (unsigned) (64 - i))
+            break
+        node: node\next
+        i: i + 1
+    ---
+    check(i = 33 && node = 0, "destination pushes linked each node once, newest first")
     check(lmx_arena_blocks_move_all(@ dst, @ src) = LMX_ARENA_BLOCKS_OK, "move 65 blocks")
     check(lmx_arena_blocks_dispose_all(@ dst) = LMX_ARENA_BLOCKS_OK, "dispose 65 blocks")
     check(src = 0 && dst = 0 && frees = before + 130, "65 payloads and nodes exactly once")

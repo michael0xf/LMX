@@ -100,6 +100,18 @@ trailer stays without an implementation
 its bytes: kernel `opus_kernel_06` GREEN296 with 113 executed selftests, L3
 `opus_l3_06` 11 suites/four budgets, full `opus_full_08` RED40/1851 -- against
 `opus_full_07` FAIL→OK 0, OK→FAIL 0, nine rows added, all green.
+A1: the cost of a merge measured with the factors apart -- the copy is the
+whole unit with its code, and the end-of-turn collection pass, its per-block
+scans of arrays, chunks and the list, takes most of the time; a block or an
+array joining the arena walked the growing list each time. Both link in
+constant time now, the two defensive selftest expectations migrated
+([MERGE-COST-GROWS-WITH-UNIT](steps/defects.md#merge-cost-grows-with-unit),
+[section 79](steps/fable-continuation-20261003.md#merge-cost-a1)). Found: a data
+merge copies the unit's qualified branch
+([DATA-MERGE-COPIES-QUALIFIED-BRANCH](steps/defects.md#data-merge-copies-qualified-branch)).
+Gates on its bytes: kernel `opus_kernel_07` GREEN296 with 113 executed
+selftests, L3 `opus_l3_07` 11 suites/four budgets, full `opus_full_09`
+RED40/1851 -- against `opus_full_08` FAIL→OK 0, OK→FAIL 0.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

@@ -8117,3 +8117,153 @@ allocations, separated by initial arena size, unit size and number of merges
 -- then the list link made constant-time under its ownership invariant, with
 every entry path audited
 ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)).
+
+<a id="merge-cost-a1"></a>
+## 79. The cost of a merge measured; the arena links in constant time (Codex's reply OPUS-CODEX-20261005-01, A1)
+
+Codex's reply on A: "The repeated list scan in lmx_arena_blocks_push is real
+[...]. The ordinary list-link operation should be constant-time under the
+established exclusive-ownership/fresh-detached-node invariant; it does not need
+a protective framework. But I have not independently measured that it accounts
+for ALL observed merge cost. lmx_arena_array also scans arena->arrays before
+linking a descriptor. Count actual push calls, tail/cycle traversal steps,
+block count at each call, array-list comparisons, copied nodes/edges/bytes and
+allocations [...]. Separate initial arena size, unit/closure size and number
+of repeated merges so the causal claim is not inferred from one elapsed-time
+curve." And: "The existing malformed-list selftests are implementation
+history, not automatic language requirements; migrate any defensive-only
+expectations explicitly and replace them with valid ownership/ordering/lifetime
+witnesses."
+
+### How it was measured
+
+Counters in a module of their own, compiled into staged copies of the kernel
+and never into the tree, printed at the start and the end of every staged
+graph copy and of every collection pass: copies, Structures and child slots
+copied, values visited, block pushes and the steps their list walk made, the
+block list's length, array-list comparisons, lookups of an array by kind, type
+and profile and their comparisons, the chunk walk after the range bisection,
+chunks and arrays made, payload bytes; in the sweep, blocks visited and
+dropped and the steps of each per-block scan. A generator keeps the factors
+apart: N named Structures with a method each that copies one of them
+(`loc: merge D<i>`) -- the size of the unit; K of the methods called per round
+and R rounds -- the number of merges; P fields of an independent const
+immutable branch -- storage of the arena a copy should not copy; F fields per
+named Structure. The defect's own program is N = K, R = 1, P = 0, F = 1.
+Stacks of the running program were sampled by attaching gdb.
+
+### What was measured
+
+**The copy.** A merge copies its operand with its lexical ancestors, so a
+data merge in a method copies the whole unit, its code frames included: 64,
+90, 142 and 246 Structures a copy for N = 2, 4, 8 and 16 (K = 1, R = 4), 846 to
+1039 for F = 64. Repeated merges do not grow it: with N = 4 and R = 16 the
+first merge's copy holds 150 Structures and each of the fifteen others 154 --
+the method's latest result, and only that, is copied with the unit.
+Each copied Structure costs about 5.6 block pushes.
+
+**The block list.** Nothing is freed during the root's turn, so the list grows
+by every copy's pushes, and every push walked the whole list: N = 4, R = 16
+makes 2.1M steps in the first merge's copy and 17.1M in the sixteenth; the
+defect's program at N = 16 makes 822M.
+
+**The sweep.** The stack samples of the defect's program stand in the
+collection pass at the end of the turn. At N = 16 it visits 33,232 blocks and
+drops about 25,500: `lmx_gc_block_live` scans every array and every chunk for
+each block (397M steps), `lmx_gc_block_unlink` scans them again for each dropped
+block (286M), `lmx_gc_drop_arrays_in_block` and `lmx_arena_array_drop` scan the
+array list (140M each), `lmx_range_drop` finds the interval by a linear scan
+and shifts the index (227M), and `lmx_arena_blocks_remove` walks to the tail
+with its cycle check (779M) before it searches the member (71M): about 2.04G
+steps against the pushes' 822M. Beside them in the copies: 46M comparisons of
+the array lookup by kind, type and profile, 19M chunk-walk steps after the
+range bisection, 15M comparisons of the array list's duplicate scan.
+
+**The qualified branch.** A qualified branch E of P fields is not a Structure
+the merge's operand names, yet with it every copy grew: P = 512 made 3636
+pushes a copy against 526 at P = 0, and four merges took 8.6 s against 0.17 s
+(the counters compiled in).
+The trace: the data merge passes the profiles of its operands only, so the
+copy of the unit copies E as well; a callable merge's node copy keeps every
+qualified branch of the program by its profile (section 77). A probe that
+passes the program's qualified branches to the data merge too made the copy
+independent of P -- 526 pushes and 94 Structures a copy at P = 0, 64 and 512,
+four merges in 0.74 s at P = 512 -- registered
+([DATA-MERGE-COPIES-QUALIFIED-BRANCH](defects.md#data-merge-copies-qualified-branch)).
+Each copied field of E cost about three chunks: its value's cell -- an array
+made by a request for one cell keeps that count as the size of every chunk it
+grows by, so every cell is a chunk of its own, two blocks and an interval --
+and the copy of the field's name with the place (`lmx_copy_names`).
+
+| N = K, R = 1 | time before | push steps | sweep steps |
+| --- | --- | --- | --- |
+| 4 | 156 ms | 8.0M | |
+| 8 | 1308 ms | 68.6M | |
+| 12 | 7052 ms | 285.5M | 0.70G |
+| 16 | 21844 ms | 822.2M | 2.04G |
+
+### What is built (A1)
+
+1. **A push links in constant time.** `lmx_arena_blocks_push` links a node
+   at the head without walking the list. Every production push links a node
+   its caller has just made, linked into no list: `lmx_pool_add_chunk` (the
+   payload's and the chunk's blocks), `lmx_pool_make_profiled` (the payload's
+   block), and the descriptor record `lmx_arena_array` takes from
+   `lmx_pool_make_profiled`. The other list operations keep their walk and
+   their cycle check: `lmx_arena_blocks_remove` (from `lmx_arena_drop`: a
+   revert, the sweep, a pool's rollback), `lmx_arena_blocks_move_all` (an
+   arena attached after `lmx_arena_blocks_can_move`: a child arena, a
+   delivered post), `lmx_arena_blocks_dispose_all` (a release). No production
+   path pushes a node that was ever linked: the sweep disposes what it drops,
+   and a revert leaves it detached.
+2. **An array joins the arena in constant time.** `lmx_arena_array` links the
+   descriptor without scanning the array list. Its entries: a pool
+   `lmx_pool_make_profiled` has just made; `lmx_pool_open_profiled`, which
+   already refuses an array that holds a chunk -- a linked one -- and takes one
+   never opened or released, which unlinks it; `lmx_pool_over`, which only
+   selftests call, with records of their own. The sweep unlinks every array of
+   a block it frees (D-43), and `lmx_post_sweep_selftest` keeps that witness
+   ("D-43 embedded pool left the arena").
+3. **The selftest's expectations.** `lmx_arena_blocks_selftest` no longer
+   expects a push of the list's own tail ("duplicate tail rejected") or a push
+   onto a cyclic list ("push into cycle rejected") to be refused: both are
+   outside the push's contract, and only a walk of the list could see them.
+   The refusals a push makes in constant time stay ("linked node rejected",
+   "missing nonempty payload rejected"), and so do the transfer's and the
+   disposal's refusals of a cyclic list. Added: after 32 and 33 pushes onto two
+   lists, each list holds every node pushed to it once, newest first. 143
+   checks, as before.
+
+A message relayed as OPUS-CODEX-20261005-02 said the two expectations "stay as
+registered"; it carried a figure I had not sent, and keeping them needs either
+the walk or a mark on the node, which the reply above excludes. I asked Codex
+which it means; this section follows the reply.
+
+### Measured after
+
+On the exact bytes of the tree, with the counters compiled in: the copies make
+the same work -- 5377 Structures and 406,581 bytes at N = 16 -- with 0 push
+steps and 0 duplicate-scan comparisons; the sweep makes the same work but its
+own list walks.
+
+| N = K, R = 1 | time before | time after |
+| --- | --- | --- |
+| 4 | 156 ms | 138 ms |
+| 8 | 1308 ms | 1052 ms |
+| 12 | 7052 ms | 5632 ms |
+| 16 | 21844 ms | 17577 ms |
+
+The rest of the cost is the sweep's per-block scans (A2, held until the
+qualified branch is traced -- done above -- and Codex has reviewed it), the
+array lookup by kind, type and profile, the chunk walk after the bisection,
+and the size of the copy itself.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_07` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest); `lmx_arena_blocks_selftest` 143 checks, 0 failures. |
+| `build/l3_selftest/opus_l3_07` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_09` (full harness) | RED40/1851: against `opus_full_08` FAIL→OK 0, OK→FAIL 0, no row added or removed, no red row's words changed. The three declared paths were hashed before the run; the kernel the gates staged is those bytes, with no counter in it. |
+
+**Next.** The data merge keeps the program's qualified branches
+([DATA-MERGE-COPIES-QUALIFIED-BRANCH](defects.md#data-merge-copies-qualified-branch)),
+then A2 by Codex's review.

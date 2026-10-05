@@ -123,20 +123,15 @@ fn: lmx_arena_find_profiled (@: LmxArena arena; int: kind; int: type; @: Lmx pro
     ---
 return: 0
 
-# An array joins the arena: its descriptor is linked into the arena's list of its N arrays
-# (never twice), and the block that carries the descriptor -- when the array has one of
-# its own -- joins the arena's block list, so the arena owns what describes it.
+# An array joins the arena: its descriptor is linked into the arena's list of its N arrays,
+# and the block that carries the descriptor -- when the array has one of its own -- joins
+# the arena's block list, so the arena owns what describes it.  The descriptor is in no
+# list: lmx_pool_make_profiled has just made it, lmx_pool_open_profiled takes only an
+# array with no chunk (one never opened, or released, which unlinks it), and the sweep
+# unlinks every array of a block it frees (D-43).  Constant time: the list is not walked.
 fn: lmx_arena_array (@: LmxArena arena; @: LmxPool array; @: LmxArenaBlock record) int
-    @: LmxPool pool
     if: arena = 0 || array = 0
         return: 1
-    pool: arena\arrays
-    while: pool != 0
-        if: pool = array
-            return: 1
-        ---
-        pool: pool\next
-    ---
     if: record != 0
         if: lmx_arena_blocks_push(@ arena\blocks, record) != c.LMX_ARENA_BLOCKS_OK
             return: 1

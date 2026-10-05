@@ -2,8 +2,10 @@ predef: "lmx_arena_blocks.h.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdlib.h>"
 
-# All list access requires exclusive ownership supplied by the caller. Detect
-# cycles before mutation; no allocator, global registry or synchronization here.
+# All list access requires exclusive ownership supplied by the caller; no allocator, global registry or
+# synchronization here.  A push links a node its caller has just made, linked into no list, at the head in
+# constant time and reads nothing else of the list.  Removal, transfer and disposal walk the list and detect a
+# cycle before they change it.
 #
 # This module owns storage and nothing else: it holds no type and reads no table.
 # The arena decides what an entry means -- it retires the index entry of a block
@@ -30,19 +32,16 @@ fn: lmx_arena_blocks_tail (@: LmxArenaBlock head; @@: LmxArenaBlock tail) int
     ---
     return: LMX_ARENA_BLOCKS_OK
 
-# Prepend one already allocated, detached node. Reject malformed/duplicate
-# attachment without changing either the list or the caller's node.
+# Prepend one node its caller allocated and owns, linked into no list: every production caller makes the node in
+# the same act (lmx_pool_add_chunk, lmx_pool_make_profiled, the descriptor record lmx_arena_array takes from
+# it).  Constant time: the list is not walked.  A null slot or node, a node that links onward, a slot that is
+# the node's own link, or a block with no storage for its length is refused, and nothing changes.
 fn: lmx_arena_blocks_push (@@: LmxArenaBlock head; @: LmxArenaBlock node) int
-    @: LmxArenaBlock tail
     if: head = 0 || node = 0
         return: LMX_ARENA_BLOCKS_INVALID
     if: node\next != 0 || head = @ node\next
         return: LMX_ARENA_BLOCKS_INVALID
     if: node\base = 0 && node\n != 0U
-        return: LMX_ARENA_BLOCKS_INVALID
-    if: lmx_arena_blocks_tail(\head, @ tail) != LMX_ARENA_BLOCKS_OK
-        return: LMX_ARENA_BLOCKS_INVALID
-    if: tail = node
         return: LMX_ARENA_BLOCKS_INVALID
     node\next: \head
     \head: node

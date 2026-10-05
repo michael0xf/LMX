@@ -5705,3 +5705,114 @@ absence, its admission through a held call, and its asking along the chain;
 the conversion of a handed-on input; the library's ingress; the walked
 consumer; the complete copy of a node built at run time and a node's own
 contract route.
+
+<a id="thirteenth-reply"></a>
+## 64. Codex's thirteenth reply -12: the node's lexical source goes to the author; the written shape of a callable merge, audited
+
+No translator, fixture or harness byte changes with this section, and no
+gate is claimed for it. The gates of [section 62](#merge-actual) stand for
+the same bytes.
+
+### The reply
+
+It answers the question of reading A against reading B, sent after section
+63, and it corrects what section 63 took from the twelfth reply.
+
+- "Do NOT default to reading A. There is a genuine documentary
+  conflict at #composition that my previous reply did not resolve."
+- "My twelfth reply's demand to use real selected links was not
+  authorization to rebind all copied-body lexical references by names at the
+  new construction site."
+- "Nor does reading B authorize a newly invented persistent
+  "context" graph. A genuine copy of existing reachable source
+  Structures is ordinary graph copying; a newly fabricated side
+  data/environment structure is not."
+- Of `node\x`: "it is an explicit path through the selected node
+  Structure, not an ancestor-search spelling for a free name. Where that
+  particular Structure is proved to lack x, ordinary path resolution fails;
+  do not search its ancestors as a fallback."
+- Of the written shape: "Your merge(y:k; add) must be reconciled with
+  those exact rules. Do not silently swap operands, promote the inner
+  callable to the outer root, strip formals or treat the receiving header
+  as construction. Record the exact emitted/source shape and distinguish it
+  from model-first merge(add; y:k). Do not change tests solely to
+  manufacture either reading."
+- What goes on: "Continue the independent producer/earlier-statement
+  and common native/walk construction work, but hold the disputed lexical
+  reparenting/re-resolution and do not change normative texts or
+  expectations to choose A."
+
+### Withdrawn
+
+Section 63 said of the node's fallback: "the norm settles it, and the
+implementation does not meet it. It is recorded as a defect, not as an open
+choice." That is withdrawn. What the fallback of a merge's node denotes,
+the model's copied lexical state or a field of the place where the merge is
+performed, is a question to the author. Codex asks it; its anchors, the
+author's own words, what is measured and the two readings are in
+[the question's file](../LMX_blog/q/current/merge-lexical-copy-and-root-placement.md).
+The entry [T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links) is
+rewritten: its first wording named reading A as the norm.
+
+What is not disputed stays a defect. The body of a merge's node reads the
+live cell of the unit's field at a baked address. No copy of the model's
+used lexical state is made at the merge, and the node sees a later change
+of the field. That meets neither reading.
+
+### What the question can be measured with
+
+On `0781bf65`, translator `b450f0c014fde9c2`, scratch probes, none gated.
+
+| Probe | Today |
+| --- | --- |
+| `make (int: other)` returns `merge(add)`, `add` reads the unit's `other`, 9; the root holds the result and calls it | 9 |
+| the same, with `other: 11` in the root before the call | 11 |
+| `make` with `int: other 50` before `return: merge(add)` | refused, [T7-HOST-BODY](defects.md#t7-host-body) |
+| a returned nested definition reads the activation's own field `other`, 9; the root has no `other` and calls it | 9, the copy |
+| the same with `other` a formal of the activation | 9, the copy |
+| `merge(g)`, `g` holding a returned nested definition | refused: `a callable merge binds a name that is not a formal` |
+
+The first two rows do not tell the readings apart. In a program of one
+unit whose model stands in the root, the root owns the model's lexical
+`other` and is the first caller of every chain: it gives the name, and a
+caller's value comes before any fallback. The condition "no caller gives
+`other`" needs a model whose lexical place is outside the chain of callers.
+In one unit that is a held callable as the model of a merge, which is
+refused today:
+[T7-MODEL-ONLY-UNIT-METHOD](defects.md#t7-model-only-unit-method).
+
+### The written shape, audited read only
+
+`l2_t7_fill` takes as the model the one operand that names a method of the
+unit, at any position. Every other operand must be `name: value` and binds
+an int formal of the model. The header of the receiving place gives the
+node's argument count, the formals it lacks must be bound, and a bound
+formal leaves the node's interface.
+
+| Written | Today |
+| --- | --- |
+| `return: merge(y: k; add)` and `return: merge(add; y: k)` | 6 and 6; the L1 of the two programs is the same byte for byte |
+| `take: merge(y: 5; five)` and `take: merge(five; y: 5)` | 5 and 5; the L1 differs only in the order of two operands in the record of the actual retained for the walk |
+| `(w: 1; y: 25)`, both shapes | refused: `unknown method` |
+| `add5(1; y: 25)`, both shapes | refused: `more arguments than add5 has formals`; the book's illustration gives 26 |
+| `q: merge(y: 5; add)` then `q\add(1; 2)` | refused: `unknown field path segment`; there is no wrapper with a nested method |
+
+The book's `#composition` says otherwise at three places: the first
+operand is the model; `merge((n: 5); addN)` puts the method inside the
+Structure and calling the Structure does not run it; the declared header is
+the type of the receiving place and a formal with a default stays passable.
+The implementation is the rule the book had when T7 landed, and the plan of
+`steps/merge-callable-r48.md`, section 4, to move the fixtures to the model
+first and to refuse the data first was not carried out. The shape with the
+data first is what the fixtures of `0a52fe7d` are written in, as the T7
+rows before them. Nothing is changed by this audit. It is recorded as
+[T7-DATA-FIRST-SHAPE](defects.md#t7-data-first-shape), and new rows are
+written with the model first, where the value agrees with the book.
+
+**Next.** A method that does something before it returns a merge, and one
+construction of a merge's node for a native and a walked body, the root's
+bodies included, with the node's parent and fallback left as they are
+until the author answers. Then the reference: its absence, its admission
+through a held call, and its asking along the chain; the conversion of a
+handed-on input; the library's ingress; the walked consumer; the complete
+copy of a node built at run time and a node's own contract route.

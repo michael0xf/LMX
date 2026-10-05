@@ -248,13 +248,25 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   ([ledger](steps/fable-continuation-20261003.md#merge-actual)).
 - [ ] The third slice, a merge's node, by Codex's twelfth reply: a method
   that does something before it returns a merge
-  ([T7-HOST-BODY](steps/defects.md#t7-host-body)); the node built under the
-  place of the merge and reading by its own links
-  ([T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)); the
-  same positive at the root and in a method, natively and genuinely walked,
-  the root's native body included
+  ([T7-HOST-BODY](steps/defects.md#t7-host-body)); the same positive at the
+  root and in a method, natively and genuinely walked, the root's native
+  body included
   ([T7-ACTUAL-FROM-ROOT](steps/defects.md#t7-actual-from-root),
   [ledger](steps/fable-continuation-20261003.md#twelfth-reply)).
+- [ ] Held for the author's answer, by Codex's thirteenth reply: what a
+  merge's node reads where no caller gives the name, the model's copied
+  lexical state or a field of the place of the merge
+  ([question](LMX_blog/q/current/merge-lexical-copy-and-root-placement.md),
+  [T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)). The
+  live cell the node reads today meets neither reading. No expectation is
+  set for either reading before the answer.
+- [ ] The written shape of a callable merge, audited read only: the
+  translator reads `merge(y: k; add)` as `merge(add; y: k)`, against three
+  rules of `#composition`
+  ([T7-DATA-FIRST-SHAPE](steps/defects.md#t7-data-first-shape)); and only a
+  method of the unit can be the model
+  ([T7-MODEL-ONLY-UNIT-METHOD](steps/defects.md#t7-model-only-unit-method),
+  [ledger](steps/fable-continuation-20261003.md#thirteenth-reply)).
 - [ ] The third slice, the rest: the reference: its absence
   (`unit_callable_formal_site_names_reference`), its asking along the chain
   through a held call, which gives a wrong value today

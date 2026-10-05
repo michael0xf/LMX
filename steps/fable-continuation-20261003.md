@@ -5816,3 +5816,85 @@ until the author answers. Then the reference: its absence, its admission
 through a held call, and its asking along the chain; the conversion of a
 handed-on input; the library's ingress; the walked consumer; the complete
 copy of a node built at run time and a node's own contract route.
+
+<a id="fourteenth-reply"></a>
+## 65. Codex's fourteenth reply -12: the shape needs no author decision; a merge keeps the model's interface; the witness of one unit
+
+No translator, fixture or harness byte changes with this section, and no
+gate is claimed for it.
+
+### The reply
+
+It answers the audit of [section 64](#thirteenth-reply).
+
+- The shape with the data first: "The data-first question does NOT need
+  a new author decision under the current explicit #composition rules. But
+  do NOT implement a general "data-first merge is forbidden"
+  branch." And: "The existing code that picks the sole unit method
+  at any operand position and turns the result into that method's root is
+  the defect. A receiving callable place applies ordinary
+  conversion/admission to the value actually constructed."
+- The interface: "Model-first merge(add; y:5) must keep add's full
+  callable interface." The three calls `add5(1; y: 25)`, `add5(1; y: 0)`
+  and then `add5(1)`, giving 26, 1 and 6, "are REQUIRED positives.
+  Therefore the T7 constructor/formation route you just measured still has
+  interface debt when it strips a bound formal and builds only the unbound
+  inputs."
+- The fixtures: "do not silently swap operands and claim the original
+  program now works. Where an old fixture intended specialization, introduce
+  or migrate its explicit model-first spelling with a stated
+  source/expectation change; keep direct tests for the original data-first
+  shape and its actual wrapper/nested path". And of this slice:
+  "Keep the new independent slice's model-first fixtures, but call
+  default-only success a bounded case, not complete callable-merge
+  support."
+- The witness: "The statement that no caller-provided other is
+  impossible in one unit is too broad." And: "Do not confuse a
+  materialized graph field with an eligible caller binding at that source
+  position."
+
+### Withdrawn
+
+Section 64 said that in a program of one unit whose model stands in the
+root the condition "no caller gives `other`" cannot be met. That is
+withdrawn. A variable is visible only forward: a call the root makes above
+its own declaration of `other` has no caller's binding. The gated row
+`unit_a3_caller_binding` already calls so.
+
+### The witness, measured
+
+On `0781bf65`, a scratch probe, not gated. `prep` and `bump` write the
+unit's field by the explicit path `node\other`, 9 and 11. `make (int:
+other)` returns `merge(add)` and is called with 50. `plain` only hands the
+name on. The root calls `plain` twice above its own `int: other 9`, with
+`bump` between, and once below.
+
+| Call | Today | The model's copied state | The place of the merge |
+| --- | --- | --- | --- |
+| above the declaration, after `prep` | 9 | 9 | 50 |
+| above the declaration, after `bump` | 11 | 9 | 50 |
+| below the declaration | 9 | 9 | 9 |
+
+The same natively, with the methods walked and with the root walked. The
+11 shows by a run what section 64 had only read in the generated code: the
+node reads the live cell of the unit's field. No expectation is set for
+either reading: the probe becomes a row with the author's answer. Its
+`other` at `make` is a formal; the variant with a field of `make`'s own
+waits for [T7-HOST-BODY](defects.md#t7-host-body).
+
+### Recorded
+
+- [T7-DATA-FIRST-SHAPE](defects.md#t7-data-first-shape) now says what is to
+  be done: the wrapper is ordinary composition and gets its producer and
+  its path positive; a callable place admits the value actually built; no
+  refusal by operand order; the fixtures that meant a specialization move
+  to the model first with the change named.
+- [MERGE-KEEPS-MODEL-INTERFACE](defects.md#merge-keeps-model-interface),
+  new: the three required positives, refused today, and the node of a merge
+  that keeps only the unbound formals.
+- [T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links) and the
+  question's file carry the witness in place of the withdrawn sentence.
+
+**Next.** Unchanged from section 64. The rows of that step are written
+with the model first and are a bounded case: they call the node with the
+defaults only.

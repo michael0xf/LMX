@@ -260,13 +260,21 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   [T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)). The
   live cell the node reads today meets neither reading. No expectation is
   set for either reading before the answer.
-- [ ] The written shape of a callable merge, audited read only: the
-  translator reads `merge(y: k; add)` as `merge(add; y: k)`, against three
-  rules of `#composition`
-  ([T7-DATA-FIRST-SHAPE](steps/defects.md#t7-data-first-shape)); and only a
+- [ ] The written shape of a callable merge: the translator reads
+  `merge(y: k; add)` as `merge(add; y: k)`, against three rules of
+  `#composition`. By Codex's fourteenth reply no author decision is needed:
+  the wrapper with a nested method gets its producer and its path positive,
+  a callable place admits the value actually built, there is no refusal by
+  operand order, and fixtures that meant a specialization move to the model
+  first with the change named
+  ([T7-DATA-FIRST-SHAPE](steps/defects.md#t7-data-first-shape)). Only a
   method of the unit can be the model
   ([T7-MODEL-ONLY-UNIT-METHOD](steps/defects.md#t7-model-only-unit-method),
-  [ledger](steps/fable-continuation-20261003.md#thirteenth-reply)).
+  [ledger](steps/fable-continuation-20261003.md#fourteenth-reply)).
+- [ ] A merge keeps the model's whole callable interface: `add5(1; y: 25)`
+  26, `add5(1; y: 0)` 1, then `add5(1)` 6 are required positives, refused
+  today; the node a merge builds keeps only the unbound formals
+  ([MERGE-KEEPS-MODEL-INTERFACE](steps/defects.md#merge-keeps-model-interface)).
 - [ ] The third slice, the rest: the reference: its absence
   (`unit_callable_formal_site_names_reference`), its asking along the chain
   through a held call, which gives a wrong value today

@@ -8638,3 +8638,174 @@ which kept the forming method native; they use `size_t` instead.
 
 **Next.** (e): an opaque reference under a free name of a typed reference,
 with ARGUMENT-EDGE-REFERENCE-TYPE.
+
+<a id="hidden-opaque-typed"></a>
+## 83. An opaque reference under a free name its reader uses as a typed reference (RECEPTION-EDGE-DEBTS (e))
+
+Codex's ruling, recorded with the debts: "e) An opaque reference supplied as
+a hidden input to a typed reference use has the same receiving-edge
+conversion/admission as the explicit analogue, provided actual reference
+depth/type is correct." Section 81 registered the depth and type side at the
+explicit edge as ARGUMENT-EDGE-REFERENCE-TYPE, with this step.
+
+### What was measured
+
+On the translator of section 82, in every mode:
+
+| Program | Before |
+| --- | --- |
+| `caller (@: void p)` declares `@: void shared p` and calls `relay`, which only hands `shared` on to `observe`, which reads `shared\value`; the unit declares `@: Model shared` | refused at translation at `caller`'s call of `relay`: "incompatible entry signature" |
+| the same with `@@: void shared @p` | the same refusal |
+| a local `@@: void q` given to a Structure formal | admitted; the run stops at the read, "a field path met no Structure", exit 3 |
+| a local `@: char q` given to a Structure formal | admitted |
+
+Three causes:
+
+- The call site compared the types of the caller's binding and of the
+  callee's input exactly (`l2_dyn_site`). An opaque reference against a
+  graph reference was a mismatch, whatever the value held.
+- Even past that check, an input formed from a place with no schema was
+  admitted by position against the whole model (`l2_hidden_emit_admit`,
+  natively, and two walked forms of it), not by the declaration the value
+  carries. The explicit analogue admits it by that declaration.
+- The argument edge took a name of any reference type to a Structure formal.
+  The assignment to a typed reference refuses the same pairs.
+
+### What is built
+
+1. **The signature.** A caller's `@: void` against an input its reader uses
+   as a graph reference is accepted at the call site, at depth one only. A
+   `@@: void` is still refused there.
+2. **The admission by the record.** A place that holds what was given to
+   it, an opaque reference or an opaque formal (`l2_d105_opaque_place`), has
+   the declarations that reached it in the record since section 82. Its
+   value is admitted by the one it carries, natively (`l2_hidden_emit_admit`)
+   and walked (the call of a method and the held call). A place of that kind
+   with no record keeps the admission by position.
+3. **The reference type of a name.** At the argument edge, a name whose
+   reference is a level deeper than the formal's, or of a type no Structure
+   is held in (`@: char`), is refused where it is given, with the words a
+   call's result of that type has: "implements is false in function
+   argument". An opaque `@: void` and a graph reference pass.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_recv_hidden_opaque_typed`, `_walk` | The Model: 11. An Other whose `value` is its second field: 9, by name. A Thin: refused where `caller` forms `relay`'s input, taken by `caller`'s handler, 42. Where the methods are walked, all three are. |
+| `unit_recv_hidden_opaque_depth_refused` | A `@@: void` binding: refused at the call, 11:9. |
+| `unit_recv_name_depth_refused` | A local `@@: void` given to a Structure formal: refused, 13:11. |
+| `unit_recv_name_char_refused` | A local `@: char`: refused, 13:13. |
+
+A replay of the 1855 translations recorded by `opus_full_10` changes no row.
+
+### Mutants
+
+| Mutant | Takes out | Result |
+| --- | --- | --- |
+| `nosig` | the signature's exception | `unit_recv_hidden_opaque_typed` refused at translation, 22:8 |
+| `nonative` | the admission by the record, natively | the Other is not read by name natively: 82 |
+| `nowalk` | the admission by the record, walked | the Other is not read by name where the methods are walked: 82 |
+| `notype` | the name's reference type | `unit_recv_name_depth_refused` and `unit_recv_name_char_refused` translate |
+
+### Measured
+
+This step and the next one, (f), are one checkpoint with one run of the
+gates: [section 84](#opaque-return).
+
+<a id="opaque-return"></a>
+## 84. A value of opaque type returned as a typed result (RECEPTION-EDGE-DEBTS (f))
+
+Codex's ruling, recorded with the debts: "absence of a named source schema is
+not proved implements-false. Classify the premature refusal as
+implementation debt if the actual value satisfies the result's consuming
+contract and permitted conversion."
+
+### What was measured
+
+On the translator of section 83, in every mode: `back (@: void p) Model` with
+`return: p` was refused at translation at the return, "implements is false in
+return value". So was `via () Model` with `return: same(good)`, where `same`
+returns `@: void`. The check took the value's type from its declaration or
+its call, and a value with no Structure was refused whatever it held. The
+emitted return already admits a Structure result when the program runs, by
+every field of the result's type (`l2_emit_model_admit`, full receiver). But
+a refusal there stopped the process, since only proved values reached it.
+
+### What is built
+
+1. **The check** (`l2_admit_return`). A returned value of opaque type, a name
+   of `@: void` or a call whose result is one (`l2_return_opaque`), is a
+   dynamic candidate. The declarations that reach it are the result's
+   sources (`l2_d105_note`), and the method is recorded as one that can
+   throw `implements` (`l2_admit_site`).
+2. **The admission.** Such a return's admission, by every field of the
+   result's type, refuses as the returning method's implicit `implements`.
+   That holds at a trailer's return (`l2_emit_ret_tr`) and at a `return:`
+   statement inside the body (the statement's emission), which are two
+   emitters. It is formed into the result place, so a candidate the result
+   refused has no alternative there (`l2_d105_refused`). Every other return
+   keeps its admission as it was.
+3. **The result place.** At a result, a source the result's type does not
+   admit is a possible candidate on the terms of section 82: every edge that
+   brings it brings an admissible one beside it. In addition, every such
+   edge must come from a place of opaque type, an opaque reference or a
+   call's opaque result, because only those returns refuse with
+   `implements`. Any other source is definite and refused at translation,
+   as before.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_recv_opaque_return_typed`, `_walk` | `back` returns its opaque formal as a Model by its trailer: a Model 4; an Other 9, by name; a Thin refused where `back` returns it, taken by `run`'s handler, 42. `back2` returns it by a statement inside its body: the Other 9, the Thin 42. `via` returns a call's opaque result: 4. Where the methods are walked, all of them are. |
+| `unit_recv_opaque_return_only_refused` | `back` is given only the Thin: refused at translation at the return, 13:1. |
+
+A replay of the 1855 translations recorded by `opus_full_10` changes no row,
+and the final translator of this checkpoint changes none of the 1881
+recorded by `opus_full_12`, which hold the rows of (c) and (d).
+
+The first run of the gates of this checkpoint was stopped when its full
+harness had begun (`opus_kernel_11`, `opus_l3_11` and the start of
+`opus_full_13` remain, incomplete): a probe found that the return statement
+inside a body still stopped the process, because only the trailer's emitter
+had been changed. The witness's `back2` is that form.
+
+### Mutants
+
+| Mutant | Takes out | Result |
+| --- | --- | --- |
+| `nocheck` | the check's admission of an opaque value | `unit_recv_opaque_return_typed` refused at translation, 29:1 |
+| `notrailer` | the trailer's refusal as `implements` | natively the run stops at "lmx: invariant: an admission by name was refused", at `back` |
+| `nobody` | the body statement's refusal as `implements` | natively the run stops at the same invariant, at `back2` |
+| `noresult` | the possible candidate at a result | `unit_recv_opaque_return_typed` refused at translation, 29:1: the Thin at `back`'s result |
+
+### Measured beside, not repaired
+
+**A letter through an opaque place is not admitted to its own declaration.**
+`fn: pass (@: void p) int` with `return: count(p)`, where
+`count (MainLetter: l)`, called as `pass(m)` with the received letter: R0 is
+stopped by an uncaught throw. The same holds on the translator of section
+80. Its form at the return, `back (@: void p) MainLetter` returning the
+letter, is the program Codex classified under (f). Before this step it was
+refused at translation; now it translates and stops the same way. Given
+directly, `count(m)` admits the letter by its payload (D-57). Through an
+opaque place the value is the letter's record, and the admission checks that
+record against the model. Whether an opaque reference to a letter is
+admitted to the letter's declaration by its payload is asked of Codex
+([LETTER-THROUGH-OPAQUE-PLACE](defects.md#letter-through-opaque-place)).
+
+### Measured
+
+The gates of sections 83 and 84, one checkpoint.
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_12` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_12` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_14` (full harness) | RED39/1890: against `opus_full_12` FAIL→OK 0, OK→FAIL 0, added 8, all green, removed 0, no red row's words changed. The eight declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_ef2` (focused, before the gates) | The 40 rows of (c) to (f) and their neighbours, all green. |
+
+**Next.** The duplicate stop under its real proof, then the numeric
+conversion at the receiving edge; LETTER-THROUGH-OPAQUE-PLACE by Codex's
+answer.

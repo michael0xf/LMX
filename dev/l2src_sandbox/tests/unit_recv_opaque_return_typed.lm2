@@ -1,0 +1,80 @@
+# A value of opaque type returned as a typed result is admitted when the program runs, by the result's consuming
+# contract -- every field of the result's type -- as the returning method's implicit `implements`
+# (RECEPTION-EDGE-DEBTS (f); Codex: "absence of a named source schema is not proved implements-false").  back
+# returns its opaque formal as a Model: a Model 4; an Other, whose `value` is its second field, 9 by name; a Thin,
+# which has no `value`, refused where back returns it, and run's handler takes it, 42.  via returns the result of a
+# call of opaque type as a Model: 4.  back2 returns its formal from inside its body, not by its trailer: the Other
+# 9, the Thin refused where back2 returns it, 42.  Until 2026-10-05 these returns were refused at translation,
+# "implements is false in return value".  Entry 7.
+Model:
+    size_t: value 4U
+end: Model
+
+Other:
+    size_t: pad 1U
+    size_t: value 9U
+end: Other
+
+Thin:
+    int: pad 1
+end: Thin
+
+Model: good
+Other: wide
+Thin: bad
+
+fn: same (@: void p) @: void
+return: p
+
+fn: back (@: void p) Model
+return: p
+
+fn: back2 (@: void p) Model
+    return: p
+end: back2
+
+fn: via () Model
+return: same(good)
+
+fn: get (Model: x) size_t
+return: x\value
+
+fn: run (@: void p) size_t
+    size_t: r 0U
+    r: get(back(p))
+    catch: implements ()
+        r: 42U
+    ---
+return: r
+
+fn: run2 (@: void p) size_t
+    size_t: r 0U
+    r: get(back2(p))
+    catch: implements ()
+        r: 42U
+    ---
+return: r
+
+size_t: a run(good)
+size_t: b run(wide)
+size_t: c run(bad)
+size_t: d get(via())
+size_t: e run2(wide)
+size_t: f run2(bad)
+int: ok 7
+if: a != 4U
+    ok: 81
+if: b = 1U
+    ok: 61
+if: b != 9U && b != 1U
+    ok: 82
+if: c != 42U
+    ok: 83
+if: d != 4U
+    ok: 84
+if: e != 9U
+    ok: 85
+if: f != 42U
+    ok: 86
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

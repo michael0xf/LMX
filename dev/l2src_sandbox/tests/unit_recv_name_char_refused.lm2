@@ -1,0 +1,16 @@
+# ARGUMENT-EDGE-REFERENCE-TYPE: a name of a reference type no Structure is held in -- `@: char` -- is refused where it
+# is given to a Structure formal, as an assignment to a typed reference refuses the pair.  Until 2026-10-05 it was
+# admitted at translation.
+Model:
+    size_t: value 4U
+end: Model
+fn: name (@: char s) @: char
+return: s
+fn: get (Model: x) size_t
+return: x\value
+fn: run (@: char t) size_t
+    @: char q name(t)
+    return: get(q)
+end: run
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

@@ -1,0 +1,14 @@
+# The depth must be the reference's (RECEPTION-EDGE-DEBTS (e)): a caller's `@@: void` under the name its reader uses
+# as a Model reference is refused at the call that forms the input.
+Model: (size_t: value 11U)
+@: Model shared @Model
+fn: observe () size_t
+return: shared\value
+fn: relay () size_t
+return: observe()
+fn: caller (@: void p) size_t
+    @@: void shared @p
+return: relay()
+size_t: r caller(@Model)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

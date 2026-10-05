@@ -1,0 +1,21 @@
+# The definite side at a result (RECEPTION-EDGE-DEBTS (f)): back's opaque formal is given only a Thin, which has no
+# `value`, so every return of it as a Model is incompatible, and the translation refuses it there.
+Model:
+    size_t: value 4U
+end: Model
+
+Thin:
+    int: pad 1
+end: Thin
+
+Thin: bad
+
+fn: back (@: void p) Model
+return: p
+
+fn: get (Model: x) size_t
+return: x\value
+
+size_t: c get(back(bad))
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

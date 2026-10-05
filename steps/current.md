@@ -524,6 +524,18 @@ Fable принял единственный writer/build-слот по [to_fable
   ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts),
   [§82 журнала](fable-continuation-20261003.md#possible-candidate)). Гейты `opus_kernel_10`,
   `opus_l3_10`, `opus_full_12` RED39/1882: против `opus_full_11` FAIL→OK 0, OK→FAIL 0.
+- Шаг RECEPTION-EDGE-DEBTS (e). Непрозрачная ссылка вызывающего под свободным именем, которое
+  читатель берёт как типизированную ссылку, допускается, как у явного аналога: глубины один, по
+  объявлению, которое значение несёт, при исполнении у формирующего метода. С ним исправлен
+  ARGUMENT-EDGE-REFERENCE-TYPE: имя глубже формала или типа `@: char` отвергается при трансляции
+  ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts),
+  [§83 журнала](fable-continuation-20261003.md#hidden-opaque-typed)).
+- Шаг RECEPTION-EDGE-DEBTS (f). Значение непрозрачного типа, возвращённое как типизированный результат,
+  допускается при исполнении по всем полям типа результата, неявным `implements` возвращающего метода.
+  Письмо через непрозрачное место не допускается к своему объявлению ни на явном крае, ни на возврате:
+  [LETTER-THROUGH-OPAQUE-PLACE](defects.md#letter-through-opaque-place), вопрос Codex
+  ([§84 журнала](fable-continuation-20261003.md#opaque-return)). Гейты шагов (e) и (f), один пункт:
+  `opus_kernel_12`, `opus_l3_12`, `opus_full_14` RED39/1890: против `opus_full_12` FAIL→OK 0, OK→FAIL 0.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
   эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
   callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который
@@ -537,9 +549,8 @@ Fable принял единственный writer/build-слот по [to_fable
   исправление на правильной копии ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)).
   Затем долги принимающего края (c)–(f), дублирующая остановка по её настоящему доказательству,
   числовое преобразование на принимающем крае, остальные зависимости K/G5, чистое ядро, стадии 8 и 8a.
-- Открыто, блокер G5: два отказа при трансляции на принимающем крае, которые Codex назвал долгами
-  реализации, (e) и (f) ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts)); край аргумента без
-  проверки типа ссылки имени ([ARGUMENT-EDGE-REFERENCE-TYPE](defects.md#argument-edge-reference-type)).
+- Открыто, вопрос Codex: письмо через непрозрачное место
+  ([LETTER-THROUGH-OPAQUE-PLACE](defects.md#letter-through-opaque-place)).
 - Открыто, блокер G5: возвращённое определение, которое само читает имя без объявления, отвергается;
   Codex подтвердил, что программа верна
   ([HELD-DEFINITION-UNDECLARED-NAME](defects.md#held-definition-undeclared-name)).

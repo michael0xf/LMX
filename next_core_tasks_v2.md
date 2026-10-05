@@ -148,6 +148,22 @@ the program runs
 Gates: kernel `opus_kernel_10` GREEN296 with 113 executed selftests, L3
 `opus_l3_10`, full `opus_full_12` RED39/1882 -- against `opus_full_11`
 FAIL→OK 0, OK→FAIL 0, added 18.
+RECEPTION-EDGE-DEBTS (e): a caller's opaque reference under a free name its
+reader uses as a typed reference is admitted as the explicit analogue is --
+depth one, by the declaration the value carries, when the program runs, where
+the input is formed; with it ARGUMENT-EDGE-REFERENCE-TYPE: a name a level
+deeper than the formal, or `@: char`, is refused at translation
+([RECEPTION-EDGE-DEBTS](steps/defects.md#reception-edge-debts),
+[section 83](steps/fable-continuation-20261003.md#hidden-opaque-typed)).
+RECEPTION-EDGE-DEBTS (f): a value of opaque type returned as a typed result
+is admitted when the program runs by every field of the result's type, as
+the returning method's implicit `implements`; a letter through an opaque
+place is not admitted to its own declaration, at the explicit edge nor at the
+return (LETTER-THROUGH-OPAQUE-PLACE, asked of Codex;
+[section 84](steps/fable-continuation-20261003.md#opaque-return)).
+Gates of (e) and (f), one checkpoint: kernel `opus_kernel_12` GREEN296
+with 113 executed selftests, L3 `opus_l3_12`, full `opus_full_14`
+RED39/1890 -- against `opus_full_12` FAIL→OK 0, OK→FAIL 0, added 8.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

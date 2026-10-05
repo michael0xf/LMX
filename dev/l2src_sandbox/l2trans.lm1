@@ -1101,6 +1101,8 @@ prototype:
     fn: l2_rw_arg (int: parent; int: j; @: int out) int
     fn: l2_rw_arg_pos (int: j) int
     fn: l2_rw_ret (@: LmP0Field first; int: n; int: into; @: int out) int
+    fn: l2_return_opaque (@: LmP0Field first; int: n; int: mi) int
+    fn: l2_d105_opaque_place (int: mi; int: key) int
     fn: l2_rw_trailer (int: mi; int: into; int: slot; @: int made) int
     fn: l2_rw_mad_trailer (int: mi; int: into; int: slot; @: int made) int
     fn: l2_rw_mad_ret (int: mi; int: into; @: int out) int
@@ -4040,8 +4042,11 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
         ---
     if: pret = 2 && l2_eval_fields(body\first_field, n, mi, ind, l2_tok) != 0
         return: 1
-    # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).
-    if: l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
+    # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).  A value of
+    # opaque type is refused there as this method's implicit `implements` (RECEPTION-EDGE-DEBTS (f)).
+    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) != 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, mi, mi, -1) != 0
+        return: 1
+    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
         return: 1
     # §7b: the value is evaluated above; what is marked is published before the return (book §14).
     if: l2_emit_publish(ind) != 0
@@ -13500,7 +13505,11 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
         ---
         if: pres != 0 && l2_dyp_mark(cidx, nm, changed) != 0
             return: 1
-        if: sdt != 0 && ty != 0 && sdt != ty
+        # RECEPTION-EDGE-DEBTS (e) (Codex, FABLE-CODEX-20261004-12: "An opaque reference supplied as a hidden input
+        # to a typed reference use has the same receiving-edge conversion/admission as the explicit analogue,
+        # provided actual reference depth/type is correct."): a caller's `@: void` under a name its reader uses as a
+        # graph reference is admitted where the input is formed, as an opaque actual to a Structure formal is.
+        if: sdt != 0 && ty != 0 && sdt != ty && (ty != l2_colon_graph_ty() || l2_ft_of_own(l2_own_of_dt(sdt)) != 16)
             return: l2_error(path, site\source, "incompatible entry signature")
         if: sdt != 0 && ty = 0
             if: l2_dt_set(cidx, k, sdt) != 0
@@ -25209,6 +25218,18 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
         return: l2_actual_path(mi, a0, span, path, at, out_ni)
 return: 2
 
+# RECEPTION-EDGE-DEBTS (f): whether a returned value is of opaque type -- a name of `@: void`, or a call whose result is
+# one -- and so holds what was given to it.
+fn: l2_return_opaque (@: LmP0Field first; int: n; int: mi) int
+    int: ty 0
+    if: n != 1 || first = 0 || first\value = 0
+        return: 0
+    if: first\value\kind != c.LM_P0_NODE_ATOM && first\value\kind != c.LM_P0_NODE_FRAME
+        return: 0
+    if: l2_colon_value_ty(first\value, mi, @ ty) != 0
+        return: 0
+return: (cast: (int) (ty = 16))
+
 # The callers of a return are not in this body, so the Consumer is the
 # required descriptor. A type name, a bound variable, a call result, and a
 # field path share that call.
@@ -25227,6 +25248,11 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
         cmi: l2_find_method(first\value\as\frame\head)
         if: cmi >= 0
             cand: l2_nsty_get(cmi, 0 - 1)
+            # RECEPTION-EDGE-DEBTS (f): a call's result of opaque type is admitted when the program runs (below).
+            if: cand < 0 && l2_m_ret[cmi] = 16
+                if: l2_d105_note(mi, mi, 0 - 1, first, n, at) != 0
+                    return: 1
+                return: l2_admit_site(mi)
             if: cand < 0
                 return: l2_error(path, at, "implements is false in return value")
             # D-105 native: the result of cmi reaches this method's result.
@@ -25246,6 +25272,14 @@ fn: l2_admit_return (int: mi; @: LmP0Field first; int: n; const: @(char path); c
             ast: 0
         ---
     ---
+    # RECEPTION-EDGE-DEBTS (f) (Codex, FABLE-CODEX-20261004-12: "absence of a named source schema is not proved
+    # implements-false"): a value of opaque type holds what was given to it.  It is admitted when the program runs,
+    # by the result's consuming contract -- every field of the result's type, the callers not being in this body --
+    # and a refusal is this method's implicit `implements`; the declarations that reach it are the result's.
+    if: ast = 2 && l2_return_opaque(first, n, mi) != 0
+        if: l2_d105_note(mi, mi, 0 - 1, first, n, at) != 0
+            return: 1
+        return: l2_admit_site(mi)
     if: ast = 2
         return: l2_error(path, at, "implements is false in return value")
     # D-105 native: the value's type reaches this method's result (or its formal, passed on as it is).
@@ -25284,6 +25318,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     int: cf_fi 0 - 1
     int: cf_cand 0 - 1
     int: ns_at 0 - 1
+    int: vty 0
     # The actuals by formal coordinate: the body's projection.
     if: body != 0
         a0: l2_next_active(l2_call_actuals(body))
@@ -25409,6 +25444,12 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
                         return: 1
                     handled: 1
                 ---
+                # ARGUMENT-EDGE-REFERENCE-TYPE (RECEPTION-EDGE-DEBTS (e): "provided actual reference depth/type is
+                # correct"): a name whose reference is a level deeper than the formal's, or of a type no Structure is
+                # held in, is refused where it is given -- as a call's result of that type is (l2_actual_ns), and as an
+                # assignment to a typed reference refuses the pair.  An opaque `@: void` and a graph reference pass.
+                if: ast = 2 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && l2_colon_value_ty(a0\value, mi, @ vty) = 0 && l2_pointer_depth(vty) > 0 && l2_colon_is_graph_ty(vty) = 0 && vty != 16
+                    return: l2_error(path, node, "implements is false in function argument")
                 # (c): an actual that is a Frame and no Structure actual by its type -- a call's result of opaque type
                 # (l2_actual_ns), a pointer cast -- reaches the formal from its source's place: the callee's result
                 # place, whose sources its returns give (l2_d105_note_return), or the cast's operand.  The formal's
@@ -34637,10 +34678,14 @@ fn: l2_d105_possible (int: i; int: req) int
     int: j
     int: alt
     int: found 0
-    if: l2_d105s_k[i] < 0
+    if: l2_d105s_k[i] < -1
         return: 0
     while: e < l2_d105e_n
         if: l2_d105e_tmi[e] = l2_d105s_mi[i] && l2_d105e_tk[e] = l2_d105s_k[i] && l2_d105e_fmi[e] >= 0 && l2_d105_has(l2_d105e_fmi[e], l2_d105e_fk[e], l2_d105s_ty[i]) != 0
+            # RECEPTION-EDGE-DEBTS (f): at a result, only the return of a value of opaque type admits its value when
+            # the program runs as the method's implicit `implements`; any other return's admission is a proof.
+            if: l2_d105s_k[i] = -1 && l2_d105_opaque_place(l2_d105e_fmi[e], l2_d105e_fk[e]) = 0 && (l2_d105e_fk[e] != -1 || l2_m_ret[l2_d105e_fmi[e]] != 16)
+                return: 0
             found: 1
             alt: 0
             j: 0
@@ -34761,7 +34806,7 @@ fn: l2_d105_close () int
                 return: l2_error(l2_src, l2_d105s_at[i], "an admission to a Structure type by name in a library unit (D-105: the pair tables are a program's)")
             # RECEPTION-EDGE-DEBTS (d): a possible candidate an input's Consumer cannot admit is refused when the
             # program runs, where the input is formed, and not here: it gets no pair map and marks nothing.
-            if: l2_d105s_k[i] >= 0 && l2_d105_fits(ty, req, l2_d105s_mi[i], l2_d105s_k[i]) = 0 && l2_d105_possible(i, req) != 0
+            if: l2_d105s_k[i] >= -1 && l2_d105_fits(ty, req, l2_d105s_mi[i], l2_d105s_k[i]) = 0 && l2_d105_possible(i, req) != 0
                 l2_d105s_no[i]: 1
                 i: i + 1
                 continue
@@ -35373,6 +35418,16 @@ fn: l2_input_undeclared (int: mi; int: j) int
         return: 0
 return: (cast: (int) (l2_own_lexical(mi, l2_dn(mi, j - l2_m_arity[mi])) < 0))
 
+# RECEPTION-EDGE-DEBTS (e): whether place `key` of mi is a reference of opaque type -- an own reference or a formal
+# declared `@: void` -- which holds what was given to it.
+fn: l2_d105_opaque_place (int: mi; int: key) int
+    int: own l2_d105_key_own(key)
+    if: own >= 0 && own < l2_own_n
+        return: (cast: (int) (l2_own_schema(own) = -1 && l2_ft_of_own(l2_own_ty[own]) = 16))
+    if: mi < 0 || mi >= l2_m_n || key < 0 || key >= l2_m_arity[mi]
+        return: 0
+return: (cast: (int) (l2_input_schema(mi, key) = -1 && l2_ft(mi, key) = 16))
+
 # Explicit and hidden actuals share the reached admission of an already evaluated
 # candidate. Compiler-known producer schema tokens select immutable pair maps;
 # forwarded values retain genuine schema evidence in the existing implements
@@ -35392,7 +35447,10 @@ fn: l2_hidden_emit_admit (int: mi; int: idx; int: k; const: @(char value); const
     # no schema either, but the declarations that reach it are the translation's record (l2_d105_close): its
     # value is admitted by the one it carries, as a value of a known schema is.  Where the record has none the
     # value carries no layout to tell, and its admission is the positional one.
-    if: cand = -1 && (l2_input_undeclared(mi, source_input) = 0 || l2_d105_place_sources(mi, source_input) = 0)
+    # RECEPTION-EDGE-DEBTS (e): a place that holds what was given to it -- an opaque reference, an opaque formal --
+    # has the declarations that reached it in the record too (l2_check_receiving_value): its value is admitted by
+    # the one it carries, as the explicit analogue's is.
+    if: cand = -1 && ((l2_input_undeclared(mi, source_input) = 0 && l2_d105_opaque_place(mi, source_input) = 0) || l2_d105_place_sources(mi, source_input) = 0)
         return: l2_emit_admit(mi, req, value, ind)
     if: source_input != -1
         source_method: l2_d105_key_method(mi, source_input)
@@ -37394,7 +37452,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
             # carries, among those the translation records as reaching it, and may be absent: the admitting
             # instruction takes both (LMX_WALK_OP_ADMIT_AS).  Any other value with no schema is admitted by
             # position.
-            if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0
+            if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0 && (l2_d105_opaque_place(l2_rw_mi, hidden_source) = 0 || l2_d105_place_sources(l2_rw_mi, hidden_source) = 0)
                 if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(hid, d)), @ holder) != 0
                     return: 1
                 ---
@@ -42917,7 +42975,7 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
             if: same = 0 && hidden_model != -1
                 hidden_source: 0 - 1
                 cand: l2_hidden_model_source(l2_rw_mi, model, k, @ hidden_source)
-                if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0
+                if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0 && (l2_d105_opaque_place(l2_rw_mi, hidden_source) = 0 || l2_d105_place_sources(l2_rw_mi, hidden_source) = 0)
                     if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(model, k)), @ holder) != 0
                         return: 1
                     ---
@@ -47093,7 +47151,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             ---
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && pret = 2 && l2_eval_fields(fr\body\first_field, l2_count_active(fr\body), mi, ind, l2_tok) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
+        # A value of opaque type is refused there as this method's implicit `implements` (RECEPTION-EDGE-DEBTS (f)),
+        # as at a trailer's return (l2_emit_ret_tr).
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) != 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, mi, mi, -1) != 0
+            return: 1
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok, ind, 1, 0, -1, -1, -1, -1) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_publish(ind) != 0
             return: 1

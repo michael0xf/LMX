@@ -1,0 +1,15 @@
+# ARGUMENT-EDGE-REFERENCE-TYPE: a name whose reference is a level deeper than the Structure formal's is refused where
+# it is given, as a call's result of that type is (unit_recv_call_depth_result_refused).  Until 2026-10-05 it was
+# admitted at translation and the program stopped at the read: "a field path met no Structure", exit 3.
+Model:
+    size_t: value 4U
+end: Model
+Model: base
+fn: deeper (@: void p) @@: void
+return: @ p
+fn: get (Model: x) size_t
+return: x\value
+@@: void q deeper(base)
+size_t: r get(q)
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

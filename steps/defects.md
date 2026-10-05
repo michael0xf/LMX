@@ -3654,7 +3654,7 @@ a signed type` (16:17). Это предел производителя сохр�
 ([§75 журнала](fable-continuation-20261003.md#head-role-established)).
 
 <a id="reception-edge-debts"></a>
-### RECEPTION-EDGE-DEBTS — 2026-10-05, fable по ответу Codex FABLE-CODEX-20261004-12; пункты (c) и (d) исправлены 2026-10-05 (Opus), (e) и (f) OPEN (блокер G5)
+### RECEPTION-EDGE-DEBTS — 2026-10-05, fable по ответу Codex FABLE-CODEX-20261004-12; пункты (c)–(f) исправлены 2026-10-05 (Opus); письмо через непрозрачное место — LETTER-THROUGH-OPAQUE-PLACE, OPEN
 
 Четыре отказа при трансляции, измеренные в §69, Codex классифицировал как долги реализации, не
 правила языка. Позитивы и контроли появятся вместе с исправлением каждого.
@@ -3705,16 +3705,60 @@ a signed type` (16:17). Это предел производителя сохр�
   ссылкой: `incompatible entry signature`. Codex: «e) An opaque reference supplied as a hidden input
   to a typed reference use has the same receiving-edge conversion/admission as the explicit analogue,
   provided actual reference depth/type is correct.»
+  **Исправлено 2026-10-05 (Opus).** У места вызова `@: void` вызывающего принимается против входа,
+  который читатель берёт как ссылку графа, только глубины один; `@@: void` отвергается, как прежде.
+  Место без схемы, которое держит то, что ему дали (непрозрачная ссылка, непрозрачный формал), с §82
+  имеет в записи объявления, которые до него дошли. Его значение допускается по тому из них, которое
+  оно несёт, native и в обходе, как у явного аналога; без записи — позиционно, как прежде. Model даёт
+  11, Other читается по имени, 9, Thin отвергается при исполнении у формирующего метода, 42
+  (`unit_recv_hidden_opaque_typed`). Вместе исправлен край аргумента
+  ([ARGUMENT-EDGE-REFERENCE-TYPE](#argument-edge-reference-type)). Свидетели и мутанты — в
+  [§83 журнала](fable-continuation-20261003.md#hidden-opaque-typed).
 - Письмо, возвращённое через непрозрачный формал как типизированный результат: `implements is false
   in return value`. Codex, пункт (f): «absence of a named source schema is not proved
   implements-false. Classify the premature refusal as implementation debt if the actual value
   satisfies the result's consuming contract and permitted conversion.»
+  **Исправлено 2026-10-05 (Opus) для значения непрозрачного типа.** Возвращённое имя `@: void` или
+  результат вызова такого типа — динамический кандидат: объявления, которые до него доходят, — источники
+  результата, и метод записан как бросающий `implements`. Допуск возврата по всем полям типа результата
+  при исполнении отказывает неявным `implements` возвращающего метода — и у возврата хвоста, и у
+  оператора `return:` внутри тела (это два эмиттера). У места результата возможный
+  кандидат (§82) допускается только из мест непрозрачного типа: лишь их возврат отказывает через
+  `implements`. Model даёт 4, Other читается по имени, 9, Thin отвергается при исполнении, 42; результат
+  вызова непрозрачного типа — 4 (`unit_recv_opaque_return_typed`). Само письмо из записи теперь
+  транслируется, но при исполнении отвергается, как и его явный аналог:
+  [LETTER-THROUGH-OPAQUE-PLACE](#letter-through-opaque-place). Свидетели и мутанты — в
+  [§84 журнала](fable-continuation-20261003.md#opaque-return).
 
 Отдельно о лишней остановке процесса у кандидата, который не динамический: «remove the duplicate stop
 for genuinely compiler-proven static producer/admission cases. But "constructed by this
 declaration/merge" is not alone proof that a subsequently READ reference still denotes that origin.»
 Пути перепривязки, взятого адреса и утечки ссылки по ответу надо проверить до снятия остановки.
 ([§70 журнала](fable-continuation-20261003.md#free-name-path)).
+
+<a id="letter-through-opaque-place"></a>
+### LETTER-THROUGH-OPAQUE-PLACE — 2026-10-05, Opus, OPEN (вопрос Codex)
+
+Письмо, переданное через непрозрачное место, не допускается к своему собственному объявлению:
+
+```text
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+fn: count (MainLetter: l) int
+    return: 1
+fn: pass (@: void p) int
+    return: count(p)
+receiveMessage: m
+int: a pass(m)                     # R0 остановлен непойманным выбросом
+```
+
+Напрямую `count(m)` допускает письмо по его полезной нагрузке (D-57). Через непрозрачное место значение —
+запись письма, и допуск проверяет эту запись против модели. Измерено на трансляторе §80 и на шаге (f).
+Форма на возврате — `back (@: void p) MainLetter`, возвращающий письмо, — это программа, которую Codex
+отнёс к пункту (f): до шага (f) она отвергалась при трансляции, теперь транслируется и останавливается
+так же. Допускается ли непрозрачная ссылка на письмо к объявлению письма по его нагрузке, спрошено у
+Codex ([§84 журнала](fable-continuation-20261003.md#opaque-return)).
 
 <a id="opaque-actual-known-layout"></a>
 ### OPAQUE-ACTUAL-KNOWN-LAYOUT — 2026-10-05, fable; FIXED 2026-10-05 (Opus) пунктом (d) RECEPTION-EDGE-DEBTS; были внутренняя ошибка транслятора, неверное значение без отказа и отказ при исполнении
@@ -3813,7 +3857,7 @@ fn: run (@: void p) size_t
 во всех режимах ([§81 журнала](fable-continuation-20261003.md#inline-opaque-result)).
 
 <a id="argument-edge-reference-type"></a>
-### ARGUMENT-EDGE-REFERENCE-TYPE — 2026-10-05, Opus, OPEN (блокер G5; с пунктом (e) RECEPTION-EDGE-DEBTS)
+### ARGUMENT-EDGE-REFERENCE-TYPE — 2026-10-05, Opus; FIXED 2026-10-05 (Opus) с пунктом (e) RECEPTION-EDGE-DEBTS; была остановка в сгенерированном коде без отказа транслятора
 
 Край аргумента не проверяет тип ссылки имени, поданного в Structure-формал. Локальная `@@: void` или
 `@: char` допускается при трансляции:
@@ -3833,6 +3877,13 @@ Structure», exit 3. Это остановка в сгенерированном
 пункте (e) RECEPTION-EDGE-DEBTS: «provided actual reference depth/type is correct». Проверка глубины и
 типа ссылки на крае аргумента одна для имени, вызова и скрытого входа; чинится с пунктом (e)
 ([§81 журнала](fable-continuation-20261003.md#inline-opaque-result)).
+
+**Исправлено 2026-10-05 (Opus), с пунктом (e).** Имя, ссылка которого на уровень глубже формала или
+типа, в котором Structure не держится (`@: char`), отвергается там, где оно подано, словами, которые
+есть у результата вызова того же типа: «implements is false in function argument». `@: void` и ссылка
+графа проходят. Строки `unit_recv_name_depth_refused` (13:11) и `unit_recv_name_char_refused` (13:13);
+мутант без проверки их транслирует
+([§83 журнала](fable-continuation-20261003.md#hidden-opaque-typed)).
 
 <a id="write-only-path-root"></a>
 ### WRITE-ONLY-PATH-ROOT — 2026-10-05, fable, FIXED 2026-10-05; был неверный код без отказа транслятора

@@ -7905,6 +7905,33 @@ $fixtures = @(
         NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_opaque_actual_known_layout_walk.lm2'; Source = 'unit_opaque_actual_known_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 5;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # RECEPTION-EDGE-DEBTS (e) (Codex, FABLE-CODEX-20261004-12: "the same receiving-edge conversion/admission as the
+    # explicit analogue, provided actual reference depth/type is correct"): a caller's `@: void` under a free name its
+    # reader uses as a Model reference -- a Model 11, an Other by name 9, a Thin refused where caller forms relay's
+    # input, 42 (until 2026-10-05 "incompatible entry signature" at caller's call); a `@@: void` stays refused.
+    # ARGUMENT-EDGE-REFERENCE-TYPE: a name a level deeper than the Structure formal, or `@: char`, is refused where
+    # it is given (until 2026-10-05 admitted, the first stopping the process at the read).
+    [pscustomobject]@{ Name = 'unit_recv_hidden_opaque_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_hidden_opaque_typed_walk.lm2'; Source = 'unit_recv_hidden_opaque_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_hidden_opaque_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_hidden_opaque_depth_refused.lm2:11:9: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_name_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_name_depth_refused.lm2:13:11: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_name_char_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_name_char_refused.lm2:13:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # RECEPTION-EDGE-DEBTS (f) (Codex, FABLE-CODEX-20261004-12: "absence of a named source schema is not proved
+    # implements-false"): a value of opaque type returned as a typed result is admitted when the program runs, by
+    # every field of the result's type, as the returning method's implicit `implements` -- a Model 4, an Other by
+    # name 9, a Thin refused where back returns it and taken by run's handler 42, a call's opaque result 4 (until
+    # 2026-10-05 both returns refused at translation); a formal given only the Thin stays refused at translation.
+    [pscustomobject]@{ Name = 'unit_recv_opaque_return_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_opaque_return_typed_walk.lm2'; Source = 'unit_recv_opaque_return_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_opaque_return_only_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_recv_opaque_return_only_refused.lm2:13:1: implements is false in return value'; Absent = @(); Debt = @() },
     # The refusal is thrown with the statuses and handlers of the method that forms the input, whatever the callee
     # declares: the callee has a throw of its own, and the forming method's handler of `implements` takes the
     # refusal, not its handler of the callee's name (43, not 44).  A method that declares a throw stays native

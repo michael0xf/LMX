@@ -1,0 +1,42 @@
+# An opaque reference given under a free name its reader uses as a typed reference is admitted as the explicit
+# analogue is (RECEPTION-EDGE-DEBTS (e); Codex: "the same receiving-edge conversion/admission as the explicit
+# analogue, provided actual reference depth/type is correct").  observe reads shared\value, the unit declares
+# `@: Model shared`, relay only hands the name on, and caller binds it to its opaque p.  A Model: 11.  An Other,
+# whose `value` is its second field: 9, by name.  A Thin, which has no `value`: refused where caller forms relay's
+# input, taken by caller's handler, 42.  Until 2026-10-05 caller's call of relay was refused at translation,
+# "incompatible entry signature".  Entry 7.
+Model: (size_t: value 11U)
+Other:
+    size_t: pad 1U
+    size_t: value 9U
+end: Other
+Thin: (int: pad 1)
+@: Model shared @Model
+fn: observe () size_t
+return: shared\value
+fn: relay () size_t
+return: observe()
+fn: caller (@: void p) size_t
+    size_t: r 0U
+    @: void shared p
+    r: relay()
+    catch: implements ()
+        r: 42U
+    ---
+return: r
+Other: wide
+Thin: bad
+size_t: a caller(@Model)
+size_t: b caller(wide)
+size_t: c caller(bad)
+int: ok 7
+if: a != 11U
+    ok: 81
+if: b = 1U
+    ok: 61
+if: b != 9U && b != 1U
+    ok: 82
+if: c != 42U
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

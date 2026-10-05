@@ -975,6 +975,17 @@ C: makeA()
 
 f(), f: () и явно закрытая пустая вертикальная форма задают одно представление. При неизвестном f в позиции определения это пустая именованная Structure; при существующем callable f в позиции исполнения — нульарный вызов. Голый f в позиции исполнения вычисляется по обычным правилам выражения. Наличие трейлера, return или особая поверхностная форма не выбирают объявление вместо вызова. Неизвестное A в A: b объявляет Structure A, а не переменную выведенного из b примитивного типа: в языке нет var.
 
+Последующее чтение имени не меняет задним числом роль уже записанной неизвестной головы. В следующем примере у `f` нет формала, видимого внешнего значения или ранее установленного свободного входа `x`: `x: j` определяет именованную Structure, а не присваивает примитиву. `return: x` не даёт объявленного результата `int` и ошибочно по общему правилу проверки и преобразования результата. Одноимённое значение вызывающего не меняет эту классификацию.
+
+```text
+fn: f () int
+    int: j 3
+    x: j
+    return: x
+```
+
+Свободный вход — используемое вызываемым свободное значение, не объявленное его явным формалом; его установление и выбор источника следуют [§12](#dynamic). Этот термин не обозначает дополнительную Structure, отдельный граф контекста или поиск имён во время исполнения.
+
 ### Явное копирование и ссылочные переменные
 
 Для клонирования либо композиции уже существующих структур используется явный [merge](#composition). В b: merge A C операнды — A и C, внешний b получает результат; имя результата не является первым операндом merge. Неявное клонирование по факту неизвестного аргумента не выполняется. Формирование возвращаемого вложенного callable с данными завершающейся активации регулируется отдельно тем же разделом композиции и не отменяется правилами объявления.
@@ -1040,6 +1051,17 @@ C: makeA()
 ```
 
 f(), f: () and an explicitly closed empty vertical form have one representation. For unknown f in definition position this is an empty named Structure; for existing callable f in execution position it is a nullary call. Bare f in execution position is evaluated under ordinary expression rules. A trailer, return or particular surface spelling does not select declaration instead of call. Unknown A in A: b declares Structure A, not a primitive variable whose type is inferred from b: the language has no var.
+
+A later read does not retroactively change the role of an already written unknown head. In the following example, `f` has no formal, visible outer value or previously established free input `x`: `x: j` defines a named Structure rather than assigning a primitive. `return: x` does not provide the declared `int` result and is erroneous under the general result checking and conversion rule. A caller's same-named value does not change this classification.
+
+```text
+fn: f () int
+    int: j 3
+    x: j
+    return: x
+```
+
+A free input is a free value used by a callable without being declared as its explicit formal; establishing it and selecting its source follow [§12](#dynamic). This term denotes neither an additional Structure, a separate context graph nor name lookup during execution.
 
 ### Explicit copying and reference variables
 
@@ -1655,7 +1677,7 @@ Arrays use the same scalar operations and contexts. Vectorization, reduction and
 [RU]
 `merge` — исполняемая операция над живыми структурными операндами. Она не является препроцессорным включением, составлением C-типов или изменением исходных значений. Операнды вычисляются один раз слева направо; затем строится новый корень с непосредственными полями в порядке операндов и дописанного тела. Результат прежнего `merge` сам может быть операндом.
 
-Копируется полный используемый граф с необходимыми ссылками и лексическими цепочками до нулевого родителя. Одна карта «источник — копия» используется для всех операндов: общие цели остаются общими, циклы сохраняются, ссылки и `parent` явно переписываются. Корни операндов и необходимые лексические предки не добавляются лишними видимыми полями результата. Лексический родитель нового корня определяется местом выражения `merge`. Для обычных копируемых целей сохранение связей означает, что ссылки результата указывают на соответствующие копии, а не на исходный граф; удержание исходных целей ограничено ссылками на переиспользуемую нативную реализацию и допущенной ветвью `independent: const: immutable` (ниже). Сохранение связей внутри копии не связывает аргументы и не меняет приоритет динамических входов.
+Копируется полный используемый граф с необходимыми ссылками и лексическими цепочками до нулевого родителя. Одна карта «источник — копия» используется для всех операндов: общие цели остаются общими, циклы сохраняются, ссылки и `parent` явно переписываются. Корни операндов и необходимые лексические предки не добавляются лишними видимыми полями результата. Родительские связи переписываются внутри копии на соответствующие копии исходных узлов; место исполнения `merge` не задаёт нового лексического родителя и не переразрешает имена тела. Для обычных копируемых целей сохранение связей означает, что ссылки результата указывают на соответствующие копии, а не на исходный граф; удержание исходных целей ограничено ссылками на переиспользуемую нативную реализацию и допущенной ветвью `independent: const: immutable` (ниже). Сохранение связей внутри копии не связывает аргументы и не меняет приоритет динамических входов.
 
 Обход полного используемого графа сам по себе не даёт доступа к защищённой ветви или полномочия экспортировать её содержимое. Композиция сохраняет [выбранный контракт защиты объекта](#protected-structures); `merge` не является обходным способом открыть защищённый контекст.
 
@@ -1690,6 +1712,24 @@ add5(1; y: 25), then add5(1)   -> 26, then 6   (one call's argument is not a new
 
 Так же строится возвращаемый вложенный метод: активация компонует реально используемые ею значения в данные вложенного вызываемого вхождения тем же `merge` — код `addN` остаётся неизменённым (и его нативная реализация, если она есть), данные результата — данные `addN` с дописанным значением активации (`n: значение активации`); объявленный тип результата (`fn` у `makeAdder`) проверяет получившийся callable обычным способом и третьим неявным операндом не становится. Скрытого окружения замыкания не возникает, а копирование не есть частичное применение и не замораживает вход вызова: свободное имя `n` тела `addN` (не его формал) остаётся свободным именем — скопированное значение есть лексический запасной путь, приоритет [§12](#dynamic) сохраняется, а явный `node\n` читает соответствующее лексическое состояние; лишь когда `n` — формал выбранного метода, скопированное значение — его значение по умолчанию (выше). Успешная композиция публикует полностью инициализированный результат, не требует регистрации коротких имён и не меняет источники.
 
+<a id="factory-reference-result"></a>
+
+Результат вызова фабрики принимается явно ресивером `@:`: он вычисляет записанный вызов и сохраняет обычную ссылку на возвращённое вызываемое. Определение именованного тела само по себе фабрику не исполняет. Поэтому получение результатов `makeAdder` записывается так:
+
+```text
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+@: add5 makeAdder(5)
+@: add100 makeAdder(100)
+
+[add5(1); add100(1); add5(1)]
+```
+
+При отсутствии динамического `n` у вызывающего ожидаемый результат — `[6 101 6]`. В отличие от этих исполняемых присваиваний ссылки, обычная запись с неизвестной головой `add5: makeAdder 5` определяет тело без его исполнения; она не является неявным получением результата фабрики. Унарное `@` перед результатом не добавляется: оно означало бы адрес хранимой ссылки, то есть другой уровень ссылки.
+
 ### Динамические источники и лексический запасной путь
 
 Копирование локально используемого лексического дерева не меняет разрешение динамических входов. При последующем вызове голое имя входа — свободное имя тела, не его формал ([§11](#callables)) — по-прежнему берётся из обычных динамических источников вызывающего до лексического запасного пути; скопированный лексический контекст даёт запасные данные, а не захват, переопределяющий вызывающего. Явный путь `node\…` выбирает этот лексический контекст непосредственно. `merge` не вводит операции связывания аргументов. То же правило действует после композиции и внутри независимых ветвей: отсечение внешнего лексического родителя не запрещает динамические входы от текущего вызывающего, и переиспользование вечной ветви не превращает её допустимые входы в константы. Семантическая иллюстрация, не новый синтаксис:
@@ -1712,7 +1752,7 @@ no admissible source at all:        ordinary missing-input diagnostic
 [EN]
 `merge` is an executable operation over live structural operands. It is neither a preprocessor include, C-type composition nor mutation of source values. Operands are evaluated once left-to-right; a fresh root is then built with direct fields in operand and appended-body order. A previous `merge` result can itself be an operand.
 
-The complete used graph is copied with required references and lexical chains to a zero parent. One source-to-copy map spans all operands: shared targets remain shared, cycles are preserved, and references and `parent` links are explicitly rewritten. Operand roots and necessary lexical ancestors do not become extra visible result fields. The new root's lexical parent follows the `merge` expression's location. For ordinary copied targets, preservation of relationships means that the result's links refer to the corresponding copied objects, not to the original graph; retention of original targets is limited to reusable native implementation references and the admitted `independent: const: immutable` branch (below). Preserving relationships inside a copy does not bind arguments or change dynamic-input precedence.
+The complete used graph is copied with required references and lexical chains to a zero parent. One source-to-copy map spans all operands: shared targets remain shared, cycles are preserved, and references and `parent` links are explicitly rewritten. Operand roots and necessary lexical ancestors do not become extra visible result fields. Parent links are rewritten inside the copy to the corresponding copies of the source nodes; the place that executes `merge` neither supplies a new lexical parent nor re-resolves the body's names. For ordinary copied targets, preservation of relationships means that the result's links refer to the corresponding copied objects, not to the original graph; retention of original targets is limited to reusable native implementation references and the admitted `independent: const: immutable` branch (below). Preserving relationships inside a copy does not bind arguments or change dynamic-input precedence.
 
 Traversal of the complete used graph does not itself grant access to a protected branch or authority to export its contents. Composition preserves the [selected object-protection contract](#protected-structures); `merge` is not an alternative route for opening a protected context.
 
@@ -1746,6 +1786,24 @@ A `merge` result executes the selected body, and the result's `native` word belo
 ### Returned nested methods
 
 A returned nested method is built the same way: the activation composes the values it actually uses into the data of the nested callable occurrence by the same `merge` -- the code of `addN` stays unchanged (and so does its native implementation, when it has one), the result's data is the data of `addN` with the activation's value appended (`n: the activation's value`); the declared result type (`fn` of `makeAdder`) checks the resulting callable in the ordinary way and does not become a third implicit operand. No hidden closure environment arises, and the copy is neither partial application nor a freeze of a call-time input: the free name `n` of the body of `addN` (not its formal) remains a free name -- the copied value is the lexical fallback, the priority of [§12](#dynamic) is kept, and an explicit `node\n` reads the corresponding lexical state; only when `n` is a formal of the selected method is the copied value its default value (above). Successful composition publishes a fully initialized result, requires no short-name registration and leaves sources unchanged.
+
+<a id="factory-reference-result"></a>
+
+A factory call's result is received explicitly by the `@:` receiver: it evaluates the written call and stores the ordinary reference to the returned callable. Defining a named body does not itself execute the factory. Receiving `makeAdder` results is therefore written as follows:
+
+```text
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+@: add5 makeAdder(5)
+@: add100 makeAdder(100)
+
+[add5(1); add100(1); add5(1)]
+```
+
+With no caller-supplied dynamic `n`, the expected result is `[6 101 6]`. Unlike these executable reference assignments, the ordinary spelling with unknown head `add5: makeAdder 5` defines a body without executing it; it is not implicit factory-result initialization. No unary `@` is added before the result: it would mean the address of the stored reference, a different reference level.
 
 ### Dynamic sources and the lexical fallback
 

@@ -17,7 +17,7 @@ work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
 [kernel map](CORE_L2_L3_v2.md), and
 [porting guide](L2_L3_CODING_INSTRUCTION.md).
 
-**Current handoff, 2026-10-03.** The author has transferred continuation to
+**Historical handoff, 2026-10-03.** The author transferred continuation to
 Fable; Codex finishes documentation and then answers Fable's questions, without
 starting another code stage. Read [to_fable.md](to_fable.md) before taking the
 single writer/build slot. Latest completed full gate: `critical_graph_fix_full_32`,
@@ -26,10 +26,19 @@ its copy-to-alias mutant fails in native and cleared-root execution. It is not
 a new full-gate verdict. Sandbox code/tests are uncommitted and stable `l2src`
 is unchanged. Both critical tickets remain OPEN. Exact current evidence:
 [persistent occurrence oracles](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles).
+
+**Current owner, 2026-10-05.** Opus succeeds the quota-exhausted Fable as the
+sole kernel writer/build; Codex answers questions and has a bounded documentation
+baton. The three author questions below are answered, not language-decision
+blockers. Their implementation and gates remain outstanding where listed.
+The [author's decisions](LMX_blog/2026-10-05.md) require source-copy parent
+rewriting, explicit `@: add5 makeAdder(5)` result receipt, and ordinary result
+type checking for an unknown-head Structure returned as int.
+
 Historical runs and intermediate task descriptions below are not restart
 instructions where a later measured slice supersedes them.
 
-**Continuation, 2026-10-03 (Fable).** Fable holds the single writer/build slot.
+**Continuation, 2026-10-03 (Fable).** Fable held the single writer/build slot.
 Baseline rerun on the handoff bytes: `fable_full_01` RED126/1395, exactly the
 four persistent-oracle recoveries against full32. Latest full gate on the
 continuation bytes: `fable_full_43` RED39/1788 — against that baseline 98
@@ -68,11 +77,15 @@ Bounded slices of this continuation (each measured, none closes a ticket):
 
 Subtasks discovered, in dependency order with the items below (all OPEN):
 
-- [ ] Deferred head-role decision for `h: tail`: an executable free read
+- [ ] Common head-role implementation for `h: tail`: an executable free read
   that precedes the statement establishes the input and must not be suppressed
   by an early definition row (`unit_own_dirty_rhs`); audit
-  `unit_arg_addr_dyn_types`; three rows wait for the author
-  ([ruling and split](steps/fable-continuation-20261003.md#head-role)).
+  `unit_arg_addr_dyn_types`. The author has answered the previously deferred
+  case: an unknown `x: j` defines Structure x; `return: x` is a result
+  type/conversion error, not a way to establish a primitive input retroactively.
+  Migrate the old positive expectations and retain the established-input controls
+  ([answer](LMX_blog/q/head-role-hidden-input-fixed-point.md),
+  [ruling and split](steps/fable-continuation-20261003.md#head-role)).
 - [x] `NATIVE-RAW-INDEX-LITERAL-TYPE`: an unknown foreign raw index is opaque,
   not an int literal (`unit_indent_stack_field_index`).
 - [x] Arrays declared in nested bodies in the retained graph and in the
@@ -179,11 +192,14 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   a nullary held callable as a statement is its call (Codex ruling
   FABLE-CODEX-20261004-10)
   ([ledger](steps/fable-continuation-20261003.md#no-forward-lookup)).
-- [ ] Named actuals of the factory in the store of a callable merge, a G5
-  blocker waiting for the author: Codex withdrew `h2: make2(n: 100)` (by Q58
-  it defines a named Structure that retains the call), and the meaning of
-  the short store `add5: makeAdder 5` itself is asked of the author
-  ([question](LMX_blog/q/current/held-factory-initialization-versus-body-definition.md),
+- [ ] Factory-result reception and its named actuals through the general
+  reference receiver: `@: add5 makeAdder(5)`, and `@: h2 make2(n: 100)`.
+  The author has settled the rule; ordinary unknown-head `add5: makeAdder 5`
+  defines a dormant body and must not use the legacy eager factory shortcut.
+  Migrate factory-result fixtures explicitly, retain Q58 dormant-body controls,
+  and gate both native and genuinely walked execution. This is implementation
+  debt, not an unanswered language question
+  ([answer](LMX_blog/q/held-factory-initialization-versus-body-definition.md),
   [defects](steps/defects.md#held-store-factory-actuals-positional)).
 - [x] The bare name of a held callable where a number is received as a
   whole value (a store, an initializer, a number formal's actual, a number
@@ -260,13 +276,15 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [ ] A merge returned from a nested body of its method
   ([T7-HOST-NESTED-RETURN](steps/defects.md#t7-host-nested-return)); the
   consumer of a merge given as an actual, walked.
-- [ ] Held for the author's answer, by Codex's thirteenth reply: what a
-  merge's node reads where no caller gives the name, the model's copied
-  lexical state or a field of the place of the merge
-  ([question](LMX_blog/q/current/merge-lexical-copy-and-root-placement.md),
-  [T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)). The
-  live cell the node reads today meets neither reading. No expectation is
-  set for either reading before the answer.
+- [ ] Repair copied lexical links under the author's settled rule: merge
+  copies the used source tree and rewrites parent links inside that copy.
+  The execution site supplies no lexical parent or re-resolution of names.
+  Gate a source value 9 against merge-site value 50 with no dynamic input:
+  the copy reads 9 before and after mutation of the original to 11; explicit
+  node paths use the copied source relation. Keep dynamic-input priority,
+  shared targets/cycles and native/walk parity
+  ([answer](LMX_blog/q/merge-lexical-copy-and-root-placement.md),
+  [T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)).
 - [ ] The written shape of a callable merge: the translator reads
   `merge(y: k; add)` as `merge(add; y: k)`, against three rules of
   `#composition`. By Codex's fourteenth reply no author decision is needed:

@@ -105,6 +105,15 @@ a primitive is assigned under its receiver contract. For absent b, b: A and
 @: b A are equivalent. Explicit reference reassignment uses @: b B, not
 application b: args. An invalid call never falls back to assignment.
 
+A factory result is received explicitly, for example `@: add5 makeAdder(5)`.
+The ordinary unknown-head spelling `add5: makeAdder 5` instead defines a
+dormant body; a known method in its tail is not permission to execute the
+definition. See the [complete example](docs/LMX_semantics.en.md#factory-reference-result).
+A later read does not establish a primitive input retroactively: if `x: j`
+defines an unknown head in a method returning int, `return: x` is a result
+type/conversion error. A free input is an established free value used without
+an explicit formal, not another graph or runtime name lookup.
+
 **Body versus signature.** `(A: b)` in a signature describes a structural
 reference parameter, synonymous there with `(@: A b)`. It does not execute A.
 In an executable body, existing `A: b` selects the general call route and checks
@@ -325,7 +334,8 @@ a new composed value. The first operand supplies model slots; matching later
 fields update those positions and new fields append under the common rule.
 Structural parts compose under the documented args/return/body contract. One
 source-to-copy map preserves sharing and cycles and rewrites internal references
-and lexical chains. The fresh result's parent comes from its expression location.
+and lexical chains within the copied source relationships. The place that
+executes merge does not supply its lexical parent or re-resolve its names.
 Operand roots/needed ancestors are not extra visible result fields.
 
 The qualified `independent: const: immutable` branch is retained by physical

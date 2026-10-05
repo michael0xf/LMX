@@ -130,6 +130,12 @@ If `makeA` is already a callable in the applicable context, the nested node is a
 
 **PENDING.** The current implementation notes still track complete common known/unknown nested-head resolution. Code generators must not add a spelling flag, empty-body exception, or call capsule to bridge this gap.
 
+A later read does not retroactively convert an unknown-head definition into
+a primitive assignment or an implicit input. For `fn: f () int` with
+`int: j 3`, `x: j`, then `return: x`, the unknown x is a named Structure;
+the return is erroneous under ordinary result checking/conversion. A caller's
+same-named primitive does not change the role of the written definition.
+
 ### 3.4 Signatures are descriptions, not executed declarations
 
 **NORMATIVE.** A callable signature describes transport, admission, defaults, result, and exits. Its forms are not executed as body declarations.
@@ -183,6 +189,33 @@ b: merge A C
 The operands are `A` and `C`; `b` receives the result. `b` is not silently inserted as a first operand. Merge is explicit construction and has its own copying, reference-retention, parent, identity, and admission rules.
 
 **SUPPORTED/PENDING boundary.** Ordinary merge-result own storage and known-schema result projection have focused implementation work and evidence. The implementation notes still track held operands whose declared view differs from their actual layout, hidden/formal merge operands, and general occurrence-selector projection. Write portable source to the normative rule, but label compiler examples depending on those open cases as **PENDING**.
+
+### 4.4 Receive a factory result explicitly
+
+Use the reference-assignment receiver to evaluate the factory call and receive
+the returned callable; do not turn an ordinary named-body definition into an
+eager initializer:
+
+```text
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+
+@: add5 makeAdder(5)
+@: add100 makeAdder(100)
+
+[add5(1); add100(1); add5(1)]
+```
+
+With no dynamic n supplied by the caller, this gives `[6 101 6]`. The `@:`
+receiver stores the returned reference; unary `@` would add an address level
+and is not needed. The old `add5: makeAdder 5` spelling defines a dormant body
+when add5 is unknown; it does not execute the factory while defining add5.
+The returned callable keeps its actual signature, lexical-copy rule and ordinary
+dynamic-input priority. See [returned methods](docs/LMX_semantics.en.md#factory-reference-result).
+Implementations still using an eager short-tail shortcut must migrate through
+the general receiver/expression route, not a factory-name or spelling exception.
 
 ## 5. Values, references, places, and addresses
 

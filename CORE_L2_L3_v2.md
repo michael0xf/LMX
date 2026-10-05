@@ -462,7 +462,7 @@ walked. A method that returns a merge runs its body first and builds the node
 where the body ends; a nested body of a host is its statements, not its
 build. Under what the node hangs, and what its body reads where no caller
 gives a name, are as they were and wait for the author
-([question](LMX_blog/q/current/merge-lexical-copy-and-root-placement.md)).
+([question](LMX_blog/q/merge-lexical-copy-and-root-placement.md)).
 The node's interface keeps the unbound formals only, against L3 §20: an open
 obligation
 ([MERGE-KEEPS-MODEL-INTERFACE](steps/defects.md#merge-keeps-model-interface),

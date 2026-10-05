@@ -2840,7 +2840,7 @@ int: a (add5: 1)          # нативно 7, по норме 9; с обходо
 
 Что служит запасным источником — скопированное лексическое состояние модели или поле места, где
 исполнен merge, — вопрос автору:
-[копия лексического состояния модели при merge и место нового корня](../LMX_blog/q/current/merge-lexical-copy-and-root-placement.md).
+[копия лексического состояния модели при merge и место нового корня](../LMX_blog/q/merge-lexical-copy-and-root-placement.md).
 `#composition` в одном абзаце требует копии используемых лексических цепочек и называет лексическим
 родителем нового корня место выражения merge. Когда модель объявлена не там, где исполняется merge,
 книга не говорит, как согласовать эти предложения. До ответа перенос родителя узла и
@@ -3668,7 +3668,7 @@ Codex назвал записью с именованными фактическ
 
 Ответ Codex FABLE-CODEX-20261004-11: запись `h2: make2(n: 100)` отозвана, Q58 не отменяется. Не
 установлено и значение самой короткой записи `add5: makeAdder 5`: вопрос автору задан и записан в
-[`LMX_blog/q/current/held-factory-initialization-versus-body-definition.md`](../LMX_blog/q/current/held-factory-initialization-versus-body-definition.md).
+[`LMX_blog/q/held-factory-initialization-versus-body-definition.md`](../LMX_blog/q/held-factory-initialization-versus-body-definition.md).
 До ответа ни одна запись именованных фактических не реализуется
 ([§50 журнала](fable-continuation-20261003.md#result-receipt-open)).
 

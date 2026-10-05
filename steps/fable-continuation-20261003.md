@@ -459,7 +459,7 @@ withdrawn on 2026-10-03 ([free names](free-names.md)), and
 | --- | --- |
 | `unit_own_dirty_rhs` | Decidable: an executable free read of `quote` precedes both writes and is an independent input-use fact. The early definition row must not suppress it. Needs the deferred head-role decision described in [the pointer-fix ledger](critical-graph-pointer-fix-20261002.md). |
 | `unit_arg_addr_dyn_types` | First audit its `setnull(@: dp)` spelling against the current unary `@` / `@:` receiver contract; the pointer ticket is OPEN. |
-| `unit_colon_hidden_update`, `unit_free_conv`, `unit_walk_free_conv` | No independent preceding use. Both readings are self-consistent; the tie-break is [asked of the author](../LMX_blog/q/current/head-role-hidden-input-fixed-point.md). Expectations stay as they are, red. |
+| `unit_colon_hidden_update`, `unit_free_conv`, `unit_walk_free_conv` | No independent preceding use. Both readings are self-consistent; the tie-break is [asked of the author](../LMX_blog/q/head-role-hidden-input-fixed-point.md). Expectations stay as they are, red. |
 
 A body reached through a callable formal or a path follows the same rule as a
 directly called one. Once a name is established as a required input, each call
@@ -694,7 +694,7 @@ when a call receives a copy.
 **Left as they are.** `unit_arr_path_variable_index_refused`,
 `unit_arr_path_inner_value_refused`, `unit_arr_path_three_refused` belong to
 the letter element contract and change with it. `unit_asgn_fallback` waits for
-[the author](../LMX_blog/q/current/head-role-hidden-input-fixed-point.md).
+[the author](../LMX_blog/q/head-role-hidden-input-fixed-point.md).
 `unit_bind_method_thin_other` is a runtime failure, not an oracle question.
 
 **A control for section 15's literal row.** Mutant M4 (`fable_lit_mut_04`)
@@ -3466,7 +3466,7 @@ the later general dormant named-body rule." Codex asked the author whether
 dormant named body with the result received explicitly. Until the author
 answers, neither spelling of named actuals is implemented, Q58 and the rows
 of the short form stay as they are, and the question stands in
-[`LMX_blog/q/current/held-factory-initialization-versus-body-definition.md`](../LMX_blog/q/current/held-factory-initialization-versus-body-definition.md)
+[`LMX_blog/q/held-factory-initialization-versus-body-definition.md`](../LMX_blog/q/held-factory-initialization-versus-body-definition.md)
 with the two author sources, the anchors, the P0 trees and what was
 measured.
 
@@ -5750,7 +5750,7 @@ choice." That is withdrawn. What the fallback of a merge's node denotes,
 the model's copied lexical state or a field of the place where the merge is
 performed, is a question to the author. Codex asks it; its anchors, the
 author's own words, what is measured and the two readings are in
-[the question's file](../LMX_blog/q/current/merge-lexical-copy-and-root-placement.md).
+[the question's file](../LMX_blog/q/merge-lexical-copy-and-root-placement.md).
 The entry [T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links) is
 rewritten: its first wording named reading A as the norm.
 

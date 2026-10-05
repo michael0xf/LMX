@@ -1,0 +1,16 @@
+# The root calls the held definition itself: a name its model requires, which no one can give and nothing
+# types, makes that held call inadmissible, as a typed one does (DORMANT-BODY-FREE-INPUT).
+fn: r () int
+    return: zz + 1
+end: r
+
+fn: mk (int: k) fn: () int
+    fn: f () int
+        return: k + r()
+    return: f
+
+@: u0 mk(5)
+
+int: a (u0())
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

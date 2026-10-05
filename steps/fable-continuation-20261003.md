@@ -8279,3 +8279,101 @@ and the size of the copy itself.
 **Next.** The data merge keeps the program's qualified branches
 ([DATA-MERGE-COPIES-QUALIFIED-BRANCH](defects.md#data-merge-copies-qualified-branch)),
 then A2 by Codex's review.
+
+<a id="one-admission-rule"></a>
+## 80. One admission rule at the call (DORMANT-BODY-FREE-INPUT, part 1)
+
+Codex's answer, recorded with the defect: "use one admission rule for typed
+and still-untyped free inputs. A required input with no admissible source
+makes the CALL inadmissible. A type learned elsewhere must not decide whether
+this failing call is reported as an unresolved use or a missing binding." The
+rows of the third class move their primary location to the inadmissible call
+that starts the chain; `Counter`'s call with no source of `g` is refused at
+that call, with two witnesses beside it.
+
+### What was measured
+
+On `b9f880fd`: from the root, a callee's input that no one can give (need 2)
+was refused at the call only when a type had been learned for it somewhere
+("unbound dynamic input"); without one, the closure said "unresolved name" at
+the original read. A held call asked its caller only for the inputs of its
+model that had a type, and skipped the others: the same program with nothing
+to type the name was refused at the read, with a type at the root's call.
+
+### What is built
+
+1. **The root's call.** `l2_dyn_site_callee` refuses, from the root, a
+   required input no one can give at that call, whether or not it has a type.
+2. **The held call.** `l2_dyn_site_held` asks the caller for every input of
+   the model, with a type or not, so a method that calls a held definition
+   hands an untyped input on as a typed one; from the root, an untyped input no
+   one can give refuses the held call itself, with the word
+   `l2_held_unbound` says for a typed one where the call is formed.
+
+### The migrations
+
+A replay of the 1850 translations recorded by `opus_full_09` changes exactly
+17 rows, all refusals before and after, none of them a running program.
+
+| Row | Before (at the read) | After (at the call) |
+| --- | --- | --- |
+| `unit_body_path_bare_refused`, walked twin | 11:13 unresolved name | 14:4 unbound dynamic input j |
+| `unit_colon_unknown_value_refused` | 2:10 | 6:1 missing_value |
+| `unit_copy_call_missing_input_refused` | 6:11 | 8:1 z |
+| `unit_dormant_free_body_call_refused` | 8:8 (red) | 13:10 z, its registered needle |
+| `unit_dyn_hidden_from_cross_method` | 15:39 | 21:1 shared |
+| `unit_dyn_hidden_from_undeclared_refused` | 7:39 | 17:1 shared |
+| `unit_named_actual_free_name_refused` | 9:24 | 12:30 a |
+| `unit_named_struct_dead_tail_refused` | 7:12 | 9:1 g, the root's call of Counter |
+| `unit_s2_vis_branch_refused` | 5:9 | 15:1 cfg |
+| `unit_s7_part_free_refused` | the part's 4:9 | 8:6 k |
+| `unit_s7_part_ns_hidden` | the part's 4:9 | 9:6 Counter |
+| `unit_s7_part_root_hidden` | 6:9 | 8:4 k |
+| `unit_site_future_only_refused` | 2:9 | 11:30 p |
+| `unit_sizeof_unknown_refused` | 4:16 | 8:1 unknownName |
+| `unit_unresolved_name_located_refused` | 5:8 | 8:5 g |
+| `unit_upper_undeclared_refused` | 6:8 | 10:30 NOPE |
+
+The locations measured at `1b86feaf` and `b9f880fd` stay as dated evidence;
+seven fixtures' header comments say the new place, with their line counts
+kept. Unchanged: the free names of the root and of a program part's root
+(refused by the norm), the path segments that name nothing (another
+mechanism), and `unit_colon_graph_unknown_value_refused`, whose `broken` is
+never called (part 2).
+
+### New rows
+
+| Row | Shows |
+| --- | --- |
+| `unit_named_struct_dead_tail_given`, walked twin | The root gives `g`, declared above its call of `Counter`: the call is admitted, the tail after the bare `return` does not run (`Counter\n` stays 0), and the retained graph holds it -- `Counter` has five children, four without the tail. |
+| `unit_named_struct_dead_tail_invalid_refused` | `n\nosuch` in the dead tail, 7:10: refused by the check, though it never runs. |
+| `unit_held_call_untyped_input_refused` | Nothing types `zz`: the root's call of `inner`, which calls the held definition, is refused, 21:8; before, 7:13 at `r`'s read. |
+| `unit_held_call_untyped_root_refused` | The root's own held call, 14:9; before, 4:13. |
+
+### Mutants
+
+| Mutant | Puts back | Result |
+| --- | --- | --- |
+| both parts out (`b9f880fd`'s translator) | the type decides at the root's call; the held call skips untyped inputs | the 16 migrated rows and `unit_dormant_free_body_call_refused` say "unresolved name" at the read; both held rows too |
+| the held part out | the held call skips untyped inputs | `unit_held_call_untyped_input_refused` 7:13 and `unit_held_call_untyped_root_refused` 4:13, "unresolved name" |
+
+### Open: part 2
+
+A body nothing calls cannot be compiled without a type for its free input:
+with the closure's refusal taken out (a probe), `unit_dormant_free_body` and
+`unit_asgn_fallback` stop at the procedure's signature ("dynamic input type has
+no formal spelling"), `unit_local_ns_stmt_unresolved` at its statement
+("assignment value has unknown type"), a called body under the walk at "a call
+with an input that is not a number". What a dormant body compiles to is asked
+of Codex; the four positives stay registered OPEN.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_08` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_08` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_10` (full harness) | RED39/1856: against `opus_full_09` FAIL→OK 1 (`unit_dormant_free_body_call_refused`), OK→FAIL 0, added 5, all green, removed 0, no red row's words changed. The 13 declared paths were hashed before the run; the staged translator is their bytes. |
+
+**Next.** Part 2 by Codex's answer; A2 and the data merge's parent by his
+review.

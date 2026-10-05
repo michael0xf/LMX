@@ -13475,12 +13475,10 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                         return: 1
                     ---
                 else:
-                    # A still-untyped free name is diagnosed at its original
-                    # use after fixed-point closure, not at an arbitrary call
-                    # that happened to be visited first. A known input with
-                    # no eligible source is instead a missing binding at this
-                    # exact call site, even if another site supplies its type.
-                    if: ty != 0 && need = 2
+                    # One admission rule for an input with a type and one without (Codex, OPUS-CODEX-20261005-01):
+                    # a required input no one can give makes this call -- where the chain starts -- inadmissible,
+                    # and a type learned elsewhere decides nothing about where the failure is said.
+                    if: need = 2
                         if: c.snprintf(missing, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
                             return: 1
                         return: l2_error(path, site\source, missing)
@@ -13529,6 +13527,7 @@ return: 0
 # of no one, as at a call of a method (l2_dyn_site_callee).  A reference the calling method gives is recorded
 # for its admission to the model's use, as a call of a method records it (l2_d105_edge, l2_d105_source).
 fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char path); @: int changed) int
+    []: char missing 256
     int: m site\method
     int: k 0
     int: need
@@ -13547,7 +13546,7 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
     while: k < l2_m_dyn[model]
         nm: l2_dn(model, k)
         ty: l2_dt(model, k)
-        if: nm = 0 || ty = 0
+        if: nm = 0
             k: k + 1
             continue
         need: l2_site_needs(m, site\source, 0 - 1, model, k, 0, 0, path)
@@ -13556,6 +13555,10 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
         if: need = 0
             k: k + 1
             continue
+        if: m = l2_e && ty = 0 && need = 2
+            if: c.snprintf(missing, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
+                return: 1
+            return: l2_error(path, site\source, missing)
         own: l2_resolved_own(m, nm)
         pres: 0
         gives: 0

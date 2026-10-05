@@ -1,0 +1,23 @@
+# A name a held definition requires, which no one can give and nothing types, is refused at the call that
+# starts the chain, as when a type is known (unit_held_call_required_input_unavailable_refused): one admission
+# rule for an input with a type and one without (DORMANT-BODY-FREE-INPUT).  r reads zz; the unit does not
+# declare it.  The definition f calls r and only hands zz on; inner calls the held f and has no zz.  The root
+# calls inner and has none either: that call is refused.
+fn: r () int
+    return: zz + 1
+end: r
+
+fn: mk (int: k) fn: () int
+    fn: f () int
+        return: k + r()
+    return: f
+
+@: u0 mk(5)
+
+fn: inner () int
+    return: u0()
+end: inner
+
+int: a inner()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

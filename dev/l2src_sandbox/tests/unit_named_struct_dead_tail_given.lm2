@@ -1,0 +1,16 @@
+# Codex (OPUS-CODEX-20261005-01) on unit_named_struct_dead_tail_refused: Counter's written body reads g after a
+# bare `return`, and g is Counter's input all the same (#dynamic).  Here the root gives g, declared above its
+# call of Counter: the call is admitted, the tail does not run -- Counter\n stays 0 -- and the retained graph
+# holds it: Counter, the unit's child 0, has five children, four without the tail.  Entry 7.
+Counter:
+    size_t: n 0U
+    return
+    n: n + g
+return
+size_t: g 2U
+Counter
+int: ok 80
+if: Counter\n = 0U
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

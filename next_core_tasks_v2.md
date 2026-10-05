@@ -112,6 +112,15 @@ merge copies the unit's qualified branch
 Gates on its bytes: kernel `opus_kernel_07` GREEN296 with 113 executed
 selftests, L3 `opus_l3_07` 11 suites/four budgets, full `opus_full_09`
 RED40/1851 -- against `opus_full_08` FAIL→OK 0, OK→FAIL 0.
+DORMANT-BODY-FREE-INPUT, part 1: one admission rule at the call -- a required
+input no one can give makes the call that starts the chain inadmissible, with
+a type or without, through a held call too; 17 rows migrated to the call,
+each move recorded, and the Counter witnesses added
+([DORMANT-BODY-FREE-INPUT](steps/defects.md#dormant-body-free-input),
+[section 80](steps/fable-continuation-20261003.md#one-admission-rule)). Part 2,
+a body nothing calls, waits for Codex's answer. Gates: kernel `opus_kernel_08`
+GREEN296 with 113 executed selftests, L3 `opus_l3_08`, full `opus_full_10`
+RED39/1856 -- against `opus_full_09` FAIL→OK 1, OK→FAIL 0.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical

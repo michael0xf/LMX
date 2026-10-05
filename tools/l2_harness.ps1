@@ -2222,7 +2222,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s2_vis_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_s2_vis_branch_refused.lm2:15:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_empty_program.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 1; Needle = ''; Args = @('0'); EmptyEntry = $true;
         Absent = @(); Debt = @('# entry statements: 0') },
     [pscustomobject]@{ Name = 'unit_s2_stray_end_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3504,7 +3504,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_upper_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_upper_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unresolved dynamic=NOPE'; Absent = @(); Debt = @() },
+        Needle = 'unit_upper_undeclared_refused.lm2:10:30: unbound dynamic input NOPE'; Absent = @(); Debt = @() },
     # D-61: a bound merge result is a root of the read-position field path resolver
     # (l2_field_path_check), so its path is a value in any expression -- a condition, arithmetic, a
     # loop condition -- read through its slot map like `v: R\x`.  It was «unresolved name» (and, for
@@ -3752,7 +3752,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_site_mixed_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':14:14: unbound dynamic input p'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_constructor_reception.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0); WalkedMethods = @(1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_sizeof_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_site_future_only_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_site_future_only_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'unit_site_future_only_refused.lm2:11:30: unbound dynamic input p'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_hidden_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_callsite_depth_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':8:5: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_hidden_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
@@ -4145,7 +4145,18 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_struct_exec_unit_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'lm2:7:12: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'lm2:9:1: unbound dynamic input g'; Absent = @(); Debt = @() },
+    # DORMANT-BODY-FREE-INPUT (Codex, OPUS-CODEX-20261005-01): Counter's g after the bare `return` is its input all
+    # the same, and its call with no source of g is refused at the call (above; until 2026-10-05 at g, 7:12).
+    # dead_tail_given: the root gives g, so the call is admitted, the tail does not run (Counter\n stays 0), and
+    # the retained graph holds it -- Counter has five children, four without the tail.  dead_tail_invalid_refused:
+    # a dead tail no execution could make valid is refused where it stands: a check, not an execution.
+    [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_given.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0','postpaths','widthpath','1','0','5','endpostpaths'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_given_walk.lm2'; Source = 'unit_named_struct_dead_tail_given.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0','postpaths','widthpath','1','0','5','endpostpaths'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_dead_tail_invalid_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_named_struct_dead_tail_invalid_refused.lm2:7:10: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_array.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_return_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -4321,7 +4332,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_sub_return_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:7:9: return with a value in a callable that returns nothing'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_unresolved_name_located_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'lm2:5:8: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'lm2:8:5: unbound dynamic input g'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_unresolved_name_located_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:4:5: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_nested_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -4959,9 +4970,9 @@ $fixtures = @(
     # The negatives: the bare j after `end: for` is not j outside its body (Q51) -- refused where it stands; a path to a
     # field the body does not declare is refused -- nothing makes one (Q52).  Both modes.
     [pscustomobject]@{ Name = 'unit_body_path_bare_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_body_path_bare_refused.lm2:11:13: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_body_path_bare_refused.lm2:14:4: unbound dynamic input j'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_body_path_bare_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_walk_body_path_bare_refused.lm2:11:13: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_walk_body_path_bare_refused.lm2:14:4: unbound dynamic input j'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_body_path_absent_refused.lm2:12:12: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_body_path_absent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -6176,9 +6187,9 @@ $fixtures = @(
     # use, not in beta's lexical parent. Q8 does not grant this binding.
     # The valid parent/caller counterpart is unit_site_parent_fallback.
     [pscustomobject]@{ Name = 'unit_dyn_hidden_from_cross_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_dyn_hidden_from_cross_method.lm2:21:1: unbound dynamic input shared'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_dyn_hidden_from_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_dyn_hidden_from_undeclared_refused.lm2:7:39: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_dyn_hidden_from_undeclared_refused.lm2:17:1: unbound dynamic input shared'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_own_find_last_sizeof.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0');
         Absent = @();
@@ -6220,7 +6231,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_sizeof_struct_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_entry_unit: graph') },
     [pscustomobject]@{ Name = 'unit_sizeof_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_sizeof_unknown_refused.lm2:8:1: unbound dynamic input unknownName'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_sizeof_c_door_arena.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT'); Debt = @('l2_entry_unit: graph', 'c.sizeof(c.size_t)') },
     # FABLE-OPUS-GATE-TRANSLATOR-20260924-151 commit 2: the sizeof: receiver takes a type frame --
@@ -6448,7 +6459,7 @@ $fixtures = @(
     # missing_value is a free name no caller binds: "unresolved name" at the name (l2_dyn_typed), before the
     # assignment's check, which waits for the name's type (steps/free-names.md M2).
     [pscustomobject]@{ Name = 'unit_colon_unknown_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_colon_unknown_value_refused.lm2:2:10: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_colon_unknown_value_refused.lm2:6:1: unbound dynamic input missing_value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_colon_incompatible_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     # Historical filename: const protects the referent, while its explicit pointer cell may rebind.
@@ -6778,7 +6789,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_s7_part_free_bound.lm2'; Parts = @('unit_s7_part_free_bound_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_free_refused.lm2'; Parts = @('unit_s7_part_free_bound_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_free_bound_part.lm2:4:9: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_free_refused.lm2:8:6: unbound dynamic input k'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_runtime_src_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:4:1: a table built at run time is not supported yet'; Absent = @(); Debt = @() },
     # §10 (steps/table-receiver.md; REVIEW a582309 with fable_pc's three conditions): a part's root is a
@@ -6827,7 +6838,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_part_forward.lm2'; Parts = @('unit_s7_part_forward_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_hidden.lm2'; Parts = @('unit_s7_part_root_field_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_root_hidden.lm2:6:9: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_root_hidden.lm2:8:4: unbound dynamic input k'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_src_refused.lm2'; Parts = @('unit_s7_part_root_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_src_refused_part.lm2:4:4: unresolved name'; Absent = @(); Debt = @() },
     # Triage 2026-10-03: bump has no established k (the field is declared below it), so its `k: 7`
@@ -6853,7 +6864,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_tbl_in_struct.lm2'; Table = 'absent'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_ns_hidden.lm2'; Parts = @('unit_s7_part_ns_hidden_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_ns_hidden_part.lm2:4:9: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_ns_hidden.lm2:9:6: unbound dynamic input Counter'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_dup_method_refused.lm2'; Parts = @('unit_s7_part_dup_method_refused_part.lm2', 'unit_s7_part_dup_method_refused_second.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_dup_method_refused_second.lm2:3:1: duplicate definition (the other at unit_s7_part_dup_method_refused_part.lm2:3:1)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_lib_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Library = $true;
@@ -7267,7 +7278,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_named_actual_machine_walk.lm2'; Source = 'unit_named_actual_machine.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,4,5,6); NativeMethods = @(2,3,7); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_free_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_named_actual_free_name_refused.lm2:9:24: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_named_actual_free_name_refused.lm2:12:30: unbound dynamic input a'; Absent = @(); Debt = @() },
     # A named actual inside the index of a store's head.  The head is an expression of its own, parsed
     # apart and kept by its statement; the binding walks that one tree as it walks a body, so a call
     # there is bound as any call's.  The callee is a * 2 + b: bound by place every case writes another
@@ -8231,6 +8242,13 @@ $fixtures = @(
     # makes the held call, where the chain starts.
     [pscustomobject]@{ Name = 'unit_held_call_required_input_unavailable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_required_input_unavailable_refused.lm2:28:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+    # The same with nothing to type zz (DORMANT-BODY-FREE-INPUT: one admission rule for an input with a type and
+    # one without): the root's call of inner, and the root's own held call, are refused where the chain starts;
+    # until 2026-10-05 the closure said "unresolved name" at r's zz.
+    [pscustomobject]@{ Name = 'unit_held_call_untyped_input_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_untyped_input_refused.lm2:21:8: unbound dynamic input zz'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_call_untyped_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_held_call_untyped_root_refused.lm2:14:9: unbound dynamic input zz'; Absent = @(); Debt = @() },
     # A reference among the names of a callable a site does not give is left out, as a number is: whether an
     # input is formed does not depend on how it is represented.  Through a method that only hands the callable
     # on, the reference left out stays absent (site_reference_forwarded).  A caller whose own Structure under
@@ -8589,7 +8607,7 @@ $fixtures = @(
     # A genuinely missing input: the copied body needs z, which neither the
     # caller nor the copy's lexical parent has. Refused, located at the name.
     [pscustomobject]@{ Name = 'unit_copy_call_missing_input_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_copy_call_missing_input_refused.lm2:6:11: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_copy_call_missing_input_refused.lm2:8:1: unbound dynamic input z'; Absent = @(); Debt = @() },
     # OPEN positive, red by design: a valid program whose copy's own row is
     # addressed before the call. The translator cannot yet prove the row's
     # current value and refuses the call as unsupported; the row stays a

@@ -7927,6 +7927,39 @@ $fixtures = @(
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_formal_long_field_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_formal_long_field_other_refused.lm2:19:13: implements is false in function argument'; Absent = @(); Debt = @() },
+    # No ceiling on the text of a path or a name (FIXED-BLOCKS-AUDIT; Codex, OPUS-CODEX-20261005-01 (2) B).  Names of
+    # 600 bytes, a path of two of them over 1200 bytes: read and written through a declared formal, through a free
+    # name and in the method that made the copy; a field of one such name, read also by its occurrence; an Array
+    # field's element through its address and its length; a path read through a typed reference of such a name and
+    # stored into a declared field (path_long_names).  A call through a path to a method's occurrence held by a
+    # Structure of such a name (path_long_call).  A path of twenty names, past the walked path's table of twelve
+    # (path_deep_names).  A typed reference that reads a path of
+    # such a name receives by that use and admits a Structure without the field it does not read
+    # (reference_long_path_coverage; its method receives natively).  True missing-field controls: a candidate
+    # without the formal's field of such a name, and a returned Structure without the result model's field of such
+    # a name -- this one translated before and stopped the process when it ran.
+    [pscustomobject]@{ Name = 'unit_path_long_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0..6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_long_names_walk.lm2'; Source = 'unit_path_long_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5,6); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_long_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0..2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_long_call_walk.lm2'; Source = 'unit_path_long_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_deep_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0..3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_deep_names_walk.lm2'; Source = 'unit_path_deep_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_long_path_coverage.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_long_names_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_path_long_names_other_refused.lm2:18:9: implements is false in function argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_return_long_field_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_return_long_field_other_refused.lm2:17:1: implements is false in return value'; Absent = @(); Debt = @() },
+    # A write through a free name of a path over 1200 bytes that nothing reaching the name gives its fields to: the
+    # check of a path write passed a head of 1024 bytes or more over.
+    [pscustomobject]@{ Name = 'unit_free_path_write_long_none_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_free_path_write_long_none_refused.lm2:10:5: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
     # Seventy formals each filled with another declaration than its own (64 formals admitted by name).
     [pscustomobject]@{ Name = 'unit_formal_many_admitted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0..70); Absent = @(); Debt = @() },

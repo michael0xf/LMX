@@ -47,6 +47,25 @@ fourteen green and one OPEN required positive red
 ([gates](steps/fable-continuation-20261003.md#letter-typed-place)). What the
 author's three decisions of 2026-10-05 supersede in the ledger and leave to
 build: [section 73](steps/fable-continuation-20261003.md#author-decisions-20261005).
+The second slice, B: the text of a path or a name of any length on the routes
+of a read, a write, an address, an indexed field, a call through a path, the
+uses of a typed reference and the static check of a candidate, and a walked
+path of any number of names. A wrong translation found beside it is
+repaired: the static check of a return value passed over a field name of 128
+bytes or more ([FIXED-BLOCKS-AUDIT](steps/defects.md#fixed-blocks-audit),
+[RETURN-CHECK-LONG-NAME](steps/defects.md#return-check-long-name)). Gates on
+its bytes: kernel `opus_kernel_02` GREEN296 with 113 executed selftests, L3
+`opus_l3_02` 11 suites/four budgets, full `opus_full_03` RED40/1813 — against
+`opus_full_02` FAIL→OK 0, OK→FAIL 0, ten rows added, all green
+([section 74](steps/fable-continuation-20261003.md#path-text-any-length)).
+The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
+hold the reading the author rejected for a head no binding established;
+FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical
+links by the author's rule, with the complete copy it needs; A -- the cost of
+a merge, diagnosed and repaired over the correct copy; then the
+receiving-edge debts (c) to (f), the duplicate stop under its real proof, the
+numeric conversion at the receiving edge, the outstanding K/G5 dependencies,
+the clean kernel and stages 8 and 8a.
 
 Historical runs and intermediate task descriptions below are not restart
 instructions where a later measured slice supersedes them.

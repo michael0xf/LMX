@@ -741,6 +741,10 @@ int: l2_alloc_live 0
 int: l2_alloc_fail_at 0
 int: l2_alloc_fail_kind 0
 int: l2_alloc_kind 0
+# Texts longer than the local buffer of the function that joins them (l2_text_room): kept until l2_release.
+@@: char l2_ltx 0
+int: l2_ltx_n 0
+int: l2_ltx_cap 0
 @: int l2_m_edge 0
 @: int l2_it_ar 0
 @: int l2_it_dyn 0
@@ -1570,6 +1574,12 @@ prototype:
     fn: l2_head_method (const: @(LmP0Text t)) int
     fn: l2_emit_path_bail (int: mi; const: @(char ind)) int
     fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
+    fn: l2_atoms_len (@: LmP0Field f; int: cnt) size_t
+    fn: l2_text_room (size_t: need; @: char local; size_t: cap) @: char
+    fn: l2_rw_seg_cap (const: @(LmP0Text t)) int
+    fn: l2_rw_path_room (const: @(LmP0Text t); @: int local; int: cap) @: int
+    fn: l2_cap_next (int: cap; int: need) int
+    fn: l2_vec_grow (@: void old; int: used; int: cap; size_t: esz) @: void
     fn: l2_path_rhs (const: @(LmP0Structure body); int: kind; @: size_t out_v) int
     fn: l2_is_path_head (const: @(LmP0Text t)) int
     fn: l2_seg_at (const: @(char pd); size_t: pn; int: i; @: size_t off; @: size_t len) int
@@ -1623,9 +1633,9 @@ prototype:
     fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
     fn: l2_path_struct_leaf (const: @(char pd); size_t: pn) int
     fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
-    fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
+    fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
     fn: l2_emit_arr_operand (int: mi; const: @(char pd); size_t: pn; int: kind; int: elem; int: depth; size_t: i0; size_t: i1; int: want_len; const: @(char ind); const: @(LmP0Node at); @: char dest) int
-    fn: l2_arr_len_shape (const: @(LmP0Node node); @: char pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
+    fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap; @@: char out_pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
     fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); @: int out_kind) int
     fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); const: @(char ind); const: @(LmP0Node at); @: char dest) int
     fn: l2_own_array_root (int: mi; const: @(LmP0Text left); const: @(LmP0Text right)) int
@@ -2432,6 +2442,15 @@ fn: l2_release () int
     l2_cf_req: 0
     l2_cf_n: 0
     l2_cf_cap: 0
+    i: 0
+    while: i < l2_ltx_n
+        l2_xfree((cast: (@: void) l2_ltx[i]))
+        i: i + 1
+    ---
+    l2_xfree((cast: (@: void) l2_ltx))
+    l2_ltx: 0
+    l2_ltx_n: 0
+    l2_ltx_cap: 0
     l2_flow_free()
     l2_e_free()
 return: 0
@@ -9893,7 +9912,7 @@ return: ty
 fn: l2_native_path_ty (const: @(LmP0Text t)) int
     int: leaf 0
     int: ft
-    if: t = 0 || t\data = 0 || t\length = 0U || t\length >= 1024U
+    if: t = 0 || t\data = 0 || t\length = 0U
         return: 0 - 99
     ft: l2_path_kind_ft(l2_path_kind(t\data, t\length, @ leaf))
     if: ft < 0
@@ -10335,7 +10354,8 @@ return: l2_pointer_compatible(target_ty, value_ty)
 # have translation-time types, so refuse an incompatible pair here rather than
 # emitting invalid C and pretending that the assignment was typed.
 fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: target_ty; int: receiving_model; const: @(LmP0Text receiving_name); int: mi; const: @(char path)) int
-    []: char lpd 1024
+    []: char lpd_own 1024
+    @: char lpd 0
     size_t: lpn 0U
     int: lkind 0
     int: lelem 0
@@ -10391,7 +10411,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
             return: 1
     ---
     if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "length")
-        if: l2_array_length_own(only\value, mi) < 0 && l2_arr_len_shape(only\value, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
+        if: l2_array_length_own(only\value, mi) < 0 && l2_arr_len_shape(only\value, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, only\value, "length requires one known primitive own array")
     ---
     # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): a call whose
@@ -17251,7 +17271,8 @@ return: 0 - 1
 
 # 1: the walk stores this field-path write as one step. 0: it does not, so the method stays packed.
 fn: l2_src_path_write (const: @(LmP0Node stmt); const: @(LmP0Text h)) int
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     int: n
     int: kind
     int: raw_type
@@ -17264,6 +17285,7 @@ fn: l2_src_path_write (const: @(LmP0Node stmt); const: @(LmP0Text h)) int
     n: l2_count_active(stmt\as\frame\body)
     if: n < 1
         return: 0
+    path: l2_rw_path_room(h, path_own, 42)
     if: l2_rw_path_meta(stmt, h, 0, path) != 0
         return: 0
     if: path[3] < 0 || path[0] = 4
@@ -18614,7 +18636,8 @@ fn: l2_descriptor_implements (int: cand; int: req; int: cons; @: int out_result)
     int: req_n 0
     int: cons_n 0
     @: char fname
-    []: char buf 128
+    []: char buf_own 128
+    @: char buf 0
     if: out_result != 0
         \out_result: 0
     if: cand = -1 || req < 0 || cons < 0 || out_result = 0
@@ -18630,7 +18653,12 @@ fn: l2_descriptor_implements (int: cand; int: req; int: cons; @: int out_result)
         return: 0
     k: 0
     while: k < l2_nsf_n
-        if: l2_nsf_owner[k] = cons && l2_nsf_fname[k] != 0 && l2_nsf_fname[k]\data != 0 && l2_nsf_fname[k]\length > 0U && l2_nsf_fname[k]\length < 128U
+        if: l2_nsf_owner[k] = cons && l2_nsf_fname[k] != 0 && l2_nsf_fname[k]\data != 0 && l2_nsf_fname[k]\length > 0U
+            # A field's name of any length is compared (l2_text_room); a name of 128 bytes or more used to be
+            # passed over.
+            buf: l2_text_room(l2_nsf_fname[k]\length + 1U, buf_own, 128U)
+            if: buf = 0
+                return: 1
             memcpy(buf, l2_nsf_fname[k]\data, l2_nsf_fname[k]\length)
             buf[l2_nsf_fname[k]\length]: 0
             fname: buf
@@ -21703,6 +21731,55 @@ return: 0
 # A member written `[N]name` arrives as separate atoms (`[`, the digits, `]`,
 # the name); they are joined into the one segment `[N]name` the lookup parses
 # (K01: the occurrence selector is part of the segment text).
+# TEXT OF ANY LENGTH.  A name or a path the program writes may be of any length.  A function that joins one into a
+# buffer of its own asks l2_text_room for the buffer: its local one when the text fits, else storage of exactly the
+# text's size, kept until the translation is released (l2_ltx, l2_release).  The size comes from the fields the text
+# is made of (l2_atoms_len).  Nothing is clipped, and no length is refused.
+
+# The bytes of the atoms of the active fields from f on: cnt of them, or to the end of the list when cnt < 0.  No
+# text a builder joins of those fields is longer (l2_join_path, l2_path_chain, l2_ruse_follow, l2_arr_operand): the
+# separators it writes are atoms of the list as well.
+fn: l2_atoms_len (@: LmP0Field f; int: cnt) size_t
+    @: LmP0Field g
+    size_t: n 0U
+    int: i 0
+    g: l2_next_active(f)
+    while: g != 0 && (cnt < 0 || i < cnt)
+        if: g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && g\value\as\atom != 0
+            n: n + g\value\as\atom\length
+        g: l2_next_active(g\next)
+        i: i + 1
+    ---
+return: n
+
+# Room for need bytes: `local` when its capacity cap holds them, else storage of exactly need bytes, kept until
+# l2_release.  0 when there is no memory.
+fn: l2_text_room (size_t: need; @: char local; size_t: cap) @: char
+    @: char made
+    @: void grown
+    int: want
+    size_t: psz
+    if: need <= cap && local != 0
+        return: local
+    if: l2_ltx_n >= l2_ltx_cap
+        want: l2_cap_next(l2_ltx_cap, l2_ltx_n + 1)
+        if: want < 0
+            l2_alloc_err: 2
+            return: 0
+        psz: c.sizeof(@: char)
+        grown: l2_vec_grow((cast: (@: void) l2_ltx), l2_ltx_n, want, psz)
+        if: grown = 0
+            return: 0
+        l2_ltx: (cast: (@@: char) grown)
+        l2_ltx_cap: want
+    ---
+    made: (cast: (@: char) l2_xmalloc(need))
+    if: made = 0
+        return: 0
+    l2_ltx[l2_ltx_n]: made
+    l2_ltx_n: l2_ltx_n + 1
+return: made
+
 fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
     @: LmP0Field f
     const: @: LmP0Text t
@@ -21850,7 +21927,7 @@ fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigne
     # included (`c.abort()`), never an update of a field of that name.
     if: l2_c_stmt_door(t) != 0
         return: 1
-    if: t\data = 0 || t\length >= 256U
+    if: t\data = 0
         return: 0
     if: l2_seg_count(t\data, t\length) < 2
         return: 0
@@ -21906,7 +21983,7 @@ fn: l2_head_method (const: @(LmP0Text t)) int
     r: l2_find_method(t)
     if: r >= 0
         return: r
-    if: t\data = 0 || t\length >= 256U
+    if: t\data = 0
         return: 0 - 1
     if: l2_seg_count(t\data, t\length) < 2
         return: 0 - 1
@@ -21943,7 +22020,7 @@ fn: l2_is_path_head (const: @(LmP0Text t)) int
     int: oi 0
     int: root 0
     int: fi 0
-    if: t = 0 || t\data = 0 || t\length >= 256U
+    if: t = 0 || t\data = 0
         return: 0
     if: l2_raw_head(t, l2_cur_mi, @ fi) = 0
         return: 0
@@ -23211,7 +23288,8 @@ return: 0
 # (l2_emit_path's own per-segment loop) chains. No emission: shared by the
 # check-time and emit-time callers.
 fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); @: int out_kind) int
-    []: char buf 1024
+    []: char buf_own 1024
+    @: char buf 0
     size_t: n
     int: leaf_mi
     \out_kind: 0 - 1
@@ -23222,8 +23300,9 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
         return: -1
     if: l2_own_visible(mi, left) < 0 && l2_nsty_of_name(mi, left) < 0 && l2_mres_find(mi, left) < 0 && l2_text_eq(left, "node") = 0 && l2_body_named(mi, left) < 0
         return: 0 - 1
-    if: left\length + right\length + 2U > 256U
-        return: 1
+    buf: l2_text_room(left\length + right\length + 2U, buf_own, 1024U)
+    if: buf = 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
     memcpy((cast: (@: void) buf), (cast: (@: void) left\data), left\length)
     buf[left\length]: 92
     memcpy((cast: (@: void) (buf + left\length + 1U)), (cast: (@: void) right\data), right\length)
@@ -23234,7 +23313,8 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
 return: 0
 
 fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text right); const: @(char ind); const: @(LmP0Node at); @: char dest) int
-    []: char buf 1024
+    []: char buf_own 1024
+    @: char buf 0
     size_t: n
     int: kind
     int: fpc
@@ -23249,8 +23329,9 @@ fn: l2_field_path_read (int: mi; const: @(LmP0Text left); const: @(LmP0Text righ
         return: l2_error(l2_src, at, "a field path must end at a primitive field")
     if: fpc != 0
         return: fpc
-    if: left\length + right\length + 2U > 256U
-        return: l2_error(l2_src, at, "expression too long")
+    buf: l2_text_room(left\length + right\length + 2U, buf_own, 1024U)
+    if: buf = 0
+        return: l2_alloc_or(l2_src, at, "out of memory")
     memcpy((cast: (@: void) buf), (cast: (@: void) left\data), left\length)
     buf[left\length]: 92
     memcpy((cast: (@: void) (buf + left\length + 1U)), (cast: (@: void) right\data), right\length)
@@ -23539,7 +23620,7 @@ return: 0
 # does not end at an Array field, an index is not a decimal literal, a kind-5 index is
 # outside its declared count, or there are more indices than the field has levels.
 # 3 = the root is a graph with no declared Structure type.
-fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
+fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: size_t out_pn; @: int out_count; @@: LmP0Field out_after; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0; @: size_t out_i1) int
     @: LmP0Field g
     @: LmP0Field nm
     @: LmP0Field idx
@@ -23560,7 +23641,7 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @
     int: fi 0 - 1
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0 || l2_ident(f\value\as\atom) = 0 || pd = 0
         return: 1
-    if: f\value\as\atom\length > 200U
+    if: f\value\as\atom\length + 1U > cap
         return: 1
     memcpy((cast: (@: void) pd), (cast: (@: void) f\value\as\atom\data), f\value\as\atom\length)
     pn: f\value\as\atom\length
@@ -23569,7 +23650,7 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; @: size_t out_pn; @
         nm: l2_next_active(g\next)
         if: nm = 0 || nm\value = 0 || nm\value\kind != c.LM_P0_NODE_ATOM || nm\value\as = 0 || l2_ident(nm\value\as\atom) = 0
             return: 1
-        if: pn + 1U + nm\value\as\atom\length > 250U
+        if: pn + 1U + nm\value\as\atom\length + 1U > cap
             return: 1
         pd[pn]: 92
         memcpy((cast: (@: void) (pd + pn + 1U)), (cast: (@: void) nm\value\as\atom\data), nm\value\as\atom\length)
@@ -23675,7 +23756,7 @@ return: 0
 # length() of an indexed-route Array: `length(P)` (kind 5 or 6) or `length(P[k])` (the
 # inner Array of kind 6).  0 = this route's and well formed; 1 = not this route's; 2 = its,
 # but not an Array (an element, or a wrong shape).
-fn: l2_arr_len_shape (const: @(LmP0Node node); @: char pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
+fn: l2_arr_len_shape (const: @(LmP0Node node); @: char local; size_t: local_cap; @@: char out_pd; @: size_t out_pn; @: int out_kind; @: int out_elem; @: int out_depth; @: size_t out_i0) int
     @: LmP0Field first
     @: LmP0Field after
     int: n
@@ -23687,11 +23768,19 @@ fn: l2_arr_len_shape (const: @(LmP0Node node); @: char pd; @: size_t out_pn; @: 
     size_t: i0 0U
     size_t: i1 0U
     int: st
+    @: char pd
+    size_t: room
     if: node = 0 || l2_frame_head(node, "length") = 0 || node\as\frame\trailer != 0 || node\as\frame\body = 0 || node\as\frame\body\trailer != 0
         return: 1
     first: l2_next_active(node\as\frame\body\first_field)
     n: l2_count_active(node\as\frame\body)
-    st: l2_arr_operand(first, 1, pd, @ pn, @ cnt, @ after, @ kind, @ elem, @ depth, @ i0, @ i1)
+    # The path's text of any length (l2_text_room); the caller reads it at *out_pd.
+    room: l2_atoms_len(node\as\frame\body\first_field, -1) + 1U
+    pd: l2_text_room(room, local, local_cap)
+    if: pd = 0
+        return: l2_alloc_or(l2_src, node, "out of memory")
+    \out_pd: pd
+    st: l2_arr_operand(first, 1, pd, room, @ pn, @ cnt, @ after, @ kind, @ elem, @ depth, @ i0, @ i1)
     if: st != 0
         return: st
     if: cnt != n || after != 0
@@ -24435,7 +24524,8 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
 return: 0
 
 fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
-    []: char lpd 1024
+    []: char lpd_own 1024
+    @: char lpd 0
     size_t: lpn 0U
     int: lkind 0
     int: lelem 0
@@ -24605,7 +24695,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     # D-106: a callable formal of this method shadows a unit method of its name.
     idx: l2_call_head_method(mi, call\head, @ fi)
     if: idx < 0 && l2_text_eq(call\head, "length")
-        if: l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
+        if: l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, node, "length requires one known primitive own array")
         return: 0
     if: idx < 0 && l2_is_known(call\head)
@@ -24627,7 +24717,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: call\body = 0
             return: l2_error(path, node, "incompatible entry signature")
         return: l2_check_fields(call\body\first_field, l2_count_active(call\body), mi, path, node)
-    if: idx < 0 && call\head != 0 && call\head\data != 0 && call\head\length < 256U && l2_seg_count(call\head\data, call\head\length) > 1
+    if: idx < 0 && call\head != 0 && call\head\data != 0 && l2_seg_count(call\head\data, call\head\length) > 1
         # Item 738: a path through a Structure capture of the model -- the capture says what is
         # wrong with it (past its field, no such field, a Structure field); a path it takes is the
         # walk's.
@@ -24683,7 +24773,8 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
     int: owner
     int: fx
     int: consumed
-    []: char buf 128
+    []: char buf_own 128
+    @: char buf 0
     int: capn 0
     int: capk
     if: span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
@@ -24707,8 +24798,11 @@ fn: l2_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char path); co
         return: l2_error(path, a0\value, "unresolved name")
     consumed: 3
     while: consumed <= span
-        if: mem\value\as\atom\length = 0U || mem\value\as\atom\length >= 128U || mem\value\as\atom\data = 0
+        if: mem\value\as\atom\length = 0U || mem\value\as\atom\data = 0
             return: l2_error(path, mem\value, "unresolved name")
+        buf: l2_text_room(mem\value\as\atom\length + 1U, buf_own, 128U)
+        if: buf = 0
+            return: l2_alloc_or(path, mem\value, "out of memory")
         memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
         buf[mem\value\as\atom\length]: 0
         fx: l2_ns_field_ix(owner, buf)
@@ -24745,7 +24839,8 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     int: s
     size_t: nlen
     []: int slots 32
-    []: char buf 128
+    []: char buf_own 128
+    @: char buf 0
     []: char cur 1024
     []: char nxt 1024
     if: dest = 0 || ind = 0 || span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
@@ -24762,8 +24857,11 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     consumed: 3
     nseg: 0
     while: consumed <= span
-        if: mem\value\as\atom\data = 0 || mem\value\as\atom\length = 0U || mem\value\as\atom\length >= 128U
+        if: mem\value\as\atom\data = 0 || mem\value\as\atom\length = 0U
             return: 2
+        buf: l2_text_room(mem\value\as\atom\length + 1U, buf_own, 128U)
+        if: buf = 0
+            return: l2_alloc_or(l2_src, at, "out of memory")
         memcpy(buf, mem\value\as\atom\data, mem\value\as\atom\length)
         buf[mem\value\as\atom\length]: 0
         slot: l2_ns_slot_named(owner, buf, 0U, mem\value\as\atom\length, @ kind, @ ent)
@@ -24814,7 +24912,8 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
     int: fx
     size_t: off
     @: LmP0Text left
-    []: char buf 128
+    []: char buf_own 128
+    @: char buf 0
     L2Address: address_value
     @: L2Address address @ address_value
     int: address_status
@@ -24858,10 +24957,13 @@ fn: l2_actual_ns (int: mi; @: LmP0Field a0; int: span; const: @(char path); cons
             \out_ni: l2_nsty_get(cmi, 0 - 1)
             return: 0
         off: 0U
-        if: a0\value\as\atom\data != 0 && a0\value\as\atom\length > 2U && a0\value\as\atom\length < 128U
+        if: a0\value\as\atom\data != 0 && a0\value\as\atom\length > 2U
             while: off < a0\value\as\atom\length && a0\value\as\atom\data[off] != 92
                 off: off + 1U
             if: off > 0U && off + 1U < a0\value\as\atom\length
+                buf: l2_text_room(a0\value\as\atom\length + 1U, buf_own, 128U)
+                if: buf = 0
+                    return: l2_alloc_or(path, a0\value, "out of memory")
                 memcpy(buf, a0\value\as\atom\data, a0\value\as\atom\length)
                 buf[a0\value\as\atom\length]: 0
                 buf[off]: 0
@@ -25276,7 +25378,9 @@ fn: l2_ptr_land_ty (const: @(LmP0Node at); int: mi; @: int out_ty) int
 
 fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); const: @(LmP0Node at)) int
     @: LmP0Field f
-    []: char chbuf 256
+    []: char chbuf_own 256
+    @: char chbuf 0
+    size_t: room 0U
     size_t: chn 0U
     int: chain
     int: cck
@@ -25288,7 +25392,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: cproot 0
     int: cpfi 0
     int: fpk 0
-    []: char cpbuf 1024
+    []: char cpbuf_own 1024
+    @: char cpbuf 0
     int: cpraw
     int: cpraw_j 0
     int: cpleaf 0
@@ -25312,7 +25417,8 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     int: array_status
     size_t: array_index
     int: array_count
-    []: char apd 1024
+    []: char apd_own 1024
+    @: char apd 0
     size_t: apn 0U
     int: acnt 0
     int: akind 0
@@ -25350,7 +25456,15 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         return: l2_error(path, at, "unsupported body")
     if: l2_check_value_kinds(field, n, mi, path, at) != 0
         return: 1
-    cpn: l2_join_path(field, n, cpbuf, 255U)
+    # A path's text of any length: the local buffers when the fields' text fits them, else storage of its size
+    # (l2_text_room).  No builder below meets a capacity shorter than the text it joins.
+    room: l2_atoms_len(field, -1) + 1U
+    cpbuf: l2_text_room(room, cpbuf_own, 1024U)
+    chbuf: l2_text_room(room, chbuf_own, 256U)
+    apd: l2_text_room(room, apd_own, 1024U)
+    if: cpbuf = 0 || chbuf = 0 || apd = 0
+        return: l2_alloc_or(path, at, "out of memory")
+    cpn: l2_join_path(field, n, cpbuf, room - 1U)
     if: cpn != 0U
         cpraw: l2_raw_path(cpbuf, cpn, mi, @ cpraw_j)
         if: cpraw = 0
@@ -25439,7 +25553,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             f: indexed\after
             continue
         # An indexed field path (S3 part 2b): an element of a declared Array field.
-        ast: l2_arr_operand(f, 0, apd, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
+        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
         if: ast = 2
             return: l2_error(path, f\value, "an indexed field path needs decimal literal indices, within a fixed Array's count, into a declared Array field")
         if: ast = 3
@@ -25467,7 +25581,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         # D-112/D-113: a path deeper than one field (`m\in\x`, five atoms) is one value -- the general
         # path walk reads it to its leaf, as it does for `v: m\in\x`.  Its first hop alone is a
         # Structure field, which the single-hop check below would take for a name it cannot resolve.
-        chain: l2_path_chain(f, chbuf, 255U, @ chn)
+        chain: l2_path_chain(f, chbuf, room, @ chn)
         if: chain > 0
             cck: l2_path_chain_check(mi, f\value\as\atom, chbuf, chn, @ fpk)
             if: cck = 1
@@ -25554,7 +25668,7 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             i: i + 3
             f: l2_next_active(p2\next)
             continue
-        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && f\value\as\atom\length + p2\value\as\atom\length + 1U <= 255U
+        if: p2 != 0 && p2\value != 0 && p2\value\kind = c.LM_P0_NODE_ATOM && f\value\as\atom\length + p2\value\as\atom\length + 1U < room
             memcpy(cpbuf, f\value\as\atom\data, f\value\as\atom\length)
             cpbuf[f\value\as\atom\length]: 92
             memcpy(cpbuf + f\value\as\atom\length + 1U, p2\value\as\atom\data, p2\value\as\atom\length)
@@ -25655,7 +25769,7 @@ fn: l2_check_path_write (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
         return: 0
     h: stmt\as\frame\head
     n: l2_count_active(stmt\as\frame\body)
-    if: h\data = 0 || h\length = 0U || h\length >= 1024U || l2_seg_count(h\data, h\length) < 2 || n < 1
+    if: h\data = 0 || h\length = 0U || l2_seg_count(h\data, h\length) < 2 || n < 1
         return: 0
     if: l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) != 0
         return: 0
@@ -26601,7 +26715,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && raw = 0 && rj >= l2_m_arity[mi] && rj < l2_m_arity[mi] + l2_m_sn[mi] && l2_ty_raw_c_members(l2_st[l2_slot_off(mi, rj - l2_m_arity[mi])]) = 0
             return: l2_error(path, stmt, "unknown foreign field")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && ix != 0 && pd != 0 && (stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\head = 0 || (l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_find_method(stmt\as\frame\head) < 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && raw != 0 && l2_is_known(stmt\as\frame\head) = 0 && l2_is_path_head(stmt\as\frame\head) = 0 && l2_cap_path_head(mi, stmt\as\frame\head) = 0))
-            if: stmt\as\frame\head != 0 && stmt\as\frame\head\data != 0 && stmt\as\frame\head\length < 256U && l2_seg_count(stmt\as\frame\head\data, stmt\as\frame\head\length) > 1
+            if: stmt\as\frame\head != 0 && stmt\as\frame\head\data != 0 && l2_seg_count(stmt\as\frame\head\data, stmt\as\frame\head\length) > 1
                 return: l2_error(path, stmt, "unknown field path root")
             return: l2_error(path, stmt, "unsupported body")
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
@@ -28114,7 +28228,9 @@ return: 0
 fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
     @: LmP0Text t
     LmP0Text: joined
-    []: char jbuf 256
+    []: char jbuf_own 256
+    @: char jbuf 0
+    size_t: room 0U
     size_t: jn 0U
     int: fi
     int: cand
@@ -28135,8 +28251,12 @@ fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_
     # Value position splits Holder\other into the atom, the separator, and the
     # field. Joined, that span is the path a frame head already carries whole.
     if: t = 0 && actual_span >= 3
+        room: l2_atoms_len((cast: (@: LmP0Field) a0), actual_span) + 1U
+        jbuf: l2_text_room(room, jbuf_own, 256U)
+        if: jbuf = 0
+            return: 0 - 1
         jbuf[0]: 0
-        jn: l2_join_path((cast: (@: LmP0Field) a0), actual_span, jbuf, 255U)
+        jn: l2_join_path((cast: (@: LmP0Field) a0), actual_span, jbuf, room - 1U)
         if: jn != 0U
             joined.data: (cast: (@: char) jbuf)
             joined.length: jn
@@ -29567,7 +29687,8 @@ fn: l2_method_sig_compatible (int: cand; int: req) int
 return: 1
 
 fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
-    []: char lpd 1024
+    []: char lpd_own 1024
+    @: char lpd 0
     size_t: lpn 0U
     int: lkind 0
     int: lelem 0
@@ -29746,7 +29867,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
     # below takes it).
     if: l2_head_is_method_call(mi, call\head) = 0
         idx: 0 - 1
-    if: idx < 0 && call\head != 0 && call\head\data != 0 && call\head\length < 256U && l2_seg_count(call\head\data, call\head\length) > 1 && l2_path_kind(call\head\data, call\head\length, @ l2_call_mi) = 4
+    if: idx < 0 && call\head != 0 && call\head\data != 0 && l2_seg_count(call\head\data, call\head\length) > 1 && l2_path_kind(call\head\data, call\head\length, @ l2_call_mi) = 4
         # The path selects THIS occurrence of the callable. Its slot 0 holds a
         # typed LmxCallable referring to the shared METHOD; this occurrence is
         # the hidden self; its node is the source-visible lexical space above
@@ -29766,7 +29887,7 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest)
             ---
         ---
     ---
-    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) = 0
+    if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) = 0
         return: l2_emit_arr_operand(mi, lpd, lpn, lkind, lelem, ldepth, li0, 0U, 1, ind, node, dest)
     if: idx < 0 && l2_text_eq(call\head, "length")
         return: l2_emit_array_length(l2_array_length_own(node, mi), ind, dest)
@@ -30433,7 +30554,9 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: fld
     int: po
     int: fpr
-    []: char chbuf 256
+    []: char chbuf_own 256
+    @: char chbuf 0
+    size_t: room 0U
     size_t: chn 0U
     int: chain
     int: chk
@@ -30442,7 +30565,8 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: have_value 0
     size_t: array_index
     int: array_count
-    []: char apd 1024
+    []: char apd_own 1024
+    @: char apd 0
     size_t: apn 0U
     int: acnt 0
     int: akind 0
@@ -30458,7 +30582,8 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     []: char aptr 1024
     []: char occx 128
     int: occt
-    []: char pbuf 256
+    []: char pbuf_own 256
+    @: char pbuf 0
     size_t: l2_pn2 0U
     int: pni2 0
     int: pres2 0
@@ -30489,8 +30614,15 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     # initializer takes.  The atom-splitting walk below would otherwise emit
     # its atoms as an L1 member chain (NAMED-MODEL-OCCURRENCE-PATH-LOWERING);
     # a non-number leaf keeps the walk below.
+    # A path's text of any length (l2_text_room), as l2_check_fields has it.
+    room: l2_atoms_len(field, -1) + 1U
+    pbuf: l2_text_room(room, pbuf_own, 256U)
+    chbuf: l2_text_room(room, chbuf_own, 256U)
+    apd: l2_text_room(room, apd_own, 1024U)
+    if: pbuf = 0 || chbuf = 0 || apd = 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
     pbuf[0]: 0
-    l2_pn2: l2_join_path(field, n, pbuf, 255U)
+    l2_pn2: l2_join_path(field, n, pbuf, room - 1U)
     if: l2_pn2 != 0U && l2_path_root(pbuf, l2_pn2, @ pni2, @ pres2, @ poi2, @ proot2, @ pfi2) = 0
         pkind2: l2_path_kind(pbuf, l2_pn2, @ pmi2)
         if: pkind2 = 0 || pkind2 = 1 || pkind2 = 7 || pkind2 = 8 || pkind2 = 9
@@ -30576,7 +30708,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             i: i + indexed\count
             f: indexed\after
             continue
-        ast: l2_arr_operand(f, 0, apd, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
+        ast: l2_arr_operand(f, 0, apd, room, @ apn, @ acnt, @ aafter, @ akind, @ aelem, @ adepth, @ ai0, @ ai1)
         if: ast = 0
             if: l2_emit_arr_operand(mi, apd, apn, akind, aelem, adepth, ai0, ai1, 0, ind, at, piece) != 0 || l2_cat(buf, piece) != 0
                 return: 1
@@ -30627,7 +30759,7 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         # D-112: a path deeper than one field is one value, read by the general path walk
         # (l2_path_text_read); its first hop alone is a Structure field, and the single-hop read below
         # failed on it without a word.
-        chain: l2_path_chain(f, chbuf, 255U, @ chn)
+        chain: l2_path_chain(f, chbuf, room, @ chn)
         cck: 0 - 1
         if: chain > 0
             cck: l2_path_chain_check(mi, f\value\as\atom, chbuf, chn, @ chk)
@@ -31930,7 +32062,8 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     int: formal 0 - 1
     int: pmi 0 - 1
     size_t: eix 0U
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     LmP0Text: base
     int: levels
     L2RawIndex: raw_index
@@ -31992,6 +32125,7 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
         ---
         if: eix < t\length
             return: l2_rw_index_ty(node, t)
+        path: l2_rw_path_room(t, path_own, 42)
         if: l2_rw_path_meta(node, t, 0, path) = 0 && path[3] >= 0
             return: path[3]
         return: 0 - 1
@@ -32270,7 +32404,8 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
     L2ArrayPlace: array_place
     @: char text
     LmP0Text: word
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     int: ty 0 - 1
     int: status
     int: own
@@ -32356,6 +32491,7 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
             ty: 0 - 1
         ---
     else:
+        path: l2_rw_path_room(@ word, path_own, 42)
         if: l2_rw_path_meta(span\node, @ word, 0, path) = 0
             ty: path[3]
         ---
@@ -32385,8 +32521,35 @@ return: ty
 # or 1 with the refusal made when `say` (the typing pass asks silently).
 # Lexical resolution is shared by metadata and actual operand production.
 # Metadata row coordinates are never passed to l2_rw_path_value.
+# The names a resolved path of t can have: its segments, at least one (l2_rw_path_room sizes a table by it).
+fn: l2_rw_seg_cap (const: @(LmP0Text t)) int
+    int: n
+    if: t = 0 || t\data = 0
+        return: 1
+    n: l2_seg_count(t\data, t\length)
+    if: n < 1
+        return: 1
+return: n
+
+# A table for the resolved path of t: six header cells and three per name, in `local` when its cap cells hold
+# them, else storage of that size kept until l2_release (l2_text_room).  0 when there is no memory or the count
+# does not fit; the resolver then refuses (a null table), as for a path it cannot resolve.
+fn: l2_rw_path_room (const: @(LmP0Text t); @: int local; int: cap) @: int
+    int: n l2_rw_seg_cap(t)
+    size_t: isz
+    if: n > (c.INT_MAX - 6) / 3
+        l2_alloc_err: 2
+        return: 0
+    if: 6 + 3 * n <= cap && local != 0
+        return: local
+    isz: c.sizeof(c.int)
+    if: l2_mul_ok((cast: (size_t) (6 + 3 * n)), isz) = 0
+        l2_alloc_err: 2
+        return: 0
+return: (cast: (@: int) l2_text_room((cast: (size_t) (6 + 3 * n)) * isz, 0, 0U))
+
 fn: l2_rw_path_resolve (const: @(LmP0Node node); const: @(LmP0Text t); int: project; int: say; @: int path) int
-return: l2_rw_path_resolve_sized(node, t, project, say, 12, path)
+return: l2_rw_path_resolve_sized(node, t, project, say, l2_rw_seg_cap(t), path)
 
 fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int: project; int: say; int: capacity; @: int path) int
     LmP0Text: segment
@@ -32802,7 +32965,9 @@ return: 0
 
 # A path read `a\b...` as an operand: the last field's cell (OF over the way to it).
 fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
+    path: l2_rw_path_room(t, path_own, 42)
     if: l2_rw_path(node, t, 1, path) != 0
         return: 1
     if: path[3] < 0
@@ -32818,13 +32983,15 @@ return: l2_rw_path_value(path, path[2], parent, out)
 # A whole Structure assigned through a path stays fail-closed (the ruling pinned by
 # unit_*_struct_rebind_refused).
 fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     int: v
     int: h
     int: kind
     int: raw_type
     int: model 0 - 1
     int: saved_mi
+    path: l2_rw_path_room(t, path_own, 42)
     if: l2_rw_path(stmt, t, 1, path) != 0
         return: 1
     if: path[3] < 0
@@ -33721,13 +33888,21 @@ fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const:
     @: LmP0Field f
     @: LmP0Field prev 0
     @: LmP0Field next
-    []: char path 256
+    []: char path_own 256
+    @: char path 0
+    size_t: room 0U
     size_t: used 0U
     int: bad 0
     int: how
     int: left
     int: right
     if: body = 0
+        return: 0
+    # A path below the place of any length (l2_text_room).
+    room: l2_atoms_len(l2_call_actuals(body), -1) + 1U
+    path: l2_text_room(room, path_own, 256U)
+    if: path = 0
+        l2_ruse_unknown: 1
         return: 0
     f: l2_next_active(l2_call_actuals(body))
     while: f != 0 && l2_ruse_unknown = 0
@@ -33742,7 +33917,7 @@ fn: l2_ruse_scan_struct (int: mi; int: req; const: @(LmP0Structure body); const:
                 return: 0
             if: how = 1 && l2_ruse_one(next, 92) != 0
                 # The root of a path below the place.
-                next: l2_ruse_follow(next, path, 256U, @ used, @ bad)
+                next: l2_ruse_follow(next, path, room, @ used, @ bad)
                 if: bad != 0 || used = 0U
                     l2_ruse_unknown: 1
                     return: 0
@@ -35847,7 +36022,8 @@ fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
     int: ent 0
     int: slot
     int: ni
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     @: LmP0Text prefix
     if: t = 0
         return: 0 - 1
@@ -35861,6 +36037,7 @@ fn: l2_rw_index_ty (const: @(LmP0Node node); const: @(LmP0Text t)) int
         return: 0 - 1
     prefix\data: t\data
     prefix\length: cut
+    path: l2_rw_path_room(prefix, path_own, 42)
     if: l2_rw_path_meta(node, prefix, 0, path) != 0 || path[2] < 1
         free((cast: (@: void) prefix))
         return: 0 - 1
@@ -35920,7 +36097,8 @@ fn: l2_rw_indexed_path (const: @(LmP0Node node); const: @(LmP0Text t); int: pare
     int: nidx 0
     int: base
     int: inner
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     @: LmP0Text prefix
     while: cut < t\length && t\data[cut] != 91
         cut: cut + 1U
@@ -35932,6 +36110,7 @@ fn: l2_rw_indexed_path (const: @(LmP0Node node); const: @(LmP0Text t); int: pare
         return: l2_rw_refuse(node, "an array")
     prefix\data: t\data
     prefix\length: cut
+    path: l2_rw_path_room(prefix, path_own, 42)
     if: l2_rw_path(node, prefix, 1, path) != 0
         free((cast: (@: void) prefix))
         return: 1
@@ -35975,13 +36154,16 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
     int: k
     int: arr
     int: elem
-    []: char pd 256
+    []: char pd_own 256
+    @: char pd 0
+    size_t: room 0U
     size_t: pn 0U
     size_t: iv 0U
     int: kind
     int: depth
     size_t: i0 0U
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     @: LmP0Text prefix
     if: node = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
         return: l2_rw_refuse(node, "an array")
@@ -36005,7 +36187,12 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
     # and ask that table. Kind 5/6 is an array field; one index is its inner array.
     if: first = 0 || first\value = 0 || first\value\kind != c.LM_P0_NODE_ATOM || first\value\as = 0 || l2_ident(first\value\as\atom) = 0
         return: l2_rw_refuse(node, "an array")
-    if: first\value\as\atom\length > 200U
+    # The path's text of any length (l2_text_room).
+    room: l2_atoms_len(node\as\frame\body\first_field, -1) + 1U
+    pd: l2_text_room(room, pd_own, 256U)
+    if: pd = 0
+        return: l2_alloc_or(l2_src, node, "out of memory")
+    if: first\value\as\atom\length + 1U > room
         return: l2_rw_refuse(node, "an array")
     memcpy((cast: (@: void) pd), (cast: (@: void) first\value\as\atom\data), first\value\as\atom\length)
     pn: first\value\as\atom\length
@@ -36015,7 +36202,7 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
         nm: l2_next_active(g\next)
         if: nm = 0 || nm\value = 0 || l2_ident(nm\value\as\atom) = 0
             return: l2_rw_refuse(node, "an array")
-        if: pn + 1U + nm\value\as\atom\length > 250U
+        if: pn + 1U + nm\value\as\atom\length + 1U > room
             return: l2_rw_refuse(node, "an array")
         pd[pn]: 92
         memcpy((cast: (@: void) (pd + pn + 1U)), (cast: (@: void) nm\value\as\atom\data), nm\value\as\atom\length)
@@ -36044,6 +36231,7 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
         return: l2_rw_refuse(node, "an array")
     prefix\data: pd
     prefix\length: pn
+    path: l2_rw_path_room(prefix, path_own, 42)
     if: l2_rw_path(node, prefix, 0, path) != 0 || path[2] < 1
         free((cast: (@: void) prefix))
         return: l2_rw_refuse(node, "an array")
@@ -37588,7 +37776,8 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
     int: status
     @: char text
     LmP0Text: word
-    []: int path 42
+    []: int path_own 42
+    @: int path 0
     if: address\descriptor = 0
         if: l2_rw_frame(parent, "LMX_WALK_OP_ADDRESS", 3, out) != 0 || l2_rw_witness(\out, 2, l2_own_ty_of_param(address\type), 0) != 0
             return: 1
@@ -37615,6 +37804,7 @@ fn: l2_rw_address (const: @(L2Address address); int: parent; @: int out) int
                     return: 1
                 word.data: text
                 word.length: strlen(text)
+                path: l2_rw_path_room(@ word, path_own, 42)
                 status: l2_rw_path(l2_next_active(address\target)\value, @ word, 1, path)
                 if: status = 0
                     status: l2_rw_path_value(path, path[2], holder, @ value)
@@ -44065,18 +44255,23 @@ return: 0
 fn: l2_addr_names_eternal (@: LmP0Field name; @: LmP0Field fld) int
     size_t: a
     size_t: b
+    @: char pd
     if: name = 0 || fld = 0 || name\value = 0 || fld\value = 0 || name\value\kind != c.LM_P0_NODE_ATOM || fld\value\kind != c.LM_P0_NODE_ATOM
         return: 0
     if: name\value\as = 0 || fld\value\as = 0 || name\value\as\atom = 0 || fld\value\as\atom = 0
         return: 0
     a: name\value\as\atom\length
     b: fld\value\as\atom\length
-    if: a = 0U || b = 0U || a + b + 1U >= 250U
+    if: a = 0U || b = 0U
         return: 0
-    memcpy((cast: (@: void) l2_addr_path), (cast: (@: void) name\value\as\atom\data), a)
-    l2_addr_path[a]: 92
-    memcpy((cast: (@: void) (l2_addr_path + a + 1U)), (cast: (@: void) fld\value\as\atom\data), b)
-return: l2_path_in_eternal(l2_addr_path, a + b + 1U)
+    # Names of any length (l2_text_room).
+    pd: l2_text_room(a + b + 2U, l2_addr_path, 1024U)
+    if: pd = 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
+    memcpy((cast: (@: void) pd), (cast: (@: void) name\value\as\atom\data), a)
+    pd[a]: 92
+    memcpy((cast: (@: void) (pd + a + 1U)), (cast: (@: void) fld\value\as\atom\data), b)
+return: l2_path_in_eternal(pd, a + b + 1U)
 
 # The flat spelling: `@`, a name, `\`, a field, as four fields of an argument list.
 fn: l2_addr_flat_eternal (@: LmP0Field at) int
@@ -45514,7 +45709,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     int: l2_pown 0
     int: l2_prhs_lit 0
     int: l2_pw 0 - 1
-    []: char l2_pbuf 1024
+    []: char l2_pbuf_own 1024
+    @: char l2_pbuf 0
+    size_t: l2_proom 0U
     []: char l2_pnm 1024
     []: char l2_pval 160
     []: char l2_pval2 192
@@ -45969,7 +46166,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             continue
         ---
         if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
-            l2_pn: l2_join_path(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_pbuf, 255U)
+            l2_proom: l2_atoms_len(stmt\as\frame\body\first_field, -1) + 1U
+            l2_pbuf: l2_text_room(l2_proom, l2_pbuf_own, 1024U)
+            if: l2_pbuf = 0
+                return: l2_alloc_or(l2_src, stmt, "out of memory")
+            l2_pn: l2_join_path(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_pbuf, l2_proom - 1U)
         # A field path is an ordinary expression: it only claims this statement
         # when the head is a real declared own field (an assignment into that
         # field). Any other head (return, a call argument, ...) falls through

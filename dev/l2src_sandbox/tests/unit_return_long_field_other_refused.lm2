@@ -1,0 +1,28 @@
+# A method declared to return a Model returns a Structure of a declaration
+# without Model's field of a long name: refused where the value is returned
+# (FIXED-BLOCKS-AUDIT). The static check of a return value compared the
+# names of the model's fields through a buffer of 128 bytes and passed over
+# a longer one: this program translated, and the process stopped when it
+# ran (an admission by name was refused). With a short name it was refused
+# as it is now.
+Model:
+    int: value_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name_of_any_length_a_name 4
+    int: v 1
+end: Model
+
+Near:
+    int: v 1
+end: Near
+
+fn: give () Model
+    n: merge Near
+return: n
+
+fn: take () int
+    @: Model m
+    m: give()
+return: m\v
+
+int: ok take()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

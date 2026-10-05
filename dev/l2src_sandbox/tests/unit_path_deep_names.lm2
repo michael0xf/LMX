@@ -1,0 +1,53 @@
+# A path of twenty names (FIXED-BLOCKS-AUDIT; Codex, OPUS-CODEX-20261005-01
+# (2) B: no syntax-depth ceiling): nineteen nested Structures and a value
+# field. The walked path's tables held twelve names; a path is now resolved
+# into a table of its own count. Read and written through a declared formal,
+# through a free name, and in the method that made the copy. Entry 7.
+Deep:
+    s0:
+        s1:
+            s2:
+                s3:
+                    s4:
+                        s5:
+                            s6:
+                                s7:
+                                    s8:
+                                        s9:
+                                            s10:
+                                                s11:
+                                                    s12:
+                                                        s13:
+                                                            s14:
+                                                                s15:
+                                                                    s16:
+                                                                        s17:
+                                                                            s18:
+                                                                                size_t: x 5U
+end: Deep
+
+fn: rd (Deep: box) size_t
+return: box\s0\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\x + 1U
+
+fn: wr (Deep: box) size_t
+    box\s0\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\x: 30U
+return: box\s0\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\x
+
+fn: fr () size_t
+return: held\s0\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\x + 2U
+
+fn: take () int
+    box: merge Deep
+    held: merge Deep
+    size_t: a rd(box)
+    size_t: b wr(box)
+    size_t: c box\s0\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\x
+    held\s0\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\x: 40U
+    size_t: d fr()
+    if: a != 6U || b != 30U || c != 30U || d != 42U
+        return: 81
+return: 7
+
+int: ok take()
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

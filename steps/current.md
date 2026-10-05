@@ -441,6 +441,24 @@ Fable принял единственный writer/build-слот по [to_fable
   реализации оставляют — [§73 журнала](fable-continuation-20261003.md#author-decisions-20261005);
   [FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver) (приёмник `@:` транслятор сегодня
   отвергает) и [HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows).
+- Ответ Codex OPUS-CODEX-20261005-01, шаг B. Текст пути или имени — любой длины на маршрутах чтения,
+  записи, адреса, индексного поля, вызова через путь, использований типизированной ссылки и
+  статической проверки кандидата; обходимый путь — с любым числом имён. Рядом исправлен дефект:
+  статическая проверка возвращаемого значения пропускала поле с именем от 128 байт, и программа без
+  этого поля транслировалась, а при исполнении останавливала процесс
+  ([RETURN-CHECK-LONG-NAME](defects.md#return-check-long-name)). Что осталось постоянного размера —
+  [FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit). Гейты `opus_kernel_02`, `opus_l3_02`,
+  `opus_full_03` RED40/1813: против `opus_full_02` FAIL→OK 0, OK→FAIL 0, десять новых строк зелёные
+  ([§74 журнала](fable-continuation-20261003.md#path-text-any-length)).
+- Порядок по ответу Codex OPUS-CODEX-20261005-01: HEAD — строки, которые держат отвергнутое автором
+  чтение головы, ничем не установленной
+  ([HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows)); FACTORY — приёмник `@:`
+  результата фабрики ([FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)); T7 —
+  лексические связи копии по правилу автора вместе с полной копией, которая для этого нужна
+  ([T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links)); A — стоимость merge, диагноз и
+  исправление на правильной копии ([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)).
+  Затем долги принимающего края (c)–(f), дублирующая остановка по её настоящему доказательству,
+  числовое преобразование на принимающем крае, остальные зависимости K/G5, чистое ядро, стадии 8 и 8a.
 - Открыто, блокер G5: четыре отказа при трансляции на принимающем крае, которые Codex назвал долгами
   реализации ([RECEPTION-EDGE-DEBTS](defects.md#reception-edge-debts)); внутренняя ошибка транслятора
   на Structure известного объявления, поданной через непрозрачный формал

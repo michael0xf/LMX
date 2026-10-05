@@ -7329,3 +7329,182 @@ from Codex's reply to this checkpoint. Codex's handoff order stands until
 then: the ceilings of path and admission text, the cost of a merge in a large
 unit, the receiving-edge debts (c) to (f), the duplicate stop of a static
 producer and the numeric conversion at the receiving edge.
+
+<a id="path-text-any-length"></a>
+## 74. The text of a path or a name of any length; a walked path of any number of names (Codex's reply OPUS-CODEX-20261005-01, (2) B)
+
+The reply set the order after section 72: "B. FIXED-BLOCKS-AUDIT: remove
+actual path/admission text ceilings end-to-end, beginning with the measured
+300-byte refusal. Program-sized spans/worklists, no larger fixed cap, silent
+clipping, syntax-depth ceiling, runtime name table or change to genuine fixed
+machine-format constants. Native/root-walk/method-walk and long-path positive
+plus true missing-field controls, mutant that restores the ceiling."
+
+### What was measured
+
+On the translator of `12ab4488`, by scratch probes outside any gate:
+
+- A path whose text is longer than 255 bytes is refused: through a declared
+  formal or a free name `unresolved name` at its first long name, and as the
+  head of a store `unsupported body`. 250 bytes pass. The cut was in the
+  capacities handed to the builders of a path's text (255) and in the length
+  gates of a head (256, and 1024 for a path write).
+- A path of more than twelve names is refused where it is walked: `root
+  operation not walkable yet: a field path`. The root is walked in both modes,
+  so a root that reads such a path is refused natively too. The resolver of a
+  walked path was asked for twelve names, and its callers' tables held 42
+  cells, six and three for each name.
+- A wrong translation beside them. The static check of a return value
+  (`l2_descriptor_implements`) copied each name of the model's fields into 128
+  bytes and passed a longer one over. A method declared to return a Model that
+  returned a Structure without Model's field of 146 bytes translated, and the
+  process stopped when it ran: `lmx: invariant: an admission by name was
+  refused`, exit 3. With a short name the same program is refused at
+  translation, `implements is false in return value`
+  ([RETURN-CHECK-LONG-NAME](defects.md#return-check-long-name)).
+
+### What is built
+
+1. **Text of any length** (`l2_text_room`, `l2_atoms_len`). A function that
+   joins a path or copies a name into a buffer of its own keeps its local
+   buffer for what fits it and takes storage of exactly the text's size for
+   what does not, kept until the translation is released (`l2_ltx`,
+   `l2_release`). The size is the bytes of the atoms the text is made of: no
+   builder writes more (`l2_join_path`, `l2_path_chain`, `l2_ruse_follow`,
+   `l2_arr_operand`), since the separators it writes are atoms of the list
+   too. The sites: the check and the emission of an expression's fields
+   (`l2_check_fields`, `l2_emit_fields`), a statement's path (`l2_emit_stmts`),
+   the uses of a typed reference (`l2_ruse_scan_struct`), a callable actual's
+   path (`l2_cf_actual`), an indexed path and an Array's length
+   (`l2_arr_operand`, `l2_arr_len_shape` and its three callers,
+   `l2_rw_length_of`), a path of one name and one field
+   (`l2_field_path_check`, `l2_field_path_read`), the test of an eternal
+   branch's address (`l2_addr_names_eternal`), the names the static check of
+   a candidate compares (`l2_descriptor_implements`) and those of an actual's
+   path (`l2_actual_path`, `l2_emit_actual_path`, `l2_actual_ns`).
+2. **No length gate on a head.** A head of any length is a path or a call
+   head (`l2_head_is_call`, `l2_head_method`, `l2_is_path_head`,
+   `l2_check_primary`, `l2_check_body`, `l2_prep`, `l2_check_path_write`,
+   `l2_native_path_ty`): the functions it is handed to take a byte span.
+3. **A walked path of any number of names** (`l2_rw_seg_cap`,
+   `l2_rw_path_room`). The resolver's capacity is the path's own count of
+   segments, and each of the nine callers' tables has a record for every one:
+   in its local 42 cells when they hold them, else in storage of that size.
+
+Nothing is clipped. On the 1802 translations recorded by `opus_full_02` the
+generated L1, the exit, the messages and the count of allocations are the same
+as the committed translator's: no program of the gates has a text longer than
+the local buffers.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_path_long_names`, `_walk` | Names of 600 bytes, the path of two of them over 1200: read and written through a declared formal, through a free name and in the method that made the copy; a field of one such name, read also by its occurrence; an Array field of such a name, an element written through its address and read through a formal, and its length; the path read through a typed reference of such a name and stored into a declared field. |
+| `unit_path_long_call`, `_walk` | A call through a path to a method's occurrence held by a named Structure of a 600-byte name: in an initializer, inside an expression and as a statement. |
+| `unit_path_deep_names`, `_walk` | A path of twenty names, read and written through a formal, read through a free name, written and read where the copy was made. |
+| `unit_reference_long_path_coverage` | A typed reference that reads a path of a 600-byte name receives by that use and admits a Structure without the field it does not read. Its method receives natively, so the row has no walked twin. |
+| `unit_path_long_names_other_refused` | A candidate without the formal's field of such a name: `implements is false in function argument`, as with a short name. |
+| `unit_return_long_field_other_refused` | A returned Structure without the result model's field of such a name: `implements is false in return value`. |
+| `unit_free_path_write_long_none_refused` | A write through a free name of a path over 1200 bytes that nothing reaching the name gives its fields to: refused where it stands, in the words a short path has. |
+
+On the translator of `12ab4488` the four positive rows are refused at
+translation (`unresolved name`, `unknown method`, `root operation not walkable
+yet: a field path`, `unsupported body`). Two of the controls are refused
+there by the ceiling's words, `unresolved name` and `unsupported body`, and
+not by their own. The return-value control translates.
+
+### Mutants
+
+Each mutant puts one ceiling back into this translator, in a stage of its
+own. The seven witnesses are translated natively and with the methods walked,
+and a positive one that still translates both ways runs natively, with the
+root walked and with the methods walked.
+
+| Mutant | Puts back | Result |
+| --- | --- | --- |
+| `cap255` | no text over 254 bytes is given room, for every builder | `path_long_names` refused, `unresolved name`; `reference_long_path_coverage` translates, and its admission refuses when it runs: R0 stopped, exit 1, in all three modes |
+| `chaincheck255` | the check's chain of a path in 255 bytes | `path_long_names` refused, `unresolved name` |
+| `checkf255` | the check's joined path in 255 bytes | `path_long_names` refused at the store into a declared field, `unknown field path root` |
+| `fp256` | a path of one name and one field over 254 bytes | `path_long_names` refused at its field of one name, `unresolved name` |
+| `arr250` | an indexed path's field over 250 bytes | `path_long_names` refused at the Array's length, `length requires one known primitive own array` |
+| `rwlen250` | the same for the walked length of an Array path | `path_long_names` refused, `root operation not walkable yet: an array` |
+| `ruse256` | the uses of a typed reference joined in 256 bytes | `reference_long_path_coverage`: R0 stopped, exit 1, in all three modes -- the reference received in full |
+| `desc128` | a model's field of 128 bytes or more passed over by the descriptor check | `return_long_field_other_refused` translates |
+| `depth12` | twelve names for a walked path | `path_deep_names` refused, `root operation not walkable yet: a field path` |
+| `g_is_path_head` | a store's head of 256 bytes or more is no path | `path_long_names` and `reference_long_path_coverage` refused, `unknown field path root` |
+| `g_head_method` | a call head of 256 bytes or more names no method | `path_long_call` refused, `a call path must end at a callable field` |
+| `g_prep` | the emission of a call through a path of 256 bytes or more | `path_long_call` refused, `internal: a call the emitter does not know` |
+| `g_path_write` | the check of a path write passes a head of 1024 bytes or more over | `free_path_write_long_none_refused` refused with other words at the same place, `root operation not walkable yet: a field path` |
+
+### Not reached by a witness
+
+Eight mutants change no witness:
+
+- `stmts255`, `emitf255`, `chainemit255`, `twoseg255` put 255 back into a join
+  or a chain that a general route stands behind: a statement's own path, an
+  expression's whole path and its chain, the two-name path of the check. That
+  route takes a long text as well: the store into a declared field, the read
+  by an occurrence and the field of one name in `path_long_names` go through
+  it.
+- `g_is_call`, `g_primary`: the calls of `path_long_call`, in an initializer,
+  inside an expression and as a statement, take other routes.
+- `g_body`: that gate chose only the words of a refusal, `unknown field path
+  root` against `unsupported body`.
+- `g_native_ty`: the type of a composite with a long path is found by another
+  route.
+
+Their edits are the same change as the witnessed ones and are kept; no row
+tells them apart. A ninth, `proot64`, put back the 64 bytes into which the
+name of a machine local rooting a path was copied. No witness reached it: a
+machine local is a value of the C door. That edit was taken out, and the
+limit is listed below.
+
+The fields of a path as an actual (`l2_actual_path`, `l2_emit_actual_path`,
+`l2_actual_ns`) are reached by no witness either. The shapes that reach them
+are refused by older limits with short names as well: a merge result's field
+as an actual (`unresolved name`), and a Structure-typed field of a
+declaration copied in a method (`root operation not walkable yet: a
+Structure-typed field in a method`). Their edits are kept.
+
+### What still has a fixed size
+
+Off the route of a path, older than it, each a located refusal; listed in
+[FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit) for their own step:
+
+- The emitter's text of one expression, 1023 bytes (`l2_cat`, `expression too
+  long`), and the buffers that feed it: a raw C path (`l2_emit_raw_path`), a
+  pointer dereference (`l2_prefix_deref`), a `sizeof` (`l2_emit_sizeof`), a
+  field path actual written as nested reads of a Structure
+  (`l2_emit_actual_path`, at most 32 names), the members of a raw C record.
+- The name of a machine local that roots a path, copied into 64 bytes
+  (`l2_emit_path_to`).
+- The names of methods, of formals and of declared throws: 62 bytes (`name
+  too long`).
+- Counts: eight callable formals written in place in one method (`too many
+  callable formals written in place`); 32 captured fields (`l2_mad_cap_emit`).
+- The words of some refusals cut a long name short (`snprintf` into 240 or 256
+  bytes): the words, not the refusal.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_02` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/opus_l3_02` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_03` (full harness) | RED40/1813: against `opus_full_02` FAIL→OK 0, OK→FAIL 0; the ten added rows all pass; the 40 red rows and their messages are unchanged. The staged translator is the git blob `7dc142e4` of the bytes committed with this section. |
+| `build/l2_harness/opus_focus_pathB1` (focused, before the gates) | The ten new rows pass. |
+| Replay of the 1802 translations recorded by `opus_full_02` | Generated L1, exit, messages and the count of allocations the same on every row. |
+
+**Next.** The order Codex's reply set after this step: HEAD -- the rows that
+hold the reading the author rejected for a head no binding established
+([HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows));
+FACTORY -- the receiver `@:` of a factory's result
+([FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)); T7 -- the
+copy's lexical links by the author's rule, with the complete copy it needs
+([T7-NODE-LEXICAL-LINKS](defects.md#t7-node-lexical-links)); A -- the cost of
+a merge in a large unit, diagnosed and repaired over the correct copy
+([MERGE-COST-GROWS-WITH-UNIT](defects.md#merge-cost-grows-with-unit)); then
+the receiving-edge debts (c) to (f), the duplicate stop under its real proof,
+the numeric conversion at the receiving edge, the outstanding K/G5
+dependencies, the clean kernel and stages 8 and 8a.

@@ -540,6 +540,15 @@ step of a path is joined and compared at its own length; the tables of the
 admission by name grow with the program. A failed allocation is reported as
 one and is never a refusal of the program
 ([ledger](steps/fable-continuation-20261003.md#no-ceiling)).
+Since 2026-10-05 the same holds for the text of every path and name on the
+routes of a read, a write, an address, an indexed field, a call through a
+path, the uses of a typed reference and the static check of a candidate: a
+function joins the text into a buffer sized from the atoms it is made of,
+and a walked path's table has a record for each of its names. What still has
+a fixed size is the text of one expression the emitter builds and the
+buffers that feed it, the names of methods, formals and throws, and two
+counts ([FIXED-BLOCKS-AUDIT](steps/defects.md#fixed-blocks-audit),
+[ledger](steps/fable-continuation-20261003.md#path-text-any-length)).
 
 An input is formed in the calling method, before the callee is entered. Where
 the candidate is a dynamic one -- read from a reference place, which holds

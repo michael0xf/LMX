@@ -453,11 +453,18 @@ callable is unchanged. The translator still reads the short form
 built on it; it refuses `@: add5 makeAdder(5)` at the root and in a method
 (`unsupported body`)
 ([FACTORY-RESULT-RECEIVER](steps/defects.md#factory-result-receiver)).
-A head that no binding established defines a named Structure even when the
-name is read later: `x: j` then `return: x` is a conversion error, not a
-hidden input ([the author's words](LMX_blog/2026-10-05.md#unknown-head-return));
-the rows that expect the other reading are listed in
-[HEAD-ROLE-UNESTABLISHED-ROWS](steps/defects.md#head-role-unestablished-rows).
+A head `h: tail` is established by a formal, by a declaration in sight, or
+by a read of `h` as a free name before the statement; then the statement
+assigns the method's input, in its activation only. A head that nothing
+established defines a named Structure even when the name is read later, in
+the statement's own tail or by a caller: `x: j` then `return: x` is a
+conversion error, not a hidden input
+([the author's words](LMX_blog/2026-10-05.md#unknown-head-return)). The read
+before the statement is found by the scan of free names itself, run as a
+probe that makes nothing and ends at the statement, and every pass gets the
+one answer collection found
+([ledger](steps/fable-continuation-20261003.md#head-role-established),
+[HEAD-ROLE-UNESTABLISHED-ROWS](steps/defects.md#head-role-unestablished-rows)).
 
 A merge given as an actual is followed the same way (kind 5): the node it
 builds is formed as its model is. That node carries its own complete contract

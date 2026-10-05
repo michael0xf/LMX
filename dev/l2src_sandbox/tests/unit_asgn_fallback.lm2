@@ -1,10 +1,13 @@
-# inc assigns x, which it does not declare: x is its hidden input (book §12; bafca4c, the author 2026-09-28:
-# an assignment is not a declaration -- it changes the value an argument, explicit or hidden, has in this
-# activation).  with_caller binds it by its formal x; the root binds none, and inc's lexical space, the unit,
-# has no x either (first_x's is a local of first_x, not visible outward -- Q51): the root's call inc() is
-# refused where it stands, "unbound dynamic input x" (book, admission recipes, case 7: every dynamic input must
-# be available at the call; a known case is rejected during translation).
-# Before bafca4c the assignment fell back to making x a field of inc, and the program ran.
+# inc writes x, which it does not declare, and nothing establishes x in inc: it has no formal x, the unit has
+# no x in its sight (first_x's is a local of first_x, not visible outward -- Q51), and inc reads x only in the
+# tail of `x: x + 1` itself.  By the author's decision of 2026-10-05 (LMX_blog/2026-10-05.md#unknown-head-return;
+# HEAD-ROLE-UNESTABLISHED-ROWS) that statement defines a named Structure x; the read in its own tail establishes
+# nothing.  So inc has no input x, and neither call of inc needs one.  The tail is the body of x, checked whether
+# or not x runs, and the x it reads is a free name that nothing binds: refused where it stands, as in
+# unit_local_ns_stmt_unresolved.
+# Until 2026-10-05 this row expected x to be inc's hidden input (bafca4c, the author 2026-09-28) and the root's
+# call inc() refused, "unbound dynamic input x": the reading the author rejected.  Before bafca4c the assignment
+# fell back to making x a field of inc, and the program ran.
 fn: first_x () int
     int: x
     x: 20

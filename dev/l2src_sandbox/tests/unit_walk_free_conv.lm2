@@ -1,8 +1,11 @@
 # steps/free-names.md (class B): a free name is a dynamic input -- a value of its binding's type, under the rule a
 # local of that type is under.  k is int in the caller m; each method reads it where a size_t is wanted, so each is a
 # conversion int -> size_t: the receiver `convert` is called, and its refusal would be the method's implicit throw.
-# target assigns the hidden argument k: the value of k in target's activation -- size_t 3 into an int, then back; no
-# field (bafca4c, the author 2026-09-28) -- and m's k stays 5.  Before M2 each method was accepted with an L1 that
+# target reads k before it writes it, which makes k its input (the author, 2026-10-05: a head nothing established
+# defines a named Structure; HEAD-ROLE-UNESTABLISHED-ROWS), and then assigns that hidden argument: the value of k in
+# target's activation -- size_t 3 into an int, then back; no field (bafca4c, the author 2026-09-28) -- and m's k stays
+# 5.  Until 2026-10-05 target wrote k without reading it first, the reading the author rejected.  Before M2 each
+# method was accepted with an L1 that
 # cannot build: typed non-throwing, its body
 # calling the throwing receiver.
 fn: id (size_t: v) size_t
@@ -19,6 +22,9 @@ fn: arg () size_t
     return: id(k)
 fn: target () size_t
     size_t: j 3U
+    size_t: was k
+    if: was != 5U
+        return: 0U
     k: j
     return: k
 fn: m () int

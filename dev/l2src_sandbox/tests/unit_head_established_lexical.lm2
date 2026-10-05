@@ -1,0 +1,34 @@
+# A head a visible declaration establishes (the author, 2026-10-05;
+# HEAD-ROLE-UNESTABLISHED-ROWS): the unit's int hidden is in bump_hidden's
+# sight, so `hidden: hidden + 1` assigns bump_hidden's input. The caller's
+# hidden gives its value by the ordinary priority, and neither the caller's
+# value nor the unit's changes: 5 returned, outer's hidden stays 4 and the
+# unit's 0: outer says OUTER 5 4 0. Entry 7.
+int: hidden 0
+
+fn: bump_hidden () int
+    hidden: hidden + 1
+    return: hidden
+end: bump_hidden
+
+fn: unit_hidden () int
+    return: node\hidden
+end: unit_hidden
+
+fn: outer () int
+    int: hidden
+    int: got
+    hidden: 4
+    got: bump_hidden()
+    c.printf: "OUTER %d %d %d\n" got hidden unit_hidden()
+    if: got != 5
+        return: 83
+    if: hidden != 4
+        return: 84
+    if: unit_hidden() != 0
+        return: 85
+    return: 7
+end: outer
+
+sendMessage: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

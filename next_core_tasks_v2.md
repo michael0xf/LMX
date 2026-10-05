@@ -58,6 +58,16 @@ its bytes: kernel `opus_kernel_02` GREEN296 with 113 executed selftests, L3
 `opus_l3_02` 11 suites/four budgets, full `opus_full_03` RED40/1813 — against
 `opus_full_02` FAIL→OK 0, OK→FAIL 0, ten rows added, all green
 ([section 74](steps/fable-continuation-20261003.md#path-text-any-length)).
+HEAD: a read of a head as a free name before its statement establishes the
+method's input, and the statement assigns it; a head nothing established
+defines a named Structure. The defect it repairs: declarations were collected
+before any input existed, so such a head was taken for a definition. The rows
+of the rejected reading are migrated, and fourteen rows are added
+([section 75](steps/fable-continuation-20261003.md#head-role-established)).
+Gates on its bytes: kernel `opus_kernel_03` GREEN296 with 113 executed
+selftests, L3 `opus_l3_03` 11 suites/four budgets, full `opus_full_04`
+RED36/1827 — against `opus_full_03` FAIL→OK 4, OK→FAIL 0, fourteen rows
+added, all green.
 The order Codex's reply OPUS-CODEX-20261005-01 set: HEAD -- the rows that
 hold the reading the author rejected for a head no binding established;
 FACTORY -- the `@:` receiver of a factory's result; T7 -- the copy's lexical
@@ -109,15 +119,16 @@ Bounded slices of this continuation (each measured, none closes a ticket):
 
 Subtasks discovered, in dependency order with the items below (all OPEN):
 
-- [ ] Common head-role implementation for `h: tail`: an executable free read
-  that precedes the statement establishes the input and must not be suppressed
-  by an early definition row (`unit_own_dirty_rhs`); audit
-  `unit_arg_addr_dyn_types`. The author has answered the previously deferred
-  case: an unknown `x: j` defines Structure x; `return: x` is a result
-  type/conversion error, not a way to establish a primitive input retroactively.
-  Migrate the old positive expectations and retain the established-input controls
-  ([answer](LMX_blog/q/head-role-hidden-input-fixed-point.md),
-  [ruling and split](steps/fable-continuation-20261003.md#head-role)).
+- [x] Common head-role implementation for `h: tail`: an executable free read
+  that precedes the statement establishes the input; an unknown `x: j` defines
+  Structure x and `return: x` is a result type error. The read is found by the
+  scan of free names run as a probe; the old positive expectations are
+  migrated; `unit_own_dirty_rhs` and `unit_arg_addr_dyn_types` are green
+  ([ledger](steps/fable-continuation-20261003.md#head-role-established)).
+- [ ] `unit_free_conv` and its walked twin: `ret_expr`'s `k + 1U` is refused,
+  `a U literal in a signed type`, a producer limit of the retained graph,
+  with the numeric conversion at the receiving edge
+  ([defects](steps/defects.md#free-conv-u-literal-walk)).
 - [x] `NATIVE-RAW-INDEX-LITERAL-TYPE`: an unknown foreign raw index is opaque,
   not an int literal (`unit_indent_stack_field_index`).
 - [x] Arrays declared in nested bodies in the retained graph and in the
@@ -614,6 +625,19 @@ Current bounded implementation, with no DONE claim:
   remains distinct from arbitrary nested/imported Array coverage.
   The descriptor supplies actual storage, not a fabricated own row, raw-pointer
   substitute, nested-Array special case, depth cap or rank inferred from length.
+- [ ] Before G5, the fixed sizes step B left, each a bounded cleanup subtask
+  with a long positive and a mutant that restores the size; a located refusal
+  is evidence of the implementation, not leave to keep a language limit
+  ([FIXED-BLOCKS-AUDIT](steps/defects.md#fixed-blocks-audit)):
+  - [ ] the text of one expression in the emitter, 1023 bytes (`l2_cat`), and
+    the buffers that feed it, the path of an actual of at most 32 names among
+    them;
+  - [ ] the name of a machine local that roots a path, 64 bytes
+    (`l2_emit_path_to`);
+  - [ ] the names of methods, formals and declared throws, 62 bytes;
+  - [ ] eight callable formals written in place in one method, 32 captured
+    fields;
+  - [ ] the words of refusals that cut a long name.
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
   Earlier full `critical_graph_fix_full_12`: RED, 204 of 1284,

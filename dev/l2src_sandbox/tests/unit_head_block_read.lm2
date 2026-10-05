@@ -1,0 +1,28 @@
+# A read in a nested executable body establishes the input as well
+# (HEAD-ROLE-UNESTABLISHED-ROWS): bump reads hidden inside an anonymous block
+# that runs before `hidden: hidden + 1`, so the statement assigns bump's input:
+# 5 returned, outer's hidden stays 4: outer says OUTER 5 4. Entry 7.
+fn: bump () int
+    int: was 0
+    ---
+        was: hidden
+    if: was != 4
+        return: 80
+    hidden: hidden + 1
+    return: hidden
+end: bump
+
+fn: outer () int
+    int: hidden 4
+    int: got
+    got: bump()
+    c.printf: "OUTER %d %d\n" got hidden
+    if: got != 5
+        return: 83
+    if: hidden != 4
+        return: 84
+    return: 7
+end: outer
+
+sendMessage: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

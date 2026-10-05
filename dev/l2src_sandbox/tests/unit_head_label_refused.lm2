@@ -1,0 +1,26 @@
+# Spellings of x before `x: a` that are not a read of x by f
+# (HEAD-ROLE-UNESTABLISHED-ROWS): the label of a named actual names give's
+# formal, and S's body is dormant: a field x of S, and S's own update of it.
+# Neither establishes x in f, so `x: a` defines a named Structure x, and
+# returning it as f's int result is a type error. g's x does not change it.
+fn: give (int: x) int
+    return: x + 1
+end: give
+
+fn: f () int
+    int: a give(x: 2)
+    S:
+        int: x 1
+        x: x + 1
+    end: S
+    x: a
+    return: x
+end: f
+
+fn: g () int
+    int: x 4
+    return: f()
+end: g
+
+sendMessage: exit(exit_code: g(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,30 @@
+# A declaration's initializer reads the occurrence before it, never the one it
+# declares (Q24), so `int: x x` in the block reads x as a free name of bump:
+# bump's input, given by outer's x (HEAD-ROLE-UNESTABLISHED-ROWS). After the
+# block, `x: x + 1` assigns that input, not the block's int: 5 returned,
+# outer's x stays 4: outer says OUTER 5 4. Entry 7.
+fn: bump () int
+    int: seen 0
+    ---
+        int: x x
+        seen: x
+    if: seen != 4
+        return: 80
+    x: x + 1
+    return: x
+end: bump
+
+fn: outer () int
+    int: x 4
+    int: got
+    got: bump()
+    c.printf: "OUTER %d %d\n" got x
+    if: got != 5
+        return: 83
+    if: x != 4
+        return: 84
+    return: 7
+end: outer
+
+sendMessage: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

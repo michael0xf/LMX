@@ -7508,3 +7508,185 @@ a merge in a large unit, diagnosed and repaired over the correct copy
 the receiving-edge debts (c) to (f), the duplicate stop under its real proof,
 the numeric conversion at the receiving edge, the outstanding K/G5
 dependencies, the clean kernel and stages 8 and 8a.
+
+<a id="head-role-established"></a>
+## 75. The role of a head: a read before the statement establishes the input (Codex's reply OPUS-CODEX-20261005-01, HEAD)
+
+The reply set this step after B: "HEAD-ROLE-UNESTABLISHED-ROWS: migrate/check
+the three obsolete unestablished-input rows, audit unit_asgn_fallback, and
+verify the common role resolver with established-input positives. If this
+exposes a real translator defect, repair its universal classification path,
+not a test-spelling branch." On the self-reading row it answered: "Reading
+hidden in that definition's own tail does not circularly establish a
+primitive input, and the later return does not retroactively change the
+head's role." Its review of the repair, before the gates: "independently
+preceding free VALUE read may establish the input; the statement's own tail,
+later reads or caller homonym do not. Apply the same resolved role across
+declaration collection, free-input collection, checking, native emission and
+retained-graph emission."
+
+### What was measured
+
+On the translator of `849ea1b5`, by scratch probes outside any gate:
+
+- A method that reads a name as a free name and then writes it -- `int: was
+  hidden`, then `hidden: hidden + 1` -- is refused at its return, `return value
+  has incompatible type`: its statement was taken for the definition of a
+  named Structure. The cause is the order of the passes. The declarations of
+  a unit are collected (`l2_collect_asgn_binds`, which asks
+  `l2_local_ns_shape`) before the scan of free names (`l2_dyn_local`) has made
+  any input, so a head the method had read looked established by nothing; the
+  passes after the scan see the input and answered the other way.
+  `unit_own_dirty_rhs` (`if: quote = 65` before `quote: 88`) and
+  `unit_arg_addr_dyn_types` (`setnull(@: dp)` before `dp: dp`) were red on it:
+  `more arguments than quote has formals`, `more arguments than dp has
+  formals`.
+- The rows that held the reading the author rejected: `unit_colon_hidden_update`
+  ran and expected 5 from `hidden: hidden + 1`; `target` in `unit_free_conv` and
+  `unit_walk_free_conv` wrote `k` without reading it; `unit_asgn_fallback`
+  expected the root's call refused for an input `x` of `inc`.
+
+### What is built
+
+1. **The role of a head asks for a read before its statement.** After its
+   existing checks, `l2_local_ns_shape` asks whether the method read the head
+   as a free name before the statement (`l2_head_read_before`). The scan of
+   free names answers it (`l2_scan_body`), run as a probe from the method's own
+   environment, as `l2_own_lexical` reads it: the source site saved, the scopes
+   cleared, the method's visibility. The probe ends at the statement, before
+   its tail is read. A read counts where the scan meets the name as a name
+   that no declaration in sight gives (`l2_scan_ident`): what the scan would
+   make an input.
+2. **Under the probe the scan makes nothing.** Its declaration routes call
+   neither `l2_own_add` nor `l2_own_output_add`; `l2_scan_bound`, the marks of
+   a unit field and the captures (`l2_scan_node_use`) do nothing;
+   `l2_scan_ident` returns before any input. No declaration is published and
+   then taken back.
+3. **A statement before keeps the role its collection gave it.** Inside the
+   probe the role of an earlier head is the row its statement declares
+   (`l2_own_by_decl`). Collection runs in source order, so each earlier
+   statement is collected when a later one asks, and the probe never asks
+   inside itself: the dependency follows the order of the statements.
+4. **A call before it is bound.** The probe runs at collection, before
+   `l2_bind_calls`. It reads a call as its binding will (`l2_scan_actuals`,
+   `l2_actual_formal`): a Frame among the actuals whose head names a formal of
+   the callee is that formal's argument (`l2_bind_actuals`); its head is the
+   label, and only its body is read. A bound call is read by its projection,
+   as before.
+5. **One answer for every pass.** The answer is kept for each statement until
+   `l2_release` (`l2_head_read_kept`). Collection, the scan of free inputs,
+   the check, native emission and the walker ask the same question and get
+   the answer collection found; no prefix is scanned twice.
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_head_established_read`, walked twin | A read before the statement makes the head the method's input; the update stays in its activation. `outer` says `OUTER 5 4`. |
+| `unit_head_established_lexical`, walked twin | A declaration in sight establishes the head; neither the caller's value nor the unit's changes: `OUTER 5 4 0`. |
+| `unit_head_block_read`, walked twin | A read in an anonymous block that runs before the statement counts. |
+| `unit_head_initializer_read`, walked twin | `int: x x` in a block reads the free `x` -- an initializer never reads the row it declares (Q24) -- and that read establishes `x` for the method after the block. |
+| `unit_head_chain_read`, walked twin | The role of each head follows the statements before it: an assignment whose head was read runs, and its tail reads the next head. `OUTER 13 4 4`. |
+| `unit_head_unestablished_return_refused` | The author's example, `x: j` then `return: x`: refused at the return. |
+| `unit_head_later_read_refused` | A read after the statement establishes nothing: the later read finds the Structure where a number is asked. |
+| `unit_head_label_refused` | The label of a named actual and a dormant body (a field `x` of `S` and `S`'s update of it) establish nothing: refused at the return. |
+| `unit_head_shadow_refused` | A read of a block's own declaration is no free read; after the block `x: v` defines a Structure: refused at the return. |
+
+The walked twins walk the method whose head is written (`WalkedMethods`); its
+caller prints, since a C door keeps a method native under `--walk-methods`.
+On `849ea1b5` four of the five positives are refused at translation; the
+lexical one already passed, the declaration in sight being the rule it had.
+The four refusals are refused there with the same words.
+
+### Migrations
+
+- `unit_colon_hidden_update`: refused at 12:13, `return value has incompatible
+  type`, the decision named in its header.
+- `unit_asgn_fallback`: `inc` has no input `x` now, so neither call of it needs
+  one. The tail of `x: x + 1` is the body of the Structure `x`, checked whether
+  `x` runs or not, and the `x` it reads is a free name nothing binds: refused
+  where it stands, 17:8, `unresolved name`, as `unit_local_ns_stmt_unresolved`
+  is.
+- `unit_free_conv`, `unit_walk_free_conv`: `target` reads `k` before writing it
+  (`size_t: was k`, which must be 5). Section 73 planned a refusal at the
+  return instead; the row's purpose, an assignment to an input across a
+  conversion, needs an established input, and the question's own shape is now
+  `unit_head_unestablished_return_refused`. The rows now stop at `ret_expr`:
+  16:17, `root operation not walkable yet: a U literal in a signed type`, an
+  older limit of the retained graph's producer that the refusal at `target`
+  hid. Measured on `849ea1b5`: the same program without `target` is refused by
+  it ([FREE-CONV-U-LITERAL-WALK](defects.md#free-conv-u-literal-walk)). They
+  stay red, required positives.
+- `unit_own_dirty_rhs` and `unit_arg_addr_dyn_types`, red on the defect, are
+  green: the latter says its eleven lines exactly.
+
+### The probe makes nothing
+
+- The 1812 translations recorded by `opus_full_03`, replayed with this
+  translator: the generated L1, the exit and the messages are the same on
+  every row but the two that now translate. The count of allocations differs
+  on 104 rows: the kept answers and the probes' own copies of the scope stack.
+- A cross-check build, kept in the scratchpad and never committed, finds the
+  answer again every time a role is asked and compares it with the kept one.
+  No answer differs on the 1812 translations or on the new rows, and its L1 is
+  this translator's on all 1812: the scan run again on every ask makes no row,
+  capture or input and changes no field order.
+
+### Mutants
+
+Each mutant is built in a stage of its own from this step's translator. The
+witnesses are translated natively and with the methods walked; a positive that
+still translates both ways runs natively, with the root walked and with the
+methods walked; and the 1812 recorded translations are replayed with the
+mutant.
+
+| Mutant | Puts back | Result |
+| --- | --- | --- |
+| `m_nohit` | no read is found: the defect of the order of the passes | `unit_head_established_read`, `_block_read`, `_initializer_read`, `_chain_read`, `unit_own_dirty_rhs` and `unit_arg_addr_dyn_types` refused at translation again |
+| `m_rhs` | the statement's own tail is read before the probe ends | `unit_colon_hidden_update` translates; `unit_asgn_fallback` is refused at the root's call, `unbound dynamic input x`: the reading the author rejected |
+| `m_selftail` | the statement itself is read, its head as a target and its tail | `unit_head_unestablished_return_refused`, `_later_read_refused`, `_shadow_refused` and `unit_colon_hidden_update` translate; `_label_refused` and `unit_asgn_fallback` are refused elsewhere; 91 recorded translations change |
+| `m_nostop` | the probe reads past the statement: a later read counts | the same six rows; 94 recorded translations change |
+| `m_anyread` | any spelling of the name counts, resolved or not | `unit_head_shadow_refused` translates |
+| `m_role1` | inside the probe an earlier head is always a definition | `unit_head_chain_read` refused, `unresolved name` |
+| `m_role0` | inside the probe an earlier head is always an assignment | `unit_head_label_refused` translates: the dormant body is read |
+| `m_labels` | a named actual's label is read before the call is bound | `unit_head_label_refused` translates |
+| `m_norestore` | the probe leaves its environment behind | `unit_local_ns_node_nested` refused, `unit_site_local_model_scope_refused` translates, `unit_local_ns_node_outer_refused` refused otherwise; 11 recorded translations change |
+
+### Not reached by a witness
+
+Six mutants take a gate off the probe and change no witness and no recorded
+translation: `m_bound` (`l2_scan_bound`), `m_add` and `m_out` (the routes
+that would call `l2_own_add` and `l2_own_output_add`), `m_marks_asgn` and
+`m_marks_at` (the marks of a unit field) and `m_use` (a capture). The marks
+are those the scan of free inputs makes for the same statements, and a mark
+set twice is one mark. The rows of a colon, a binding and a letter
+declaration already exist when the probe meets them: collection made them.
+Only the empty Structure `f()` has its row made by the scan, and no program of
+the gates writes one before a head of its method. These gates keep the probe
+from writing anything; no row tells their absence. `m_nokeep`, which finds the
+answer again on every ask, changes nothing either: keeping it saves scans, and
+the cross-check above shows the answers equal.
+
+### A boundary
+
+A declaration whose type does not resolve -- `@: Model ref` before the local
+`Model` is declared (`unit_site_local_model_future_refused`) -- is read by the
+scan as names, and the probe follows the scan: there `Model: (int: value 1)`
+is now an assignment. The program is refused at that declaration first, in the
+same words; it makes fewer allocations, since no local Structure is
+registered.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_03` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 296 targets, 113 selftests ran (112 at exit 0 and the one expected-fatal watchdog selftest), gate exit 0. |
+| `build/l3_selftest/opus_l3_03` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_04` (full harness) | RED36/1827: against `opus_full_03` FAIL→OK 4 (`unit_own_dirty_rhs`, `unit_arg_addr_dyn_types`, `unit_colon_hidden_update`, `unit_asgn_fallback`), OK→FAIL 0; the fourteen added rows pass; the other red rows and their messages are unchanged. The staged translator is the git blob `ae30500a` of the bytes committed with this section. |
+| `build/l2_harness/opus_focus_headrole1` (focused, before the chain rows were added) | 95 of 97 rows pass; the two red rows are `unit_free_conv` and its walked twin, on FREE-CONV-U-LITERAL-WALK. |
+| Replay of the 1812 translations recorded by `opus_full_03` | As in [the probe makes nothing](#head-role-established) above. |
+
+**Next.** FACTORY: the receiver `@:` of a factory's result
+([FACTORY-RESULT-RECEIVER](defects.md#factory-result-receiver)); then T7, A
+and the remainder in the order of section 74. Before G5, the fixed sizes that
+step B left are bounded cleanup subtasks of the plan.

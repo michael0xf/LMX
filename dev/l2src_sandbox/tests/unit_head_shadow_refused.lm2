@@ -1,0 +1,21 @@
+# A read of a declaration in sight is no free read (HEAD-ROLE-UNESTABLISHED-ROWS):
+# inside the block, x is the block's own int, declared and read there. After
+# the block that declaration is out of sight, nothing read x as a free name
+# before `x: v`, so the statement defines a named Structure x, and returning
+# it as f's int result is a type error. g's x does not change it.
+fn: f () int
+    int: v 0
+    ---
+        int: x 5
+        v: x
+    x: v
+    return: x
+end: f
+
+fn: g () int
+    int: x 4
+    return: f()
+end: g
+
+sendMessage: exit(exit_code: g(); stdout: ""; stderr: "")
+return

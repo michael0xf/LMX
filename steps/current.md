@@ -450,6 +450,19 @@ Fable принял единственный writer/build-слот по [to_fable
   [FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit). Гейты `opus_kernel_02`, `opus_l3_02`,
   `opus_full_03` RED40/1813: против `opus_full_02` FAIL→OK 0, OK→FAIL 0, десять новых строк зелёные
   ([§74 журнала](fable-continuation-20261003.md#path-text-any-length)).
+- Шаг HEAD. Чтение головы как свободного имени до её оператора устанавливает вход метода, и оператор
+  присваивает его; голова, которую ничто не установило, определяет именованную Structure. Исправлен
+  дефект порядка: объявления собирались раньше, чем появлялся хоть один вход. Строки отвергнутого
+  чтения перенесены, добавлено четырнадцать строк
+  ([HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows),
+  [§75 журнала](fable-continuation-20261003.md#head-role-established)). `unit_free_conv` и двойник
+  остаются красными на независимом пределе ([FREE-CONV-U-LITERAL-WALK](defects.md#free-conv-u-literal-walk)).
+  Гейты `opus_kernel_03`, `opus_l3_03`, `opus_full_04` RED36/1827:
+  против `opus_full_03` FAIL→OK 4, OK→FAIL 0, четырнадцать новых строк зелёные.
+- Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
+  эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
+  callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который
+  возвращает размер ([FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit)).
 - Порядок по ответу Codex OPUS-CODEX-20261005-01: HEAD — строки, которые держат отвергнутое автором
   чтение головы, ничем не установленной
   ([HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows)); FACTORY — приёмник `@:`

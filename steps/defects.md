@@ -3347,7 +3347,7 @@ fn: makeAdder (int: n) fn: (int: x) int
 ([§73 журнала](fable-continuation-20261003.md#author-decisions-20261005)).
 
 <a id="head-role-unestablished-rows"></a>
-### HEAD-ROLE-UNESTABLISHED-ROWS — 2026-10-05, Opus по решению автора (Codex, DOC-BATON-AUTHOR-20261005-115300), OPEN
+### HEAD-ROLE-UNESTABLISHED-ROWS — 2026-10-05, Opus по решению автора (Codex, DOC-BATON-AUTHOR-20261005-115300), FIXED 2026-10-05 (Opus)
 
 Решение автора 2026-10-05 ([журнал автора](../LMX_blog/2026-10-05.md#unknown-head-return), вопрос закрыт:
 [роль головы `h: хвост`, когда вход `h` ничем заранее не установлен](../LMX_blog/q/head-role-hidden-input-fixed-point.md)).
@@ -3363,6 +3363,48 @@ retroactively make x a hidden primitive input.» Уже установленны
 такое чтение, спрошено у Codex до смены ожидания. `unit_asgn_fallback` (ожидает отказ `unbound
 dynamic input x`) сверяется с решением в том же шаге. Ожидания меняются шагом, который несёт строки
 в гейт ([§73 журнала](fable-continuation-20261003.md#author-decisions-20261005)).
+
+**Исправлено 2026-10-05 (Opus)**, по ответу Codex OPUS-CODEX-20261005-01, шаг HEAD. Codex закрыл
+вопрос о самочтении: «Reading hidden in that definition's own tail does not circularly establish a
+primitive input». Аудит строк нашёл настоящий дефект транслятора `849ea1b5`. Исполняемое свободное
+чтение имени до оператора не устанавливало вход. Объявления единицы собираются
+(`l2_collect_asgn_binds`, роль спрашивает `l2_local_ns_shape`) раньше, чем скан свободных имён
+(`l2_dyn_local`) создаёт хотя бы один вход. Поэтому голова, прочитанная методом раньше, получала
+роль определения, а следующие проходы, которые вход уже видят, отвечали иначе. На этом были красными
+`unit_own_dirty_rhs` и `unit_arg_addr_dyn_types` (`more arguments than … has formals`). Метод,
+который читает `hidden`, а затем пишет `hidden: hidden + 1`, отвергался при `return`.
+
+Исправление — в общем пути роли. После прежних проверок `l2_local_ns_shape` спрашивает, прочитал ли
+метод голову как свободное имя до оператора (`l2_head_read_before`). Ответ даёт сам скан свободных
+имён (`l2_scan_body`), запущенный пробой: из собственного окружения метода, с остановкой на
+операторе до его хвоста. Проба ничего не создаёт: ни строк, ни отметок, ни захватов, ни входов.
+Оператор раньше сохраняет роль, которую ему дал сбор: строку, которую он объявляет. До связывания
+вызовов метка именованного аргумента не считается чтением — так её прочтёт связывание
+(`l2_scan_actuals`). Ответ для оператора хранится до конца трансляции (`l2_head_read_kept`), и
+каждый проход получает тот же.
+
+Перенос строк по решению автора. `unit_colon_hidden_update` — отказ 12:13 `return value has
+incompatible type`. `unit_asgn_fallback` — отказ 17:8 `unresolved name`: у `inc` нет входа `x`, а `x`
+в теле Structure `x` никто не связывает. В `target` строк `unit_free_conv` и `unit_walk_free_conv`
+появилось чтение `k` до записи. Сами строки теперь останавливаются на независимом пределе
+[FREE-CONV-U-LITERAL-WALK](#free-conv-u-literal-walk). Новые строки: `unit_head_established_read`,
+`unit_head_established_lexical`, `unit_head_block_read`, `unit_head_initializer_read`,
+`unit_head_chain_read` с обходимыми двойниками; отказы `unit_head_unestablished_return_refused`,
+`unit_head_later_read_refused`, `unit_head_label_refused`, `unit_head_shadow_refused`
+([§75 журнала](fable-continuation-20261003.md#head-role-established)).
+
+<a id="free-conv-u-literal-walk"></a>
+### FREE-CONV-U-LITERAL-WALK — 2026-10-05, Opus, OPEN; обязательные позитивы красные на пределе реализации
+
+`ret_expr` в `unit_free_conv` читает `int` `k` вызывающего там, где нужен `size_t`, и прибавляет
+литерал: `return: k + 1U`. Трансляция отвергает его: `root operation not walkable yet: a U literal in
+a signed type` (16:17). Это предел производителя сохранённого графа, не правило языка: чтение
+свободного имени преобразуется в `size_t` до сложения. Измерено транслятором `849ea1b5` пробником
+вне гейта: та же программа без метода `target` отвергается тем же отказом. Раньше его заслонял
+отказ в `target`. При `7124005` строка принималась ([журнал ревью](review-log.md)). Этот же предел
+стоит в долгах G5 как «два производителя `int`/`1U`». `unit_free_conv` и `unit_walk_free_conv`
+остаются красными обязательными позитивами до шага о числовом преобразовании
+([§75 журнала](fable-continuation-20261003.md#head-role-established)).
 
 <a id="reception-edge-debts"></a>
 ### RECEPTION-EDGE-DEBTS — 2026-10-05, fable по ответу Codex FABLE-CODEX-20261004-12, OPEN (блокер G5)

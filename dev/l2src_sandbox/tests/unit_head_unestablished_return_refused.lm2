@@ -1,0 +1,18 @@
+# The author's example (2026-10-05; HEAD-ROLE-UNESTABLISHED-ROWS). f has no
+# formal x, no x in its sight and no read of x before `x: j`, so `x: j`
+# defines a named Structure x, and returning it from a method whose result
+# is int is a type error. g's own x does not change the role of f's head,
+# and the later `return: x` does not make x an input after the fact.
+fn: f () int
+    int: j 3
+    x: j
+    return: x
+end: f
+
+fn: g () int
+    int: x 4
+    return: f()
+end: g
+
+sendMessage: exit(exit_code: g(); stdout: ""; stderr: "")
+return

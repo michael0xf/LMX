@@ -1,0 +1,18 @@
+# A read after the statement establishes nothing (the author, 2026-10-05;
+# HEAD-ROLE-UNESTABLISHED-ROWS). bump reads hidden only after `hidden: 5`,
+# so that statement defines a named Structure hidden, and the later read
+# finds the Structure where a number is asked. outer's int hidden does not
+# change the role of bump's head.
+fn: bump () int
+    hidden: 5
+    int: v hidden
+    return: v
+end: bump
+
+fn: outer () int
+    int: hidden 4
+    return: bump() + 3
+end: outer
+
+sendMessage: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

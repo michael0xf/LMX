@@ -2917,10 +2917,12 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
-    # bafca4c (the author, 2026-09-28; 7b, by name): inc's x is its hidden input, and the root binds none -- refused
-    # at the root's call.  (Was eternal-runs: the assignment made x a field of inc.)
+    # The author's decision of 2026-10-05 (HEAD-ROLE-UNESTABLISHED-ROWS): nothing establishes x in inc, so
+    # `x: x + 1` defines a named Structure x; inc has no input x, and the body's x is a free name nothing binds,
+    # refused where it stands.  (Was, after bafca4c, "21:1: unbound dynamic input x" at the root's call: the
+    # reading the author rejected.  Before bafca4c it was eternal-runs: the assignment made x a field of inc.)
     [pscustomobject]@{ Name = 'unit_asgn_fallback.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_asgn_fallback.lm2:21:1: unbound dynamic input x'; Absent = @(); Debt = @() },
+        Needle = 'unit_asgn_fallback.lm2:17:8: unresolved name'; Absent = @(); Debt = @() },
     # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: sendMessage: X inside a method body --
     # a method called from the root sends exit(exit_code: 7; ...) directly (l2_msend<k>).
     [pscustomobject]@{ Name = 'unit_send_in_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; Needle = '';
@@ -5684,10 +5686,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_struct_decl_opp_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args=@('0'); Entry=7;
         NativeCalls = @([pscustomobject]@{Caller=1; Method=0; Throwing=$false; ResultType='int:'; ResultUse='(?m)^\s*return: {result}\s*$'; Args=@([pscustomobject]@{Type='int:'; Value='^1$'})});
         Absent = @(); Debt = @() }
-    [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_entry_unit: graph', 'return: lmx_root_launch(@ l2_program_root, argc, argv, l2_program_build, ') },
+    # The author's decision of 2026-10-05 (HEAD-ROLE-UNESTABLISHED-ROWS): `hidden: hidden + 1`, with nothing
+    # establishing hidden in bump_hidden, defines a named Structure, and returning it as an int is a type error.
+    # (Was eternal-runs, bump_hidden() = 5 with outer's hidden kept: the reading the author rejected.)
+    [pscustomobject]@{ Name = 'unit_colon_hidden_update.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_colon_hidden_update.lm2:12:13: return value has incompatible type'; Absent = @(); Debt = @() },
     # S2: the unit's `Model: fresh` is an own field of the entry E, registered by the same
     # recognizer every method uses (l2_own_add(E, ...)), so the unit declares it again.
     [pscustomobject]@{ Name = 'unit_colon_model_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -8592,6 +8595,41 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_graph_hidden_literal_no_field.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_graph_hidden_literal_no_field.lm2:7:11: unresolved name'; Absent = @(); Debt = @() },
+    # HEAD-ROLE-UNESTABLISHED-ROWS (the author, 2026-10-05): a head `h: tail` is established by a formal, by a
+    # declaration in sight, or by a read of h as a free name before the statement; then the statement assigns the
+    # method's input, in its activation only.  The read is found by the scan of free names, run as a probe that
+    # makes nothing and ends at the statement (l2_head_read_before).  A head nothing established defines a named
+    # Structure: the statement's own tail, a later read, a caller's value of the same name, a named actual's
+    # label, a dormant body and a declaration out of sight establish nothing.  The walked twins walk the method
+    # whose head is written (its caller prints, and a C door keeps a method native).
+    [pscustomobject]@{ Name = 'unit_head_established_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_head_established_read.lm2'; Source = 'unit_head_established_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_established_lexical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4 0'); NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_head_established_lexical.lm2'; Source = 'unit_head_established_lexical.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4 0'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_block_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_head_block_read.lm2'; Source = 'unit_head_block_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_initializer_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_head_initializer_read.lm2'; Source = 'unit_head_initializer_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 5 4'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_chain_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 13 4 4'); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_head_chain_read.lm2'; Source = 'unit_head_chain_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('OUTER 13 4 4'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_unestablished_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_head_unestablished_return_refused.lm2:9:13: return value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_later_read_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_head_later_read_refused.lm2:8:12: a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_label_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_head_label_refused.lm2:17:13: return value has incompatible type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_head_shadow_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_head_shadow_refused.lm2:12:13: return value has incompatible type'; Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:14:5: more arguments than bar has formals'; Absent = @(); Debt = @() },

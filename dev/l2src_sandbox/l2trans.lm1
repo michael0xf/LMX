@@ -38,6 +38,20 @@ int: l2_own_cap 0
 # name-only lookup cannot tell "before this row" from "this row". The source-site
 # selector also excludes this exact declaration until its candidate is checked/evaluated.
 int: l2_own_excl -1
+# A probe of the free-name scan (l2_head_read_before): the name it asks about, the statement it ends at, whether
+# the scan read that name as a free name before that statement, and whether it reached the statement.  Under a
+# probe the scan makes no row, mark, capture or input.
+int: l2_hr_on 0
+int: l2_hr_hit 0
+int: l2_hr_done 0
+@: LmP0Text l2_hr_name 0
+@: LmP0Node l2_hr_stop 0
+# Its answer for each statement asked about, kept until l2_release (l2_head_read_kept).
+@@: LmP0Node l2_hr_at 0
+@: int l2_hr_mi 0
+@: int l2_hr_val 0
+int: l2_hr_n 0
+int: l2_hr_cap 0
 int: l2_tn 0
 # The cells a path write keeps while its value is evaluated (l2_pw<n>, l2_emit_stmts).
 int: l2_pw_n 0
@@ -2451,6 +2465,14 @@ fn: l2_release () int
     l2_ltx: 0
     l2_ltx_n: 0
     l2_ltx_cap: 0
+    l2_xfree((cast: (@: void) l2_hr_at))
+    l2_xfree((cast: (@: void) l2_hr_mi))
+    l2_xfree((cast: (@: void) l2_hr_val))
+    l2_hr_at: 0
+    l2_hr_mi: 0
+    l2_hr_val: 0
+    l2_hr_n: 0
+    l2_hr_cap: 0
     l2_flow_free()
     l2_e_free()
 return: 0
@@ -11114,6 +11136,79 @@ fn: l2_expr_only_tail (const: @(LmP0Frame fr)) int
         return: 0
 return: (cast: (int) (l2_skip_span(f, span) = 0))
 
+# Does method mi read name h as a free name before statement stop, as the scan of its free names reads it
+# (l2_scan_body)?  Such a read is an executable free read before the first write: it uses h as an input of mi,
+# and stop then assigns that input (the author, 2026-10-05; LMX_blog/q/head-role-hidden-input-fixed-point.md:
+# «Исполняемое свободное чтение имени до первой записи — самостоятельный факт использования входа»).  The scan
+# runs as a probe from mi's own environment, as l2_own_lexical reads it: it makes no row, mark, capture or
+# input, and it ends at stop.  A read in stop's own tail or after it is not before it; a statement the scan
+# does not reach has nothing read before it.
+fn: l2_head_read_before (int: mi; const: @(LmP0Text h); const: @(LmP0Node stop)) int
+    L2SourceSite: saved
+    int: hit 0
+    int: restored
+    if: mi < 0 || mi >= l2_m_n || h = 0 || stop = 0 || l2_hr_on != 0 || l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0
+        return: 0
+    if: l2_source_save(@ saved) != 0
+        return: 0
+    l2_scope_n: 0
+    l2_own_excl: -1
+    l2_vis_method(mi)
+    l2_hr_on: 1
+    l2_hr_name: (cast: (@: LmP0Text) h)
+    l2_hr_stop: (cast: (@: LmP0Node) stop)
+    l2_hr_hit: 0
+    l2_hr_done: 0
+    l2_scan_body(l2_m_body[mi]\as\structure, mi, 0)
+    if: l2_hr_done != 0
+        hit: l2_hr_hit
+    l2_hr_on: 0
+    l2_hr_name: 0
+    l2_hr_stop: 0
+    restored: l2_source_restore(@ saved)
+    l2_xfree((cast: (@: void) saved.scopes))
+    if: restored != 0
+        return: 0
+return: hit
+
+# l2_head_read_before for statement stmt of method mi, found once and kept until l2_release: every pass that
+# asks for the role of the head gets the answer the first one found, and no prefix is scanned twice.  Without
+# memory to keep it the answer is found again when asked.
+fn: l2_head_read_kept (int: mi; const: @(LmP0Text h); const: @(LmP0Node stmt)) int
+    int: i 0
+    int: got
+    int: want
+    @: void grown
+    while: i < l2_hr_n
+        if: l2_hr_at[i] = stmt && l2_hr_mi[i] = mi
+            return: l2_hr_val[i]
+        i: i + 1
+    ---
+    got: l2_head_read_before(mi, h, stmt)
+    if: l2_hr_n >= l2_hr_cap
+        want: l2_cap_next(l2_hr_cap, l2_hr_n + 1)
+        if: want < 0
+            return: got
+        grown: l2_vec_grow((cast: (@: void) l2_hr_at), l2_hr_n, want, c.sizeof(@: LmP0Node))
+        if: grown = 0
+            return: got
+        l2_hr_at: (cast: (@@: LmP0Node) grown)
+        grown: l2_vec_grow((cast: (@: void) l2_hr_mi), l2_hr_n, want, c.sizeof(c.int))
+        if: grown = 0
+            return: got
+        l2_hr_mi: (cast: (@: int) grown)
+        grown: l2_vec_grow((cast: (@: void) l2_hr_val), l2_hr_n, want, c.sizeof(c.int))
+        if: grown = 0
+            return: got
+        l2_hr_val: (cast: (@: int) grown)
+        l2_hr_cap: want
+    ---
+    l2_hr_at[l2_hr_n]: (cast: (@: LmP0Node) stmt)
+    l2_hr_mi[l2_hr_n]: mi
+    l2_hr_val[l2_hr_n]: got
+    l2_hr_n: l2_hr_n + 1
+return: got
+
 # An original named Structure in a method uses the same absent-head/body
 # classification as l2_unit_role. Its whole source is retained, including an
 # empty body. Neither field kinds nor a trailer make its definition execute.
@@ -11148,6 +11243,14 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
     oi: l2_own_find(mi, h)
     if: oi >= 0 && l2_own_decl[oi] != stmt
+        return: 0
+    # A head the method read as a free name before this statement is its input, established by that read
+    # (l2_head_read_before): the statement assigns it.  Its own tail, a later read and a caller's value of the
+    # same name establish nothing (the author, 2026-10-05).  Inside that scan a statement before this one keeps
+    # the role its collection gave it: the row it declares.
+    if: l2_hr_on != 0
+        return: (cast: (int) (l2_own_by_decl(mi, stmt) >= 0))
+    if: l2_head_read_kept(mi, h, stmt) != 0
         return: 0
 return: 1
 
@@ -12540,6 +12643,11 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     if: t\length >= 2U && t\data[0] = 99 && t\data[1] = 46
         return: 0
     oi: l2_own_visible(mi, t)
+    # A probe (l2_head_read_before) asks whether its name is read here as a free name; it makes nothing.
+    if: l2_hr_on != 0
+        if: oi < 0 && l2_define_name(t) = 0 && l2_text_same(t, l2_hr_name) != 0
+            l2_hr_hit: 1
+        return: 0
     # Q52 (the author: «нет видимого поля "y" у структуры "s" ... поля такого нет (потому что объявление не там)»;
     # «0 — меняется лишь скрытый вход s»): a field of the unit that a method sees is not the method's -- its name is a
     # hidden input of the method, the caller's current value handed over at the call (book :1182); a bare write changes
@@ -12601,6 +12709,64 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 1
 return: 0
 
+# The formal of the callee -- method idx, or else held callable held -- that a Frame among a call's actuals
+# names, as l2_bind_actuals reads the actuals; -1 when f names none.
+fn: l2_actual_formal (@: LmP0Field f; int: idx; int: held) int
+    @: LmP0Frame fr
+    int: nf 0
+    int: k 0
+    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_FRAME || f\value\as = 0 || f\value\as\frame = 0 || f\value\as\frame\head = 0
+        return: -1
+    fr: f\value\as\frame
+    if: idx >= 0
+        nf: l2_m_arity[idx]
+    if: idx < 0 && held >= 0
+        nf: l2_mad_held_formals(held)
+    while: k < nf
+        if: idx >= 0 && l2_payload_same(fr\head, l2_fn(idx, k)) != 0
+            return: k
+        if: idx < 0 && l2_payload_same(fr\head, l2_mad_held_arg_name(held, k)) != 0
+            return: k
+        k: k + 1
+    ---
+return: -1
+
+# The actuals of call, a Frame with a body, as the scan reads them: once l2_bind_calls has bound the call, its
+# projection (l2_call_actuals).  A probe (l2_head_read_before) runs at collection, before any call is bound,
+# and reads a call as its binding will (l2_bind_actuals): a Frame among the actuals whose head names a formal
+# of the callee is that formal's argument -- its head the formal's label, its body the value.
+fn: l2_scan_actuals (const: @(LmP0Node call); int: mi; @: int seen) int
+    @: LmP0Structure body
+    @: LmP0Field f
+    int: idx
+    int: held -1
+    int: fi 0
+    int: span
+    int: named
+    body: call\as\frame\body
+    if: l2_hr_on = 0 || l2_bound_find(body) >= 0
+        return: l2_scan_fields(l2_call_actuals(body), l2_call_actual_fields(body), mi, seen)
+    idx: l2_call_head_method(mi, call\as\frame\head, @ fi)
+    if: idx = l2_e
+        idx: -1
+    if: idx < 0
+        held: l2_call_head_held(mi, call\as\frame\head)
+    f: l2_next_active(body\first_field)
+    while: f != 0
+        span: l2_expr_span(f)
+        if: span < 1
+            span: 1
+        named: -1
+        if: span = 1
+            named: l2_actual_formal(f, idx, held)
+        if: named >= 0 && f\value\as\frame\body != 0 && l2_scan_fields(f\value\as\frame\body\first_field, l2_count_active(f\value\as\frame\body), mi, seen) != 0
+            return: 1
+        if: named < 0 && l2_scan_fields(f, span, mi, seen) != 0
+            return: 1
+        f: l2_skip_span(f, span)
+    ---
+return: 0
+
 fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
     @: LmP0Field f
     int: n
@@ -12627,6 +12793,8 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
         f: l2_next_active(node\as\frame\body\first_field)
         if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
             oi: l2_own_visible(mi, f\value\as\atom)
+            if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0 && l2_hr_on != 0
+                return: 0
             if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
                 if: l2_m_uses[l2_own_off(mi, oi)] = 0
                     l2_m_own[mi]: l2_m_own[mi] + 1
@@ -12653,6 +12821,9 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
         if: oi >= 0 && oi != l2_e
             if: l2_scan_ident(mi, node\as\frame\head, seen) != 0
                 return: 1
+            # A probe reads a call l2_bind_calls has not bound yet (l2_scan_actuals).
+            if: l2_hr_on != 0 && l2_bound_find(node\as\frame\body) < 0
+                return: l2_scan_actuals(node, mi, seen)
             # An empty Structure actual (D-23) has nothing to scan.  The actuals are
             # taken by formal coordinate: the projection.
             f: l2_next_active(l2_call_actuals(node\as\frame\body))
@@ -12678,9 +12849,7 @@ fn: l2_scan_node (const: @(LmP0Node node); int: mi; @: int seen) int
         if: indexed = 1 && l2_scan_ident(mi, node\as\frame\head, seen) != 0
             return: 1
         # A call of a callable formal arrives here: its actuals are its projection too.
-        f: l2_call_actuals(node\as\frame\body)
-        n: l2_call_actual_fields(node\as\frame\body)
-        return: l2_scan_fields(f, n, mi, seen)
+        return: l2_scan_actuals(node, mi, seen)
 return: 0
 
 fn: l2_scan_index_head (const: @(LmP0Node node); int: mi; @: int seen) int
@@ -12756,6 +12925,8 @@ return: l2_scan_fields(declaration\candidate, declaration\candidate_count, mi, s
 # the same scan state as ordinary declarations, not an untyped hidden input.
 fn: l2_scan_bound (int: mi; int: oi; @: int seen) int
     size_t: off
+    if: l2_hr_on != 0
+        return: 0
     if: oi < 0
         return: 1
     off: l2_own_off(mi, oi)
@@ -12791,6 +12962,10 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
     field: l2_next_active(body\first_field)
     while: field != 0
         stmt: field\value
+        # A probe (l2_head_read_before) ends at the statement it asks about.
+        if: l2_hr_on != 0 && stmt = l2_hr_stop
+            l2_hr_done: 1
+            return: 1
         l2_vis_stmt(mi, stmt)
         retained: l2_ns_constructed_row(mi, stmt)
         if: retained = -2
@@ -12903,12 +13078,12 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         # among them -- resolves to the field and never makes f a dynamic input.  The check pass's l2_own_add on the
         # same statement finds this row.
         if: l2_empty_struct_decl_shape(stmt, mi) != 0
-            if: l2_scan_bound(mi, l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_colon_decl_shape(stmt, @ slnm, @ fa) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
-            if: l2_scan_bound(mi, l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -12917,12 +13092,12 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: l2_colon_bind_shape(stmt, @ slnm, @ fa, @ bcand) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
             if: bcand != 0 && bcand\value != 0 && l2_scan_node(bcand\value, mi, seen) != 0
                 return: 1
-            if: l2_scan_bound(mi, l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_receive_msg_shape(stmt, @ fa, 0) = 0
-            if: l2_scan_bound(mi, l2_own_output_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_output_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -13056,14 +13231,14 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             if: stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0 && l2_own_find_decl(mi, stmt\as\frame\head, stmt) < 0 && (l2_own_visible(mi, stmt\as\frame\head) < 0 || l2_own_mi[l2_own_visible(mi, stmt\as\frame\head)] != mi) && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
                 return: 1
             # The statement may be a call (`put(b: 1; a: 8)`): its actuals are its projection.
-            if: stmt\as\frame\body != 0 && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_fields(l2_call_actuals(stmt\as\frame\body), l2_call_actual_fields(stmt\as\frame\body), mi, seen) != 0
+            if: stmt\as\frame\body != 0 && l2_local_ns_shape(stmt, mi) = 0 && l2_scan_actuals(stmt, mi, seen) != 0
                 return: 1
             oi: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
             # A target that became an argument's name (a formal or a hidden input) marks no field.
             if: oi < 0 && l2_param_find(mi, stmt\as\frame\head) < 0
                 oi: l2_own_visible(mi, stmt\as\frame\head)
             ---
-            if: oi >= 0 && l2_own_unit_seen(oi, mi) != 0
+            if: l2_hr_on = 0 && oi >= 0 && l2_own_unit_seen(oi, mi) != 0
                 if: l2_own_off(mi, oi) = (cast: (size_t) -1)
                     return: 1
                 if: l2_m_uses[l2_own_off(mi, oi)] = 0
@@ -13099,7 +13274,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: l2_frame_head(stmt, "if") = 0 && l2_frame_head(stmt, "while") = 0 && l2_frame_head(stmt, "for") = 0 && l2_is_asgn(stmt, mi) = 0 && l2_is_char_decl(stmt) = 0
             if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_scan_ident(mi, stmt\as\frame\head, seen) != 0
                 return: 1
-            if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0 && l2_scan_fields(l2_call_actuals(stmt\as\frame\body), l2_call_actual_fields(stmt\as\frame\body), mi, seen) != 0
+            if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0 && l2_scan_actuals(stmt, mi, seen) != 0
                 return: 1
             field: l2_next_active(field\next)
 return: 0
@@ -41118,7 +41293,7 @@ fn: l2_scan_node_use (int: mi; const: @(LmP0Text name)) int
     int: oi
     int: ty
     host: l2_mad_host_of(mi)
-    if: host < 0 || name = 0
+    if: host < 0 || name = 0 || l2_hr_on != 0
         return: 0
     fi: l2_formal_find(host, name)
     if: fi >= 0

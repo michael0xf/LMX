@@ -1,0 +1,28 @@
+# The role of each head follows the statements before it, in order
+# (HEAD-ROLE-UNESTABLISHED-ROWS): bump reads y first, so `y: hidden + was`
+# assigns bump's input y, and that statement runs: its tail reads hidden as a
+# free name, which establishes hidden before `hidden: hidden + 1` writes it.
+# Both writes stay in bump's activation: 5 + 8 = 13 returned, and outer's y
+# and hidden stay 4: outer says OUTER 13 4 4. Entry 7.
+fn: bump () int
+    int: was y
+    y: hidden + was
+    hidden: hidden + 1
+    return: hidden + y
+end: bump
+
+fn: outer () int
+    int: y 4
+    int: hidden 4
+    int: got
+    got: bump()
+    c.printf: "OUTER %d %d %d\n" got y hidden
+    if: got != 13
+        return: 83
+    if: y != 4 || hidden != 4
+        return: 84
+    return: 7
+end: outer
+
+sendMessage: exit(exit_code: outer(); stdout: ""; stderr: "")
+return

@@ -58,6 +58,14 @@ struct: L2ReferenceSource
     int: place
 end: L2ReferenceSource
 
+# The text the emitter builds (FIXED-BLOCKS-AUDIT, the expression text): `data` holds `len` bytes and a NUL in
+# `cap` bytes -- its owner's buffer while that suffices, then storage of the translation (l2trans.lm1, l2_tx_*).
+struct: L2Tx
+    @: char data
+    size_t: len
+    size_t: cap
+end: L2Tx
+
 # A bounded source operand view. All source pointers are borrowed; no AST or
 # runtime graph is copied. The index is either a literal, an existing joined
 # own-name projection, or the original P0 index expression.

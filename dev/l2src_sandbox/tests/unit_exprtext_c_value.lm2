@@ -1,0 +1,10 @@
+# FIXED-BLOCKS-AUDIT, the expression text (Codex 2026-10-06): a C call used as a value takes its whole text.
+# Its text was copied in 256 bytes: c.abs of 40 operands (between 256 and 1023 bytes) was cut there into L1
+# that l1trans refused, of 120 operands (past 1023) refused "expression too long".  f(1) = 40 + 120 - 153.
+# A raw C call: native only.
+fn: f (int: a) int
+    int: p c.abs(a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a)
+    int: q c.abs(a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a)
+return: p + q - 153
+sendMessage: exit(exit_code: f(1); stdout: ""; stderr: "")
+return

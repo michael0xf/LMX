@@ -588,8 +588,14 @@ Fable принял единственный writer/build-слот по [to_fable
   [§93 журнала](fable-continuation-20261003.md#send-sites-any-count)); свидетели читают письма на перехвате
   драйвера (`postlog 1`). Гейты `opus_kernel_23` GREEN297, `opus_l3_22`, `opus_full_24` RED39/1917: против
   `opus_full_23` FAIL→OK 0, OK→FAIL 0, добавлено 5.
+- Текст одного выражения — сколько написано (FIXED-BLOCKS-AUDIT, срез 1,
+  [§94 журнала](fable-continuation-20261003.md#expression-text-slice-1)): было 1023 байта и два отказа без
+  места (литерал от 256 байт, вызов C с 300 фактическими); заодно исправлен
+  [C-CALL-VALUE-TEXT-CUT](defects.md#c-call-value-text-cut). Остальные маршруты — OPEN, перечислены в
+  FIXED-BLOCKS-AUDIT. Гейты `opus_kernel_24` GREEN297, `opus_l3_23`, `opus_full_25` RED39/1928: против
+  `opus_full_24` FAIL→OK 0, OK→FAIL 0, добавлено 11.
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
-  под гейтом (идёт сейчас); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
+  под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),
   [OWN-TYPE-CODE-BANDS](defects.md#own-type-code-bands)), сначала они, затем новая перепись и удаление;
   после текста выражения — шаг имён в `l1trans`. Общий заголовок `<string.h>` остаётся.

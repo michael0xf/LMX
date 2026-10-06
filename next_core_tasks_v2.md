@@ -813,7 +813,21 @@ Current bounded implementation, with no DONE claim:
     "expression too long". Required positives: the long sum well beyond the
     old boundary, a 260+ byte literal operand through the C-door
     preparation, a C call of 300+ actuals through the ordinary join, with
-    more than one growth, nested and parenthesized preparation, live=0;
+    more than one growth, nested and parenthesized preparation, live=0.
+    Slice 1 done
+    ([section 94](steps/fable-continuation-20261003.md#expression-text-slice-1)):
+    the text `L2Tx`; evaluation and joining, operand preparation, the C door
+    and a C call's value, the statement's text and its readers, a letter's
+    fields; an atom of any length; C-CALL-VALUE-TEXT-CUT fixed with it.
+    Gates: kernel `opus_kernel_24` GREEN297 (114 selftests), L3 `opus_l3_23`,
+    full `opus_full_25` RED39/1928 -- against `opus_full_24` FAIL→OK 0,
+    OK→FAIL 0, added 11. The residual routes (33 fixed writers, `l2_payload_expr`,
+    eight fixed routes of a migrated text, `l2_tok_text` atoms, `l2_cat`
+    joins) stay OPEN, listed in FIXED-BLOCKS-AUDIT;
+  - [ ] a failed allocation in the emission said twice, located and again at
+    1:1 ([ALLOC-FAILURE-SAID-TWICE](steps/defects.md#alloc-failure-said-twice)):
+    a small fix; its gated witness needs a row that fails an allocation,
+    which the harness does not make yet (asked of Codex 2026-10-06);
   - [ ] the machine-local path root (`l2_path_root`'s branch with
     `i < 990`, `l2_proot` 64 in `l2_emit_path_to`): two producers reach it
     ([DECLARATION-CANDIDATE-ROLE](steps/defects.md#declaration-candidate-role),

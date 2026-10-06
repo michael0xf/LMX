@@ -2132,6 +2132,11 @@ $sendFieldsManySays = @(
     'post 1: 4 8 "m3" 16 20 24 28 32 "m9" 40 44 48 52 56 "m15" 64 68 72 76 80 "m21" 88 92 96',
     'post 2: 12 22 32 42 "r5" 62 72 82 92 "r10" 112 122 132 142 "r15" 162 172 182 192 "r20"',
     'post 3: 7 "" ""')
+# The expression text (FIXED-BLOCKS-AUDIT, slice 1): unit_exprtext_literal prints its literal of 3000 bytes,
+# unit_exprtext_actuals the values 1 ... 300 in their order, unit_exprtext_letter posts its field's 150.
+$exprTextLiteralSays = @((0..2999 | ForEach-Object { 'abcdefghij'[$_ % 10] }) -join '')
+$exprTextActualsSays = @((1..300) -join ' ')
+$exprTextLetterSays = @('post 1: 150', 'post 2: 7 "" ""')
 
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
@@ -2978,6 +2983,32 @@ $fixtures = @(
     # walker ("root operation not walkable yet"); one giving every site the first's offset accepts it.
     [pscustomobject]@{ Name = 'unit_send_site_kinds_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_send_site_kinds_refused.lm2:6:31: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT, the expression text, slice 1 (Codex 2026-10-06, OPUS-CODEX-20261005-01, Decision 2): the
+    # text of one expression is as long as the program writes it (L2Tx, steps/fable-continuation-20261003.md §94).
+    # Past the 1023 bytes it was refused at ("expression too long"): a sum of 300 operands with 110 nested groups
+    # and a sign over a group, a while and an if condition and a letter's field of 150 operands -- natively, and
+    # with the method and the root walked.  The previous translator refused a literal operand of 256+ bytes and a C
+    # call of 300 actuals with no located diagnostic, and cut a C call used as a value at 256 bytes into L1 that
+    # l1trans refused.  Those three rows are native only: a raw C call keeps its method native under
+    # --walk-methods (the walked translation keeps l2_m0's native word), and no walked twin is made of it.
+    [pscustomobject]@{ Name = 'unit_exprtext_sum.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_sum_walk.lm2'; Source = 'unit_exprtext_sum.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_while_walk.lm2'; Source = 'unit_exprtext_while.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_if_walk.lm2'; Source = 'unit_exprtext_if.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_letter.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postlog', '1'); Entry = 7;
+        Says = $exprTextLetterSays; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_letter_walk.lm2'; Source = 'unit_exprtext_letter.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postlog', '1'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Says = $exprTextLetterSays; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_literal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = $exprTextLiteralSays; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_actuals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = $exprTextActualsSays; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_c_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # Triage 2026-10-03: `idle: 1` at the root is an unknown head and defines a named Structure.
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone

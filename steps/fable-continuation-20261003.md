@@ -9477,3 +9477,137 @@ its sites.
 | `build/l3_selftest/opus_l3_22` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_24` (full harness) | RED39/1917: against `opus_full_23` FAIL→OK 0, OK→FAIL 0, added 5, removed 0. The declared paths were hashed before the run; the staged translator and driver are their bytes. |
 | `build/l2_harness/opus_focus_msd1` (focused, before the gates) | 25 rows: the five of this section, the other send rows, the rows of the driver's post-path tap and the reception rows, all green. |
+
+<a id="expression-text-slice-1"></a>
+## 94. The text of one expression as long as the program writes it: slice 1 (FIXED-BLOCKS-AUDIT)
+
+Codex's decision of 2026-10-06 (OPUS-CODEX-20261005-01, Decision 2): one
+compiler-only owned text builder -- data, current length, capacity -- under
+the existing `l2_xmalloc`/`l2_xfree` discipline, migrated in slices by real
+dependency, each gated; a route is migrated only when its writers and its
+readers use the unbounded text, and a route not migrated yet stays OPEN. The
+text of one expression was 1023 bytes (`l2_cat` into 1024-byte buffers,
+"expression too long"): a sum of about a hundred operands was refused, and
+two ordinary shapes were refused with no located diagnostic ("internal: a
+refusal said nothing", exit 3) -- a literal operand of 256 bytes or more
+through the C door (`l2_tok_text(..., 256U)` in `l2_prep`) and a C call of
+300 actuals.
+
+The text, `L2Tx` (the translator's header `l2_application.h.lm1`), is `data`
+holding `len` bytes and a NUL in `cap` bytes. It starts on a 1024-byte buffer
+of its owner, so a text that fits there takes no allocation; beyond it the
+text takes storage of the translation twice the room (`l2_tx_room` through
+`l2_text_room`, released by `l2_release`). A grown text's earlier storage
+stays until then, so no pointer into it dangles; a reader takes `data` after
+the last write. The functions: `l2_tx_open`, `l2_tx_len`, `l2_tx_room`,
+`l2_tx_cat`/`l2_tx_catn`, `l2_tx_clear`, `l2_tx_set`, `l2_tx_join`,
+`l2_tx_temp`, and `l2_tok_tx`, an atom's text of any length (a
+triple-quoted text as an L1 string) in place of `l2_tok_text`'s 256 bytes.
+
+Migrated, writers and readers: the evaluation of an expression
+(`l2_eval_fields`, `l2_eval_and`, `l2_eval_cond`), the joining of its operands
+(`l2_emit_fields`), the preparation of an operand (`l2_prep`: atoms, groups,
+prefix signs, casts, unit references, function-pointer calls), the C door
+(`l2_emit_ccall`) with the destination of a C call used as a value
+(`l2_ccall_into`), the statement's text `l2_tok` (its record in
+`l2_translate`'s frame) with every reader of it, and a letter's field texts
+(`l2_emit_msend`). The type carries the contract: a migrated writer's
+destination is `@: L2Tx`, so gcc's `-Werror=incompatible-pointer-types` named
+every site that still passed it a fixed buffer.
+
+The routes not migrated yet stay OPEN. None of them cuts a text: each takes it
+whole or refuses it in its own words.
+
+- 33 writers still on a 1024-byte buffer are handed the text's room for it
+  (`l2_tx_fixed`) and keep their own bounds and refusals -- among them
+  `l2_emit_call`, `l2_emit_indexed`, `l2_own_load`, `l2_emit_raw_path`,
+  `l2_prefix_deref`, `l2_emit_sizeof`, `l2_emit_address`, `l2_path_text_read`,
+  `l2_emit_reference_value`, `l2_emit_init_convert`, `l2_emit_ret_convert`;
+- two writers rewrite the statement's text in place (`l2_tx_fixed_keep`):
+  `l2_payload_expr`, which still refuses a letter's value of 256 bytes ("a
+  letter's value expression too long"), and `l2_emit_receiving_admit`, which
+  reads the text whole;
+- eight routes take a migrated writer's text into a fixed 1024-byte buffer
+  (`l2_eval_fields_fixed`, `l2_emit_fields_fixed`, `l2_prep_fixed`): the
+  actual slots of `l2_emit_call`, `l2_prep_held_call`, `l2_emit_indexed`,
+  `l2_prep_addr`, `l2_emit_actual_path` (at most 32 names),
+  `l2_emit_indirect_span`, `l2_emit_reference_value_at` and
+  `l2_emit_fnptr_call`. The text is copied there when it fits, else refused
+  where it stands, "expression too long" (`l2_tx_to_fixed`). The three
+  wrappers were put between `l2_emit_formal` and its leading comment, which
+  they now separate; the next slice moves what remains of them;
+- atoms copied by `l2_tok_text` into buffers of a constant size: a raw C path's
+  root and a dereferenced name (256 bytes), an index's base and pieces, a
+  foreign type's name in a cast and a declared reference's name (256), and the
+  machine-local path root (64 -- its own item, after its two producers); the
+  joins of `l2_emit_fnptr_call` and `l2_pointer_decl_text` (`l2_cat`).
+
+A defect found and fixed with the slice, C-CALL-VALUE-TEXT-CUT: a C call used
+as a value had its text copied into its destination in 256 bytes
+(`memcpy(into_buf, buf, 256U)`). `int: r c.abs(a + ... + a)` of 40 operands
+(a text between 256 and 1023 bytes) translated, exit 0, into L1 that `l1trans`
+refused, "unclosed parenthesized form" (`c.abs(l2_p0_0 + ... + )`); of 120
+operands it was refused "expression too long". The destination is now the
+text itself.
+
+| Row | What it pins |
+| --- | --- |
+| `unit_exprtext_sum` (+`_walk`) | A sum of 300 operands of a formal (3010 bytes of text: one text grows twice, 1024 to 4096 bytes), 110 nested groups around one operand and a sign over a group of 120; Entry 7. The twin walks the method and the root. |
+| `unit_exprtext_while` (+`_walk`) | A while condition of 151 operands; the loop ends at r = 7. |
+| `unit_exprtext_if` (+`_walk`) | An if condition of 150 operands; the branch is taken. |
+| `unit_exprtext_letter` (+`_walk`) | A letter's field of 150 operands: `postlog 1` says "post 1: 150", then the exit. |
+| `unit_exprtext_literal` | A literal of 3000 bytes as the operand of `c.puts`, printed whole (Says). |
+| `unit_exprtext_actuals` | `c.printf` of 301 actuals: the values 1 ... 300 (four of them written a + k) printed in their order (Says). |
+| `unit_exprtext_c_value` | `c.abs` used as a value, of 40 and of 120 operands; Entry 7. |
+
+The last three are native only: a raw C call keeps its method native under
+`--walk-methods` (the walked translation keeps `l2_m0`'s native word), and no
+walked twin is made of them -- no interpretation of raw `c.*` is invented for
+one. The previous translator refuses every row: "expression too long" at the
+long expression (sum 6:420, c_value 7:426, while 5:420, if 5:417, letter
+4:434); literal and actuals with no located diagnostic, exit 3.
+
+The sizes are what the witnesses need and no more: the harness reads each
+program's graph in a time that grows faster than the graph -- the first
+draft's sum, 1451 operands in all, took 210 s a row, a condition of 301
+operands 13 s.
+
+Translating the seven fixtures, natively and with `--walk-methods`, the
+allocation log ends with no live allocation. An allocation failed at a growth
+(`L2_FAIL_MALLOC` at each of the sum's first three) refuses the translation at
+the expression, "out of memory" (6:420, 6:830, 6:1208), writes no L1 and ends
+with no live allocation. Both translators follow a failed allocation in the
+emission with a second line, "1:1: out of memory": not this step's, it is
+registered as ALLOC-FAILURE-SAID-TWICE (`steps/defects.md`, OPEN).
+
+Mutants, each built as its own translator; the seven fixtures translated,
+compiled and run natively, the posts and the printed lines compared:
+
+| Mutant | Killed by |
+| --- | --- |
+| a text refused past 1024 bytes (`l2_tx_room`) | all seven fixtures: "out of memory" at the long expression |
+| an atom refused at 256 bytes (`l2_tok_tx`, the old bound of `l2_tok_text`) | `unit_exprtext_literal` and `unit_exprtext_actuals`: "out of memory" at the literal |
+| a C call's value copied in 256 bytes (the old `memcpy`) | `unit_exprtext_c_value`: L1 that `l1trans` refuses, "unclosed parenthesized form" |
+| a growth that does not copy the text | `unit_exprtext_sum`, `_c_value` and `_if`: the entry returns another value (exit 1); `_literal` and `_actuals`: L1 that `l1trans` refuses; `_while`: the loop does not end (stopped at 60 s); `_letter`: "post 1: 48" |
+| the C door's join refused at 1023 bytes | `unit_exprtext_literal`, `_actuals` and `_c_value`: "out of memory" |
+| `l2_tx_fixed_keep` emptying the text | the replay changes the L1 of `unit_bind_root_letter` and `unit_bind_root_letter_refused` alone: a cast with no operand, which gcc refuses ("expected expression before ')' token") |
+| `l2_tx_fixed` not emptying the text | nothing: the replay keeps the L1 of all 1916 rows and changes the number of allocations of 1340 -- the emptying only spares growth |
+
+A replay of the 1916 translations recorded by `opus_full_24`, with the
+translator of this section's full gate against that gate's, changes nothing:
+every row keeps its L1, exit, messages and number of allocations -- a text
+that fits in its owner's buffer takes no memory.
+
+The comment on the preamble's `<string.h>` in `l2_emit_unit`, and the header
+of `unit_send_text`, said the header was named only where the program's own
+emission uses it; it is one common header of every program's preamble since
+6ea06df8 (Codex 2026-10-06), and they say so.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_24` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_23` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_25` (full harness) | RED39/1928: against `opus_full_24` FAIL→OK 0, OK→FAIL 0, added 11, removed 0. The declared paths were hashed before the run; the staged translator, its header and the fixtures are their bytes. |
+| `build/l2_harness/opus_focus_tx2` (focused, before the gates) | 14 rows: the eleven of this section, `unit_send_text` and the two rows the `l2_tx_fixed_keep` mutant changes, all green. |

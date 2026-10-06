@@ -2125,6 +2125,13 @@ $criticalT7CopyPost = @('postpaths',
     'parentpath','5','7','deref','up','2','1','4','7','deref','up','2',
     'samepath','1','0','4','7','deref','up','0',
     'endpostpaths')
+# SEND-SITE-ARTIFICIAL-CAPS: what the driver's `postlog 1` says of the posts -- unit_send_sites_many's 70, site k's
+# letter k, 3 k, "sk", then k * 100 + 4 ... k * 100 + 17, and the exit; unit_send_fields_many's three.
+$sendSitesManySays = @(1..69 | ForEach-Object { $k = $_; 'post ' + $k + ': ' + $k + ' ' + (3 * $k) + ' "s' + $k + '" ' + ((4..17 | ForEach-Object { $k * 100 + $_ }) -join ' ') }) + @('post 70: 7 "" ""')
+$sendFieldsManySays = @(
+    'post 1: 4 8 "m3" 16 20 24 28 32 "m9" 40 44 48 52 56 "m15" 64 68 72 76 80 "m21" 88 92 96',
+    'post 2: 12 22 32 42 "r5" 62 72 82 92 "r10" 112 122 132 142 "r15" 162 172 182 192 "r20"',
+    'post 3: 7 "" ""')
 
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
@@ -2949,6 +2956,28 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    # SEND-SITE-ARTIFICIAL-CAPS (Codex, 2026-09-30): seventy send sites at the root, sixty-nine letters of
+    # seventeen fields and the exit -- past the 64 sites and the 16 fields of a site the translator held, and
+    # past the 1024 field places the unit keeps (1176 fields).  The driver's `postlog 1` says every post at its
+    # tap, before the delivery: Says pins each letter's fields and the order of the posts, natively and walked.
+    # The previous translator refuses "a message of more than 16 fields"; a mutant restoring the 64 sites, the
+    # 16 fields or the 1024 places refuses, one reading another site's fields fails the run
+    # (steps/fable-continuation-20261003.md §93).
+    [pscustomobject]@{ Name = 'unit_send_sites_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postlog', '1'); Entry = 7;
+        Says = $sendSitesManySays; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_send_sites_many_walk.lm2'; Source = 'unit_send_sites_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postlog', '1'); Entry = 7; WalkRoot = $true;
+        Says = $sendSitesManySays; Absent = @(); Debt = @() },
+    # Letters of more fields than a site held: a method's of 24 (the method is native: no walked method sends
+    # yet) and the root's of 20, texts among the ints, then the exit.
+    [pscustomobject]@{ Name = 'unit_send_fields_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postlog', '1'); Entry = 7;
+        Says = $sendFieldsManySays; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_send_fields_many_walk.lm2'; Source = 'unit_send_fields_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postlog', '1'); Entry = 7; WalkRoot = $true;
+        Says = $sendFieldsManySays; Absent = @(); Debt = @() },
+    # The check reads each site's own fields: the second letter's field that indexes a number is refused by the
+    # check, where the first letter's field is a text.  A mutant reading the first site's fields leaves it to the
+    # walker ("root operation not walkable yet"); one giving every site the first's offset accepts it.
+    [pscustomobject]@{ Name = 'unit_send_site_kinds_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_send_site_kinds_refused.lm2:6:31: an index on a number: only an Array field is indexed'; Absent = @(); Debt = @() },
     # Triage 2026-10-03: `idle: 1` at the root is an unknown head and defines a named Structure.
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone

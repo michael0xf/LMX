@@ -52,6 +52,10 @@ int: post_paths_requested 0
 int: post_paths_seen 0
 @: LmxArena post_paths_arena 0
 @: Lmx post_paths_graph 0
+# `postlog 1` (SEND-SITE-ARTIFICIAL-CAPS): every post is said before its delivery (post_log), so a row's
+# Says pins the letters' data and their order.
+int: post_log_requested 0
+int: post_log_n 0
 const: @: char phase ""
 # S1.1: the merges the program made and the one the row fails (`mergefail N`, 0 = none).
 int: merge_calls 0
@@ -452,9 +456,9 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
                     check(member != 0 && member\parent = other && lmx_range_profile(arena, cell) = root_profile(arena, other) && sealed_here(arena, cell) != 0, "slot member keeps its lexical parent and exact sealed profile")
                     at: at + 5
                 else:
-                    # `entry N`, `letters N`, `fails N`, `mergefail N`, `stopped N`, `thrown N` and
-                    # `ref N` are read by main, not root facts.
-                    if: (c.strcmp(gargv[at], "entry") = 0 || c.strcmp(gargv[at], "letters") = 0 || c.strcmp(gargv[at], "fails") = 0 || c.strcmp(gargv[at], "mergefail") = 0 || c.strcmp(gargv[at], "stopped") = 0 || c.strcmp(gargv[at], "thrown") = 0 || c.strcmp(gargv[at], "ref") = 0 || c.strcmp(gargv[at], "walkroot") = 0) && at + 1 < gargc
+                    # `entry N`, `letters N`, `fails N`, `mergefail N`, `stopped N`, `thrown N`, `ref N` and
+                    # `postlog N` are read by main, not root facts.
+                    if: (c.strcmp(gargv[at], "entry") = 0 || c.strcmp(gargv[at], "letters") = 0 || c.strcmp(gargv[at], "fails") = 0 || c.strcmp(gargv[at], "mergefail") = 0 || c.strcmp(gargv[at], "stopped") = 0 || c.strcmp(gargv[at], "thrown") = 0 || c.strcmp(gargv[at], "ref") = 0 || c.strcmp(gargv[at], "walkroot") = 0 || c.strcmp(gargv[at], "postlog") = 0) && at + 1 < gargc
                         at: at + 2
                     else:
                         # `postpaths ... endpostpaths` are the service post's (shape_paths_check), not root facts.
@@ -2217,6 +2221,42 @@ fn: l2_driver_before_turn (@: LmxRoot root; @: LmxMsg r0) int
     st: lmx_service_post(lmx_root_service(root), (cast: (@: void) r0), letter, letter_arena)
 return: (cast: (int) (st != c.LMX_SERVICE_OK))
 
+# `postlog 1`: the letter of a post as one line, "post N:" and its payload's fields in order -- an int by its
+# value, a text in quotes, anything else `?`.  Read in the letter's own arena, before the post hands it on.
+sub: post_log (@: LmxArena arena; @: LmxMsg letter)
+    @: Lmx g 0
+    @: Lmx p 0
+    @: void v 0
+    @: VoidArray t 0
+    size_t: j 0U
+    post_log_n: post_log_n + 1
+    c.printf("post %d:", post_log_n)
+    if: letter != 0
+        g: letter\graph
+    ---
+    if: g != 0 && g\array.size >= 2U && lmx_range_classify(arena, lmx_arena_ref_value(g, 1U)) = c.LMX_KIND_STRUCT
+        p: lmx_arena_ref_struct(g, 1U)
+    ---
+    if: p = 0
+        c.printf(" not a letter")
+    ---
+    while: p != 0 && j < p\array.size
+        v: lmx_arena_ref_value(p, j)
+        if: v != 0 && lmx_domain_type(arena, v) = c.LMX_TYPE_INT
+            c.printf(" %d", lmx_int_value_known(v))
+        else:
+            if: v != 0 && lmx_domain_type(arena, v) = c.LMX_TYPE_ARRAY_OF_CHAR
+                t: (cast: (@: VoidArray) v)
+                c.printf(" \"%.*s\"", (cast: (int) t\size), (cast: (@: char) t\data))
+            else:
+                c.printf(" ?")
+            ---
+        ---
+        j: j + 1
+    ---
+    c.printf("\n")
+end: post_log
+
 # The observation point for EVERY lmx_service_post the generated program makes
 # (-Dlmx_service_post=l2_driver_service_post): counts a post addressed to the peer or the host's
 # parent without inspecting either mailbox afterward, and unregisters the peer the instant a reply
@@ -2239,6 +2279,9 @@ fn: l2_driver_service_post (@: LmxService service; @: void address; @: LmxMsg le
     ---
     if: l2_ref_parent_addr != 0 && address = l2_ref_parent_addr
         l2_ref_reply_to_parent: l2_ref_reply_to_parent + 1
+    ---
+    if: post_log_requested != 0
+        post_log(letter_arena, letter)
     ---
     st: lmx_service_post(service, address, letter, letter_arena)
     if: st = c.LMX_SERVICE_OK && l2_ref_peer != 0 && address = (cast: (@: void) l2_ref_peer)
@@ -2386,6 +2429,9 @@ fn: main (int: argc; @@: char argv) int
         ---
         if: c.strcmp(argv[at], "postpaths") = 0
             post_paths_requested: 1
+        ---
+        if: c.strcmp(argv[at], "postlog") = 0
+            post_log_requested: arg(at + 1)
         ---
         if: c.strcmp(argv[at], "letters") = 0
             letters: arg(at + 1)

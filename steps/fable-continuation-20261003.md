@@ -9404,3 +9404,76 @@ of allocations.
 | `build/l3_selftest/opus_l3_21` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_23` (full harness) | RED39/1912: against `opus_full_21` FAIL→OK 0, OK→FAIL 0, added 1, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
 | `build/l2_harness/opus_focus_tbl2` (focused, before the gates) | 22 rows: the two of this section, the receiver `table` rows and the conversion-table rows beside them, all green. |
+
+<a id="send-sites-any-count"></a>
+## 93. Send sites and letter fields as many as the program writes (SEND-SITE-ARTIFICIAL-CAPS)
+
+Codex's entry SEND-SITE-ARTIFICIAL-CAPS (2026-09-30, `steps/defects.md`): the
+translator described the program's send sites in places of fixed size -- 64
+sites (`l2_msend_at`, `l2_msend_owner`, `l2_msend_inputs` and the `calloc(64)`
+counts) and 16 fields a site (`calloc(1024)` kinds and texts, indexed
+`k * 16 + j`) -- and refused beyond them: "more than 64 sends in method
+bodies", "a message of more than 16 fields". Nothing released that
+description.
+
+A site is now one record -- its statement, owner, inputs, number of fields,
+offset, and whether it names a destination -- and the fields of all sites are
+one array, site k's from its offset (`l2_msend_off[k]`). The records and the
+fields keep the unit's 64 and 1024 places while they suffice and beyond them
+memory of twice the entries (`l2_msend_room`, `l2_msend_froom`), released and
+reset with the translation (`l2_release`). The check (`l2_check_body`), the
+native and walked emission (`l2_emit_msend`, `l2_rw_send`) and the shared
+sender (`l2_emit_send`, which now takes the offsets) read the one record. It
+is compiler metadata only: nothing new reaches the runtime. The fifth reader
+in Codex's list, `l2_send_copies_text`, has had no caller since 6ea06df8
+(`<string.h>` is in every preamble); it is removed rather than rewritten, and
+the comment that named it says so.
+
+The witnesses use the driver's existing tap of every post,
+`l2_driver_service_post`, as Codex proposed. A new driver fact, `postlog 1`,
+says each post there before its delivery, as one line: "post N:" and the
+letter's payload fields in order, an int by its value, a text in quotes. The
+row's `Says` pins the lines.
+
+| Row | What it pins |
+| --- | --- |
+| `unit_send_sites_many` (+`_walk`) | 70 sites at the root: 69 letters of 17 fields (k, 3k, the text "sk", then k·100+4 … k·100+17) and the exit, 1176 fields in all. All 70 posts, in order, with every field, natively and walked; Entry 7. |
+| `unit_send_fields_many` (+`_walk`) | A method's letter of 24 fields (`x * j + j`, texts at 3, 9, 15, 21; the method is native, as every method that sends) and the root's of 20 (`b + 10 j`, a text at every fifth), then the exit. |
+| `unit_send_site_kinds_refused` | The check reads each site's own fields: the second letter's field that indexes a number is refused by the check (6:31, "an index on a number: only an Array field is indexed"), where the first letter's field is a text. |
+
+The previous translator refuses both positives at their 17th field, "a
+message of more than 16 fields". Nine mutants were each built as their own
+translator and run on both positives, natively and walked; the refusal row
+was translated by the two that change the check:
+
+| Mutant | Killed by |
+| --- | --- |
+| the 64 sites restored (`l2_msend_room` fails at 64) | `unit_send_sites_many`: "out of memory" at the 65th site |
+| the 16 fields of a site restored | both positives: refused at the 17th field |
+| the 1024 field places restored (`l2_msend_froom` fails at 1024) | `unit_send_sites_many`: "out of memory" at the 1025th field (site 61, its fifth) |
+| every site's offset 0 | all four runs: the program builder fails and the host cannot make R0 (exit 1); `unit_send_site_kinds_refused` is accepted |
+| the field count not advanced | all four runs: the send aborts (exit 3; walked, `walk error: INVALID`) |
+| `l2_emit_send` reading site 0's fields | all four runs: a letter takes the first site's texts, then a send whose inputs no longer match aborts (exit 3) |
+| `l2_rw_send` reading site 0's kinds | all four runs: the program builder fails (exit 1) |
+| `l2_emit_msend` reading site 0's kinds | `unit_send_fields_many` natively: the root's letter is other fields (exit 0, the second line differs) |
+| the check reading site 0's kinds | `unit_send_site_kinds_refused`: refused by the walker instead (6:30, "root operation not walkable yet: a field path") |
+
+The `l2_emit_msend` mutant survives the other three runs: the walked runs do
+not use it, and `unit_send_sites_many`'s letters share one pattern of kinds.
+Translating the two positives, the allocation log ends with no live
+allocation.
+
+A replay of the 1911 translations recorded by `opus_full_23`, with this
+step's translator (the focused stage's, from these bytes) against that gate's,
+changes nothing: every row keeps its L1, exit, messages and number of
+allocations -- a translation within the unit's places takes no memory for
+its sites.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_23` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_22` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_24` (full harness) | RED39/1917: against `opus_full_23` FAIL→OK 0, OK→FAIL 0, added 5, removed 0. The declared paths were hashed before the run; the staged translator and driver are their bytes. |
+| `build/l2_harness/opus_focus_msd1` (focused, before the gates) | 25 rows: the five of this section, the other send rows, the rows of the driver's post-path tap and the reception rows, all green. |

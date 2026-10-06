@@ -1,0 +1,8 @@
+# SEND-SITE-ARTIFICIAL-CAPS: the check reads each send site's own fields.  The first letter's second field is a
+# text; the second letter's second field indexes a number, and the check refuses it there.  Read with the first
+# letter's fields, that field would go unchecked, and the walker would refuse its path instead.
+int: i 3
+sendMessage: first(a: 1; t: "x")
+sendMessage: second(a: 2; n: i[0])
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

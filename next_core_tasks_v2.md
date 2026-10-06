@@ -787,8 +787,14 @@ Current bounded implementation, with no DONE claim:
     cells, a cell's text of 127 bytes
     ([section 92](steps/fable-continuation-20261003.md#source-tables-any-size)).
     Gates: kernel `opus_kernel_22` GREEN297 (114 selftests), L3 `opus_l3_21`,
-  full `opus_full_23` RED39/1912 -- against `opus_full_21` FAIL→OK 0,
-  OK→FAIL 0, added 1.
+    full `opus_full_23` RED39/1912 -- against `opus_full_21` FAIL→OK 0,
+    OK→FAIL 0, added 1.
+  - [x] send sites: 64 sites and 16 fields of a letter
+    (SEND-SITE-ARTIFICIAL-CAPS,
+    [section 93](steps/fable-continuation-20261003.md#send-sites-any-count)).
+    Gates: kernel `opus_kernel_23` GREEN297 (114 selftests), L3 `opus_l3_22`,
+    full `opus_full_24` RED39/1917 -- against `opus_full_23` FAIL→OK 0,
+    OK→FAIL 0, added 5.
   - [ ] the size of the L1 emitted for nested loops, faster than the square
     of the nesting (seventy nested `for:` loops: 27.5 MB);
   - [ ] the text of one expression in the emitter, 1023 bytes (`l2_cat`), and

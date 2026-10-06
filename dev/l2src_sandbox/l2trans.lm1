@@ -451,15 +451,30 @@ int: l2_rw_bseq_n 0
 int: l2_rw_loops 0
 # Send-site metadata is keyed by its source statement and owner. Native and
 # graph emission use one helper per site, independently of traversal order.
+# As many sites as the translation has, each with the fields its letter has (SEND-SITE-ARTIFICIAL-CAPS): the
+# unit's 64 sites and 1024 fields while they suffice, then memory of twice the entries (l2_msend_room,
+# l2_msend_froom).  Site k's fields are l2_msend_kind/l2_msend_text[l2_msend_off[k] + j], j < l2_msend_count[k].
 int: l2_msend_n 0
-[]: @(LmP0Node) l2_msend_at 64
-[]: int l2_msend_owner 64
-[]: int l2_msend_inputs 64
+int: l2_msend_cap 0
+[]: @(LmP0Node) l2_msend_at_own 64
+[]: int l2_msend_owner_own 64
+[]: int l2_msend_inputs_own 64
+[]: int l2_msend_count_own 64
+[]: int l2_msend_off_own 64
+[]: int l2_msend_has_ref_own 64
+@@: LmP0Node l2_msend_at 0
+@: int l2_msend_owner 0
+@: int l2_msend_inputs 0
 @: int l2_msend_count 0
-@: int l2_msend_kind 0
-@@: LmP0Text l2_msend_text 0
+@: int l2_msend_off 0
 # Whether the source site explicitly names a destination.
 @: int l2_msend_has_ref 0
+int: l2_msend_nfield 0
+int: l2_msend_fcap 0
+[]: int l2_msend_kind_own 1024
+[]: @(LmP0Text) l2_msend_text_own 1024
+@: int l2_msend_kind 0
+@@: LmP0Text l2_msend_text 0
 int: l2_e_n 0
 @: LmP0Field l2_e_fields 0
 @: LmP0Structure l2_e_struct 0
@@ -916,6 +931,7 @@ prototype:
     fn: l2_error_name (const: @(char path); const: @(LmP0Node at); const: @(char before); const: @(char name); size_t: n; const: @(char after)) int
     fn: l2_error_words (const: @(char path); const: @(LmP0Node at); const: @(char p0); const: @(char x); size_t: xn; const: @(char p1); const: @(char y); size_t: yn; const: @(char p2); const: @(char z); size_t: zn; const: @(char p3)) int
     fn: l2_tb_free () int
+    fn: l2_msend_free () int
     fn: l2_check_held_convert (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
     fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
     fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
@@ -1268,7 +1284,7 @@ prototype:
     fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
-    fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr; @: int has_ref_arr) int
+    fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int off_arr; @: int kind_arr; @@: LmP0Text text_arr; @: int has_ref_arr) int
     fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @: int out_k; @: int out_ni) int
     fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_rw_body (@: LmP0Structure body; int: parent; int: slot) int
@@ -2396,6 +2412,23 @@ return: base + (cast: (size_t) i) * 1024U
 fn: l2_release () int
     int: i 0
     unsigned: s 0U
+    if: l2_msend_cap > 64
+        l2_msend_free()
+    l2_msend_at: 0
+    l2_msend_owner: 0
+    l2_msend_inputs: 0
+    l2_msend_count: 0
+    l2_msend_off: 0
+    l2_msend_has_ref: 0
+    l2_msend_cap: 0
+    l2_msend_n: 0
+    if: l2_msend_fcap > 1024
+        l2_xfree((cast: (@: void) l2_msend_kind))
+        l2_xfree((cast: (@: void) l2_msend_text))
+    l2_msend_kind: 0
+    l2_msend_text: 0
+    l2_msend_fcap: 0
+    l2_msend_nfield: 0
     if: l2_lp_cap > 64
         l2_xfree((cast: (@: void) l2_lpk))
         l2_xfree((cast: (@: void) l2_lpp))
@@ -27187,7 +27220,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             send_i: 0
             while: send_part != 0
                 send_node: send_part\value
-                if: l2_msend_kind[msk * 16 + send_i] = 1 && l2_check_fields(l2_next_active(send_node\as\frame\body\first_field), l2_count_active(send_node\as\frame\body), mi, path, send_node) != 0
+                if: l2_msend_kind[l2_msend_off[msk] + send_i] = 1 && l2_check_fields(l2_next_active(send_node\as\frame\body\first_field), l2_count_active(send_node\as\frame\body), mi, path, send_node) != 0
                     return: 1
                 send_part: l2_next_active(send_part\next)
                 send_i: send_i + 1
@@ -39015,9 +39048,117 @@ fn: l2_rw_count (@: LmP0Field first) int
         return: 0 - 1
 return: made
 
+# The send sites' memory beyond the unit's places.
+fn: l2_msend_free () int
+    l2_xfree((cast: (@: void) l2_msend_at))
+    l2_xfree((cast: (@: void) l2_msend_owner))
+    l2_xfree((cast: (@: void) l2_msend_inputs))
+    l2_xfree((cast: (@: void) l2_msend_count))
+    l2_xfree((cast: (@: void) l2_msend_off))
+    l2_xfree((cast: (@: void) l2_msend_has_ref))
+return: 0
+
+# Room for one more send site (SEND-SITE-ARTIFICIAL-CAPS): the unit's 64 places while they suffice, then memory of
+# twice the sites, the sites kept.  0, or 1 out of memory.
+fn: l2_msend_room () int
+    @@: LmP0Node at
+    @: int ow
+    @: int ip
+    @: int co
+    @: int of
+    @: int hr
+    int: cap
+    size_t: psz
+    size_t: isz
+    size_t: ok 1U
+    if: l2_msend_cap = 0
+        l2_msend_at: (cast: (@@: LmP0Node) l2_msend_at_own)
+        l2_msend_owner: l2_msend_owner_own
+        l2_msend_inputs: l2_msend_inputs_own
+        l2_msend_count: l2_msend_count_own
+        l2_msend_off: l2_msend_off_own
+        l2_msend_has_ref: l2_msend_has_ref_own
+        l2_msend_cap: 64
+    if: l2_msend_n < l2_msend_cap
+        return: 0
+    if: l2_msend_cap > c.INT_MAX / 2
+        return: 1
+    cap: l2_msend_cap * 2
+    psz: c.sizeof(@: void)
+    isz: c.sizeof(c.int)
+    at: (cast: (@@: LmP0Node) l2_xmalloc((cast: (size_t) cap) * psz))
+    ow: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    ip: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    co: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    of: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    hr: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    if: at = 0 || ow = 0 || ip = 0 || co = 0 || of = 0 || hr = 0
+        ok: 0U
+    if: ok = 0U
+        l2_xfree((cast: (@: void) at))
+        l2_xfree((cast: (@: void) ow))
+        l2_xfree((cast: (@: void) ip))
+        l2_xfree((cast: (@: void) co))
+        l2_xfree((cast: (@: void) of))
+        l2_xfree((cast: (@: void) hr))
+        return: 1
+    memcpy((cast: (@: void) at), (cast: (@: void) l2_msend_at), (cast: (size_t) l2_msend_n) * psz)
+    memcpy((cast: (@: void) ow), (cast: (@: void) l2_msend_owner), (cast: (size_t) l2_msend_n) * isz)
+    memcpy((cast: (@: void) ip), (cast: (@: void) l2_msend_inputs), (cast: (size_t) l2_msend_n) * isz)
+    memcpy((cast: (@: void) co), (cast: (@: void) l2_msend_count), (cast: (size_t) l2_msend_n) * isz)
+    memcpy((cast: (@: void) of), (cast: (@: void) l2_msend_off), (cast: (size_t) l2_msend_n) * isz)
+    memcpy((cast: (@: void) hr), (cast: (@: void) l2_msend_has_ref), (cast: (size_t) l2_msend_n) * isz)
+    if: l2_msend_cap > 64
+        l2_msend_free()
+    l2_msend_at: at
+    l2_msend_owner: ow
+    l2_msend_inputs: ip
+    l2_msend_count: co
+    l2_msend_off: of
+    l2_msend_has_ref: hr
+    l2_msend_cap: cap
+return: 0
+
+# Room for field `at` of the sites, the fields before it kept: the unit's 1024 places while they suffice, then
+# memory of twice the fields.  0, or 1 out of memory.
+fn: l2_msend_froom (int: at) int
+    @: int ki
+    @@: LmP0Text tx
+    int: cap
+    size_t: psz
+    size_t: isz
+    if: l2_msend_fcap = 0
+        l2_msend_kind: l2_msend_kind_own
+        l2_msend_text: (cast: (@@: LmP0Text) l2_msend_text_own)
+        l2_msend_fcap: 1024
+    if: at < l2_msend_fcap
+        return: 0
+    cap: l2_msend_fcap
+    while: cap <= at
+        if: cap > c.INT_MAX / 2
+            return: 1
+        cap: cap * 2
+    psz: c.sizeof(@: void)
+    isz: c.sizeof(c.int)
+    ki: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    tx: (cast: (@@: LmP0Text) l2_xmalloc((cast: (size_t) cap) * psz))
+    if: ki = 0 || tx = 0
+        l2_xfree((cast: (@: void) ki))
+        l2_xfree((cast: (@: void) tx))
+        return: 1
+    memcpy((cast: (@: void) ki), (cast: (@: void) l2_msend_kind), (cast: (size_t) at) * isz)
+    memcpy((cast: (@: void) tx), (cast: (@: void) l2_msend_text), (cast: (size_t) at) * psz)
+    if: l2_msend_fcap > 1024
+        l2_xfree((cast: (@: void) l2_msend_kind))
+        l2_xfree((cast: (@: void) l2_msend_text))
+    l2_msend_kind: ki
+    l2_msend_text: tx
+    l2_msend_fcap: cap
+return: 0
+
 # FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: `sendMessage: X` inside a method body --
 # the same field shape l2_rw_send validates for the root (one Structure `Name(f: v; ...)`, fields
-# `name: literal-or-int-expr`, at most 16, a text field is a quoted literal with no escape),
+# `name: literal-or-int-expr`, as many as written, a text field is a quoted literal with no escape),
 # recorded into the method-send arrays instead of a walker-op-tree.
 # FABLE-SONNET-SEND-REF-20260925-172 commit 3: `sendMessage: Ref X` -- the message Structure is
 # always the LAST active field of the statement's body; every field before it (there may be
@@ -39071,17 +39212,8 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
         return: l2_error(path, stmt, "a message that is not one Structure")
     ---
     k: l2_msend_n
-    if: k >= 64
-        return: l2_error(path, stmt, "more than 64 sends in method bodies")
-    if: l2_msend_count = 0
-        l2_msend_count: (cast: (@: int) calloc(64U, c.sizeof(int)))
-        l2_msend_kind: (cast: (@: int) calloc(1024U, c.sizeof(int)))
-        l2_msend_text: (cast: (@@: LmP0Text) calloc(1024U, c.sizeof(@: void)))
-        l2_msend_has_ref: (cast: (@: int) calloc(64U, c.sizeof(int)))
-        if: l2_msend_count = 0 || l2_msend_kind = 0 || l2_msend_text = 0 || l2_msend_has_ref = 0
-            return: l2_error(path, stmt, "out of memory")
-        ---
-    ---
+    if: l2_msend_room() != 0
+        return: l2_alloc_or(path, stmt, "out of memory")
     l2_msend_has_ref[k]: has_ref
     if: has_ref != 0
         save_mi: l2_rw_mi
@@ -39104,8 +39236,8 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
         if: v = 0 || v\kind != c.LM_P0_NODE_FRAME || v\as = 0 || v\as\frame = 0 || v\as\frame\body = 0 || l2_ident(v\as\frame\head) = 0
             return: l2_error(path, v, "a message field that is not `name: value`")
         ---
-        if: nf >= 16
-            return: l2_error(path, v, "a message of more than 16 fields")
+        if: l2_msend_froom(l2_msend_nfield + nf) != 0
+            return: l2_alloc_or(path, v, "out of memory")
         n: l2_count_active(v\as\frame\body)
         b: l2_next_active(v\as\frame\body\first_field)
         t: 0
@@ -39121,11 +39253,11 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
                     return: l2_error(path, b\value, "a text with an escape in a message")
                 i: i + 1U
             ---
-            l2_msend_kind[k * 16 + nf]: 2
-            l2_msend_text[k * 16 + nf]: t
+            l2_msend_kind[l2_msend_nfield + nf]: 2
+            l2_msend_text[l2_msend_nfield + nf]: t
         else:
-            l2_msend_kind[k * 16 + nf]: 1
-            l2_msend_text[k * 16 + nf]: 0
+            l2_msend_kind[l2_msend_nfield + nf]: 1
+            l2_msend_text[l2_msend_nfield + nf]: 0
             ni: ni + 1
         ---
         nf: nf + 1
@@ -39134,6 +39266,8 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
     if: nf = 0
         return: l2_error(path, x, "an empty message")
     l2_msend_count[k]: nf
+    l2_msend_off[k]: l2_msend_nfield
+    l2_msend_nfield: l2_msend_nfield + nf
     l2_msend_at[k]: (cast: (@: LmP0Node) stmt)
     l2_msend_owner[k]: mi
     l2_msend_inputs[k]: ni
@@ -39199,7 +39333,7 @@ fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
         v: g\value
         n: l2_count_active(v\as\frame\body)
         b: l2_next_active(v\as\frame\body\first_field)
-        if: l2_msend_kind[k * 16 + j] = 1
+        if: l2_msend_kind[l2_msend_off[k] + j] = 1
             if: l2_rw_texpr(b, n, 0, \out, @ e) != 0 || l2_rw_put(\out, 3 + ni, e) != 0
                 return: 1
             ni: ni + 1
@@ -39271,7 +39405,7 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     ii: 0
     while: g != 0
         v: g\value
-        if: l2_msend_kind[k * 16 + j] = 1
+        if: l2_msend_kind[l2_msend_off[k] + j] = 1
             if: l2_eval_fields(l2_next_active(v\as\frame\body\first_field), l2_count_active(v\as\frame\body), mi, ind, tok) != 0
                 return: 1
             # A copy into a named local first: l2_eval_fields's own token can be a bare literal
@@ -39298,28 +39432,12 @@ fn: l2_emit_msend (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
         return: 1
 return: 0
 
-# Whether one of the n sends of a registry has a text field whose literal is not empty: its bytes are
-# copied with memcpy (l2_emit_send), a use of <string.h> in the program's own emission (-197 (b)).
-fn: l2_send_copies_text (int: n; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr) int
-    int: k 0
-    int: j
-    while: k < n
-        j: 0
-        while: j < count_arr[k]
-            if: kind_arr[k * 16 + j] = 2 && text_arr[k * 16 + j] != 0 && text_arr[k * 16 + j]\length > 2U
-                return: 1
-            j: j + 1
-        ---
-        k: k + 1
-    ---
-return: 0
-
 # The primitive of send site k: it builds the letter (sender; payload) in an arena of its own and
 # posts it through the current Message's service to its parent.  The payload is a Structure of the
 # site's fields in order: an int cell from the next input, or a char Array holding the text
 # (exact length, no NUL).  The letter's arena is the service's from the post on (attached to the
 # receiver at its take); the record that describes it is this primitive's, and stays allocated.
-# FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: parameterised (prefix, count/kind/text
+# FABLE-SONNET-SEND-IN-METHODS-20260925-168 commit 2: parameterised (prefix, count/off/kind/text
 # arrays) so a method-body send site and a root send site share this one emission path -- no
 # twin -- while keeping their k-spaces (and so their generated function names) apart.
 # FABLE-SONNET-SEND-REF-20260925-172 commit 3: has_ref_arr[k], 1 when the site named `sendMessage:
@@ -39330,7 +39448,7 @@ return: 0
 # after the payload's own ni int-expression inputs -- both call sites (l2_rw_send's PRIM, whose
 # refs[] the walker itself evaluates one slot per primitive input; l2_emit_msend's direct call)
 # already place it there.
-fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int kind_arr; @@: LmP0Text text_arr; @: int has_ref_arr) int
+fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int off_arr; @: int kind_arr; @@: LmP0Text text_arr; @: int has_ref_arr) int
     int: j
     int: ni 0
     int: nf
@@ -39346,7 +39464,7 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
         return: 1
     j: 0
     while: j < nf
-        if: kind_arr[k * 16 + j] = 1
+        if: kind_arr[off_arr[k] + j] = 1
             ni: ni + 1
         ---
         j: j + 1
@@ -39356,15 +39474,15 @@ fn: l2_emit_send (int: k; int: proto; @: char prefix; @: int count_arr; @: int k
     ni: 0
     j: 0
     while: j < nf
-        t: text_arr[k * 16 + j]
-        if: kind_arr[k * 16 + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        l2_send_fail()\n", ni, ni, j) < 0
+        t: text_arr[off_arr[k] + j]
+        if: kind_arr[off_arr[k] + j] = 1 && c.fprintf(l2_out, "    cell: lmx_int_new_owned(a)\n    if: cell = 0 || refs[%d] = 0 || lmx_int_store_known(cell, lmx_int_value_known(refs[%d])) != 0 || lmx_arena_ref_store(p, %dU, cell) != 0\n        l2_send_fail()\n", ni, ni, j) < 0
             return: 1
-        if: kind_arr[k * 16 + j] = 1
+        if: kind_arr[off_arr[k] + j] = 1
             ni: ni + 1
         ---
-        if: kind_arr[k * 16 + j] = 2 && c.fprintf(l2_out, "    text: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %uU, a)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n", (cast: (unsigned) (t\length - 2U)), j) < 0
+        if: kind_arr[off_arr[k] + j] = 2 && c.fprintf(l2_out, "    text: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_CHAR, %uU, a)\n    if: text = 0 || lmx_arena_ref_store(p, %dU, (cast: (@: void) text)) != 0\n        l2_send_fail()\n", (cast: (unsigned) (t\length - 2U)), j) < 0
             return: 1
-        if: kind_arr[k * 16 + j] = 2 && t\length > 2U && c.fprintf(l2_out, "    memcpy(text\\data, (cast: (@: void) %.*s), %uU)\n", (cast: (int) t\length), t\data, (cast: (unsigned) (t\length - 2U))) < 0
+        if: kind_arr[off_arr[k] + j] = 2 && t\length > 2U && c.fprintf(l2_out, "    memcpy(text\\data, (cast: (@: void) %.*s), %uU)\n", (cast: (int) t\length), t\data, (cast: (unsigned) (t\length - 2U))) < 0
             return: 1
         j: j + 1
     ---
@@ -48348,8 +48466,8 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # The C headers of the program's OWN mechanics, which the translator emits (GATE §7a, -197 (b)):
     # <stdio.h> and <stdlib.h> for every program -- an X1 invariant is `c.fprintf(c.stderr, ...)` then
     # `c.abort()`, the launch hands the host root `c.stdout`/`c.stderr`, a send's arena is calloc'd --
-    # and <string.h> only where the emission uses it: the library profile's memset, a send copying a
-    # text field (l2_send_copies_text).  What the SOURCE uses through `c.*` comes with its own
+    # and <string.h>, for every program too since 6ea06df8 (the library profile's memset, a send copying
+    # a text field).  What the SOURCE uses through `c.*` comes with its own
     # `include:` / `predef:` (the unit's list, written next).
     if: c.fprintf(l2_out, "predef: \"%slmx_arena_refs.h.lm1\" \"%slmx_value_owned.h.lm1\" \"%slmx.h.lm1\" \"%slmx_message.h.lm1\" \"%slmx_root.h.lm1\" \"%slmx_call.h.lm1\" \"%slmx_clock.h.lm1\"\ninclude: \"<stdio.h>\" \"<stdlib.h>\"", l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root, l2_rt_root) < 0
         fclose(l2_out)
@@ -48484,7 +48602,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # a separate k-space (l2_msend_*) so they cannot collide with the root's (l2_rw_send_*).
     i: 0
     while: i < l2_msend_n
-        if: l2_emit_send(i, 1, "l2_msend", l2_msend_count, l2_msend_kind, l2_msend_text, l2_msend_has_ref) != 0
+        if: l2_emit_send(i, 1, "l2_msend", l2_msend_count, l2_msend_off, l2_msend_kind, l2_msend_text, l2_msend_has_ref) != 0
             fclose(l2_out)
             return: 1
         i: i + 1
@@ -48690,7 +48808,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
         return: 1
     i: 0
     while: i < l2_msend_n
-        if: l2_emit_send(i, 0, "l2_msend", l2_msend_count, l2_msend_kind, l2_msend_text, l2_msend_has_ref) != 0
+        if: l2_emit_send(i, 0, "l2_msend", l2_msend_count, l2_msend_off, l2_msend_kind, l2_msend_text, l2_msend_has_ref) != 0
             fclose(l2_out)
             return: 1
         i: i + 1

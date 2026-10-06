@@ -1,0 +1,27 @@
+# FIXED-BLOCKS-AUDIT: callable formals written in place, as many as the method
+# has -- ten here, past the eight places it had. Each is inc, called on 1: 20.
+# Entry 7.
+fn: inc (int: x) int
+    return: x + 1
+end: inc
+
+fn: apply10 (f0(fn: (int: x) int) f1(fn: (int: x) int) f2(fn: (int: x) int) f3(fn: (int: x) int) f4(fn: (int: x) int) f5(fn: (int: x) int) f6(fn: (int: x) int) f7(fn: (int: x) int) f8(fn: (int: x) int) f9(fn: (int: x) int) int(v)) int
+    int: s 0
+    s: s + f0(v)
+    s: s + f1(v)
+    s: s + f2(v)
+    s: s + f3(v)
+    s: s + f4(v)
+    s: s + f5(v)
+    s: s + f6(v)
+    s: s + f7(v)
+    s: s + f8(v)
+    s: s + f9(v)
+    return: s
+end: apply10
+
+int: ok 7
+if: apply10(inc inc inc inc inc inc inc inc inc inc 1) != 20
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

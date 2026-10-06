@@ -9079,3 +9079,101 @@ of Codex. The red required positive is `unit_held_call_free_name_two_types`:
 
 **Next.** FIELD-CONSUMPTION-CONVERSION: a field read at the type of its
 cell's own range, converted at the consuming edge.
+
+<a id="fixed-counts"></a>
+## 88. Two counts the program did not choose, and the words that cut a name (FIXED-BLOCKS-AUDIT)
+
+Codex's reply OPUS-CODEX-20261005-01, (2) B, on the fixed blocks: "the
+prohibited issue is an arbitrary program length/count/depth ceiling or
+silent truncation." Two such counts stood outside the route of a path.
+
+| Count | Where | Before | Now |
+| --- | --- | --- | --- |
+| callable formals written in place in one method | `l2_collect_method` (`cf_fn`, `cf_j`) | eight, then "too many callable formals written in place" | a place for each formal the method has: the eight local places serve where they suffice, beyond them memory of exactly that size (`l2_text_room`) |
+| fields a capture of a Structure copies | `l2_mad_cap_emit`, `l2_mad_cap_emit_walk` (`fl`); the constructor's `l2_capf` | 32, then "a captured Structure has too many fields read"; the array the generated code declares, 32 | as many places as the captured Structure has (`l2_ns_width`); the constructor declares as many as its widest captured Structure (`l2_mad_capf_room`) |
+
+### Witnesses
+
+| Row | Shows |
+| --- | --- |
+| `unit_callable_formals_many_in_place` | ten callable formals written in place, each given `inc` and called on 1: 20. Natively only: a callable formal is outside the walkable subset, as for `unit_callable_anon`. |
+| `unit_capture_many_fields` (+`_walk`) | a definition reading 40 fields of a captured Structure sums them, 820; the root's write after the node is made is not seen. |
+
+The translator before this step is the mutant that restores the sizes. It
+refuses both rows: the first with "too many callable formals written in
+place" at the ninth formal, the second with "a captured Structure has too
+many fields read". Measured at the boundary: 32 fields are copied, 33 were
+refused; eight formals were taken, nine were refused.
+
+### The words of a refusal
+
+Refusals that name what they refuse formatted the words into a fixed number
+of bytes, so a long name was cut from them; three formatted them with no
+bound at all:
+
+| Words | Where | Before |
+| --- | --- | --- |
+| "unbound dynamic input <name>" | `l2_dyn_site_callee`, `l2_dyn_site_held`, `l2_held_unbound`, `l2_rw_lex_operand`, `l2_hidden_lex` | cut at 256 bytes |
+| "more arguments than <name> has formals" | `l2_struct_arity_error` | cut at 240 bytes |
+| "the program has no method `<name>`, the receiver of this conversion" | `l2_convert_norecv` | cut at 256 bytes |
+| the binding's eight refusals: "the argument <a> of <f> is given twice", "<a> is not an argument of <f>", "<f> has no argument <a>" and the others | `l2_bind_actuals`, and the callee's name it is given (`l2_bind_call_in`) | the words cut at 200 bytes, the callee's name at 160 |
+| "duplicate catch: <name>", "unhandled throw: <name>", "unhandled throw in entry: <name>" | `l2_check_catch`, `l2_check_throws_handled` | `sprintf` into 160 bytes, no bound |
+| "duplicate definition (the other at <path>:<line>:<column>)", "two source tables have this name (the other at ...)" | `l2_dup_method`, `l2_table_twice` | cut at 1400 bytes |
+
+They are now made in memory of their own size: `l2_error_words` says up to
+three names between fixed words, `l2_error_name` one, both with
+`l2_text_room`. The callee's name is copied whole the same way.
+
+A catch's name has no length check, so the unbounded `sprintf` was reachable:
+two catches of one name of 300 bytes in one block crashed the translator,
+exit 139, by a write past the 160 bytes on its stack. A name of 150 bytes
+already wrote eight bytes past them and the run went on. Registered and fixed
+as [DUPLICATE-CATCH-LONG-NAME](defects.md#duplicate-catch-long-name). The
+name of an unhandled throw is a declared throw's, at most 62 bytes, so that
+`sprintf` stayed inside its buffer; it is made the same way now.
+
+Rows, each with a name of 300 bytes and a needle that holds the whole name:
+
+| Row | The translator before this step |
+| --- | --- |
+| `unit_unbound_input_long_name_refused`: a free name no caller binds | cuts the words at 256 bytes; the needle is not found |
+| `unit_struct_arity_long_name_refused`: a named Structure given an argument | cuts at 240 |
+| `unit_catch_duplicate_long_name_refused`: two catches of one name | crashes, exit 139 |
+| `unit_named_actual_long_unknown_refused`: a named actual that names no formal | cuts at 200 |
+| `unit_held_call_long_name_count_refused`: a held callable under a long name, given one argument of two | cuts the callee's name at 160 bytes |
+
+Not witnessed: the fifth "unbound dynamic input" (`l2_hidden_lex`), said
+while a call's hidden input is emitted and its callee has no lexical cell
+for it, is reached by no row measured; and the other definition's or
+table's path, which would need a source path of more than 1400 bytes.
+
+A replay of the 1895 translations recorded by `opus_full_17`, with this step's
+translator against that gate's, changes the L1 of 21 rows, in the size of the
+constructor's `l2_capf` alone; no exit or message changes. The number of
+allocations grows in four rows, by three or four: `unit_named_actual_many`
+and its walked twin declare a method of 17 formals, whose places for callable
+formals are now taken in memory of their size, and `unit_path_long_call` and
+its walked twin call through heads longer than 160 bytes, whose callee's name
+is now copied whole.
+
+### Found beside it: the names of methods, formals and declared throws
+
+The third count of the audit is the 62 bytes of a method's, a formal's or a
+declared throw's name ("name too long"). Without those three checks the
+translator takes names of 300 bytes on every route probed: a throwing method
+with a long formal and a long throw caught by name, natively and with the
+methods walked. One route then fails: a method used as a value gets a public
+C wrapper under its source name, and `l1trans` keeps function names in
+64-byte slots (`l1_fn_ensure`), refusing a longer one with "too many
+functions". The limit is the L1 translator's. The step that removes it is
+`l1trans`'s, with its own self-build. Until then the translator's check is
+the honest place for the refusal, so it stays.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_17` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_16` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_18` (full harness) | RED39/1904: against `opus_full_17` FAIL→OK 0, OK→FAIL 0, added 8, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_fb1` (focused, before the gates) | 31 rows: the eight of this section and the capture, callable-formal, binding, catch, throw and duplicate rows beside them, all green. |

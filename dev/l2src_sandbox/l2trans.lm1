@@ -885,6 +885,8 @@ const: @: char l2_q_path 0
 
 prototype:
     fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
+    fn: l2_error_name (const: @(char path); const: @(LmP0Node at); const: @(char before); const: @(char name); size_t: n; const: @(char after)) int
+    fn: l2_error_words (const: @(char path); const: @(LmP0Node at); const: @(char p0); const: @(char x); size_t: xn; const: @(char p1); const: @(char y); size_t: yn; const: @(char p2); const: @(char z); size_t: zn; const: @(char p3)) int
     fn: l2_check_held_convert (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
     fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
     fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
@@ -8514,7 +8516,6 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
     int: k 0
     int: pos 0
     int: named 0
-    []: char msg 200
     while: k < nf
         out_at[k]: 0
         out_span[k]: 0
@@ -8523,8 +8524,7 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
     while: f != 0
         span: l2_expr_span(f)
         if: span < 1
-            c.snprintf(msg, 200U, "an actual of %s is not an argument", callee)
-            return: l2_error(path, f\value, msg)
+            return: l2_error_words(path, f\value, "an actual of ", callee, strlen(callee), " is not an argument", 0, 0U, "", 0, 0U, "")
         fr: 0
         if: span = 1 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0
             fr: f\value\as\frame
@@ -8539,27 +8539,21 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
                 if: out_at[k]\value != 0 && out_at[k]\value\kind = c.LM_P0_NODE_FRAME && out_at[k]\value\as != 0
                     pf: out_at[k]\value\as\frame
                 if: pf != 0 && pf\head != 0
-                    c.snprintf(msg, 200U, "the argument %.*s of %s is given by position (%.*s:) and again by name", (cast: (int) names[k]\length), names[k]\data, callee, (cast: (int) pf\head\length), pf\head\data)
-                    return: l2_error(path, f\value, msg)
+                    return: l2_error_words(path, f\value, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given by position (", pf\head\data, pf\head\length, ":) and again by name")
                 ---
-                c.snprintf(msg, 200U, "the argument %.*s of %s is given by position and again by name", (cast: (int) names[k]\length), names[k]\data, callee)
-                return: l2_error(path, f\value, msg)
+                return: l2_error_words(path, f\value, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given by position and again by name", 0, 0U, "")
             if: out_at[k] != 0
-                c.snprintf(msg, 200U, "the argument %.*s of %s is given twice", (cast: (int) names[k]\length), names[k]\data, callee)
-                return: l2_error(path, f\value, msg)
+                return: l2_error_words(path, f\value, "the argument ", names[k]\data, names[k]\length, " of ", callee, strlen(callee), " is given twice", 0, 0U, "")
             out_at[k]: f
             out_span[k]: 0
             named: 1
         else:
             if: named != 0 && fr != 0
-                c.snprintf(msg, 200U, "%.*s is not an argument of %s", (cast: (int) fr\head\length), fr\head\data, callee)
-                return: l2_error(path, f\value, msg)
+                return: l2_error_words(path, f\value, "", fr\head\data, fr\head\length, " is not an argument of ", callee, strlen(callee), "", 0, 0U, "")
             if: named != 0
-                c.snprintf(msg, 200U, "a positional argument of %s after a named one", callee)
-                return: l2_error(path, f\value, msg)
+                return: l2_error_words(path, f\value, "a positional argument of ", callee, strlen(callee), " after a named one", 0, 0U, "", 0, 0U, "")
             if: pos >= nf
-                c.snprintf(msg, 200U, "more arguments than %s has formals", callee)
-                return: l2_error(path, f\value, msg)
+                return: l2_error_words(path, f\value, "more arguments than ", callee, strlen(callee), " has formals", 0, 0U, "", 0, 0U, "")
             out_at[pos]: f
             out_span[pos]: span
             pos: pos + 1
@@ -8568,8 +8562,7 @@ fn: l2_bind_actuals (@: LmP0Field first; int: nf; @@: LmP0Text names; const: @(c
     k: 0
     while: k < nf
         if: out_at[k] = 0
-            c.snprintf(msg, 200U, "%s has no argument %.*s", callee, (cast: (int) names[k]\length), names[k]\data)
-            return: l2_error(path, at, msg)
+            return: l2_error_words(path, at, "", callee, strlen(callee), " has no argument ", names[k]\data, names[k]\length, "", 0, 0U, "")
         k: k + 1
 return: 0
 
@@ -9032,7 +9025,8 @@ return: rc
 # The binding of l2_bind_call over its nf per-formal slots, the formals' names given.  0, or 1 said.
 fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     @: LmP0Structure body
-    []: char callee 160
+    []: char callee_own 160
+    @: char callee 0
     @: LmP0Field f
     @: LmP0Field copies 0
     @: LmP0Field cp 0
@@ -9048,7 +9042,12 @@ fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: 
     @: int rank 0
     @@: LmP0Node wrap 0
     body: node\as\frame\body
-    c.snprintf(callee, 160U, "%.*s", (cast: (int) node\as\frame\head\length), node\as\frame\head\data)
+    # The callee's name whole, in memory of its own size: the words of a refused binding say it (FIXED-BLOCKS-AUDIT).
+    callee: l2_text_room(node\as\frame\head\length + 1U, callee_own, 160U)
+    if: callee = 0
+        return: l2_alloc_or(path, node, "out of memory")
+    memcpy(callee, node\as\frame\head\data, node\as\frame\head\length)
+    callee[node\as\frame\head\length]: 0
     if: l2_bind_actuals(body\first_field, nf, names, callee, at, span, path, node) != 0
         return: 1
     k: 0
@@ -9202,15 +9201,19 @@ return: a
 # Two source tables of one name (§8): said at the second, with the place of the first -- they may stand in
 # two files of the program.
 fn: l2_table_twice (const: @(char path); const: @(LmP0Node at); int: k) int
-    []: char msg 1400
+    []: char place 64
     size_t: line 1U
     size_t: column 1U
+    size_t: pn 0U
     if: l2_tb_name_at[k] != 0 && l2_tb_name_at[k]\span != 0
         line: l2_tb_name_at[k]\span\line
         column: l2_tb_name_at[k]\span\column
     ---
-    c.snprintf(msg, 1400U, "two source tables have this name (the other at %s:%zu:%zu)", l2_tb_path[k], line, column)
-return: l2_error(path, at, msg)
+    if: l2_tb_path[k] != 0
+        pn: strlen(l2_tb_path[k])
+    # The other source's path whole (FIXED-BLOCKS-AUDIT); its line and column are numbers.
+    c.snprintf(place, 64U, ":%zu:%zu)", line, column)
+return: l2_error_words(path, at, "two source tables have this name (the other at ", l2_tb_path[k], pn, place, 0, 0U, "", 0, 0U, "")
 
 # A `table:` call (Q41, Q43): its actuals bound to the receiver's formals by l2_bind_actuals.  Its name
 # is the one atom of its `name:` argument (a quoted spelling is the same name, l2_payload_same), one
@@ -9626,11 +9629,9 @@ return: l2_note_call(mi, idx, stmt, path)
 
 # A row whose receiver is no method of the program (§8): said at the edge, with the receiver's name.
 fn: l2_convert_norecv (const: @(char path); const: @(LmP0Node at)) int
-    []: char msg 256
     if: l2_cv_recv = 0
         return: l2_error(path, at, "the program has no method for the receiver of this conversion")
-    c.snprintf(msg, 256U, "the program has no method `%s`, the receiver of this conversion", l2_cv_recv)
-return: l2_error(path, at, msg)
+return: l2_error_name(path, at, "the program has no method `", l2_cv_recv, strlen(l2_cv_recv), "`, the receiver of this conversion")
 
 # The program part method mi was read from, or -1: a method of the source (§8).
 fn: l2_m_part (int: mi) int
@@ -13421,7 +13422,6 @@ fn: l2_dyn_local (const: @(char path)) int
 return: 0
 
 fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: @(char path); @: int changed) int
-    []: char missing 256
     int: m site\method
     int: k 0
     int: src
@@ -13515,9 +13515,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
                     # a required input no one can give makes this call -- where the chain starts -- inadmissible,
                     # and a type learned elsewhere decides nothing about where the failure is said.
                     if: need = 2
-                        if: c.snprintf(missing, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
-                            return: 1
-                        return: l2_error(path, site\source, missing)
+                        return: l2_error_name(path, site\source, "unbound dynamic input ", nm\data, nm\length, "")
                     ---
         ---
         if: pres != 0 && l2_dyp_mark(cidx, nm, changed) != 0
@@ -13567,7 +13565,6 @@ return: 0
 # of no one, as at a call of a method (l2_dyn_site_callee).  A reference the calling method gives is recorded
 # for its admission to the model's use, as a call of a method records it (l2_d105_edge, l2_d105_source).
 fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char path); @: int changed) int
-    []: char missing 256
     int: m site\method
     int: k 0
     int: need
@@ -13597,9 +13594,7 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
             k: k + 1
             continue
         if: m = l2_e && ty = 0 && need = 2
-            if: c.snprintf(missing, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
-                return: 1
-            return: l2_error(path, site\source, missing)
+            return: l2_error_name(path, site\source, "unbound dynamic input ", nm\data, nm\length, "")
         own: l2_resolved_own(m, nm)
         pres: 0
         gives: 0
@@ -19643,13 +19638,10 @@ return: 0
 # gives a callable with too few formals -- the resolved value's contract, not an unimplemented
 # construct ("not built yet") and not a name-specific ban.
 fn: l2_struct_arity_error (const: @(char path); const: @(LmP0Node at); const: @(LmP0Text name)) int
-    []: char msg 240
     if: name = 0 || name\data = 0 || name\length = 0U
-        c.snprintf(msg, 240U, "more arguments than the resolved Structure has formals")
-        return: l2_error(path, at, msg)
+        return: l2_error(path, at, "more arguments than the resolved Structure has formals")
     ---
-    c.snprintf(msg, 240U, "more arguments than %.*s has formals", (cast: (int) name\length), name\data)
-return: l2_error(path, at, msg)
+return: l2_error_name(path, at, "more arguments than ", name\data, name\length, " has formals")
 
 # No uses walk: the caller supplied a descriptor Consumer.
 fn: l2_admit_implements (int: cand; int: req; int: cons; const: @(LmP0Text cand_name); const: @(char path); const: @(LmP0Node at); const: @(char context)) int
@@ -20287,7 +20279,6 @@ fn: l2_check_catch (const: @(LmP0Node cf); const: @(LmP0Structure blk); const: @
     int: n
     int: ty 0
     int: gi
-    []: char msg 160
     n: 0
     if: cf\as\frame\body != 0
         n: l2_count_active(cf\as\frame\body)
@@ -20299,9 +20290,7 @@ fn: l2_check_catch (const: @(LmP0Node cf); const: @(LmP0Structure blk); const: @
     f: l2_next_active(blk\first_field)
     while: f != 0 && f\value != cf
         if: l2_frame_head(f\value, "catch") && l2_text_same(l2_catch_name(f\value), nm) != 0
-            if: c.sprintf(msg, "duplicate catch: %.*s", (cast: (int) nm\length), nm\data) < 0
-                return: 1
-            return: l2_error(path, cf, msg)
+            return: l2_error_name(path, cf, "duplicate catch: ", nm\data, nm\length, "")
         f: l2_next_active(f\next)
     gi: 1
     while: l2_implicit_name(gi) != 0
@@ -20605,16 +20594,13 @@ fn: l2_check_throws_handled (int: mi; int: callee; const: @(char path); const: @
     int: k 1
     int: d
     @: LmP0Text nm
-    []: char msg 160
     d: l2_throws_declared(callee)
     while: k <= d
         nm: l2_throws_name(callee, k)
         if: nm != 0 && l2_throws_pos(mi, nm) = 0 && l2_catch_find(mi, nm, 0, 0, 0) = 0
-            if: mi = l2_e && c.sprintf(msg, "unhandled throw in entry: %.*s", (cast: (int) nm\length), nm\data) < 0
-                return: 1
-            if: mi != l2_e && c.sprintf(msg, "unhandled throw: %.*s", (cast: (int) nm\length), nm\data) < 0
-                return: 1
-            return: l2_error(path, at, msg)
+            if: mi = l2_e
+                return: l2_error_name(path, at, "unhandled throw in entry: ", nm\data, nm\length, "")
+            return: l2_error_name(path, at, "unhandled throw: ", nm\data, nm\length, "")
         k: k + 1
 return: 0
 
@@ -22026,6 +22012,37 @@ fn: l2_text_room (size_t: need; @: char local; size_t: cap) @: char
     l2_ltx[l2_ltx_n]: made
     l2_ltx_n: l2_ltx_n + 1
 return: made
+
+# The words of a refusal that name up to three things: p0, the xn bytes of x, p1, the yn bytes of y, p2, the zn
+# bytes of z, p3 -- in memory of their own size, so that no name is cut from the words that name it
+# (FIXED-BLOCKS-AUDIT).  A name not given (0) is said as nothing.
+fn: l2_error_words (const: @(char path); const: @(LmP0Node at); const: @(char p0); const: @(char x); size_t: xn; const: @(char p1); const: @(char y); size_t: yn; const: @(char p2); const: @(char z); size_t: zn; const: @(char p3)) int
+    []: char own 256
+    @: char msg
+    size_t: need
+    if: x = 0
+        x: ""
+        xn: 0U
+    if: y = 0
+        y: ""
+        yn: 0U
+    if: z = 0
+        z: ""
+        zn: 0U
+    if: xn > (cast: (size_t) c.INT_MAX) || yn > (cast: (size_t) c.INT_MAX) || zn > (cast: (size_t) c.INT_MAX)
+        return: l2_error(path, at, p0)
+    need: strlen(p0) + xn + strlen(p1) + yn + strlen(p2) + zn + strlen(p3) + 1U
+    msg: l2_text_room(need, own, 256U)
+    if: msg = 0
+        return: l2_alloc_or(path, at, "out of memory")
+    c.snprintf(msg, need, "%s%.*s%s%.*s%s%.*s%s", p0, (cast: (int) xn), x, p1, (cast: (int) yn), y, p2, (cast: (int) zn), z, p3)
+return: l2_error(path, at, msg)
+
+# The words of a refusal that names one thing: before, the n bytes of name, after (l2_error_words).
+fn: l2_error_name (const: @(char path); const: @(LmP0Node at); const: @(char before); const: @(char name); size_t: n; const: @(char after)) int
+    if: name = 0
+        return: l2_error(path, at, before)
+return: l2_error_words(path, at, before, name, n, after, 0, 0U, "", 0, 0U, "")
 
 fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
     @: LmP0Field f
@@ -24522,15 +24539,21 @@ return: t
 # Two definitions of one method name in the program -- in one file or in two (§8): said at the second, with
 # the other's place, as two source tables of one name are (l2_table_twice; REVIEW 70f869c, account 2).
 fn: l2_dup_method (const: @(char path); const: @(LmP0Node at); int: other) int
-    []: char msg 1400
+    []: char place 64
+    const: @: char src 0
     size_t: line 1U
     size_t: column 1U
+    size_t: pn 0U
     if: other >= 0 && other < l2_m_n && l2_m_node[other] != 0 && l2_m_node[other]\span != 0
         line: l2_m_node[other]\span\line
         column: l2_m_node[other]\span\column
     ---
-    c.snprintf(msg, 1400U, "duplicate definition (the other at %s:%zu:%zu)", l2_method_src(other, l2_src), line, column)
-return: l2_error(path, at, msg)
+    src: l2_method_src(other, l2_src)
+    if: src != 0
+        pn: strlen(src)
+    # The other source's path whole (FIXED-BLOCKS-AUDIT); its line and column are numbers.
+    c.snprintf(place, 64U, ":%zu:%zu)", line, column)
+return: l2_error_words(path, at, "duplicate definition (the other at ", src, pn, place, 0, 0U, "", 0, 0U, "")
 
 # A header is read in its actual lexical parent, not in whichever body the
 # preceding collection left active. Nested callable headers pass their parent.
@@ -24578,6 +24601,10 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     @: LmP0Text anon 0
     []: @(LmP0Node) cf_fn 8
     []: int cf_j 8
+    @@: LmP0Node cfp_fn 0
+    @: int cfp_j 0
+    size_t: cf_psz
+    size_t: cf_isz
     int: cf_n 0
     int: me 0
     @: LmP0Text cf_nm 0
@@ -24635,6 +24662,17 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     ar: l2_count_active(params\as\structure)
     if: ar < 0
         return: l2_error(path, fn_node, "incompatible entry signature")
+    # A2: a place for each formal that may be written in place -- as many as the method has formals (FIXED-BLOCKS-AUDIT:
+    # a fixed eight was a count the program did not choose).  The local places serve where they suffice.
+    cf_psz: c.sizeof(@: char)
+    cf_isz: c.sizeof(c.int)
+    if: l2_mul_ok((cast: (size_t) ar), cf_psz) = 0
+        l2_alloc_err: 2
+        return: l2_error(path, fn_node, "size overflow")
+    cfp_fn: (cast: (@@: LmP0Node) l2_text_room((cast: (size_t) ar) * cf_psz, (cast: (@: char) cf_fn), 8U * cf_psz))
+    cfp_j: (cast: (@: int) l2_text_room((cast: (size_t) ar) * cf_isz, (cast: (@: char) cf_j), 8U * cf_isz))
+    if: cfp_fn = 0 || cfp_j = 0
+        return: l2_error(path, fn_node, "out of memory")
     if: l2_formals_alloc(l2_m_n, ar) != 0
         if: l2_alloc_err = 2
             return: l2_error(path, fn_node, "size overflow")
@@ -24668,11 +24706,8 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
         ---
         # A2: an anonymous header's method is registered after this one; its index is then known.
         if: l2_last_cf_anon != 0
-            if: cf_n >= 8
-                l2_free_method(l2_m_n)
-                return: l2_error(path, p\value, "too many callable formals written in place")
-            cf_fn[cf_n]: l2_last_cf_anon
-            cf_j[cf_n]: j
+            cfp_fn[cf_n]: l2_last_cf_anon
+            cfp_j[cf_n]: j
             cf_n: cf_n + 1
             l2_last_cf_anon: 0
         ---
@@ -24758,13 +24793,13 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     # bodiless `fn:` named in `(test3: f)` is.
     j: 0
     while: j < cf_n
-        cf_nm: l2_anon_cf_name(nm, l2_fn(me, cf_j[j]))
+        cf_nm: l2_anon_cf_name(nm, l2_fn(me, cfp_j[j]))
         if: cf_nm = 0
             return: l2_error(path, fn_node, "out of memory")
         l2_collect_anon_name: cf_nm
-        if: l2_collect_method(cf_fn[j], path, lexical_mi) != 0
+        if: l2_collect_method(cfp_fn[j], path, lexical_mi) != 0
             return: 1
-        if: l2_cf_set(me, cf_j[j], l2_m_n - 1) != 0
+        if: l2_cf_set(me, cfp_j[j], l2_m_n - 1) != 0
             return: l2_error(path, fn_node, "out of memory")
         j: j + 1
     ---
@@ -27294,9 +27329,7 @@ fn: l2_hidden_lex (int: mi; int: callee; int: k; int: callee_self; const: @(char
     dest[0]: 0
     child: l2_own_lexical(callee, nm)
     if: child < 0
-        if: c.snprintf(l2_hf_msg, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
-            return: 1
-        return: l2_error(l2_src, at, l2_hf_msg)
+        return: l2_error_name(l2_src, at, "unbound dynamic input ", nm\data, nm\length, "")
     if: l2_graph_field_child(child) < 0 || l2_call_node = 0
         return: 1
     if: l2_own_from_expr(child, l2_hf_msg) != 0
@@ -29233,7 +29266,6 @@ return: m
 # give the name: the ordinary refusal.  From a method, its callers may bind it; a held call does not ask them
 # yet: a limit of this implementation, said where the call stands.
 fn: l2_held_unbound (const: @(LmP0Node node); int: mi; int: model; int: k) int
-    []: char missing 256
     int: need
     @: LmP0Text nm
     nm: l2_dn(model, k)
@@ -29244,9 +29276,7 @@ fn: l2_held_unbound (const: @(LmP0Node node); int: mi; int: model; int: k) int
         return: 0
     if: mi != l2_e
         return: l2_error(l2_src, node, "a name a held callable requires is not asked of this method's callers yet")
-    if: c.snprintf(missing, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
-        return: 1
-return: l2_error(l2_src, node, missing)
+return: l2_error_name(l2_src, node, "unbound dynamic input ", nm\data, nm\length, "")
 
 # How many classes of formation reach formal t of consumer c.  0 when no flow of this translation reaches the
 # formal: the definition is dormant, asks nothing of anyone and its call forms no hidden input.  One class is
@@ -37746,7 +37776,6 @@ fn: l2_rw_lex_operand (const: @(LmP0Node node); int: idx; int: k; int: parent; @
     @: LmP0Text nm
     int: gr
     int: oi
-    []: char msg 256
     if: idx < 0 || k < 0 || k >= l2_m_dyn[idx]
         return: 1
     nm: l2_dn(idx, k)
@@ -37755,9 +37784,7 @@ fn: l2_rw_lex_operand (const: @(LmP0Node node); int: idx; int: k; int: parent; @
     if: oi < 0
         if: nm = 0
             return: l2_error(l2_src, node, "unbound dynamic input")
-        if: c.snprintf(msg, 256U, "unbound dynamic input %.*s", (cast: (int) nm\length), nm\data) < 0
-            return: 1
-        return: l2_error(l2_src, node, msg)
+        return: l2_error_name(l2_src, node, "unbound dynamic input ", nm\data, nm\length, "")
     if: l2_own_mi[oi] = idx && l2_own_uchild[oi] >= 0 && (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0))
         return: l2_rw_callee_at(parent, idx, oi, out)
     if: (l2_rw_num_ty(l2_own_ty[oi]) != 0 || l2_own_is_pointer(l2_own_ty[oi]) != 0 || (gr != 0 && l2_own_is_slot(oi) != 0)) && l2_own_uchild[oi] >= 0
@@ -41656,6 +41683,18 @@ fn: l2_scan_node_text (int: mi; const: @(LmP0Text t); size_t: off) int
     ---
 return: 0
 
+# FIXED-BLOCKS-AUDIT: the places the constructor of model mi's node needs for the fields one capture of a Structure
+# copies -- as many as the widest captured Structure has fields, at least one.
+fn: l2_mad_capf_room (int: mi) int
+    int: k 0
+    int: room 1
+    while: k < l2_mcap_n
+        if: l2_mcap_model[k] = mi && l2_mcap_ns[k] >= 0 && l2_ns_width(l2_mcap_ns[k]) > room
+            room: l2_ns_width(l2_mcap_ns[k])
+        k: k + 1
+    ---
+return: room
+
 # Item 738: does model mi capture a Structure?  Only then do its host and its walk constructor
 # declare the capture's field list (l2_capf).
 fn: l2_mad_struct_caps (int: mi) int
@@ -42425,7 +42464,7 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     kids: l2_m_width(model)
     mw: l2_m_width(model)
     hw: l2_m_width(mi)
-    if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "%s[]: size_t l2_capf 32\n", ind) < 0
+    if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "%s[]: size_t l2_capf %d\n", ind, l2_mad_capf_room(model)) < 0
         return: 1
     # C, the copied lexical context (book §composition, "Returned nested methods"; Codex, 2026-09-28): the host's
     # layout -- and after its width one body field per formal of the host, which the merge appends (`node\n`,
@@ -42986,10 +43025,20 @@ return: l2_unit_base + l2_occ_tail_rank(l2_m_n) + l2_ebr_tail_rank(branch)
 # holds -- copied field by field into the node's copied context at `slot`.  The type's node is the unit's child
 # (the program's unit: the model's occurrence hangs under its host, book §3).
 fn: l2_mad_cap_emit_walk (int: model; int: j; int: ri; int: slot) int
-    []: int fl 32
+    []: int fl_own 32
+    @: int fl 0
     int: n
     int: k 0
-    n: l2_cap_fields(model, l2_mcap_name[j], l2_mcap_ns[j], fl, 32)
+    int: room l2_ns_width(l2_mcap_ns[j])
+    size_t: isz
+    isz: c.sizeof(c.int)
+    if: room < 1
+        room: 1
+    # As many places as the captured Structure has fields: it copies no more (FIXED-BLOCKS-AUDIT).
+    fl: (cast: (@: int) l2_text_room((cast: (size_t) room) * isz, (cast: (@: char) fl_own), 32U * isz))
+    if: fl = 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
+    n: l2_cap_fields(model, l2_mcap_name[j], l2_mcap_ns[j], fl, room)
     if: n < 0
         return: 1
     while: k < n
@@ -43006,13 +43055,23 @@ return: 0
 # lmx_walk_capture's 0 is a guard (and out of memory): l2_cap_add names value fields only, and those the kernel
 # copies.
 fn: l2_mad_cap_emit (int: mi; int: model; int: j; const: @(char tgt); const: @(char ind); int: slot) int
-    []: int fl 32
+    []: int fl_own 32
+    @: int fl 0
     []: char src 128
     int: n
     int: k 0
     int: fi
     int: oi
-    n: l2_cap_fields(model, l2_mcap_name[j], l2_mcap_ns[j], fl, 32)
+    int: room l2_ns_width(l2_mcap_ns[j])
+    size_t: isz
+    isz: c.sizeof(c.int)
+    if: room < 1
+        room: 1
+    # As many places as the captured Structure has fields: it copies no more (FIXED-BLOCKS-AUDIT).
+    fl: (cast: (@: int) l2_text_room((cast: (size_t) room) * isz, (cast: (@: char) fl_own), 32U * isz))
+    if: fl = 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
+    n: l2_cap_fields(model, l2_mcap_name[j], l2_mcap_ns[j], fl, room)
     if: n < 0
         return: 1
     src[0]: 0
@@ -43073,7 +43132,7 @@ fn: l2_emit_mad_construct_one (int: mi) int
     ---
     if: c.fprintf(l2_out, "fn: l2_mad_construct_%d (@: void owner; @@: void refs; size_t: nargs; @: void dest; @@: void out) int\n    @: Lmx l2_madc 0\n    @: Lmx l2_mad 0\n    @: Lmx l2_mad_src 0\n    @: void l2_mad_cell 0\n    size_t: l2_mad_k 0U\n", mi) < 0
         return: 1
-    if: l2_mad_struct_caps(model) != 0 && fputs("    []: size_t l2_capf 32\n", l2_out) < 0
+    if: l2_mad_struct_caps(model) != 0 && c.fprintf(l2_out, "    []: size_t l2_capf %d\n", l2_mad_capf_room(model)) < 0
         return: 1
     # C, the copied lexical context, under the host's `node` -- the model's occurrence hangs under its host (book §3),
     # whose parent that is.

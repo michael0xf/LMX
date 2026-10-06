@@ -768,10 +768,22 @@ Current bounded implementation, with no DONE claim:
     them;
   - [ ] the name of a machine local that roots a path, 64 bytes
     (`l2_emit_path_to`);
-  - [ ] the names of methods, formals and declared throws, 62 bytes;
-  - [ ] eight callable formals written in place in one method, 32 captured
-    fields;
-  - [ ] the words of refusals that cut a long name.
+  - [ ] the names of methods, formals and declared throws, 62 bytes: a
+    method used as a value gets a public C wrapper under its source name,
+    and `l1trans` keeps function names in 64-byte slots (`l1_fn_ensure`) --
+    the limit moves with `l1trans`'s own step
+    ([section 88](steps/fable-continuation-20261003.md#fixed-counts));
+  - [x] eight callable formals written in place in one method, 32 captured
+    fields: as many as the method's formals and the captured Structure's
+    fields ([section 88](steps/fable-continuation-20261003.md#fixed-counts)).
+    Gates: kernel `opus_kernel_17` GREEN297 (114 selftests), L3 `opus_l3_16`,
+    full `opus_full_18` RED39/1904 -- against `opus_full_17` FAIL→OK 0,
+    OK→FAIL 0, added 8;
+  - [x] the words of refusals that cut a long name: made in memory of their
+    own size, every refusal that names a name or a path. Two catches of one
+    name of 300 bytes crashed the translator (an unbounded `sprintf` into
+    160 bytes, DUPLICATE-CATCH-LONG-NAME)
+    ([section 88](steps/fable-continuation-20261003.md#fixed-counts)).
 - [ ] G5: fix or justify each full-gate refusal by the current norm and release
   an actually green graph checkpoint before the pointer implementation.
   Earlier full `critical_graph_fix_full_12`: RED, 204 of 1284,

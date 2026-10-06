@@ -556,10 +556,18 @@ Fable принял единственный writer/build-слот по [to_fable
   ([HELD-FREE-NAME-OTHER-TYPE](defects.md#held-free-name-other-type),
   [§87 журнала](fable-continuation-20261003.md#held-conversion)). Гейты `opus_kernel_16` GREEN297
   (114 селфтестов), `opus_l3_15`, `opus_full_17` RED39/1896: против `opus_full_16` FAIL→OK 1, OK→FAIL 0.
+- Шаг двух постоянных счётов и слов отказов (FIXED-BLOCKS-AUDIT): callable-формалов, записанных на
+  месте, столько, сколько у метода формалов, а не восемь; захват Structure копирует столько полей,
+  сколько читает определение, а не 32; слова отказа называют имя целиком. Две `catch:` одного имени
+  в 300 байт роняли транслятор (`sprintf` в 160 байт без границы,
+  [DUPLICATE-CATCH-LONG-NAME](defects.md#duplicate-catch-long-name)). Имена длиннее 62 байт
+  упираются в `l1trans` (имена функций по 64 байта) и остаются отказом в `l2trans`
+  ([§88 журнала](fable-continuation-20261003.md#fixed-counts)). Гейты `opus_kernel_17` GREEN297,
+  `opus_l3_16`, `opus_full_18` RED39/1904: против `opus_full_17` FAIL→OK 0, OK→FAIL 0, добавлено 8.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
-  эмиттере и его буферы, имя машинного локала, имена методов, формалов и бросков, счётчики
-  callable-формалов и захватов, слова отказов); каждая — с длинным позитивом и мутантом, который
-  возвращает размер ([FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit)).
+  эмиттере и его буферы, имя машинного локала; имена методов, формалов и бросков — с шагом
+  `l1trans`); каждая — с длинным позитивом и мутантом, который возвращает размер
+  ([FIXED-BLOCKS-AUDIT](defects.md#fixed-blocks-audit)).
 - Порядок по ответу Codex OPUS-CODEX-20261005-01: HEAD — строки, которые держат отвергнутое автором
   чтение головы, ничем не установленной
   ([HEAD-ROLE-UNESTABLISHED-ROWS](defects.md#head-role-unestablished-rows)); FACTORY — приёмник `@:`

@@ -3240,6 +3240,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: the fields a capture copies are as many as the definition reads -- 40, past the 32 places
+    # the copy had (it refused "a captured Structure has too many fields read").
+    [pscustomobject]@{ Name = 'unit_capture_many_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_many_fields_walk.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
     # Item 738 slice 2 (steps/capture-738.md §6): the capture's refusals, located -- the needle carries the
     # line and column.  A model tried for the walk silently now gives its own first reason, where it stands,
     # in its host's refusal (l2_mad_unwalkable); before, the host's header alone.  Update-position paths
@@ -3508,6 +3514,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_upper_undeclared_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_upper_undeclared_refused.lm2:10:30: unbound dynamic input NOPE'; Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: the words of a refusal name what they refuse in full -- a free name of 300 bytes, a
+    # named Structure of 300 bytes; the words were cut at 256 and 240 bytes (l2_error_name).
+    [pscustomobject]@{ Name = 'unit_unbound_input_long_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ('unit_unbound_input_long_name_refused.lm2:11:30: unbound dynamic input unbound' + ('u' * 293)); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_struct_arity_long_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ('unit_struct_arity_long_name_refused.lm2:13:1: more arguments than Model' + ('m' * 295) + ' has formals'); Absent = @(); Debt = @() },
     # D-61: a bound merge result is a root of the read-position field path resolver
     # (l2_field_path_check), so its path is a value in any expression -- a condition, arithmetic, a
     # loop condition -- read through its slot map like `v: R\x`.  It was «unresolved name» (and, for
@@ -3874,6 +3886,10 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'duplicate catch: Oops'; Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: the words name the catch in full -- 300 bytes.  They were formatted into 160 bytes without
+    # a bound, and a name this long crashed the translator.
+    [pscustomobject]@{ Name = 'unit_catch_duplicate_long_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ('unit_catch_duplicate_long_name_refused.lm2:8:1: duplicate catch: Oops' + ('o' * 296)); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_merge_params_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'an implicit throw carries no payload'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_param_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -5276,6 +5292,9 @@ $fixtures = @(
     # rows held before; the words were the check's, "a held callable takes the arguments of its header".
     [pscustomobject]@{ Name = 'unit_held_call_count_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_count_refused.lm2:9:8: h2 has no argument y'; Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: the binding's words name a callee of 300 bytes in full; its name was copied into 160 bytes.
+    [pscustomobject]@{ Name = 'unit_held_call_long_name_count_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ('unit_held_call_long_name_count_refused.lm2:11:8: held' + ('h' * 296) + ' has no argument y'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_more_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_call_more_refused.lm2:9:15: more arguments than h2 has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_ns_fresh.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 99;
@@ -5594,6 +5613,11 @@ $fixtures = @(
     # made the formal's -- "unknown method", all three red; the header's inputs unread -- the witness
     # and the arity row red.
     [pscustomobject]@{ Name = 'unit_callable_anon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: callable formals written in place, as many as the method has formals -- ten, past the
+    # eight places the collector had (it refused "too many callable formals written in place").  Natively: a
+    # callable formal is outside the walkable subset, as for unit_callable_anon.
+    [pscustomobject]@{ Name = 'unit_callable_formals_many_in_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_anon_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:13:5: incompatible entry signature'; Absent = @(); Debt = @() },
@@ -7138,6 +7162,9 @@ $fixtures = @(
         Needle = 'unit_named_actual_twice_refused.lm2:6:12: the argument a of f is given twice'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_actual_unknown_refused.lm2:6:12: c is not an argument of f'; Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: the binding's words name a named actual of 300 bytes in full; they were cut at 200 bytes.
+    [pscustomobject]@{ Name = 'unit_named_actual_long_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = ('unit_named_actual_long_unknown_refused.lm2:8:12: zz' + ('z' * 298) + ' is not an argument of f'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_order_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_named_actual_order_refused.lm2:6:12: a positional argument of f after a named one'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_actual_missing_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

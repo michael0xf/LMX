@@ -1,0 +1,101 @@
+# FIXED-BLOCKS-AUDIT: a capture of a Structure copies the fields its definition
+# reads, as many as they are -- 40 here, past the 32 places it had. The node
+# sums them: 820. The root's write after the node is made is not seen. Entry 7.
+Wide:
+    int: f0 1
+    int: f1 2
+    int: f2 3
+    int: f3 4
+    int: f4 5
+    int: f5 6
+    int: f6 7
+    int: f7 8
+    int: f8 9
+    int: f9 10
+    int: f10 11
+    int: f11 12
+    int: f12 13
+    int: f13 14
+    int: f14 15
+    int: f15 16
+    int: f16 17
+    int: f17 18
+    int: f18 19
+    int: f19 20
+    int: f20 21
+    int: f21 22
+    int: f22 23
+    int: f23 24
+    int: f24 25
+    int: f25 26
+    int: f26 27
+    int: f27 28
+    int: f28 29
+    int: f29 30
+    int: f30 31
+    int: f31 32
+    int: f32 33
+    int: f33 34
+    int: f34 35
+    int: f35 36
+    int: f36 37
+    int: f37 38
+    int: f38 39
+    int: f39 40
+end: Wide
+
+fn: make (Wide: w) fn: () int
+    fn: total () int
+        int: s 0
+        s: s + w\f0
+        s: s + w\f1
+        s: s + w\f2
+        s: s + w\f3
+        s: s + w\f4
+        s: s + w\f5
+        s: s + w\f6
+        s: s + w\f7
+        s: s + w\f8
+        s: s + w\f9
+        s: s + w\f10
+        s: s + w\f11
+        s: s + w\f12
+        s: s + w\f13
+        s: s + w\f14
+        s: s + w\f15
+        s: s + w\f16
+        s: s + w\f17
+        s: s + w\f18
+        s: s + w\f19
+        s: s + w\f20
+        s: s + w\f21
+        s: s + w\f22
+        s: s + w\f23
+        s: s + w\f24
+        s: s + w\f25
+        s: s + w\f26
+        s: s + w\f27
+        s: s + w\f28
+        s: s + w\f29
+        s: s + w\f30
+        s: s + w\f31
+        s: s + w\f32
+        s: s + w\f33
+        s: s + w\f34
+        s: s + w\f35
+        s: s + w\f36
+        s: s + w\f37
+        s: s + w\f38
+        s: s + w\f39
+        return: s
+    return: total
+
+Wide: src
+@: t make(src)
+src\f39: 1000
+int: got t()
+int: ok 7
+if: got != 820
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

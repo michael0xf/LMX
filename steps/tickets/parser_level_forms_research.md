@@ -1,10 +1,12 @@
 # Parser level/form ownership — research after self-build
 
-Date: 2026-10-06. Status: **DEFERRED RESEARCH — after accepted S8.6**.
-The author cancelled the previously requested parser fix. This ticket is not
-a bug classification, an implementation assignment, or a G5/stage-8 blocker.
-Do not change parser code, seeds, normative admission or test expectations on
-its authority. Any later implementation requires a separate decision.
+Date: 2026-10-06. Status: **CLOSED 2026-10-06 — the author confirmed the
+observed behavior.** The line's level reset closes the short form, and the
+fence makes a sibling Structure: the old parser is right, and the tree below
+is not a defect ([the author's words](../../LMX_blog/2026-10-06.md#vertical-call-fence)).
+The research is removed from the plan; no parser code, seed, admission or
+test expectation changes. The text below is kept as the history of the
+question and its measurements.
 
 ## 1. Authority, dependency and earlier work
 
@@ -23,7 +25,7 @@ boundary. That older audit is dated evidence, not proof of the interpretation
 of this particular nested-marker case. Do not introduce a second normalization
 algorithm or infer a new call syntax from the comparison.
 
-Placement: [immediately after S8.6 in the v2 plan](../../next_core_tasks_v2.md#parser-level-forms-research),
+Placement until closure: immediately after S8.6 in the v2 plan,
 before the next written stage. This research is not part of self-build
 acceptance and does not reopen G5. Continue the existing kernel and self-build
 queue without a parser fix for this question. Preserve the sole writer/build;

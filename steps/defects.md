@@ -4403,6 +4403,33 @@ takes one value» (`l2_check_one_value`). Строки `unit_decl_one_value_refu
 body» — другой роли оно не брало, но слова не объявления; `const:` в корне читается как сигнатура входа и
 отказывается «incompatible entry signature», верное или нет.
 
+**После ответа автора 2026-10-06** ([§102 журнала](fable-continuation-20261003.md#declaration-call-tail-answer)):
+вызов — свой Frame, `make: 3` или `make(3)`; `make 3` — два значения. Ветвь вызова из `l2_fields_one_value`
+удалена: `unit_decl_one_value_call_tail_refused` отказывается у `3`, «a declaration takes one value»; `make(3)`
+и `make: 3` — контроли. Классификация обоих сборщиков не меняется. Остаются OPEN: объявление под словом
+примитивного типа с лишним значением (`int: v 3 4`, `int: seen values[i] 7`) отказывается «unsupported body», а не
+как объявление; `const:` в корне читается как сигнатура входа.
+
+<a id="callable-first-tail"></a>
+### CALLABLE-FIRST-TAIL — 2026-10-06, Opus, FIXED 2026-10-06 (ответ автора; Codex OPUS-CODEX-20261005-01)
+
+Общий классификатор хвоста `l2_tail_is_structure` читал хвост, чей первый атом называет метод, дверь C или
+предопределённую функцию, значением этого вызова — чтение T6. На уровне единицы его не стало вместе с
+FACTORY-RESULT-RECEIVER (`l2_call_value`), но оно жило во вложенном определении именованной Structure (Q57,
+`l2_ns_nested_def`) и в проверке вперёд головы с одними именами (`l2_struct_defined_below`). Измерено на
+`9d75979f`: `S:` / `C: tick 7` (tick — метод без формалов) отказывается «internal: an own declaration has no
+physical field»; `A: b` над `A: tick 7` берёт `A: b` определением A, а строку ниже — применением A («more
+arguments than A has formals»).
+
+**Исправлено 2026-10-06** ([§102 журнала](fable-continuation-20261003.md#declaration-call-tail-answer)) по ответу
+автора: вызов — свой Frame, неявного префиксного вызова нет. Чтение удалено; атом слова-ресивера (`b: merge A C`)
+сохранён. `C: tick 7` во вложенном теле — определение, исполнение S ничего не вызывает
+(`unit_nested_def_method_tail_dormant` с двойником обхода; мутант, возвращающий чтение, даёт снова внутреннюю
+ошибку). Для `A: b` над `A: tick 7` теперь `A: tick 7` — определение A, а `A: b` — имя, типизированное вперёд,
+отказ «unresolved name» у него: измерено, не норма и не строка. Повтор 1970 трансляций `opus_full_32` этой
+половиной не меняется ни в одной строке. Удалены и две функции без вызывающих, `l2_tail_decl_first` и
+`l2_tail_field_body`.
+
 <a id="own-type-code-bands"></a>
 ### OWN-TYPE-CODE-BANDS — 2026-10-06, Opus, OPEN (FIXED-BLOCKS, блокер G5; по ответу Codex OPUS-CODEX-20261005-01)
 

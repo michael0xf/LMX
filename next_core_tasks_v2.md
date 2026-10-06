@@ -35,11 +35,6 @@ The [author's decisions](LMX_blog/2026-10-05.md) require source-copy parent
 rewriting, explicit `@: add5 makeAdder(5)` result receipt, and ordinary result
 type checking for an unknown-head Structure returned as int.
 
-**Deferred parser research, 2026-10-06.** The author cancelled the proposed
-level/fence fix. [Research the question immediately after accepted S8.6](#parser-level-forms-research),
-not as a G5/self-build prerequisite. Preserve the measured behavior as evidence;
-this ticket does not authorize parser changes or new test expectations.
-
 **Continuation, 2026-10-05 (Opus).** The first slice of Codex's handoff
 (OPUS-HANDOFF-20261005-103112): a letter held in a place of its own declaration
 is admitted to an input of another declaration by what the input's method
@@ -881,6 +876,13 @@ Current bounded implementation, with no DONE claim:
     ([section 100](steps/fable-continuation-20261003.md#declaration-one-value)):
     a declaration's candidate is one value, the extra value refused at the
     declaration, no machine local made of it. Gates: kernel `opus_kernel_32` GREEN297 (114 selftests), L3 `opus_l3_30`, full `opus_full_32` RED39/1971 -- against `opus_full_31` FAIL→OK 0, OK→FAIL 0, added 18.
+    A call is its Frame (the author, 2026-10-06,
+    [section 102](steps/fable-continuation-20261003.md#declaration-call-tail-answer)):
+    `make 3` in a candidate is two values, refused at 3; the callable-first
+    reading is gone from both classifiers
+    ([CALLABLE-FIRST-TAIL](steps/defects.md#callable-first-tail)). This describes
+    the uncommitted development slice, not a landed source checkpoint.
+    Gates: kernel opus_kernel_34 GREEN, L3 opus_l3_32 ok; full harness opus_full_34 pending.
   - [ ] the names of methods, formals and declared throws, 62 bytes: a
     method used as a value gets a public C wrapper under its source name,
     and `l1trans` keeps function names in 64-byte slots (`l1_fn_ensure`) --
@@ -2014,29 +2016,6 @@ comparison is useful additional evidence; byte-identical executable files are
 not an invented mandatory condition. Retain logs proving which generation did
 the work. Windows results establish Windows only; Unix or other targets remain
 unverified until actually exercised.
-
-<a id="parser-level-forms-research"></a>
-### Immediately after S8.6 — Research: parser level/form ownership
-
-- [ ] Complete [parser level/form research](steps/tickets/parser_level_forms_research.md)
-  after the accepted full self-build checkpoint, before the next written
-  stage. Compare the exact nested-head/fence forms and the general logical
-  versus physical level rules with the working, self-building
-  `C:\Nyasha_Planet\lingvamyxa_old_worked_version`; retain
-  `C:\Nyasha_Planet\lingvamyxa_prev` as a secondary comparison.
-- [ ] Reconcile the measured trees with current paired grammar and the earlier
-  [common-form investigation](next_parser_fix.md). Report general rules,
-  admission/topology, provenance and unresolved alternatives; do not prescribe
-  a call-specific workaround or infer a new implicit prefix-call syntax.
-- [ ] Return the research findings and any exact language question to Codex;
-  implementation, normative admission and golden changes require a separate
-  decision. The previously requested parser fix is **cancelled**.
-
-This is a post-self-build research ticket, not a parser bug classification or
-a G5/S8 acceptance dependency. Existing independently approved parser contracts
-remain unchanged. Measured differences are retained as evidence, not mandated
-new failing tests. Do not start this repair before self-build or launch an
-automatic implementation after the research report.
 
 <a id="stage8a"></a>
 ## 8. Stage 8a — ordinary calls over the existing Message transport

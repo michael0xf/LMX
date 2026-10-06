@@ -10242,3 +10242,107 @@ outcome. A native publication that skips the pointer fields (a mutant of
 | `build/l3_selftest/opus_l3_30` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_32` (full harness) | RED39/1971: against `opus_full_31` FAIL→OK 0, OK→FAIL 0, added 18, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
 | `build/l2_harness/opus_focus_dcr` (focused) | 30 rows on the gated bytes: the eighteen rows of sections 100 and 101 and the twelve the one-field mutant changes, all green; the same rows ran green on an isolated clone of these bytes before the gates. |
+
+<a id="declaration-call-tail-answer"></a>
+## 102. A call is its Frame: the call tail answered (the author, 2026-10-06)
+
+Section 100 left `@: Model m make 3` refused for make's arity: its one-value
+check read a tail whose first atom names a callable as that call's value.
+The question went to the author
+([`LMX_blog/q/value-tail-prefix-call.md`](../LMX_blog/q/value-tail-prefix-call.md)),
+and he answered the same day
+([blog](../LMX_blog/2026-10-06.md#explicit-call-frame)): a call needs its
+Frame, `r: twice: 3` or `r: twice(3)`; `r: twice 3` is no call. Codex: no
+implicit prefix call and no declaration-only call normalization; a bare
+method name keeps its rule (its application without actuals), and so does
+a receiver's consumption of its tail.
+
+The author also asked whether we have a call without `:` anywhere. The
+translator's answer:
+
+| Where | What it did | Now |
+| --- | --- | --- |
+| `l2_fields_one_value` (section 100) | a tail whose first atom names a method, a C door or a predefined function was one value, that call's | removed: `make 3` is two values |
+| `l2_tail_is_structure` | the same reading, from T6: such a tail was the call's value, not a Structure | removed: it is a Structure like any other |
+| `l2_unit_role` | T6's store `add5: makeAdder 5` ran the factory | gone since FACTORY-RESULT-RECEIVER (2026-10-05): a definition |
+| a receiver word written as an atom | `b: merge A C`, the book's own spelling of an explicit merge (semantics section 9) | kept |
+| a bare method name in a value | its application without actuals (`i: findValue`) | kept |
+
+No route turns `r: twice 3` into `twice(3)`: the bare twice is checked as
+its application without actuals and refused, at twice, for its missing n.
+
+After FACTORY-RESULT-RECEIVER `l2_tail_is_structure`'s reading lived on at
+two places: the nested definition of a named Structure (Q57,
+`l2_ns_nested_def`) and the forward check of an ident-only head
+(`l2_struct_defined_below`). A nested `C: tick 7` (tick a method without
+formals) was refused "internal: an own declaration has no physical field"
+([CALLABLE-FIRST-TAIL](defects.md#callable-first-tail)); now C is a nested
+definition, and running S runs nothing. A forward `A: b` above `A: tick 7`
+took `A: b` for A's definition and the line below for A's application
+("more arguments than A has formals"); now `A: tick 7` defines A and
+`A: b` is the forward-typed name, refused "unresolved name" at it --
+measured, neither a norm nor a row. `l2_tail_decl_first` and
+`l2_tail_field_body`, which nothing calls, are deleted.
+
+Replaying the 1970 translations recorded by `opus_full_32` with this
+checkpoint's translator: two change, the call-tail row and its twin, now
+refused at 3. With the declaration's half alone the same two; the
+classifier's half and the deleted helpers change none.
+
+| Row (+`_walk`) | What it pins |
+| --- | --- |
+| `unit_decl_one_value_call_tail_refused` | `@: Model m make 3` refused at 3 (13:21), "a declaration takes one value"; it said make's arity at 13:16 |
+| `unit_value_tail_prefix_call_refused` | the author's `r: twice 3`: refused at twice (8:4), "incompatible entry signature" -- unchanged by this step |
+| `unit_value_tail_call_explicit` | `r: twice: 3` and `s: twice(3)` each give 6 |
+| `unit_nested_def_method_tail_dormant` | `C: tick 7` nested in S: running S prints nothing; the program says only DONE |
+
+Mutants, each on an isolated clone of these bytes, run on these rows,
+section 100's call controls and the factory dormancy rows (15 rows, all
+green without a mutant):
+
+| Mutant | Rows that go red |
+| --- | --- |
+| `l2_fields_one_value` reads a callable-first tail as one value again | the call-tail row and twin: the arity reason again |
+| `l2_tail_is_structure` reads it as the call's value again | the nested dormant row and twin: the internal error |
+| a bare method name in a value is not checked as its application | the `r: twice 3` row and twin: "root operation not walkable yet: this expression" instead |
+
+The row's make returns `Model`, the Structure reference its `@: Model`
+result names; it returned `@ Model` before, and both read 7 today because
+unary `@` of a Structure gives its descriptor
+([critical_pointer_to_struct_bug](defects.md#critical-pointer-to-struct-bug)).
+That depth is the pointer debt's, not this step's.
+
+The vertical spellings. The author proposed two vertical forms of the same
+call ([blog](../LMX_blog/2026-10-06.md#vertical-call-fence)). Measured with
+this checkpoint's translator and with `opus_full_32`'s, the same (Codex
+measured them first, read-only):
+
+| Spelling (lines) | Result |
+| --- | --- |
+| `r: twice:` / `---` / `. . 3` / `---` | P0 error 13, "source level increase must be one step", at the level-2 item |
+| `r: twice:` / `. ---` / `. . 3` / `---` | P0 gives r two fields, twice with an empty body and an anonymous sibling holding 3; the translator refuses "twice has no argument n" |
+| `r: twice:` / `. . 3` / `---` | P0 error 13 at the level-2 item |
+| `r:` / `. twice:` / `. . 3` / `---` | translates; L1 byte-identical to `r: twice: 3` and `r: twice(3)` |
+
+The author first held that the level-2 body is twice's (r at level 0,
+twice at level 1 even on one physical line), and two old printTree
+binaries of `lingvamyxa_old_worked_version` give the same tree as today's
+parser: both reset the per-line level to 0 at a new line, and both
+delimiter resolvers truncate to the delimiter's level before choosing the
+parent (Codex, read-only). The author cancelled the fix, and then
+corrected himself ([blog](../LMX_blog/2026-10-06.md#vertical-call-fence)):
+the old parser is right -- the line's level reset closes the short form,
+and the fence makes a sibling Structure. So `. ---` gives r a sibling of
+twice, and that tree is not a defect. The deferred research is removed
+from the plan and its [ticket](tickets/parser_level_forms_research.md)
+closed: no parser change and no new parser expectation; the measurements
+above are the record.
+
+### Measured
+
+Documentation-only checkpoint: the translator, harness and fixtures described
+above are still uncommitted development work. The mutant and replay facts are
+measured on isolated clones; they do not establish a completed full gate or a
+landed source checkpoint.
+
+Gates: kernel opus_kernel_34 GREEN, L3 opus_l3_32 ok; full harness opus_full_34 pending.

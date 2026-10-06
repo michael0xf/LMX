@@ -774,8 +774,8 @@ Current bounded implementation, with no DONE claim:
     loop's step, `sizeof(c.<name>)`)
     ([section 90](steps/fable-continuation-20261003.md#sprintf-past-buffer)).
     Gates: kernel `opus_kernel_19` GREEN297 (114 selftests), L3 `opus_l3_18`,
-  full `opus_full_20` RED39/1909 -- against `opus_full_19` FAIL→OK 0,
-  OK→FAIL 0, added 3.
+    full `opus_full_20` RED39/1909 -- against `opus_full_19` FAIL→OK 0,
+    OK→FAIL 0, added 3.
   - [x] loops and catch blocks nested more than 64 deep, open pads, and
     more than 64 catches of one emission (refused in the walker's wrong
     words): as many as the program nests and writes
@@ -796,17 +796,47 @@ Current bounded implementation, with no DONE claim:
     full `opus_full_24` RED39/1917 -- against `opus_full_23` FAIL→OK 0,
     OK→FAIL 0, added 5.
   - [ ] the size of the L1 emitted for nested loops, faster than the square
-    of the nesting (seventy nested `for:` loops: 27.5 MB);
-  - [ ] the text of one expression in the emitter, 1023 bytes (`l2_cat`), and
-    the buffers that feed it, the path of an actual of at most 32 names among
-    them;
-  - [ ] the name of a machine local that roots a path, 64 bytes
-    (`l2_emit_path_to`);
+    of the nesting (seventy nested `for:` loops: 27.5 MB) -- an implementation
+    cost subtask, not a nesting cap (Codex 2026-10-06): a publication helper
+    keeps the ordinary machine activation, dirty-only timing, the
+    call/exit/yield/cleanup order and one graph; no loop procedures, extra
+    activations or state graph;
+  - [ ] IN PROGRESS: the text of one expression in the emitter, 1023 bytes
+    (`l2_cat`), and the buffers that feed it, the path of an actual of at most
+    32 names among them. Ordinary programs meet it: a sum of about a hundred
+    operands is refused, and two shapes refuse with no located diagnostic
+    (D-112, exit 3): a literal operand of 256+ bytes and a C call of 300
+    actuals. Codex 2026-10-06: the growable text directly -- one compiler-only
+    owned text builder (data, length, capacity; `l2_xmalloc`/`l2_xfree`),
+    migrated in dependency slices, each gated; a route is done only when its
+    writers and readers use it; no new cap, larger buffer or permanent
+    "expression too long". Required positives: the long sum well beyond the
+    old boundary, a 260+ byte literal operand through the C-door
+    preparation, a C call of 300+ actuals through the ordinary join, with
+    more than one growth, nested and parenthesized preparation, live=0;
+  - [ ] the machine-local path root (`l2_path_root`'s branch with
+    `i < 990`, `l2_proot` 64 in `l2_emit_path_to`): two producers reach it
+    ([DECLARATION-CANDIDATE-ROLE](steps/defects.md#declaration-candidate-role),
+    [OWN-TYPE-CODE-BANDS](steps/defects.md#own-type-code-bands)). Order
+    (Codex 2026-10-06): shared declaration/candidate validation -> kind and
+    type kept apart in the own-storage code -> a renewed producer/read census
+    with the reference-path controls, native and walked -> removal of the
+    route and its readers; legitimate foreign by-value and function-pointer
+    machine locals stay;
   - [ ] the names of methods, formals and declared throws, 62 bytes: a
     method used as a value gets a public C wrapper under its source name,
     and `l1trans` keeps function names in 64-byte slots (`l1_fn_ensure`) --
     the limit moves with `l1trans`'s own step
-    ([section 88](steps/fable-continuation-20261003.md#fixed-counts));
+    ([section 88](steps/fable-continuation-20261003.md#fixed-counts)). After
+    the expression route (Codex 2026-10-06): the bounded `l1trans`
+    storage/self-build step, its pin refreshed through the existing verified
+    chain; no truncated or renamed source identities, no downstream L2/L3
+    self-build before G5 is green;
+  - [ ] a fortified translator as an additional test build (Codex 2026-10-06):
+    distinct from the canonical binary and its pin, its source bytes tied to
+    the same checkpoint, no installed dependency, its aborts never in place
+    of a located diagnostic; its overhead measured before it would become the
+    sole harness compiler;
   - [x] eight callable formals written in place in one method, 32 captured
     fields: as many as the method's formals and the captured Structure's
     fields ([section 88](steps/fable-continuation-20261003.md#fixed-counts)).

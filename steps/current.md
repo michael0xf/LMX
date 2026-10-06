@@ -610,6 +610,11 @@ Fable принял единственный writer/build-слот по [to_fable
   выражения не отдаётся место постоянного размера, `l2_cat` удалён; исправлен ADDRESS-TYPE-PAST-BUFFER
   (тип адреса писался за буфер, транслятор падал)
   ([§99 журнала](fable-continuation-20261003.md#expression-text-owner-group-3)). Гейты `opus_kernel_31` GREEN297, `opus_l3_29`, `opus_full_31` RED39/1953: против `opus_full_29` FAIL→OK 0, OK→FAIL 0, добавлено 10.
+- DECLARATION-CANDIDATE-ROLE исправлен: кандидат объявления — одно значение, лишнее значение отказывается у
+  объявления («a declaration takes one value»), объявление больше не становится машинным локалом
+  ([§100 журнала](fable-continuation-20261003.md#declaration-one-value)); контроли публикации указателя на
+  ячейку указателя по ответу Codex — вызов или запись `\p2: @v` перед `\\p2: 5U`
+  ([§101](fable-continuation-20261003.md#pointer-cell-publication-controls)). Гейты `opus_kernel_32` GREEN297, `opus_l3_30`, `opus_full_32` RED39/1971: против `opus_full_31` FAIL→OK 0, OK→FAIL 0, добавлено 18.
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
   под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),

@@ -6053,6 +6053,38 @@ $fixtures = @(
         Needle = 'assignment value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_indexed_initializer_extra_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unsupported body'; Absent = @(); Debt = @() },
+    # DECLARATION-CANDIDATE-ROLE (steps/defects.md): a reference declaration whose candidate is one value and one more
+    # is refused at the extra value, read or not, in the `@:` and the `const:` form, of a Structure and of a primitive --
+    # it was a machine local with the model (a read refused at its path, or L1 gcc refuses, or nothing said).  A call
+    # in the candidate keeps the call's own reason (here its arity).  The twins: the same under --walk-methods.
+    [pscustomobject]@{ Name = 'unit_decl_one_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_one_value_refused.lm2:9:24: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_refused_walk.lm2'; Source = 'unit_decl_one_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_decl_one_value_refused_walk.lm2:9:24: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_read_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_one_value_read_refused.lm2:9:24: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_read_refused_walk.lm2'; Source = 'unit_decl_one_value_read_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_decl_one_value_read_refused_walk.lm2:9:24: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_one_value_const_refused.lm2:9:30: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_const_refused_walk.lm2'; Source = 'unit_decl_one_value_const_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_decl_one_value_const_refused_walk.lm2:9:30: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_two_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_one_value_two_refused.lm2:8:26: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_two_refused_walk.lm2'; Source = 'unit_decl_one_value_two_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_decl_one_value_two_refused_walk.lm2:8:26: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_one_value_name_refused.lm2:9:24: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_name_refused_walk.lm2'; Source = 'unit_decl_one_value_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_decl_one_value_name_refused_walk.lm2:9:24: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_prim_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_one_value_prim_refused.lm2:7:20: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_prim_refused_walk.lm2'; Source = 'unit_decl_one_value_prim_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_decl_one_value_prim_refused_walk.lm2:7:20: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_call_tail_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_decl_one_value_call_tail_refused.lm2:11:16: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_call_tail_refused_walk.lm2'; Source = 'unit_decl_one_value_call_tail_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_decl_one_value_call_tail_refused_walk.lm2:11:16: incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_array_descriptor.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_index_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -6302,6 +6334,16 @@ $fixtures = @(
         Args = @('0');
         Absent = @();
         Debt = @() },
+    # Codex 2026-10-06 (OPUS-CODEX-20261005-01), the positive controls of a pointer to a pointer's cell: `@@: size_t p2
+    # @p1` addresses p1's published cell, which takes @v at a publication boundary (A, an ordinary call) or by the store
+    # `\p2: @v` (B); `\\p2: 5U` then changes v's cell and the bare working v keeps 0 (L2 section 18.2).  Values and the
+    # address are checked; the twins walk check (and publish).
+    [pscustomobject]@{ Name = 'unit_pointer_cell_publish_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_cell_publish_call_walk.lm2'; Source = 'unit_pointer_cell_publish_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_cell_store_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_pointer_cell_store_first_walk.lm2'; Source = 'unit_pointer_cell_store_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
     # D-53: `h\q: @mo` -- `@` of an own Structure field is the reference its slot holds, as its load
     # is; h\q is non-null, `@mo` and `mo` itself.  Success is 7 (it was 0, an empty witness).
     [pscustomobject]@{ Name = 'unit_ns_ref_field_general.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;

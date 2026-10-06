@@ -1550,6 +1550,8 @@ prototype:
     fn: l2_address_depth (const: @(LmP0Text head)) int
     fn: l2_emit_address_marks (@: FILE out; int: depth) int
     fn: l2_own_decl_ty (const: @(LmP0Node stmt)) int
+    fn: l2_fields_one_value (@: LmP0Field first; int: n) int
+    fn: l2_check_one_value (@: LmP0Field first; int: n; const: @(char path)) int
     fn: l2_application (const: @(LmP0Node node)) @: LmP0Frame
     fn: l2_declaration (const: @(LmP0Node node)) @: L2Declaration
     fn: l2_application_free () int
@@ -11154,6 +11156,8 @@ fn: l2_check_reference_init (const: @(LmP0Node stmt); int: mi; const: @(char pat
     l2_reference_fields(@ first, @ n)
     if: n < 1
         return: 1
+    if: l2_check_one_value(first, n, path) != 0
+        return: 1
     if: l2_reference_descriptor(first, n, mi, descriptor) != 0 && l2_check_fields(first, n, mi, path, stmt) != 0
         return: 1
 return: l2_check_receiving_value(stmt, first, n, ty, l2_declaration_model(stmt, 0), declaration\name, mi, path)
@@ -14418,6 +14422,8 @@ fn: l2_check_decl_candidate (const: @(LmP0Node stmt); int: mi; const: @(char pat
     if: first = 0 || first\value = 0
         rc: 1
     if: rc = 0
+        rc: l2_check_one_value(first, declaration\candidate_count, path)
+    if: rc = 0
         rc: l2_check_fields(first, declaration\candidate_count, mi, path, stmt)
     if: rc = 0 && declaration\candidate_count = 1 && first\value\kind = c.LM_P0_NODE_ATOM
         rc: l2_check_literal_kind(first\value\as\atom, l2_lit_kind_from_own(l2_own_decl_ty(stmt)), path, stmt)
@@ -15405,11 +15411,42 @@ fn: l2_unimpl_numeric (const: @(LmP0Node stmt)) const: @: char
         return: "by-value wchar_t local not yet implemented"
 return: 0
 
+# Whether the n fields from first are one value (book section 9, as l2_tail_is_structure reads a tail): what the
+# operand reader spans -- one atom, one operator run, one Frame -- or a call, whose first item names a callable and
+# whose actuals follow it.
+fn: l2_fields_one_value (@: LmP0Field first; int: n) int
+    @: LmP0Field f l2_next_active(first)
+    if: n < 1 || f = 0 || f\value = 0
+        return: 0
+    if: l2_expr_span(f) = n
+        return: 1
+    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
+        if: l2_unit_names_method(f\value\as\atom) != 0 || l2_find_method(f\value\as\atom) >= 0 || l2_is_known(f\value\as\atom) != 0 || l2_receiver_word(f\value\as\atom) != 0
+            return: 1
+    ---
+return: 0
+
+# A declaration's candidate is one value (DECLARATION-CANDIDATE-ROLE): the first value past it is refused where it
+# stands, whether or not anything reads the declared name.
+fn: l2_check_one_value (@: LmP0Field first; int: n; const: @(char path)) int
+    @: LmP0Field f l2_next_active(first)
+    @: LmP0Field extra
+    if: l2_fields_one_value(f, n) != 0
+        return: 0
+    extra: l2_skip_span(f, l2_expr_span(f))
+    if: extra = 0 || extra\value = 0
+        extra: f
+return: l2_error(path, extra\value, "a declaration takes one value")
+
 fn: l2_own_decl_ty (const: @(LmP0Node stmt)) int
     @: L2Declaration application l2_declaration(stmt)
     if: application = 0
         return: 0
-    if: application\candidate_count > 0 && l2_expr_span(application\candidate) != application\candidate_count
+    # Under a type word alone, a tail that is not one operand declares nothing (a call, a statement).  A declaration
+    # word -- `[]`, `@`, `const`, `immutable`, `independent` -- declares whatever its candidate: a candidate that is
+    # not one value is refused by the check (l2_check_one_value), and the declaration is never taken for another role,
+    # a machine local with the model (DECLARATION-CANDIDATE-ROLE).
+    if: application\contract\kind = 0 && application\candidate_count > 0 && l2_expr_span(application\candidate) != application\candidate_count
         return: 0
     if: application\contract\kind = 1 && l2_own_array_count(stmt) = 0
         return: 0

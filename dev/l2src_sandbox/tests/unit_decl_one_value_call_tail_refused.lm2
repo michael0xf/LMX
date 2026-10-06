@@ -1,0 +1,15 @@
+# `@: Model m make 3`: a candidate whose first item names a callable is that call (book section 9), one value, and
+# the call keeps its own reason -- the call check reads `make` with no actuals and refuses its arity, as for `r:
+# twice 3` -- not the declaration's (DECLARATION-CANDIDATE-ROLE).
+Model:
+    int: value 7
+end: Model
+fn: make (int: k) @: Model
+    return: @ Model
+end: make
+fn: check () int
+    @: Model m make 3
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

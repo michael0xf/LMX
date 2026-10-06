@@ -872,7 +872,10 @@ Current bounded implementation, with no DONE claim:
     type kept apart in the own-storage code -> a renewed producer/read census
     with the reference-path controls, native and walked -> removal of the
     route and its readers; legitimate foreign by-value and function-pointer
-    machine locals stay;
+    machine locals stay. The shared validation is done
+    ([section 100](steps/fable-continuation-20261003.md#declaration-one-value)):
+    a declaration's candidate is one value, the extra value refused at the
+    declaration, no machine local made of it. Gates: kernel `opus_kernel_32` GREEN297 (114 selftests), L3 `opus_l3_30`, full `opus_full_32` RED39/1971 -- against `opus_full_31` FAIL→OK 0, OK→FAIL 0, added 18.
   - [ ] the names of methods, formals and declared throws, 62 bytes: a
     method used as a value gets a public C wrapper under its source name,
     and `l1trans` keeps function names in 64-byte slots (`l1_fn_ensure`) --

@@ -1,0 +1,13 @@
+# `@: Model m @ Model 3` with nothing reading m: a reference declaration whose candidate is one value and one more
+# is refused at the extra value, whether or not anything reads the name (DECLARATION-CANDIDATE-ROLE,
+# steps/defects.md). It was taken for a machine local with the model; its L1 joined the 3 to the address
+# (`lmx_arena_ref_struct(node, 0U)3`), which gcc refused.
+Model:
+    int: value 7
+end: Model
+fn: check () int
+    @: Model m @ Model 3
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

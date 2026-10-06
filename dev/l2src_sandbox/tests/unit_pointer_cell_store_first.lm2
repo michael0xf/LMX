@@ -1,0 +1,22 @@
+# After `@: size_t p1 @v` the working p1 holds @v and is dirty; its published cell holds what it held, and p2 = @p1
+# is that cell's address (L2 section 18.2; semantics section 12: address acquisition is not a publication boundary).
+# The one-dereference store `\p2: @v` writes p1's physical cell; `\\p2: 5U` then changes v's cell -- read through p2
+# and p1 -- while the bare working v keeps 0. Codex 2026-10-06, control B. Success is 7.
+fn: check () int
+    size_t: v 0U
+    @: size_t p1 @v
+    @@: size_t p2 @p1
+    \p2: @v
+    if: \p2 != @v
+        return: 1
+    \\p2: 5U
+    if: \\p2 != 5U
+        return: 2
+    if: \p1 != 5U
+        return: 3
+    if: v != 0U
+        return: 4
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

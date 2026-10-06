@@ -1,0 +1,27 @@
+# After `@: size_t p1 @v` the working p1 holds @v and is dirty; its published cell holds what it held, and p2 = @p1
+# is that cell's address (L2 section 18.2; semantics section 12: address acquisition is not a publication boundary).
+# An ordinary user call after the declarations publishes p1: p2's pointee is then @v, and `\\p2: 5U` changes v's
+# cell -- read through p2 and p1 -- while the bare working v keeps 0. Without the call the first load of the double
+# dereference reads the unpublished cell (a publication-state observation, not a test outcome). Codex 2026-10-06,
+# control A. Success is 7.
+fn: publish () int
+    return: 0
+end: publish
+fn: check () int
+    size_t: v 0U
+    @: size_t p1 @v
+    @@: size_t p2 @p1
+    int: done publish()
+    if: \p2 != @v
+        return: 1
+    \\p2: 5U
+    if: \\p2 != 5U
+        return: 2
+    if: \p1 != 5U
+        return: 3
+    if: v != 0U
+        return: 4
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

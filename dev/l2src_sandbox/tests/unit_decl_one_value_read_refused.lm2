@@ -1,0 +1,14 @@
+# `@: Model m @ Model 3` and a read of m\value: a reference declaration whose candidate is one value and one more is
+# refused at the extra value, whether or not anything reads the name (DECLARATION-CANDIDATE-ROLE, steps/defects.md).
+# It was taken for a machine local with the model; the read was refused at its path ("root operation not walkable
+# yet: a field path").
+Model:
+    int: value 7
+end: Model
+fn: check () int
+    @: Model m @ Model 3
+    int: v m\value
+    return: v
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

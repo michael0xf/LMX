@@ -10101,3 +10101,144 @@ allocations.
 | `build/l3_selftest/opus_l3_29` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_31` (full harness) | RED39/1953: against `opus_full_29` FAIL→OK 0, OK→FAIL 0, added 10, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
 | `build/l2_harness/opus_focus_g3b` (focused, before the gates) | 40 rows: this section's six rows and their four twins, the rows its mutants are killed by and the controls of sections 94, 96, 97 and 98, all green. |
+
+<a id="declaration-one-value"></a>
+## 100. A declaration's candidate is one value (DECLARATION-CANDIDATE-ROLE)
+
+The defect (`steps/defects.md`, found by the producer census of the
+machine-local path root): a declaration with a declaration word whose
+candidate is one value and one more -- `@: Model m @ Model 3`,
+`const: @(Model m @ Model 3)`, `@: size_t p @w 3` in a method -- was turned
+away by the own classifier (`l2_own_decl_ty` gave 0 when the operand reader
+did not span the candidate) and taken by the machine-local collector for a
+machine local with the model. What the program then met depended on what
+read the name: a read was refused at its path ("root operation not walkable
+yet: a field path"), a sum at its root ("unknown field path root"), the
+`const:` form at its start ("root operation not walkable yet: this
+statement"); with nothing reading the name the translation passed, and its
+L1 joined the extra value to the address (`lmx_arena_ref_struct(node,
+0U)3`) or to the cell (`(cast: (@: size_t) l2_q0_from[0])3`).
+
+The repair, by Codex's terms (2026-10-06: one truth of classification and
+check for the own collector, the machine-local one and the check with the
+emission; "not a declaration" apart from "a recognized but invalid
+declaration"; the candidate checked by the ordinary rules of the receiving
+place and the operand, neither a new parse nor a general refusal of a
+candidate of several atoms; the refusal located at the declaration, read or
+not, in the `const:` form too; a call, an arity and a type keep their own
+reasons):
+
+- one value is one predicate, `l2_fields_one_value`: what the operand
+  reader spans -- one atom, one operator run (a path, a sum, a unary
+  address), one Frame --, or a call, whose first item names a callable and
+  whose actuals follow it (book section 9, the rule `l2_tail_is_structure`
+  reads a tail by);
+- a declaration word -- `[]`, `@`, `const`, `immutable`, `independent` --
+  makes the Frame a declaration whatever its candidate: the own classifier
+  no longer turns it away on the candidate, so the own collector takes an
+  invalid declaration where it takes a valid one, and the machine-local
+  collector does not see it (`l2_own_decl_ty`). Under a type word alone a
+  tail the operand reader does not span still declares nothing -- a call,
+  a statement --, as before;
+- the reference check and the own check (`l2_check_reference_init`,
+  `l2_check_decl_candidate`) refuse a candidate that is not one value at
+  its first extra value: "a declaration takes one value"
+  (`l2_check_one_value`).
+
+| Row (+`_walk`, the same under `--walk-methods`) | The declaration | The previous translator |
+| --- | --- | --- |
+| `unit_decl_one_value_refused` | `@: Model m @ Model 3`, m not read | translates; the L1 joins the 3 to the address |
+| `unit_decl_one_value_read_refused` | the same, m\value read | refused at the read's path |
+| `unit_decl_one_value_const_refused` | `const: @(Model m @ Model 3)` | refused at the statement's start, "root operation not walkable yet: this statement" |
+| `unit_decl_one_value_two_refused` | `@: Model m (@ Model) (@ Model)` | translates |
+| `unit_decl_one_value_name_refused` | `@: Model m @ Model z` | translates |
+| `unit_decl_one_value_prim_refused` | `@: size_t p @w 3` | translates; the L1 joins the 3 to the cell |
+| `unit_decl_one_value_call_tail_refused` | `@: Model m make 3`: one value, a call | "incompatible entry signature" at `make`, the same now |
+
+Each refusal of the first six is "a declaration takes one value", at the
+extra value. The last row pins that a call keeps its own reason: the call
+check reads `make` with no actuals and refuses its arity -- as it does for
+`r: twice 3`, an assignment (asked of Codex: whether a call written as its
+callable's name and its actuals is a call with those actuals in a value
+position; the declaration does not decide it). The legitimate candidates --
+a path (`@ Data\number`), an element (`@values[0]`), `make(1)`, a
+factory's receipt `@:`, `(@ Model)` -- are the existing rows'; none of them
+changes (below).
+
+Measured beside the rows. A diagnostic build that reports each machine
+local added from a declaration whose candidate the operand reader does not
+span: with the previous translator 2 to 6 reports for each probe program in
+a method (the collection runs more than once), with this one none. At the
+root a `const: @(T m ...)` declaration is read as the entry's signature and
+refused "incompatible entry signature" valid or not -- the invalid one was
+"root operation not walkable yet: a Structure-typed field"; a root
+`@: Model m @ Model 3` is refused "a declaration takes one value" at the 3,
+as in a method. Not changed: a declaration under a type word alone whose
+candidate is one value and one more -- `int: v 3 4`, `int: seen values[i] 7`
+(`unit_indexed_initializer_extra_refused`) -- is still refused "unsupported
+body" at the declaration. It never took another role; its words are not
+the declaration's.
+
+Replay, with this checkpoint's translator against section 99's over the
+1952 recorded translations of `opus_full_31`: every row keeps its L1, exit,
+messages and number of allocations -- no recorded translation has such a
+declaration (the census over the 1942 of `opus_full_29`: the own
+classifier's span test turned away Frames under a type word only, and the
+machine-local collector added none of them).
+
+Mutants, each its own translator, run by the harness of an isolated shared
+clone of HEAD with the checkpoint laid over it, its own evidence directory,
+one after another; without a mutant every row named passes (30 rows: the
+fourteen above, section 101's four and twelve of the rows the one-field
+mutant changes):
+
+| Mutant | Killed by |
+| --- | --- |
+| a candidate taken as written, no one-value check (`l2_check_one_value`) | the six refusal rows and their twins: the own collector now has the declaration, and `l2_check_fields` refuses it at the candidate's first field with other words ("root operation not walkable yet: this expression") |
+| the refusal said at the candidate's first field, not at the value too many | the same twelve rows (the place) |
+| a call written with its actuals after the callable's name not one value (`l2_fields_one_value`) | `unit_decl_one_value_call_tail_refused` and its twin: "a declaration takes one value" at the 3 takes the call's own reason |
+| one value taken for one field, a general refusal of a candidate of several atoms | the twelve rows sampled from the 148 whose translation it changes in the replay -- `unit_address_path_actual_span`, `unit_address_reference_cell`, `unit_array_value_pointer_elements` and the others: no L1 |
+| the own classifier turning a declaration word's Frame away on its candidate again (`l2_own_decl_ty`) | no row: the check refuses at the same place on the machine-local route too. The classification is seen only by the diagnostic build above (no machine local added from such a declaration); kept because the classification is one truth for both collectors (Codex), not because a row tells it apart. |
+| (section 101) the native publication skipping the pointer fields (`l2_emit_publish`) | `unit_pointer_cell_publish_call` (exit 1: p1's cell is not `@v`); its walked twin and both store rows pass -- the walker publishes on its own, and the store does not need a boundary |
+
+<a id="pointer-cell-publication-controls"></a>
+## 101. A pointer to a pointer's cell: the publication controls (Codex 2026-10-06)
+
+Section 99 asked whether `size_t: v 0U`, `@: size_t p1 @v`,
+`@@: size_t p2 @p1`, `\\p2: 5U` -- a null store at run time -- is a
+defect. Codex (OPUS-CODEX-20261005-01): no. After the first declarations
+the working p1 holds @v and is dirty, while its published cell still holds
+what it held; p2 is the address of that cell (L2 section 18.2: an own
+field's `@` is its real published cell, not its working cache; semantics
+section 12: publication happens at the defined boundaries, and taking an
+address is not one). The first load of the double dereference reads the
+unpublished cell. Nothing about two levels is a language restriction, and
+no rejection, publication on `@`, flush of pointer initializers,
+checkpoint before a dereference or reload after a pointer write is to be
+added. The one-level observation (`\p1: 5U`, then the bare v still 0) is
+the norm, as L2 section 18.2's example. A real defect would be p1's cell
+still null after its dirty publication, or an explicit store through the
+pointer losing a level or a value.
+
+The two controls Codex asked for, natively and walked, checking values and
+the address:
+
+| Row (+`_walk`) | What it pins |
+| --- | --- |
+| `unit_pointer_cell_publish_call` | A: an ordinary user call (`int: done publish()`, a method that does nothing) after the declarations publishes p1 -- `\p2` is then `@v` --, and `\\p2: 5U` changes v's cell: `\\p2` and `\p1` read 5, the bare v keeps 0. |
+| `unit_pointer_cell_store_first` | B: the store `\p2: @v` writes p1's physical cell -- `\p2` is `@v` --, and `\\p2: 5U` changes v's cell as in A. |
+
+In the twins every method is walked (`publish` and `check`). Without the
+call or the store the program is the observation above -- with this
+checkpoint's translator it stops with 139 natively; it is not a test
+outcome. A native publication that skips the pointer fields (a mutant of
+`l2_emit_publish`) fails control A natively; see the table above.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_32` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_30` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_32` (full harness) | RED39/1971: against `opus_full_31` FAIL→OK 0, OK→FAIL 0, added 18, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
+| `build/l2_harness/opus_focus_dcr` (focused) | 30 rows on the gated bytes: the eighteen rows of sections 100 and 101 and the twelve the one-field mutant changes, all green; the same rows ran green on an isolated clone of these bytes before the gates. |

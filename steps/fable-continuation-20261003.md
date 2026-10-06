@@ -10265,11 +10265,21 @@ translator's answer:
 | `l2_fields_one_value` (section 100) | a tail whose first atom names a method, a C door or a predefined function was one value, that call's | removed: `make 3` is two values |
 | `l2_tail_is_structure` | the same reading, from T6: such a tail was the call's value, not a Structure | removed: it is a Structure like any other |
 | `l2_unit_role` | T6's store `add5: makeAdder 5` ran the factory | gone since FACTORY-RESULT-RECEIVER (2026-10-05): a definition |
-| a receiver word written as an atom | `b: merge A C`, the book's own spelling of an explicit merge (semantics section 9) | kept |
+| a receiver word written as an atom | `b: merge A C`: `l2_merge_frame` settles it into the merge Frame (`l2_merge_atom_settle`), and the classifiers take the atom for the receiver's application | kept at this checkpoint; a crutch by the author's word the same day, to go with its rows ([RECEIVER-ATOM-CRUTCH](defects.md#receiver-atom-crutch)) |
 | a bare method name in a value | its application without actuals (`i: findValue`) | kept |
 
 No route turns `r: twice 3` into `twice(3)`: the bare twice is checked as
 its application without actuals and refused, at twice, for its missing n.
+
+The receiver atom was no exception either. Later the same day the author
+([blog](../LMX_blog/2026-10-06.md#explicit-receiver-frames)): no exceptions -- `b: merge: A C` or
+`b: merge(A C)`; `b: merge A C` is a crutch, and everything like it goes.
+Measured on `178508a1`: a translator without the atom readings changes 264
+of `opus_full_34`'s 1980 recorded translations, 231 of them from accepted to
+refused -- the fixtures that write `x: merge Y`. Their removal and migration
+is [RECEIVER-ATOM-CRUTCH](defects.md#receiver-atom-crutch), the plan's
+[K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames), the step after
+OWN-TYPE-CODE-BANDS.
 
 After FACTORY-RESULT-RECEIVER `l2_tail_is_structure`'s reading lived on at
 two places: the nested definition of a named Structure (Q57,

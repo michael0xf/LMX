@@ -623,6 +623,9 @@ Fable принял единственный writer/build-слот по [to_fable
   прав); исправление и отложенное исследование отменены
   ([§102 журнала](fable-continuation-20261003.md#declaration-call-tail-answer)). Гейты `opus_kernel_34` GREEN297, `opus_l3_32`,
   `opus_full_34` RED39/1981: против `opus_full_32` FAIL→OK 0, OK→FAIL 0, добавлено 10.
+- RECEIVER-ATOM-CRUTCH (OPEN): `b: merge A C` — костыль по слову автора 2026-10-06, уходит вместе со строками на
+  нём (231 перевод из принятых станет отказом без него); шаг после OWN-TYPE-CODE-BANDS
+  ([defects](defects.md#receiver-atom-crutch), план [K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames)).
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
   под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),

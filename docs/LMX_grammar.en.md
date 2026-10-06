@@ -581,7 +581,7 @@ Sources: §§4.0–4.3.
 
 `f(a, b, c)` is a compact Frame with a bounded argument Structure. `f: a b c` opens a short form at level N; its tail is at implicit level N + 1. An empty opening-line tail may continue with vertical children. A colon admits a bare, exact, or symbolic head.
 
-Horizontal whitespace and commas separate fields of the current tail. A physical newline resets the counter to that physical line's level but does not by itself complete the Frame. A following item at N + 1 continues the body, at N completes the current form and becomes a sibling, and below N completes it under the closing rules. A deeper item requires a predecessor admitting nesting and a valid level transition.
+Horizontal whitespace and commas separate fields of the current tail. A physical newline resets the counter to the completed physical line's level but does not by itself complete the Frame. Implicit levels of nested inline heads do not persist across the newline. The next item or marker determines continuation or closure under the shared [level model in §15](#levels); this model distinguishes the physical line's level from the depth of its open inline tail.
 
 When an indented body follows existing inline arguments, the down/up level transition preserves a new Structure-field boundary. Vertical tokens must not simply be flattened into the inline tail. Ordinary P0 does not infer argument counts from head signatures.
 
@@ -1223,13 +1223,67 @@ After a physical newline, a bounded continuation must remain deeper than the ope
 
 ## 15. Source levels and indentation
 
-Sources: §§4.2.1.1, 4.5–4.5.2.1, 15.0.
+Sources: §§4.2–4.6, 15.0 of the former specification.
 
-The canonical leading zone contains dots, spaces, and tabs; the dot count gives the absolute level, while spaces and tabs do not affect depth. In relaxed notation, an indentation-column stack maps to the same integer levels. The first deeper column creates one next level regardless of the number of added spaces. Dotted delimiters remain valid in relaxed notation.
+### One stream of structural events
 
-An atomic increase K → K + 1 opens a Structure field, K → K creates a sibling subject to the current short/bounded context, and K → K − 1 closes the current vertical Structure. An increase exceeding one level is forbidden. An ordinary decrease exceeding one level is forbidden; it requires an admitted tail cutter. A scalar item does not become a head merely because deeper indentation follows.
+A source level is a position in the tree being built, not the language level L1/L2/L3 or an indentation number detached from the rest of the syntax. P0 reads a stream of items and structural events. Colons, brackets, separators, newlines outside shielded literals, and visible markers participate in one model; they do not start independent grammars. A physical line is an input fragment, not a tree container. Several nested Frames can therefore occur on one line, and one Frame can continue over several lines.
 
-An empty physical line is a level-0 boundary event. It may close a level-1 tail by ordinary decrease but does not replace a visible delimiter between anonymous sibling sections at deeper levels. A newline after nested short forms resets the counter to the physical line's level, not the deepest inline receiver.
+The canonical leading zone contains dots, spaces, and tabs; the dot count gives the absolute level, while spaces and tabs do not affect depth. In relaxed notation, an indentation-column stack maps to the same integer levels. The first deeper column creates one next level regardless of the number of added spaces. Dotted delimiters remain valid in relaxed notation. Both spellings describe one tree, not two ways of deciding body ownership.
+
+### An increase opens; a cut completes
+
+| Level event | Structural action |
+| --- | --- |
+| K → K + 1 | Open a Structure field under the current parent. |
+| K → K | The next sibling, subject to the open short or bounded context. |
+| K → K − 1 | Complete the current vertical Structure before reading the next item at its own level. |
+| Increase exceeding one level | Invalid jump; inline nesting cannot replace a missing visible level on the next line. |
+| Decrease exceeding one level | Not an ordinary cut: an admitted tail cutter is required. |
+
+These are universal structural actions, not special rules for `if`, `match`, calls, or declarations. An increase explicitly requests a nested Structure field; a scalar item does not become its named head merely because deeper indentation follows. An ordinary cut completes the open field without turning the following item into a special closing receiver. For example, a sibling declaration closes the preceding Frame by its level, not by its declaration semantics. Naming a Frame does not require `end:`.
+
+The “head — primary body Structure — trailer” envelope describes opening, contents, and completion. A trailer is a completion event, not a mandatory source word. The head and structural close are not appended as ordinary fields of the primary body. Terminal receiver roles and preservation of their executable action are defined in [§17](#close).
+
+### Short forms and the next physical level
+
+`f:` at level N opens an argument Structure at implicit level N + 1. Inline fields live inside it. Whitespace and comma separate fields without changing the level; semicolon completes the current short form at its scan depth. After an existing inline tail, the down/up transition to vertical children preserves a new Structure-field boundary instead of flattening all tokens into the tail ([§10](#frames)).
+
+A newline in an open short form resets the counter to the level of **the physical line that just ended**, not to the deepest head written inside its tail. Inline nesting does not carry its implicit level across a newline. The next leading zone supplies the next visible level; an increase from the completed physical line's level can be only one step. The number of colons on the preceding line therefore does not permit skipping several levels on the next line.
+
+The newline itself is a separator, not a trailer. It means neither unconditional closure of all Frames nor preservation of the deepest inline body through any following line. The next level, visible marker, and open context determine ownership of the next item. The asymmetry is intentional: an increase opens a Structure, whereas completion requires a visible next item/marker, `;`, a matching bracket, or an admitted tail cutter.
+
+The following two spellings have different structures:
+
+```text
+r:
+. twice:
+. . 3
+---
+```
+
+Consecutive physical levels 0 → 1 → 2 explicitly place `3` in `twice`'s body and `twice` in `r`'s body. This describes syntactic ownership of fields, not a decision to execute the heads.
+
+```text
+r: twice:
+. ---
+. . 3
+---
+```
+
+The marker is written at level 1, in `r`'s body. It completes the empty short form `twice` and, with the following level 2, opens **an anonymous sibling field under r**, not a continuation of `twice`'s body. The body of `r` has two fields: the empty Frame `twice` and a separate anonymous Structure containing `3`. P0 does not move a field into `twice` to satisfy a signature or an expected argument count. Only the first spelling agrees with `r: twice: 3` and `r: twice(3)` in the ownership of `3`.
+
+### Visible markers and closing scope
+
+Anonymous sibling sections at the same level require a visible marker: without a smaller level between them, indentation does not show their boundary. A dotted line or `---` materializes **its own** level K, not the level of the last inline head. When children at K + 1 follow, the marker opens an anonymous Structure at K; the same marker may close the preceding section and open the next. It is not a call and carries no arguments ([§16](#markers)).
+
+An ordinary one-level cut requires no explicit closing word. A deeper close uses an admitted tail cutter: `end: target`, a fence, or a terminal form in its admitted position. A body-level `return` does not become a universal tail cutter by spelling; terminal `return` closes its own executable definition in the position described in [§17](#close). A tail cutter does not close unmatched `(` or `[`.
+
+### Brackets, literals, and empty lines
+
+Within a bounded form, a newline itself neither closes the brackets nor performs the short-form step outwards. Continuation stays inside the bounded context; returning to the opening line's level before the matching bracket is permitted only for the matching closer itself ([§14](#bounded)). Newlines inside shielded strings, exact identifiers, and other lexical payload do not produce outer level events ([§24](#automaton)).
+
+An empty physical line outside shielded payload is a separate level-0 boundary event. It may close a level-1 tail by ordinary decrease but does not replace a visible delimiter between anonymous sibling sections at deeper levels. Such an empty line must not be confused with a single newline character between two non-empty items.
 
 **Invalid level jump; source expects P0 error 13 at 2:5** — `Lingvamyxa_spec.txt`, 3076–3079.
 

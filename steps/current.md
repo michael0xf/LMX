@@ -626,6 +626,13 @@ Fable принял единственный writer/build-слот по [to_fable
 - RECEIVER-ATOM-CRUTCH (OPEN): `b: merge A C` — костыль по слову автора 2026-10-06, уходит вместе со строками на
   нём (231 перевод из принятых станет отказом без него); шаг после OWN-TYPE-CODE-BANDS
   ([defects](defects.md#receiver-atom-crutch), план [K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames)).
+- OWN-TYPE-CODE-BANDS исправлен: код указателя и Array указателей без полос, у ссылки графа свой формальный код 42,
+  декодеры по интервалу и ветка совместимости нулевого литерала удалены (ноль — ячейка указателя типа значения
+  места); в обходе перепривязка формала Structure получила допуск; свидетели 899/950/1101 чужих типов и другой
+  порядок интернирования, нативно и с обходом; код ядра — KERNEL-POINTER-TYPE-RANGE
+  ([§103 журнала](fable-continuation-20261003.md#own-type-code-bands-fixed)). Гейты `opus_kernel_36` GREEN297,
+  `opus_l3_34`, `opus_full_36` RED39/1993: против `opus_full_35` FAIL→OK 0, OK→FAIL 0, добавлено 0; против
+  `opus_full_34` FAIL→OK 0, OK→FAIL 0, добавлено 12.
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
   под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),

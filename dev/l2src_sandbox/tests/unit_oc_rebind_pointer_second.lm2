@@ -1,0 +1,28 @@
+# OWN-TYPE-CODE-BANDS: another interning order -- `Lmx *` first (m's Structure formal v), a foreign pointer type
+# second (`@: c.int px 0`).  The band encoding read v's graph code as the second foreign type's own code and made v an
+# Array of pointers: `v: w` was refused "a reference where a number is asked".  v is the same reference whatever was
+# interned second: it is rebound after w's admission to Model, and a path through it reads w's 7 (as
+# unit_ref_formal_rebind_same, without the pointer).  Entry 7.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: m (@: Model v) int
+    @: c.int px 0
+    w: merge: Model
+    size_t: got 0U
+    int: out 0
+    w\value: 7U
+    v: w
+    got: v\value
+    if: got = 7U && px = 0
+        out: 7
+    return: out
+end: m
+
+fn: check () int
+    mo: merge: Model
+return: m(mo)
+
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

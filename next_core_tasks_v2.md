@@ -894,6 +894,14 @@ Current bounded implementation, with no DONE claim:
     ([CALLABLE-FIRST-TAIL](steps/defects.md#callable-first-tail)). Gates: kernel `opus_kernel_34`
     GREEN297 (114 selftests), L3 `opus_l3_32`, full `opus_full_34` RED39/1981 -- against
     `opus_full_32` FAIL→OK 0, OK→FAIL 0, added 10.
+    Kind and type are kept apart in the own-storage code
+    ([section 103](steps/fable-continuation-20261003.md#own-type-code-bands-fixed);
+    [OWN-TYPE-CODE-BANDS](steps/defects.md#own-type-code-bands) fixed): no bands, the graph
+    reference's own formal code 42, the null literal the pointer cell of the place's value
+    type. Next in this item, after [K03-EXPLICIT-RECEIVER-FRAMES](#explicit-receiver-frames):
+    the renewed producer/read census. Gates: kernel `opus_kernel_36`
+    GREEN297 (114 selftests), L3 `opus_l3_34`, full `opus_full_36` RED39/1993 -- against
+    `opus_full_34` FAIL→OK 0, OK→FAIL 0, added 12.
   - [ ] the names of methods, formals and declared throws, 62 bytes: a
     method used as a value gets a public C wrapper under its source name,
     and `l1trans` keeps function names in 64-byte slots (`l1_fn_ensure`) --

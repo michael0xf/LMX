@@ -1357,7 +1357,11 @@ prototype:
     fn: l2_param_ty (int: mi; const: @(LmP0Text t)) int
     fn: l2_is_asgn (const: @(LmP0Node stmt); int: mi) int
     fn: l2_colon_model (const: @(LmP0Text name)) int
-    fn: l2_colon_graph_ty () int
+    fn: l2_graph_code () int
+    fn: l2_graph_ft () int
+    fn: l2_graph_own () int
+    fn: l2_graph_dt () int
+    fn: l2_own_is_graph (int: oty) int
     fn: l2_colon_is_graph_ty (int: ty) int
     fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop); int: mi; const: @(LmP0Text name)) int
     fn: l2_colon_bound_ty (int: mi; const: @(LmP0Text name); @: int out_ty) int
@@ -1483,6 +1487,12 @@ prototype:
     fn: l2_dyn_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) int
     fn: l2_own_ty_of_param (int: ft) int
+    fn: l2_oc_pointer (int: ft) int
+    fn: l2_oc_parray (int: ft) int
+    fn: l2_oc_is_pointer (int: oty) int
+    fn: l2_oc_is_parray (int: oty) int
+    fn: l2_oc_is_ref (int: oty) int
+    fn: l2_oc_ft (int: oty) int
     fn: l2_ft_of_own (int: oty) int
     fn: l2_value_ft_of_own (int: oty) int
     fn: l2_dt_of_own (int: oty) int
@@ -6991,8 +7001,8 @@ fn: l2_ret_type_word (const: @(LmP0Text word); int: depth; int: is_const; @: int
         \out_ty: 8
         return: 0
     if: depth = 0 && l2_ns_find(word) >= 0
-        \out_ty: l2_colon_graph_ty()
-        if: \out_ty >= 100
+        \out_ty: l2_graph_ft()
+        if: \out_ty != 0
             return: 0
         return: 1
     if: depth = 0
@@ -7839,8 +7849,8 @@ fn: l2_contract_formal (@: L2TypeContract contract; @: int out_ty) int
         return: l2_resolve_type_atom(word, depth, 0, out_ty)
     ---
     if: l2_type_model(word) >= 0 || l2_find_method(word) >= 0
-        \out_ty: l2_colon_graph_ty()
-        if: \out_ty < 100
+        \out_ty: l2_graph_ft()
+        if: \out_ty = 0
             return: 1
         return: 0
     if: l2_ret_type_word(word, 0, qualified, out_ty) != 0
@@ -7862,7 +7872,7 @@ fn: l2_contract_own (@: L2TypeContract contract) int
         if: contract\operand\kind = 2
             if: l2_contract_formal(contract\operand, @ ty) != 0
                 return: 0
-            return: 2000 + ty
+            return: l2_oc_parray(ty)
         ---
         if: contract\operand\kind != 0
             return: 0
@@ -8252,25 +8262,44 @@ fn: l2_colon_model (const: @(LmP0Text name)) int
         return: 1
 return: 0
 
-# The dynamic input used by a constructor is an ordinary graph reference.
-# Intern the real source type rather than assigning a private/magic ABI code.
-fn: l2_colon_graph_ty () int
-    int: ft
-    ft: l2_foreign_intern(l2_lmx_text(), 1, 0)
-    if: ft < 100
+# THE GRAPH REFERENCE -- a Structure or a callable held by reference -- in each code space (OWN-TYPE-CODE-BANDS).
+# Its formal code is one named code of the formal space, as the Message reference's (l2_msg_ref_ty) is: formal tables
+# -- formals, results, contracts, addresses -- hold it and nothing of another space.  Its own storage is the pointer
+# own of the real source type `Lmx *`, and its dynamic-input code is that own's.  Each interns `Lmx *` where it is
+# asked, as the one code before them did, so the foreign types keep their order; 0 (-1 for the own) when it cannot.
+# l2_graph_code is the formal code alone: a reader compares with it and interns nothing.
+fn: l2_graph_code () int
+return: 42
+
+fn: l2_graph_ft () int
+    if: l2_foreign_intern(l2_lmx_text(), 1, 0) < 100
         return: 0
-return: l2_dt_of_own(l2_own_ty_of_param(ft))
+return: l2_graph_code()
+
+fn: l2_graph_own () int
+    int: ft l2_foreign_intern(l2_lmx_text(), 1, 0)
+    if: ft < 100
+        return: -1
+return: l2_oc_pointer(ft)
+
+fn: l2_graph_dt () int
+    int: own l2_graph_own()
+    if: own < 0
+        return: 0
+return: l2_dt_of_own(own)
+
+# Whether own code oty holds a graph reference: a pointer whose formal type is one (an own code is never read as a
+# formal one).
+fn: l2_own_is_graph (int: oty) int
+    if: l2_oc_is_pointer(oty) = 0
+        return: 0
+return: l2_colon_is_graph_ty(l2_oc_ft(oty))
 
 fn: l2_colon_is_graph_ty (int: ty) int
     int: fi
-    int: oty
-    # Declared graph formals store dt_of_own(1000+foreign); recover foreign @: Lmx.
-    if: ty > 1
-        oty: l2_own_of_dt(ty)
-        if: oty >= 1000 && oty < 2000
-            ty: l2_ft_of_own(oty)
-        ---
-    ---
+    # A formal code: the graph code itself, or `Lmx *` written as a foreign type.
+    if: ty = l2_graph_code()
+        return: 1
     if: ty < 100
         return: 0
     fi: ty - 100
@@ -8490,20 +8519,11 @@ return: code
 
 # The type method m's call gives as a value, in the codes an assignment's check compares.
 fn: l2_colon_ret_ty (int: m; @: int out_ty) int
-    int: sty
-    \out_ty: l2_m_ret[m]
-    # A named-Structure return is stored dt_of_own(1000+foreign)
-    # (l2_colon_graph_ty), the same recovery l2_colon_bound_ty's own-field
-    # branch already applies (l2_ft_of_own(l2_own_ty[i])) -- a call result's
-    # type must match it, or `target: b\value` from `Model: fresh` two
-    # lines above stays the only working consumer of a Structure result
+    # A named-Structure return holds the graph code; its value is spelled `Lmx *`, as l2_colon_bound_ty's own-field
+    # branch gives it (l2_ft_of_own(l2_own_ty[i])) -- a call result's type must match it, or `target: b\value` from
+    # `Model: fresh` two lines above stays the only working consumer of a Structure result
     # (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2).
-    if: \out_ty > 1
-        sty: l2_own_of_dt(\out_ty)
-        if: sty >= 1000 && sty < 2000
-            \out_ty: l2_ft_of_own(sty)
-        ---
-    \out_ty: l2_result_value_ty(\out_ty)
+    \out_ty: l2_result_value_ty(l2_formal_raw(l2_m_ret[m]))
 return: 0
 
 # THE WHOLE VALUE OF AN ASSIGNMENT, TYPED (plan §7b "Локальные объявления и явная инициализация": the author's computed
@@ -11589,7 +11609,7 @@ fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) 
     ni: l2_local_ns_entry(stmt, mi, path)
     if: ni < 0
         return: 1
-    cj: l2_own_add(mi, h, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+    cj: l2_own_add(mi, h, l2_graph_own(), path, stmt)
     if: cj < 0
         return: 1
     if: l2_own_off(mi, cj) = (cast: (size_t) -1)
@@ -11971,8 +11991,10 @@ return: 0
 fn: l2_own_ty_of_param (int: ft) int
     if: ft = 34
         return: 3
+    if: ft = l2_graph_code()
+        return: l2_graph_own()
     if: l2_pointer_depth(ft) > 0
-        return: 1000 + ft
+        return: l2_oc_pointer(ft)
     if: ft = 0 || ft = 1 || ft = 2 || ft = 36
         return: ft
 return: -1
@@ -11981,9 +12003,33 @@ return: -1
 fn: l2_ft_of_own (int: oty) int
     if: oty = 3
         return: 34
-    if: oty >= 1000 && oty < 2000
-        return: oty - 1000
+    if: l2_oc_is_pointer(oty) != 0
+        return: l2_oc_ft(oty)
 return: oty
+
+# OWN-TYPE-CODE-BANDS: an own field's code names its kind and its type at once.  A primitive and a primitive Array
+# have their own numbers, all below 1000; a pointer and an Array of pointers are made from the formal type they hold,
+# at or above it -- the kind in the low bit, the formal type in the rest, so no formal type, however many are interned,
+# makes one kind read as the other.  Only these helpers make one, test one or take the formal type back.
+fn: l2_oc_pointer (int: ft) int
+return: 1000 + 2 * ft
+
+fn: l2_oc_parray (int: ft) int
+return: 1001 + 2 * ft
+
+fn: l2_oc_is_pointer (int: oty) int
+return: (cast: (int) (oty >= 1000 && (oty - 1000) % 2 = 0))
+
+fn: l2_oc_is_parray (int: oty) int
+return: (cast: (int) (oty >= 1000 && (oty - 1000) % 2 = 1))
+
+# A pointer or an Array of pointers: a reference.
+fn: l2_oc_is_ref (int: oty) int
+return: (cast: (int) (oty >= 1000))
+
+# The formal type a pointer or an Array of pointers holds.
+fn: l2_oc_ft (int: oty) int
+return: (oty - 1000) / 2
 
 # Storage/layout codes describe the existing cell; ordinary expression typing
 # projects the value it holds. An Array contributes its descriptor reference,
@@ -12062,7 +12108,7 @@ return: ty = 0 || ty = 1 || ty = 2 || ty = 3 || ty = 36 || l2_own_is_pointer(ty)
 # declaration -- `Model: m`, `T: m`, `receiveMessage: m`, `f()`, a Structure catch parameter.  Its
 # slot holds the Structure, empty (0) until the field is bound; the builder makes no cell for it.
 fn: l2_own_is_slot (int: k) int
-    if: k < 0 || k >= l2_own_n || l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_colon_is_graph_ty(l2_dt_of_own(l2_own_ty[k])) = 0
+    if: k < 0 || k >= l2_own_n || l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_own_is_graph(l2_own_ty[k]) = 0
         return: 0
 return: l2_frame_head(l2_own_decl[k], "@") = 0
 
@@ -12087,7 +12133,7 @@ fn: l2_emit_own_cell_load (int: k; const: @(char ind); int: t; const: @(LmP0Node
     []: char nm 32
     if: l2_own_is_slot(k) = 0
         return: l2_emit_cell_load(l2_own_ty[k], ind, t, at)
-    if: c.sprintf(nm, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_own_ty[k] - 1000, 0, nm, dcl) != 0 || l2_pointer_decl_text(l2_own_ty[k] - 1000, 0, 0, txt) != 0
+    if: c.sprintf(nm, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, nm, dcl) != 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, 0, txt) != 0
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "%s%s\n%sl2_t%d: (cast: (%s) l2_xp[0])\n", ind, dcl\data, ind, t, txt\data) < 0))
 
@@ -12199,7 +12245,7 @@ fn: l2_emit_work_decl (int: k) int
         return: 1
     if: cty != 0
         return: (cast: (int) (c.fprintf(l2_out, "    %s: l2_q%d\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n", cty, k, k, load\data, k) < 0))
-    if: l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_pointer_decl_text(l2_own_ty[k] - 1000, 0, nm, dcl) != 0
+    if: l2_own_is_pointer(l2_own_ty[k]) = 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, nm, dcl) != 0
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "    %s\n    l2_q%d: %s\n    int: l2_q%d_dirty 0\n", dcl\data, k, load\data, k) < 0))
 
@@ -12213,7 +12259,7 @@ fn: l2_own_work_store (int: k; const: @(char ind); const: @(char val)) int
         return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (char) ((cast: (int) (%s)) & 255))\n%sl2_q%d_dirty: 1\n", ind, k, val, ind, k) < 0))
     if: l2_own_num_ctype(ty) != 0
         return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (%s)\n%sl2_q%d_dirty: 1\n", ind, k, val, ind, k) < 0))
-    if: l2_own_is_pointer(ty) = 0 || l2_pointer_decl_text(ty - 1000, 0, 0, txt) != 0
+    if: l2_own_is_pointer(ty) = 0 || l2_pointer_decl_text(l2_oc_ft(ty), 0, 0, txt) != 0
         return: 1
 return: (cast: (int) (c.fprintf(l2_out, "%sl2_q%d: (cast: (%s) (%s))\n%sl2_q%d_dirty: 1\n", ind, k, txt\data, val, ind, k) < 0))
 
@@ -12273,7 +12319,7 @@ fn: l2_own_cell_load (int: k; @: L2Tx dest) int
         if: c.snprintf(nm, 96U, "lmx_ulong_value_known(l2_q%d_from[0])", k) < 0
             return: 1
         return: l2_tx_set(dest, nm)
-    if: l2_own_is_pointer(ty) != 0 && l2_pointer_decl_text(ty - 1000, 0, 0, txt) != 0
+    if: l2_own_is_pointer(ty) != 0 && l2_pointer_decl_text(l2_oc_ft(ty), 0, 0, txt) != 0
         return: 1
     if: l2_own_is_slot(k) != 0
         if: c.snprintf(nm, 96U, ") l2_q%d_from[0])", k) < 0
@@ -12323,13 +12369,13 @@ fn: l2_own_addr (int: k; @: L2Tx dest) int
     if: c.snprintf(nm, 96U, ") l2_q%d_from[0])", k) < 0
         return: 1
     # A pointer field's cell is the address of its pointer.
-    if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) = 0 && l2_pointer_decl_text(ty - 1000, 1, 0, txt) = 0
+    if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) = 0 && l2_pointer_decl_text(l2_oc_ft(ty), 1, 0, txt) = 0
         return: l2_tx_join(dest, "(cast: (", txt\data, nm, 0, 0)
     # An own Structure field is a slot that holds the Structure itself (-189 c3b-3): `@mo` is that
     # reference, the slot's value -- what l2_own_load gives the slot (D-53): its working value when it has one (§7b).
     if: l2_own_is_slot(k) != 0 && l2_own_cached(l2_work_mi, k) != 0
         return: l2_own_load(k, dest)
-    if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) != 0 && l2_pointer_decl_text(ty - 1000, 0, 0, txt) = 0
+    if: l2_own_is_pointer(ty) != 0 && l2_own_is_slot(k) != 0 && l2_pointer_decl_text(l2_oc_ft(ty), 0, 0, txt) = 0
         return: l2_tx_join(dest, "(cast: (", txt\data, nm, 0, 0)
 return: 1
 
@@ -12435,7 +12481,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # A merge declares an ordinary Structure slot. Its schema is recorded
         # separately, keyed by this exact declaration row, never by spelling.
         if: l2_merge_declaration(body, stmt, mi) != 0
-            if: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), path, stmt) < 0
+            if: l2_own_add(mi, stmt\as\frame\head, l2_graph_own(), path, stmt) < 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -12465,7 +12511,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # field of the unit typed by T -- declared by `@`, so a pointer cell, not a slot (q26) -- as the walked root has no
         # machine locals.
         if: l2_root_ref_ns(mi, stmt, @ fa) >= 0
-            cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, fa, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_nsty_set(cj, l2_root_ref_ns(mi, stmt, @ fa)) != 0
@@ -12475,7 +12521,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         if: l2_local_ns_shape(stmt, mi) != 0
             if: l2_local_ns_entry(stmt, mi, path) < 0
                 return: 1
-            cj: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, stmt\as\frame\head, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_nsty_set(cj, l2_local_ns_entry(stmt, mi, path)) != 0
@@ -12499,7 +12545,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             continue
         # (`Model: name` with name bound before is Model's call, l2_colon_bound_before: it declares nothing.)
         if: l2_colon_decl_shape(stmt, @ cmodel, @ fa) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
-            cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, fa, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_nsty_set(cj, l2_ns_find(cmodel)) != 0
@@ -12508,7 +12554,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             continue
         # `T: b c`, b absent (l2_colon_bind_shape): b is declared the same way, typed T.
         if: l2_colon_bind_shape(stmt, @ cmodel, @ fa, @ bcand) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
-            cj: l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, fa, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_nsty_set(cj, l2_ns_find(cmodel)) != 0
@@ -12525,7 +12571,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # to or assigned into (unit_admit_letter_formal.lm2 and its siblings
         # depend on this -- retyping it broke them, measured directly).
         if: l2_receive_msg_shape(stmt, @ fa, @ cmodel) = 0
-            cj: l2_own_output_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_output_add(mi, fa, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_receiver_output_place(stmt, mi, @ receiver_place) != 0
@@ -12603,7 +12649,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # The store of a callable merge, `@: h f(a)`: the receiver declares h, which holds the node the call
         # returns (l2_receiver_call).
         if: l2_mad_store_stmt(stmt) != 0
-            cj: l2_own_add(mi, l2_store_name(stmt), l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, l2_store_name(stmt), l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_off(mi, cj) = (cast: (size_t) -1)
@@ -12711,7 +12757,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
         if: retained >= 0 && l2_nsf_kind[retained] = 2
             # A named constructor binds the already allocated child in its
             # owner's source slot. It neither copies nor executes that body.
-            j: l2_own_add(mi, l2_nsf_fname[retained], l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            j: l2_own_add(mi, l2_nsf_fname[retained], l2_graph_own(), path, stmt)
             if: j < 0 || l2_own_nsty_set(j, l2_nsf_ref[retained]) != 0
                 return: 1
             if: l2_own_off(mi, j) = (cast: (size_t) -1)
@@ -13441,12 +13487,12 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         # among them -- resolves to the field and never makes f a dynamic input.  The check pass's l2_own_add on the
         # same statement finds this row.
         if: l2_empty_struct_decl_shape(stmt, mi) != 0
-            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, stmt\as\frame\head, l2_graph_own(), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_colon_decl_shape(stmt, @ slnm, @ fa) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
-            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_graph_own(), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -13455,12 +13501,12 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: l2_colon_bind_shape(stmt, @ slnm, @ fa, @ bcand) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
             if: bcand != 0 && bcand\value != 0 && l2_scan_node(bcand\value, mi, seen) != 0
                 return: 1
-            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_graph_own(), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_receive_msg_shape(stmt, @ fa, 0) = 0
-            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_output_add(mi, fa, l2_own_of_dt(l2_colon_graph_ty()), l2_src, stmt), seen) != 0
+            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_output_add(mi, fa, l2_graph_own(), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue
@@ -13778,7 +13824,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
             # A graph input named as a unit Structure or an eternal branch is reached through the unit, not
             # inherited.  A unit-level MERGE RESULT is a unit field like any other (K02c): the scan made it the
             # callee's input (l2_scan_ident), and a caller without a binding of its own inherits it.
-            if: src < 0 && m != l2_e && (ty != l2_colon_graph_ty() || ((l2_ns_find(nm) < 0 || l2_ns_parent[l2_ns_find(nm)] >= 0) && l2_ebr_find(nm) < 0))
+            if: src < 0 && m != l2_e && (ty != l2_graph_dt() || ((l2_ns_find(nm) < 0 || l2_ns_parent[l2_ns_find(nm)] >= 0) && l2_ebr_find(nm) < 0))
                 before: l2_m_dyn[m]
                 if: l2_dyn_add(m, nm, ty) != 0
                     return: l2_alloc_or(path, site\source, "unsupported body")
@@ -13788,7 +13834,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
             if: src >= 0 && src < l2_m_arity[m]
                 pres: 1
                 if: l2_input_is_descriptor(m, src) != 0
-                    sdt: l2_colon_graph_ty()
+                    sdt: l2_graph_dt()
                     ---
                 else:
                     if: l2_dt_of_source(l2_own_ty_of_param(l2_input_ft(m, src)), path, site\source, @ sdt) != 0
@@ -13840,7 +13886,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
         # to a typed reference use has the same receiving-edge conversion/admission as the explicit analogue,
         # provided actual reference depth/type is correct."): a caller's `@: void` under a name its reader uses as a
         # graph reference is admitted where the input is formed, as an opaque actual to a Structure formal is.
-        if: sdt != 0 && ty != 0 && sdt != ty && (ty != l2_colon_graph_ty() || l2_ft_of_own(l2_own_of_dt(sdt)) != 16)
+        if: sdt != 0 && ty != 0 && sdt != ty && (ty != l2_graph_dt() || l2_ft_of_own(l2_own_of_dt(sdt)) != 16)
             return: l2_error(path, site\source, "incompatible entry signature")
         if: sdt != 0 && ty = 0
             if: l2_dt_set(cidx, k, sdt) != 0
@@ -13850,7 +13896,7 @@ fn: l2_dyn_site_callee (const: @(L2SourceSite site); int: cidx; int: fi; const: 
         # reference with no declaration in the callee's sight, which the callee can only hand on: the
         # declarations that reach it are then known where a reader's schema admits it, by the one the value
         # carries (l2_hidden_emit_admit).  No admission stands at this call then.
-        if: l2_input_schema(cidx, l2_m_arity[cidx] + k) != -1 || (l2_dt(cidx, k) = l2_colon_graph_ty() && l2_input_undeclared(cidx, l2_m_arity[cidx] + k) != 0)
+        if: l2_input_schema(cidx, l2_m_arity[cidx] + k) != -1 || (l2_dt(cidx, k) = l2_graph_dt() && l2_input_undeclared(cidx, l2_m_arity[cidx] + k) != 0)
             model: l2_hidden_model_source(m, cidx, k, @ src)
             if: src != -1
                 if: l2_d105_edge(l2_d105_key_method(m, src), src, cidx, l2_m_arity[cidx] + k, site\source) != 0
@@ -13924,7 +13970,7 @@ fn: l2_dyn_site_held (const: @(L2SourceSite site); int: model; const: @(char pat
             if: pi >= 0 && pi < l2_m_arity[m]
                 pres: 1
             # A name inherited along the chain at all: not a named Structure of the unit, not an eternal branch.
-            asked: (cast: (int) (ty != l2_colon_graph_ty() || ((l2_ns_find(nm) < 0 || l2_ns_parent[l2_ns_find(nm)] >= 0) && l2_ebr_find(nm) < 0)))
+            asked: (cast: (int) (ty != l2_graph_dt() || ((l2_ns_find(nm) < 0 || l2_ns_parent[l2_ns_find(nm)] >= 0) && l2_ebr_find(nm) < 0)))
             # The method's own input of the name hands it on: one of this type or not yet typed, and, where the model
             # reads a number, one of another numeric type, which the held call converts (HELD-FREE-NAME-OTHER-TYPE).
             # A new one takes no type from a model that reads a number: a value handed on keeps the type its callers'
@@ -14515,8 +14561,8 @@ fn: l2_emit_raw_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind)
 return: l2_tx_catn(dest, pd + sl, pn - sl)
 fn: l2_pointer_depth (int: ty) int
     int: fi
-    if: ty >= 1000 && ty < 2000
-        ty: ty - 1000
+    if: ty = l2_graph_code()
+        return: 1
     if: ty = 3 || ty = 9 || ty = 11 || ty = 12 || ty = 16 || ty = 25 || ty = l2_msg_ref_ty() || ty = 38
         return: 1
     if: ty = 17 || ty = 18 || ty = 19 || ty = 20 || ty = 24 || ty = 39
@@ -14549,7 +14595,7 @@ fn: l2_deref_load (int: k; const: @(char ind); @: L2Tx dest) int
         return: l2_tx_set(dest, load\data)
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.snprintf(nm, 32U, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_own_ty[k] - 1000, 0, nm, dcl) != 0
+    if: c.snprintf(nm, 32U, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_oc_ft(l2_own_ty[k]), 0, nm, dcl) != 0
         return: 1
     if: c.fprintf(l2_out, "%s%s\n%s%s: %s\n", ind, dcl\data, ind, nm, load\data) < 0
         return: 1
@@ -15412,22 +15458,20 @@ fn: l2_own_decl_ty (const: @(LmP0Node stmt)) int
 return: l2_contract_own(application\contract)
 
 fn: l2_own_is_array (int: ty) int
-    if: ty = 4 || ty = 5 || ty = 7 || ty = 8 || ty = 37 || ty >= 2000
+    if: ty = 4 || ty = 5 || ty = 7 || ty = 8 || ty = 37 || l2_oc_is_parray(ty) != 0
         return: 1
 return: 0
 
 fn: l2_own_is_pointer (int: ty) int
-    if: ty >= 1000 && ty < 2000
-        return: 1
-return: 0
+return: l2_oc_is_pointer(ty)
 
 # The L1 spelling of raw pointer type `raw` with extra_depth more address levels, into dest: the
 # type alone (name 0), or a declarator of `name` -- a const type keeps the name inside
 # `const: @(... name)`, where appending it after the closing parenthesis would be invalid L1.
 fn: l2_formal_raw (int: ty) int
-    int: own l2_own_of_dt(ty)
-    if: own >= 1000 && own < 2000
-        return: l2_ft_of_own(own)
+    # The graph code is spelled as the source type it is, `Lmx *`.
+    if: ty = l2_graph_code()
+        return: l2_oc_ft(l2_graph_own())
 return: ty
 
 # The representation of a primitive/foreign type, shared by pointer spelling
@@ -15720,16 +15764,16 @@ fn: l2_emit_raw_pointer_type (@: FILE out; int: raw; int: extra_depth) int
         return: 1
 return: (cast: (int) (fputs(txt\data, out) < 0))
 fn: l2_emit_own_pointer_type (@: FILE out; int: ty) int
-    if: ty < 1000 || ty >= 2000
+    if: l2_oc_is_pointer(ty) = 0
         return: 1
-return: l2_emit_raw_pointer_type(out, ty - 1000, 0)
+return: l2_emit_raw_pointer_type(out, l2_oc_ft(ty), 0)
 
 # Type of Array<@^n T>.data is @^(n+1) T. The extra level is the address of
 # the contiguous element backing, not a replacement void** representation.
 fn: l2_emit_own_pointer_array_data_type (@: FILE out; int: ty) int
-    if: ty < 2000
+    if: l2_oc_is_parray(ty) = 0
         return: 1
-return: l2_emit_raw_pointer_type(out, ty - 2000, 1)
+return: l2_emit_raw_pointer_type(out, l2_oc_ft(ty), 1)
 
 fn: l2_own_store_ty (int: dty) int
     if: dty = 3
@@ -17967,7 +18011,7 @@ fn: l2_src_set_arg (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
     ty: l2_rw_tyof(tok, 0, m - 1)
     l2_xfree((cast: (@: void) tok))
     l2_rw_mix_at: saved
-    if: ty = 0 - 3 || ty >= 1000
+    if: ty = 0 - 3 || l2_oc_is_ref(ty) != 0
         return: 0
     if: ty >= 0 && ty != want
         return: 0
@@ -18004,7 +18048,7 @@ fn: l2_src_deref (const: @(LmP0Node stmt); const: @(LmP0Text h); int: mi) int
     ty: l2_rw_tyof(tok, 0, m - 1)
     l2_xfree((cast: (@: void) tok))
     l2_rw_mix_at: saved
-    if: ty = 0 - 3 || ty >= 1000
+    if: ty = 0 - 3 || l2_oc_is_ref(ty) != 0
         return: 0
     if: ty >= 0 && ty != want
         return: 0
@@ -20696,8 +20740,8 @@ return: 0
 fn: l2_catch_param_own (int: ty) int
     if: ty = 0 || ty = 2 || ty = 34 || ty = 36
         return: l2_own_ty_of_param(ty)
-    if: ty = l2_colon_graph_ty()
-        return: l2_own_of_dt(ty)
+    if: ty = l2_graph_ft()
+        return: l2_graph_own()
 return: -1
 
 # `catch: Name (params)` and its handler: the name, no second catch of it in this block, the
@@ -20737,14 +20781,14 @@ fn: l2_check_catch (const: @(LmP0Node cf); const: @(LmP0Structure blk); const: @
             return: 1
         if: l2_catch_param_own(ty) < 0
             return: l2_error(path, p\value, "unsupported catch parameter type")
-        if: ty = l2_colon_graph_ty() && (p\value\kind != c.LM_P0_NODE_FRAME || l2_ns_find(p\value\as\frame\head) < 0)
+        if: ty = l2_graph_ft() && (p\value\kind != c.LM_P0_NODE_FRAME || l2_ns_find(p\value\as\frame\head) < 0)
             return: l2_error(path, p\value, "unsupported catch parameter type")
         # The handler reads its parameter by name; a visible formal, method, own or unit field of
         # the same name would be found first.
         if: l2_formal_find(mi, fa) >= 0 || l2_find_method(fa) >= 0 || l2_own_visible(mi, fa) >= 0
             return: l2_error(path, p\value, "a catch parameter hides a visible name")
         l2_need_admit: 1
-        if: ty = l2_colon_graph_ty() && l2_admit_site(mi) != 0
+        if: ty = l2_graph_ft() && l2_admit_site(mi) != 0
             return: l2_error(path, p\value, "internal: admission outside a method")
         p: l2_next_active(p\next)
     if: hb = 0
@@ -20793,7 +20837,7 @@ fn: l2_collect_catch (const: @(LmP0Node cf); int: mi; const: @(char path); int: 
         if: l2_m_uses[l2_own_off(mi, j)] = 0
             l2_m_own[mi]: l2_m_own[mi] + 1
         l2_m_uses[l2_own_off(mi, j)]: 1
-        if: ty = l2_colon_graph_ty() && l2_own_nsty_set(j, l2_ns_find(p\value\as\frame\head)) != 0
+        if: ty = l2_graph_ft() && l2_own_nsty_set(j, l2_ns_find(p\value\as\frame\head)) != 0
             l2_scope_pop()
             return: 1
         p: l2_next_active(p\next)
@@ -21064,12 +21108,12 @@ fn: l2_throw_arg_ty (@: LmP0Field a0; int: span; int: mi) int
     if: ty < 0
         return: -1
     # A declared graph formal carries the graph type itself (l2_colon_is_graph_ty).
-    if: ty = l2_colon_graph_ty()
-        return: l2_own_of_dt(ty)
+    if: ty = l2_graph_ft()
+        return: l2_graph_own()
     own: l2_own_ty_of_param(ty)
     if: own = 0 || own = 2 || own = 3 || own = 36
         return: own
-    if: own >= 1000 && l2_dt_of_own(own) = l2_colon_graph_ty()
+    if: l2_oc_is_ref(own) != 0 && own = l2_graph_own()
         return: own
 return: -1
 
@@ -23411,7 +23455,7 @@ fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t
         return: hit
     if: l2_own_is_pointer(l2_own_ty[hit]) != 0 && l2_own_is_slot(hit) = 0
         \out_kind: 10
-        \out_ent: l2_own_ty[hit] - 1000
+        \out_ent: l2_oc_ft(l2_own_ty[hit])
         return: hit
     if: l2_own_schema(hit) != -1 && l2_own_is_slot(hit) != 0
         \out_kind: 2
@@ -24388,7 +24432,7 @@ fn: l2_arr_operand (@: LmP0Field f; int: allow0; @: char pd; size_t: cap; @: siz
     # An own field holding a graph with no declared type (the letter receiveMessage gives an
     # untyped m): the path has no fields to walk.  A c.* raw root is not a graph and is left
     # to the raw-path machinery.
-    if: oi >= 0 && ni < 0 && res < 0 && l2_colon_is_graph_ty(l2_dt_of_own(l2_own_ty[oi])) != 0
+    if: oi >= 0 && ni < 0 && res < 0 && l2_own_is_graph(l2_own_ty[oi]) != 0
         return: 3
     if: (ni < 0 && res < 0) || root != 0 - 1
         return: 1
@@ -24690,8 +24734,8 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
         if: first != 0 && l2_frame_head(first\value, "fn") != 0
             if: l2_ident(node\as\frame\head) = 0
                 return: l2_error(path, node, "incompatible entry signature")
-            \out_ty: l2_colon_graph_ty()
-            if: \out_ty < 100
+            \out_ty: l2_graph_ft()
+            if: \out_ty = 0
                 return: l2_error(path, node, "out of memory")
             \out_name: node\as\frame\head
             l2_last_cf_anon: first\value
@@ -24711,7 +24755,7 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     # physical ABI. The executable reference receiver keeps its own storage
     # projection; only a nonexecuting signature uses the graph-input code.
     if: l2_declaration_model(node, 1) >= 0
-        \out_ty: l2_colon_graph_ty()
+        \out_ty: l2_graph_ft()
     \out_name: application\name
     word: l2_contract_leaf(application\contract, @ depth, @ qualified)
     if: depth = 0 && qualified = 0 && word != 0
@@ -27281,7 +27325,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             l2_own_excl: -1
             if: k != 0
                 return: 1
-            cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, cname, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_off(mi, cj) = (cast: (size_t) -1)
@@ -27352,7 +27396,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
                 return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
             if: nmk >= 0
                 return: l2_error(path, stmt, "assignment value has incompatible type")
-            cj: l2_own_output_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_output_add(mi, cname, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_receiver_output_place(stmt, mi, @ receiver_place) != 0
@@ -27382,7 +27426,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # declaration -- CORE.md 3.1/4, L2 spec 10. At unit level it is an own
         # field of the entry E, registered the same way (S2).
         if: l2_frame_head(stmt, "if") = 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0 && l2_colon_bound_before(body, stmt, mi, cname) = 0
-            cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, cname, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_off(mi, cj) = (cast: (size_t) -1)
@@ -27402,7 +27446,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_frame_head(stmt, "if") = 0 && l2_colon_bind_shape(stmt, @ cmodel, @ cname, @ bcand) = 0 && l2_colon_bound_before(body, stmt, mi, cname) = 0
             if: l2_check_bind(stmt, cmodel, cname, bcand, mi, path) != 0
                 return: 1
-            cj: l2_own_add(mi, cname, l2_own_of_dt(l2_colon_graph_ty()), path, stmt)
+            cj: l2_own_add(mi, cname, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
             if: l2_own_off(mi, cj) = (cast: (size_t) -1)
@@ -27932,7 +27976,7 @@ fn: l2_hidden_from (int: mi; int: callee; int: k; int: callee_self; const: @(cha
     # A future declaration in the callee body is not a visible source, and
     # the caller's position does not replace the callee's lexical context.
     ni: l2_ns_find(nm)
-    if: ty = l2_colon_graph_ty() && ni >= 0 && l2_ns_parent[ni] < 0 && callee_self >= 0
+    if: ty = l2_graph_dt() && ni >= 0 && l2_ns_parent[ni] < 0 && callee_self >= 0
         if: c.snprintf(ref, 64U, "lmx_arena_ref_struct(l2_c%d\\parent, %uU)", callee_self, (cast: (unsigned) (l2_ns_unit_slot(ni)))) < 0
             return: 1
         return: l2_tx_set(dest, ref)
@@ -28231,7 +28275,7 @@ fn: l2_address_name (int: mi; const: @(LmP0Text name); @: L2Address out) int
                         out\index: i
                         out\descriptor: 1
                         out\model: i
-                        out\type: l2_colon_graph_ty()
+                        out\type: l2_graph_ft()
     ---
     if: out\kind = 0
         return: 1
@@ -28597,8 +28641,8 @@ fn: l2_indexed_type (@: L2IndexedOperand out) int
     out\type: l2_ft_of_own(l2_rw_elem_ty(out\own))
     if: ty = 8
         out\type: 34
-    if: ty >= 2000
-        out\type: ty - 2000
+    if: l2_oc_is_parray(ty) != 0
+        out\type: l2_oc_ft(ty)
     if: out\type < 0
         return: 2
 return: 0
@@ -28976,7 +29020,7 @@ fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; 
     ---
     if: l2_own_is_pointer(l2_own_ty[oi]) != 0
         if: l2_m_uses[l2_own_off(mi, oi)] != 0
-            if: l2_pointer_decl_text(l2_own_ty[oi] - 1000, 0, 0, l2_szt) != 0
+            if: l2_pointer_decl_text(l2_oc_ft(l2_own_ty[oi]), 0, 0, l2_szt) != 0
                 return: 1
             if: l2_tx_join(dest, "c.sizeof(", l2_szt\data, ")", 0, 0) != 0
                 return: l2_alloc_or(l2_src, node, "out of memory")
@@ -30055,7 +30099,7 @@ return: (cast: (int) (r >= 0 && l2_anc_ns[r] = -2))
 fn: l2_free_path_refused (int: mi; int: j; const: @(char path); const: @(LmP0Node at)) int
     if: mi < 0 || mi >= l2_m_n || mi = l2_e || j < l2_m_arity[mi] || l2_input_undeclared(mi, j) = 0
         return: 0
-    if: l2_dt(mi, j - l2_m_arity[mi]) != l2_colon_graph_ty() || l2_input_schema(mi, j) != -1
+    if: l2_dt(mi, j - l2_m_arity[mi]) != l2_graph_dt() || l2_input_schema(mi, j) != -1
         return: 0
     if: l2_anchor_differ(mi, l2_input_name(mi, j)) != 0
         return: l2_error(path, at, "the declarations reaching a free name give a field the method uses different types; reading it by conversion is not built yet")
@@ -30242,7 +30286,7 @@ fn: l2_anchor_close () int
         k: 0
         while: status = 0 && m != l2_e && k < l2_m_dyn[m]
             nm: l2_dn(m, k)
-            if: nm = 0 || l2_dt(m, k) != l2_colon_graph_ty() || l2_input_undeclared(m, l2_m_arity[m] + k) = 0 || l2_m_node[m] = 0 || l2_m_node[m]\as = 0
+            if: nm = 0 || l2_dt(m, k) != l2_graph_dt() || l2_input_undeclared(m, l2_m_arity[m] + k) = 0 || l2_m_node[m] = 0 || l2_m_node[m]\as = 0
                 k: k + 1
                 continue
             l2_uses_reset()
@@ -31088,20 +31132,10 @@ return: 0
 # The declarations a call's result lands in: l2_t<t>, and for a throwing callee its status and record.
 fn: l2_emit_call_result (int: idx; int: t; const: @(char ind)) int
     int: prty
-    int: prsty
-    # A named-Structure return is stored dt_of_own(1000+foreign)
-    # (l2_colon_graph_ty); recover the raw foreign code the same way
-    # l2_emit_formal/l2_emit_sig already do, or a discarded or captured
-    # call to a Structure-returning method silently fails here
-    # (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2): l2_emit_foreign_temp
-    # would see the unconverted dt-space number as an out-of-range foreign
-    # index and return 1 with no l2_error call.
-    prty: l2_m_ret[idx]
-    if: prty > 1
-        prsty: l2_own_of_dt(prty)
-        if: prsty >= 1000 && prsty < 2000
-            prty: l2_ft_of_own(prsty)
-        ---
+    # A named-Structure return holds the graph code, spelled `Lmx *` (l2_formal_raw), as l2_emit_formal/l2_emit_sig
+    # spell it -- a discarded or captured call to a Structure-returning method must not reach l2_emit_foreign_temp
+    # with a code of another space (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2).
+    prty: l2_formal_raw(l2_m_ret[idx])
     if: prty = 1 && c.fprintf(l2_out, "%schar: l2_t%d\n", ind, t) < 0
         return: 1
     if: prty = 2 && c.fprintf(l2_out, "%ssize_t: l2_t%d\n", ind, t) < 0
@@ -31527,23 +31561,23 @@ fn: l2_emit_array_ptr (int: oi; const: @(char ind); @: L2Tx dest) int
             c.fprintf(l1_stderr(), "l2trans detail: imported array type spelling unavailable oi=%d\n", oi)
             return: 1
         ---
-    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
+    if: l2_own_ty[oi] != 8 && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s@: %s l2_a%d_data\n", ind, element, t) < 0
         return: 1
     if: l2_own_ty[oi] = 8
         if: c.fprintf(l2_out, "%s@: ", ind) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
         ---
-    if: l2_own_ty[oi] >= 2000
+    if: l2_oc_is_parray(l2_own_ty[oi]) != 0
         if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, " l2_a%d_data\n", t) < 0
             return: 1
     ---
-    if: l2_own_ty[oi] != 8 && l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor\data) < 0
+    if: l2_own_ty[oi] != 8 && l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: %s) %s\\data)\n", ind, t, element, descriptor\data) < 0
         return: 1
     if: l2_own_ty[oi] = 8
         if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (@: ", ind, t) < 0 || l2_write_text(l2_out, type_field\value\as\atom) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
             return: 1
         ---
-    if: l2_own_ty[oi] >= 2000
+    if: l2_oc_is_parray(l2_own_ty[oi]) != 0
         if: c.fprintf(l2_out, "%sl2_a%d_data: (cast: (", ind, t) < 0 || l2_emit_own_pointer_array_data_type(l2_out, l2_own_ty[oi]) != 0 || c.fprintf(l2_out, ") %s\\data)\n", descriptor\data) < 0
             return: 1
         ---
@@ -31609,10 +31643,10 @@ fn: l2_emit_array_load_at (int: oi; const: @(char index); const: @(char ind); @:
         element: "unsigned"
     t: l2_tn
     l2_tn: l2_tn + 1
-    if: l2_own_ty[oi] < 2000 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
+    if: l2_oc_is_parray(l2_own_ty[oi]) = 0 && c.fprintf(l2_out, "%s%s: l2_t%d\n", ind, element, t) < 0
         return: 1
-    if: l2_own_ty[oi] >= 2000
-        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_own_ty[oi] - 1000) != 0 || c.fprintf(l2_out, " l2_t%d\n", t) < 0
+    if: l2_oc_is_parray(l2_own_ty[oi]) != 0
+        if: fputs(ind, l2_out) < 0 || l2_emit_own_pointer_type(l2_out, l2_oc_pointer(l2_oc_ft(l2_own_ty[oi]))) != 0 || c.fprintf(l2_out, " l2_t%d\n", t) < 0
             return: 1
     ---
     if: c.fprintf(l2_out, "%sl2_t%d: %s[%s]\n", ind, t, ptr\data, index) < 0
@@ -32243,38 +32277,18 @@ fn: l2_emit_formal (int: ft; int: mi; int: idx; int: arg) int
         return: 1
     if: sig != 0 && arg = 1 && read = 0 && c.fprintf(l2_out, ", lmx_pointer_value_known(refs[%d])", idx) < 0
         return: 1
-    # Graph / foreign pointer formals may be stored as dt_of_own(1000+foreign).
-    if: ft > 1
-        oty: l2_own_of_dt(ft)
-        if: oty >= 1000 && oty < 2000
-            ft: l2_ft_of_own(oty)
-        ---
-    ---
+    # A graph formal holds the graph code, spelled `Lmx *`.
+    ft: l2_formal_raw(ft)
     if: ft >= 100 && l2_emit_foreign_formal(l2_out, ft, mi, idx, arg) != 0
         return: 1
 return: 0
 
-# The return type of method mi as its signature spells it.  A named-Structure return type is
-# stored dt_of_own(1000+foreign) like any other declared graph type (l2_colon_graph_ty), not the
-# raw >=100 foreign code l2_emit_foreign_return expects -- l2_emit_formal already runs a formal's
-# own type through this exact recovery (own_of_dt then ft_of_own, matching l2_colon_is_graph_ty's
-# own comment: "Declared graph formals store dt_of_own(1000+foreign); recover foreign @: Lmx"),
-# but the return-type dispatch of l2_emit_sig read l2_m_ret[mi] raw. Measured
-# (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2, Opus's finding): `fn: same (Model: x) Model /
-# return: x` silently failed translation -- l2_emit_foreign_return(l2_out, 1101) computed foreign
-# index 1001 against a 1-entry table and returned 1 with no l2_error call. A no-op for every
-# primitive return code (only a declared graph type round-trips through the 1000..1999 own-type
-# space).  The signature and the method's trampoline both read it here.
+# The return type of method mi as its signature spells it: a named-Structure return holds the graph code, spelled
+# as the raw foreign `Lmx *` l2_emit_foreign_return expects (l2_formal_raw), as l2_emit_formal spells a formal.  Read
+# raw, `fn: same (Model: x) Model / return: x` once failed translation with no located diagnostic
+# (FABLE-SONNET-DECL-PREPASS-20260923-137 part 2).  The signature and the method's trampoline both read it here.
 fn: l2_sig_ret (int: mi) int
-    int: ret_ty l2_m_ret[mi]
-    int: roty
-    if: ret_ty > 1
-        roty: l2_own_of_dt(ret_ty)
-        if: roty >= 1000 && roty < 2000
-            ret_ty: l2_ft_of_own(roty)
-        ---
-    ---
-return: ret_ty
+return: l2_formal_raw(l2_m_ret[mi])
 
 fn: l2_emit_sig (int: mi) int
     int: j 0
@@ -33038,7 +33052,7 @@ fn: l2_rw_tlit (const: @(LmP0Node node); int: parent; int: ty; int: neg; size_t:
     int: v 0
     # A source null literal in pointer context is a typed reference before EQ;
     # a numeric value that happens to be zero is never reclassified at runtime.
-    if: ty >= 1000
+    if: l2_oc_is_ref(ty) != 0
         if: mag != 0U
             return: l2_rw_refuse(node, "a reference compared with a number other than 0")
         return: l2_rw_reference_value(0, 0, ty, parent, out)
@@ -33935,7 +33949,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
     # pointer, the same 1000+pointee a formal of that type has. Structures share one address
     # range; this is the type, not a range.
     if: kind = 10
-        path[3]: 1000 + ent
+        path[3]: l2_oc_pointer(ent)
     ---
 return: 0
 
@@ -36722,7 +36736,7 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out) 
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out, \out, ni) < 0
         return: 1
-    if: l2_rw_contract(\out, 2, l2_own_of_dt(l2_colon_graph_ty()), 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, source_ty, 0) != 0 || l2_rw_witness(inputs, 1, 0, 1) != 0 || l2_rw_primitive_contract(\out, contract) != 0
+    if: l2_rw_contract(\out, 2, l2_graph_own(), 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, source_ty, 0) != 0 || l2_rw_witness(inputs, 1, 0, 1) != 0 || l2_rw_primitive_contract(\out, contract) != 0
         return: 1
 return: l2_rw_catch_fixed(\out, 5, 2, "implements", @ nc)
 
@@ -36791,7 +36805,9 @@ fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @: 
             n: 0
     ---
     if: n = 0
-        if: l2_ptr_cell_type(ty - 1000, cell_type) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
+        # The null literal is a pointer cell of the place's value type (l2_value_ft_of_own): a pointer's held formal
+        # type, an Array's descriptor reference.
+        if: l2_ptr_cell_type(l2_value_ft_of_own(ty), cell_type) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
             return: 1
         if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, lmx_pointer_new_owned(%s, l2_program_arena)) != 0\n            return: 1\n", \out, cell_type) < 0
             return: 1
@@ -38031,7 +38047,7 @@ return: 0
 fn: l2_rw_empty_arg (int: ni; int: parent; @: int out) int
     int: adm
     int: fr
-    if: l2_rw_admit(parent, ni, 0, l2_own_of_dt(l2_colon_graph_ty()), @ adm) != 0
+    if: l2_rw_admit(parent, ni, 0, l2_graph_own(), @ adm) != 0
         return: 1
     if: l2_rw_frame(adm, "LMX_WALK_OP_EMPTY", 1, @ fr) != 0
         return: 1
@@ -38470,7 +38486,7 @@ fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: in
     if: l2_cap_arg_ns(idx, l2_m_arity[idx] + k) >= 0 && l2_mad_host_of(idx) = l2_rw_mi
         return: l2_rw_mad_host_struct(parent, l2_rw_mi, nm, out)
     # A number, or a graph reference -- a Structure, a held callable -- passed by reference as a Structure formal is.
-    gr: (cast: (int) (l2_dt(idx, k) = l2_colon_graph_ty()))
+    gr: (cast: (int) (l2_dt(idx, k) = l2_graph_dt()))
     if: l2_rw_num_ty(oty) = 0 && l2_own_is_pointer(oty) = 0 && gr = 0
         return: l2_rw_refuse(node, "a call with an input that is not a number")
     pi: l2_param_find(l2_rw_mi, nm)
@@ -38510,7 +38526,7 @@ fn: l2_rw_lex_operand (const: @(LmP0Node node); int: idx; int: k; int: parent; @
     if: idx < 0 || k < 0 || k >= l2_m_dyn[idx]
         return: 1
     nm: l2_dn(idx, k)
-    gr: (cast: (int) (l2_dt(idx, k) = l2_colon_graph_ty()))
+    gr: (cast: (int) (l2_dt(idx, k) = l2_graph_dt()))
     oi: l2_own_lexical(idx, nm)
     if: oi < 0
         if: nm = 0
@@ -38564,7 +38580,7 @@ return: 0
 fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     int: candidate
     int: status l2_actual_ns(l2_rw_mi, a, span, l2_src, node, @ candidate)
-    int: ty l2_own_of_dt(l2_colon_graph_ty())
+    int: ty l2_graph_own()
     if: status = 1
         return: 1
     if: candidate = -1 && span = 1 && a != 0 && a\value != 0 && a\value\kind = c.LM_P0_NODE_ATOM && a\value\as != 0
@@ -38743,12 +38759,12 @@ return: l2_rw_frame(parent, "LMX_WALK_OP_POS", 2, out)
 fn: l2_rw_prefix_operand_ty (const: @(LmP0Node at); int: opty; int: ty; @: int out_ty) int
     if: opty = 0 - 3
         return: l2_rw_refuse(at, "mixed numeric types (a conversion)")
-    if: opty >= 1000
+    if: l2_oc_is_ref(opty) != 0
         return: l2_rw_refuse(at, "arithmetic on a reference")
     if: opty < 0
         if: ty = 1
             return: l2_rw_refuse(at, "mixed numeric types (a conversion)")
-        if: ty >= 1000
+        if: l2_oc_is_ref(ty) != 0
             return: l2_rw_refuse(at, "arithmetic on a reference")
         opty: ty
     ---
@@ -38912,7 +38928,7 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_elem(parent, oi, pmi, 0U, out)
     # A reference where a reference is asked (`m = 0`, -179): the field's pointer cell, as AT
     # gives it; the walker's EQ compares the address it holds.
-    if: ty >= 1000
+    if: l2_oc_is_ref(ty) != 0
         oi: l2_rw_find(t)
         if: l2_rw_seen(oi) != 0 && (l2_rw_is_hosted(oi) != 0 || (l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0)) && l2_own_is_pointer(l2_own_ty[oi]) != 0
             return: l2_rw_own(parent, oi, out)
@@ -38993,7 +39009,7 @@ fn: l2_rw_sc_ty (@: L2ValueSpan tok; int: lo; int: hi) int
         return: 0
     if: ty = 0 - 2
         return: 3
-    if: ty >= 1000
+    if: l2_oc_is_ref(ty) != 0
         return: 0 - 9
 return: ty
 
@@ -39237,14 +39253,14 @@ fn: l2_rw_bin (@: L2ValueSpan tok; int: lo; int: hi; int: ty; int: parent; @: in
         if: ot = 0 - 2
             ot: 3
         # References are equal or not (-179): the walker's EQ over pointer cells has no order.
-        if: ot >= 1000 && bestp = 4
+        if: l2_oc_is_ref(ot) != 0 && bestp = 4
             return: l2_rw_refuse(l2_span_node(tok, best), "a reference compared by order")
     ---
     if: bestp != 3 || l2_own_is_pointer(left_ty) = 0 || l2_own_is_pointer(right_ty) = 0
         left_ty: ot
         right_ty: ot
     # `+` or `-` whose result is a reference is C address arithmetic.
-    if: bestp = 5 && ty >= 1000
+    if: bestp = 5 && l2_oc_is_ref(ty) != 0
         return: l2_rw_machine_offset(tok, lo, best, hi, parent, out)
     op: l2_span_node(tok, best)\as\atom
     if: bestp = 1 || bestp = 2
@@ -39254,7 +39270,7 @@ fn: l2_rw_bin (@: L2ValueSpan tok; int: lo; int: hi; int: ty; int: parent; @: in
     # retains both operands even if executing this expression would fail; a
     # literal divisor and a computed divisor have the same runtime contract.
     if: bestp = 6
-        if: ty >= 1000
+        if: l2_oc_is_ref(ty) != 0
             return: l2_rw_refuse(l2_span_node(tok, best), "arithmetic on a reference")
         if: l2_text_eq(op, "*")
             code: "LMX_WALK_OP_MUL"
@@ -39338,7 +39354,7 @@ fn: l2_rw_texpr (@: LmP0Field field; int: n; int: want; int: parent; @: int out)
     if: ty = 0 - 3
         l2_xfree((cast: (@: void) tok))
         return: l2_rw_refuse(l2_rw_mix_at, "mixed numeric types (a conversion)")
-    if: ty >= 1000 && want >= 0 && l2_own_is_pointer(want) = 0
+    if: l2_oc_is_ref(ty) != 0 && want >= 0 && l2_own_is_pointer(want) = 0
         l2_xfree((cast: (@: void) tok))
         return: l2_rw_refuse(at, "a reference where a number is asked")
     if: want >= 0
@@ -39571,8 +39587,8 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
         refty: l2_rw_fields_ty(f, refn)
         l2_rw_mi: save_mi
         l2_cur_mi: save_cur
-        if: refty != 1000 + l2_msg_ref_ty()
-            if: refty < 1000
+        if: refty != l2_oc_pointer(l2_msg_ref_ty())
+            if: l2_oc_is_ref(refty) = 0
                 return: l2_error(path, f\value, "a Ref that is not a reference")
             return: l2_error(path, f\value, "a plain Message does not implement Thread")
         ---
@@ -40243,7 +40259,7 @@ fn: l2_rw_machine_actual (@: LmP0Field first; int: span; int: parent; @: int out
         if: l2_rw_foreign_path(text) != 0
             return: l2_rw_machine_word(text, parent, out)
         if: l2_bare_structure(text, l2_rw_mi) != 0
-            return: l2_rw_reference_value(first, span, l2_own_of_dt(l2_colon_graph_ty()), parent, out)
+            return: l2_rw_reference_value(first, span, l2_graph_own(), parent, out)
         ---
     ---
 return: l2_rw_texpr(first, span, -1, parent, out)
@@ -42329,7 +42345,7 @@ fn: l2_cap_dyn_add (int: mi; const: @(LmP0Text t); int: ty; int: whole) int
     int: dt
     dt: l2_dt_of_own(ty)
     if: dt = 0 && whole != 0
-        dt: l2_colon_graph_ty()
+        dt: l2_graph_dt()
     if: dt = 0
         return: l2_error(l2_src, l2_m_node[mi], "a capture whose type has no value cell")
 return: l2_dyn_add(mi, t, dt)
@@ -45661,16 +45677,11 @@ fn: l2_emit_public_sig (int: mi) int
         return: 1
     while: j < l2_m_arity[mi]
         ty: l2_ft(mi, j)
-        # D-101: a declared graph formal is stored dt_of_own(1000+foreign), recovered as
-        # l2_emit_formal recovers it; read raw, l2_emit_foreign_named got an index past its table
+        # D-101: a declared graph formal holds the graph code, spelled as l2_emit_formal spells it
+        # (l2_formal_raw); read raw, l2_emit_foreign_named got an index past its table
         # and the translation failed with no located diagnostic.  The result goes through
         # l2_sig_ret for the same reason (-137 part 2).
-        if: ty > 1
-            oty: l2_own_of_dt(ty)
-            if: oty >= 1000 && oty < 2000
-                ty: l2_ft_of_own(oty)
-            ---
-        ---
+        ty: l2_formal_raw(ty)
         if: j != 0
             sep: "; "
         if: ty = 0 && c.fprintf(l2_out, "%sint: ", sep) < 0
@@ -45802,7 +45813,7 @@ return: 0
 fn: l2_has_pointer_array () int
     int: i 0
     while: i < l2_own_n
-        if: l2_own_ty[i] >= 2000
+        if: l2_oc_is_parray(l2_own_ty[i]) != 0
             return: 1
         i: i + 1
 return: 0
@@ -47123,7 +47134,7 @@ fn: l2_merge_scan (const: @(LmP0Structure body); int: mi) int
                 l2_merge_max: n
             own: l2_own_find_decl(mi, stmt\as\frame\head, stmt)
             if: own < 0
-                own: l2_own_add(mi, stmt\as\frame\head, l2_own_of_dt(l2_colon_graph_ty()), l2_method_src(mi, l2_src), stmt)
+                own: l2_own_add(mi, stmt\as\frame\head, l2_graph_own(), l2_method_src(mi, l2_src), stmt)
             if: own < 0
                 return: 1
             res: l2_mres_of_own(own)
@@ -48552,7 +48563,7 @@ fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char s
         return: 1
     if: ty = 36 && c.fprintf(l2_out, "%s%s[0]: lmx_ulong_new_owned(l2_program_arena)\n", ind, slot) < 0
         return: 1
-    if: l2_own_is_pointer(ty) != 0 && (l2_ptr_cell_type(ty - 1000, pty) != 0 || c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_owned(%s, l2_program_arena)\n", ind, slot, pty) < 0)
+    if: l2_own_is_pointer(ty) != 0 && (l2_ptr_cell_type(l2_oc_ft(ty), pty) != 0 || c.fprintf(l2_out, "%s%s[0]: lmx_pointer_new_owned(%s, l2_program_arena)\n", ind, slot, pty) < 0)
         return: 1
     if: ty = 4 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, %zuU, l2_program_arena)\n", ind, slot, n) < 0
         return: 1
@@ -48564,7 +48575,7 @@ fn: l2_emit_cell_new_ty (int: ty; size_t: n; const: @(char ind); const: @(char s
         return: 1
     if: ty = 8 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR, %zuU, l2_program_arena)\n", ind, slot, n) < 0
         return: 1
-    if: ty >= 2000 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", ind, slot, ty - 2000, n) < 0
+    if: l2_oc_is_parray(ty) != 0 && c.fprintf(l2_out, "%s%s[0]: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_POINTER_BASE + %d, %zuU, l2_program_arena)\n", ind, slot, l2_oc_ft(ty), n) < 0
         return: 1
     if: ty != 0 && ty != 1 && ty != 2 && ty != 3 && ty != 36 && l2_own_is_pointer(ty) = 0 && l2_own_is_array(ty) = 0
         return: 0
@@ -48606,15 +48617,15 @@ fn: l2_ret_cell_ty (int: mi) int
     if: cls = 4
         return: 36
     if: rt = 3
-        return: 1012
+        return: l2_oc_pointer(12)
     if: rt = 16
-        return: 1016
+        return: l2_oc_pointer(16)
     if: rt = 35
-        return: 1003
+        return: l2_oc_pointer(3)
     if: rt = 32
-        return: 1017
+        return: l2_oc_pointer(17)
     if: rt >= 100 && fi < l2_foreign_n && l2_foreign_depth[fi] > 0
-        return: 1000 + rt
+        return: l2_oc_pointer(rt)
 return: 0 - 1
 
 # THE HEADER PARTS OF METHOD i (-189 c4; form A): its signature is an ordinary graph field.

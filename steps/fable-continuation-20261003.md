@@ -10356,3 +10356,116 @@ above are the record.
 | `build/l3_selftest/opus_l3_32` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_34` (full harness) | RED39/1981: against `opus_full_32` FAIL→OK 0, OK→FAIL 0, added 10, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
 | isolated clones (scratchpad, before the gates) | 15 rows -- this section's, section 100's call controls and the factory dormancy rows -- all green on these bytes; each of the three mutants red on its own two rows only. |
+
+<a id="own-type-code-bands-fixed"></a>
+## 103. Own codes without bands; the graph reference's formal code (OWN-TYPE-CODE-BANDS)
+
+The defect ([defects](defects.md#own-type-code-bands)): an own field's
+code carried kind and type in one number by bands -- a pointer 1000 + ft,
+an Array of pointers 2000 + ft, ft = 100 + the foreign type's index -- so
+from the 901st interned foreign type a pointer's code fell in the Arrays'
+band. And the graph reference's code was the dynamic-input code of
+`Lmx *`'s pointer own (1101 when `Lmx *` is foreign 0), stored in formal
+tables and read back by decoders that guessed the space by the number's
+interval (Codex: compiler-only kind and the existing formal type behind
+common helpers; formal tables hold formal codes only; no wider bands and
+no new limit).
+
+Four stages, the first three replayed over `opus_full_34`'s 1980 recorded
+translations, the fourth over `opus_full_35`'s 1992 (stage 2b's gate):
+
+| Stage | What | Replay |
+| --- | --- | --- |
+| 1 | every own-code literal and range test behind `l2_oc_pointer`, `l2_oc_parray`, `l2_oc_is_pointer`, `l2_oc_is_parray`, `l2_oc_is_ref`, `l2_oc_ft` -- with `l2_ret_cell_ty`'s literal own codes 1012, 1016, 1003 and 1017, found by a census of every literal from 1000 to 2999, not by the two band words | identical: L1, exit, messages, allocations |
+| 2a | the graph reference has a code in each space: the formal code `l2_graph_code()`, 42, one named code of the formal space as the Message reference's 29 is; its own storage `l2_graph_own()`, the pointer own of `Lmx *`; its dynamic-input code `l2_graph_dt()`. The producers ask `l2_graph_ft`, which interns `Lmx *` where the old code did, so the foreign types keep their order; a reader compares with the code and interns nothing. `l2_formal_raw` spells 42 as `Lmx *`, `l2_pointer_depth` and `l2_own_ty_of_param` read it; `l2_colon_is_graph_ty` reads formal codes only (its two callers holding an own code ask `l2_own_is_graph`); the five recoveries of "dt_of_own(1000+foreign)" in `l2_colon_ret_ty`, `l2_emit_call_result`, `l2_emit_formal`, `l2_sig_ret` and `l2_emit_public_sig` are `l2_formal_raw`. `l2_colon_graph_ty` is gone | 7 rows change, below |
+| 2b | the reference own code without bands: a pointer to formal type ft is 1000 + 2 ft, an Array of pointers 1001 + 2 ft; above the one partition of the own space the kind is the low bit | identical to 2a |
+| 3 | stage 1's replay-compatibility branch is gone (below): a null literal received into a reference place is the pointer cell of the place's value type, `l2_value_ft_of_own` | identical to 2b, allocations too |
+
+The seven rows of stage 2a. Codex: the old -1-versus-2101 decode is not
+kept for an identical replay; each difference is tied to its contract and
+executed.
+
+- `unit_recv_use_passed_thin` (+`_walk`): the null literal compared with
+  the Structure formal v gets the pointer cell of `Lmx *`
+  (`LMX_TYPE_POINTER_BASE + 100`) instead of `+ 1101` -- the graph code had
+  been read as the own code 2101 of an Array of pointers. Both run green;
+  the type code shows in the L1 only.
+- `unit_ref_formal_rebind_same`, `unit_ref_formal_rebind_other_refused`,
+  `unit_formal_spelling_rebind`, `unit_formal_spelling_rebind_other_refused`,
+  `unit_site_model_header_context`: the retained walker graph builds the
+  admission (ADMIT_AS) of the value rebound into the Structure formal; the
+  band decode had given the formal no cell (`l2_own_ty_of_param` -1). The
+  four rebinding rows, walked with the committed translator, stop with
+  "lmx: walk error: INVALID" (exit 3); with this one they say what their
+  native rows say. Their walked twins are new rows.
+  `unit_site_model_header_context` is walked in the harness and green with
+  both translators.
+
+Witnesses. Distinct foreign pointer types are made of C's own type names at
+growing depth -- (name, depth) is the interner's key; typedefs through
+header units stop at l1trans's 128 header type names a translation unit,
+`too many header type names` (FIXED-BLOCKS, l1trans's own step).
+
+| Row (+`_walk`) | What it pins | With the committed translator |
+| --- | --- | --- |
+| `unit_oc_types_below` | 899 types, then a Structure reference m: m\value reads 7 | green, the control |
+| `unit_oc_types_above` | 950 types, then m: `Lmx *` is the 951st | refused at the 901st C declaration, "assignment value has incompatible type" |
+| `unit_oc_types_far` | 1101 types; the 1102nd (`double` at depth 138, formal code 1201) as a pointer z holding an address, an Array of two such pointers and the formal and result of a method; m last: the addresses and the Array's length compared | refused at the 901st C declaration |
+| `unit_oc_rebind_pointer_second` | another interning order: `Lmx *` first, a foreign pointer second, then `v: w` rebinding the Structure formal: 7 | refused at `v: w`, "a reference where a number is asked" |
+| walked twins of the four rebinding rows | the walked rebinding with its admission | "lmx: walk error: INVALID", exit 3 |
+
+Mutants, each on an isolated clone of the stage-2b bytes over the 19 rows (the
+seven above, the four twins, the eight witness rows), all green without
+one: without stage 2a, the four walked twins, `unit_oc_rebind_pointer_second_walk`
+and the above and far rows are red; without stage 2b, only the above and
+far rows and their twins; without either (the committed translator), every
+new row but the control.
+
+Stage 3, the null literal. Stage 1 had kept one branch for an identical
+replay: in `l2_rw_reference_value` an Array-of-pointers code gave its
+element's own code, and that own code went to `l2_ptr_cell_type` as a
+formal one -- the old decode. Codex (OTCB-NULL-PROJECTION): the branch goes
+before the commit; the null literal received into a reference place is the
+pointer cell of the place's value type, the common projection
+`l2_value_ft_of_own` -- a pointer's held formal code, an Array's descriptor
+reference. A census build (each null literal said on stderr its own code,
+its kind, its value type and the old branch's choice; a diagnostic, never a
+gate input), replayed over `opus_full_35`'s recorded translations: the
+builder ran 19040 times in 204 translations, every time for a pointer own
+code, never for an Array of pointers, and the old branch and the projection
+named the same type every time -- no translation reached the branch's own
+case. Four controls run natively and walked, exit 0: a pointer (own code
+1022, value type 11), a graph reference (1200, 100), an Array's descriptor
+compared with zero (1200, 100), an Array's element (1022, 11).
+
+Mutants. The branch put back is stage 2b itself: identical on all 1992
+recorded translations. The own code fed in as the formal one
+(`l2_ptr_cell_type(ty, ...)`) changes the L1 of 201 translations (the other
+three of the 204 are refusals): the literal's cell is
+`LMX_TYPE_POINTER_BASE + 1022` for `+ 11`, `+ 1200` for `+ 100`. Over those
+201 rows on an isolated clone it changes no verdict: the walker reads a
+literal's cell by its class (`lmx_walk_value_load`: at or above
+`LMX_TYPE_POINTER_BASE`, a reference), and stores, argument contracts and
+comparisons of a reference read its class or its address. The wrong code
+shows in the arena: each of the 14 runs among those rows that print their
+arena has a pointer domain of type 2224 (1024 + 1200) that the program
+never declared. No row reads an arena's domain types; the cell's exact type
+is metadata no execution consults today.
+
+What stays outside. The kernel's pointer cell code
+`LMX_TYPE_POINTER_BASE + ft` (1024 + ft) meets
+`LMX_TYPE_ARRAY_OF_POINTER_BASE` (1048576) at ft = 1047552: a range of the
+kernel's own encoding, now
+[KERNEL-POINTER-TYPE-RANGE](defects.md#kernel-pointer-type-range), before
+G5. `l2_path_root`'s method encoding (at or below -1000, `i < 990`) belongs
+to the machine-local route's step, after the renewed census.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_36` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_34` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_36` (full harness, the final bytes) | RED39/1993: against `opus_full_35` FAIL→OK 0, OK→FAIL 0, added 0, removed 0; against `opus_full_34`, before this step, FAIL→OK 0, OK→FAIL 0, added 12, removed 0. The declared paths were hashed before the run; the staged translator, harness and fixtures are their bytes. |
+| `opus_kernel_35`, `opus_l3_33`, `opus_full_35` (stage 2b, the branch still in) | GREEN: 297 targets, 114 selftests; all 11 suites; RED39/1993: against `opus_full_34` FAIL→OK 0, OK→FAIL 0, added 12, removed 0. Stage 3 replays its 1992 recorded translations identically. |
+| isolated clones (scratchpad) | The mutants above: the three of stage 2 over the 19 rows on the stage-2b bytes; the own code as formal over its 201 rows on the stage-3 bytes. |

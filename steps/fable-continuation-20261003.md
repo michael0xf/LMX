@@ -10469,3 +10469,54 @@ to the machine-local route's step, after the renewed census.
 | `build/l2_harness/opus_full_36` (full harness, the final bytes) | RED39/1993: against `opus_full_35` FAIL→OK 0, OK→FAIL 0, added 0, removed 0; against `opus_full_34`, before this step, FAIL→OK 0, OK→FAIL 0, added 12, removed 0. The declared paths were hashed before the run; the staged translator, harness and fixtures are their bytes. |
 | `opus_kernel_35`, `opus_l3_33`, `opus_full_35` (stage 2b, the branch still in) | GREEN: 297 targets, 114 selftests; all 11 suites; RED39/1993: against `opus_full_34` FAIL→OK 0, OK→FAIL 0, added 12, removed 0. Stage 3 replays its 1992 recorded translations identically. |
 | isolated clones (scratchpad) | The mutants above: the three of stage 2 over the 19 rows on the stage-2b bytes; the own code as formal over its 201 rows on the stage-3 bytes. |
+
+<a id="null-literal-exact-type"></a>
+## 104. The null literal's exact cell type, witnessed (OWN-TYPE-CODE-BANDS follow-up)
+
+Section 103's mutant -- the own code fed in as the formal one at the null
+literal -- changed 201 L1s and no verdict: the kernel reads a pointer
+cell's type by its class. Codex (OTCB-EXACT-NULL-TYPE-WITNESS-20261006-01):
+a wrong exact storage type is a representation-contract failure even when
+present consumers accept its class; a killing witness reads the
+compiler-generated payload through the existing address and type services
+and compares it with an independent contract witness -- no dump text, no
+number the row supplies, no registry of declared types.
+
+The harness driver gets two physical path facts beside `samepath` and
+`cellpath`, read through the arena (`lmx_domain_kind`, `lmx_domain_type`,
+`lmx_pointer_value_known`):
+
+| Fact | Holds when |
+| --- | --- |
+| `typepath P Q` | the addresses at the two paths belong to one exact typed arena domain: kind and type equal |
+| `nullrefpath P` | the address at the path is an actual pointer cell, present, holding the null reference |
+
+The row `unit_oc_null_literal_type` (+`_walk`): at the root `@: int p 0`
+and `@@: int q 0`, one pointer depth and the next; the init SET of each
+holds a LIT whose payload is the null literal's cell. For each declaration
+the payload and the declared cell it initializes are one exact typed
+domain, and the payload is a present null pointer -- at the build and again
+at the exit post; `check` compares both with 0 and gives 7. The expected
+type is the declared cell's, which the unit's cell builder makes, not the
+literal's emitter. The row runs its root natively and then walked; the twin
+walks `check` too.
+
+| Translator | `unit_oc_null_literal_type` | `_walk` |
+| --- | --- | --- |
+| `a71009cc` | OK, 103 checks, the root native and walked | OK, 103 checks |
+| the own code fed in as the formal one at the null literal | red: the four `typepath` facts, at the build and at the post, both runs | red: the same four |
+
+The facts fail on their own: `typepath` between p's cell and q's payload,
+or between p's cell and an OWN's slot cell, is red; `nullrefpath` on an
+OWN's slot cell is red, and on p's cell at the post after `p: @x`. The
+Array-of-pointers branch stage 3 removed keeps its census (reached by none
+of 19040 null literals, section 103); no source form is invented for it.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_37` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_35` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_37` (full harness) | RED39/1995: against `opus_full_36` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths (the driver, the harness, the fixture) were hashed before the run; the staged copies are their bytes. |
+| isolated clones (scratchpad) | The two rows on these bytes: OK with `a71009cc`'s translator; red with the own code fed in as the formal one, on the four `typepath` facts only. |

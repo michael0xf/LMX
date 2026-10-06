@@ -633,6 +633,12 @@ Fable принял единственный writer/build-слот по [to_fable
   ([§103 журнала](fable-continuation-20261003.md#own-type-code-bands-fixed)). Гейты `opus_kernel_36` GREEN297,
   `opus_l3_34`, `opus_full_36` RED39/1993: против `opus_full_35` FAIL→OK 0, OK→FAIL 0, добавлено 0; против
   `opus_full_34` FAIL→OK 0, OK→FAIL 0, добавлено 12.
+- Точный тип ячейки нулевого литерала засвидетельствован (пункт приёмки OWN-TYPE-CODE-BANDS, Codex): драйвер
+  читает через арену `typepath` и `nullrefpath`; `unit_oc_null_literal_type` (+`_walk`) сравнивает нагрузку
+  каждого корневого нулевого литерала с объявленной ячейкой, которую она инициализирует; мутант «свой код как
+  формальный» красный в обеих ([§104 журнала](fable-continuation-20261003.md#null-literal-exact-type)).
+  Гейты `opus_kernel_37` GREEN297, `opus_l3_35`, `opus_full_37` RED39/1995: против `opus_full_36` FAIL→OK 0,
+  OK→FAIL 0, добавлено 2.
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
   под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),

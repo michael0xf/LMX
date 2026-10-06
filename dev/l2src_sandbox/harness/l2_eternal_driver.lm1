@@ -820,6 +820,10 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
             mode: 11
         if: c.strcmp(gargv[at], "nullpath") = 0
             mode: 12
+        if: c.strcmp(gargv[at], "typepath") = 0
+            mode: 13
+        if: c.strcmp(gargv[at], "nullrefpath") = 0
+            mode: 14
         if: mode = 0
             at: at + 1
             continue
@@ -852,11 +856,15 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
         if: value = 0
             check(0, "physical path reaches its selected nonnull object")
             return: 0
-        if: mode = 1 || mode = 2 || mode = 10
+        if: mode = 1 || mode = 2 || mode = 10 || mode = 13
             other: shape_path(arena, graph, @ at, 0)
             check(other != 0, "comparison path reaches its actual object")
             if: mode = 1
                 check(other != 0 && value = other, "two physical paths retain the exact same object")
+            # The type an address has is the arena's answer for it, read of each cell: an expected type comes from
+            # another actual cell, never from a number the row supplies.
+            if: mode = 13
+                check(other != 0 && lmx_domain_kind(arena, value) = lmx_domain_kind(arena, other) && lmx_domain_type(arena, value) = lmx_domain_type(arena, other), "two physical paths select addresses of one exact typed arena domain")
             if: mode = 10
                 check(other != 0 && value != other, "two physical paths name distinct occurrence storage")
             if: mode = 2
@@ -927,6 +935,13 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
                 ---
             ---
             at: at + 2
+        ---
+        # The cell itself is present (the path reached it); what it holds is the null reference.
+        if: mode = 14
+            check(lmx_domain_kind(arena, value) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, value) >= c.LMX_TYPE_POINTER_BASE && lmx_domain_type(arena, value) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE, "nullrefpath selects an actual pointer cell")
+            if: lmx_domain_kind(arena, value) = c.LMX_KIND_PRIMITIVE && lmx_domain_type(arena, value) >= c.LMX_TYPE_POINTER_BASE && lmx_domain_type(arena, value) < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                check(lmx_pointer_value_known(value) = 0, "selected pointer cell holds the null reference")
+            ---
         ---
         if: mode = 9
             check(at < gargc && arg(at) >= 0, "physical size_t assertion supplies its nonnegative expected value")

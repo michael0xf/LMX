@@ -1,0 +1,14 @@
+# The null literal's cell is the pointer cell of the place's value type (OWN-TYPE-CODE-BANDS, Codex
+# OTCB-EXACT-NULL-TYPE-WITNESS-20261006-01): `@: int p 0` and `@@: int q 0` at the root, one depth and the next.  The
+# row reads the retained graph through the arena: each declaration's LIT payload is a present pointer cell holding
+# null, of the exact typed domain of the declared cell it initializes -- before the run and after it.  check
+# compares both with 0 again.  Entry 7.
+@: int p 0
+@@: int q 0
+fn: check () int
+    if: p != 0 || q != 0
+        return: 81
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

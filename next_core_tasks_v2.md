@@ -23,9 +23,12 @@ Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 not permission for a receiver-specific argument collector. The writer's first
 text census found 260 fixtures using receiver-word atoms with following
 operands; this is preliminary evidence, not a final classified migration
-count. Finish the independent OWN-TYPE-CODE-BANDS checkpoint already in flight,
-then close [K03-EXPLICIT-RECEIVER-FRAMES](#explicit-receiver-frames) before
-G5 or self-build. Earlier green rows using the prefix path do not certify
+count. OWN-TYPE-CODE-BANDS is fixed at `a71009cc`; its acceptance follow-up, the
+exact type of the null literal's cell witnessed through the arena
+(OTCB-EXACT-NULL-TYPE-WITNESS-20261006-01,
+[section 104](steps/fable-continuation-20261003.md#null-literal-exact-type)), is
+closed. On that baseline close [K03-EXPLICIT-RECEIVER-FRAMES](#explicit-receiver-frames)
+before G5 or self-build. Earlier green rows using the prefix path do not certify
 this corrected syntax. The copying/operand/result contract is unchanged.
 
 **Historical handoff, 2026-10-03.** The author transferred continuation to
@@ -1692,8 +1695,8 @@ hidden-input preparation: the two positive copy-call refusals remain OPEN.
 
 Status: **OPEN, mandatory before G5/self-build**. The author confirmed that
 the old `x: merge Y` spelling is a typo and its implementation is a shim to
-remove, not a language exception. This stage follows the independent
-OWN-TYPE-CODE-BANDS checkpoint already being verified. Keep one writer/build.
+remove, not a language exception. This stage follows OWN-TYPE-CODE-BANDS,
+fixed at `a71009cc`, and its exact-null-type witness. Keep one writer/build.
 Authority: [the author's exact clarification](LMX_blog/2026-10-06.md#explicit-receiver-frames)
 and the [general grammar rule](docs/LMX_grammar.en.md#no-inference).
 

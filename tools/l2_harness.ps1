@@ -2154,6 +2154,13 @@ $sendFieldsManySays = @(
 $exprTextLiteralSays = @((0..2999 | ForEach-Object { 'abcdefghij'[$_ % 10] }) -join '')
 $exprTextActualsSays = @((1..300) -join ' ')
 $exprTextLetterSays = @('post 1: 150', 'post 2: 7 "" ""')
+# OTCB-EXACT-NULL-TYPE-WITNESS (Codex, 2026-10-06): unit_oc_null_literal_type's root holds `@: int p 0` (its cell at
+# 0, the initializing SET at 1) and `@@: int q 0` (2 and 3); a SET's LIT is its child 2, the literal's payload the
+# LIT's child 1.  Each payload is a present pointer cell holding null, of the exact typed domain of the cell it
+# initializes -- the arena's answer for both cells, never a number -- at the build and again at the exit post.
+$criticalNullLiteralTypeFacts = @('typepath','1','0','3','1','2','1','nullrefpath','3','1','2','1',
+    'typepath','1','2','3','3','2','1','nullrefpath','3','3','2','1')
+$criticalNullLiteralType = $criticalNullLiteralTypeFacts + @('postpaths') + $criticalNullLiteralTypeFacts + @('endpostpaths')
 
 $fixtures = @(
     [pscustomobject]@{ Name = 'unit_uniform_stop.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 0; NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); StopMethods = @(0,1,2,3,4,5,6,7); StopWalk = $true; Absent = @(); Debt = @() },
@@ -6172,6 +6179,12 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_oc_rebind_pointer_second.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_oc_rebind_pointer_second_walk.lm2'; Source = 'unit_oc_rebind_pointer_second.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # OTCB-EXACT-NULL-TYPE-WITNESS: the null literal's payload against the declared cell it initializes, one pointer
+    # depth and the next, the root native and walked; the twin walks check too.
+    [pscustomobject]@{ Name = 'unit_oc_null_literal_type.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalNullLiteralType; Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_oc_null_literal_type_walk.lm2'; Source = 'unit_oc_null_literal_type.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalNullLiteralType; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_field_path_unit_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'c.LMX_WALK_OP_DEREF');

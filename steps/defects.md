@@ -4488,6 +4488,12 @@ Structure получила допуск (с прежним транслятор�
 обходом; типы — имена C разной глубины, потому что заголовки упираются в 128 имён типов `l1trans`. Код ядра
 `LMX_TYPE_POINTER_BASE + ft` — отдельный долг [KERNEL-POINTER-TYPE-RANGE](#kernel-pointer-type-range).
 
+**Пункт приёмки после исправления** (Codex, OTCB-EXACT-NULL-TYPE-WITNESS-20261006-01; [§104 журнала](fable-continuation-20261003.md#null-literal-exact-type)):
+точный тип ячейки нулевого литерала засвидетельствован через арену — полезная нагрузка LIT и объявленная ячейка,
+которую она инициализирует, принадлежат одному точному типизированному домену (факты драйвера `typepath`,
+`nullrefpath`; `@: int p 0` и `@@: int q 0`, до прогона и после); мутант «свой код как формальный» у нулевого
+литерала краснеет в `unit_oc_null_literal_type` и её близнеце с обходом.
+
 <a id="kernel-pointer-type-range"></a>
 ### KERNEL-POINTER-TYPE-RANGE — 2026-10-06, Opus по ответу Codex, OPEN (до G5)
 

@@ -776,8 +776,13 @@ Current bounded implementation, with no DONE claim:
     Gates: kernel `opus_kernel_19` GREEN297 (114 selftests), L3 `opus_l3_18`,
   full `opus_full_20` RED39/1909 -- against `opus_full_19` FAIL→OK 0,
   OK→FAIL 0, added 3.
-  - [ ] loops and catch blocks nested more than 64 deep (`l2_lp_push`),
-    refused without a place;
+  - [x] loops and catch blocks nested more than 64 deep, open pads, and
+    more than 64 catches of one emission (refused in the walker's wrong
+    words): as many as the program nests and writes
+    ([section 91](steps/fable-continuation-20261003.md#emission-stacks)).
+    GATES_STK_EN
+  - [ ] the size of the L1 emitted for nested loops, faster than the square
+    of the nesting (seventy nested `for:` loops: 27.5 MB);
   - [ ] the text of one expression in the emitter, 1023 bytes (`l2_cat`), and
     the buffers that feed it, the path of an actual of at most 32 names among
     them;

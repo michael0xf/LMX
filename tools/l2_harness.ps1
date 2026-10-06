@@ -3895,6 +3895,13 @@ $fixtures = @(
     # the catch role (-171).
     [pscustomobject]@{ Name = 'unit_s1_catch_implements.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 42;
         Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: seventy nested blocks with a catch each -- the stack of enclosing loops and pads, the open
+    # pads and the walker's pads of one emission hold as many as the program nests; each held 64 (mutants that
+    # restore any one of the three refuse this row).  Native and walked.
+    [pscustomobject]@{ Name = 'unit_catch_nested_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_catch_nested_many_walk.lm2'; Source = 'unit_catch_nested_many.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1);
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s1_catch_duplicate_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'duplicate catch: Oops'; Absent = @(); Debt = @() },
     # FIXED-BLOCKS-AUDIT: the words name the catch in full -- 300 bytes.  They were formatted into 160 bytes without

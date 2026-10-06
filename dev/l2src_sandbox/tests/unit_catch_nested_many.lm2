@@ -1,0 +1,300 @@
+# FIXED-BLOCKS-AUDIT: seventy blocks nested in one method, each catching Oops after the block inside it; the
+# innermost calls the thrower and catches after the call.  Each block with a catch is a pad, and a pad is a
+# loop: the stack of enclosing loops and pads, the open pads and the walker's pads of the emission each hold
+# seventy.  They held 64: the 65th was refused, "a catch parameter that is not a number" (the walker's pads),
+# "catch blocks nested too deeply", "loops and catch blocks nested too deeply".  The innermost catch takes the
+# throw and no outer one runs.  Success is 7; otherwise 64 plus the count the catches made.
+fn: thrower () int
+    throws: Oops
+    throw: Oops()
+return: 0
+
+fn: m () int
+    int: r 0
+    if: r = 0
+        if: r = 0
+            if: r = 0
+                if: r = 0
+                    if: r = 0
+                        if: r = 0
+                            if: r = 0
+                                if: r = 0
+                                    if: r = 0
+                                        if: r = 0
+                                            if: r = 0
+                                                if: r = 0
+                                                    if: r = 0
+                                                        if: r = 0
+                                                            if: r = 0
+                                                                if: r = 0
+                                                                    if: r = 0
+                                                                        if: r = 0
+                                                                            if: r = 0
+                                                                                if: r = 0
+                                                                                    if: r = 0
+                                                                                        if: r = 0
+                                                                                            if: r = 0
+                                                                                                if: r = 0
+                                                                                                    if: r = 0
+                                                                                                        if: r = 0
+                                                                                                            if: r = 0
+                                                                                                                if: r = 0
+                                                                                                                    if: r = 0
+                                                                                                                        if: r = 0
+                                                                                                                            if: r = 0
+                                                                                                                                if: r = 0
+                                                                                                                                    if: r = 0
+                                                                                                                                        if: r = 0
+                                                                                                                                            if: r = 0
+                                                                                                                                                if: r = 0
+                                                                                                                                                    if: r = 0
+                                                                                                                                                        if: r = 0
+                                                                                                                                                            if: r = 0
+                                                                                                                                                                if: r = 0
+                                                                                                                                                                    if: r = 0
+                                                                                                                                                                        if: r = 0
+                                                                                                                                                                            if: r = 0
+                                                                                                                                                                                if: r = 0
+                                                                                                                                                                                    if: r = 0
+                                                                                                                                                                                        if: r = 0
+                                                                                                                                                                                            if: r = 0
+                                                                                                                                                                                                if: r = 0
+                                                                                                                                                                                                    if: r = 0
+                                                                                                                                                                                                        if: r = 0
+                                                                                                                                                                                                            if: r = 0
+                                                                                                                                                                                                                if: r = 0
+                                                                                                                                                                                                                    if: r = 0
+                                                                                                                                                                                                                        if: r = 0
+                                                                                                                                                                                                                            if: r = 0
+                                                                                                                                                                                                                                if: r = 0
+                                                                                                                                                                                                                                    if: r = 0
+                                                                                                                                                                                                                                        if: r = 0
+                                                                                                                                                                                                                                            if: r = 0
+                                                                                                                                                                                                                                                if: r = 0
+                                                                                                                                                                                                                                                    if: r = 0
+                                                                                                                                                                                                                                                        if: r = 0
+                                                                                                                                                                                                                                                            if: r = 0
+                                                                                                                                                                                                                                                                if: r = 0
+                                                                                                                                                                                                                                                                    if: r = 0
+                                                                                                                                                                                                                                                                        if: r = 0
+                                                                                                                                                                                                                                                                            if: r = 0
+                                                                                                                                                                                                                                                                                if: r = 0
+                                                                                                                                                                                                                                                                                    if: r = 0
+                                                                                                                                                                                                                                                                                        if: r = 0
+                                                                                                                                                                                                                                                                                            r: thrower()
+                                                                                                                                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                                                                                                                                r: r + 1
+                                                                                                                                                                                                                                                                                        ---
+                                                                                                                                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                                                                                                                                            r: r + 100
+                                                                                                                                                                                                                                                                                    ---
+                                                                                                                                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                                                                                                                                        r: r + 100
+                                                                                                                                                                                                                                                                                ---
+                                                                                                                                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                                                                                                                                    r: r + 100
+                                                                                                                                                                                                                                                                            ---
+                                                                                                                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                                                                                                                r: r + 100
+                                                                                                                                                                                                                                                                        ---
+                                                                                                                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                                                                                                                            r: r + 100
+                                                                                                                                                                                                                                                                    ---
+                                                                                                                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                                                                                                                        r: r + 100
+                                                                                                                                                                                                                                                                ---
+                                                                                                                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                                                                                                                    r: r + 100
+                                                                                                                                                                                                                                                            ---
+                                                                                                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                                                                                                r: r + 100
+                                                                                                                                                                                                                                                        ---
+                                                                                                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                                                                                                            r: r + 100
+                                                                                                                                                                                                                                                    ---
+                                                                                                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                                                                                                        r: r + 100
+                                                                                                                                                                                                                                                ---
+                                                                                                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                                                                                                    r: r + 100
+                                                                                                                                                                                                                                            ---
+                                                                                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                                                                                r: r + 100
+                                                                                                                                                                                                                                        ---
+                                                                                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                                                                                            r: r + 100
+                                                                                                                                                                                                                                    ---
+                                                                                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                                                                                        r: r + 100
+                                                                                                                                                                                                                                ---
+                                                                                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                                                                                    r: r + 100
+                                                                                                                                                                                                                            ---
+                                                                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                                                                r: r + 100
+                                                                                                                                                                                                                        ---
+                                                                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                                                                            r: r + 100
+                                                                                                                                                                                                                    ---
+                                                                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                                                                        r: r + 100
+                                                                                                                                                                                                                ---
+                                                                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                                                                    r: r + 100
+                                                                                                                                                                                                            ---
+                                                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                                                r: r + 100
+                                                                                                                                                                                                        ---
+                                                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                                                            r: r + 100
+                                                                                                                                                                                                    ---
+                                                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                                                        r: r + 100
+                                                                                                                                                                                                ---
+                                                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                                                    r: r + 100
+                                                                                                                                                                                            ---
+                                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                                r: r + 100
+                                                                                                                                                                                        ---
+                                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                                            r: r + 100
+                                                                                                                                                                                    ---
+                                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                                        r: r + 100
+                                                                                                                                                                                ---
+                                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                                    r: r + 100
+                                                                                                                                                                            ---
+                                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                                r: r + 100
+                                                                                                                                                                        ---
+                                                                                                                                                                        catch: Oops ()
+                                                                                                                                                                            r: r + 100
+                                                                                                                                                                    ---
+                                                                                                                                                                    catch: Oops ()
+                                                                                                                                                                        r: r + 100
+                                                                                                                                                                ---
+                                                                                                                                                                catch: Oops ()
+                                                                                                                                                                    r: r + 100
+                                                                                                                                                            ---
+                                                                                                                                                            catch: Oops ()
+                                                                                                                                                                r: r + 100
+                                                                                                                                                        ---
+                                                                                                                                                        catch: Oops ()
+                                                                                                                                                            r: r + 100
+                                                                                                                                                    ---
+                                                                                                                                                    catch: Oops ()
+                                                                                                                                                        r: r + 100
+                                                                                                                                                ---
+                                                                                                                                                catch: Oops ()
+                                                                                                                                                    r: r + 100
+                                                                                                                                            ---
+                                                                                                                                            catch: Oops ()
+                                                                                                                                                r: r + 100
+                                                                                                                                        ---
+                                                                                                                                        catch: Oops ()
+                                                                                                                                            r: r + 100
+                                                                                                                                    ---
+                                                                                                                                    catch: Oops ()
+                                                                                                                                        r: r + 100
+                                                                                                                                ---
+                                                                                                                                catch: Oops ()
+                                                                                                                                    r: r + 100
+                                                                                                                            ---
+                                                                                                                            catch: Oops ()
+                                                                                                                                r: r + 100
+                                                                                                                        ---
+                                                                                                                        catch: Oops ()
+                                                                                                                            r: r + 100
+                                                                                                                    ---
+                                                                                                                    catch: Oops ()
+                                                                                                                        r: r + 100
+                                                                                                                ---
+                                                                                                                catch: Oops ()
+                                                                                                                    r: r + 100
+                                                                                                            ---
+                                                                                                            catch: Oops ()
+                                                                                                                r: r + 100
+                                                                                                        ---
+                                                                                                        catch: Oops ()
+                                                                                                            r: r + 100
+                                                                                                    ---
+                                                                                                    catch: Oops ()
+                                                                                                        r: r + 100
+                                                                                                ---
+                                                                                                catch: Oops ()
+                                                                                                    r: r + 100
+                                                                                            ---
+                                                                                            catch: Oops ()
+                                                                                                r: r + 100
+                                                                                        ---
+                                                                                        catch: Oops ()
+                                                                                            r: r + 100
+                                                                                    ---
+                                                                                    catch: Oops ()
+                                                                                        r: r + 100
+                                                                                ---
+                                                                                catch: Oops ()
+                                                                                    r: r + 100
+                                                                            ---
+                                                                            catch: Oops ()
+                                                                                r: r + 100
+                                                                        ---
+                                                                        catch: Oops ()
+                                                                            r: r + 100
+                                                                    ---
+                                                                    catch: Oops ()
+                                                                        r: r + 100
+                                                                ---
+                                                                catch: Oops ()
+                                                                    r: r + 100
+                                                            ---
+                                                            catch: Oops ()
+                                                                r: r + 100
+                                                        ---
+                                                        catch: Oops ()
+                                                            r: r + 100
+                                                    ---
+                                                    catch: Oops ()
+                                                        r: r + 100
+                                                ---
+                                                catch: Oops ()
+                                                    r: r + 100
+                                            ---
+                                            catch: Oops ()
+                                                r: r + 100
+                                        ---
+                                        catch: Oops ()
+                                            r: r + 100
+                                    ---
+                                    catch: Oops ()
+                                        r: r + 100
+                                ---
+                                catch: Oops ()
+                                    r: r + 100
+                            ---
+                            catch: Oops ()
+                                r: r + 100
+                        ---
+                        catch: Oops ()
+                            r: r + 100
+                    ---
+                    catch: Oops ()
+                        r: r + 100
+                ---
+                catch: Oops ()
+                    r: r + 100
+            ---
+            catch: Oops ()
+                r: r + 100
+        ---
+        catch: Oops ()
+            r: r + 100
+    ---
+    if: r != 1
+        return: 64 + r
+return: 7
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

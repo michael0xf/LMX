@@ -790,17 +790,28 @@ int: l2_ltx_cap 0
 # S1.3: while a method body is emitted, the loops that enclose the point being written -- a
 # user while/for (kind 0) or a catch block's pad (kind 1, its pad number) -- and the open pads
 # with the block each one lowers.
-[]: int l2_lpk 64
-[]: int l2_lpp 64
+# As many entries as the program nests (FIXED-BLOCKS-AUDIT): the unit's 64 places, beyond them memory of the size
+# needed (l2_lp_room, l2_pad_room).
+[]: int l2_lpk_own 64
+[]: int l2_lpp_own 64
+@: int l2_lpk 0
+@: int l2_lpp 0
+int: l2_lp_cap 0
 int: l2_lp_n 0
-[]: @(LmP0Structure) l2_padb 64
-[]: int l2_padi 64
+[]: @(LmP0Structure) l2_padb_own 64
+[]: int l2_padi_own 64
+@@: LmP0Structure l2_padb 0
+@: int l2_padi 0
+int: l2_pad_cap 0
 int: l2_pad_n 0
 int: l2_pad_seq 0
 # -201: walker pads for the catches of one emission. The node id is stable from the
 # body's prep until the catch statement stores it in its slot.
-[]: @(LmP0Node) l2_rw_pcf 64
-[]: int l2_rw_pid 64
+[]: @(LmP0Node) l2_rw_pcf_own 64
+[]: int l2_rw_pid_own 64
+@@: LmP0Node l2_rw_pcf 0
+@: int l2_rw_pid 0
+int: l2_rw_pcap 0
 int: l2_rw_pn 0
 @@: char l2_it_n 0
 @@: size_t l2_it_nl 0
@@ -2367,6 +2378,27 @@ return: base + (cast: (size_t) i) * 1024U
 fn: l2_release () int
     int: i 0
     unsigned: s 0U
+    if: l2_lp_cap > 64
+        l2_xfree((cast: (@: void) l2_lpk))
+        l2_xfree((cast: (@: void) l2_lpp))
+    l2_lpk: 0
+    l2_lpp: 0
+    l2_lp_cap: 0
+    l2_lp_n: 0
+    if: l2_pad_cap > 64
+        l2_xfree((cast: (@: void) l2_padb))
+        l2_xfree((cast: (@: void) l2_padi))
+    l2_padb: 0
+    l2_padi: 0
+    l2_pad_cap: 0
+    l2_pad_n: 0
+    if: l2_rw_pcap > 64
+        l2_xfree((cast: (@: void) l2_rw_pcf))
+        l2_xfree((cast: (@: void) l2_rw_pid))
+    l2_rw_pcf: 0
+    l2_rw_pid: 0
+    l2_rw_pcap: 0
+    l2_rw_pn: 0
     while: i < l2_tbx_n
         l2_xfree((cast: (@: void) l2_tbx_name[i]))
         l2_tbx_name[i]: 0
@@ -20162,6 +20194,107 @@ fn: l2_catch_find (int: mi; const: @(LmP0Text tname); const: @(char cname); @@: 
         lv: lv - 1
 return: 0
 
+# Room for one more entry of the stack of enclosing loops and pads: the unit's 64 places while they suffice, then
+# memory of twice the entries, the entries kept.  0, or 1 out of memory.
+fn: l2_lp_room () int
+    @: int nk
+    @: int np
+    int: cap
+    size_t: isz
+    if: l2_lp_cap = 0
+        l2_lpk: l2_lpk_own
+        l2_lpp: l2_lpp_own
+        l2_lp_cap: 64
+    if: l2_lp_n < l2_lp_cap
+        return: 0
+    if: l2_lp_cap > c.INT_MAX / 2
+        return: 1
+    cap: l2_lp_cap * 2
+    isz: c.sizeof(c.int)
+    nk: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    np: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    if: nk = 0 || np = 0
+        l2_xfree((cast: (@: void) nk))
+        l2_xfree((cast: (@: void) np))
+        return: 1
+    memcpy((cast: (@: void) nk), (cast: (@: void) l2_lpk), (cast: (size_t) l2_lp_n) * isz)
+    memcpy((cast: (@: void) np), (cast: (@: void) l2_lpp), (cast: (size_t) l2_lp_n) * isz)
+    if: l2_lp_cap > 64
+        l2_xfree((cast: (@: void) l2_lpk))
+        l2_xfree((cast: (@: void) l2_lpp))
+    l2_lpk: nk
+    l2_lpp: np
+    l2_lp_cap: cap
+return: 0
+
+# The same for the open pads.
+fn: l2_pad_room () int
+    @@: LmP0Structure nb
+    @: int ni
+    int: cap
+    size_t: psz
+    size_t: isz
+    if: l2_pad_cap = 0
+        l2_padb: (cast: (@@: LmP0Structure) l2_padb_own)
+        l2_padi: l2_padi_own
+        l2_pad_cap: 64
+    if: l2_pad_n < l2_pad_cap
+        return: 0
+    if: l2_pad_cap > c.INT_MAX / 2
+        return: 1
+    cap: l2_pad_cap * 2
+    psz: c.sizeof(@: void)
+    isz: c.sizeof(c.int)
+    nb: (cast: (@@: LmP0Structure) l2_xmalloc((cast: (size_t) cap) * psz))
+    ni: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    if: nb = 0 || ni = 0
+        l2_xfree((cast: (@: void) nb))
+        l2_xfree((cast: (@: void) ni))
+        return: 1
+    memcpy((cast: (@: void) nb), (cast: (@: void) l2_padb), (cast: (size_t) l2_pad_n) * psz)
+    memcpy((cast: (@: void) ni), (cast: (@: void) l2_padi), (cast: (size_t) l2_pad_n) * isz)
+    if: l2_pad_cap > 64
+        l2_xfree((cast: (@: void) l2_padb))
+        l2_xfree((cast: (@: void) l2_padi))
+    l2_padb: nb
+    l2_padi: ni
+    l2_pad_cap: cap
+return: 0
+
+# The same for the walker's pads of one emission.
+fn: l2_rw_pad_room () int
+    @@: LmP0Node nc
+    @: int ni
+    int: cap
+    size_t: psz
+    size_t: isz
+    if: l2_rw_pcap = 0
+        l2_rw_pcf: (cast: (@@: LmP0Node) l2_rw_pcf_own)
+        l2_rw_pid: l2_rw_pid_own
+        l2_rw_pcap: 64
+    if: l2_rw_pn < l2_rw_pcap
+        return: 0
+    if: l2_rw_pcap > c.INT_MAX / 2
+        return: 1
+    cap: l2_rw_pcap * 2
+    psz: c.sizeof(@: void)
+    isz: c.sizeof(c.int)
+    nc: (cast: (@@: LmP0Node) l2_xmalloc((cast: (size_t) cap) * psz))
+    ni: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    if: nc = 0 || ni = 0
+        l2_xfree((cast: (@: void) nc))
+        l2_xfree((cast: (@: void) ni))
+        return: 1
+    memcpy((cast: (@: void) nc), (cast: (@: void) l2_rw_pcf), (cast: (size_t) l2_rw_pn) * psz)
+    memcpy((cast: (@: void) ni), (cast: (@: void) l2_rw_pid), (cast: (size_t) l2_rw_pn) * isz)
+    if: l2_rw_pcap > 64
+        l2_xfree((cast: (@: void) l2_rw_pcf))
+        l2_xfree((cast: (@: void) l2_rw_pid))
+    l2_rw_pcf: nc
+    l2_rw_pid: ni
+    l2_rw_pcap: cap
+return: 0
+
 # THE PADS.  A block that holds catches is emitted as one loop, its pad:
 #     int: l2_atP 0            -- 0 on the straight pass, i after a delivery to catch i
 #     while: 1
@@ -20177,8 +20310,8 @@ return: 0
 # `if: l2_goP != 0` breaks again or, at the pad, restarts it.  A user break or continue written
 # directly in a pad leaves the pad the same way (l2_ubP / l2_ucP) and is done at its own loop.
 fn: l2_lp_push (int: kind; int: pad) int
-    if: l2_lp_n >= 64
-        return: l2_error(l2_src, 0, "loops and catch blocks nested too deeply")
+    if: l2_lp_room() != 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
     l2_lpk[l2_lp_n]: kind
     l2_lpp[l2_lp_n]: pad
     l2_lp_n: l2_lp_n + 1
@@ -20474,8 +20607,8 @@ fn: l2_emit_pad (const: @(LmP0Structure body); int: mi; const: @(char ind)) int
         q: q + 1
     if: l2_bump_ind(ind, @ d1) != 0 || l2_bump_ind(d1, @ d2) != 0
         return: 1
-    if: l2_pad_n >= 64
-        return: l2_error(l2_src, 0, "catch blocks nested too deeply")
+    if: l2_pad_room() != 0
+        return: l2_alloc_or(l2_src, 0, "out of memory")
     p: l2_pad_seq
     l2_pad_seq: l2_pad_seq + 1
     if: c.fprintf(l2_out, "%sint: l2_at%d 0\n%sint: l2_go%d 0\n%s@: Lmx l2_pl%d 0\n%s@: void l2_pv%d 0\n", ind, p, ind, p, ind, p, ind, p) < 0
@@ -37038,8 +37171,9 @@ fn: l2_rw_pad_new (int: into; const: @(LmP0Node cf)) int
     id: l2_rw_pad_slot(cf)
     if: id >= 0
         return: id
-    if: l2_rw_pn >= 64
-        return: 0 - 1
+    # -2: no room for the pad (out of memory), which is not the catch's own refusal.
+    if: l2_rw_pad_room() != 0
+        return: 0 - 2
     ps: l2_catch_params(cf)
     if: ps != 0
         np: l2_count_active(ps)
@@ -37269,6 +37403,8 @@ fn: l2_rw_pads (@: LmP0Field first; int: into) int
     while: f != 0
         if: l2_frame_head(f\value, "catch")
             id: l2_rw_pad_new(into, f\value)
+            if: id = 0 - 2
+                return: l2_alloc_or(l2_src, f\value, "out of memory")
             if: id < 0
                 return: l2_rw_refuse(f\value, "a catch parameter that is not a number")
             ---
@@ -37285,6 +37421,8 @@ fn: l2_rw_catch_stmt (const: @(LmP0Node stmt); int: into; int: slot; @: int made
     int: bsave
     \made: 1
     id: l2_rw_pad_new(into, stmt)
+    if: id = 0 - 2
+        return: l2_alloc_or(l2_src, stmt, "out of memory")
     if: id < 0
         return: l2_rw_refuse(stmt, "a catch parameter that is not a number")
     ps: l2_catch_params(stmt)

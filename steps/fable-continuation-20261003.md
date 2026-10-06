@@ -9295,3 +9295,55 @@ write or a sizeof operand over 200 bytes.
 | `build/l3_selftest/opus_l3_18` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_20` (full harness) | RED39/1909: against `opus_full_19` FAIL→OK 0, OK→FAIL 0, added 3, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
 | `build/l2_harness/opus_focus_ovf1` (focused, before the gates) | 21 rows: the three of this section, the `for:` and `sizeof` rows beside them and the reference-field rows of §89, all green. |
+
+<a id="emission-stacks"></a>
+## 91. The emission's stacks hold as many as the program nests (FIXED-BLOCKS-AUDIT)
+
+Three stacks of the emission had 64 places, and the program met each of them
+with the wrong words or none:
+
+| Stack | Where | The 65th entry was |
+| --- | --- | --- |
+| the loops and catch pads enclosing the point emitted | `l2_lpk`, `l2_lpp` (`l2_lp_push`) | "loops and catch blocks nested too deeply", at 1:1 |
+| the open pads | `l2_padb`, `l2_padi` | "catch blocks nested too deeply", at 1:1 |
+| the walker's pads of one emission -- every catch of a method or the root, siblings as well | `l2_rw_pcf`, `l2_rw_pid` (`l2_rw_pad_new`) | "root operation not walkable yet: a catch parameter that is not a number", natively too |
+
+Measured with the translator before this step: 64 nested `for:` or
+`while:` loops translate and 65 are refused; 65 nested blocks with a catch
+each, or 65 sibling ones in a method or in the root, are refused in the
+walker's words.
+
+Each stack now keeps the unit's 64 places while they suffice, and beyond
+them memory of twice the entries (`l2_lp_room`, `l2_pad_room`,
+`l2_rw_pad_room`), released with the translation (`l2_release`). Running
+out of that memory is said as such. A diagnostic build with
+`-O2 -D_FORTIFY_SOURCE=2` translates 150 nested blocks with a catch each --
+two growths, the second releasing the first -- in both modes, and the
+translation's allocation log ends with no live allocation.
+
+Row `unit_catch_nested_many` (+`_walk`, its method walked): seventy nested
+blocks, each catching after the block inside it; the innermost catch takes
+the throw; success 7. Each catch's block is a pad and a pad is a loop, so
+the row fills all three stacks. The previous translator refuses it in the
+walker's words, and each of three mutants that restores one of the caps
+refuses it (out of memory at its cap), natively and walked.
+
+Found beside it: the generated L1 grows faster than the square of the
+nesting. Twenty nested `for:` loops give 1.4 MB of L1, forty 6.8 MB, sixty
+18.5 MB, seventy 27.5 MB (9.3 MB of C). Not a ceiling of the language, but a
+cost of the emission the author counts (build memory); registered on the
+audit's list.
+
+A replay of the 1908 translations recorded by `opus_full_20`, with this step's
+translator against that gate's, changes nothing: every row keeps its L1, exit,
+messages and number of allocations. No row before this step nested or wrote
+more than 64 of the three stacks' entries.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_20` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_19` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_21` (full harness) | RED39/1911: against `opus_full_20` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_stk1` (focused, before the gates) | 16 rows: the two of this section, the nested `for:` rows of §90 and the catch rows beside them, all green. |

@@ -432,7 +432,7 @@ The single candidate-admission mechanism consists of analytical tree-based `impl
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` is the proposed candidate, `bVar` is the exemplar of the required role, and `Consumer` is the concrete receiving expression for which substitution is checked. The predicate is directional: it answers whether `aVar` may be supplied in place of `bVar` to this particular Consumer. It is not nominal type membership, equality of whole Structures, or a promise of suitability for another or every future consumer. Without Consumer the requirement scope is undefined, so a two-argument form does not specify this model.
+`aVar` is the proposed candidate, `bVar` is the exemplar of the required role, and `Consumer` is the concrete receiving expression for which substitution is checked. The predicate is directional: it answers whether `aVar` may be supplied in place of `bVar` to this particular Consumer. It is not nominal type membership, equality of whole Structures, or a promise of suitability for another or every future consumer. If Consumer is not supplied, the candidate's full structural suitability is checked against the requirements of `bVar`, not an empty use set. The formula below describes checking with a supplied Consumer.
 
 The analytical stage builds `uses(Consumer, bVar)` from the accesses to `bVar` visible in the known Consumer tree: `bVar`, `bVar\foo`, `bVar\foo\bar`, and so on. It includes accesses in every visible alternative branch, not only the path of one possible execution. The analytical result requires all of the following:
 
@@ -467,6 +467,13 @@ Admitting a value to a named model establishes a **correspondence**: the model's
 
 Collection of `uses` does not expand every callee, execute computed names, or perform whole-heap alias and dataflow analysis.
 
+<a id="correspondence-stability"></a>
+#### Preservation of established correspondence
+
+An established `implements` correspondence persists: changes to the candidate's or checking expression's values neither invalidate it nor require its reconstruction. The graph's structure cannot change so as to break admission already passed: every branch assignment first checks through `implements` that the alternative branch fits the receiving place, then stores it; refusal preserves the previous value. That check covers the supplied Consumer's used requirements or full structural suitability in its absence, as defined above. A new candidate or different receiving requirements need their own admission, but this is not mutation-triggered invalidation of an established correspondence.
+
+Primitive values are checked when passing arguments. This rule introduces no additional checks on every primitive change, read, or other use.
+
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which same-name branch composition selects (the last by the general rule, or the explicitly selected occurrence), which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 
 An executed call must receive every input required by the selected expression. A passed directed check makes the call admissible but does not prove equal implementation behavior.
@@ -476,9 +483,9 @@ An executed call must receive every input required by the selected expression. A
 
 The interpreter receives an already constructed graph of executable Structures and links. Parsing source text precedes this stage and does not serve as interpretation. The receiving expression defines unit tests for the interpreter to execute against the candidate. These tests provide substantive runtime validation: a field named `range` or `unit` does not by its presence prove that the stated constraint holds.
 
-The candidate and checking expression have physical identities. Successful checking does not freeze their state. Mutation, external effects and changes to consulted descriptions must be accounted for by the conditions under which a result applies. Result reuse, isolation of test execution and representation of the test set require explicit contracts; matching addresses alone do not resolve them.
+Execution of mandatory unit tests is an admission stage, not a handler for every graph change. Changing values does not automatically rerun all tests; structural correspondence persists under the [rule above](#correspondence-stability).
 
-Ordinary values may store test results when the program explicitly does so. Applicability of such a result is defined by an explicit contract covering identity of the candidate, Consumer, test set, and checked state.
+Ordinary values may store test results when the program explicitly does so. A result refers to the candidate, Consumer, and test set for which it was obtained; storing it introduces neither mutation tracking nor rechecking after every store.
 
 A statically established violation is reported during analysis. Failure of any mandatory unit test makes `admitted(aVar, bVar, Consumer)` false; declared failures follow the [exception rules](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
 
@@ -567,6 +574,13 @@ Source notation constructs the complete Structure graph: values, declarations an
 ### Head resolution and the role of the tail
 
 A receiver is an instruction to the translator; a callable call is a runtime action. They share the Frame syntax "the head consumes the tail", not a semantic role. General resolution and the receiving head's contract determine the head's role and the meaning of its arguments. A name in a receiver's arguments does not thereby become another call: `catch: merge ()` supplies catch with the failure name and parameter description, just as `fn: test ()` supplies fn with the name and signature description. These are consequences of the common rule, not exceptions for those receivers or names.
+
+<a id="resolved-head-consumption"></a>
+#### One model, one resolution, one consumption
+
+First, the complete written structural head/arguments model is formed in translator memory, without knowing what the head denotes. Neither its name, signature, nor entity category determines that model's boundaries or permits collecting additional arguments. Only after the model has been formed does the common resolution algorithm in the single namespace determine the head's role: receiver, callable, assignment value, or Structure definition. One common consumption mechanism applies the resolved entity's contract; differing contracts do not create separate parsers, namespaces, or resolution routes.
+
+In evaluation position, a bare identifier enters that same flow. A resolved callable is invoked without arguments; a resolved receiver receives an empty argument list and checks it under its ordinary contract. If the contract requires arguments, their absence is diagnosed at the source occurrence; a known entity does not become a free variable or hidden input. Bare `merge` and `int` follow this same rule, not separate handlers. A non-callable value is read without invocation. Neighboring atoms are not captured. If the receiving contract requires a name or description rather than an evaluated expression, knowledge of the written name does not turn that position into a call.
 
 Block, short and parenthesized spellings express one application: the head consumes the tail. A reserved receiver applies its contract. An existing callable Structure, directly or through its held reference, is called; a call error does not become declaration or assignment. A primitive receives assignment under its contract. An unknown head retains general construction of a named Structure with its written contents without executing the body; free names may resolve later. For absent b, b: A and @: b A are equivalent assignment forms introducing b. Subsequently b: args applies the Structure, while @: b B reassigns the reference. This equivalence does not authorize erasing the source body, implicit merge, or identifying distinct source occurrences merely because storage uses references.
 

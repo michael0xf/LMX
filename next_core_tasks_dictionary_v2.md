@@ -98,6 +98,14 @@ argument container is generally transparent, not only for calls or emptiness.
 `f()`, `f: ()` and explicitly closed empty vertical f have the same empty body;
 dangling `f:` is invalid. Bare f is an expression evaluated by its resolved role.
 
+The complete written head/arguments model must exist before the role is known.
+One namespace, role-resolution algorithm, and consumption mechanism serve
+all heads. A bare resolved receiver receives zero arguments through that same
+route, just as a bare callable is invoked nullarily; arity failure belongs to
+its ordinary contract at the occurrence, never a free/dynamic-input fallback.
+Names and signatures cannot shape the model or collect adjacent atoms.
+See the [primary rule](docs/LMX_semantics.en.md#resolved-head-consumption).
+
 An application with actual arguments has an explicit Frame: `merge: A C`,
 `merge(A C)` or an equivalent completed vertical form. A receiver word written
 as an atom does not capture neighboring fields as operands. Bare callable
@@ -320,6 +328,13 @@ candidate as used by the Consumer. Requirement/exemplar supplies described paths
 it is not a demand to compare every unused field. Primitive conversion and
 structural admission are distinct cooperating stages. Consumer tests follow the
 analytical stage; execution of tests cannot repair an analytical failure.
+
+An established correspondence survives value changes permanently. Replacing a
+branch admits its new candidate before the store; without a Consumer, check
+full structural suitability. Primitive checks here apply **when passing
+arguments**, not to every change or use. No mutation tracker, correspondence
+invalidation, or automatic all-tests rerun follows from these rules. See
+[the primary stability contract](docs/LMX_semantics.en.md#correspondence-stability).
 
 `uses` is the set of actual semantic accesses/calls made by the Consumer, not
 the entire required Structure and not an arity alone. For callable leaves,

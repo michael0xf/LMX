@@ -369,6 +369,11 @@ is an instruction to the translator; the shared Frame syntax does not make
 every head a receiver or every receiver argument a runtime call. Resolve
 the actual role under [head resolution](docs/LMX_semantics.en.md#construction).
 
+The complete written head/arguments model precedes role resolution. One
+namespace, resolver, and consumer serve all heads, including bare receiver
+atoms with no written actuals; distinct contracts do not license a separate
+front-end route. See [model before role](docs/LMX_semantics.en.md#resolved-head-consumption).
+
 ### 8.1 The selector is the actual occurrence
 
 **Norm.** A callable occurrence with a nonzero native word calls that entry; otherwise its portable executable tree is walked. The choice is not a Thread mode, an E/root exception, a compile-time prediction that a known method must be native, or a retry policy after failure. Native and walked execution operate on the same occurrence's fields.
@@ -620,6 +625,13 @@ The typed walker propagates internal **STOPPED = -4** through recursive evaluati
 ### 9.1 The order is conversion, then admission, then binding
 
 **Norm.** A directed conversion table is about value-type conversions. It is not a table enumerating every pair of Structure models. For a receiving reference, convert the candidate first; then run the applicable `implements(candidate, requirement, Consumer)` and receiver tests; store only on success. A candidate expression is evaluated once. A failed admission does not mutate the destination or its dirty state, although earlier effects of evaluating the candidate are not rolled back.
+
+Established correspondence is permanent under value changes. Branch replacement
+checks its new candidate before storage; absent a Consumer, the full structural
+requirement is checked. This is not mutation-triggered revalidation or a request
+to rerun every test after a write. Primitive checking here is **when passing
+arguments**, not every primitive use. The primary contract is
+[correspondence stability](docs/LMX_semantics.en.md#correspondence-stability).
 
 The current compiler projects the same receiving contract for initialization, rebinding, ordinary reference return and supported physical-path stores. A named model used as a descriptor candidate is not executed just to obtain the descriptor. A value-producing callable in candidate position remains a call according to its resolved contract; it cannot be commandeered into a model-reference shortcut.
 

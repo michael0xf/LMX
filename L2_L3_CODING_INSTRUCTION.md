@@ -93,7 +93,7 @@ Batch: (put: 7)
 
 ### 3.2 “The head consumes the tail”
 
-**NORMATIVE.** Block, short, parenthesized, and explicitly closed spellings all form applications. Resolve the head in its receiving and lexical context before deciding what the tail means.
+**NORMATIVE.** First form the complete written head/arguments model without knowing the head's role. Block, short, parenthesized, and explicitly closed spellings use that common model; bare atoms retain their source form. Only then does one resolver in one namespace determine the head's role in its receiving and lexical context, and one consumer apply its contract. Names or signatures must not affect model construction. See [the primary phase-order rule](docs/LMX_semantics.en.md#resolved-head-consumption).
 
 Distinguish the roles within that common syntax: a receiver instructs the
 translator; a callable call is a runtime action. An argument name does not
@@ -108,6 +108,13 @@ The role order is:
 4. an unknown head in definition position declares a named Structure.
 
 Argument count, parentheses, or an empty tail do not override this resolution.
+
+In evaluation position a bare callable is invoked with no arguments; a bare
+receiver receives no arguments through that same mechanism. Missing required
+arguments are diagnosed under the resolved contract at the occurrence, not
+by inventing a free input or capturing adjacent atoms. A non-callable value
+is read normally. Name/description argument positions follow their receiving
+contract; known names in those positions do not introduce nested calls.
 
 ```text
 int: i 5       # primitive declaration through the int receiver
@@ -659,6 +666,13 @@ or candidate behavior. Consumer unit-test execution is the separate second
 stage; it is not implemented or proven by current analytical gates. Do not add
 algorithm analysis to `implements` or claim that a structural PASS completes
 that later stage.
+
+An established structural correspondence is not invalidated by value changes.
+Branch replacement admits the new candidate before storage; with no Consumer,
+the full structural requirement is checked. Do not install a mutation monitor
+or rerun every test after each store. Primitive checks here are **when passing
+arguments**, not on every write, read, or other use. Follow the
+[primary stability rule](docs/LMX_semantics.en.md#correspondence-stability).
 
 ### 12.2 Conversion precedes structural admission
 

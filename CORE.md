@@ -354,6 +354,13 @@ existing `Model: fresh` is an erroneous application of `Model`, whether or
 not `fresh` is known, not an instruction to clone it. Its nullary invocation
 remains valid. This does not remove the declared formals of `fn`/`fm`/`sub`.
 
+All names enter one namespace and one head/arguments pipeline. The complete
+written model is formed before the head's role is known; common resolution
+then selects that role and common consumption applies its contract. A bare
+resolved receiver uses the same zero-argument route as a bare callable, with
+its own contract diagnostics, never a free-input fallback or adjacent-atom
+capture. See the [primary rule](docs/LMX_semantics.en.md#resolved-head-consumption).
+
 An unknown `A` in `A: b` defines Structure `A`; it does not declare an empty
 typed reference named `b` and does not run `b`. If both `C` and the nested
 head `makeA` are unknown, `C: makeA()` defines `C` with the named empty
@@ -416,6 +423,12 @@ compatibility operations and a Consumer-driven structural walk; their
 existence does not prove complete compiler `uses`/capture closure or every
 primitive conversion. The prior project's full conversion table and L2 table
 construction mechanism remain governed by [the implementation plan](next_core_tasks.md).
+
+Established structural correspondence survives value changes; branch
+replacement admits the new candidate before storage, using full structural
+requirements when no Consumer is supplied. Primitive checking here is when
+passing arguments, not a per-mutation hook or repeated all-tests run.
+See [correspondence stability](docs/LMX_semantics.en.md#correspondence-stability).
 
 At source checkpoint `e70689c`, `LmxArena.impl` stores ordinary
 `LmxImplEntry` correspondences: weak `value`/`req`/optional `frame`, a

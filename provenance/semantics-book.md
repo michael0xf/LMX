@@ -716,7 +716,7 @@ The semantic source of a binding or conversion is always ordinary reachable LMX 
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` — предлагаемый кандидат, `bVar` — образец требуемой роли, а `Consumer` — конкретное принимающее выражение, для которого проверяется подстановка. Предикат направлен: он отвечает, можно ли предоставить `aVar` вместо `bVar` именно этому Consumer. Это не номинальная принадлежность типу, не равенство целых структур и не обещание пригодности для другого или любого будущего потребителя. Без Consumer область требований не определена, поэтому двухаргументная форма не задаёт эту модель.
+`aVar` — предлагаемый кандидат, `bVar` — образец требуемой роли, а `Consumer` — конкретное принимающее выражение, для которого проверяется подстановка. Предикат направлен: он отвечает, можно ли предоставить `aVar` вместо `bVar` именно этому Consumer. Это не номинальная принадлежность типу, не равенство целых структур и не обещание пригодности для другого или любого будущего потребителя. Если Consumer не задан, проверяется полная структурная пригодность кандидата по требованиям `bVar`, а не пустое множество использований. Формула ниже описывает проверку с заданным Consumer.
 
 Аналитическая часть строит множество `uses(Consumer, bVar)` из видимых в известном дереве Consumer обращений к `bVar`: `bVar`, `bVar\foo`, `bVar\foo\bar` и так далее. В него входят обращения во всех видимых альтернативных ветвях, а не только путь одного возможного запуска. Для аналитического результата должны одновременно выполняться условия:
 
@@ -751,6 +751,13 @@ admitted(aVar, bVar, Consumer) ⇔
 
 Сбор `uses` не расширяет тела всех вызываемых функций, не исполняет вычисляемые имена и не выполняет полный анализ псевдонимов и потока данных кучи.
 
+<a id="correspondence-stability"></a>
+#### Сохранение установленного соответствия
+
+Один раз установленное соответствие `implements` сохраняется: изменение значений кандидата или проверяющего выражения не отменяет его и не требует строить его заново. Структура графа не может измениться так, чтобы нарушить уже пройденный допуск: любое присваивание ветки сначала проверяет через `implements`, что альтернативная ветка подходит принимающему месту, и лишь затем записывает её; отказ сохраняет прежнее значение. Область этой проверки — используемые требования заданного Consumer либо полная структурная пригодность при его отсутствии, как определено выше. Новый кандидат или другие требования принимающего места требуют собственного допуска, но это не отмена ранее установленного соответствия из-за мутации.
+
+Примитивные значения проверяются при передаче аргументов. Это правило не вводит дополнительных проверок каждого изменения, чтения или иного использования примитива.
+
 Диагностика должна различать действительно тонкое использование и невозможность установить используемые пути. Она может показать, какая одноимённая ветвь выбрана после композиции (последняя по общему правилу или явно выбранное вхождение), какие описательные поля не используются и какие требования остались неустановленными. Диагностика не вводит глобальный «строгий режим» и не меняет правила выбора поля.
 
 На реально исполняемом вызове должны быть предоставлены все требуемые входы выбранного выражения. Успешная направленная проверка делает вызов допустимым, но не доказывает одинакового поведения реализаций.
@@ -760,9 +767,9 @@ admitted(aVar, bVar, Consumer) ⇔
 
 Интерпретатор получает уже построенный граф исполняемых структур и связей. Разбор исходного текста предшествует этому этапу и не выполняет роль интерпретации. Принимающее выражение задаёт юнит-тесты, которые интерпретатор исполняет над кандидатом. Эти тесты выполняют содержательную runtime-валидацию: наличие поля с названием `range` или `unit` само по себе не доказывает соблюдение записанного ограничения.
 
-Кандидат и проверяющее выражение имеют физическую идентичность. Успешная проверка не замораживает их состояние. Изменяемость, внешние эффекты и изменение использованных описаний должны учитываться условиями применения результата проверки. Способ повторного использования результатов, изоляция тестового исполнения и представление набора тестов требуют явного контракта; автоматическое разрешение этих вопросов из совпадения адресов не следует.
+Исполнение обязательных юнит-тестов — этап допуска, а не обработчик каждого изменения графа. Изменение значений не запускает автоматический повторный прогон всех тестов; структурное соответствие сохраняется по [правилу выше](#correspondence-stability).
 
-Обычные значения могут хранить результаты выполнения тестов, если это явно делает программа. Область применимости такого результата задаётся явным контрактом на идентичность кандидата, Consumer, набора тестов и проверенного состояния.
+Обычные значения могут хранить результаты выполнения тестов, если это явно делает программа. Результат относится к кандидату, Consumer и набору тестов, для которых он получен; его хранение не вводит отслеживания мутаций или перепроверки после каждой записи.
 
 Статически установленное нарушение сообщается при анализе. Неуспех любого обязательного юнит-теста делает `admitted(aVar, bVar, Consumer)` ложным; объявленные отказы обрабатываются по правилам [исключений](#exceptions). Ни проверка, ни освобождение памяти не означают отката уже опубликованных сообщений или внешних эффектов.
 [EN]
@@ -774,7 +781,7 @@ The single candidate-admission mechanism consists of analytical tree-based `impl
 <a id="three-argument-implements"></a>
 #### `implements(aVar, bVar, Consumer)`
 
-`aVar` is the proposed candidate, `bVar` is the exemplar of the required role, and `Consumer` is the concrete receiving expression for which substitution is checked. The predicate is directional: it answers whether `aVar` may be supplied in place of `bVar` to this particular Consumer. It is not nominal type membership, equality of whole Structures, or a promise of suitability for another or every future consumer. Without Consumer the requirement scope is undefined, so a two-argument form does not specify this model.
+`aVar` is the proposed candidate, `bVar` is the exemplar of the required role, and `Consumer` is the concrete receiving expression for which substitution is checked. The predicate is directional: it answers whether `aVar` may be supplied in place of `bVar` to this particular Consumer. It is not nominal type membership, equality of whole Structures, or a promise of suitability for another or every future consumer. If Consumer is not supplied, the candidate's full structural suitability is checked against the requirements of `bVar`, not an empty use set. The formula below describes checking with a supplied Consumer.
 
 The analytical stage builds `uses(Consumer, bVar)` from the accesses to `bVar` visible in the known Consumer tree: `bVar`, `bVar\foo`, `bVar\foo\bar`, and so on. It includes accesses in every visible alternative branch, not only the path of one possible execution. The analytical result requires all of the following:
 
@@ -809,6 +816,13 @@ Admitting a value to a named model establishes a **correspondence**: the model's
 
 Collection of `uses` does not expand every callee, execute computed names, or perform whole-heap alias and dataflow analysis.
 
+<a id="correspondence-stability"></a>
+#### Preservation of established correspondence
+
+An established `implements` correspondence persists: changes to the candidate's or checking expression's values neither invalidate it nor require its reconstruction. The graph's structure cannot change so as to break admission already passed: every branch assignment first checks through `implements` that the alternative branch fits the receiving place, then stores it; refusal preserves the previous value. That check covers the supplied Consumer's used requirements or full structural suitability in its absence, as defined above. A new candidate or different receiving requirements need their own admission, but this is not mutation-triggered invalidation of an established correspondence.
+
+Primitive values are checked when passing arguments. This rule introduces no additional checks on every primitive change, read, or other use.
+
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which same-name branch composition selects (the last by the general rule, or the explicitly selected occurrence), which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 
 An executed call must receive every input required by the selected expression. A passed directed check makes the call admissible but does not prove equal implementation behavior.
@@ -818,9 +832,9 @@ An executed call must receive every input required by the selected expression. A
 
 The interpreter receives an already constructed graph of executable Structures and links. Parsing source text precedes this stage and does not serve as interpretation. The receiving expression defines unit tests for the interpreter to execute against the candidate. These tests provide substantive runtime validation: a field named `range` or `unit` does not by its presence prove that the stated constraint holds.
 
-The candidate and checking expression have physical identities. Successful checking does not freeze their state. Mutation, external effects and changes to consulted descriptions must be accounted for by the conditions under which a result applies. Result reuse, isolation of test execution and representation of the test set require explicit contracts; matching addresses alone do not resolve them.
+Execution of mandatory unit tests is an admission stage, not a handler for every graph change. Changing values does not automatically rerun all tests; structural correspondence persists under the [rule above](#correspondence-stability).
 
-Ordinary values may store test results when the program explicitly does so. Applicability of such a result is defined by an explicit contract covering identity of the candidate, Consumer, test set, and checked state.
+Ordinary values may store test results when the program explicitly does so. A result refers to the candidate, Consumer, and test set for which it was obtained; storing it introduces neither mutation tracking nor rechecking after every store.
 
 A statically established violation is reported during analysis. Failure of any mandatory unit test makes `admitted(aVar, bVar, Consumer)` false; declared failures follow the [exception rules](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
 @@ admission-recipes | Как получить требуемую гарантию: четырнадцать практических случаев | Obtaining a required guarantee: fourteen practical cases | 2.5.4; 2.5.3; author 2026-09-20
@@ -953,6 +967,13 @@ A foreign handle requires a checked high-level wrapper and explicit resource and
 
 Ресивер — инструкция транслятору; вызов callable — действие во время исполнения. У них общий синтаксис Frame «голова принимает хвост», но не одна семантическая роль. Роль головы и смысл её аргументов определяются общим разрешением и контрактом принимающей головы. Имя в аргументах ресивера не становится из-за этого отдельным вызовом: `catch: merge ()` передаёт catch имя выхода и описание параметров, как `fn: test ()` передаёт fn имя и описание сигнатуры. Это следствия общего правила, не исключения для этих ресиверов или имён.
 
+<a id="resolved-head-consumption"></a>
+#### Одна модель, одно разрешение, одно потребление
+
+Сначала в памяти транслятора целиком формируется записанная структурная модель «голова — аргументы», без знания того, чем является голова. Ни имя, ни сигнатура, ни категория сущности не определяют границы этой модели и не позволяют собирать дополнительные аргументы. Только после её формирования общий алгоритм разрешения в едином пространстве имён определяет роль головы: ресивер, callable, значение для присваивания либо определение Structure. Один общий механизм потребления применяет контракт разрешённой сущности; различие контрактов не создаёт отдельных разборщиков, пространств имён или маршрутов разрешения.
+
+В позиции вычисления голый идентификатор проходит тот же поток. Разрешённый callable вызывается без аргументов; разрешённый ресивер получает пустой список аргументов и проверяет его по своему обычному контракту. Если контракт требует аргументы, их недостаток диагностируется у исходного вхождения; известная сущность не становится свободной переменной или скрытым входом. Голые `merge` и `int` следуют этому же правилу, не отдельным обработчикам. Non-callable значение читается без вызова. Соседние атомы не захватываются. Если принимающий контракт требует имя или описание, а не вычисляемое выражение, эта позиция не превращается в вызов лишь по известности записанного имени.
+
 Блочная, короткая и скобочная записи выражают одно применение «голова принимает хвост». Зарезервированный ресивер применяет свой контракт. Существующая callable Structure, непосредственно либо через хранящуюся ссылку, вызывается; ошибка вызова не превращается в объявление или присваивание. Примитив получает присваивание по своему контракту. Неизвестная голова сохраняет общее построение именованной Structure с записанным содержимым без исполнения тела; свободные имена могут разрешаться позже. При неизвестном b формы b: A и @: b A равнозначны как присваивание при введении b. Далее b: args применяет Structure, а @: b B переприсваивает ссылку. Эта равнозначность не разрешает стирать исходное тело, неявно делать merge или считать разные исходные вхождения одним объектом лишь из-за ссылочного хранения.
 
 Неизвестное имя аргумента не превращает существующую Structure-голову в ресивер объявления по модели. При существующем A запись A: b в исполняемом теле сначала классифицируется как вызов. Если A — обычная именованная Structure, этот вызов с аргументом ошибочен: у неё есть только тело и нет аргументов; допустим её нульарный вызов. Для fn/fm/sub применяются объявленные сигнатуры. Неизвестный фактический b не объявляется и не клонируется; ошибка вызова не превращается в присваивание. Неявного merge(A, empty) здесь нет. Ресивер примитивного типа int, напротив, объявляет по своему контракту: int: i 5 передаёт ему имя i и значение 5. Произвольная вложенность ресиверов не означает равенства цепочки применений списку аргументов; каждую вложенную форму потребляет её принимающее выражение.
@@ -1031,6 +1052,13 @@ Source notation constructs the complete Structure graph: values, declarations an
 ### Head resolution and the role of the tail
 
 A receiver is an instruction to the translator; a callable call is a runtime action. They share the Frame syntax "the head consumes the tail", not a semantic role. General resolution and the receiving head's contract determine the head's role and the meaning of its arguments. A name in a receiver's arguments does not thereby become another call: `catch: merge ()` supplies catch with the failure name and parameter description, just as `fn: test ()` supplies fn with the name and signature description. These are consequences of the common rule, not exceptions for those receivers or names.
+
+<a id="resolved-head-consumption"></a>
+#### One model, one resolution, one consumption
+
+First, the complete written structural head/arguments model is formed in translator memory, without knowing what the head denotes. Neither its name, signature, nor entity category determines that model's boundaries or permits collecting additional arguments. Only after the model has been formed does the common resolution algorithm in the single namespace determine the head's role: receiver, callable, assignment value, or Structure definition. One common consumption mechanism applies the resolved entity's contract; differing contracts do not create separate parsers, namespaces, or resolution routes.
+
+In evaluation position, a bare identifier enters that same flow. A resolved callable is invoked without arguments; a resolved receiver receives an empty argument list and checks it under its ordinary contract. If the contract requires arguments, their absence is diagnosed at the source occurrence; a known entity does not become a free variable or hidden input. Bare `merge` and `int` follow this same rule, not separate handlers. A non-callable value is read without invocation. Neighboring atoms are not captured. If the receiving contract requires a name or description rather than an evaluated expression, knowledge of the written name does not turn that position into a call.
 
 Block, short and parenthesized spellings express one application: the head consumes the tail. A reserved receiver applies its contract. An existing callable Structure, directly or through its held reference, is called; a call error does not become declaration or assignment. A primitive receives assignment under its contract. An unknown head retains general construction of a named Structure with its written contents without executing the body; free names may resolve later. For absent b, b: A and @: b A are equivalent assignment forms introducing b. Subsequently b: args applies the Structure, while @: b B reassigns the reference. This equivalence does not authorize erasing the source body, implicit merge, or identifying distinct source occurrences merely because storage uses references.
 

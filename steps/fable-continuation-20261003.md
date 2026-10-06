@@ -9228,3 +9228,70 @@ reference field into an own field.
 | `build/l3_selftest/opus_l3_17` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_19` (full harness) | RED39/1906: against `opus_full_18` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
 | `build/l2_harness/opus_focus_rf1` (focused, before the gates) | 17 rows: the two of this section, the reference-path rows beside them and the rows of a path stored with a conversion -- all green but `unit_free_path_field_converted` (+`_swapped`), the red required positives of FIELD-CONSUMPTION-CONVERSION, refused in the words they have in `opus_full_18`. |
+
+<a id="sprintf-past-buffer"></a>
+## 90. No write past a buffer, and sizeof's operand of any length (SPRINTF-PAST-BUFFER, FIXED-BLOCKS-AUDIT)
+
+Probing the audit's remaining sizes with long names and deep nesting, two
+writes past a fixed buffer of the translator were reached by programs:
+
+| Write | Where | Reached by | Before |
+| --- | --- | --- | --- |
+| a counter's step, indented one level below its loop's body: `%s    ` of the body's indentation | `l2_emit_stmts`, 64 bytes on the stack (`l2_dind`) | about nine nested `for:` loops | at twenty the L1 does not parse ("source level decrease must be one step"); at forty the step's indentation is 324 spaces, 261 bytes past the buffer |
+| `c.sizeof(<operand>)` with the operand's own text | `l2_emit_sizeof`, into the expression's text: here the global `l2_tok`, 1024 bytes | `sizeof(c.<name>)` with a long name: an atom with `c.` is a type word (`l2_prim_type_word`), and that branch wrote it | a name of 20000 bytes overwrote 19 KB of the translator's globals with exit 0 |
+
+A diagnostic build of the translator with `-O2 -D_FORTIFY_SOURCE=2` stops at
+the first ("*** buffer overflow detected ***") from ten nested loops, and
+crashes on the second. Over the 1903 translations recorded by
+`opus_full_18` that build gives the same L1, messages and exits as the
+ordinary one and detects nothing: no row reached either write.
+
+Now the step's indentation is in memory of its own size (`l2_text_room`).
+An operand `sizeof` writes as it stands -- a type word, the C door's name, a
+machine local's name -- and that the expression's text cannot hold is the
+expression's located refusal, "expression too long", as every other writer
+of that text says it (`l2_cat`). The size of the expression's text itself
+stays on the audit's list.
+
+The same probes found a cap of the audit's kind: `sizeof(<name>)` of a
+declared local whose name is longer than 200 bytes was refused as
+"unresolved name". The lowering (`l2_sizeof_name_bytes`) took 200 bytes of a
+name at most and answered "not lowered here" for a longer one, and its
+caller refused the operand in the words of a name it could not find:
+200 bytes translated, 201 were refused. The cap is gone; that lowering
+writes no name into the expression's text (a scalar's size is its typed
+temp's, a formal's its parameter's).
+
+| Row | Shows | The previous translator |
+| --- | --- | --- |
+| `unit_for_nested_deep` (+`_walk`, its method walked) | twenty nested `for:` loops stepping their counters; the innermost body runs 4 times; success 7 | its L1 does not parse |
+| `unit_sizeof_long_name` | `sizeof` of a scalar, a reference and an array local of 300 bytes each, against `sizeof(int)`, `sizeof(@: void)` and three `int`s; success 7. Natively only: a method with `sizeof` keeps its native word under `--walk-methods` | "unresolved name" |
+
+Not pinned by a row: `sizeof(c.<name>)` past the expression's room is now
+the located refusal of a size the audit still lists, so a row would expect
+the limit itself. Measured with probes: names of 1500, 3000 and 20000 bytes
+are refused at their place; a short one translates.
+
+Found beside it and kept on the audit's list: loops and catch blocks nested
+more than 64 deep are refused, "loops and catch blocks nested too deeply"
+(`l2_lp_push`), with no place (1:1); a C door's name of 3000 bytes in a
+constant, a call or an expression is refused as "internal: a refusal said
+nothing" -- the expression's limit without its words; a count of an own
+array written with more than 300 digits is refused, "unsupported own array
+declaration"; the route of `l2_emit_path_to` that roots a path at a machine
+local (`l2_proot`, 64 bytes) is taken by none of the 1903 translations -- a
+diagnostic stage printed a line there and the replay printed none.
+
+A replay of the 1905 translations recorded by `opus_full_19`, with this step's
+translator against that gate's, changes nothing: every row keeps its L1, exit,
+messages and number of allocations. No row before this step reached either
+write or a sizeof operand over 200 bytes.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_19` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_18` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_20` (full harness) | RED39/1909: against `opus_full_19` FAIL→OK 0, OK→FAIL 0, added 3, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_ovf1` (focused, before the gates) | 21 rows: the three of this section, the `for:` and `sizeof` rows beside them and the reference-field rows of §89, all green. |

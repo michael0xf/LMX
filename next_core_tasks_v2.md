@@ -769,6 +769,15 @@ Current bounded implementation, with no DONE claim:
   with a long positive and a mutant that restores the size; a located refusal
   is evidence of the implementation, not leave to keep a language limit
   ([FIXED-BLOCKS-AUDIT](steps/defects.md#fixed-blocks-audit)):
+  - [x] sizeof's operand name, 200 bytes; with it SPRINTF-PAST-BUFFER, two
+    unbounded writes past a fixed buffer reached by programs (a nested
+    loop's step, `sizeof(c.<name>)`)
+    ([section 90](steps/fable-continuation-20261003.md#sprintf-past-buffer)).
+    Gates: kernel `opus_kernel_19` GREEN297 (114 selftests), L3 `opus_l3_18`,
+  full `opus_full_20` RED39/1909 -- against `opus_full_19` FAIL→OK 0,
+  OK→FAIL 0, added 3.
+  - [ ] loops and catch blocks nested more than 64 deep (`l2_lp_push`),
+    refused without a place;
   - [ ] the text of one expression in the emitter, 1023 bytes (`l2_cat`), and
     the buffers that feed it, the path of an actual of at most 32 names among
     them;

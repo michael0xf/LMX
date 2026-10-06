@@ -28262,8 +28262,6 @@ fn: l2_sizeof_name_bytes (const: @(LmP0Node node); const: @(char d); size_t: b; 
     if: d = 0 || dest = 0 || e <= b
         return: 2
     n: e - b
-    if: n > 200U
-        return: 2
     if: d[b] != 95 && (d[b] < 65 || d[b] > 90) && (d[b] < 97 || d[b] > 122)
         return: 2
     i: b
@@ -28374,12 +28372,18 @@ fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: cha
     ---
     if: a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: l2_error(l2_src, node, "sizeof: unsupported operand")
+    # A type word (a C door's name among them) and the C door's name are written as they stand, into the expression's
+    # text (dest, the room l2_cat keeps): one it cannot hold is the expression's refusal, located.
     if: l2_prim_type_word(a0\value\as\atom)
+        if: a0\value\as\atom\length + 11U >= 1024U
+            return: l2_error(l2_src, node, "expression too long")
         if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
             return: 1
         return: 0
     ---
     if: a0\value\as\atom\length > 2U && a0\value\as\atom\data[0] = 99 && a0\value\as\atom\data[1] = 46
+        if: a0\value\as\atom\length + 11U >= 1024U
+            return: l2_error(l2_src, node, "expression too long")
         if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
             return: 1
         return: 0
@@ -28389,6 +28393,8 @@ fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: cha
         return: k
     ml: l2_ml_find(a0\value\as\atom)
     if: ml >= 0
+        if: a0\value\as\atom\length + 11U >= 1024U
+            return: l2_error(l2_src, node, "expression too long")
         if: c.sprintf(dest, "c.sizeof(%.*s)", (cast: (int) a0\value\as\atom\length), a0\value\as\atom\data) < 0
             return: 1
         return: 0
@@ -46533,7 +46539,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     []: char l2_pnm 1024
     []: char l2_pval 160
     []: char l2_pval2 192
-    []: char l2_dind 64
+    []: char l2_dind_own 64
+    @: char l2_dind 0
     []: char pdest 1024
     int: cni
     @: LmP0Text cmodel
@@ -47176,9 +47183,14 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 l2_scope_pop()
                 return: 1
             nxt: l2_next_active(nxt\next)
-            # The counter steps in its working value, or in its cell when it has none (§7b).
+            # The counter steps in its working value, or in its cell when it has none (§7b).  Its step is indented one
+            # level below the body, as deep as the loops are nested: in memory of its own size (SPRINTF-PAST-BUFFER).
             if: l2_own_direct(mi, si) != 0
-                if: c.sprintf(l2_dind, "%s    ", deep) < 0 || l2_own_load(si, l2_pval) != 0
+                l2_dind: l2_text_room(strlen(deep) + 5U, l2_dind_own, 64U)
+                if: l2_dind = 0
+                    l2_scope_pop()
+                    return: l2_alloc_or(l2_src, stmt, "out of memory")
+                if: c.snprintf(l2_dind, strlen(deep) + 5U, "%s    ", deep) < 0 || l2_own_load(si, l2_pval) != 0
                     l2_scope_pop()
                     return: 1
                 if: nxt != 0 && nxt\value != 0 && l2_text_eq(nxt\value\as\atom, "--") && c.sprintf(l2_pval2, "%s - 1", l2_pval) < 0

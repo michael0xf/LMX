@@ -1,0 +1,54 @@
+# SPRINTF-PAST-BUFFER: twenty `for:` loops nested in one method, each stepping its own counter.  The step of a
+# counter is written one level below its loop's body; its indentation was formatted into 64 bytes, and from
+# about nine nested loops it ran past them: the L1 of this row did not parse ("source level decrease must be
+# one step").  The innermost body runs once per pass of every loop: 2 passes of the outer two, 1 of the rest,
+# so 4 times.  Success is 7.
+fn: m () int
+    int: total 0
+    for: int(k0, 0) (k0 < 2) k0++
+        for: int(k1, 0) (k1 < 2) k1++
+            for: int(k2, 0) (k2 < 1) k2++
+                for: int(k3, 0) (k3 < 1) k3++
+                    for: int(k4, 0) (k4 < 1) k4++
+                        for: int(k5, 0) (k5 < 1) k5++
+                            for: int(k6, 0) (k6 < 1) k6++
+                                for: int(k7, 0) (k7 < 1) k7++
+                                    for: int(k8, 0) (k8 < 1) k8++
+                                        for: int(k9, 0) (k9 < 1) k9++
+                                            for: int(k10, 0) (k10 < 1) k10++
+                                                for: int(k11, 0) (k11 < 1) k11++
+                                                    for: int(k12, 0) (k12 < 1) k12++
+                                                        for: int(k13, 0) (k13 < 1) k13++
+                                                            for: int(k14, 0) (k14 < 1) k14++
+                                                                for: int(k15, 0) (k15 < 1) k15++
+                                                                    for: int(k16, 0) (k16 < 1) k16++
+                                                                        for: int(k17, 0) (k17 < 1) k17++
+                                                                            for: int(k18, 0) (k18 < 1) k18++
+                                                                                for: int(k19, 0) (k19 < 1) k19++
+                                                                                    total: total + 1
+                                                                                ---
+                                                                            ---
+                                                                        ---
+                                                                    ---
+                                                                ---
+                                                            ---
+                                                        ---
+                                                    ---
+                                                ---
+                                            ---
+                                        ---
+                                    ---
+                                ---
+                            ---
+                        ---
+                    ---
+                ---
+            ---
+        ---
+    ---
+    if: total != 4
+        return: 64 + total
+return: 7
+
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

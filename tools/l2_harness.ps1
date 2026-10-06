@@ -3516,6 +3516,17 @@ $fixtures = @(
         Needle = 'unit_upper_undeclared_refused.lm2:10:30: unbound dynamic input NOPE'; Absent = @(); Debt = @() },
     # FIXED-BLOCKS-AUDIT: the words of a refusal name what they refuse in full -- a free name of 300 bytes, a
     # named Structure of 300 bytes; the words were cut at 256 and 240 bytes (l2_error_name).
+    # FIXED-BLOCKS-AUDIT: sizeof's operand is a declared name of any length (a scalar, a reference and an array local
+    # of 300 bytes); a name over 200 bytes was "unresolved name".  Natively: a method with sizeof keeps its native
+    # word under --walk-methods.
+    [pscustomobject]@{ Name = 'unit_sizeof_long_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    # SPRINTF-PAST-BUFFER: twenty nested `for:` loops, each stepping its counter; the step's indentation was written
+    # past 64 bytes on the stack and the previous translator's L1 does not parse.  Native and walked.
+    [pscustomobject]@{ Name = 'unit_for_nested_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_for_nested_deep_walk.lm2'; Source = 'unit_for_nested_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_unbound_input_long_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = ('unit_unbound_input_long_name_refused.lm2:11:30: unbound dynamic input unbound' + ('u' * 293)); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_struct_arity_long_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

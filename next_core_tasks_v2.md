@@ -1775,6 +1775,21 @@ survive both engines; the reintroduced-collector mutant is caught; exact
 corpus comparison and normal gates are recorded. No downstream clean-kernel
 or self-build checkpoint may retain this shim.
 
+Progress 2026-10-06 ([section 105](steps/fable-continuation-20261003.md#explicit-receiver-frames-removal)):
+items 1-4 done on the OWN-TYPE-CODE-BANDS baseline -- the census (268 translations,
+282 sites in 188 fixtures, all `merge`), the settle and the three atom branches removed,
+the [migration manifest](steps/k03-receiver-frame-migration.tsv) applied and replayed equal;
+item 5's explicit-Frame controls done (`unit_explicit_frame_method`, `unit_explicit_frame_root`,
+native and walked); item 6's collector-reintroduction mutants replayed. The author
+answered the bare-head question (one namespace; the head/arguments model before any
+role; a bare resolved head is its zero-argument application through the same consumer
+as `H()`, never a free input, for every head). Remaining acceptance: that universal
+route (measured: bare and `H()` agree in 33 of 138 head/position cases,
+[matrix](steps/k03-bare-head-matrix.txt)), the bare and prefix non-application
+witnesses, and the gated row a reintroduced collector reddens.
+Gates: kernel `opus_kernel_38` GREEN297 (114 selftests), L3 `opus_l3_36`, full
+`opus_full_38` RED39/1999 -- against `opus_full_37` FAIL→OK 0, OK→FAIL 0, added 4.
+
 ### K04 — Callable actuals and hidden inputs
 
 Complete `CALLABLE-FORMAL-HIDDEN-CONTRACT`, `SUB-ACTUAL-REFERENCE-CLASSIFICATION`,

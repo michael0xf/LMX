@@ -623,9 +623,15 @@ Fable принял единственный writer/build-слот по [to_fable
   прав); исправление и отложенное исследование отменены
   ([§102 журнала](fable-continuation-20261003.md#declaration-call-tail-answer)). Гейты `opus_kernel_34` GREEN297, `opus_l3_32`,
   `opus_full_34` RED39/1981: против `opus_full_32` FAIL→OK 0, OK→FAIL 0, добавлено 10.
-- RECEIVER-ATOM-CRUTCH (OPEN): `b: merge A C` — костыль по слову автора 2026-10-06, уходит вместе со строками на
-  нём (231 перевод из принятых станет отказом без него); шаг после OWN-TYPE-CODE-BANDS
-  ([defects](defects.md#receiver-atom-crutch), план [K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames)).
+- RECEIVER-ATOM-CRUTCH (OPEN): сборщики атома-ресивера удалены (`l2_merge_atom_settle` и три ветви), 282 места в
+  188 фикстурах перенесены на явный Frame (`x: merge: Y`), перенос проверен повтором 272 переводов и побайтным L1
+  гейта; контроли явных форм в корне, методе, вложении, возврате и анонимной Structure, нативно и с обходом. Автор
+  ответил о голой голове: одно пространство имён, модель до роли, голая голова — применение без аргументов тем же
+  потребителем, никогда не свободный вход. Общий маршрут не реализован (матрица: 33 из 138 совпадений голой записи и
+  `H()`); он, отрицательные свидетели и строка для возвращённого сборщика — оставшаяся приёмка K03
+  ([§105 журнала](fable-continuation-20261003.md#explicit-receiver-frames-removal), [defects](defects.md#receiver-atom-crutch),
+  план [K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames)). Гейты `opus_kernel_38`
+  GREEN297, `opus_l3_36`, `opus_full_38` RED39/1999: против `opus_full_37` FAIL→OK 0, OK→FAIL 0, добавлено 4.
 - OWN-TYPE-CODE-BANDS исправлен: код указателя и Array указателей без полос, у ссылки графа свой формальный код 42,
   декодеры по интервалу и ветка совместимости нулевого литерала удалены (ноль — ячейка указателя типа значения
   места); в обходе перепривязка формала Structure получила допуск; свидетели 899/950/1101 чужих типов и другой

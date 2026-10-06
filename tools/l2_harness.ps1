@@ -4282,7 +4282,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:30:11: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_copy_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:10: unknown merge operand'; Absent = @(); Debt = @() },
+        Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:11: unknown merge operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_root_used_other_refused.lm2:14:1: implements is false in a typed binding'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -4455,13 +4455,12 @@ $fixtures = @(
     # the call at translation (the source does not carry a field the Consumer reads; K01's used-edge check).
     [pscustomobject]@{ Name = 'unit_merge_hidden_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_hidden_refused.lm2:11:13: implements is false in function argument'; Absent = @(); Debt = @() },
-    # K03d (next_core_tasks_v2.md K02 bullet 4; docs, "Явное копирование": `b: merge A C` -- the operands are A
-    # and C, the outer b receives the result, the destination name is not a first operand).  The receiver `merge`
-    # written as an ATOM with its operands after it is the book's own spelling of one statement -- the same
-    # statement as `b: merge: A C`, settled into that one frame form in the tree before any later pass reads it
-    # (arity, mrs, native emission, walker), so both spellings emit the same L1.  A method-local result reading
-    # the CURRENT cells, a three-operand result whose later operand joins an appended slot, and a unit-level
-    # result a method reads as its hidden input (the shape K03b/K03c recorded as still "unresolved name merge").
+    # K03d, migrated by K03-EXPLICIT-RECEIVER-FRAMES: these rows pinned the receiver written as an ATOM with its
+    # operands after it (`b: merge A C`) as a spelling of one merge.  The author (2026-10-06): a typo, its reading
+    # a crutch -- the settle and the atom readings are gone; a call, a receiver's too, is its Frame.  The rows keep
+    # their assertions in the Frame `b: merge: A C`: a method-local result reading the CURRENT cells, a
+    # three-operand result whose later operand joins an appended slot, and a unit-level result a method reads as
+    # its hidden input.
     [pscustomobject]@{ Name = 'unit_merge_atom_receiver.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_atom_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 4;
@@ -4469,10 +4468,20 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_atom_unit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     # The same statement with the destination name ALREADY bound is an assignment of a merge value to an existing
-    # binding, not a declaration; it is refused by the same receiving-context path, with the same diagnostic at
-    # the same site as its frame-spelling twin `w: merge: Model`.  The message is that path's current one.
+    # binding, not a declaration; the receiving-context path refuses it.  The message is that path's current one.
     [pscustomobject]@{ Name = 'unit_merge_atom_assign_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_merge_atom_assign_refused.lm2:10:5: assignment value has unknown type'; Absent = @(); Debt = @() },
+    # K03-EXPLICIT-RECEIVER-FRAMES: an application with arguments is its Frame -- merge's short, compact and completed
+    # vertical spellings with one operand and two, in a method, nested, returned from a factory, at the root and as an
+    # anonymous Structure's sole content, and length's Frames; the root native and walked, the twins walk the methods.
+    [pscustomobject]@{ Name = 'unit_explicit_frame_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_explicit_frame_method_walk.lm2'; Source = 'unit_explicit_frame_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_explicit_frame_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_explicit_frame_root_walk.lm2'; Source = 'unit_explicit_frame_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
     # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
     # task changes stays 0 through the receiving call and is changed once by the explicit invocation.

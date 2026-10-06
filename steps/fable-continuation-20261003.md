@@ -10520,3 +10520,94 @@ of 19040 null literals, section 103); no source form is invented for it.
 | `build/l3_selftest/opus_l3_35` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_37` (full harness) | RED39/1995: against `opus_full_36` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths (the driver, the harness, the fixture) were hashed before the run; the staged copies are their bytes. |
 | isolated clones (scratchpad) | The two rows on these bytes: OK with `a71009cc`'s translator; red with the own code fed in as the formal one, on the four `typepath` facts only. |
+
+<a id="explicit-receiver-frames-removal"></a>
+## 105. A receiver's application is its Frame: the atom collectors removed (K03-EXPLICIT-RECEIVER-FRAMES)
+
+The author (2026-10-06, [blog](../LMX_blog/2026-10-06.md#explicit-receiver-frames)): `b: merge: A C` or
+`b: merge(A C)`; `b: merge A C` is a typo, and the code that reads it is a crutch to remove whole. Plan:
+[K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames); stage request
+K03-EXPLICIT-FRAME-REMOVAL-20261006-01 (Codex).
+
+The census, frozen before any change, on the baseline after OWN-TYPE-CODE-BANDS: a diagnostic build in which each
+reading said "RCV <reader> <word> <line>:<column>" on stderr, and a build without the readings, both replayed over
+`opus_full_36`'s 1992 recorded translations.
+
+| Census | Count |
+| --- | --- |
+| translations that change without the readings | 268: 235 accepted -> refused, 33 refusals with another message, 0 refused -> accepted; each has a site |
+| site readings | 441, all of the word `merge`: the settle 441, `l2_receiver_value`'s atom branch 102 of them; the atom branches of `l2_tail_is_structure` and `l2_fields_one_value` 0 (the settle had rewritten the tree first) |
+| sites | 282 in 188 fixtures (two pairs of fixtures are byte-identical files) |
+| a site, the outcome unchanged | 4 rows, refused earlier for their own reason |
+| the text census `x: merge Y` in tests | 289 lines: 281 of the sites, and 8 `catch: merge (...)` -- catch's arguments, no application of merge; one site, the vertical `fresh:` / `merge Model`, the text pattern misses |
+
+Removed from `l2trans.lm1`:
+
+| What | Its callers now |
+| --- | --- |
+| `l2_merge_atom_settle`, which rewrote `b: merge A C` in the tree into a merge Frame, and its call from `l2_merge_frame` | `l2_merge_frame` returns the Frame or 0; its 8 callers (`l2_emit_stmts` 2, `l2_scan_body` 2, `l2_merge_body`, `l2_merge_declaration`, `l2_rw_merge`, `l2_rw_stmt_content`, `l2_src_merge`) took 0 already for a statement that is no merge |
+| `l2_receiver_value`'s receiver-word atom branch | `l2_unit_role`, `l2_local_ns_shape`: a receiver's value is its Frame |
+| `l2_tail_is_structure`'s receiver-word atom branch | `l2_ns_nested_def`, `l2_struct_defined_below` |
+| `l2_fields_one_value`'s receiver-word atom branch | `l2_check_one_value` |
+
+No read of a receiver word by name in an atom's position is left. `l2_receiver_word` keeps six uses: the head
+(`l2_head_absent`, `l2_local_ns_shape`), a Frame's head (`l2_receiver_value`, `l2_tail_is_structure`), and two
+reserved-role exclusions of a tail atom that assemble nothing (`l2_ident_only_tail`: a receiver word is no plain
+identifier content; `l2_retained_atom`: it is no retained atom).
+
+The migration ([manifest](k03-receiver-frame-migration.tsv): fixture, old line:column, the old and the new line,
+the recorded translations): each of the 282 sites gets its colon, `x: merge Y` -> `x: merge: Y`, and no other code
+changes; 26 comment lines of 9 of those files follow it (five spelled the site; the four K03d rows pinned the atom
+spelling itself and say now what they keep, in as many lines, so no position moves). Every changed line of the 188
+files is a site or a comment line. The K03 translator on the migrated sources equals `a71009cc`'s on the originals
+for all 272 recorded translations of those fixtures: L1 bytes, exit, and the messages with the moved columns mapped
+back. One harness needle moves: `unit_recv_use_nested_copy_reach_limit_probe` 30:10 -> 30:11.
+
+Controls, each with a twin that walks every method; the root runs native and walked:
+
+- `unit_explicit_frame_method`: in a method, merge's short, compact and completed vertical spellings with one
+  operand and with two, each result its own copy; a merge nested in an if body; merge's Frame returned from a
+  factory, short and compact; another receiver's Frames, `length: arr` and `length(arr)`.
+- `unit_explicit_frame_root`: at the root, short, compact and the dotted vertical spelling with two operands,
+  `u: (merge: Model)` (an anonymous Structure's sole content) and `w: merge: (Model)`, read by methods as their hidden
+  inputs.
+
+The vertical and the compact spellings translate byte for byte as the short ones do.
+
+Located limits met on the way, the same with `a71009cc` (not this step's): a merge Frame as an actual,
+`rdx(merge(Model))`, "merge expression is not lowered in this receiving context"; `Model: mm merge: Model`, "a typed
+binding whose candidate is not a name is not built yet"; a method `() Model` returning `merge: Model`, "implements is
+false in return value".
+
+Mutants: each removed collector put back alone into an isolated build of these bytes, replayed. Over
+`opus_full_38`'s 1998 recorded translations -- the migrated sources -- neither the settle nor `l2_receiver_value`'s
+atom branch changes any: the corpus depends on no collector, and no gated row catches one put back yet (the bare and
+prefix witnesses below are remaining acceptance). Over `opus_full_37`'s 1994 -- the atom sources -- K03 changes 268;
+the settle put back returns 196 of them to `a71009cc`'s outcome (59 stay as K03, 13 neither) and changes no other;
+`l2_receiver_value`'s atom branch put back alone returns 1 (7 stay, 260 neither) and changes 4 others.
+
+The bare head. Asked what a bare receiver atom is, the author answered (2026-10-06, relayed by Codex as
+K03-BARE-RECEIVER-ANSWER-20261006-01 with K03-UNIVERSAL-CONSUMPTION, K03-ONE-NAMESPACE-ONE-RESOLVER and
+K03-MODEL-BEFORE-ROLE; archived in the [author's log](../LMX_blog/2026-10-06.md), the rule in
+[semantics](../docs/LMX_semantics.en.md#resolved-head-consumption)): one namespace for merge,
+fn, int, a Structure and a method alike; first the complete head/arguments model, then one resolution of what the
+head is; a bare resolved head is its application with zero written arguments, through the same consumer as `H()`,
+diagnosed where it stands, never a free or dynamic input, never collecting its neighbours -- for every head, not
+merge alone. This checkpoint does not implement that route. Measured on its bytes ([matrix](k03-bare-head-matrix.txt):
+23 heads in 6 positions, each bare and as `H()`), the two spellings agree in 33 of 138: the bare receiver atoms go
+the name path -- `x: merge` and `x: merge Model` are refused "unresolved name" at merge (with `a71009cc`, through
+the deleted settle, "merge needs at least one operand"), a bare `merge` statement "unbound dynamic input merge" at
+the method's call site (so with `a71009cc` too) -- while `H()` meets per-category handlers (`merge()` as a statement
+"internal: a source definition has no owning producer", `x: sendMessage()` "unknown method"). The translator
+dispatches by spelling: tests `l2_frame_head(node, "<word>")` on 317 lines over about 30 words, beside `l2_receiver_word`,
+`l2_prim_type_word` and the atom name path. The universal route, the bare and prefix negative witnesses, and a gated
+row that a reintroduced collector reddens, are K03's remaining acceptance.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_38` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_36` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_38` (full harness) | RED39/1999: against `opus_full_37` FAIL→OK 0, OK→FAIL 0, added 4 (the controls), removed 0, red rows whose message changed 0. The 192 declared paths were hashed before the run; the staged copies are their bytes. |
+| `opus_full_37` against `opus_full_38`, generated L1 | Of the 1493 rows both translate, every L1 is byte-identical -- atom sources with `a71009cc`'s translator, migrated sources with this one -- but three library-mode rows, which differ only in the unit hash `l2_u<hex>` of their evidence directory (as between `opus_full_36` and `opus_full_37`). |

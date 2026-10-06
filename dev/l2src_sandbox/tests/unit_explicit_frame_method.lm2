@@ -1,0 +1,59 @@
+# K03-EXPLICIT-RECEIVER-FRAMES (the author, 2026-10-06: `b: merge: A C` or `b: merge(A C)`; `b: merge A C` is a
+# typo): an application with arguments is its Frame, whatever the receiver.  In a method: merge's short, compact
+# and completed vertical spellings with one operand and with two, each result its own copy; a merge nested in a
+# condition's body; merge's Frame returned from a factory, short and compact; and another receiver's Frames,
+# `length: arr` and `length(arr)`.  The vertical spelling translates as the short one does, byte for byte.
+# Entry 7.
+Model:
+    size_t: x 1U
+end: Model
+Extra:
+    size_t: z 2U
+end: Extra
+fn: add () int
+    return: 4
+end: add
+fn: make () fn: () int
+    return: merge: add
+end: make
+fn: make2 () fn: () int
+    return: merge(add)
+end: make2
+fn: rdx (Model: m) size_t
+    return: m\x
+end: rdx
+fn: check () int
+    []: int arr 3
+    size_t: n 0U
+    size_t: k 0U
+    a: merge: Model
+    b: merge(Model)
+    c:
+        merge:
+            Model
+    ---
+    d: merge: Model Extra
+    e: merge(Model Extra)
+    a\x: 5U
+    if: b\x != 1U || c\x != 1U || d\x != 1U || d\z != 2U || e\z != 2U || Model\x != 1U
+        return: 81
+    if: a\x = 5U
+        f: merge: d
+        f\z: 9U
+        if: f\x != 1U || d\z != 2U || f\z != 9U
+            return: 82
+    ---
+    if: rdx(a) != 5U
+        return: 83
+    n: length: arr
+    k: length(arr)
+    if: n != 3U || k != 3U
+        return: 84
+    @: w make()
+    @: v make2()
+    if: w() + v() != 8
+        return: 85
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

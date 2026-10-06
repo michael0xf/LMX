@@ -1,13 +1,13 @@
-# K03d: the destination of the atom spelling is NOT a first operand, and it is not a new declaration
-# when the name is already bound -- `w` is an int here, so `w: merge Model` is an assignment of a merge
-# value to an existing binding, which the current receiving-context machinery refuses.  The point of
-# this row is that BOTH surface forms refuse the SAME way: the frame-spelling twin `w: merge: Model`
-# gives the identical diagnostic at the identical site.  The message is the assignment path's current
-# one, not a claim of the language.
+# K03d, migrated by K03-EXPLICIT-RECEIVER-FRAMES: this row pinned `w: merge Model`, the atom spelling
+# the author (2026-10-06) calls a typo; it is the Frame `w: merge: Model`.  The destination is not a
+# first operand, and not a new declaration when the name is already bound -- `w` is an int here, so the
+# statement assigns a merge value to an existing binding, which the current receiving-context machinery
+# refuses.  The message is the assignment path's current one, not a claim of the language.
+# The atom spelling's reading is gone with the other atom readings.
 Model: (int: value 1)
 fn: m () int
     int: w 5
-    w: merge Model
+    w: merge: Model
     return: w\value
 sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
 return

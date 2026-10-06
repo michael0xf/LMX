@@ -1,10 +1,10 @@
-# K03d (next_core_tasks_v2.md K02 bullet 4; docs, "Явное копирование": `b: merge A C` -- the operands
-# are A and C, the outer b receives the result, and the destination name is not the first operand of
-# merge).  The receiver `merge` written as an ATOM with its operands after it is the book's own spelling
-# of one statement; the frame spelling `R: merge: Source` is the other surface form of the same
-# statement, and both settle into one form before any later pass.  This is the method-local twin of
-# unit_merge_live_source: the copy reads the CURRENT cells.  Before this slice the atom tail was read as
-# a Structure in a method's body (the atoms became statements: `unresolved name`, atom=merge).
+# K03d, migrated by K03-EXPLICIT-RECEIVER-FRAMES.  This row pinned `R: merge Source`, the receiver written
+# as an ATOM with its operand after it, as a spelling of one merge (next_core_tasks_v2.md K02 bullet 4).
+# The author (2026-10-06): that spelling is a typo and its reading a crutch; the settle and the atom
+# readings are gone, and a call, a receiver's too, is its Frame.  The row keeps its assertion in the
+# Frame `R: merge: Source`: the method-local twin of unit_merge_live_source, the copy reads the CURRENT
+# cells, and writing the copy leaves Source as it is.  The operands are A and C in `b: merge: A C`, and
+# the outer b receives the result; the destination name is not the first operand of merge.
 # Success is 7.
 Source:
     size_t: x 1U
@@ -14,7 +14,7 @@ end: Source
 fn: probe () int
     Source\x: 9U
     Source\letter: 'B'
-    R: merge Source
+    R: merge: Source
     if: R\x != 9U || R\letter != 'B'
         return: 81
     R\x: 12U

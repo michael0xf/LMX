@@ -1,6 +1,6 @@
 # FACTORY (the author, 2026-10-05): `@: h f(a)` receives a factory's result; this row wrote `h: f a` until then.
 # LIMIT PROBE, not a rule. A definition inside a method reached through a
-# copy of the method, `c: merge make` and `c\read()`. This implementation
+# copy of the method, `c: merge: make` and `c\read()`. This implementation
 # refuses a method as a merge operand, and the coverage analysis relies on
 # that: a definition inside a method counts as unconsumed when its method
 # neither calls it nor returns it, because no other route to it is accepted
@@ -16,7 +16,7 @@ Other:
 end: Other
 
 fn: make () fn: () size_t
-    o: merge Other
+    o: merge: Other
     @: Model b o
     fn: read () size_t
         return: b\value
@@ -27,7 +27,7 @@ end: make
 
 @: r make()
 size_t: got r()
-c: merge make
+c: merge: make
 size_t: z c\read()
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
 return

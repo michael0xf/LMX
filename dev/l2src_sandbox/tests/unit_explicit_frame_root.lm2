@@ -1,0 +1,38 @@
+# K03-EXPLICIT-RECEIVER-FRAMES (the author, 2026-10-06): merge's Frames at the unit's root -- short, compact, the
+# completed vertical spelling with two operands, the Frame as the sole content of an anonymous Structure,
+# `u: (merge: Model)`, and a parenthesized operand, `merge: (Model)` -- read by methods as their hidden inputs:
+# 1 + 3 + 3 + 2 = 9.  The vertical and compact spellings translate as the short ones do, byte for byte.  Entry 7.
+Model:
+    size_t: x 1U
+end: Model
+Extra:
+    size_t: z 2U
+end: Extra
+r: merge: Model
+s: merge(Model Extra)
+t:
+. merge:
+. . Model
+. . Extra
+---
+u: (merge: Model)
+w: merge: (Model)
+fn: readr () size_t
+    return: r\x
+end: readr
+fn: reads () size_t
+    return: s\x + s\z
+end: reads
+fn: readt () size_t
+    return: t\x + t\z
+end: readt
+fn: readu () size_t
+    return: u\x + w\x
+end: readu
+size_t: got 0U
+got: readr() + reads() + readt() + readu()
+if: got != 9U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

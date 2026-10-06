@@ -974,6 +974,9 @@ prototype:
     fn: l2_app_actuals (const: @(LmP0Node n)) @: LmP0Structure
     fn: l2_head_word (const: @(LmP0Text t)) int
     fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out_outside) int
+    fn: l2_stmt_word_head (const: @(LmP0Node stmt); int: mi) @: LmP0Text
+    fn: l2_stmt_word (const: @(LmP0Node stmt); int: mi; const: @(char word)) int
+    fn: l2_check_word_stmt (const: @(LmP0Node stmt); const: @(LmP0Text w); const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     fn: l2_find_method (const: @(LmP0Text name)) int
     fn: l2_os_fn_name (const: @(LmP0Node fn)) @: LmP0Text
     fn: l2_end_text (const: @(LmP0Frame frame); const: @(LmP0Text name)) int
@@ -4483,7 +4486,7 @@ fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     @: LmP0Text got
     if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_find_method(t) >= 0
         return: 0
-    if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_receiver_word(t) != 0
+    if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_receiver_word(t) != 0 || l2_head_word(t) != 0
         return: 0
     if: l2_cur_unit = 0
         return: 1
@@ -7039,6 +7042,25 @@ fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out
     if: l2_is_known(t) != 0
         return: 6
 return: 0
+
+# K03: the head of the application at statement stmt when the one resolution gives a word of the language at this site --
+# an atom's text or a Frame's head, so a bare word and its empty application reach one contract -- or 0.  A program's
+# binding of the spelling where it is visible (a local `sub`, a method `until`) is no word (RESERVED-NAME-BINDINGS).
+fn: l2_stmt_word_head (const: @(LmP0Node stmt); int: mi) @: LmP0Text
+    @: LmP0Text h
+    if: stmt = 0 || (stmt\kind != c.LM_P0_NODE_FRAME && stmt\kind != c.LM_P0_NODE_ATOM)
+        return: 0
+    h: l2_app_head(stmt)
+    if: h = 0 || l2_head_word(h) = 0 || l2_head_resolve(mi, h, 0, 0) != 1
+        return: 0
+return: h
+
+# Whether statement stmt applies the word `word` of the language (l2_stmt_word_head).
+fn: l2_stmt_word (const: @(LmP0Node stmt); int: mi; const: @(char word)) int
+    @: LmP0Text h l2_app_head(stmt)
+    if: h = 0 || l2_text_eq(h, word) = 0
+        return: 0
+return: (cast: (int) (l2_stmt_word_head(stmt, mi) != 0))
 fn: l2_predef_file_has_function (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     size_t: n
     @: char path 0
@@ -9329,14 +9351,22 @@ fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: 
     int: s0
     @: int rank 0
     @@: LmP0Node wrap 0
-    body: node\as\frame\body
+    @: LmP0Text hd
+    @: LmP0Field bfirst 0
+    # K03: the written application (l2_app_head, l2_app_actuals): a bare head is bound as its empty application is.
+    body: l2_app_actuals(node)
+    hd: l2_app_head(node)
+    if: hd = 0
+        return: l2_error(path, node, "internal: a call has no head")
     # The callee's name whole, in memory of its own size: the words of a refused binding say it (FIXED-BLOCKS-AUDIT).
-    callee: l2_text_room(node\as\frame\head\length + 1U, callee_own, 160U)
+    callee: l2_text_room(hd\length + 1U, callee_own, 160U)
     if: callee = 0
         return: l2_alloc_or(path, node, "out of memory")
-    memcpy(callee, node\as\frame\head\data, node\as\frame\head\length)
-    callee[node\as\frame\head\length]: 0
-    if: l2_bind_actuals(body\first_field, nf, names, callee, at, span, path, node) != 0
+    memcpy(callee, hd\data, hd\length)
+    callee[hd\length]: 0
+    if: body != 0
+        bfirst: body\first_field
+    if: l2_bind_actuals(bfirst, nf, names, callee, at, span, path, node) != 0
         return: 1
     k: 0
     while: k < nf
@@ -11475,6 +11505,10 @@ fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
     if: l2_param_find(mi, fr\head) >= 0 || l2_slot_find(mi, fr\head) >= 0 || l2_ml_find(fr\head) >= 0 || l2_colon_model(fr\head) != 0
         return: 0
+    # K03: a word of the language is never a head that resolves to nothing: `merge()` is merge's application.  Read
+    # from the word alone, as the rest of this shape is read: the row the statement would declare does not count.
+    if: l2_head_word(fr\head) != 0
+        return: 0
 return: 1
 
 # Whether own field oi is typed by its own declaration: `f()`, `f: ()` or the closed empty vertical -- one P0 Frame,
@@ -11700,7 +11734,7 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
         return: 0
     if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_find_method(h) >= 0 || l2_is_known(h) != 0
         return: 0
-    if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_receiver_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h, 0) != 0
+    if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_receiver_word(h) != 0 || l2_head_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h, 0) != 0
         return: 0
     # A definition inside a method sees that method's names: its formal, or a field it declares at method
     # level, is a binding the head resolves to (l2_colon_bound_ty), and the statement assigns it.
@@ -11927,11 +11961,12 @@ fn: l2_receive_msg_shape (const: @(LmP0Node stmt); @@: LmP0Text out_name; @@: Lm
     \out_name: 0
     if: out_model != 0
         \out_model: 0
-    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
+    if: stmt = 0 || l2_app_head(stmt) = 0 || l2_text_eq(l2_app_head(stmt), "receiveMessage") = 0 || l2_find_method(l2_app_head(stmt)) >= 0
         return: 1
+    # K03: the bare word is its application with no name: it binds none.
+    if: stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0
+        return: 2
     fr: stmt\as\frame
-    if: fr\head = 0 || l2_text_eq(fr\head, "receiveMessage") = 0 || l2_find_method(fr\head) >= 0
-        return: 1
     if: fr\body = 0 || fr\trailer != 0 || fr\body\trailer != 0 || (l2_count_active(fr\body) != 1 && l2_count_active(fr\body) != 2)
         return: 2
     only: l2_next_active(fr\body\first_field)
@@ -13185,6 +13220,10 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
     if: l2_text_eq(t, "return") || l2_text_eq(t, "if") || l2_text_eq(t, "else") || l2_text_eq(t, "while") || l2_text_eq(t, "for") || l2_text_eq(t, "continue") || l2_text_eq(t, "break") || l2_text_eq(t, "fn") || l2_text_eq(t, "sub") || l2_text_eq(t, "end") || l2_text_eq(t, "node") || l2_prim_type_word(t) || l2_text_eq(t, "length") || l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast")
         return: 0
     if: t\length >= 2U && t\data[0] = 99 && t\data[1] = 46
+        return: 0
+    # K03 (the author, 2026-10-06): a word of the language the site does not bind -- `merge`, `table`, `catch` -- is its
+    # own application, consumed by its contract (l2_head_resolve); it is never a free input of the method.
+    if: l2_head_word(t) != 0 && l2_head_resolve(mi, t, 0, 0) = 1
         return: 0
     oi: l2_own_visible(mi, t)
     # A probe (l2_head_read_before) asks whether its name is read here as a free name; it makes nothing.
@@ -18262,13 +18301,13 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
             return: 1
         \cursor: \cursor + 1
         return: 0
+    # K03: a `return` -- the bare word or its Frame -- is one source step, one consumer for both spellings.
+    if: l2_stmt_word(stmt, mi, "return") != 0
+        if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
+            return: 1
+        \cursor: \cursor + 1
+        return: 0
     if: stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0
-        h: stmt\as\atom
-        if: l2_text_eq(h, "return")
-            if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
-                return: 1
-            \cursor: \cursor + 1
-            return: 0
         return: 1
     if: stmt\kind = c.LM_P0_NODE_STRUCTURE
         # A block closed by until is one source step. The walked UNTIL already
@@ -18536,11 +18575,6 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
     if: l2_text_eq(h, "sendMessage")
         if: mi != l2_e
             return: 1
-        if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
-            return: 1
-        \cursor: \cursor + 1
-        return: 0
-    if: l2_text_eq(h, "return")
         if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
             return: 1
         \cursor: \cursor + 1
@@ -20894,13 +20928,13 @@ fn: l2_check_catch (const: @(LmP0Node cf); const: @(LmP0Structure blk); const: @
     int: n
     int: ty 0
     int: gi
-    n: 0
-    if: cf\as\frame\body != 0
-        n: l2_count_active(cf\as\frame\body)
+    n: l2_count_active(l2_app_actuals(cf))
+    if: n < 2 || n > 3 || cf\kind != c.LM_P0_NODE_FRAME || cf\as\frame\trailer != 0
+        return: l2_error(path, cf, "catch: takes a name, its parameters and a handler body")
     nm: l2_catch_name(cf)
     ps: l2_catch_params(cf)
     hb: l2_catch_body(cf)
-    if: cf\as\frame\trailer != 0 || n < 2 || n > 3 || nm = 0 || l2_ident(nm) = 0 || ps = 0 || (n = 3 && hb = 0)
+    if: nm = 0 || l2_ident(nm) = 0 || ps = 0 || (n = 3 && hb = 0)
         return: l2_error(path, cf, "catch: takes a name, its parameters and a handler body")
     f: l2_next_active(blk\first_field)
     while: f != 0 && f\value != cf
@@ -21264,8 +21298,10 @@ fn: l2_check_throw (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     int: span
     int: pmi
     const: @: LmP0Frame fr
+    if: l2_count_active(l2_app_actuals(stmt)) != 1 || stmt\kind != c.LM_P0_NODE_FRAME
+        return: l2_error(path, stmt, "throw: takes one name and its payload")
     fr: stmt\as\frame
-    if: fr\trailer != 0 || fr\body = 0 || fr\body\trailer != 0 || l2_count_active(fr\body) != 1
+    if: fr\trailer != 0 || fr\body = 0 || fr\body\trailer != 0
         return: l2_error(path, stmt, "throw: takes one name and its payload")
     what: l2_next_active(fr\body\first_field)\value
     if: what != 0 && what\kind = c.LM_P0_NODE_ATOM && what\as != 0
@@ -26062,6 +26098,10 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
         a0: l2_next_active(l2_call_actuals(body))
         nact: l2_actual_count(l2_call_actuals(body))
     ---
+    # K03: a bare head writes no argument; a formal it leaves without one is said by the one binding (l2_bind_call),
+    # as for `f()`.
+    if: body = 0 && l2_m_arity[idx] > 0 && node != 0 && node\kind = c.LM_P0_NODE_ATOM && l2_bind_call(node, idx, 0 - 1, path) != 0
+        return: 1
     if: nact != l2_m_arity[idx]
         return: l2_error(path, node, "incompatible entry signature")
     # Descriptor-only required method is legal as a formal contract; refuse bodiless only on direct calls.
@@ -27094,6 +27134,77 @@ fn: l2_discard_run (@: LmP0Field field) int
         return: n
 return: 0
 
+# K03 (the author, 2026-10-06; docs/LMX_semantics.en.md#resolved-head-consumption): a statement applying word w of the
+# language (l2_stmt_word_head) -- the bare word or its Frame -- meets the word's statement contract here, one consumer
+# for every spelling: no written argument is the bare word's case and `w()`'s alike (l2_app_actuals), said at the word.
+# A word whose written arguments the branches below read -- a condition, a declaration, a letter, a return value -- goes
+# on to them (2).  0 checked, 1 refused (said).
+fn: l2_check_word_stmt (const: @(LmP0Node stmt); const: @(LmP0Text w); const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
+    int: na l2_count_active(l2_app_actuals(stmt))
+    int: msk 0
+    int: msni 0
+    @: LmP0Field first 0
+    @: LmP0Text rnm 0
+    if: l2_text_eq(w, "break") || l2_text_eq(w, "continue")
+        if: na != 0
+            return: l2_error_name(path, stmt, "", w\data, w\length, " takes no argument")
+        if: l2_loop_depth = 0
+            return: l2_error(path, stmt, "unsupported loop")
+        return: 0
+    # A trailer word closes the frame it follows. After a frame that is already closed P0 leaves it an ordinary item;
+    # it is still not a statement, in the entry or in any body.
+    if: l2_text_eq(w, "end") || l2_text_eq(w, "until")
+        return: l2_error(path, stmt, "stray trailer: the frame above is already closed")
+    # A `table:` with no `source` first builds a table when the program runs (REVIEW 7dad13b, answer 1): that receiver's
+    # run-time body is not built yet (§8).
+    if: l2_text_eq(w, "table")
+        return: l2_error(path, stmt, "a table built at run time is not supported yet")
+    # S1.3: a catch and its handler (l2_check_catch); S1.2: a throw (l2_check_throw).
+    if: l2_text_eq(w, "catch")
+        return: l2_check_catch(stmt, body, path, mi, depth)
+    if: l2_text_eq(w, "throw")
+        return: l2_check_throw(stmt, mi, path)
+    # S1.2 (author Q13): `throws:` is the first item of a method head -- l2_collect_method took the list from there --
+    # and nowhere else; with no name it lists nothing, as l2_check_throws_list says of `throws: ()`.
+    if: l2_text_eq(w, "throws")
+        if: na != 0 && l2_throws_frame(mi) = stmt
+            return: 0
+        if: mi >= 0 && mi < l2_m_n && l2_m_node[mi] != 0 && l2_m_body[mi] != 0 && l2_m_body[mi]\kind = c.LM_P0_NODE_STRUCTURE && l2_m_body[mi]\as != 0 && l2_m_body[mi]\as\structure != 0
+            first: l2_next_active(l2_m_body[mi]\as\structure\first_field)
+        if: na = 0 && first != 0 && first\value = stmt
+            return: l2_error(path, stmt, "throws: lists the names that may leave the method")
+        return: l2_error(path, stmt, "throws: must be the first item of a method head")
+    # Receivers the translator does not build at all.
+    if: l2_text_eq(w, "fm") || l2_text_eq(w, "synchronized")
+        return: l2_error_name(path, stmt, "", w\data, w\length, " is not supported yet")
+    # The operators whose application is a value: with operands, a statement receives none (a located limit); with
+    # none, the operator's own refusal.
+    if: l2_text_eq(w, "merge") || l2_text_eq(w, "length") || l2_text_eq(w, "cast") || l2_text_eq(w, "sizeof")
+        if: na != 0
+            return: l2_error_name(path, stmt, "", w\data, w\length, " expression is not lowered in this receiving context")
+        if: l2_text_eq(w, "merge")
+            return: l2_error(path, stmt, "merge needs at least one operand")
+        if: l2_text_eq(w, "length")
+            return: l2_error(path, stmt, "length requires one known primitive own array")
+        if: l2_text_eq(w, "cast")
+            return: l2_error(path, stmt, "unsupported cast")
+        return: l2_error(path, stmt, "sizeof: requires one operand")
+    if: na != 0
+        return: 2
+    # No written argument.  A bare `return` ends the walked root (mi = E): its value is its last evaluated expression
+    # (plan §3); a method with a result returns a value.
+    if: l2_text_eq(w, "return")
+        if: mi != l2_e && l2_m_ret[mi] != 8
+            return: l2_error(path, stmt, "unsupported body")
+        return: 0
+    if: l2_text_eq(w, "sendMessage")
+        return: l2_msend_register(stmt, path, mi, @ msk, @ msni)
+    if: l2_text_eq(w, "receiveMessage") && l2_receive_msg_shape(stmt, @ rnm, 0) = 2
+        return: l2_error(path, stmt, "receiveMessage binds one or two names")
+    if: l2_text_eq(w, "for")
+        return: l2_error(path, stmt, "unsupported loop")
+return: l2_error(path, stmt, "unsupported body")
+
 fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     L2Address: receiver_place
     @: L2Declaration declaration
@@ -27141,6 +27252,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     @: LmP0Structure call_body 0
     int: call_result
     int: retained
+    @: LmP0Text sw 0
     if: body = 0
         return: l2_error(path, 0, "unsupported body")
     field: l2_next_active(body\first_field)
@@ -27160,10 +27272,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: retained >= 0
             field: l2_next_active(field\next)
             continue
-        # A `table:` with no `source` first builds a table when the program runs (REVIEW 7dad13b, answer 1):
-        # that receiver's run-time body is not built yet (§8; it was refused in an assignment's words).
-        if: l2_frame_head(stmt, "table") != 0 && l2_find_method(stmt\as\frame\head) < 0
-            return: l2_error(path, stmt, "a table built at run time is not supported yet")
         if: l2_pap_on(mi) != 0 && l2_frame_head(stmt, "merge") != 0
             field: l2_next_active(field\next)
             continue
@@ -27187,6 +27295,19 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
             continue
         ---
+        # K03 (the author, 2026-10-06): a statement whose head -- an atom's or a Frame's -- resolves to a word of the
+        # language is that word's application: `break` and `break()`, `merge` and `merge()` are one application each,
+        # their written arguments the Frame's body or none (l2_app_actuals); the word's contract decides, at the word
+        # (l2_check_word_stmt).  A word whose arguments a branch below reads goes on to it.
+        sw: l2_stmt_word_head(stmt, mi)
+        if: sw != 0
+            k: l2_check_word_stmt(stmt, sw, body, mi, path, depth)
+            if: k = 1
+                return: 1
+            if: k = 0
+                field: l2_next_active(field\next)
+                continue
+            ---
         # An expression statement (l2_check_discard); the walker moves past its whole run.
         n: l2_discard_run(field)
         if: n > 0
@@ -27222,29 +27343,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
-        # A trailer word closes the frame it follows. After a frame that is
-        # already closed P0 leaves it an ordinary item; it is still not a
-        # statement, in the entry or in any body.
-        if: l2_frame_head(stmt, "end") != 0 || l2_frame_head(stmt, "until") != 0
-            return: l2_error(path, stmt, "stray trailer: the frame above is already closed")
-        # S1.2 (author Q13): `throws:` is the first item of a method head -- l2_collect_method
-        # took the list from there -- and nowhere else.
-        if: l2_frame_head(stmt, "throws")
-            if: l2_throws_frame(mi) != stmt
-                return: l2_error(path, stmt, "throws: must be the first item of a method head")
-            field: l2_next_active(field\next)
-            continue
-        if: l2_frame_head(stmt, "throw")
-            if: l2_check_throw(stmt, mi, path) != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
-        # S1.3: a catch and its handler (l2_check_catch).
-        if: l2_frame_head(stmt, "catch")
-            if: l2_check_catch(stmt, body, path, mi, depth) != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
         # 19.17 merge is an ordinary statement frame here. Its operands are
         # checked at emission, where the qualified branch table is complete.
         if: l2_merge_declaration(body, stmt, mi) != 0
@@ -27252,23 +27350,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             continue
         if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
             return: l2_error(path, stmt, "unsupported own array declaration")
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "break") && l2_loop_depth = 0
-            return: l2_error(path, stmt, "unsupported loop")
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "break")
-            field: l2_next_active(field\next)
-            continue
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "continue") && l2_loop_depth = 0
-            return: l2_error(path, stmt, "unsupported loop")
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "continue")
-            field: l2_next_active(field\next)
-            continue
-        # A bare `return` ends the walked root (mi = E): its value is its last evaluated expression
-        # (plan §3).  A method with a result returns a value.
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && l2_m_ret[mi] != 8 && mi != l2_e
-            return: l2_error(path, stmt, "unsupported body")
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return")
-            field: l2_next_active(field\next)
-            continue
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
             array_status: l2_array_place(stmt, mi, @ array_place)
             if: array_status = 3
@@ -27305,8 +27386,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             if: array_target >= 0 && l2_own_is_array(l2_own_ty[array_target]) != 0
                 return: l2_error(path, stmt, "own array use not yet supported")
         ---
-        if: l2_frame_head(stmt, "break") || l2_frame_head(stmt, "continue")
-            return: l2_error(path, stmt, "unsupported loop")
         if: l2_frame_head(stmt, "if")
             fr: stmt\as\frame
             if: fr\body = 0
@@ -27716,8 +27795,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # A `sub:`'s, and a named Structure's (its procedure's, §12): one refusal in any place of the body.
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8 && l2_count_active(fr\body) != 0
             return: l2_error(path, stmt, "return with a value in a callable that returns nothing")
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_count_active(fr\body) = 0 && mi != l2_e
-            return: l2_error(path, stmt, "unsupported body")
         # FABLE-SONNET-DIAG-AND-INDEX-20260924-163 commit 1 (D-40): the same
         # "no result" refusal l2_check_value_call gives for a bare callable
         # atom, not the generic entry-signature text this branch used to
@@ -39696,7 +39773,7 @@ fn: l2_msend_register (const: @(LmP0Node stmt); const: @(char path); int: mi; @:
             return: 0
         k: k + 1
     ---
-    if: stmt\as\frame\body = 0 || l2_count_active(stmt\as\frame\body) = 0
+    if: l2_count_active(l2_app_actuals(stmt)) = 0
         return: l2_error(path, stmt, "this sendMessage")
     ---
     f: l2_next_active(stmt\as\frame\body\first_field)
@@ -41083,24 +41160,26 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: l2_rw_put(into, slot, t) != 0
             return: 1
         return: 0
-    if: stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0
-        h: stmt\as\atom
+    # K03: `return`, `break` and `continue` with no written argument -- the bare word or its empty Frame, one application
+    # (l2_stmt_word_head) -- are one step each, one consumer for both spellings.
+    h: l2_stmt_word_head(stmt, l2_rw_mi)
+    if: h != 0 && l2_count_active(l2_app_actuals(stmt)) = 0 && (l2_text_eq(h, "return") || l2_text_eq(h, "break") || l2_text_eq(h, "continue"))
         if: l2_text_eq(h, "return")
             \made: 1
             if: l2_rw_frame(into, "LMX_WALK_OP_RET", 1, @ node) != 0
                 return: 1
             return: l2_rw_put(into, slot, node)
-        if: l2_text_eq(h, "break") || l2_text_eq(h, "continue")
-            if: l2_rw_loops = 0
-                return: l2_rw_refuse(stmt, "break and continue")
-            if: l2_text_eq(h, "break") && l2_rw_frame(into, "LMX_WALK_OP_BREAK", 1, @ node) != 0
-                return: 1
-            if: l2_text_eq(h, "continue") && l2_rw_frame(into, "LMX_WALK_OP_CONTINUE", 1, @ node) != 0
-                return: 1
-            \made: 1
-            if: l2_rw_put(into, slot, node) != 0
-                return: 1
-            return: 0
+        if: l2_rw_loops = 0
+            return: l2_rw_refuse(stmt, "break and continue")
+        if: l2_text_eq(h, "break") && l2_rw_frame(into, "LMX_WALK_OP_BREAK", 1, @ node) != 0
+            return: 1
+        if: l2_text_eq(h, "continue") && l2_rw_frame(into, "LMX_WALK_OP_CONTINUE", 1, @ node) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_put(into, slot, node) != 0
+            return: 1
+        return: 0
+    if: stmt\kind = c.LM_P0_NODE_ATOM && stmt\as != 0
         return: l2_rw_refuse(stmt, "this statement")
     # An anonymous block (`---`, `( ... )`) is a nested executable body, as natively (§14, Q14 K;
     # l2_emit_stmts): a step IF(LIT 1, body), the if role running a plain body.  One with nothing
@@ -41174,10 +41253,8 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
             if: l2_rw_put(into, slot, node) != 0
                 return: 1
             return: 0
-        \made: 1
-        if: l2_rw_frame(into, "LMX_WALK_OP_RET", 1, @ node) != 0
-            return: 1
-        return: l2_rw_put(into, slot, node)
+        # A `return` with no value is the step above, for both spellings.
+        return: l2_rw_refuse(stmt, "this return")
     if: l2_rw_external_head(h) != 0
         if: l2_rw_machine_application(stmt, into, @ node) != 0 || l2_rw_put(into, slot, node) != 0
             return: 1
@@ -48190,21 +48267,23 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "continue")
+        # K03: `continue`, `break` and `return` with no written argument -- the bare word or its empty Frame, one
+        # application (l2_stmt_word) -- are emitted here, one consumer for both spellings.
+        if: l2_stmt_word(stmt, mi, "continue") != 0 && l2_count_active(l2_app_actuals(stmt)) = 0
             if: l2_lp_n > 0 && l2_lpk[l2_lp_n - 1] = 1 && c.fprintf(l2_out, "%sl2_uc%d: 1\n%sbreak\n", ind, l2_lpp[l2_lp_n - 1], ind) < 0
                 return: 1
             if: (l2_lp_n = 0 || l2_lpk[l2_lp_n - 1] = 0) && c.fprintf(l2_out, "%scontinue\n", ind) < 0
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "break")
+        if: l2_stmt_word(stmt, mi, "break") != 0 && l2_count_active(l2_app_actuals(stmt)) = 0
             if: l2_lp_n > 0 && l2_lpk[l2_lp_n - 1] = 1 && c.fprintf(l2_out, "%sl2_ub%d: 1\n%sbreak\n", ind, l2_lpp[l2_lp_n - 1], ind) < 0
                 return: 1
             if: (l2_lp_n = 0 || l2_lpk[l2_lp_n - 1] = 0) && c.fprintf(l2_out, "%sbreak\n", ind) < 0
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return") && l2_m_ret[mi] = 8
+        if: l2_stmt_word(stmt, mi, "return") != 0 && l2_count_active(l2_app_actuals(stmt)) = 0 && l2_m_ret[mi] = 8
             # §7b: a return is an exit -- what is marked is published before it (book §14).
             if: l2_emit_publish(ind) != 0 || l2_emit_poll(mi, ind) != 0
                 return: 1
@@ -48212,7 +48291,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                 return: 1
             field: l2_next_active(field\next)
             continue
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_ATOM && l2_text_eq(stmt\as\atom, "return")
+        if: l2_stmt_word(stmt, mi, "return") != 0 && l2_count_active(l2_app_actuals(stmt)) = 0
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0
             pd: l2_prefix_deref(stmt\as\frame\head, mi, ind, pdest)
@@ -48425,15 +48504,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0
             fr: stmt\as\frame
-        # §7b: a return is an exit -- what is marked is published before it (book §14), after its value.
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8 && l2_emit_publish(ind) != 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8 && l2_emit_poll(mi, ind) != 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8 && l2_emit_empty_return(mi, ind) != 0
-            return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] = 8
-            field: l2_next_active(field\next)
+        # §7b: a return is an exit -- what is marked is published before it (book §14), after its value.  A `return` with
+        # no value is emitted above, for both spellings; one with a value in a callable that returns nothing was refused.
         # `return: v` evaluates v as every value is evaluated -- a callable named there is called
         # (l2_prep), in a body and in a trailer (l2_emit_ret_tr) alike.
         pret: 2

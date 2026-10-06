@@ -1,0 +1,14 @@
+# K03 (the author, 2026-10-06; docs/LMX_semantics.en.md#resolved-head-consumption): a bare resolved head is its
+# application with no written argument, through the same consumer as `H()`, diagnosed at the head and never a free
+# input of the method; neighbouring atoms are not its arguments.
+# A bare method that takes an argument is its call with none: refused by the one binding of a call, as `twice()` is
+# (it was "incompatible entry signature", another check's words).
+fn: twice (int: n) int
+    return: n * 2
+end: twice
+fn: m () int
+    twice
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

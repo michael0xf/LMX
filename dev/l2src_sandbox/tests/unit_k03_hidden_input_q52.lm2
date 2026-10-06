@@ -1,0 +1,24 @@
+# Correction 1 of K03-UNIFIED-HEAD-IMPLEMENT (Q52; the author: «0 -- меняется лишь скрытый вход s»): a field of the
+# unit that a method sees is not the method's -- its name is the method's hidden input, the caller's value handed over
+# at the call, and a bare write changes that activation's value only.  `s` and `s()` leave the unit's y at 0; the
+# explicit path `node\y` writes the unit's cell.  Entry 7.
+int: y 0
+sub: s ()
+    y: y + 3
+end: s
+fn: bump () int
+    node\y: node\y + 5
+    return: 0
+end: bump
+fn: check () int
+    s
+    s()
+    if: y != 0
+        return: 81
+    bump()
+    if: node\y != 5
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

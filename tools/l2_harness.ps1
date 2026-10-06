@@ -4482,6 +4482,64 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_explicit_frame_root_walk.lm2'; Source = 'unit_explicit_frame_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    # K03-UNIFIED-HEAD S2+S3 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01; the author, 2026-10-06): a statement whose
+    # head resolves to a word of the language is that word's application -- the bare word and its empty Frame one
+    # application, refused at the word by the word's own contract, never a free input; a bare call that leaves a
+    # formal without an argument is refused by the one binding, as `twice()` is.  The twins: the same under
+    # --walk-methods.  The positive rows: break/continue, a callable, a Structure and return bare and empty, and Q52's
+    # hidden input kept (`s` and `s()` leave the unit's y at 0), native and walked.
+    [pscustomobject]@{ Name = 'unit_k03_bare_merge_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_bare_merge_stmt_refused.lm2:10:5: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_merge_stmt_refused_walk.lm2'; Source = 'unit_k03_bare_merge_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_bare_merge_stmt_refused_walk.lm2:10:5: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_merge_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_empty_merge_stmt_refused.lm2:10:5: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_merge_stmt_refused_walk.lm2'; Source = 'unit_k03_empty_merge_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_empty_merge_stmt_refused_walk.lm2:10:5: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_merge_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_bare_merge_root_refused.lm2:8:1: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_merge_root_refused_walk.lm2'; Source = 'unit_k03_bare_merge_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_bare_merge_root_refused_walk.lm2:8:1: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_merge_loop_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_bare_merge_loop_refused.lm2:12:9: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_merge_loop_refused_walk.lm2'; Source = 'unit_k03_bare_merge_loop_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_bare_merge_loop_refused_walk.lm2:12:9: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_prefix_merge_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_prefix_merge_stmt_refused.lm2:10:5: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_prefix_merge_stmt_refused_walk.lm2'; Source = 'unit_k03_prefix_merge_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_prefix_merge_stmt_refused_walk.lm2:10:5: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_break_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_empty_break_root_refused.lm2:6:1: unsupported loop'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_break_root_refused_walk.lm2'; Source = 'unit_k03_empty_break_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_empty_break_root_refused_walk.lm2:6:1: unsupported loop'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_sizeof_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_empty_sizeof_stmt_refused.lm2:7:5: sizeof: requires one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_sizeof_stmt_refused_walk.lm2'; Source = 'unit_k03_empty_sizeof_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_empty_sizeof_stmt_refused_walk.lm2:7:5: sizeof: requires one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_length_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_empty_length_stmt_refused.lm2:7:5: length requires one known primitive own array'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_length_stmt_refused_walk.lm2'; Source = 'unit_k03_empty_length_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_empty_length_stmt_refused_walk.lm2:7:5: length requires one known primitive own array'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_twice_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_bare_twice_stmt_refused.lm2:10:5: twice has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_twice_stmt_refused_walk.lm2'; Source = 'unit_k03_bare_twice_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_bare_twice_stmt_refused_walk.lm2:10:5: twice has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_table_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_bare_table_stmt_refused.lm2:7:5: a table built at run time is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_bare_table_stmt_refused_walk.lm2'; Source = 'unit_k03_bare_table_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_bare_table_stmt_refused_walk.lm2:7:5: a table built at run time is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_fm_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_empty_fm_stmt_refused.lm2:7:5: fm is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_empty_fm_stmt_refused_walk.lm2'; Source = 'unit_k03_empty_fm_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_empty_fm_stmt_refused_walk.lm2:7:5: fm is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_nullary_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_nullary_stmt_walk.lm2'; Source = 'unit_k03_nullary_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_hidden_input_q52.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_hidden_input_q52_walk.lm2'; Source = 'unit_k03_hidden_input_q52.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
     # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
     # task changes stays 0 through the receiving call and is changed once by the explicit invocation.
@@ -6112,9 +6170,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_decl_one_value_call_colon_walk.lm2'; Source = 'unit_decl_one_value_call_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_tail_prefix_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_value_tail_prefix_call_refused.lm2:8:4: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_value_tail_prefix_call_refused.lm2:8:4: twice has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_tail_prefix_call_refused_walk.lm2'; Source = 'unit_value_tail_prefix_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_value_tail_prefix_call_refused_walk.lm2:8:4: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_value_tail_prefix_call_refused_walk.lm2:8:4: twice has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_tail_call_explicit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_value_tail_call_explicit_walk.lm2'; Source = 'unit_value_tail_call_explicit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
@@ -7737,15 +7795,15 @@ $fixtures = @(
     # intercepting by shape.  No program the check accepts carries the storing shape under a bound
     # head, so neither point is entered with one.
     [pscustomobject]@{ Name = 'unit_held_call_reapplied_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_reapplied_refused.lm2:12:5: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_reapplied_refused.lm2:12:5: make2 has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_reapplied_method_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_held_call_reapplied_method_refused.lm2:12:9: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_held_call_reapplied_method_refused.lm2:12:9: make2 has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_callable_over_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_store_callable_over_number_refused.lm2:10:5: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_store_callable_over_number_refused.lm2:10:5: make2 has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_callable_over_local_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_store_callable_over_local_refused.lm2:13:9: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_store_callable_over_local_refused.lm2:13:9: make2 has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_store_callable_over_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_store_callable_over_formal_refused.lm2:12:9: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_store_callable_over_formal_refused.lm2:12:9: make2 has no argument n'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_call_failed_application_walk.lm2'; Source = 'unit_held_call_failed_application.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -9195,7 +9253,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_walk_factory_short_dormant.lm2'; Source = 'unit_factory_short_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Says = @('DONE'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3); NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_factory_short_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_factory_short_args_refused.lm2:11:7: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_factory_short_args_refused.lm2:11:7: makeAdder has no argument n'; Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.
     [pscustomobject]@{ Name = 'unit_matrix_parity_extra_struct_native.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'lm2:14:5: more arguments than bar has formals'; Absent = @(); Debt = @() },

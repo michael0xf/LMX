@@ -1797,6 +1797,12 @@ classified by slice), the application view (`l2_app_head`, `l2_app_actuals`) and
 (`l2_head_resolve`: the visible binding first, then its category; an outside flag keeps Q52's hidden
 inputs), with no reader yet: the replay of 1998 translations is byte-identical, and a cross-check build
 explains its three reader disagreements. Gates: kernel `opus_kernel_39` GREEN297 (114 selftests), L3 `opus_l3_37`, full `opus_full_39` RED39/1999 -- against `opus_full_38` FAIL→OK 0, OK→FAIL 0, added 0.
+S2+S3 done ([section 107](steps/fable-continuation-20261003.md#unified-head-s2-s3)): statements and the
+free-name scan read the view and the resolution -- a statement applying a word of the language, bare or as
+its empty Frame, meets one consumer (`l2_check_word_stmt`; `return`/`break`/`continue` with no argument through
+`l2_stmt_word` natively, walked and in the root's source); a word is never a free input; `f()` declares nothing
+when f is a word; a bare call binds as its empty application. Statement matrices: 23 of 23 heads agree (6
+before), the root and a loop body 10 and 10 of 10 (4 and 4). Gates: kernel `opus_kernel_40` GREEN297 (114 selftests), L3 `opus_l3_38`, full `opus_full_40` RED39/2025 -- against `opus_full_39` FAIL→OK 0, OK→FAIL 0, added 26.
 
 ### K04 — Callable actuals and hidden inputs
 

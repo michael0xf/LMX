@@ -10718,3 +10718,99 @@ the same allocation count in every row (the pieces are not called).
 | `build/l3_selftest/opus_l3_37` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_39` (full harness) | RED39/1999: against `opus_full_38` FAIL→OK 0, OK→FAIL 0, added 0, removed 0, red rows whose message changed 0. The one declared path (`l2trans.lm1`) was hashed before the run; both staged copies are its bytes. |
 | Replay of `opus_full_38`'s 1998 recorded translations | The S1 translator: L1, exit and messages byte-identical in all 1998, allocation counts identical in all 1998. The cross-check build: L1 and messages identical in all 1998. |
+
+<a id="unified-head-s2-s3"></a>
+## 107. Statements and the free-name scan through the one resolution (K03-UNIFIED-HEAD S2+S3)
+
+Slice S2+S3 of Codex's request K03-UNIFIED-HEAD-IMPLEMENT-20261006-01: the statement, scan, native and walker routes
+read the written application and the one resolution of §106; real hidden inputs stay; the parallel atom and Frame
+handling of one resolved contract collapses into one consumer; `break()`/`continue()` and the internal failures are
+fixed in their common handlers and said at the occurrence.
+
+The route. A statement whose head -- an atom's text or a Frame's head (`l2_app_head`) -- resolves at its site to a word
+of the language (`l2_head_resolve`, kind word; `l2_stmt_word_head`, `l2_stmt_word`) is that word's application, its
+written arguments the Frame's body or none (`l2_app_actuals`): `break` and `break()`, `merge` and `merge()` are one
+application each.
+
+- The check: one consumer, `l2_check_word_stmt`, meets the word's statement contract for both spellings and says it at
+  the word -- `break`/`continue` (no argument, inside a loop), the trailer words (a stray trailer), a run-time `table`,
+  `catch` (`l2_check_catch`), `throw` (`l2_check_throw`), `throws` (the first item of a method head), `fm` and
+  `synchronized` (not supported yet), `merge`/`length`/`cast`/`sizeof` (with no operand the operator's own refusal;
+  with operands a statement receives no value, a located limit), `return` with no value, `sendMessage`
+  (`l2_msend_register`), `receiveMessage` (binds one or two names), `for`. A word whose written arguments the existing
+  branches read -- a condition, a declaration, a letter, a return value -- goes on to them. In `l2_check_body` the
+  atom-only branches (`break`, `continue`, `return`) and the Frame-only branches (`end`/`until`, `throws`, `throw`,
+  `catch`, `table`, `break()`/`continue()`, `return()`) are gone.
+- The native emission (`l2_emit_stmts`), the walker (`l2_rw_stmt_content`) and the root's source (`l2_src_one`) take
+  `return`, `break` and `continue` with no written argument through `l2_stmt_word` -- one consumer for the bare word and
+  its empty Frame. The four `return()` branches of `l2_emit_stmts` (publish, poll, empty return) repeated the atom's
+  code and are gone. `catch`, `throw`, `sendMessage` and `receiveMessage` read their arguments through the view; a bare
+  word has none.
+- The scan (S2). `l2_scan_ident`: a word of the language the site does not bind is never a free input (`merge`,
+  `table`, `catch` became "unbound dynamic input" at the call site). The resolver's order holds: a binding the site
+  sees -- an own field, a formal, a unit field a method sees -- decides first, and Q52's hidden input stays.
+  `l2_empty_struct_decl_shape`: `f()` declares a Structure named f only when f resolves to nothing, and a word never
+  does (`break()` at the root declared a Structure named break; `merge()`, `fm()`, `length()` reached "internal: a
+  source definition has no owning producer"). This test reads the word alone (`l2_head_word`), as the rest of the
+  shape does: the row the statement would declare must not count (a resolver test there found that row, and the
+  refusal of `break()` in a loop said nothing). `l2_head_absent` and `l2_local_ns_shape`: a word is no absent head.
+- The call entry (correction 5: the duplicate folds as the phase moves). `l2_bind_call_in` binds through the view, a
+  bare head as its empty application; in `l2_check_call` a formal that a bare head leaves without an argument is said
+  by the one binding (`l2_bind_call`), as for `f()` -- "twice has no argument n" for `twice` as for `twice()`, where a
+  second arity test said "incompatible entry signature". No third bare-call adapter.
+
+The census after the slice (the S1 census script over these bytes): 761 sites (769). Statement dispatch 283 → 254
+(`l2_check_body` 83 → 67, `l2_emit_stmts` 119 → 107, `l2_src_one` 21 → 19, `l2_rw_stmt_content` 28 → 29: one test names
+the three words); contract 59 → 80 (`l2_check_word_stmt`: 21 comparisons of a word already resolved, the word's own
+contract). The remaining statement sites dispatch Frames with written arguments (`if:`, `while:`, `return: v`,
+declarations, letters, merge with operands); each reads a head that spells a word, which is the resolved word once no
+program can bind a word ([RESERVED-NAME-BINDINGS](defects.md#reserved-name-bindings), the next slice); S6 proves them
+site by site.
+
+The matrices (translation only, scratchpad, no gate weight). Statement in a method, 23 heads (the receivers, the
+trailer and statement words, two type words, a callable with a formal, a nullary callable, a named Structure): on the
+S1 bytes the bare word and `H()` agreed in 6 of 23 -- the others said "unbound dynamic input merge" at the call site,
+"unresolved name", "internal: a source definition has no owning producer", "root operation not walkable yet: this cast
+contract", or accepted `sizeof()`; now in 23 of 23, each the word's own contract at the word. Statement at the root and
+inside a loop, 10 heads each: 4 and 4 of 10 agreed (inside a loop `break()` was refused, "unsupported loop", and at the
+root accepted; the bare `break` the other way round); now 10 and 10, `break`/`continue` accepted inside the loop and
+refused at the root in both spellings. The positions that are not statements -- `x: H`, `w: H + 1`, `return: H`, an
+actual `take(H)` -- keep their differences: S4.
+
+The replay of `opus_full_38`'s 1998 recorded translations with these bytes: 1990 byte-identical (L1, exit, messages);
+8 differ in the message alone, each a bare call or a held reapplication whose callee has a formal, "incompatible entry
+signature" → "<callee> has no argument n" at the same line and column: `unit_factory_short_args_refused`,
+`unit_held_call_reapplied_method_refused`, `unit_held_call_reapplied_refused`,
+`unit_store_callable_over_formal_refused`, `unit_store_callable_over_local_refused`,
+`unit_store_callable_over_number_refused`, `unit_value_tail_prefix_call_refused` and its `_walk` twin. Their needles
+move with them. No corpus row changes its L1.
+
+The witnesses: 13 new fixtures, 26 rows after the explicit-Frame controls. Refused at the word, natively and under
+`--walk-methods`: the bare `merge` in a method, at the root and in a loop body; `merge()`; the prefix line `merge
+Model` (two statements: the bare `merge`, refused by merge's own contract, and `Model`, which is no operand of it);
+`break()` at the root ("unsupported loop"; it was accepted); `sizeof()`; `length()`; a bare `twice`; a bare `table`;
+`fm()`. Run natively and walked (WalkRoot clears the root's native word; in the walked twins every method is walked --
+only the entry keeps a native word in the `--walk-methods` L1): `unit_k03_nullary_stmt` -- `break`/`break()` and
+`continue`/`continue()` inside loops, a callable called bare and as `tick()`, a named Structure run bare and as
+`Model()`, `return`/`return()` in a sub (ticks 222, loops 12, entry 7); `unit_k03_hidden_input_q52` -- `s` and `s()`
+leave the unit's y at 0 and `node\y` writes the unit's cell (correction 1).
+
+The focused run on these bytes (`build/l2_harness/opus_focus_s23_01`): 71 targets, 0 failed -- the 26 new rows, the 8
+rows whose message moved, the explicit-Frame controls, the catch/throw/throws rows (`unit_s1_*`), the receiveMessage
+rows, `unit_recursion`, the continue rows, the held bare-name condition rows, the caller-binding rows, the run-time
+table rows, `unit_void_return_abi` and `graph_shape_if_body`.
+
+Not in this slice: the value, return and actual positions (S4: `x: sizeof` is accepted bare and refused as
+`sizeof()`, `return: merge` says "unresolved name"), with the row that the reintroduced collector must turn red (a
+receiving prefix `x: merge Model` and its walked twin); definition bodies (S5); the reserved-name validator and its four
+migrations (RESERVED-NAME-BINDINGS, Codex K03-RESERVED-NAME-ANSWER-20261006-02), next. Until that slice a program's
+binding of a word -- a local `size_t: sub`, a method `fn: until` -- is what the resolver finds where it is visible.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_40` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_38` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_40` (full harness) | RED39/2025: against `opus_full_39` FAIL→OK 0, OK→FAIL 0, added 26 (the witnesses, all OK), removed 0, red rows whose message changed 0. The 15 declared paths were hashed before the run; every staged copy is their bytes. |
+| Replay of `opus_full_38`'s 1998 recorded translations | 1990 byte-identical; 8 messages moved, as above. |

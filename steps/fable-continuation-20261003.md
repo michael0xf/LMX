@@ -9825,3 +9825,135 @@ its L1, exit, messages and number of allocations.
 | `build/l3_selftest/opus_l3_26` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_28` (full harness) | RED39/1942: against `opus_full_27` FAIL→OK 0, OK→FAIL 0, added 4, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
 | `build/l2_harness/opus_focus_fault1` (focused, before the gates) | 12 rows: the four of this section, their control `unit_exprtext_sum` (+`_walk`), the long literal, actuals and path of sections 94 and 96, the `sizeof` and literal refusals beside them, all green. |
+
+<a id="expression-text-owner-groups"></a>
+## 98. The writers whose callers already hand a text: owner groups 1 and 2 of the expression text (FIXED-BLOCKS-AUDIT)
+
+After slice 3 no route copies the expression's text into a fixed buffer;
+what remained were 33 writers that still wrote a `@: char` destination and
+were handed the text's room for 1023 more bytes (`l2_tx_fixed`, or
+`l2_tx_fixed_keep` for the two that read the text they rewrite), at 65 call
+sites. A writer's destination moves to the text with its owners: a caller's
+buffer handed to it becomes a text, so the buffer's other writers move too,
+and a destination the writer hands on moves the writer it is handed to.
+Over the translator's calls that closure splits the 33: 13 form twelve
+groups of their own whose callers already hand texts or buffers of their own
+(fourteen writers with `l2_sizeof_name_bytes`, to which `l2_emit_sizeof`
+hands its destination) -- group 1; 10 belong to one group of 15 writers
+around the method call, the conversions and the array elements -- group 2;
+10 to a group of 34 around tokens, places and declarators, `l2_tok_text`'s
+atoms and `l2_pointer_decl_text`'s joins among them -- group 3, the next
+step. Codex (2026-10-06) let groups 1 and 2 form one gated checkpoint; each
+keeps its own measurements below.
+
+**Group 1.** `l2_emit_array_desc`, `l2_emit_array_place_operand`,
+`l2_emit_empty_actual`, `l2_emit_indirect_span`, `l2_emit_receiving_admit`,
+`l2_mrs_occ_read`, `l2_payload_expr`, `l2_prep_held_call`,
+`l2_prep_implements`, `l2_t7_emit_actual`, `l2_emit_sizeof` with
+`l2_sizeof_name_bytes`, and `l2_field_path_read` with `l2_path_text_read`
+write the text. Their 22 call sites hand the text itself, and
+`l2_tx_fixed_keep` loses its last callers and is removed. The buffers their
+callers had of their own become texts on those buffers
+(`l2_emit_array_place`'s target, the descriptor of `l2_emit_array_ptr` and
+`l2_emit_array_length`, the walk's `implements` answer in `l2_rw_operand`).
+One helper is added, `l2_tx_wrapn`: a text, n bytes, a text. The bounds that
+go with them: `sizeof` of a type frame was written in at most 256 bytes
+("expression too long" at the sizeof, for a pointer about 240 levels deep);
+`sizeof` of a type word, a C door's name or a method in 1024 (the located
+refusal of section 90), an own array's count with them; a letter's payload
+in 256 ("a letter's value expression too long" -- a letter's value is a name
+or a load in every program the gates translate, and no row reached it);
+`l2_emit_indirect_span` wrote its indirections into the 1024 bytes
+unchecked (as many as the operand's type is deep).
+
+**Group 2.** The method call (`l2_emit_call`), the conversions
+(`l2_emit_value_convert`, `_n`, `_field`, `l2_emit_ret_convert`,
+`l2_emit_init_convert`, `l2_emit_convert_raw`), a new int temporary
+(`l2_new_temp`) and the array elements and lengths (`l2_emit_arr_operand`,
+`l2_emit_array_length`, `l2_emit_array_load_at`, `l2_emit_own_index`,
+`l2_emit_indexed`) write the text: 24 more call sites hand it. What they
+write is a name -- a temporary, an element, a literal index -- so no bound a
+program meets goes with them; what goes is the room they were handed.
+`l2_tok_temp` loses its callers to `l2_tx_temp` and is removed;
+`l2_emit_array_load`, which nothing calls, is removed. The callers' own
+buffers handed to them become texts: `l2_emit_ccall`'s boxed temporary,
+`l2_emit_stmts`' loop flags and own-array index, `l2_emit_indexed`'s index,
+`l2_held_convert_emit`'s result. 19 adapter sites remain, all in group 3.
+Removing an adapter does not show that the writers downstream take a text
+of any length: every bound group 3 still holds stays listed in
+FIXED-BLOCKS-AUDIT until its own migration and witness.
+
+| Row | What it pins |
+| --- | --- |
+| `unit_exprtext_sizeof_frame` | `sizeof(@@...@: int)`, a pointer 1100 levels deep, is the size of a pointer; Entry 7. The previous translator refuses it at 5:11, "expression too long". Natively only, as `unit_sizeof_long_name`: a walked root stops at its `sizeof` ("lmx: walk error: UNSUPPORTED"), already at depth 2 -- the walker's existing behaviour, not a bound of this step. |
+
+Not pinned by a row: `sizeof(c.<name>)` past 1024 bytes now translates (a
+name of 1500 bytes; the previous translator refuses it at its place), but
+`l1trans` refuses a C type name of 64 bytes or more (`l1_hdr_type_add`,
+"type name too long", measured at 100) -- a debt of the bootstrap toolchain,
+recorded in FIXED-BLOCKS-AUDIT for `l1trans`'s own step; not a reason to
+shorten, hash or treat C names specially.
+
+Reach, measured with coverage builds over the recorded translations (group 1
+over the 1935 of `opus_full_26`, groups 1 and 2 over the 1937 of
+`opus_full_27`): every writer of group 1 runs but `l2_mrs_occ_read`
+(`merged\[N]x` of a bound merge result). Of group 2, `l2_emit_array_load_at`
+never runs, `l2_emit_own_index` runs only to answer "not this shape" (56270
+times), `l2_emit_arr_operand`'s element branches and `l2_emit_indexed`'s
+load branch never run. They are migrated by the same rule. No coverage, no
+unchanged replay and no "not this shape" shows them dead: they stay for the
+producer and reachability audit before any removal (Codex 2026-10-06).
+
+Mutants, each its own translator, run by the harness of an isolated shared
+clone of HEAD with the group laid over it, its own evidence directory, one
+after another; the rows named are among those whose L1 the mutant changes in
+the replay, and all of them pass without it. Group 1's, over group 1:
+
+| Mutant | Killed by |
+| --- | --- |
+| the type frame's text bounded at 256 bytes again | `unit_exprtext_sizeof_frame`: refused at 5:11, "expression too long" |
+| `l2_tx_wrapn` not writing the text after the bytes | `unit_exprtext_sizeof_frame` (gcc), `unit_sizeof_long_name` and `unit_sizeof_array_bytes` (l1trans), `unit_sizeof_type_frame` (its L1 pin) |
+| one indirection fewer | `unit_addr_depth`, `unit_addr_take`, `unit_address_reference_cell` (exit 1) |
+| a letter's value not rewritten into its payload | `unit_admit_letter_formal`, `unit_admit_rebind_read`, `unit_bind_root_letter` (exit 1) |
+| `implements` always 0 | `unit_implements_admission`, `unit_implements_argument`, `unit_implements_primitives` (exit 1) |
+| an array place's element without its index | `graph_shape_array_place_selectors` (exit 1) |
+| an array's length read from a descriptor not its own | `graph_shape_nested_array`, `unit_array_value_projection`, `unit_field_path_array_dispatch` (gcc) |
+| a reference taking the value it was given, not the temporary that value was admitted in | only `unit_ref_local_path`'s text pin of the native relationship -- a text pin, not behaviour. Of the 161 rows whose L1 it changes, run, the others pass (one was red before): the value handed to the receiving admission is a temporary or a read in each of them. The behaviour stays untested (FIXED-BLOCKS-AUDIT). |
+
+Group 2's, over groups 1 and 2:
+
+| Mutant | Killed by |
+| --- | --- |
+| an addressed element without its address (`l2_emit_indexed`) | `graph_shape_machine_address`, `graph_shape_walk_machine_address`, `graph_shape_pointer_index`, `unit_addr_own_array_arith`: the program crashes |
+| a new temporary named by its neighbour (`l2_new_temp`) | `graph_shape_for_body`, `graph_shape_for_no_init`, `graph_shape_array_place_selectors` (+`_walk`) (gcc) |
+| the postcondition loop clearing its first-turn flag where it clears its keep flag (`l2_emit_stmts`' loop texts) | `unit_body_path_until_pt`, `unit_named_until_canonical_copy` (no end: the program was stopped from outside, the harness has no time limit), `unit_held_call_bare_name_condition` (exit 1); its `_walk` twin passes |
+| a conversion's result named by the receiver's temporary (`l2_emit_convert_raw`) | `unit_held_call_free_name_converted`, `unit_held_call_free_name_own_binding` (+`_walk`) (gcc) |
+| an indexed path array's length named by the next temporary (`l2_emit_arr_operand`) | `entry_argc_if`, `graph_shape_ns_source_array_read` (+`_walk_methods`), `graph_shape_ns_source_constructors` (gcc) |
+| a callable without a result leaving the destination's text as it was (`l2_emit_call`) | changes no translation of the corpus |
+| a literal own index spelled 0 (`l2_emit_own_index`); an own array element named by the next temporary (`l2_emit_array_load_at`) | change no translation: the routes no recorded translation takes (above) |
+
+**The scoped environment** (Codex's spot-check of section 97):
+`Invoke-WithEnv` set its variables before entering the `try` whose
+`finally` restores them, so a setup failing after an earlier variable was
+set left that variable set. They are now set inside the `try`, each saved
+before it is set. A script takes the function from the harness by its text
+and runs three cases -- a block that succeeds, a block that throws, a setup
+that sets one variable and then fails on a name that cannot be set: the
+function of section 97 leaves the first variable set in the third case
+(`WE_K2='x'`, was `'prior'`); this one restores it, and the other two cases
+pass with both.
+
+Replays, with each group's translator against the one before it: group 1
+against section 97's over the 1935 translations of `opus_full_26` and the
+1937 of `opus_full_27`, group 2 against group 1 over the 1937 -- every row
+keeps its L1, exit, messages and number of allocations. So does the
+translator of this section's full gate against section 97's over the 1937.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_28` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_27` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_29` (full harness) | RED39/1943: against `opus_full_28` FAIL→OK 0, OK→FAIL 0, added 1, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
+| `build/l2_harness/opus_focus_g12` (focused, before the gates) | 39 rows: this section's row, the rows its mutants are killed by and the controls of sections 94, 96 and 97, all green. |

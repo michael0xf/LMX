@@ -1031,14 +1031,17 @@ function Invoke-Step([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$
 }
 # A row's translator environment (Codex 2026-10-06, OPUS-CODEX-20261005-01, Question A): the variables are set for
 # what the block runs -- one translator invocation -- and restored after it, failed or not, so no later step (l1trans,
-# gcc, the program) and no other row sees them.
+# gcc, the program) and no other row sees them.  They are set inside the try: a setup that fails after an earlier
+# variable was set restores it too (each one is saved before it is set).
 function Invoke-WithEnv([hashtable]$Vars, [scriptblock]$Block) {
     $saved = @{}
-    foreach ($name in $Vars.Keys) {
-        $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
-        [Environment]::SetEnvironmentVariable($name, [string]$Vars[$name], 'Process')
+    try {
+        foreach ($name in $Vars.Keys) {
+            $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+            [Environment]::SetEnvironmentVariable($name, [string]$Vars[$name], 'Process')
+        }
+        return (& $Block)
     }
-    try { return (& $Block) }
     finally {
         foreach ($name in $saved.Keys) { [Environment]::SetEnvironmentVariable($name, $saved[$name], 'Process') }
     }
@@ -3059,6 +3062,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_exprtext_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_exprtext_path_walk.lm2'; Source = 'unit_exprtext_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1, 2);
         Absent = @(); Debt = @() },
+    # Owner group 1 (steps/fable-continuation-20261003.md §98): the size of a type frame 1100 levels deep -- its text
+    # was at most 256 bytes (1:11, "expression too long").  Natively only, as unit_sizeof_long_name: a walked root
+    # stops at its `sizeof` at any depth ("lmx: walk error: UNSUPPORTED").
+    [pscustomobject]@{ Name = 'unit_exprtext_sizeof_frame.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # Triage 2026-10-03: `idle: 1` at the root is an unknown head and defines a named Structure.
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone

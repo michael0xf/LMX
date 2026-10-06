@@ -828,11 +828,19 @@ Current bounded implementation, with no DONE claim:
     selftests), L3 `opus_l3_24`, full `opus_full_26` RED39/1936 -- against
     `opus_full_25` FAIL→OK 0, OK→FAIL 0, added 8. Slice 3 done
     ([section 96](steps/fable-continuation-20261003.md#expression-text-path-actual)):
-    a path actual of any number of names. Gates: kernel `opus_kernel_26` GREEN297 (114 selftests), L3 `opus_l3_25`, full `opus_full_27` RED39/1938 -- against `opus_full_26` FAIL→OK 0, OK→FAIL 0, added 2. The residual routes
-    (32 fixed writers, `l2_payload_expr`, the held call's converted value in
-    1100/1024 bytes, the indexed operand's value route -- the last two with
-    unreached mutants --, `l2_tok_text` atoms, `l2_pointer_decl_text`'s
-    joins) stay OPEN, listed in FIXED-BLOCKS-AUDIT;
+    a path actual of any number of names. Gates: kernel `opus_kernel_26`
+    GREEN297 (114 selftests), L3 `opus_l3_25`, full `opus_full_27`
+    RED39/1938 -- against `opus_full_26` FAIL→OK 0, OK→FAIL 0, added 2.
+    Owner groups 1 and 2 done
+    ([section 98](steps/fable-continuation-20261003.md#expression-text-owner-groups)):
+    the 27 writers whose callers already hand a text write it themselves;
+    `sizeof` of a type frame of any depth. Gates: kernel `opus_kernel_28` GREEN297 (114 selftests), L3 `opus_l3_27`, full `opus_full_29` RED39/1943 -- against `opus_full_28` FAIL→OK 0, OK→FAIL 0, added 1. The residual routes
+    (group 3's 34 writers on the 1024-byte room around tokens, places and
+    declarators -- `l2_tok_text`'s atoms and `l2_pointer_decl_text`'s joins
+    among them --, the held call's converted value in 1100/1024 bytes and
+    the indexed operand's value route, both with unreached mutants, the
+    migrated routes no translation reaches) stay OPEN, listed in
+    FIXED-BLOCKS-AUDIT;
   - [ ] a checked build, or a test-only witness, that a call's actual records
     and their slots do not overlap (Codex 2026-10-06): slice 2's overlap
     mutant is killed only by chance; the existing toolchain where it serves;

@@ -1,0 +1,12 @@
+# FIXED-BLOCKS-AUDIT, the expression text, slice 2 (Codex 2026-10-06): an own array's index is as long as the
+# program writes it -- it went through a buffer of 1024 bytes and was refused "expression too long" past it.
+# The index is 150 operands less 148: 2, where 7 is.  r receives the element, s adds 1 to it (each the index
+# of an array place).  f(1) = 7 + 8 - 8.
+fn: f (size_t: a) int
+    []: int arr 4
+    arr[2]: 7
+    int: r arr[a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a - 148U]
+    int: s arr[a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a - 148U] + 1
+return: r + s - 8
+sendMessage: exit(exit_code: f(1U); stdout: ""; stderr: "")
+return

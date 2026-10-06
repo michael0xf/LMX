@@ -3009,6 +3009,23 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_exprtext_actuals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Says = $exprTextActualsSays; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_exprtext_c_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # Slice 2 (steps/fable-continuation-20261003.md §95): the routes that took a migrated text into a 1024-byte buffer
+    # write into a text of their own -- a call's actuals, a held callable's, an own array's index, the actuals of a
+    # call through a function-pointer local and the value a reference takes.  Slice 1 refuses every row "expression
+    # too long" at the long actual, index or value.  g's one actual and h's second are 150 operands, so that one
+    # actual in another's place changes h's u * 1000 + v.  The function-pointer and reference rows call raw C:
+    # native only.
+    [pscustomobject]@{ Name = 'unit_exprtext_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_call_walk.lm2'; Source = 'unit_exprtext_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1, 2);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_held_walk.lm2'; Source = 'unit_exprtext_held.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 2);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_index_walk.lm2'; Source = 'unit_exprtext_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_fnptr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # Triage 2026-10-03: `idle: 1` at the root is an unknown head and defines a named Structure.
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone

@@ -1,0 +1,15 @@
+# FIXED-BLOCKS-AUDIT, the expression text, slice 2 (Codex 2026-10-06): a held callable's actual is as long as the
+# program writes it -- it went through a buffer of 1024 bytes and was refused "expression too long" past it.
+# h holds make(1)'s g, x + 1; f calls it on 150 operands.  f(1) = 150 + 1 - 144 = 7.
+fn: make (int: k) fn: (int: x) int
+    fn: g (int: x) int
+        return: x + k
+    return: g
+
+@: h make(1)
+
+fn: f (int: a) int
+    int: r h(a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a)
+return: r - 144
+sendMessage: exit(exit_code: f(1); stdout: ""; stderr: "")
+return

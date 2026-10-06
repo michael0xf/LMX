@@ -1,0 +1,16 @@
+# FIXED-BLOCKS-AUDIT, the expression text, slice 2 (Codex 2026-10-06): a call's actual is as long as the program
+# writes it -- each actual had a slot of 1024 bytes, and one past it was refused "expression too long".  g takes
+# one actual of 150 operands; h two, the first a and the second of 150, so that one actual in another's place
+# shows: h gives u * 1000 + v.  f(1) = 150 + 1150 - 1293 = 7.
+fn: g (int: x) int
+    int: y x
+return: y
+fn: h (int: u; int: v) int
+    int: y u * 1000 + v
+return: y
+fn: f (int: a) int
+    int: p g(a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a)
+    int: q h(a; a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a + a)
+return: p + q - 1293
+sendMessage: exit(exit_code: f(1); stdout: ""; stderr: "")
+return

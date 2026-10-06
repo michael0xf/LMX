@@ -9611,3 +9611,98 @@ emission uses it; it is one common header of every program's preamble since
 | `build/l3_selftest/opus_l3_23` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_25` (full harness) | RED39/1928: against `opus_full_24` FAIL→OK 0, OK→FAIL 0, added 11, removed 0. The declared paths were hashed before the run; the staged translator, its header and the fixtures are their bytes. |
 | `build/l2_harness/opus_focus_tx2` (focused, before the gates) | 14 rows: the eleven of this section, `unit_send_text` and the two rows the `l2_tx_fixed_keep` mutant changes, all green. |
+
+<a id="expression-text-fixed-routes"></a>
+## 95. The routes that took a text into a fixed buffer: slice 2 of the expression text (FIXED-BLOCKS-AUDIT)
+
+Slice 1 left eight routes that took a migrated writer's text into a buffer of
+1024 bytes, copied when it fit and refused "expression too long" where it
+stood when it did not (`l2_eval_fields_fixed`, `l2_emit_fields_fixed`,
+`l2_prep_fixed`). Seven of them now write into a text of their own:
+
+- a call's actuals (`l2_emit_call`). One block still holds them, now the
+  actuals' texts (`L2Tx` records) and then a 1024-byte slot for each, where its
+  text starts (`l2_act_tx`); a text grows past its slot into storage of the
+  translation. The joiner writes into the actual's text (`l2_emit_fields`);
+  the writers still on the 1024-byte contract are handed the slot's room
+  (`l2_tx_fixed`: `l2_t7_emit_actual`, `l2_cf_actual_emit`,
+  `l2_emit_empty_actual`, `l2_emit_value_convert_field`,
+  `l2_emit_actual_path`); `l2_payload_expr` keeps the text it rewrites; the
+  admissions and `l2_emit_call_go`'s refs (through `l2_emit_call_classes`
+  too) read its data. The one actual of a conversion receiver's call
+  (`l2_emit_convert_raw`) is a text on the frame, and its refusal "internal: a
+  converted value's text does not fit its actual" went with its 1024-byte
+  block;
+- a held callable's actuals (`l2_prep_held_call`);
+- an own array's index: the index of an array place
+  (`l2_emit_array_place_operand`, through `l2_emit_received_span`), and the
+  value an indexed operand loads (`l2_emit_indexed`), whose index is one name,
+  call or literal and so never long;
+- the actuals of a call through a function-pointer local
+  (`l2_emit_fnptr_call`), joined in a text whose growth failing is said where
+  the call stands -- the joins on a 1024-byte buffer returned with no located
+  diagnostic past it;
+- the value a reference takes (`l2_emit_reference_value`,
+  `l2_emit_reference_value_at`, `l2_emit_received_span`): its callers hand the
+  statement's text itself, or a text of their own
+  (`l2_emit_reference_declaration`, `l2_emit_array_place_operand`'s index);
+- a pointer's dereference (`l2_emit_indirect_span`);
+- the address of a C field (`l2_prep_addr`), whose destination is a text: its
+  `@ ` and a field text of 1023 bytes could pass the 1024 bytes it was handed
+  by two.
+
+`l2_eval_fields_fixed` and `l2_emit_fields_fixed` have no caller left and are
+removed. `l2_prep_fixed` stays for the eighth route, the path actual
+(`l2_emit_actual_path`, at most 32 names), OPEN; slice 1 had put the three
+between `l2_emit_formal` and its leading comment, and the one left now stands
+before that comment.
+
+The residual routes of section 94 are now 32 writers on the 1024-byte
+contract, `l2_payload_expr`'s 256 bytes, the path actual, the `l2_tok_text`
+atoms and `l2_pointer_decl_text`'s joins.
+
+| Row | What it pins |
+| --- | --- |
+| `unit_exprtext_call` (+`_walk`) | g of one actual of 150 operands, h of two (a, then 150 operands), so that an actual in another's place changes h's u * 1000 + v; Entry 7. The twin walks g, h, f and the root. |
+| `unit_exprtext_held` (+`_walk`) | A held callable (`@: h make(1)`, x + 1) called on 150 operands; Entry 7. The twin walks make, f and the root. |
+| `unit_exprtext_index` (+`_walk`) | An own array read at an index of 150 operands less 148 (the index of an array place), then again with 1 added; Entry 7. |
+| `unit_exprtext_fnptr` | `c.malloc` through a function-pointer local, called as a statement and as a value on 150 operands less 146; Entry 7. |
+| `unit_exprtext_reference` | A reference declared, and another assigned, with `c.strchr` over a literal of 1500 bytes; both read past it; Entry 7. |
+
+The last two are native only: a raw C call keeps its method native. Slice 1
+refuses every row "expression too long", at the long actual, index or value
+(call 12:14, held 12:14, index 8:16, fnptr 13:14, reference 6:15). A long
+dereference and a long C field address have no positive: the check refuses a
+dereference of a call before the emission ("root operation not walkable yet:
+this operand"), and a C field's address is written of its names.
+
+Mutants, each its own translator; the five fixtures translated, compiled and
+run natively:
+
+| Mutant | Killed by |
+| --- | --- |
+| every actual the first's text (`l2_act_tx` answering the block's first record) | `unit_exprtext_call`: the entry returns another value (exit 1) |
+| a call's actual refused past 1023 bytes again | `unit_exprtext_call` refused |
+| a held callable's actual refused past 1023 bytes again | `unit_exprtext_held` refused |
+| a function-pointer call's join refused past 1023 bytes again, with no diagnostic, as before | `unit_exprtext_fnptr` refused |
+| the value a reference takes refused past 1023 bytes again | `unit_exprtext_index` (the array place's index), `unit_exprtext_fnptr` (the value `got` takes) and `unit_exprtext_reference` refused |
+| the slots laid over the records | in this run `unit_exprtext_index`, whose L1 came out broken ("unindent does not match any outer indentation level"); the other four were right. The damage is to the heap and depends on where the block lies: a row sees it only by chance, a checked build would always (the fortified test build is its own item) |
+| an indexed operand's value refused past 1023 bytes again | not reached: an indexed operand's index is one name, call or literal; a long index goes by the array place |
+| a converted value refused past 1023 bytes again | not reached: `l2_emit_convert_raw`'s callers hand it a value from a 1100-byte buffer (`l2_held_convert_emit`, OPEN); the replay changes no row |
+
+Each length mutant refuses by returning 1, which the translator's guard says
+as "internal: a refusal said nothing" (exit 3).
+
+A replay of the 1916 translations recorded by `opus_full_24`, with the
+translator of this section's full gate against section 94's: every row keeps
+its L1, exit and messages; six make two allocations fewer (the held calls'
+conversions, whose actual is no longer allocated).
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_25` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_24` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_26` (full harness) | RED39/1936: against `opus_full_25` FAIL→OK 0, OK→FAIL 0, added 8, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
+| `build/l2_harness/opus_focus_tx3` (focused, before the gates) | 32 rows: the eight of this section, three of section 94, the held calls' conversion rows, the function-pointer, reference, array, letter and send rows, all green. |

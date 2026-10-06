@@ -821,9 +821,14 @@ Current bounded implementation, with no DONE claim:
     fields; an atom of any length; C-CALL-VALUE-TEXT-CUT fixed with it.
     Gates: kernel `opus_kernel_24` GREEN297 (114 selftests), L3 `opus_l3_23`,
     full `opus_full_25` RED39/1928 -- against `opus_full_24` FAIL→OK 0,
-    OK→FAIL 0, added 11. The residual routes (33 fixed writers, `l2_payload_expr`,
-    eight fixed routes of a migrated text, `l2_tok_text` atoms, `l2_cat`
-    joins) stay OPEN, listed in FIXED-BLOCKS-AUDIT;
+    OK→FAIL 0, added 11. Slice 2 done
+    ([section 95](steps/fable-continuation-20261003.md#expression-text-fixed-routes)):
+    seven routes that took a migrated text into a 1024-byte buffer write into
+    a text of their own. Gates: kernel `opus_kernel_25` GREEN297 (114
+    selftests), L3 `opus_l3_24`, full `opus_full_26` RED39/1936 -- against
+    `opus_full_25` FAIL→OK 0, OK→FAIL 0, added 8. The residual routes (32 fixed writers,
+    `l2_payload_expr`, the path actual, `l2_tok_text` atoms,
+    `l2_pointer_decl_text`'s joins) stay OPEN, listed in FIXED-BLOCKS-AUDIT;
   - [ ] a failed allocation in the emission said twice, located and again at
     1:1 ([ALLOC-FAILURE-SAID-TWICE](steps/defects.md#alloc-failure-said-twice)):
     a small fix; its gated witness needs a row that fails an allocation,

@@ -594,6 +594,10 @@ Fable принял единственный writer/build-слот по [to_fable
   [C-CALL-VALUE-TEXT-CUT](defects.md#c-call-value-text-cut). Остальные маршруты — OPEN, перечислены в
   FIXED-BLOCKS-AUDIT. Гейты `opus_kernel_24` GREEN297, `opus_l3_23`, `opus_full_25` RED39/1928: против
   `opus_full_24` FAIL→OK 0, OK→FAIL 0, добавлено 11.
+- Срез 2 текста выражения: семь маршрутов, принимавших готовый текст в буфер в 1024 байта, пишут в
+  свой текст ([§95 журнала](fable-continuation-20261003.md#expression-text-fixed-routes)). Гейты
+  `opus_kernel_25` GREEN297, `opus_l3_24`, `opus_full_26` RED39/1936: против `opus_full_25` FAIL→OK 0, OK→FAIL 0,
+  добавлено 8.
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
   под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),

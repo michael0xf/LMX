@@ -9347,3 +9347,60 @@ more than 64 of the three stacks' entries.
 | `build/l3_selftest/opus_l3_19` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_21` (full harness) | RED39/1911: against `opus_full_20` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
 | `build/l2_harness/opus_focus_stk1` (focused, before the gates) | 16 rows: the two of this section, the nested `for:` rows of §90 and the catch rows beside them, all green. |
+
+<a id="source-tables-any-size"></a>
+## 92. Source tables as many, as wide and as large as the program writes them (FIXED-BLOCKS-AUDIT)
+
+The receiver `table` kept the program's source tables in places of fixed
+size, and refused what did not fit, at its place:
+
+| Size | Where | Refused as |
+| --- | --- | --- |
+| 8 tables of one translation (two are the conversion and primitive tables) | `l2_tb_*` | "too many source tables" |
+| 32 columns of one table, 128 of all | `l2_tbc_name` | "a table has too many columns" |
+| 4096 cells of all (the conversion table alone holds several hundred) | `l2_tbx_arg`, `l2_tbx_name` | "a table is too large" |
+| a cell's text of 127 bytes | the cell's copy | "a table cell is too long" |
+
+The tables, their columns and their cells now keep the unit's places while
+they suffice and beyond them memory of twice the entries (`l2_tb_room`,
+`l2_tbc_room`, `l2_tbx_room`), released with the translation; a cell's text
+is made in memory of its own size: its bytes and the terminator, and for a
+triple-quoted cell, written as an L1 string, at most four bytes for each of
+its bytes (an escape) and its quotes. The per-table cap of 32 columns is
+gone with the total.
+
+`unit_s7_conv_wide` pinned the 33rd column's refusal: a conversion table of
+33 columns, 27 of other names, whose rows held only the six cells the
+conversion reads. It is now a positive: each row has a cell for each column
+(`n` for the 27), the conversion reads the six it knows and holds the others
+in the row unread, and the program converts as `unit_s7_prim_cross` does
+(Entry 7). The holding of a column of another name had no gated witness of
+its own until now (the review log's M40: the wide row caught that mutant only
+through the column cap).
+
+Row `unit_s7_tbl_many`, over the part `unit_s7_tbl_many_part.lm2`: twelve
+tables in all, one of 130 columns, one of 5000 cells and one cell of 300
+bytes, and the conversion still finds `primitive.convert` by its name: a
+`size_t` given to an `int` place is converted; Entry 7. The previous
+translator refuses the part, "too many source tables", and each of five
+mutants that restores one size -- the tables, the columns of one table, the
+columns of all, the cells, the cell's text -- refuses it at that size.
+Translated with the part, the allocation log ends with no live allocation,
+natively and with the methods walked.
+
+A replay of the 1910 translations recorded by `opus_full_21`, with this step's
+translator against that gate's, changes one row: `unit_s7_conv_wide`, recorded
+with its old table, is now refused at its first row, "table rows are not whole
+rows of its columns", where the 33rd column was refused before; this step
+rewrites that table. Every other row keeps its L1, exit, messages and number
+of allocations.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_22` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l2src/opus_kernel_21` | Stopped in its kernel phase, before the harness: the replay had shown `unit_s7_conv_wide` pinning the 33rd column's refusal and long cells taking memory; the partial directory remains. |
+| `build/l3_selftest/opus_l3_21` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_23` (full harness) | RED39/1912: against `opus_full_21` FAIL→OK 0, OK→FAIL 0, added 1, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_tbl2` (focused, before the gates) | 22 rows: the two of this section, the receiver `table` rows and the conversion-table rows beside them, all green. |

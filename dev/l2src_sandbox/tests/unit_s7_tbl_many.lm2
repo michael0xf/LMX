@@ -1,0 +1,19 @@
+# FIXED-BLOCKS-AUDIT: the source tables of a program are as many, as wide and as large as it writes them
+# (tests/unit_s7_tbl_many_part.lm2: twelve tables in all, one of 130 columns, one of five thousand cells,
+# one cell of 300 bytes), and the conversion still finds `primitive.convert` by its name: a size_t given to an
+# int place is converted.  The translation refused the part: "too many source tables", "a table has too many
+# columns", "a table is too large", "a table cell is too long".  Entry 7.
+
+fn: go () int
+    int: a 1
+    size_t: b 2U
+    a: b
+    return: a
+
+int: k
+k: go()
+if: k = 2
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

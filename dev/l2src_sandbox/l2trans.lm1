@@ -845,25 +845,42 @@ int: l2_pr_said 0
 # The receiver `table` (Q41, Q43; steps/table-receiver.md §5): the source tables of this translation.
 # Table t: its name (the one atom of its `name:` argument, or 0), its `columns:` argument, its first
 # column and number of columns in l2_tbc_name, its first cell and number of rows in l2_tbx_*.
+# As many tables, columns and cells as the program's tables have (FIXED-BLOCKS-AUDIT): the unit's places, beyond
+# them memory of the size needed (l2_tb_room, l2_tbc_room, l2_tbx_room).
 int: l2_tb_n 0
-[]: @(LmP0Text) l2_tb_name 8
-[]: @(LmP0Node) l2_tb_cols 8
-[]: @(LmP0Node) l2_tb_call 8
+int: l2_tb_cap 0
+[]: @(LmP0Text) l2_tb_name_own 8
+[]: @(LmP0Node) l2_tb_cols_own 8
+[]: @(LmP0Node) l2_tb_call_own 8
+[]: @(char) l2_tb_path_own 8
+[]: @(LmP0Node) l2_tb_name_at_own 8
+[]: int l2_tb_col0_own 8
+[]: int l2_tb_ncol_own 8
+[]: int l2_tb_cell0_own 8
+[]: int l2_tb_nrow_own 8
+@@: LmP0Text l2_tb_name 0
+@@: LmP0Node l2_tb_cols 0
+@@: LmP0Node l2_tb_call 0
 # The file each table stands in, and the node of its name (§8: two tables of one name are said with both
 # places -- they may stand in two files of the program).
-[]: @(char) l2_tb_path 8
-[]: @(LmP0Node) l2_tb_name_at 8
-[]: int l2_tb_col0 8
-[]: int l2_tb_ncol 8
-[]: int l2_tb_cell0 8
-[]: int l2_tb_nrow 8
-[]: @(LmP0Text) l2_tbc_name 128
+@@: char l2_tb_path 0
+@@: LmP0Node l2_tb_name_at 0
+@: int l2_tb_col0 0
+@: int l2_tb_ncol 0
+@: int l2_tb_cell0 0
+@: int l2_tb_nrow 0
+[]: @(LmP0Text) l2_tbc_name_own 128
+@@: LmP0Text l2_tbc_name 0
+int: l2_tbc_cap 0
 int: l2_tbc_n 0
 # Q43 (the author, 2026-09-27): a cell is an argument of any kind -- an atom, a Structure, an array --
 # so a table keeps each cell's node (its document stays for the translation, as the impl sources'
 # do); l2_tbx_name holds a name only for a cell that is one atom, and 0 for any other.
-[]: @(LmP0Node) l2_tbx_arg 4096
-[]: @(char) l2_tbx_name 4096
+[]: @(LmP0Node) l2_tbx_arg_own 4096
+[]: @(char) l2_tbx_name_own 4096
+@@: LmP0Node l2_tbx_arg 0
+@@: char l2_tbx_name 0
+int: l2_tbx_cap 0
 int: l2_tbx_n 0
 # The receiver's formals, read once from its header (l2_table_header); the header's document stays.
 []: @(LmP0Text) l2_tb_formal 4
@@ -898,6 +915,7 @@ prototype:
     fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
     fn: l2_error_name (const: @(char path); const: @(LmP0Node at); const: @(char before); const: @(char name); size_t: n; const: @(char after)) int
     fn: l2_error_words (const: @(char path); const: @(LmP0Node at); const: @(char p0); const: @(char x); size_t: xn; const: @(char p1); const: @(char y); size_t: yn; const: @(char p2); const: @(char z); size_t: zn; const: @(char p3)) int
+    fn: l2_tb_free () int
     fn: l2_check_held_convert (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
     fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
     fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
@@ -2406,6 +2424,28 @@ fn: l2_release () int
     l2_tbx_n: 0
     l2_tbc_n: 0
     l2_tb_n: 0
+    if: l2_tbx_cap > 4096
+        l2_xfree((cast: (@: void) l2_tbx_arg))
+        l2_xfree((cast: (@: void) l2_tbx_name))
+    l2_tbx_arg: 0
+    l2_tbx_name: 0
+    l2_tbx_cap: 0
+    if: l2_tbc_cap > 128
+        l2_xfree((cast: (@: void) l2_tbc_name))
+    l2_tbc_name: 0
+    l2_tbc_cap: 0
+    if: l2_tb_cap > 8
+        l2_tb_free()
+    l2_tb_name: 0
+    l2_tb_cols: 0
+    l2_tb_call: 0
+    l2_tb_path: 0
+    l2_tb_name_at: 0
+    l2_tb_col0: 0
+    l2_tb_ncol: 0
+    l2_tb_cell0: 0
+    l2_tb_nrow: 0
+    l2_tb_cap: 0
     lm_p0_document_destroy(l2_tb_sig)
     l2_tb_sig: 0
     i: 0
@@ -9247,6 +9287,154 @@ fn: l2_table_twice (const: @(char path); const: @(LmP0Node at); int: k) int
     c.snprintf(place, 64U, ":%zu:%zu)", line, column)
 return: l2_error_words(path, at, "two source tables have this name (the other at ", l2_tb_path[k], pn, place, 0, 0U, "", 0, 0U, "")
 
+# The tables' memory beyond the unit's places.
+fn: l2_tb_free () int
+    l2_xfree((cast: (@: void) l2_tb_name))
+    l2_xfree((cast: (@: void) l2_tb_cols))
+    l2_xfree((cast: (@: void) l2_tb_call))
+    l2_xfree((cast: (@: void) l2_tb_path))
+    l2_xfree((cast: (@: void) l2_tb_name_at))
+    l2_xfree((cast: (@: void) l2_tb_col0))
+    l2_xfree((cast: (@: void) l2_tb_ncol))
+    l2_xfree((cast: (@: void) l2_tb_cell0))
+    l2_xfree((cast: (@: void) l2_tb_nrow))
+return: 0
+
+# Room for one more source table: the unit's 8 places while they suffice, then memory of twice the tables, the
+# tables kept (FIXED-BLOCKS-AUDIT).  0, or 1 out of memory.
+fn: l2_tb_room () int
+    @@: LmP0Text nm
+    @@: LmP0Node co
+    @@: LmP0Node ca
+    @@: char pa
+    @@: LmP0Node na
+    @: int c0
+    @: int nc
+    @: int e0
+    @: int nr
+    int: cap
+    size_t: psz
+    size_t: isz
+    size_t: ok 1U
+    if: l2_tb_cap = 0
+        l2_tb_name: (cast: (@@: LmP0Text) l2_tb_name_own)
+        l2_tb_cols: (cast: (@@: LmP0Node) l2_tb_cols_own)
+        l2_tb_call: (cast: (@@: LmP0Node) l2_tb_call_own)
+        l2_tb_path: (cast: (@@: char) l2_tb_path_own)
+        l2_tb_name_at: (cast: (@@: LmP0Node) l2_tb_name_at_own)
+        l2_tb_col0: l2_tb_col0_own
+        l2_tb_ncol: l2_tb_ncol_own
+        l2_tb_cell0: l2_tb_cell0_own
+        l2_tb_nrow: l2_tb_nrow_own
+        l2_tb_cap: 8
+    if: l2_tb_n < l2_tb_cap
+        return: 0
+    if: l2_tb_cap > c.INT_MAX / 2
+        return: 1
+    cap: l2_tb_cap * 2
+    psz: c.sizeof(@: void)
+    isz: c.sizeof(c.int)
+    nm: (cast: (@@: LmP0Text) l2_xmalloc((cast: (size_t) cap) * psz))
+    co: (cast: (@@: LmP0Node) l2_xmalloc((cast: (size_t) cap) * psz))
+    ca: (cast: (@@: LmP0Node) l2_xmalloc((cast: (size_t) cap) * psz))
+    pa: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * psz))
+    na: (cast: (@@: LmP0Node) l2_xmalloc((cast: (size_t) cap) * psz))
+    c0: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    nc: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    e0: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    nr: (cast: (@: int) l2_xmalloc((cast: (size_t) cap) * isz))
+    if: nm = 0 || co = 0 || ca = 0 || pa = 0 || na = 0 || c0 = 0 || nc = 0 || e0 = 0 || nr = 0
+        ok: 0U
+    if: ok = 0U
+        l2_xfree((cast: (@: void) nm))
+        l2_xfree((cast: (@: void) co))
+        l2_xfree((cast: (@: void) ca))
+        l2_xfree((cast: (@: void) pa))
+        l2_xfree((cast: (@: void) na))
+        l2_xfree((cast: (@: void) c0))
+        l2_xfree((cast: (@: void) nc))
+        l2_xfree((cast: (@: void) e0))
+        l2_xfree((cast: (@: void) nr))
+        return: 1
+    memcpy((cast: (@: void) nm), (cast: (@: void) l2_tb_name), (cast: (size_t) l2_tb_n) * psz)
+    memcpy((cast: (@: void) co), (cast: (@: void) l2_tb_cols), (cast: (size_t) l2_tb_n) * psz)
+    memcpy((cast: (@: void) ca), (cast: (@: void) l2_tb_call), (cast: (size_t) l2_tb_n) * psz)
+    memcpy((cast: (@: void) pa), (cast: (@: void) l2_tb_path), (cast: (size_t) l2_tb_n) * psz)
+    memcpy((cast: (@: void) na), (cast: (@: void) l2_tb_name_at), (cast: (size_t) l2_tb_n) * psz)
+    memcpy((cast: (@: void) c0), (cast: (@: void) l2_tb_col0), (cast: (size_t) l2_tb_n) * isz)
+    memcpy((cast: (@: void) nc), (cast: (@: void) l2_tb_ncol), (cast: (size_t) l2_tb_n) * isz)
+    memcpy((cast: (@: void) e0), (cast: (@: void) l2_tb_cell0), (cast: (size_t) l2_tb_n) * isz)
+    memcpy((cast: (@: void) nr), (cast: (@: void) l2_tb_nrow), (cast: (size_t) l2_tb_n) * isz)
+    if: l2_tb_cap > 8
+        l2_tb_free()
+    l2_tb_name: nm
+    l2_tb_cols: co
+    l2_tb_call: ca
+    l2_tb_path: pa
+    l2_tb_name_at: na
+    l2_tb_col0: c0
+    l2_tb_ncol: nc
+    l2_tb_cell0: e0
+    l2_tb_nrow: nr
+    l2_tb_cap: cap
+return: 0
+
+# Room for one more column name: the unit's 128 places, then memory of twice the columns.
+fn: l2_tbc_room () int
+    @@: LmP0Text nm
+    int: cap
+    size_t: psz
+    if: l2_tbc_cap = 0
+        l2_tbc_name: (cast: (@@: LmP0Text) l2_tbc_name_own)
+        l2_tbc_cap: 128
+    if: l2_tbc_n < l2_tbc_cap
+        return: 0
+    if: l2_tbc_cap > c.INT_MAX / 2
+        return: 1
+    cap: l2_tbc_cap * 2
+    psz: c.sizeof(@: void)
+    nm: (cast: (@@: LmP0Text) l2_xmalloc((cast: (size_t) cap) * psz))
+    if: nm = 0
+        return: 1
+    memcpy((cast: (@: void) nm), (cast: (@: void) l2_tbc_name), (cast: (size_t) l2_tbc_n) * psz)
+    if: l2_tbc_cap > 128
+        l2_xfree((cast: (@: void) l2_tbc_name))
+    l2_tbc_name: nm
+    l2_tbc_cap: cap
+return: 0
+
+# Room for one more cell: the unit's 4096 places, then memory of twice the cells.
+fn: l2_tbx_room () int
+    @@: LmP0Node ar
+    @@: char nm
+    int: cap
+    size_t: psz
+    if: l2_tbx_cap = 0
+        l2_tbx_arg: (cast: (@@: LmP0Node) l2_tbx_arg_own)
+        l2_tbx_name: (cast: (@@: char) l2_tbx_name_own)
+        l2_tbx_cap: 4096
+    if: l2_tbx_n < l2_tbx_cap
+        return: 0
+    if: l2_tbx_cap > c.INT_MAX / 2
+        return: 1
+    cap: l2_tbx_cap * 2
+    psz: c.sizeof(@: void)
+    ar: (cast: (@@: LmP0Node) l2_xmalloc((cast: (size_t) cap) * psz))
+    nm: (cast: (@@: char) l2_xmalloc((cast: (size_t) cap) * psz))
+    if: ar = 0 || nm = 0
+        l2_xfree((cast: (@: void) ar))
+        l2_xfree((cast: (@: void) nm))
+        return: 1
+    memcpy((cast: (@: void) ar), (cast: (@: void) l2_tbx_arg), (cast: (size_t) l2_tbx_n) * psz)
+    memcpy((cast: (@: void) nm), (cast: (@: void) l2_tbx_name), (cast: (size_t) l2_tbx_n) * psz)
+    if: l2_tbx_cap > 4096
+        l2_xfree((cast: (@: void) l2_tbx_arg))
+        l2_xfree((cast: (@: void) l2_tbx_name))
+    l2_tbx_arg: ar
+    l2_tbx_name: nm
+    l2_tbx_cap: cap
+return: 0
+
 # A `table:` call (Q41, Q43): its actuals bound to the receiver's formals by l2_bind_actuals.  Its name
 # is the one atom of its `name:` argument (a quoted spelling is the same name, l2_payload_same), one
 # name to one source table; a name of another form names no table (l2_table_find).  Its columns are its
@@ -9263,7 +9451,9 @@ fn: l2_table_call (const: @(LmP0Node call); const: @(char path)) int
     @: LmP0Field g
     @: LmP0Node v
     @: LmP0Text name
-    []: char buf 128
+    []: char buf_own 128
+    @: char buf 0
+    size_t: room
     @: char copy
     size_t: len
     int: t
@@ -9273,8 +9463,8 @@ fn: l2_table_call (const: @(LmP0Node call); const: @(char path)) int
     int: col 0
     if: l2_table_formals() != 0
         return: 1
-    if: l2_tb_n >= 8
-        return: l2_error(path, call, "too many source tables")
+    if: l2_tb_room() != 0
+        return: l2_alloc_or(path, call, "out of memory")
     if: l2_bind_actuals(call\as\frame\body\first_field, 4, l2_tb_formal, "table", at, span, path, call) != 0
         return: 1
     t: l2_tb_n
@@ -9315,8 +9505,8 @@ fn: l2_table_call (const: @(LmP0Node call); const: @(char path)) int
                 g: l2_next_active(g\next)
             ---
         ---
-        if: l2_tb_ncol[t] >= 32 || l2_tbc_n >= 128
-            return: l2_error(path, v, "a table has too many columns")
+        if: l2_tbc_room() != 0
+            return: l2_alloc_or(path, v, "out of memory")
         if: name = 0
             return: l2_error(path, v, "a table column needs a name")
         w: l2_tb_col0[t]
@@ -9337,13 +9527,23 @@ fn: l2_table_call (const: @(LmP0Node call); const: @(char path)) int
             return: l2_error(path, f\value, "a table cell is not an argument")
         if: l2_tb_ncol[t] = 0
             return: l2_error(path, at[3]\value, "table rows are not whole rows of its columns")
-        if: l2_tbx_n >= 4096
-            return: l2_error(path, f\value, "a table is too large")
+        if: l2_tbx_room() != 0
+            return: l2_alloc_or(path, f\value, "out of memory")
         l2_tbx_arg[l2_tbx_n]: f\value
         l2_tbx_name[l2_tbx_n]: 0
         if: w = 1 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0
-            if: l2_tok_text(f\value\as\atom, buf, 128U) != 0
-                return: l2_error(path, f\value, "a table cell is too long")
+            # The cell's text in memory of its own size: its bytes and the terminator; a triple-quoted cell is
+            # written as an L1 string, at most four bytes for each of its bytes (an escape) and its quotes.
+            room: f\value\as\atom\length + 1U
+            if: l2_triple_q(f\value\as\atom) != 0
+                if: l2_mul_ok(f\value\as\atom\length, 4U) = 0
+                    return: l2_alloc_or(path, f\value, "size overflow")
+                room: f\value\as\atom\length * 4U + 3U
+            buf: l2_text_room(room, buf_own, 128U)
+            if: buf = 0
+                return: l2_alloc_or(path, f\value, "out of memory")
+            if: l2_tok_text(f\value\as\atom, buf, room) != 0
+                return: l2_error(path, f\value, "internal: a table cell's text did not fit its room")
             len: c.strlen(buf) + 1U
             copy: (cast: (@: char) l2_xmalloc(len))
             if: copy = 0

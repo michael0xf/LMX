@@ -6704,8 +6704,11 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_conv_partial.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_partial_table.lm2';
         Needle = 'unit_s7_conv_partial_table.lm2:8:5: table rows are not whole rows of its columns'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s7_conv_wide.lm2'; Parts = @('convert_impl.lm2'); Expect = 'l2trans-refuses'; Exit = 0; Table = 'unit_s7_conv_wide_table.lm2';
-        Needle = 'unit_s7_conv_wide_table.lm2:6:549: a table has too many columns'; Absent = @(); Debt = @() },
+    # FIXED-BLOCKS-AUDIT: 33 columns, 27 of other names held in each row and not read; the conversion reads the six
+    # it knows, as unit_s7_prim_cross.  It was refused at the 33rd column before the translation kept as many
+    # columns as a table has.
+    [pscustomobject]@{ Name = 'unit_s7_conv_wide.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_conv_wide_table.lm2';
+        Absent = @('fn: lm_stg_convert_'); Debt = @('> 2147483647U') },
     # Q43 (the author, 2026-09-27): a cell of `rows:` is an argument of any kind -- an atom, a Structure, an
     # array -- through the common gate of actuals (l2_expr_span), no exceptions; refusing a cell that is
     # not one atom is a bug.  A Structure cell and an expression cell are one cell each (the gated reading
@@ -6739,6 +6742,12 @@ $fixtures = @(
     # Mutants (steps/table-receiver.md §5): each check dropped, the first table taken whatever its name,
     # names compared as written, a table without `source` taken, the tables below the root looked into --
     # exactly their rows red.
+    # FIXED-BLOCKS-AUDIT: a program's source tables are as many, as wide and as large as it writes them -- twelve
+    # tables, one of 130 columns, one of 5000 cells, a cell of 300 bytes (unit_s7_tbl_many_part.lm2) -- and the
+    # conversion still finds its table.  The translation kept 8 tables, 32 columns of one and 128 of all, 4096 cells
+    # and a cell of 127 bytes (a mutant restoring any one of them refuses this row).
+    [pscustomobject]@{ Name = 'unit_s7_tbl_many.lm2'; Parts = @('convert_impl.lm2', 'unit_s7_tbl_many_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_named.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_named_table.lm2';
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_tbl_quoted.lm2'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Table = 'unit_s7_tbl_quoted_table.lm2';

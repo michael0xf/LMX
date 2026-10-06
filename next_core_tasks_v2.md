@@ -783,6 +783,12 @@ Current bounded implementation, with no DONE claim:
     Gates: kernel `opus_kernel_20` GREEN297 (114 selftests), L3 `opus_l3_19`,
     full `opus_full_21` RED39/1911 -- against `opus_full_20` FAIL→OK 0,
     OK→FAIL 0, added 2.
+  - [x] source tables: 8 tables, 32 columns of one and 128 of all, 4096
+    cells, a cell's text of 127 bytes
+    ([section 92](steps/fable-continuation-20261003.md#source-tables-any-size)).
+    Gates: kernel `opus_kernel_22` GREEN297 (114 selftests), L3 `opus_l3_21`,
+  full `opus_full_23` RED39/1912 -- against `opus_full_21` FAIL→OK 0,
+  OK→FAIL 0, added 1.
   - [ ] the size of the L1 emitted for nested loops, faster than the square
     of the nesting (seventy nested `for:` loops: 27.5 MB);
   - [ ] the text of one expression in the emitter, 1023 bytes (`l2_cat`), and

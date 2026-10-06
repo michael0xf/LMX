@@ -632,6 +632,13 @@ Fable принял единственный writer/build-слот по [to_fable
   ([§105 журнала](fable-continuation-20261003.md#explicit-receiver-frames-removal), [defects](defects.md#receiver-atom-crutch),
   план [K03-EXPLICIT-RECEIVER-FRAMES](../next_core_tasks_v2.md#explicit-receiver-frames)). Гейты `opus_kernel_38`
   GREEN297, `opus_l3_36`, `opus_full_38` RED39/1999: против `opus_full_37` FAIL→OK 0, OK→FAIL 0, добавлено 4.
+- K03 S1 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01): перепись писателей P0, моделей проходов и читателей
+  написания головы ([k03-head-census.tsv](k03-head-census.tsv), 769 мест); вид применения `l2_app_head`/`l2_app_actuals`
+  и одно разрешение `l2_head_resolve` (сначала видимое связывание, затем категория; флаг «вне активации» хранит скрытые
+  входы Q52) добавлены без читателей: повтор 1998 переводов побайтно равен, перекрёстная сборка — три объяснённых
+  расхождения; новые долги [MAD-TRAILER-WRITE](defects.md#mad-trailer-write),
+  [RESERVED-NAME-BINDINGS](defects.md#reserved-name-bindings)
+  ([§106 журнала](fable-continuation-20261003.md#unified-head-s1)). Гейты `opus_kernel_39` GREEN297, `opus_l3_37`, `opus_full_39` RED39/1999: против `opus_full_38` FAIL→OK 0, OK→FAIL 0, добавлено 0.
 - OWN-TYPE-CODE-BANDS исправлен: код указателя и Array указателей без полос, у ссылки графа свой формальный код 42,
   декодеры по интервалу и ветка совместимости нулевого литерала удалены (ноль — ячейка указателя типа значения
   места); в обходе перепривязка формала Structure получила допуск; свидетели 899/950/1101 чужих типов и другой

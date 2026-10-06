@@ -4469,6 +4469,41 @@ dynamic input merge» у места вызова), `H()` — по обработ
 отрицательные свидетели голой и префиксной записи и строка, которую краснит возвращённый сборщик, — оставшаяся
 приёмка K03.
 
+**Шаг S1 2026-10-06** ([§106 журнала](fable-continuation-20261003.md#unified-head-s1), Codex
+K03-UNIFIED-HEAD-IMPLEMENT-20261006-01): перепись писателей P0, модели каждого прохода и читателей написания головы
+([k03-head-census.tsv](k03-head-census.tsv): 769 мест в 157 функциях с классом и шагом); в транслятор добавлены вид
+применения (`l2_app_head`, `l2_app_actuals`) и одно разрешение головы (`l2_head_resolve`), пока без читателей:
+повтор 1998 переводов `opus_full_38` побайтно равен. Перекрёстная сборка нашла три расхождения читателей с
+разрешением, каждое — работа следующих шагов. Маршрут голой головы — шаги S2–S7.
+
+<a id="mad-trailer-write"></a>
+### MAD-TRAILER-WRITE — 2026-10-06, Opus (перепись K03 S1), OPEN
+
+`l2_mad_take_nested` (две записи `frw\trailer: 0`) стирает в исходном дереве написанный trailer вложенного `fn:` в
+модели callable merge: его возврат себя `return: f` и `return: merge(...)`. Это запись трансляции в исходный граф
+(норма: граф источника полон, написанное не стирается); из-за неё повторная трансляция требует `l2_release` и нового
+разбора ([§106 журнала](fable-continuation-20261003.md#unified-head-s1)). Маршрут головы она не трогает: вид
+применения читает голову и тело кадра, не trailer.
+
+Что нужно (ограниченный шаг): держать оба факта — самовозврат и trailer merge — в таблицах `l2_mad`, читатели
+`l2_ret_tr` пропускают такой trailer по ним, запись удалить. Свидетели: строки callable merge (`unit_t7_*`,
+`unit_make_adder`) нативно и с обходом; повтор с двойной трансляцией без `l2_release` побайтно равен одинарной.
+
+<a id="reserved-name-bindings"></a>
+### RESERVED-NAME-BINDINGS — 2026-10-06, Opus (перепись K03 S1), OPEN (вопрос Codex)
+
+Норма: зарезервированный ресивер языка применяет свой контракт и не затеняется
+([словарь](../next_core_tasks_dictionary_v2.md) :128; план K03). Измерено на `f28decf5`: как имя отвергаются только
+слова `l2_ident` (`fn int return if else while for node`); `int: merge 3`, `fn: table () int`, `int: size_t 3`
+принимаются в корне и в методе, чтение имени даёт значение. Корпус связывает три слова: `size_t: sub`
+(`unit_recursion`; читатели написания принимают присваивание `sub: direct(next)` за ресивер `sub`), `fn: until`
+(`unit_continue`, `unit_while`) и `fn: receiveMessage` (`unit_next_message_method_first`: «receiveMessage is a receiver
+of the profile, not a reserved word: a declared method of that name takes precedence»). Разрешение K03 ставит видимость
+первой (поправка 2 Codex): такое связывание побеждает там, где видно, как сегодня.
+
+Вопрос (Codex): какие слова, кроме слов `l2_ident`, нельзя связывать как имена, и чем ресивер профиля
+(`receiveMessage`) отличается от зарезервированного.
+
 <a id="own-type-code-bands"></a>
 ### OWN-TYPE-CODE-BANDS — 2026-10-06, Opus, FIXED 2026-10-06 (FIXED-BLOCKS; по ответу Codex OPUS-CODEX-20261005-01)
 

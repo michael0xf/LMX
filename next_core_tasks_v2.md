@@ -1790,6 +1790,14 @@ witnesses, and the gated row a reintroduced collector reddens.
 Gates: kernel `opus_kernel_38` GREEN297 (114 selftests), L3 `opus_l3_36`, full
 `opus_full_38` RED39/1999 -- against `opus_full_37` FAIL→OK 0, OK→FAIL 0, added 4.
 
+Progress 2026-10-06, the unified head route (K03-UNIFIED-HEAD-IMPLEMENT-20261006-01, slices S1-S7;
+[section 106](steps/fable-continuation-20261003.md#unified-head-s1)): S1 done -- the census of P0 writers,
+of each pass's model and of head-spelling readers ([census](steps/k03-head-census.tsv), 769 sites
+classified by slice), the application view (`l2_app_head`, `l2_app_actuals`) and the one resolution
+(`l2_head_resolve`: the visible binding first, then its category; an outside flag keeps Q52's hidden
+inputs), with no reader yet: the replay of 1998 translations is byte-identical, and a cross-check build
+explains its three reader disagreements. Gates: kernel `opus_kernel_39` GREEN297 (114 selftests), L3 `opus_l3_37`, full `opus_full_39` RED39/1999 -- against `opus_full_38` FAIL→OK 0, OK→FAIL 0, added 0.
+
 ### K04 — Callable actuals and hidden inputs
 
 Complete `CALLABLE-FORMAL-HIDDEN-CONTRACT`, `SUB-ACTUAL-REFERENCE-CLASSIFICATION`,

@@ -10611,3 +10611,110 @@ row that a reintroduced collector reddens, are K03's remaining acceptance.
 | `build/l3_selftest/opus_l3_36` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_38` (full harness) | RED39/1999: against `opus_full_37` FAIL→OK 0, OK→FAIL 0, added 4 (the controls), removed 0, red rows whose message changed 0. The 192 declared paths were hashed before the run; the staged copies are their bytes. |
 | `opus_full_37` against `opus_full_38`, generated L1 | Of the 1493 rows both translate, every L1 is byte-identical -- atom sources with `a71009cc`'s translator, migrated sources with this one -- but three library-mode rows, which differ only in the unit hash `l2_u<hex>` of their evidence directory (as between `opus_full_36` and `opus_full_37`). |
+
+<a id="unified-head-s1"></a>
+## 106. One head resolution: the census, the application view and the resolver (K03-UNIFIED-HEAD S1)
+
+Codex's request K03-UNIFIED-HEAD-IMPLEMENT-20261006-01 (parent OPUS-CODEX-20261005-01) accepts the design of
+the bare head (§105, the author's answer: one namespace, the head/arguments model first, one resolution, one
+consumer) as a translation-only structural application view, then a common resolution in the one namespace, then
+the resolved entity's contract, with five corrections: real hidden inputs stay (Q52); visibility selects the
+declaration and then its category, with no global priority of categories; the written view comes before any role
+and never regroups a neighbour; the census of P0 writers, of each pass's model and of admission readers comes
+first; duplicate call formation folds into the common call entry as the phases move. S1 is the census and the two
+pieces, with no change of behavior.
+
+The census. P0 writers of the translation (`l2trans.lm1`, every write through an `LmP0*` node, field or
+structure, and every `mem*` call):
+
+| Writer | What it writes | On the head route? |
+| --- | --- | --- |
+| `l2_mad_take_nested` (two sites) | `frw\trailer: 0`: the written trailer of a nested `fn:` in a callable merge's model -- its self-return `return: f`, or its `return: merge(...)` -- is erased from the source tree | No (callable merge); a violation of the source graph: [MAD-TRAILER-WRITE](defects.md#mad-trailer-write) |
+| `l2_tables_in` | `n\flags | LM_P0_NODE_INACTIVE` on a `table: source ...` statement after its projection at translation (Q46): no later pass reads it as a statement | No (statement enumeration, the table's own contract); the same follow-up could keep the fact in the table registry |
+| `l2_head_rebase_node` | spans of the translator's own document for an indexed head `row[i]: v` (`l2_head_expression` parses the head text, one cached document per statement) | No (a place head, not an application's name); not the source tree |
+| `l2_make_entry`, `l2_translate_unit`, `l2_ns_proc_add`, `l2_ns_loop_body`, `l2_part_root` | new shells -- E's node over the root statements, a named Structure's procedure, a part's root -- whose fields borrow the source nodes | No: no source node is written |
+| `l2_bind_calls` (`l2_bind_call_in`, `l2_bind_whole`) | a call with named actuals gets its projection in formal order in a side record (`l2_call_actuals`); "the body stays as written" | No: the record is new memory, the call's Frame is unchanged |
+| `l2_emit_value_convert(_n)`, `l2_rw_convert`, `l2_rw_held_convert` | local copies of a field list | No |
+| about 40 `LmP0Text` slices | text views over source bytes | No node |
+
+Each pass's model: every pass reads the method's registered body -- `l2_m_body[mi]`, a `fn:`'s body field as P0 made
+it, E's shell, a procedure's shell -- and `l2_m_node[mi]`, 33 readers: the binding (`l2_bind_calls`), the scan
+(`l2_dyn_local`, `l2_head_read_before`), the check, the native emission (`l2_emit_unit`, `l2_emit_body_in`), the walker
+(`l2_rw_methods_count`, `l2_rw_methods_emit`, `l2_rw_stmts`) and the root's source (`l2_src_method`); an indexed head
+adds its cached head document. No pass reads a reconstructed tree, and since `4e922c80` no translation-time writer
+touches a head or an actual. Admission: no `lmx_*` kernel source compares a head with a word (the only such
+comparison outside `l2trans.lm1` is the harness driver's own command word `merge`,
+`harness/l2_eternal_driver.lm1:2080`); in `l2trans.lm1` the admission family (`l2_admit_*`, `l2_emit_admit`, the
+anchors) reads no head spelling, and the receiving readers that do are in the census below.
+
+The spelling census ([k03-head-census.tsv](k03-head-census.tsv)): every comparison of a head, an atom or a text with
+a word -- `l2_frame_head(node, "w")`, `l2_text_eq(x, "w")`, `l2_payload_eq(x, "w")` -- 769 sites in 157 functions, each
+with its function's class and the slice that moves it:
+
+| Class | Sites | Slice |
+| --- | --- | --- |
+| stmt: statement dispatch in an evaluation body (`l2_scan_body`, `l2_check_body`, `l2_emit_stmts`, `l2_rw_stmt_content`, `l2_src_one`, ...) | 283 | S2+S3 |
+| name: the free-name scan (`l2_scan_ident`, `l2_scan_node`) | 18 | S2+S3 |
+| value: value, return and actual positions | 54 | S4 |
+| call: the two call checks/emissions | 2 | S4 with S6 |
+| def: unit items, declaration and definition shapes | 148 | S5 |
+| merge: merge's operand reader | 2 | S7 |
+| contract: a receiver's own contract, chosen after resolution | 59 | - |
+| set: the defined word sets | 38 | - |
+| boundary: P0 trailers (`end: t`, `until: c`, terminal return) | 9 | - |
+| descriptive: signatures, a callable formal's header, throws lists | 4 | - |
+| lexical: operators, type words in declarations, paths, indices, addresses | 122 | - |
+| file: predef, library and profile files | 30 | - |
+
+The two pieces, in `l2trans.lm1`, unused by any reader in S1:
+
+- `l2_app_head(n)` and `l2_app_actuals(n)`: the written application at a node -- a Frame's head and its argument
+  Structure, an atom's text and no written argument (0). `H()`, `H: ()` and an empty block are already one empty
+  Structure in P0. A literal, a path, an operator or a quoted text is no head; nothing is classified, regrouped or
+  written.
+- `l2_head_resolve(mi, t, *index, *outside)`: the binding the site sees first, and it blocks every outer category of
+  its name, as `l2_call_head_method` already has it -- an own field the site sees (the method's own, or a unit field
+  seen from a method), a formal, an input the method already has, a slot, a body local, a name of the host's
+  activation; then a method (both ways, by name or path) or a named Structure; then a word of the language; then a
+  define, the C door or a declared function; else unknown. The kinds: unknown, word, method, held callable, value,
+  named Structure, external, define (and "no name" for a path or an operator). `*outside` says that a value or a held
+  callable found is not this activation's own -- a unit field a method sees, an input it has, its host's name: the
+  hidden input of Q52, whose value the caller gives. The words (`l2_head_word`): the receivers of `l2_receiver_word`
+  and the words its comment names as the language's others -- the statement words, `sizeof`, `const`, the six
+  primitive type words of `l2_ptr_type_word`'s table; nothing a predef or the C door declares, and no `test`
+  (TEST-RECEIVER-DOCS, a later migration). A word comes before a define and the C door: a receiver's name is the
+  language's, never discovered from a header (dictionary :454).
+
+The cross-check: a scratch build (never committed) in which the free-name scan (`l2_scan_ident`), the check of a
+value-position atom (`l2_check_primary`) and every frame-head spelling test (`l2_frame_head` with a word) also ask
+the resolver and log both answers, replayed over `opus_full_38`'s 1998 recorded translations (its L1 and messages
+equal the committed translator's on all 1998). The pairs that agree: a method, a word, a named Structure, the C door,
+a define never become an input (16 694 scan readings); values and held callables from outside the activation become
+or are inputs (627 + 547 + 208 readings, Q52 kept); unknown names become inputs (358); the check's branches name what
+the resolver names (17 213 readings). The pairs that differ, each explained:
+
+| Readings | Rows | What |
+| --- | --- | --- |
+| `sub`, 126 frame-head readings | `unit_recursion` | `sub: direct(next)` assigns the method's local `size_t: sub`; the spelling readers take it for the `sub` receiver (`l2_bind_node` skips it as a nested method), the resolver gives the local. The readers move to the resolver (S2+S3, S5) |
+| `table`, 3 scan readings and 2 frame-head readings | `unit_s7_tbl_runtime`, `unit_s7_tbl_runtime_src_refused`, `unit_s7_part_tbl_runtime_refused` | the scan makes the head of a run-time `table:` statement a dynamic input -- the defect K03 removes -- and the resolver then finds that input. S2 |
+| `p0`, `p7`, `z0`, 24 check readings | 14 rows `unit_held_call_bare_name_*` | the check takes the bare name of a held callable for an own value; the resolver gives the held callable, which the emitter executes (those rows assert it). S4 routes it to the held call's consumer |
+
+Measured on the side: a program can bind most receiver words today -- `int: merge 3`, `fn: table () int`,
+`int: size_t 3` are accepted at the root and in a method; only `l2_ident`'s words (`fn int return if else while for
+node`) are refused as names. The corpus binds three: `size_t: sub` (`unit_recursion`), `fn: until` (`unit_continue`,
+`unit_while`), and `fn: receiveMessage` (`unit_next_message_method_first`, which asserts that "receiveMessage is a
+receiver of the profile, not a reserved word: a declared method of that name takes precedence"). The resolver keeps
+visibility first, so such a binding wins where it is visible, as today
+([RESERVED-NAME-BINDINGS](defects.md#reserved-name-bindings)).
+
+Equivalence: the S1 translator, replayed over the same 1998 translations, gives byte-identical L1 and messages and
+the same allocation count in every row (the pieces are not called).
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_39` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_37` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_39` (full harness) | RED39/1999: against `opus_full_38` FAIL→OK 0, OK→FAIL 0, added 0, removed 0, red rows whose message changed 0. The one declared path (`l2trans.lm1`) was hashed before the run; both staged copies are its bytes. |
+| Replay of `opus_full_38`'s 1998 recorded translations | The S1 translator: L1, exit and messages byte-identical in all 1998, allocation counts identical in all 1998. The cross-check build: L1 and messages identical in all 1998. |

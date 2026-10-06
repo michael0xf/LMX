@@ -970,6 +970,10 @@ prototype:
     fn: l2_e_free () int
     fn: l2_ident_word (const: @(LmP0Text t)) int
     fn: l2_ident (const: @(LmP0Text t)) int
+    fn: l2_app_head (const: @(LmP0Node n)) @: LmP0Text
+    fn: l2_app_actuals (const: @(LmP0Node n)) @: LmP0Structure
+    fn: l2_head_word (const: @(LmP0Text t)) int
+    fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out_outside) int
     fn: l2_find_method (const: @(LmP0Text name)) int
     fn: l2_os_fn_name (const: @(LmP0Node fn)) @: LmP0Text
     fn: l2_end_text (const: @(LmP0Frame frame); const: @(LmP0Text name)) int
@@ -6889,6 +6893,151 @@ fn: l2_define_name (const: @(LmP0Text name)) int
             return: 1
         i: i + 1
     ---
+return: 0
+
+# K03 (the author, 2026-10-06; docs/LMX_semantics.en.md#resolved-head-consumption): the written application at a node,
+# as P0 wrote it and before any role -- a Frame's head with its argument Structure, an atom's text with no written
+# argument.  A reader of an evaluation position asks it; a literal, a path, an operator or a quoted text is no head
+# (l2_ident_word), and the C door's `c.name` is its own.  It classifies nothing, takes no neighbour and writes no node.
+fn: l2_app_head (const: @(LmP0Node n)) @: LmP0Text
+    if: n = 0 || n\as = 0
+        return: 0
+    if: n\kind = c.LM_P0_NODE_FRAME && n\as\frame != 0
+        return: n\as\frame\head
+    if: n\kind = c.LM_P0_NODE_ATOM && n\as\atom != 0 && (l2_ident_word(n\as\atom) != 0 || l2_c_stmt_door(n\as\atom) != 0)
+        return: n\as\atom
+return: 0
+
+# The written arguments of that application: a Frame's body -- `H()`, `H: ()` and an empty block are one empty
+# Structure in P0 -- or 0 for an atom, which writes none.  A consumer reads the actuals through it, so a bare head and
+# its empty application reach one contract with no argument.
+fn: l2_app_actuals (const: @(LmP0Node n)) @: LmP0Structure
+    if: n = 0 || n\as = 0 || n\kind != c.LM_P0_NODE_FRAME || n\as\frame = 0
+        return: 0
+return: n\as\frame\body
+
+# A receiver or word of the language (next_core_tasks_dictionary_v2.md :128): the receivers that head a statement
+# (l2_receiver_word) and the words it names as the language's others -- the statement words (l2_ident refuses them as
+# names; `break`, `continue`), `sizeof`, `const` and the primitive type words of l2_ptr_type_word's table (a named
+# Structure and the C door it also answers for are no words).  Nothing a predef or the C door declares is one.
+fn: l2_head_word (const: @(LmP0Text t)) int
+    int: ty 0
+    if: t = 0 || l2_ident_word(t) = 0
+        return: 0
+    if: l2_receiver_word(t) != 0 || l2_ident(t) = 0 || l2_text_eq(t, "break") || l2_text_eq(t, "continue") || l2_text_eq(t, "sizeof") || l2_text_eq(t, "const")
+        return: 1
+return: (cast: (int) (l2_ptr_type_word(t, 1, @ ty) = 0 && ty > 0 && ty < 100))
+
+# K03: what head t names at its occurrence in method mi -- the one resolution every phase asks (the author: one
+# namespace, the head/arguments model first, then the role).  The binding the site sees comes first and blocks every
+# outer category of its name, as l2_call_head_method has it: an own field the site sees -- the method's own, or a field
+# of the unit seen from a method --, a formal, an input the method already has, a slot, a body local, a name of its
+# host's activation; then the unit's method (both ways, by name or path) or named Structure; then a word of the
+# language; then a define, the C door or a declared function.  Read at the pass's current site (l2_here_at_method), as
+# the readers it serves read it; it records nothing.  The answer, with *out_index the entry it found (-1 for none):
+#  -1  no name -- a path, an operator, a literal: its own form, never looked up;
+#   0  unknown -- nothing visible declares it (§9: in a definition position it defines a named Structure; §12: a value a
+#      method reads by it is an input its callers give);
+#   1  a receiver or word of the language (l2_head_word);
+#   2  a method (l2_head_method);
+#   3  a held callable: a callable formal, a callable local, a stored callable (l2_call_head_held);
+#   4  a value: an own field, a formal, an input, a slot, a local;
+#   5  a named Structure;
+#   6  the C door or a declared function (l2_is_known);
+#   7  a define.
+# *out_outside is 1 when the binding found for a held callable or a value is not this activation's own -- a field of
+# the unit a method sees, an input the method already has, its host's formal or field (Q52, §12): the activation's
+# hidden input, whose value its caller gives; 0 otherwise.
+fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out_outside) int
+    int: k
+    int: h
+    int: hk
+    if: out_index != 0
+        \out_index: -1
+    if: out_outside != 0
+        \out_outside: 0
+    if: t = 0 || t\data = 0
+        return: -1
+    if: l2_c_stmt_door(t) != 0
+        return: 6
+    if: l2_ident_word(t) = 0
+        return: -1
+    if: mi >= 0
+        k: l2_resolved_own(mi, t)
+        if: k >= 0
+            if: out_index != 0
+                \out_index: k
+            if: out_outside != 0 && l2_own_unit_seen(k, mi) != 0
+                \out_outside: 1
+            if: l2_own_decl[k] != 0 && l2_mad_store_stmt(l2_own_decl[k]) != 0
+                return: 3
+            return: 4
+        k: l2_formal_find(mi, t)
+        if: k >= 0
+            if: out_index != 0
+                \out_index: k
+            if: l2_cf_get(mi, k) >= 0
+                return: 3
+            return: 4
+        k: l2_dyn_find(mi, t)
+        if: k >= 0
+            if: out_index != 0
+                \out_index: k
+            if: out_outside != 0
+                \out_outside: 1
+            return: 4
+        k: l2_slot_find(mi, t)
+        if: k >= 0
+            if: out_index != 0
+                \out_index: k
+            return: 4
+        k: l2_ml_find(t)
+        if: k >= 0
+            if: out_index != 0
+                \out_index: k
+            if: l2_ml_ty != 0 && l2_ml_ty[k] = 40
+                return: 3
+            return: 4
+        h: l2_mad_host_of(mi)
+        if: h >= 0
+            hk: l2_formal_find(h, t)
+            if: hk >= 0
+                if: out_index != 0
+                    \out_index: hk
+                if: out_outside != 0
+                    \out_outside: 1
+                if: l2_cf_get(h, hk) >= 0
+                    return: 3
+                return: 4
+            hk: l2_mad_host_own(h, t)
+            if: hk >= 0
+                if: out_index != 0
+                    \out_index: hk
+                if: out_outside != 0
+                    \out_outside: 1
+                if: l2_own_decl[hk] != 0 && l2_mad_store_stmt(l2_own_decl[hk]) != 0
+                    return: 3
+                return: 4
+            ---
+        ---
+    ---
+    k: l2_head_method(t)
+    if: k >= 0
+        if: out_index != 0
+            \out_index: k
+        return: 2
+    k: l2_ns_find(t)
+    if: k >= 0
+        if: out_index != 0
+            \out_index: k
+        return: 5
+    # A receiver's name is the language's, never discovered from a predef or a C header (dictionary :454).
+    if: l2_head_word(t) != 0
+        return: 1
+    if: l2_define_name(t) != 0
+        return: 7
+    if: l2_is_known(t) != 0
+        return: 6
 return: 0
 fn: l2_predef_file_has_function (const: @(LmP0Text name); const: @(LmP0Text quoted)) int
     size_t: n

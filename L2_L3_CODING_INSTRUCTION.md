@@ -155,8 +155,8 @@ same-named primitive does not change the role of the written definition.
 For a nonprimitive model `A`, these formal spellings are synonymous reference transport:
 
 ```text
-sub: test (A: value)
-sub: test (@: A value)
+sub: mytest (A: value)
+sub: mytest (@: A value)
 ```
 
 Both pass the candidate's Structure descriptor after admission to `A`. Neither allocates an executable reference-variable cell in the callee merely because `@:` appears in the signature.
@@ -260,7 +260,7 @@ b: args    # application; the selected callable checks its actual arguments
 
 Do not reinterpret this equivalence as permission to erase a written body, merge implicitly, or identify distinct declaration occurrences. Repeated declarations retain separate places. Conversion and implements precede any reference store; a failed check leaves the prior value intact. There is no separate nominal “Type” object: requirements use primitives or ordinary Structures.
 
-Pointer primitives retain their declared depth, for example `@: int p` and `@@: int pp`. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `test(A) == test(@A)` assumption.
+Pointer primitives retain their declared depth, for example `@: int p` and `@@: int pp`. Unary `@A` is not the receiver `@:`: it addresses the stored reference and adds a level. Do not port an old `mytest(A) == mytest(@A)` assumption.
 
 ### 5.3 What `@x` denotes
 
@@ -657,6 +657,18 @@ Candidate admission has two distinct stages:
 
 1. analytical, directional structural `implements(candidate, requirement, Consumer)` over the paths and callable uses required by Consumer;
 2. successful interpretation of all unit tests defined by that Consumer against the already constructed graph.
+
+Checks are explicitly associated with receiving places by the reserved
+[test receiver](docs/LMX_semantics.en.md#test-receiver-contract), for example
+`test: op checkIncrement`; the two names describe the receiving place and refer
+to its ordinary checker, not implicit nullary calls. With no explicit Consumer,
+full validation uses checks specified in bVar, not candidate aVar tests. Executing
+checks completes admission already in progress rather than restarting it;
+necessary checking accesses are proven analytically first, behavioral success
+only after completion. Use mytest for ordinary user bindings formerly named test.
+The receiver and behavioral stage are planned implementation work, not supported
+by today's analytical gates; keep ordinary native/walker dispatch and no runtime
+name lookup or test-only typing bypass.
 
 A matching machine type, address range, source name, signature fragment, or native callback does not replace either stage.
 

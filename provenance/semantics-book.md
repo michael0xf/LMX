@@ -777,6 +777,83 @@ admitted(aVar, bVar, Consumer) ⇔
 Обычные значения могут хранить результаты выполнения тестов, если это явно делает программа. Результат относится к кандидату, Consumer и набору тестов, для которых он получен; его хранение не вводит отслеживания мутаций или перепроверки после каждой записи.
 
 Статически установленное нарушение сообщается при анализе. Неуспех любого обязательного юнит-теста делает `admitted(aVar, bVar, Consumer)` ложным; объявленные отказы обрабатываются по правилам [исключений](#exceptions). Ни проверка, ни освобождение памяти не означают отката уже опубликованных сообщений или внешних эффектов.
+
+<a id="test-receiver-contract"></a>
+#### Ресивер test: связь принимаемого места с проверкой
+
+Ресивер test доступен внутри любой Structure и задаёт явную связь «принимаемое место → обычное проверяющее выражение». Он определяет проверки на этапе допуска, не запускает их при обычном прохождении тела и не создаёт глобальную регистрацию или скрытое тестовое окружение. Имя test зарезервировано и неподменяемо по общему правилу единого пространства имён; для обычных пользовательских методов и привязок используется другое имя, например mytest.
+
+##### Связь и область принадлежности
+
+Форма:
+
+```text
+test: op checkIncrement
+```
+
+op описывает проверяемое принимаемое место конкретного Consumer; checkIncrement — обычное проверяющее выражение LMX. Аргументы инструкции описывают место и ссылаются на проверку, а не вызывают эти имена неявно без аргументов. Сначала формируется полная модель головы и аргументов, затем применяется обычный контракт ресивера. Его доступность не ограничивается видом, именем или вложенностью Structure.
+
+Связь принадлежит принимающей Structure: тесты кандидата не заменяют unit_tests(Consumer). У вложенного Consumer свои связи; нельзя рекурсивно объявлять все тесты всех вложенных методов требованиями внешнего Consumer. Проверяющую функцию можно явно переиспользовать. Несколько применений test: op checkZero, test: op checkPositive, test: op checkNegative задают несколько обязательных проверок; это не повторные объявления поля с выбором последнего.
+
+##### Обычный код проверки
+
+Пример:
+
+```text
+fn: applyStep (op(fn: (int: x) int); int: value) int
+    fn: checkIncrement (candidate(fn: (int: x) int)) int
+        return: (candidate(0) = 1) && (candidate(5) = 6)
+    end: checkIncrement
+    test: op checkIncrement
+    return: op(value)
+end: applyStep
+```
+
+При допуске фактический кандидат для op, не образец и не одноимённая функция, передаётся в checkIncrement обычным аргументом. Callable-формал получает целое callable-вхождение по обычной сигнатуре. Непримитивы передаются своей обычной ссылкой; добавлять @candidate «ради ссылочной передачи» нельзя — это другая глубина адресации. Основное тело Consumer использует op(value) уже после завершения допуска.
+
+Проверяющее определение можно записать непосредственно в аргументах инструкции, без нового языка тестов или специального разбора смешанных форм. Полностью вертикальная запись той же связи:
+
+```text
+test:
+    op
+    fn: checkIncrement (candidate(fn: (int: x) int)) int
+        return: (candidate(0) = 1) && (candidate(5) = 6)
+    end: checkIncrement
+end: test
+```
+
+Подготовка данных, вызовы, сравнения, ветвления и обработка отказов остаются обычным LMX-кодом. Не требуются отдельные suite, case, fixture, expect, beforeEach, фундаментальный TestResult или скрытый объект тестового состояния.
+
+##### Результат, отказы и этап допуска
+
+Результат проверки: обычный int, 1 — успех, 0 — неуспех. Нужное логическое описание может быть явно задано профилем. Обычный return: candidate(5) = 6 не равнозначен assert: ложный assert сохраняет [свои диагностические последствия](LMX_semantics.ru.md#exceptions), не становится обычным отрицательным результатом только внутри теста.
+
+Ожидаемый отказ проверяется обычным catch внутри проверяющего выражения: пойман именно ожидаемый отказ — возвращается успех; отказа не было — неуспех. Произвольный throw нельзя автоматически считать успешным отрицательным тестом. Непойманные отказы и диагностические нарушения сохраняют общие правила; точное представление результата неуспеха всего набора остаётся открытым решением.
+
+Последовательность: аналитическая пригодность основного использования и необходимых тестовых обращений → подготовка обычного вызова проверки с фактическим кандидатом → выполнение проверок → успех всех обязательных проверок → завершённый допуск → обычное использование. Аналитический предикат сам не исполняет тесты или преобразователи. Не надо временно заменять живое поле Consumer кандидатом и затем восстанавливать его.
+
+Проверяющее выражение само потребляет кандидата и требует обычной аналитической пригодности своих обращений. Если тело вызывает op(1), а тест вызывает op(1; y: 25), кандидат должен допускать и явно поданный y для этого использования. Тест не получает права требовать все неиспользуемые поля исходного образца и не освобождается от типизации.
+
+##### Граф, исполнение и отсутствие скрытой регистрации
+
+В полном исходном графе сохраняется явно написанная связь: принимаемое место и проверяющее выражение. Разрешённая ссылка на место обозначает описание принимаемого входа, не угаданный адрес будущего машинного аргумента; фактический кандидат подаётся обычной активации проверки при допуске. Не создаются новые поля базового Lmx, дополнительного графа, паспорта переменной, каталога тестов или TestEnvironment. Имена разрешаются при трансляции; runtime пользуется физическими ссылками, не ищет текст "test" и не обращается к таблице имён.
+
+Проверяющее тело остаётся обычной частью графа, доступной toLmx, копированию и композиции. Полное представление записи и её исходный порядок не заменяются комментарием «здесь были тесты» или отдельной служебной копией. Обычное прохождение Consumer не регистрирует связи повторно и не запускает тесты заново.
+
+Исполнитель допуска обходит явно заданный графовый сценарий; вызовы проверяющего выражения и кандидата следуют обычной диспетчеризации по наличию native. Нельзя обязательно обнулять native, портить выбранную реализацию или вводить исключение «внутри тестов всегда только обход». Инструмент запуска проверок получает явно переданный корень и не меняет смысл ресивера.
+
+Подготовка тестового состояния явная. Копия, если нужна, создаётся обычным merge; тестовый ресурс или отдельный Message явно создаются или передаются. Нет скрытого клонирования, отката сообщений или внешних эффектов. Отчёт может быть обычной Structure со ссылками на Consumer, место, кандидата, проверку и результат; это результат работы, не обязательный скрытый объект при каждом значении.
+
+Успешное сравнение описывает значение при выполнении теста, а не все будущие значения. Оно не превращается в вечный числовой инвариант и не вводит монитор мутаций или автоматический повтор всех тестов. Если операция проверяет текущее значение по своему явно заданному контракту, это действие операции, не повторная проверка установленной [совместимости сигнатуры](LMX_semantics.ru.md#argument-compatibility-stage).
+
+##### Полная валидация без явного Consumer
+
+Без явного Consumer полная валидация использует проверки принимающего описания bVar, явно заданные в нём, не тесты кандидата aVar. Аналитический implements без Consumer по-прежнему проверяет полную структурную пригодность относительно bVar; источник поведенческих проверок не подменяет эту область анализа. Отсутствие обязательного набора не превращается в успешную валидацию.
+
+##### Завершение начатого допуска
+
+Исполнение проверки завершает уже начатый допуск, а не начинает заново тот же самый допуск. Аналитическая пригодность необходимых проверочных обращений устанавливается до их исполнения; успешный поведенческий результат появляется только после завершения проверки. Уже проверенные операции остаются проверенными, новые зависимости требуют своих проверок. Цикл незавершённых проверок нельзя считать успехом; глобальный режим отключения типизации и скрытый skip_tests запрещены. Это порядок одного механизма допуска, не исключение для тестовых вызовов.
+
 [EN]
 The single candidate-admission mechanism consists of analytical tree-based `implements` for the receiving expression and execution of that expression's unit tests by the graph interpreter. Arena address classification supports value representation; it is not alternative validation. A matching signature, an attached explicit description or a positive analytical answer does not replace execution of the required tests.
 
@@ -847,6 +924,83 @@ Execution of mandatory unit tests is an admission stage, not a handler for every
 Ordinary values may store test results when the program explicitly does so. A result refers to the candidate, Consumer, and test set for which it was obtained; storing it introduces neither mutation tracking nor rechecking after every store.
 
 A statically established violation is reported during analysis. Failure of any mandatory unit test makes `admitted(aVar, bVar, Consumer)` false; declared failures follow the [exception rules](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
+
+<a id="test-receiver-contract"></a>
+#### The test receiver: associating a receiving place with a check
+
+The test receiver is available inside any Structure and explicitly associates a receiving place with an ordinary checking expression. It specifies checks for the admission stage rather than executing them during ordinary body traversal, and creates neither global registration nor a hidden test environment. The name test is reserved and unshadowable under the general single-namespace rule; ordinary user methods and bindings use another name, such as mytest.
+
+##### Association and ownership
+
+Spelling:
+
+```text
+test: op checkIncrement
+```
+
+op describes the receiving place checked for a particular Consumer; checkIncrement is an ordinary LMX checking expression. The instruction's arguments describe the place and refer to the checker; they are not implicit nullary invocations of those names. The complete head/arguments model is formed first, then the ordinary receiver contract applies. Availability is not restricted by a Structure's kind, name or nesting.
+
+The association belongs to the receiving Structure: candidate-owned tests do not replace unit_tests(Consumer). A nested Consumer owns its associations; tests in every nested method must not be recursively promoted into requirements of the outer Consumer. A checking function can be explicitly reused. Multiple applications test: op checkZero, test: op checkPositive, test: op checkNegative specify multiple mandatory checks, not repeated field declarations reduced to the last occurrence.
+
+##### Ordinary checking code
+
+Example:
+
+```text
+fn: applyStep (op(fn: (int: x) int); int: value) int
+    fn: checkIncrement (candidate(fn: (int: x) int)) int
+        return: (candidate(0) = 1) && (candidate(5) = 6)
+    end: checkIncrement
+    test: op checkIncrement
+    return: op(value)
+end: applyStep
+```
+
+At admission the actual candidate for op, not the exemplar or a same-name function, is passed to checkIncrement as an ordinary argument. The callable formal receives the complete callable occurrence under its ordinary signature. Nonprimitives travel by their ordinary held reference; adding @candidate merely "to pass a reference" changes indirection depth. The main Consumer body uses op(value) after admission completes.
+
+The checking definition may appear directly in the instruction's arguments without a test-specific language or special mixed-form parser. A fully vertical spelling of the same association:
+
+```text
+test:
+    op
+    fn: checkIncrement (candidate(fn: (int: x) int)) int
+        return: (candidate(0) = 1) && (candidate(5) = 6)
+    end: checkIncrement
+end: test
+```
+
+Data preparation, calls, comparisons, branches and failure handling remain ordinary LMX code. No separate suite, case, fixture, expect, beforeEach, fundamental TestResult, or hidden test-state object is needed.
+
+##### Results, failures and the admission stage
+
+Checker result: ordinary int, 1 for success and 0 for failure. A suitable logical description may be explicitly provided by a profile. Ordinary return: candidate(5) = 6 is not assert: a false assertion retains [its diagnostic consequences](LMX_semantics.en.md#exceptions), rather than becoming an ordinary negative result only inside tests.
+
+An expected failure is checked using ordinary catch inside the checking expression: catching the expected failure returns success; its absence returns failure. An arbitrary throw is not automatically a successful negative test. Uncaught failures and diagnostic violations retain the general rules; the precise failure representation for the whole test set remains an open decision.
+
+Sequence: analytical suitability of the main use and necessary test accesses → preparation of the ordinary checker call with the actual candidate → execution of checks → success of all mandatory checks → completed admission → ordinary use. The analytical predicate itself executes neither tests nor converters. There is no temporary replacement of a live Consumer field followed by restoration.
+
+The checker also consumes the candidate and needs ordinary analytical suitability for its own accesses. If the body calls op(1) but a test calls op(1; y: 25), the candidate must admit the explicitly supplied y for that use too. The test gains no right to require every unused exemplar field and is not exempt from typing.
+
+##### Graph, execution and no hidden registration
+
+The full source graph retains the written association: receiving place and checking expression. The resolved place reference identifies the receiving-input description, not a guessed address of a future machine argument; the actual candidate is supplied to the checker's ordinary activation at admission. It creates no new base Lmx fields, extra graph, variable passport, test catalogue, or TestEnvironment. Names resolve during translation; runtime uses physical references rather than searching for text "test" or consulting the name table.
+
+The checking body remains an ordinary graph part available to toLmx, copying and composition. Its full representation and source order are not replaced by a comment "tests were here" or a separate service copy. Ordinary Consumer execution neither registers associations again nor reruns the tests.
+
+The admission executor traverses the explicitly given graph scenario; checker and candidate calls follow ordinary dispatch according to native. It must not obligatorily clear native, damage the selected implementation, or introduce an exception "inside tests always walk." A developer test runner receives an explicit root and does not change the receiver's meaning.
+
+Test-state preparation is explicit. Any needed copy is made by ordinary merge; test resources or a separate Message are explicitly created or supplied. There is no hidden cloning or rollback of messages or external effects. A report may be an ordinary Structure holding references to Consumer, place, candidate, check and result; this is an output, not a mandatory hidden object attached to every value.
+
+A successful comparison describes the value when the test ran, not every future value. It establishes no everlasting numerical invariant, mutation monitor, or automatic all-tests rerun. If an operation checks the current value under its explicitly defined contract, that is the operation's action, not repeated checking of established [signature compatibility](LMX_semantics.en.md#argument-compatibility-stage).
+
+##### Full validation without an explicit Consumer
+
+Without an explicit Consumer, full validation uses checks explicitly specified by the receiving description bVar, not tests of the candidate aVar. Analytical implements without Consumer still checks full structural suitability relative to bVar; the source of behavioral checks does not replace that analytical scope. Absence of the mandatory set does not become successful validation.
+
+##### Completing admission already in progress
+
+Executing a check completes admission already in progress rather than starting that same admission again. Analytical suitability of the necessary checking accesses is established before execution; a successful behavioral result exists only after the check completes. Already checked operations remain checked; new dependencies require their own checks. A cycle of unfinished checks is not success; a global typing-disabled mode and hidden skip_tests are forbidden. This is the ordering of one admission mechanism, not an exception for test calls.
+
 @@ admission-recipes | Как получить требуемую гарантию: четырнадцать практических случаев | Obtaining a required guarantee: fourteen practical cases | 2.5.4; 2.5.3; author 2026-09-20
 [RU]
 Большинство вопросов о гарантиях сводится к практическому выбору: где именно провести различие, чтобы требуемое свойство действительно проверялось. Гарантия возникает не из глобального «строгого режима», а из части структуры, которую обязан пройти Consumer, и из тестов, которые задаёт принимающее выражение. Подобно тому как в C `typedef` лишь называет псевдоним, а оборачивающая `struct` создаёт отдельную проверяемую границу, в LMX существенны выраженный путь и контракт его потребления.
@@ -975,7 +1129,7 @@ A foreign handle requires a checked high-level wrapper and explicit resource and
 
 ### Разрешение головы и роль хвоста
 
-Ресивер — инструкция транслятору; вызов callable — действие во время исполнения. У них общий синтаксис Frame «голова принимает хвост», но не одна семантическая роль. Роль головы и смысл её аргументов определяются общим разрешением и контрактом принимающей головы. Имя в аргументах ресивера не становится из-за этого отдельным вызовом: `catch: merge ()` передаёт catch имя выхода и описание параметров, как `fn: test ()` передаёт fn имя и описание сигнатуры. Это следствия общего правила, не исключения для этих ресиверов или имён.
+Ресивер — инструкция транслятору; вызов callable — действие во время исполнения. У них общий синтаксис Frame «голова принимает хвост», но не одна семантическая роль. Роль головы и смысл её аргументов определяются общим разрешением и контрактом принимающей головы. Имя в аргументах ресивера не становится из-за этого отдельным вызовом: `catch: merge ()` передаёт catch имя выхода и описание параметров, как `fn: mytest ()` передаёт fn имя и описание сигнатуры. Это следствия общего правила, не исключения для этих ресиверов или имён.
 
 <a id="resolved-head-consumption"></a>
 #### Одна модель, одно разрешение, одно потребление
@@ -1029,14 +1183,14 @@ fn: f () int
 
 ### Сигнатура не исполняется
 
-Сигнатура описывает входы, а не исполняет записанные в ней формы как тело метода. Для непримитивного A формалы (A: b) и (@: A b) описывают одну ссылочную передачу с допуском кандидата к A. В test(c) существующий кандидат проходит implements(c, A, Consumer); передаётся ссылка на его дескриптор, без копирования непримитивного значения и без неявного merge. Это не делает A: b в исполняемом теле объявлением формала или ссылочной переменной.
+Сигнатура описывает входы, а не исполняет записанные в ней формы как тело метода. Для непримитивного A формалы (A: b) и (@: A b) описывают одну ссылочную передачу с допуском кандидата к A. В mytest(c) существующий кандидат проходит implements(c, A, Consumer); передаётся ссылка на его дескриптор, без копирования непримитивного значения и без неявного merge. Это не делает A: b в исполняемом теле объявлением формала или ссылочной переменной.
 
 ```text
-sub: test (A: b)
-sub: test (@: A b)
+sub: mytest (A: b)
+sub: mytest (@: A b)
 ```
 
-Для структурного c передачи test(c) и test(@c) имеют разную глубину: ссылка на Structure и ссылка на ячейку этой ссылки. Лишний уровень не снимается ради формала. Это одинаково для Structure, ссылочной переменной и непримитивного формала; адресуется собственное языковое хранилище, не транспортная ABI-ячейка. Примитивные формалы (int: b) и (@: int b) не синонимы. Передача и возврат непримитивов не используют C by-value aggregate.
+Для структурного c передачи mytest(c) и mytest(@c) имеют разную глубину: ссылка на Structure и ссылка на ячейку этой ссылки. Лишний уровень не снимается ради формала. Это одинаково для Structure, ссылочной переменной и непримитивного формала; адресуется собственное языковое хранилище, не транспортная ABI-ячейка. Примитивные формалы (int: b) и (@: int b) не синонимы. Передача и возврат непримитивов не используют C by-value aggregate.
 
 ### Присваивание и места объявления
 
@@ -1061,7 +1215,7 @@ Source notation constructs the complete Structure graph: values, declarations an
 
 ### Head resolution and the role of the tail
 
-A receiver is an instruction to the translator; a callable call is a runtime action. They share the Frame syntax "the head consumes the tail", not a semantic role. General resolution and the receiving head's contract determine the head's role and the meaning of its arguments. A name in a receiver's arguments does not thereby become another call: `catch: merge ()` supplies catch with the failure name and parameter description, just as `fn: test ()` supplies fn with the name and signature description. These are consequences of the common rule, not exceptions for those receivers or names.
+A receiver is an instruction to the translator; a callable call is a runtime action. They share the Frame syntax "the head consumes the tail", not a semantic role. General resolution and the receiving head's contract determine the head's role and the meaning of its arguments. A name in a receiver's arguments does not thereby become another call: `catch: merge ()` supplies catch with the failure name and parameter description, just as `fn: mytest ()` supplies fn with the name and signature description. These are consequences of the common rule, not exceptions for those receivers or names.
 
 <a id="resolved-head-consumption"></a>
 #### One model, one resolution, one consumption
@@ -1115,14 +1269,14 @@ Candidate conversion precedes implements against the Consumer's requirement; ref
 
 ### A signature is not executed
 
-A signature describes inputs rather than executing its forms as a method body. For nonprimitive A, formals (A: b) and (@: A b) describe the same reference transport with candidate admission to A. In test(c) an existing candidate passes implements(c, A, Consumer); its descriptor reference is passed without copying the nonprimitive value or performing implicit merge. This does not turn A: b in an executable body into a formal or reference-variable declaration.
+A signature describes inputs rather than executing its forms as a method body. For nonprimitive A, formals (A: b) and (@: A b) describe the same reference transport with candidate admission to A. In mytest(c) an existing candidate passes implements(c, A, Consumer); its descriptor reference is passed without copying the nonprimitive value or performing implicit merge. This does not turn A: b in an executable body into a formal or reference-variable declaration.
 
 ```text
-sub: test (A: b)
-sub: test (@: A b)
+sub: mytest (A: b)
+sub: mytest (@: A b)
 ```
 
-For structural c, test(c) and test(@c) have different depths: a Structure reference and a reference to the cell holding it. No extra level is removed to fit a formal. This applies equally to a Structure, a reference variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. Primitive formals (int: b) and (@: int b) are not synonyms. Passing and returning nonprimitives never use C by-value aggregates.
+For structural c, mytest(c) and mytest(@c) have different depths: a Structure reference and a reference to the cell holding it. No extra level is removed to fit a formal. This applies equally to a Structure, a reference variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. Primitive formals (int: b) and (@: int b) are not synonyms. Passing and returning nonprimitives never use C by-value aggregates.
 
 ### Assignment and declaration sites
 
@@ -1335,7 +1489,7 @@ Structure хранится по ссылке. Для адресуемого ст
 Следующий пример вызова показывает порядок между кэшем, явным чтением графа и фактическими аргументами; это трасса установленной формы `for:`, не новое правило грамматики. `j` объявлено во вложенном теле `for`: как рабочая переменная оно видно только вперёд и вниз, а путь `for\j` из объемлющего метода после `end: for` открывает его место объявления — объявление в любом случае заводит там значение (ответ автора, Q51); пример показывает порядок кэша, явного чтения и фактических аргументов; ячейка `j` в примере начинается с 0 — это условие примера, не общее правило инициализации `int`. `print` здесь — высокоуровневое вызываемое выражение профиля, не операция `c.*`.
 
 ```text
-fn: test () int
+fn: mytest () int
     int: acc
     acc: 0
     for: int(i, 0) (i < 10) i++
@@ -1344,7 +1498,7 @@ fn: test () int
     end: for
     print: acc for\j
     return: 0
-end: test
+end: mytest
 ```
 
 После цикла рабочее `acc` равно 9. `end: for` не является контрольной точкой, как и само явное чтение пути. Перед вызовом объявленные фактические аргументы вычисляются в типизированные временные значения: `acc` даёт 9 из кэша, а `for\j` читает прежнее опубликованное значение графа 0. Затем публикация записывает 9 в граф, но вызов получает уже выбранные временные значения и печатает `9 0`. Последующее явное чтение `for\j` в другом операторе видит 9. Публикация не меняет задним числом уже вычисленные фактические аргументы; запись `for\j: 42` в той же активации меняет ячейку графа, не кэш.
@@ -1425,7 +1579,7 @@ A declared field therefore combines the persistence of an occurrence's cell with
 The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. `j` is declared in the nested `for` body: as a working variable it is visible only forward and down, while the path `for\j` from the enclosing method after `end: for` opens its place of declaration -- a declaration always establishes a value there (the author's answer, Q51); the example shows the order of cache, explicit read and actual arguments; the cell of `j` starts at 0 in this example, which is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
 
 ```text
-fn: test () int
+fn: mytest () int
     int: acc
     acc: 0
     for: int(i, 0) (i < 10) i++
@@ -1434,7 +1588,7 @@ fn: test () int
     end: for
     print: acc for\j
     return: 0
-end: test
+end: mytest
 ```
 
 After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.

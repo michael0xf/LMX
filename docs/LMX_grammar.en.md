@@ -1853,7 +1853,7 @@ receiver:
 receiver: ()
 ````
 
-**Valid nonempty vertical return body** — `Lingvamyxa_spec.txt`, 8985–8987.
+**Historical nonempty vertical return-body form; the ordinary method name in the current language is mytest** — `Lingvamyxa_spec.txt`, 8985–8987.
 
 ````text
     fn: test () int

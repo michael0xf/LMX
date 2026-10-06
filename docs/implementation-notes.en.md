@@ -59,6 +59,39 @@ This document is not a language specification. It contains state of concrete tra
 - The fourteen guarantee examples do not establish completeness of the current translator. Every implemented case requires its own checks.
 - Intermediate host/root transitions in the old implementation must not create a second global registry or indefinite owner outside Messages. Old Java locks and callbacks likewise must not be copied into Mix automatically; ownership and FIFO follow the new model.
 
+<a id="test-receiver-proposal"></a>
+### 4.1 test receiver: adopted contract and implementation debt
+
+**Norm.** The author adopted the contract on 2026-10-06. The primary paragraph is
+[the test receiver](LMX_semantics.en.md#test-receiver-contract); the supplied
+source material and subsequent decisions are retained separately in the
+[author's journal](../LMX_blog/2026-10-06.md#test-receiver-proposal).
+This is no longer a proposal awaiting a decision to introduce the receiver.
+
+Without an explicit Consumer, checks come from the receiving description
+bVar, not the candidate aVar. Executing checks completes admission already
+in progress: analytical suitability of necessary accesses is established
+before execution, and behavioral success only after the check completes.
+
+**Implementation and migration.** The receiver and behavioral stage are not
+implemented or proven by current analytical gates. The name test is reserved;
+ordinary user bindings with that exact name migrate to mytest in source,
+formals, fixtures and active examples, with no exceptions. Names test2/test3
+and string contents are not renamed by substring matching. Verbatim historical
+sources retain their original bytes and are marked as history, not as valid
+current bindings.
+
+Migration and check execution require a separately coordinated slice of the
+sole writer/build; updating the norm does not imply code readiness. Use common
+P0, head resolution, ordinary callable formals, address binding and native/walker
+selection. Do not introduce runtime name lookup, a hidden catalogue, test
+environment, skip_tests or a restart of that same admission. Gates must
+distinguish Consumer/bVar checks from candidate checks, analytical rejection,
+an unfinished check and its final result; prove execution and absence of
+automatic reruns during ordinary calls and mutation. The exact representation
+of failure of the entire set remains open, not grounds for invented fallback
+semantics.
+
 <a id="open-design"></a>
 ## 5. Open design decisions
 

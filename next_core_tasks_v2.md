@@ -1717,7 +1717,7 @@ and the [general grammar rule](docs/LMX_grammar.en.md#no-inference).
    contract determines the arguments. A receiver is a translator instruction,
    a callable call is a runtime action; they share syntax, not a role.
    An argument name does not invent another application. Thus
-   `catch: merge ()` and `fn: test ()` already are ordinary applications of
+   `catch: merge ()` and `fn: mytest ()` already are ordinary applications of
    their respective heads, not missing nested calls. These are consequences
    of the common rule, not special protected spellings or an exception list.
    Do not blindly insert punctuation after matching receiver words.
@@ -1754,7 +1754,7 @@ and the [general grammar rule](docs/LMX_grammar.en.md#no-inference).
    Preserve bare nullary callable evaluation without consuming later fields.
    Verify the same head/tail contract for arbitrary receiver arguments and
    nonexecuting descriptions across names, nesting and source positions.
-   `catch: merge ()` and `fn: test ()` can witness that universal mechanism;
+   `catch: merge ()` and `fn: mytest ()` can witness that universal mechanism;
    they do not define exemptions. No name allowlist or protected-case branch
    may preserve them while breaking other instances of the same rule.
 6. Mutate a removed atomic collector back in: at least one non-application
@@ -2000,6 +2000,65 @@ cached correspondence. Cover the fourteen documented admission recipes and
 remaining unit_colon/unit_eternal cases by a current manifest: count actual
 reachable fixtures, do not reuse the historical number 17 as proof. No separate
 RuntimeImplements decision tree and no test result masking analytical failure.
+
+<a id="test-receiver-migration"></a>
+### K12-TEST — Reserved test receiver, binding migration and behavioral admission (OPEN)
+
+**Adopted norm, not implementation evidence.** Use the
+[primary receiver contract](docs/LMX_semantics.en.md#test-receiver-contract),
+[migration notes](docs/implementation-notes.en.md#test-receiver-proposal) and
+[author's decisions](LMX_blog/2026-10-06.md#test-receiver-proposal).
+The receiver associates a receiving place with an ordinary checker callable.
+Without explicit Consumer, full validation uses checks explicitly given by bVar,
+not candidate-owned aVar tests. Executing checks completes admission already in
+progress; necessary checking accesses are admitted analytically before execution,
+and behavioral success exists only after completion. These two decisions are
+closed, not reasons to ask the author again or add a test-only bypass.
+
+**Dependency/ownership.** Keep the current K03 common-model/resolution slice and
+its gates first; this is a separate follow-up of the sole writer/build. Reuse
+common head/actuals resolution, callable-formal transport, physical references,
+complete source graph and native/walker dispatch. Preserve the G5-before-stage-8
+order and the distinction between analytical gates and behavioral-stage proof.
+Do not claim complete admission from the current analytical checkpoint.
+
+**Boundaries.** Inventory exact ordinary bindings named test across current LMX
+sources, formals, fields, fixtures and active examples; migrate them to mytest,
+including their actual references and current expected source output. No exceptions
+for quoted spelling, nesting, method kind or fixture convenience. Do not rename
+test2/test3, unrelated string contents or raw C symbols by textual coincidence.
+Keep verbatim imported sources/snapshots and author quotations unchanged as
+history; intentionally invalid reserved-name witnesses remain negative tests.
+The implementation slice uses dev/l2src_sandbox/l2trans.lm1 and the existing
+lmx_implements/call/walker graph path, with witnesses under
+dev/l2src_sandbox/tests and exact current harness registrations. Identify exact
+symbols/files after inventory before editing; no new parallel implementation.
+
+**Required implementation.** Resolve test through the common application model,
+not a special parser or an adjacent-atom collector. Preserve explicit associations
+and checker bodies/order in the original graph and toLmx. Each checker receives
+the actual candidate ordinarily, with its actual reference depth; no temporary
+mutation of a live Consumer, hidden catalogue/environment, runtime name lookup,
+new base Lmx fields or skip_tests. Handle all required checks, their dependencies
+and normal failures without restarting the same admission or granting success to
+an unfinished cycle. Any still-open failure-representation contradiction requires
+an exact example and decision before the dependent implementation.
+
+**Acceptance.** Gates must prove: all current valid user bindings migrated;
+reserved test cannot be shadowed by any binding; receiver links work at arbitrary
+Structure nesting through the common model; repeated links accumulate; nested
+Consumers retain their own checks; bVar rather than aVar supplies checks without
+Consumer; the checker receives the actual candidate; its additional accesses are
+analytically admitted before execution; analytical rejection precedes execution;
+behavioral failure/success and unfinished admission are distinct; normal call,
+return, throw/diagnostic and native/walker selection remain general. Demonstrate
+no automatic all-tests rerun on mutation or normal Consumer invocation, complete
+graph/toLmx retention and no rollback of earlier external effects. Positive
+witnesses need reached, nonzero observations and mutants that actually fail.
+Run the current focused harness plus full/kernel/L3 gates according to
+[the common acceptance protocol](#workflow); run python tools/check_docs.py
+and scoped git diff --check. Record exact commands, source hashes and results
+before claiming this OPEN stage complete.
 
 <a id="clean-gate"></a>
 ## 6. Clean-kernel checkpoint — mandatory before stage 8

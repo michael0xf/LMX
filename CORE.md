@@ -433,6 +433,15 @@ This is not a per-mutation hook or repeated all-tests run. See
 [the compatibility stage](docs/LMX_semantics.en.md#argument-compatibility-stage).
 See [correspondence stability](docs/LMX_semantics.en.md#correspondence-stability).
 
+Behavioral checks are declared by the reserved
+[test receiver](docs/LMX_semantics.en.md#test-receiver-contract). With no explicit
+Consumer they come from the receiving description bVar, not the candidate aVar.
+Their execution completes admission already in progress: necessary checking
+accesses are admitted analytically before execution, behavioral success only
+after completion. Ordinary user bindings named test migrate to mytest universally;
+verbatim historical sources remain history. This is the adopted contract, not
+proof that the receiver or behavioral stage is implemented by current gates.
+
 At source checkpoint `e70689c`, `LmxArena.impl` stores ordinary
 `LmxImplEntry` correspondences: weak `value`/`req`/optional `frame`, a
 borrowed static map or frame offset/length, capture-hole information, and

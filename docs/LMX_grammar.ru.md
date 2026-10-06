@@ -1853,7 +1853,7 @@ receiver:
 receiver: ()
 ````
 
-**Допустимое непустое вертикальное тело return** — `Lingvamyxa_spec.txt`, 8985–8987.
+**Историческая форма непустого вертикального тела return; имя обычного метода в текущем языке — mytest** — `Lingvamyxa_spec.txt`, 8985–8987.
 
 ````text
     fn: test () int

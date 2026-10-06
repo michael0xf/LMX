@@ -119,7 +119,7 @@ their role. The tail supplies arguments under the resolved head's contract.
 A receiver's argument name is not thereby another receiver application.
 For example, `catch: merge ()` supplies the failure name `merge` and empty
 parameter description to `catch`; it does not call merge. Likewise,
-`fn: test ()` supplies the method name and signature description to `fn`.
+`fn: mytest ()` supplies the method name and signature description to `fn`.
 These follow the common rule; they are not exceptions or an allowlist of
 protected forms. Interpret the actual Frame and receiving contract, not
 matching words; see [head resolution](docs/LMX_semantics.en.md#construction)
@@ -329,6 +329,14 @@ it is not a demand to compare every unused field. Primitive conversion and
 structural admission are distinct cooperating stages. Consumer tests follow the
 analytical stage; execution of tests cannot repair an analytical failure.
 
+The reserved [test receiver](docs/LMX_semantics.en.md#test-receiver-contract)
+explicitly associates a receiving place with an ordinary checker. With no explicit
+Consumer, full validation uses bVar's explicitly given checks, never candidate
+aVar tests. Check execution completes admission already in progress; necessary
+checking accesses are admitted analytically before execution, and behavioral
+success exists only after completion. Ordinary user bindings named test migrate
+to mytest, with no source/fixture/formal exceptions.
+
 An established correspondence survives value changes permanently. Replacing a
 branch admits its new candidate before the store; without a Consumer, check
 full structural suitability. Argument/signature compatibility is established
@@ -354,10 +362,23 @@ and explicit occurrence selectors; plan K01 fixes their identity through the
 common use edge. Storing Consumer in a cache key alone does not solve two
 different accesses by the same Consumer.
 
+The adopted test receiver and behavioral stage need separate implementation and
+universal source/fixture migration; neither is proven by current analytical gates.
+Keep explicit source associations in the complete graph, ordinary checker calls
+and native/walker dispatch. Do not add runtime name lookup, a hidden test catalogue,
+or skip_tests; do not restart the same in-progress admission or call an unfinished
+cycle successful. Verbatim historical sources retain their bytes as history.
+
 **Verification.** Different layouts, repeated names, only-used-edge checks,
 both admission orders, read/write/@ through the same admitted edge, callable
 defaults and hidden inputs, conversion failures before store, full Consumer test
 execution. Distinguish manual physical maps from source semantic paths.
+
+For the behavioral stage, distinguish Consumer/bVar checks from candidate-owned
+checks, all required checker accesses from the main body's accesses, analytical
+failure from checker result, and unfinished admission from successful completion.
+Witness explicit checker execution in native and walked modes and absence of
+automatic reruns during ordinary invocation or mutation.
 
 <a id="schema"></a>
 ## 10. Declared model versus actual schema/layout

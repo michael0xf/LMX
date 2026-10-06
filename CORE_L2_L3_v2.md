@@ -705,6 +705,16 @@ Token boxes use the declared pointer witness; they are metadata operands, not so
 
 ### 9.6 Remaining admission boundaries
 
+**Adopted contract; implementation debt.** The reserved
+[test receiver](docs/LMX_semantics.en.md#test-receiver-contract) associates receiving
+places with ordinary checking expressions. With no explicit Consumer, checks are
+those explicitly given by bVar, not candidate-owned tests. They complete the
+existing admission after necessary analytical checks; they do not restart that
+same admission or grant behavioral success before completion. Ordinary user
+bindings named test migrate to mytest universally. Receiver execution and this
+source/fixture migration need their own implementation gates; analytical gates
+do not certify them. See [migration notes](docs/implementation-notes.en.md#test-receiver-proposal).
+
 **Debt.** Complete transitive `uses`/capture analysis and every directed conversion are not certified. A source capture whose body indirectly invokes a consumer of `y` may need `y` in its captured closure; it is wrong to encode an incomplete syntactic scanner as a normative expected refusal. A deliberately partial runtime value sent to a new consumer requiring missing `y` is a different, legitimate negative.
 
 **Debt.** Cross-count repeated-field selection remains a measured design boundary: if a requirement has two `x` occurrences and an actual has three, bare-last and explicit `[1]x` can collapse to the same requirement slot while needing different actual slots. One `(value, required-model) -> slot map` is not automatically a complete Consumer-use correspondence for both selectors. This is not solved by positional zipping or forbidding the valid program. See [selector collapse](steps/defects.md#admission-occurrence-selector-collapse).

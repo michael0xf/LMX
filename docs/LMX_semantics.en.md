@@ -494,6 +494,82 @@ Ordinary values may store test results when the program explicitly does so. A re
 
 A statically established violation is reported during analysis. Failure of any mandatory unit test makes `admitted(aVar, bVar, Consumer)` false; declared failures follow the [exception rules](#exceptions). Neither validation nor memory reclamation rolls back already published messages or external effects.
 
+<a id="test-receiver-contract"></a>
+#### The test receiver: associating a receiving place with a check
+
+The test receiver is available inside any Structure and explicitly associates a receiving place with an ordinary checking expression. It specifies checks for the admission stage rather than executing them during ordinary body traversal, and creates neither global registration nor a hidden test environment. The name test is reserved and unshadowable under the general single-namespace rule; ordinary user methods and bindings use another name, such as mytest.
+
+##### Association and ownership
+
+Spelling:
+
+```text
+test: op checkIncrement
+```
+
+op describes the receiving place checked for a particular Consumer; checkIncrement is an ordinary LMX checking expression. The instruction's arguments describe the place and refer to the checker; they are not implicit nullary invocations of those names. The complete head/arguments model is formed first, then the ordinary receiver contract applies. Availability is not restricted by a Structure's kind, name or nesting.
+
+The association belongs to the receiving Structure: candidate-owned tests do not replace unit_tests(Consumer). A nested Consumer owns its associations; tests in every nested method must not be recursively promoted into requirements of the outer Consumer. A checking function can be explicitly reused. Multiple applications test: op checkZero, test: op checkPositive, test: op checkNegative specify multiple mandatory checks, not repeated field declarations reduced to the last occurrence.
+
+##### Ordinary checking code
+
+Example:
+
+```text
+fn: applyStep (op(fn: (int: x) int); int: value) int
+    fn: checkIncrement (candidate(fn: (int: x) int)) int
+        return: (candidate(0) = 1) && (candidate(5) = 6)
+    end: checkIncrement
+    test: op checkIncrement
+    return: op(value)
+end: applyStep
+```
+
+At admission the actual candidate for op, not the exemplar or a same-name function, is passed to checkIncrement as an ordinary argument. The callable formal receives the complete callable occurrence under its ordinary signature. Nonprimitives travel by their ordinary held reference; adding @candidate merely "to pass a reference" changes indirection depth. The main Consumer body uses op(value) after admission completes.
+
+The checking definition may appear directly in the instruction's arguments without a test-specific language or special mixed-form parser. A fully vertical spelling of the same association:
+
+```text
+test:
+    op
+    fn: checkIncrement (candidate(fn: (int: x) int)) int
+        return: (candidate(0) = 1) && (candidate(5) = 6)
+    end: checkIncrement
+end: test
+```
+
+Data preparation, calls, comparisons, branches and failure handling remain ordinary LMX code. No separate suite, case, fixture, expect, beforeEach, fundamental TestResult, or hidden test-state object is needed.
+
+##### Results, failures and the admission stage
+
+Checker result: ordinary int, 1 for success and 0 for failure. A suitable logical description may be explicitly provided by a profile. Ordinary return: candidate(5) = 6 is not assert: a false assertion retains [its diagnostic consequences](LMX_semantics.en.md#exceptions), rather than becoming an ordinary negative result only inside tests.
+
+An expected failure is checked using ordinary catch inside the checking expression: catching the expected failure returns success; its absence returns failure. An arbitrary throw is not automatically a successful negative test. Uncaught failures and diagnostic violations retain the general rules; the precise failure representation for the whole test set remains an open decision.
+
+Sequence: analytical suitability of the main use and necessary test accesses → preparation of the ordinary checker call with the actual candidate → execution of checks → success of all mandatory checks → completed admission → ordinary use. The analytical predicate itself executes neither tests nor converters. There is no temporary replacement of a live Consumer field followed by restoration.
+
+The checker also consumes the candidate and needs ordinary analytical suitability for its own accesses. If the body calls op(1) but a test calls op(1; y: 25), the candidate must admit the explicitly supplied y for that use too. The test gains no right to require every unused exemplar field and is not exempt from typing.
+
+##### Graph, execution and no hidden registration
+
+The full source graph retains the written association: receiving place and checking expression. The resolved place reference identifies the receiving-input description, not a guessed address of a future machine argument; the actual candidate is supplied to the checker's ordinary activation at admission. It creates no new base Lmx fields, extra graph, variable passport, test catalogue, or TestEnvironment. Names resolve during translation; runtime uses physical references rather than searching for text "test" or consulting the name table.
+
+The checking body remains an ordinary graph part available to toLmx, copying and composition. Its full representation and source order are not replaced by a comment "tests were here" or a separate service copy. Ordinary Consumer execution neither registers associations again nor reruns the tests.
+
+The admission executor traverses the explicitly given graph scenario; checker and candidate calls follow ordinary dispatch according to native. It must not obligatorily clear native, damage the selected implementation, or introduce an exception "inside tests always walk." A developer test runner receives an explicit root and does not change the receiver's meaning.
+
+Test-state preparation is explicit. Any needed copy is made by ordinary merge; test resources or a separate Message are explicitly created or supplied. There is no hidden cloning or rollback of messages or external effects. A report may be an ordinary Structure holding references to Consumer, place, candidate, check and result; this is an output, not a mandatory hidden object attached to every value.
+
+A successful comparison describes the value when the test ran, not every future value. It establishes no everlasting numerical invariant, mutation monitor, or automatic all-tests rerun. If an operation checks the current value under its explicitly defined contract, that is the operation's action, not repeated checking of established [signature compatibility](LMX_semantics.en.md#argument-compatibility-stage).
+
+##### Full validation without an explicit Consumer
+
+Without an explicit Consumer, full validation uses checks explicitly specified by the receiving description bVar, not tests of the candidate aVar. Analytical implements without Consumer still checks full structural suitability relative to bVar; the source of behavioral checks does not replace that analytical scope. Absence of the mandatory set does not become successful validation.
+
+##### Completing admission already in progress
+
+Executing a check completes admission already in progress rather than starting that same admission again. Analytical suitability of the necessary checking accesses is established before execution; a successful behavioral result exists only after the check completes. Already checked operations remain checked; new dependencies require their own checks. A cycle of unfinished checks is not success; a global typing-disabled mode and hidden skip_tests are forbidden. This is the ordering of one admission mechanism, not an exception for test calls.
+
 <a id="admission-recipes"></a>
 ## 8. Obtaining a required guarantee: fourteen practical cases
 
@@ -578,7 +654,7 @@ Source notation constructs the complete Structure graph: values, declarations an
 
 ### Head resolution and the role of the tail
 
-A receiver is an instruction to the translator; a callable call is a runtime action. They share the Frame syntax "the head consumes the tail", not a semantic role. General resolution and the receiving head's contract determine the head's role and the meaning of its arguments. A name in a receiver's arguments does not thereby become another call: `catch: merge ()` supplies catch with the failure name and parameter description, just as `fn: test ()` supplies fn with the name and signature description. These are consequences of the common rule, not exceptions for those receivers or names.
+A receiver is an instruction to the translator; a callable call is a runtime action. They share the Frame syntax "the head consumes the tail", not a semantic role. General resolution and the receiving head's contract determine the head's role and the meaning of its arguments. A name in a receiver's arguments does not thereby become another call: `catch: merge ()` supplies catch with the failure name and parameter description, just as `fn: mytest ()` supplies fn with the name and signature description. These are consequences of the common rule, not exceptions for those receivers or names.
 
 <a id="resolved-head-consumption"></a>
 #### One model, one resolution, one consumption
@@ -632,14 +708,14 @@ Candidate conversion precedes implements against the Consumer's requirement; ref
 
 ### A signature is not executed
 
-A signature describes inputs rather than executing its forms as a method body. For nonprimitive A, formals (A: b) and (@: A b) describe the same reference transport with candidate admission to A. In test(c) an existing candidate passes implements(c, A, Consumer); its descriptor reference is passed without copying the nonprimitive value or performing implicit merge. This does not turn A: b in an executable body into a formal or reference-variable declaration.
+A signature describes inputs rather than executing its forms as a method body. For nonprimitive A, formals (A: b) and (@: A b) describe the same reference transport with candidate admission to A. In mytest(c) an existing candidate passes implements(c, A, Consumer); its descriptor reference is passed without copying the nonprimitive value or performing implicit merge. This does not turn A: b in an executable body into a formal or reference-variable declaration.
 
 ```text
-sub: test (A: b)
-sub: test (@: A b)
+sub: mytest (A: b)
+sub: mytest (@: A b)
 ```
 
-For structural c, test(c) and test(@c) have different depths: a Structure reference and a reference to the cell holding it. No extra level is removed to fit a formal. This applies equally to a Structure, a reference variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. Primitive formals (int: b) and (@: int b) are not synonyms. Passing and returning nonprimitives never use C by-value aggregates.
+For structural c, mytest(c) and mytest(@c) have different depths: a Structure reference and a reference to the cell holding it. No extra level is removed to fit a formal. This applies equally to a Structure, a reference variable and a nonprimitive formal; the target is its own language storage, not a transport-ABI box. Primitive formals (int: b) and (@: int b) are not synonyms. Passing and returning nonprimitives never use C by-value aggregates.
 
 ### Assignment and declaration sites
 
@@ -799,7 +875,7 @@ A declared field therefore combines the persistence of an occurrence's cell with
 The following call example shows the order among cache, explicit graph read and actual arguments; it is a trace using the established `for:` form, not a new grammar rule. `j` is declared in the nested `for` body: as a working variable it is visible only forward and down, while the path `for\j` from the enclosing method after `end: for` opens its place of declaration -- a declaration always establishes a value there (the author's answer, Q51); the example shows the order of cache, explicit read and actual arguments; the cell of `j` starts at 0 in this example, which is an example condition, not a general initialization rule for `int`. Here `print` is a high-level profile callable, not a `c.*` operation.
 
 ```text
-fn: test () int
+fn: mytest () int
     int: acc
     acc: 0
     for: int(i, 0) (i < 10) i++
@@ -808,7 +884,7 @@ fn: test () int
     end: for
     print: acc for\j
     return: 0
-end: test
+end: mytest
 ```
 
 After the loop, working `acc` is 9. `end: for` is not a checkpoint, and neither is an explicit path read by itself. Before the call, declared actual arguments are evaluated into typed temporaries: `acc` contributes 9 from the cache, while `for\j` reads the previously published graph value 0. Publication then writes 9 into the graph, but the call receives the already selected temporaries and prints `9 0`. A later explicit `for\j` read in another statement sees 9. Publication cannot retroactively change actual arguments already evaluated; a same-activation `for\j: 42` writes the graph cell, not the cache.

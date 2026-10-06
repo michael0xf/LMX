@@ -35,6 +35,12 @@ The [author's decisions](LMX_blog/2026-10-05.md) require source-copy parent
 rewriting, explicit `@: add5 makeAdder(5)` result receipt, and ordinary result
 type checking for an unknown-head Structure returned as int.
 
+**Additional critical parser dependency, 2026-10-06.**
+[parser_critical_bug](#parser-critical-bug) reopens generic ownership of a
+nested head's vertical body. It extends the earlier common-form repair, not
+the language's call syntax. It blocks parser conformance and G5/self-build;
+do not interrupt the current writer stage or start a second writer/build.
+
 **Continuation, 2026-10-05 (Opus).** The first slice of Codex's handoff
 (OPUS-HANDOFF-20261005-103112): a letter held in a place of its own declaration
 is admitted to an input of another declaration by what the input's method
@@ -552,6 +558,41 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [ ] Letter Array-of-Array element contract for a typed letter reference
   (`entry_arg_len`, `entry_index`, `entry_strcmp`, `entry_parse_min`,
   `unit_charpp_return`, `unit_l2_puts_library`).
+
+<a id="parser-critical-bug"></a>
+## Additional critical dependency — parser_critical_bug (CRITICAL / P0, OPEN)
+
+- [ ] Complete [parser_critical_bug](steps/tickets/parser_critical_bug.md)
+  through the shared nested-Frame/marker continuation mechanism. Required
+  positive: `r: twice:` followed by `. ---`, `. . 3`, `---` must keep `3`
+  under `twice`, not append an anonymous sibling under `r`. The general
+  levels are `r` at 0, `twice` at 1, its body at 2, including heads composed
+  on one physical line. A downstream `twice has no argument n` on the wrong
+  empty Frame is not a reason to reject the source.
+- [ ] Reconcile the earlier [next_parser_fix.md](next_parser_fix.md) repair
+  with this case and the complete compact/short/vertical, empty/nonempty,
+  arbitrary-depth and genuine-sibling matrix. No local call-name patch,
+  second translator normalization, unconditional flattening or implicit
+  `twice 3` call. Equivalent forms must preserve the same ordered P0 topology.
+- [ ] Audit general level logic against the working, self-building
+  **`C:\Nyasha_Planet\lingvamyxa_old_worked_version`**; keep
+  `C:\Nyasha_Planet\lingvamyxa_prev` as a secondary inheritance comparison.
+  Run the actual implementation on exact witnesses, not just read its spec.
+  Codex reproduced the misplaced body on both existing old `printTree`
+  binaries and traced premature level-2 owner removal; hashes and limits of
+  that evidence are in the ticket. The complete audit/fix is still OPEN.
+  If the working baseline repeats the bug, **still fix the current parser**;
+  historical agreement is not the norm.
+- [ ] Synchronize maintained parser routes/copies/seeds through the ordinary
+  promotion protocol and prove P0 topology plus native/walker result parity,
+  with negatives retaining genuine boundaries. The earlier column-zero
+  first-fence spelling remains a distinct measured case, not silently repaired
+  input. Evidence, symbols, matrix and release commands are in the ticket.
+
+Take a dependency-closed repair cut with the existing sole writer after its
+current stage. This does not waive graph -> pointer -> reference-application
+dependencies. G5 and downstream parser migration/self-build remain blocked
+until the common-form defect is closed; no focused gate alone closes it.
 
 <a id="before-critical-graph-bug"></a>
 ## Before critical_graph_bug — acceptance still required
@@ -1527,6 +1568,9 @@ Still not established:
    with Git before assuming it landed. No second writer/build beside a live one.
 3. Follow the mandatory front queue: critical_graph_bug, then
    critical_pointer_to_struct_bug, then structure_reference_application_refactor.
+   Respect the additional [parser_critical_bug dependency](#parser-critical-bug)
+   before certifying source-form conformance or G5; coordinate its bounded
+   repair with the current owner, without changing the graph/pointer order.
    Afterwards choose one dependency-closed remaining item below. Name files,
    symbols, witnesses and exit conditions. Independent
    read-only review may run in parallel.

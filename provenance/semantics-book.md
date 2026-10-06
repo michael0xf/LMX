@@ -756,7 +756,12 @@ admitted(aVar, bVar, Consumer) ⇔
 
 Один раз установленное соответствие `implements` сохраняется: изменение значений кандидата или проверяющего выражения не отменяет его и не требует строить его заново. Структура графа не может измениться так, чтобы нарушить уже пройденный допуск: любое присваивание ветки сначала проверяет через `implements`, что альтернативная ветка подходит принимающему месту, и лишь затем записывает её; отказ сохраняет прежнее значение. Область этой проверки — используемые требования заданного Consumer либо полная структурная пригодность при его отсутствии, как определено выше. Новый кандидат или другие требования принимающего места требуют собственного допуска, но это не отмена ранее установленного соответствия из-за мутации.
 
-Примитивные значения проверяются при передаче аргументов. Это правило не вводит дополнительных проверок каждого изменения, чтения или иного использования примитива.
+<a id="argument-compatibility-stage"></a>
+Совместимость фактических аргументов с сигнатурой устанавливается при трансляции, когда вызываемое и типы аргументов известны. Если необходимые сведения появляются только при динамическом выборе, совместимость устанавливается при обычном допуске выбранного вызываемого или передаваемого значения к требованиям этого вызова. Уже установленная совместимость используется дальше; изменение примитивного значения не меняет его тип и не требует повторять проверку.
+
+То, что анализ или допуск выполняется работающим интерпретатором, не означает проверки при каждом исполнении полученного скомпилированного кода. Уже проверенный скомпилированный вызов при прежних требованиях не требует повторной проверки типов на каждой передаче аргументов. Это правило не вводит проверок каждого изменения, чтения или иного использования примитива и не подменяет отдельно заданные обязательные тесты принимающего выражения.
+
+Выполнение выбранного [преобразователя](#descriptions), включая заданные им проверки конкретного значения, является отдельным действием, а не повторной проверкой совместимости сигнатуры. Аналитический допуск не исполняет преобразователь и не отменяет его контракт.
 
 Диагностика должна различать действительно тонкое использование и невозможность установить используемые пути. Она может показать, какая одноимённая ветвь выбрана после композиции (последняя по общему правилу или явно выбранное вхождение), какие описательные поля не используются и какие требования остались неустановленными. Диагностика не вводит глобальный «строгий режим» и не меняет правила выбора поля.
 
@@ -821,7 +826,12 @@ Collection of `uses` does not expand every callee, execute computed names, or pe
 
 An established `implements` correspondence persists: changes to the candidate's or checking expression's values neither invalidate it nor require its reconstruction. The graph's structure cannot change so as to break admission already passed: every branch assignment first checks through `implements` that the alternative branch fits the receiving place, then stores it; refusal preserves the previous value. That check covers the supplied Consumer's used requirements or full structural suitability in its absence, as defined above. A new candidate or different receiving requirements need their own admission, but this is not mutation-triggered invalidation of an established correspondence.
 
-Primitive values are checked when passing arguments. This rule introduces no additional checks on every primitive change, read, or other use.
+<a id="argument-compatibility-stage"></a>
+Compatibility of actual arguments with the signature is established during translation when the callable and argument types are known. If the necessary information becomes available only through dynamic selection, compatibility is established at ordinary admission of the selected callable or supplied value to this call's requirements. Established compatibility is reused; changing a primitive value does not change its type or require repeating the check.
+
+Analysis or admission being performed by a running interpreter does not imply checking on every execution of the resulting compiled code. An already checked compiled call under unchanged requirements does not require another type check at each argument transfer. This rule introduces no checks on every primitive change, read, or other use and does not replace the receiving expression's separately specified mandatory tests.
+
+Executing the selected [converter](#descriptions), including its specified checks of the particular value, is a separate action, not repeated signature compatibility checking. Analytical admission neither executes the converter nor cancels its contract.
 
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which same-name branch composition selects (the last by the general rule, or the explicitly selected occurrence), which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 

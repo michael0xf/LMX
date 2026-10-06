@@ -472,7 +472,12 @@ Collection of `uses` does not expand every callee, execute computed names, or pe
 
 An established `implements` correspondence persists: changes to the candidate's or checking expression's values neither invalidate it nor require its reconstruction. The graph's structure cannot change so as to break admission already passed: every branch assignment first checks through `implements` that the alternative branch fits the receiving place, then stores it; refusal preserves the previous value. That check covers the supplied Consumer's used requirements or full structural suitability in its absence, as defined above. A new candidate or different receiving requirements need their own admission, but this is not mutation-triggered invalidation of an established correspondence.
 
-Primitive values are checked when passing arguments. This rule introduces no additional checks on every primitive change, read, or other use.
+<a id="argument-compatibility-stage"></a>
+Compatibility of actual arguments with the signature is established during translation when the callable and argument types are known. If the necessary information becomes available only through dynamic selection, compatibility is established at ordinary admission of the selected callable or supplied value to this call's requirements. Established compatibility is reused; changing a primitive value does not change its type or require repeating the check.
+
+Analysis or admission being performed by a running interpreter does not imply checking on every execution of the resulting compiled code. An already checked compiled call under unchanged requirements does not require another type check at each argument transfer. This rule introduces no checks on every primitive change, read, or other use and does not replace the receiving expression's separately specified mandatory tests.
+
+Executing the selected [converter](#descriptions), including its specified checks of the particular value, is a separate action, not repeated signature compatibility checking. Analytical admission neither executes the converter nor cancels its contract.
 
 Diagnostics should distinguish genuinely thin consumption from inability to establish used paths. They may show which same-name branch composition selects (the last by the general rule, or the explicitly selected occurrence), which descriptive fields are unused and which requirements remain unresolved. Diagnostics do not introduce a global strict mode or change field-selection rules.
 

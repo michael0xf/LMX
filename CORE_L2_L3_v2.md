@@ -629,8 +629,12 @@ The typed walker propagates internal **STOPPED = -4** through recursive evaluati
 Established correspondence is permanent under value changes. Branch replacement
 checks its new candidate before storage; absent a Consumer, the full structural
 requirement is checked. This is not mutation-triggered revalidation or a request
-to rerun every test after a write. Primitive checking here is **when passing
-arguments**, not every primitive use. The primary contract is
+to rerun every test after a write. Argument/signature compatibility is established
+during translation when known, or at the required dynamic admission, and reused
+by an already checked compiled call; it is not a new check on each argument
+transfer or primitive use. See
+[the compatibility stage](docs/LMX_semantics.en.md#argument-compatibility-stage).
+The primary structural contract is
 [correspondence stability](docs/LMX_semantics.en.md#correspondence-stability).
 
 The current compiler projects the same receiving contract for initialization, rebinding, ordinary reference return and supported physical-path stores. A named model used as a descriptor candidate is not executed just to obtain the descriptor. A value-producing callable in candidate position remains a call according to its resolved contract; it cannot be commandeered into a model-reference shortcut.

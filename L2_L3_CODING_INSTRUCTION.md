@@ -670,8 +670,13 @@ that later stage.
 An established structural correspondence is not invalidated by value changes.
 Branch replacement admits the new candidate before storage; with no Consumer,
 the full structural requirement is checked. Do not install a mutation monitor
-or rerun every test after each store. Primitive checks here are **when passing
-arguments**, not on every write, read, or other use. Follow the
+or rerun every test after each store. Establish argument/signature compatibility
+during translation when the callable and argument types are known; otherwise
+establish it at the required dynamic admission. An already checked compiled
+call reuses that compatibility without per-call type checks. Executing a selected
+converter remains a separate operation, not a repeated compatibility check. See
+[the compatibility stage](docs/LMX_semantics.en.md#argument-compatibility-stage).
+Do not add checks on every primitive write, read, or other use. Follow the
 [primary stability rule](docs/LMX_semantics.en.md#correspondence-stability).
 
 ### 12.2 Conversion precedes structural admission

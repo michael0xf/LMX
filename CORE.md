@@ -426,8 +426,11 @@ construction mechanism remain governed by [the implementation plan](next_core_ta
 
 Established structural correspondence survives value changes; branch
 replacement admits the new candidate before storage, using full structural
-requirements when no Consumer is supplied. Primitive checking here is when
-passing arguments, not a per-mutation hook or repeated all-tests run.
+requirements when no Consumer is supplied. Argument/signature compatibility is
+established during translation when known, or at the required dynamic admission;
+an already checked compiled call reuses it without a per-call type check.
+This is not a per-mutation hook or repeated all-tests run. See
+[the compatibility stage](docs/LMX_semantics.en.md#argument-compatibility-stage).
 See [correspondence stability](docs/LMX_semantics.en.md#correspondence-stability).
 
 At source checkpoint `e70689c`, `LmxArena.impl` stores ordinary

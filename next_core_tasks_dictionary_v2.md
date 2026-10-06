@@ -331,9 +331,14 @@ analytical stage; execution of tests cannot repair an analytical failure.
 
 An established correspondence survives value changes permanently. Replacing a
 branch admits its new candidate before the store; without a Consumer, check
-full structural suitability. Primitive checks here apply **when passing
-arguments**, not to every change or use. No mutation tracker, correspondence
-invalidation, or automatic all-tests rerun follows from these rules. See
+full structural suitability. Argument/signature compatibility is established
+during translation when known, or at the required dynamic admission, and then
+reused by already checked compiled calls. It is not a check on every argument
+transfer, primitive change, or use. Executing a selected converter is distinct
+from establishing compatibility. See
+[the compatibility stage](docs/LMX_semantics.en.md#argument-compatibility-stage).
+No mutation tracker, correspondence invalidation, or automatic all-tests rerun
+follows from these rules. See
 [the primary stability contract](docs/LMX_semantics.en.md#correspondence-stability).
 
 `uses` is the set of actual semantic accesses/calls made by the Consumer, not

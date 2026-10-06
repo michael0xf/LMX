@@ -158,6 +158,8 @@ The `@:` receiver selects explicit reference assignment: for absent `b`, `b: A` 
 
 A signature describes inputs, not executable declarations. Nonprimitive inputs transmit their existing Structure/Array references without C by-value copies. The descriptive forms `(A: b)` and `(@: A b)` retain their signature contract; that does not erase a unary address operation on an actual. `test(b)` passes the held reference; `test(@b)` passes the address of its cell, one level deeper. The receiving formal must admit that exact depth; no descriptor-specific stripping is permitted. Primitive `(int: b)` and `(@: int b)` remain different. Calls and candidate admission follow the general [callable contract](LMX_semantics.en.md#callables).
 
+Signature/actual-argument compatibility is established at the [stage defined by the semantics](LMX_semantics.en.md#argument-compatibility-stage), not rechecked on each execution of an already checked compiled call. Executing a selected converter is not a repeated check of that compatibility.
+
 <a id="implements"></a>
 ## 14. `implements`
 

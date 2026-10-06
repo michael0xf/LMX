@@ -9706,3 +9706,47 @@ conversions, whose actual is no longer allocated).
 | `build/l3_selftest/opus_l3_24` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_26` (full harness) | RED39/1936: against `opus_full_25` FAIL→OK 0, OK→FAIL 0, added 8, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
 | `build/l2_harness/opus_focus_tx3` (focused, before the gates) | 32 rows: the eight of this section, three of section 94, the held calls' conversion rows, the function-pointer, reference, array, letter and send rows, all green. |
+
+<a id="expression-text-path-actual"></a>
+## 96. A path actual of any number of names: slice 3 of the expression text (FIXED-BLOCKS-AUDIT)
+
+The path actual (`l2_emit_actual_path`: `take(h\a\p)`, a Structure path handed
+to a Structure formal, admitted at its leaf) was the last route that took a
+migrated text into a fixed buffer. It held at most 32 names (`[]: int slots
+32`) and wrote the path in 1024 bytes (`cur`/`nxt`, refused when the text and
+one more name could pass them), each refused "expression too long" where the
+call stands. The names now go into an array of twice the room when it is full
+(storage of the translation, released by `l2_release`), the path is a text --
+each name wraps the text so far, written into the other of two texts, which
+then change places -- and the destination is a text: the call hands the
+actual's own text, a `return:` the statement's. `l2_prep_fixed` and
+`l2_tx_to_fixed` lose their last callers and are removed: no route of the
+expression text copies a migrated text into a fixed buffer any more.
+
+| Row | What it pins |
+| --- | --- |
+| `unit_exprtext_path` (+`_walk`) | `take(h\s1\...\s40)`: the leaf of 40 nested Structures, not `Equatable` (an unread `extra` before its `equals`); `take` writes `equals` through the admitted argument and the write is seen in `Holder`'s own leaf, `extra` unchanged; Entry 7. The twin walks `take`, `pass`, `go` and the root. Slice 2 refuses it at 61:9, "expression too long". |
+
+Paths of 3 and 31 names, below the old bound, translate and run as before.
+
+Mutants, each its own translator; the fixture translated, compiled and run:
+
+| Mutant | Killed by |
+| --- | --- |
+| the 33rd name refused again | refused at 61:9, "expression too long" |
+| the path's text refused past 1023 bytes again | refused at 61:9, "expression too long" |
+| each name wrapping the root's text, not the text so far (the texts not changing places) | the run stops: "lmx: invariant: the record of a proved admission was not kept" (exit 3) |
+| the names found so far not kept when their room grows | the run stops: "lmx: invariant: a field path met no Structure" (exit 3) |
+
+A replay of the 1916 translations recorded by `opus_full_24`, with the
+translator of this section's full gate against section 95's: every row keeps
+its L1, exit, messages and number of allocations.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_26` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_25` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_27` (full harness) | RED39/1938: against `opus_full_26` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
+| `build/l2_harness/opus_focus_tx4` (focused, before the gates) | 12 rows: the two of this section, the long sum and call of sections 94 and 95, the admitted path actuals beside them (`unit_s7_*`, `unit_named_actual_path`), all green. |

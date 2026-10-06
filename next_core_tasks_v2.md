@@ -826,9 +826,17 @@ Current bounded implementation, with no DONE claim:
     seven routes that took a migrated text into a 1024-byte buffer write into
     a text of their own. Gates: kernel `opus_kernel_25` GREEN297 (114
     selftests), L3 `opus_l3_24`, full `opus_full_26` RED39/1936 -- against
-    `opus_full_25` FAIL→OK 0, OK→FAIL 0, added 8. The residual routes (32 fixed writers,
-    `l2_payload_expr`, the path actual, `l2_tok_text` atoms,
-    `l2_pointer_decl_text`'s joins) stay OPEN, listed in FIXED-BLOCKS-AUDIT;
+    `opus_full_25` FAIL→OK 0, OK→FAIL 0, added 8. Slice 3 done
+    ([section 96](steps/fable-continuation-20261003.md#expression-text-path-actual)):
+    a path actual of any number of names. Gates: kernel `opus_kernel_26` GREEN297 (114 selftests), L3 `opus_l3_25`, full `opus_full_27` RED39/1938 -- against `opus_full_26` FAIL→OK 0, OK→FAIL 0, added 2. The residual routes
+    (32 fixed writers, `l2_payload_expr`, the held call's converted value in
+    1100/1024 bytes, the indexed operand's value route -- the last two with
+    unreached mutants --, `l2_tok_text` atoms, `l2_pointer_decl_text`'s
+    joins) stay OPEN, listed in FIXED-BLOCKS-AUDIT;
+  - [ ] a checked build, or a test-only witness, that a call's actual records
+    and their slots do not overlap (Codex 2026-10-06): slice 2's overlap
+    mutant is killed only by chance; the existing toolchain where it serves;
+    no defensive check in the translator to kill a test mutant;
   - [ ] a failed allocation in the emission said twice, located and again at
     1:1 ([ALLOC-FAILURE-SAID-TWICE](steps/defects.md#alloc-failure-said-twice)):
     a small fix; its gated witness needs a row that fails an allocation,

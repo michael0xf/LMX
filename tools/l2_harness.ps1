@@ -3026,6 +3026,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_exprtext_fnptr.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_exprtext_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # Slice 3 (steps/fable-continuation-20261003.md §96): a path actual of 40 names -- it had at most 32, in a text of
+    # at most 1024 bytes (61:9 at slice 2, "expression too long").  The leaf is admitted, take writes through it,
+    # the write is seen in Holder's leaf; take, pass and go walked in the twin.
+    [pscustomobject]@{ Name = 'unit_exprtext_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_path_walk.lm2'; Source = 'unit_exprtext_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1, 2);
+        Absent = @(); Debt = @() },
     # Triage 2026-10-03: `idle: 1` at the root is an unknown head and defines a named Structure.
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone

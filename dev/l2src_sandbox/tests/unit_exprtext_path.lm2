@@ -1,0 +1,72 @@
+# FIXED-BLOCKS-AUDIT, the expression text, slice 3 (Codex 2026-10-06): a path actual has as many names as the
+# program writes -- it had at most 32, in a text of at most 1024 bytes, refused "expression too long" past
+# either.  take(h\s1\...\s40): the leaf of 40 nested Structures, not Equatable (an unread extra before its
+# equals).  take writes equals through the admitted argument; the write is seen in Holder's own leaf, and
+# extra keeps its value.  Entry 7.
+
+Equatable:
+    size_t: equals 0U
+end: Equatable
+
+Holder:
+    s1:
+        s2:
+            s3:
+                s4:
+                    s5:
+                        s6:
+                            s7:
+                                s8:
+                                    s9:
+                                        s10:
+                                            s11:
+                                                s12:
+                                                    s13:
+                                                        s14:
+                                                            s15:
+                                                                s16:
+                                                                    s17:
+                                                                        s18:
+                                                                            s19:
+                                                                                s20:
+                                                                                    s21:
+                                                                                        s22:
+                                                                                            s23:
+                                                                                                s24:
+                                                                                                    s25:
+                                                                                                        s26:
+                                                                                                            s27:
+                                                                                                                s28:
+                                                                                                                    s29:
+                                                                                                                        s30:
+                                                                                                                            s31:
+                                                                                                                                s32:
+                                                                                                                                    s33:
+                                                                                                                                        s34:
+                                                                                                                                            s35:
+                                                                                                                                                s36:
+                                                                                                                                                    s37:
+                                                                                                                                                        s38:
+                                                                                                                                                            s39:
+                                                                                                                                                                s40:
+                                                                                                                                                                    size_t: extra 5U
+                                                                                                                                                                    size_t: equals 0U
+end: Holder
+
+fn: take (Equatable: slot) size_t
+    slot\equals: 9U
+return: slot\equals
+
+fn: pass (Holder: h) size_t
+return: take(h\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\s19\s20\s21\s22\s23\s24\s25\s26\s27\s28\s29\s30\s31\s32\s33\s34\s35\s36\s37\s38\s39\s40)
+
+fn: go () size_t
+return: pass(Holder)
+
+size_t: k
+k: go()
+if: k = 9U && Holder\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\s19\s20\s21\s22\s23\s24\s25\s26\s27\s28\s29\s30\s31\s32\s33\s34\s35\s36\s37\s38\s39\s40\equals = 9U && Holder\s1\s2\s3\s4\s5\s6\s7\s8\s9\s10\s11\s12\s13\s14\s15\s16\s17\s18\s19\s20\s21\s22\s23\s24\s25\s26\s27\s28\s29\s30\s31\s32\s33\s34\s35\s36\s37\s38\s39\s40\extra = 5U
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+return

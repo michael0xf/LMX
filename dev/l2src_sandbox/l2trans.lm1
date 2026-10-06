@@ -945,9 +945,7 @@ prototype:
     fn: l2_tx_temp (@: L2Tx t; int: k) int
     fn: l2_tx_fixed (@: L2Tx t) @: char
     fn: l2_tx_fixed_keep (@: L2Tx t) @: char
-    fn: l2_tx_to_fixed (@: L2Tx t; @: char dest; size_t: cap; const: @(LmP0Node at)) int
     fn: l2_tok_tx (@: L2Tx t; const: @(LmP0Text a)) int
-    fn: l2_prep_fixed (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
     fn: l2_check_held_convert (const: @(LmP0Node node); int: oi; int: mi; const: @(char path)) int
     fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
     fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
@@ -25513,7 +25511,7 @@ return: 2
 
 # The same path as a value: the child at the last Structure field.
 # 0: dest holds it. 1: located or a prep failure. 2: not this shape.
-fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind); const: @(LmP0Node at); @: char dest) int
+fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     @: LmP0Field sl
     @: LmP0Field mem
     int: owner
@@ -25524,12 +25522,20 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     int: nseg
     int: i
     int: s
-    size_t: nlen
-    []: int slots 32
+    []: int slots_own 32
+    @: int slots 0
+    int: slots_cap 32
+    @: int grown 0
     []: char buf_own 128
     @: char buf 0
-    []: char cur 1024
-    []: char nxt 1024
+    []: char cur_own 1024
+    []: char nxt_own 1024
+    []: char num 32
+    L2Tx: cur_tx
+    L2Tx: nxt_tx
+    @: L2Tx cur @ cur_tx
+    @: L2Tx nxt @ nxt_tx
+    @: L2Tx swap 0
     if: dest = 0 || ind = 0 || span < 3 || (span % 2) = 0 || a0 = 0 || a0\value = 0 || a0\value\kind != c.LM_P0_NODE_ATOM || a0\value\as = 0 || a0\value\as\atom = 0
         return: 2
     sl: l2_next_active(a0\next)
@@ -25541,6 +25547,7 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     owner: l2_bound_nsty(mi, a0\value\as\atom)
     if: owner < 0
         return: 2
+    slots: slots_own
     consumed: 3
     nseg: 0
     while: consumed <= span
@@ -25554,8 +25561,18 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
         slot: l2_ns_slot_named(owner, buf, 0U, mem\value\as\atom\length, @ kind, @ ent)
         if: slot < 0 || (kind != 2 && kind != 3) || ent < 0
             return: 2
-        if: nseg >= 32
-            return: l2_error(l2_src, at, "expression too long")
+        # The names found so far, kept in twice the room (storage of the translation, released by l2_release).
+        if: nseg >= slots_cap
+            if: slots_cap > c.INT_MAX / 2
+                l2_alloc_err: 2
+                return: l2_alloc_or(l2_src, at, "size overflow")
+            grown: (cast: (@: int) l2_text_room((cast: (size_t) slots_cap) * 2U * c.sizeof(c.int), 0, 0U))
+            if: grown = 0
+                return: l2_alloc_or(l2_src, at, "out of memory")
+            memcpy((cast: (@: void) grown), (cast: (@: void) slots), (cast: (size_t) nseg) * c.sizeof(c.int))
+            slots: grown
+            slots_cap: slots_cap * 2
+        ---
         slots[nseg]: slot
         nseg: nseg + 1
         if: consumed = span
@@ -25573,20 +25590,21 @@ fn: l2_emit_actual_path (int: mi; @: LmP0Field a0; int: span; const: @(char ind)
     ---
     if: nseg < 1
         return: 2
-    if: l2_prep_fixed(a0\value, mi, ind, cur) != 0
+    if: l2_tx_open(cur, cur_own, 1024U) != 0 || l2_tx_open(nxt, nxt_own, 1024U) != 0 || l2_prep(a0\value, mi, ind, cur) != 0
         return: 1
+    # Each name wraps the text so far: the next text is written from the current one, then they change places.
     i: 0
     while: i < nseg
-        nlen: strlen(cur)
-        if: nlen + 48U >= 1024U
-            return: l2_error(l2_src, at, "expression too long")
         s: slots[i]
-        if: c.sprintf(nxt, "lmx_arena_ref_struct(%s, %uU)", cur, (cast: (unsigned) s)) < 0
-            return: 1
-        memcpy(cur, nxt, strlen(nxt) + 1U)
+        if: c.snprintf(num, 32U, ", %uU)", (cast: (unsigned) s)) < 0 || l2_tx_join(nxt, "lmx_arena_ref_struct(", cur\data, num, 0, 0) != 0
+            return: l2_alloc_or(l2_src, at, "out of memory")
+        swap: cur
+        cur: nxt
+        nxt: swap
         i: i + 1
     ---
-    memcpy(dest, cur, strlen(cur) + 1U)
+    if: l2_tx_set(dest, cur\data) != 0
+        return: l2_alloc_or(l2_src, at, "out of memory")
 return: 0
 
 # 0: *out_ni is the Structure index of this actual. 1: a located error was
@@ -25777,7 +25795,7 @@ return: l2_admit_implements(cand, req, req, 0, path, at, "return value")
 fn: l2_emit_return_path (int: mi; @: LmP0Field first; int: n; const: @(char ind); const: @(LmP0Node at)) int
     if: ind = 0 || first = 0
         return: 2
-return: l2_emit_actual_path(mi, first, n, ind, at, l2_tx_fixed(l2_tok))
+return: l2_emit_actual_path(mi, first, n, ind, at, l2_tok)
 
 # A CALL OF THE RESOLVED CALLEE idx (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): one check for
 # every spelling of a call -- `m(args)`, `m: args`, the vertical form, and a bare atom `m`, which
@@ -27767,19 +27785,6 @@ fn: l2_tx_fixed_keep (@: L2Tx t) @: char
         return: 0
     t\len: (cast: (size_t) -1)
 return: t\data
-
-# A text made for a route still on a fixed buffer of cap bytes (a route not migrated yet, FIXED-BLOCKS-AUDIT OPEN):
-# copied there when it fits, else refused where it stands, `at`.
-fn: l2_tx_to_fixed (@: L2Tx t; @: char dest; size_t: cap; const: @(LmP0Node at)) int
-    size_t: len
-    if: t = 0 || dest = 0 || cap = 0U
-        return: 1
-    len: l2_tx_len(t)
-    if: len >= cap
-        return: l2_error(l2_src, at, "expression too long")
-    if: t\data != dest
-        memcpy(dest, t\data, len + 1U)
-return: 0
 
 # An atom's text into t, as l2_tok_text writes it but of any length: a triple-quoted text as an L1 string (at
 # most four bytes for each of its bytes, and its quotes).
@@ -31296,7 +31301,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             if: occ_mi < 0 && l2_nsty_get(idx, t) < 0
                 er: l2_emit_value_convert_field(node, a0, actual_span, l2_ft(idx, t), mi, ind, l2_tx_fixed(l2_act_tx(acts, t)))
             if: occ_mi < 0 && actual_span >= 3 && l2_nsty_get(idx, t) >= 0
-                er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_tx_fixed(l2_act_tx(acts, t)))
+                er: l2_emit_actual_path(mi, a0, actual_span, ind, node, l2_act_tx(acts, t))
             if: er = 1
                 return: l2_prep_drop(acts, hides)
             if: occ_mi < 0 && er = 2 && (actual_span < 1 || l2_emit_fields(a0, actual_span, mi, ind, l2_act_tx(acts, t)) != 0)
@@ -32065,15 +32070,6 @@ fn: l2_eval_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             nxt: l2_next_active(nxt\next)
         ---
 return: 0
-
-# A migrated writer for a route still on a fixed buffer of 1024 bytes (FIXED-BLOCKS-AUDIT: that route is not migrated
-# yet, l2_emit_actual_path): its text copied into dest when it fits there, else refused where it stands.
-fn: l2_prep_fixed (const: @(LmP0Node node); int: mi; const: @(char ind); @: char dest) int
-    []: char own 1024
-    L2Tx: tv
-    if: dest = 0 || l2_tx_open(@ tv, own, 1024U) != 0 || l2_prep(node, mi, ind, @ tv) != 0
-        return: 1
-return: l2_tx_to_fixed(@ tv, dest, 1024U, node)
 
 # One formal of a generated signature: its FORMAL type code, the method, and its position among
 # the method's parameters (declared formals first, hidden/dynamic inputs after them).

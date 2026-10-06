@@ -1,0 +1,15 @@
+# The control of unit_decl_one_value_call_tail_refused with the call spelled explicitly, `@: Model m make(3)`: one
+# value, the declaration takes the result of make, whose return matches its `@: Model` result. Success is 7, read
+# through m.
+Model:
+    int: value 7
+end: Model
+fn: make (int: k) @: Model
+    return: Model
+end: make
+fn: check () int
+    @: Model m make(3)
+    return: m\value
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

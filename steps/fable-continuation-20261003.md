@@ -10340,9 +10340,9 @@ above are the record.
 
 ### Measured
 
-Documentation-only checkpoint: the translator, harness and fixtures described
-above are still uncommitted development work. The mutant and replay facts are
-measured on isolated clones; they do not establish a completed full gate or a
-landed source checkpoint.
-
-Gates: kernel opus_kernel_34 GREEN, L3 opus_l3_32 ok; full harness opus_full_34 pending.
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_34` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_32` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_34` (full harness) | RED39/1981: against `opus_full_32` FAIL→OK 0, OK→FAIL 0, added 10, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
+| isolated clones (scratchpad, before the gates) | 15 rows -- this section's, section 100's call controls and the factory dormancy rows -- all green on these bytes; each of the three mutants red on its own two rows only. |

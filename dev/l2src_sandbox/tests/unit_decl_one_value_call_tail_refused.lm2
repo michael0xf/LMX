@@ -1,11 +1,13 @@
-# `@: Model m make 3`: a candidate whose first item names a callable is that call (book section 9), one value, and
-# the call keeps its own reason -- the call check reads `make` with no actuals and refuses its arity, as for `r:
-# twice 3` -- not the declaration's (DECLARATION-CANDIDATE-ROLE).
+# `@: Model m make 3`: a call is its Frame -- `make: 3` or `make(3)` (unit_decl_one_value_call_colon, _call_paren) --
+# and `make 3` is two values (the author, 2026-10-06, LMX_blog/2026-10-06.md#explicit-call-frame; the answered
+# question LMX_blog/q/value-tail-prefix-call.md).  The declaration takes one value and refuses the second where it
+# stands, at 3: "a declaration takes one value" (DECLARATION-CANDIDATE-ROLE).  make returns `Model`, the Structure
+# reference its `@: Model` result names.
 Model:
     int: value 7
 end: Model
 fn: make (int: k) @: Model
-    return: @ Model
+    return: Model
 end: make
 fn: check () int
     @: Model m make 3

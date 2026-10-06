@@ -6056,7 +6056,11 @@ $fixtures = @(
     # DECLARATION-CANDIDATE-ROLE (steps/defects.md): a reference declaration whose candidate is one value and one more
     # is refused at the extra value, read or not, in the `@:` and the `const:` form, of a Structure and of a primitive --
     # it was a machine local with the model (a read refused at its path, or L1 gcc refuses, or nothing said).  A call
-    # in the candidate keeps the call's own reason (here its arity).  The twins: the same under --walk-methods.
+    # is its Frame (the author, 2026-10-06, LMX_blog/2026-10-06.md#explicit-call-frame): `make 3` is two values, refused
+    # at 3; make(3) and make: 3 are its controls.  The author's own example `r: twice 3` is no call -- the bare twice is
+    # refused for its missing n -- and his two spellings give 6.  A nested definition whose tail begins with a known
+    # method calls nothing (it was refused "internal: an own declaration has no physical field").  The twins: the same
+    # under --walk-methods.
     [pscustomobject]@{ Name = 'unit_decl_one_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_decl_one_value_refused.lm2:9:24: a declaration takes one value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_decl_one_value_refused_walk.lm2'; Source = 'unit_decl_one_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -6082,9 +6086,26 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_decl_one_value_prim_refused_walk.lm2'; Source = 'unit_decl_one_value_prim_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_decl_one_value_prim_refused_walk.lm2:7:20: a declaration takes one value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_decl_one_value_call_tail_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_decl_one_value_call_tail_refused.lm2:11:16: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_decl_one_value_call_tail_refused.lm2:13:21: a declaration takes one value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_decl_one_value_call_tail_refused_walk.lm2'; Source = 'unit_decl_one_value_call_tail_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_decl_one_value_call_tail_refused_walk.lm2:11:16: incompatible entry signature'; Absent = @(); Debt = @() },
+        Needle = 'unit_decl_one_value_call_tail_refused_walk.lm2:13:21: a declaration takes one value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_call_paren.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_call_paren_walk.lm2'; Source = 'unit_decl_one_value_call_paren.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_call_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_decl_one_value_call_colon_walk.lm2'; Source = 'unit_decl_one_value_call_colon.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_value_tail_prefix_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_value_tail_prefix_call_refused.lm2:8:4: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_value_tail_prefix_call_refused_walk.lm2'; Source = 'unit_value_tail_prefix_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_value_tail_prefix_call_refused_walk.lm2:8:4: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_value_tail_call_explicit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_value_tail_call_explicit_walk.lm2'; Source = 'unit_value_tail_call_explicit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_def_method_tail_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('DONE'); NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_def_method_tail_dormant_walk.lm2'; Source = 'unit_nested_def_method_tail_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Says = @('DONE'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3); NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_address_array_descriptor.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_array_index_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

@@ -1459,7 +1459,6 @@ prototype:
     fn: l2_ns_empty (int: ni) int
     fn: l2_struct_call_inert (const: @(LmP0Text t); int: mi) int
     fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
-    fn: l2_tail_decl_first (const: @(LmP0Frame fr)) int
     fn: l2_local_ns_declare (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_body_calls_name (@: LmP0Field first; const: @(LmP0Text h)) int
@@ -4424,10 +4423,11 @@ return: (cast: (int) (l2_text_eq(t, "sendMessage") || l2_text_eq(t, "receiveMess
 
 # Whether frame fr's tail is a Structure, not one value (book §9 :563: an absent target whose value IS a Structure is
 # created a structural variable, its type that Structure; `target: ()` -- with or without `end: target` -- is the empty
-# one; a literal, `arg: 7`, never declares).  One value is one atom, one operator run, or a call: a tail whose first
-# item names a callable -- `makeAdder 5`, `merge: A B` and what the receiver takes after it -- is that call's value
-# (callable-first, :559).  Anything else -- the empty tail, several items, one statement or declaration -- is a
-# Structure.
+# one; a literal, `arg: 7`, never declares).  One value is one atom, one operator run, or the application of a
+# receiver or of the C door -- `merge: A B`, `merge A C` and what the receiver takes after it.  A call is its Frame: a
+# tail whose first atom names a method -- `makeAdder 5` -- is no call and no value, and is a Structure like any other
+# (the author, 2026-10-06; for a unit item Q58 and 2026-10-05).  Anything else -- the empty tail, several items, one
+# statement or declaration -- is a Structure.
 fn: l2_tail_is_structure (const: @(LmP0Frame fr)) int
     @: LmP0Field f
     int: n
@@ -4441,17 +4441,12 @@ fn: l2_tail_is_structure (const: @(LmP0Frame fr)) int
         return: 0
     if: l2_expr_span(f) = n && (n > 1 || f\value\kind = c.LM_P0_NODE_ATOM)
         return: 0
-    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
-        if: l2_unit_names_method(f\value\as\atom) != 0 || l2_find_method(f\value\as\atom) >= 0 || l2_is_known(f\value\as\atom) != 0
-            return: 0
-        # The same, for a receiver written as an atom: `merge A C` is the receiver's application, the
-        # head's VALUE, exactly as the receiver frame at the check below is.  The book's own spelling
-        # of an explicit merge is `b: merge A C` (docs, "Явное копирование": the operands are A and C,
-        # the outer b receives the result; the destination name is not the first operand), and the
-        # receiver words are the language's, not a callable a binding could name.
-        if: l2_receiver_word(f\value\as\atom) != 0
-            return: 0
-        ---
+    # A receiver written as an atom: `merge A C` is the receiver's application, the head's VALUE, exactly as the
+    # receiver frame at the check below is.  The book's own spelling of an explicit merge is `b: merge A C` (docs,
+    # "Явное копирование": the operands are A and C, the outer b receives the result; the destination name is not the
+    # first operand), and the receiver words are the language's, not a callable a binding could name.
+    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0 && l2_receiver_word(f\value\as\atom) != 0
+        return: 0
     # Q58 (the author, 2026-10-01): `Batch: (put: 7)` with put a method of the unit -- Batch, absent, holds the one
     # Structure (put: 7): the known call is a STATEMENT of its body, retained, not executed at the definition and
     # not the head's value.  A receiver's call (`merge: A B` and what the receiver takes after it) and the C door
@@ -11384,41 +11379,6 @@ fn: l2_struct_call_inert (const: @(LmP0Text t); int: mi) int
         return: l2_own_self_typed(oi)
 return: l2_ns_empty(ni)
 
-# Whether frame fr's tail begins with the declaration of a number or char field with its initializer -- a type word
-# (l2_lit_field_kind), a name, a value: `size_t: v 4U`.  A conversion named by that type word takes one value, so this
-# is a declaration, never that call, whatever the program's parts name (l2_tail_is_structure asks l2_is_known).
-fn: l2_tail_decl_first (const: @(LmP0Frame fr)) int
-    @: LmP0Field f
-    @: LmP0Field g
-    if: fr = 0 || fr\body = 0
-        return: 0
-    f: l2_next_active(fr\body\first_field)
-    if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_FRAME || f\value\as = 0 || f\value\as\frame = 0 || f\value\as\frame\body = 0 || l2_lit_field_kind(f\value) < 0 || l2_count_active(f\value\as\frame\body) != 2
-        return: 0
-    g: l2_next_active(f\value\as\frame\body\first_field)
-return: (cast: (int) (g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && l2_ident(g\value\as\atom) != 0))
-
-# 1 when every field of the tail is a number or char declaration, or a nested Structure.
-fn: l2_tail_field_body (const: @(LmP0Frame fr)) int
-    @: LmP0Field f
-    int: n 0
-    if: fr = 0 || fr\body = 0
-        return: 0
-    f: l2_next_active(fr\body\first_field)
-    while: f != 0
-        if: f\value = 0 || f\value\kind != c.LM_P0_NODE_FRAME || f\value\as = 0 || f\value\as\frame = 0
-            return: 0
-        if: l2_lit_field_kind(f\value) >= 0 && l2_count_active(f\value\as\frame\body) != 2
-            return: 0
-        if: l2_lit_field_kind(f\value) < 0 && l2_tail_is_structure(f\value\as\frame) = 0
-            return: 0
-        n: n + 1
-        f: l2_next_active(f\next)
-    ---
-    if: n < 1
-        return: 0
-return: 1
-
 # Identifier atoms only (`A: b`). A literal (`x: 7`) is not content of a new Structure.
 fn: l2_ident_only_tail (const: @(LmP0Frame fr)) int
     @: LmP0Field f
@@ -15412,18 +15372,17 @@ fn: l2_unimpl_numeric (const: @(LmP0Node stmt)) const: @: char
 return: 0
 
 # Whether the n fields from first are one value (book section 9, as l2_tail_is_structure reads a tail): what the
-# operand reader spans -- one atom, one operator run, one Frame -- or a call, whose first item names a callable and
-# whose actuals follow it.
+# operand reader spans -- one atom, one operator run, one Frame -- or a receiver word written as an atom with what it
+# takes after it (`merge A C`).  A call is its Frame, `make: 3` or `make(3)`: `make 3` is two values (the author,
+# 2026-10-06), whatever make names.
 fn: l2_fields_one_value (@: LmP0Field first; int: n) int
     @: LmP0Field f l2_next_active(first)
     if: n < 1 || f = 0 || f\value = 0
         return: 0
     if: l2_expr_span(f) = n
         return: 1
-    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0
-        if: l2_unit_names_method(f\value\as\atom) != 0 || l2_find_method(f\value\as\atom) >= 0 || l2_is_known(f\value\as\atom) != 0 || l2_receiver_word(f\value\as\atom) != 0
-            return: 1
-    ---
+    if: f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && f\value\as\atom != 0 && l2_receiver_word(f\value\as\atom) != 0
+        return: 1
 return: 0
 
 # A declaration's candidate is one value (DECLARATION-CANDIDATE-ROLE): the first value past it is refused where it

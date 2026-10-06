@@ -1,0 +1,18 @@
+# A nested definition whose tail begins with a known method calls nothing, as a unit item does (Q58; the author,
+# 2026-10-05 and 2026-10-06: a call needs its Frame): `C: tick 7` in S defines C, and running S prints nothing.  It
+# was read as tick's value and refused "internal: an own declaration has no physical field".  report prints DONE (a
+# C door keeps it native when the methods are walked) and gives 7.  The program says only DONE.  Entry 7.
+fn: tick () int
+    c.printf: "tick\n"
+    return: 1
+end: tick
+S:
+    C: tick 7
+end: S
+fn: report () int
+    c.printf: "DONE\n"
+    return: 7
+end: report
+S
+sendMessage: exit(exit_code: report(); stdout: ""; stderr: "")
+return

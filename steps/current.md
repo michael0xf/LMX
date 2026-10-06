@@ -621,9 +621,8 @@ Fable принял единственный writer/build-слот по [to_fable
   `r: twice 3` отвергается у twice, `twice: 3` и `twice(3)` дают 6. Вертикальные записи `r: twice:` с
   ограждением вызова не дают; автор подтвердил, что сброс уровня закрывает короткую форму (старый парсер
   прав); исправление и отложенное исследование отменены
-  ([§102 журнала](fable-continuation-20261003.md#declaration-call-tail-answer)). Это незакоммиченный
-  development-срез, не посаженный кодовый чекпойнт.
-  Gates: kernel opus_kernel_34 GREEN, L3 opus_l3_32 ok; full harness opus_full_34 pending.
+  ([§102 журнала](fable-continuation-20261003.md#declaration-call-tail-answer)). Гейты `opus_kernel_34` GREEN297, `opus_l3_32`,
+  `opus_full_34` RED39/1981: против `opus_full_32` FAIL→OK 0, OK→FAIL 0, добавлено 10.
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
   под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),

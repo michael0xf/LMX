@@ -880,9 +880,9 @@ Current bounded implementation, with no DONE claim:
     [section 102](steps/fable-continuation-20261003.md#declaration-call-tail-answer)):
     `make 3` in a candidate is two values, refused at 3; the callable-first
     reading is gone from both classifiers
-    ([CALLABLE-FIRST-TAIL](steps/defects.md#callable-first-tail)). This describes
-    the uncommitted development slice, not a landed source checkpoint.
-    Gates: kernel opus_kernel_34 GREEN, L3 opus_l3_32 ok; full harness opus_full_34 pending.
+    ([CALLABLE-FIRST-TAIL](steps/defects.md#callable-first-tail)). Gates: kernel `opus_kernel_34`
+    GREEN297 (114 selftests), L3 `opus_l3_32`, full `opus_full_34` RED39/1981 -- against
+    `opus_full_32` FAIL→OK 0, OK→FAIL 0, added 10.
   - [ ] the names of methods, formals and declared throws, 62 bytes: a
     method used as a value gets a public C wrapper under its source name,
     and `l1trans` keeps function names in 64-byte slots (`l1_fn_ensure`) --

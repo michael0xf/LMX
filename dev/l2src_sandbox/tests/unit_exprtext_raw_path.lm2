@@ -1,0 +1,44 @@
+# A write through a raw C path of 61 members, `head\next\...\next: head`, over a chain of C records the
+# program links: the path was written in at most 256 bytes, and a longer one was refused with no place
+# ("internal: a refusal said nothing"; owner group 3 of the expression text, section 99).  The write lands on
+# the 60th record after the head, which the program kept; the records are not freed.  Success is 7.
+include: "l1src/p0.lm1.h" "<stdlib.h>"
+
+fn: far (@: c.LmP0Field head; @: c.LmP0Field kept) int
+    if: kept = 0
+        return: 3
+    head\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next\next: head
+    if: kept\next != head
+        return: 2
+    return: 0
+end: far
+
+fn: chain_read () int
+    @: c.LmP0Field head
+    @: c.LmP0Field cur
+    @: c.LmP0Field nxt
+    @: c.LmP0Field kept
+    int: i 0
+    head: (cast: (@: LmP0Field) c.calloc(1U, c.sizeof(c.LmP0Field)))
+    if: head = 0
+        return: 1
+    cur: head
+    kept: 0
+    while: i < 62
+        nxt: (cast: (@: LmP0Field) c.calloc(1U, c.sizeof(c.LmP0Field)))
+        if: nxt = 0
+            return: 1
+        cur\next: nxt
+        cur: nxt
+        i: i + 1
+        if: i = 60
+            kept: cur
+    ---
+    return: far(head, kept)
+end: chain_read
+
+if: chain_read() != 0
+    sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

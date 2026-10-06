@@ -801,7 +801,7 @@ Current bounded implementation, with no DONE claim:
     keeps the ordinary machine activation, dirty-only timing, the
     call/exit/yield/cleanup order and one graph; no loop procedures, extra
     activations or state graph;
-  - [ ] IN PROGRESS: the text of one expression in the emitter, 1023 bytes
+  - [x] the text of one expression in the emitter, 1023 bytes
     (`l2_cat`), and the buffers that feed it, the path of an actual of at most
     32 names among them. Ordinary programs meet it: a sum of about a hundred
     operands is refused, and two shapes refuse with no located diagnostic
@@ -834,13 +834,26 @@ Current bounded implementation, with no DONE claim:
     Owner groups 1 and 2 done
     ([section 98](steps/fable-continuation-20261003.md#expression-text-owner-groups)):
     the 27 writers whose callers already hand a text write it themselves;
-    `sizeof` of a type frame of any depth. Gates: kernel `opus_kernel_28` GREEN297 (114 selftests), L3 `opus_l3_27`, full `opus_full_29` RED39/1943 -- against `opus_full_28` FAIL→OK 0, OK→FAIL 0, added 1. The residual routes
-    (group 3's 34 writers on the 1024-byte room around tokens, places and
-    declarators -- `l2_tok_text`'s atoms and `l2_pointer_decl_text`'s joins
-    among them --, the held call's converted value in 1100/1024 bytes and
-    the indexed operand's value route, both with unreached mutants, the
-    migrated routes no translation reaches) stay OPEN, listed in
-    FIXED-BLOCKS-AUDIT;
+    `sizeof` of a type frame of any depth. Gates: kernel `opus_kernel_28` GREEN297 (114 selftests), L3 `opus_l3_27`, full `opus_full_29` RED39/1943 -- against `opus_full_28` FAIL→OK 0, OK→FAIL 0, added 1.
+    Owner group 3 done
+    ([section 99](steps/fable-continuation-20261003.md#expression-text-owner-group-3)):
+    tokens, places and declarators of any length; no writer of the
+    expression text is handed a fixed room, `l2_cat` is gone;
+    [ADDRESS-TYPE-PAST-BUFFER](steps/defects.md#address-type-past-buffer)
+    fixed with it. Gates: kernel `opus_kernel_31` GREEN297 (114 selftests), L3 `opus_l3_29`, full `opus_full_31` RED39/1953 -- against `opus_full_29` FAIL→OK 0, OK→FAIL 0, added 10.
+  - [ ] the expression text's residuals (FIXED-BLOCKS-AUDIT, Codex
+    2026-10-06): the migrated routes no recorded translation reaches
+    (`l2_mrs_occ_read`, `l2_emit_array_load_at`, `l2_emit_own_index`'s
+    literal and loaded index, `l2_emit_arr_operand`'s element branches,
+    `l2_emit_indexed`'s load branch, `l2_tok_slot`,
+    `l2_emit_reference_declaration`, a machine local or a define name in a
+    raw index) wait for the producer and reachability census -- no removal
+    on coverage, an unchanged replay or "not this shape"; the held call's
+    converted value and the indexed operand's value route have unreached
+    mutants; behaviour pinned only by text (the receiving admission's
+    temporary, the captured indirect place, a slot load's cast) needs
+    behavioural witnesses; a foreign C name past 63 bytes is measured on
+    translation only until `l1trans`'s step;
   - [ ] a checked build, or a test-only witness, that a call's actual records
     and their slots do not overlap (Codex 2026-10-06): slice 2's overlap
     mutant is killed only by chance; the existing toolchain where it serves;

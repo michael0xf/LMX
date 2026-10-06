@@ -3066,6 +3066,27 @@ $fixtures = @(
     # was at most 256 bytes (1:11, "expression too long").  Natively only, as unit_sizeof_long_name: a walked root
     # stops at its `sizeof` at any depth ("lmx: walk error: UNSUPPORTED").
     [pscustomobject]@{ Name = 'unit_exprtext_sizeof_frame.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # Owner group 3 (steps/fable-continuation-20261003.md §99): inputs past the bounds its writers held -- a write
+    # through 260 levels and through a pointer named with 300 bytes (refused at 6:5 / 7:5, "assignment target must be a
+    # declared typed mutable value"), the address of a pointer 300 and 1100 levels deep and a write through one level
+    # of such pointers (the translator crashed at 300; refused with no place at 1100), a write through a raw C path of
+    # 61 members and a raw index of 160 terms (refused with no place).  The twins walk every method but the root's
+    # native word; the raw path and the raw index natively only: under --walk-methods their methods keep their native
+    # words (the C door in chain_read and far, the raw pointer index in work).
+    [pscustomobject]@{ Name = 'unit_exprtext_deref_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_deref_deep_walk.lm2'; Source = 'unit_exprtext_deref_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..260);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_deref_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_deref_name_walk.lm2'; Source = 'unit_exprtext_deref_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_address_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_address_deep_walk.lm2'; Source = 'unit_exprtext_address_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1, 2, 3, 4);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_capture_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_capture_deep_walk.lm2'; Source = 'unit_exprtext_capture_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0, 1, 2);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_raw_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_raw_index.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # Triage 2026-10-03: `idle: 1` at the root is an unknown head and defines a named Structure.
     [pscustomobject]@{ Name = 'entry_ret_tr_bad.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
     # One return-literal rule for every callable: an int result literal must fit int in a lone

@@ -9957,3 +9957,147 @@ translator of this section's full gate against section 97's over the 1937.
 | `build/l3_selftest/opus_l3_27` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_29` (full harness) | RED39/1943: against `opus_full_28` FAIL→OK 0, OK→FAIL 0, added 1, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
 | `build/l2_harness/opus_focus_g12` (focused, before the gates) | 39 rows: this section's row, the rows its mutants are killed by and the controls of sections 94, 96 and 97, all green. |
+
+<a id="expression-text-owner-group-3"></a>
+## 99. Tokens, places and declarators of any length: owner group 3 of the expression text (FIXED-BLOCKS-AUDIT, ADDRESS-TYPE-PAST-BUFFER)
+
+After groups 1 and 2 (section 98), 19 call sites still handed a writer the
+text's room for 1023 more bytes (`l2_tx_fixed`), all of them into one group
+of 34 writers around tokens, places and declarators -- the closure over the
+translator's calls in which a caller's buffer handed to a writer moves with
+it. Codex (2026-10-06): group 3 next, with the remaining adapters removed
+and long-input witnesses for the limits a program still reaches.
+
+**The group.** 31 of the 34 write the text: `l2_cast_type`,
+`l2_cast_resolve`, `l2_pointer_decl_text`, `l2_value_decl_text`,
+`l2_tok_formal`, `l2_tok_slot`, `l2_own_load`, `l2_own_cell_load`,
+`l2_own_addr`, `l2_own_from_expr`, `l2_emit_graph_field_value`,
+`l2_model_inst`, `l2_type_inst`, `l2_occ_expr`, `l2_tok_method_occ`,
+`l2_cf_actual_emit`, `l2_emit_address`, `l2_emit_raw_path`,
+`l2_prefix_deref`, `l2_deref_load`, `l2_capture_indirect_place`,
+`l2_emit_index_base`, `l2_emit_index_place`, `l2_emit_path_load`,
+`l2_emit_array_ptr`, `l2_held_binding`, `l2_held_convert_emit`,
+`l2_hidden_forward`, `l2_hidden_from`, `l2_hidden_lex` and
+`l2_cap_host_src`; with them `l2_emit_index_expression` and
+`l2_num_read_text`, which fed their texts. `l2_cat` -- the join of at most
+1023 bytes -- is removed; `l2_tok_text` and `l2_fmt_l1_string` keep their
+buffer, whose room their callers size from the atom (`l2_tok_tx`, a table
+cell's text, a source literal). A call's hidden inputs are one block of
+texts, as its actuals (`l2_emit_call_hides`): the 1024-byte slots and
+`l2_act_at` go. The 59 buffers the callers had become texts on those
+buffers (`l2_tx_local`: the buffer is the text's first room, and the text
+grows past it), and the 19 adapter sites hand the text; `l2_tx_fixed` is
+removed, and `l2_index_token`, which nothing called. One helper is added,
+`l2_prefix_levels` (levels of `\`, then a text).
+
+**What a program met.** With the translator of section 98 (`opus_full_29`,
+the bytes of `247a6339`):
+
+- a dereference word -- `\...\p`, its levels and its pointer's name
+  together -- was taken in at most 255 bytes (`l2_prefix_deref`), and a
+  longer one was refused as an assignment target ("assignment target must
+  be a declared typed mutable value");
+- a raw C path was written in at most 256 bytes (`l2_emit_raw_path`) and a
+  raw index in at most 1024 (`l2_emit_index_expression`,
+  `l2_emit_index_place`); past them the translation was refused with no
+  place ("internal: a refusal said nothing");
+- the address type -- a pointer one level deeper than the target -- of a
+  path target's address (`l2_emit_address`) and of a place captured before
+  it is written through (`l2_capture_indirect_place`) was joined by
+  `l2_cat` into 256-byte buffers on the stack, its text and its
+  declaration, and written past them (ADDRESS-TYPE-PAST-BUFFER,
+  `steps/defects.md`): with a target 241 levels deep the address's L1 is
+  already wrong at exit 0 -- a cast with no type, `(cast: () l2_pxp[0])`,
+  which `l1trans` refuses; at 245 `(cast: (2_t1) l2_pxp[0])`, which
+  `l1trans` takes and gcc refuses --; at 300 the translator crashes (139),
+  for the address and for the capture alike; at 1100 the join's 1023 bytes
+  refuse it with no place.
+
+| Row | What it pins | The previous translator |
+| --- | --- | --- |
+| `unit_exprtext_deref_deep` (+`_walk`) | a write and a read through a pointer 260 levels deep, handed down a chain of 260 methods as `unit_addr_depth` hands it down two | refused at 6:5 |
+| `unit_exprtext_deref_name` (+`_walk`) | a write and a read through a pointer local named with 300 bytes | refused at 7:5 |
+| `unit_exprtext_address_deep` (+`_walk`) | the address of a path target whose type is a pointer 300 levels deep, and of one 1100 deep, each handed to a formal one level deeper | crashes (139) |
+| `unit_exprtext_capture_deep` (+`_walk`) | a write through one level of a pointer 300 levels deep, and of one 1100 deep: the place is captured in a temporary first | crashes (139) |
+| `unit_exprtext_raw_path` | a write through a raw C path of 61 members over a chain of C records (`LmP0Field`) the program links | refused with no place |
+| `unit_exprtext_raw_index` | a raw pointer index of 160 terms, written and read | refused with no place |
+
+Every row's success is 7. The twins walk every method, and the root under
+its walk; the raw path's and the raw index's rows run natively only: under
+`--walk-methods` their methods keep their native words (the C door in
+`chain_read` and `far`, the raw pointer index in `work`). The deep
+dereference's two rows are the gate's slowest compiles, about 1 m 45 s
+each, with cc1 at 222.5 MB -- under the previous gate's peak, 232.7 MB of
+another row.
+
+Not pinned by a row. A foreign type's word in a declarator was cut at 255
+bytes, silently (`l2_pointer_decl_text`), and a foreign type's name in a
+cast was copied in 256 (`l2_cast_resolve`): measured on translation only --
+for a cast to `c.T` named with 300 bytes the previous translator writes the
+name cut to 255 bytes in four places of the L1 and whole in one, this one
+whole in all five -- because `l1trans` takes no C type name of 64 bytes or
+more (the toolchain debt of section 98). Migrated by the same rule but
+reached by no recorded translation and not probed for length: `l2_tok_slot`;
+`l2_emit_reference_declaration`, whose declared name was copied in 256 bytes
+(a pointer local declared with a name of 300 or 1100 bytes is an own field,
+`l2_q`, and its L1 is the same with both translators); a machine local as a
+raw index's base and a define name as one of its pieces, copied in 1024
+(`l2_emit_index_base`, `l2_emit_index_expression`); the machine-local path
+root's name, copied in 64 (`l2_emit_path_to`), which only the programs of
+its producers reach (DECLARATION-CANDIDATE-ROLE, OWN-TYPE-CODE-BANDS). No
+coverage, no unchanged replay and no "not this shape" shows them dead: they
+stay for the producer and reachability census (Codex 2026-10-06). The held
+call's converted value (`l2_held_convert_emit`, 1100 bytes) is a read of a
+generated name, `l2_hcr<n>`; a bound value's text (`l2_emit_stmts`, 1100
+bytes) was reached by no probe: what is bound is a name, a path read into a
+temporary or a letter's payload.
+
+Reach, measured with a coverage build of this translator over the 1937
+recorded translations of `opus_full_27`: every writer of the group runs but
+`l2_tok_slot`; `l2_emit_reference_declaration` never runs; in
+`l2_emit_index_base` the slot and machine-local branches never run, and in
+`l2_emit_index_expression` the own-array and define-name branches.
+
+Mutants, each its own translator, run by the harness of an isolated shared
+clone of HEAD with the step laid over it, its own evidence directory, one
+after another; the rows named are run, and all of them pass without it:
+
+| Mutant | Killed by |
+| --- | --- |
+| a dereference word of 256 bytes or more refused again (`l2_prefix_deref`) | `unit_exprtext_deref_deep`, `unit_exprtext_deref_name` (no L1) |
+| a raw C path past 255 bytes refused again (`l2_emit_raw_path`) | `unit_exprtext_raw_path` (no L1) |
+| an index past 1023 bytes refused again (`l2_emit_index_expression`) | `unit_exprtext_raw_index` (no L1) |
+| the address type's text bounded at 256 bytes (`l2_emit_address`) | `unit_exprtext_address_deep` (no L1); `unit_exprtext_capture_deep` passes |
+| the captured place's declaration bounded at 256 bytes (`l2_capture_indirect_place`) | `unit_exprtext_capture_deep` (no L1); the other five rows pass |
+| a declarator joined in at most 1022 bytes again (`l2_pointer_decl_text`) | `unit_exprtext_address_deep`, `unit_exprtext_capture_deep` (no L1); the other four, `unit_exprtext_sizeof_frame` and `unit_sizeof_type_frame` pass |
+| one indirection fewer (`l2_prefix_levels`) | `graph_shape_machine_address`, `unit_addr_arg`, `unit_addr_take` (no L1), `unit_addr_depth` (the program crashes) |
+| a raw C path's members after its root not written | `unit_exprtext_raw_path` (exit 1), `unit_c_member_len`, `unit_c_member_twohop` (the program crashes) |
+| a pointer declarator without its type's word | `entry_argc`, `entry_array`, `entry_dyn_array_index` (`l1trans`) |
+| an index of its first piece only | `unit_exprtext_raw_index`, `unit_raw_pointer_index_expression` (exit 1) |
+| an input the site does not need handed as an empty text, not `ABSENT` (`l2_emit_call_hides`) | `unit_callable_formal_site_names_reference`, `unit_callable_formal_site_reference_forwarded`, `unit_callable_formal_site_reference_unasked` (gcc); the other 5 of the 8 rows whose L1 it changes pass |
+| a held call's converted binding left as it was given (`l2_held_convert_emit`) | `unit_held_call_free_name_converted` (exit 1, natively and walked) |
+| an indirect place kept as written, not the temporary it was captured in (`l2_capture_indirect_place`) | only `unit_arg_decl_oldptr`'s text pin of the native relationship -- a text pin, not behaviour. Of the 58 rows whose L1 it changes, run, the other 57 pass: in none of them does the place change between its capture and the write. The behaviour stays untested (FIXED-BLOCKS-AUDIT). |
+| a slot's load without the type it is cast to (`l2_own_cell_load`) | only `unit_ref_local_path`'s text pin; of a fixed sample of 60 of the 493 rows whose L1 it changes, run, the other 59 pass. The behaviour stays untested (FIXED-BLOCKS-AUDIT). |
+
+Found beside it. A pointer about 950 levels deep, handed down a chain of
+methods as in `unit_exprtext_deref_deep` -- one interned foreign type for
+each level --, is refused "invalid raw dereference": past 900 interned
+types the pointer codes reach the own array band (OWN-TYPE-CODE-BANDS, its
+own step). And `@: size_t p1 @v`, then `@@: size_t p2 @p1`: `\p2` reads
+`p1`'s cell, which holds no value while `p1`'s value is its working value
+(L2 section 18.2) -- a null read at run time, the same with both
+translators; asked of Codex, not this step's.
+
+Replay, with this section's gate translator (`opus_full_31`) against
+section 98's (`opus_full_29`) over the 1937 recorded translations of
+`opus_full_27`: every row keeps its L1, exit, messages and number of
+allocations.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_31` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_29` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_31` (full harness) | RED39/1953: against `opus_full_29` FAIL→OK 0, OK→FAIL 0, added 10, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
+| `build/l2_harness/opus_focus_g3b` (focused, before the gates) | 40 rows: this section's six rows and their four twins, the rows its mutants are killed by and the controls of sections 94, 96, 97 and 98, all green. |

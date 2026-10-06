@@ -10814,3 +10814,131 @@ binding of a word -- a local `size_t: sub`, a method `fn: until` -- is what the 
 | `build/l3_selftest/opus_l3_38` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_40` (full harness) | RED39/2025: against `opus_full_39` FAIL→OK 0, OK→FAIL 0, added 26 (the witnesses, all OK), removed 0, red rows whose message changed 0. The 15 declared paths were hashed before the run; every staged copy is their bytes. |
 | Replay of `opus_full_38`'s 1998 recorded translations | 1990 byte-identical; 8 messages moved, as above. |
+
+<a id="reserved-name-bindings-slice"></a>
+## 108. A word of the language binds nothing: one admission of every binding's name (RESERVED-NAME-BINDINGS)
+
+Codex's answers K03-RESERVED-NAME-ANSWER-20261006-02 and -03 (parent K03-UNIFIED-HEAD-IMPLEMENT-20261006-01) to the
+question of §106: no new language choice -- the author already decided that the receivers and operators of the
+language are reserved and unshadowable, exactly like `if` (CORE.md :648-652, the dictionary :128 and :475, the plan
+:1657); a method, a formal or any other binding of a program with a reserved name is invalid; there is no profile
+exception (`receiveMessage` is a receiver, docs/LMX_semantics.en.md :1824); quoting escapes no reservation (grammar
+§5). The fix is one admission of binding creation, said at the name. A name's reservation follows its defined contract,
+never whether its lowering exists (-03). Visibility-first resolution stays for ordinary names; descriptive positions
+stay legal (`catch: merge ()` names a failure; `fn: mytest ()` gives fn an ordinary name).
+
+The defined set (`l2_head_word`, what the resolver calls a word), each group by its document:
+
+| Group | Words | Source |
+| --- | --- | --- |
+| receivers heading a statement | sendMessage receiveMessage merge table catch throw throws until end sub fm synchronized length cast | `l2_receiver_word` (S1) |
+| statement words, `node` | fn int return if else while for node break continue | S1 (`l2_ident`'s words and the loop controls) |
+| operators | sizeof | S1 |
+| receiving expressions | const immutable independent | docs §10 (`l2_declaration` reads all three as qualifier kinds) |
+| receivers with a contract and no lowering yet | implements, test, post, external | docs §7 (implements; test adopted at :500), §28 :1489 ("post remains an ordinary protocol receiver"), L2 §18 :273 |
+| machine types | char size_t int void unsigned ulong (lowered); short long float double signed `_Bool` (no by-value lowering) | `l2_ptr_type_word`; L2 §17 :187 (exactly their C99 meaning) |
+| unit instructions | predef define include profile prototype os | L2 §18 :275, docs/L1_spec_en.md :172-174; `l2_unit_word`, one list that `l2_unit_role` now reads |
+
+Not words, by their contracts: a named Structure, the C door, a name a predef or a header declares, a table alias
+(`u8`, `Boolean`), an argument label (`source`, `ask`, `answer`, `default`). Recorded open classifications (no
+document makes them a compiler receiver, and none is claimed shadowable either): `RuntimeImmutable` and `toLmx`
+(operations in prose, docs :746 and :1142); `llong`, `ullong`, `uint`, `wchar_t` (named only by
+`l2_unimpl_numeric`'s refusal); `ifdef` and the heads `C`, `L1`, `L2`, `L3` (the L1 profile, docs/L1_spec_en.md :174);
+`_Complex` (never a type on its own).
+
+The admission (`l2trans.lm1`):
+
+- `l2_bind_admit(t, at, path)`: the one admission of a name a program binds. A plain identifier that is a word is
+  refused at the name -- "<word> is a word of the language: a program cannot bind it" (`l2_bind_reserved`); an exact
+  spelling (`` `merge` ``) is decoded first (`l2_exact_ident`) and refused the same way; an exact spelling of another
+  name says "an exact identifier cannot name a binding yet" (bindings are keyed by their plain spelling: a located
+  limit where "unsupported body" was said).
+- `l2_bind_spelling(t)`: what a binding's shape reads in its name position -- any identifier, plain or exact -- so a
+  word, a statement word (`int: if 3` failed `l2_ident` and was "unsupported body") and an exact spelling all reach the
+  admission: `l2_declaration` (every declaration's name: own fields, pointer cells, formals, const and
+  machine locals), `l2_fnptr_local`, `l2_struct_local`, `l2_receive_msg_shape` (the bound name; the model stays a reference),
+  `l2_slot_decl_ty`, `l2_ns_arrarr_field`, `l2_take_ns_body` (ten field shapes), `l2_take_eternal`, `l2_typed_formal`
+  (a callable formal), `l2_collect_method_body` (a method's name).
+- The creations admit: `l2_own_add` and `l2_ml_add` (they tested `l2_ident`: "incompatible entry signature",
+  "unsupported body"), a method's name, a formal (both forms), each of the twelve field registrations of
+  `l2_take_ns_body`, a qualified branch's name. The slot branch of `l2_scan_body` takes none: it is dead -- `@: char x`
+  and `@: size_t x` always have an own pointer code (`l2_own_decl_ty` is 1000 + 2 ft, never 0), so `l2_own_add`
+  admits them; a marker build reached it in none of 2024 translations (left for S6). `l2_bind_at` finds the name's atom in the binding
+  statement, so the refusal is said at the name.
+- The words with no lowering get their own located contract as statements, never an accidental one: `test`, `post`,
+  `external` "<word> is not supported yet" (beside fm and synchronized, `l2_check_word_stmt`); a unit instruction in a
+  body "<word> is a unit instruction: it stands at the root of the unit"; `short`, `signed`, `_Bool` declarations
+  "by-value <type> local not yet implemented" (beside float, double, long, `l2_unimpl_numeric`). Before, `test: 1`
+  and `short: x 3` were accepted (an assignment and a named Structure `short`), bare `test` was "unbound dynamic input".
+- The profile exception is gone: `l2_receive_msg_shape` and the walker no longer ask whether a method named
+  receiveMessage exists.
+
+The binding matrix (translation only; 12 kinds -- a field at the root, plain and quoted, a local in a method, plain,
+quoted and `size_t`, a nested body's local, a reference local, a method, a sub, a formal, a named Structure's field,
+the name receiveMessage binds -- by 39 words): on the S2+S3 bytes every word but `l2_ident`'s eight was accepted in
+every kind (a method named sendMessage shadowed the receiver at its call site); now all 408 cells of the 34 words of
+the matrix that are in the set say "<word> is a word of the language" at the name's line and column; the ordinary
+names are accepted, and their exact spellings say the located limit.
+
+The migrations (every program of the tree that bound a word; the replay of `opus_full_40`'s 2024 recorded translations
+with the new translator differs in exactly 64 rows, each refused at its binding, nothing else changed):
+
+| Fixture | Binding | Renamed to | Gate |
+| --- | --- | --- | --- |
+| 60 fixtures of the body-path, cache, call-argument, formal, occurrence, q24 and walk families ([manifest](k03-reserved-name-migrations.tsv)) | the method `test` | `mytest` (method, trailer, calls, paths `mytest\x`, the callable type of `test2 (mytest: f)`, comments) | GATED (60 rows) |
+| `unit_recursion` | the local `size_t: sub` | `recursiveResult` | GATED |
+| `dev/l2src_sandbox/parser_text_heap.lm2`, `parser_trailer_role.lm2` | the formal `size_t: length` | `textLength` (never the C field `result\length`) | GATED (RootSource) |
+| `unit_next_message_method_first` | the method `receiveMessage` | refused at its name now; the program runs as `unit_next_message_method_ordinary` (method `nextValue`), native and walked | GATED |
+| `unit_continue`, `unit_while` | the method `until` | `loopCondition` | UNGATED (no row names them) |
+| `unit_paren_long` | the method `long` | `nestedSum` | UNGATED |
+
+Two refusal needles moved two columns (`mytest` is longer, left of the refused place): `unit_occ_root_named` 18:13 →
+18:15, `unit_own_last_occurrence` 28:20 → 28:22. The migrated programs keep their behavior: their translations with the
+new translator, the new names read back as the old, equal the old translations byte for byte (the name's length in
+`lmx_source_name_set` aside); the three library rows differ only in the unit hash of the evidence directory. The root
+`l2src/` twins of the two parser ports keep `length` (the twin is read by no gate).
+
+The witnesses: 27 new fixtures and 54 new rows after the K03 S2+S3 rows, the `unit_next_message_method_first` row now a
+refusal. Refused at the name, natively and under `--walk-methods`: a field at the root (`merge`, `external`), a local
+(`size_t`, `post`), a nested body's local (`break`), a method (`table`, `test`, `long`), a sub (`until`), a formal
+(`merge`, `double`), a callable formal (`length`), a named Structure's field (`sub`, `include`), a char pointer cell
+(`sizeof`), an imported function-pointer local (`merge`), a reference local (`cast`), a qualified branch (`merge`), the
+name receiveMessage binds (`catch`), a local named `if`, and the exact spellings `` `merge` `` and `` `node` ``. Refused
+at the word by their own contracts: bare `test` and `post` ("not supported yet"), `include: "stdio.h"` in a method
+(the unit instruction). Run natively and walked (WalkRoot; methods 0-3 walked, the entry native until WalkRoot clears
+it): `unit_rn_word_prefixed_names` -- merged, Holder's casting, tables, lengthy, untilDone, subtotal, testCount are
+other names, bound and used; `unit_next_message_method_ordinary` (method 0 walked).
+
+Mutants (each built from the patched bytes, the 26 witnesses translated; a witness is red when its first diagnostic is
+no longer its needle):
+
+| Mutant | Red witnesses |
+| --- | --- |
+| a word admitted like any name (`l2_bind_admit`'s two word tests) | 23 of 23 binding refusals (the three statement contracts stay) |
+| the exact spelling not decoded | the two exact spellings |
+| `l2_declaration`'s name read by `l2_ident` again | `if` and the two exact spellings |
+| no admission in `l2_own_add` | 11: the root fields, the locals, the nested local, the pointer cell, the reference local, the receiveMessage name |
+| no admission in `l2_ml_add` | the function-pointer local |
+| no admission of a method's name | the methods `table`, `test`, `long`, the sub `until`, `unit_next_message_method_first` |
+| no admission of a formal (both forms) | the formals `merge`, `double`, the callable formal `length` |
+| no admission of a qualified branch's name | the branch `merge` |
+| no admission of the twelve field registrations | none alone: a named Structure's field is admitted again as its procedure's own field (`l2_own_add`) |
+| the twelve field registrations and `l2_own_add` | 13: the two fields with the eleven of `l2_own_add` |
+| the set without implements, test, post, external, immutable, independent | the method `test`, the local `post`, the field `external`, the two statement contracts |
+| the set without the C99 machine types | the method `long`, the formal `double` |
+| the set without the unit instructions | the field `include`, the `include` statement |
+| the statement contracts of the words with no lowering removed | the three statement contracts |
+
+The unmutated control: 0 of 26 red. Focused runs on the patched bytes: `opus_focus_rn_02` 180 targets, 0 failed (the
+witnesses, every migrated row, the K03 S2+S3 rows, the catch, implements, eternal and receiveMessage controls);
+`opus_focus_rn_03` 58 targets, 0 failed (the witnesses after the function-pointer witness was added and the dead slot
+edit removed).
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_41` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_39` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_41` (full harness) | Stopped by the low-memory reaper of Claude Code at 1344 logs (about 3.1 GB of 15.8 GB free on the machine); run again on the same 96 hashed paths as `build/l2_harness/opus_full_42`: RED39/2079, against `opus_full_40` FAIL→OK 0, OK→FAIL 0, added 54 (the witnesses and the ordinary-name program, all OK), removed 0, red rows whose message changed 0; the migrated rows stay OK. Every staged copy is the declared bytes. |
+| Replay of `opus_full_40`'s 2024 recorded translations | 1960 byte-identical; 64 refused at the binding (60 `test`, 2 `length`, `sub`, `receiveMessage`); the migrated sources translate as before but for the renamed name. |

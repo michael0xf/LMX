@@ -1,7 +1,7 @@
 # 7b-3 (ticket OPUS-7B3-20260929-02; Q51: ordinary visibility is forward and down, a local is not visible outward):
 # the bare name j after `end: for` -- j is declared in the for body, so outside the body it is not j at all, and the
 # translator refuses it where it stands.  (The explicit path for\j is the place of declaration: unit_body_path_for.)
-fn: test () int
+fn: mytest () int
     int: acc
     acc: 0
     for: int(i, 0) (i < 10) i++
@@ -9,8 +9,8 @@ fn: test () int
         acc: j
     end: for
     return: j
-end: test
+end: mytest
 int: r 0
-r: test()
+r: mytest()
 sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
 return

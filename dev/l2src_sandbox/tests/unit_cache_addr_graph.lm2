@@ -1,12 +1,12 @@
 # §7b witness (L2 spec §18.2): the address of an own field is its graph cell.  x is 5 and published by the call to
 # nop, so graph and working x are both 5 and x is clean.  `\p: 9` through `p: @x` changes the graph cell, not the
-# working copy: bare x stays 5 while `\p` reads 9 -- test gives 59.  x was not assigned after that, so the exit does
+# working copy: bare x stays 5 while `\p` reads 9 -- mytest gives 59.  x was not assigned after that, so the exit does
 # not republish the old 5 and check reads 9.  The program exits 59 + 9 - 9 = 59; under writes in place 99.
 fn: nop () int
     return: 0
 end: nop
 
-fn: test () int
+fn: mytest () int
     int: x 5
     nop()
     @: int p
@@ -15,14 +15,14 @@ fn: test () int
     int: seen 0
     seen: \p
     return: x * 10 + seen
-end: test
+end: mytest
 
 fn: check () int
-    return: test\x
+    return: mytest\x
 end: check
 
 int: v 0
-v: test()
+v: mytest()
 int: w 0
 w: check()
 sendMessage: exit(exit_code: v + w - 9; stdout: ""; stderr: "")

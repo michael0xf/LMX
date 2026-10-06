@@ -1,38 +1,38 @@
 # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: the author's rule (Q22.2, LMX_blog/2026-09-24.md,
 # book Sfields, CORE S3.1) -- an unqualified name is its LAST occurrence, including repeated
-# occurrences of the same name in one method body. `test\[N]x` counts in lexical (source) order;
-# unqualified `test\x` is `test\[lastIndex]x`.  Declared occurrences, read and written through a
+# occurrences of the same name in one method body. `mytest\[N]x` counts in lexical (source) order;
+# unqualified `mytest\x` is `mytest\[lastIndex]x`.  Declared occurrences, read and written through a
 # method root: unit_q24_repeated_decl.lm2.
 #
 # bafca4c (the author, 2026-09-28: assignment is not a declaration; an argument is its parameter): this
 # row numbered the bare assignments of the argument `arg`, one cell under Q29 (`arg: 1`, poke9 through
-# @: arg, `arg: 2` -- test\[0]arg and test\arg 2, then 5 after `test\arg: 5`).  They declare nothing now,
-# and test\[0]arg -- a place of declaration opened from another method, check (book §11) -- is refused
+# @: arg, `arg: 2` -- mytest\[0]arg and mytest\arg 2, then 5 after `mytest\arg: 5`).  They declare nothing now,
+# and mytest\[0]arg -- a place of declaration opened from another method, check (book §11) -- is refused
 # where it stands ("no such occurrence"): an argument has none.
 fn: poke9 (@: int p) int
     \p: 9
     return: 0
 end: poke9
 
-fn: test (int: arg) int
+fn: mytest (int: arg) int
     arg: 1
     poke9(@: arg)
     arg: 2
     return: 0
-end: test
+end: mytest
 
 fn: check () int
     int: first
     int: last
-    test(0)
-    first: test\[0]arg
-    last: test\arg
+    mytest(0)
+    first: mytest\[0]arg
+    last: mytest\arg
     if: first != 2
         return: 81
     if: last != 2
         return: 83
-    test\arg: 5
-    first: test\[0]arg
+    mytest\arg: 5
+    first: mytest\[0]arg
     if: first != 5
         return: 84
     return: 7

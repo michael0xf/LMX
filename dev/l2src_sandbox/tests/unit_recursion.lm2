@@ -10,13 +10,13 @@ end: Holder
 fn: direct (size_t: n) size_t
     size_t: keep
     size_t: next
-    size_t: sub
+    size_t: recursiveResult
     keep: n
     n: n + 100U
     if: keep != 0U
         next: keep - 1U
-        sub: direct(next)
-        if: sub != next
+        recursiveResult: direct(next)
+        if: recursiveResult != next
             return: 91U
     ---
     return: keep
@@ -24,12 +24,12 @@ end: direct
 fn: viaPath (size_t: n) size_t
     size_t: keep
     size_t: next
-    size_t: sub
+    size_t: recursiveResult
     keep: n
     if: keep != 0U
         next: keep - 1U
-        sub: Holder\viaPath(next)
-        if: sub != next
+        recursiveResult: Holder\viaPath(next)
+        if: recursiveResult != next
             return: 92U
     ---
     return: keep
@@ -37,13 +37,13 @@ end: viaPath
 fn: rmerge (size_t: n) size_t
     size_t: keep
     size_t: next
-    size_t: sub
+    size_t: recursiveResult
     keep: n
     Q: merge: P
     if: keep != 0U
         next: keep - 1U
-        sub: rmerge(next)
-        if: sub != next
+        recursiveResult: rmerge(next)
+        if: recursiveResult != next
             return: 93U
     ---
     return: keep

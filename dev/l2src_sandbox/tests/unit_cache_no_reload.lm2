@@ -1,24 +1,24 @@
 # §7b witness (book §12: a clean cached field is not written back; no reload after return): x is declared 1, dirty,
-# and published before the call to poke.  poke writes test\x: 7 through an explicit path.  test's bare x keeps its
-# working 1 (no reload) and is clean, so test's exit does not write 1 back: check reads 7.  The program exits
+# and published before the call to poke.  poke writes mytest\x: 7 through an explicit path.  mytest's bare x keeps its
+# working 1 (no reload) and is clean, so mytest's exit does not write 1 back: check reads 7.  The program exits
 # 1 * 10 + 7 = 17; under writes in place 77, with a reload after the call 77, with clean fields published 11.
 fn: poke () int
-    test\x: 7
+    mytest\x: 7
     return: 0
 end: poke
 
-fn: test () int
+fn: mytest () int
     int: x 1
     poke()
     return: x
-end: test
+end: mytest
 
 fn: check () int
-    return: test\x
+    return: mytest\x
 end: check
 
 int: v 0
-v: test()
+v: mytest()
 int: w 0
 w: check()
 sendMessage: exit(exit_code: v * 10 + w; stdout: ""; stderr: "")

@@ -1,0 +1,27 @@
+# RESERVED-NAME-BINDINGS, the control: a name that holds a word of the language is another name -- merged, Holder's
+# casting, tables, lengthy, untilDone, subtotal, testCount are bound (a field at the root, a named Structure's field,
+# a method, a formal, a sub, a local) and used, natively and walked.  Entry 7.
+int: merged 3
+Holder:
+    size_t: casting 4U
+end: Holder
+fn: tables (int: lengthy) int
+    return: lengthy + 1
+end: tables
+sub: untilDone ()
+    node\merged: node\merged + 10
+end: untilDone
+fn: check () int
+    int: subtotal 2
+    int: testCount 4
+    untilDone()
+    if: tables(subtotal) != 3
+        return: 81
+    if: node\merged != 13
+        return: 82
+    if: testCount != 4
+        return: 83
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

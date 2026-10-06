@@ -1,12 +1,12 @@
 # FABLE-SONNET-RECEIVE-RENAME-20260924-166 commit 3 (D-48): Q24 = A (author, LMX_blog/2026-09-25.md,
 # q24.md) -- a repeated TYPED declaration of one name in one body is a new occurrence, the same
-# mechanism the argument same-name-binding rule already uses. `test\[0]arg` = 1 (first), `test\[1]arg`
-# = 2 (second), unqualified `test\arg` = 2 (last, Q22.2 = A, FABLE-SONNET-LAST-OCCURRENCE-20260924-164).
-fn: test () int
+# mechanism the argument same-name-binding rule already uses. `mytest\[0]arg` = 1 (first), `mytest\[1]arg`
+# = 2 (second), unqualified `mytest\arg` = 2 (last, Q22.2 = A, FABLE-SONNET-LAST-OCCURRENCE-20260924-164).
+fn: mytest () int
     int: arg 1
     int: arg 2
     return: 0
-end: test
+end: mytest
 
 # The author's own example (LMX_blog/2026-09-25.md): a repeated declaration's initialiser
 # expression reads whatever occurrence was declared BEFORE this statement -- `x + 2` reads the
@@ -21,19 +21,19 @@ fn: check () int
     int: first
     int: second
     int: last
-    test()
-    first: test\[0]arg
-    second: test\[1]arg
-    last: test\arg
+    mytest()
+    first: mytest\[0]arg
+    second: mytest\[1]arg
+    last: mytest\arg
     if: first != 1
         return: 81
     if: second != 2
         return: 82
     if: last != 2
         return: 83
-    test\arg: 5
-    second: test\[1]arg
-    first: test\[0]arg
+    mytest\arg: 5
+    second: mytest\[1]arg
+    first: mytest\[0]arg
     if: second != 5
         return: 84
     if: first != 1

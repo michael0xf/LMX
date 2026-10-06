@@ -1,7 +1,7 @@
 # §7b witness (dirty.md §1.1: an own Structure field's working value is a reference, and its publication publishes the
 # reference, never a copy of the referent): `Box: b` binds b's working reference, and `b\v` goes through it before
 # anything is published -- first is 2.  The call publishes the reference; `b\v: 5` then writes the same Box, so the
-# explicit `test\b\v` reads 5.  test gives 2 * 10 + 5 = 25; a publication that copies the Box gives 22.  (Rebinding
+# explicit `mytest\b\v` reads 5.  mytest gives 2 * 10 + 5 = 25; a publication that copies the Box gives 22.  (Rebinding
 # one own Box field to another is refused today -- "graph assignment admission requires receiving-expression
 # tests" -- so the stale-reference half of the model has no witness here.)
 Box:
@@ -12,7 +12,7 @@ fn: nop () int
     return: 0
 end: nop
 
-fn: test () int
+fn: mytest () int
     b: merge: Box
     b\v: 2
     int: first 0
@@ -20,9 +20,9 @@ fn: test () int
     nop()
     b\v: 5
     int: seen 0
-    seen: test\b\v
+    seen: mytest\b\v
     return: first * 10 + seen
-end: test
+end: mytest
 
-sendMessage: exit(exit_code: test(); stdout: ""; stderr: "")
+sendMessage: exit(exit_code: mytest(); stdout: ""; stderr: "")
 return

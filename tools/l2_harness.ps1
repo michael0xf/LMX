@@ -2290,8 +2290,13 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_receive_else_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_next_message_method_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+    # RESERVED-NAME-BINDINGS: receiveMessage is reserved; no method takes its name.  The program with an ordinary name runs.
+    [pscustomobject]@{ Name = 'unit_next_message_method_first.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_next_message_method_first.lm2:5:5: receiveMessage is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_next_message_method_ordinary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
         Absent = @('lmx_thread_mail_take'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_next_message_method_ordinary_walk.lm2'; Source = 'unit_next_message_method_ordinary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0');
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @('lmx_thread_mail_take'); Debt = @() },
     [pscustomobject]@{ Name = 'unit_next_message_one_name.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'receiveMessage: unknown payload model'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_receive_letter_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -4540,6 +4545,118 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_hidden_input_q52_walk.lm2'; Source = 'unit_k03_hidden_input_q52.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # RESERVED-NAME-BINDINGS (Codex K03-RESERVED-NAME-ANSWER-20261006-02/-03; dictionary :128, CORE :648, grammar §5): a
+    # word of the language cannot name a binding of the program -- a field at the root, a local in a method or a nested
+    # body, a method, a sub, a formal, a callable formal, a named Structure's field, a pointer cell, a function-pointer
+    # local, a reference local, a qualified branch, the name receiveMessage binds -- in either spelling (`merge`, `node`),
+    # whether the word has a lowering (merge, size_t) or not yet (test, post, long, double, include, external); the
+    # statement words by the same admission (l2_bind_admit), refused at the name.  A statement of a word with no lowering
+    # says so at the word.  The twins: the same under --walk-methods.  The control: names that hold a word are other
+    # names, bound and used, native and walked.
+    [pscustomobject]@{ Name = 'unit_rn_root_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_root_merge_refused.lm2:5:6: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_root_merge_refused_walk.lm2'; Source = 'unit_rn_root_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_root_merge_refused_walk.lm2:5:6: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_local_size_t_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_local_size_t_refused.lm2:6:10: size_t is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_local_size_t_refused_walk.lm2'; Source = 'unit_rn_local_size_t_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_local_size_t_refused_walk.lm2:6:10: size_t is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_nested_break_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_nested_break_refused.lm2:7:14: break is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_nested_break_refused_walk.lm2'; Source = 'unit_rn_nested_break_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_nested_break_refused_walk.lm2:7:14: break is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_table_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_method_table_refused.lm2:5:5: table is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_table_refused_walk.lm2'; Source = 'unit_rn_method_table_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_method_table_refused_walk.lm2:5:5: table is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_sub_until_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_sub_until_refused.lm2:5:6: until is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_sub_until_refused_walk.lm2'; Source = 'unit_rn_sub_until_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_sub_until_refused_walk.lm2:5:6: until is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_formal_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_formal_merge_refused.lm2:5:13: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_formal_merge_refused_walk.lm2'; Source = 'unit_rn_formal_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_formal_merge_refused_walk.lm2:5:13: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_callable_formal_length_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_callable_formal_length_refused.lm2:5:12: length is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_callable_formal_length_refused_walk.lm2'; Source = 'unit_rn_callable_formal_length_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_callable_formal_length_refused_walk.lm2:5:12: length is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_field_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_field_sub_refused.lm2:6:13: sub is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_field_sub_refused_walk.lm2'; Source = 'unit_rn_field_sub_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_field_sub_refused_walk.lm2:6:13: sub is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_quoted_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_quoted_merge_refused.lm2:6:10: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_quoted_merge_refused_walk.lm2'; Source = 'unit_rn_quoted_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_quoted_merge_refused_walk.lm2:6:10: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_quoted_node_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_quoted_node_refused.lm2:5:6: node is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_quoted_node_refused_walk.lm2'; Source = 'unit_rn_quoted_node_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_quoted_node_refused_walk.lm2:5:6: node is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_if_local_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_if_local_refused.lm2:6:10: if is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_if_local_refused_walk.lm2'; Source = 'unit_rn_if_local_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_if_local_refused_walk.lm2:6:10: if is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_receive_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_receive_name_refused.lm2:6:21: catch is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_receive_name_refused_walk.lm2'; Source = 'unit_rn_receive_name_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_receive_name_refused_walk.lm2:6:21: catch is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_char_pointer_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_char_pointer_refused.lm2:6:13: sizeof is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_char_pointer_refused_walk.lm2'; Source = 'unit_rn_char_pointer_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_char_pointer_refused_walk.lm2:6:13: sizeof is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_fnptr_local_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_fnptr_local_refused.lm2:8:20: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_fnptr_local_refused_walk.lm2'; Source = 'unit_rn_fnptr_local_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_fnptr_local_refused_walk.lm2:8:20: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_ref_local_cast_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_ref_local_cast_refused.lm2:9:14: cast is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_ref_local_cast_refused_walk.lm2'; Source = 'unit_rn_ref_local_cast_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_ref_local_cast_refused_walk.lm2:9:14: cast is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_eternal_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_eternal_merge_refused.lm2:8:17: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_eternal_merge_refused_walk.lm2'; Source = 'unit_rn_eternal_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_eternal_merge_refused_walk.lm2:8:17: merge is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_test_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_method_test_refused.lm2:5:5: test is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_test_refused_walk.lm2'; Source = 'unit_rn_method_test_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_method_test_refused_walk.lm2:5:5: test is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_local_post_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_local_post_refused.lm2:6:10: post is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_local_post_refused_walk.lm2'; Source = 'unit_rn_local_post_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_local_post_refused_walk.lm2:6:10: post is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_long_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_method_long_refused.lm2:5:5: long is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_method_long_refused_walk.lm2'; Source = 'unit_rn_method_long_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_method_long_refused_walk.lm2:5:5: long is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_formal_double_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_formal_double_refused.lm2:5:13: double is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_formal_double_refused_walk.lm2'; Source = 'unit_rn_formal_double_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_formal_double_refused_walk.lm2:5:13: double is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_field_include_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_field_include_refused.lm2:6:13: include is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_field_include_refused_walk.lm2'; Source = 'unit_rn_field_include_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_field_include_refused_walk.lm2:6:13: include is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_root_external_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_root_external_refused.lm2:5:6: external is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_root_external_refused_walk.lm2'; Source = 'unit_rn_root_external_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_root_external_refused_walk.lm2:5:6: external is a word of the language: a program cannot bind it'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_test_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_test_stmt_refused.lm2:6:5: test is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_test_stmt_refused_walk.lm2'; Source = 'unit_rn_test_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_test_stmt_refused_walk.lm2:6:5: test is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_post_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_post_stmt_refused.lm2:6:5: post is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_post_stmt_refused_walk.lm2'; Source = 'unit_rn_post_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_post_stmt_refused_walk.lm2:6:5: post is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_include_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_rn_include_stmt_refused.lm2:6:5: include is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_include_stmt_refused_walk.lm2'; Source = 'unit_rn_include_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_rn_include_stmt_refused_walk.lm2:6:5: include is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_word_prefixed_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_rn_word_prefixed_names_walk.lm2'; Source = 'unit_rn_word_prefixed_names.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
     # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
     # task changes stays 0 through the receiving call and is changed once by the explicit invocation.
@@ -7379,7 +7496,7 @@ $fixtures = @(
     # scanner.  bafca4c (7b, by name): an argument has no place of declaration, so test\[0]arg is refused at the
     # walked root (was eternal-runs, Q29's one cell); declared occurrences: unit_q24_repeated_decl.lm2.
     [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_occ_root_named.lm2:18:13: no such occurrence'; Absent = @(); Debt = @() },
+        Needle = 'unit_occ_root_named.lm2:18:15: no such occurrence'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_out_of_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'no such occurrence'; Absent = @(); Debt = @() },
     # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: unqualified test\arg is the
@@ -7390,7 +7507,7 @@ $fixtures = @(
     # test\[0]arg from check is refused where it stands (was eternal-runs, Q29's one cell); declared occurrences
     # through a method root, read and written: unit_q24_repeated_decl.lm2.
     [pscustomobject]@{ Name = 'unit_own_last_occurrence.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_own_last_occurrence.lm2:28:20: no such occurrence'; Absent = @(); Debt = @() },
+        Needle = 'unit_own_last_occurrence.lm2:28:22: no such occurrence'; Absent = @(); Debt = @() },
     # 7b-2 (by name; ticket OPUS-7B2-20260929-01): the declaration makes the argument's same-name field a declared
     # field with a working value -- BEFORE: poked parameter 7 carried, `ba: 1` published, the graph write 100 changes
     # the cell only: BEFORE 1 100; AFTER: `@af` is the cell, the working value 1 stays: AFTER 1 100 (both were

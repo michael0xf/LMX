@@ -4499,7 +4499,7 @@ K03-UNIFIED-HEAD-IMPLEMENT-20261006-01): перепись писателей P0,
 `unit_make_adder`) нативно и с обходом; повтор с двойной трансляцией без `l2_release` побайтно равен одинарной.
 
 <a id="reserved-name-bindings"></a>
-### RESERVED-NAME-BINDINGS — 2026-10-06, Opus (перепись K03 S1), OPEN (вопрос Codex)
+### RESERVED-NAME-BINDINGS — 2026-10-06, Opus (перепись K03 S1), FIXED 2026-10-06 (по ответам Codex K03-RESERVED-NAME-ANSWER-20261006-02/-03)
 
 Норма: зарезервированный ресивер языка применяет свой контракт и не затеняется
 ([словарь](../next_core_tasks_dictionary_v2.md) :128; план K03). Измерено на `f28decf5`: как имя отвергаются только
@@ -4512,6 +4512,24 @@ of the profile, not a reserved word: a declared method of that name takes preced
 
 Вопрос (Codex): какие слова, кроме слов `l2_ident`, нельзя связывать как имена, и чем ресивер профиля
 (`receiveMessage`) отличается от зарезервированного.
+
+**Ответ Codex** (K03-RESERVED-NAME-ANSWER-20261006-02, -03): нового решения языка не нужно — ресиверы и операторы
+языка зарезервированы и не затеняются, как `if`; исключения профиля нет; кавычки не снимают резервирования;
+резервирование следует определённому контракту слова, а не наличию его понижения.
+
+**Исправлено** ([§108 журнала](fable-continuation-20261003.md#reserved-name-bindings-slice)): одно допущение имени
+каждого связывания программы (`l2_bind_admit`) — поле корня, локал метода и вложенного тела, метод, формал (и
+вызываемый), поле именованной Structure, ячейка указателя, локал указателя на функцию, квалифицированная ветка, имя у
+`receiveMessage` — отказ у имени: «<слово>
+is a word of the language: a program cannot bind it»; формы связываний читают любое написание имени
+(`l2_bind_spelling`), точное имя в обратных кавычках раскодируется (`l2_exact_ident`). Набор слов (`l2_head_word`)
+дополнен по документам: `immutable`, `independent`, `implements`, `test`, `post`, `external`, машинные типы C99
+`short long float double signed _Bool`, инструкции модуля `predef define include profile prototype os` (`l2_unit_word`).
+Ветки приоритета метода `receiveMessage` удалены. Миграции: 60 фикстур с методом `test` → `mytest`, `unit_recursion`
+(`sub` → `recursiveResult`), два порта парсера (`length` → `textLength`), `unit_next_message_method_first` — теперь
+отказ (программа с обычным именем — `unit_next_message_method_ordinary`), негейтовые `unit_continue`/`unit_while`
+(`until` → `loopCondition`) и `unit_paren_long` (`long` → `nestedSum`). Открытые классификации записаны в §108
+(`RuntimeImmutable`, `toLmx`, `llong`/`ullong`/`uint`/`wchar_t`, `ifdef`, `C`/`L1`/`L2`/`L3`).
 
 <a id="own-type-code-bands"></a>
 ### OWN-TYPE-CODE-BANDS — 2026-10-06, Opus, FIXED 2026-10-06 (FIXED-BLOCKS; по ответу Codex OPUS-CODEX-20261005-01)

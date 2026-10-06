@@ -1803,6 +1803,11 @@ its empty Frame, meets one consumer (`l2_check_word_stmt`; `return`/`break`/`con
 `l2_stmt_word` natively, walked and in the root's source); a word is never a free input; `f()` declares nothing
 when f is a word; a bare call binds as its empty application. Statement matrices: 23 of 23 heads agree (6
 before), the root and a loop body 10 and 10 of 10 (4 and 4). Gates: kernel `opus_kernel_40` GREEN297 (114 selftests), L3 `opus_l3_38`, full `opus_full_40` RED39/2025 -- against `opus_full_39` FAIL→OK 0, OK→FAIL 0, added 26.
+RESERVED-NAME-BINDINGS done before the dependent routes ([section 108](steps/fable-continuation-20261003.md#reserved-name-bindings-slice)):
+one admission of every binding's name (`l2_bind_admit`), the binding shapes reading any spelling, exact
+identifiers decoded; the defined set completed by its documents (test, post, external, implements, the
+receiving expressions, the C99 machine types, the unit instructions) whether or not a lowering exists; the
+receiveMessage method exception removed; 66 programs migrated (60 `test` methods to `mytest`). Gates: kernel `opus_kernel_41` GREEN297 (114 selftests), L3 `opus_l3_39`, full `opus_full_42` RED39/2079 (`opus_full_41` was stopped for low memory and run again on the same bytes) -- against `opus_full_40` FAIL→OK 0, OK→FAIL 0, added 54.
 
 ### K04 — Callable actuals and hidden inputs
 

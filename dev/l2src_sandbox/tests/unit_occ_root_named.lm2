@@ -1,24 +1,24 @@
 # FABLE-SONNET-OCC-ROOT-20260924-146: an own-field occurrence under a NAMED (method) root,
-# `test\[N]field`, resolved by the same occurrence lookup the rootless `\[N]field` form uses
+# `mytest\[N]field`, resolved by the same occurrence lookup the rootless `\[N]field` form uses
 # (l2_own_find_occ) -- no second scanner.
 #
 # bafca4c (the author, 2026-09-28: assignment is not a declaration; an argument is its parameter): the two
-# bare assignments of the argument `arg` declare nothing, and `test\[N]x` opens a place of declaration (book
-# §11: «путь M\i снаружи открывает место объявления») -- arg has none, so test\[0]arg is refused where it
-# stands, at the walked root ("no such occurrence").  (Q29 made them one cell, test\[0]arg = 2.)  Declared
+# bare assignments of the argument `arg` declare nothing, and `mytest\[N]x` opens a place of declaration (book
+# §11: «путь M\i снаружи открывает место объявления») -- arg has none, so mytest\[0]arg is refused where it
+# stands, at the walked root ("no such occurrence").  (Q29 made them one cell, mytest\[0]arg = 2.)  Declared
 # occurrences through a method root: unit_q24_repeated_decl.lm2.
-fn: test (int: arg) int
+fn: mytest (int: arg) int
     arg: 1
     arg: 2
     return: 0
-end: test
+end: mytest
 
 int: got
-got: test(0)
-if: test\[0]arg != 2
+got: mytest(0)
+if: mytest\[0]arg != 2
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
-if: test\arg != 2
+if: mytest\arg != 2
     sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")

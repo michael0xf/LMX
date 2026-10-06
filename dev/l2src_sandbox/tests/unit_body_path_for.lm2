@@ -2,14 +2,14 @@
 # arguments"; L2 §10: `M\for\y` is the same path; Q51: access from outside is to the place of declaration; Q52): the
 # book's program.  After the loop the working acc is 9 and j's working value 9 is unpublished -- `end: for` is no
 # checkpoint.  `pair(acc for\j)` evaluates its actuals first: acc 9 from the cache, for\j 0 from j's place of
-# declaration in the for body the statement left in test's Structure; the call's checkpoint then publishes 9, and pair
+# declaration in the for body the statement left in mytest's Structure; the call's checkpoint then publishes 9, and pair
 # receives 9 0: 900.  A later explicit for\j reads 9; `for\j: 42` writes the cell, read back 42.  Walked too: its twin
 # unit_walk_body_path_for (OPUS-WALKLOOP-20260929-11).  Success 7; actuals taken after the publication (9 9) 65;
 # the later read not 9 66; the written cell not 42 67.
 fn: pair (int: a; int: b) int
     return: a * 100 + b
 end: pair
-fn: test () int
+fn: mytest () int
     int: acc
     acc: 0
     for: int(i, 0) (i < 10) i++
@@ -33,8 +33,8 @@ fn: test () int
     if: p = 900 && later = 9 && w = 42
         ok: 7
     return: ok
-end: test
+end: mytest
 int: r 0
-r: test()
+r: mytest()
 sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
 return

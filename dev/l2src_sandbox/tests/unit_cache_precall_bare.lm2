@@ -3,10 +3,10 @@
 # reads 2.  `x: 3` is dirty again and the return publishes it: check reads 3.  The program exits 2 * 10 + 3 = 23;
 # without the pre-call publication 13, without the exit's publication 22.
 fn: peek () int
-    return: test\x
+    return: mytest\x
 end: peek
 
-fn: test () int
+fn: mytest () int
     int: x 1
     peek()
     x: 2
@@ -14,14 +14,14 @@ fn: test () int
     seen: peek()
     x: 3
     return: seen
-end: test
+end: mytest
 
 fn: check () int
-    return: test\x
+    return: mytest\x
 end: check
 
 int: v 0
-v: test()
+v: mytest()
 int: w 0
 w: check()
 sendMessage: exit(exit_code: v * 10 + w; stdout: ""; stderr: "")

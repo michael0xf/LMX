@@ -1,18 +1,18 @@
 # §7b witness (book §9, dirty.md F49-04: a failed admission commits nothing, does not newly mark the destination and
 # does not erase an earlier pending write): a is -1, b and c are 5U, all published by the call to nop.  `b: 6U` is
 # pending when `b: a` is refused by the converter; the next call still publishes 6.  c is clean; poke writes
-# test\c: 7U, then `c: a` is refused, and the next call must not write the stale 5 back.  The program exits
+# mytest\c: 7U, then `c: a` is refused, and the next call must not write the stale 5 back.  The program exits
 # 6 * 10 + 7 = 67; a refusal that erases the mark gives 57, one that marks the destination 65.
 fn: nop () int
     return: 0
 end: nop
 
 fn: poke () int
-    test\c: 7U
+    mytest\c: 7U
     return: 0
 end: poke
 
-fn: test () int
+fn: mytest () int
     int: a -1
     size_t: b 5U
     size_t: c 5U
@@ -32,13 +32,13 @@ fn: test () int
     ---
     nop()
     return: 0
-end: test
+end: mytest
 
 fn: check () int
     size_t: pb 0U
-    pb: test\b
+    pb: mytest\b
     size_t: pc 0U
-    pc: test\c
+    pc: mytest\c
     if: pb = 6U && pc = 7U
         return: 67
     if: pb = 5U
@@ -49,7 +49,7 @@ fn: check () int
 end: check
 
 int: v 0
-v: test()
+v: mytest()
 int: w 0
 w: check()
 sendMessage: exit(exit_code: v + w; stdout: ""; stderr: "")

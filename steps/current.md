@@ -600,6 +600,9 @@ Fable принял единственный writer/build-слот по [to_fable
   добавлено 8.
 - Срез 3 текста выражения: путь-фактический — сколько угодно имён, было не больше 32
   ([§96 журнала](fable-continuation-20261003.md#expression-text-path-actual)). Гейты `opus_kernel_26` GREEN297, `opus_l3_25`, `opus_full_27` RED39/1938: против `opus_full_26` FAIL→OK 0, OK→FAIL 0, добавлено 2.
+- Отказ выделения памяти в эмиссии говорится один раз, где он случился (ALLOC-FAILURE-SAID-TWICE); строки
+  харнесса проваливают одно выделение, найденное заново по трассе выделений (решение Codex по вопросу A,
+  [§97 журнала](fable-continuation-20261003.md#alloc-failure-rows)). Гейты `opus_kernel_27` GREEN297, `opus_l3_26`, `opus_full_28` RED39/1942: против `opus_full_27` FAIL→OK 0, OK→FAIL 0, добавлено 4.
 - Решения Codex 2026-10-06 (OPUS-CODEX-20261005-01): текст выражения делается растущим сразу, срезами
   под гейтом (срез 1 — §94; остальные маршруты — следующие срезы); маршрут машинного локала как корня пути пока не удаляется — перепись нашла
   двух производителей ([DECLARATION-CANDIDATE-ROLE](defects.md#declaration-candidate-role),

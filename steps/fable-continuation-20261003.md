@@ -9750,3 +9750,78 @@ its L1, exit, messages and number of allocations.
 | `build/l3_selftest/opus_l3_25` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_27` (full harness) | RED39/1938: against `opus_full_26` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
 | `build/l2_harness/opus_focus_tx4` (focused, before the gates) | 12 rows: the two of this section, the long sum and call of sections 94 and 95, the admitted path actuals beside them (`unit_s7_*`, `unit_named_actual_path`), all green. |
+
+<a id="alloc-failure-rows"></a>
+## 97. A failed allocation said once, and rows that fail one (ALLOC-FAILURE-SAID-TWICE)
+
+Codex's reply of 2026-10-06 (OPUS-CODEX-20261005-01) to Question A of
+section 94: a generic per-row translator environment and a self-calibrating
+allocation-failure probe -- no literal `L2_FAIL_MALLOC=N` in a fixture, no
+failure mode of the translator that knows a helper, a source or a fixture --
+and the small common correction of ALLOC-FAILURE-SAID-TWICE in a bounded
+checkpoint of its own.
+
+**The correction.** `l2_translate` said a failed allocation of the emission
+again after `l2_emit_unit`, at 1:1, whenever `l2_alloc_err` was set -- after a
+located refusal too. It now takes `l2_diag_n` just before `l2_emit_unit` and
+says the allocation failure only when the emission said nothing since then
+(`l2_said_or` against that count). An allocation failure left unsaid is still
+said, and a refusal of another kind is untouched.
+
+**The trace.** `L2_ALLOC_TRACE=<file>` (test instrumentation, opt-in): every
+allocation `l2_text_room` makes -- the tracking vector's (`l2_vec_grow`) and the
+room's own -- is written there before it is made, as the ordinal
+`L2_FAIL_MALLOC` counts, what makes the room (`text-growth` for a text's
+growth, `room` else) and which of the two it is. The file is opened by the C
+library, outside `l2_xmalloc`: a traced translation makes the same counted
+allocations and writes the same L1 as an untraced one (`unit_exprtext_sum`:
+52069 allocations both ways).
+
+**The rows.** `TranslatorEnv` sets a row's translator environment for that one
+invocation and restores it after it, failed or not (`Invoke-WithEnv`).
+`FaultAlloc = '<what made the room> <vector|buffer> <which>'` names an
+allocation by what the trace says it is: the same translator, source, parts,
+arguments and directory translate once with the trace, the event is looked up,
+and the translation runs again failing exactly that allocation, traced too. The
+row requires the allocation log to say the failure was there (`fail_at` the
+found ordinal, `err=1`); the failing translation's own trace to have, at
+`fail_at`, the named event -- the same kind and the same one of its kind, so a
+trace numbering otherwise names another allocation and fails the row rather
+than becoming another valid out-of-memory test; nothing live after the
+release; the exit of a refusal (1, not the silent refusal's 3); no L1; and --
+the refusal branch as for every refusal row -- one `l2trans error:` line
+(`ErrorLines = 1`) located at the expression (`Needle`). An event the trace
+does not have fails the row. The environment is restored after each of the two
+translations, whatever happens in them.
+
+| Row | What it pins |
+| --- | --- |
+| `unit_exprtext_sum_fault_growth1` | The first growth of the long sum's text fails: 6:420, "out of memory". |
+| `unit_exprtext_sum_fault_growth2` | Its second growth: 6:830. |
+| `unit_exprtext_sum_fault_growth3` | The statement's text grown for the sum: 6:1208. |
+| `unit_exprtext_sum_fault_vector1` | The first growth of the rooms' tracking vector during a text's growth (the nested groups): 7:127. |
+
+`unit_exprtext_sum` itself is the control that translates and runs.
+
+Mutants, each run by the harness of an isolated shared clone of HEAD with
+this checkpoint laid over it, its own evidence directory, one after another;
+`unit_exprtext_sum`, the control, passed in each:
+
+| Mutant | Killed by |
+| --- | --- |
+| the allocation failure said again whatever the emission said (the old `l2_alloc_or` after `l2_emit_unit`) | all four rows: "refused with 2 "l2trans error:" lines -- one cause, one line" |
+| `L2_FAIL_MALLOC` not read | all four: "did not fail where it was named" (`fail_at=0`, `err=0`; the translation succeeds) |
+| the trace numbering each allocation one before the ordinal the failure counts | all four: "allocation N failed, but the failing translation's trace does not have it as ..." -- in `_growth2` the allocation that failed was the first growth of the same text, a valid out-of-memory refusal at its own place, and the row refuses it |
+
+A replay of the 1937 translations recorded by `opus_full_27`, with the
+translator of this section's full gate against section 96's: every row keeps
+its L1, exit, messages and number of allocations.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_27` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_26` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_28` (full harness) | RED39/1942: against `opus_full_27` FAIL→OK 0, OK→FAIL 0, added 4, removed 0. The declared paths were hashed before the run; the staged translator and the fixtures are their bytes. |
+| `build/l2_harness/opus_focus_fault1` (focused, before the gates) | 12 rows: the four of this section, their control `unit_exprtext_sum` (+`_walk`), the long literal, actuals and path of sections 94 and 96, the `sizeof` and literal refusals beside them, all green. |

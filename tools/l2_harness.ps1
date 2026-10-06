@@ -1029,6 +1029,20 @@ function Invoke-Step([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$
     Add-Content -LiteralPath $log -Value ('exit: ' + $code) -Encoding utf8
     return $code
 }
+# A row's translator environment (Codex 2026-10-06, OPUS-CODEX-20261005-01, Question A): the variables are set for
+# what the block runs -- one translator invocation -- and restored after it, failed or not, so no later step (l1trans,
+# gcc, the program) and no other row sees them.
+function Invoke-WithEnv([hashtable]$Vars, [scriptblock]$Block) {
+    $saved = @{}
+    foreach ($name in $Vars.Keys) {
+        $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
+        [Environment]::SetEnvironmentVariable($name, [string]$Vars[$name], 'Process')
+    }
+    try { return (& $Block) }
+    finally {
+        foreach ($name in $saved.Keys) { [Environment]::SetEnvironmentVariable($name, $saved[$name], 'Process') }
+    }
+}
 # A translator step is judged by its OUTPUT, never by its exit code (see the header).
 function Step-Made([string]$Label, [string]$Exe, [string[]]$ArgList, [string]$WorkDir, [string]$Product) {
     if (Test-Path -LiteralPath $Product) { Remove-Item -LiteralPath $Product -Force }
@@ -3009,6 +3023,19 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_exprtext_actuals.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Says = $exprTextActualsSays; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_exprtext_c_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
+    # ALLOC-FAILURE-SAID-TWICE (Codex 2026-10-06): an allocation failed at a text's growth refuses the translation
+    # where it stands, in one line -- not again at 1:1 -- with no L1, exit 1 and nothing live after the release.
+    # unit_exprtext_sum's long sum grows its text twice (6:420, 6:830) and its statement's text once (6:1208); the
+    # nested groups grow the rooms' tracking vector (7:127).  Each allocation is found afresh in the allocation
+    # trace of the same translation (FaultAlloc); unit_exprtext_sum is the control that translates.
+    [pscustomobject]@{ Name = 'unit_exprtext_sum_fault_growth1.lm2'; Source = 'unit_exprtext_sum.lm2'; Expect = 'l2trans-refuses'; Exit = 0; FaultAlloc = 'text-growth buffer 1'; ErrorLines = 1;
+        Needle = 'unit_exprtext_sum_fault_growth1.lm2:6:420: out of memory'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_sum_fault_growth2.lm2'; Source = 'unit_exprtext_sum.lm2'; Expect = 'l2trans-refuses'; Exit = 0; FaultAlloc = 'text-growth buffer 2'; ErrorLines = 1;
+        Needle = 'unit_exprtext_sum_fault_growth2.lm2:6:830: out of memory'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_sum_fault_growth3.lm2'; Source = 'unit_exprtext_sum.lm2'; Expect = 'l2trans-refuses'; Exit = 0; FaultAlloc = 'text-growth buffer 3'; ErrorLines = 1;
+        Needle = 'unit_exprtext_sum_fault_growth3.lm2:6:1208: out of memory'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_exprtext_sum_fault_vector1.lm2'; Source = 'unit_exprtext_sum.lm2'; Expect = 'l2trans-refuses'; Exit = 0; FaultAlloc = 'text-growth vector 1'; ErrorLines = 1;
+        Needle = 'unit_exprtext_sum_fault_vector1.lm2:7:127: out of memory'; Absent = @(); Debt = @() },
     # Slice 2 (steps/fable-continuation-20261003.md §95): the routes that took a migrated text into a 1024-byte buffer
     # write into a text of their own -- a call's actuals, a held callable's, an own array's index, the actuals of a
     # call through a function-pointer local and the value a reference takes.  Slice 1 refuses every row "expression
@@ -9134,7 +9161,63 @@ foreach ($fx in $fixtures) {
     if ($fx.Expect -eq 'library-links') { $profileArgs += @('--library') }
     # Library (§10): a refusal row translated as a library -- whose unit executes no statements.
     if ($fx.PSObject.Properties['Library'] -and $fx.Library) { $profileArgs += @('--library') }
-    $made = Step-Made $label $l2trans ($profileArgs + @($source) + $partArgs + @($genLm1)) $src $genLm1
+    $l2Args = $profileArgs + @($source) + $partArgs + @($genLm1)
+    $rowEnv = @{}
+    if ($fx.PSObject.Properties['TranslatorEnv'] -and $fx.TranslatorEnv) { foreach ($k in $fx.TranslatorEnv.Keys) { $rowEnv[$k] = $fx.TranslatorEnv[$k] } }
+    # FaultAlloc (Codex 2026-10-06, Question A (a)): the translation fails one allocation, named by what the
+    # allocation trace says it is -- '<what made the room> <vector|buffer> <which of them>' -- never by a number.
+    # The number is found afresh: the same translator, source, parts, arguments and directory translate once with
+    # the trace (L2_ALLOC_TRACE, written outside the counted allocations), the event is looked up, and the
+    # translation runs again with that allocation failing (L2_FAIL_MALLOC), traced too.  The row then requires the
+    # allocation log to say the failure was there (fail_at, err=1), the failing translation's own trace to have the
+    # named event at fail_at, nothing live after the release, and the exit to be a refusal's 1 -- not the silent
+    # refusal's 3; the refusal branch below requires its one located line.  An event the trace does not have fails
+    # the row: it never falls back to another allocation.  The environment is restored after each of the two
+    # translations, whatever happens in them.
+    if ($fx.PSObject.Properties['FaultAlloc'] -and $fx.FaultAlloc) {
+        $want = @($fx.FaultAlloc -split ' ')
+        $trace = Join-Path $gen ($stem + '.alloc_trace.txt')
+        $allocLog = Join-Path $gen ($stem + '.alloc_log.txt')
+        foreach ($f in @($trace, $allocLog)) { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force } }
+        $probeEnv = @{} + $rowEnv
+        $probeEnv['L2_ALLOC_TRACE'] = $trace
+        $probeMade = Invoke-WithEnv $probeEnv { Step-Made ($label + '.probe') $l2trans $l2Args $src $genLm1 }
+        if (-not $probeMade -or -not (Test-Path -LiteralPath $trace)) { Add-Row 'FAIL' ('fixture:' + $stem) 'the allocation probe did not translate, or wrote no trace'; continue }
+        Remove-Item -LiteralPath $genLm1 -Force
+        $events = @(Get-Content -LiteralPath $trace | Where-Object { $_ -match ('^\d+ ' + [regex]::Escape($want[0]) + ' ' + [regex]::Escape($want[1]) + '$') } | ForEach-Object { [int](($_ -split ' ')[0]) })
+        $nth = [int]$want[2]
+        if ($want.Count -ne 3 -or $nth -lt 1 -or $events.Count -lt $nth) { Add-Row 'FAIL' ('fixture:' + $stem) ('the allocation "' + $fx.FaultAlloc + '" is not in the trace (' + $events.Count + ' of its kind)'); continue }
+        $faultAt = $events[$nth - 1]
+        $faultTrace = Join-Path $gen ($stem + '.alloc_trace_fault.txt')
+        if (Test-Path -LiteralPath $faultTrace) { Remove-Item -LiteralPath $faultTrace -Force }
+        $faultEnv = @{} + $rowEnv
+        $faultEnv['L2_FAIL_MALLOC'] = [string]$faultAt
+        $faultEnv['L2_ALLOC_LOG'] = $allocLog
+        $faultEnv['L2_ALLOC_TRACE'] = $faultTrace
+        $made = Invoke-WithEnv $faultEnv { Step-Made $label $l2trans $l2Args $src $genLm1 }
+        $facts = ''
+        if (Test-Path -LiteralPath $allocLog) { $facts = (Get-Content -LiteralPath $allocLog -Raw) }
+        $exitSaid = [regex]::Match((Log-Text $label), '(?m)^exit: (\d+)')
+        if ($facts -notmatch ('fail_at=' + $faultAt + ' ') -or $facts -notmatch 'err=1(\s|$)') { Add-Row 'FAIL' ('fixture:' + $stem) ('allocation ' + $faultAt + ' (' + $fx.FaultAlloc + ') did not fail where it was named: ' + $facts.Trim()); continue }
+        # The allocation that failed is the one named, not merely the number handed over: in the failing translation's
+        # own trace the event at fail_at is of the same kind, and the same one of its kind.  A trace that numbers its
+        # events otherwise than the failure counts them names another allocation, and fails here.
+        $hit = -1
+        $seen = 0
+        if (Test-Path -LiteralPath $faultTrace) {
+            foreach ($line in @(Get-Content -LiteralPath $faultTrace)) {
+                if ($line -match ('^(\d+) ' + [regex]::Escape($want[0]) + ' ' + [regex]::Escape($want[1]) + '$')) {
+                    $seen++
+                    if ([int]$Matches[1] -eq $faultAt) { $hit = $seen }
+                }
+            }
+        }
+        if ($hit -ne $nth) { Add-Row 'FAIL' ('fixture:' + $stem) ('allocation ' + $faultAt + ' failed, but the failing translation''s trace does not have it as "' + $fx.FaultAlloc + '"'); continue }
+        if ($facts -notmatch 'live=0 ') { Add-Row 'FAIL' ('fixture:' + $stem) ('the refused translation left allocations live: ' + $facts.Trim()); continue }
+        if (-not $exitSaid.Success -or $exitSaid.Groups[1].Value -ne '1') { Add-Row 'FAIL' ('fixture:' + $stem) ('the refused translation exited ' + $exitSaid.Groups[1].Value + ', not a refusal''s 1'); continue }
+    } else {
+        $made = Invoke-WithEnv $rowEnv { Step-Made $label $l2trans $l2Args $src $genLm1 }
+    }
 
     # 'root-pending' (FABLE-OPUS-ROOT-WALK-TRANSLATOR-20260924-159): a row whose root uses an operation the
     # translator does not build as walker nodes yet.  It is refused, located, with the operation it needs

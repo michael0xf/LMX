@@ -837,10 +837,12 @@ Current bounded implementation, with no DONE claim:
     and their slots do not overlap (Codex 2026-10-06): slice 2's overlap
     mutant is killed only by chance; the existing toolchain where it serves;
     no defensive check in the translator to kill a test mutant;
-  - [ ] a failed allocation in the emission said twice, located and again at
+  - [x] a failed allocation in the emission said twice, located and again at
     1:1 ([ALLOC-FAILURE-SAID-TWICE](steps/defects.md#alloc-failure-said-twice)):
-    a small fix; its gated witness needs a row that fails an allocation,
-    which the harness does not make yet (asked of Codex 2026-10-06);
+    said once now; harness rows fail one allocation, found afresh by the
+    allocation trace (Codex 2026-10-06, Question A,
+    [section 97](steps/fable-continuation-20261003.md#alloc-failure-rows)).
+    Gates: kernel `opus_kernel_27` GREEN297 (114 selftests), L3 `opus_l3_26`, full `opus_full_28` RED39/1942 -- against `opus_full_27` FAIL→OK 0, OK→FAIL 0, added 4.
   - [ ] the machine-local path root (`l2_path_root`'s branch with
     `i < 990`, `l2_proot` 64 in `l2_emit_path_to`): two producers reach it
     ([DECLARATION-CANDIDATE-ROLE](steps/defects.md#declaration-candidate-role),

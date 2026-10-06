@@ -794,6 +794,9 @@ int: l2_alloc_fail_kind 0
 int: l2_alloc_kind 0
 # Texts longer than the local buffer of the function that joins them (l2_text_room): kept until l2_release.
 @@: char l2_ltx 0
+# The allocation trace (L2_ALLOC_TRACE, test instrumentation): its file, and what is making a room now.
+@: FILE l2_alloc_trace 0
+const: @: char l2_room_tag 0
 int: l2_ltx_n 0
 int: l2_ltx_cap 0
 @: int l2_m_edge 0
@@ -934,6 +937,7 @@ prototype:
     fn: l2_error_words (const: @(char path); const: @(LmP0Node at); const: @(char p0); const: @(char x); size_t: xn; const: @(char p1); const: @(char y); size_t: yn; const: @(char p2); const: @(char z); size_t: zn; const: @(char p3)) int
     fn: l2_tb_free () int
     fn: l2_msend_free () int
+    fn: l2_alloc_note (const: @(char what)) int
     fn: l2_tx_open (@: L2Tx t; @: char local; size_t: cap) int
     fn: l2_tx_len (@: L2Tx t) size_t
     fn: l2_tx_room (@: L2Tx t; size_t: more) int
@@ -5376,6 +5380,7 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
     int: status
     size_t: path_i 0U
     L2Tx: tok_root
+    int: d_emit 0
     finally:
         # Drop compiler-owned shells while their borrowed source is still live:
         # the procedures' bodies, then the binding's projections.
@@ -5428,10 +5433,13 @@ fn: l2_translate (const: @(char in_path); const: @(char out_path)) int
         return: 1
     # A conversion's receiver is a method of the program from the start (Q33; §8): one translation, where a
     # receiver an edge noted was once taken by translating the source again.
+    # A failed allocation the emission has said where it stood is not said again here (ALLOC-FAILURE-SAID-TWICE):
+    # only what the emission left unsaid since it began.
+    d_emit: l2_diag_n
     status: l2_emit_unit(out_path)
     if: status != 0
         if: l2_alloc_err != 0
-            return: l2_alloc_or(in_path, 0, "translation failed")
+            return: l2_said_or(in_path, 0, d_emit, "translation failed")
         return: 1
 return: 0
 
@@ -22390,6 +22398,17 @@ return: n
 
 # Room for need bytes: `local` when its capacity cap holds them, else storage of exactly need bytes, kept until
 # l2_release.  0 when there is no memory.
+# One line of the allocation trace (L2_ALLOC_TRACE): the ordinal of the allocation about to be made -- the
+# one L2_FAIL_MALLOC counts -- what makes the room, and which allocation of it this is.
+fn: l2_alloc_note (const: @(char what)) int
+    if: l2_alloc_trace = 0
+        return: 0
+    if: l2_room_tag = 0
+        c.fprintf(l2_alloc_trace, "%d room %s\n", l2_alloc_n + 1, what)
+        return: 0
+    c.fprintf(l2_alloc_trace, "%d %s %s\n", l2_alloc_n + 1, l2_room_tag, what)
+return: 0
+
 fn: l2_text_room (size_t: need; @: char local; size_t: cap) @: char
     @: char made
     @: void grown
@@ -22403,12 +22422,14 @@ fn: l2_text_room (size_t: need; @: char local; size_t: cap) @: char
             l2_alloc_err: 2
             return: 0
         psz: c.sizeof(@: char)
+        l2_alloc_note("vector")
         grown: l2_vec_grow((cast: (@: void) l2_ltx), l2_ltx_n, want, psz)
         if: grown = 0
             return: 0
         l2_ltx: (cast: (@@: char) grown)
         l2_ltx_cap: want
     ---
+    l2_alloc_note("buffer")
     made: (cast: (@: char) l2_xmalloc(need))
     if: made = 0
         return: 0
@@ -27705,7 +27726,9 @@ fn: l2_tx_room (@: L2Tx t; size_t: more) int
             cap: cap * 2U
         ---
     ---
+    l2_room_tag: "text-growth"
     grown: l2_text_room(cap, 0, 0U)
+    l2_room_tag: 0
     if: grown = 0
         return: 1
     memcpy(grown, t\data, len + 1U)
@@ -49550,6 +49573,8 @@ external:
             l2_rt_root: rt
         if: c.getenv("L2_FAIL_MALLOC") != 0
             l2_fail_left: c.atoi(c.getenv("L2_FAIL_MALLOC"))
+        if: c.getenv("L2_ALLOC_TRACE") != 0
+            l2_alloc_trace: c.fopen(c.getenv("L2_ALLOC_TRACE"), "wb")
         r: l2_translate(argv[a], argv[argc - 1])
         # A failure that printed no located diagnostic is still a failure the
         # user must see; a silent exit 1 names nothing to fix.  It is an invariant break of the
@@ -49567,6 +49592,9 @@ external:
             c.remove(argv[argc - 1])
             r: 3
         l2_release()
+        if: l2_alloc_trace != 0
+            fclose(l2_alloc_trace)
+            l2_alloc_trace: 0
         lg: c.getenv("L2_ALLOC_LOG")
         if: lg != 0
             af: c.fopen(lg, "wb")

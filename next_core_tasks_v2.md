@@ -521,6 +521,12 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [x] A path through a merge result's reference field, read and store, with
   the store admitted to the field's model
   ([ledger](steps/fable-continuation-20261003.md#merge-result-reference-field)).
+- [x] A reference field read as a value into a reference local: `q: a\next`,
+  `p: p\next` along a chain (REF-FIELD-VALUE-READ)
+  ([ledger](steps/fable-continuation-20261003.md#ref-field-value-read)).
+  Gates: kernel `opus_kernel_18` GREEN297 (114 selftests), L3 `opus_l3_17`,
+  full `opus_full_19` RED39/1906 -- against `opus_full_18` FAIL→OK 0,
+  OK→FAIL 0, added 2.
 - [ ] Nested correspondence maps across distinct nested definitions; capture of
   a merge-result local; foreign by-value call producer; address-arithmetic and
   nested-body Array producers; C99 common arithmetic (K08) for the `1U` rows.

@@ -6187,6 +6187,13 @@ $fixtures = @(
         Absent = @('@@: Lmx l2_p'); Debt = @('@: Lmx l2_p0_0') },
     [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @(); Debt = @('l2_pst: (cast: (@: Lmx) lmx_pointer_value_known(l2_pxp[0]))') },
+    # REF-FIELD-VALUE-READ: a reference field read as a value into a reference local -- one hop, two hops, a chain
+    # walked to its end, a field written from a field, the root's read.  The statement's path branch read number
+    # leaves only and stored stale text for a reference leaf: the previous translator's L1 does not parse.
+    [pscustomobject]@{ Name = 'unit_ref_field_value_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ref_field_value_read_walk.lm2'; Source = 'unit_ref_field_value_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
+        Absent = @(); Debt = @() },
     # Triage 2026-10-03: a positive again, with an explicit copy for its setup: each of the five
     # user locals keeps its value next to the entry adapter's own names.
     [pscustomobject]@{ Name = 'unit_addr_entry_name_collision.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';

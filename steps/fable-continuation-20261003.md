@@ -9177,3 +9177,54 @@ the honest place for the refusal, so it stays.
 | `build/l3_selftest/opus_l3_16` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_18` (full harness) | RED39/1904: against `opus_full_17` FAIL→OK 0, OK→FAIL 0, added 8, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
 | `build/l2_harness/opus_focus_fb1` (focused, before the gates) | 31 rows: the eight of this section and the capture, callable-formal, binding, catch, throw and duplicate rows beside them, all green. |
+
+<a id="ref-field-value-read"></a>
+## 89. A reference field read as a value into a reference local (REF-FIELD-VALUE-READ)
+
+Found while probing a chain of Structures for the collector's depth (K09):
+`q: a\next`, where `next` is a reference field `@: Node next` and `q` a
+reference local `@: Node q`, was translated into code that does not parse.
+The statement's path branch -- a path stored into a declared own field --
+read number leaves only (kinds 0, 1, 7, 8, 9). For any other leaf it stored
+whatever its value buffer last held: `(cast: (@: Lmx) (())`, `(cast: (@: Lmx)
+())`, or bytes never written (gcc: "stray '\345' in program").
+
+The general store already reads a reference leaf (`l2_path_text_read`: the
+reference cell's pointer, typed by the field's pointee) and stores a
+reference with its admission, as it converts a number of another type. The
+path branch now leaves both to it: `l2_path_store_converts` became
+`l2_path_store_general`, which answers 1 for a reference leaf too.
+
+| Form | Before | Now |
+| --- | --- | --- |
+| `q: a\next`, in the root and in a method | the L1 does not parse | the reference `a\next` holds |
+| `q: a\next\next` | gcc refuses the C | the second hop's reference |
+| `p: p\next` in a loop to the chain's end | gcc refuses the C | the chain counted, `p` 0 at its end |
+| `c\next: a\next`, then `q: c\next` | the L1 does not parse | the reference written |
+| `@: Node q a\next`, a declaration's initializer | translated | unchanged |
+
+Row `unit_ref_field_value_read` (+`_walk`, its method walked): the readings
+in a method and the root's read; success 7. The previous translator is its
+mutant: its C does not compile.
+
+Observed, asked of Codex: with `q` a reference of another model
+(`@: Other q`) that nothing uses, `q: a\next` now stops the forming method
+by its implicit `implements` when the program runs -- as `n: a\next` and
+then `q: n` already did, a candidate known only when the program runs.
+`q: b`, with `b` a copy of `Node` (`b: merge Node`), is admitted. The book
+decides admission "by the analytical check of used paths" (:808). No row
+pins either until the norm is said.
+
+A replay of the 1903 translations recorded by `opus_full_18`, with this step's
+translator against that gate's, changes nothing: every row keeps its L1, exit,
+messages and number of allocations. No row before this step stored a
+reference field into an own field.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_18` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest). |
+| `build/l3_selftest/opus_l3_17` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_19` (full harness) | RED39/1906: against `opus_full_18` FAIL→OK 0, OK→FAIL 0, added 2, removed 0. The declared paths were hashed before the run; the staged translator is their bytes. |
+| `build/l2_harness/opus_focus_rf1` (focused, before the gates) | 17 rows: the two of this section, the reference-path rows beside them and the rows of a path stored with a conversion -- all green but `unit_free_path_field_converted` (+`_swapped`), the red required positives of FIELD-CONSUMPTION-CONVERSION, refused in the words they have in `opus_full_18`. |

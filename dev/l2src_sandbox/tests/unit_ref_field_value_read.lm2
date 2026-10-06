@@ -1,0 +1,56 @@
+# REF-FIELD-VALUE-READ: a reference field read as a value into a reference local -- `q: a\next`, `q: a\next\next`,
+# `p: p\next` walking a chain to its end, `q: c\next` after a reference field was written from one -- is the
+# reference the field holds, in a method and in the root.  The statement's path branch read number leaves only and
+# stored stale text for a reference leaf: the generated L1 did not parse.  Success is 7; otherwise 64 plus a bit per
+# failed reading: 1 one hop, 2 two hops, 4 the chain's length, 8 a field written from a field, 16 the root's read,
+# 32 the end of the chain.
+Node:
+    int: value 0
+    @: Node next
+end: Node
+
+fn: check () int
+    int: bad 0
+    a: merge Node
+    b: merge Node
+    c: merge Node
+    a\next: b
+    b\next: c
+    b\value: 5
+    c\value: 9
+    @: Node q
+    q: a\next
+    if: q\value != 5
+        bad: bad + 1
+    q: a\next\next
+    if: q\value != 9
+        bad: bad + 2
+    @: Node p a
+    int: n 0
+    while: p != 0
+        n: n + 1
+        p: p\next
+    ---
+    if: n != 3
+        bad: bad + 4
+    if: p != 0
+        bad: bad + 32
+    c\next: a\next
+    q: c\next
+    if: q\value != 5
+        bad: bad + 8
+    if: bad != 0
+        return: 64 + bad
+return: 7
+
+x: merge Node
+y: merge Node
+x\next: y
+y\value: 3
+@: Node rq
+rq: x\next
+int: r check()
+if: r = 7 && rq\value != 3
+    r: 64 + 16
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

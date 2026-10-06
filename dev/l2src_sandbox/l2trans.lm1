@@ -1362,7 +1362,7 @@ prototype:
     fn: l2_prefix_kind_refused (const: @(LmP0Node node); int: mi; const: @(char path)) int
     fn: l2_native_path_ty (const: @(LmP0Text t)) int
     fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
-    fn: l2_path_store_converts (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
+    fn: l2_path_store_general (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
     fn: l2_convert_on_store (int: mi; int: oi; const: @(LmP0Node stmt); const: @(LmP0Frame fr); const: @(char ind)) int
     fn: l2_check_ret_convert (int: mi; const: @(LmP0Structure body); const: @(char path)) int
     fn: l2_emit_ret_convert (int: mi; const: @(LmP0Structure body); const: @(LmP0Node at); const: @(char ind); @: char dest) int
@@ -9989,17 +9989,25 @@ fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
         return: 0 - 99
 return: ty
 
-# Does the path pd..pn reach a number field of another type than own field `head` of method mi?  Its store is then a
-# conversion (the general store, l2_convert_on_store), not the path branch's plain read.  0 for any other path or place.
-fn: l2_path_store_converts (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
+# Is the store of the path pd..pn into own field `head` of method mi the general store's, not the path branch's plain
+# read of a number leaf?  It is for a number field of another type than the own field's -- a conversion
+# (l2_convert_on_store) -- and for a reference field (`@: T name`, kinds 10 and 11): its value is the reference the
+# field holds, read as any reference field is read (l2_path_text_read), and stored as any reference is, with its
+# admission (REF-FIELD-VALUE-READ: the path branch, which reads number leaves only, stored stale text for one).  0 for
+# any other path or place.
+fn: l2_path_store_general (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
     int: leaf 0
+    int: kind
     int: pft
     int: oft
     int: oi
     oi: l2_own_visible(mi, head)
     if: oi < 0 || pd = 0 || pn = 0U
         return: 0
-    pft: l2_path_kind_ft(l2_path_kind(pd, pn, @ leaf))
+    kind: l2_path_kind(pd, pn, @ leaf)
+    if: kind = 10 || kind = 11
+        return: 1
+    pft: l2_path_kind_ft(kind)
     oft: l2_ft_of_own(l2_own_ty[oi])
     if: pft < 0 || l2_prim_code_name(pft) = 0 || l2_prim_code_name(oft) = 0 || pft = oft
         return: 0
@@ -46977,9 +46985,10 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # field). Any other head (return, a call argument, ...) falls through
         # to the general expression-value handling below -- a field path used
         # there resolves and reads through l2_eval_fields like any other value.
-        # A path to a number field stored into an own field of another number type is a conversion: the general store
-        # below makes it (l2_convert_on_store), as for any value of another type (l2_path_store_converts).
-        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot, @ l2_pfi) = 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && l2_path_store_converts(mi, stmt\as\frame\head, l2_pbuf, l2_pn) = 0
+        # A path to a number field stored into an own field of another number type is a conversion, and a path to a
+        # reference field is a reference: the general store below makes both (l2_convert_on_store; the reference read,
+        # l2_path_text_read), as for any value (l2_path_store_general).
+        if: l2_pn != 0U && l2_path_root(l2_pbuf, l2_pn, @ l2_pni, @ l2_pres, @ l2_poi, @ l2_proot, @ l2_pfi) = 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && l2_path_store_general(mi, stmt\as\frame\head, l2_pbuf, l2_pn) = 0
             if: l2_emit_path(l2_pbuf, l2_pn, mi, ind, stmt, @ l2_pkind) != 0
                 return: 1
             # The destination is an OWN field, stored into its cell like any

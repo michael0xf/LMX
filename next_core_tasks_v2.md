@@ -780,7 +780,9 @@ Current bounded implementation, with no DONE claim:
     more than 64 catches of one emission (refused in the walker's wrong
     words): as many as the program nests and writes
     ([section 91](steps/fable-continuation-20261003.md#emission-stacks)).
-    GATES_STK_EN
+    Gates: kernel `opus_kernel_20` GREEN297 (114 selftests), L3 `opus_l3_19`,
+    full `opus_full_21` RED39/1911 -- against `opus_full_20` FAIL→OK 0,
+    OK→FAIL 0, added 2.
   - [ ] the size of the L1 emitted for nested loops, faster than the square
     of the nesting (seventy nested `for:` loops: 27.5 MB);
   - [ ] the text of one expression in the emitter, 1023 bytes (`l2_cat`), and

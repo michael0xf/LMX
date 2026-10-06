@@ -577,7 +577,9 @@ Fable принял единственный writer/build-слот по [to_fable
   GREEN297, `opus_l3_18`, `opus_full_20` RED39/1909: против `opus_full_19` FAIL→OK 0, OK→FAIL 0.
 - Стеки эмиссии держат столько, сколько вложено и написано: циклы и pads, открытые pads и pads обходчика
   были по 64 (65-й `catch:` метода отвергался словами `a catch parameter that is not a number`)
-  (FIXED-BLOCKS-AUDIT, [§91 журнала](fable-continuation-20261003.md#emission-stacks)). GATES_STK_CUR
+  (FIXED-BLOCKS-AUDIT, [§91 журнала](fable-continuation-20261003.md#emission-stacks)). Гейты
+  `opus_kernel_20` GREEN297, `opus_l3_19`, `opus_full_21` RED39/1911: против `opus_full_20` FAIL→OK 0,
+  OK→FAIL 0, добавлено 2.
 - Перед G5 — ограниченные подзадачи на оставшиеся постоянные размеры шага B (текст выражения в
   эмиттере и его буферы, имя машинного локала; имена методов, формалов и бросков — с шагом
   `l1trans`); каждая — с длинным позитивом и мутантом, который возвращает размер

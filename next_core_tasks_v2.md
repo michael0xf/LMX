@@ -17,6 +17,17 @@ work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
 [kernel map](CORE_L2_L3_v2.md), and
 [porting guide](L2_L3_CODING_INSTRUCTION.md).
 
+**Mandatory correction, 2026-10-06: receiver applications require explicit
+Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
+`b: merge A C` is not one. The earlier conversational spelling was a typo,
+not permission for a receiver-specific argument collector. The writer's first
+text census found 260 fixtures using receiver-word atoms with following
+operands; this is preliminary evidence, not a final classified migration
+count. Finish the independent OWN-TYPE-CODE-BANDS checkpoint already in flight,
+then close [K03-EXPLICIT-RECEIVER-FRAMES](#explicit-receiver-frames) before
+G5 or self-build. Earlier green rows using the prefix path do not certify
+this corrected syntax. The copying/operand/result contract is unchanged.
+
 **Historical handoff, 2026-10-03.** The author transferred continuation to
 Fable; Codex finishes documentation and then answers Fable's questions, without
 starting another code stage. Read [to_fable.md](to_fable.md) before taking the
@@ -258,8 +269,8 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
 - [x] Arrays declared in nested bodies in the retained graph and in the
   interpreter; witness `graph_shape_nested_array`
   ([ledger](steps/fable-continuation-20261003.md#nested-array)).
-- [x] Held-call boundary, step one: one proved alternative for the whole copy
-  `R: merge S` called in the body that owns S; witness
+- [x] Held-call boundary, step one: one proved alternative for a whole copy
+  of S called in the body that owns S; witness
   `unit_copy_call_hidden_inputs` with a contract-confusion translator mutant
   ([ledger](steps/fable-continuation-20261003.md#held-call-step-one)).
 - [ ] Held-call boundary, the rest: selection among alternatives, copies of
@@ -538,7 +549,7 @@ Subtasks discovered, in dependency order with the items below (all OPEN):
   of an element through a path in the retained graph; witness
   `unit_arr_path_merge_result` with two translator mutants
   ([ledger](steps/fable-continuation-20261003.md#merge-result-array)).
-- [x] Capture of a whole copy `loc: merge S` by a nested method
+- [x] Capture of a whole copy of S by a nested method
   ([ledger](steps/fable-continuation-20261003.md#capture-copy)).
 - [ ] Capture closure, the rest: a captured Structure used whole
   (`unit_capture_struct_whole`), a captured copy of several operands
@@ -1605,9 +1616,11 @@ incompatible edge, not by deleting the witness.
   schema and no permanent registry for merge instances.
 - Restore caller-local → inherited input → lexical fallback for a free merge
   result. A global result-name lookup must not bypass a dynamic input.
-- Support the existing `b: merge A C` form and merge in ordinary receiving
-  expressions, including return, under the general receiver mechanism. A
-  destination name is not a first operand, and a `return` receiver is not an
+- Support `b: merge: A C`, `b: merge(A C)` and equivalent explicit Frame
+  forms, including merge in ordinary receiving expressions and return,
+  under the general receiver mechanism. Do not gather operands from an atom
+  `merge` followed by neighboring fields. A destination name is not a first
+  operand, and a `return` receiver is not an
   own-field declaration.
 - Finish unchanged-code native retention and actual-body replacement rules;
   data changes alone must not force interpretation or retain mutable originals.
@@ -1665,6 +1678,91 @@ already checks the resolved formal contract and diagnoses excess arguments;
 do not reopen that diagnostic migration or implement invented arguments.
 This does not close execution of a copied/held nullary Structure or its actual
 hidden-input preparation: the two positive copy-call refusals remain OPEN.
+
+<a id="explicit-receiver-frames"></a>
+### K03-EXPLICIT-RECEIVER-FRAMES — Remove implicit receiver-word operand grouping
+
+Status: **OPEN, mandatory before G5/self-build**. The author confirmed that
+the old `x: merge Y` spelling is a typo and its implementation is a shim to
+remove, not a language exception. This stage follows the independent
+OWN-TYPE-CODE-BANDS checkpoint already being verified. Keep one writer/build.
+Authority: [the author's exact clarification](LMX_blog/2026-10-06.md#explicit-receiver-frames)
+and the [general grammar rule](docs/LMX_grammar.en.md#no-inference).
+
+1. Census the actual semantic dependency, not only matching text. Replay the
+   frozen `opus_full_34` translation corpus with the receiver-word atomic
+   collectors removed in an isolated translator. Record every changed row,
+   source location, old classification, intended explicit Frame, and native/
+   walked twin. The preliminary text census is 260 fixtures, mostly
+   `x: merge Y`; do not treat that as a verified final count. Inventory other
+   receiver words through their common role, not an implementation allowlist.
+   The subsequent writer-reported classifier replay changes 264 of 1980
+   recorded translations, 231 from accepted to refused. Translation runs
+   are not distinct fixture files; retain the exact corpus/hash/partition
+   artifacts and reconcile the counts in the migration manifest.
+   Classify the actual enclosing receiver and argument roles before deciding
+   that a fixture depends on this defect. The actual Frame supplies the
+   head/tail boundary; general resolution selects the head's role and its
+   contract determines the arguments. A receiver is a translator instruction,
+   a callable call is a runtime action; they share syntax, not a role.
+   An argument name does not invent another application. Thus
+   `catch: merge ()` and `fn: test ()` already are ordinary applications of
+   their respective heads, not missing nested calls. These are consequences
+   of the common rule, not special protected spellings or an exception list.
+   Do not blindly insert punctuation after matching receiver words.
+2. Remove the atomic operand-collecting routes in `l2_receiver_value`,
+   `l2_fields_one_value`, `l2_tail_is_structure`, and any remaining emitter,
+   schema, construction, or walker route that reconstructs a call from such
+   atoms. `l2_receiver_word` must not decide that neighboring atoms belong to
+   a call. Retain any legitimate reserved-name classification needed by the
+   general resolver; delete dead helpers after removing their callers.
+   Delete `l2_merge_atom_settle` entirely and the atomic fallback from
+   `l2_merge_frame` that calls it. Delete the reconstruction subsystem itself:
+   do not keep it behind a colon check, rename it, insert punctuation before
+   passing to it, or feed it synthetic Frames as a compatibility shim.
+   Enumerate every removed branch/helper and verify that surviving callers
+   consume the common path. See [RECEIVER-ATOM-CRUTCH](steps/defects.md#receiver-atom-crutch).
+3. Use the existing explicit Frame route for all receiver applications:
+   `x: merge: Y`, `x: merge(Y)`, arbitrary argument counts and equivalent
+   completed vertical forms. Preserve operand order, one evaluation each,
+   result receipt, admission, source graph, and native/walker parity.
+   Do not change the parser to infer Frames or add a merge-specific parser.
+   Consume the actual P0 Frame; no later local parser may recreate a call
+   by scanning receiver words or regrouping an atomic expression tail.
+4. Migrate every classified fixture and its walked twin explicitly. Preserve
+   the behavioral assertion, ownership/reference-depth setup, and failure
+   oracle; do not obtain green by deleting rows, weakening checks, or
+   reinterpreting old gates as proof of the corrected source bytes. Keep a
+   named old-to-new migration manifest and count its exact coverage.
+5. Add positive colon/compact/vertical controls and prefix non-application
+   witnesses for one and several operands. Test root, method, nested and
+   anonymous/receiving positions, including return. A prefix sequence must
+   not execute merge or create a merge result. Apply ordinary semantic rules
+   to the actual enclosing head: an unknown head may define a dormant body;
+   do not impose a special global parse refusal for the word `merge`.
+   Preserve bare nullary callable evaluation without consuming later fields.
+   Verify the same head/tail contract for arbitrary receiver arguments and
+   nonexecuting descriptions across names, nesting and source positions.
+   `catch: merge ()` and `fn: test ()` can witness that universal mechanism;
+   they do not define exemptions. No name allowlist or protected-case branch
+   may preserve them while breaking other instances of the same rule.
+6. Mutate a removed atomic collector back in: at least one non-application
+   witness and its walked twin must fail. Replay the frozen corpus, explain
+   every changed row, and run focused migrated/control rows in native and
+   genuinely walked modes. Then run the normal full L2, kernel, L3, generated
+   and docs gates, plus scoped `git diff --check`, on the checkpoint bytes.
+   The exact acceptance commands/artifact paths follow the existing gate
+   protocol in §1 and must be recorded in the writer's stage ledger.
+7. Commit/push the exact named source/test/harness/document paths. Release
+   this stage only after its own acceptance is met; unresolved baseline
+   failures remain named debts, and do not constitute a green G5 checkpoint.
+
+Acceptance: no receiver-word operand collector, no name-specific fallback;
+all classified prefix-dependent fixtures migrated with unchanged intended
+behavior; explicit Frame forms agree; non-application and nullary controls
+survive both engines; the reintroduced-collector mutant is caught; exact
+corpus comparison and normal gates are recorded. No downstream clean-kernel
+or self-build checkpoint may retain this shim.
 
 ### K04 — Callable actuals and hidden inputs
 

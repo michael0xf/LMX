@@ -384,7 +384,7 @@ An unknown actual in an existing head's call is an error, not a declaration. Unk
 - **Norm:** accepted
 - **Implementation:** partial
 - **Verification:** fixture
-- **definition:** Explicit merge builds/combines Structures. `b: merge A C` keeps `A` and `C` as merge operands and `b` as the external result recipient.
+- **definition:** Explicit merge builds/combines Structures. `b: merge: A C` keeps `A` and `C` as merge operands and `b` as the external result recipient.
 - **invariants:** No implicit `Model: fresh` clone and no invented result-name-first merge receiver. The established composition on returning a nested callable is a separate return contract and is not removed by this declaration correction.
 - **not-confused-with:** structural-declaration; implements
 - **links:** requires=see related articles; produces=see definition; consumes=see definition; selects=see definition

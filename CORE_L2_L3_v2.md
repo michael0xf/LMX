@@ -364,6 +364,11 @@ The compiler's source-site selection respects declaration order, active host sco
 <a id="call-and-stop"></a>
 ## 8. Calls, actual native selection, typed results, and stopping
 
+**Role boundary.** This section concerns runtime calls. A language receiver
+is an instruction to the translator; the shared Frame syntax does not make
+every head a receiver or every receiver argument a runtime call. Resolve
+the actual role under [head resolution](docs/LMX_semantics.en.md#construction).
+
 ### 8.1 The selector is the actual occurrence
 
 **Norm.** A callable occurrence with a nonzero native word calls that entry; otherwise its portable executable tree is walked. The choice is not a Thread mode, an E/root exception, a compile-time prediction that a known method must be native, or a retry policy after failure. Native and walked execution operate on the same occurrence's fields.
@@ -738,7 +743,7 @@ The current fixture set distinguishes fresh values on repeated reach, held alias
 
 ### 10.5 Open source routes are not hidden by the repaired storage
 
-The October1 inspection found that documented `copy: merge Model` did not enter the merge parser while nested-Frame probes did. That historical parser refusal is no longer the current plain-form status: frozen full32 and canonical-copy native/walk controls reach the ordinary merge path. Do not reintroduce the alternate spelling as a requirement. General stored-result invocation and complete actual-layout projection remain separate debts.
+**Correction, 2026-10-06.** `copy: merge: Model` or `copy: merge(Model)` is an ordinary explicit receiver application. The October1 investigation and later gates also accepted `copy: merge Model` through atomic-prefix collectors; that was an implementation shim based on a conversational typo, not a normative alias. The old successes do not validate this spelling or prove that the correctly formed source was tested. Remove the common atomic collectors and migrate their fixtures under [K03-EXPLICIT-RECEIVER-FRAMES](next_core_tasks_v2.md#explicit-receiver-frames). All receivers use the general Frame rule; no alternate prefix path may remain for merge. General stored-result invocation and complete actual-layout projection remain separate debts.
 
 A held operand whose actual layout differs from its declared view still exposes a complete-schema projection gap. Same-schema retained-alias tests do not close it. Formal merge operands and certain hidden-input/scanner routes remain separately located. General source invocation of a stored merged callable (`R()`/bare `R`) has also had distinct resolution gaps; invoking the actual result through a test-only existing runtime call interface certifies runtime identity, not that source syntax.
 

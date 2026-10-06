@@ -2,6 +2,8 @@
 
 > Archive note — Codex, 2026-10-02: tracked at the author's request to preserve all documentation. The handoff below records its author's earlier session, not current ownership, acceptance or a new instruction. Unfilled checkpoint placeholders remain unverified; local paths are historical evidence locations. Use [the v2 queue](next_core_tasks_v2.md) and [current instructions](steps/current.md) for work. The later [address correction](steps/tickets/critical_pointer_to_struct_bug.md) and [reference-application refactoring](steps/tickets/structure_reference_application_refactor.md) supersede any earlier descriptor-address exemption or explicit-dereference-only call policy below. The original handoff text is retained.
 
+> Editorial correction — Codex, 2026-10-06: the K02d claim below that `b: merge A C` is a "book form" is withdrawn. The missing colon was a conversational typo, not a receiver exception. Correct applications are `b: merge: A C`, `b: merge(A C)` and equivalent explicit Frames. Delete the entire atomic application reconstruction subsystem under the [mandatory v2 stage](next_core_tasks_v2.md#explicit-receiver-frames); historical counts and checkpoints below do not validate that syntax. See the [author's clarification](LMX_blog/2026-10-06.md#explicit-receiver-frames).
+
 Писал `deepseek`, продолжив очередь fable по плану v2. Это рабочая передача, не спецификация:
 нормы — в `docs/`, план — `next_core_tasks_v2.md`, словарь — `next_core_tasks_dictionary_v2.md`,
 карта ядра — `CORE_L2_L3_v2.md`, инструкция переноса — `L2_L3_CODING_INSTRUCTION.md`.

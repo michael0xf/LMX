@@ -95,6 +95,11 @@ Batch: (put: 7)
 
 **NORMATIVE.** Block, short, parenthesized, and explicitly closed spellings all form applications. Resolve the head in its receiving and lexical context before deciding what the tail means.
 
+Distinguish the roles within that common syntax: a receiver instructs the
+translator; a callable call is a runtime action. An argument name does not
+invent a nested call. Follow [head resolution](docs/LMX_semantics.en.md#construction)
+rather than classifying every Frame head as a receiver.
+
 The role order is:
 
 1. a reserved receiver/operator uses its defined contract;
@@ -183,8 +188,14 @@ If `A` is a known ordinary named Structure, this resolves as a call and then fai
 Use `merge` when a new composed Structure is required:
 
 ```text
-b: merge A C
+b: merge: A C
 ```
+
+The compact `b: merge(A C)` and equivalent completed vertical forms use the
+same rule. Do not write `b: merge A C`: whitespace separates atoms and does
+not create a merge Frame. This is not a receiver-specific exception; follow
+the [general grammar](docs/LMX_grammar.en.md#no-inference). Bare nullary
+evaluation does not gather neighboring atoms as actual arguments.
 
 The operands are `A` and `C`; `b` receives the result. `b` is not silently inserted as a first operand. Merge is explicit construction and has its own copying, reference-retention, parent, identity, and admission rules.
 
@@ -761,7 +772,7 @@ The step after `\` indexes the Array value produced by `rows[i]`. An intermediat
 Replace implicit constructor/clone assumptions with explicit composition:
 
 ```text
-result: merge Model Overrides
+result: merge: Model Overrides
 ```
 
 Then admit `result` where the receiving context requires it. Do not overload `Model: result Overrides` to mean construction when `Model` is already known.

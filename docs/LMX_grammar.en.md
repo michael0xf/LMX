@@ -1046,6 +1046,8 @@ Sources: §§4.2.2–4.2.3, 4.4, 6.1–6.3.
 
 Whitespace separates fields. `print: getTypedValue values[i]` does not turn into `getTypedValue(values[i])`. Nesting requires parentheses, a compact Frame, or a vertical Structure. `args: int(v, j)`, `args: (int: v j)`, and the vertical nested form express nesting explicitly.
 
+Application with explicit actual arguments requires its own Frame: short `merge: A C`, compact `merge(A C)`, or an equivalent vertical form. This rule applies to all receivers and callable heads without name-based exceptions. In `b: merge A C`, the body of Frame `b` contains neighboring atoms `merge`, `A`, `C`, not a nested `merge` Frame; P0 does not build one from knowledge of the receiver or its signature. Semantic validity of the whole Structure follows its ordinary context, not a special prohibition of these names. A bare callable atom may undergo nullary evaluation under the semantics, but does not consume neighboring atoms as actual arguments.
+
 Expression-like sequences consist of atoms and operator fields. `print: a+b c` and `print: a + b c` produce the same structural split. The expression profile determines prefix, postfix, or infix roles, precedence, and operation meaning after P0. The C projection preserves ANSI C precedence and associativity; other backends use a separate profile, not a new structural grammar.
 
 **Source excerpt** — `Lingvamyxa_spec.txt`, 3105–3105.

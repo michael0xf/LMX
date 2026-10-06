@@ -1,5 +1,15 @@
 # K02 — ordinary merge values (next_core_tasks_v2.md, §2)
 
+Editorial correction — 2026-10-06: this historical record includes the
+incorrectly accepted prefix spelling `b: merge A C`. It is not a language
+rule or an alias. Operand-bearing applications require their own actual
+P0 Frame, such as `b: merge: A C`, `b: merge(A C)` or an equivalent vertical
+form. The former K02d "book spelling" collector is a crutch to remove,
+not a verified common application path. Old measurements remain evidence
+of the old bytes, not gates of the corrected syntax. See the
+[author's correction](../LMX_blog/2026-10-06.md#explicit-receiver-frames) and
+[mandatory removal stage](../next_core_tasks_v2.md#explicit-receiver-frames).
+
 Status 2026-10-01: **OPEN**; first slice K02a implemented on the K01 release (`65e4cf4`). This
 note records reproductions before repairs, as the plan's §1 asks.
 

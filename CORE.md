@@ -368,7 +368,7 @@ A primitive declaration names its receiver, such as `int: i`; an unknown
 ordinary head does not acquire a primitive variable type from a literal body.
 
 There is no implicit `merge(Model, empty)` declaration route. Explicit
-`b: merge A C` retains the ordinary expression-merge contract, with `A` and
+`b: merge: A C` retains the ordinary expression-merge contract, with `A` and
 `C` as operands and `b` as the external recipient. Nonprimitive values are
 passed and returned by reference to their descriptors, never by-value copies.
 The established composition needed when returning a nested callable remains

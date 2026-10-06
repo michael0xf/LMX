@@ -98,6 +98,25 @@ argument container is generally transparent, not only for calls or emptiness.
 `f()`, `f: ()` and explicitly closed empty vertical f have the same empty body;
 dangling `f:` is invalid. Bare f is an expression evaluated by its resolved role.
 
+An application with actual arguments has an explicit Frame: `merge: A C`,
+`merge(A C)` or an equivalent completed vertical form. A receiver word written
+as an atom does not capture neighboring fields as operands. Bare callable
+evaluation is nullary, not signature-based grouping. This is the common
+[grammar rule](docs/LMX_grammar.en.md#no-inference), with no receiver exceptions.
+
+The actual Frame provides the head/tail boundary; general resolution selects
+the head's semantic role. A receiver is an instruction to the translator,
+whereas a callable call is a runtime action; their syntax is common, not
+their role. The tail supplies arguments under the resolved head's contract.
+A receiver's argument name is not thereby another receiver application.
+For example, `catch: merge ()` supplies the failure name `merge` and empty
+parameter description to `catch`; it does not call merge. Likewise,
+`fn: test ()` supplies the method name and signature description to `fn`.
+These follow the common rule; they are not exceptions or an allowlist of
+protected forms. Interpret the actual Frame and receiving contract, not
+matching words; see [head resolution](docs/LMX_semantics.en.md#construction)
+and [declared failures](docs/LMX_semantics.en.md#exceptions).
+
 A reserved language receiver applies its defined contract and cannot be shadowed.
 An unknown ordinary head in definition position defines a named Structure and
 retains its tail without executing it. An existing callable Structure, directly or through a reference, is called;
@@ -128,6 +147,21 @@ collection, type checking, native emission and graph emission. Legacy
 `Model: fresh` and named-model shortcut recognizers cannot stay alongside the
 new classifier. The current merge slice's `l2_merge_declaration` demonstrates
 declaration-role filtering; it is not a replacement second resolver.
+The atomic collectors in `l2_receiver_value`, `l2_fields_one_value` and
+`l2_tail_is_structure` violate this rule when they reconstruct an application
+from `x: merge Y`. The preliminary census is 260 text-matching fixtures,
+not a verified final dependency count. Remove those routes and migrate the
+classified fixtures through the existing Frame path under
+[K03-EXPLICIT-RECEIVER-FRAMES](next_core_tasks_v2.md#explicit-receiver-frames).
+Earlier atomic-prefix successes are historical implementation evidence,
+not normative aliases or completion of that new gate.
+`l2_merge_atom_settle` must be deleted entirely, together with its fallback
+caller in `l2_merge_frame` and any equivalent call reconstruction. A colon
+guard or a synthetic-Frame adapter over the same subsystem does not remove
+the defect. Consume the actual P0 Frame through the common route. The writer's
+later replay reports 264 changed translation runs of 1980 (231 accepted to
+refused); these are not the same counting unit as 260 text-matching fixtures,
+and neither count proves completed migration or a green gate.
 
 **Verification.** Repeat the same role across source positions, empty/nonempty
 forms and both engines. Q58's Batch holds the known `put: 7` operator without
@@ -330,7 +364,8 @@ the genuine result layout/origin, not whichever requirement made a test pass.
 ## 11. merge result, copy map, parent and native retention
 
 **Norm.** Explicit merge evaluates live operands once, left to right, and builds
-a new composed value. The first operand supplies model slots; matching later
+a new composed value through its ordinary explicit application Frame:
+`b: merge: A C` or `b: merge(A C)`. The first operand supplies model slots; matching later
 fields update those positions and new fields append under the common rule.
 Structural parts compose under the documented args/return/body contract. One
 source-to-copy map preserves sharing and cycles and rewrites internal references

@@ -1,0 +1,20 @@
+# K03 S5 control (Q58): a known callable as the tail of a definition, bare or applied to nothing, stays in the
+# retained body -- nothing runs at the definition (82 if it did), each runs when its Structure runs: exit 7.
+int: ticks 0
+fn: tick () int
+    node\ticks: node\ticks + 1
+    return: 2
+end: tick
+fn: check () int
+    b: tick
+    c: tick()
+    if: node\ticks != 0
+        return: 82
+    b()
+    c()
+    if: node\ticks != 2
+        return: 83
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

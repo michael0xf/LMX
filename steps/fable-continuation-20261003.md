@@ -11083,3 +11083,188 @@ red, and the two positive controls carry the coverage the program claimed.
 | `build/l3_selftest/opus_l3_40` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_46` (full harness, the cleaned bytes) | RED39/2125: against `opus_full_42` FAIL→OK 0, OK→FAIL 0, added 46 (all OK), removed 0, red rows whose message changed 0; against `opus_full_45` (this slice before the cleanup, RED41/2127) exactly the two rows of cd6aa536 removed, every other target's verdict and message the same but for two identifiers that change in every run: the translator's sha256 (its PE build stamp; the two executables are equal with TimeDateStamp and CheckSum masked) and the unit hash of the two library rows (derived from the evidence directory of each run). The kernel and L3 gates read no fixture and no row, and the cleanup changed no `.lm1`. `opus_full_43` was stopped at its start to add the data control; `opus_full_44` was stopped by the low-memory reaper of Claude Code at 5020 logs and run again on the same 26 hashed paths as `opus_full_45`. Every staged copy is the declared bytes; the removed program is absent. |
 | Replay of `opus_full_42`'s 2078 recorded translations | 2076 byte-identical (L1 included); 2 refusals moved to their new contract (`unit_held_call_bare_name_args_refused`, `unit_merge_atom_assign_refused`). |
+
+<a id="unified-head-s5"></a>
+## 110. A definition retains its tail: a word there is an item of the body under its statement contract (K03-UNIFIED-HEAD S5)
+
+Codex's ticket K03-UNIFIED-HEAD-S5-20261007-02 (a child of K03-UNIFIED-HEAD-IMPLEMENT-20261006-01) and its answer
+K03-S5-DEFINITION-TAIL-20261007-03: in every scope a known word bare in a definition tail and its empty application meet
+the same contract and the same located error; a known word never becomes an unknown dynamic input or a dormant
+same-named definition because of its spelling; an unknown head keeps its Structure construction; a known callable stays
+in the retained dormant body in source order. The answer chose the first reading: with x absent, `x: sendMessage:
+exit(...)` defines x with the written sendMessage application in its body -- defining x sends nothing, an explicit
+execution of x reaches that operator. The role inference that made a receiver's application the outer name's value
+(`l2_receiver_value`) and its duplicate classifiers go through the application, resolution and consumption route; the
+receiving construction stays where its resolved contract defines it (#construction :703, `b: merge: A C`), downstream of
+the common resolution; no whitelist, no new syntax kind, no parser flag, no declaration-time execution.
+
+What reads the resolution now (`l2trans.lm1`):
+
+- `l2_merge_construction(fr)` replaces `l2_receiver_value`: 1 only when the tail's first item is merge's application,
+  the atom or its Frame (`l2_app_head`), the word read by the defined set (`l2_head_word`). Its readers: `l2_unit_role`
+  and `l2_local_ns_shape` (the construction is the statement, not a definition), `l2_tail_is_structure` (it is the
+  head's value) and `l2_ns_decl_first` (it declares no field). The check refuses merge's construction with no operand
+  at the merge, whatever the outer name: `x: merge`, `x: merge()` and `x: merge Model` say "merge needs at least one
+  operand" (`x: merge()` said it at x).
+- Any other word's application in the tail of an absent head -- bare, applied to nothing or to names -- is an item of
+  the retained body under its ordinary statement contract (`l2_check_word_stmt`, S2): a word is never retained content
+  (`l2_retained_atom`), never an identifier of an identifier-only tail (`l2_ident_only_tail`), never the one value of
+  the tail (`l2_tail_is_structure`, whose clause "a receiver's call stays the head's value" was `l2_receiver_value`'s
+  twin), and heads no reference field (`l2_ns_decl_first`: `catch: e` in a body is catch's application, not a field e
+  of a type named catch -- refused in the second phase, "unknown nested Structure reference", at the unit or at 1:1).
+- A field word applied to nothing -- `size_t`, `int`, `unsigned`, `ulong`, `char`, `fn`, `[]`, `()`, bare or empty --
+  is that field's declaration and says what it lacks at the word (`l2_ns_field_needs`; the set `l2_ns_field_word` is
+  the one `l2_ns_decl_first` and `l2_take_ns_body` read).
+- In the procedure of a method's own named Structure a name the method sees is no new definition: the nested head,
+  the empty declaration shape and the local Structure shape resolve at the host method's site (`l2_ns_host_of`,
+  `l2_head_resolve`; `l2_ns_take_mi` while `l2_take_ns_body` reads such a body). `x: j()` with j the method's int was
+  a nested Structure j.
+- A unit item is read by its application (`l2_unit_role`, the directives of `l2_translate_unit`): `include`, `fn`,
+  `sub`, `os` and `independent` written bare are the directive, the method header, the os block and the qualified
+  branch with no argument, and their contracts say what is missing: "unsupported argument", "incompatible entry
+  signature", "unsupported body", "independent takes one qualified construction" (they were told they stand at the
+  root of the unit where they stood, or "unsupported body").
+- receiveMessage declares the name it binds by its own contract (`l2_receive_msg_shape`) in `l2_unit_declares`, one
+  name or two: after `receiveMessage: got Model`, `got()` is got's call (it was a new empty Structure got); the
+  one-name form was declared only through its likeness to `Model: name`, which no word has any more.
+- A located limit: a named Structure's procedure lays its top-level declarations out as the Structure's fields
+  (`l2_own_mslot`), and the name receiveMessage binds there has none: "receiveMessage in the body of a named Structure
+  is not supported yet", at the statement (it was a field of a type named receiveMessage; with the statement reading
+  alone it reached the layout, "internal: an own declaration has no physical field"). In a block of the body it has
+  the block's place, as before.
+- The spelling lists that stood for the resolution are gone: `l2_is_asgn` (16 words -> `l2_head_word`; `@` is no
+  identifier), `l2_unit_role` (const, immutable, merge, end: `l2_head_absent` below), `l2_local_ns_shape` (fn by
+  `l2_ident` above, const, immutable, independent and the receiver words by `l2_head_word` below), `l2_ns_body_stmt`
+  (the control words by `l2_ns_decl_first`, a bare `return` -- any item that is no Frame -- by its caller),
+  `l2_unit_declares` (the control words -> `l2_head_word`), `l2_head_absent` (the receiver words are words).
+  `l2_receiver_word` is read only inside `l2_head_word` now.
+
+The census's S5 sites ([k03-head-census.tsv](k03-head-census.tsv), 148 in 27 functions, line numbers of the S1 bytes):
+
+| Function (sites) | Disposition |
+| --- | --- |
+| `l2_is_asgn` (16) | the resolution: a word heads no assignment (`l2_head_word`); `@` is no identifier (`l2_ident`, above it) |
+| `l2_unit_role` (13) | fn, sub, independent, os and the five unit instructions (9): the item's contract chosen by its application, bare as empty; const, immutable, merge, end (4): removed, a word resolves (`l2_head_absent`) |
+| `l2_unimpl_numeric` (15) | kept and recorded: the language numeric types with no owned domain are refused by name; whether i8-i64, u8-u64, uint, llong, ullong and wchar_t are words of the language (float, double and long are) is not decided by the documents -- an unresolved classification, a recorded dependency |
+| `l2_collect_decls` (14), `l2_collect_asgn_body` (13) | kept: the control words' contracts -- the bodies of catch, if/else, while and for are scopes the collectors enter, `[]` declares an own array -- read from the word's Frame once the statement route has resolved it; a bare control word has no body and meets its statement contract |
+| `l2_take_ns_body` (10), `l2_ns_arrarr_field` (4) | kept: the field words' declaration shapes; applied to nothing they say what they lack at the word |
+| `l2_ns_decl_first` (8) | moved into `l2_ns_field_word`, the set it shares with `l2_take_ns_body`; no other word heads a declaration |
+| `l2_ns_body_stmt` (6) | removed: a word's Frame is a statement because it declares nothing; a bare `return` is a statement at the caller |
+| `l2_unit_declares` (5) | the resolution: a word's application declares no name (`l2_head_word`); receiveMessage's binding by its contract |
+| `l2_local_ns_shape` (5) | fn, const, immutable, independent (4) removed; the trailer's spelling `end` (1) kept, a boundary |
+| `l2_collect_method_body` (5) | kept: the method header and its close (`fn`/`sub`, `return`/`end` trailers); a bare `fn`/`sub` meets the header's count |
+| `l2_translate_unit` (4) | the directives taken by the item's application; bare, their takers refuse the missing argument |
+| `l2_take_eternal` (4) | kept: the qualified branch (`independent`'s one construction, `const`/`immutable`, `()`); a bare `independent` has none |
+| `l2_declaration` (4), `l2_contract_type` (4), `l2_emit_loc_stmt` (1) | kept: the declaration model's qualifiers and array word, and their emission |
+| `l2_slot_decl_ty` (3), `l2_receiver_frame` (1) | kept: lexical -- a slot's type words, the address of `@: t f(a)` |
+| `l2_unit_names_method`, `l2_bind_node`, `l2_bind_node_content`, `l2_fn_defined`, `l2_unit_defined_fn` (2 each), `l2_bind_same_unit_forward` (1) | kept: the method definition's header word |
+| `l2_retained_atom` (1), `l2_ident_only_tail` (1) | removed: `return` was the one word they named; no word is content or an identifier of a tail |
+
+In all: 37 sites removed into the resolution, 8 moved into the field words' set, 13 read from the application, 75
+kept as the contracts that follow resolution, 15 kept as recorded unresolved classifications.
+
+The matrices (translation only; bare and `H()` with the final translator against 4a8e1d8d's; `x` absent):
+
+| Matrix | Agree before | Agree now | What differs, by resolved contract |
+| --- | --- | --- | --- |
+| `x: H` at the root, in a method and in a block (34 heads) | 39 of 102 | 99 of 102 | j, a local int, at each: bare it is the datum (a definition holding it), `j()` applies a number |
+| a unit item `H` (40 heads) | 29 of 40 | 38 of 40 | j as above; Foo unknown: bare an unresolved name, `Foo()` the empty Structure's declaration |
+| `x: W: j` at the root, in a method and in a block against the statement `W: j` (36 words) | 3 of 36 | 27 of 36 | merge: the definition is merge's construction (`unknown merge operand` at j); until, end: P0's trailers; fn, int, size_t, char: field declarations in x; return: x's procedure has no result; receiveMessage: the limit |
+| `x: H` in a named Structure's body, at the root and in a method (34 heads, bare against `H()`) | 6 of 68 | 58 of 68 | tick, twice, Model, j, Foo bare: the field shape `Type: name` (Q57: one atom is a field of that type), recorded below |
+
+Every word and every known callable in the first two now meets one contract written bare and applied to nothing. The
+word's refusal is said at the word in all four (the field words' said at x before).
+
+The witnesses: 27 refusal programs and 5 positive programs, 64 rows after the S4 block, each refusal natively and
+under `--walk-methods` (the walked translation says the same as the native one in every row); every refusal row is
+red against 4a8e1d8d's translator:
+
+| Witness (the refused place) | 4a8e1d8d | Now |
+| --- | --- | --- |
+| root `x: catch()`, method `x: sendMessage()`, block `x: throw()`, root `x: receiveMessage()` | "<word> has no value" | catch's, sendMessage's ("this sendMessage"), throw's and receiveMessage's statement contracts, at the word |
+| root `x: sizeof`, method `x: include`, block `x: predef`, method `x: size_t`, root `x: break` | accepted | "sizeof: requires one operand", the unit instruction's refusal, "a named Structure field needs a name", "unsupported loop" |
+| method `x: fn()`, block `x: merge()` | said at x | "a callable field needs a method name", "merge needs at least one operand", at the word |
+| root `x: break: j`, method `x: catch: j`, block `x: continue: j`, method `x: include: j` | a field j of a type named by the word, "unknown nested Structure reference" at 8:1 or 1:1; catch "has no value" | the word's statement contract at the word |
+| named Structure body: `x: catch`, `x: merge` (in a method's), `x: merge()`, `x: throw()` (in a method's), `break: k` | "catch/merge is a word of the language: a program cannot bind it", "internal: an own declaration has no physical field", "throw has no value", a field k of a type named break | catch's contract, "merge needs at least one operand", throw's contract, "break takes no argument", at the word |
+| unit items `include`, `fn`, `independent` | "include is a unit instruction: it stands at the root of the unit", "unsupported body" | "unsupported argument", "incompatible entry signature", "independent takes one qualified construction" |
+| method `x: j()`, j its int | accepted (a nested Structure j) | "assignment target must be a declared typed mutable value" |
+| root `x: size_t` above a Structure x the unit declares below | "size_t has no value": the word read as an identifier, the line a use of the x below | "a named Structure field needs a name": a word is no name, the line defines x by source order as every other tail does |
+| `receiveMessage: got Model`, then `got()` | accepted (a new empty Structure got) | "executing a named Structure is not supported yet", as for the one-name letter (`unit_letter_call_refused`) |
+| root `x: receiveMessage: msg` -- the limit | "unresolved name" | "receiveMessage in the body of a named Structure is not supported yet" |
+
+The positive controls, natively and walked (every method walked but the root's native word): `unit_k03_def_send_body`,
+`unit_k03_def_send_root` and `unit_k03_def_send_block` -- s, absent, retains `sendMessage: exit(exit_code: count(); ...)`
+in a method, at the root and in a block: the definition sends nothing (exit 4 if it did), three ticks run, s() sends in
+source order and count() is read then, exit 7 (81 if s() sent nothing); 4a8e1d8d refused each, "sendMessage has no
+value". `unit_k03_ns_send_body`: x, absent in the body of Outer, retains `sendMessage: exit(exit_code: 4; ...)` as a
+nested Structure, and `Outer()` runs none of it: exit 7 (4a8e1d8d: "sendMessage has no value"). `unit_k03_def_callable_body` (Q58, green before too): `b: tick` and `c: tick()` run nothing at their
+definitions and once each when b and c run. The driver checks the exit: the same artifacts run with 4 or 81 expected
+fail.
+
+Mutants (each removes one rule whole or restores the classifier it replaced, built from the final bytes, one gcc at a
+time; the 32 witness programs translated natively and under `--walk-methods`, and the 2124 recorded translations of
+`opus_full_46` replayed; a refusal row is red when its first diagnostic is no longer its needle, a positive row when
+it is refused):
+
+| Mutant | Red rows |
+| --- | --- |
+| `l2_merge_construction` back to `l2_receiver_value` (a receiver's Frame gives the outer name a result) | 22: catch/sendMessage/throw/receiveMessage applied to nothing ("<word> has no value"), `x: catch: j`, the limit, `unit_k03_ns_throw_app_refused`, and the four positives refused ("sendMessage has no value") |
+| `l2_retained_atom`: a bare word is content again (only `return` and the receiver words excluded) | 12: bare sizeof, include, predef, size_t, break, and `x: size_t` above a Structure x (accepted or another contract) |
+| `l2_ident_only_tail`: a bare word an identifier of a tail again | 2: `x: size_t` above a Structure x, "size_t has no value" (the line read as a use of the x below) |
+| merge's construction with no operand unrefused | 4: block `x: merge()`, body `x: merge()` |
+| a field word applied to nothing unrefused at the word | 6: `x: size_t`, `x: fn()`, `x: size_t` above a Structure x |
+| the nested head of a method's own named Structure, the empty declaration shape, the local Structure shape -- each without the host's resolution (three mutants) | 2 each: method `x: j()` |
+| unit items by the Frame alone | 6: unit items `include`, `fn`, `independent` |
+| `fn` written bare no longer the header with no field | 2: unit item `fn` |
+| `independent` written bare no longer the branch with no construction | 2: unit item `independent` |
+| a word heads a reference field again (`l2_ns_decl_first`) | 12: `x: break: j`, `x: catch: j`, `x: continue: j`, `x: include: j`, the limit (a field of a type named receiveMessage), `break: k` in a body |
+| a bare word the one value of a tail (`l2_tail_is_structure`) | 2: `x: catch` in a body (a field named catch again) |
+| `l2_tail_is_structure`'s receiver clause restored | 2: `unit_k03_ns_send_body` -- the line becomes a statement of Outer's procedure, "internal: an own declaration has no physical field"; every refusal witness stays green (that route refuses the same way) |
+| merge's construction a field in a body again | 2: `x: merge` in a body ("merge is a word of the language: a program cannot bind it") |
+| the receiveMessage limit removed | 2: the limit ("internal: an own declaration has no physical field") |
+| `l2_unit_declares` without receiveMessage's contract | 2: `got()` after the two-name form (accepted), and the corpus row `unit_letter_call_refused` |
+| every spelling list the resolution replaced, restored at once | none: the lists were the resolution's duplicates for every reached input |
+| the control (unchanged bytes) | none |
+
+No mutant changed the L1 of a translating corpus row (the replay of the 2124 translations is byte-identical to
+4a8e1d8d's for every mutant but `l2_unit_declares`'s, whose one changed row is the refusal named above).
+
+Two debts of this checkpoint, ruled by Codex (K03-S5-NS-ROLES-20261007-04) and taken next, each its own bounded
+checkpoint in this lane before S6 (next_core_tasks_v2.md, K03):
+
+- K03-S5-NS-ROLES. In a named Structure's body a one-atom tail that is no word -- `x: tick`, `x: j`, `x: Model`,
+  `x: Foo`, x absent -- is still the shape `Type: name`, a field x of a type named by the head, refused in the second
+  phase when no Structure has that name; at the root and in a method the same line defines x. Codex: a body is not a
+  signature -- the same ordinary role resolution applies there ([docs](../docs/LMX_semantics.en.md#resolved-head-consumption):
+  an existing ordinary named Structure takes no arguments, an unknown head constructs, for absent b `b: A` and
+  `@: b A` introduce b; next_core_tasks_dictionary_v2.md §3: the `Model: fresh` and named-model shortcut recognizers
+  cannot stay beside the new classifier). The culprit is `l2_ns_decl_first`'s last one-atom branch (`l2_ident(head)`,
+  `l2_ident(tail)`) with its second-phase consumers: census the registrations that depend on it, compare root,
+  method, named and anonymous bodies (later names included), and remove that role decision through the common route.
+- K03-S5-RECEIVE-OUTPUT. The limit above is a temporary implementation limit, not a rule of the language. The name
+  receiveMessage binds is a computed output (LMX_blog/q/q53.md:95-97: `receiveMessage: m` is like `int: i getValue()`,
+  not `int: i 5` -- no data reachable as `struct\m`): it takes the ordinary computed-output binding and storage
+  (`l2_own_output_add`, `l2_receiver_output_place`) and `l2_own_mslot` stops assuming that every top-level name of a
+  named Structure's procedure has a public field slot -- never a synthetic data field.
+
+Recorded, not changed here:
+
+- The second phase says "unknown nested Structure reference" and "unknown callable field" at the unit's node (1:1, or
+  the item that opened the pass) for a Structure that is no part's root; a part's is said at the field
+  (`unit_s7_part_root_type_refused_part` 4:8).
+- `l2_tail_is_structure` keeps the C door's Frame the head's value in a named Structure's body (a known callable);
+  at the root and in a method the tail is retained.
+- `x: j()` with j a method's int says "assignment target must be a declared typed mutable value" in a method and in a
+  block (the procedure's check of the host's name), "unsupported body" at the root, as the statement `j()` does in a
+  method.
+- A number field written with its name and no literal (`x: int: j`) is told "a named Structure field needs a name".
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_43` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes. |
+| `build/l3_selftest/opus_l3_41` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_47` (full harness) | RED39/2189: against `opus_full_46` FAIL→OK 0, OK→FAIL 0, added 64 (all OK: the 64 rows of this slice), removed 0, and no target's verdict or message changed but two identifiers that change in every run (the translator's sha256 and the unit hash of the two library rows). The 34 declared paths were hashed before the run; every staged copy is the declared bytes. |
+| Focused runs on the same bytes | `opus_focus_s5_01` 71 targets and `opus_focus_s5_02` 82 targets, 0 failed (the slice rows, the S4 controls, Q58 and retained-body rows, `unit_letter_call_refused`). |
+| Replay of `opus_full_46`'s 2124 recorded translations | 2124 byte-identical (L1, exit, messages). |

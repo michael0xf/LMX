@@ -1,0 +1,22 @@
+# K03 S5 (Codex K03-S5-DEFINITION-TAIL-20261007-03): s, absent, retains `sendMessage: exit(...)` as its body: the
+# definition sends nothing (exit 4 if it did), s() sends it in source order, count() read then (3 ticks: exit 7; 81
+# if s() sent nothing).  In a block of a method.
+int: ticks 0
+fn: tick () int
+    node\ticks: node\ticks + 1
+    return: 2
+end: tick
+fn: count () int
+    return: node\ticks + 4
+end: count
+fn: check () int
+    if: node\ticks = 0
+        s: sendMessage: exit(exit_code: count(); stdout: ""; stderr: "")
+        tick()
+        tick()
+        tick()
+        s()
+    return: 81
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

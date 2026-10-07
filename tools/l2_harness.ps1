@@ -4758,6 +4758,144 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_data_value_walk.lm2'; Source = 'unit_k03_data_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    # K03-UNIFIED-HEAD S5 (Codex K03-UNIFIED-HEAD-S5-20261007-02, K03-S5-DEFINITION-TAIL-20261007-03): a definition
+    # `x: tail`, x absent -- at the root, in a method, in a block, in a named Structure body -- retains its tail as
+    # the body of x; a word of the language there, bare, applied to nothing or to a name, is an item of that body
+    # under its ordinary statement contract, refused at the word (it was "W has no value", a field of a type named by
+    # the word, a name the admission refused, content, or accepted); a unit item written bare is its application; a
+    # known name (`j()`, j a local int) is no new definition; the two-name receiveMessage declares its letter, whose
+    # `got()` is a call.  The limit, located: the name receiveMessage binds at the top of a named Structure body has no
+    # field yet.  The twins: --walk-methods.  The controls, native and walked: a retained `sendMessage: exit(...)` sends
+    # only when its Structure runs (root, method, block), running a named Structure runs none of a nested definition
+    # of its body, and a known callable, bare or applied, stays dormant (Q58).
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_break_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_bare_break_refused.lm2:8:4: unsupported loop'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_break_refused_walk.lm2'; Source = 'unit_k03_def_bare_break_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_bare_break_refused_walk.lm2:8:4: unsupported loop'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_include_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_bare_include_refused.lm2:10:8: include is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_include_refused_walk.lm2'; Source = 'unit_k03_def_bare_include_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_bare_include_refused_walk.lm2:10:8: include is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_predef_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_bare_predef_refused.lm2:11:12: predef is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_predef_refused_walk.lm2'; Source = 'unit_k03_def_bare_predef_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_bare_predef_refused_walk.lm2:11:12: predef is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_size_t_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_bare_size_t_refused.lm2:10:8: a named Structure field needs a name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_size_t_refused_walk.lm2'; Source = 'unit_k03_def_bare_size_t_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_bare_size_t_refused_walk.lm2:10:8: a named Structure field needs a name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_sizeof_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_bare_sizeof_refused.lm2:8:4: sizeof: requires one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_bare_sizeof_refused_walk.lm2'; Source = 'unit_k03_def_bare_sizeof_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_bare_sizeof_refused_walk.lm2:8:4: sizeof: requires one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_break_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_break_arg_refused.lm2:9:4: break takes no argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_break_arg_refused_walk.lm2'; Source = 'unit_k03_def_break_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_break_arg_refused_walk.lm2:9:4: break takes no argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_catch_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_catch_app_refused.lm2:8:4: catch: takes a name, its parameters and a handler body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_catch_app_refused_walk.lm2'; Source = 'unit_k03_def_catch_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_catch_app_refused_walk.lm2:8:4: catch: takes a name, its parameters and a handler body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_catch_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_catch_arg_refused.lm2:10:8: catch: takes a name, its parameters and a handler body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_catch_arg_refused_walk.lm2'; Source = 'unit_k03_def_catch_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_catch_arg_refused_walk.lm2:10:8: catch: takes a name, its parameters and a handler body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_continue_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_continue_arg_refused.lm2:11:12: continue takes no argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_continue_arg_refused_walk.lm2'; Source = 'unit_k03_def_continue_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_continue_arg_refused_walk.lm2:11:12: continue takes no argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_fn_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_fn_app_refused.lm2:10:8: a callable field needs a method name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_fn_app_refused_walk.lm2'; Source = 'unit_k03_def_fn_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_fn_app_refused_walk.lm2:10:8: a callable field needs a method name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_include_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_include_arg_refused.lm2:10:8: include is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_include_arg_refused_walk.lm2'; Source = 'unit_k03_def_include_arg_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_include_arg_refused_walk.lm2:10:8: include is a unit instruction: it stands at the root of the unit'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_local_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_local_app_refused.lm2:10:8: assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_local_app_refused_walk.lm2'; Source = 'unit_k03_def_local_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_local_app_refused_walk.lm2:10:8: assignment target must be a declared typed mutable value'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_merge_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_merge_app_refused.lm2:11:12: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_merge_app_refused_walk.lm2'; Source = 'unit_k03_def_merge_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_merge_app_refused_walk.lm2:11:12: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_receive_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_receive_app_refused.lm2:8:4: receiveMessage binds one or two names'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_receive_app_refused_walk.lm2'; Source = 'unit_k03_def_receive_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_receive_app_refused_walk.lm2:8:4: receiveMessage binds one or two names'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_receive_name_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_receive_name_limit.lm2:8:4: receiveMessage in the body of a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_receive_name_limit_walk.lm2'; Source = 'unit_k03_def_receive_name_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_receive_name_limit_walk.lm2:8:4: receiveMessage in the body of a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_send_app_refused.lm2:10:8: this sendMessage'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_app_refused_walk.lm2'; Source = 'unit_k03_def_send_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_send_app_refused_walk.lm2:10:8: this sendMessage'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_throw_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_throw_app_refused.lm2:11:12: throw: takes one name and its payload'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_throw_app_refused_walk.lm2'; Source = 'unit_k03_def_throw_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_throw_app_refused_walk.lm2:11:12: throw: takes one name and its payload'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_word_above_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_def_word_above_struct_refused.lm2:8:4: a named Structure field needs a name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_word_above_struct_refused_walk.lm2'; Source = 'unit_k03_def_word_above_struct_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_def_word_above_struct_refused_walk.lm2:8:4: a named Structure field needs a name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_bare_catch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ns_bare_catch_refused.lm2:10:8: catch: takes a name, its parameters and a handler body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_bare_catch_refused_walk.lm2'; Source = 'unit_k03_ns_bare_catch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ns_bare_catch_refused_walk.lm2:10:8: catch: takes a name, its parameters and a handler body'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_bare_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ns_bare_merge_refused.lm2:11:12: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_bare_merge_refused_walk.lm2'; Source = 'unit_k03_ns_bare_merge_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ns_bare_merge_refused_walk.lm2:11:12: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_merge_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ns_merge_app_refused.lm2:10:8: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_merge_app_refused_walk.lm2'; Source = 'unit_k03_ns_merge_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ns_merge_app_refused_walk.lm2:10:8: merge needs at least one operand'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_throw_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ns_throw_app_refused.lm2:11:12: throw: takes one name and its payload'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_throw_app_refused_walk.lm2'; Source = 'unit_k03_ns_throw_app_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ns_throw_app_refused_walk.lm2:11:12: throw: takes one name and its payload'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_word_item_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ns_word_item_refused.lm2:10:5: break takes no argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_word_item_refused_walk.lm2'; Source = 'unit_k03_ns_word_item_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ns_word_item_refused_walk.lm2:10:5: break takes no argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_receive_two_names_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_receive_two_names_call_refused.lm2:9:1: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_receive_two_names_call_refused_walk.lm2'; Source = 'unit_k03_receive_two_names_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_receive_two_names_call_refused_walk.lm2:9:1: executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_unit_bare_fn_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_unit_bare_fn_refused.lm2:8:1: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_unit_bare_fn_refused_walk.lm2'; Source = 'unit_k03_unit_bare_fn_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_unit_bare_fn_refused_walk.lm2:8:1: incompatible entry signature'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_unit_bare_include_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_unit_bare_include_refused.lm2:8:1: unsupported argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_unit_bare_include_refused_walk.lm2'; Source = 'unit_k03_unit_bare_include_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_unit_bare_include_refused_walk.lm2:8:1: unsupported argument'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_unit_bare_independent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_unit_bare_independent_refused.lm2:8:1: independent takes one qualified construction'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_unit_bare_independent_refused_walk.lm2'; Source = 'unit_k03_unit_bare_independent_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_unit_bare_independent_refused_walk.lm2:8:1: independent takes one qualified construction'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_callable_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_callable_body_walk.lm2'; Source = 'unit_k03_def_callable_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_block_walk.lm2'; Source = 'unit_k03_def_send_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_body_walk.lm2'; Source = 'unit_k03_def_send_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_def_send_root_walk.lm2'; Source = 'unit_k03_def_send_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_send_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ns_send_body_walk.lm2'; Source = 'unit_k03_ns_send_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
     # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
     # task changes stays 0 through the receiving call and is changed once by the explicit invocation.

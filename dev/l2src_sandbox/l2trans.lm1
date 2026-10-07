@@ -584,6 +584,9 @@ int: l2_nsf_n 0
 # 1 while l2_take_ns_body is reading a method-local named Structure. Those atoms stay
 # statements; a unit definition retains a written atom as content (l2_retained_atom).
 int: l2_atom_hold 0
+# K03 S5: the method whose own named Structure l2_take_ns_body is reading, or -1: its nested heads resolve at that
+# method's site (l2_ns_nested_def).
+int: l2_ns_take_mi 0 - 1
 # Fresh names for nested Structures built into a method-local Holder.
 int: l2_held_n 0
 @@: LmP0Text l2_nsf_name 0
@@ -1009,6 +1012,7 @@ prototype:
     fn: l2_layout_source () int
     fn: l2_fill_inert () int
     fn: l2_retained_body (const: @(LmP0Frame fr)) int
+    fn: l2_merge_construction (const: @(LmP0Frame fr)) int
     fn: l2_ident_only_tail (const: @(LmP0Frame fr)) int
     fn: l2_struct_defined_below (const: @(LmP0Text name); const: @(LmP0Node item)) int
     fn: l2_ret_cell_ty (int: mi) int
@@ -4447,11 +4451,11 @@ return: (cast: (int) (l2_text_eq(t, "sendMessage") || l2_text_eq(t, "receiveMess
 
 # Whether frame fr's tail is a Structure, not one value (book §9 :563: an absent target whose value IS a Structure is
 # created a structural variable, its type that Structure; `target: ()` -- with or without `end: target` -- is the empty
-# one; a literal, `arg: 7`, never declares).  One value is one atom, one operator run, or the application of a
-# receiver or of the C door, its Frame -- `merge: A B`.  A call, a receiver's too, is its Frame: a tail whose first
-# atom names a method or a receiver -- `makeAdder 5`, `merge A C` -- applies nothing and is no one value, and is a
-# Structure like any other (the author, 2026-10-06; for a unit item Q58 and 2026-10-05).  Anything else -- the empty
-# tail, several items, one statement or declaration -- is a Structure.
+# one; a literal, `arg: 7`, never declares).  One value is one atom, one operator run, merge's receiving construction
+# (`merge: A B`, l2_merge_construction) or the application of the C door, its Frame.  A call is its Frame: a tail whose
+# first atom names a method -- `makeAdder 5` -- applies nothing and is no one value, and is a Structure like any other
+# (the author, 2026-10-06; for a unit item Q58 and 2026-10-05); a word written bare is its application (K03 S5).
+# Anything else -- the empty tail, several items, one statement or declaration -- is a Structure.
 fn: l2_tail_is_structure (const: @(LmP0Frame fr)) int
     @: LmP0Field f
     int: n
@@ -4463,14 +4467,21 @@ fn: l2_tail_is_structure (const: @(LmP0Frame fr)) int
         return: 1
     if: f = 0 || f\value = 0
         return: 0
+    # merge's receiving construction (#construction :703, `R: merge: A B`) is the head's value (l2_merge_construction).
+    if: l2_merge_construction(fr) != 0
+        return: 0
+    # K03 S5 (Codex K03-S5-DEFINITION-TAIL-20261007-03): any other word's application, bare or applied -- `x: catch`
+    # as `x: catch()`, `x: sendMessage: exit(...)` -- is an item of the retained body under its ordinary statement
+    # contract, not the head's value: the tail is a Structure.
+    if: n = 1 && f\value\kind = c.LM_P0_NODE_ATOM && f\value\as != 0 && l2_head_word(f\value\as\atom) != 0
+        return: 1
     if: l2_expr_span(f) = n && (n > 1 || f\value\kind = c.LM_P0_NODE_ATOM)
         return: 0
     # Q58 (the author, 2026-10-01): `Batch: (put: 7)` with put a method of the unit -- Batch, absent, holds the one
     # Structure (put: 7): the known call is a STATEMENT of its body, retained, not executed at the definition and
-    # not the head's value.  A receiver's call (`merge: A B` and what the receiver takes after it) and the C door
-    # stay the head's value, as before.
+    # not the head's value.  The C door stays the head's value, as before.
     if: f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0
-        if: l2_is_known(f\value\as\frame\head) != 0 || l2_receiver_word(f\value\as\frame\head) != 0
+        if: l2_is_known(f\value\as\frame\head) != 0
             return: 0
         ---
 return: 1
@@ -4484,7 +4495,7 @@ return: (cast: (int) (fr != 0 && fr\body != 0))
 
 # Whether head t, at unit item `item`, resolves to nothing (book §9 :559: the declaration route is the one left when
 # neither a callable nor a non-callable binding is found): no method -- visible both ways (l2_unit_names_method) --,
-# no field the unit declares, no C door or declared function, no primitive type word, no receiver of the language, and
+# no field the unit declares, no C door or declared function, no primitive type word, no word of the language, and
 # no named Structure an earlier item of the unit declared -- that is a binding, whose `f()` or `f:` + Structure is the
 # assignment with admission (:561).  Read from the source's order, never from what is registered yet: every pass that
 # classifies the unit's items -- a count before the named Structures exist, a fill after -- gets one answer.
@@ -4493,7 +4504,7 @@ fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     @: LmP0Text got
     if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_find_method(t) >= 0
         return: 0
-    if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_receiver_word(t) != 0 || l2_head_word(t) != 0
+    if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_head_word(t) != 0
         return: 0
     if: l2_cur_unit = 0
         return: 1
@@ -4511,19 +4522,23 @@ fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     ---
 return: 1
 
-# 1 when the frame's first item is a receiver's value, its Frame (`R: merge: A`).
-# That frame is the statement: the outer name receives the result, and the receiver
-# word is not a nested Structure type (l2_tail_is_structure).
-fn: l2_receiver_value (const: @(LmP0Frame fr)) int
+# K03 S5 (Codex K03-S5-DEFINITION-TAIL-20261007-03; docs/LMX_semantics.en.md#construction): 1 when the frame's first
+# item is merge's application -- the atom or its Frame (l2_app_head), the word read by the defined set -- whose own
+# construction contract makes the outer name the result: `b: merge: A C`, `b: merge(A C)`.  No other receiver gives an
+# absent outer name a result: its application, bare, empty or with arguments, is an item of the retained body under
+# its ordinary statement contract (l2_check_word_stmt), and a known word never names a nested Structure.
+fn: l2_merge_construction (const: @(LmP0Frame fr)) int
     @: LmP0Field f
+    @: LmP0Text h
     if: fr = 0 || fr\body = 0
         return: 0
     f: l2_next_active(fr\body\first_field)
-    if: f = 0 || f\value = 0 || f\value\as = 0
+    if: f = 0 || f\value = 0
         return: 0
-    if: f\value\kind = c.LM_P0_NODE_FRAME && f\value\as\frame != 0 && f\value\as\frame\head != 0 && l2_receiver_word(f\value\as\frame\head) != 0
-        return: 1
-return: 0
+    h: l2_app_head(f\value)
+    if: h = 0 || l2_head_word(h) = 0 || l2_text_eq(h, "merge") = 0
+        return: 0
+return: 1
 
 fn: l2_struct_defined_below (const: @(LmP0Text name); const: @(LmP0Node item)) int
     @: LmP0Field f
@@ -4548,20 +4563,21 @@ return: 0
 # call), `R: merge: A B` (a receiver's value) -- is a statement.
 fn: l2_unit_role (const: @(LmP0Node item)) int
     const: @: LmP0Frame fr
-    if: l2_frame_head(item, "fn") != 0 || l2_frame_head(item, "sub") != 0
+    @: LmP0Text ah l2_app_head(item)
+    # K03 S5: the item's application -- the atom or its Frame (l2_app_head) -- decides: `fn` and `fn()`, `os` and `os()`,
+    # `include` and `include()` are one item each, meeting one contract.
+    if: l2_text_eq(ah, "fn") != 0 || l2_text_eq(ah, "sub") != 0
         return: 1
-    if: l2_frame_head(item, "independent") != 0
+    if: l2_text_eq(ah, "independent") != 0
         return: 2
-    if: l2_frame_head(item, "os") != 0
+    if: l2_text_eq(ah, "os") != 0
         return: 3
-    if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && l2_unit_word(item\as\frame\head) != 0
+    if: l2_unit_word(ah) != 0
         return: 4
     if: item = 0 || item\kind != c.LM_P0_NODE_FRAME || item\as = 0 || item\as\frame = 0 || item\as\frame\body = 0
         return: 0
     fr: item\as\frame
     if: l2_ident(fr\head) = 0 || l2_unit_names_method(fr\head) != 0
-        return: 0
-    if: l2_frame_head(item, "const") != 0 || l2_frame_head(item, "immutable") != 0 || l2_frame_head(item, "merge") != 0 || l2_frame_head(item, "end") != 0
         return: 0
     # General resolution (book §9, docs/LMX_semantics.ru.md :559-:565; the author, Q54): a head that resolves to
     # nothing, with a Structure tail, declares a named Structure -- whatever closes the frame: `end: Name`, a bare
@@ -4570,12 +4586,12 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
         return: 0
     # An absent head declares a named Structure whose tail is a Structure or identifier
     # atoms (semantics: unknown A: b). A literal tail (`x: 7`) declares nothing.
-    # A receiver's value is the statement even when that tail is nonempty: `R: merge: A B`.
+    # merge's construction is the statement even when that tail is nonempty: `R: merge: A B` (l2_merge_construction).
     # A tail that begins with a known method declares the Structure too and calls nothing,
     # in every spelling (Q58): `add5: makeAdder 5` is a definition.  A factory's result is
     # received by `@: add5 makeAdder(5)` (the author, 2026-10-05; l2_receiver_call).
     if: l2_head_absent(fr\head, item) != 0 && l2_retained_body(fr) != 0
-        if: l2_receiver_value(fr) != 0
+        if: l2_merge_construction(fr) != 0
             return: 0
         if: l2_ident_only_tail(fr) != 0 && l2_struct_defined_below(fr\head, item) != 0
             return: 0
@@ -4586,18 +4602,43 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
     ---
 return: 0
 
+# The words whose application declares a named Structure field (l2_take_ns_body): a number or char field, an
+# array, an inline nested Structure, a callable field.
+fn: l2_ns_field_word (const: @(LmP0Text h)) int
+    if: h = 0
+        return: 0
+    if: l2_text_eq(h, "size_t") || l2_text_eq(h, "int") || l2_text_eq(h, "unsigned") || l2_text_eq(h, "ulong") || l2_text_eq(h, "char")
+        return: 1
+return: (cast: (int) (l2_text_eq(h, "[]") || l2_text_eq(h, "()") || l2_text_eq(h, "fn")))
+
+# K03 S5: what the field declaration of word h applied to nothing lacks, said at node -- the refusals its Frame form
+# gives for no argument (l2_take_ns_body).
+fn: l2_ns_field_needs (const: @(char path); const: @(LmP0Node node); const: @(LmP0Text h)) int
+    if: l2_text_eq(h, "fn")
+        return: l2_error(path, node, "a callable field needs a method name")
+    if: l2_text_eq(h, "[]")
+        return: l2_error(path, node, "an array field needs a type, a name and a count")
+    if: l2_text_eq(h, "()")
+        return: l2_error(path, node, "a nested Structure needs a name and a body")
+return: l2_error(path, node, "a named Structure field needs a name")
+
 # Whether node, the first item of a body, declares a named Structure field: a number or char field,
 # an array, an inline nested Structure, a callable field, a reference field, or `Name: field` (one
 # name after a Structure type) -- the shapes l2_take_ns_body takes.
 fn: l2_ns_decl_first (const: @(LmP0Node node)) int
     if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || node\as\frame\body = 0
         return: 0
-    if: l2_frame_head(node, "size_t") || l2_frame_head(node, "int") || l2_frame_head(node, "unsigned") || l2_frame_head(node, "ulong") || l2_frame_head(node, "char")
-        return: 1
-    if: l2_frame_head(node, "[]") || l2_frame_head(node, "()") || l2_frame_head(node, "fn")
+    if: l2_ns_field_word(node\as\frame\head) != 0
         return: 1
     if: l2_address_depth(node\as\frame\head) != 0
         return: 1
+    # K03 S5: a word of the language is no Structure type (l2_head_word: no program binds one): `catch: e` is catch's
+    # application, a statement of the body, not a field e of a type named catch.
+    if: l2_head_word(node\as\frame\head) != 0
+        return: 0
+    # merge's receiving construction (l2_merge_construction) declares no field: `x: merge` is `x: merge()`.
+    if: l2_merge_construction(node\as\frame) != 0
+        return: 0
     if: l2_ident(node\as\frame\head) != 0 && l2_count_active(node\as\frame\body) = 1 && l2_next_active(node\as\frame\body\first_field)\value != 0 && l2_next_active(node\as\frame\body\first_field)\value\kind = c.LM_P0_NODE_ATOM && l2_ident(l2_next_active(node\as\frame\body\first_field)\value\as\atom) != 0
         return: 1
 return: 0
@@ -4615,12 +4656,16 @@ fn: l2_unit_declares (const: @(LmP0Text name); const: @(LmP0Node stop)) int
     @: LmP0Field field
     @: LmP0Node item
     @: LmP0Field first
+    @: LmP0Text bound 0
     if: l2_cur_unit = 0 || name = 0
         return: 0
     field: l2_next_active(l2_cur_unit\first_field)
     while: field != 0 && (stop = 0 || field\value != stop)
         item: field\value
         if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && item\as\frame\body != 0 && item\as\frame\head != 0 && l2_text_same(item\as\frame\head, name) = 0
+            # K03 S5: receiveMessage declares the name it binds (its contract, l2_receive_msg_shape, one name or two).
+            if: l2_receive_msg_shape(item, @ bound, 0) = 0 && l2_text_same(bound, name) != 0
+                return: 1
             first: l2_next_active(item\as\frame\body\first_field)
             # A declaration's shape, not any frame whose first atom is the name: P0 splits a path
             # `got: Counter\n` into the atoms Counter, \, n.  A type word takes the name first; an address
@@ -4629,9 +4674,10 @@ fn: l2_unit_declares (const: @(LmP0Text name); const: @(LmP0Node stop)) int
             if: l2_address_depth(item\as\frame\head) != 0 && first != 0
                 first: l2_next_active(first\next)
             if: first != 0 && first\value != 0 && first\value\kind = c.LM_P0_NODE_ATOM && first\value\as != 0 && l2_text_same(first\value\as\atom, name) != 0
-                # `Model: name` needs a type for its head: a control receiver's (`else: Counter`, a bare execution
-                # in an else body; REVIEW 99511ff, P59) or a method's (`f: Counter`, a call) heads no declaration.
-                if: (l2_prim_type_word(item\as\frame\head) != 0 && l2_ns_find(item\as\frame\head) < 0) || l2_predef_receiver(item\as\frame\head) != 0 || l2_address_depth(item\as\frame\head) != 0 || (l2_count_active(item\as\frame\body) = 1 && l2_text_eq(item\as\frame\head, "if") = 0 && l2_text_eq(item\as\frame\head, "else") = 0 && l2_text_eq(item\as\frame\head, "while") = 0 && l2_text_eq(item\as\frame\head, "for") = 0 && l2_text_eq(item\as\frame\head, "return") = 0 && l2_unit_names_method(item\as\frame\head) = 0)
+                # `Model: name` needs a type for its head: a word's application (`else: Counter`, a bare execution
+                # in an else body; REVIEW 99511ff, P59; K03 S5: any word, l2_head_word) or a method's (`f: Counter`,
+                # a call) heads no declaration.
+                if: (l2_prim_type_word(item\as\frame\head) != 0 && l2_ns_find(item\as\frame\head) < 0) || l2_predef_receiver(item\as\frame\head) != 0 || l2_address_depth(item\as\frame\head) != 0 || (l2_count_active(item\as\frame\body) = 1 && l2_head_word(item\as\frame\head) = 0 && l2_unit_names_method(item\as\frame\head) = 0)
                     return: 1
                 ---
             ---
@@ -5193,13 +5239,14 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     field: l2_next_active(unit\first_field)
     while: field != 0
         item: field\value
-        if: l2_frame_head(item, "predef") != 0 && l2_take_predef(item, path) != 0
+        # K03 S5: a directive written bare is its application with no argument: its taker says what it lacks.
+        if: l2_text_eq(l2_app_head(item), "predef") != 0 && l2_take_predef(item, path) != 0
             return: 1
-        if: l2_frame_head(item, "define") != 0 && l2_take_define(item, path) != 0
+        if: l2_text_eq(l2_app_head(item), "define") != 0 && l2_take_define(item, path) != 0
             return: 1
-        if: l2_frame_head(item, "include") != 0 && l2_take_include(item, path) != 0
+        if: l2_text_eq(l2_app_head(item), "include") != 0 && l2_take_include(item, path) != 0
             return: 1
-        if: l2_frame_head(item, "profile") != 0 && l2_take_profile(item, path) != 0
+        if: l2_text_eq(l2_app_head(item), "profile") != 0 && l2_take_profile(item, path) != 0
             return: 1
         field: l2_next_active(field\next)
     ---
@@ -8471,7 +8518,8 @@ fn: l2_is_asgn (const: @(LmP0Node stmt); int: mi) int
     h: stmt\as\frame\head
     if: h = 0 || l2_ident(h) = 0
         return: 0
-    if: l2_frame_head(stmt, "if") || l2_frame_head(stmt, "else") || l2_frame_head(stmt, "while") || l2_frame_head(stmt, "for") || l2_frame_head(stmt, "return") || l2_frame_head(stmt, "fn") || l2_frame_head(stmt, "sub") || l2_frame_head(stmt, "end") || l2_frame_head(stmt, "char") || l2_frame_head(stmt, "int") || l2_frame_head(stmt, "size_t") || l2_frame_head(stmt, "unsigned") || l2_frame_head(stmt, "ulong") || l2_frame_head(stmt, "@") || l2_frame_head(stmt, "implements")
+    # K03 S5: a word of the language heads no assignment: the statement is the word's application (l2_head_word).
+    if: l2_head_word(h) != 0
         return: 0
     # The head's role at the statement's site is the one a call head has there
     # (l2_call_head_method).  A head that calls -- a method, or what a callable
@@ -8489,8 +8537,6 @@ fn: l2_is_asgn (const: @(LmP0Node stmt); int: mi) int
     if: l2_is_known(h) || l2_predef_receiver(h) != 0
         return: 0
     if: h\length >= 2U && h\data[0] = 99 && h\data[1] = 46
-        return: 0
-    if: l2_text_eq(h, "receiveMessage")
         return: 0
     if: stmt\as\frame\body = 0
         return: 0
@@ -11606,6 +11652,14 @@ fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
         return: 2
 return: 0
 
+# K03 S5: the method that lexically holds procedure mi, the procedure of a method's own named Structure
+# (l2_local_ns_entry), or -1: that procedure's body is read in the method's lexical context.
+fn: l2_ns_host_of (int: mi) int
+    int: ni l2_m_nsof(mi)
+    if: ni < 0
+        return: 0 - 1
+return: l2_ns_local[ni]
+
 fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     @: LmP0Frame fr
     int: existing
@@ -11622,6 +11676,10 @@ fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     # K03: a word of the language is never a head that resolves to nothing: `merge()` is merge's application.  Read
     # from the word alone, as the rest of this shape is read: the row the statement would declare does not count.
     if: l2_head_word(fr\head) != 0
+        return: 0
+    # K03 S5: in the procedure of a method's own named Structure, a name that method sees (the one resolution at its
+    # site) is no head that resolves to nothing either: a known name never becomes a new definition.
+    if: l2_ns_host_of(mi) >= 0 && l2_head_resolve(l2_ns_host_of(mi), fr\head, 0, 0) != 0
         return: 0
 return: 1
 
@@ -11705,8 +11763,9 @@ fn: l2_ident_only_tail (const: @(LmP0Frame fr)) int
         t: f\value\as\atom
         if: l2_num(t) != 0 || l2_quoted(t) != 0 || l2_char_literal(t) >= 0 || l2_ident(t) = 0
             return: 0
-        # Source order only. l2_find_method is empty on the count walk, so it must not decide this.
-        if: l2_text_eq(t, "return") != 0 || l2_unit_names_method(t) != 0 || l2_receiver_word(t) != 0
+        # Source order only. l2_find_method is empty on the count walk, so it must not decide this.  A word of the
+        # language is its application, never an identifier of content (K03 S5, l2_head_word).
+        if: l2_head_word(t) != 0 || l2_unit_names_method(t) != 0
             return: 0
         n: n - 1
         f: l2_next_active(f\next)
@@ -11840,15 +11899,19 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
     h: fr\head
     if: h = 0 || l2_ident(h) = 0 || l2_is_asgn(stmt, mi) = 0 || fr\body = 0 || fr\body\trailer != 0
         return: 0
-    if: l2_is_char_decl(stmt) != 0 || l2_frame_head(stmt, "fn") != 0 || l2_frame_head(stmt, "const") != 0 || l2_frame_head(stmt, "immutable") != 0 || l2_frame_head(stmt, "independent") != 0
+    if: l2_is_char_decl(stmt) != 0
         return: 0
     if: fr\trailer != 0 && (fr\trailer\spelling = 0 || l2_text_eq(fr\trailer\spelling, "end") = 0)
         return: 0
-    if: l2_retained_body(fr) = 0 || l2_receiver_value(fr) != 0
+    if: l2_retained_body(fr) = 0 || l2_merge_construction(fr) != 0
         return: 0
     if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_find_method(h) >= 0 || l2_is_known(h) != 0
         return: 0
-    if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_receiver_word(h) != 0 || l2_head_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h, 0) != 0
+    if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_head_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h, 0) != 0
+        return: 0
+    # K03 S5: in the procedure of a method's own named Structure, a head the host method sees (the one resolution at its
+    # site, l2_ns_host_of) is no new definition: a known name never becomes one.
+    if: l2_ns_host_of(mi) >= 0 && l2_head_resolve(l2_ns_host_of(mi), h, 0, 0) != 0
         return: 0
     # A definition inside a method sees that method's names: its formal, or a field it declares at method
     # level, is a binding the head resolves to (l2_colon_bound_ty), and the statement assigns it.
@@ -11927,10 +11990,13 @@ fn: l2_local_ns_entry (const: @(LmP0Node stmt); int: mi; const: @(char path)) in
     # definition keeps those atoms as content (kind 12), the same as the unit.
     if: l2_atom_only_tail(stmt\as\frame) = 0
         l2_atom_hold: 1
+    l2_ns_take_mi: mi
     if: l2_take_ns_body(stmt\as\frame\head, 0 - 1, stmt\as\frame\body, stmt, path) != 0
         l2_atom_hold: 0
+        l2_ns_take_mi: 0 - 1
         return: 0 - 1
     l2_atom_hold: 0
+    l2_ns_take_mi: 0 - 1
     if: ni >= l2_ns_n
         l2_error(path, stmt, "internal: a method's named Structure made no entry")
         return: 0 - 1
@@ -12861,6 +12927,11 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # to or assigned into (unit_admit_letter_formal.lm2 and its siblings
         # depend on this -- retyping it broke them, measured directly).
         if: l2_receive_msg_shape(stmt, @ fa, @ cmodel) = 0
+            # K03 S5: a named Structure's procedure lays its top-level declarations out as that Structure's fields
+            # (l2_own_mslot); the name receiveMessage binds there has no field yet.  In a block of the body it has the
+            # block's place.
+            if: l2_m_nsof(mi) >= 0 && l2_scope_host() = 0
+                return: l2_error(path, stmt, "receiveMessage in the body of a named Structure is not supported yet")
             cj: l2_own_output_add(mi, fa, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
@@ -21988,26 +22059,31 @@ fn: l2_ns_nested_def (const: @(LmP0Node node); int: me) int
     ---
     if: top < 0 || l2_head_absent(node\as\frame\head, l2_ns_at[top]) = 0
         return: 0
+    # K03 S5: in a method's own named Structure the head resolves at the method's site too (l2_head_resolve): a name
+    # that method sees is no nested definition, as a unit's name is none at the root.
+    if: l2_ns_take_mi >= 0 && l2_head_resolve(l2_ns_take_mi, node\as\frame\head, 0, 0) != 0
+        return: 0
     # One atom (`E: self`, `E: kept`) is a field of that type, not a nested Structure.
     # A nested definition is a Structure tail (l2_tail_is_structure).
 return: l2_tail_is_structure(node\as\frame)
 
 # A written atom kept as the body of an absent-head definition. A literal is structural
-# content. An identifier that is not itself a call (a method, a named Structure, a receiver,
-# a C door) is the same content, whether or not some other binding spells it. `return` and
-# those calls stay statements. Method-local bodies (l2_atom_hold) are unchanged.
+# content. An identifier that is not itself a call (a method, a named Structure, a C door) is the same
+# content, whether or not some other binding spells it.  A word of the language (K03 S5: the defined set,
+# l2_head_word) is its application, an item of the body under its contract, never content; those calls
+# stay statements. Method-local bodies (l2_atom_hold) are unchanged.
 fn: l2_retained_atom (const: @(LmP0Node node)) int
     @: LmP0Text t
     if: l2_atom_hold != 0 || node = 0 || node\kind != c.LM_P0_NODE_ATOM || node\as = 0 || node\as\atom = 0
         return: 0
     t: node\as\atom
-    if: l2_text_eq(t, "return")
+    if: l2_head_word(t) != 0
         return: 0
     if: l2_num(t) != 0 || l2_quoted(t) != 0 || l2_char_literal(t) >= 0
         return: 1
     if: l2_ident(t) = 0
         return: 0
-    if: l2_find_method(t) >= 0 || l2_unit_names_method(t) != 0 || l2_ns_find(t) >= 0 || l2_is_known(t) != 0 || l2_receiver_word(t) != 0
+    if: l2_find_method(t) >= 0 || l2_unit_names_method(t) != 0 || l2_ns_find(t) >= 0 || l2_is_known(t) != 0
         return: 0
 return: 1
 
@@ -22213,22 +22289,21 @@ fn: l2_emit_method_fields (int: oi) int
         return: 1
 return: l2_emit_method_fields_at(oi, "l2_pst", field\child)
 
-# steps/named-struct-exec.md, slice 1: whether node, an item of named Structure me's body, is a
-# statement -- a bare `return`, or `x: value` where x names a field me declared above (a
-# declaration's head is a type; an assignment's is the field's own name).
+# steps/named-struct-exec.md, slice 1: whether node, a Frame item of named Structure me's body, is a
+# statement -- `x: value` where x names a field me declared above (a declaration's head is a type; an
+# assignment's is the field's own name).  An item that is no Frame -- a bare `return` -- is a statement at
+# the caller (l2_take_ns_body).
 fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
     int: j
     if: node = 0 || me < 0
         return: 0
-    if: node\kind = c.LM_P0_NODE_ATOM && node\as != 0 && l2_text_eq(node\as\atom, "return")
-        return: 1
     # §12 (Q45 and its additions: a named Structure is a procedure, its body a method's body): a receiver's
-    # call is a statement of the body, not a field -- `return`, a control receiver (if, else, while, for:
-    # words no field is named by, l2_ident) or a method of the unit, wherever it stands (methods are
-    # visible both ways, l2_unit_names_method).  A `return: n` is one of them: the check says what it
+    # call is a statement of the body, not a field -- a method of the unit, wherever it stands (methods are
+    # visible both ways, l2_unit_names_method), or a word of the language: `return`, `if`, `catch: e` declare
+    # no field (l2_ns_decl_first, K03 S5).  A `return: n` is one of them: the check says what it
     # says of every callable that returns nothing, in any place of the body.
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0
-        if: l2_text_eq(node\as\frame\head, "return") || l2_text_eq(node\as\frame\head, "if") || l2_text_eq(node\as\frame\head, "else") || l2_text_eq(node\as\frame\head, "while") || l2_text_eq(node\as\frame\head, "for") || l2_find_method(node\as\frame\head) >= 0 || l2_unit_names_method(node\as\frame\head) != 0
+        if: l2_find_method(node\as\frame\head) >= 0 || l2_unit_names_method(node\as\frame\head) != 0
             return: 1
         # Only a declaration's shape is a field -- the shapes l2_take_ns_body takes (l2_ns_decl_first, the
         # test that finds a named Structure's first field); an item of any other shape -- `cells[1]: …`,
@@ -22310,6 +22385,10 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
             count: count + 1
             f: l2_next_active(f\next)
             continue
+        # K03 S5: a field-declaring word applied to nothing -- bare `size_t` as `size_t()` -- is that field's
+        # declaration, and its contract says what it lacks, at the word.
+        if: fld != 0 && l2_ns_field_word(l2_app_head(fld)) != 0 && l2_count_active(l2_app_actuals(fld)) = 0
+            return: l2_ns_field_needs(path, fld, l2_app_head(fld))
         if: l2_ns_body_stmt(fld, me) != 0 || (fld != 0 && fld\kind != c.LM_P0_NODE_FRAME)
             if: l2_ns_stmt[me] = 0
                 l2_ns_stmt[me]: fld
@@ -24973,6 +25052,9 @@ fn: l2_take_eternal (const: @(LmP0Node item); const: @(char path)) int
     @: LmP0Field f
     int: root
     cur: (cast: (@: LmP0Node) item)
+    # K03 S5: `independent` written bare is its application with no argument, as `independent()`: no construction.
+    if: l2_text_eq(l2_app_head(cur), "independent") != 0 && l2_count_active(l2_app_actuals(cur)) = 0
+        return: l2_error(path, item, "independent takes one qualified construction")
     if: l2_frame_head(cur, "independent") = 0 || cur\as = 0 || cur\as\frame = 0 || cur\as\frame\body = 0
         return: l2_error(path, item, "unsupported body")
     if: l2_count_active(cur\as\frame\body) != 1
@@ -25434,6 +25516,10 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     @: LmP0Text cf_nm 0
     anon: l2_collect_anon_name
     l2_collect_anon_name: 0
+    # K03 S5: `fn` or `sub` written bare is its application with no argument, as `fn()`: its header has no field, so
+    # the header's count refuses it below the same way (k is 0).
+    if: fn_node != 0 && fn_node\as != 0 && fn_node\as\frame = 0 && l2_app_head(fn_node) != 0 && anon = 0
+        return: l2_error(path, fn_node, "incompatible entry signature")
     if: fn_node = 0 || fn_node\as = 0 || fn_node\as\frame = 0
         return: l2_error(path, fn_node, "unsupported body")
     if: l2_m_n >= c.INT_MAX
@@ -27448,6 +27534,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     int: call_result
     int: retained
     @: LmP0Text sw 0
+    @: LmP0Node mg 0
     if: body = 0
         return: l2_error(path, 0, "unsupported body")
     field: l2_next_active(body\first_field)
@@ -27490,6 +27577,14 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
             continue
         ---
+        # K03 S5: merge's construction (l2_merge_construction) with no operand -- `x: merge` as `x: merge()` -- is
+        # refused by merge's contract at the merge, whatever the outer name is; with operands it is the merge
+        # declaration below, its operands checked at emission.
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_stmt_word_head(stmt, mi) = 0 && l2_merge_construction(stmt\as\frame) != 0
+            mg: l2_next_active(stmt\as\frame\body\first_field)\value
+            if: l2_count_active(l2_app_actuals(mg)) = 0
+                return: l2_error(path, mg, "merge needs at least one operand")
+            ---
         # K03 (the author, 2026-10-06): a statement whose head -- an atom's or a Frame's -- resolves to a word of the
         # language is that word's application: `break` and `break()`, `merge` and `merge()` are one application each,
         # their written arguments the Frame's body or none (l2_app_actuals); the word's contract decides, at the word

@@ -1815,6 +1815,25 @@ word by its contract; a named Structure's name in a number place is a reference 
 held callable called bare meets the one binding. Value matrices: bare and `H()` agree for every head but a named
 Structure, whose two spellings are two contracts; the definition positions (`x: H`, x absent) are S5's. Gates:
 kernel `opus_kernel_42` GREEN297 (114 selftests), L3 `opus_l3_40`, full `opus_full_46` RED39/2125 on the bytes cleaned of cd6aa536 (Codex K03-S4-CLEANUP-S5-20261007-01) -- against `opus_full_42` FAIL→OK 0, OK→FAIL 0, added 46; against `opus_full_45` exactly its two rows removed.
+S5 done ([section 110](steps/fable-continuation-20261003.md#unified-head-s5)): a definition `x: tail` with x absent --
+at the root, in a method, in a block, in a named Structure's body -- retains its tail as x's body, and a word of the
+language there, bare, applied to nothing or to a name, is an item of that body under its statement contract, refused
+at the word -- never x's value (`l2_receiver_value` and its twin in `l2_tail_is_structure` removed; merge's receiving
+construction read by `l2_merge_construction` after the common resolution), never a field of a type named by the
+word, never content; a unit item is read by its application; a name a host method sees is no new definition in its
+local Structure; receiveMessage declares its name by its contract; the census's spelling lists replaced by the
+resolution. Matrices: definitions 99 of 102 (39 before), unit items 38 of 40 (29), a word applied to a name 27 of 36
+(3), a named Structure's body 58 of 68 (6). A located limit: the name receiveMessage binds at the top of a named
+Structure's body has no field yet. Gates: kernel `opus_kernel_43` GREEN297 (114 selftests), L3 `opus_l3_41`, full `opus_full_47` RED39/2189 -- against `opus_full_46` FAIL→OK 0, OK→FAIL 0, added 64, no message changed.
+Open, next in this lane, each its own bounded checkpoint before S6 (Codex K03-S5-NS-ROLES-20261007-04):
+K03-S5-NS-ROLES -- a one-atom tail in a named Structure's body (`x: tick`, `x: Foo`, x absent) is still read as
+`Type: name`, a field x of a type named by the head; the same ordinary role resolution as at the root and in a method
+replaces `l2_ns_decl_first`'s one-atom branch and its second-phase consumers (a body is not a signature; the
+`Model: fresh` shortcut cannot stay beside the classifier, next_core_tasks_dictionary_v2.md §3); census the dependent
+registrations, compare root/method/named/anonymous bodies with later names. K03-S5-RECEIVE-OUTPUT -- the name
+receiveMessage binds at the top of a named Structure's body is a computed output (LMX_blog/q/q53.md:95-97), stored by
+the ordinary computed-output binding (`l2_own_output_add`, `l2_receiver_output_place`); `l2_own_mslot` stops assuming
+a public field slot for every top-level name; no synthetic data field, never `struct\m`.
 
 ### K04 — Callable actuals and hidden inputs
 

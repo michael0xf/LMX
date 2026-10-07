@@ -11477,6 +11477,12 @@ nullary application through b (`box()`, bare `box`) keeps the present refusal "e
 supported yet" until the held-reference route of 1b; a method's own named Structure visible only after its definition
 (V2); between two frames whose tails are Structures (`Later(3 4)` or `Later()` above `Later:`) the first defines.
 
+Provisional (Codex K03-NAMED-DEFINITION-BOUNDARY-20261007-10): which occurrence of an unknown head defines -- a
+one-value tail applying a definition below, the first of the Structure-tailed frames defining -- and the both-way
+visibility of the unit's ordinary named Structures it rests on (Codex -07 Q2) are Codex's earlier interpretation and
+this implementation, not an author decision.  The open question, the measured readings and the 12 dependent fixtures
+(22 rows): `LMX_blog/q/current/named-definition-boundary.md`.
+
 ### Measured
 
 | Gate | Result |

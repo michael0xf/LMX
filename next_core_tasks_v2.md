@@ -1853,12 +1853,17 @@ The dependency-closed substeps that remain in this lane (Codex K03-NS-ROLES-NEXT
 - NS-ROLES-1c: a merge result as A -- b's row takes the merge's schema record; `unit_ref_absent_colon` becomes its
   positive (exit 9).
 - NS-ROLES-V2: a method's own named callable definitions visible throughout their actual block both ways; siblings,
-  later ordinary data and receiver outputs not (negatives, reached mutants).
+  later ordinary data and receiver outputs not (negatives, reached mutants).  Waits for the author's answer on the
+  defining occurrence (below).
 - NS-ROLES-2: a named body's one-atom branch through the common resolution; reference fields `b: A` storing A's node at
   construction; kind 3 removed after its 14 programs (Codex -07 Q3 as restated in -09: refusal intent and stage kept,
   identity controls for eternal references, a fresh-copy intent never silently shared).
 - K03-S5-RECEIVE-OUTPUT (generic); then S6, S7.
 The typed-null / typed-binding family waits for the author (LMX_blog/q/current/model-constrained-null-reference.md).
+Which occurrence of an unknown head defines a named Structure, and the forward visibility of ordinary named Structures
+built on it, wait for the author (LMX_blog/q/current/named-definition-boundary.md, Codex
+K03-NAMED-DEFINITION-BOUNDARY-20261007-10): the present root lookahead and its 12 fixtures are provisional and are not
+extended.
 
 ### K04 — Callable actuals and hidden inputs
 

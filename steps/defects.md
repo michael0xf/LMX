@@ -4534,7 +4534,9 @@ Structure модуля видна в обе стороны: из метода в
 3 строки — `unit_k03_vis_unit_declares_tail` с двойником (новый L1, по-прежнему 7) и `unit_ref_absent_colon` (теперь
 предел 1c у A, закреп перенесён). Остаётся: метод как A (1b), результат merge как A (1c), нульарное применение через b
 (`box()` — прежний отказ до 1b), видимость собственных Structure метода в обе стороны (V2); из двух кадров с хвостом-
-Structure (`Later()` или `Later(3 4)` выше `Later:`) определяет первый.
+Structure (`Later()` или `Later(3 4)` выше `Later:`) определяет первый. Этот выбор определяющего вхождения и видимость
+обычной именованной Structure в обе стороны — предварительные, ждут ответа автора
+([вопрос](../LMX_blog/q/current/named-definition-boundary.md), Codex K03-NAMED-DEFINITION-BOUNDARY-20261007-10).
 
 <a id="mad-trailer-write"></a>
 ### MAD-TRAILER-WRITE — 2026-10-06, Opus (перепись K03 S1), OPEN

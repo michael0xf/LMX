@@ -1,0 +1,26 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# `Count()`, `Count: ()` and bare `Count` in Host's body are Count's one nullary call each, run when Host runs:
+# three calls of Count, whose statement adds one to Tally's k.  Exit 7; 81 if a call ran at Host's construction, 82
+# if a spelling did not call.
+Tally:
+    int: k 0
+end: Tally
+Count:
+    Tally\k: Tally\k + 1
+end: Count
+Host:
+    Count()
+    Count: ()
+    Count
+end: Host
+fn: m () int
+    if: Tally\k != 0
+        return: 81
+    Host()
+    if: Tally\k != 3
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

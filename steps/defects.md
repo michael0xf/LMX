@@ -4565,6 +4565,10 @@ b держит Structure A, пути через b читают запись merg
 виден только в своём блоке; один читатель записанного имени метода (`l2_site_method`) во всех доказанных местах.
 Перепись эквивалентности: 16 из 17 пар равны (осталось поле модуля — долг ниже); корпус 2314 переводов не меняется.
 
+**Шаг NS-ROLES-2 2026-10-07** ([§118 журнала](fable-continuation-20261003.md#ns-roles-2)): тело именованной Structure
+получает общие роли; исходный маршрут `T: x` убран (kind 3 остался только у модели письма). Повтор 2342 переводов: 12
+строк переписи со старым написанием, остальное байт в байт. Открытое ниже — обязательные позитивы, красные до постройки.
+
 <a id="call-classifier-typed-route"></a>
 ### CALL-CLASSIFIER-TYPED-ROUTE — 2026-10-07, Opus (K03 NS-ROLES-VIS; Codex K03-VIS-CALL-CLASSIFICATION-20261007-16), FIXED 2026-10-07 (K03 NS-ROLES-CALL)
 
@@ -4636,6 +4640,63 @@ docs/L2_spec_en.md:155) — вызов Model, ошибочный по числу
   поле модуля, видимое из метода, раньше собственных fn метода, поэтому затенение внешнего поля собственным fn не
   построено (единственная неравная пара переписи эквивалентности V2);
 - fm не построен.
+
+<a id="reference-field-consumers"></a>
+### REFERENCE-FIELD-CONSUMERS — 2026-10-07, Opus (K03 NS-ROLES-2; Codex K03-NS-ROLES-2-20261007-20, K03-NS2-COVERAGE-20261007-21), OPEN
+
+Привязка `b: A` в теле именованной Structure хранится как в корне и методе: типизированная ячейка-ссылка (хранение
+`@: T x`, kind 10). Часть потребителей поля-ссылки не построена; для каждого маршрута — обязательный позитив,
+зарегистрированный красным, с сегодняшним сообщением:
+
+- путь через поле-ссылку как Structure-фактический вызова и как возвращаемое значение — «a field path must end at a
+  Structure» (`l2_actual_path`, `l2_actual_ns`, `l2_emit_actual_path`, при обходе `l2_rw_struct_arg` берут только
+  kind 2 и 3): `unit_ns2_ref_arg`, `unit_ns2_ref_return`;
+- допуск через поля-ссылки разных моделей (таблица D-105) — «root operation not walkable yet: an admission to a
+  Structure type through a Structure field of another type»: `unit_ns2_ref_admit`;
+- захват поля-ссылки (пункт 738): `unit_ns2_ref_capture` (сегодня — тот же отказ пути);
+- привязка к Structure, которую достигает путь, `into: E\deep`: привязка берёт один атом (в корне и методе тоже), в
+  квалифицированной ветви это оператор — «a statement in a nested or qualified named Structure is not supported yet»:
+  `unit_eternal_xref` (прежнее `deep: into` значило член E только через глобальную таблицу имён);
+- привязка тела к callable (`b: tick`), к значению-Structure (`y: inner`, Structure своего поля выше) и привязка в
+  именованной Structure метода: `unit_ns2_bind_callable`, `unit_ns2_bind_value`, `unit_ns2_local_bind`; их временные
+  диагностики — строки-пределы с метками `unit_ns2_bind_callable_limit_refused`, `unit_ns2_bind_value_limit_refused`,
+  `unit_ns2_local_limit_refused` (не правила языка и не покрытие).
+
+Тот же разрыв есть у полей `@: T x` (семейство типизированного null — открытый вопрос автора, не тронуто). Отказы допуска
+и захвата (`unit_s7_arg_path`, `unit_s7_arg_deep_refused`, `unit_s7_ret_path`, `unit_s7_nested_missing`,
+`unit_capture_struct_field_struct_refused`) сохранили потребителей на собственном вложенном поле держателя; их
+ссылочные версии — позитивы выше.
+
+<a id="named-body-copy-field"></a>
+### NAMED-BODY-COPY-FIELD — 2026-10-07, Opus (K03 NS-ROLES-2; Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q3, K03-NS2-COVERAGE-20261007-21, K03-NS2-COPY-ORACLE-20261007-22), OPEN
+
+merge в теле именованной Structure: `box: merge: Inner` в теле Host исполняется, когда исполняется тело Host (объявление
+Host тела не исполняет — [построение](../docs/LMX_semantics.ru.md#construction); вычисляемая инициализация — когда
+управление доходит до строки, без фазы построения и скрытой однократной инициализации —
+[§12](../docs/LMX_semantics.ru.md#dynamic); merge — исполняемая операция над живыми операндами —
+[композиция](../docs/LMX_semantics.ru.md#composition)); результат принимает box. Не построено: located limit «a merge
+construction in the body of a named Structure is not built yet» (до шага — «internal: an own declaration has no physical
+field»). Обязательный позитив `unit_ns2_copy_field`: m пишет 3 в Inner\v и вызывает Host(); тело Host копирует, пишет
+5 через box и сообщает через объявленные поля Out — копия прочла 3 (значение операнда в момент исполнения; копия при
+построении прочла бы 1), запись попала в копию, Inner\v остался 3, второй запуск скопировал снова (4); до вызова тело
+не исполнялось. Вариант `box: Inner` (привязка вместо merge) доходит до кода 83 — оракул отличает копию от ссылки. Не
+утверждается и не читается: доступен ли box снаружи как Host\box (LMX_blog/q/q53.md: выход вычисляемого приёмника — не
+данные; общий RECEIVE-OUTPUT). Прежнее `Inner: box` строило копию при построении Host — измеренное устаревшее
+поведение, не норма; первая регистрация позитива (байты `opus_full_57`) повторяла его — копия при построении, Host\box
+снаружи до вызова — и исправлена по Codex -22 (перепроверка `opus_focus_ns2_02`). Временная диагностика —
+`unit_ns2_copy_field_limit_refused`. Комментарии `l2trans.lm1:19266-19267` и `tools/l2_harness.ps1:5325-5326`,
+`5367-5368` ещё называют это «полем со свежей копией»; исправляются при следующей проверке точных байтов транслятора и
+харнесса (RECEIVE-OUTPUT). Ни одной программе переписи свежая копия не нужна.
+
+<a id="merge-of-qualified-reference-cells"></a>
+### MERGE-OF-QUALIFIED-REFERENCE-CELLS — 2026-10-07, Opus (K03 NS-ROLES-2), OPEN
+
+merge квалифицированного операнда, чья собственная ячейка-привязка держит удерживаемый корень (`self: E` в E,
+`peer: E` в F), нативно останавливает R0 неявным броском merge. Изолировано на `unit_eternal_shape`: без строки merge
+программа проходит (31 проверка); merge E с изменяемым Holder, чья ячейка держит E, проходит; merge F (с `peer: E`) —
+нет. `unit_eternal_shape` была красной до шага на трансляции («root operation not walkable yet: a Structure-typed field
+in a method»), теперь транслируется и красная при исполнении; её факты читают ячейки (`deref`). Ядро и эмиссия merge в
+этом шаге не менялись.
 
 <a id="mad-trailer-write"></a>
 ### MAD-TRAILER-WRITE — 2026-10-06, Opus (перепись K03 S1), OPEN

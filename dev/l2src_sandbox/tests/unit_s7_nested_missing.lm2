@@ -1,20 +1,15 @@
-# slot\in\x is read. Shell\in is a Structure that has no x.
+# slot\in\x is read. Shell\in is a Structure that has no x (K03 NS-ROLES-2: each in is its holder's own nested
+# Structure; `Inner: in` and `Bare: in` are calls now).
 # Today, before this slice, the first segment `in` was enough and this translated.
 
-Inner:
-    size_t: x 0U
-end: Inner
-
-Bare:
-    size_t: y 0U
-end: Bare
-
 Outer:
-    Inner: in
+    in:
+        size_t: x 0U
 end: Outer
 
 Shell:
-    Bare: in
+    in:
+        size_t: y 0U
 end: Shell
 
 fn: take (Outer: slot) int

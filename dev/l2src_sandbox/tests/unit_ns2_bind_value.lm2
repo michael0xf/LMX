@@ -1,0 +1,18 @@
+# K03 NS-ROLES-2 REQUIRED POSITIVE, red until its dependency is built (Codex K03-NS2-COVERAGE-20261007-21;
+# steps/defects.md#reference-field-consumers).
+# `y: inner` in Host's body, inner the Structure Host's own field holds above it, binds y to that Structure: a write
+# through Host\y reaches Host\inner.  Today: "a reference binding to a Structure value in a named Structure is not built
+# yet" (the limit row unit_ns2_bind_value_limit_refused).  Exit 7; 81 if the write did not reach inner.
+Host:
+    inner:
+        int: k 1
+    y: inner
+end: Host
+fn: m () int
+    Host\y\k: 5
+    if: Host\inner\k != 5
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

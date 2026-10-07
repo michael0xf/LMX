@@ -1,0 +1,20 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# In Host's nested Inner, `box: Model` binds box to the unit's Model (visible from its place on).  Exit 7; 81 if the
+# write did not reach Model.
+Model:
+    int: v 1
+end: Model
+Host:
+    (): Inner
+        box: Model
+    end: Inner
+end: Host
+fn: m () int
+    Host\Inner\box\v: 3
+    if: Model\v != 3
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

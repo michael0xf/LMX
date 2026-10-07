@@ -1,0 +1,18 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# `x: 5` with x declared above is an assignment of Host's body: it runs when Host runs -- x is its declared 0
+# before.  Exit 7; 81 if the assignment ran at construction, 82 if Host did not run it.
+Host:
+    int: x 0
+    x: 5
+end: Host
+fn: m () int
+    if: Host\x != 0
+        return: 81
+    Host()
+    if: Host\x != 5
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

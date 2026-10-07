@@ -1,0 +1,45 @@
+# K03 NS-ROLES-2 REQUIRED POSITIVE, red until its dependency is built (Codex K03-NS2-COVERAGE-20261007-21,
+# K03-NS2-COPY-ORACLE-20261007-22; steps/defects.md#named-body-copy-field).
+# `box: merge: Inner` in Host's body is merge run when Host runs (docs/LMX_semantics.en.md#construction: declaring Host
+# runs nothing of its body; #composition: merge copies its live operand), its result received in box
+# (#explicit-copying); Host's later statements write through box and report through Out's declared fields.  Not read
+# here: whether box is addressable from outside as Host\box (LMX_blog/q/q53.md, a computed receiver's output is not
+# data; the generic RECEIVE-OUTPUT).  Today: "a merge construction in the body of a named Structure is not built yet".
+# Exit 7; 80 if Host's body ran before its call, 81 if the copy did not read Inner's value of that moment, 82 if the
+# write through box did not land, 83 or 84 if it reached Inner (box Inner itself), 85 if a second run did not copy again.
+Inner:
+    int: v 1
+end: Inner
+Out:
+    int: first 0
+    int: after 0
+    int: inner 0
+end: Out
+Host:
+    box: merge: Inner
+    Out\first: box\v
+    box\v: 5
+    Out\after: box\v
+    Out\inner: Inner\v
+end: Host
+fn: m () int
+    Inner\v: 3
+    if: Out\first != 0
+        return: 80
+    Host()
+    if: Out\first != 3
+        return: 81
+    if: Out\after != 5
+        return: 82
+    if: Out\inner != 3
+        return: 83
+    if: Inner\v != 3
+        return: 84
+    Inner\v: 4
+    Host()
+    if: Out\first != 4
+        return: 85
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

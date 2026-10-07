@@ -1,0 +1,22 @@
+# K03 NS-ROLES-2 REQUIRED POSITIVE, red until its dependency is built (Codex K03-NS2-COVERAGE-20261007-21;
+# steps/defects.md#reference-field-consumers).
+# `b: tick` in Host's body binds b to tick's whole occurrence, as at the root and in a method (NS-ROLES-1b); Host's
+# `got: b(5)` calls tick through b when Host runs.  Today a named body holds no binding to a callable: "a reference
+# binding to a callable in a named Structure is not built yet" (the limit row unit_ns2_bind_callable_limit_refused).
+# Exit 7; 81 if got is not tick's 6.
+fn: tick (int: n) int
+    return: n + 1
+end: tick
+Host:
+    int: got 0
+    b: tick
+    got: b(5)
+end: Host
+fn: m () int
+    Host()
+    if: Host\got != 6
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

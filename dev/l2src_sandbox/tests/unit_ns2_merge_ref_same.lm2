@@ -1,0 +1,21 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# merge's into-pair (the author's merge rule, plan §4): Model's and Other's `at` both reference Point -- one type:
+# Other's at goes INTO Model's slot.  Exit 7; 81 if R's at did not read Point's x.
+Point:
+    size_t: x 3U
+end: Point
+Model:
+    at: Point
+end: Model
+Other:
+    at: Point
+end: Other
+fn: m () int
+    R: merge: Model Other
+    if: R\at\x != 3U
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

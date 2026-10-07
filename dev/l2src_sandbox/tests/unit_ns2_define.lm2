@@ -1,0 +1,25 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# An unknown head in a named body defines a nested named Structure with its written content, as at the root: `b:
+# zz` (zz retained), `c: 7` (a literal retained, no int is inferred), `d()` and `e: ()` (empty), `f:` with a block
+# closed by its level (no end, no return).  Host runs; nothing of them runs at their definition.  Exit 7.
+Host:
+    int: n 0
+    b: zz
+    c: 7
+    d()
+    e: ()
+    f:
+        int: k 2
+    n: 5
+end: Host
+fn: m () int
+    Host()
+    if: Host\n != 5
+        return: 81
+    if: Host\f\k != 2
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -11961,3 +11961,160 @@ Evidence:
 | `build/l2_harness/opus_full_56` (full harness) | RED39/2343: against `opus_full_55` FAIL→OK 0, OK→FAIL 0, added 28 (all OK: the fourteen witnesses with their twins), removed 0; of the 2315 common targets none of the fixture rows changed its message -- only the identifiers that change in every run (the translator's sha256, the unit hashes of the two library rows); the 39 red are the same rows with the same messages.  The 16 declared paths were hashed before the gates; the staged `l2trans.lm1` is the declared bytes. |
 | Focused run on the same bytes | `opus_focus_v2_01` 31 targets, 0 failed (the 28 declared stems with the translator's build and the driver's). |
 | Replay of `opus_full_55`'s 2314 recorded translations | no row differs. |
+
+<a id="ns-roles-2"></a>
+## 118. A named Structure's body takes the common roles; the source `T: x` field goes (K03 NS-ROLES-2)
+
+The rule (`docs/LMX_semantics.en.md#resolved-head-consumption`, `#declaration-visibility`; Codex K03-S5-ALIAS-VISIBILITY-
+20261007-07 Q3, K03-NS-ROLES-NEXT-20261007-09, K03-NS-ROLES-2-20261007-20, K03-NS2-COVERAGE-20261007-21,
+K03-NS2-COPY-ORACLE-20261007-22): a named body is
+not a signature.  A known head is its application, whatever its tail -- with an ordinary named Structure `Model: zz` is
+the erroneous argument-bearing call; an absent b with a known Structure A, `b: A`, binds A by the root's and a method's
+route -- a separate real cell holding A, no copy, no reparent, nothing executed at the binding; an unknown head
+otherwise defines a Structure with its written contents, a literal included -- no inferred primitive storage.
+
+Before this step a named body read the one-atom item `T: x` as a field declaration of its own (l2_take_ns_body's
+catch-all, kind 3): x a field holding a fresh copy of T, merged at construction (a shared reference for a qualified T),
+T resolved after the whole unit by its name in the global table -- below the host, nested in another Structure, it did
+not matter (l2_ns_count_named).  At the root and in a method `T: x` was T's call since NS-ROLES-CALL; only the named
+body kept the shape, and with it `l2_colon_decl_shape` (its last reader) and l2_ns_decl_first's one-atom branch.  The
+role matrix (eleven written forms in the root, a method, a named body, a nested named body and a method's if-block,
+native and walked) measured it on 08717c53: the root, the method and the block agreed in every cell; the named body did
+not -- `A: zz` a kind-3 field, `b: A` and `b: zz` "unknown nested Structure reference" (b taken as the type), `b: 7`
+"internal: an own declaration has no physical field"; in a nested named body `A: zz` translated as a field.
+
+What changed in `l2trans.lm1` (419d86c2):
+- `l2_ns_site_known` -- whether a name is known at a place of a named body, read from the source while the body is
+  taken: a field of the host chain declared above, the chain's own names (a body is below its Structure's place),
+  `l2_head_absent` past the top Structure's item, `l2_head_resolve` for a method's own named Structure.
+- A known head is a statement of the body, its application (l2_ns_decl_first keeps only the typed shapes: number and
+  char fields, arrays, `()`, `fn`, `@: T x`).
+- `l2_ns_bind_item` / `l2_ns_bind_target` -- the binding: an absent head whose one atom names a named Structure visible
+  there -- the host chain, or a unit-level named Structure or qualified branch's root registered above the top item (the
+  unit's items are taken in source order: registered is above).  Its storage is the root's and a method's: a typed
+  reference cell (the `@: A b` storage, kind 10), its referent kept exactly (`l2_nsf_val`, read by `l2_nsf_pointee`,
+  which `l2_ns_ref_pointee` and `l2_mrs_ref_pointee` now use), filled with A's node at construction (`l2_emit_ns_refs`; A
+  stands above b, so it exists), assigned again by the procedure's own NS-ROLES-1 statement when the Structure runs.  The
+  procedure's site reading (`l2_ref_bind_site`) and the body's source reading must agree (`l2_ns_bind_agrees`), else
+  "internal: a named Structure's field and its procedure disagree about a reference binding".  A qualified branch's
+  binding to mutable storage is refused at its referent.  A callable or a Structure value as A, and any binding in a
+  method's named Structure, are located limits (below).
+- `l2_ns_nested_def` -- an absent head with a retained tail defines a nested Structure: the root's and a method's rule
+  (`l2_retained_body`), one atom and a literal included; `l2_tail_is_structure`, its one reader gone, removed.
+- Removed with the source route: the catch-all `Name: field` and its refusal (no row reached it), kind 3's deferred
+  global resolution ("unknown/ambiguous nested Structure reference", `l2_ns_count_named`), `l2_colon_decl_shape` and
+  `l2_ns_ref_field_stmt` with their ten reader branches (collection, scan, room, check, merge sizing and throws, emission,
+  the bound-before test, the source layout), the part root's `Model: m` exception in `l2_unit_role`
+  (`l2_ident_only_tail`), the root `Model: v` reading in `l2_ns_exec_mark` (a closed-route variant: no row).
+- Kind 3 itself stays: its other producer is the synthesized letter model's payload of a named model
+  (`l2_letter_ns_for`, `receiveMessage: m Model`), the model's copy at construction -- unchanged (a first build that
+  removed kind-3 construction changed six letter rows' L1: `unit_receive_letter_model` with `_root` and `_walk`,
+  `unit_send_ref_driver_tap` with `_walk`, `unit_send_ref_method`; restored, they replay byte-identical).  No source
+  spelling makes kind 3.
+- Dependent consumers: merge's into-pair compared two reference fields by their one machine pointer type, so `at: Point`
+  and `at: Size` merged INTO each other -- now the referenced Structures are compared (`l2_nsf_pointee`); a merge's
+  result declared at a named body's top level gave "internal: an own declaration has no physical field" -- now the
+  located limit "a merge construction in the body of a named Structure is not built yet", said by the layout after every
+  check (placed in the merge scan first, it masked `unit_k03_ns_merge_app_refused`'s "merge needs at least one operand").
+
+Migrations, by intent (Codex -07 Q3, -20, -21; each program translated natively and walked with the final build):
+- the explicit reference `x: T`, same Consumer, stage and needle: `unit_capture_struct_nofield_refused`,
+  `_nofield_write_refused`, `_past_refused`, `_past_write_refused`, `unit_d112_nested_leaf_refused`,
+  `unit_merge_field_entry_refused` (its own comment: both `at` fields Structure references to different Structures --
+  reached with the merge fix);
+- the holder's own nested Structure field -- the shape the old copy put in the slot -- where the reference does not reach
+  the intended stage today (reference fields have unbuilt consumers, below), the Consumer unchanged: `unit_s7_arg_path`,
+  `unit_s7_arg_deep_refused`, `unit_s7_ret_path`, `unit_s7_nested_missing` (needles without location),
+  `unit_capture_struct_field_struct_refused` (its intent is a Structure field, which a reference is not; 22:27 kept);
+- `unit_s7_part_root_type_refused`: the part root's `Model: m` is now a named Structure definition (refused by the part
+  as one); the declaration naming a Structure no file declares is `m: merge: Model` -- "part.lm2:4:11: unknown merge
+  operand", said in the part;
+- `unit_eternal_shape`: `self: E`, `peer: E`, `kept: E`, its `same` facts become physical paths through the cells
+  (`deref`); red before (translation), red now at run time -- its `R: merge: E Holder` merges a qualified operand whose
+  own binding cell holds a retained root (MERGE-OF-QUALIFIED-REFERENCE-CELLS);
+- `unit_eternal_xref`: `deep: into` meant E's member only through the global table (deep is not visible in F); the row is
+  re-registered with the explicit `into: E\deep` as a REQUIRED POSITIVE, red until a binding takes a path's Structure.
+No census program needs a fresh copy.  A merge in a named body, `box: merge: Inner`, runs when the body runs and its
+result is received there; it has its own required positive (below).
+
+Required positives, red until their dependency is built (Codex -21; each with its runtime oracle and a walked twin):
+`unit_eternal_xref`; `unit_ns2_ref_arg`, `unit_ns2_ref_return`, `unit_ns2_ref_admit`, `unit_ns2_ref_capture` (a
+reference field's Structure as a call's actual, a returned value, through an admission, through a capture);
+`unit_ns2_bind_callable`, `unit_ns2_bind_value`, `unit_ns2_local_bind` (a named body's binding to a callable, to a
+Structure value, in a method's named Structure); `unit_ns2_copy_field` (a merge in a named body).  The labelled limit
+rows are their temporary diagnostics, not their coverage.
+
+`unit_ns2_copy_field` was first registered (the bytes `opus_full_57` ran) with an oracle no primary rule supports: the
+copy made at Host's construction, Host\box written and read from outside before Host ran -- the removed kind-3 behavior
+again (Codex K03-NS2-COPY-ORACLE-20261007-22: `docs/LMX_semantics.en.md#construction`, the computed initialization of
+`#dynamic` -- no construction phase, no hidden once-only initialization --, `#composition`, LMX_blog/q/q53.md's
+refinement).  Its corrected oracle: m sets Inner\v to 3 and calls Host; Host's body merges, writes 5 through box and
+reports through Out's declared fields -- the copy read 3 (the operand's value when the statement ran; a copy made at
+construction reads 1), the write landed in the copy, Inner kept 3, a second run merged again (4); before the call
+nothing of the body ran.  Not read: whether box is addressable from outside as Host\box (a computed receiver's output is
+not data; the generic RECEIVE-OUTPUT).  The alias variant, `box: Inner` in place of the merge, runs to exit 83 -- the
+oracle tells a copy from an alias.  The corrected bytes and the limit row's corrected comment were rerun in
+`opus_focus_ns2_02`.
+
+Evidence:
+
+- Census of the readers (closed-route variants of 08717c53's translator; replay of the completed `opus_full_56`'s 2342
+  recorded translations, no gcc): the catch-all kind-3 row never recorded -- 14 rows, 14 programs; a text scan's 13 files
+  were not the readers (two ungated, `unit_named_alias` and `unit_named_nested`; three missed: `unit_eternal_shape`,
+  `unit_eternal_xref`, `unit_s7_part_root_type_refused`'s part root); the catch-all's own refusal -- 0 rows;
+  l2_ns_decl_first's one-atom branch answering "statement" -- 12; `l2_colon_decl_shape` never matching -- 4 (the
+  procedure then reads `Inner: box` as Inner's call); the root `Model: v` reading of the execution scan -- 0.
+- Replay of the same 2342 translations with the final translator against 08717c53's: exactly the 12 census rows that
+  still carry the old spelling change; nothing else (the six letter rows of kind 3's other producer byte-identical).
+- Role matrix (eleven forms -- `A: zz`, `A: B`, `b: A`, `b: zz`, `b: 7`, `b()`, `b: ()`, `A()`, `A: ()`, bare `A`,
+  `x: 5` after `int: x 0` -- in the root, a method, a named body, a nested named body and a method's if-block, 110
+  translations, native = walked): the named body now equals the root and the method in every cell; in a nested named body
+  bindings and definitions do too, its statements are the existing limit.
+- Witnesses, nineteen programs, each with a `--walk-methods` twin.  Positives, exit 7 natively, with the root walked and
+  with the methods walked (walked pins from the twins' L1): `unit_ns2_bind_alias` (writes through Host\box reach Model at
+  the root and in a method, `@Host\box != @Model`; driver: the cell's referent is Model, the cell is not Model)
+  (0,1,2), `unit_ns2_bind_read` (Host\box reads Model before Host runs; reassigned when it runs) (0,1,2),
+  `unit_ns2_bind_self` (`me: Host`) (0,1), `unit_ns2_bind_nested` (a binding in a nested `(): Inner`) (0,1,2),
+  `unit_ns2_bind_nested_self` (`me: Inner` in Inner) (0,1), `unit_ns2_define` (`b: zz`, `c: 7`, `d()`, `e: ()`, a block
+  `f:` without end or return -- Structures of widths 1, 1, 0, 0, 2, no int inferred for `c: 7`) (0,...,6),
+  `unit_ns2_assign` (`x: 5` runs when Host runs, not at construction) (0,1), `unit_ns2_call_nullary` (`Count()`,
+  `Count: ()`, bare `Count`: three calls when Host runs, none at its construction) (0,1,2,3), `unit_ns2_merge_ref_same`
+  (references to one Structure merge INTO) (0,1,2,3), `unit_ns2_eternal_ref` (qualified `self: E`, `peer: E` and a mutable
+  Holder's `kept: E`; driver: each cell's referent is E, the cells are not E -- these facts go red on a wrong target)
+  (0,1).  Refusals: `unit_ns2_call_refused` ("10:5: more arguments than Model has formals"),
+  `unit_ns2_call_known_refused` ("11:5: ..."), `unit_ns2_call_self_refused` ("7:5: more arguments than Host has
+  formals"), `unit_ns2_later_refused` ("12:5: unknown field path segment": Later is below Host, `b: Later` defines b),
+  `unit_ns2_eternal_mutable_refused` ("12:22: an eternal branch cannot reference mutable storage").  Labelled limits:
+  `unit_ns2_bind_callable_limit_refused`, `unit_ns2_bind_value_limit_refused`, `unit_ns2_copy_field_limit_refused`,
+  `unit_ns2_local_limit_refused`.
+- Required positives (red until built; measured cause): `unit_eternal_xref` ("27:23: a statement in a nested or qualified
+  named Structure is not supported yet"), `unit_ns2_ref_arg` ("21:20: a field path must end at a Structure"),
+  `unit_ns2_ref_return` ("17:15: ..."), `unit_ns2_ref_capture` ("22:27: ..."), `unit_ns2_ref_admit` ("26:9: root operation
+  not walkable yet: an admission to a Structure type through a Structure field of another type"),
+  `unit_ns2_bind_callable` ("12:8: a reference binding to a callable in a named Structure is not built yet"),
+  `unit_ns2_bind_value` ("9:8: ... a Structure value ..."), `unit_ns2_local_bind` ("11:14: a reference binding in a
+  method's named Structure is not built yet"), `unit_ns2_copy_field` (corrected oracle, Codex -22: "19:5: a merge
+  construction in the body of a named Structure is not built yet", natively and walked; with the limit off, w10, "19:5:
+  internal: an own declaration has no physical field"; its first registration's old oracle failed at "14:5: unknown field
+  path segment").  The copy-field alias control, `box: Inner` in place of the merge: exit 83 natively, root-walked
+  and methods-walked (the frozen translator) -- the oracle tells a copy from an alias.
+- Mutants from the final bytes, each turning one rule off (the control w00 changes nothing): w01 the binding off -- 26
+  witness rows; w02 the host chain's names unknown at a place -- 2 (`unit_ns2_call_self_refused` accepted) and 1 corpus
+  row; w02b the host chain's names bind nothing -- 2 (`unit_ns2_bind_nested_self`; a top-level host is also found among
+  the unit's registered entries, so only the nested witness reaches it); w03 one atom is no definition -- 4, and 1 corpus
+  row; w04 a known head defines -- 30, two runs fail, 692 corpus rows; w05 no construction fill -- 14 runs fail; w07
+  merge compares reference fields by machine type -- 2; w08 a qualified binding to mutable storage -- 2; w09 the
+  agreement guard never agrees -- 24 (the guard is reached); w10 the copy-field limit off -- 2 (the internal error back);
+  w11 the local limit off -- 2; w12 the callable limit off -- 2.  A source-order visibility check in `l2_ns_bind_target`
+  survived its mutant (the registration order already says "above") and was removed.
+- gcc's `-Wall -Wextra` list: the same 75 warnings.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| focused `opus_focus_ns2_01` | 73 of 74 targets OK; the red `unit_s7_nested_shape` is a baseline row (the same message in `opus_full_56`) |
+| kernel `opus_kernel_51` | GREEN, 297 targets, 114 selftests ran; staged `l2trans.lm1` blob 419d86c2 |
+| L3 `opus_l3_49` | all 11 suites ok, type budget ok |
+| full `opus_full_57` | RED 57/2398; against `opus_full_56` (RED 39/2343): FAIL→OK 0; OK→FAIL 1 (`unit_eternal_xref`, re-registered as a required positive); added 55 (38 OK, 17 required positives red); removed 0; one common red row changed its stage (`unit_eternal_shape`: "l2trans produced no L1" → "ran under the driver, exit 1"); common OK rows changed only the migrated part's needle (`unit_s7_part_root_type_refused`: 4:8 "unknown nested Structure reference" → 4:11 "unknown merge operand") and per-build identifiers |
+| focused `opus_focus_ns2_02` | the corrected `unit_ns2_copy_field` oracle and its limit row's comment (Codex -22), the other 42 declared paths byte-equal to `opus_full_57`'s: the two limit rows OK at 9:5, the positive's two rows red at 19:5 "a merge construction in the body of a named Structure is not built yet" |

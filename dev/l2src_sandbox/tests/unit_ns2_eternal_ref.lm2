@@ -1,0 +1,44 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# In qualified branches the binding is the branch's immutable reference cell holding the branch itself: `self: E`
+# in E, `peer: E` in F; mutable Holder's `kept: E` references E too.  A read through each reaches E's own fields;
+# the driver's physical paths see each cell hold E itself, and the cells are not E.  Exit 7; 81-83 for a wrong read.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: a 7U
+                self: E
+                size_t: z 13U
+            end: E
+        end: immutable
+    end: const
+end: independent
+
+independent:
+    const:
+        immutable:
+            (): F
+                peer: E
+                size_t: c 17U
+            end: F
+        end: immutable
+    end: const
+end: independent
+
+Holder:
+    kept: E
+    size_t: cell 3U
+end: Holder
+
+fn: m () int
+    if: E\self\a != 7U
+        return: 81
+    if: F\peer\z != 13U
+        return: 82
+    if: Holder\kept\a != 7U
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

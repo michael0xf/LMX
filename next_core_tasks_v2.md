@@ -1894,7 +1894,24 @@ Open subtasks, recorded with their measurements:
   sub, two own fns in one factory, an own fn in a factory's if-block, fm; same-named own fns in two blocks and an own fn
   named like a unit method ("duplicate definition"); a unit field named like an own fn (the head resolution reads an
   outer field before a method's own fns) -- required positives, implementation debt.
-Next, in this order (Codex -17, -19): NS-ROLES-2, the generic RECEIVE-OUTPUT, S6/S7.
+NS-ROLES-2 done ([section 118](steps/fable-continuation-20261003.md#ns-roles-2); Codex K03-NS-ROLES-2-20261007-20,
+K03-NS2-COVERAGE-20261007-21, K03-NS2-COPY-ORACLE-20261007-22): a named Structure's body takes the common roles of the root and a method -- a known head
+its application, an absent head with a visible named Structure as its one atom the binding (the root's and a method's
+typed reference cell, filled at construction), any other absent head a definition with its written content; the
+obsolete SOURCE `T: x` route (kind 3's catch-all and deferred global resolution, `l2_colon_decl_shape` with its readers,
+the part root's exception) is removed -- kind 3 stays only as the synthesized letter model's payload; the 14 census
+programs migrated by intent, required positives registered red for every unbuilt route. Gates: `opus_focus_ns2_01` (73 of 74 targets; the red `unit_s7_nested_shape` is a baseline row, the same message in `opus_full_56`), kernel `opus_kernel_51` GREEN297 (114 selftests), L3 `opus_l3_49`, full `opus_full_57` RED57/2398 -- against `opus_full_56` FAIL→OK 0, OK→FAIL 1 (`unit_eternal_xref`, re-registered as a required positive), added 55 (38 OK, 17 required positives red), removed 0; one common red row changed its stage (`unit_eternal_shape`, translation → run time), the 39 baseline rows unchanged; the corrected `unit_ns2_copy_field` oracle and its limit row's comment (Codex -22) in `opus_focus_ns2_02` (the limit rows OK, the positive's two rows red at the located limit).
+Open subtasks, each a bounded dependency, recorded with its required positives:
+- REFERENCE-FIELD-CONSUMERS (steps/defects.md#reference-field-consumers): a reference field's Structure as a call's
+  actual, a returned value, through an admission and through a capture (`unit_ns2_ref_arg`, `_ref_return`, `_ref_admit`,
+  `_ref_capture`); a binding to a path's Structure (`unit_eternal_xref`); a named body's binding to a callable, to a
+  Structure value, in a method's named Structure (`unit_ns2_bind_callable`, `_bind_value`, `unit_ns2_local_bind`).
+- NAMED-BODY-COPY-FIELD (steps/defects.md#named-body-copy-field): a merge in a named body, run when the body runs,
+  its result received there (`unit_ns2_copy_field`, oracle corrected by Codex -22); whether that result is addressable
+  from outside is the generic RECEIVE-OUTPUT's distinction.
+- MERGE-OF-QUALIFIED-REFERENCE-CELLS (steps/defects.md#merge-of-qualified-reference-cells): a qualified operand whose
+  binding cell holds a retained root (`unit_eternal_shape`).
+Next, in this order (Codex -19, -20): the generic RECEIVE-OUTPUT, S6/S7.
 
 ### K04 — Callable actuals and hidden inputs
 

@@ -1,16 +1,13 @@
-# take(h\p): the actual is a field path. The field type is Plain.
-# take reads equals. Plain has no equals.
-
-Plain:
-    size_t: toString 0U
-end: Plain
+# take(h\p): the actual is a field path. Its Structure, Holder's own p, has toString only (K03 NS-ROLES-2: it was
+# `Plain: p`, now Plain's call). take reads equals. p has no equals.
 
 Equatable:
     size_t: equals 0U
 end: Equatable
 
 Holder:
-    Plain: p
+    p:
+        size_t: toString 0U
 end: Holder
 
 fn: take (Equatable: slot) int

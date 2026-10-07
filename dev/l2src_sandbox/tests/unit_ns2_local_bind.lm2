@@ -1,0 +1,19 @@
+# K03 NS-ROLES-2 REQUIRED POSITIVE, red until its dependency is built (Codex K03-NS2-COVERAGE-20261007-21;
+# steps/defects.md#reference-field-consumers).
+# `box: Model` in a method's own named Structure Local binds box to Model: a write through Local\box reaches Model.
+# Today: "a reference binding in a method's named Structure is not built yet" (the limit row
+# unit_ns2_local_limit_refused).  Exit 7; 81 if the write did not reach Model.
+Model:
+    int: v 1
+end: Model
+fn: m () int
+    Local:
+        box: Model
+    end: Local
+    Local\box\v: 5
+    if: Model\v != 5
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,16 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# `me: Host` in Host's own body binds me to Host itself (its body stands below Host's place): a write through
+# Host\me\n is Host's n.  Exit 7; 81 if me held a copy.
+Host:
+    int: n 1
+    me: Host
+end: Host
+fn: m () int
+    Host\me\n: 8
+    if: Host\n != 8
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

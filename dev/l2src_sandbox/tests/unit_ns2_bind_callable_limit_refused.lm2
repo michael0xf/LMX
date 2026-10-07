@@ -1,0 +1,13 @@
+# K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption,
+# #declaration-visibility): a named Structure's body takes the common roles of the root and a method.
+# Implementation limit (not a rule): `b: tick` in Host's body, tick a method -- the binding to the callable
+# occurrence that the root and a method build -- is not held by a named body yet.  Said at tick.
+fn: tick (int: n) int
+    return: n + 1
+end: tick
+Host:
+    b: tick
+end: Host
+Host()
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

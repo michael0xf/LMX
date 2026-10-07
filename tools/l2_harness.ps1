@@ -3179,21 +3179,25 @@ $fixtures = @(
                  'l2_entry_unit: graph') },
     # A nested member, a reference to the branch itself, a reference to the OTHER branch, and a
     # mutable Holder beside them: two roots are retained, the nested member and Holder are not.
+    # K03 NS-ROLES-2: the references are bindings, `self: E`, `peer: E`, `kept: E` -- typed reference cells holding E,
+    # read through their cells (`deref`).  Red: the qualified merge `R: merge: E Holder` of E holding its own cell stops
+    # R0 at run time (steps/defects.md#merge-of-qualified-reference-cells).
     [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'same', '0', '3', '0', 'same', '1', '0', '0', 'size', '1', '1', '17');
+        Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'size', '1', '1', '17', 'postpaths', 'samepath', '3', '0', '3', 'deref', '1', '0', 'samepath', '3', '1', '0', 'deref', '1', '0', 'samepath', '3', '2', '0', 'deref', '1', '0', 'endpostpaths');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
                  'l2_nsp[1]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
-    # A cross-reference INTO another branch: F\into is E's member `deep`, not a copy of it.
-    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 0;
-        Args = @('2', 'slot', '1', '0', '0', '0', 'size', '0', '1', '7', 'size', '1', '1', '23');
-        Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
-        Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
-                 'l2_nsp[1]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
-                 'l2_program_qualified_roots[1U]: l2_nsp[2]',
-                 'l2_entry_unit: graph') },
+    # A cross-reference INTO another branch: F\into is E's member `deep` itself, not a copy of it.  K03 NS-ROLES-2: a
+    # REQUIRED POSITIVE, red until a binding takes a path's Structure (Codex K03-NS2-COVERAGE-20261007-21;
+    # steps/defects.md#reference-field-consumers): `deep: into` meant E's member only through the global name table and
+    # now defines F's own deep; the explicit spelling is `into: E\deep`.  The oracle: F\into\d reads 21; into's cell
+    # holds E's deep itself (deref).
+    [pscustomobject]@{ Name = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '1', '7', 'size', '1', '1', '23', 'postpaths', 'samepath', '3', '1', '0', 'deref', '2', '0', '0', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_eternal_xref_walk.lm2'; Source = 'unit_eternal_xref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '1', '7', 'size', '1', '1', '23', 'postpaths', 'samepath', '3', '1', '0', 'deref', '2', '0', '0', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # Array records/backing and merge sites use the same exact profiled owner ranges.
     [pscustomobject]@{ Name = 'unit_array_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('1', 'merge_array', '1', '1', '1', '0', 'merge_array', '1', '2', '1', '1', 'merge_same', '1', '0', '0', '0');
@@ -5248,6 +5252,129 @@ $fixtures = @(
         Needle = 'unit_v2_signature_refused.lm2:9:12: unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_v2_signature_refused_walk.lm2'; Source = 'unit_v2_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_v2_signature_refused_walk.lm2:9:12: unknown type'; Absent = @(); Debt = @() },
+    # K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption): a named
+    # Structure's body takes the common roles of the root and a method -- a known head is its application (the arity
+    # refusal), an absent head with a visible named Structure as its one atom the binding (a typed reference cell holding
+    # that Structure: writes through it reach it, its cell is not it, filled at construction, assigned again when the
+    # Structure runs), any other absent head a nested definition with its written content (`b: zz`, `c: 7`, empty, a
+    # block -- Structures, no inferred storage).  Physical facts read through the cells (`deref`).  The twins: --walk-methods.
+    [pscustomobject]@{ Name = 'unit_ns2_assign.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_assign_walk.lm2'; Source = 'unit_ns2_assign.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_alias.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postpaths', 'samepath', '3', '1', '2', 'deref', '1', '0', 'differentpath', '2', '1', '2', '1', '0', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_alias_walk.lm2'; Source = 'unit_ns2_bind_alias.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postpaths', 'samepath', '3', '1', '2', 'deref', '1', '0', 'differentpath', '2', '1', '2', '1', '0', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_nested_walk.lm2'; Source = 'unit_ns2_bind_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_nested_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_nested_self_walk.lm2'; Source = 'unit_ns2_bind_nested_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_read_walk.lm2'; Source = 'unit_ns2_bind_read.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_self_walk.lm2'; Source = 'unit_ns2_bind_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_nullary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_nullary_walk.lm2'; Source = 'unit_ns2_call_nullary.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_define.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postpaths', 'widthpath', '2', '0', '2', '1', 'widthpath', '2', '0', '3', '1', 'widthpath', '2', '0', '4', '0', 'widthpath', '2', '0', '5', '0', 'widthpath', '2', '0', '6', '2', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_define_walk.lm2'; Source = 'unit_ns2_define.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'postpaths', 'widthpath', '2', '0', '2', '1', 'widthpath', '2', '0', '3', '1', 'widthpath', '2', '0', '4', '0', 'widthpath', '2', '0', '5', '0', 'widthpath', '2', '0', '6', '2', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_eternal_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'postpaths', 'samepath', '3', '0', '1', 'deref', '1', '0', 'samepath', '3', '1', '0', 'deref', '1', '0', 'samepath', '3', '2', '0', 'deref', '1', '0', 'differentpath', '2', '0', '1', '1', '0', 'differentpath', '2', '1', '0', '2', '0', '1', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_eternal_ref_walk.lm2'; Source = 'unit_ns2_eternal_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'postpaths', 'samepath', '3', '0', '1', 'deref', '1', '0', 'samepath', '3', '1', '0', 'deref', '1', '0', 'samepath', '3', '2', '0', 'deref', '1', '0', 'differentpath', '2', '0', '1', '1', '0', 'differentpath', '2', '1', '0', '2', '0', '1', 'endpostpaths'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_merge_ref_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_merge_ref_same_walk.lm2'; Source = 'unit_ns2_merge_ref_same.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_call_refused.lm2:10:5: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_refused_walk.lm2'; Source = 'unit_ns2_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_call_refused_walk.lm2:10:5: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_known_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_call_known_refused.lm2:11:5: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_known_refused_walk.lm2'; Source = 'unit_ns2_call_known_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_call_known_refused_walk.lm2:11:5: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_self_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_call_self_refused.lm2:7:5: more arguments than Host has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_call_self_refused_walk.lm2'; Source = 'unit_ns2_call_self_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_call_self_refused_walk.lm2:7:5: more arguments than Host has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_later_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_later_refused.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_later_refused_walk.lm2'; Source = 'unit_ns2_later_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_later_refused_walk.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_eternal_mutable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_eternal_mutable_refused.lm2:12:22: an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_eternal_mutable_refused_walk.lm2'; Source = 'unit_ns2_eternal_mutable_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_eternal_mutable_refused_walk.lm2:12:22: an eternal branch cannot reference mutable storage'; Absent = @(); Debt = @() },
+    # REQUIRED POSITIVES, red until their dependency is built (Codex K03-NS2-COVERAGE-20261007-21): the valid programs of
+    # the routes K03 NS-ROLES-2 found unbuilt, each with its runtime oracle -- a reference field's Structure as a call's
+    # actual, as a returned value, through an admission and through a capture (steps/defects.md#reference-field-consumers;
+    # the admission/capture refusals above keep their Consumers with owned nested fields), a named body's binding to a
+    # callable, to a Structure value, in a method's named Structure, and merge's fresh copy as a field
+    # (#named-body-copy-field).  The labelled limit rows above are their temporary diagnostics, not their coverage.
+    [pscustomobject]@{ Name = 'unit_ns2_ref_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_ref_arg_walk.lm2'; Source = 'unit_ns2_ref_arg.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_ref_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_ref_return_walk.lm2'; Source = 'unit_ns2_ref_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_ref_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_ref_admit_walk.lm2'; Source = 'unit_ns2_ref_admit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_ref_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_ref_capture_walk.lm2'; Source = 'unit_ns2_ref_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_callable_walk.lm2'; Source = 'unit_ns2_bind_callable.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_value_walk.lm2'; Source = 'unit_ns2_bind_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_copy_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_copy_field_walk.lm2'; Source = 'unit_ns2_copy_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_local_bind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_local_bind_walk.lm2'; Source = 'unit_ns2_local_bind.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # Implementation limits, labelled (not rules; steps/defects.md#reference-field-consumers, #named-body-copy-field): a
+    # named body holds no binding to a callable or to a Structure value yet, no merge's fresh copy, and a method's own
+    # named Structure no binding.
+    [pscustomobject]@{ Name = 'unit_ns2_bind_callable_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_bind_callable_limit_refused.lm2:9:8: a reference binding to a callable in a named Structure is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_callable_limit_refused_walk.lm2'; Source = 'unit_ns2_bind_callable_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_bind_callable_limit_refused_walk.lm2:9:8: a reference binding to a callable in a named Structure is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_value_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_bind_value_limit_refused.lm2:8:8: a reference binding to a Structure value in a named Structure is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_bind_value_limit_refused_walk.lm2'; Source = 'unit_ns2_bind_value_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_bind_value_limit_refused_walk.lm2:8:8: a reference binding to a Structure value in a named Structure is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_copy_field_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_copy_field_limit_refused.lm2:9:5: a merge construction in the body of a named Structure is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_copy_field_limit_refused_walk.lm2'; Source = 'unit_ns2_copy_field_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_copy_field_limit_refused_walk.lm2:9:5: a merge construction in the body of a named Structure is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_local_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_ns2_local_limit_refused.lm2:10:14: a reference binding in a method''s named Structure is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_ns2_local_limit_refused_walk.lm2'; Source = 'unit_ns2_local_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_ns2_local_limit_refused_walk.lm2:10:14: a reference binding in a method''s named Structure is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:15:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -7943,7 +8070,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_part_node_src_refused.lm2'; Parts = @('unit_s7_part_node_src_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_node_src_refused_part.lm2:6:13: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_type_refused.lm2'; Parts = @('unit_s7_part_root_type_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_root_type_refused_part.lm2:4:8: unknown nested Structure reference'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_root_type_refused_part.lm2:4:11: unknown merge operand'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_root_collide_refused.lm2'; Parts = @('unit_s7_part_root_collide_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_root_collide_refused_part.lm2:3:1: method collides with a unit field'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_tbl_runtime_refused.lm2'; Parts = @('unit_s7_part_tbl_runtime_refused_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;

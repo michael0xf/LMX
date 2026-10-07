@@ -1,0 +1,33 @@
+# K03 NS-ROLES-2 REQUIRED POSITIVE, red until its dependency is built (Codex K03-NS2-COVERAGE-20261007-21;
+# steps/defects.md#reference-field-consumers).
+# take(Shell) with Outer's `in: Inner` and Shell's `in: Box`: Box has the x take writes through slot\in, so Shell is
+# admitted to (Outer: slot) by the fields its Consumer reads (Box's extra y unread); the write reaches Box.  Today the
+# admission through reference fields of two models is not built: "root operation not walkable yet: an admission to a
+# Structure type through a Structure field of another type" (unit_s7_nested_missing keeps its refusal with owned
+# nested fields).  Exit 7; 81 for a wrong result, 82 if the write did not reach Box.
+Inner:
+    size_t: x 0U
+end: Inner
+Box:
+    size_t: x 0U
+    size_t: y 5U
+end: Box
+Outer:
+    in: Inner
+end: Outer
+Shell:
+    in: Box
+end: Shell
+fn: take (Outer: slot) int
+    slot\in\x: 1U
+    return: 4
+end: take
+fn: m () int
+    if: take(Shell) != 4
+        return: 81
+    if: Box\x != 1U
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,3 +1,12 @@
+# K03 NS-ROLES-2 REQUIRED POSITIVE, red until its dependency is built (Codex K03-NS2-COVERAGE-20261007-21;
+# steps/defects.md#reference-field-consumers).
+# A cross-reference INTO another branch: F's into holds E's member deep itself, not a copy.  It was written
+# `deep: into`, which meant that only through the global name table: deep is E's member, not visible in F (an ordinary
+# named Structure is visible forward and down from its place), so that line would now define F's own deep.  The
+# explicit spelling binds into to the Structure the path E\deep reaches.  No route binds a path today -- a binding
+# takes one atom, at the root and in a method too -- and in a qualified branch the item is a statement: "a statement in
+# a nested or qualified named Structure is not supported yet".  The oracle: F\into\d reads 21 through the reference,
+# and the driver sees into's cell hold E's deep itself.  Exit 7; 81/82 for a wrong read.
 independent:
     const:
         immutable:
@@ -15,7 +24,7 @@ independent:
     const:
         immutable:
             (): F
-                deep: into
+                into: E\deep
                 size_t: f 23U
             end: F
         end: immutable
@@ -23,12 +32,11 @@ independent:
 end: independent
 
 fn: m () int
-    return: 0
+    if: E\deep\d != 21U
+        return: 81
+    if: F\into\d != 21U
+        return: 82
+    return: 7
 end: m
-size_t: v
-v: E\deep\d
-if: v != 21U
-    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
-    return
-sendMessage: exit(exit_code: 0; stdout: ""; stderr: "")
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
 return

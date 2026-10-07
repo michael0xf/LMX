@@ -1,0 +1,31 @@
+# K03 NS-ROLES-2 REQUIRED POSITIVE, red until its dependency is built (Codex K03-NS2-COVERAGE-20261007-21;
+# steps/defects.md#reference-field-consumers).
+# take(h\p) with Holder's p the binding `p: Eq`: the actual is the Structure p references, Eq itself, admitted to
+# (Equatable: slot) by the field take reads; take's write through slot reaches Eq.  Today a path through a reference
+# field is no Structure actual: "a field path must end at a Structure" (unit_s7_arg_path keeps its admission refusal
+# with an owned nested field).  Exit 7; 81 if take did not return its write, 82 if the write did not reach Eq.
+Equatable:
+    size_t: equals 0U
+end: Equatable
+Eq:
+    size_t: equals 0U
+end: Eq
+Holder:
+    p: Eq
+end: Holder
+fn: take (Equatable: slot) size_t
+    slot\equals: 9U
+    return: slot\equals
+end: take
+fn: go (Holder: h) size_t
+    return: take(h\p)
+end: go
+fn: m () int
+    if: go(Holder) != 9U
+        return: 81
+    if: Eq\equals != 9U
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

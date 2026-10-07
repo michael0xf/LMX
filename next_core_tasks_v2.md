@@ -1920,6 +1920,15 @@ selected by the common rule, not by a name match against the body's formal or hi
 the K03-S5-RECEIVE-OUTPUT debt is closed. Gates on the final bytes: `opus_focus_output_02` (64 targets; red only the 4 rows of the address required positives), kernel `opus_kernel_53` GREEN297 (114 selftests), L3 `opus_l3_51`, full `opus_full_59` RED59/2442 -- against `opus_full_58` FAIL→OK 0, OK→FAIL 0, added 18 (14 OK, 4 red address required positives), removed 0; the intermediate chain on 296675640 (`opus_focus_output_01` 35 targets 0 failed, `opus_kernel_52`, `opus_l3_50`, `opus_full_58` RED55/2424 -- against `opus_full_57` FAIL→OK 2: `unit_ns2_copy_field` and its twin, OK→FAIL 0, added 26) is the intermediate bytes' evidence, not the final bytes'.
 Open: the address `@m` of a receive's output -- two required positives under critical_pointer_to_struct_bug (red, 82).
 Next (Codex -23): S6, then S7, with concrete dependency subtasks for proven open routes.
+S6 done ([section 120](steps/fable-continuation-20261003.md#unified-head-s6); Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01
+S6, K03-CALLABLE-PATH-20261007-25): the check's one call resolution is read by the native emission and the walk
+(complete-tuple census over `opus_full_59`: every site agrees; the emission's and the walk's own ladders gone); the
+binding route goes through the one call entry (BIND-CALL-ENTRY, found by the census, fixed); a bare path that selects a
+callable is its nullary call (answer (c)); `l2_collect_decls`'s dead slot arms removed; the spelling census
+(steps/k03-s6-census.tsv): 761 sites, none selects a callee by its spelling. Gates on the final bytes (`l2trans.lm1` blob f92a24cc): `opus_focus_s6_01` (97 targets; red only the baseline `unit_callable_forward` and the required-positive pair `unit_s6_own_fn_capture_value`), kernel `opus_kernel_54` GREEN297 (114 selftests ran, staged blob f92a24cc), L3 `opus_l3_52` (all 11 suites ok, type budget ok), full `opus_full_60` RED61/2477 -- against `opus_full_59` FAIL→OK 0, OK→FAIL 0, added 35 (33 OK, 2 red: the required-positive pair), removed 0, no recorded message changed.
+Open: PATH-STRUCTURE-LEAF (required positives and refusals for a path whose leaf is a Structure, next checkpoint),
+SLOT-FAMILY-DEAD (bounded removal), OWN-CALLABLE-LIMITS's capturing own fn named bare (required positive red).
+Next: S7 -- leading-atom merge operand parsing through the ordinary actuals/operand model.
 
 ### K04 — Callable actuals and hidden inputs
 

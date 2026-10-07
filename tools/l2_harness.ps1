@@ -5497,6 +5497,90 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_output_receive_address_method_walk.lm2'; Source = 'unit_output_receive_address_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # K03 S6 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01 S6, K03-CALLABLE-PATH-20261007-25): the emission and the walk read
+    # the check's one resolution of a call head; a binding `b: tick` (NS-ROLES-1b) is called through the one call entry
+    # wherever it is named -- checked as tick's call where it is named as a value, its value tick's result where a number
+    # is received, its self temp declared in a unit with no named Structure, merge result or `node\` path; a method named
+    # as a value is the one its site sees (an own fn in its host).
+    [pscustomobject]@{ Name = 'unit_s6_bind_plain_unit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){4}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_plain_unit_walk.lm2'; Source = 'unit_s6_bind_plain_unit.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){4}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_number_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_number_place_walk.lm2'; Source = 'unit_s6_bind_number_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,3); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_hidden_input_walk.lm2'; Source = 'unit_s6_bind_hidden_input.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_value_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_value_throw_caught_walk.lm2'; Source = 'unit_s6_bind_value_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_value_throw_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s6_bind_value_throw_refused.lm2:14:10: unhandled throw: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_bind_value_throw_refused_walk.lm2'; Source = 'unit_s6_bind_value_throw_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_s6_bind_value_throw_refused_walk.lm2:14:10: unhandled throw: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_own_fn_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_own_fn_value_walk.lm2'; Source = 'unit_s6_own_fn_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # REQUIRED POSITIVE, red until its route is built (steps/defects.md#own-callable-limits): a capturing own fn named bare
+    # where a value is evaluated in its host is its nullary call, as `get()` is; today the emitter's guard of a callable
+    # merge host takes the bare call for a value mention.
+    [pscustomobject]@{ Name = 'unit_s6_own_fn_capture_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_own_fn_capture_value_walk.lm2'; Source = 'unit_s6_own_fn_capture_value.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # K03 S6, Codex K03-CALLABLE-PATH-20261007-25 answer (c): a path that selects a callable, written with no argument
+    # where a value is evaluated -- a statement, a declaration's candidate, an operand, an assignment's value, a return
+    # value, an int actual -- is the selected callable's nullary call, as `Holder\tick()` is: the path is the call's
+    # written head and selector (native: the path's occurrence, sel 1; walked: EXEC on it).  Selecting runs nothing of
+    # Holder; a number leaf is read; a callable formal receives the occurrence; a missing argument is refused as `()`'s.
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt_walk.lm2'; Source = 'unit_s6_path_bare_stmt.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_decl_walk.lm2'; Source = 'unit_s6_path_bare_decl.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_operand_walk.lm2'; Source = 'unit_s6_path_bare_operand.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_owner.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){7}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_owner_walk.lm2'; Source = 'unit_s6_path_bare_owner.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){7}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_return_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*@: Lmx l2_c\d+ l2_pst$.*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_return_actual_walk.lm2'; Source = 'unit_s6_path_bare_return_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativePatterns = @('(?s)(?:c\.LMX_WALK_OP_EXEC.*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s6_path_bare_arity_refused.lm2:11:12: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_arity_refused_walk.lm2'; Source = 'unit_s6_path_bare_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_s6_path_bare_arity_refused_walk.lm2:11:12: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s6_path_bare_stmt_arity_refused.lm2:11:5: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_bare_stmt_arity_refused_walk.lm2'; Source = 'unit_s6_path_bare_stmt_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_s6_path_bare_stmt_arity_refused_walk.lm2:11:5: Holder\viaPath has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_read_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_read_control_walk.lm2'; Source = 'unit_s6_path_read_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # Natively and root-walked only: a callable formal is outside the walkable subset (--walk-methods), as before.
+    [pscustomobject]@{ Name = 'unit_s6_path_transport_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_descriptor_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s6_path_descriptor_refused.lm2:11:1: unknown callable field'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_descriptor_refused_walk.lm2'; Source = 'unit_s6_path_descriptor_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_s6_path_descriptor_refused_walk.lm2:11:1: unknown callable field'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_descriptor_empty_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_s6_path_descriptor_empty_refused.lm2:11:1: unknown callable field'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s6_path_descriptor_empty_refused_walk.lm2'; Source = 'unit_s6_path_descriptor_empty_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_s6_path_descriptor_empty_refused_walk.lm2:11:1: unknown callable field'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:15:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

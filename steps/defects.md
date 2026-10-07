@@ -4580,6 +4580,12 @@ b держит Structure A, пути через b читают запись merg
 бывших пределов теперь транслируются, остальное байт в байт; повтор 2423 переводов `opus_full_58` финальными байтами —
 ни одна строка не меняется.
 
+**Шаг S6 2026-10-07** ([§120 журнала](fable-continuation-20261003.md#unified-head-s6)): одно разрешение вызова читают
+проверка, эмиссия и обходчик; маршрут привязки — через общий вход вызова ([BIND-CALL-ENTRY](#bind-call-entry)); голый
+путь к callable — его нульарный вызов (ответ Codex K03-CALLABLE-PATH-20261007-25 (c)); мёртвые ветви слотов удалены;
+перепись мест написания — [k03-s6-census.tsv](k03-s6-census.tsv). Повтор 2441 перевода `opus_full_59` после каждого
+шага побайтно равен.
+
 <a id="call-classifier-typed-route"></a>
 ### CALL-CLASSIFIER-TYPED-ROUTE — 2026-10-07, Opus (K03 NS-ROLES-VIS; Codex K03-VIS-CALL-CLASSIFICATION-20261007-16), FIXED 2026-10-07 (K03 NS-ROLES-CALL)
 
@@ -4651,6 +4657,64 @@ docs/L2_spec_en.md:155) — вызов Model, ошибочный по числу
   поле модуля, видимое из метода, раньше собственных fn метода, поэтому затенение внешнего поля собственным fn не
   построено (единственная неравная пара переписи эквивалентности V2);
 - fm не построен.
+- (K03 S6, обязательный позитив, красный: `unit_s6_own_fn_capture_value` с двойником) собственный fn фабрики, который
+  захватывает её данные, названный голым там, где вычисляется значение в его хосте, — его нульарный вызов, как
+  `get()`; защита эмиттера хоста callable merge (`l2_mad_names_nested`, `l2_mad_mentions_value`) принимает голый вызов
+  за упоминание значения: «a callable merge host names a nested method outside the return», тогда как `int: t get()`
+  исполняется. Не захватывающий собственный fn голым работает (`unit_s6_own_fn_value`).
+
+<a id="bind-call-entry"></a>
+### BIND-CALL-ENTRY — 2026-10-07, Opus (перепись K03 S6), FIXED 2026-10-07 (K03 S6)
+
+Перепись S6 сопоставила каждый вызов проверки, эмиссии и обходчика по месту; единственные вызовы, выданные эмиссией и
+обходчиком без проверки, — `c` в `if: c != 2` у `unit_k03_alias_bare`: привязка `c: two` (NS-ROLES-1b), названная как
+значение, шла своим частичным путём. Пробы нашли три дефекта маршрута привязки, нативно и при обходе:
+
+- в модуле без именованных Structure, результатов merge и путей `node\` любой вызов через привязку (`c`, `c()`,
+  `int: v c()`) не компилировался: «'l2_pst' undeclared» — пролог метода объявлял самость пути только при тех трёх
+  признаках, а вызов через привязку выбирает своё вхождение через неё (`l2_emit_alias_self`);
+- привязка, названная как значение, не проходила общую проверку вызова (`l2_check_call`: арность, рёбра, throws,
+  отметка динамических входов): `got: c + 0` с бросающим `boom` без catch давал «1:1: internal: a callee's declared
+  throw is not handled by its caller» из эмиссии, а `c()`, `boom` и `boom()` — «unhandled throw: Oops» у места;
+- в месте, принимающем число, голая привязка читалась как ячейка-ссылка: `int: v c` и `id(c)` — «a reference where a
+  number is asked», `z: c` — «assignment value has incompatible type», `return: c` — «return value has incompatible
+  type», тогда как операнд `c != 2` и все формы `c()` работали.
+
+Исправлено ([§120 журнала](fable-continuation-20261003.md#unified-head-s6)): привязка, названная как значение,
+проверяется как вызов вызываемого (`l2_check_primary` → `l2_check_value_call`); её значение там, где принимается
+число, — результат вызываемого (`l2_colon_simple_ty`, как `l2_native_cf_ty` в операнде); пролог объявляет `l2_pst`, где
+модуль держит привязку-ссылку. Свидетели `unit_s6_bind_plain_unit`, `_number_place`, `_hidden_input`,
+`_value_throw_caught`, `_value_throw_refused` с двойниками; мутанты m07–m09 краснят их.
+
+<a id="path-structure-leaf"></a>
+### PATH-STRUCTURE-LEAF — 2026-10-07, Opus (K03 S6; Codex K03-CALLABLE-PATH-20261007-25), OPEN
+
+Отказ обходчика «root operation not walkable yet: a Structure value» (`l2_rw_path_read`, path[3] < 0) после S6 больше
+не достигается путём к callable (теперь — вызов), но достигается путём, последнее поле которого — Structure
+(`Holder: inner: int: k 1`), нативно и при обходе:
+
+- оператор `Holder\inner` один — «a Structure value», а `Holder\inner()` — «a call path must end at a callable
+  field» у проверки; обычная именованная Structure — callable без результата (#callables), и по правилу голой головы обе
+  записи — одно нульарное применение выбранной Structure: исполнение вложенной Structure через путь не построено, и две
+  записи сегодня говорят о нём по-разному;
+- `int: v Holder\inner` — «a Structure value»: проверка принимает путь (ветвь всего значения-пути принимает любой
+  разрешённый лист), хотя место числа отказывает ссылке, как `int: v Holder + 1` — «a reference where a number is
+  asked»;
+- `int: v Holder\inner + 1` — «unresolved name» у inner (одношаговая проверка пути), а не тот же отказ ссылки.
+
+Это отдельные долги от вызова пути (Codex -25: «preserve/register those separate required-positive debts»): строки
+обязательных позитивов (исполнение вложенной Structure через путь) и отказов с контрактом места («a reference where a
+number is asked») войдут в следующую контрольную точку; отказ обходчика остаётся, пока эти маршруты не построены.
+
+<a id="slot-family-dead"></a>
+### SLOT-FAMILY-DEAD — 2026-10-07, Opus (K03 S6), OPEN
+
+K03 S6 удалил обе ветви слотов `l2_collect_decls` — единственного места, где регистрировались слоты
+(`l2_sn`, `l2_st`, `l2_m_sn`): `@: char x` и `@: size_t x` — собственные объявления-указатели, ветви были недостижимы
+(маркер — 0 из 2441 переводов и 14 проб). Теперь ни одно объявление не регистрирует слот, и все читатели слотов мертвы
+по построению: `l2_slot_find` и его семья, 89 обращений примерно в 40 функциях (в лестницах разрешения —
+`l2_call_head_method`, `l2_head_resolve`, `l2_colon_bound_ty`, `l2_call_alias_own`, `l2_call_head_held`, — в эмиссии и
+прологах). Ограниченное удаление с повтором корпуса (ожидаются побайтно равные переводы) — отдельный шаг.
 
 <a id="reference-field-consumers"></a>
 ### REFERENCE-FIELD-CONSUMERS — 2026-10-07, Opus (K03 NS-ROLES-2; Codex K03-NS-ROLES-2-20261007-20, K03-NS2-COVERAGE-20261007-21), OPEN

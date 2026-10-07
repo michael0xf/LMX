@@ -1,0 +1,27 @@
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25; steps/defects.md#bind-call-entry): a binding `c: boom` named as a value is
+# boom's call -- inside a catch its throw is caught as `boom()`'s is: got takes Oops's 3 from the handler, then more
+# takes 4 from the handler of `c() + 1`'s block, which adds 1.  Exit 7.
+fn: boom () int
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(3)
+    return: 0
+end: boom
+fn: run () int
+    c: boom
+    int: got 0
+    ---
+        got: c + 0
+        catch: Oops (int: v)
+            got: v
+    ---
+    int: more 0
+    ---
+        more: c() + 1
+        catch: Oops (int: w)
+            more: w + 1
+    ---
+    return: got + more
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

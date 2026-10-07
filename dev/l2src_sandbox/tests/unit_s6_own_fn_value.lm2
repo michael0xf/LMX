@@ -1,0 +1,19 @@
+# K03 S6 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01 S6; docs #declaration-visibility): a method named as a value is
+# the method the site sees -- the emission and the walk read the check's resolution (l2_site_method), not a lookup of the
+# name alone.  makeGetter's own fn get, which captures nothing, is visible in its host only; named bare where a value is
+# received there, above its definition, it is get's call: t is get() = 3, and g, the returned get, gives 3 too.  Exit 7
+# when both are 3.
+int: hits 0
+fn: makeGetter (int: n) fn: () int
+    int: t get
+    node\hits: node\hits + t + n - 2
+    fn: get () int
+        return: 3
+    return: get
+end: makeGetter
+fn: check (int: v) int
+    return: v + node\hits + 1
+end: check
+@: g makeGetter(2)
+sendMessage: exit(exit_code: check(g()); stdout: ""; stderr: "")
+return

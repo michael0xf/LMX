@@ -12224,3 +12224,133 @@ Evidence:
 | final: kernel `opus_kernel_53` | GREEN, 297 targets, 114 selftests ran; staged `l2trans.lm1` blob 35db57d1 |
 | final: L3 `opus_l3_51` | all 11 suites ok, type budget ok |
 | final: full `opus_full_59` | RED 59/2442; against `opus_full_58`: FAIL→OK 0, OK→FAIL 0, added 18 (14 OK, 4 red: the address required positives), removed 0 |
+
+<a id="unified-head-s6"></a>
+## 120. One call resolution read by the check, the emission and the walk; a bare path is its callable's call (K03 S6)
+
+The rule (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01, S6: "remove any still-duplicated resolution/call entry; prove all
+census sites either use the common route or are legitimate resolved-contract handlers. No old fallback list left as a
+compatibility path"; K03-CALLABLE-PATH-20261007-25, answer (c); `docs/LMX_semantics.en.md#resolved-head-consumption`,
+`#callables`): a call's callee, its category and the occurrence it runs on are the check's one resolution of the written
+head (`l2_call_head_method`), and every consumer -- the check, the native emission, the walk -- reads it.  A path is a
+selector: written with no argument where a value is evaluated, the callable it selects is consumed as `Holder\tick()`
+is, by its nullary call; reaching it runs nothing of Holder.
+
+The census first (scratch; `opus_full_59`'s 2441 recorded translations replayed with a marker build of the
+RECEIVE-OUTPUT bytes 35db57d1).  Every call the check admits (`l2_check_call`), the native emission emits
+(`l2_emit_call`) and the walk builds (`l2_rw_call`) printed its complete tuple -- callee, category (a method by its name,
+a binding `b: tick`, a callable formal, a method's path), formal, owner (the binding's own row, the path's root
+resolution and leaf, the formal) -- keyed by the call's source offset and its host method:
+
+| Pairing | Sites | Agree |
+| --- | --- | --- |
+| check and native emission, complete tuple | 6107 | 6107 |
+| check and walk, complete tuple | 6242 | 6242 |
+| `l2_prep`'s Frame call: its own ladder (`l2_find_method` + `l2_head_is_method_call`, then path, formal, binding) beside the one resolution read once | 6321 (by name 5471, formal 94, path 55, binding 18, no callee 683) | 6321 |
+| `l2_prep`'s atom named as a value: `l2_find_method` beside `l2_site_method` | 32 | 32 |
+| `l2_rw_call`'s path category: `l2_find_method(head) < 0` beside `l2_site_method(mi, head) < 0` | 18655 lines | all |
+| `l2_rw_operand`'s atom: `l2_find_method` beside `l2_site_method` | 318 lines | all |
+
+They agree because the method table is one space by name (two same-named own fns in two hosts: "duplicate definition",
+[OWN-CALLABLE-LIMITS](defects.md#own-callable-limits)) -- by the limit, not by construction.  Converter calls (113 native,
+388 walked) have no written head and stand outside.  `l2_rw_operand`'s second path entry after `l2_call_head_method`
+was reached 0 times (only the excluded `l2_e` could reach it); `l2_collect_decls`'s two slot arms 0 times.  The only
+calls emitted and walked but never checked were `unit_k03_alias_bare`'s `c` in `if: c != 2` and its twin: the binding
+route had its own partial entries, and probes then found three defects in it ([BIND-CALL-ENTRY](defects.md#bind-call-entry)).
+
+What changed in `l2trans.lm1` (f92a24cc), each step replayed against the RECEIVE-OUTPUT bytes -- 2441 of 2441 recorded
+translations byte-identical after every step:
+
+- One resolution read by the emission and the walk.  `l2_prep`'s Frame call reads `l2_call_head_method` once and selects
+  the occurrence by what it resolved: a callable formal -- the one the formal holds (sel 2); a binding -- the occurrence
+  it holds (sel 1, `l2_emit_alias_self`); a method's path -- the occurrence the path selects (sel 1, `l2_emit_path`); a
+  method by its name -- the unit's occurrence (sel 0); `l2_call_mi` goes.  `l2_prep`'s atom named as a value and
+  `l2_rw_operand`'s atom read `l2_site_method` (the method the site sees), `l2_rw_call`'s path category asks whether the
+  head resolved by its name (`l2_site_method`) or through a path; `l2_rw_operand`'s dead second path entry goes.
+- The binding route through the one call entry (BIND-CALL-ENTRY): a binding named as a value is checked as its callee's
+  call (`l2_check_primary` -> `l2_check_value_call`: arity, edges, throws, the dynamic-input note); its value where a
+  number is received is the callee's result (`l2_colon_simple_ty`, as `l2_native_cf_ty` already typed it in an operand),
+  so a declaration's candidate, an int actual, an assignment's value and a return value receive it as `c()`'s; the
+  method prologue declares the self temp `l2_pst` wherever the unit holds a reference binding (`l2_rb_n`).
+- `l2_collect_decls`'s slot arms removed: `@: char x` and `@: size_t x` are own pointer declarations (`l2_own_decl_ty`
+  gives `l2_contract_own`'s pointer code, never 0), so the arms that read them when it was 0 -- the registration at
+  depth 0 and its "unsupported body" below -- could not be reached; 14 probes (depth 0 and in a block, used and unused,
+  the root, native and walked) took the own route and reached neither.  No declaration registers a slot now; the slot
+  readers (`l2_slot_find` and its family, 89 references) are dead by construction -- a bounded removal, recorded below.
+- A bare path that selects a callable (answer (c)).  `l2_path_callee` is the call's one resolution of a path head
+  (`l2_call_head_method`: `l2_head_method`'s callable field, kind 4); `l2_path_run_callee` takes it for an operand run,
+  `a\b...`, which the operand reader delimits.  The path is the call's written head and its selector, handed to the call
+  consumer rather than recomputed from a node's text, which a run of atoms does not have: the check
+  (`l2_check_call_at`, `l2_check_value_call_at`, `l2_bind_call_at` -- a missing argument is "Holder\viaPath has no
+  argument n" at the path, as for `Holder\viaPath()`), the native emission (`l2_emit_path` then `l2_emit_call`, sel 1)
+  and the walk (`l2_rw_call_at`, whose `l2_rw_call_path` reads the selected occurrence).  Its positions: a statement
+  (`l2_check_discard`, `l2_eval_discard`), a value -- the whole value or one operand among others (`l2_check_fields`,
+  `l2_emit_fields`, `l2_rw_span`) -- typed as the callee's result (`l2_native_span_ty`, `l2_rw_span_ty`), and an
+  assignment's value, which the native path branch read as a number leaf: a selected callable is the general store's
+  (`l2_path_store_general`).  A number leaf stays a read; a callable formal's actual stays the occurrence.
+
+The census of spelling sites ([k03-s6-census.tsv](k03-s6-census.tsv), the S1 method over f92a24cc): 761 sites in 159
+functions, each with its class and its disposition -- 584 compare a word of the language, which no program can bind
+([RESERVED-NAME-BINDINGS](defects.md#reserved-name-bindings), `l2_bind_admit`), so at every site the spelling is the one
+resolution's word (`l2_head_resolve` kind 1) and the comparison dispatches that word's own contract; 123 lexical (an
+operator, a bracket, a separator, the head forms `@:` and `[]:`, which no name spells); 24 inner (a word inside a
+resolved receiver's own written contract -- `os:`'s `win`/`default`, C's `Lmx`, the numeric spellings
+`l2_unimpl_numeric` refuses -- and one name-specific refusal, `l2_rw_operand`'s `mainArgs`, the walk's located limit on
+reading the launch letter as an operand, which selects nothing); 30 file texts.  No site selects a callee or a category
+from a spelling: a call's callee comes only from the one resolution.
+
+Evidence:
+
+- Witnesses, eighteen new programs, each but one with a `--walk-methods` twin; positives exit 7 natively, root-walked and
+  methods-walked.  The binding route: `unit_s6_bind_plain_unit` (a unit with no named Structure, merge result or
+  `node\` path: `c`, `c()`, `int: v c`, `int: w c()` -- before, gcc's "'l2_pst' undeclared"), `unit_s6_bind_number_place`
+  (`int: v c`, `id(c)`, `z: c` each receive 2, two runs three times -- before, "a reference where a number is asked"
+  and "assignment value has incompatible type"), `unit_s6_bind_hidden_input` (the callee's hidden input supplied
+  through `c` and `c()`; `return: c` -- before, "return value has incompatible type"), `unit_s6_bind_value_throw_caught`
+  (`c + 0` and `c() + 1` caught), `unit_s6_bind_value_throw_refused` ("14:10: unhandled throw: Oops", as for `c()`,
+  `boom`, `boom()` -- before, "1:1: internal: a callee's declared throw is not handled by its caller"); a method named as
+  a value is the one its site sees: `unit_s6_own_fn_value` (an own fn that captures nothing, named bare in its host).
+  The bare path: `unit_s6_path_bare_stmt`, `_decl`, `_operand`, `_return_actual` (a statement; a declaration's
+  candidate; operands of `+`, `*` and a comparison; a return value and an int actual -- each beside `Holder\tick()`,
+  tick counted exactly once per occurrence, Holder's own `bump()` never run), `unit_s6_path_bare_owner` (Q44: bare
+  `A\M` and `R\M` in each position run on A's and on R's own occurrence, counted apart), `unit_s6_path_bare_arity_refused`
+  and `_stmt_arity_refused` ("Holder\viaPath has no argument n" at the path, as `Holder\viaPath()`); controls
+  `unit_s6_path_read_control` (a number leaf is read, nothing runs), `unit_s6_path_transport_control` (handed to a callable
+  formal the path is the occurrence, called once inside; natively and root-walked -- a callable formal is outside the
+  walkable subset, as before), `unit_s6_path_descriptor_refused` and `_empty_refused` (a field `fn: zz` naming no method:
+  "unknown callable field" for the bare and the applied path alike; nothing is manufactured).  The native rows pin the
+  path-selected calls (`@: Lmx l2_cN l2_pst`, 2, 2, 3, 7, 2) and the binding loads; the walked twins the EXEC frames.
+- REQUIRED POSITIVE, red ([OWN-CALLABLE-LIMITS](defects.md#own-callable-limits)): `unit_s6_own_fn_capture_value` and its
+  twin -- an own fn that captures n, named bare where a value is evaluated in its host, is its call as `get()` is; the
+  emitter's guard of a callable merge host (`l2_mad_names_nested`) takes the bare call for a value mention, "a callable
+  merge host names a nested method outside the return", while `int: t get()` runs.
+- Mutants, each one rule off (the control m00 changes nothing): m01 a path call on the unit's occurrence --
+  `unit_merged_callable` exit 83 (R's M counted with A's), 26 corpus rows' L1; m02 a callable formal's call on its
+  contract's own occurrence -- `unit_callable_formal_site_names` exit 81, 62 rows; m03 a binding's call without its
+  held occurrence -- 14 rows, the binding loads the alias rows pin drop (3 to 2, 2 to 0); m04 and m06 the atom resolved at
+  the root instead of its site (native, walked) -- `unit_s6_own_fn_value` refused ("a refusal said nothing", "this
+  operand"); m05 the walk's path category inverted -- 1408 rows refused; m07 the self temp not declared for bindings --
+  gcc fails on `unit_s6_bind_plain_unit`, `_hidden_input`; m08 a binding named as a value unchecked -- the internal
+  error back on `unit_s6_bind_value_throw_refused`; m09 a binding typed as its cell -- `_number_place`, `_plain_unit`,
+  `_hidden_input` refused.  The bare path: mb01 the bare leaf's call skipped -- every bare witness back to its old
+  refusal; mb02 the native statement's call emitted twice -- `unit_s6_path_bare_stmt` exit 82 natively; mb03 the native
+  operand's selector bypassed (sel 0) -- `unit_s6_path_bare_owner` exit 82 natively; mb04 the walk's selector bypassed --
+  the same, methods-walked.  None changes a recorded corpus translation except where said.
+- gcc's `-Wall -Wextra` list: the same 75 warnings.
+
+Open after this step (steps/defects.md): [PATH-STRUCTURE-LEAF](defects.md#path-structure-leaf) -- the walk's refusal
+"a Structure value" is still reached by a path whose last field is a Structure, alone as a statement or a number
+declaration's candidate, and the operand form says "unresolved name"; [SLOT-FAMILY-DEAD](defects.md#slot-family-dead) --
+the slot readers no declaration can feed now; the capturing own fn named bare in its host
+([OWN-CALLABLE-LIMITS](defects.md#own-callable-limits), a required positive red).  `l2_fields_has_call` still reads a
+path's leaf atom as a name (`tick` of `Holder\tick` finds the unit's tick): under Q22 the leaf is that method's name,
+so the answer is the right one, for the wrong reason -- noted, not changed.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| focused `opus_focus_s6_01` | 97 targets, 3 failed -- the baseline `unit_callable_forward` (its full_59 message) and `unit_s6_own_fn_capture_value` with its twin (the required positive) |
+| kernel `opus_kernel_54` | GREEN, 297 targets, 114 selftests ran, staged blob f92a24cc |
+| L3 `opus_l3_52` | all 11 suites ok, type budget ok |
+| full `opus_full_60` | RED 61/2477; against `opus_full_59`: FAIL→OK 0, OK→FAIL 0, added 35 (33 OK, 2 red: the required-positive pair), removed 0 |

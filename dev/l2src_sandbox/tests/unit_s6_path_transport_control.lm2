@@ -1,0 +1,39 @@
+# K03 S6 control (Codex K03-CALLABLE-PATH-20261007-25): handed to a callable formal, a path that selects a callable is the
+# occurrence it selects -- a reference the formal receives, not a call: apply calls it once, after reading the count,
+# which is still 0 then.  Holder runs nothing (`bump()` would count).  v is 1 * 10 + 0: exit 7; 81 Holder ran, 83 a wrong
+# value (the path called before apply).
+int: hits 0
+int: seen 0
+fn: tick () int
+    node\hits: node\hits + 1
+    return: node\hits
+end: tick
+fn: bump () int
+    node\seen: node\seen + 1
+    return: 0
+end: bump
+fn: count () int
+    return: node\hits
+end: count
+fn: saw () int
+    return: node\seen
+end: saw
+Holder:
+    fn: tick
+    bump()
+end: Holder
+fn: apply (tick: f) int
+    int: before count()
+    int: r f()
+    return: r * 10 + before
+end: apply
+fn: run () int
+    int: v apply(Holder\tick)
+    if: saw() != 0
+        return: 81
+    if: v != 10
+        return: 83
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,43 @@
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25, answer (c)): a path that selects a callable, with no argument, as a return
+# value and as an actual of an int formal, is the callable's nullary call -- as `Holder\tick()` is; Holder's field
+# `fn: tick` refers to the unit's tick (Q22).  get returns tick's first result, id receives the second: 1 + 2, tick runs
+# twice, Holder never (`bump()` would count a run).  Exit 7; 81 Holder ran, 82 a wrong count, 83 a wrong value.
+int: hits 0
+int: seen 0
+fn: tick () int
+    node\hits: node\hits + 1
+    return: node\hits
+end: tick
+fn: bump () int
+    node\seen: node\seen + 1
+    return: 0
+end: bump
+fn: count () int
+    return: node\hits
+end: count
+fn: saw () int
+    return: node\seen
+end: saw
+fn: id (int: x) int
+    return: x
+end: id
+Holder:
+    fn: tick
+    bump()
+end: Holder
+fn: get () int
+    return: Holder\tick
+end: get
+fn: run () int
+    int: a get()
+    int: b id(Holder\tick)
+    if: saw() != 0
+        return: 81
+    if: count() != 2
+        return: 82
+    if: a + b != 3
+        return: 83
+    return: 7
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

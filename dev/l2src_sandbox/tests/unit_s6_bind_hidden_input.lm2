@@ -1,0 +1,19 @@
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25; steps/defects.md#bind-call-entry): two reads the unit's base, its hidden
+# input (Q52), which its caller supplies; a call through the binding `c: two` -- named as a value and applied -- is a
+# site of that input as `two()` is, in a unit with no named Structure, merge result or `node\` path.  base is 5, two
+# gives 7 each time: exit 7; 82 if a call through c read another base.
+int: base 5
+fn: two () int
+    return: base + 2
+end: two
+fn: m () int
+    c: two
+    if: c != 7
+        return: 82
+    int: v c()
+    if: v != 7
+        return: 82
+    return: c
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

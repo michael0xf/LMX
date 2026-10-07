@@ -224,7 +224,6 @@ int: l2_anc_on 0
 @: int l2_cf_omi 0
 @: int l2_cf_fk 0
 @: int l2_cf_req 0
-int: l2_call_mi 0
 int: l2_call_k 0
 # How to spell the program unit Structure in the code being emitted right now.
 # In a unit-level method source `node` is already that unit, while the separate
@@ -977,6 +976,8 @@ prototype:
     fn: l2_dyk_note (int: m; const: @(LmP0Text nm); int: ty) int
     fn: l2_dyk_close (@: int changed) int
     fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
+    fn: l2_path_callee (int: mi; @: LmP0Text t) int
+    fn: l2_path_run_callee (@: LmP0Field field; int: count; int: mi; @@: char out) int
     fn: l2_head_is_method_call (int: mi; const: @(LmP0Text head)) int
     fn: l2_head_is_callable_formal (int: mi; const: @(LmP0Text head)) int
     fn: l2_anon_cf_name (const: @(LmP0Text host); const: @(LmP0Text formal)) @: LmP0Text
@@ -1040,6 +1041,7 @@ prototype:
     fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
     fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest) int
     fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
+    fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
     fn: l2_actual_ns (int: mi; @: LmP0Field first; int: count; const: @(char path); const: @(LmP0Node at); @: int model) int
     fn: l2_empty_actual (@: LmP0Field field; int: idx; int: k) int
     fn: l2_bind_calls (const: @(char path)) int
@@ -1047,6 +1049,7 @@ prototype:
     fn: l2_bind_node_content (const: @(LmP0Node n); int: mi; const: @(char path)) int
     fn: l2_bind_struct (const: @(LmP0Structure s); int: mi; const: @(char path)) int
     fn: l2_bind_call (const: @(LmP0Node node); int: idx; int: held; const: @(char path)) int
+    fn: l2_bind_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: held; const: @(char path)) int
     fn: l2_bound_find (const: @(LmP0Structure body)) int
     fn: l2_bound_rank (int: bi; int: k) int
     fn: l2_bound_formal (int: bi; int: rank) int
@@ -1059,7 +1062,7 @@ prototype:
     fn: l2_bound_free () int
     fn: l2_actual_field (@: LmP0Field first; int: k) @: LmP0Field
     fn: l2_rw_put_actual (int: call; int: site; int: place; int: arg) int
-    fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
+    fn: l2_bind_call_in (const: @(LmP0Node node); @: LmP0Text head; const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     fn: l2_bind_whole (@: LmP0Field first; int: cnt; const: @(LmP0Node at)) @: LmP0Node
     fn: l2_atom_callee (const: @(LmP0Text t); int: mi; @: int fi) int
     fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
@@ -1070,6 +1073,7 @@ prototype:
     fn: l2_body_inert (const: @(LmP0Structure body); int: mi) int
     fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: L2Tx dest; int: edge) int
     fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
+    fn: l2_check_value_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: fi; int: mi; const: @(char path)) int
     fn: l2_tok_method_occ (int: idx; @: L2Tx dest) int
     fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_empty_call_shape (const: @(LmP0Node v)) int
@@ -1190,6 +1194,7 @@ prototype:
     fn: l2_rw_has_slash (const: @(LmP0Text t)) int
     fn: l2_rw_own_row (const: @(LmP0Node node); const: @(LmP0Text t)) int
     fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0Field args; int: parent; @: int out) int
+    fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: selected_formal; @: LmP0Field args; int: parent; @: int out) int
     fn: l2_rw_dyn_arg (const: @(LmP0Node node); int: idx; int: k; int: parent; @: int out) int
     fn: l2_rw_callee_at (int: parent; int: idx; int: oi; @: int out) int
     fn: l2_rw_pads (@: LmP0Field first; int: into) int
@@ -8952,6 +8957,10 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         # A held callable's bare name received as its result has the type of that result.
         if: l2_held_result_site(value) != 0
             return: l2_mad_held_value_ty(l2_call_head_held(mi, atom), out_ty)
+        # K03 S6: so has a binding `b: tick` (NS-ROLES-1b) named where a value is consumed: it is tick's call
+        # (callable-first; l2_check_primary checks it), its value tick's result, as l2_native_cf_ty types it in an operand.
+        if: l2_call_alias_own(mi, atom) >= 0
+            return: l2_colon_ret_ty(l2_rb_meth_of(l2_own_decl[l2_call_alias_own(mi, atom)]), out_ty)
         if: l2_deref_word(atom, mi, @ base, @ levels, out_ty) = 0
             return: 0
         if: l2_num(atom) || l2_signed_num(atom) || (atom != 0 && atom\length >= 3U && atom\data[0] = 39 && atom\data[atom\length - 1U] = 39)
@@ -9639,6 +9648,11 @@ return: a
 # (REVIEW 394f6a9, P62).  A held callable whose header cannot be read is left to the check, which says
 # so.  0, or 1 said.
 fn: l2_bind_call (const: @(LmP0Node node); int: idx; int: held; const: @(char path)) int
+return: l2_bind_call_at(node, l2_app_head(node), idx, held, path)
+
+# The same binding, the call's written head given: the node's own (l2_app_head), or the path a path operand writes
+# (K03 S6, l2_check_call_at) -- the words of a refused binding name it.
+fn: l2_bind_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: held; const: @(char path)) int
     int: nf
     int: k 0
     int: rc
@@ -9685,7 +9699,7 @@ fn: l2_bind_call (const: @(LmP0Node node); int: idx; int: held; const: @(char pa
                 names[k]: l2_mad_held_arg_name(held, k)
             k: k + 1
         ---
-        rc: l2_bind_call_in(node, path, nf, at, span, names, first, cnt)
+        rc: l2_bind_call_in(node, head, path, nf, at, span, names, first, cnt)
     else:
         rc: l2_alloc_or(path, node, "out of memory")
     if: at != 0
@@ -9701,7 +9715,7 @@ fn: l2_bind_call (const: @(LmP0Node node); int: idx; int: held; const: @(char pa
 return: rc
 
 # The binding of l2_bind_call over its nf per-formal slots, the formals' names given.  0, or 1 said.
-fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
+fn: l2_bind_call_in (const: @(LmP0Node node); @: LmP0Text head; const: @(char path); int: nf; @@: LmP0Field at; @: int span; @@: LmP0Text names; @@: LmP0Field first; @: int cnt) int
     @: LmP0Structure body
     []: char callee_own 160
     @: char callee 0
@@ -9723,7 +9737,7 @@ fn: l2_bind_call_in (const: @(LmP0Node node); const: @(char path); int: nf; @@: 
     @: LmP0Field bfirst 0
     # K03: the written application (l2_app_head, l2_app_actuals): a bare head is bound as its empty application is.
     body: l2_app_actuals(node)
-    hd: l2_app_head(node)
+    hd: head
     if: hd = 0
         return: l2_error(path, node, "internal: a call has no head")
     # The callee's name whole, in memory of its own size: the words of a refused binding say it (FIXED-BLOCKS-AUDIT).
@@ -10844,17 +10858,23 @@ return: ty
 # read of a number leaf?  It is for a number field of another type than the own field's -- a conversion
 # (l2_convert_on_store) -- and for a reference field (`@: T name`, kinds 10 and 11): its value is the reference the
 # field holds, read as any reference field is read (l2_path_text_read), and stored as any reference is, with its
-# admission (REF-FIELD-VALUE-READ: the path branch, which reads number leaves only, stored stale text for one).  0 for
-# any other path or place.
+# admission (REF-FIELD-VALUE-READ: the path branch, which reads number leaves only, stored stale text for one) -- and
+# for a path that selects a callable (K03 S6, l2_path_callee): its value is the callable's nullary call, evaluated as
+# `A\M()` is (l2_emit_fields).  0 for any other path or place.
 fn: l2_path_store_general (int: mi; const: @(LmP0Text head); const: @(char pd); size_t: pn) int
     int: leaf 0
     int: kind
     int: pft
     int: oft
     int: oi
+    LmP0Text: word
     oi: l2_own_visible(mi, head)
     if: oi < 0 || pd = 0 || pn = 0U
         return: 0
+    word.data: pd
+    word.length: pn
+    if: l2_path_callee(mi, @ word) >= 0
+        return: 1
     kind: l2_path_kind(pd, pn, @ leaf)
     if: kind = 10 || kind = 11
         return: 1
@@ -13357,7 +13377,6 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
     int: j
     int: n
     int: ty
-    int: slot_no
     int: retained
     int: rbm
     if: body = 0 || sn = 0
@@ -13511,8 +13530,6 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             return: l2_error(path, stmt, l2_unimpl_numeric(stmt))
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && depth > 0 && l2_scope_n = 0
             return: l2_error(path, stmt, "unsupported own declaration")
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) = 0 && l2_slot_decl_ty(stmt) != 0 && depth > 0
-            return: l2_error(path, stmt, "unsupported body")
         if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) != 0 && (depth = 0 || l2_scope_n != 0)
             ty: l2_own_decl_ty(stmt)
             fa: l2_own_decl_name(stmt)
@@ -13538,22 +13555,10 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
                 ---
             ---
             field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) = 0 && l2_slot_decl_ty(stmt) != 0 && depth = 0
-            declaration: l2_declaration(stmt)
-            if: declaration = 0 || l2_contract_formal(declaration\contract, @ ty) != 0
-                return: l2_error(path, stmt, "unsupported pointer declaration contract")
-            fa: declaration\name
-            slot_no: \sn
-            l2_m_sn[mi]: slot_no
-            if: slot_no = c.INT_MAX || l2_slot_reserve(slot_no + 1) != 0
-                return: l2_alloc_or(path, stmt, "out of memory")
-            l2_sn[l2_slot_off(mi, slot_no)]: fa
-            l2_st[l2_slot_off(mi, slot_no)]: ty
-            slot_no: slot_no + 1
-            \sn: slot_no
-            l2_m_sn[mi]: slot_no
-            field: l2_next_active(field\next)
-        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) = 0 && l2_slot_decl_ty(stmt) = 0
+        # K03 S6: `@: char x` and `@: size_t x` are own pointer declarations (l2_own_decl_ty: l2_contract_own's pointer
+        # code, never 0); the two slot arms that read them when it was 0 were unreachable and are gone -- no declaration
+        # registers a slot.
+        if: l2_frame_head(stmt, "if") = 0 && l2_own_decl_ty(stmt) = 0
             field: l2_next_active(field\next)
 return: 0
 
@@ -23486,6 +23491,42 @@ fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     ---
 return: m
 
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25; docs/LMX_semantics.en.md#resolved-head-consumption, #callables): the
+# callable a written path t selects at a site in method mi -- the call's one resolution of a path head
+# (l2_call_head_method: l2_head_method's callable field, kind 4, the occurrence it holds) -- or -1.  A path is a
+# selector: reaching Holder\tick reads Holder's field and runs nothing.  Written with no argument where a value is
+# evaluated, the selected callable is consumed as `Holder\tick()` is, by its nullary call.
+fn: l2_path_callee (int: mi; @: LmP0Text t) int
+    int: fi 0 - 1
+    int: k
+    if: t = 0 || t\data = 0 || l2_seg_count(t\data, t\length) < 2
+        return: -1
+    k: l2_call_head_method(mi, t, @ fi)
+    if: k < 0 || k = l2_e || fi >= 0
+        return: -1
+return: k
+
+# The callable the operand run field..count -- one path, `a\b...` -- selects (l2_path_callee), with the path's text in
+# *out for the caller to free (l2_xfree); else -1, *out 0.
+fn: l2_path_run_callee (@: LmP0Field field; int: count; int: mi; @@: char out) int
+    @: char text
+    LmP0Text: word
+    int: k
+    \out: 0
+    if: count < 3 || l2_operand_run(field, count) != count
+        return: -1
+    text: l2_address_path_text(field, count)
+    if: text = 0
+        return: -1
+    word.data: text
+    word.length: strlen(text)
+    k: l2_path_callee(mi, @ word)
+    if: k < 0
+        l2_xfree((cast: (@: void) text))
+        return: -1
+    \out: text
+return: k
+
 # K03 NS-ROLES-1b: the field a call head names at its site in method mi when a binding `b: tick` declared it -- the
 # site's own row or, in a method, the unit's field it sees (l2_own_visible; there its value is the method's hidden
 # input, Q52) -- or -1.  The call is tick's on the occurrence the field holds.
@@ -26230,6 +26271,10 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_check_value_call(node, l2_cf_get(mi, idx), idx, mi, path)
         if: idx >= 0
             return: 0
+        # K03 S6: a binding `b: tick` (NS-ROLES-1b) named as a value is tick's result -- its call with no arguments, on the
+        # occurrence b holds -- checked as that call, as l2_prep and l2_rw_operand run it.
+        if: l2_call_alias_own(mi, node\as\atom) >= 0
+            return: l2_check_value_call(node, l2_rb_meth_of(l2_own_decl[l2_call_alias_own(mi, node\as\atom)]), 0 - 1, mi, path)
         if: l2_head_is_method_call(mi, node\as\atom) != 0
             return: l2_check_value_call(node, l2_site_method(mi, node\as\atom), 0 - 1, mi, path)
         # and a local this method body declares, which lives in its own
@@ -26726,6 +26771,11 @@ return: l2_emit_actual_path(mi, first, n, ind, at, l2_tok)
 # has no argument Structure (body 0) and so no actuals.  fi is the callable formal the call goes
 # through, idx then being its required contract, or -1 for a unit method or a method path.
 fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
+return: l2_check_call_at(node, l2_app_head(node), idx, fi, body, mi, path)
+
+# The same check, the call's written head given: the node's own (l2_app_head), or the path a path operand writes,
+# `Holder\tick` with no argument (K03 S6) -- node is then the path's first atom, where the call stands.
+fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: fi; const: @(LmP0Structure body); int: mi; const: @(char path)) int
     L2ReferenceSource: source
     @: LmP0Field a0 0
     int: nact 0
@@ -26751,7 +26801,7 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     ---
     # K03: a bare head writes no argument; a formal it leaves without one is said by the one binding (l2_bind_call),
     # as for `f()`.
-    if: body = 0 && l2_m_arity[idx] > 0 && node != 0 && node\kind = c.LM_P0_NODE_ATOM && l2_bind_call(node, idx, 0 - 1, path) != 0
+    if: body = 0 && l2_m_arity[idx] > 0 && node != 0 && node\kind = c.LM_P0_NODE_ATOM && l2_bind_call_at(node, head, idx, 0 - 1, path) != 0
         return: 1
     if: nact != l2_m_arity[idx]
         return: l2_error(path, node, "incompatible entry signature")
@@ -26947,9 +26997,12 @@ return: 0
 # no arguments (l2_check_call), and a callable without a result -- a sub, or a callable formal
 # whose contract is one -- has no value to give (plan §3 native gate (б)).
 fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
+return: l2_check_value_call_at(node, l2_app_head(node), idx, fi, mi, path)
+
+fn: l2_check_value_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: fi; int: mi; const: @(char path)) int
     if: l2_m_ret[idx] = 8
         return: l2_error(path, node, "a callable without a result has no value")
-return: l2_check_call(node, idx, fi, 0, mi, path)
+return: l2_check_call_at(node, head, idx, fi, 0, mi, path)
 
 # A call Frame whose callee has no result: a sub, or a callable formal whose contract is one.  As a
 # value it has none to give (l2_check_fields); as a statement it is simply called.
@@ -27117,6 +27170,10 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     @: LmP0Field aidx_f
     int: pty 0
     int: tty 0
+    int: pcall
+    int: prun
+    @: char ptext 0
+    LmP0Text: pword
     int: num_prev 0
     int: nprev 0
     int: nty 0
@@ -27142,6 +27199,15 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         return: l2_error(path, at, "unsupported body")
     if: l2_check_value_kinds(field, n, mi, path, at) != 0
         return: 1
+    # K03 S6: a path operand that selects a callable is consumed as `Holder\tick()` is: its nullary call, checked by the
+    # one call check with the path as the call's written head -- here the whole value, below one operand among others.
+    pcall: l2_path_run_callee(field, n, mi, @ ptext)
+    if: pcall >= 0
+        pword.data: ptext
+        pword.length: strlen(ptext)
+        pcall: l2_check_value_call_at(l2_next_active(field)\value, @ pword, pcall, 0 - 1, mi, path)
+        l2_xfree((cast: (@: void) ptext))
+        return: pcall
     # A path's text of any length: the local buffers when the fields' text fits them, else storage of its size
     # (l2_text_room).  No builder below meets a capacity shorter than the text it joins.
     room: l2_atoms_len(field, -1) + 1U
@@ -27250,6 +27316,19 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
             have_value: 1
             i: i + acnt
             f: aafter
+            continue
+        prun: l2_operand_run(f, n - i)
+        pcall: l2_path_run_callee(f, prun, mi, @ ptext)
+        if: pcall >= 0
+            pword.data: ptext
+            pword.length: strlen(ptext)
+            pcall: l2_check_value_call_at(f\value, @ pword, pcall, 0 - 1, mi, path)
+            l2_xfree((cast: (@: void) ptext))
+            if: pcall != 0
+                return: 1
+            have_value: 1
+            i: i + prun
+            f: l2_skip_span(f, prun)
             continue
         skip: 0
         p1: 0
@@ -27652,7 +27731,22 @@ fn: l2_check_discard (@: LmP0Field field; int: span; int: mi; const: @(char path
     @: LmP0Node stmt
     int: idx
     int: fi 0
+    int: prc
+    @: char ptext 0
+    LmP0Text: pword
     stmt: field\value
+    # K03 S6: a path operand that selects a callable, written alone, is its nullary call (l2_path_run_callee), checked as
+    # `Holder\tick()` is, its path the call's written head.
+    if: span > 1
+        idx: l2_path_run_callee(field, span, mi, @ ptext)
+        if: idx >= 0
+            pword.data: ptext
+            pword.length: strlen(ptext)
+            prc: l2_check_call_at(stmt, @ pword, idx, 0 - 1, 0, mi, path)
+            l2_xfree((cast: (@: void) ptext))
+            return: prc
+        ---
+    ---
     if: span != 1 || stmt\kind != c.LM_P0_NODE_ATOM
         return: l2_check_fields(field, span, mi, path, stmt)
     idx: l2_atom_callee(stmt\as\atom, mi, @ fi)
@@ -31731,10 +31825,10 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
             return: 0
         ---
         # A method named as a value is its result: it runs with no arguments on the call path of
-        # `m()` (l2_check_primary refused one without a result).
-        idx: l2_find_method(node\as\atom)
-        if: idx >= 0 && l2_head_is_method_call(mi, node\as\atom) != 0
-            return: l2_emit_call(node, idx, 0, 0 - 1, 0, mi, ind, dest, 0)
+        # `m()` (l2_check_primary refused one without a result) -- the method the site sees (l2_site_method), the
+        # check's.
+        if: l2_head_is_method_call(mi, node\as\atom) != 0
+            return: l2_emit_call(node, l2_site_method(mi, node\as\atom), 0, 0 - 1, 0, mi, ind, dest, 0)
         ---
         if: l2_tok_tx(dest, node\as\atom) != 0
             return: l2_alloc_or(l2_src, node, "out of memory")
@@ -31804,37 +31898,24 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
     ---
     if: l2_text_eq(call\head, "implements")
         return: l2_prep_implements(node, dest)
-    idx: l2_find_method(call\head)
+    # K03 S6: the callee is the check's one resolution of the head (l2_call_head_method; D-106: a callable formal of this
+    # method shadows a unit method of its name), read once.  What it resolved selects the occurrence called: a callable
+    # formal -- the one the formal holds (sel 2); a binding `b: tick` (NS-ROLES-1b) -- tick's occurrence b holds now
+    # (sel 1); a method's path -- the occurrence the path selects (sel 1): its slot 0 holds a typed LmxCallable
+    # referring to the shared METHOD, the occurrence is the hidden self, its node the source-visible lexical space above
+    # the method, fixed for the entire activation; a method by its name -- the unit's occurrence (sel 0).
+    idx: l2_call_head_method(mi, call\head, @ l2_call_fi)
     l2_call_sel: 0
-    # D-106: a callable formal of this method shadows a unit method of its name (the formal branch
-    # below takes it).
-    if: l2_head_is_method_call(mi, call\head) = 0
-        idx: 0 - 1
-    if: idx < 0 && call\head != 0 && call\head\data != 0 && l2_seg_count(call\head\data, call\head\length) > 1 && l2_path_kind(call\head\data, call\head\length, @ l2_call_mi) = 4
-        # The path selects THIS occurrence of the callable. Its slot 0 holds a
-        # typed LmxCallable referring to the shared METHOD; this occurrence is
-        # the hidden self; its node is the source-visible lexical space above
-        # the method and stays fixed for the entire activation.
-        if: l2_emit_path(call\head\data, call\head\length, mi, ind, node, @ l2_call_k) != 0
-            return: 1
-        idx: l2_call_mi
-        l2_call_sel: 1
-    if: idx < 0
-        if: l2_head_is_callable_formal(mi, call\head) != 0
-            idx: l2_call_head_method(mi, call\head, @ l2_call_fi)
-            if: idx >= 0
-                l2_call_sel: 2
-            ---
-            if: idx < 0
-                idx: 0 - 1
-            ---
-        ---
-    ---
-    # K03 NS-ROLES-1b: through a binding `b: tick` -- tick's call on the occurrence b holds now, the path call's self.
-    if: idx < 0 && l2_call_alias_own(mi, call\head) >= 0
+    if: idx >= 0 && l2_call_fi >= 0
+        l2_call_sel: 2
+    if: idx >= 0 && l2_call_sel = 0 && l2_call_alias_own(mi, call\head) >= 0
         if: l2_emit_alias_self(l2_call_alias_own(mi, call\head), mi, ind) != 0
             return: 1
-        idx: l2_rb_meth_of(l2_own_decl[l2_call_alias_own(mi, call\head)])
+        l2_call_sel: 1
+    ---
+    if: idx >= 0 && l2_call_sel = 0 && l2_seg_count(call\head\data, call\head\length) > 1
+        if: l2_emit_path(call\head\data, call\head\length, mi, ind, node, @ l2_call_k) != 0
+            return: 1
         l2_call_sel: 1
     ---
     if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) = 0
@@ -32589,6 +32670,8 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
     int: pkind2 0
     int: pmi2 0
     int: pnt 0
+    int: pcallee
+    int: prc
     @: char path_operand 0
     L2Address: address_value
     @: L2Address address @ address_value
@@ -32670,6 +32753,27 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
             continue
         if: l2_address_operand(f, indirect\count, mi, address) = 0
             if: l2_emit_address(mi, address, ind, piece) != 0
+                return: 1
+            if: l2_tx_cat(buf, piece\data) != 0
+                return: l2_alloc_or(l2_src, at, "out of memory")
+            indirect_count: indirect\count
+            i: i + indirect_count
+            f: l2_skip_span(f, indirect_count)
+            have_value: 1
+            ao: 0
+            after: 0
+            continue
+        # K03 S6: a path operand that selects a callable is its nullary call on the occurrence the path selects
+        # (l2_emit_path, sel 1), its result the operand, as `Holder\tick()`'s is.
+        pcallee: l2_path_run_callee(f, indirect\count, mi, @ path_operand)
+        if: pcallee >= 0
+            l2_tx_clear(piece)
+            prc: l2_emit_path(path_operand, c.strlen(path_operand), mi, ind, at, @ l2_call_k)
+            if: prc = 0
+                prc: l2_emit_call(at, pcallee, 1, 0 - 1, 0, mi, ind, piece, 0)
+            l2_xfree((cast: (@: void) path_operand))
+            path_operand: 0
+            if: prc != 0
                 return: 1
             if: l2_tx_cat(buf, piece\data) != 0
                 return: l2_alloc_or(l2_src, at, "out of memory")
@@ -34387,6 +34491,17 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
         return: 0 - 99
     word.data: text
     word.length: strlen(text)
+    # K03 S6: a path that selects a callable is its call: the callable's result (l2_path_callee), as a call's.
+    own: l2_path_callee(mi, @ word)
+    if: own >= 0
+        l2_xfree(text)
+        if: l2_colon_ret_ty(own, @ ty) != 0
+            return: 0 - 99
+        if: l2_colon_is_graph_ty(ty) != 0
+            return: 0 - 5
+        if: l2_prim_code_name(ty) = 0
+            return: 0 - 99
+        return: ty
     ty: l2_native_path_ty(@ word)
     l2_xfree(text)
 return: ty
@@ -34480,6 +34595,11 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
         return: 0 - 1
     word.data: text
     word.length: strlen(text)
+    # K03 S6: a path that selects a callable is its call: the callable's result, as the walk types a call's.
+    own: l2_path_callee(l2_rw_mi, @ word)
+    if: own >= 0
+        l2_xfree(text)
+        return: l2_rw_call_ty(own)
     if: l2_rw_foreign_path(@ word) != 0
         # The same declared member contract the native checker reads.
         ty: l2_native_path_ty(@ word)
@@ -38917,6 +39037,11 @@ return: l2_rw_put(call, 2, value)
 # A call of method idx under container parent: the occurrence by reference, then each input from
 # `args` (a field run, split by l2_expr_span like any actual list).
 fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0Field args; int: parent; @: int out) int
+return: l2_rw_call_at(node, 0, idx, selected_formal, args, parent, out)
+
+# The same call, its written head given -- the path a path operand writes (K03 S6, l2_rw_span), the head and selector
+# of the call there; else (0) the node's own.
+fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: selected_formal; @: LmP0Field args; int: parent; @: int out) int
     @: LmP0Field a
     const: @: LmP0Text head 0
     const: @: char call_op "LMX_WALK_OP_CALL"
@@ -38956,7 +39081,11 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
             head: node\as\frame\head
         if: node\kind = c.LM_P0_NODE_ATOM
             head: node\as\atom
-        if: formal_call < 0 && head != 0 && l2_find_method(head) < 0 && l2_head_method(l2_rw_mi, head) = idx
+        if: given != 0
+            head: given
+        # K03 S6: a head the one resolution gives idx through a path (l2_head_method), not by its name (l2_site_method):
+        # the call runs on the occurrence the path selects.
+        if: formal_call < 0 && head != 0 && l2_site_method(l2_rw_mi, head) < 0 && l2_head_method(l2_rw_mi, head) = idx
             path_call: 1
             call_op: "LMX_WALK_OP_EXEC"
         # K03 NS-ROLES-1b: through a binding `b: tick` -- EXEC on the occurrence b holds now.
@@ -39677,6 +39806,10 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
             return: l2_rw_machine_application(node, parent, out)
         if: l2_text_eq(t, "sizeof") || l2_text_eq(t, "cast") || (t != 0 && t\length > 0U && (t\data[0] = 64 || t\data[0] = 92))
             return: l2_rw_source_node(node, parent, "LMX_WALK_OP_SOURCE_MACHINE", out)
+        # The one resolution of the head (l2_call_head_method): a method by its name, a binding, a callable formal, or
+        # a call through a path, `Holder\viaPath(4U)` (-196) -- the general path resolver gives the callable field's
+        # method (kind 4, its occurrence -- a shared terminal, Q22 = II), called as that method is, on the occurrence
+        # the path selects (l2_rw_call).
         idx: l2_call_head_method(l2_rw_mi, t, @ formal)
         if: idx >= 0 && idx != l2_e
             if: node\as\frame\body = 0
@@ -39684,14 +39817,6 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
             return: l2_rw_call(node, idx, formal, l2_call_actuals(node\as\frame\body), parent, out)
         if: l2_text_eq(t, "merge")
             return: l2_rw_refuse(node, "merge")
-        # A call through a path, `Holder\viaPath(4U)` (-196): the general path resolver gives the
-        # callable field's method (kind 4, its occurrence -- a shared terminal, Q22 = II), called as
-        # that method is.
-        if: l2_rw_has_slash(t) != 0 && l2_path_kind(t\data, t\length, @ pmi) = 4 && pmi >= 0 && pmi != l2_e
-            if: node\as\frame\body = 0
-                return: l2_rw_call(node, pmi, -1, 0, parent, out)
-            return: l2_rw_call(node, pmi, -1, l2_call_actuals(node\as\frame\body), parent, out)
-        ---
         if: l2_rw_has_slash(t) != 0
             return: l2_rw_refuse(node, "a field path")
         oi: l2_call_head_held(l2_rw_mi, t)
@@ -39814,7 +39939,7 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: 1
     if: oi >= 0
         return: l2_rw_own(parent, oi, out)
-    idx: l2_find_method(t)
+    idx: l2_site_method(l2_rw_mi, t)
     if: idx >= 0 && idx != l2_e
         return: l2_rw_call(node, idx, -1, 0, parent, out)
     if: l2_text_eq(t, "mainArgs")
@@ -40050,6 +40175,13 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
         return: l2_rw_refuse(span\node, "this operand")
     word.data: text
     word.length: strlen(text)
+    # K03 S6: a path that selects a callable is its nullary call on the occurrence the path selects: the path is the
+    # call's written head and the selector l2_rw_call_path reads (l2_rw_call_at).
+    own: l2_path_callee(l2_rw_mi, @ word)
+    if: own >= 0
+        status: l2_rw_call_at(span\node, @ word, own, 0 - 1, 0, parent, out)
+        l2_xfree(text)
+        return: status
     # A member path rooted at foreign C storage keeps its resolved root; it
     # is native-only source, not a graph field read.
     if: l2_rw_foreign_path(@ word) != 0
@@ -48103,7 +48235,21 @@ fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind))
     @: LmP0Node e
     int: idx
     int: fi 0
+    int: prc
+    @: char ptext 0
     e: field\value
+    # K03 S6: a path operand that selects a callable, written alone, is its nullary call on the occurrence the path
+    # selects (l2_emit_path, sel 1), as `Holder\tick()` is.
+    if: span > 1
+        idx: l2_path_run_callee(field, span, mi, @ ptext)
+        if: idx >= 0
+            prc: l2_emit_path(ptext, strlen(ptext), mi, ind, e, @ l2_call_k)
+            if: prc = 0
+                prc: l2_emit_call(e, idx, 1, 0 - 1, 0, mi, ind, l2_tok, 0)
+            l2_xfree((cast: (@: void) ptext))
+            return: prc
+        ---
+    ---
     if: span = 1 && e\kind = c.LM_P0_NODE_ATOM
         idx: l2_atom_callee(e\as\atom, mi, @ fi)
         if: idx >= 0 && fi >= 0
@@ -49961,8 +50107,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         # The field-path temps. A unit with no declaration and no bound
         # result can hold no path, so they are only declared where one is
-        # possible.
-        if: (l2_ns_n != 0 || l2_mres_n != 0 || l2_uses_node_for_root != 0) && fputs("    @: Lmx l2_pst 0\n    @@: void l2_pxp 0\n", l2_out) < 0
+        # possible -- or where a reference binding is: a binding's call (`b: tick`) selects its occurrence through
+        # l2_pst too (l2_emit_alias_self).
+        if: (l2_ns_n != 0 || l2_mres_n != 0 || l2_uses_node_for_root != 0 || l2_rb_n != 0) && fputs("    @: Lmx l2_pst 0\n    @@: void l2_pxp 0\n", l2_out) < 0
             fclose(l2_out)
             return: 1
         # D-105 native: a place admitted by name reads its fields at the slot its value's record gives.  The

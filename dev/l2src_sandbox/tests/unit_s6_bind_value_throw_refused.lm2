@@ -1,0 +1,18 @@
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25; steps/defects.md#bind-call-entry): a binding `c: boom` named as a value is
+# boom's call, checked by the one call check -- boom declares a throw, so `got: c + 0` with no catch is refused at c as
+# `c()`, `boom` and `boom()` are: "unhandled throw: Oops" (before: an unlocated internal error from the emission,
+# "a callee's declared throw is not handled by its caller").
+fn: boom () int
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(3)
+    return: 0
+end: boom
+fn: run () int
+    c: boom
+    int: got 0
+    got: c + 0
+    return: got
+end: run
+sendMessage: exit(exit_code: run(); stdout: ""; stderr: "")
+return

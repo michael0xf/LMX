@@ -1,0 +1,39 @@
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25, answer (c)): the occurrence a bare path selects is the one its call runs
+# on.  Q44 (the author, 2026-09-28; unit_merged_callable): merge copies the occurrence A's field `fn: M` reaches, so R
+# holds its own M with its own hits.  Bare `A\M` and `R\M` -- a statement, a declaration's candidate, an operand -- count
+# A's and R's apart, as `A\M()` and `R\M()` do: A 1, 2, 3, 4 and R 1, 2, 3.  Exit 7; 81-85 a call on another occurrence.
+A:
+    fn: M
+    int: tag 1
+end: A
+
+fn: M () int
+    int: hits
+    hits: hits + 1
+    return: hits
+end: M
+
+fn: probe () int
+    R: merge: A
+    A\M
+    int: a2 A\M
+    int: r1 R\M + 0
+    int: a3 0
+    a3: A\M
+    R\M
+    int: r3 R\M()
+    if: a2 != 2
+        return: 81
+    if: r1 != 1
+        return: 82
+    if: a3 != 3
+        return: 83
+    if: r3 != 3
+        return: 84
+    if: A\M() != 4
+        return: 85
+    return: 7
+end: probe
+
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

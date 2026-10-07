@@ -1,0 +1,29 @@
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25; steps/defects.md#bind-call-entry): a binding `c: two` named where a number
+# is received is two's call, as `c()` and as an operand: a declaration's candidate, an int actual and an assignment's
+# value each receive 2 (before: "a reference where a number is asked", and "assignment value has incompatible type"
+# for the assignment), and two runs once per use -- three times.  Exit 7; 81 a wrong value, 82 a wrong count.
+int: hits 0
+fn: two () int
+    node\hits: node\hits + 1
+    return: 2
+end: two
+fn: id (int: x) int
+    return: x
+end: id
+fn: count () int
+    return: node\hits
+end: count
+fn: m () int
+    c: two
+    int: v c
+    int: w id(c)
+    int: z 0
+    z: c
+    if: v + w + z != 6
+        return: 81
+    if: count() != 3
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,17 @@
+# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25; steps/defects.md#bind-call-entry): a binding `c: two` (NS-ROLES-1b) in a
+# unit with no named Structure, no merge result and no `node\` path.  Every call through c -- the statement `c`, `c()`,
+# the declaration's candidates `c` and `c()` -- selects two's occurrence through the self temp, which the method now
+# declares wherever the unit holds a reference binding (before: "'l2_pst' undeclared" from gcc).  v and w are 2: exit 7.
+fn: two () int
+    return: 2
+end: two
+fn: m () int
+    c: two
+    c
+    c()
+    int: v c
+    int: w c()
+    return: v + w + 3
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

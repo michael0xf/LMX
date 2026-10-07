@@ -1856,18 +1856,22 @@ The dependency-closed substeps that remain in this lane (Codex K03-NS-ROLES-NEXT
 checkpoint:
 - NS-ROLES-1c: a merge result as A, its binding established above the use -- b's row takes the merge's schema record;
   `unit_ref_absent_colon` becomes its positive (exit 9).
-- NS-ROLES-V2: a method's own named callable definitions visible throughout their actual block both ways; siblings,
-  later ordinary data and receiver outputs not (negatives, reached mutants).  Waits for the author's answer on the
-  defining occurrence (below).
+- NS-ROLES-V2 (the author's decision of 2026-10-07, below): a method's own fn/fm/sub visible throughout their actual
+  block both ways; its ordinary named Structures, like the unit's, from their place on; siblings, later ordinary data
+  and receiver outputs not (negatives, reached mutants).
 - NS-ROLES-2: a named body's one-atom branch through the common resolution; reference fields `b: A` storing A's node at
   construction; kind 3 removed after its 14 programs (Codex -07 Q3 as restated in -09: refusal intent and stage kept,
   identity controls for eternal references, a fresh-copy intent never silently shared).
 - K03-S5-RECEIVE-OUTPUT (generic); then S6, S7.
 The typed-null / typed-binding family waits for the author (LMX_blog/q/current/model-constrained-null-reference.md).
-Which occurrence of an unknown head defines a named Structure, and the forward visibility of ordinary named Structures
-built on it, wait for the author (LMX_blog/q/current/named-definition-boundary.md, Codex
-K03-NAMED-DEFINITION-BOUNDARY-20261007-10): the present root lookahead and its 12 fixtures are provisional and are not
-extended.
+NS-ROLES-VIS, next (the author's decision of 2026-10-07, LMX_blog/q/named-definition-boundary.md; Codex
+K03-VISIBILITY-AUTHOR-CLOSE-20261007-12): both-way visibility belongs to the callables fn, fm and sub create; an
+ordinary named Structure and a qualified branch's root are visible from their place on.  The root lookahead
+(`l2_struct_defined_below` and its deferral in `l2_head_absent`) and the both-way `l2_def_visible` of NS-ROLES-3/1a
+for them go, with the root's source reading of them; the first written occurrence of an unknown head defines, whatever
+its tail; the 12 fixtures of the census (22 rows) re-pointed with disclosure; the two S2 refusals NS-ROLES-3 replaced
+come back as new rows; witnesses distinguish a later fn/fm/sub from a later ordinary Structure and a later branch, at
+the root and in a method.  Then NS-ROLES-1c.
 
 ### K04 — Callable actuals and hidden inputs
 

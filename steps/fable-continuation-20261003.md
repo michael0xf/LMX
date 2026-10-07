@@ -11481,7 +11481,12 @@ Provisional (Codex K03-NAMED-DEFINITION-BOUNDARY-20261007-10): which occurrence 
 one-value tail applying a definition below, the first of the Structure-tailed frames defining -- and the both-way
 visibility of the unit's ordinary named Structures it rests on (Codex -07 Q2) are Codex's earlier interpretation and
 this implementation, not an author decision.  The open question, the measured readings and the 12 dependent fixtures
-(22 rows): `LMX_blog/q/current/named-definition-boundary.md`.
+(22 rows): `LMX_blog/q/named-definition-boundary.md`.
+
+Decided by the author the same day (`LMX_blog/q/named-definition-boundary.md`, relayed by Codex in
+K03-VISIBILITY-AUTHOR-CLOSE-20261007-12): both-way visibility belongs to the callables the receivers fn, fm and sub
+create; an ordinary named Structure is not under that rule.  The lookahead above and the both-way visibility of
+ordinary named Structures and qualified branches' roots go (K03 NS-ROLES-VIS).
 
 ### Measured
 
@@ -11538,11 +11543,12 @@ What changed in `l2trans.lm1`:
 
 Scope recorded (Codex K03-NAMED-DEFINITION-BOUNDARY-20261007-10, K03-DEFINITION-PAUSED-SCOPE-20261007-11): which
 occurrence of an unknown head defines a named Structure is an open author question
-(`LMX_blog/q/current/named-definition-boundary.md`); until the answer, new work on forward ordinary Structures and on
+(`LMX_blog/q/named-definition-boundary.md`); until the answer, new work on forward ordinary Structures and on
 qualified branches' roots below their use is paused with it (a receiver-declared `(): cfg` settles its defining
 occurrence, not its visibility above its declaration), and the 12 provisional fixtures listed there (22 rows) stay in
 the gate, disclosed.  No 1b witness uses a definition below its use: every method and Structure a binding names is
-declared above it.
+declared above it.  (The question was answered the same day -- both ways only for fn, fm and sub -- and the pause ended:
+section 112's closing note, K03 NS-ROLES-VIS.)
 
 Evidence:
 

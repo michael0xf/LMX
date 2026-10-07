@@ -1,0 +1,26 @@
+# K03 RECEIVE-OUTPUT REQUIRED POSITIVE, red until critical_pointer_to_struct_bug's address route is built (Codex
+# K03-OUTPUT-ORACLES-20261007-24; docs/L2_spec_en.md 18.2: unary @ addresses the cell holding a Structure's reference,
+# one level deeper, whatever the cell holds).  `receiveMessage: m` at Host's top level: @m is the address of m's own
+# cell -- nonzero with C main's letter on Host's first run and with the empty inbox's 0 on its second.  Exit 7; 81 if
+# @m is 0 beside the letter, 82 if @m is 0 beside a 0 (today: the address collapses to the value, 82).
+Out:
+    int: code 0
+end: Out
+Host:
+    receiveMessage: m
+    if: m != 0 && @m = 0
+        Out\code: 81
+    if: m = 0 && @m = 0
+        Out\code: 82
+end: Host
+fn: probe () int
+    Host()
+    if: Out\code != 0
+        return: Out\code
+    Host()
+    if: Out\code != 0
+        return: Out\code
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

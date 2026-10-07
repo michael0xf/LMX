@@ -1,0 +1,24 @@
+# K03 RECEIVE-OUTPUT (Codex K03-OUTPUT-ORACLES-20261007-24; LMX_blog/q/q53.md:95-97 and its addendum; docs #own,
+# #declaration-visibility): a receiver's output is selected by the common rule -- its own written occurrence, or an
+# explicitly typed receiving place of the same body -- never by a name match against a formal or a hidden input.
+# The generic comparison: after the root's x read as the method's hidden input (5), `x: merge: Inner` declares the
+# method's own later x, a copy of Inner; the root's x stays 5.  Exit 7; 81 if the input was not 5, 82 if x after is
+# not the copy, 85 if the root's x changed.
+Inner:
+    int: v 1
+end: Inner
+int: x 5
+fn: probe () int
+    int: before x
+    x: merge: Inner
+    if: before != 5
+        return: 81
+    if: x\v != 1
+        return: 82
+    return: 7
+end: probe
+int: code probe()
+if: x != 5
+    code: 85
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

@@ -1906,12 +1906,20 @@ Open subtasks, each a bounded dependency, recorded with its required positives:
   actual, a returned value, through an admission and through a capture (`unit_ns2_ref_arg`, `_ref_return`, `_ref_admit`,
   `_ref_capture`); a binding to a path's Structure (`unit_eternal_xref`); a named body's binding to a callable, to a
   Structure value, in a method's named Structure (`unit_ns2_bind_callable`, `_bind_value`, `unit_ns2_local_bind`).
-- NAMED-BODY-COPY-FIELD (steps/defects.md#named-body-copy-field): a merge in a named body, run when the body runs,
-  its result received there (`unit_ns2_copy_field`, oracle corrected by Codex -22); whether that result is addressable
-  from outside is the generic RECEIVE-OUTPUT's distinction.
+- NAMED-BODY-COPY-FIELD (steps/defects.md#named-body-copy-field): done by RECEIVE-OUTPUT below.
 - MERGE-OF-QUALIFIED-REFERENCE-CELLS (steps/defects.md#merge-of-qualified-reference-cells): a qualified operand whose
   binding cell holds a retained root (`unit_eternal_shape`).
-Next, in this order (Codex -19, -20): the generic RECEIVE-OUTPUT, S6/S7.
+RECEIVE-OUTPUT done ([section 119](steps/fable-continuation-20261003.md#receive-output); Codex
+K03-RECEIVE-OUTPUT-20261007-23 and its design answer, K03-OUTPUT-ORACLES-20261007-24; LMX_blog/q/q53.md:95-97): a
+computed output at a named Structure's top level -- `receiveMessage: m`, the result `b: merge: A` receives, `int: i
+getValue()` -- is no field of the Structure, never `Host\m`: it takes the existing output storage at its own receiver
+occurrence (the output operand of the receiver application, the typed cell at the declaration), as in a method and a
+block (`l2_own_mslot`'s placeholder until `l2_source_places_bind`), produced when control reaches it; a literal
+declaration and an explicit receiving place stay data; the receive and merge limits are gone; the receive's output is
+selected by the common rule, not by a name match against the body's formal or hidden input (RECEIVE-NAME-INPUT fixed);
+the K03-S5-RECEIVE-OUTPUT debt is closed. Gates on the final bytes: `opus_focus_output_02` (64 targets; red only the 4 rows of the address required positives), kernel `opus_kernel_53` GREEN297 (114 selftests), L3 `opus_l3_51`, full `opus_full_59` RED59/2442 -- against `opus_full_58` FAIL→OK 0, OK→FAIL 0, added 18 (14 OK, 4 red address required positives), removed 0; the intermediate chain on 296675640 (`opus_focus_output_01` 35 targets 0 failed, `opus_kernel_52`, `opus_l3_50`, `opus_full_58` RED55/2424 -- against `opus_full_57` FAIL→OK 2: `unit_ns2_copy_field` and its twin, OK→FAIL 0, added 26) is the intermediate bytes' evidence, not the final bytes'.
+Open: the address `@m` of a receive's output -- two required positives under critical_pointer_to_struct_bug (red, 82).
+Next (Codex -23): S6, then S7, with concrete dependency subtasks for proven open routes.
 
 ### K04 — Callable actuals and hidden inputs
 

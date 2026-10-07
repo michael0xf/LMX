@@ -12118,3 +12118,109 @@ Evidence:
 | L3 `opus_l3_49` | all 11 suites ok, type budget ok |
 | full `opus_full_57` | RED 57/2398; against `opus_full_56` (RED 39/2343): FAIL→OK 0; OK→FAIL 1 (`unit_eternal_xref`, re-registered as a required positive); added 55 (38 OK, 17 required positives red); removed 0; one common red row changed its stage (`unit_eternal_shape`: "l2trans produced no L1" → "ran under the driver, exit 1"); common OK rows changed only the migrated part's needle (`unit_s7_part_root_type_refused`: 4:8 "unknown nested Structure reference" → 4:11 "unknown merge operand") and per-build identifiers |
 | focused `opus_focus_ns2_02` | the corrected `unit_ns2_copy_field` oracle and its limit row's comment (Codex -22), the other 42 declared paths byte-equal to `opus_full_57`'s: the two limit rows OK at 9:5, the positive's two rows red at 19:5 "a merge construction in the body of a named Structure is not built yet" |
+
+<a id="receive-output"></a>
+## 119. A named Structure's computed outputs take their receiver's place (K03 RECEIVE-OUTPUT)
+
+The rule (LMX_blog/q/q53.md:95-97 and its addendum; `docs/LMX_semantics.en.md#construction`, `#dynamic`, `#own`,
+`#declaration-visibility`; `docs/L2_spec_en.md` 18.2; Codex K03-S5-NS-ROLES-20261007-04 item 2,
+K03-S5-DEBTS-20261007-05, K03-NS2-COPY-ORACLE-20261007-22, K03-RECEIVE-OUTPUT-20261007-23 and its design answer,
+K03-OUTPUT-ORACLES-20261007-24): a receiver's computed output -- `receiveMessage: m`, the result `b: merge: A C`
+receives, `int: i getValue()` -- is a local binding of its lexical body, usable there from its place on, not data:
+never a public field of its Structure, never `Host\m`.  It is produced when control reaches its receiver, not when
+the Structure is declared or constructed, and a repeated run updates the same written occurrence.  A literal
+declaration (`int: i 5`) and an explicit receiving place (`int: i 0` with `i: getValue()`) stay data.  The output is
+selected by the common rule -- its own written occurrence, or an explicitly typed receiving place of the same body --
+never by a name match against the body's formal or hidden input: after either it is the receiver's own later
+occurrence, as any later declaration is.
+
+Before this step a named Structure's procedure assumed that every top-level own row is a field of the Structure:
+`l2_own_mslot` mapped each to its `l2_nsf` row, `l2_ns_proc_add` called any other "internal: a declaration of a named
+Structure's body is not a field of the Structure", and two located limits stood in front of that --
+"receiveMessage in the body of a named Structure is not supported yet" and "a merge construction in the body of a named
+Structure is not built yet"; the take read `int: i getValue()` as a data field and refused it, "a named Structure field
+needs a literal" (said at the Structure's head).  The receive and the merge items already got no `l2_nsf` row.  And in
+every body the receive route refused a name that was already the body's formal or hidden input -- `l2_param_find`
+before the output's selection, "assignment value has incompatible type" -- while `int:` and merge declarations in the
+same position declared their own later occurrence.
+
+What changed in `l2trans.lm1` (35db57d1):
+- `l2_own_mslot`: in a named Structure's procedure a field's index stays the Structure's field's; a computed output
+  (`l2_own_computed`: a receiver's output, a merge result; `l2_ns_computed_decl`) takes a method's placeholder after
+  the fields until its own receiver occurrence's place binds (`l2_source_places_bind`) -- the existing output storage
+  of a method and a block: the output operand inside the receiver's application, the place named by the output.  No
+  slot of the Structure, no new graph, runtime names or ABI; `l2_ns_proc_add`'s check reads "data or a computed output".
+- The receive limit and the merge limit removed (with the latter's stale copy-as-field comment).
+- `l2_ns_computed_decl`: a number or char declaration whose candidate is no literal is a computed output; the body
+  reads it as a statement (`l2_ns_body_stmt`), so it gets no `l2_nsf` row.  A literal candidate keeps its data field.
+- The receive route's `l2_param_find` refusal removed: `l2_own_output_add` selects the output by the common rule.
+
+The first chain ran the bytes before the last item (296675640, `opus_full_58`, intermediate evidence) with a mail test
+that also demanded @m = 0 whenever m = 0 -- the address collapsing to the value, which the defective address route
+gives in a method too; that oracle was withdrawn (Codex -24: unary @ addresses the cell holding the reference, nonzero
+whatever it holds) and two required positives take its place, red until critical_pointer_to_struct_bug's address
+route is built.  The final chain ran the final bytes.
+
+Evidence:
+
+- Census (0acd7397's translator; scratch programs): five forms -- `receiveMessage: m MainLetter`, bare
+  `receiveMessage: m`, `box: merge: Inner`, `int: i getValue()`, the explicit place `int: i 0` + `i: getValue()` --
+  each used in its own body, in the root, a method, a method's if-block and a named body's if-block: 40 translations
+  (native and walked) and 60 runs (native, root-walked, methods-walked), all exit 7.  At a named Structure's top level
+  the two receives, the merge and `int: i getValue()` stopped at the limits above; the explicit place translated.
+- The common rule beside a formal or a hidden input, measured first on the declarations that already followed it
+  (scratch probes, natively and walked): after the int formal n = 3, `int: n 7` reads 7 after and 3 before, `int: n`
+  gives #own's keep(3) = 4, `int: n getValue()` reads 4 after; after the root's x = 5 read as a method's hidden input
+  (Q52), `int: x getValue()` and `x: merge: Inner` declare their own later x and the root's x stays 5; the same in a
+  named body.  Only the receive refused.
+- Replays of the recorded translations: `opus_full_57`'s 2397 with 296675640 -- exactly the 4 former limit rows
+  (`unit_k03_def_receive_name_limit`, `unit_ns2_copy_field_limit_refused`, twins) change, they now translate;
+  `opus_full_58`'s 2423 with the final bytes against 296675640 -- no row changes (no recorded program reached the
+  receive's name refusal).
+- Physical facts (the driver's pre-run graph, natively, root-walked and methods-walked): a named Structure holds only its
+  written items (`widthpath`); each receive is the receiver application (`rolepath` op 8, facet 2 bare, 1 with a
+  model), its output operand op 4 facet 0, the place inside it named by the output (`placenamepath ... m`); two
+  written receives, two different operands (`differentpath`) -- `unit_output_repeated`'s facts at the root; merge's
+  result the same shape (op 8 facet 0, operand 4/0, the place named box); `int: i getValue()` its typed cell at the
+  declaration (`namepath ... i`) beside its initializer application.
+- Witnesses, twenty-two new programs, each with a `--walk-methods` twin.  Positives, exit 7 natively, root-walked and
+  methods-walked: `unit_output_named_receive` (the model form: nothing before Host runs; the first run takes C main's
+  one letter -- m, its sender, its payload's arguments; the same occurrence takes 0 on the second run),
+  `unit_output_named_repeat` (two written receives, two occurrences), `unit_output_named_shadow` (a block's own receive
+  leaves the top-level m), `unit_output_named_typed` (getValue counted: not at construction, once per run, again on the
+  second), `unit_output_named_typed_forms` (`int: j i`, `int: k i + 1`), `unit_output_named_data_place` (Host\i 0
+  before Host runs, 4 after), `unit_output_tail_run` and `unit_output_tail_defined` (`x: receiveMessage: msg`: running x
+  takes the letter; defined only, the root's receive gets it), `unit_output_receive_after_formal` (after the int
+  formal m = 3 the receive's m is the letter, its sender and payload read through it), `unit_output_receive_after_input`
+  and `unit_output_named_receive_after_input` (after the root's x read as the hidden input, x is the letter, the root's x
+  still 5), `unit_output_int_after_formal` and `unit_output_merge_after_input` (the generic comparisons).  Refusals:
+  `unit_output_named_notdata_receive_refused` and `_merge_refused` ("14:9: unknown field path segment"),
+  `_notdata_typed_refused` ("14:14: unresolved name"), `unit_output_named_forward_merge_refused` and `_typed_refused`
+  ("20:30: unbound dynamic input box", "... i"), `unit_output_receive_input_unbound_refused` and
+  `unit_output_named_receive_input_unbound_refused` (no input given: "unbound dynamic input m" at the call -- the
+  ordinary missing-input refusal; before this step "assignment value has incompatible type" at the receive).  Required
+  positives, red until critical_pointer_to_struct_bug's address route is built: `unit_output_named_receive_address` and
+  `unit_output_receive_address_method` (@m nonzero beside the letter and beside 0; today 82: @m is 0 beside 0, in a
+  method as in a named body).  Re-registered: `unit_k03_def_receive_name_limit` and `unit_ns2_copy_field_limit_refused`
+  (with twins) as positives, exit 7; `unit_ns2_copy_field` (Codex -22's oracle) green, with the physical facts.
+- Mutants, each turning one rule off (the control m00 changes nothing); m01-m06 on 296675640, m07 on the final bytes:
+  m01 the receive limit back -- 14 witness rows, 2 corpus rows; m02 a merge result unplaced -- 4 and 2; m03 no computed
+  declaration (the literal requirement back) -- 8 witness rows; m04 literal candidates computed too -- 20 witness rows,
+  801 corpus rows; m05 no placeholder -- 24 witness rows, 4 corpus rows; m06 a computed number declaration a public
+  field again (the repair Codex -04 forbids) -- `unit_output_named_notdata_typed_refused` translates and runs to exit 7
+  while the typed positive still passes: only the not-data witness catches it; m07 the receive's name refusal back --
+  the three receive-after-input positives and the two missing-input refusals (10 rows) turn to "assignment value has
+  incompatible type" at the receive.
+- gcc's `-Wall -Wextra` list: the same 75 warnings.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| intermediate, 296675640: focused `opus_focus_output_01` | 35 targets, 0 failed |
+| intermediate: kernel `opus_kernel_52`, L3 `opus_l3_50` | GREEN 297 targets, 114 selftests ran; all 11 suites ok |
+| intermediate: full `opus_full_58` | RED 55/2424; against `opus_full_57`: FAIL→OK 2 (`unit_ns2_copy_field`, twin), OK→FAIL 0, added 26 (all OK), removed 0; the four former limit rows run as positives |
+| final, 35db57d1: focused `opus_focus_output_02` | 64 targets, 4 failed -- exactly the address required positives and their twins (exit 82) |
+| final: kernel `opus_kernel_53` | GREEN, 297 targets, 114 selftests ran; staged `l2trans.lm1` blob 35db57d1 |
+| final: L3 `opus_l3_51` | all 11 suites ok, type budget ok |
+| final: full `opus_full_59` | RED 59/2442; against `opus_full_58`: FAIL→OK 0, OK→FAIL 0, added 18 (14 OK, 4 red: the address required positives), removed 0 |

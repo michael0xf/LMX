@@ -1,0 +1,35 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# The non-postal comparison (Codex -23's design answer; q53.md:95-97: `int: i getValue()` is analogous to a
+# receiver's output, not to `int: i 5`): at Host's top level i is a computed output, no field of Host, computed when
+# control reaches it -- getValue runs once per run of Host, never at its construction -- and read by Host's later
+# statement.  Exit 7; 80 if getValue ran before Host's call, 81 if Host's run did not compute i, 82 if the second run
+# did not compute it again.
+Tally:
+    int: calls 0
+end: Tally
+fn: getValue () int
+    Tally\calls: Tally\calls + 1
+    return: 4
+end: getValue
+Out:
+    int: a 0
+end: Out
+Host:
+    int: i getValue()
+    Out\a: i
+end: Host
+fn: probe () int
+    if: Tally\calls != 0
+        return: 80
+    Host()
+    if: Tally\calls != 1 || Out\a != 4
+        return: 81
+    Host()
+    if: Tally\calls != 2
+        return: 82
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

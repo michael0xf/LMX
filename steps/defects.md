@@ -274,6 +274,11 @@ reference-application refactoring. Detailed evidence and acceptance:
 [critical_pointer_to_struct_bug](tickets/critical_pointer_to_struct_bug.md).
 Owner unclaimed; documentation correction is not code closure.
 
+Обязательные позитивы K03 RECEIVE-OUTPUT (Codex K03-OUTPUT-ORACLES-20261007-24), красные до этого маршрута:
+`unit_output_named_receive_address` и `unit_output_receive_address_method` (с двойниками) — `@m` выхода `receiveMessage: m`
+адресует ячейку, держащую ссылку, и не равен нулю рядом с письмом и рядом с 0; сегодня `@m` равен 0 рядом с 0 (код 82) —
+в методе так же, как в теле именованной Structure.
+
 Статус в заголовке относится к текущему состоянию. Описания первоначальных
 падений и промежуточных прогонов сохраняют историю проверки; checkpoint
 `661735a` включил перечисленные ниже исправления прежнего VERIFIED WIP.
@@ -4569,6 +4574,12 @@ b держит Structure A, пути через b читают запись merg
 получает общие роли; исходный маршрут `T: x` убран (kind 3 остался только у модели письма). Повтор 2342 переводов: 12
 строк переписи со старым написанием, остальное байт в байт. Открытое ниже — обязательные позитивы, красные до постройки.
 
+**Шаг RECEIVE-OUTPUT 2026-10-07** ([§119 журнала](fable-continuation-20261003.md#receive-output)): вычисленный выход
+на верхнем уровне тела именованной Structure — у своего вхождения-приёмника, не поле; выход выбирается общим правилом, не
+по имени формала или скрытого входа; долг K03-S5-RECEIVE-OUTPUT закрыт. Повтор 2397 переводов `opus_full_57`: 4 строки
+бывших пределов теперь транслируются, остальное байт в байт; повтор 2423 переводов `opus_full_58` финальными байтами —
+ни одна строка не меняется.
+
 <a id="call-classifier-typed-route"></a>
 ### CALL-CLASSIFIER-TYPED-ROUTE — 2026-10-07, Opus (K03 NS-ROLES-VIS; Codex K03-VIS-CALL-CLASSIFICATION-20261007-16), FIXED 2026-10-07 (K03 NS-ROLES-CALL)
 
@@ -4668,7 +4679,13 @@ docs/L2_spec_en.md:155) — вызов Model, ошибочный по числу
 ссылочные версии — позитивы выше.
 
 <a id="named-body-copy-field"></a>
-### NAMED-BODY-COPY-FIELD — 2026-10-07, Opus (K03 NS-ROLES-2; Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q3, K03-NS2-COVERAGE-20261007-21, K03-NS2-COPY-ORACLE-20261007-22), OPEN
+### NAMED-BODY-COPY-FIELD — 2026-10-07, Opus (K03 NS-ROLES-2; Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q3, K03-NS2-COVERAGE-20261007-21, K03-NS2-COPY-ORACLE-20261007-22), FIXED 2026-10-07 (K03 RECEIVE-OUTPUT)
+
+Исправлено K03 RECEIVE-OUTPUT ([§119 журнала](fable-continuation-20261003.md#receive-output)): результат
+`box: merge: Inner` в теле Host — вычисленный выход merge у своего вхождения-приёмника, не поле Host; обязательный
+позитив `unit_ns2_copy_field` и бывшая строка-предел `unit_ns2_copy_field_limit_refused` исполняются (код 7, нативно и
+при обходе); `Host\box` отказывает (`unit_output_named_notdata_merge_refused`); устаревшие комментарии «поля со
+свежей копией» исправлены в байтах этого шага. Ниже — первоначальная запись.
 
 merge в теле именованной Structure: `box: merge: Inner` в теле Host исполняется, когда исполняется тело Host (объявление
 Host тела не исполняет — [построение](../docs/LMX_semantics.ru.md#construction); вычисляемая инициализация — когда
@@ -4697,6 +4714,20 @@ merge квалифицированного операнда, чья собств
 нет. `unit_eternal_shape` была красной до шага на трансляции («root operation not walkable yet: a Structure-typed field
 in a method»), теперь транслируется и красная при исполнении; её факты читают ячейки (`deref`). Ядро и эмиссия merge в
 этом шаге не менялись.
+
+<a id="receive-name-input"></a>
+### RECEIVE-NAME-INPUT — 2026-10-07, Opus (K03 RECEIVE-OUTPUT; Codex K03-OUTPUT-ORACLES-20261007-24), FIXED 2026-10-07 (K03 RECEIVE-OUTPUT)
+
+Маршрут receive отказывал по имени, когда оно уже формал или скрытый вход своего тела (`l2_param_find` до выбора места
+выхода: «assignment value has incompatible type», для формала модели — «graph assignment admission requires
+receiving-expression tests»), — в методе и в теле именованной Structure; объявления `int:` и merge в том же положении
+объявляли своё следующее вхождение. Это обход выбора роли, не норма (Codex -24: Q53 — отдельное вхождение выхода,
+дополнение Q25 — явное типизированное место того же тела, не формал и не внешняя привязка; #own — объявление может
+затенять формал). Исправлено: отказ по имени снят, выход выбирает `l2_own_output_add`; после формала или поданного
+скрытого входа receive — своё следующее вхождение, вход не тронут (`unit_output_receive_after_formal`,
+`unit_output_receive_after_input`, `unit_output_named_receive_after_input`; сравнения `unit_output_int_after_formal`,
+`unit_output_merge_after_input`); без поданного входа — обычный отказ «unbound dynamic input m» у вызова
+(`unit_output_receive_input_unbound_refused`, `unit_output_named_receive_input_unbound_refused`).
 
 <a id="mad-trailer-write"></a>
 ### MAD-TRAILER-WRITE — 2026-10-06, Opus (перепись K03 S1), OPEN

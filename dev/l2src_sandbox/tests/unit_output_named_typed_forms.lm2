@@ -1,0 +1,28 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# Every computed candidate of a number declaration, not only a call: `int: j i` (a name) and `int: k i + 1` (an
+# expression) are computed outputs of Host like `int: i getValue()`, each read by Host's later statements.  Exit 7;
+# 81 if a candidate was not computed when Host ran.
+fn: getValue () int
+    return: 4
+end: getValue
+Out:
+    int: a 0
+    int: b 0
+end: Out
+Host:
+    int: i getValue()
+    int: j i
+    int: k i + 1
+    Out\a: j
+    Out\b: k
+end: Host
+fn: probe () int
+    Host()
+    if: Out\a != 4 || Out\b != 5
+        return: 81
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

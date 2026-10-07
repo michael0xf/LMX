@@ -1,0 +1,14 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# The nested-tail spelling: `x: receiveMessage: msg` at the root defines the named Structure x whose body is the
+# receiver, its output msg no field of x.  Running x takes C main's one letter, so the root's own receive after it
+# takes the empty inbox's 0.  Exit 7; 81 if x's run did not take the letter.
+x: receiveMessage: msg
+x()
+receiveMessage: after
+if: after != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

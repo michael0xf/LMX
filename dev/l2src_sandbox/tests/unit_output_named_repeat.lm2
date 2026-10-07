@@ -1,0 +1,30 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# Two written `receiveMessage: m` at Host's top level are two occurrences, each its own output in its own receiver:
+# the first takes C main's one letter, the second the empty inbox's 0, and m after the second is the second's.  The
+# driver checks the places: Host holds its four written items and no other slot, each receive is the receiver
+# application with its own output operand, both outputs named m and different (unit_output_repeated's facts at the
+# root).  Exit 7; 81 if the first did not take the letter, 82 if m after the second is not the second's.
+Out:
+    int: a 0
+    int: b 0
+end: Out
+Host:
+    receiveMessage: m
+    if: m != 0
+        Out\a: 1
+    receiveMessage: m
+    if: m = 0
+        Out\b: 1
+end: Host
+fn: probe () int
+    Host()
+    if: Out\a != 1
+        return: 81
+    if: Out\b != 1
+        return: 82
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

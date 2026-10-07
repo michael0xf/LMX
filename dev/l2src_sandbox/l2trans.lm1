@@ -1502,6 +1502,7 @@ prototype:
     fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_own_self_typed (int: oi) int
     fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
+    fn: l2_ns_computed_decl (const: @(LmP0Node fld)) int
     fn: l2_ns_empty (int: ni) int
     fn: l2_struct_call_inert (const: @(LmP0Text t); int: mi) int
     fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
@@ -5137,7 +5138,8 @@ fn: l2_ns_proc_add (int: ni; const: @(char path)) int
     if: l2_collect_decls(l2_ns_at[ni]\as\frame\body, me, path, 0, @ sn) != 0
         return: 1
     l2_m_sn[me]: sn
-    # Every own field of the procedure is a field of the Structure: the procedure's data is the Structure.
+    # Every own row of the procedure is the Structure's data, one of its fields, or a computed output, which no field
+    # is: its place is its own receiver occurrence (l2_own_mslot).
     k: 0
     while: k < l2_own_n
         if: l2_own_mi[k] = me && l2_own_host[k] = 0 && l2_own_mslot(k) < 0
@@ -11854,6 +11856,30 @@ fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
         return: 9
 return: 0 - 1
 
+# K03 RECEIVE-OUTPUT: whether fld declares a number or a char with a computed candidate -- written after the name and
+# not a literal: `int: i getValue()`, `int: i x`, `int: i 2 + 3`.  q53.md:95-97: such a declaration is analogous to a
+# receiver's output, not to `int: i 5` -- not data, never a public field of its Structure; #dynamic: its computed
+# initialization runs when control reaches it.  A literal candidate (a number or a quoted character, of whatever kind)
+# keeps the data declaration it was, and so does `int: i` followed by `i: getValue()`.
+fn: l2_ns_computed_decl (const: @(LmP0Node fld)) int
+    @: LmP0Field g
+    size_t: bits 0U
+    if: fld = 0 || l2_lit_field_kind(fld) < 0 || fld\as\frame\body = 0 || l2_count_active(fld\as\frame\body) < 2
+        return: 0
+    g: l2_next_active(fld\as\frame\body\first_field)
+    if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(g\value\as\atom) = 0
+        return: 0
+    if: l2_count_active(fld\as\frame\body) > 2
+        return: 1
+    g: l2_next_active(g\next)
+    if: g = 0 || g\value = 0
+        return: 0
+    if: g\value\kind != c.LM_P0_NODE_ATOM
+        return: 1
+    if: l2_num(g\value\as\atom) != 0 || l2_int_literal_bits(g\value\as\atom, @ bits) != 0 || l2_char_literal(g\value\as\atom) >= 0
+        return: 0
+return: 1
+
 # Whether named Structure ni is the empty Structure -- its declaration's body holds no field and no statement, and no
 # `until` loop closes it: `E()`, `E: ()` -- whose call runs nothing.
 fn: l2_ns_empty (int: ni) int
@@ -13157,11 +13183,8 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
         # to or assigned into (unit_admit_letter_formal.lm2 and its siblings
         # depend on this -- retyping it broke them, measured directly).
         if: l2_receive_msg_shape(stmt, @ fa, @ cmodel) = 0
-            # K03 S5: a named Structure's procedure lays its top-level declarations out as that Structure's fields
-            # (l2_own_mslot); the name receiveMessage binds there has no field yet.  In a block of the body it has the
-            # block's place.
-            if: l2_m_nsof(mi) >= 0 && l2_scope_host() = 0
-                return: l2_error(path, stmt, "receiveMessage in the body of a named Structure is not supported yet")
+            # K03 RECEIVE-OUTPUT: at a named Structure's top level too the name is the receiver's computed output, no
+            # field of the Structure (q53.md:95-97; l2_own_mslot); in a block of the body it has the block's place.
             cj: l2_own_output_add(mi, fa, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
@@ -18156,7 +18179,10 @@ fn: l2_m_nsof (int: mi) int
 return: 0 - 1
 
 # Child index of own field oi inside its own method's Structure M: after the header parts
-# (l2_m_head), the earlier unhosted own fields of the same method; no extra per-method table.
+# (l2_m_head), the earlier unhosted own fields of the same method; no extra per-method table.  In a named Structure's
+# procedure a field's index is the Structure's field's; a computed output (l2_own_computed, l2_ns_computed_decl) is no
+# field of it (K03 RECEIVE-OUTPUT, q53.md:95-97) and takes a method's placeholder after the fields until its own
+# receiver occurrence's place binds (l2_source_places_bind) -- no slot of the Structure, never `Host\m`.
 fn: l2_own_mslot (int: oi) int
     int: k 0
     int: ni l2_m_nsof(l2_own_mi[oi])
@@ -18173,7 +18199,15 @@ fn: l2_own_mslot (int: oi) int
                 n: n + 1
             ---
             k: k + 1
-        return: -1
+        if: l2_own_computed(oi) = 0 && l2_ns_computed_decl(l2_own_decl[oi]) = 0
+            return: -1
+        k: 0
+        while: k < oi
+            if: l2_own_host[k] = 0 && l2_own_mi[k] = l2_own_mi[oi] && (l2_own_computed(k) != 0 || l2_ns_computed_decl(l2_own_decl[k]) != 0)
+                n: n + 1
+            k: k + 1
+        ---
+        return: n
     while: k < oi
         if: l2_own_host[k] = 0 && l2_own_mi[k] = l2_own_mi[oi]
             n: n + 1
@@ -19263,10 +19297,6 @@ fn: l2_layout_owns () int
             # l2_own_mslot maps the existing declaration occurrence, including
             # repeated names; structural lookup by spelling is not that identity.
             if: l2_own_uchild[oi] < 0
-                # K03 NS-ROLES-2: a merge's result declared at a named Structure's top level -- a field holding a fresh
-                # copy, `box: merge: Inner` -- has no field of the Structure yet (steps/defects.md#named-body-copy-field).
-                if: l2_m_nsof(l2_own_mi[oi]) >= 0 && l2_own_decl[oi] != 0 && l2_application(l2_own_decl[oi]) != 0 && l2_merge_construction(l2_application(l2_own_decl[oi])) != 0
-                    return: l2_error(l2_method_src(l2_own_mi[oi], l2_src), l2_own_decl[oi], "a merge construction in the body of a named Structure is not built yet")
                 return: l2_error(l2_src, l2_own_decl[oi], "internal: an own declaration has no physical field")
             ---
         if: l2_own_host[oi] != 0
@@ -22615,7 +22645,9 @@ fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
         # K03 NS-ROLES-2: the binding `b: A`, b absent, declares b -- a field of me (l2_ns_bind_item).
         if: l2_ns_bind_item(node, me) != 0
             return: 0
-        if: l2_ns_decl_first(node) = 0
+        # K03 RECEIVE-OUTPUT: a number or char declaration with a computed candidate is the body's statement, its
+        # output no field of me (l2_ns_computed_decl).
+        if: l2_ns_decl_first(node) = 0 || l2_ns_computed_decl(node) != 0
             return: 1
         ---
     if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || l2_ident(node\as\frame\head) = 0
@@ -27837,7 +27869,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     int: indirect_source
     int: indirect_depth
     int: indirect_const
-    int: nmk
     int: msk
     int: msni
     int: array_target
@@ -28231,18 +28262,16 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # a second computed declaration never rebinds the first. A
         # letter's graph has no static Structure type of its own: into the
         # letter model own field it is admitted at run time (l2_emit_admit);
-        # a formal is not its target.  Set here too, not only in the
+        # a formal or a hidden input of the body, whatever its spelling, is not
+        # its target and does not refuse it: from its place on the output
+        # shadows it, as any later declaration does (K03-OUTPUT-ORACLES-20261007-24;
+        # docs #own's `fn: keep (int: n)`).  Set here too, not only in the
         # collection pre-pass (l2_collect_asgn_body): idempotent on a repeat,
         # and the only way this site's own l2_own_nsty_get check below sees
         # the type on a first declaration if that pre-pass has not run yet.
         if: l2_receive_msg_shape(stmt, @ cname, 0) = 2
             return: l2_error(path, stmt, "receiveMessage binds one or two names")
         if: l2_receive_msg_shape(stmt, @ cname, @ cmodel) = 0
-            nmk: l2_param_find(mi, cname)
-            if: nmk >= 0 && l2_colon_is_graph_ty(l2_ft(mi, nmk)) != 0
-                return: l2_error(path, stmt, "graph assignment admission requires receiving-expression tests")
-            if: nmk >= 0
-                return: l2_error(path, stmt, "assignment value has incompatible type")
             cj: l2_own_output_add(mi, cname, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1

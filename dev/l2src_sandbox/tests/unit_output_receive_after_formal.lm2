@@ -1,0 +1,22 @@
+# K03 RECEIVE-OUTPUT (Codex K03-OUTPUT-ORACLES-20261007-24; LMX_blog/q/q53.md:95-97 and its addendum; docs #own,
+# #declaration-visibility): a receiver's output is selected by the common rule -- its own written occurrence, or an
+# explicitly typed receiving place of the same body -- never by a name match against a formal or a hidden input.
+# After the int formal m, `receiveMessage: m MainLetter` declares its own later occurrence: before it m is the formal
+# (3), after it the letter -- its sender and payload are read through it.  Exit 7; 81 if the formal was not 3 before,
+# 82 if the receive took nothing, 86 if m after it is not the letter.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+fn: probe (int: m) int
+    int: before m
+    receiveMessage: m MainLetter
+    if: before != 3
+        return: 81
+    if: m = 0
+        return: 82
+    if: m\sender = 0 || length(m\payload\mainArgs) = 0
+        return: 86
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(3); stdout: ""; stderr: "")
+return

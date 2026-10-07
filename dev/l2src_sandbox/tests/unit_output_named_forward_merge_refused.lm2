@@ -1,0 +1,21 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# From its place on: `Out\a: box\v` above `box: merge: Inner` in Host's body names no binding of box -- a free name,
+# an input Host's call does not give (unit_v2_receiver_output_refused's rule in a method).
+Inner:
+    int: v 1
+end: Inner
+Out:
+    int: a 0
+end: Out
+Host:
+    Out\a: box\v
+    box: merge: Inner
+end: Host
+fn: probe () int
+    Host()
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

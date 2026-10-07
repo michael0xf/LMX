@@ -1,0 +1,28 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# A block's own `receiveMessage: m` is its own occurrence (Q53: a nested receiver does not assign the enclosing
+# body's m): inside the block m is the block's (the empty inbox's 0), after it m is Host's top-level output again,
+# still the letter.  Exit 7; 81 if the block's receive wrote Host's m or declared none of its own.
+Out:
+    int: a 0
+    int: b 0
+end: Out
+Host:
+    receiveMessage: m
+    if: m != 0
+        receiveMessage: m
+        if: m = 0
+            Out\a: 1
+    ---
+    if: m != 0
+        Out\b: 1
+end: Host
+fn: probe () int
+    Host()
+    if: Out\a != 1 || Out\b != 1
+        return: 81
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

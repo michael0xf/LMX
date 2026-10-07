@@ -1,0 +1,23 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# The explicit receiving place stays data (docs #dynamic; Codex -23's design answer): `int: i 0` declares Host's
+# field i and `i: getValue()` assigns it when control reaches it -- Host\i reads 0 before Host runs and 4 after.
+# Exit 7; 80 if i is not 0 before Host's run, 81 if it is not 4 after.
+fn: getValue () int
+    return: 4
+end: getValue
+Host:
+    int: i 0
+    i: getValue()
+end: Host
+fn: probe () int
+    if: Host\i != 0
+        return: 80
+    Host()
+    if: Host\i != 4
+        return: 81
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

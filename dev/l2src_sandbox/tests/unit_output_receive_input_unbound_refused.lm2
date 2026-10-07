@@ -1,0 +1,16 @@
+# K03 RECEIVE-OUTPUT (Codex K03-OUTPUT-ORACLES-20261007-24; LMX_blog/q/q53.md:95-97 and its addendum; docs #own,
+# #declaration-visibility): a receiver's output is selected by the common rule -- its own written occurrence, or an
+# explicitly typed receiving place of the same body -- never by a name match against a formal or a hidden input.
+# Without the input: m read above the receive is the method's hidden input, which no caller gives -- refused at the
+# call, as for any later declaration (unit_v2_receiver_output_refused); the receive does not supply it.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+fn: probe () int
+    if: m = 0
+        return: 80
+    receiveMessage: m
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

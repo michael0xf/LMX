@@ -1,0 +1,26 @@
+# K03 RECEIVE-OUTPUT (Codex K03-OUTPUT-ORACLES-20261007-24; LMX_blog/q/q53.md:95-97 and its addendum; docs #own,
+# #declaration-visibility): a receiver's output is selected by the common rule -- its own written occurrence, or an
+# explicitly typed receiving place of the same body -- never by a name match against a formal or a hidden input.
+# The root's x is the method's hidden input (Q52): read before the receive it gives 5; `receiveMessage: x MainLetter`
+# declares the method's own later x -- the letter -- and writes nothing into the root's.  Exit 7; 81 if the input was
+# not 5, 82 if the receive took nothing, 86 if x after it is not the letter, 85 if the root's x changed.
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+int: x 5
+fn: probe () int
+    int: before x
+    receiveMessage: x MainLetter
+    if: before != 5
+        return: 81
+    if: x = 0
+        return: 82
+    if: x\sender = 0 || length(x\payload\mainArgs) = 0
+        return: 86
+    return: 7
+end: probe
+int: code probe()
+if: x != 5
+    code: 85
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

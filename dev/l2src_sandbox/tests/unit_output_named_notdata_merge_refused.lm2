@@ -1,0 +1,19 @@
+# K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23; LMX_blog/q/q53.md:95-97; docs/LMX_semantics.en.md
+# #construction, #dynamic): a computed output -- a receiver's, merge's, a computed number declaration's -- at a named
+# Structure's top level is no field of it, stored at its own receiver occurrence, produced when control reaches it.
+# Not data (q53.md:95-97; Codex K03-NS2-COPY-ORACLE-20261007-22): the result `x: merge: Inner` receives at Host's top
+# level is merge's computed output, no field of Host -- `Host\x\v` names nothing, refused at the path.
+Inner:
+    int: v 1
+end: Inner
+Host:
+    x: merge: Inner
+end: Host
+fn: probe () int
+    Host()
+    if: Host\x\v = 0
+        return: 80
+    return: 7
+end: probe
+sendMessage: exit(exit_code: probe(); stdout: ""; stderr: "")
+return

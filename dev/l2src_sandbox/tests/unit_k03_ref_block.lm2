@@ -1,0 +1,18 @@
+# K03 NS-ROLES-1 (Codex K03-S5-MIGRATION-20261007-06 (b), K03-S5-ALIAS-VISIBILITY-20261007-07; docs/LMX_semantics.en.md
+# :666, :834, L2_spec_en.md:206): for absent b, `b: A` with A an existing Structure introduces b as a reference to A --
+# no copy, no reparent: a write through b is a write of A.
+# In a block of a method: box references Model there.  Exit 7; 81 if the write did not reach Model.
+Model:
+    int: v 1
+end: Model
+fn: m () int
+    int: k 1
+    if: k = 1
+        box: Model
+        box\v: 5
+    if: Model\v != 5
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

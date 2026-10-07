@@ -1840,12 +1840,25 @@ Structure takes no argument); 111 items of 92 programs are now `m: merge: Model`
 the old shape is read only for a named Structure body's reference field until NS-ROLES-2; `Model: name` declares no
 field at the unit; a named Structure of the unit is visible throughout the unit in both directions (methods, statements
 and signatures above it), data forward only, a nested Structure no name of the unit. Gates: kernel `opus_kernel_44` GREEN297 (114 selftests), L3 `opus_l3_42`, full `opus_full_48` RED39/2210 -- against `opus_full_47` FAIL→OK 0, OK→FAIL 0, added 23, removed 2 (replaced by the `_below` positives); three common rows changed their message (the two call refusals and the S1 entry, now run).
-Open, next in this lane: NS-ROLES-1 -- the absent-b reference binding `b: A` at the root, in a method and in a block
-(A a named callable definition visible both ways, a method held as its whole occurrence, a Structure value visible
-forward), a method's own named Structures visible throughout their block both ways; NS-ROLES-2 -- a named body's
-one-atom branch through the common resolution, reference fields by `b: A`, kind 3 and its 14 programs; then
-K03-S5-RECEIVE-OUTPUT. The typed-null / typed-binding family waits for the author
-(LMX_blog/q/current/model-constrained-null-reference.md).
+NS-ROLES-1a done ([section 112](steps/fable-continuation-20261003.md#ns-roles-1a), Codex K03-NS-ROLES-NEXT-20261007-09):
+`b: A`, b absent, A a Structure (a named Structure or a qualified branch's root, both ways; a value of a named model,
+forward) binds b to A at the root, in a block of the root, in a method and its blocks -- the reference-cell route, a
+cell of its own; `b: args` after it is the application (arity refusal), never a rebinding; the root's head resolves
+before its tail (`Later: 3` above `Later:` is Later's call); `l2_ns_find`'s twins share its visibility. Gates: kernel `opus_kernel_45` GREEN297 (114 selftests), L3 `opus_l3_43`, full `opus_full_49` RED39/2248 -- against `opus_full_48` FAIL→OK 0, OK→FAIL 0, added 38; one common row changed its message (`unit_ref_absent_colon`, the 1c limit).
+The dependency-closed substeps that remain in this lane (Codex K03-NS-ROLES-NEXT-20261007-09), each a gated checkpoint:
+- NS-ROLES-1b: a method or held callable as A -- b holds the whole occurrence; the application through b (a Structure's
+  nullary execution and a method's call with its own signature, natively and walked) by one held-reference route;
+  nothing runs at binding; Q58 dormant applications kept; `unit_k03_def_callable_body` split, its `b: tick` part an
+  alias row; the method tail's S5 reading (the disclosed debt) removed.
+- NS-ROLES-1c: a merge result as A -- b's row takes the merge's schema record; `unit_ref_absent_colon` becomes its
+  positive (exit 9).
+- NS-ROLES-V2: a method's own named callable definitions visible throughout their actual block both ways; siblings,
+  later ordinary data and receiver outputs not (negatives, reached mutants).
+- NS-ROLES-2: a named body's one-atom branch through the common resolution; reference fields `b: A` storing A's node at
+  construction; kind 3 removed after its 14 programs (Codex -07 Q3 as restated in -09: refusal intent and stage kept,
+  identity controls for eternal references, a fresh-copy intent never silently shared).
+- K03-S5-RECEIVE-OUTPUT (generic); then S6, S7.
+The typed-null / typed-binding family waits for the author (LMX_blog/q/current/model-constrained-null-reference.md).
 
 ### K04 — Callable actuals and hidden inputs
 

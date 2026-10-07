@@ -11379,3 +11379,110 @@ merge primitive keeps its emission code until NS-ROLES-2.
 | `build/l3_selftest/opus_l3_42` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_48` (full harness) | RED39/2210: against `opus_full_47` FAIL→OK 0, OK→FAIL 0, added 23 (all OK: the rows of this slice), removed 2 (`unit_s2_vis_signature_refused`, `unit_s2_vis_branch_refused`, replaced by their `_below` positives); of the 2187 common targets exactly three changed their message -- `unit_s2_vis_structure_below_refused` and `unit_root_struct_call2_forward_refused` (the call refusal above) and `unit_s1_merge_uncaught_entry` (now run) -- besides the two identifiers that change in every run (the translator's sha256, the unit hash of the two library rows). The 111 declared paths were hashed before the run; every staged copy is the declared bytes. |
 | Replay of `opus_full_47`'s 2188 recorded translations | Final translator over the migrated sources against 23974ec7 over the old ones: 3 rows change their message (the visibility rows), 64 rows of migrated programs only their L1. |
+
+<a id="ns-roles-1a"></a>
+## 112. `b: A` binds b to a Structure; a head resolves before its tail is read (K03 NS-ROLES-1a)
+
+Codex's answers under K03-UNIFIED-HEAD-IMPLEMENT-20261006-01: K03-S5-MIGRATION-20261007-06 (b) -- for absent b, `b: A`
+with A an existing Structure introduces b as a reference to A, uniformly; K03-S5-ALIAS-VISIBILITY-20261007-07 -- the
+same rule for a method (Q1, NS-ROLES-1b) and the both-way visibility of named callable definitions (Q2); and
+K03-NS-ROLES-NEXT-20261007-09 -- 1a reuses the existing reference-cell storage downstream of the common resolution (no
+source Frame made, no second resolver, no wrapper, no clone or reparent: the same referent in a cell of its own,
+@b != @A, ordinary admitted writes and application); a merge-result referent may be its own measured sub-step; the
+method tail's present reading stays only as disclosed debt until 1b; and the root's recorded `Later: 3` above `Later:`
+closes now -- once the head is known, no spelling of the tail makes it an unknown definition.  The rule itself:
+docs/LMX_semantics.en.md:666 ("For absent b, b: A and @: b A are equivalent assignment forms introducing b.
+Subsequently b: args applies the Structure, while @: b B reassigns the reference."), :835, L2_spec_en.md:206.
+
+What changed in `l2trans.lm1`:
+
+- The binding is recognized after the one resolution at its site (`l2_ref_bind_site`, `l2_ref_tail_kind` over
+  `l2_head_resolve`): b's head resolves to nothing there and its tail is one atom A that is a named Structure (5) or a
+  value of a named model -- an own field or a formal (4); its kind and its model come from that resolution only.  In a
+  method and its blocks the head's absence is the definition route's own test (`l2_local_absent_def`, the former body
+  of `l2_local_ns_shape`); in a block of the root it is the resolution at the statement's place.  A root item's role
+  must be read from the source before anything is registered (the lexical pass's count and fill walks agree):
+  `l2_unit_ref_bind` reads it as the unit role does -- A a named Structure or a qualified branch's root the unit defines
+  (both ways), or a Structure value bound above it -- and the collection stops with an internal error if that reading
+  and the site's resolution ever disagree.
+- The statement is kept by node in a registry (`l2_rb_at` / `l2_rb_model`, released with the translation), filled by
+  the collection: for E before its rows are made (`l2_collect_decls`), for a method by `l2_collect_asgn_body`, once every
+  Structure it may name is registered.  The declaration reader gives such a statement the reference contract of A's
+  model with A its one candidate (`l2_rb_declaration`) -- the record every reader of a reference declaration already
+  reads -- so b's row is made, checked (`l2_check_reference_init`), stored natively and walked exactly as a reference
+  declaration's: a pointer cell, never a slot (`l2_own_is_slot`).  No source Frame is made.
+- After the binding `b: args` is the application of the bound Structure, never a rebinding: `l2_colon_check_assignment`
+  gives a head bound by `b: A` the arity refusal it gives a head holding a constructed Structure ("more arguments than
+  box has formals"); explicit reassignment is `@: b B` (docs :836), which the pending typed-reference question still
+  holds.
+- A merge result as A (`a: merge: Model`, then `b: a`) is "a reference binding to a merge result is not built yet",
+  said at A -- NS-ROLES-1c.  A method or a held callable as A keeps its present reading (S5's definition) until
+  NS-ROLES-1b: disclosed debt, no alias support claimed.
+- One visibility reading for a definition of the unit (`l2_def_visible`): `l2_ns_find`'s twins -- the payload lookup
+  `l2_ns_find_payload` and the qualified branch's `l2_ebr_find` -- kept the source order after NS-ROLES-3; a merge
+  operand or a reference binding naming a branch or a Structure defined below was refused ("unknown merge operand",
+  "assignment value has unknown type").
+- The root's head resolves before its tail is classified (`l2_head_absent`, `l2_struct_defined_below`): a frame whose
+  tail is no Structure -- one value: an atom, a literal, an operator run, merge's construction is data -- applies a
+  definition of its head written below it, whatever the tail is written as (`Later: 3`, `Later(3)`, `Later: x` above
+  `Later:` are Later's application, refused: "more arguments than Later has formals"); the identifier-only clause of
+  NS-ROLES-3 is gone from the unit role and from l2_head_absent.  A definition below is a frame whose tail is a
+  Structure (book section 9, :563) that no data binding of the name precedes -- a receiver `@: t f(a)`, merge's
+  construction, a reference binding; between frames whose tails are Structures, the first defines.  With no
+  definition elsewhere, `Later: 3` defines Later (S5).
+
+Evidence:
+
+- Replay of the 2209 recorded translations of `opus_full_48` with the final translator against 64ebf1f0's: 3 rows
+  differ.  `unit_k03_vis_unit_declares_tail` and its walked twin change their L1 (`x: Foo` above `Foo:` is now the
+  binding of x to Foo, no definition of x) and still exit 7 natively and walked (run) -- the walked twin's pin of
+  walked methods is (0,1) now, x being no procedure; `unit_ref_absent_colon` (`b: A`
+  with A the merge result `A: merge: Model`, the NS-ROLES-3 migration of `Model: A`) said "unknown field path segment"
+  at `b\value` and now says the 1c limit at A ("6:4: a reference binding to a merge result is not built yet"): its pin
+  is re-pointed and disclosed.  Every other row: L1, exit and messages byte-identical.
+- Witnesses, natively and under `--walk-methods`, 38 rows: the binding at the root, in a block of the
+  root, in a method, in a block of a method, to a Structure defined below (root and method), to a method's own
+  Structure, along a chain of bindings in a method and through a formal (`q: p`, the caller's Model written), at the
+  root along a binding above (`a: Model`, `b: a`) and through a typed reference above (`@: Model h Model`, `b: h`), to
+  a qualified branch's root defined below -- each writes through b and reads the write through A (exit 7; 81 if b were
+  a copy; `@box = @Model` is false: a cell of its own); a merge operand naming a branch below, in a method and at the
+  root; `Later: 3` alone defining Later; the refusals: `box: Model` again in a method and `box: 3` at the root (the
+  application), `Later: 3` and `Later(3)` above `Later:`, and the 1c limit in a method and at the root.  The walked
+  twins pin the methods they walk; `unit_k03_ref_local`'s own Structure's procedure keeps its native word.
+- Mutants: each removes one rule whole, built from the final bytes one gcc at a time (m01-m11 from the bytes before a
+  comment-only correction, whose replay is byte-identical), the witnesses translated natively and walked, the recorded
+  translations replayed:
+
+| Mutant | Red |
+| --- | --- |
+| m01 the declaration reader ignores the binding's record | 20 witness rows (every binding: "unbound dynamic input", "unresolved name") and the two `unit_k03_vis_unit_declares_tail` rows |
+| m02 the unit role ignores the binding (a root `b: A` a definition again) | 10 witness rows ("unknown field path segment"; the root merge limit accepted) and 3 corpus rows |
+| m03 a root block's statement never the binding | `unit_k03_ref_root_block` and its twin ("unresolved name") |
+| m04 a value referent excluded | 6 witness rows (the chains, the method's own Structure, the method's merge limit accepted) and `unit_ref_absent_colon` |
+| m05 the binding's row a slot | 16 witness rows ("root operation not walkable yet: a Structure-typed field in a method") and 2 corpus rows |
+| m06 `b: args` a rebinding again | the two application refusals (accepted; "assignment value has incompatible type") |
+| m07 the payload lookup in source order | 4 witness rows ("assignment value has unknown type"), 4 more whose L1 changes, 2 corpus rows |
+| m08 a branch's root in source order | the two branch merge witnesses and twins ("unknown merge operand") |
+| m09 E's bindings kept after its rows are made | 6 witness rows ("unresolved name") |
+| m10 a one-value tail does not defer to a definition below | the two `Later:` refusals ("duplicate named Structure") and `unit_s2_vis_structure_below_refused` |
+| m11 the identifier-only clause back in l2_head_absent | the two `Later:` refusals ("unsupported trailer") |
+| m12 a merge result known only by its schema | the root merge limit and its twin (the internal disagreement error) and `unit_ref_absent_colon` |
+| m13 the root misses a typed reference above | `unit_k03_ref_root_typed` and its twin |
+| m14 the root misses a binding above | `unit_k03_ref_root_chain` and its twin |
+| m15 the root misses merge's construction above | the root merge limit and its twin (accepted as a definition) and `unit_ref_absent_colon` |
+| m00 control | none |
+
+Recorded, not changed here: a method or held callable as A (NS-ROLES-1b); a merge result as A (NS-ROLES-1c); the
+nullary application through b (`box()`, bare `box`) keeps the present refusal "executing a named Structure is not
+supported yet" until the held-reference route of 1b; a method's own named Structure visible only after its definition
+(V2); between two frames whose tails are Structures (`Later(3 4)` or `Later()` above `Later:`) the first defines.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_45` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes. |
+| `build/l3_selftest/opus_l3_43` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_49` (full harness) | RED39/2248: against `opus_full_48` FAIL→OK 0, OK→FAIL 0, added 38 (all OK: the rows of this slice), removed 0; of the 2210 common targets one changed its message -- `unit_ref_absent_colon`, the 1c limit above -- besides the two identifiers that change in every run (the translator's sha256, the unit hash of the two library rows). The 22 declared paths were hashed before the run; every staged copy is the declared bytes. |
+| Focused runs on the same bytes | `opus_focus_n1a_01` 97 targets: 2 red on walked-method pins (corrected: `unit_k03_ref_local`'s own Structure's procedure keeps its native word; `unit_k03_vis_unit_declares_tail`'s twin walks two methods now) -- `opus_focus_n1a_02` 7 targets, 0 failed. |
+| Replay of `opus_full_48`'s 2209 recorded translations | 3 rows differ, named above; the rest byte-identical. |

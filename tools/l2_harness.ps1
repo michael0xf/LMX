@@ -4947,7 +4947,93 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_vis_unit_declares_tail.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_unit_declares_tail_walk.lm2'; Source = 'unit_k03_vis_unit_declares_tail.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # K03 NS-ROLES-1a (Codex K03-S5-MIGRATION-20261007-06 (b), K03-S5-ALIAS-VISIBILITY-20261007-07,
+    # K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md:666, :835, L2_spec_en.md:206; steps/fable-continuation-
+    # 20261003.md section 112): for absent b, `b: A` with A a Structure -- a named Structure or a qualified branch's root
+    # (visible both ways), or a value of a named model (an own, a formal) visible forward -- binds b to A: a reference
+    # in a cell of its own, no copy (writes through b are A's, @b != @A), at the root, in a block of the root, in a
+    # method and its blocks; after the binding `b: args` applies the bound Structure (an ordinary named Structure takes
+    # no argument: refused), never a rebinding.  A merge result as A is NS-ROLES-1c's (said at A).  A qualified branch's
+    # root is visible both ways to every reader (a merge operand above it).  At the root a frame whose tail is no
+    # Structure applies a definition of its head below it, whatever the tail is written as (`Later: 3`, `Later(3)` above
+    # `Later:`: refused as Later's call); with no other Later, `Later: 3` defines Later.  The twins: --walk-methods.
+    [pscustomobject]@{ Name = 'unit_k03_ref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_root_walk.lm2'; Source = 'unit_k03_ref_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_root_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_root_block_walk.lm2'; Source = 'unit_k03_ref_root_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_method_walk.lm2'; Source = 'unit_k03_ref_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_block_walk.lm2'; Source = 'unit_k03_ref_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_later.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_later_walk.lm2'; Source = 'unit_k03_ref_later.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_local_walk.lm2'; Source = 'unit_k03_ref_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_chain_walk.lm2'; Source = 'unit_k03_ref_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_root_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_root_chain_walk.lm2'; Source = 'unit_k03_ref_root_chain.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_root_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_root_typed_walk.lm2'; Source = 'unit_k03_ref_root_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_branch_later.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_branch_later_walk.lm2'; Source = 'unit_k03_ref_branch_later.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_branch_merge_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_branch_merge_above_walk.lm2'; Source = 'unit_k03_vis_branch_merge_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_branch_merge_root_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_branch_merge_root_above_walk.lm2'; Source = 'unit_k03_vis_branch_merge_root_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_literal_tail_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_literal_tail_defines_walk.lm2'; Source = 'unit_k03_vis_literal_tail_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_bound_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ref_bound_call_refused.lm2:11:5: more arguments than box has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_bound_call_refused_walk.lm2'; Source = 'unit_k03_ref_bound_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ref_bound_call_refused_walk.lm2:11:5: more arguments than box has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_bound_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ref_bound_root_refused.lm2:9:1: more arguments than box has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_bound_root_refused_walk.lm2'; Source = 'unit_k03_ref_bound_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ref_bound_root_refused_walk.lm2:9:1: more arguments than box has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_merge_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ref_merge_limit_refused.lm2:10:8: a reference binding to a merge result is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_merge_limit_refused_walk.lm2'; Source = 'unit_k03_ref_merge_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ref_merge_limit_refused_walk.lm2:10:8: a reference binding to a merge result is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_merge_root_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_ref_merge_root_limit_refused.lm2:9:4: a reference binding to a merge result is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_ref_merge_root_limit_refused_walk.lm2'; Source = 'unit_k03_ref_merge_root_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_ref_merge_root_limit_refused_walk.lm2:9:4: a reference binding to a merge result is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_literal_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_vis_later_literal_call_refused.lm2:6:1: more arguments than Later has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_literal_call_refused_walk.lm2'; Source = 'unit_k03_vis_later_literal_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_vis_later_literal_call_refused_walk.lm2:6:1: more arguments than Later has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_frame_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_vis_later_frame_call_refused.lm2:5:1: more arguments than Later has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_frame_call_refused_walk.lm2'; Source = 'unit_k03_vis_later_frame_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_vis_later_frame_call_refused_walk.lm2:5:1: more arguments than Later has formals'; Absent = @(); Debt = @() },
     # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
     # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
     # task changes stays 0 through the receiving call and is changed once by the explicit invocation.
@@ -6115,10 +6201,10 @@ $fixtures = @(
     # ordinary named Structure has no arguments -- the arity refusal, where it stands.
     [pscustomobject]@{ Name = 'unit_q57_nested_known_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_q57_nested_known_arity_refused.lm2:7:4: more arguments than Known has formals'; Absent = @(); Debt = @() },
-    # Absent b: A is not a reference binding yet: b\value is an unknown field.
-    # @: b A is read as type b and refused as an unknown type.
+    # Absent b: A is the reference binding (K03 NS-ROLES-1a); here A is a merge result, whose binding is not built yet
+    # (NS-ROLES-1c): said at A.  @: b A is read as type b and refused as an unknown type.
     [pscustomobject]@{ Name = 'unit_ref_absent_colon.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_ref_absent_colon.lm2:6:4: a reference binding to a merge result is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_ref_absent_at.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown type'; Absent = @(); Debt = @() },
     # In a method, Holder: 1 is the same arity refusal, not an assignment into Holder.

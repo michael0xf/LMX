@@ -1,0 +1,15 @@
+# K03 NS-ROLES-1 (Codex K03-S5-MIGRATION-20261007-06 (b), K03-S5-ALIAS-VISIBILITY-20261007-07; docs/LMX_semantics.en.md
+# :666, :834, L2_spec_en.md:206): for absent b, `b: A` with A an existing Structure introduces b as a reference to A --
+# no copy, no reparent: a write through b is a write of A.
+# A bound b is no new binding: the second `box: Model` applies the Structure box is bound to (docs :666, :835: b: args
+# applies, it never rebinds) -- Model, an ordinary named Structure, takes no argument: refused at the line.
+Model:
+    int: v 1
+end: Model
+fn: m () int
+    box: Model
+    box: Model
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

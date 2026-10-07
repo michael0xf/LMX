@@ -1,0 +1,21 @@
+# K03 NS-ROLES-1 (Codex K03-S5-MIGRATION-20261007-06 (b), K03-S5-ALIAS-VISIBILITY-20261007-07; docs/LMX_semantics.en.md
+# :666, :834, L2_spec_en.md:206): for absent b, `b: A` with A an existing Structure introduces b as a reference to A --
+# no copy, no reparent: a write through b is a write of A.
+# A method above a qualified branch binds b to its root: b\e reads the branch's e.  Exit 7; 81 otherwise.
+fn: go () int
+    b: cfg
+    if: b\e != 7U
+        return: 81
+    return: 7
+end: go
+independent:
+    const:
+        immutable:
+            (): cfg
+                size_t: e 7U
+            end: cfg
+        end: immutable
+    end: const
+end: independent
+sendMessage: exit(exit_code: go(); stdout: ""; stderr: "")
+return

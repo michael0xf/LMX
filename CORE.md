@@ -361,6 +361,12 @@ resolved receiver uses the same zero-argument route as a bare callable, with
 its own contract diagnostics, never a free-input fallback or adjacent-atom
 capture. See the [primary rule](docs/LMX_semantics.en.md#resolved-head-consumption).
 
+Declaration visibility follows the [explicit semantic scope](docs/LMX_semantics.en.md#declaration-visibility):
+both-way visibility belongs to callables created by `fn`, `fm`, `sub`, not to
+ordinary named Structures. Executability alone does not grant backward visibility.
+Ordinary Structure and reference bindings are visible forward and down from their
+declaration sites; collecting their layouts must not change that source rule.
+
 An unknown `A` in `A: b` defines Structure `A`; it does not declare an empty
 typed reference named `b` and does not run `b`. If both `C` and the nested
 head `makeA` are unknown, `C: makeA()` defines `C` with the named empty

@@ -178,7 +178,7 @@ The first receives an integer value. The second receives a reference to an integ
 
 An explicit or hidden input is activation-local. Assigning it does not create or update a public graph field and does not write back to its caller. An own field occupies a real place in the graph and follows ordinary working-cache/publication rules.
 
-Machine locals are visible only forward and down from their declaration site. Methods are visible under the program's method-resolution rules; do not apply variable forward-visibility mechanically to method discovery. An initializer is resolved in the environment preceding the new declaration, then the new occurrence is bound.
+Machine locals and ordinary named Structure/reference bindings are visible only forward and down from their declaration sites. Both-way visibility applies to callables created by `fn`, `fm`, `sub`, not to every executable Structure or a binding holding a callable. Do not apply variable forward-visibility mechanically to those method declarations, or method backward-visibility to ordinary Structure declarations. See [declaration visibility](docs/LMX_semantics.en.md#declaration-visibility). An initializer is resolved in the environment preceding the new declaration, then the new occurrence is bound.
 
 ### 4.2 No implicit `Model:fresh`
 
@@ -521,7 +521,7 @@ This rule is used for paths and must also be preserved by structural admission w
 
 ### 8.3 Source order and capture
 
-Declarations and operators remain in lexical order. A local value is visible forward and down. Nested scopes choose the nearest preceding eligible binding. A later declaration must not satisfy an earlier call merely because a whole-method scan discovered its name.
+Declarations and operators remain in lexical order. A local value or ordinary named Structure is visible forward and down. Nested scopes choose the nearest preceding eligible ordinary binding. A later ordinary declaration must not satisfy an earlier call merely because a whole-method scan discovered its name; the both-way rule is explicitly for callables created by `fn`, `fm`, `sub` ([visibility](docs/LMX_semantics.en.md#declaration-visibility)).
 
 A captured value keeps the physical identity required by its category:
 

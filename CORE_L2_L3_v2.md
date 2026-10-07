@@ -879,6 +879,8 @@ This list is an implementation orientation, not a new language execution order. 
 
 ### 13.3 Visibility is site-aware, not method-wide name search
 
+**Norm.** Both-way declaration visibility applies to callables created by `fn`, `fm`, `sub`, not to ordinary named Structures. Ordinary Structure declarations and reference bindings are visible forward and down from their declaration sites. A callable referent does not grant the binding that holds it backward visibility. Whole-unit collection and native-entry generation do not change this scope; head resolution must not choose a later ordinary Structure definition by tail shape, arity or trailer. See [the primary visibility rule](docs/LMX_semantics.en.md#declaration-visibility).
+
 The common selector must consider exact method/source-part identity, active structural hosts, source position and an excluded initializer row. A formal remains selected until a visible declaration creates its own row. Different declarations of the same name retain occurrence identity. Deferred checking must restore precisely this context and restore the previous context on both success and error.
 
 Dynamic input closure records each call site; a single method edge cannot erase different caller scopes. A type learned from one valid caller does not make another invalid caller legal. Eligible callee lexical fallback remains distinct from caller visibility: a parent declaration preceding the callee's lexical definition can be eligible even when the first dynamic call occurs earlier, while a future own declaration inside the callee is not an automatic fallback.

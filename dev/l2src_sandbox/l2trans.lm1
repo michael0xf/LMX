@@ -57,6 +57,9 @@ int: l2_hr_cap 0
 # (l2_declaration).
 @@: LmP0Node l2_rb_at 0
 @@: LmP0Text l2_rb_model 0
+# The method whose occurrence a binding `b: tick` holds (NS-ROLES-1b); -2 for a binding to a named Structure itself,
+# -1 for one to a value of a named model.
+@: int l2_rb_meth 0
 int: l2_rb_n 0
 int: l2_rb_cap 0
 # Whether a root item that could be such a binding is one (l2_unit_ref_bind), found once: -1 while it is being found.
@@ -1487,13 +1490,16 @@ prototype:
     fn: l2_ns_ref_field_stmt (const: @(LmP0Node stmt)) int
     fn: l2_unit_defines_struct (const: @(LmP0Text t)) int
     fn: l2_rb_find (const: @(LmP0Node stmt)) @: LmP0Text
+    fn: l2_rb_meth_of (const: @(LmP0Node stmt)) int
+    fn: l2_call_alias_own (int: mi; const: @(LmP0Text head)) int
+    fn: l2_emit_alias_self (int: oi; int: mi; const: @(char ind)) int
     fn: l2_def_visible (const: @(LmP0Node at); int: unit) int
     fn: l2_rb_declaration (const: @(LmP0Node node)) @: L2Declaration
     fn: l2_ref_tail_atom (const: @(LmP0Frame fr)) @: LmP0Text
     fn: l2_unit_ref_bind (const: @(LmP0Frame fr); const: @(LmP0Node item)) int
-    fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word) int
+    fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word; @: int out_meth) int
     fn: l2_local_absent_def (const: @(LmP0Node stmt); int: mi) int
-    fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word) int
+    fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: int out_meth) int
     fn: l2_sig_models_refresh () int
     fn: l2_colon_bind_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name; @@: LmP0Field out_cand) int
     fn: l2_bind_untyped (int: mi; @: LmP0Field cand) int
@@ -2685,8 +2691,10 @@ fn: l2_release () int
     l2_hr_cap: 0
     l2_xfree((cast: (@: void) l2_rb_at))
     l2_xfree((cast: (@: void) l2_rb_model))
+    l2_xfree((cast: (@: void) l2_rb_meth))
     l2_rb_at: 0
     l2_rb_model: 0
+    l2_rb_meth: 0
     l2_rb_n: 0
     l2_rb_cap: 0
     l2_xfree((cast: (@: void) l2_urm_at))
@@ -4595,8 +4603,21 @@ fn: l2_rb_find (const: @(LmP0Node stmt)) @: LmP0Text
     ---
 return: 0
 
-# Keep statement stmt as a reference binding whose referent's model is named by word model.  0, or 1 without memory.
-fn: l2_rb_add (const: @(LmP0Node stmt); const: @(LmP0Text model)) int
+# The method whose occurrence the kept binding stmt holds (`b: tick`), or -1: a Structure's binding, or no binding.
+fn: l2_rb_meth_of (const: @(LmP0Node stmt)) int
+    int: i 0
+    if: stmt = 0
+        return: -1
+    while: i < l2_rb_n
+        if: l2_rb_at[i] = stmt
+            return: l2_rb_meth[i]
+        i: i + 1
+    ---
+return: -1
+
+# Keep statement stmt as a reference binding: to a Structure whose model is named by word model (meth -1), or to the
+# occurrence of method meth (model the word written for it).  0, or 1 without memory.
+fn: l2_rb_add (const: @(LmP0Node stmt); const: @(LmP0Text model); int: meth) int
     int: want
     @: void grown
     if: stmt = 0 || model = 0 || l2_rb_find(stmt) != 0
@@ -4613,10 +4634,15 @@ fn: l2_rb_add (const: @(LmP0Node stmt); const: @(LmP0Text model)) int
         if: grown = 0
             return: 1
         l2_rb_model: (cast: (@@: LmP0Text) grown)
+        grown: l2_vec_grow((cast: (@: void) l2_rb_meth), l2_rb_n, want, c.sizeof(c.int))
+        if: grown = 0
+            return: 1
+        l2_rb_meth: (cast: (@: int) grown)
         l2_rb_cap: want
     ---
     l2_rb_at[l2_rb_n]: (cast: (@: LmP0Node) stmt)
     l2_rb_model[l2_rb_n]: (cast: (@: LmP0Text) model)
+    l2_rb_meth[l2_rb_n]: meth
     l2_rb_n: l2_rb_n + 1
 return: 0
 
@@ -4626,6 +4652,10 @@ fn: l2_rb_declaration (const: @(LmP0Node node)) @: L2Declaration
     @: L2Declaration result l2_declarations
     @: L2TypeContract leaf
     @: LmP0Text word l2_rb_find(node)
+    # A binding to a method's occurrence (NS-ROLES-1b) has no model to take: its row is a reference cell
+    # (l2_own_decl_ty) and its store the occurrence (l2_emit_stmts, l2_rw_stmt_content).
+    if: l2_rb_meth_of(node) >= 0
+        return: 0
     while: result != 0
         if: result\source = node && result\contract != 0 && result\contract\kind = 2
             return: result
@@ -4708,18 +4738,21 @@ fn: l2_unit_defines_branch (const: @(LmP0Text t)) int
 return: 0
 
 # Whether a unit item above `item` binds a as a Structure value, read from the source in order (a value is visible
-# forward only): a reference binding `a: A` (l2_unit_ref_bind), merge's construction `a: merge: ...`, or a typed
-# reference `@: T a ...` of a Structure T the unit defines.
+# forward only): a reference binding `a: A` (l2_unit_ref_bind), merge's construction `a: merge: ...`, a typed
+# reference `@: T a ...` of a Structure T the unit defines, or the receiver of a call's result `@: a f(x)`.
 fn: l2_unit_value_above (const: @(LmP0Text a); const: @(LmP0Node item)) int
     @: LmP0Field f
     @: LmP0Node it
     @: LmP0Field g
     @: LmP0Field h
+    @: LmP0Text got
     if: l2_cur_unit = 0 || a = 0
         return: 0
     f: l2_next_active(l2_cur_unit\first_field)
     while: f != 0 && f\value != item
         it: f\value
+        if: l2_receiver_frame(it, @ got) != 0 && l2_text_same(got, a) != 0
+            return: 1
         if: it != 0 && it\kind = c.LM_P0_NODE_FRAME && it\as != 0 && it\as\frame != 0 && it\as\frame\head != 0 && it\as\frame\body != 0
             if: l2_text_same(it\as\frame\head, a) != 0 && l2_merge_construction(it\as\frame) != 0
                 return: 1
@@ -4774,12 +4807,11 @@ return: l2_urm_n - 1
 
 # K03 NS-ROLES-1 (docs/LMX_semantics.en.md:666; Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q2): whether root item
 # `item`, its head resolving to nothing, is the reference binding `b: A` -- its tail one atom A the unit names as a
-# callable definition, above or below (a named Structure it defines, a qualified branch's root: visible both ways), or
-# as a Structure value bound above it (l2_unit_value_above).  A method as A is the next sub-checkpoint's (NS-ROLES-1b,
-# Codex -07 Q1: b holds the method's whole occurrence); until it, such a line keeps the definition it is (S5).  Read
-# from the source, as the unit role is, before anything is registered, and once per item: while it is being found the
-# item counts as no binding -- a definition -- so a cycle `x: y` / `y: x` has one answer, the first item's in source
-# order.
+# callable definition, above or below (a named Structure it defines, a qualified branch's root, a method: visible both
+# ways -- a method's whole occurrence, Codex -07 Q1), or as a Structure value bound above it (l2_unit_value_above).
+# Read from the source, as the unit role is, before anything is registered, and once per item: while it is being found
+# the item counts as no binding -- a definition -- so a cycle `x: y` / `y: x` has one answer, the first item's in
+# source order.
 fn: l2_unit_ref_bind (const: @(LmP0Frame fr); const: @(LmP0Node item)) int
     @: LmP0Text a l2_ref_tail_atom(fr)
     int: m
@@ -4790,7 +4822,7 @@ fn: l2_unit_ref_bind (const: @(LmP0Frame fr); const: @(LmP0Node item)) int
     if: m >= 0
         return: (cast: (int) (l2_urm_val[m] = 1))
     m: l2_urm_add(item)
-    if: l2_unit_defines_struct(a) != 0 || l2_unit_defines_branch(a) != 0 || l2_unit_value_above(a, item) != 0
+    if: l2_unit_names_method(a) != 0 || l2_unit_defines_struct(a) != 0 || l2_unit_defines_branch(a) != 0 || l2_unit_value_above(a, item) != 0
         got: 1
     if: m >= 0
         l2_urm_val[m]: got
@@ -7381,7 +7413,7 @@ fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out
                 \out_index: k
             if: out_outside != 0 && l2_own_unit_seen(k, mi) != 0
                 \out_outside: 1
-            if: l2_own_decl[k] != 0 && l2_mad_store_stmt(l2_own_decl[k]) != 0
+            if: l2_own_decl[k] != 0 && (l2_mad_store_stmt(l2_own_decl[k]) != 0 || l2_rb_meth_of(l2_own_decl[k]) >= 0)
                 return: 3
             return: 4
         k: l2_formal_find(mi, t)
@@ -7397,6 +7429,9 @@ fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out
                 \out_index: k
             if: out_outside != 0
                 \out_outside: 1
+            # K03 NS-ROLES-1b: the unit's binding `b: tick` seen from a method is a held callable there too.
+            if: l2_call_alias_own(mi, t) >= 0
+                return: 3
             return: 4
         k: l2_slot_find(mi, t)
         if: k >= 0
@@ -10879,7 +10914,8 @@ fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
     if: mi < 0 || t = 0
         return: 0 - 100
     k: l2_call_head_method(mi, t, @ formal)
-    if: k < 0 || formal < 0
+    # K03 NS-ROLES-1b: a binding `b: tick`, named bare or called, is a value of tick's result, as a callable formal is.
+    if: k < 0 || (formal < 0 && l2_call_alias_own(mi, t) < 0)
         return: 0 - 100
     if: l2_colon_ret_ty(k, @ ty) != 0 || l2_prim_code_name(ty) = 0
         return: 0 - 99
@@ -11477,7 +11513,7 @@ fn: l2_colon_check_assignment (const: @(LmP0Node stmt); int: mi; const: @(char p
     # Structure (K03 NS-ROLES-1, l2_rb_find; docs/LMX_semantics.en.md:666, :835, L2_spec_en.md:206: `b: args` applies the
     # bound Structure, it is not a rebinding).  A formal is not: a nonprimitive formal is a reference binding whichever
     # way its signature spells it, and `v: w` is its rebinding (l2_check_receiving_value; the admission at emission).
-    if: l2_colon_is_graph_ty(target_ty) != 0 && l2_formal_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && (l2_own_is_slot(l2_own_visible(mi, stmt\as\frame\head)) != 0 || l2_rb_find(l2_own_decl[l2_own_visible(mi, stmt\as\frame\head)]) != 0)
+    if: l2_colon_is_graph_ty(target_ty) != 0 && l2_formal_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) >= 0 && (l2_own_is_slot(l2_own_visible(mi, stmt\as\frame\head)) != 0 || (l2_rb_find(l2_own_decl[l2_own_visible(mi, stmt\as\frame\head)]) != 0 && l2_rb_meth_of(l2_own_decl[l2_own_visible(mi, stmt\as\frame\head)]) < 0))
         return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
 return: l2_check_receiving_value(stmt, stmt\as\frame\body\first_field, n, target_ty, l2_graph_nsty(mi, stmt\as\frame\head), stmt\as\frame\head, mi, path)
 
@@ -11550,6 +11586,11 @@ fn: l2_own_call_origin (int: own) int
     int: origin l2_own_layout(own)
     if: origin < 0
         origin: l2_own_copy_origin(own)
+    # K03 NS-ROLES-1b: a binding `b: A` to a named Structure itself holds exactly A (no rebinding form yet): its
+    # execution is A's.  A binding to a value of a named model holds what that value holds, which may be a Structure
+    # admitted by name -- executed as a Structure formal's would be, not yet.
+    if: origin < 0 && own >= 0 && own < l2_own_n && l2_own_decl[own] != 0 && l2_rb_meth_of(l2_own_decl[own]) = -2
+        origin: l2_own_nsty_get(own)
     if: origin < 0 || origin >= l2_ns_n || l2_ns_proc[origin] < 0
         return: -1
 return: origin
@@ -11941,6 +11982,9 @@ fn: l2_empty_struct_assign_shape (const: @(LmP0Node stmt); int: mi) int
     # actuals, checked against its header as any call of it is.
     if: l2_call_head_held(mi, fr\head) >= 0
         return: 0
+    # K03 NS-ROLES-1b: so is a binding `b: tick` -- `b()` is tick's call on the occurrence b holds.
+    if: l2_call_alias_own(mi, fr\head) >= 0
+        return: 0
     oi: l2_own_find(mi, fr\head)
     if: oi >= 0 && l2_own_decl[oi] != stmt
         return: l2_colon_is_graph_ty(l2_ft_of_own(l2_own_ty[oi]))
@@ -12194,7 +12238,7 @@ fn: l2_local_ns_shape (const: @(LmP0Node stmt); int: mi) int
     # Structure value at the site -- is no definition of b (l2_ref_bind_site).
     if: l2_rb_find(stmt) != 0 || l2_local_absent_def(stmt, mi) = 0
         return: 0
-    if: stmt\as != 0 && stmt\as\frame != 0 && l2_ref_tail_atom(stmt\as\frame) != 0 && l2_ref_tail_kind(mi, l2_ref_tail_atom(stmt\as\frame), @ w) != 0
+    if: stmt\as != 0 && stmt\as\frame != 0 && l2_ref_tail_atom(stmt\as\frame) != 0 && l2_ref_tail_kind(mi, l2_ref_tail_atom(stmt\as\frame), @ w, 0) != 0
         return: 0
 return: 1
 
@@ -12243,16 +12287,19 @@ return: 1
 
 # K03 NS-ROLES-1: what the one atom a names at the current site in method mi, for the reference binding (the one
 # resolution, l2_head_resolve): 5 a named Structure, 4 a Structure value of a named model -- an own field, a formal
-# (the word of the model into *out_word for both; a named Structure's is a itself) --, 6 a Structure value of no named
-# model (a merge result), 0 anything else (a datum, an unknown name: the definition route).  A callable occurrence (a
-# method, a held callable) is NS-ROLES-1b's (Codex -07 Q1); until it, 0: the definition S5 reads.
-fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word) int
+# (the word of the model into *out_word for both; a named Structure's is a itself) --, 2 a method, whose occurrence the
+# binding holds (Codex -07 Q1; *out_meth the method, *out_word a), 8 a held callable (a callable formal, a held
+# callable merge, a C function local: not built yet), 6 a Structure value of no named model (a merge result), 0
+# anything else (a datum, an unknown name: the definition route).
+fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: int out_meth) int
     int: k
     int: idx -1
     int: own
     int: model -1
     if: out_word != 0
         \out_word: 0
+    if: out_meth != 0
+        \out_meth: -1
     if: a = 0
         return: 0
     k: l2_head_resolve(mi, a, @ idx, 0)
@@ -12260,6 +12307,14 @@ fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word) int
         if: out_word != 0
             \out_word: (cast: (@: LmP0Text) a)
         return: 5
+    if: k = 2 && idx >= 0
+        if: out_word != 0
+            \out_word: (cast: (@: LmP0Text) a)
+        if: out_meth != 0
+            \out_meth: idx
+        return: 2
+    if: k = 3
+        return: 8
     if: k != 4
         return: 0
     own: l2_resolved_own(mi, a)
@@ -12285,11 +12340,13 @@ return: 4
 # item by its unit role (l2_unit_ref_bind, read from the source), a statement of a block of the root by the resolution
 # at its place, a method's statement by the definition route's own test (l2_local_absent_def).  7: the root's source
 # reading and the site disagree -- said by the collection, never taken silently.
-fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word) int
+fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word; @: int out_meth) int
     @: LmP0Text a
     int: k
     if: out_word != 0
         \out_word: 0
+    if: out_meth != 0
+        \out_meth: -1
     if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || mi < 0
         return: 0
     a: l2_ref_tail_atom(stmt\as\frame)
@@ -12298,7 +12355,7 @@ fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word) i
     if: mi = l2_e && l2_unit_item(stmt) != 0
         if: l2_head_absent(stmt\as\frame\head, stmt) = 0 || l2_retained_body(stmt\as\frame) = 0 || l2_unit_ref_bind(stmt\as\frame, stmt) = 0
             return: 0
-        k: l2_ref_tail_kind(mi, a, out_word)
+        k: l2_ref_tail_kind(mi, a, out_word, out_meth)
         if: k = 0
             return: 7
         return: k
@@ -12308,11 +12365,11 @@ fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word) i
     if: mi = l2_e
         if: l2_ident(stmt\as\frame\head) = 0 || l2_head_resolve(mi, stmt\as\frame\head, 0, 0) != 0 || l2_retained_body(stmt\as\frame) = 0
             return: 0
-        return: l2_ref_tail_kind(mi, a, out_word)
+        return: l2_ref_tail_kind(mi, a, out_word, out_meth)
     ---
     if: l2_local_absent_def(stmt, mi) = 0
         return: 0
-return: l2_ref_tail_kind(mi, a, out_word)
+return: l2_ref_tail_kind(mi, a, out_word, out_meth)
 
 # The atom A of a reference binding's statement, the place its limits are said at.
 fn: l2_ref_tail_node (const: @(LmP0Node stmt)) const: @: LmP0Node
@@ -13198,6 +13255,7 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
     int: cj
     int: letni
     int: retained
+    int: rbm
     if: body = 0 || mi < 0
         return: 0
     field: l2_next_active(body\first_field)
@@ -13233,11 +13291,18 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             continue
         # K03 NS-ROLES-1 (Codex K03-S5-MIGRATION-20261007-06 (b); docs/LMX_semantics.en.md:666): the absent-b reference
         # binding `b: A` (l2_ref_bind_site) is kept here, before any reader of the statement, and declares b as the
-        # reference `@: M b A` would (l2_rb_declaration) -- the reference rows below take it.  A reference to a merge
-        # result is not built yet: said at A.
-        k: l2_ref_bind_site(stmt, mi, @ fa)
-        if: (k = 5 || k = 4) && l2_rb_add(stmt, fa) != 0
+        # reference `@: M b A` would (l2_rb_declaration) -- the reference rows below take it; a binding to a method
+        # holds its occurrence (NS-ROLES-1b).  A reference to a merge result or to a held callable is not built yet: said
+        # at A.
+        k: l2_ref_bind_site(stmt, mi, @ fa, @ rbm)
+        if: k = 5 && l2_rb_add(stmt, fa, -2) != 0
             return: l2_alloc_or(path, stmt, "out of memory")
+        if: k = 4 && l2_rb_add(stmt, fa, -1) != 0
+            return: l2_alloc_or(path, stmt, "out of memory")
+        if: k = 2 && l2_rb_add(stmt, fa, rbm) != 0
+            return: l2_alloc_or(path, stmt, "out of memory")
+        if: k = 8
+            return: l2_error(path, l2_ref_tail_node(stmt), "a reference binding to a held callable is not built yet")
         if: k = 6
             return: l2_error(path, l2_ref_tail_node(stmt), "a reference binding to a merge result is not built yet")
         if: k = 7
@@ -13515,6 +13580,7 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
     int: ty
     int: slot_no
     int: retained
+    int: rbm
     if: body = 0 || sn = 0
         return: 0
     field: l2_next_active(body\first_field)
@@ -13529,8 +13595,12 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
         # made after every Structure it may name is registered; a method's binding is kept by its collection
         # (l2_collect_asgn_body), which comes after that too.
         if: mi = l2_e
-            j: l2_ref_bind_site(stmt, mi, @ fa)
-            if: (j = 5 || j = 4) && l2_rb_add(stmt, fa) != 0
+            j: l2_ref_bind_site(stmt, mi, @ fa, @ rbm)
+            if: j = 5 && l2_rb_add(stmt, fa, -2) != 0
+                return: l2_alloc_or(path, stmt, "out of memory")
+            if: j = 4 && l2_rb_add(stmt, fa, -1) != 0
+                return: l2_alloc_or(path, stmt, "out of memory")
+            if: j = 2 && l2_rb_add(stmt, fa, rbm) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
         ---
         if: retained >= 0 && l2_nsf_kind[retained] = 2
@@ -16168,6 +16238,9 @@ return: l2_define_count(application\extent)
 
 fn: l2_own_decl_name (const: @(LmP0Node stmt)) @: LmP0Text
     @: L2Declaration application l2_declaration(stmt)
+    # K03 NS-ROLES-1b: a binding `b: tick` declares b.
+    if: l2_rb_meth_of(stmt) >= 0 && stmt\as != 0 && stmt\as\frame != 0
+        return: stmt\as\frame\head
     if: application = 0
         return: 0
 return: application\name
@@ -16231,6 +16304,9 @@ return: l2_error(path, extra\value, "a declaration takes one value")
 
 fn: l2_own_decl_ty (const: @(LmP0Node stmt)) int
     @: L2Declaration application l2_declaration(stmt)
+    # K03 NS-ROLES-1b: a binding `b: tick` declares a reference cell holding tick's occurrence.
+    if: l2_rb_meth_of(stmt) >= 0
+        return: l2_own_ty_of_param(l2_graph_ft())
     if: application = 0
         return: 0
     # Under a type word alone, a tail that is not one operand declares nothing (a call, a statement).  A declaration
@@ -23534,7 +23610,13 @@ fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     int: fi
     int: m
     int: ty
+    int: k
     \out_fi: -1
+    # K03 NS-ROLES-1b: a field bound by `b: tick` -- the site's own, or the unit's seen from a method -- calls tick, on
+    # the occurrence it holds (l2_call_alias_own); another own field blocks every outer callable of its name.
+    k: l2_call_alias_own(mi, head)
+    if: k >= 0
+        return: l2_rb_meth_of(l2_own_decl[k])
     if: l2_resolved_own(mi, head) >= 0
         return: -1
     fi: l2_formal_find(mi, head)
@@ -23549,6 +23631,18 @@ fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
         \out_fi: 0 - 1
     ---
 return: m
+
+# K03 NS-ROLES-1b: the field a call head names at its site in method mi when a binding `b: tick` declared it -- the
+# site's own row or, in a method, the unit's field it sees (l2_own_visible; there its value is the method's hidden
+# input, Q52) -- or -1.  The call is tick's on the occurrence the field holds.
+fn: l2_call_alias_own (int: mi; const: @(LmP0Text head)) int
+    int: k
+    if: mi < 0 || head = 0 || l2_formal_find(mi, head) >= 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
+        return: -1
+    k: l2_own_visible(mi, head)
+    if: k < 0 || l2_own_decl[k] = 0 || l2_rb_meth_of(l2_own_decl[k]) < 0
+        return: -1
+return: k
 
 # D-106: does a call head inside method mi name a callable formal of mi?
 fn: l2_head_is_callable_formal (int: mi; const: @(LmP0Text head)) int
@@ -31863,6 +31957,12 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
         if: idx >= 0
             return: l2_tok_formal(mi, idx, dest)
         ---
+        # K03 NS-ROLES-1b: a binding `b: tick` named as a value is tick's result -- its call with no arguments, on the
+        # occurrence b holds (as a method named as a value, below).
+        if: l2_call_alias_own(mi, node\as\atom) >= 0
+            if: l2_emit_alias_self(l2_call_alias_own(mi, node\as\atom), mi, ind) != 0
+                return: 1
+            return: l2_emit_call(node, l2_rb_meth_of(l2_own_decl[l2_call_alias_own(mi, node\as\atom)]), 1, 0 - 1, 0, mi, ind, dest, 0)
         # D-10 (steps/defects.md): the l2_own_find fallback here was dead --
         # see l2_check_sizeof's copy of this reasoning above.
         idx: l2_own_visible(mi, node\as\atom)
@@ -31985,6 +32085,13 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
             ---
         ---
     ---
+    # K03 NS-ROLES-1b: through a binding `b: tick` -- tick's call on the occurrence b holds now, the path call's self.
+    if: idx < 0 && l2_call_alias_own(mi, call\head) >= 0
+        if: l2_emit_alias_self(l2_call_alias_own(mi, call\head), mi, ind) != 0
+            return: 1
+        idx: l2_rb_meth_of(l2_own_decl[l2_call_alias_own(mi, call\head)])
+        l2_call_sel: 1
+    ---
     if: idx < 0 && l2_text_eq(call\head, "length") && l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) = 0
         return: l2_emit_arr_operand(mi, lpd, lpn, lkind, lelem, ldepth, li0, 0U, 1, ind, node, dest)
     if: idx < 0 && l2_text_eq(call\head, "length")
@@ -32051,6 +32158,28 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
     if: idx < 0
         return: l2_said_or(l2_src, node, d0, "internal: a call the emitter does not know")
 return: l2_emit_call(node, idx, l2_call_sel, l2_call_fi, call\body, mi, ind, dest, 0)
+
+# K03 NS-ROLES-1b: l2_pst := the occurrence own field oi (a binding `b: tick`) holds now -- in a method that sees the
+# unit's binding, its hidden input's value (Q52, as a held callable's, l2_prep_held_call); else the field's working
+# value, or a load of its cell -- for a call whose self it is (sel 1).  The binding stored an occurrence, so none is an
+# invariant.
+fn: l2_emit_alias_self (int: oi; int: mi; const: @(char ind)) int
+    []: char root_own 64
+    L2Tx: root_tx
+    @: L2Tx root l2_tx_local(@ root_tx, root_own, 64U)
+    if: mi != l2_e && l2_own_mi[oi] != mi && l2_param_find(mi, l2_own_name[oi]) >= 0
+        if: l2_tok_formal(mi, l2_param_find(mi, l2_own_name[oi]), root) != 0
+            return: 1
+        if: c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) %s)\n%sif: l2_pst = 0\n", ind, root\data, ind) < 0
+            return: 1
+        return: l2_emit_invariant(ind, "a reference binding holds no callable occurrence")
+    if: l2_own_cached(l2_work_mi, oi) != 0 && l2_own_load(oi, root) != 0
+        return: 1
+    if: l2_own_cached(l2_work_mi, oi) = 0 && l2_emit_path_load(mi, oi, ind, root) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_pst: (cast: (@: Lmx) %s)\n%sif: l2_pst = 0\n", ind, root\data, ind) < 0
+        return: 1
+return: l2_emit_invariant(ind, "a reference binding holds no callable occurrence")
 
 # THE CALL (FABLE-OPUS-RECEIVER-CONTRACT-20260924-139).  One emission for every spelling of a call
 # of the resolved callee idx: l2_prep's call Frame, and a bare atom statement, which has no
@@ -34222,6 +34351,9 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: node\kind != c.LM_P0_NODE_ATOM || node\as = 0
         return: 0 - 1
     t: node\as\atom
+    # K03 NS-ROLES-1b: a binding `b: tick` named bare is tick's call: its result's type.
+    if: l2_call_alias_own(l2_rw_mi, t) >= 0
+        return: l2_rw_call_ty(l2_rb_meth_of(l2_own_decl[l2_call_alias_own(l2_rw_mi, t)]))
     # A held callable's bare name received as its result has the type of that result.
     if: l2_held_result_site(node) != 0
         return: l2_mad_held_ret_ty(l2_call_head_held(l2_rw_mi, t))
@@ -39110,6 +39242,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
     int: hid
     int: dynn
     int: sneed
+    int: alias -1
     L2ReferenceSource: reference_source
     int: guarded l2_rw_conv_guarded
     l2_rw_conv: 0
@@ -39120,6 +39253,11 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
         if: node\kind = c.LM_P0_NODE_ATOM
             head: node\as\atom
         if: formal_call < 0 && head != 0 && l2_find_method(head) < 0 && l2_head_method(head) = idx
+            path_call: 1
+            call_op: "LMX_WALK_OP_EXEC"
+        # K03 NS-ROLES-1b: through a binding `b: tick` -- EXEC on the occurrence b holds now.
+        if: formal_call < 0 && head != 0 && l2_call_alias_own(l2_rw_mi, head) >= 0
+            alias: l2_call_alias_own(l2_rw_mi, head)
             path_call: 1
             call_op: "LMX_WALK_OP_EXEC"
         ---
@@ -39218,7 +39356,16 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
             return: 1
         ---
     else:
-        if: path_call != 0 && l2_rw_call_path(node, head, \out) != 0
+        # The unit's binding seen from a walked method is its hidden input (Q52): ARG, as a held name's is.
+        if: alias >= 0 && l2_rw_mi != l2_e && l2_own_mi[alias] != l2_rw_mi && l2_param_find(l2_rw_mi, l2_own_name[alias]) >= 0
+            if: l2_rw_arg_fb(\out, l2_param_find(l2_rw_mi, l2_own_name[alias]), @ arg) != 0 || l2_rw_put(\out, 2, arg) != 0
+                return: 1
+            ---
+        if: alias >= 0 && (l2_rw_mi = l2_e || l2_own_mi[alias] = l2_rw_mi || l2_param_find(l2_rw_mi, l2_own_name[alias]) < 0)
+            if: l2_rw_own(\out, alias, @ arg) != 0 || l2_rw_put(\out, 2, arg) != 0
+                return: 1
+            ---
+        if: alias < 0 && path_call != 0 && l2_rw_call_path(node, head, \out) != 0
             return: 1
         ---
     ---
@@ -39954,6 +40101,10 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
             idx: l2_call_head_method(l2_rw_mi, t, @ formal)
             return: l2_rw_call(node, idx, formal, 0, parent, out)
         return: l2_rw_arg_fb(parent, l2_param_find(l2_rw_mi, t), out)
+    # K03 NS-ROLES-1b: a binding `b: tick` named alone is tick's call with no actuals (l2_rw_call: EXEC on the occurrence
+    # b holds).
+    if: l2_call_alias_own(l2_rw_mi, t) >= 0
+        return: l2_rw_call(node, l2_rb_meth_of(l2_own_decl[l2_call_alias_own(l2_rw_mi, t)]), -1, 0, parent, out)
     oi: l2_rw_own_row(node, t)
     if: oi = 0 - 1
         return: 1
@@ -42048,6 +42199,18 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         if: l2_rw_machine_declaration(stmt, machine_name, into, @ node) != 0 || l2_rw_put(into, slot, node) != 0
             return: 1
         \made: 1
+        return: 0
+    # K03 NS-ROLES-1b: a binding `b: tick` writes tick's occurrence into b's cell -- the callable actual's resolution
+    # (l2_rw_callable_actual), as a callable formal receives it; tick runs not.
+    if: l2_rb_meth_of(stmt) >= 0
+        oi: l2_own_ref_decl(stmt, l2_rw_mi)
+        if: oi < 0
+            return: l2_error(l2_src, stmt, "internal: a reference binding to a method has no cell")
+        if: l2_rw_write(into, oi, l2_rw_bind_op(oi), @ node, @ k) != 0 || l2_rw_callable_actual(l2_next_active(stmt\as\frame\body\first_field), 1, node, @ t) != 0 || l2_rw_put(node, k, t) != 0
+            return: 1
+        \made: 1
+        if: l2_rw_put(into, slot, node) != 0
+            return: 1
         return: 0
     # A reached reference declaration writes its admitted candidate (default
     # zero) through the same receiving/store route as later assignments.
@@ -48130,8 +48293,16 @@ return: l2_emit_ns_exec_at(ni, mi, node, ind, at)
 fn: l2_emit_local_exec (int: oi; int: mi; const: @(LmP0Node node); const: @(char ind)) int
     []: char slot 256
     []: char at 320
+    []: char load_own 64
+    L2Tx: load_tx
+    @: L2Tx load l2_tx_local(@ load_tx, load_own, 64U)
     if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0 && c.sprintf(at, "(cast: (@: Lmx) l2_q%d)", oi) < 0
         return: 1
+    # K03 NS-ROLES-1b: a reference cell -- a binding `b: A` -- holds the Structure: its load, not a slot's.
+    if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && l2_own_is_slot(oi) = 0
+        if: l2_emit_path_load(mi, oi, ind, load) != 0 || c.snprintf(at, 320U, "(cast: (@: Lmx) %s)", load\data) < 0
+            return: 1
+        return: l2_emit_ns_exec_at(l2_own_call_origin(oi), mi, node, ind, at)
     if: (mi != l2_work_mi || l2_own_cached(mi, oi) = 0) && (l2_own_slot_at(oi, slot) != 0 || c.sprintf(at, "lmx_arena_ref_struct(%s)", slot) < 0)
         return: 1
 return: l2_emit_ns_exec_at(l2_own_call_origin(oi), mi, node, ind, at)
@@ -48208,6 +48379,11 @@ fn: l2_eval_discard (@: LmP0Field field; int: span; int: mi; const: @(char ind))
         idx: l2_atom_callee(e\as\atom, mi, @ fi)
         if: idx >= 0 && fi >= 0
             return: l2_emit_call(e, idx, 2, fi, 0, mi, ind, l2_tok, 0)
+        # K03 NS-ROLES-1b: a binding `b: tick` named alone -- tick's call on the occurrence b holds.
+        if: idx >= 0 && l2_call_alias_own(mi, e\as\atom) >= 0
+            if: l2_emit_alias_self(l2_call_alias_own(mi, e\as\atom), mi, ind) != 0
+                return: 1
+            return: l2_emit_call(e, idx, 1, 0 - 1, 0, mi, ind, l2_tok, 0)
         if: idx >= 0
             return: l2_emit_call(e, idx, 0, 0 - 1, 0, mi, ind, l2_tok, 0)
         # A held callable named alone is its call with no actuals: the emission of `p0()`.
@@ -48465,6 +48641,16 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         si: -1
         fi: -1
         sl: -1
+        # K03 NS-ROLES-1b: a binding `b: tick` stores tick's occurrence in b's cell -- the unit's occurrence of tick, as
+        # a callable formal receives it (l2_cf_actual_emit); tick runs not.
+        if: l2_rb_meth_of(stmt) >= 0
+            oi: l2_own_ref_decl(stmt, mi)
+            if: oi < 0
+                return: l2_error(l2_src, stmt, "internal: a reference binding to a method has no cell")
+            if: l2_tok_method_occ(l2_rb_meth_of(stmt), l2_tok) != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
+                return: 1
+            field: l2_next_active(field\next)
+            continue
         # A reached reference declaration evaluates/admit its candidate before
         # binding the existing cell. Omission is zero on every execution.
         oi: l2_own_ref_decl(stmt, mi)

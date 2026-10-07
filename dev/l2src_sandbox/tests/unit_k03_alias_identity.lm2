@@ -1,0 +1,28 @@
+# K03 NS-ROLES-1b (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q1, K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md
+# :666, :722): for absent b, `b: tick` with tick a method binds b to tick's whole occurrence -- no wrapper, nothing
+# runs at the binding; `b: args` and `b(args)` call tick, with its signature, on the occurrence b holds.
+# The occurrence b holds is tick's own: a call through b leaves its field last where tick\last reads it.  Exit 7;
+# 81/82/84 if a call ran elsewhere.  Two bindings of the one occurrence are two cells: 83 if @b = @c.
+fn: tick (int: n) int
+    int: last
+    last: n
+    return: n + 1
+end: tick
+fn: m () int
+    tick(1)
+    if: tick\last != 1
+        return: 81
+    b: tick
+    c: tick
+    if: @b = @c
+        return: 83
+    b(5)
+    if: tick\last != 5
+        return: 82
+    c(6)
+    if: tick\last != 6
+        return: 84
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

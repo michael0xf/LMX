@@ -1,0 +1,18 @@
+# K03 NS-ROLES-1b (Codex K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md:666, :668): after `box: Model` the
+# application of box is Model's -- `box()` and the bare `box` run Model's body as `Model()` does (an argument is
+# refused: an ordinary named Structure takes none); nothing runs at the binding.
+# At the root.  Exit 7; 81 otherwise.
+int: hits 0
+Model:
+    int: v 1
+    node\hits: node\hits + 1
+end: Model
+box: Model
+box()
+fn: m () int
+    if: node\hits != 1
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

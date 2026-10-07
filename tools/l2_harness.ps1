@@ -4891,7 +4891,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_def_callable_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_def_callable_body_walk.lm2'; Source = 'unit_k03_def_callable_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_def_send_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_def_send_block_walk.lm2'; Source = 'unit_k03_def_send_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -5034,6 +5034,63 @@ $fixtures = @(
         Needle = 'unit_k03_vis_later_frame_call_refused.lm2:5:1: more arguments than Later has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_later_frame_call_refused_walk.lm2'; Source = 'unit_k03_vis_later_frame_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_vis_later_frame_call_refused_walk.lm2:5:1: more arguments than Later has formals'; Absent = @(); Debt = @() },
+    # K03 NS-ROLES-1b (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q1, K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md
+    # :666, :722; steps/fable-continuation-20261003.md section 113): `b: tick`, b absent and tick a method, binds b to
+    # tick's whole occurrence -- nothing runs at the binding; `b: args`, `b(args)`, `b()` and the bare b call tick with
+    # its signature on the occurrence b holds (natively the path call's self from b's working value or, in a method
+    # that sees the unit's binding, from its hidden input; walked an EXEC on b's own field or that input: pinned, one
+    # match per call), at the root, in a method and its blocks; tick's own field is the one the call through b wrote;
+    # two bindings of one occurrence are two cells.  After `box: Model`, `box()` and the bare box run Model's body as
+    # `Model()` does.  A held callable as A -- a callable formal, or a binding `c: b` to one -- is not built yet, said at
+    # A.  The twins: --walk-methods.
+    [pscustomobject]@{ Name = 'unit_k03_alias_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_method_walk.lm2'; Source = 'unit_k03_alias_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_root_walk.lm2'; Source = 'unit_k03_alias_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_root_seen.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_p\d+_\d+\).*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_root_seen_walk.lm2'; Source = 'unit_k03_alias_root_seen.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_ARG, .*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_block_walk.lm2'; Source = 'unit_k03_alias_block.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN_OF, .*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_bare_walk.lm2'; Source = 'unit_k03_alias_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){3}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?ms)(?:^\s*l2_pst: \(cast: \(@: Lmx\) l2_q\d+\).*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_identity_walk.lm2'; Source = 'unit_k03_alias_identity.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?s)(?:lmx_call_prim\(l2_program_arena, \(cast: \(@: Lmx\) l2_q\d+\), \(cast: \(@: Lmx\) l2_q\d+\), 0, 0U, 0, @ l2_nso\d+\).*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec_walk.lm2'; Source = 'unit_k03_alias_struct_exec.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){2}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativePatterns = @('(?s)(?:lmx_call_prim\(l2_program_arena, \(cast: \(@: Lmx\) l2_q\d+\), \(cast: \(@: Lmx\) l2_q\d+\), 0, 0U, 0, @ l2_nso\d+\).*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_struct_exec_root_walk.lm2'; Source = 'unit_k03_alias_struct_exec_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativePatterns = @('(?s)(?:@: Lmx (?<e>l2_rw\d+) lmx_walk_frame\([^)]*c\.LMX_WALK_OP_EXEC, \d+U\)\s+if: \k<e> = 0\s+return: 1\s+@: Lmx l2_rw\d+ lmx_walk_frame\(l2_program_arena, l2_rw_roles, \k<e>, c\.LMX_WALK_OP_OWN, .*?){1}'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_alias_arity_refused.lm2:12:5: b has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_arity_refused_walk.lm2'; Source = 'unit_k03_alias_arity_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_alias_arity_refused_walk.lm2:12:5: b has no argument n'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_held_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_alias_held_limit_refused.lm2:9:8: a reference binding to a held callable is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_held_limit_refused_walk.lm2'; Source = 'unit_k03_alias_held_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_alias_held_limit_refused_walk.lm2:9:8: a reference binding to a held callable is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_chain_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_alias_chain_limit_refused.lm2:12:8: a reference binding to a held callable is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_chain_limit_refused_walk.lm2'; Source = 'unit_k03_alias_chain_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_alias_chain_limit_refused_walk.lm2:12:8: a reference binding to a held callable is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_root_chain_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_alias_root_chain_limit_refused.lm2:11:4: a reference binding to a held callable is not built yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_alias_root_chain_limit_refused_walk.lm2'; Source = 'unit_k03_alias_root_chain_limit_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_alias_root_chain_limit_refused_walk.lm2:11:4: a reference binding to a held callable is not built yet'; Absent = @(); Debt = @() },
     # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
     # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
     # task changes stays 0 through the receiving call and is changed once by the explicit invocation.
@@ -9749,7 +9806,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_factory_short_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Says = @('DONE'); NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_walk_factory_short_dormant.lm2'; Source = 'unit_factory_short_dormant.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Says = @('DONE'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2,3); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+        Says = @('DONE'); WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(2); NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_factory_short_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_factory_short_args_refused.lm2:11:7: makeAdder has no argument n'; Absent = @(); Debt = @() },
     # Parity native for D-04 (walker FIXED -140): extra Structure arg to nullary.

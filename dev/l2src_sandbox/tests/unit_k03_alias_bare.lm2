@@ -1,0 +1,24 @@
+# K03 NS-ROLES-1b (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q1, K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md
+# :666, :722): for absent b, `b: tick` with tick a method binds b to tick's whole occurrence -- no wrapper, nothing
+# runs at the binding; `b: args` and `b(args)` call tick, with its signature, on the occurrence b holds.
+# The binding named alone is the method's call with no actuals, as the method's name is: c as a value gives two's
+# result, `c` and `c()` as statements call two.  Exit 7; 81 if the binding ran two, 82/83 otherwise.
+int: ticks 0
+fn: two () int
+    node\ticks: node\ticks + 10
+    return: 2
+end: two
+fn: m () int
+    c: two
+    if: node\ticks != 0
+        return: 81
+    if: c != 2
+        return: 82
+    c
+    c()
+    if: node\ticks != 30
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

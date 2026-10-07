@@ -1,0 +1,16 @@
+# K03 NS-ROLES-1b (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q1, K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md
+# :666, :722): for absent b, `b: tick` with tick a method binds b to tick's whole occurrence -- no wrapper, nothing
+# runs at the binding; `b: args` and `b(args)` call tick, with its signature, on the occurrence b holds.
+# A call through b meets tick's signature: b() gives tick no n -- refused at the call, as tick() would be.
+int: ticks 0
+fn: tick (int: n) int
+    node\ticks: node\ticks + n
+    return: n + 1
+end: tick
+fn: m () int
+    b: tick
+    b()
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

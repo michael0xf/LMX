@@ -11492,3 +11492,108 @@ this implementation, not an author decision.  The open question, the measured re
 | `build/l2_harness/opus_full_49` (full harness) | RED39/2248: against `opus_full_48` FAIL→OK 0, OK→FAIL 0, added 38 (all OK: the rows of this slice), removed 0; of the 2210 common targets one changed its message -- `unit_ref_absent_colon`, the 1c limit above -- besides the two identifiers that change in every run (the translator's sha256, the unit hash of the two library rows). The 22 declared paths were hashed before the run; every staged copy is the declared bytes. |
 | Focused runs on the same bytes | `opus_focus_n1a_01` 97 targets: 2 red on walked-method pins (corrected: `unit_k03_ref_local`'s own Structure's procedure keeps its native word; `unit_k03_vis_unit_declares_tail`'s twin walks two methods now) -- `opus_focus_n1a_02` 7 targets, 0 failed. |
 | Replay of `opus_full_48`'s 2209 recorded translations | 3 rows differ, named above; the rest byte-identical. |
+
+<a id="ns-roles-1b"></a>
+## 113. `b: tick` binds b to a method's whole occurrence; the application through a binding (K03 NS-ROLES-1b)
+
+Codex's K03-S5-ALIAS-VISIBILITY-20261007-07 Q1 -- a method is a callable Structure, and `b: tick` (b absent) binds b to
+tick's whole occurrence by the same reference rule as a Structure's: its signature, native code and body are tick's,
+the cell is b's own, there is no wrapper, and nothing runs at the binding -- and K03-NS-ROLES-NEXT-20261007-09 (no final
+alias claim while the method tail kept S5's wrapper reading; ordinary application through the binding).  The rule:
+docs/LMX_semantics.en.md:666 ("Subsequently b: args applies the Structure"), :722 ("Applying b: args to a callable
+Structure remains a call"), L2_spec_en.md:206.  The scope is NS-ROLES-1a's: the root, a block of the root, a method and
+its blocks.
+
+What changed in `l2trans.lm1`:
+
+- What A is, at its site (`l2_ref_tail_kind`): a method (the one resolution's kind 2) is a referent -- the binding keeps
+  the method in its registry entry (`l2_rb_meth`); at the root the source reading takes a method the unit names, both
+  ways, as a genuine `fn`/`sub` declaration is visible (`l2_unit_ref_bind`).  A held callable as A -- a callable
+  formal, a held callable merge, a C function local, or a binding `c: b` whose b holds a method (kind 3) -- is "a
+  reference binding to a held callable is not built yet", said at A: the occurrence such a name holds is known only
+  when it runs (a formal's is the caller's, and a call through it forms its hidden inputs by the formal's classes, K04),
+  which a binding does not carry yet.
+- The binding's row is a reference cell (`l2_own_decl_ty`: the graph reference type; `l2_own_decl_name`: b); no
+  declaration record is made for it (`l2_rb_declaration` gives none: there is no model to admit).  Its store is the
+  method's occurrence, as a callable formal receives one -- natively `l2_tok_method_occ`, walked
+  `l2_rw_callable_actual` -- and nothing is called.  Two bindings of one occurrence are two cells (`@b != @c`).
+- A call through the binding: `l2_head_resolve` reads b as a held callable (3) -- b's own field, or the unit's binding
+  seen from a method; `l2_call_head_method` gives the method for b's head through `l2_call_alias_own` (the check is
+  then the method's call, by its signature: "b has no argument n"); natively the call's self is the occurrence b
+  holds (`l2_emit_alias_self`: b's working value or a load of its cell; in a method that sees the unit's binding, the
+  method's hidden input, as for a held callable -- Q52, `l2_prep_held_call`), walked an EXEC on b's own field or on
+  that input (`l2_rw_call`).  `b: args`, `b(args)`, `b()` (`l2_empty_struct_assign_shape` leaves b to the call) and
+  the bare b, as a statement (`l2_eval_discard`) or a value (`l2_prep`, the walker's operand; its type the method's
+  result: `l2_native_cf_ty`, `l2_rw_opty`), are that call.
+- A binding to a named Structure itself executes it (`l2_own_call_origin`: the registry's -2): `box()` and the bare
+  box run Model's body over the Structure box holds, as `Model()` does -- natively over the load of box's cell
+  (`l2_emit_local_exec`), walked the EXEC the root's fields already take.  A binding to a value of a named model holds
+  what that value holds, possibly a Structure admitted by name: its execution keeps the refusal a Structure formal's
+  has, until executing an admitted value is settled.
+- `b: args` after a Structure's binding stays the application's arity refusal (NS-ROLES-1a); after a method's binding it
+  is the method's call.
+- The bare method name as a definition's tail is gone with it (S5's wrapper reading, the debt NS-ROLES-1a disclosed):
+  `b: tick` is the binding wherever 1a's `b: A` is; a definition whose tail applies a method (`c: tick()`, Q58) still
+  retains that application and runs nothing.
+
+Scope recorded (Codex K03-NAMED-DEFINITION-BOUNDARY-20261007-10, K03-DEFINITION-PAUSED-SCOPE-20261007-11): which
+occurrence of an unknown head defines a named Structure is an open author question
+(`LMX_blog/q/current/named-definition-boundary.md`); until the answer, new work on forward ordinary Structures and on
+qualified branches' roots below their use is paused with it (a receiver-declared `(): cfg` settles its defining
+occurrence, not its visibility above its declaration), and the 12 provisional fixtures listed there (22 rows) stay in
+the gate, disclosed.  No 1b witness uses a definition below its use: every method and Structure a binding names is
+declared above it.
+
+Evidence:
+
+- Replay of the 2247 recorded translations of `opus_full_49` with the final translator against 234bb50f's (the bytes of
+  83db2d4a): 4 rows differ, all in their L1 only.  `unit_k03_def_callable_body` and `unit_factory_short_dormant` with
+  their walked twins: `b: tick` and `s: shout` are bindings now, no definitions -- one procedure fewer, the walked
+  twins' pins re-pointed ((0,1,3,4) -> (0,1,3); (2,3) -> (2)); both programs still give 7 natively and walked (run),
+  and the second still says only DONE: nothing runs at a binding, and `c: tick()` / `t: shout()` keep Q58's dormant
+  application.  Their header comments are reworded, line counts kept.  Every other row -- the 12 provisional rows of
+  the open definition question among them -- byte-identical in L1, exit and messages.
+- Witnesses, natively and under `--walk-methods`, 24 rows: a method's binding in a method (`b(3)` = 4, then `b: 2`,
+  tick's counter 5), at the root (`got: b(3)`), at the root seen from a method (the hidden input), in a block of a
+  method; the bare binding as a statement, empty-applied and as a value (two's counter 30 after three calls); the
+  occurrence's own state through both names (`tick\last` after `b(5)`, `c(6)`) and two bindings in two cells
+  (`@b = @c` false); `box()` and the bare box after `box: Model` (Model's body twice in a method, once at the root);
+  the refusals: `b()` without tick's n ("12:5: b has no argument n"), a callable formal as A and the chain `c: b` in a
+  method and at the root (the held limit, at A).  Every positive runs to 7 natively and walked; nothing runs at a
+  binding (81 if it did).  The pins count one match per call through a binding: natively the self from b's working
+  value (`l2_q`) or from the method's hidden input (`l2_p`), the Structure's execution over box's working value;
+  walked an EXEC whose operand frame is b's own field (OWN, OWN_OF in a block) or the hidden input (ARG); the walked
+  twins pin their walked methods.
+- Mutants: each removes one rule whole, built from the final bytes one gcc at a time; the witnesses translated natively
+  and walked, the pins evaluated, the witnesses whose L1 changed and whose pins held run, the recorded translations
+  replayed.  Where only a pin is red the run cannot tell the routes apart: b holds tick's own occurrence, and the root's
+  binding read as the hidden input or from its cell is the same occurrence; the pin keeps the route the call takes.
+
+| Mutant | Red |
+| --- | --- |
+| b01 the root reads no method as A (a root `b: tick` a definition again) | 6 witness rows (`unit_k03_alias_root`: "tick has no argument n"; `_root_seen`: "a callable without a result has no value"; the root chain limit) and the two `unit_factory_short_dormant` rows (their L1 back to the wrapper) |
+| b02 a method as A no binding (S5's wrapper reading) | 18 witness rows (every method binding and both chains: "unknown method", "more arguments than b has formals", the internal disagreement at the root, ...) and 4 corpus rows |
+| b03 a held callable as A no limit | the held limit (accepted natively; walked the walker's callable-formal limit instead) and the 4 chain rows |
+| b04 a call through b not on b's occurrence (natively and walked) | 12 pin rows (every call site's self and EXEC); `unit_k03_def_callable_body`'s two L1 |
+| b05 b's call head resolves to no method | 14 witness rows ("unknown method", "unsupported body", ...) and 2 corpus rows |
+| b06 the binding's row no reference cell | 18 witness rows and 4 corpus rows |
+| b07 the bare binding as a value its cell | `unit_k03_alias_bare` and its twin ("root operation not walkable yet: a Structure-typed field") |
+| b08 `b()` read as a Structure's execution | `unit_k03_alias_bare` and its twin ("executing a named Structure is not supported yet") and 2 corpus rows |
+| b09 a Structure's binding not executed through b | the 4 Structure-execution rows ("executing a named Structure is not supported yet") |
+| b10 nothing stored at the binding | the 12 method-binding runs (natively "invariant: a reference binding holds no callable occurrence", walked "walk error: INVALID") and 4 corpus rows |
+| b11n natively the root's binding in a method read from its cell, not as the hidden input | `unit_k03_alias_root_seen`'s pin; its walked twin runs to 7 |
+| b11w the same, walked | `unit_k03_alias_root_seen_walk`'s pin; its native twin runs to 7 |
+| b12 the bare binding as a statement called on tick's own occurrence | `unit_k03_alias_bare`'s pin (3 selves -> 2); its walked twin runs to 7 |
+| b13 a call through b has no value type | `unit_k03_alias_bare` and its twin ("a reference compared with a number other than 0") |
+| b14 the one resolution reads a binding as a value | the 4 chain rows (in a method accepted, at the root the internal disagreement); no other witness reaches it -- calls through b resolve before it.  It first survived the 20 rows; the chain witnesses were added for it |
+| b00 control | none |
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_46` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes. |
+| `build/l3_selftest/opus_l3_44` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_50` (full harness) | RED39/2272: against `opus_full_49` FAIL→OK 0, OK→FAIL 0, added 24 (all OK: the rows of this slice), removed 0; of the 2248 common targets none changed its message besides the identifiers that change in every run (the translator's sha256, the unit hash of the two library rows); the 39 red are the same rows with the same messages. The 16 declared paths were hashed before the run; every staged copy is the declared bytes. |
+| Focused run on the same bytes | `opus_focus_n1b_01` 121 targets, 0 failed (the 24 rows of this slice, the two corpus programs and their twins, the K03 ref/vis/def rows). |
+| Replay of `opus_full_49`'s 2247 recorded translations | 4 rows differ in their L1, named above; the rest byte-identical. |

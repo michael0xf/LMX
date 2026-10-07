@@ -1845,13 +1845,17 @@ NS-ROLES-1a done ([section 112](steps/fable-continuation-20261003.md#ns-roles-1a
 forward) binds b to A at the root, in a block of the root, in a method and its blocks -- the reference-cell route, a
 cell of its own; `b: args` after it is the application (arity refusal), never a rebinding; the root's head resolves
 before its tail (`Later: 3` above `Later:` is Later's call); `l2_ns_find`'s twins share its visibility. Gates: kernel `opus_kernel_45` GREEN297 (114 selftests), L3 `opus_l3_43`, full `opus_full_49` RED39/2248 -- against `opus_full_48` FAIL→OK 0, OK→FAIL 0, added 38; one common row changed its message (`unit_ref_absent_colon`, the 1c limit).
-The dependency-closed substeps that remain in this lane (Codex K03-NS-ROLES-NEXT-20261007-09), each a gated checkpoint:
-- NS-ROLES-1b: a method or held callable as A -- b holds the whole occurrence; the application through b (a Structure's
-  nullary execution and a method's call with its own signature, natively and walked) by one held-reference route;
-  nothing runs at binding; Q58 dormant applications kept; `unit_k03_def_callable_body` split, its `b: tick` part an
-  alias row; the method tail's S5 reading (the disclosed debt) removed.
-- NS-ROLES-1c: a merge result as A -- b's row takes the merge's schema record; `unit_ref_absent_colon` becomes its
-  positive (exit 9).
+NS-ROLES-1b done ([section 113](steps/fable-continuation-20261003.md#ns-roles-1b), Codex -07 Q1, -09, -11): `b: tick`,
+b absent, tick a method, binds b to tick's whole occurrence -- a cell of its own (two bindings, two cells), nothing at
+the binding; `b: args`, `b(args)`, `b()` and the bare b (statement and value) call tick by its signature on the
+occurrence b holds, natively and walked (the root's binding seen from a method is its hidden input, Q52); `box()` and
+the bare box after `box: Model` execute Model; a held callable as A a located limit; the bare method tail's S5 wrapper
+reading removed (`unit_k03_def_callable_body` keeps its program: `b: tick` is the binding there now, `c: tick()` the
+Q58 dormant application). Gates: kernel `opus_kernel_46` GREEN297 (114 selftests), L3 `opus_l3_44`, full `opus_full_50` RED39/2272 -- against `opus_full_49` FAIL→OK 0, OK→FAIL 0, added 24; no common row changed its message (besides the per-run identifiers).
+The dependency-closed substeps that remain in this lane (Codex K03-NS-ROLES-NEXT-20261007-09, scope -11), each a gated
+checkpoint:
+- NS-ROLES-1c: a merge result as A, its binding established above the use -- b's row takes the merge's schema record;
+  `unit_ref_absent_colon` becomes its positive (exit 9).
 - NS-ROLES-V2: a method's own named callable definitions visible throughout their actual block both ways; siblings,
   later ordinary data and receiver outputs not (negatives, reached mutants).  Waits for the author's answer on the
   defining occurrence (below).

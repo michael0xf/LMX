@@ -1,0 +1,22 @@
+# K03 NS-ROLES-CALL control: Model's nullary call -- `Model()` and `Model: ()` at the root, the bare `Model`
+# in a method and `Model()` retained in Outer's body, run when Outer is called -- runs Model's body, as an
+# ordinary named Structure's call; defining Outer runs nothing.  Exit 7; 81 otherwise.
+int: hits 0
+Model:
+    size_t: value 1U
+    node\hits: node\hits + 1
+end: Model
+Outer:
+    Model()
+end: Outer
+Model()
+Model: ()
+fn: m () int
+    Model
+    Outer()
+    if: node\hits != 4
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

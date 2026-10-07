@@ -11693,3 +11693,112 @@ Evidence:
 | `build/l2_harness/opus_full_51` (full harness) | RED39/2280: against `opus_full_50` FAIL→OK 0, OK→FAIL 0, added 8 (all OK: the new rows of this slice), removed 0; of the 2272 common targets 25 changed their message -- the 22 re-pointed rows of the census above (the `unit_k03_vis_unit_declares_tail` pair keeps its message: it still runs) and the identifiers that change in every run (the translator's sha256, the unit hash of the two library rows); the 39 red are the same rows with the same messages.  The 21 declared paths were hashed before the run; every staged copy is the declared bytes. |
 | Focused run on the same bytes | `opus_focus_vis_02` 134 targets, 0 failed (the visibility rows, the K03 ref/alias/def/vis rows, the S2 rows); `opus_focus_vis_01` stopped before running: its list named two walked twins that do not exist. |
 | Replay of `opus_full_50`'s 2271 recorded translations | 24 rows of 13 fixtures differ, named above; the rest byte-identical. |
+
+<a id="ns-roles-call"></a>
+## 115. A known ordinary named Structure head is its call, whatever its actuals are (K03 NS-ROLES-CALL)
+
+The rule (`docs/LMX_semantics.en.md:668`, `docs/L2_spec_en.md:155`; Codex K03-VIS-CALL-CLASSIFICATION-20261007-16 and
+K03-NS-ROLES-CALL-20261007-17): with A an existing ordinary named Structure, `A: args` in an executable body is A's
+call whatever the actuals are -- their number, their spelling, and whether an actual is known, unknown or defined
+below.  An ordinary named Structure has no arguments, so any actual is the general arity error at the call; an
+unknown actual is neither declared nor cloned; an unknown head still defines a named Structure with its written
+contents.  Until this step the translator kept OPUS-TYPED-BINDING-20260930-20's typed receiving route: `T: b c`, b
+absent there, declared b typed T and bound it to c after c's admission to T.  Whenever b was invisible -- unknown, or
+a named Structure defined below -- the route took the line instead of the call; section 114 pinned one such row as
+implementation debt (`unit_root_struct_call2_forward_refused`).
+
+What changed in `l2trans.lm1` (2da89f5d):
+
+- The route is gone: `l2_colon_bind_shape` (its shape), `l2_check_bind` and `l2_bind_untyped` (its admission) and
+  `l2_rw_model_bind` (its walked binding).
+- So is every consumer: `l2_colon_bound_before`'s clause (a typed binding's b above counted as bound), the collection
+  (`l2_collect_asgn_body`), the scan (`l2_scan_body`), `l2_colon_decl_room`, the root's source placement of
+  `Model: b c` in `l2_src_one`, the checker's branch in `l2_check_body`, the walked statement (`l2_rw_stmt_content`;
+  `T: b` keeps `l2_rw_model`), the throws reading (`l2_body_throws`), the emission (`l2_emit_stmts`) and
+  `l2_admit_finish`'s "implements is false in a typed binding", whose only caller was `l2_check_bind`.  Thirteen
+  locals left without a reader are dropped; gcc's `-Wall -Wextra` list is the same 75 warnings before and after.
+- Nothing is added.  Without the route the line meets the common resolution: a known head, its call -- the arity
+  refusal Q59 made general (`l2_struct_arity_error`); an unknown head, its definition.  No refusal reads the source's
+  shape or a name.
+
+The rows the route carried (Codex -17's migration guard; fixture bodies untouched, headers rewritten with their line
+counts kept, so no needle moves):
+
+- `unit_bind_candidate_not_name_refused` (`Model: b mk()` in a method) pinned the route's own limit, "a typed binding
+  whose candidate is not a name is not built yet"; no purpose outlives the route.  It is the call's refusal now.
+- `unit_bind_root_ref`, `unit_bind_root_thin_other`, `unit_bind_root_used_other_refused`,
+  `unit_bind_method_used_other_refused`, `unit_bind_root_letter` and `unit_bind_root_letter_refused`: the written
+  `Model: b c` (`MainLetter: b raw`) is the known head's call, so each row is that refusal; two positives and the
+  letter's run-time refusal become translation refusals.  Their purpose -- b constrained by a model and bound to a
+  candidate, admitted by b's uses at translation or at run time -- is a model-constrained reference with a value, the
+  `@: T name value` family that the author's open question lists as dependent
+  (`LMX_blog/q/current/model-constrained-null-reference.md`, not touched).  It is exact debt, not reinterpreted:
+  [TYPED-BINDING-PURPOSE-DEBT](defects.md#typed-binding-purpose-debt) names each row and its old verdict.  No helper
+  method with a typed formal replaces a root receiving place; the formal side keeps its own rows
+  (`unit_formal_thin_other`, `unit_formal_used_other_refused`, `unit_admit_letter_formal`, `unit_admit_letter_not_model`,
+  `unit_admit_formal_refused`), and the explicit `@: Model b c` rows in methods (`unit_bind_method_ref`,
+  `unit_bind_method_formal`, `unit_bind_method_thin_other`, `unit_recv_use_*`) are unchanged, inside the question's
+  frozen family.
+- `unit_root_struct_call2_forward_refused`: the debt of section 114 is resolved -- the line is Model's call however
+  Other stands; its header states the rule.
+- Stale explanatory text corrected, rows unchanged: `unit_bind_known_b_call_refused` and `unit_root_struct_call_refused`
+  ("until a named Structure's call with an argument is built" -- an ordinary named Structure has no arguments, the
+  refusal is the language's), `unit_root_struct_call2_refused` ("declares only by `T: name`"), `unit_formal_thin_other`
+  and `unit_formal_used_other_refused` ("the same admission `Model: b o` takes"); in the harness the comment over the
+  root call rows (disclosed at the VIS checkpoint) and the route's comment over the `unit_bind_*` rows.
+
+Not in this step: in a named body the one-atom `Model: zz` is still the old reference-field reading (a probe: "5:5:
+root operation not walkable yet: a Structure-typed field in a method") -- NS-ROLES-2's branch in the plan (Codex -07
+Q3).  Every other count and spelling in a named body resolves as the call here.  Found while this step was gated:
+three harness comments that NS-ROLES-VIS left stale -- the S2 visibility block and the NS-ROLES-3 and NS-ROLES-1a
+blocks still describe NS-ROLES-3's both-way reading of named Structures and branch roots; they are corrected with
+NS-ROLES-1c, the harness bytes of this step being gated already.
+
+Evidence:
+
+- Census: a diagnostic variant of 147a9e16's translator in which `l2_colon_bind_shape` never gives its shape (the route
+  closed for every head), replayed over the 2279 recorded translations of `opus_full_51`, changes 8 rows of 8
+  fixtures; every other row is byte-identical in L1, exit and messages.  The translator of this step replays
+  identically to that variant on all 2279 rows, so the removal moves exactly the census:
+
+| Fixture | Before | Now |
+| --- | --- | --- |
+| `unit_bind_root_ref` | exit 7 (a write through b read through c) | "16:1: more arguments than Model has formals" |
+| `unit_bind_root_thin_other` | exit 7 (an Other admitted to a Model-typed b nothing uses) | "15:1: ..." |
+| `unit_bind_root_used_other_refused` | "14:1: implements is false in a typed binding" | "14:1: ..." |
+| `unit_bind_method_used_other_refused` | "14:5: implements is false in a typed binding" | "14:5: ..." |
+| `unit_bind_root_letter` | exit 2 (the letter admitted to MainLetter at run time, b its payload) | "9:1: more arguments than MainLetter has formals" |
+| `unit_bind_root_letter_refused` | run: Fails 1, Stopped 1, Thrown 2 (the run-time admission refused) | "13:1: more arguments than Model has formals" |
+| `unit_bind_candidate_not_name_refused` | "18:5: a typed binding whose candidate is not a name is not built yet" | "18:5: more arguments than Model has formals" |
+| `unit_root_struct_call2_forward_refused` | "11:1: a typed binding's candidate is not a Structure value" (section 114's debt) | "11:1: more arguments than Model has formals" |
+
+- New witnesses, twelve programs, each with a `--walk-methods` twin.  Ten refusals, all "more arguments than Model
+  has formals" at the call: at the root the first actual unknown (`unit_call_root_unknown_refused`, 11:1), defined
+  below (`unit_call_root_below_refused`, 11:1), three unknown actuals (`unit_call_root_three_refused`, 10:1), the Frame
+  spelling `Model(zz 3)` (`unit_call_root_frame_refused`, 10:1); in a method unknown, below and declared above
+  (`unit_call_method_unknown_refused` 12:5, `_below_` 12:5, `_known_` 15:5); in a named body Outer, never called, whose
+  retained application is checked as the call it is: unknown, below and declared above (`unit_call_named_unknown_refused`
+  12:5, `_below_` 12:5, `_known_` 15:5).  Two positives: `unit_call_nullary_runs` (`Model()` and `Model: ()` at the root,
+  the bare `Model` in a method and `Model()` retained in Outer and run by `Outer()`: four runs of Model's body, exit 7;
+  defining Outer runs nothing) and `unit_call_unknown_head_defines` (`Fresh: zz extra` at the root, `Inner: zz extra` in
+  Outer, `Local: zz extra` in a method, each head unknown: definitions, exit 7), natively, with the root walked and with
+  the methods walked (pins (0,1,2) and (0,1,2,3,5), read from the twins' L1).
+- The route put back: the removal deletes the route and nothing else, so its mutant is 147a9e16's own gated
+  translator (`opus_full_51/bin/l2trans.exe`, built from 7a6f7f39).  Under it the root's unknown, below
+  and Frame witnesses, the method's unknown and below and the named body's unknown give the route's messages, natively
+  and walked ("a typed binding's candidate is not a Structure value"; the Frame "a typed binding whose candidate is not
+  a name is not built yet") -- twelve rows red; the three-actual row and the method's and the named body's declared-above
+  and the named body's below rows are the common route's controls (the same arity refusal under both); the positives'
+  L1 is byte-identical under both.  So the witnesses separate the shared call check from the old typed receiving.
+- Probes, not rows: the one-atom `Model: zz` in a named body is still the old reference-field reading ("5:5: root
+  operation not walkable yet: a Structure-typed field in a method"), NS-ROLES-2's.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_48` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes (2da89f5d). |
+| `build/l3_selftest/opus_l3_46` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_52` (full harness) | RED39/2304: against `opus_full_51` FAIL→OK 0, OK→FAIL 0, added 24 (all OK: the twelve witnesses and their twins), removed 0; of the 2280 common targets 11 changed their message -- the 8 census rows above and the identifiers that change in every run (the translator's sha256, the unit hashes of the two library rows); the 39 red are the same rows with the same messages.  The 27 declared paths were hashed before the gates and again before this run; the staged `l2trans.lm1` is the declared bytes.  `opus_full_52` (the same bytes) was stopped at 5434 logs by Claude Code's low-memory reaper; this is its rerun. |
+| Focused run on the same bytes | `opus_focus_call_01` 40 targets, 0 failed (the 37 declared stems with the translator's build and the driver's). |
+| Replay of `opus_full_51`'s 2279 recorded translations | 8 rows of 8 fixtures differ, named above; identical to the closed-route census variant on all 2279. |

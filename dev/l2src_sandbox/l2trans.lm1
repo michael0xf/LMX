@@ -1251,7 +1251,6 @@ prototype:
     fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
     fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Field value; int: n; int: into; @: int out) int
     fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
-    fn: l2_rw_model_bind (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
     fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     fn: l2_is_letter_name (int: mi; const: @(LmP0Node node)) int
     fn: l2_is_letter_value (int: mi; @: LmP0Field first; int: count) int
@@ -1498,9 +1497,6 @@ prototype:
     fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word; @: int out_meth) int
     fn: l2_local_absent_def (const: @(LmP0Node stmt); int: mi) int
     fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: int out_meth) int
-    fn: l2_colon_bind_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name; @@: LmP0Field out_cand) int
-    fn: l2_bind_untyped (int: mi; @: LmP0Field cand) int
-    fn: l2_check_bind (const: @(LmP0Node stmt); const: @(LmP0Text model); const: @(LmP0Text name); @: LmP0Field cand; int: mi; const: @(char path)) int
     fn: l2_empty_struct_decl_shape (const: @(LmP0Node stmt); int: mi) int
     fn: l2_own_self_typed (int: oi) int
     fn: l2_lit_field_kind (const: @(LmP0Node fld)) int
@@ -8884,7 +8880,6 @@ fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop)
     @: LmP0Field f
     @: LmP0Text dn
     @: LmP0Text dm
-    @: LmP0Field dc
     int: prior
     if: name = 0
         return: 0
@@ -8908,9 +8903,6 @@ fn: l2_colon_bound_before (const: @(LmP0Structure body); const: @(LmP0Node stop)
             # place it is still read, until NS-ROLES-2), a letter (`receiveMessage: name`) or the empty Structure
             # (`name()`) is bound after its statement as well: a later `Model: name` is Model's call, not a declaration.
             if: l2_colon_decl_shape(f\value, @ dm, @ dn) = 0 && l2_text_same(dn, name) != 0
-                return: 1
-            # So is b of a typed binding `T: b c` (l2_colon_bind_shape): absent there, it was declared there.
-            if: l2_colon_bind_shape(f\value, @ dm, @ dn, @ dc) = 0 && l2_text_same(dn, name) != 0
                 return: 1
             if: l2_receive_msg_shape(f\value, @ dn, 0) = 0 && l2_text_same(dn, name) != 0
                 return: 1
@@ -11820,75 +11812,6 @@ fn: l2_ns_ref_field_stmt (const: @(LmP0Node stmt)) int
     ---
 return: 0
 
-# `T: b c` -- the typed receiving form with a candidate (the book's `A: b c`; next_core_tasks.md §3 item 207): T a
-# named Structure, b a name, c one more field, the candidate.  Whether it declares b -- b absent: bound to c's
-# descriptor after c's admission to T (l2_check_bind) -- or calls T with b and c (b bound) is resolution's
-# (l2_colon_bound_before), as for `T: b` (l2_colon_decl_shape).  0: the shape.
-fn: l2_colon_bind_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name; @@: LmP0Field out_cand) int
-    @: L2Declaration application l2_declaration(stmt)
-    int: ni
-    if: out_model = 0 || out_name = 0 || out_cand = 0
-        return: 1
-    \out_model: 0
-    \out_name: 0
-    \out_cand: 0
-    if: application = 0 || application\contract\kind != 0 || application\candidate_count != 1 || application\extent != 0
-        return: 1
-    ni: l2_ns_find(application\contract\word)
-    if: ni < 0 || l2_ns_parent[ni] >= 0
-        return: 1
-    \out_model: application\contract\word
-    \out_name: application\name
-    \out_cand: application\candidate
-return: 0
-
-# Is the candidate of a typed binding admitted at run time -- a letter (by its payload, D-57) or an untyped graph --
-# rather than at translation, by its known named Structure?
-fn: l2_bind_untyped (int: mi; @: LmP0Field cand) int
-    if: cand = 0 || cand\value = 0
-        return: 0
-    if: l2_is_letter_name(mi, cand\value) != 0
-        return: 1
-return: l2_untyped_graph(mi, cand\value)
-
-# The candidate c of `T: b c`, b absent: admitted to T before b is bound -- the one admission a formal's actual takes at
-# a call (l2_check_call).  c of a known named Structure: at translation, by what b's activation uses of it -- the
-# Consumer is the body b lives in, as a formal's is its callee: the method's frame, else (the walked root, a named
-# Structure's procedure: no frame node) its body; a letter or an untyped graph: at run time (l2_admit_site; the
-# emission's l2_emit_admit natively, the walker's admit() at the root).  The interim admission: item 474 stays open.
-# 0: admitted, or left to the run; 1: refused, said.
-fn: l2_check_bind (const: @(LmP0Node stmt); const: @(LmP0Text model); const: @(LmP0Text name); @: LmP0Field cand; int: mi; const: @(char path)) int
-    int: ni
-    int: cns
-    ni: l2_ns_find(model)
-    if: ni < 0 || cand = 0 || cand\value = 0
-        return: l2_error(path, stmt, "internal: a typed binding without its model or candidate")
-    # A candidate that is not a name -- a call's result, an expression -- is not built yet: the implementation's
-    # status, not a rule of the language.
-    if: cand\value\kind != c.LM_P0_NODE_ATOM || cand\value\as = 0 || cand\value\as\atom = 0 || l2_ident(cand\value\as\atom) = 0
-        return: l2_error(path, stmt, "a typed binding whose candidate is not a name is not built yet")
-    if: l2_check_fields(cand, 1, mi, path, stmt) != 0
-        return: 1
-    if: l2_bind_untyped(mi, cand) != 0
-        return: l2_admit_site(mi)
-    # K03 NS-ROLES-3: the candidate's Structure by its schema, as a call's actual is read (l2_own_schema, -1 none): a
-    # merge result -- the written construction `c: merge: Model` that replaced the old `Model: c` -- is a Structure
-    # value, its schema the merge's.
-    cns: 0 - 1
-    if: l2_resolved_own(mi, cand\value\as\atom) >= 0
-        cns: l2_own_schema(l2_resolved_own(mi, cand\value\as\atom))
-    if: cns = -1
-        cns: l2_bound_nsty(mi, cand\value\as\atom)
-    if: cns = -1 && l2_ml_find(cand\value\as\atom) >= 0
-        cns: l2_ml_ns[l2_ml_find(cand\value\as\atom)]
-    if: cns = -1
-        return: l2_error(path, stmt, "a typed binding's candidate is not a Structure value")
-    if: l2_fn_frame(mi) != 0
-        return: l2_admit_consumer_at(cns, ni, name, l2_fn_frame(mi), 0, path, stmt, "typed binding")
-    if: mi < 0 || l2_m_body = 0 || l2_m_body[mi] = 0 || l2_m_body[mi]\as = 0 || l2_m_body[mi]\as\structure = 0
-        return: l2_error(path, stmt, "internal: a typed binding with no body for its Consumer")
-return: l2_admit_consumer_at(cns, ni, name, 0, l2_m_body[mi]\as\structure, path, stmt, "typed binding")
-
 # `f()`, `f: ()` and the closed empty vertical, name absent (FABLE-SONNET-
 # EMPTY-STRUCT-20260923-132, book SS10/SS12, after -127's P0 parity all
 # three spellings are the identical Frame -- head plus a body with 0
@@ -13200,7 +13123,6 @@ return: 0
 
 fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char path)) int
     L2Address: receiver_place
-    @: LmP0Field bcand 0
     @: LmP0Field field
     @: LmP0Field nxt
     @: LmP0Field last
@@ -13334,15 +13256,6 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             continue
         # (A body reference field only, l2_colon_decl_shape; with name bound before it is Model's call, l2_colon_bound_before.)
         if: l2_colon_decl_shape(stmt, @ cmodel, @ fa) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
-            cj: l2_own_add(mi, fa, l2_graph_own(), path, stmt)
-            if: cj < 0
-                return: 1
-            if: l2_own_nsty_set(cj, l2_ns_find(cmodel)) != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
-        # `T: b c`, b absent (l2_colon_bind_shape): b is declared the same way, typed T.
-        if: l2_colon_bind_shape(stmt, @ cmodel, @ fa, @ bcand) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
             cj: l2_own_add(mi, fa, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
@@ -14156,7 +14069,6 @@ return: 0
 
 fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
     @: L2Declaration declaration
-    @: LmP0Field bcand 0
     @: LmP0Text slnm 0
     int: slty 0
     @: LmP0Field field
@@ -14304,15 +14216,6 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             field: l2_next_active(field\next)
             continue
         if: l2_colon_decl_shape(stmt, @ slnm, @ fa) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
-            if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_graph_own(), l2_src, stmt), seen) != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
-        # A typed binding `T: b c`, b absent: its candidate is read before b is bound, as an initializer is; b is
-        # declared here.
-        if: l2_colon_bind_shape(stmt, @ slnm, @ fa, @ bcand) = 0 && l2_colon_bound_before(body, stmt, mi, fa) = 0
-            if: bcand != 0 && bcand\value != 0 && l2_scan_node(bcand\value, mi, seen) != 0
-                return: 1
             if: l2_hr_on = 0 && l2_scan_bound(mi, l2_own_add(mi, fa, l2_graph_own(), l2_src, stmt), seen) != 0
                 return: 1
             field: l2_next_active(field\next)
@@ -14502,7 +14405,6 @@ return: 0
 
 # How many own rows a scan of this node may add: one per `Model: fresh`, letter or `f()` in it.
 fn: l2_colon_decl_room (const: @(LmP0Node node)) int
-    @: LmP0Field bc 0
     @: LmP0Field f 0
     @: LmP0Text cm 0
     @: LmP0Text cn 0
@@ -14510,8 +14412,6 @@ fn: l2_colon_decl_room (const: @(LmP0Node node)) int
     if: node = 0 || node\as = 0
         return: 0
     if: node\kind = c.LM_P0_NODE_FRAME && l2_colon_decl_shape(node, @ cm, @ cn) = 0
-        return: 1
-    if: node\kind = c.LM_P0_NODE_FRAME && l2_colon_bind_shape(node, @ cm, @ cn, @ bc) = 0
         return: 1
     if: node\kind = c.LM_P0_NODE_FRAME && l2_receive_msg_shape(node, @ cn, 0) = 0
         return: 1
@@ -18901,9 +18801,6 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
     int: oi
     int: step
     int: ni
-    @: LmP0Text bm 0
-    @: LmP0Text bn 0
-    @: LmP0Field bc 0
     stmt: field\value
     \next: l2_next_active(field\next)
     if: stmt = 0
@@ -19237,8 +19134,7 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
         return: 0
     if: l2_prim_type_word(h) != 0
         if: l2_text_eq(h, "int") = 0 && l2_text_eq(h, "char") = 0 && l2_text_eq(h, "size_t") = 0 && l2_text_eq(h, "unsigned") = 0 && l2_text_eq(h, "ulong") = 0
-            # The root's Model: name is the cell and then the merge. Model: b c
-            # is the cell and then the binding, once c is already a root field.
+            # The root's Model: name is the cell and then the merge.
             # A method stays packed.
             if: mi != l2_e
                 return: 1
@@ -19262,21 +19158,7 @@ fn: l2_src_one (@: LmP0Field field; int: mi; int: commit; @: int cursor; @@: LmP
                     return: 1
                 \cursor: \cursor + 1
                 return: 0
-            if: l2_colon_bind_shape(stmt, @ bm, @ bn, @ bc) != 0 || bc = 0 || bc\value = 0 || bc\value\kind != c.LM_P0_NODE_ATOM || bc\value\as = 0 || bc\value\as\atom = 0
-                return: 1
-            step: l2_own_at(mi, bc\value\as\atom, stmt)
-            if: step < 0 || step = oi || l2_own_host[step] != 0 || l2_own_fid[step] >= 0 || l2_own_uchild[step] < 0
-                return: 1
-            if: l2_own_is_pointer(l2_own_ty[step]) = 0
-                return: 1
-            if: commit != 0
-                l2_own_uchild[oi]: \cursor
-            \cursor: \cursor + 1
-            \seen_own: \seen_own + 1
-            if: commit != 0 && l2_ps_add(stmt, \cursor) != 0
-                return: 1
-            \cursor: \cursor + 1
-            return: 0
+            return: 1
         oi: l2_own_by_decl(mi, stmt)
         if: oi < 0 || l2_own_host[oi] != 0
             return: 1
@@ -20817,8 +20699,6 @@ fn: l2_admit_finish (int: cand; int: req; int: status; int: compatible; const: @
             return: l2_error(path, at, "implements is false in assignment")
         if: context != 0 && strcmp(context, "return value") = 0
             return: l2_error(path, at, "implements is false in return value")
-        if: context != 0 && strcmp(context, "typed binding") = 0
-            return: l2_error(path, at, "implements is false in a typed binding")
         return: l2_error(path, at, "implements is false")
 return: 0
 
@@ -28013,7 +27893,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
     int: letni
     @: LmP0Text cmodel
     @: LmP0Text cname
-    @: LmP0Field bcand 0
     @: LmP0Field send_field
     @: LmP0Field send_message
     @: LmP0Field send_part
@@ -28423,26 +28302,6 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # declaration -- CORE.md 3.1/4, L2 spec 10. At unit level it is an own
         # field of the entry E, registered the same way (S2).
         if: l2_frame_head(stmt, "if") = 0 && l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0 && l2_colon_bound_before(body, stmt, mi, cname) = 0
-            cj: l2_own_add(mi, cname, l2_graph_own(), path, stmt)
-            if: cj < 0
-                return: 1
-            if: l2_own_off(mi, cj) = (cast: (size_t) -1)
-                return: l2_error(path, stmt, "size overflow")
-            l2_m_uses[l2_own_off(mi, cj)]: 1
-            l2_m_own[mi]: l2_m_own[mi] + 1
-            if: l2_bind_own(mi, cj, path, stmt) != 0
-                return: 1
-            if: l2_own_nsty_set(cj, l2_ns_find(cmodel)) != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
-        # `T: b c`, b absent (next_core_tasks.md §3 item 207; the book's receiving form with a candidate): b is declared,
-        # an own Structure value of T -- callable, as `T: b` makes it -- bound to c's descriptor after the admission of c
-        # to T (l2_check_bind: the one a formal's actual takes).  No merge, no copy.  With b bound, `T: b c` is T's call
-        # with two arguments, refused below as not built yet.
-        if: l2_frame_head(stmt, "if") = 0 && l2_colon_bind_shape(stmt, @ cmodel, @ cname, @ bcand) = 0 && l2_colon_bound_before(body, stmt, mi, cname) = 0
-            if: l2_check_bind(stmt, cmodel, cname, bcand, mi, path) != 0
-                return: 1
             cj: l2_own_add(mi, cname, l2_graph_own(), path, stmt)
             if: cj < 0
                 return: 1
@@ -38015,47 +37874,6 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
         return: 1
 return: l2_rw_put(\out, vs, admission)
 
-# `T: b c` at the walked root, b absent (l2_check_bind admitted c, or left it to the run): b, the root's own Structure
-# value declared here, takes c's descriptor by reference -- PUT_REF(b, OWN(c)), no merge, no copy -- and, c a letter or
-# an untyped graph, after c's admission to T here: PUT_REF(b, admit(OWN(c), T)), admit_letter for a letter (its
-# payload, D-57), a refusal the implicit throw `implements`.
-fn: l2_rw_model_bind (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: int out) int
-    @: LmP0Text bm 0
-    @: LmP0Text bn 0
-    @: LmP0Field bc 0
-    int: ni l2_ns_find(h)
-    int: oi 0
-    int: src
-    int: raw
-    int: adm
-    int: vs
-    if: l2_colon_bind_shape(stmt, @ bm, @ bn, @ bc) != 0 || bc = 0 || bc\value = 0 || bc\value\kind != c.LM_P0_NODE_ATOM || bc\value\as = 0 || bc\value\as\atom = 0
-        return: l2_rw_refuse(stmt, "this binding")
-    while: oi < l2_own_n && (l2_own_decl[oi] != stmt || l2_own_mi[oi] != l2_rw_mi)
-        oi: oi + 1
-    ---
-    if: oi >= l2_own_n
-        return: l2_rw_refuse(stmt, "this binding")
-    if: l2_own_host[oi] != 0 || l2_own_fid[oi] >= 0 || l2_own_uchild[oi] < 0
-        return: l2_rw_refuse(stmt, "a field declared in a nested body")
-    if: ni < 0 || l2_own_nsty_get(oi) != ni || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
-        return: l2_rw_refuse(stmt, "a Structure-typed field")
-    src: l2_rw_find(bc\value\as\atom)
-    if: src < 0 || l2_rw_seen(src) = 0 || l2_own_host[src] != 0 || l2_own_fid[src] >= 0 || l2_own_uchild[src] < 0 || l2_own_is_pointer(l2_own_ty[src]) = 0
-        return: l2_rw_refuse(stmt, "a binding whose candidate is not a Structure field")
-    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0
-        return: 1
-    if: l2_rw_is_letter(src) = 0 && l2_own_nsty_get(src) >= 0
-        if: l2_rw_own(\out, src, @ raw) != 0
-            return: 1
-        return: l2_rw_put(\out, vs, raw)
-    ---
-    if: l2_rw_admit(\out, ni, l2_rw_is_letter(src), l2_own_ty[src], @ adm) != 0
-        return: 1
-    if: l2_rw_own(adm, src, @ raw) != 0 || l2_rw_put(adm, 3, raw) != 0
-        return: 1
-return: l2_rw_put(\out, vs, adm)
-
 # A reached merge produces one fresh descriptor through PRIM_PUB and stores it
 # in its ordinary own row. Operands are read once from visible bindings. The
 # instruction carries expression host, producer schema token and inline pairs;
@@ -41938,9 +41756,6 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
     int: bsave 0
     L2RawIndex: indexed
     L2ArrayPlace: array_place
-    @: LmP0Text rwbm 0
-    @: LmP0Text rwbn 0
-    @: LmP0Field rwbc 0
     @: LmP0Text machine_name 0
     []: char pn 32
     \made: 0
@@ -42358,10 +42173,8 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
             if: l2_ns_find(h) >= 0 && l2_rw_mi != l2_e
                 return: l2_rw_refuse(stmt, "a Structure-typed field in a method")
             if: l2_ns_find(h) >= 0
-                # `T: b c`, b absent: b takes c's descriptor (l2_rw_model_bind); `T: b`, a fresh merge (l2_rw_model).
-                if: l2_colon_bind_shape(stmt, @ rwbm, @ rwbn, @ rwbc) = 0 && l2_rw_model_bind(stmt, h, into, @ node) != 0
-                    return: 1
-                if: l2_colon_bind_shape(stmt, @ rwbm, @ rwbn, @ rwbc) != 0 && l2_rw_model(stmt, h, into, @ node) != 0
+                # `T: b`, a fresh merge (l2_rw_model).
+                if: l2_rw_model(stmt, h, into, @ node) != 0
                     return: 1
                 \made: 1
                 if: l2_rw_put(into, slot, node) != 0
@@ -47866,7 +47679,6 @@ return: 0
 # throws merge(args) and therefore takes the full declared-throw ABI; every
 # other callable keeps its direct return, so nothing else changes shape.
 fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
-    @: LmP0Field bcand 0
     @: LmP0Field field
     @: LmP0Field inner
     @: LmP0Node stmt
@@ -47889,9 +47701,6 @@ fn: l2_body_throws (const: @(LmP0Structure body); int: mi) int
         # A colon declaration (Model: fresh) is the same construction as an
         # explicit merge: statement, spelled differently -- it also throws.
         if: l2_colon_decl_shape(stmt, @ cmodel, @ cname) = 0
-            return: 1
-        # A typed binding whose candidate is admitted at run time (a letter, an untyped graph) can refuse it.
-        if: l2_colon_bind_shape(stmt, @ cmodel, @ cname, @ bcand) = 0 && l2_bind_untyped(mi, bcand) != 0
             return: 1
         if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0
             if: l2_for_find(stmt) >= 0 && l2_scope_block(stmt) = stmt\as\frame\body && l2_body_throws(stmt\as\frame\body, mi) != 0
@@ -48415,7 +48224,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     @: LmP0Text cmodel
     @: LmP0Text cname
     []: char l2_esd_tok 64
-    @: LmP0Field bcand 0
     []: char l2_bind_tok_own 1100
     L2Tx: l2_bind_tok_tx
     @: L2Tx l2_bind_tok l2_tx_local(@ l2_bind_tok_tx, l2_bind_tok_own, 1100U)
@@ -49276,26 +49084,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             if: l2_type_inst(cni, l2_tok) != 0 || l2_emit_constructed_layout(cni, "l2_mresult", l2_tok\data, ind) != 0
                 return: 1
             if: l2_own_store(mi, oi, ind, "(cast: (@: void) l2_mresult)") != 0
-                return: 1
-            field: l2_next_active(field\next)
-            continue
-        # `T: b c`, b absent (l2_check_bind): b's slot takes c's descriptor at once -- no merge, no copy -- after c's
-        # admission to T at run time when c is a letter (its payload, D-57) or an untyped graph; c of a known named
-        # Structure was admitted at translation.
-        if: l2_colon_bind_shape(stmt, @ cmodel, @ cname, @ bcand) = 0
-            oi: l2_own_find_decl(mi, cname, stmt)
-            cni: l2_ns_find(cmodel)
-            if: oi < 0 || cni < 0 || bcand = 0
-                return: l2_error(l2_src, stmt, "unresolved name")
-            if: l2_eval_fields(bcand, 1, mi, ind, l2_tok) != 0
-                return: 1
-            if: l2_is_letter_name(mi, bcand\value) != 0 && l2_payload_expr(l2_tok) != 0
-                return: 1
-            if: l2_bind_untyped(mi, bcand) != 0 && l2_emit_admit(mi, cni, l2_tok\data, ind) != 0
-                return: 1
-            if: l2_tx_join(l2_bind_tok, "(cast: (@: void) ", l2_tok\data, ")", 0, 0) != 0
-                return: l2_alloc_or(l2_src, stmt, "out of memory")
-            if: l2_own_store(mi, oi, ind, l2_bind_tok\data) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue

@@ -1870,12 +1870,14 @@ LMX_blog/q/named-definition-boundary.md; Codex K03-VISIBILITY-AUTHOR-CLOSE-20261
 lookahead, the both-way lookups, the late signature refresh and the type position's whole-unit clause removed; the
 first written occurrence of an unknown head defines; 24 rows of 13 fixtures re-pointed, the two S2 refusals back,
 witnesses for fn/sub below and a typed reference above its type's definition. Gates: kernel `opus_kernel_47` GREEN297 (114 selftests), L3 `opus_l3_45`, full `opus_full_51` RED39/2280 -- against `opus_full_50` FAIL→OK 0, OK→FAIL 0, added 8; 22 re-pointed rows changed their message (besides the per-run identifiers).
-NS-ROLES-CALL, next (Codex K03-VIS-CALL-CLASSIFICATION-20261007-16; steps/defects.md#call-classifier-typed-route): the
-common resolved call role of a known ordinary Structure head wins for any argument count and whatever the first
-actual is (known, unknown, defined below), at the root, in a method and in a named body; an unknown head still
-defines; the old typed receiving route (`l2_colon_bind_shape`, `l2_check_bind`) never takes a known head; a census of
-the route closed for a known head, positive and negative controls and a route witness; the explicit `@: T p`
-typed-null family untouched.  Then NS-ROLES-1c.
+NS-ROLES-CALL done ([section 115](steps/fable-continuation-20261003.md#ns-roles-call); Codex
+K03-VIS-CALL-CLASSIFICATION-20261007-16, K03-NS-ROLES-CALL-20261007-17): a known ordinary named Structure head is its
+call whatever its actuals are -- their count, their spelling, an actual known, unknown or defined below -- at the
+root, in a method and in a named body; the typed receiving route (`l2_colon_bind_shape`, `l2_check_bind`,
+`l2_bind_untyped`, `l2_rw_model_bind`) is removed with its consumers; the six rows that used it are the call's refusal
+now, their purpose exact debt on the author's open question (steps/defects.md#typed-binding-purpose-debt); in a named
+body the one-atom `Model: zz` stays NS-ROLES-2's branch. Gates: kernel `opus_kernel_48` GREEN297 (114 selftests), L3 `opus_l3_46`, full `opus_full_53` RED39/2304 -- against `opus_full_51` FAIL→OK 0, OK→FAIL 0, added 24; the 8 census rows changed their message (besides the per-run identifiers); `opus_full_52` on the same bytes was stopped by the environment's low-memory reaper and re-run.
+Next, in this order (Codex -17): NS-ROLES-1c, the corrected-scope V2, NS-ROLES-2, the generic RECEIVE-OUTPUT, S6/S7.
 
 ### K04 — Callable actuals and hidden inputs
 

@@ -1,0 +1,19 @@
+# K03 NS-ROLES-CALL (Codex K03-NS-ROLES-CALL-20261007-17; docs/LMX_semantics.en.md:668): with Model existing,
+# `Model: args` is Model's call whatever the actuals are -- an ordinary named Structure takes none: refused at the
+# call, by the call's own arity check, never a declaration of an unknown actual.
+# In a method: the first actual a named Structure declared above.
+int: hits 0
+Model:
+    size_t: value 1U
+    node\hits: node\hits + 1
+end: Model
+Other:
+    int: p 2
+end: Other
+fn: m () int
+    int: extra 1
+    Model: Other extra
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

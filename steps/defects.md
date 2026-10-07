@@ -4553,8 +4553,18 @@ RECEIVE-OUTPUT; V2 и работа со Structure ниже места испол
 двусторонние чтения NS-ROLES-3/1a сняты. Повтор 2271 перевода: 24 строки 13 фикстур (восемь позитивов стали отказами,
 два отказа сдвинулись на блок, строка вызова сменила сообщение — долг ниже, `x: Foo` выше `Foo:` снова определение x).
 
+**Шаг NS-ROLES-CALL 2026-10-07** ([§115 журнала](fable-continuation-20261003.md#ns-roles-call)): известная голова —
+вызов при любых фактических; маршрут типизированной привязки удалён (его функции и все потребители). Повтор 2279
+переводов: 8 строк 8 фикстур — строки маршрута и строка долга §114; остальное байт в байт.
+
 <a id="call-classifier-typed-route"></a>
-### CALL-CLASSIFIER-TYPED-ROUTE — 2026-10-07, Opus (K03 NS-ROLES-VIS; Codex K03-VIS-CALL-CLASSIFICATION-20261007-16), OPEN
+### CALL-CLASSIFIER-TYPED-ROUTE — 2026-10-07, Opus (K03 NS-ROLES-VIS; Codex K03-VIS-CALL-CLASSIFICATION-20261007-16), FIXED 2026-10-07 (K03 NS-ROLES-CALL)
+
+Исправлено K03 NS-ROLES-CALL ([§115 журнала](fable-continuation-20261003.md#ns-roles-call)): маршрут удалён со всеми
+потребителями; `Model: Other extra` — вызов Model при любом Other, отказ по арности. Свидетели — десять отказов (корень,
+метод, тело именованной Structure; первый фактический неизвестен, определён ниже, объявлен выше; три фактических;
+запись кадром) и два позитива; с маршрутом обратно (транслятор 147a9e16) отказы с неизвестным, нижним и кадром дают его
+сообщения. Ниже — первоначальный дефект.
 
 При существующей обычной именованной Structure Model запись `Model: Other extra` по норме (docs/LMX_semantics.ru.md:668,
 docs/L2_spec_en.md:155) — вызов Model, ошибочный по числу аргументов, каким бы ни был Other. Транслятор же, если Other не
@@ -4564,6 +4574,31 @@ docs/L2_spec_en.md:155) — вызов Model, ошибочный по числу
 фактическом, в корне, в методе и в теле именованной Structure; маршрут типизированной привязки известную голову не
 берёт; перепись, контроли и свидетель маршрута (проверка вызова против `l2_check_bind`). Семейство `@: T p` (вопрос
 автора о пустой ссылке с моделью) не затрагивается.
+
+<a id="typed-binding-purpose-debt"></a>
+### TYPED-BINDING-PURPOSE-DEBT — 2026-10-07, Opus (K03 NS-ROLES-CALL; Codex K03-NS-ROLES-CALL-20261007-17), OPEN (ответ автора)
+
+Маршрут `T: b c` (OPUS-TYPED-BINDING-20260930-20) удалён: при известной T эта запись — вызов T, отказ по арности.
+Шесть строк, которые его использовали, закрепляют теперь этот отказ. Их назначение — b с требованием модели T,
+привязанное к кандидату c и допущенное по использованиям b при трансляции или в рантайме, — ссылка, ограниченная
+моделью, со значением: семейство `@: T name значение`, которое открытый вопрос автора называет зависимым
+([вопрос](../LMX_blog/q/current/model-constrained-null-reference.md)). До ответа назначение не переписывается и не
+переистолковывается:
+
+| Фикстура | Было | Теперь |
+| --- | --- | --- |
+| `unit_bind_root_ref` | исполнение, Entry 7: запись через b читается через c | «16:1: more arguments than Model has formals» |
+| `unit_bind_root_thin_other` | исполнение, Entry 7: Other допущен к b, ни одно поле которого не используется | «15:1: …» |
+| `unit_bind_root_used_other_refused` | «14:1: implements is false in a typed binding» | «14:1: …» |
+| `unit_bind_method_used_other_refused` | «14:5: implements is false in a typed binding» | «14:5: …» |
+| `unit_bind_root_letter` | исполнение, Entry 2: письмо допущено к MainLetter в рантайме, b — его полезная нагрузка | «9:1: more arguments than MainLetter has formals» |
+| `unit_bind_root_letter_refused` | исполнение: Fails 1, Stopped 1, Thrown 2 (допуск письма к Model отказан в рантайме) | «13:1: …» |
+
+Остаётся покрытым: сторона формала (`unit_formal_thin_other`, `unit_formal_used_other_refused`,
+`unit_admit_letter_formal`, `unit_admit_letter_not_model`, `unit_admit_formal_refused`) и явная ссылка `@: Model b c` в
+методе (`unit_bind_method_ref`, `unit_bind_method_formal`, `unit_bind_method_thin_other`, `unit_recv_use_*`) — она сама
+в замороженном семействе вопроса. Вспомогательный метод с типизированным формалом место приёма в корне не заменяет
+(Codex -17). Когда автор ответит, назначение каждой строки записывается в утверждённой форме с прежним вердиктом.
 
 <a id="mad-trailer-write"></a>
 ### MAD-TRAILER-WRITE — 2026-10-06, Opus (перепись K03 S1), OPEN

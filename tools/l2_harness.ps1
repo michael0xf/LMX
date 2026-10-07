@@ -4288,6 +4288,13 @@ $fixtures = @(
         Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:30:11: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_copy_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:11: unknown merge operand'; Absent = @(); Debt = @() },
+    # K03-UNIFIED-HEAD-S4: receiving-prefix witness for bare merge atom vs. explicit forms
+    # The bare receiver atom merge with following Model is NOT an application (distinct from merge: Model)
+    # Collector-reintroduction mutant must fail this row to prove unified head resolution
+    [pscustomobject]@{ Name = 'unit_recv_prefix_merge_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkRoot = $true;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_prefix_merge_model_walk.lm2'; Source = 'unit_recv_prefix_merge_model.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 0; WalkRoot = $true;
+        Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_root_used_other_refused.lm2:14:1: implements is false in a typed binding'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;

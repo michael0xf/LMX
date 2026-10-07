@@ -1,0 +1,14 @@
+# K03 NS-ROLES-3: `x: Foo` declares no field Foo -- x, absent, is defined with Foo in its body; the definition of Foo
+# below stays a definition, and m reads its field.  (The old reading took `x: Foo` for a field Foo typed by x.)
+# Exit 7 when the read gives 4.
+x: Foo
+Foo:
+    size_t: v 4U
+end: Foo
+fn: m () int
+    if: Foo\v != 4U
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

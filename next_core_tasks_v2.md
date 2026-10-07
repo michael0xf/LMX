@@ -1834,6 +1834,18 @@ registrations, compare root/method/named/anonymous bodies with later names. K03-
 receiveMessage binds at the top of a named Structure's body is a computed output (LMX_blog/q/q53.md:95-97), stored by
 the ordinary computed-output binding (`l2_own_output_add`, `l2_receiver_output_place`); `l2_own_mslot` stops assuming
 a public field slot for every top-level name; no synthetic data field, never `struct\m`.
+NS-ROLES-3 done ([section 111](steps/fable-continuation-20261003.md#ns-roles-3), Codex K03-S5-MIGRATION-20261007-06 (a),
+-07 Q2, -08): `Model: m` with Model existing is Model's call at the root and in a method (refused: an ordinary named
+Structure takes no argument); 111 items of 92 programs are now `m: merge: Model` (steps/k03-colondecl-migration.tsv);
+the old shape is read only for a named Structure body's reference field until NS-ROLES-2; `Model: name` declares no
+field at the unit; a named Structure of the unit is visible throughout the unit in both directions (methods, statements
+and signatures above it), data forward only, a nested Structure no name of the unit. Gates: kernel `opus_kernel_44` GREEN297 (114 selftests), L3 `opus_l3_42`, full `opus_full_48` RED39/2210 -- against `opus_full_47` FAIL→OK 0, OK→FAIL 0, added 23, removed 2 (replaced by the `_below` positives); three common rows changed their message (the two call refusals and the S1 entry, now run).
+Open, next in this lane: NS-ROLES-1 -- the absent-b reference binding `b: A` at the root, in a method and in a block
+(A a named callable definition visible both ways, a method held as its whole occurrence, a Structure value visible
+forward), a method's own named Structures visible throughout their block both ways; NS-ROLES-2 -- a named body's
+one-atom branch through the common resolution, reference fields by `b: A`, kind 3 and its 14 programs; then
+K03-S5-RECEIVE-OUTPUT. The typed-null / typed-binding family waits for the author
+(LMX_blog/q/current/model-constrained-null-reference.md).
 
 ### K04 — Callable actuals and hidden inputs
 

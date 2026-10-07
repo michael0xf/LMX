@@ -1,0 +1,28 @@
+# K03 NS-ROLES-3: the exact-actual twin of unit_walk_struct_formal.  T4b class 1: a Structure formal is the
+# reference the caller passed -- here the named Structure Model itself, a value exactly of the formal's model,
+# so m\value is OF(ARG j, the field's slot) and a write PUT_OF (the pins); the migrated row passes merge results,
+# admitted by name.  sum reads formal 0 then formal 1: 3 + 3.  poke writes 9 through the formal.  Success is 7.
+Model:
+    size_t: value 1U
+end: Model
+
+fn: peek (Model: m) size_t
+return: m\value
+
+fn: poke (Model: m) int
+    m\value: 9U
+return: 7
+
+fn: sum (Model: a; Model: b) size_t
+return: a\value + b\value
+
+int: r 0
+Model\value: 3U
+if: sum(Model, Model) = 6U
+    r: r + 1
+if: poke(Model) = 7
+    r: r + 2
+if: peek(Model) = 9U
+    r: r + 4
+sendMessage: exit(exit_code: r; stdout: ""; stderr: "")
+return

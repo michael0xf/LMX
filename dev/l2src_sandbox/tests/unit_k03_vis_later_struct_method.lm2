@@ -1,0 +1,16 @@
+# K03 (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q2; docs/LMX_semantics.en.md:768, :937): a named Structure is a
+# callable procedure, visible throughout its block in both directions.  m stands above Later and reads and writes
+# its field: 4, then 6.  Exit 7; 81 or 82 if the path reached another place.
+fn: m () int
+    if: Later\v != 4U
+        return: 81
+    Later\v: 6U
+    if: Later\v != 6U
+        return: 82
+    return: 7
+end: m
+Later:
+    size_t: v 4U
+end: Later
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -11268,3 +11268,114 @@ Recorded, not changed here:
 | `build/l2_harness/opus_full_47` (full harness) | RED39/2189: against `opus_full_46` FAIL→OK 0, OK→FAIL 0, added 64 (all OK: the 64 rows of this slice), removed 0, and no target's verdict or message changed but two identifiers that change in every run (the translator's sha256 and the unit hash of the two library rows). The 34 declared paths were hashed before the run; every staged copy is the declared bytes. |
 | Focused runs on the same bytes | `opus_focus_s5_01` 71 targets and `opus_focus_s5_02` 82 targets, 0 failed (the slice rows, the S4 controls, Q58 and retained-body rows, `unit_letter_call_refused`). |
 | Replay of `opus_full_46`'s 2124 recorded translations | 2124 byte-identical (L1, exit, messages). |
+
+<a id="ns-roles-3"></a>
+## 111. The old `Model: m` declaration leaves the root and methods; a named Structure is visible both ways (K03 NS-ROLES-3)
+
+Codex's answers under K03-S5-DEBTS-20261007-05 (children of K03-UNIFIED-HEAD-IMPLEMENT-20261006-01):
+K03-S5-MIGRATION-20261007-06 (a) -- migrate each legacy `Model: m` whose intent is a fresh independent instance to the
+written construction `m: merge: Model`, preserving the copy, the reference relocation, the lexical parent, the source
+order and the observed behavior, tracking each classified path; K03-S5-ALIAS-VISIBILITY-20261007-07 Q2 -- a direct named
+callable definition is visible throughout its lexical unit or block in both directions, by the general visibility of
+callables (docs/LMX_semantics.en.md:768, a named Structure is a callable procedure; :937, a callable is visible
+throughout its block in both directions), for the root too, while ordinary data and receiver outputs keep forward
+visibility and a sibling block is not covered; K03-S5-VISIBILITY-GUARD-20261007-08 -- `Model: fresh` above `Model:`
+becomes Model's source-located call refusal, never an acceptance through the old declaration, and the forward branch
+read becomes a positive observed in both execution paths. The removal comes first in the NS-ROLES lane for that reason:
+the visibility alone would have accepted that line through the old declaration.
+
+What changed in `l2trans.lm1`:
+
+- `l2_colon_decl_shape` is read only for a named Structure body's reference field (`l2_take_ns_body`'s kind 3, the new
+  `l2_ns_ref_field_stmt`): the one remaining dependent route, isolated until NS-ROLES-2 migrates and removes it. At the
+  root and in a method `Model: m` with Model existing is Model's call: "more arguments than Model has formals", where
+  it stands (docs :668: an ordinary named Structure takes no argument; an unknown m is neither declared nor cloned).
+- `l2_unit_declares` no longer reads `Model: name` as a declaration of name at the unit (that clause also took `x: Foo`
+  for a field Foo typed by x, so a definition of Foo below it was no definition).
+- `l2_ns_find`: a named Structure defined at the unit (parent < 0 -- a root definition, a qualified branch's root) is
+  visible from every method and every statement of the unit, above it too; a nested Structure keeps its place's
+  visibility, and a program part's code sees none (`l2_vis_ok`).
+- A signature may name a Structure the unit defines below its method: `l2_contract_formal` takes one the source
+  defines (`l2_unit_defines_struct`, read from the source as `l2_unit_names_method` reads a method, before
+  registration), and `l2_sig_models_refresh` reads each formal's and result's model again once every named Structure
+  of the unit is registered -- the same reading (`l2_ref_formal_ns`, `l2_contract_model`), not another.
+- The root's forward rule (`l2_struct_defined_below`: an identifier tail above a later Structure definition of its
+  head) stays: it is the both-way rule at the unit role -- the line is that Structure's application, a statement --
+  and its consequence is now the call refusal, no longer the declaration.
+- The typed binding `T: b c` (the pending family) reads its candidate by its schema, as a call's actual is read
+  (`l2_own_schema`, -1 none): a merge result is a Structure value, so the migrated `c: merge: Model` keeps the
+  binding's admission. The binding itself is untouched (LMX_blog/q/current/model-constrained-null-reference.md).
+
+The migration (`steps/k03-colondecl-migration.tsv`): every item the recorded translations of `opus_full_47` reached
+through `l2_colon_decl_shape` at the root (80) and in a method (31) -- 111 items in 92 programs -- rewritten in place as
+`m: merge: Model` (same line, same indentation). Their intent is a fresh instance, the old declaration's copy of the
+model; the explicit merge is that copy. The 16 items in named Structure bodies (12 programs) are NS-ROLES-2's. Six
+headers that quoted the old line were reworded, line counts kept.
+
+Evidence of the migration:
+
+- The replay of the 2188 recorded translations of `opus_full_47` with the final translator over the migrated sources,
+  against the committed translator over the old ones: 3 rows change their message -- exactly the visibility rows below
+  -- and 64 rows of the migrated programs keep their verdict and message while their L1 differs (the construction is
+  now the merge); no other row changes. Before the candidate reading, 4 typed-binding rows changed (the binding refused
+  a merge result: "a typed binding's candidate is not a Structure value"); with it, none.
+- The rows of the 125 programs touched (the migrated ones, the body programs whose old route is isolated, the S2 rows,
+  the witnesses), natively and walked: green but for three rows already red in `opus_full_47` with the same message
+  (`unit_arr_path_inner_value_refused`, `unit_arr_path_three_refused`, `unit_eternal_shape`).
+- Three rows pinned the path of a Structure formal that receives a value exactly of its model:
+  `unit_a3_capture_direct_vs_copy` (the capture registered as itself), its walked twin (the CALL/ADMIT_AS shapes) and
+  `unit_walk_struct_formal` (OF(ARG j, slot)). With the actual now a merge result, the formal is admitted by name
+  (`lmx_implements_slot` through the admission's record) and each program still exits 7 natively and walked (run). The
+  migrated rows keep their run and walk checks -- the A3 row now pins the by-name read -- and the exact path's pins moved
+  unchanged to `_exact` twins that pass the named Structure itself (in the walked A3 twin the actual's shape is AT/3,
+  the named Structure, where it was the own field OWN/2).
+- `unit_s1_merge_uncaught_entry` (`translates-with-debt`, the walker's merge primitive whose failure the driver's tap
+  did not reach): E's merge is now the written construction, the native merge the tap fails -- the implicit throw
+  reaches the root (Thrown 1), the entry has no value, R0 stops; the row runs (`eternal-runs`, controls: Thrown 2 and
+  Stopped 0 each fail). No recorded translation reaches the walker's merge primitive (`lmx_walk_merge_model`) any more
+  (61 rows before): its emission is reached by no row until NS-ROLES-2 removes the old route.
+
+The S2 visibility rows (FABLE-OPUS-S2-UNIT-IS-ENTRY took a named Structure and a qualified branch for non-callables):
+`unit_s2_vis_structure_below_refused` -- `Model: fresh` above `Model:` -- is Model's call, "3:1: more arguments than
+Model has formals" (it said "unresolved name"); `unit_s2_vis_signature_refused` and `unit_s2_vis_branch_refused` are
+replaced by `unit_s2_vis_signature_below` (a signature naming Point defined below: take reads the formal's field, 7)
+and `unit_s2_vis_branch_below` (a method above a qualified branch reads `cfg\e`, 7), natively and walked;
+`unit_s2_vis_dynamic` (a unit int below a method is its dynamic input) is unchanged. The pending typed-binding row
+`unit_root_struct_call2_forward_refused` (`Model: Other extra` above `Other:`) is now Model's call with two arguments,
+"11:1: more arguments than Model has formals" (it was "a typed binding's candidate is not a Structure value").
+
+Witnesses, natively and under `--walk-methods` (16 rows): `unit_k03_cd_root_call_refused`, `_method_`, `_block_`
+(`Model: fresh` with Model existing: Model's call, at the line); `unit_k03_vis_later_struct_method` (a method above
+Later reads and writes `Later\v`: 4, then 6) and `unit_k03_vis_later_struct_root` (a root statement above Later reads
+it); `unit_k03_vis_unit_declares_tail` (`x: Foo` above `Foo:` keeps Foo a definition; m reads `Foo\v`);
+`unit_k03_vis_later_data_refused` (an int read above its declaration: "unresolved name" -- data stays forward);
+`unit_k03_vis_nested_sibling_refused` (a nested Structure is no name of the unit: `Inner\v` refused, `Outer\Inner\v`
+is the path).
+
+Mutants (each removes one rule whole, built from the final bytes one gcc at a time; the witnesses translated natively
+and walked, the recorded translations replayed over the migrated sources):
+
+| Mutant | Red |
+| --- | --- |
+| m01 the old declaration read everywhere again | the three `unit_k03_cd_*` (accepted: "root operation not walkable yet: a Structure-typed field in a method"), and the corpus row `unit_s2_vis_structure_below_refused` |
+| m02 `Model: name` declares name at the unit again | `unit_k03_vis_unit_declares_tail` ("unsupported trailer" at Foo's definition) |
+| m03 a unit-level Structure visible only below it | the two `later_struct` witnesses, `unit_s2_vis_branch_below`, and three corpus rows |
+| m04 the typed binding's candidate by its named type only | the corpus rows `unit_bind_root_ref`, `unit_bind_root_thin_other` (positive) and two refusals' messages |
+| m05 a signature's type not taken from the source | `unit_s2_vis_signature_below` ("unknown type") |
+| m06 the signature's models not read again | `unit_s2_vis_signature_below` ("unknown field path root") |
+| m07 the old shape read nowhere, the body's isolated route too | four corpus rows of the body programs (NS-ROLES-2's) |
+| m00 control | none |
+
+Recorded, not changed here: a frame with a tail that is not an identifier written above a later definition of its
+head (`Later: 3` above `Later:`) is still classified by source order at the root; a method's own named Structure is
+still visible only after its definition (both kinds belong to NS-ROLES-1's both-way rule for every block); the walker's
+merge primitive keeps its emission code until NS-ROLES-2.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_44` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes. |
+| `build/l3_selftest/opus_l3_42` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_48` (full harness) | RED39/2210: against `opus_full_47` FAIL→OK 0, OK→FAIL 0, added 23 (all OK: the rows of this slice), removed 2 (`unit_s2_vis_signature_refused`, `unit_s2_vis_branch_refused`, replaced by their `_below` positives); of the 2187 common targets exactly three changed their message -- `unit_s2_vis_structure_below_refused` and `unit_root_struct_call2_forward_refused` (the call refusal above) and `unit_s1_merge_uncaught_entry` (now run) -- besides the two identifiers that change in every run (the translator's sha256, the unit hash of the two library rows). The 111 declared paths were hashed before the run; every staged copy is the declared bytes. |
+| Replay of `opus_full_47`'s 2188 recorded translations | Final translator over the migrated sources against 23974ec7 over the old ones: 3 rows change their message (the visibility rows), 64 rows of migrated programs only their L1. |

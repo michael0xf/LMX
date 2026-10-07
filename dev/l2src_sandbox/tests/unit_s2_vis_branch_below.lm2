@@ -1,0 +1,21 @@
+# K03 (Codex -07 Q2, -08): a method body names a qualified branch declared BELOW the method -- the branch's root is a
+# named callable definition of the unit, visible from the method above it (the S2 reading made cfg the method's
+# dynamic input, unbound).  read_branch reads cfg\e.  Exit 7; 81 otherwise.
+fn: read_branch () size_t
+return: cfg\e
+independent:
+    const:
+        immutable:
+            (): cfg
+                size_t: e 7U
+            end: cfg
+        end: immutable
+    end: const
+end: independent
+fn: m () int
+    if: read_branch() != 7U
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

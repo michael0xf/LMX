@@ -1,0 +1,19 @@
+# K03 (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q2; docs/LMX_semantics.en.md:768, :937): a method's signature
+# names a named Structure the unit defines BELOW the method -- a named Structure is a callable procedure, visible
+# throughout its block in both directions (the S2 reading refused it as a non-callable: unknown type).  take reads
+# its formal's field.  Exit 7; 81 when the formal reached another place.
+fn: take (Point: p) size_t
+    return: p\x
+end: take
+Point:
+    size_t: x 5U
+end: Point
+fn: m () int
+    pt: merge: Point
+    pt\x: 7U
+    if: take(pt) != 7U
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

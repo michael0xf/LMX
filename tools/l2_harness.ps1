@@ -2243,9 +2243,13 @@ $fixtures = @(
     # visible only after its declaration, methods both ways.  unit_s2_vis_dynamic: a method ABOVE a
     # unit field cannot see it, so the name is its dynamic input, handed over by its caller (wrap's
     # own n = 7); a translator that lets the method see the unit field below it reads 3 and the
-    # program returns 1 (the visibility mutant, measured).  The three refusals are the same rule
-    # for a Structure named by a unit statement, a Structure named by a method signature, and a
-    # qualified branch named by a method body.  An empty entry is an empty program (EmptyEntry).
+    # program returns 1 (the visibility mutant, measured).  K03 (Codex K03-S5-ALIAS-VISIBILITY-
+    # 20261007-07 Q2, -08): a named Structure is a callable, visible throughout its block in both
+    # directions (docs :768, :937) -- the S2 reading took it, and a qualified branch, for a
+    # non-callable.  A Structure named by a unit statement above it is that Structure (`Model:
+    # fresh` is its call, refused), by a method signature above it the formal's type (_below,
+    # positive, native and walked), a qualified branch by a method body above it the branch (_below,
+    # positive).  An empty entry is an empty program (EmptyEntry).
     # A stray trailer after a closed frame is an item since the P0 change of -114 and is refused
     # by name.
     # §7b (7b-1): wrap's own n is a declared field with a working value, so the actual is l2_q0.
@@ -2254,11 +2258,15 @@ $fixtures = @(
         NativeCalls = @([pscustomobject]@{Caller=1; Method=0; Throwing=$false; ResultType='int:'; ResultUse='(?m)^\s*return: {result}\s*$'; Args=@([pscustomobject]@{Type='int:'; Value='^l2_q\d+$'})});
         Debt = @('fn: l2_m0 (@: Lmx node; @: Lmx self; int: l2_p0_0) int') },
     [pscustomobject]@{ Name = 'unit_s2_vis_structure_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s2_vis_structure_below_refused.lm2:3:1: unresolved name'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s2_vis_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unknown type'; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s2_vis_branch_refused.lm2:15:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
+        Needle = 'unit_s2_vis_structure_below_refused.lm2:3:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s2_vis_signature_below.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s2_vis_signature_below_walk.lm2'; Source = 'unit_s2_vis_signature_below.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s2_vis_branch_below.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_s2_vis_branch_below_walk.lm2'; Source = 'unit_s2_vis_branch_below.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_empty_program.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 1; Needle = ''; Args = @('0'); EmptyEntry = $true;
         Absent = @(); Debt = @('# entry statements: 0') },
     [pscustomobject]@{ Name = 'unit_s2_stray_end_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3531,11 +3539,15 @@ $fixtures = @(
     # direct calls, left\other 7; 1141 twice by the node, left\other 7000.  Success is 7, else 64 plus a bit per
     # failed reading.
     [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        Absent = @(); Debt = @(); NativePatterns = @('(?s)lmx_implements_slot\(l2_program_arena, l2_pst, lmx_arena_ref_struct\(node, 0U\), \d+U, @ l2_dslot\)') },
+    [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @(); NativePatterns = @('(?s)lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), (?<model>lmx_arena_ref_struct\(node, \d+U\)), 0, 0U, 0\).*?lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), \k<model>, 0, 0U, 0\)') },
     [pscustomobject]@{ Name = 'unit_walk_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_a3_capture_direct_vs_copy_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         GraphShapes = @(
             [pscustomobject]@{ Op = 'CALL'; Width = 8; Count = 2; CallLink = $true; ResultKind = 'int'; Edges = @([pscustomobject]@{ Slot = 6; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'ARG'; Width = 4 } }) } }) },
-            [pscustomobject]@{ Op = 'CALL'; Width = 4; Count = 1; CallLink = $true; ResultKind = 'pointer'; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } }) } }) }
+            [pscustomobject]@{ Op = 'CALL'; Width = 4; Count = 1; CallLink = $true; ResultKind = 'pointer'; Edges = @([pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'ADMIT_AS'; Width = 9; Sizes = @([pscustomobject]@{ Slot = 8; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'AT'; Width = 3 } }) } }) }
         ); Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)'); Debt = @() },
     # Reading 1 (book, "Dynamic sources and the lexical fallback"; Codex, 2026-09-28 and 2026-10-04): a free name
     # of a returned method takes the nearest binding of its callers first, the node's copied context only as the
@@ -3750,13 +3762,13 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s1_merge_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; });
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts') },
-    # -178 commit 2: `P: q` is the walker's merge primitive now, and the row translates -- but it is not
-    # run: the primitive's failure is LMX_WALK_PRIMITIVE (X1), not the implicit throw `merge` (E's
-    # 0 + 1), and the driver's mergefail tap does not reach the kernel's own merge.  D-55: it runs
-    # when a kernel primitive that fails an admission reports it as THROWN + k in the caller's
-    # numbering (Grok -177 commit 5; the typed receive's `implements` is the same mechanism).
-    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'translates-with-debt'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
-        Absent = @('l2_out_throw[0]: node'); Debt = @('\fn: lmx_walk_merge_model') },
+    # -178 commit 2: `P: q` was the walker's merge primitive, and the row only translated: the primitive's
+    # failure is LMX_WALK_PRIMITIVE (X1), not the implicit throw `merge`, and the driver's mergefail tap
+    # does not reach the kernel's own merge (D-55).  K03 NS-ROLES-3: E's merge is the written
+    # construction `q: merge: P`, the native merge the tap fails -- the implicit throw reaches the root
+    # (Thrown 1), the entry has no value, R0 is stopped: the row runs (the debt marker is gone).
+    [pscustomobject]@{ Name = 'unit_s1_merge_uncaught_entry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; MergeFail = 1; Stopped = 1; Thrown = 1;
+        Absent = @('l2_out_throw[0]: node', '\fn: lmx_walk_merge_model'); Debt = @() },
     # D-07: qualified-operand merge emits lmx_merge_profiles_owned; MergeFail 1 fails it via the
     # profiles tap (shared mergefail counter). Mutant without -Dlmx_merge_profiles_owned cannot
     # fail the merge -- the program completes with 5 and the row goes RED.
@@ -4136,7 +4148,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_root_struct_call2_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_root_struct_call2_refused.lm2:15:1: more arguments than '; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_call2_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_root_struct_call2_forward_refused.lm2:11:1: a typed binding''s candidate is not a Structure value'; Absent = @(); Debt = @() },
+        Needle = 'unit_root_struct_call2_forward_refused.lm2:11:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_decl_beside_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_block_before_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -4896,6 +4908,46 @@ $fixtures = @(
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_ns_send_body_walk.lm2'; Source = 'unit_k03_ns_send_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # K03 NS-ROLES-3 (Codex K03-S5-MIGRATION-20261007-06 (a), K03-S5-ALIAS-VISIBILITY-20261007-07 Q2, -08;
+    # steps/fable-continuation-20261003.md section 111): the old `Model: fresh` declaration is gone from the root and
+    # from methods -- with Model existing, `Model: m` is Model's call, refused (an ordinary named Structure takes no
+    # argument), and the 111 such items of 92 programs are now the written construction `m: merge: Model`
+    # (steps/k03-colondecl-migration.tsv); `Model: name` declares no field at the unit (`x: Foo` keeps the definition
+    # of Foo below a definition); a named Structure is visible throughout the unit in both directions -- from a method
+    # above it, a statement above it, a signature above it -- while ordinary data keeps forward visibility and a nested
+    # Structure is no name of the unit.  The twins: --walk-methods.
+    [pscustomobject]@{ Name = 'unit_k03_cd_root_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_cd_root_call_refused.lm2:7:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_cd_root_call_refused_walk.lm2'; Source = 'unit_k03_cd_root_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_cd_root_call_refused_walk.lm2:7:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_cd_method_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_cd_method_call_refused.lm2:7:5: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_cd_method_call_refused_walk.lm2'; Source = 'unit_k03_cd_method_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_cd_method_call_refused_walk.lm2:7:5: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_cd_block_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_cd_block_call_refused.lm2:8:9: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_cd_block_call_refused_walk.lm2'; Source = 'unit_k03_cd_block_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_cd_block_call_refused_walk.lm2:8:9: more arguments than Model has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_data_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_vis_later_data_refused.lm2:3:8: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_data_refused_walk.lm2'; Source = 'unit_k03_vis_later_data_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_vis_later_data_refused_walk.lm2:3:8: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_nested_sibling_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_vis_nested_sibling_refused.lm2:10:15: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_nested_sibling_refused_walk.lm2'; Source = 'unit_k03_vis_nested_sibling_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_vis_nested_sibling_refused_walk.lm2:10:15: unresolved name'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_method_walk.lm2'; Source = 'unit_k03_vis_later_struct_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_root_walk.lm2'; Source = 'unit_k03_vis_later_struct_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_unit_declares_tail.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_vis_unit_declares_tail_walk.lm2'; Source = 'unit_k03_vis_unit_declares_tail.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     # K04a (next_core_tasks_v2.md K04; steps/callable-actual-projection-20260930.md, witness matrix row 1): a
     # NONRETURNING `sub task` received by a `(task: f)` formal is transmitted by reference -- the counter the
     # task changes stays 0 through the receiving call and is changed once by the explicit invocation.
@@ -5245,6 +5297,10 @@ $fixtures = @(
     # T4b class 1: a Structure formal is ARG j, the caller's Structure. peek reads OF(ARG 0, slot 0);
     # poke writes PUT_OF of that ARG; sum reads ARG 0 and ARG 1. The three methods are walked.
     [pscustomobject]@{ Name = 'unit_walk_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkedMethods = @(0,1,2);
+        Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
+        Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_struct_formal_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         WalkedMethods = @(0,1,2);
         Absent = @('l2_entry_leaf\native: (cast: (LmxEntry) l2_m0_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m1_tr)', 'l2_entry_leaf\native: (cast: (LmxEntry) l2_m2_tr)');
         GraphShapes = @(

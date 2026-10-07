@@ -1,0 +1,15 @@
+# K03 (Codex -07 Q2): a nested Structure is a field of its parent, not a definition of the unit -- the bare name
+# Inner is no name in m (Outer\Inner is).  Both-way visibility does not flatten a block.  Refused at the path.
+Outer:
+    size_t: k 1U
+    (): Inner
+        size_t: v 4U
+    end: Inner
+end: Outer
+fn: m () int
+    if: Inner\v != 4U
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,16 @@
+# K03 S7: an operator expression is one merge operand; its common typing makes `a + 1` a number, no Structure --
+# refused at the operand by merge's contract (docs/LMX_semantics.en.md#composition: an operation over live structural
+# operands).  Before, the leading-atom reading took `a`, `+` and `1` for three operands and refused `a` as unknown.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: m () int
+    int: a 1
+    A: merge: Model a + 1
+    return: A\v + 6
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

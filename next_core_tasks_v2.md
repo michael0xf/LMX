@@ -736,6 +736,17 @@ Current bounded implementation, with no DONE claim:
   do not mistake compiler name arrays or generated diagnostic comments for
   that facility. Copy/merge must remap source-place keys and preserve payload
   ownership through the same copy map; no second AST or saved source replay.
+- [ ] G4 MERGE-PARENT-SITE-OVERRIDE ([steps/defects.md](steps/defects.md#merge-parent-site-override); Codex
+  K03-MERGE-PARENT-20261007-27; the author, LMX_blog/2026-10-05.md#merge-parent): merge copies the used source closure
+  and remaps parent inside that copy; the executing or receiving host is not the result's lexical parent, and parents
+  are not flattened to 0 -- copied lexical ancestors keep their relationships to their zero-parent root under the one
+  source-to-copy map; ownership arena, Thread supervision parent, explicit construction containment and lexical parent
+  stay separate; a retained independent: const: immutable branch keeps its identity and parent. Today
+  `lmx_merge_owned.lm1:263`, `:487` assign `result\parent: container` and the translator passes the merge site's
+  container (`l2_emit_stmts`: `merge_parent`); the model copy, the admission and the walker's receiver pass container
+  too. Census the callers and their distinct uses before changing the API; one topology for the root, a method, a
+  named/hosted body and a copied callable R executing code A; migrate the host-parent assertions by intent; caught
+  host-parent, source-parent and all-zero mutants; native, root/method-walked and kernel-selftest evidence.
 - [x] G4 bounded external-name ownership and transactional copy/merge:
   `critical_graph_source_names_07` GREEN, 290 targets; all 107 selftests ran.
   The name-service witness executes 93 checks, including late merge rollback,
@@ -1929,6 +1940,19 @@ callable is its nullary call (answer (c)); `l2_collect_decls`'s dead slot arms r
 Open: PATH-STRUCTURE-LEAF (required positives and refusals for a path whose leaf is a Structure, next checkpoint),
 SLOT-FAMILY-DEAD (bounded removal), OWN-CALLABLE-LIMITS's capturing own fn named bare (required positive red).
 Next: S7 -- leading-atom merge operand parsing through the ordinary actuals/operand model.
+S7 done ([section 121](steps/fable-continuation-20261003.md#unified-head-s7); Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01
+S7, K03-MERGE-OPERANDS-20261007-26): merge's operands are its application's actuals in all seven readers -- a path, a
+call, a field, a group or an operator expression one operand each, a group holding one value that value, a group
+holding a field, a declaration or several items an anonymous Structure (MERGE-LEADING-ATOMS fixed: silently dropped
+operands, split paths); a path to a Structure field and a call of a named result are lowered through the ordinary
+reference route, a call operand checked as any call; a number by the common typing is no Structure, every other form
+not lowered a located limit at the operand. Gates on the final bytes (`l2trans.lm1` blob b98c68bb): `opus_focus_s7_01` (207 targets; red exactly its three opus_full_60 baseline rows (unit_eternal_shape, unit_capture_struct_merge_two, unit_t7_host_nested_return, their messages unchanged) and the required-positive pair unit_k03_merge_op_anon_typed), kernel `opus_kernel_55` GREEN297 (114 selftests ran, staged blob b98c68bb), L3 `opus_l3_53` (all 11 suites ok, type budget ok), full `opus_full_61` RED63/2509 -- against `opus_full_60` FAIL→OK 0, OK→FAIL 0, added 32 (30 OK, 2 red: the required-positive pair), removed 0; one recorded message changed by intent: unit_recv_use_nested_copy_reach_limit_probe, "unknown merge operand" -> "this merge operand form is not lowered yet" (make is a known method).
+Open: MERGE-WRITTEN-OPERAND (the typed anonymous Structure operand, a required positive red; the bare field operand
+asked of the author, LMX_blog/q/current/merge-bare-field-operand.md), PATH-STRUCTURE-LEAF (the positions other than a
+merge operand), SLOT-FAMILY-DEAD, OWN-CALLABLE-LIMITS. CORE_L2_L3_v2.md's host-parent sentences (:130, :737, :766,
+:768) corrected to the author's merge-parent ruling.
+Next (Codex K03-MERGE-PARENT-20261007-27): MERGE-PARENT-SITE-OVERRIDE, the bounded dependency registered under
+critical_graph_bug above -- the census first, then one copy topology for every caller.
 
 ### K04 — Callable actuals and hidden inputs
 

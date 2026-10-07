@@ -4359,7 +4359,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:30:11: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_copy_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:11: unknown merge operand'; Absent = @(); Debt = @() },
+        Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:11: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_bind_root_used_other_refused.lm2:14:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_method_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -5581,6 +5581,88 @@ $fixtures = @(
         Needle = 'unit_s6_path_descriptor_empty_refused.lm2:11:1: unknown callable field'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s6_path_descriptor_empty_refused_walk.lm2'; Source = 'unit_s6_path_descriptor_empty_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_s6_path_descriptor_empty_refused_walk.lm2:11:1: unknown callable field'; Absent = @(); Debt = @() },
+    # K03 S7 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01, S7; K03-MERGE-OPERANDS-20261007-26;
+    # docs/LMX_semantics.en.md#composition): merge's operands are its application's actuals (l2_merge_arity:
+    # l2_actual_count), read so by the declaration merge's schema, scan, width, native emission and walk and by the
+    # callable merges (T5, T7); a group holding one value -- a name, a path, a call, an operator expression -- is that
+    # value (l2_merge_group_value), a group holding a field, a declaration or several items is an anonymous Structure.
+    # A path whose leaf is a Structure and a call of a named result are lowered through the ordinary reference route;
+    # a number by the common typing is no Structure; every other form is a located limit at the operand -- nothing is
+    # dropped, nothing split.  The native rows pin the methods' native words, the twins that they are walked.
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_group.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_group_walk.lm2'; Source = 'unit_k03_merge_op_group.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_path_walk.lm2'; Source = 'unit_k03_merge_op_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_path_roots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_path_roots_walk.lm2'; Source = 'unit_k03_merge_op_path_roots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_walk.lm2'; Source = 'unit_k03_merge_op_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_args_walk.lm2'; Source = 'unit_k03_merge_op_call_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    # Failure before the store: a call operand that throws stops the merge before it runs -- the statement after it is
+    # skipped, and a destination outside the failing method keeps its referent; tick's earlier effect stays.  boom is
+    # no walkable method (its throw), so its native word stays; the merges' methods are walked.
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_throw_caught_walk.lm2'; Source = 'unit_k03_merge_op_call_throw_caught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_fail_dest.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_fail_dest_walk.lm2'; Source = 'unit_k03_merge_op_call_fail_dest.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_pap_group.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6;
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_pap_group_walk.lm2'; Source = 'unit_k03_merge_op_pap_group.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 6; WalkMethods = $true;
+        WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_t7_group.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
+        NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_t7_group_walk.lm2'; Source = 'unit_k03_merge_op_t7_group.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # Refusals said at the operand by its category: a number (an operator expression, an int name) is no Structure; a
+    # group of two items, a group holding a field in a callable merge and a bare field are located limits; a call's
+    # unhandled throw is the call's own refusal.
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_merge_op_expr_refused.lm2:12:21: a merge operand is not a Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_expr_refused_walk.lm2'; Source = 'unit_k03_merge_op_expr_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_merge_op_expr_refused_walk.lm2:12:21: a merge operand is not a Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_name_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_merge_op_name_number_refused.lm2:11:21: a merge operand is not a Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_name_number_refused_walk.lm2'; Source = 'unit_k03_merge_op_name_number_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_merge_op_name_number_refused_walk.lm2:11:21: a merge operand is not a Structure'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_group_two_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_merge_op_group_two_refused.lm2:11:15: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_group_two_refused_walk.lm2'; Source = 'unit_k03_merge_op_group_two_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_merge_op_group_two_refused_walk.lm2:11:15: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_t7_anon_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_merge_op_t7_anon_refused.lm2:7:25: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_t7_anon_refused_walk.lm2'; Source = 'unit_k03_merge_op_t7_anon_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_merge_op_t7_anon_refused_walk.lm2:7:25: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_throw_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_merge_op_call_throw_refused.lm2:16:21: unhandled throw: Oops'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_call_throw_refused_walk.lm2'; Source = 'unit_k03_merge_op_call_throw_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_merge_op_call_throw_refused_walk.lm2:16:21: unhandled throw: Oops'; Absent = @(); Debt = @() },
+    # A located limit, not a rule: what a bare `v: 9` operand denotes is open (steps/defects.md#merge-written-operand).
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_bare_field_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_k03_merge_op_bare_field_limit.lm2:12:21: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_bare_field_limit_walk.lm2'; Source = 'unit_k03_merge_op_bare_field_limit.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_k03_merge_op_bare_field_limit_walk.lm2:12:21: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
+    # REQUIRED POSITIVE, red until its lowering is built (steps/defects.md#merge-written-operand): an anonymous Structure
+    # whose field is declared, `(int: v 9)`, is one operand whose v takes the model's slot (#composition, "Model slots"),
+    # and is the model when first; today refused at the group.
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_anon_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_k03_merge_op_anon_typed_walk.lm2'; Source = 'unit_k03_merge_op_anon_typed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:15:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

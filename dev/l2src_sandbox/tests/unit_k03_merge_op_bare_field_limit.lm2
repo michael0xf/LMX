@@ -1,0 +1,16 @@
+# K03 S7: a bare `v: 9` written as a merge operand is one operand, no longer dropped -- refused at it as a form not
+# lowered.  What it denotes is the open question this row does not answer: a field v holding 9, as
+# `merge(add; y: 5)` (docs/LMX_semantics.en.md#composition), or a definition of a Structure v, as an unknown head in a
+# body (#construction: the language has no var).  Before, the leading-atom reading dropped it: A\v read Model's 1.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: m () int
+    A: merge(Model; v: 9)
+    return: A\v - 2
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

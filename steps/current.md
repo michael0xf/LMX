@@ -763,6 +763,18 @@ Fable принял единственный writer/build-слот по [to_fable
   сравнения написания ([k03-s6-census.tsv](k03-s6-census.tsv)): 761 место, ни одно не выбирает вызываемого по написанию
   ([§120 журнала](fable-continuation-20261003.md#unified-head-s6)).
   Гейты на финальных байтах (`l2trans.lm1` blob f92a24cc): `opus_focus_s6_01` (97 целей; красные только базовая `unit_callable_forward` и пара обязательного позитива `unit_s6_own_fn_capture_value`), `opus_kernel_54` GREEN297 (114 самотестов, staged blob f92a24cc), `opus_l3_52` (все 11 наборов ok, бюджет типов ok), `opus_full_60` RED61/2477: против `opus_full_59` FAIL→OK 0, OK→FAIL 0, добавлено 35 (33 OK, 2 красных — пара обязательного позитива), удалено 0, ни одно записанное сообщение не изменилось.
+- K03 S7 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01, шаг S7; K03-MERGE-OPERANDS-20261007-26): операнды merge —
+  фактические аргументы его применения, как у любого применения: путь, вызов, поле, группа и операторное выражение —
+  по одному операнду; так читают все семь читателей (схема, скан, ширина, нативная эмиссия и обход декларативного
+  merge, callable merge T5 и T7). Группа с одним значением — это значение; группа с полем, объявлением или несколькими
+  элементами — анонимная Structure. Чтение ведущими атомами снято ([MERGE-LEADING-ATOMS](defects.md#merge-leading-atoms):
+  молча отброшенные операнды, разбитые пути). Путь к полю-Structure и вызов с именованным результатом — операнды
+  обычным ссылочным маршрутом, вызов проверяется как любой; число по общему типу — «a merge operand is not a
+  Structure», прочие формы — located-предел у операнда. Анонимная Structure с объявленным полем — обязательный
+  позитив, голое поле — вопрос автору ([MERGE-WRITTEN-OPERAND](defects.md#merge-written-operand),
+  [LMX_blog/q/current/merge-bare-field-operand.md](../LMX_blog/q/current/merge-bare-field-operand.md)); устаревшая фраза о
+  родителе результата merge в CORE_L2_L3_v2.md исправлена ([§121 журнала](fable-continuation-20261003.md#unified-head-s7)).
+  Гейты на финальных байтах (`l2trans.lm1` blob b98c68bb): `opus_focus_s7_01` (207 целей; красные ровно три базовые строки `opus_full_60` (`unit_eternal_shape`, `unit_capture_struct_merge_two`, `unit_t7_host_nested_return`, сообщения те же) и пара обязательного позитива `unit_k03_merge_op_anon_typed`), `opus_kernel_55` GREEN297 (114 самотестов, staged blob b98c68bb), `opus_l3_53` (все 11 наборов ok, бюджет типов ok), `opus_full_61` RED63/2509: против `opus_full_60` FAIL→OK 0, OK→FAIL 0, добавлено 32 (30 OK, 2 красных — пара обязательного позитива), удалено 0; одно записанное сообщение изменилось намеренно: `unit_recv_use_nested_copy_reach_limit_probe`, «unknown merge operand» → «this merge operand form is not lowered yet» (make — известный метод).
 - K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23 и ответ по дизайну, K03-OUTPUT-ORACLES-20261007-24;
   LMX_blog/q/q53.md:95-97): вычисленный выход на верхнем уровне тела именованной Structure — имя `receiveMessage: m`,
   результат `b: merge: A`, `int: i getValue()` — не данные и не поле Structure (никогда `Host\m`): он хранится у

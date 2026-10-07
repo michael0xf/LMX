@@ -1,0 +1,12 @@
+# K03 S7: in a callable merge the group `(y: k)` holds a field, no one value: it is an anonymous Structure operand,
+# not the bare `y: k` the callable merge binds -- refused at the group as a form not lowered.
+fn: add3 (int: y; int: x; int: z) int
+    return: y + x * 10 + z * 100
+
+fn: wrap (int: k) fn: (int: x; int: z) int
+    return: merge(add3; (y: k))
+
+@: w wrap(5)
+int: a (w: 1 2)
+sendMessage: exit(exit_code: a - 208; stdout: ""; stderr: "")
+return

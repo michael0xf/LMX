@@ -1,0 +1,15 @@
+# K03 S7: `merge(((Model Other)))` has one operand -- P0 makes the sole container transparent once, and what it holds,
+# the group `(Model Other)`, holds two items and no one value: an anonymous Structure, refused at the operand as a form
+# no merge lowers yet, with no merge-specific flattening of nested groups.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: m () int
+    A: merge(((Model Other)))
+    return: A\v + A\w + 4
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

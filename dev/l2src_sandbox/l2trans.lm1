@@ -1126,6 +1126,15 @@ prototype:
     fn: l2_merge_declaration (const: @(LmP0Structure body); const: @(LmP0Node stmt); int: mi) @: LmP0Node
     fn: l2_merge_body (const: @(LmP0Node stmt)) @: LmP0Structure
     fn: l2_merge_arity (const: @(LmP0Node mf)) int
+    fn: l2_merge_operand_node (const: @(LmP0Node mf); int: k; int: mi; const: @(char path); @@: LmP0Field out) int
+    fn: l2_merge_group_value (@@: LmP0Field first; @: int span; int: mi) int
+    fn: l2_merge_operand_limit (@: LmP0Field first; int: span; int: mi; const: @(char path); const: @(LmP0Node at)) int
+    fn: l2_merge_unknown_operand (@: LmP0Field name; int: mi; const: @(char path)) int
+    fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char path); @@: LmP0Field first; @: int span) int
+    fn: l2_check_merge_operands (const: @(LmP0Node mf); int: mi; const: @(char path)) int
+    fn: l2_merge_operand_value (@: LmP0Field first; int: span; int: ty; int: mi; const: @(char ind); @: L2Tx dest) int
+    fn: l2_rw_merge_operand (@: LmP0Field first; int: span; int: ty; int: parent; @: int out) int
+    fn: l2_emit_merge_profile (const: @(char ind); int: msf; int: k) int
     fn: l2_mres_of_own (int: own) int
     fn: l2_mres_find (int: mi; const: @(LmP0Text t)) int
     fn: l2_mres_decl (int: mi; const: @(LmP0Node stmt)) int
@@ -14072,7 +14081,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
             excluded: l2_own_excl
             l2_own_excl: oi
             fr: l2_merge_frame(stmt)\as\frame
-            scanned: l2_scan_fields(fr\body\first_field, l2_merge_arity(l2_merge_frame(stmt)), mi, seen)
+            scanned: l2_scan_fields(fr\body\first_field, l2_count_active(fr\body), mi, seen)
             l2_own_excl: excluded
             if: scanned != 0 || l2_scan_bound(mi, oi, seen) != 0
                 return: 1
@@ -24832,6 +24841,18 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
         ---
         bh: nb
         bm: 0 - 1
+        # K03 S7b: a merge operand (arr_ok 2) ends at a Structure field, kind 2 or 3: l2_pst is the Structure it holds.
+        if: i + 1 = segs && arr_ok = 2 && kind != 2 && kind != 3
+            return: l2_error(l2_src, at, "this merge operand form is not lowered yet")
+        if: i + 1 = segs && arr_ok = 2 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
+            return: 1
+        if: i + 1 = segs && arr_ok = 2 && l2_emit_path_bail(mi, ind) != 0
+            return: 1
+        if: i + 1 = segs && arr_ok = 2
+            \out_kind: kind
+            i: i + 1
+            continue
+        ---
         if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && (arr_ok = 0 || (kind != 5 && kind != 6))
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
         if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
@@ -28098,9 +28119,12 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             l2_scope_pop()
             field: l2_next_active(field\next)
             continue
-        # 19.17 merge is an ordinary statement frame here. Its operands are
-        # checked at emission, where the qualified branch table is complete.
+        # 19.17 merge is an ordinary statement frame here. Its name operands are
+        # checked at emission, where the qualified branch table is complete; a call
+        # operand here, as any call in a value (K03 S7b, l2_check_merge_operands).
         if: l2_merge_declaration(body, stmt, mi) != 0
+            if: l2_check_merge_operands(l2_merge_frame(stmt), mi, path) != 0
+                return: 1
             field: l2_next_active(field\next)
             continue
         if: l2_frame_head(stmt, "[]") && (l2_own_array_count(stmt) = 0 || depth != l2_scope_n)
@@ -38005,6 +38029,8 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     int: own l2_mres_own[res]
     int: value_slot
     int: excluded l2_own_excl
+    int: form
+    int: span 0
     if: n < 1
         return: l2_error(l2_src, stmt, "merge needs at least one operand")
     if: bd != 0
@@ -38047,8 +38073,19 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
     if: l2_rw_emit != 0 && source\layout = -1 && c.fprintf(l2_out, "        if: lmx_walk_store_charptr(l2_program_arena, l2_rw%d, 6U, 0) != c.LMX_WALK_OK\n            return: 1\n", prim) < 0
         return: 1
     l2_own_excl: own
-    last: l2_next_active(mf\as\frame\body\first_field)
     while: k < n
+        form: l2_merge_decl_operand(mf, k, l2_rw_mi, l2_src, @ last, @ span)
+        if: form = 1
+            l2_own_excl: excluded
+            return: 1
+        # K03 S7b: a path or a call operand -- its reference walked under the merge, evaluated before it runs.
+        if: form = 2
+            if: l2_rw_merge_operand(last, span, l2_own_ty[own], prim, @ node) != 0 || l2_rw_put(prim, k + 7, node) != 0
+                l2_own_excl: excluded
+                return: 1
+            k: k + 1
+            continue
+        ---
         sl: l2_resolved_own(l2_rw_mi, last\value\as\atom)
         oi: l2_ebr_find(last\value\as\atom)
         ni: l2_ns_find(last\value\as\atom)
@@ -38077,7 +38114,6 @@ fn: l2_rw_merge (const: @(LmP0Node stmt); int: res; int: into; @: int out) int
                     return: 1
                 ---
             ---
-        last: l2_next_active(last\next)
         k: k + 1
     ---
     l2_own_excl: excluded
@@ -45620,13 +45656,20 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
     int: val
     int: slot
     int: at
+    int: nop
+    int: k
     size_t: bits 0U
     if: node = 0 || l2_frame_head(node, "merge") = 0 || node\as = 0 || node\as\frame = 0 || node\as\frame\body = 0
         return: l2_error(path, node, "a callable merge needs one model")
-    f: l2_next_active(node\as\frame\body\first_field)
-    if: f = 0
+    nop: l2_merge_arity(node)
+    if: nop < 0
+        return: l2_error(path, node, "a merge operand is not an expression")
+    if: nop = 0
         return: l2_error(path, node, "a callable merge needs one model")
-    while: f != 0
+    k: 0
+    while: k < nop
+        if: l2_merge_operand_node(node, k, host, path, @ f) != 0
+            return: 1
         md: l2_pap_method_of(f\value)
         if: md >= 0
             methods: methods + 1
@@ -45639,7 +45682,7 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
                 return: l2_error(path, f\value, "a callable merge binds a name that is not a formal")
             ---
         ---
-        f: l2_next_active(f\next)
+        k: k + 1
     ---
     if: methods != 1 || model < 0
         return: l2_error(path, node, "a callable merge needs one model")
@@ -45656,8 +45699,12 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
     if: argc < 0
         l2_t7h_n: h_save
         return: l2_error(path, node, "out of memory")
-    f: l2_next_active(node\as\frame\body\first_field)
-    while: f != 0
+    k: 0
+    while: k < nop
+        if: l2_merge_operand_node(node, k, host, path, @ f) != 0
+            l2_t7h_n: h_save
+            l2_t7b_n: b_save
+            return: 1
         if: l2_pap_method_of(f\value) < 0
             fr: f\value\as\frame
             only: l2_next_active(fr\body\first_field)
@@ -45700,7 +45747,7 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
             l2_t7b_val[at]: val
             l2_t7b_slot[at]: slot
             l2_t7b_n: l2_t7b_n + 1
-        f: l2_next_active(f\next)
+        k: k + 1
     ---
     nb: l2_t7b_n - b_save
     if: l2_t7_header_match(model, h_save, argc, ret, b_save, nb) = 0
@@ -46163,14 +46210,19 @@ fn: l2_pap_consider (int: mi; const: @(char path)) int
     int: md
     int: oi
     int: fj
+    int: nop
+    int: k
     size_t: off
     stmt: l2_pap_sole(mi)
     if: stmt = 0 || l2_frame_head(stmt, "merge") = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
         return: 0
-    f: l2_next_active(stmt\as\frame\body\first_field)
-    if: f = 0
+    nop: l2_merge_arity(stmt)
+    if: nop < 1
         return: 0
-    while: f != 0
+    k: 0
+    while: k < nop
+        if: l2_merge_operand_node(stmt, k, mi, path, @ f) != 0
+            return: 1
         md: l2_pap_method_of(f\value)
         if: md >= 0
             methods: methods + 1
@@ -46180,12 +46232,14 @@ fn: l2_pap_consider (int: mi; const: @(char path)) int
                 return: 0
             ---
         ---
-        f: l2_next_active(f\next)
+        k: k + 1
     ---
     if: methods != 1 || model < 0
         return: l2_error(path, stmt, "a callable merge needs one model")
-    f: l2_next_active(stmt\as\frame\body\first_field)
-    while: f != 0
+    k: 0
+    while: k < nop
+        if: l2_merge_operand_node(stmt, k, mi, path, @ f) != 0
+            return: 1
         if: l2_pap_method_of(f\value) < 0
             nm: 0
             lit: 0
@@ -46214,7 +46268,7 @@ fn: l2_pap_consider (int: mi; const: @(char path)) int
                 return: 1
             ---
         ---
-        f: l2_next_active(f\next)
+        k: k + 1
     ---
     l2_pap_model[mi]: model
 return: 0
@@ -47508,21 +47562,177 @@ fn: l2_merge_body (const: @(LmP0Node stmt)) @: LmP0Structure
         return: 0
 return: f\value\as\structure
 
-# Operand count of a merge frame: the leading atoms only. A trailing STRUCTURE
-# holds the result body fields and is never an operand.
+# K03 S7 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01; docs/LMX_semantics.en.md#composition): the operands of a
+# merge are its application's actuals, read as every application's are (l2_actual_count) -- a path, a call, a field,
+# a group or an operator expression is one operand, and P0 has already made a sole argument container transparent
+# (`merge((A C))` is `merge(A C)`).  A result body is no operand: P0 gives it beside the merge Frame, in the
+# statement (l2_merge_body).  -1: a written argument is no expression.  The leading-atom reading this replaces dropped
+# every operand after the first that was not an atom, split a path into its atoms and gave a leading call or group
+# no operand at all.
 fn: l2_merge_arity (const: @(LmP0Node mf)) int
-    @: LmP0Field f
-    int: n 0
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: 0
-    f: l2_next_active(mf\as\frame\body\first_field)
-    while: f != 0
-        if: f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM
-            return: n
-        n: n + 1
-        f: l2_next_active(f\next)
+return: l2_actual_count(mf\as\frame\body\first_field)
+
+# A merge operand written as a group is the value the group holds when it holds one value -- one name, one path, one
+# call, one operator expression: the ordinary transparent one-value group (l2_reference_fields), to any depth.  A group
+# holding a field, a declaration, a definition or several items holds no one value: it is an anonymous Structure and the
+# operand itself (docs/LMX_semantics.en.md#composition: `merge((n: 5); addN)`).  Nothing beside the group is taken.
+fn: l2_merge_group_value (@@: LmP0Field first; @: int span; int: mi) int
+    @: LmP0Field g
+    @: LmP0Field in
+    int: count
+    g: \first
+    while: \span = 1 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_STRUCTURE && g\value\as != 0 && g\value\as\structure != 0
+        count: l2_count_active(g\value\as\structure)
+        in: l2_next_active(g\value\as\structure\first_field)
+        if: count < 1 || in = 0 || in\value = 0 || l2_expr_span(in) != count
+            return: 0
+        if: count = 1 && in\value\kind = c.LM_P0_NODE_FRAME && l2_d105_callee(mi, in, 1) < 0
+            return: 0
+        \first: in
+        \span: count
+        g: in
     ---
-return: n
+return: 0
+
+# An operand no merge of the translator lowers, said at the written operand by its resolved category: a number by the
+# common typing (l2_native_group_ty) is no Structure -- merge's contract; any other form (a field, an anonymous
+# Structure, a prefixed operand, a Structure the typing reaches by an expression) is a located limit.
+fn: l2_merge_operand_limit (@: LmP0Field first; int: span; int: mi; const: @(char path); const: @(LmP0Node at)) int
+    int: ty
+    ty: l2_native_group_ty(first, span, mi)
+    if: ty >= 0 && l2_prim_code_name(ty) != 0
+        return: l2_error(path, at, "a merge operand is not a Structure")
+return: l2_error(path, at, "this merge operand form is not lowered yet")
+
+# A name operand no Structure route resolves, said by what the name is: a callable's occurrence is a form the
+# declaration merge does not lower (the callable merges are lowered where a callable result is received, T5 and T7);
+# a number is no Structure; a name the site does not see is unknown.
+fn: l2_merge_unknown_operand (@: LmP0Field name; int: mi; const: @(char path)) int
+    int: formal 0 - 1
+    int: ty
+    if: l2_call_head_method(mi, name\value\as\atom, @ formal) >= 0
+        return: l2_error(path, name\value, "this merge operand form is not lowered yet")
+    ty: l2_native_group_ty(name, 1, mi)
+    if: ty >= 0 && l2_prim_code_name(ty) != 0
+        return: l2_error(path, name\value, "a merge operand is not a Structure")
+return: l2_error(path, name\value, "unknown merge operand")
+
+# Operand k of a callable merge (T5, T7) by that reading: 0 and *out its one field -- a name or a Frame, which the
+# callable merge's own contract reads; 1 said at the operand (l2_merge_operand_limit).
+fn: l2_merge_operand_node (const: @(LmP0Node mf); int: k; int: mi; const: @(char path); @@: LmP0Field out) int
+    @: LmP0Field f
+    @: LmP0Field g
+    int: span
+    \out: 0
+    if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
+        return: l2_error(path, mf, "a merge operand is not an expression")
+    f: l2_actual_field(mf\as\frame\body\first_field, k)
+    if: f = 0 || f\value = 0 || l2_expr_span(f) < 1
+        return: l2_error(path, mf, "a merge operand is not an expression")
+    span: l2_expr_span(f)
+    g: f
+    l2_merge_group_value(@ g, @ span, mi)
+    if: span != 1 || g = 0 || g\value = 0 || g\value\kind = c.LM_P0_NODE_STRUCTURE
+        return: l2_merge_operand_limit(g, span, mi, path, f\value)
+    \out: g
+return: 0
+
+# The declaration merge's operand k by its form, read where mi stands (K03 S7, S7b): 0, a name -- *first its field;
+# 2, a path whose last field is a Structure (l2_reference_path_leaf) or a call whose callee gives a named Structure
+# (l2_d105_callee) -- *first and *span its fields, seen through a one-value group (l2_merge_group_value); 1, said at the
+# operand by its category (l2_merge_operand_limit): a number is no Structure; a field, an anonymous Structure, a call of
+# no named result and a path to no Structure are the forms no merge lowers yet.
+fn: l2_merge_decl_operand (const: @(LmP0Node mf); int: k; int: mi; const: @(char path); @@: LmP0Field first; @: int span) int
+    @: LmP0Field f
+    @: LmP0Field g
+    int: n
+    int: callee
+    \first: 0
+    \span: 0
+    if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
+        return: l2_error(path, mf, "a merge operand is not an expression")
+    f: l2_actual_field(mf\as\frame\body\first_field, k)
+    if: f = 0 || f\value = 0 || l2_expr_span(f) < 1
+        return: l2_error(path, mf, "a merge operand is not an expression")
+    n: l2_expr_span(f)
+    g: f
+    l2_merge_group_value(@ g, @ n, mi)
+    if: n = 1 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && g\value\as\atom != 0
+        \first: g
+        \span: 1
+        return: 0
+    ---
+    if: n >= 3 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && l2_operand_run(g, n) = n && l2_reference_path_leaf(g, n, mi) >= 0
+        \first: g
+        \span: n
+        return: 2
+    ---
+    if: n = 1 && g != 0 && g\value != 0 && g\value\kind = c.LM_P0_NODE_FRAME
+        callee: l2_d105_callee(mi, g, 1)
+        if: callee >= 0 && callee != l2_e && l2_nsty_get(callee, 0 - 1) >= 0
+            \first: g
+            \span: 1
+            return: 2
+        ---
+    ---
+return: l2_merge_operand_limit(g, n, mi, path, f\value)
+
+# K03 S7b: a call operand is checked where the merge is, as any call in a value is (l2_check_fields): its arity,
+# edges, throws and inputs.  A name is checked at emission, where the qualified branch table is complete; a path was
+# resolved by the schema.
+fn: l2_check_merge_operands (const: @(LmP0Node mf); int: mi; const: @(char path)) int
+    @: LmP0Field first 0
+    int: span 0
+    int: k 0
+    int: n l2_merge_arity(mf)
+    while: k < n
+        if: l2_merge_decl_operand(mf, k, mi, path, @ first, @ span) = 1
+            return: 1
+        if: span = 1 && first\value\kind = c.LM_P0_NODE_FRAME && l2_check_fields(first, 1, mi, path, first\value) != 0
+            return: 1
+        k: k + 1
+    ---
+return: 0
+
+# The value of a path or call operand into dest, evaluated once where the merge runs, before it (K03 S7b): a call is
+# the ordinary reference value (l2_emit_reference_value: the call into its temporary); a path walks to its leaf
+# Structure (l2_emit_path_to's Structure leaf, l2_pst).
+fn: l2_merge_operand_value (@: LmP0Field first; int: span; int: ty; int: mi; const: @(char ind); @: L2Tx dest) int
+    @: char text 0
+    int: kind 0
+    int: rc
+    if: span = 1
+        return: l2_emit_reference_value(first, span, ty, 0 - 1, mi, ind, dest)
+    text: l2_address_path_text(first, span)
+    if: text = 0
+        return: l2_alloc_or(l2_src, first\value, "out of memory")
+    rc: l2_emit_path_to(text, strlen(text), mi, ind, first\value, @ kind, 2)
+    l2_xfree((cast: (@: void) text))
+    if: rc != 0
+        return: 1
+return: l2_tx_set(dest, "l2_pst")
+
+# The same operand walked: a path's reference (l2_rw_path_reference: AT down to the leaf Structure), a call's value.
+fn: l2_rw_merge_operand (@: LmP0Field first; int: span; int: ty; int: parent; @: int out) int
+    @: char text 0
+    LmP0Text: written
+    int: rc
+    if: span = 1
+        return: l2_rw_reference_value(first, span, ty, parent, out)
+    text: l2_address_path_text(first, span)
+    if: text = 0
+        return: 1
+    written.data: text
+    written.length: strlen(text)
+    rc: l2_rw_path_reference(first\value, @ written, parent, out)
+    l2_xfree((cast: (@: void) text))
+return: rc
+
+# Operand k's physical profile, classified when the program runs (lmx_range_profile) and counted when it has one.
+fn: l2_emit_merge_profile (const: @(char ind); int: msf; int: k) int
+return: (cast: (int) (c.fprintf(l2_out, "%sl2_mprofiles[l2_mprofile_n%d]: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_mops[%dU]))\n%sif: l2_mprofiles[l2_mprofile_n%d] != 0\n%s    l2_mprofile_n%d: l2_mprofile_n%d + 1U\n%s---\n", ind, msf, k, ind, msf, ind, msf, msf, ind) < 0))
 
 # Compiler schema handles reuse existing metadata: named namespace indices,
 # -1 absent, and tagged merge indices. A handle at or below -1500000000 is
@@ -47939,8 +48149,7 @@ fn: l2_own_ref_candidate (int: own) int
 # lowered before the entry E may already read a field of the result.
 fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     @: L2ReferenceSource source @ l2_mres_source[res]
-    const: @: LmP0Frame fr
-    @: LmP0Field last
+    @: LmP0Field last 0
     @: LmP0Field bf
     @: LmP0Field bv
     @: LmP0Structure bd
@@ -47956,19 +48165,28 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
     int: q 0
     int: cand 0 - 1
     int: fi 0 - 1
+    int: form
+    int: span 0
+    int: osch
+    L2ReferenceSource: operand
     if: mf = 0 || mf\as = 0 || mf\as\frame = 0 || mf\as\frame\body = 0
         return: 0
-    fr: mf\as\frame
     n: l2_merge_arity(mf)
-    last: l2_next_active(fr\body\first_field)
+    if: n < 0
+        return: l2_error(l2_method_src(mi, l2_src), mf, "a merge operand is not an expression")
     if: l2_reference_source(0, 0, mi, source) != 0
         return: 1
     if: l2_mres_from != 0
         l2_mres_from[res]: 0 - 1
     if: n = 1 && l2_merge_body(stmt) = 0
-        if: l2_reference_source(last, 1, mi, source) != 0
+        form: l2_merge_decl_operand(mf, 0, mi, l2_method_src(mi, l2_src), @ last, @ span)
+        if: form = 1
             return: 1
-        own: l2_resolved_own(mi, last\value\as\atom)
+        if: l2_reference_source(last, span, mi, source) != 0
+            return: 1
+        own: 0 - 1
+        if: form = 0
+            own: l2_resolved_own(mi, last\value\as\atom)
         if: own >= 0
             source\schema: l2_own_schema(own)
             source\layout: -1
@@ -47981,9 +48199,24 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
             ---
         ---
     ---
-    while: k < n && last != 0
-        if: last\value = 0 || last\value\kind != c.LM_P0_NODE_ATOM
-            return: 0
+    while: k < n
+        form: l2_merge_decl_operand(mf, k, mi, l2_method_src(mi, l2_src), @ last, @ span)
+        if: form = 1
+            return: 1
+        # K03 S7b: a path or a call operand has its reference source's model -- the path's leaf Structure, the
+        # callee's result model, a merge result's record.
+        if: form = 2
+            l2_reference_source(last, span, mi, @ operand)
+            osch: operand.schema
+            if: l2_schema_kind(osch) = 1 && l2_mrs_take_entry(res, k, osch, last\value) != 0
+                return: 1
+            if: l2_schema_kind(osch) = 2 && l2_mrs_take_result(res, k, l2_schema_index(osch), last\value) != 0
+                return: 1
+            if: l2_schema_kind(osch) != 1 && l2_schema_kind(osch) != 2
+                return: l2_error(l2_method_src(mi, l2_src), last\value, "this merge operand form is not lowered yet")
+            k: k + 1
+            continue
+        ---
         own: l2_resolved_own(mi, last\value\as\atom)
         oi: -1
         ni: -1
@@ -48012,14 +48245,13 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
             ---
         ---
         if: oi < 0 && ni < 0 && sl < 0
-            return: l2_error(l2_method_src(mi, l2_src), last\value, "unknown merge operand")
+            return: l2_merge_unknown_operand(last, mi, l2_method_src(mi, l2_src))
         if: oi >= 0 && l2_mrs_take_entry(res, k, l2_ebr_root(oi), last\value) != 0
             return: 1
         if: oi < 0 && ni >= 0 && l2_mrs_take_entry(res, k, ni, last\value) != 0
             return: 1
         if: oi < 0 && ni < 0 && sl >= 0 && l2_mrs_take_result(res, k, sl, last\value) != 0
             return: 1
-        last: l2_next_active(last\next)
         k: k + 1
     ---
     bd: l2_merge_body(stmt)
@@ -48350,6 +48582,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     @: LmP0Structure bd 0
     int: msf 0
     int: merge_own
+    int: form
+    int: span 0
     @: L2ReferenceSource merge_source
     []: char merge_parent 128
     []: char merge_source_token 128
@@ -48560,7 +48794,6 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         # (l2_emit_implicit_throw): no payload, status d + 1, and
         # the ordinary result is not published.
         if: l2_merge_declaration(body, stmt, mi) != 0
-            fr: l2_merge_frame(stmt)\as\frame
             n: l2_merge_arity(l2_merge_frame(stmt))
             if: n < 1
                 return: l2_error(l2_src, stmt, "merge needs at least one operand")
@@ -48621,9 +48854,22 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             else:
                 strcpy(merge_parent, l2_own_ctr(merge_own))
             ---
-            last: l2_next_active(fr\body\first_field)
             k: 0
             while: k < n
+                form: l2_merge_decl_operand(l2_merge_frame(stmt), k, mi, l2_src, @ last, @ span)
+                if: form = 1
+                    l2_own_excl: excluded
+                    return: 1
+                # K03 S7b: a path or a call operand is evaluated once here, in operand order, before the merge runs.
+                if: form = 2
+                    if: l2_merge_operand_value(last, span, l2_own_ty[merge_own], mi, ind, l2_bind_tok) != 0 || c.fprintf(l2_out, "%sl2_mops[%dU]: (cast: (@: Lmx) %s)\n", ind, k, l2_bind_tok\data) < 0
+                        l2_own_excl: excluded
+                        return: 1
+                    if: l2_emit_merge_profile(ind, msf, k) != 0
+                        return: 1
+                    k: k + 1
+                    continue
+                ---
                 oi: l2_ebr_find(last\value\as\atom)
                 # The operand must be identified BEFORE its width and literals are
                 # read: this lookup used to sit at the bottom of the loop, so every
@@ -48661,9 +48907,8 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
                     return: 1
                 # The actual operand, including a held alias, supplies its physical
                 # profile. This is the same runtime classification as PRIM_PUB.
-                if: c.fprintf(l2_out, "%sl2_mprofiles[l2_mprofile_n%d]: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_mops[%dU]))\n%sif: l2_mprofiles[l2_mprofile_n%d] != 0\n%s    l2_mprofile_n%d: l2_mprofile_n%d + 1U\n%s---\n", ind, msf, k, ind, msf, ind, msf, msf, ind) < 0
+                if: l2_emit_merge_profile(ind, msf, k) != 0
                     return: 1
-                last: l2_next_active(last\next)
                 k: k + 1
             ---
             l2_own_excl: excluded

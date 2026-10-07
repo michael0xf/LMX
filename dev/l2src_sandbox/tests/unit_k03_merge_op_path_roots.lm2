@@ -1,0 +1,36 @@
+# K03 S7: a path operand selects its leaf on the root it names -- a merge result's own copy (`R\inner` after
+# `R: merge: Host` and `R\inner\k: 6`: R's inner, never Host's), a Structure formal's actual (`h\inner` of the R
+# passed), a group around the path (`(Host\inner)`, Host's own 4).  Exit 7; 81 a wrong owner through R, 82 through the
+# formal, 83 the group's, 84 if Host's inner changed.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+Host:
+    inner:
+        int: k 4
+    end: inner
+end: Host
+fn: viaFormal (Host: h) int
+    A: merge: h\inner
+    return: A\k
+end: viaFormal
+fn: m () int
+    R: merge: Host
+    R\inner\k: 6
+    B: merge: Model R\inner
+    if: B\k != 6
+        return: 81
+    if: viaFormal(R) != 6
+        return: 82
+    C: merge: (Host\inner) Other
+    if: C\k * 10 + C\w != 42
+        return: 83
+    if: Host\inner\k != 4
+        return: 84
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

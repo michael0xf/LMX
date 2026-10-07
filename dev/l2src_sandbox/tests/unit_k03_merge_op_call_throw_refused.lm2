@@ -1,0 +1,20 @@
+# K03 S7: a call operand is checked as any call -- boom's declared throw is unhandled where the merge calls it,
+# refused at the call, as `int: x boom()` would be.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: boom () Model
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(3)
+    return: Model
+end: boom
+fn: m () int
+    A: merge: Other boom()
+    return: A\w + 5
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

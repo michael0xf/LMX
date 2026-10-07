@@ -1,0 +1,26 @@
+# K03 S7: a path to a Structure field is one merge operand, read as any operand path is -- `merge: Host\inner` merges
+# the Structure Host's field inner is, `merge: Model Host\inner` both (docs/LMX_semantics.en.md#composition: the
+# operands are live structural values).  Before, the leading-atom reading split the path into `Host`, `\`, `inner`.
+# Exit 7; 81 if A's k is not inner's 4, 82 if B lost a field.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+Host:
+    inner:
+        int: k 4
+    end: inner
+end: Host
+fn: m () int
+    A: merge: Host\inner
+    if: A\k != 4
+        return: 81
+    B: merge: Model Host\inner
+    if: B\v * 10 + B\k != 14
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

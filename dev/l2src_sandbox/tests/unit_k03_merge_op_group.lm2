@@ -1,0 +1,39 @@
+# K03 S7 (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01; docs/LMX_semantics.en.md#composition): merge's operands are
+# its application's actuals, a group holding one value being that value -- `merge: (Model) Other` is
+# `merge: Model Other`, in a method and at the root, the group first or last; a sole container is transparent in P0
+# already (`merge((Model Other))`).  Before, the leading-atom reading gave a leading group no operand and dropped a
+# trailing one.  Over's v, a later operand's same-name field, takes Model's slot: the operands keep their order.
+# Exit 7; 81..84 name the method's merge whose fields are not Model's 1 and Other's 2, 85 the order, 86 the root's.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+Over:
+    int: v 5
+end: Over
+fn: m () int
+    A: merge: (Model) Other
+    if: A\v * 10 + A\w != 12
+        return: 81
+    B: merge(Other; (Model))
+    if: B\v * 10 + B\w != 12
+        return: 82
+    C: merge((Model Other))
+    if: C\v * 10 + C\w != 12
+        return: 83
+    D: merge: Model Other
+    if: D\v * 10 + D\w != 12
+        return: 84
+    E: merge: (Model) (Over)
+    if: E\v != 5
+        return: 85
+    return: 7
+end: m
+R: merge: (Other) (Model)
+int: code m()
+if: R\v * 10 + R\w != 12
+    code: 86
+sendMessage: exit(exit_code: code; stdout: ""; stderr: "")
+return

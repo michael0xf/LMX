@@ -1,0 +1,31 @@
+# K03 S7: a call operand that throws stops the merge before it runs and before its result is stored -- the
+# statement after it in the block does not run, the handler does, and in it B, declared above, still holds nothing:
+# got is Oops's 3, never B's w.  Exit 7; 81 if the statement after the merge ran or B was stored.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: boom () Model
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(3)
+    return: Model
+end: boom
+fn: m () int
+    int: got 0
+    ---
+        B: merge: Other boom()
+        got: B\w + 80
+        catch: Oops (int: v)
+            got: v
+            if: B != 0
+                got: 90
+    ---
+    if: got != 3
+        return: 81
+    return: got + 4
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

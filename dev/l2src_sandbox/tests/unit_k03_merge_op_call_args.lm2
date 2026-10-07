@@ -1,0 +1,30 @@
+# K03 S7: a call operand with an argument is checked and bound as any call (its formal n) and evaluated once per
+# merge: `merge: pick(3) Other`, `merge: pick(1)` -- pick counts n into made.  Exit 7; 81 a wrong field, 82 if made is
+# not 3 + 1.
+int: made 0
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: pick (int: n) Model
+    node\made: node\made + n
+    return: Model
+end: pick
+fn: count () int
+    return: node\made
+end: count
+fn: m () int
+    A: merge: pick(3) Other
+    if: A\v * 10 + A\w != 12
+        return: 81
+    B: merge: pick(1)
+    if: B\v != 1
+        return: 81
+    if: count() != 4
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

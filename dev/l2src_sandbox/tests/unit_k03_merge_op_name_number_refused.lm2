@@ -1,0 +1,15 @@
+# K03 S7: a name operand is said by what it resolves to -- `a`, an int of the method, is a number and no Structure
+# (before: "unknown merge operand", though a is known).
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: m () int
+    int: a 1
+    A: merge: Model a
+    return: A\v + 6
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

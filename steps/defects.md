@@ -4586,6 +4586,12 @@ b держит Structure A, пути через b читают запись merg
 перепись мест написания — [k03-s6-census.tsv](k03-s6-census.tsv). Повтор 2441 перевода `opus_full_59` после каждого
 шага побайтно равен.
 
+**Шаг S7 2026-10-07** ([§121 журнала](fable-continuation-20261003.md#unified-head-s7)): операнды merge — фактические
+аргументы применения во всех семи читателях ([MERGE-LEADING-ATOMS](#merge-leading-atoms)); путь к полю-Structure и
+вызов с именованным результатом опущены обычным ссылочным маршрутом; то, что не опущено, сказано у операнда по его
+категории; операнд, написанный Structure, — [MERGE-WRITTEN-OPERAND](#merge-written-operand). Повтор 2476 переводов
+`opus_full_60`: 2475 побайтно равны, одно сообщение пробы предела изменилось намеренно.
+
 <a id="call-classifier-typed-route"></a>
 ### CALL-CLASSIFIER-TYPED-ROUTE — 2026-10-07, Opus (K03 NS-ROLES-VIS; Codex K03-VIS-CALL-CLASSIFICATION-20261007-16), FIXED 2026-10-07 (K03 NS-ROLES-CALL)
 
@@ -4662,6 +4668,71 @@ docs/L2_spec_en.md:155) — вызов Model, ошибочный по числу
   `get()`; защита эмиттера хоста callable merge (`l2_mad_names_nested`, `l2_mad_mentions_value`) принимает голый вызов
   за упоминание значения: «a callable merge host names a nested method outside the return», тогда как `int: t get()`
   исполняется. Не захватывающий собственный fn голым работает (`unit_s6_own_fn_value`).
+
+<a id="merge-leading-atoms"></a>
+### MERGE-LEADING-ATOMS — 2026-10-07, Opus (перепись K03 S7), FIXED 2026-10-07 (K03 S7)
+
+Пять читателей декларативного merge (схема `l2_mrs_build`, скан, ширина `l2_merge_scan`, нативная эмиссия, обход)
+считали операндами ведущие атомы (`l2_merge_arity`: «the leading atoms only»), нативно и при обходе:
+
+- операнд после первого не-атома молча отбрасывался: `A: merge(Model; v: 9)` транслировался как merge(Model) — `A\v`
+  читал 1 (молча неверное значение); `merge: Other make()` и `merge: Other (Model)` теряли второй операнд (видно лишь
+  при чтении его поля: «unresolved name»);
+- путь разбивался на атомы: `merge: Host\inner` — «unknown merge operand» у `\`;
+- ведущий вызов или группа не давали операнда: `merge: make()`, `merge: (Model) Other` — пустая схема;
+- атомы операторного выражения становились операндами: `merge: Model a + 1` — «unknown merge operand» у a.
+
+Callable merge T5 и T7 читали операндом каждое написанное поле (путь тоже разбивался бы). Исправлено
+([§121 журнала](fable-continuation-20261003.md#unified-head-s7)): операнды — фактические аргументы применения
+(`l2_actual_count`, `l2_actual_field`, `l2_expr_span`) во всех семи читателях; группа с одним значением — это значение,
+иначе — анонимная Structure; путь к полю-Structure и вызов с именованным результатом опущены обычным ссылочным
+маршрутом; число по общему типу — «a merge operand is not a Structure», прочие формы — located-предел у операнда.
+Свидетели `unit_k03_merge_op_*` с двойниками; мутанты (выпавший хвостовой операнд, разбитый путь, непрозрачная группа)
+краснят их.
+
+<a id="merge-written-operand"></a>
+### MERGE-WRITTEN-OPERAND — 2026-10-07, Opus (K03 S7; Codex K03-MERGE-OPERANDS-20261007-26), OPEN
+
+Операнд, написанный Structure, больше не опущен и не разбит, но не построен:
+
+- анонимная Structure с объявленным полем `(int: v 9)` — один операнд; её v по имени и типу пишется в слот модели
+  (#composition, «Model slots»), первой — она модель. Обязательный позитив `unit_k03_merge_op_anon_typed` с двойником,
+  красный: сегодня отказ у группы «this merge operand form is not lowered yet»;
+- голое поле `merge(Model; v: 9)` — located-предел без оракула (`unit_k03_merge_op_bare_field_limit`): два
+  нормативных чтения не сведены — #composition:1066 (`merge(add; y: 5)` кладёт поле y с данными, `merge((n: 5); addN)`
+  — Structure, держащая n) и #resolved-head-consumption:666, #construction:688 (неизвестная голова определяет
+  Structure; в языке нет var); минимальная программа и абзацы отправлены Codex (K03-MERGE-OPERANDS-20261007-26), до
+  ответа не строится;
+- группа из двух элементов `merge(((Model Other)))` и группа с полем в callable merge `merge(add3; (y: k))` — тоже
+  пределы у операнда (`unit_k03_merge_op_group_two_refused`, `_t7_anon_refused`).
+
+Вопрос автору о голом поле: [LMX_blog/q/current/merge-bare-field-operand.md](../LMX_blog/q/current/merge-bare-field-operand.md).
+
+<a id="merge-parent-site-override"></a>
+### MERGE-PARENT-SITE-OVERRIDE — 2026-10-07, Opus (перепись K03 S7; Codex K03-MERGE-OPERANDS-20261007-26, K03-MERGE-PARENT-20261007-27), OPEN
+
+Норма: merge копирует используемое замыкание источника и переписывает parent внутри этой копии; место, где merge
+исполняется или принимается, лексическим родителем результата не становится, и родители не обнуляются: скопированные
+лексические предки сохраняют связи до своего корня с нулевым родителем по одной карте источник→копия
+(docs/LMX_semantics.en.md#composition, абзац о копии; автор, [LMX_blog/2026-10-05.md](../LMX_blog/2026-10-05.md#merge-parent)).
+Арена владения, родитель надзора Thread, явное вмещение при построении и лексический родитель — разные отношения;
+сохраняемая ветвь independent: const: immutable держит свою идентичность и родителя.
+
+Реализация задаёт родителем место: `dev/l2src_sandbox/lmx_merge_owned.lm1:263` и `:487` присваивают
+`result\parent: container`; транслятор выбирает контейнер места (`l2_emit_stmts`: `merge_parent` = `l2_hN` или
+`l2_own_ctr(own)`) и передаёт его в `lmx_merge_profiles_owned`; копия модели, допуск и приёмник обходчика тоже
+передают container. Утверждения «родитель по месту» в фикстурах и самотестах (корень, метод, хост; самотест обходчика с
+кодом A над данными R) закрепляют отвергнутое правило; CORE_L2_L3_v2.md (:130, :737, :766, :768) описывает их теперь как
+наследие этого дефекта.
+Связан с [DATA-MERGE-COPIES-QUALIFIED-BRANCH](#data-merge-copies-qualified-branch): там 2026-10-05 измерено, что
+результат data merge висит под местом merge, а скопированная цепочка предков сразу недостижима; вопрос, поставленный
+тогда Codex, решён (K03-MERGE-PARENT-20261007-27): родитель — внутри копии.
+
+Следующая ограниченная зависимость после контрольной точки K03 S7 (план: next_core_tasks_v2.md, раздел
+critical_graph_bug): перепись конструкторов, вызывающих и оракулов; одна топология копии для корня, метода,
+именованного/вложенного тела и скопированного callable R, исполняющего код A; операнд с ненулевым лексическим родителем
+и изменяемым используемым предком, чтобы мутанты «все родители 0» и «родитель источника» краснели; перенос
+утверждений о родителе по месту по намерению.
 
 <a id="bind-call-entry"></a>
 ### BIND-CALL-ENTRY — 2026-10-07, Opus (перепись K03 S6), FIXED 2026-10-07 (K03 S6)

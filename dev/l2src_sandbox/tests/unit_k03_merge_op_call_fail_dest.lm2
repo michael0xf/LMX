@@ -1,0 +1,50 @@
+# K03 S7: failure before the store, seen at a destination outside the failing method -- build's merge has an operand
+# whose call throws, so build stops before its merge runs and nothing reaches current: it still refers to the very
+# Structure saved holds (as unit_merge_value_failure for merge's own failure).  tick ran before boom (operands are
+# evaluated left to right; their effects are not rolled back).  Exit 7; 81 if current changed, 82 if Oops was not
+# caught once, 83 if tick did not run once.
+int: ticks 0
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: tick () Model
+    node\ticks: node\ticks + 1
+    return: Model
+end: tick
+fn: count () int
+    return: node\ticks
+end: count
+fn: boom () Model
+    throws: Oops
+    if: 1 = 1
+        throw: Oops(3)
+    return: Model
+end: boom
+fn: build () Model
+    throws: Oops
+    B: merge: tick() boom()
+    return: B
+end: build
+fn: m () int
+    initial: merge: Other
+    @: Other current initial
+    @: Other saved current
+    int: caught 0
+    ---
+        current: build()
+        catch: Oops (int: v)
+            caught: caught + v
+    ---
+    if: current != saved
+        return: 81
+    if: caught != 3
+        return: 82
+    if: count() != 1
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

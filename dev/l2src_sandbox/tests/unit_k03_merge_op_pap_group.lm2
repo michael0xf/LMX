@@ -1,0 +1,12 @@
+# K03 S7: a callable merge's operands are read as every merge's (T5): `merge((add); y: 5)` is `merge(add; y: 5)` --
+# a group holding one name is that name.  add5(1) is 6.
+fn: add (int: x; int: y) int
+    return: x + y
+end: add
+
+fn: add5 (int: x) int
+    merge((add); y: 5)
+end: add5
+
+sendMessage: exit(exit_code: add5(1); stdout: ""; stderr: "")
+return

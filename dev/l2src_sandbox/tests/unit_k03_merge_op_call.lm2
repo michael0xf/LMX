@@ -1,0 +1,31 @@
+# K03 S7: a call is one merge operand -- `merge: make()` merges the Structure make returns, `merge: Other make()` both,
+# make evaluated once for each (docs/LMX_semantics.en.md#composition: operands are evaluated once, left to right).
+# Before, the leading-atom reading gave the first no operand and dropped make() from the second.
+# Exit 7; 81 if A's v is not Model's 1, 82 if B lost a field, 83 if make did not run exactly twice.
+int: made 0
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: make () Model
+    node\made: node\made + 1
+    return: Model
+end: make
+fn: count () int
+    return: node\made
+end: count
+fn: m () int
+    A: merge: make()
+    if: A\v != 1
+        return: 81
+    B: merge: Other make()
+    if: B\v * 10 + B\w != 12
+        return: 82
+    if: count() != 2
+        return: 83
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1,0 +1,16 @@
+# K03 S7: a callable merge's operands are read as every merge's (T7): `merge((add3); y: k)` is `merge(add3; y: k)` --
+# a group holding one name is that name.  w holds it with the header (int: x; int: z): 5 + 1 * 10 + 2 * 100.
+# Exit 7; 81 a wrong sum.
+fn: add3 (int: y; int: x; int: z) int
+    return: y + x * 10 + z * 100
+
+fn: wrap (int: k) fn: (int: x; int: z) int
+    return: merge((add3); y: k)
+
+@: w wrap(5)
+int: a (w: 1 2)
+int: ok 7
+if: a != 215
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

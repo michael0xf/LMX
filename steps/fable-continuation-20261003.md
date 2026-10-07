@@ -12354,3 +12354,128 @@ so the answer is the right one, for the wrong reason -- noted, not changed.
 | kernel `opus_kernel_54` | GREEN, 297 targets, 114 selftests ran, staged blob f92a24cc |
 | L3 `opus_l3_52` | all 11 suites ok, type budget ok |
 | full `opus_full_60` | RED 61/2477; against `opus_full_59`: FAIL→OK 0, OK→FAIL 0, added 35 (33 OK, 2 red: the required-positive pair), removed 0 |
+
+<a id="unified-head-s7"></a>
+## 121. Merge's operands are its application's actuals (K03 S7)
+
+The rule (Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01, S7: "remove leading-atom merge operand parsing via the ordinary
+actuals/operand model and P0's already general sole-container transparency; do not add merge-specific flattening or a
+new nesting limit. Preserve the documented merge contract and failure-before-store behavior. If this needs a separate
+implementation slice, add a concrete dependent subtask and continue it in this run";
+`docs/LMX_semantics.en.md#composition`: in `b: merge: A C` or `b: merge(A C)` the operands are A and C, evaluated once,
+left to right, and a previous merge result can itself be an operand): merge's operands are the actuals of its
+application, delimited as every application's are, and each is read by the ordinary operand model.
+
+The census first (f92a24cc, by probes, natively and walked; the P0 shapes from printTree).  Seven readers take merge
+operands -- the declaration merge `R: merge: ...` has five: its schema (`l2_mrs_build`, first, at parse, from
+`l2_merge_scan`), the free-name scan (`l2_scan_body`), the widest operand count (`l2_merge_scan`), the native emission
+(`l2_emit_stmts`) and the walk (`l2_rw_merge`); the callable merges have two, T5 (`l2_pap_consider`, a method whose
+whole body is one merge) and T7 (`l2_t7_fill`, a merge returned or given as an actual).  The five read
+`l2_merge_arity`'s count of the leading atoms and take each operand as an atom; T5 and T7 take each written field as an
+operand.  The word checks that refuse merge with no operand (`l2_check_word_stmt`, `l2_check_word_value`, the S5
+construction check) read whether anything is written, which no reading changes.  The leading-atom reading gave four
+defects:
+
+| Written | Read as | Result |
+| --- | --- | --- |
+| `A: merge(Model; v: 9)` | merge(Model): the field operand dropped | translated; `A\v` read 1 -- a silent wrong value |
+| `A: merge: Other make()`, `A: merge: Other (Model)` | merge(Other) | the second operand dropped; seen only when its field is read: "unresolved name" |
+| `A: merge: Host\inner` | the operands `Host`, `\`, `inner` | "unknown merge operand" at the `\` |
+| `A: merge: make()`, `A: merge: (Model) Other` | no operand | an empty schema: "unresolved name" at the first field read |
+| `A: merge: Model a + 1` | the operands `Model`, `a`, `+`, `1` | "unknown merge operand" at `a` |
+
+P0 makes a sole argument container transparent once: `merge((A C))` is `merge(A C)`, and `merge(((A C)))` is merge of the
+one group `(A C)`.  A result body is never inside the merge Frame -- P0 gives it as the statement's second field
+(`l2_merge_body`) -- so `l2_merge_arity`'s "a trailing STRUCTURE holds the result body" described no tree.
+
+What changed in `l2trans.lm1` (b98c68bb) -- the reading (S7a) and its dependent lowering (S7b) in one checkpoint:
+
+- The reading.  `l2_merge_arity` is the application's actual count (`l2_actual_count`); operand k is its k-th actual
+  (`l2_actual_field`, `l2_expr_span`) -- a path, a call, a field, a group or an operator expression one operand each --
+  in all seven readers: the declaration merge's schema, scan (every written field), widest count, native emission and
+  walk (`l2_merge_decl_operand`), the callable merges T5 and T7 (`l2_merge_operand_node`).  A group is the value it
+  holds when it holds one value -- one name, one path, one call (a Frame the common resolution makes a callable), one
+  operator expression -- to any depth (`l2_merge_group_value`: the ordinary transparent one-value group of the
+  reference-receiving rule); a group holding a field, a declaration, a definition or several items is no value but an
+  anonymous Structure, the operand itself (#composition's `merge((n: 5); addN)`).  No flattening is added and no depth
+  limited: `merge((A C))` is P0's own transparency.
+- What is not lowered is said by its category (Codex K03-MERGE-OPERANDS-20261007-26).  At the written operand
+  (`l2_merge_operand_limit`): a number by the common typing (`l2_native_group_ty`) is no Structure -- "a merge operand
+  is not a Structure", merge's contract; any other form is the located limit "this merge operand form is not lowered
+  yet".  A name operand no Structure route resolves (`l2_merge_unknown_operand`): a callable's occurrence is the limit
+  (the callable merges are lowered where a callable result is received, T5 and T7), a number no Structure, a name the
+  site does not see "unknown merge operand".
+- The lowering.  A path whose last field is a Structure (`l2_reference_path_leaf`) and a call whose callee gives a
+  named Structure (`l2_d105_callee`) are read through the ordinary reference route: the schema from the reference
+  source (`l2_reference_source`: the path's leaf Structure, the callee's result model); natively the general path walk
+  to a Structure leaf (`l2_emit_path_to`'s new Structure-leaf mode: `l2_pst` is the Structure the leaf field holds) or
+  the call evaluated once into its temporary (`l2_emit_reference_value`); walked, the path's reference
+  (`l2_rw_path_reference`) or the call's value (`l2_rw_reference_value`).  A call operand is checked where the merge
+  is, as any call in a value (`l2_check_merge_operands` -> `l2_check_fields`: arity, binding, edges, throws, inputs).
+  Operands are evaluated once, left to right, before the merge runs, so an operand's failure leaves the result
+  unstored.  The operand's profile line is one helper now (`l2_emit_merge_profile`), its bytes unchanged.
+- Documents (Codex K03-MERGE-PARENT-20261007-27).  CORE_L2_L3_v2.md said a merge's result is parented to its
+  construction host (:130 "A merge performed inside R must parent its fresh result to R", :737 "the constructed
+  result's parent is the actual construction host") and counted host-parent assertions as proven evidence (:766,
+  :768); corrected to the author's ruling (LMX_blog/2026-10-05.md#merge-parent; #composition: parent links are rewritten
+  inside the copy, the place that executes merge supplies no lexical parent), the host-parent assertions and parent taps
+  described as legacy evidence of a known defect, [MERGE-PARENT-SITE-OVERRIDE](defects.md#merge-parent-site-override):
+  `lmx_merge_owned.lm1:263`, `:487` assign `result\parent: container`, and the translator passes the merge site's
+  container (`merge_parent` in `l2_emit_stmts`) -- the next bounded dependency.  The bare field operand's question to
+  the author: [LMX_blog/q/current/merge-bare-field-operand.md](../LMX_blog/q/current/merge-bare-field-operand.md).
+
+Evidence:
+
+- Replay of `opus_full_60`'s 2476 recorded translations with the final bytes: 2475 byte-identical; one message
+  changed -- `unit_recv_use_nested_copy_reach_limit_probe`, the limit probe for a method as a merge operand: "unknown
+  merge operand" became "this merge operand form is not lowered yet" at the same place (make is a known method; the
+  row stays a refusal and its needle follows).  No existing merge, T5 or T7 translation changes: each has name
+  operands, P0-transparent groups or one-field callable-merge operands.  The intermediate S7a bytes replayed all 2476
+  byte-identical.
+- Witnesses, 16 programs with `--walk-methods` twins; positives exit 7 natively, root-walked and methods-walked; the
+  native rows pin the methods' native words, the twins that they are walked (NativeMethods, WalkedMethods):
+  `unit_k03_merge_op_group` (a group first, last, both, in a method and at the root, P0's sole container; the order:
+  a later operand's same-name field takes the model's slot), `_path` (`Host\inner` alone and after Model),
+  `_path_roots` (a merge result's own copy -- `R\inner` after `R\inner\k: 6` gives 6 while Host's stays 4 --, a
+  formal's actual, a group around the path), `_call` (`make()` alone and trailing, made exactly twice), `_call_args`
+  (an argument bound and counted), `_call_throw_caught` (the operand's throw stops the merge: the next statement is
+  skipped, the handler runs), `_call_fail_dest` (failure before the store, at a destination outside the failing
+  method: current keeps saved's referent, tick's earlier effect stays), `_pap_group`, `_t7_group` (a group around the
+  callable model's name).  Refusals: `_expr_refused` and `_name_number_refused` ("a merge operand is not a
+  Structure"), `_group_two_refused`, `_t7_anon_refused` (a group holding a field in a callable merge is no bare
+  binding), `_bare_field_limit` (located limits), `_call_throw_refused` ("unhandled throw: Oops" at the call).
+  REQUIRED POSITIVE, red: `_anon_typed` and its twin -- `merge(Model; (int: v 9))` and `merge((int: v 9); Other)`
+  ([MERGE-WRITTEN-OPERAND](defects.md#merge-written-operand)).
+- Mutants, each one rule off the final bytes (the control mc00 changes nothing); the witnesses translated natively and
+  walked, and every positive whose L1 changed run in the three modes.  mc01 the last of two or more operands dropped --
+  the group, path, path-roots, call and call-args positives refused ("unresolved name" at a dropped operand's field),
+  the callable-merge groups refused, the expression, name and throw refusals accepted, and `_call_throw_caught`,
+  `_call_fail_dest` exit 81: with the throwing operand dropped the merge runs and stores; mc02 each written field an
+  operand -- the path witnesses refused (a split path); mc03 a group never seen through -- `_group`, `_pap_group`,
+  `_t7_group`, `_path_roots` refused at the group; mc04 any one-item group seen through, a field too --
+  `_t7_anon_refused` accepted (`(y: k)` read as the bare binding); mc05 the native call operand evaluated twice --
+  `_call` 83, `_call_args` 82, `_call_fail_dest` 83 natively and root-walked; mc06 the walked call operand skipped --
+  `_call`, `_call_args`, `_call_throw_caught`, `_call_fail_dest` fail methods-walked; mc07 the native call operand
+  skipped -- the same four fail natively and root-walked; mc08 and mc09 a formal root's path selected on its model's
+  unit occurrence instead of the actual passed (the wrong owner; native, walked) -- `_path_roots` 82 natively,
+  methods-walked; mc10b the model stored into the destination before the later operands are evaluated (a mutation
+  before the refusal) -- `_call_throw_caught` 81 natively and root-walked: B is no longer empty in the handler; mc12
+  and mc13 the operands in reverse (native, walked) -- `_group` 86, `_path` 82, `_path_roots` 81, `_call` 82,
+  `_call_args` 81, `_call_fail_dest` 83 in the mode mutated; mc15 an unresolved name always "unknown" --
+  `_name_number_refused`'s message.  A first try at a lost throw (the call operand through `l2_emit_fields`) changed
+  no L1: a dead edit, replaced by mc10b.
+- gcc's `-Wall -Wextra` list: 75 warnings, the same list as opus_full_60's.
+
+Open after this step (steps/defects.md): [MERGE-WRITTEN-OPERAND](defects.md#merge-written-operand) -- an operand
+written as a Structure: the typed anonymous one a required positive red; the bare field `v: 9` awaits Codex's ruling
+on two normative readings (#composition's `merge(add; y: 5)` against #construction's "the language has no var");
+[PATH-STRUCTURE-LEAF](defects.md#path-structure-leaf) for the positions other than a merge operand.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| focused `opus_focus_s7_01` | 207 targets; red exactly its three opus_full_60 baseline rows (unit_eternal_shape, unit_capture_struct_merge_two, unit_t7_host_nested_return, their messages unchanged) and the required-positive pair unit_k03_merge_op_anon_typed |
+| kernel `opus_kernel_55` | GREEN297 (114 selftests ran, staged blob b98c68bb) |
+| L3 `opus_l3_53` | all 11 suites ok, type budget ok |
+| full `opus_full_61` | RED 63/2509; against `opus_full_60`: FAIL→OK 0, OK→FAIL 0, added 32 (30 OK, 2 red: the required-positive pair), removed 0; one recorded message changed by intent: unit_recv_use_nested_copy_reach_limit_probe, "unknown merge operand" -> "this merge operand form is not lowered yet" (make is a known method) |

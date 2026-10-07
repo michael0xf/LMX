@@ -25694,16 +25694,17 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_error(path, node, "not a number literal")
         if: l2_ident(node\as\atom) = 0
             return: l2_error(path, node, "unsupported body")
-        # A callable named where a value is consumed gives its result (plan §3 native gate (в);
+        # S4 K03: A callable named where a value is consumed gives its result (plan §3 native gate (в);
         # FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): it runs with no arguments, the check of
-        # `m()` (l2_check_value_call).  So for a callable formal of this method and for a unit
-        # method.  A callable formal of the CALLEE takes the occurrence itself instead; that
-        # actual never reaches here (l2_check_call).
+        # `m()` (l2_check_value_call).  A bare atom and its empty application `m()` are unified here:
+        # l2_app_actuals(atom) is 0, so one contract applies to both.
+        # Callable formal of this method: occurrence given, not call result; of the CALLEE: not here (l2_check_call).
         idx: l2_param_find(mi, node\as\atom)
         if: idx >= 0 && l2_head_is_callable_formal(mi, node\as\atom) != 0
             return: l2_check_value_call(node, l2_cf_get(mi, idx), idx, mi, path)
         if: idx >= 0
             return: 0
+        # S4: Unified method call dispatch (S2+S3 and S4 use common l2_check_value_call)
         if: l2_head_is_method_call(mi, node\as\atom) != 0
             return: l2_check_value_call(node, l2_find_method(node\as\atom), 0 - 1, mi, path)
         # and a local this method body declares, which lives in its own
@@ -26417,9 +26418,10 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     ---
 return: 0
 
-# A CALLABLE IN VALUE POSITION (l2_check_primary): its result is the value, so it is called with
+# S4 K03 CALLABLE IN VALUE POSITION (l2_check_primary): its result is the value, so it is called with
 # no arguments (l2_check_call), and a callable without a result -- a sub, or a callable formal
-# whose contract is one -- has no value to give (plan §3 native gate (б)).
+# whose contract is one -- has no value to give (plan §3 native gate (б)). A bare atom and its
+# empty application `m()` are unified here: l2_app_actuals(atom)=0, so one contract applies (S1 model).
 fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
     if: l2_m_ret[idx] = 8
         return: l2_error(path, node, "a callable without a result has no value")

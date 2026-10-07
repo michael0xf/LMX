@@ -58,8 +58,11 @@ int: l2_hr_cap 0
 @@: LmP0Node l2_rb_at 0
 @@: LmP0Text l2_rb_model 0
 # The method whose occurrence a binding `b: tick` holds (NS-ROLES-1b); -2 for a binding to a named Structure itself,
-# -1 for one to a value of a named model.
+# -1 for one to a value of a named model, -3 for one to a merge result.
 @: int l2_rb_meth 0
+# The own field of the merge result a binding `b: A` holds (NS-ROLES-1c; l2_rb_meth -3), -1 for every other binding: its
+# schema record is the binding's (l2_own_schema).
+@: int l2_rb_own 0
 int: l2_rb_n 0
 int: l2_rb_cap 0
 # Whether a root item that could be such a binding is one (l2_unit_ref_bind), found once: -1 while it is being found.
@@ -1489,6 +1492,8 @@ prototype:
     fn: l2_unit_defines_struct (const: @(LmP0Text t); const: @(LmP0Node stop)) int
     fn: l2_rb_find (const: @(LmP0Node stmt)) @: LmP0Text
     fn: l2_rb_meth_of (const: @(LmP0Node stmt)) int
+    fn: l2_rb_own_of (const: @(LmP0Node stmt)) int
+    fn: l2_own_res (int: own) int
     fn: l2_call_alias_own (int: mi; const: @(LmP0Text head)) int
     fn: l2_emit_alias_self (int: oi; int: mi; const: @(char ind)) int
     fn: l2_rb_declaration (const: @(LmP0Node node)) @: L2Declaration
@@ -2685,9 +2690,11 @@ fn: l2_release () int
     l2_xfree((cast: (@: void) l2_rb_at))
     l2_xfree((cast: (@: void) l2_rb_model))
     l2_xfree((cast: (@: void) l2_rb_meth))
+    l2_xfree((cast: (@: void) l2_rb_own))
     l2_rb_at: 0
     l2_rb_model: 0
     l2_rb_meth: 0
+    l2_rb_own: 0
     l2_rb_n: 0
     l2_rb_cap: 0
     l2_xfree((cast: (@: void) l2_urm_at))
@@ -4626,13 +4633,40 @@ fn: l2_rb_add (const: @(LmP0Node stmt); const: @(LmP0Text model); int: meth) int
         if: grown = 0
             return: 1
         l2_rb_meth: (cast: (@: int) grown)
+        grown: l2_vec_grow((cast: (@: void) l2_rb_own), l2_rb_n, want, c.sizeof(c.int))
+        if: grown = 0
+            return: 1
+        l2_rb_own: (cast: (@: int) grown)
         l2_rb_cap: want
     ---
     l2_rb_at[l2_rb_n]: (cast: (@: LmP0Node) stmt)
     l2_rb_model[l2_rb_n]: (cast: (@: LmP0Text) model)
     l2_rb_meth[l2_rb_n]: meth
+    l2_rb_own[l2_rb_n]: -1
     l2_rb_n: l2_rb_n + 1
 return: 0
+
+# K03 NS-ROLES-1c: keep statement stmt as a reference binding to the merge result own field `own` holds, its declared
+# type the word `model` (a Structure reference).  0, or 1 without memory.
+fn: l2_rb_add_own (const: @(LmP0Node stmt); const: @(LmP0Text model); int: own) int
+    if: stmt = 0 || model = 0 || own < 0 || l2_rb_find(stmt) != 0
+        return: 0
+    if: l2_rb_add(stmt, model, -3) != 0
+        return: 1
+    l2_rb_own[l2_rb_n - 1]: own
+return: 0
+
+# The own field of the merge result the kept binding stmt holds (NS-ROLES-1c), or -1.
+fn: l2_rb_own_of (const: @(LmP0Node stmt)) int
+    int: i 0
+    if: stmt = 0
+        return: -1
+    while: i < l2_rb_n
+        if: l2_rb_at[i] = stmt
+            return: l2_rb_own[i]
+        i: i + 1
+    ---
+return: -1
 
 # The declaration of a kept reference binding `b: A`: b as the reference `@: M b A` declares it, M the word of A's
 # model (l2_rb_find) -- one declaration for every reader (l2_declaration), made once.
@@ -12171,8 +12205,9 @@ return: 1
 # resolution, l2_head_resolve): 5 a named Structure, 4 a Structure value of a named model -- an own field, a formal
 # (the word of the model into *out_word for both; a named Structure's is a itself) --, 2 a method, whose occurrence the
 # binding holds (Codex -07 Q1; *out_meth the method, *out_word a), 8 a held callable (a callable formal, a held
-# callable merge, a C function local: not built yet), 6 a Structure value of no named model (a merge result), 0
-# anything else (a datum, an unknown name: the definition route).
+# callable merge, a C function local: not built yet), 6 a Structure value of no named model -- a merge result, or a
+# binding to one (NS-ROLES-1c; *out_word the Structure reference's word `Lmx`, *out_meth its own field) --, 0 anything
+# else (a datum, an unknown name: the definition route).
 fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: int out_meth) int
     int: k
     int: idx -1
@@ -12201,12 +12236,15 @@ fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: i
         return: 0
     own: l2_resolved_own(mi, a)
     if: own >= 0 && own = idx
-        # A merge result -- its row declared by merge's construction, `a: merge: ...`, known before its schema is.
-        if: l2_own_decl[own] != 0 && l2_application(l2_own_decl[own]) != 0 && l2_merge_construction(l2_application(l2_own_decl[own])) != 0
+        # A merge result -- its row declared by merge's construction, `a: merge: ...`, known before its schema is -- or a
+        # binding to one: its schema is that merge's record.
+        if: (l2_own_decl[own] != 0 && l2_application(l2_own_decl[own]) != 0 && l2_merge_construction(l2_application(l2_own_decl[own])) != 0) || (l2_own_nsty_get(own) < 0 && l2_own_schema(own) != -1)
+            if: out_word != 0
+                \out_word: l2_lmx_text()
+            if: out_meth != 0
+                \out_meth: own
             return: 6
         model: l2_own_nsty_get(own)
-        if: model < 0 && l2_own_schema(own) != -1
-            return: 6
         ---
     if: own < 0 && l2_formal_find(mi, a) >= 0 && l2_formal_find(mi, a) = idx
         model: l2_input_model(mi, idx)
@@ -13182,10 +13220,10 @@ fn: l2_collect_asgn_body (const: @(LmP0Structure body); int: mi; const: @(char p
             return: l2_alloc_or(path, stmt, "out of memory")
         if: k = 2 && l2_rb_add(stmt, fa, rbm) != 0
             return: l2_alloc_or(path, stmt, "out of memory")
+        if: k = 6 && l2_rb_add_own(stmt, fa, rbm) != 0
+            return: l2_alloc_or(path, stmt, "out of memory")
         if: k = 8
             return: l2_error(path, l2_ref_tail_node(stmt), "a reference binding to a held callable is not built yet")
-        if: k = 6
-            return: l2_error(path, l2_ref_tail_node(stmt), "a reference binding to a merge result is not built yet")
         if: k = 7
             return: l2_error(path, stmt, "internal: the unit role and the site disagree about a reference binding")
         # A merge declares an ordinary Structure slot. Its schema is recorded
@@ -13473,6 +13511,8 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             if: j = 4 && l2_rb_add(stmt, fa, -1) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
             if: j = 2 && l2_rb_add(stmt, fa, rbm) != 0
+                return: l2_alloc_or(path, stmt, "out of memory")
+            if: j = 6 && l2_rb_add_own(stmt, fa, rbm) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
         ---
         if: retained >= 0 && l2_nsf_kind[retained] = 2
@@ -24039,7 +24079,7 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
             ---
         ---
     if: \out_oi >= 0
-        \out_res: l2_mres_of_own(\out_oi)
+        \out_res: l2_own_res(\out_oi)
         return: 0
     # A resolved method name as a path root denotes its occurrence
     # Structure (FABLE-SONNET-NODE-ROOT-20260923-121, author on the -67/-84
@@ -34613,7 +34653,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         path[0]: 1
         path[1]: oi
         ni: l2_own_nsty_get(oi)
-        res: l2_mres_of_own(oi)
+        res: l2_own_res(oi)
         path[5]: 1
         rooted: 1
     # T4b class 1. A Structure formal hides an own field of the same name (l2_rw_find already
@@ -47574,10 +47614,22 @@ fn: l2_schema_placed (int: schema; int: ordinal) int
 return: ordinal
 
 fn: l2_own_schema (int: own) int
-    int: result l2_mres_of_own(own)
+    int: result l2_own_res(own)
     if: result >= 0
         return: l2_schema_merge(result)
 return: l2_own_nsty_get(own)
+
+# K03 NS-ROLES-1c: the merge record own field `own`'s paths read -- its own merge result's, or, for a binding `b: A` to
+# a merge result (l2_rb_own_of), its referent's: b holds A's Structure, whose coordinates are A's record.  -1 for none.
+fn: l2_own_res (int: own) int
+    int: result l2_mres_of_own(own)
+    int: hops 0
+    while: result < 0 && own >= 0 && own < l2_own_n && l2_own_decl[own] != 0 && l2_rb_own_of(l2_own_decl[own]) >= 0 && hops < l2_own_n
+        own: l2_rb_own_of(l2_own_decl[own])
+        result: l2_mres_of_own(own)
+        hops: hops + 1
+    ---
+return: result
 
 # The schema of input k of mi -- an own-key source's, a formal's declared model, or a HIDDEN input's: the schema of
 # the callee's lexical source (K02c: a merge result's is the tagged merge schema, which the named-only

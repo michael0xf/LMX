@@ -1,0 +1,16 @@
+# K03 NS-ROLES-1c (Codex K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md:666, :834): for absent b, `b: A`
+# with A a merge result established above binds b to A -- b's own cell holds A's referent, no copy, and b's paths
+# read A's merge record.
+# Forward only: `b: A` above `A: merge: Model` -- A is nothing there, so b is the definition an unknown tail
+# makes, not a binding; b\v below is refused at the path.
+Model:
+    int: v 1
+end: Model
+fn: m () int
+    b: A
+    A: merge: Model
+    b\v: 5
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

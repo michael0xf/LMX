@@ -11799,6 +11799,80 @@ Evidence:
 | --- | --- |
 | `build/l2src/opus_kernel_48` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes (2da89f5d). |
 | `build/l3_selftest/opus_l3_46` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
-| `build/l2_harness/opus_full_52` (full harness) | RED39/2304: against `opus_full_51` FAIL→OK 0, OK→FAIL 0, added 24 (all OK: the twelve witnesses and their twins), removed 0; of the 2280 common targets 11 changed their message -- the 8 census rows above and the identifiers that change in every run (the translator's sha256, the unit hashes of the two library rows); the 39 red are the same rows with the same messages.  The 27 declared paths were hashed before the gates and again before this run; the staged `l2trans.lm1` is the declared bytes.  `opus_full_52` (the same bytes) was stopped at 5434 logs by Claude Code's low-memory reaper; this is its rerun. |
+| `build/l2_harness/opus_full_53` (full harness; the aborted run was `opus_full_52`) | RED39/2304: against `opus_full_51` FAIL→OK 0, OK→FAIL 0, added 24 (all OK: the twelve witnesses and their twins), removed 0; of the 2280 common targets 11 changed their message -- the 8 census rows above and the identifiers that change in every run (the translator's sha256, the unit hashes of the two library rows); the 39 red are the same rows with the same messages.  The 27 declared paths were hashed before the gates and again before this run; the staged `l2trans.lm1` is the declared bytes.  `opus_full_52` (the same bytes) was stopped at 5434 logs by Claude Code's low-memory reaper; this is its rerun. |
 | Focused run on the same bytes | `opus_focus_call_01` 40 targets, 0 failed (the 37 declared stems with the translator's build and the driver's). |
 | Replay of `opus_full_51`'s 2279 recorded translations | 8 rows of 8 fixtures differ, named above; identical to the closed-route census variant on all 2279. |
+
+<a id="ns-roles-1c"></a>
+## 116. A merge result as A: b holds A's Structure and reads A's record (K03 NS-ROLES-1c)
+
+The rule (`docs/LMX_semantics.en.md:666`, `:834`, `docs/L2_spec_en.md:206`; Codex K03-NS-ROLES-NEXT-20261007-09 and
+K03-NS-ROLES-1C-20261007-18): for absent b, `b: A` introduces b as a reference to A, whatever A's origin -- a named
+Structure, a branch's root, a value of a named model, or a merge result.  1a (section 112) built the first three and
+left a merge result as A a located limit, "a reference binding to a merge result is not built yet", said at A.  A
+merge result has no named model: its Structure's coordinates are its merge record, so a binding to it must read that
+record, and that was the missing part.
+
+What changed in `l2trans.lm1` (e04c0738), one rule -- a row's paths read its referent's record:
+
+- `l2_ref_tail_kind`: kind 6 (a Structure value of no named model -- a merge result, or a binding to one) gives the
+  Structure reference word (`Lmx`, `l2_lmx_text`) and A's own field, as kind 4 gives a model's word.
+- The binding records keep A's own field (`l2_rb_own`, `l2_rb_add_own`, `l2_rb_own_of`; `l2_rb_meth` -3), and both
+  collections, a method's and E's, keep kind 6 by 1a's route where they refused it: the declaration is 1a's
+  reference-cell declaration (`l2_rb_declaration`), b's cell its own, nothing synthesized.
+- `l2_own_res`: the merge record an own row's paths read -- its own merge result's, or, for a binding to a merge
+  result, its referent's, following the binding.  `l2_own_schema`, the path root (`l2_path_root`) and the walked path's
+  own root (`l2_rw_path_resolve_sized`) read it.  The other readers of `l2_mres_of_own` stay facts about A's own row:
+  copy calls, the computed-output test, merge construction, the occurrence form `\[N]`, addressing.
+
+Rows (per-row disposition before any expectation changed): `unit_ref_absent_colon` -- its program's purpose was this
+positive ("Absent b: A binds b to A.  A write through b is read through A."), pinned as the 1c limit; it is the
+measured exit-9 row now, with a walked twin; the file is unchanged.  `unit_k03_ref_merge_limit_refused` and
+`unit_k03_ref_merge_root_limit_refused` with their twins pinned the limit; they run to 7 now, their limit line
+rewritten with the line count kept, the names kept (as at NS-ROLES-VIS).  The harness also gets the three comments
+NS-ROLES-VIS left stale (section 115): the S2 visibility block and the NS-ROLES-3 and NS-ROLES-1a blocks no longer
+describe a both-way reading of named Structures.
+
+Not in this step: reassigning such a binding (`@: b B`), b as a merge operand, the occurrence read `b\[N]x` and calling
+A through b; they read A's row facts and have no witness here.  Correction of section 115's gate table: the completed
+CALL run is `build/l2_harness/opus_full_53`; `opus_full_52` was the run the low-memory reaper stopped.
+
+Evidence:
+
+- Census against the last completed CALL run: the replay of `opus_full_53`'s 2303 recorded translations with this
+  translator against aae81483's changes 5 rows, every other row byte-identical in L1, exit and messages:
+
+| Fixture | Before | Now |
+| --- | --- | --- |
+| `unit_ref_absent_colon` | "6:4: a reference binding to a merge result is not built yet" | runs, exit 9 (new walked twin) |
+| `unit_k03_ref_merge_limit_refused` and twin | "10:8: a reference binding to a merge result is not built yet" | runs, exit 7 |
+| `unit_k03_ref_merge_root_limit_refused` and twin | "9:4: ..." | runs, exit 7 |
+
+- New witnesses, five programs, each with a `--walk-methods` twin: `unit_k03_ref_merge_method` (in a method, b and d
+  bound to the merge result A: the write through b is read through A and through d, `@b != @A`; exit 7, walked pins
+  (0,1)); `unit_k03_ref_merge_record` (`A: merge: Model Other`: `b\w` written and `A\w` read, `b\v` Model's 1; exit 7,
+  pins (0,1,2)); `unit_k03_ref_merge_field_refused` (`b\w` with A's record holding only v: "11:5: unknown field path
+  segment", at the path).  Two controls the same before and after 1c: `unit_k03_ref_merge_use_above_refused` (`b\v`
+  above `b: A` makes b a free name: "14:30: unbound dynamic input b", at m's call) and
+  `unit_k03_ref_merge_below_refused` (`b: A` above `A: merge: Model` is b's definition: "12:5: unknown field path
+  segment").  Every positive runs natively, with the root walked and with the methods walked; the census rows' twins
+  pin (0), (0,1), (0,1).
+- Mutants, each one rule of the final bytes put back (the control c00 changes nothing): c01 `l2_own_res` does not
+  follow the binding -- the two positives and `unit_ref_absent_colon` refuse at the path, 6 rows; c02 kind 6 not kept
+  (the limit back) -- 12 rows; c03 the walked root reads its own record only -- 6 rows ("root operation not walkable
+  yet: a field path": the root and the method bodies are walked in both modes); c04 the path root reads its own record
+  only -- 6 rows ("unknown field path segment"); c05 `l2_own_schema` its own record only -- 6 rows; c06 kind 6 without
+  the Structure reference word -- 12 rows (b a free name).  The refusal witness is reached by c02 and c06; under
+  c01/c03/c04/c05 it refuses the same way, as a record-less b does.  Each mutant's replay of the corpus moves only the
+  census rows above.
+- gcc's `-Wall -Wextra` list: the same 75 warnings.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_49` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes (e04c0738). |
+| `build/l3_selftest/opus_l3_47` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_54` (full harness) | RED39/2315: against `opus_full_53` FAIL→OK 0, OK→FAIL 0, added 11 (all OK: the five witnesses with their twins and the new twin of `unit_ref_absent_colon`), removed 0; of the 2304 common targets 8 changed their message -- the 5 census rows above and the identifiers that change in every run (the translator's sha256, the unit hashes of the two library rows); the 39 red are the same rows with the same messages.  The 9 declared paths were hashed before the gates and again before this run; the staged `l2trans.lm1` is the declared bytes.  `opus_full_54` (the same bytes) was stopped at 5500 logs by Claude Code's low-memory reaper; this is its rerun. |
+| Focused run on the same bytes | `opus_focus_n1c_01` 19 targets, 0 failed (the 16 declared stems with the translator's build and the driver's). |
+| Replay of `opus_full_53`'s 2303 recorded translations | 5 rows differ, named above; the rest byte-identical. |

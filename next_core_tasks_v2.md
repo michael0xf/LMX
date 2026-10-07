@@ -1877,7 +1877,13 @@ root, in a method and in a named body; the typed receiving route (`l2_colon_bind
 `l2_bind_untyped`, `l2_rw_model_bind`) is removed with its consumers; the six rows that used it are the call's refusal
 now, their purpose exact debt on the author's open question (steps/defects.md#typed-binding-purpose-debt); in a named
 body the one-atom `Model: zz` stays NS-ROLES-2's branch. Gates: kernel `opus_kernel_48` GREEN297 (114 selftests), L3 `opus_l3_46`, full `opus_full_53` RED39/2304 -- against `opus_full_51` FAIL→OK 0, OK→FAIL 0, added 24; the 8 census rows changed their message (besides the per-run identifiers); `opus_full_52` on the same bytes was stopped by the environment's low-memory reaper and re-run.
-Next, in this order (Codex -17): NS-ROLES-1c, the corrected-scope V2, NS-ROLES-2, the generic RECEIVE-OUTPUT, S6/S7.
+NS-ROLES-1c done ([section 116](steps/fable-continuation-20261003.md#ns-roles-1c); Codex K03-NS-ROLES-1C-20261007-18):
+`b: A`, b absent, A a merge result established above, binds b by 1a's reference-cell route -- b's own cell holds A's
+Structure, and b's paths read its referent's merge record (`l2_own_res`, read by the row's schema, the path root and
+the walked path's root); the three limit rows run (`unit_ref_absent_colon` exit 9); two bindings and a write, a
+two-model record through b, a refusal outside the record and two forward-visibility controls witnessed natively and
+walked; reassignment, a merge operand, `b\[N]x` and a call through such a binding are not in this step. Gates: focused `opus_focus_n1c_01` 19/0, kernel `opus_kernel_49` GREEN297 (114 selftests), L3 `opus_l3_47`, full `opus_full_55` RED39/2315 -- against `opus_full_53` FAIL→OK 0, OK→FAIL 0, added 11; the 5 census rows changed their message (besides the per-run identifiers); `opus_full_54` on the same bytes was stopped by the environment's low-memory reaper and re-run.
+Next, in this order (Codex -17, -18): the corrected-scope V2, NS-ROLES-2, the generic RECEIVE-OUTPUT, S6/S7.
 
 ### K04 — Callable actuals and hidden inputs
 

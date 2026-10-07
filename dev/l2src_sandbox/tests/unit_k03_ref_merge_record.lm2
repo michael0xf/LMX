@@ -1,0 +1,23 @@
+# K03 NS-ROLES-1c (Codex K03-NS-ROLES-NEXT-20261007-09; docs/LMX_semantics.en.md:666, :834): for absent b, `b: A`
+# with A a merge result established above binds b to A -- b's own cell holds A's referent, no copy, and b's paths
+# read A's merge record.
+# A merges Model and Other: through b both fields are A's -- the merge's record, not a model's.  Exit 7; 81 if
+# the write through b did not reach A, 82 if b\v were not Model's 1.
+Model:
+    int: v 1
+end: Model
+Other:
+    int: w 2
+end: Other
+fn: m () int
+    A: merge: Model Other
+    b: A
+    b\w: 6
+    if: A\w != 6
+        return: 81
+    if: b\v != 1
+        return: 82
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

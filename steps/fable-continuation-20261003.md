@@ -10942,3 +10942,144 @@ edit removed).
 | `build/l3_selftest/opus_l3_39` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
 | `build/l2_harness/opus_full_41` (full harness) | Stopped by the low-memory reaper of Claude Code at 1344 logs (about 3.1 GB of 15.8 GB free on the machine); run again on the same 96 hashed paths as `build/l2_harness/opus_full_42`: RED39/2079, against `opus_full_40` FAIL→OK 0, OK→FAIL 0, added 54 (the witnesses and the ordinary-name program, all OK), removed 0, red rows whose message changed 0; the migrated rows stay OK. Every staged copy is the declared bytes. |
 | Replay of `opus_full_40`'s 2024 recorded translations | 1960 byte-identical; 64 refused at the binding (60 `test`, 2 `length`, `sub`, `receiveMessage`); the migrated sources translate as before but for the renamed name. |
+
+<a id="unified-head-s4"></a>
+## 109. A word of the language in a value position: one contract for the bare word and its application (K03-UNIFIED-HEAD S4)
+
+Codex's ticket K03-UNIFIED-HEAD-IMPLEMENT-20261006-01, slice S4 with the S6 work of the same positions: the receiving,
+value, return and actual positions read the application view and the one resolution; a bare resolved head and its
+empty application reach the same consumer wherever the contexts are equivalent; an ordinary name's reference or data
+stays contextual. The author's rule (2026-10-06): a receiver is an instruction to the translator and a call is run
+time, but their syntax is common -- the language has no exception for any name.
+
+What reads the resolution now (`l2trans.lm1`):
+
+- `l2_check_word_value(node, w, mi, path)`: the value contract of every word of the language, one consumer for the
+  bare word and its Frame -- the written arguments are `l2_app_actuals` -- said at the word:
+
+| Word | Applied to nothing (bare or `w()`) | With operands |
+| --- | --- | --- |
+| merge | "merge needs at least one operand" | "merge expression is not lowered in this receiving context" (merge's receiving limit: the callable-result and callable-formal contracts construct it before this check) |
+| cast, sizeof, length | "unsupported cast", "sizeof: requires one operand", "length requires one known primitive own array" | the operator's branch |
+| implements | "implements expects candidate, required, consumer" | its branch (`l2_check_implements`) |
+| while, for, continue, break | "unsupported loop" | the same |
+| if, else, return, fn, node | "unsupported body" | the same |
+| fm, synchronized, test, post, external | "<word> is not supported yet", as in a statement | the same |
+| a unit instruction | "<word> is a unit instruction: it stands at the root of the unit", as in a statement | the same |
+| every other word (sendMessage, receiveMessage, table, catch, throw, throws, until, end, sub, the machine types, const, immutable, independent) | "<word> has no value" | the same |
+
+- Its consumers: `l2_check_primary` -- an operand, an actual, a return value, a condition -- for the bare word (before
+  the names and before `l2_ident`'s refusal of the statement words) and for the word's Frame (before the operators'
+  branches, which take over with their operands; its merge-only branch is now the contract's);
+  `l2_check_receiving_value` -- a value received by a declared name -- before the value is typed (it was "assignment
+  value has unknown type", said at the statement); `l2_colon_simple_ty` -- sizeof and length applied to nothing have no
+  type (they were size_t, and `return: length()` asked for the converter `lm_stg_convert_size_t_int`).
+- A named Structure (the resolution's kind 5) in a value position. Its name is the Structure, a reference: a number
+  place refuses it, "a reference where a number is asked", as the call's actuals already did (K04) -- an operand
+  (`l2_native_leaf_ty` gives the kind rule's -5), one value given to a number place (a return value, an initializer:
+  `l2_check_value_convert_field`), a received value (`l2_check_receiving_value`). Its application runs its body and
+  gives no value, "a callable without a result has no value", as a sub's does -- an operand, an actual, a return value
+  (`l2_check_primary`), a received value (`l2_check_receiving_value`). These were "root operation not walkable yet: a
+  Structure value", "unknown method" and "assignment value has unknown type".
+- A held callable called bare meets the one binding (`l2_bind_call`), which says which header formal it leaves
+  without an argument, as for `h2()`: "h2 has no argument x" (it was "a held callable takes the arguments of its
+  header").
+- The comments that efbc2926 put on `l2_check_primary`'s callable branch and on `l2_check_value_call` are back to the
+  c0e3fc5e text. They said that a callable formal of this method named bare is given as its occurrence (it runs:
+  `l2_check_value_call`), that `m()` is checked there and that it reads `l2_app_actuals` (only a bare name reaches it;
+  `m()` is the Frame branch's `l2_check_call`), and that the statement slices use it (none does). The translator's text
+  is now c0e3fc5e's with this slice's patch and nothing else.
+
+The census's S4 sites ([k03-head-census.tsv](k03-head-census.tsv), 54 and two S4+S6, line numbers of the S1 bytes):
+nine of `l2_check_primary`'s fourteen -- the loop words, the body words and merge -- are gone into the contract; the
+five left there (the address Frame `@`, cast, sizeof, implements, length) and those of `l2_check_receiving_value`
+(sizeof, length) and `l2_colon_simple_ty` (sizeof, length, cast) are the operators' branches with operands, reached only
+when the word's contract hands the application on (2) or, applied to nothing, typed as no value. The emission and
+walker sites -- `l2_prep` (6), `l2_reference_source`, `l2_rw_operand` (6), `l2_rw_opty` (2), `l2_rw_source_node` -- run
+on a program the check accepted, so they meet a word only as an operator with its operands (and the walker's located
+limit for merge). merge in `l2_check_ret_convert`, `l2_check_call`, `l2_emit_call` (the two S4+S6 sites) and
+`l2_rw_callable_actual` is the callable-result and callable-formal contracts' construction of merge, which comes before
+the value check. The `[`, `]` and `@` of `l2_check_fields`, `l2_emit_fields` and `l2_scan_fields` and `node` in the
+last are lexical, no head. Left for S6: `l2_rw_operand`'s refusal of a named Structure's name ("a Structure value")
+looks unreachable now that the check refuses that name in a number place -- a probe in both modes decides between
+deleting it and witnessing it.
+
+The matrices (translation only; bare and `H()` with the final translator against the RESERVED-NAME-BINDINGS bytes): a
+value received by a declared name 22 of 23 heads agree (21 before), a return value 22 of 23 (4), an actual 9 of 10
+(3), an operand 9 of 10 (3). The one head left in each is a named Structure, whose two spellings are two contracts: its
+name is a reference, its application has no value. The remaining differences of the head matrix (95 of 138 agree,
+70 before) are `x: H` with x absent, at the root, in a method and in a nested body: a definition (Q58), slice S5 --
+there the bare word still says its statement contract or "unsupported body", and `x: sizeof` and `x: size_t` are
+accepted where `x: sizeof()` and `x: size_t()` are refused.
+
+The witnesses: 21 refusal fixtures and two positive programs, 46 rows after the RESERVED-NAME-BINDINGS rows, each
+refusal natively and under `--walk-methods` (the walked translation says the same as the native one in every row):
+
+| Witness (method `m`, the refused place) | The committed translator (c0e3fc5e) | Now |
+| --- | --- | --- |
+| `return: merge` | unresolved name | merge needs at least one operand |
+| `return: merge Model` -- the bare merge, Model no operand of it | unresolved name | merge needs at least one operand |
+| `return: take(merge)` | unresolved name | merge needs at least one operand |
+| `x: merge Model`, x absent -- the row the reintroduced collector turns red | merge needs at least one operand | the same |
+| `return: merge()`, `return: take(merge())` | merge expression is not lowered in this receiving context | merge needs at least one operand |
+| `w: merge(Model) + 1` | merge expression is not lowered in this receiving context | the same, by the contract |
+| `w: sizeof()` | sizeof: requires one operand | the same, by the contract |
+| `w: sizeof` | assignment value has unknown type (at the statement) | sizeof: requires one operand |
+| `return: length()` | the program has no method `lm_stg_convert_size_t_int`, the receiver of this conversion | length requires one known primitive own array |
+| `w: length + 1` | unresolved name | length requires one known primitive own array |
+| `return: table` | unresolved name | table has no value |
+| `return: post` | unresolved name | post is not supported yet |
+| `if: post() = 1` | unknown method | post is not supported yet |
+| `w: include` | assignment value has unknown type (at the statement) | include is a unit instruction: it stands at the root of the unit |
+| `w: implements` | assignment value has unknown type (at the statement) | implements expects candidate, required, consumer |
+| `return: Model`, `w: Model + 1` | root operation not walkable yet: a Structure value | a reference where a number is asked |
+| `w: Model` | assignment value has unknown type (at the statement) | a reference where a number is asked |
+| `w: Model()` | assignment value has unknown type (at the statement) | a callable without a result has no value |
+| `w: Model() + 1` | unknown method | a callable without a result has no value |
+
+The positive controls, natively and walked (methods 0-4 walked): `unit_k03_nullary_value` -- a callable called bare
+and as `tick()` is one application as an operand, an actual of a number formal and a return value (w is 3, 6, 8, 10,
+14 and tick runs six times); `unit_k03_data_value` -- names that hold data, a local, a formal and an own field, are
+read as data as an operand, an actual, a return value, a received value and in a condition, and a named Structure's
+name where a reference is asked, a formal of its type and merge's operand, is the Structure itself (w is 30, r is 5,
+`Model\value` stays 7). Two rows moved their needle to the new contract: `unit_held_call_bare_name_args_refused`
+13:4 "h2 has no argument x", and `unit_merge_atom_assign_refused` (`w: merge: Model` received by a declared int: merge's
+receiving limit, now said at the merge) 10:5 "assignment value has unknown type" -> 10:8 "merge expression is not
+lowered in this receiving context"; its comment says so, its line count kept.
+
+Mutants (each removes one rule whole, built from the final bytes, one gcc at a time; the 256 rows of the focused run
+`opus_focus_s4_03` replayed with it; a refusal row is red when its first diagnostic is no longer its needle, a
+translating row when it refuses; no mutant changed the L1 of a translating row, so none had to be run):
+
+| Mutant | Red rows (beyond the three red without it) |
+| --- | --- |
+| the collector of the atom spelling reintroduced (`l2_merge_atom_settle`, called by `l2_merge_frame`) | `unit_k03_prefix_merge_recv_refused` and its walked twin: `x: merge Model` is accepted as `x: merge: Model` |
+| `l2_check_primary`: a bare word is no application | 12: `return: merge`, `return: merge Model`, `return: take(merge)`, `w: length + 1`, `return: table`, `return: post`, each native and walked -- "unresolved name" |
+| `l2_check_primary`: a word's Frame does not meet the contract | 8: `return: merge()`, `return: take(merge())`, `w: merge(Model) + 1`, `if: post() = 1` -- "unknown method" |
+| `l2_check_receiving_value`: a received word typed before its contract | 9: `w: sizeof`, `w: sizeof()`, `w: include`, `w: implements` (native and walked), `unit_merge_atom_assign_refused` -- "assignment value has unknown type" |
+| `l2_colon_simple_ty`: sizeof and length applied to nothing typed | `return: length()` (2) -- the missing converter |
+| the receivers with no lowering, the unit instructions, out of the contract | `return: post`, `if: post() = 1` (4); `w: include` (2) -- "<word> has no value" |
+| implements applied to nothing goes on to be typed; implements with operands refused | `w: implements` (2); the seven positive `unit_implements_*` rows |
+| a named Structure: the operand, one value to a number place, the received name, the received application, the application in `l2_check_primary` | 2 each: `w: Model + 1`, `return: Model`, `w: Model`, `w: Model()`, `w: Model() + 1` |
+| the bare held callable without the one binding | `unit_held_call_bare_name_args_refused` |
+| the control (one comment changed) | none |
+
+Two commits of another session came in between c0e3fc5e and this slice: cd6aa536 and efbc2926, made in the main
+checkout by the relay session under a slice ID Codex never issued, with no gate (Codex, K03-S4-CLEANUP-S5-20261007-01:
+not authorized). cd6aa536 added `unit_recv_prefix_merge_model.lm2` with a native and a walked row, and
+`steps/k03-s4-implementation-spec.md`. The program is not valid -- it binds `test` (a word of the language, §108) and
+writes `Model: int` then `Model: 42` -- and has no `x: merge Model` line, so no collector can reach it: it was refused
+at 11:15 "unknown merge operand" and both rows were red. The spec named Opus its owner and listed a callable formal's
+occurrence in a value position as a positive control, which the code does not do (it runs the formal); efbc2926 put
+the same claim into the two comments restored above. By Codex's decision the program, its rows and the spec are
+removed in this slice: `unit_k03_prefix_merge_recv_refused` and its walked twin, which the reintroduced collector turns
+red, and the two positive controls carry the coverage the program claimed.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_42` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes. |
+| `build/l3_selftest/opus_l3_40` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_46` (full harness, the cleaned bytes) | RED39/2125: against `opus_full_42` FAIL→OK 0, OK→FAIL 0, added 46 (all OK), removed 0, red rows whose message changed 0; against `opus_full_45` (this slice before the cleanup, RED41/2127) exactly the two rows of cd6aa536 removed, every other target's verdict and message the same but for two identifiers that change in every run: the translator's sha256 (its PE build stamp; the two executables are equal with TimeDateStamp and CheckSum masked) and the unit hash of the two library rows (derived from the evidence directory of each run). The kernel and L3 gates read no fixture and no row, and the cleanup changed no `.lm1`. `opus_full_43` was stopped at its start to add the data control; `opus_full_44` was stopped by the low-memory reaper of Claude Code at 5020 logs and run again on the same 26 hashed paths as `opus_full_45`. Every staged copy is the declared bytes; the removed program is absent. |
+| Replay of `opus_full_42`'s 2078 recorded translations | 2076 byte-identical (L1 included); 2 refusals moved to their new contract (`unit_held_call_bare_name_args_refused`, `unit_merge_atom_assign_refused`). |

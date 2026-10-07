@@ -1,0 +1,31 @@
+# K03 S4: in a value position a callable called bare and as `tick()` is one application -- an operand, an actual
+# of a number formal, a return value -- natively and walked.  w: 3, 6, 8, 10, 14; tick runs six times.  Entry 7.
+int: ticks 0
+fn: tick () int
+    node\ticks: node\ticks + 1
+    return: 2
+end: tick
+fn: take (int: v) int
+    return: v
+end: take
+fn: viaReturn () int
+    return: tick
+end: viaReturn
+fn: viaReturnEmpty () int
+    return: tick()
+end: viaReturnEmpty
+fn: check () int
+    int: w 0
+    w: tick + 1
+    w: w + tick() + 1
+    w: w + take(tick)
+    w: w + take(tick())
+    w: w + viaReturn() + viaReturnEmpty()
+    if: w != 14
+        return: 81
+    if: node\ticks != 6
+        return: 82
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

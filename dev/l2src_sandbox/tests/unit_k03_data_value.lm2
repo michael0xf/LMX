@@ -1,0 +1,37 @@
+# K03 S4 control (Codex: valid nullary and data controls): in a value position a name that holds data is read, never
+# applied -- a local, a formal and an own field as an operand, an actual of a number formal, a return value, a received
+# value and in a condition; a named Structure's name where a reference is asked -- a formal of its type, merge's
+# operand -- is the Structure itself.  w: 6, 11, 15, 16, 23, 30, 30; r: 5.  Entry 7.
+Model:
+    int: value 7
+end: Model
+int: d 4
+fn: take (int: v) int
+    return: v
+end: take
+fn: read (Model: item) int
+    return: item\value
+end: read
+fn: viaReturn (int: v) int
+    return: v
+end: viaReturn
+fn: check () int
+    int: e 5
+    int: w 0
+    int: r 0
+    w: e + 1
+    w: w + take(e)
+    w: w + node\d
+    if: e = 5
+        w: w + 1
+    w: w + read(Model)
+    c: merge: Model
+    w: w + c\value
+    w: w + viaReturn(e) - 5
+    r: e
+    if: w != 30 || r != 5 || Model\value != 7
+        return: 81
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

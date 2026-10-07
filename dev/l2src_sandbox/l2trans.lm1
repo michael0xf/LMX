@@ -977,6 +977,7 @@ prototype:
     fn: l2_stmt_word_head (const: @(LmP0Node stmt); int: mi) @: LmP0Text
     fn: l2_stmt_word (const: @(LmP0Node stmt); int: mi; const: @(char word)) int
     fn: l2_check_word_stmt (const: @(LmP0Node stmt); const: @(LmP0Text w); const: @(LmP0Structure body); int: mi; const: @(char path); int: depth) int
+    fn: l2_check_word_value (const: @(LmP0Node node); const: @(LmP0Text w); int: mi; const: @(char path)) int
     fn: l2_exact_ident (const: @(LmP0Text t); @: LmP0Text out) int
     fn: l2_bind_spelling (const: @(LmP0Text t)) int
     fn: l2_bind_admit (const: @(LmP0Text t); const: @(LmP0Node at); const: @(char path)) int
@@ -8701,8 +8702,11 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
             \out_ty: m
             return: 0
         return: 1
-    # sizeof: / length are operators whose result is size_t (storage bytes / element count).
+    # sizeof: / length are operators whose result is size_t (storage bytes / element count).  Applied to nothing the
+    # application has no value: its contract says why where it is checked (l2_check_word_value), not a conversion.
     if: l2_text_eq(value\as\frame\head, "sizeof") || l2_text_eq(value\as\frame\head, "length")
+        if: l2_count_active(l2_app_actuals(value)) = 0
+            return: 1
         \out_ty: 2
         return: 0
     ---
@@ -10375,6 +10379,10 @@ fn: l2_native_leaf_ty (const: @(LmP0Node node); int: mi) int
         # A callable formal named bare runs (callable-first): its value is its contract's result (l2_native_cf_ty).
         if: l2_native_cf_ty(mi, t) != 0 - 100
             return: l2_native_cf_ty(mi, t)
+        # K03 S4: a named Structure's name is the Structure, a reference (the resolution's kind 5): the kind rule's -5.
+        if: l2_head_resolve(mi, t, 0, 0) = 5
+            l2_kind_at: (cast: (@: LmP0Node) node)
+            return: 0 - 5
         if: l2_colon_simple_ty(node, mi, @ ty) != 0
             return: 0 - 99
         # A text is no number (-11; -10 is a number literal or a char), and a Structure is a reference: their own
@@ -10677,6 +10685,9 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
     # A number place: the bare name of a held callable is received as its result.
     if: l2_held_result_receive(mi, field, n, 1, path) != 0
         return: 1
+    # K03 S4: a named Structure's name is the Structure, a reference: a number place refuses it, as the call's actuals do.
+    if: n = 1 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_head_resolve(mi, only\value\as\atom, 0, 0) = 5
+        return: l2_error(path, only\value, "a reference where a number is asked")
     if: n = 1
         return: l2_check_value_convert(only\value, to_ft, mi, path)
     if: n > 1
@@ -10981,6 +10992,7 @@ return: l2_pointer_compatible(target_ty, value_ty)
 # have translation-time types, so refuse an incompatible pair here rather than
 # emitting invalid C and pretending that the assignment was typed.
 fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: target_ty; int: receiving_model; const: @(LmP0Text receiving_name); int: mi; const: @(char path)) int
+    int: wk
     []: char lpd_own 1024
     @: char lpd 0
     size_t: lpn 0U
@@ -11010,6 +11022,21 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
         value_ty: descriptor\type
     else:
         if: n = 1
+            # K03 S4: a word of the language received as a value -- the bare word or its Frame -- meets the word's value
+            # contract first, said at the word (l2_check_word_value); an operator with operands goes on to be typed.
+            if: only != 0 && only\value != 0 && l2_stmt_word_head(only\value, mi) != 0
+                wk: l2_check_word_value(only\value, l2_stmt_word_head(only\value, mi), mi, path)
+                if: wk != 2
+                    return: wk
+                ---
+            # K03 S4: a named Structure (the resolution's kind 5): its name is a reference, which a number place refuses;
+            # its application runs its body and gives no value.
+            if: only != 0 && only\value != 0 && l2_app_head(only\value) != 0 && l2_head_resolve(mi, l2_app_head(only\value), 0, 0) = 5
+                if: only\value\kind = c.LM_P0_NODE_FRAME
+                    return: l2_error(path, only\value, "a callable without a result has no value")
+                if: l2_prim_code_name(target_ty) != 0
+                    return: l2_error(path, only\value, "a reference where a number is asked")
+                ---
             if: only != 0 && l2_prefix_kind_refused(only\value, mi, path) != 0
                 return: 1
             # A number place: the bare name of a held callable is received as its result.
@@ -25604,6 +25631,43 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     ---
 return: 0
 
+# K03 S4 (the author, 2026-10-06): a word of the language in a value position -- the bare word or its Frame, one
+# application (l2_app_actuals) -- meets the word's value contract here, one consumer for both spellings, said at the
+# word.  An operator with a value goes on to its branch with its operands (2); applied to nothing it has none, its
+# own refusal.  A loop or body word refuses as its Frame did; a receiver the translator does not build and a unit
+# instruction say so as in a statement (l2_check_word_stmt); every other word gives no value.  0 is never answered:
+# a word's value is always one of its branches'.
+fn: l2_check_word_value (const: @(LmP0Node node); const: @(LmP0Text w); int: mi; const: @(char path)) int
+    int: na l2_count_active(l2_app_actuals(node))
+    if: l2_text_eq(w, "merge")
+        if: na = 0
+            return: l2_error(path, node, "merge needs at least one operand")
+        return: l2_error(path, node, "merge expression is not lowered in this receiving context")
+    if: l2_text_eq(w, "cast") || l2_text_eq(w, "sizeof") || l2_text_eq(w, "length")
+        if: na != 0
+            return: 2
+        if: l2_text_eq(w, "cast")
+            return: l2_error(path, node, "unsupported cast")
+        if: l2_text_eq(w, "sizeof")
+            return: l2_error(path, node, "sizeof: requires one operand")
+        return: l2_error(path, node, "length requires one known primitive own array")
+    if: l2_text_eq(w, "while") || l2_text_eq(w, "for") || l2_text_eq(w, "continue") || l2_text_eq(w, "break")
+        return: l2_error(path, node, "unsupported loop")
+    if: l2_text_eq(w, "if") || l2_text_eq(w, "else") || l2_text_eq(w, "return") || l2_text_eq(w, "fn") || l2_text_eq(w, "node")
+        return: l2_error(path, node, "unsupported body")
+    # implements has its value (§7): with operands its branch checks them (l2_check_implements); applied to nothing it
+    # has none of its three.
+    if: l2_text_eq(w, "implements")
+        if: na != 0
+            return: 2
+        return: l2_error(path, node, "implements expects candidate, required, consumer")
+    # The receivers the translator does not build (l2_check_word_stmt) and the unit instructions, as in a statement.
+    if: l2_text_eq(w, "fm") || l2_text_eq(w, "synchronized") || l2_text_eq(w, "test") || l2_text_eq(w, "post") || l2_text_eq(w, "external")
+        return: l2_error_name(path, node, "", w\data, w\length, " is not supported yet")
+    if: l2_unit_word(w) != 0
+        return: l2_error_name(path, node, "", w\data, w\length, " is a unit instruction: it stands at the root of the unit")
+return: l2_error_name(path, node, "", w\data, w\length, " has no value")
+
 fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     []: char lpd_own 1024
     @: char lpd 0
@@ -25692,19 +25756,21 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
             return: l2_error(path, node, "an octal integer literal is not supported yet")
         if: node\as\atom\length > 0U && node\as\atom\data[0] >= 48 && node\as\atom\data[0] <= 57
             return: l2_error(path, node, "not a number literal")
+        # K03 S4: a bare word of the language is its application with no argument (l2_check_word_value).
+        if: l2_stmt_word_head(node, mi) != 0
+            return: l2_check_word_value(node, l2_stmt_word_head(node, mi), mi, path)
         if: l2_ident(node\as\atom) = 0
             return: l2_error(path, node, "unsupported body")
-        # S4 K03: A callable named where a value is consumed gives its result (plan §3 native gate (в);
+        # A callable named where a value is consumed gives its result (plan §3 native gate (в);
         # FABLE-OPUS-RECEIVER-CONTRACT-20260924-139): it runs with no arguments, the check of
-        # `m()` (l2_check_value_call).  A bare atom and its empty application `m()` are unified here:
-        # l2_app_actuals(atom) is 0, so one contract applies to both.
-        # Callable formal of this method: occurrence given, not call result; of the CALLEE: not here (l2_check_call).
+        # `m()` (l2_check_value_call).  So for a callable formal of this method and for a unit
+        # method.  A callable formal of the CALLEE takes the occurrence itself instead; that
+        # actual never reaches here (l2_check_call).
         idx: l2_param_find(mi, node\as\atom)
         if: idx >= 0 && l2_head_is_callable_formal(mi, node\as\atom) != 0
             return: l2_check_value_call(node, l2_cf_get(mi, idx), idx, mi, path)
         if: idx >= 0
             return: 0
-        # S4: Unified method call dispatch (S2+S3 and S4 use common l2_check_value_call)
         if: l2_head_is_method_call(mi, node\as\atom) != 0
             return: l2_check_value_call(node, l2_find_method(node\as\atom), 0 - 1, mi, path)
         # and a local this method body declares, which lives in its own
@@ -25748,10 +25814,12 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         return: l2_check_fields(node\as\structure\first_field, l2_count_active(node\as\structure), mi, path, node)
     if: node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0
         return: l2_error(path, node, "unsupported body")
-    if: l2_frame_head(node, "while") || l2_frame_head(node, "for") || l2_frame_head(node, "continue") || l2_frame_head(node, "break")
-        return: l2_error(path, node, "unsupported loop")
-    if: l2_frame_head(node, "if") || l2_frame_head(node, "else") || l2_frame_head(node, "return") || l2_frame_head(node, "fn")
-        return: l2_error(path, node, "unsupported body")
+    # K03 S4: a word's Frame is the word's application (l2_check_word_value); an operator with operands goes on.
+    if: l2_stmt_word_head(node, mi) != 0
+        k: l2_check_word_value(node, l2_stmt_word_head(node, mi), mi, path)
+        if: k != 2
+            return: k
+        ---
     call: node\as\frame
     if: call\head = 0
         return: l2_error(path, node, "unknown method")
@@ -25771,13 +25839,11 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
     ---
     if: l2_text_eq(call\head, "implements")
         return: l2_check_implements(node, path)
-    # Callable-result and callable-formal receiving contracts handle merge
-    # through their common construction path before this expression checker.
-    # Do not turn the remaining reserved receiver into an unknown method.
-    if: l2_text_eq(call\head, "merge")
-        return: l2_error(path, node, "merge expression is not lowered in this receiving context")
     # D-106: a callable formal of this method shadows a unit method of its name.
     idx: l2_call_head_method(mi, call\head, @ fi)
+    # K03 S4: a named Structure's application runs its body and gives no value, as a sub's does.
+    if: idx < 0 && l2_head_resolve(mi, call\head, 0, 0) = 5
+        return: l2_error(path, node, "a callable without a result has no value")
     if: idx < 0 && l2_text_eq(call\head, "length")
         if: l2_array_length_own(node, mi) < 0 && l2_arr_len_shape(node, lpd_own, 1024U, @ lpd, @ lpn, @ lkind, @ lelem, @ ldepth, @ li0) != 0
             return: l2_error(path, node, "length requires one known primitive own array")
@@ -26418,10 +26484,9 @@ fn: l2_check_call (const: @(LmP0Node node); int: idx; int: fi; const: @(LmP0Stru
     ---
 return: 0
 
-# S4 K03 CALLABLE IN VALUE POSITION (l2_check_primary): its result is the value, so it is called with
+# A CALLABLE IN VALUE POSITION (l2_check_primary): its result is the value, so it is called with
 # no arguments (l2_check_call), and a callable without a result -- a sub, or a callable formal
-# whose contract is one -- has no value to give (plan §3 native gate (б)). A bare atom and its
-# empty application `m()` are unified here: l2_app_actuals(atom)=0, so one contract applies (S1 model).
+# whose contract is one -- has no value to give (plan §3 native gate (б)).
 fn: l2_check_value_call (const: @(LmP0Node node); int: idx; int: fi; int: mi; const: @(char path)) int
     if: l2_m_ret[idx] = 8
         return: l2_error(path, node, "a callable without a result has no value")
@@ -43285,6 +43350,10 @@ fn: l2_check_held_call (const: @(LmP0Node node); int: oi; int: mi; const: @(char
     # An empty argument body contains no expressions to check; signature
     # admission still applies at the same held-call construction route.
     if: body != 0 && l2_call_actual_fields(body) > 0 && l2_check_fields(l2_call_actuals(body), l2_call_actual_fields(body), mi, path, node) != 0
+        return: 1
+    # K03 S4/S6: a bare held name writes no argument; a header formal it leaves without one is said by the one binding
+    # (l2_bind_call), as for `h()`.
+    if: body = 0 && node != 0 && node\kind = c.LM_P0_NODE_ATOM && l2_mad_held_formals(oi) > 0 && l2_bind_call(node, 0 - 1, oi, path) != 0
         return: 1
     # The call passes what the held callable's header declares, no more and no less.
     if: l2_mad_held_arity(oi) >= 0

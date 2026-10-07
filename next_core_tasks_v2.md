@@ -1808,6 +1808,13 @@ one admission of every binding's name (`l2_bind_admit`), the binding shapes read
 identifiers decoded; the defined set completed by its documents (test, post, external, implements, the
 receiving expressions, the C99 machine types, the unit instructions) whether or not a lowering exists; the
 receiveMessage method exception removed; 66 programs migrated (60 `test` methods to `mytest`). Gates: kernel `opus_kernel_41` GREEN297 (114 selftests), L3 `opus_l3_39`, full `opus_full_42` RED39/2079 (`opus_full_41` was stopped for low memory and run again on the same bytes) -- against `opus_full_40` FAIL→OK 0, OK→FAIL 0, added 54.
+S4 done ([section 109](steps/fable-continuation-20261003.md#unified-head-s4)): the value positions -- an operand, an
+actual, a return value, a condition, a value received by a declared name -- read the resolution: a word of the
+language, bare or as its empty Frame, is one application meeting one consumer (`l2_check_word_value`), refused at the
+word by its contract; a named Structure's name in a number place is a reference and its application has no value; a
+held callable called bare meets the one binding. Value matrices: bare and `H()` agree for every head but a named
+Structure, whose two spellings are two contracts; the definition positions (`x: H`, x absent) are S5's. Gates:
+kernel `opus_kernel_42` GREEN297 (114 selftests), L3 `opus_l3_40`, full `opus_full_46` RED39/2125 on the bytes cleaned of cd6aa536 (Codex K03-S4-CLEANUP-S5-20261007-01) -- against `opus_full_42` FAIL→OK 0, OK→FAIL 0, added 46; against `opus_full_45` exactly its two rows removed.
 
 ### K04 — Callable actuals and hidden inputs
 

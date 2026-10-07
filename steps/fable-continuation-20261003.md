@@ -11603,3 +11603,93 @@ Evidence:
 | `build/l2_harness/opus_full_50` (full harness) | RED39/2272: against `opus_full_49` FAIL→OK 0, OK→FAIL 0, added 24 (all OK: the rows of this slice), removed 0; of the 2248 common targets none changed its message besides the identifiers that change in every run (the translator's sha256, the unit hash of the two library rows); the 39 red are the same rows with the same messages. The 16 declared paths were hashed before the run; every staged copy is the declared bytes. |
 | Focused run on the same bytes | `opus_focus_n1b_01` 121 targets, 0 failed (the 24 rows of this slice, the two corpus programs and their twins, the K03 ref/vis/def rows). |
 | Replay of `opus_full_49`'s 2247 recorded translations | 4 rows differ in their L1, named above; the rest byte-identical. |
+
+<a id="ns-roles-vis"></a>
+## 114. An ordinary named Structure is visible from its place on; fn, fm and sub both ways (K03 NS-ROLES-VIS)
+
+The author's decision of 2026-10-07 (`LMX_blog/2026-10-07.md#method-declaration-visibility`; the question
+`LMX_blog/q/named-definition-boundary.md`; the norm `docs/LMX_semantics.en.md#declaration-visibility`, written by Codex in
+442600ec; Codex K03-VISIBILITY-AUTHOR-CLOSE-20261007-12): both-way visibility belongs to the callables the receivers fn,
+fm and sub create; an ordinary named Structure is not under that rule -- its declaration, like an ordinary binding of a
+value, is visible from its place on, forward and down, and a qualified branch's root with it.  A definition below makes
+no head above it known; the shape of a tail, the number of arguments, parentheses or a trailer choose no later
+declaration.  This is a forward correction of NS-ROLES-3 (64ebf1f0, section 111) and NS-ROLES-1a (83db2d4a, section
+112), whose both-way reading of named Structures rested on Codex's -07 Q2 interpretation, not on the author.
+
+What changed in `l2trans.lm1`:
+
+- `l2_head_absent`: an earlier frame headed t binds t whatever its tail is written as -- its definition (the first
+  written occurrence of an unknown head), merge's construction or a reference binding; nothing looks below.
+  `l2_struct_defined_below` and the item's own deferral to a definition below are gone.
+- The lookups by name (`l2_ns_find`), by payload (`l2_ns_find_payload`) and of a branch's root (`l2_ebr_find`) read the
+  definition's place again (`l2_vis_ok`); `l2_def_visible`, the both-way reading 1a shared among them, is gone.
+- A signature reads the Structures visible where its method stands: the late refresh of signature models
+  (`l2_sig_models_refresh`, NS-ROLES-3) and the type position's whole-unit clause in `l2_contract_formal` are gone.
+- The root's source reading of `b: A` (`l2_unit_ref_bind`) and of a typed reference above a binding
+  (`l2_unit_value_above`) take a named Structure or a branch's root only when it is defined above
+  (`l2_unit_defines_struct`, `l2_unit_defines_branch` take the stop item now).  A method stays visible both ways
+  (`l2_unit_names_method`).  fm is not built: an fm application is "fm is not supported yet"
+  (`unit_k03_empty_fm_stmt_refused`), so fm's both-way visibility has no runnable witness until fm exists.
+
+Implementation debt, pinned as such (Codex K03-VIS-CALL-CLASSIFICATION-20261007-16): with Model existing, `Model: Other
+extra` is Model's call by the language (docs :668), whatever Other is; with Other invisible above its definition the
+translator takes the old typed receiving route (`l2_colon_bind_shape`, `l2_check_bind`) and refuses the candidate
+(`unit_root_struct_call2_forward_refused`, its header says so).  The call classification is the next step,
+NS-ROLES-CALL.
+
+Evidence:
+
+- Census: the replay of the 2271 recorded translations of `opus_full_50` with this translator against 156eefc7's
+  (1b's) changes 24 rows of 13 fixtures; every other row is byte-identical in L1, exit and messages.  The 22 rows of
+  the census of 234bb50f, and `unit_s2_vis_signature_below` with its twin, which that census (a forward-off variant that
+  kept the signature refresh) did not see:
+
+| Fixture (and its walked twin) | Before | Now |
+| --- | --- | --- |
+| `unit_k03_vis_later_struct_method` | exit 7 (m above Later reads Later) | "15:30: unbound dynamic input Later" |
+| `unit_k03_vis_later_struct_root` | exit 7 | "4:5: unresolved name" |
+| `unit_s2_vis_branch_below` | exit 7 | "20:30: unbound dynamic input cfg" (the S2 reading) |
+| `unit_s2_vis_signature_below` | exit 7 | "5:11: unknown type" (the S2 reading) |
+| `unit_k03_vis_branch_merge_above` | exit 7 | "6:15: unknown merge operand" |
+| `unit_k03_vis_branch_merge_root_above` | exit 7 | "5:11: unknown merge operand" |
+| `unit_k03_ref_later` | exit 7 (1a: a binding to a Structure below) | "12:5: unknown field path segment" -- box and inner above Later each define a Structure of their own |
+| `unit_k03_ref_branch_later` | exit 7 (1a) | "7:11: unresolved name" |
+| `unit_k03_vis_later_frame_call_refused` | "5:1: more arguments than Later has formals" | "6:1: ..." -- `Later(3)` defines Later, the block is its application |
+| `unit_k03_vis_later_literal_call_refused` | "6:1: ..." | "7:1: ..." |
+| `unit_s2_vis_structure_below_refused` (no twin) | "3:1: more arguments than Model has formals" | "4:1: ..." |
+| `unit_root_struct_call2_forward_refused` (no twin) | "11:1: more arguments than Model has formals" | "11:1: a typed binding's candidate is not a Structure value" -- the implementation debt above |
+| `unit_k03_vis_unit_declares_tail` | exit 7, x a binding | exit 7, x a definition again (run); walked pin (0,1) -> (0,1,2) |
+
+- Fixtures: the eight positives in the first rows become their refusal rows in place; the headers of fifteen programs
+  are reworded with their line counts kept (the twelve above with headers, `unit_s2_vis_signature_below`,
+  `unit_k03_vis_literal_tail_defines` and `unit_k03_vis_nested_sibling_refused`, whose texts named the both-way
+  reading); the needles re-pointed as measured.  New rows: `unit_vis_method_below` (the root and a method above twice,
+  an fn, and bump, a sub, call them: exit 7 natively and walked), `unit_vis_typed_ref_below_refused` (`@: Later h Later`
+  above `Later:`, then `b: h`: "5:4: unknown type"), and the two S2 refusals NS-ROLES-3 had replaced, re-added from
+  64ebf1f0^ with their measured needles: `unit_s2_vis_branch_refused` ("15:1: unbound dynamic input cfg") and
+  `unit_s2_vis_signature_refused` ("3:11: unknown type"), each with a walked twin now.  Every witness, natively and
+  under `--walk-methods`, gives its needle as the first diagnostic or runs to 7.
+- Mutants: each puts one removed rule back (or drops one place restriction) in the final bytes, built one gcc at a
+  time; the 19 witness programs translated natively and walked, the changed positives run, the recorded translations
+  replayed:
+
+| Mutant | Red |
+| --- | --- |
+| v01 an earlier frame binds its head only by its tail's shape | the two lookahead refusals and `unit_s2_vis_structure_below_refused` with their twins ("duplicate named Structure"); 5 corpus rows |
+| v02 the lookup by name both ways for a unit's Structure | 18 witness rows (every reader of a later Structure or branch root is accepted or changes its refusal; the call row's debt message reverts to the arity refusal); 15 corpus rows |
+| v03 the lookup by payload both ways | none: not reached -- every reader classifies the name by `l2_ns_find`, or as a dynamic input, before the payload lookup; probes (a merge operand, a Structure actual, `@Point`, a binding in a method above the definition) refuse identically under both builds |
+| v04 a branch's root found both ways | the two branch-merge rows and their twins |
+| v05 a type position takes a Structure defined anywhere | the two signature rows and their twins |
+| v06 the root's source reading takes a Structure defined anywhere | `unit_k03_ref_later` and `unit_k03_vis_unit_declares_tail` with their twins (the internal disagreement error) |
+| v07 a typed reference above a binding takes a Structure defined anywhere | `unit_vis_typed_ref_below_refused` and its twin (the internal disagreement); it first survived, a probe reached it, the witness was added for it |
+| v00 control | none |
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_47` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes. |
+| `build/l3_selftest/opus_l3_45` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_51` (full harness) | RED39/2280: against `opus_full_50` FAIL→OK 0, OK→FAIL 0, added 8 (all OK: the new rows of this slice), removed 0; of the 2272 common targets 25 changed their message -- the 22 re-pointed rows of the census above (the `unit_k03_vis_unit_declares_tail` pair keeps its message: it still runs) and the identifiers that change in every run (the translator's sha256, the unit hash of the two library rows); the 39 red are the same rows with the same messages.  The 21 declared paths were hashed before the run; every staged copy is the declared bytes. |
+| Focused run on the same bytes | `opus_focus_vis_02` 134 targets, 0 failed (the visibility rows, the K03 ref/alias/def/vis rows, the S2 rows); `opus_focus_vis_01` stopped before running: its list named two walked twins that do not exist. |
+| Replay of `opus_full_50`'s 2271 recorded translations | 24 rows of 13 fixtures differ, named above; the rest byte-identical. |

@@ -1,0 +1,25 @@
+# K03 NS-ROLES-VIS (the author, 2026-10-07; semantics #declaration-visibility): the callables fn, fm and sub
+# create are visible in their block both ways: the root and a method above twice and bump call them.  Exit 7; 81-83 if
+# a call missed.
+int: hits 0
+int: got 0
+got: twice(3)
+bump()
+fn: m () int
+    if: got != 6 || node\hits != 1
+        return: 81
+    if: twice(2) != 4
+        return: 82
+    bump()
+    if: node\hits != 2
+        return: 83
+    return: 7
+end: m
+fn: twice (int: n) int
+    return: n + n
+end: twice
+sub: bump ()
+    node\hits: node\hits + 1
+end: bump
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

@@ -1029,7 +1029,6 @@ prototype:
     fn: l2_retained_body (const: @(LmP0Frame fr)) int
     fn: l2_merge_construction (const: @(LmP0Frame fr)) int
     fn: l2_ident_only_tail (const: @(LmP0Frame fr)) int
-    fn: l2_struct_defined_below (const: @(LmP0Text name); const: @(LmP0Node item)) int
     fn: l2_ret_cell_ty (int: mi) int
     fn: l2_emit_parts (int: i) int
     fn: l2_emit_unit (const: @(char out_path)) int
@@ -1488,19 +1487,17 @@ prototype:
     fn: l2_pointer_compatible (int: target; int: value) int
     fn: l2_colon_decl_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name) int
     fn: l2_ns_ref_field_stmt (const: @(LmP0Node stmt)) int
-    fn: l2_unit_defines_struct (const: @(LmP0Text t)) int
+    fn: l2_unit_defines_struct (const: @(LmP0Text t); const: @(LmP0Node stop)) int
     fn: l2_rb_find (const: @(LmP0Node stmt)) @: LmP0Text
     fn: l2_rb_meth_of (const: @(LmP0Node stmt)) int
     fn: l2_call_alias_own (int: mi; const: @(LmP0Text head)) int
     fn: l2_emit_alias_self (int: oi; int: mi; const: @(char ind)) int
-    fn: l2_def_visible (const: @(LmP0Node at); int: unit) int
     fn: l2_rb_declaration (const: @(LmP0Node node)) @: L2Declaration
     fn: l2_ref_tail_atom (const: @(LmP0Frame fr)) @: LmP0Text
     fn: l2_unit_ref_bind (const: @(LmP0Frame fr); const: @(LmP0Node item)) int
     fn: l2_ref_bind_site (const: @(LmP0Node stmt); int: mi; @@: LmP0Text out_word; @: int out_meth) int
     fn: l2_local_absent_def (const: @(LmP0Node stmt); int: mi) int
     fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: int out_meth) int
-    fn: l2_sig_models_refresh () int
     fn: l2_colon_bind_shape (const: @(LmP0Node stmt); @@: LmP0Text out_model; @@: LmP0Text out_name; @@: LmP0Field out_cand) int
     fn: l2_bind_untyped (int: mi; @: LmP0Field cand) int
     fn: l2_check_bind (const: @(LmP0Node stmt); const: @(LmP0Text model); const: @(LmP0Text name); @: LmP0Field cand; int: mi; const: @(char path)) int
@@ -4557,19 +4554,14 @@ fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
         # below it applies t.  A method above the receiver has no binding of t (unit_held_call_above_unknown_head).
         if: l2_receiver_frame(f\value, @ got) != 0 && l2_text_same(got, t) != 0
             return: 0
-        # An earlier frame headed t binds t: merge's construction or a reference binding (data), a frame whose tail is a
-        # Structure (the definition), or one whose tail is no Structure with no definition of t below it.  Above a later
-        # definition such a frame is that Structure's application, whatever its tail is written as (K03, Codex -07 Q2,
-        # -09: a named Structure is visible both ways), not a binding of t.
-        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0 && l2_text_same(f\value\as\frame\head, t) != 0 && l2_retained_body(f\value\as\frame) != 0 && (l2_tail_is_structure(f\value\as\frame) != 0 || l2_merge_construction(f\value\as\frame) != 0 || l2_unit_ref_bind(f\value\as\frame, f\value) != 0 || l2_struct_defined_below(t, f\value) = 0)
+        # An earlier frame headed t binds t, whatever its tail is written as: its definition (the first written
+        # occurrence of an unknown head), merge's construction or a reference binding (data).  A definition below
+        # makes no head above it known: an ordinary named Structure is visible from its place on
+        # (docs/LMX_semantics.en.md#declaration-visibility; the author, 2026-10-07).
+        if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0 && l2_text_same(f\value\as\frame\head, t) != 0 && l2_retained_body(f\value\as\frame) != 0
             return: 0
         f: l2_next_active(f\next)
     ---
-    # Nothing above binds t.  K03 (Codex -09): the item itself, its tail no Structure, applies a definition of t below
-    # it -- `Later: 3`, `Later(3 4)`, `Later: x` above `Later:` -- whatever its tail is written as; merge's construction
-    # and a reference binding introduce t (data).
-    if: item != 0 && item\kind = c.LM_P0_NODE_FRAME && item\as != 0 && item\as\frame != 0 && l2_retained_body(item\as\frame) != 0 && l2_tail_is_structure(item\as\frame) = 0 && l2_merge_construction(item\as\frame) = 0 && l2_unit_ref_bind(item\as\frame, item) = 0 && l2_struct_defined_below(t, item) != 0
-        return: 0
 return: 1
 
 # K03 S5 (Codex K03-S5-DEFINITION-TAIL-20261007-03; docs/LMX_semantics.en.md#construction): 1 when the frame's first
@@ -4723,14 +4715,14 @@ fn: l2_tree_branch_root (const: @(LmP0Node n); const: @(LmP0Text t)) int
     ---
 return: 0
 
-# Whether the unit -- above or below -- defines a qualified branch whose root is named t (a callable definition of
-# the unit, visible both ways as l2_unit_defines_struct's named Structure is).
-fn: l2_unit_defines_branch (const: @(LmP0Text t)) int
+# Whether an item of the unit above `stop` defines a qualified branch whose root is named t -- an ordinary named
+# Structure, visible from its place on as l2_unit_defines_struct's is.
+fn: l2_unit_defines_branch (const: @(LmP0Text t); const: @(LmP0Node stop)) int
     @: LmP0Field f
     if: l2_cur_unit = 0 || t = 0
         return: 0
     f: l2_next_active(l2_cur_unit\first_field)
-    while: f != 0
+    while: f != 0 && f\value != stop
         if: l2_frame_head(f\value, "independent") != 0 && l2_tree_branch_root(f\value, t) != 0
             return: 1
         f: l2_next_active(f\next)
@@ -4763,7 +4755,7 @@ fn: l2_unit_value_above (const: @(LmP0Text a); const: @(LmP0Node item)) int
                 h: 0
                 if: g != 0
                     h: l2_next_active(g\next)
-                if: g != 0 && h != 0 && g\value != 0 && h\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && h\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && h\value\as != 0 && l2_text_same(h\value\as\atom, a) != 0 && l2_unit_defines_struct(g\value\as\atom) != 0
+                if: g != 0 && h != 0 && g\value != 0 && h\value != 0 && g\value\kind = c.LM_P0_NODE_ATOM && h\value\kind = c.LM_P0_NODE_ATOM && g\value\as != 0 && h\value\as != 0 && l2_text_same(h\value\as\atom, a) != 0 && l2_unit_defines_struct(g\value\as\atom, it) != 0
                     return: 1
                 ---
             ---
@@ -4822,42 +4814,11 @@ fn: l2_unit_ref_bind (const: @(LmP0Frame fr); const: @(LmP0Node item)) int
     if: m >= 0
         return: (cast: (int) (l2_urm_val[m] = 1))
     m: l2_urm_add(item)
-    if: l2_unit_names_method(a) != 0 || l2_unit_defines_struct(a) != 0 || l2_unit_defines_branch(a) != 0 || l2_unit_value_above(a, item) != 0
+    if: l2_unit_names_method(a) != 0 || l2_unit_defines_struct(a, item) != 0 || l2_unit_defines_branch(a, item) != 0 || l2_unit_value_above(a, item) != 0
         got: 1
     if: m >= 0
         l2_urm_val[m]: got
 return: got
-
-# K03 (Codex K03-NS-ROLES-NEXT-20261007-09, -07 Q2): whether a unit item below `item` defines the named Structure
-# `name` -- a frame headed name whose tail is a Structure (l2_tail_is_structure), read from the source -- before any
-# binding of name below item: a receiver `@: name f(a)`, merge's construction `name: merge: ...` or a reference binding
-# `name: A` (l2_unit_ref_bind) makes the frames after it applications of that binding, no definition.  (A unit field
-# of the name and a named Structure of it collide where the field is made, l2_make_entry.)
-fn: l2_struct_defined_below (const: @(LmP0Text name); const: @(LmP0Node item)) int
-    @: LmP0Field f
-    @: LmP0Text got
-    @: LmP0Frame fr
-    int: seen 0
-    if: l2_cur_unit = 0 || name = 0 || item = 0
-        return: 0
-    f: l2_next_active(l2_cur_unit\first_field)
-    while: f != 0
-        if: seen != 0 && f\value != 0
-            if: l2_receiver_frame(f\value, @ got) != 0 && l2_text_same(got, name) != 0
-                return: 0
-            if: f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0 && l2_text_same(f\value\as\frame\head, name) != 0 && l2_retained_body(f\value\as\frame) != 0
-                fr: f\value\as\frame
-                if: l2_merge_construction(fr) != 0 || l2_unit_ref_bind(fr, f\value) != 0
-                    return: 0
-                if: l2_tail_is_structure(fr) != 0
-                    return: 1
-                ---
-            ---
-        if: f\value = item
-            seen: 1
-        f: l2_next_active(f\next)
-    ---
-return: 0
 
 # What one unit item is: 1 a method, 2 a qualified branch, 3 the os block, 4 a
 # directive, 5 a named Structure, 0 a statement of the entry E.  A named
@@ -5650,8 +5611,6 @@ fn: l2_translate_unit (const: @(LmP0Structure unit); const: @(char path)) int
     ---
     if: l2_ns_resolve_refs(path, first_stmt) != 0
         return: 1
-    if: l2_sig_models_refresh() != 0
-        return: l2_error(path, first_stmt, "out of memory")
     # The library profile is methods only: nothing would ever execute a
     # statement, so one is refused rather than dropped.
     if: l2_library_mode != 0 && first_stmt != 0
@@ -8458,7 +8417,7 @@ fn: l2_contract_formal (@: L2TypeContract contract; @: int out_ty) int
             return: 0
         return: l2_resolve_type_atom(word, depth, 0, out_ty)
     ---
-    if: l2_type_model(word) >= 0 || l2_find_method(word) >= 0 || l2_unit_defines_struct(word) != 0
+    if: l2_type_model(word) >= 0 || l2_find_method(word) >= 0
         \out_ty: l2_graph_ft()
         if: \out_ty = 0
             return: 1
@@ -20011,7 +19970,7 @@ return: 0
 fn: l2_ebr_find (const: @(LmP0Text t)) int
     int: i 0
     while: i < l2_ebr_n
-        if: l2_text_same(l2_ebr_name[i], t) && l2_def_visible(l2_ebr_at[i], 1)
+        if: l2_text_same(l2_ebr_name[i], t) && l2_vis_ok(l2_ebr_at[i])
             return: i
         i: i + 1
     ---
@@ -20028,26 +19987,18 @@ return: 0 - 1
 # E gets two references, per SPEC 9.1.4: an ordinary declaration-site child of
 # the unit graph, and an entry in the root retention array. Neither reparents
 # it; E\parent stays 0.
-# K03 (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q2; docs/LMX_semantics.en.md:768, :937): a named Structure is a
-# callable procedure, and a callable is visible throughout its block in both directions -- a definition of the unit
-# (parent < 0: a root definition, a qualified branch's root) is seen from every method and every statement of the
-# unit, above it too.  A nested Structure keeps the visibility of its place, and a program part's code sees none
-# (l2_vis_ok).  One reading (l2_def_visible) for every lookup of such a definition: by name, by payload, a branch's.
+# An ordinary named Structure -- a root definition, a qualified branch's root, a nested one -- is visible from its
+# place on (l2_vis_ok), as any ordinary declaration; only the callables fn, fm and sub create are visible both ways
+# (docs/LMX_semantics.en.md#declaration-visibility; the author, 2026-10-07).  A program part's code sees none.  The
+# lookup by payload and a branch's read the same place.
 fn: l2_ns_find (const: @(LmP0Text t)) int
     int: i 0
     while: i < l2_ns_n
-        if: l2_text_same(l2_ns_name[i], t) && l2_def_visible(l2_ns_at[i], (cast: (int) (l2_ns_parent[i] < 0))) && l2_ns_local[i] < 0
+        if: l2_text_same(l2_ns_name[i], t) && l2_vis_ok(l2_ns_at[i]) && l2_ns_local[i] < 0
             return: i
         i: i + 1
     ---
 return: 0 - 1
-
-# Whether a named callable definition at `at` is visible from the code being read: one of the unit (`unit` 1) from all
-# of the unit's code, both ways; another from its place (l2_vis_ok); none from a program part's code.
-fn: l2_def_visible (const: @(LmP0Node at); int: unit) int
-    if: unit != 0 && l2_vis_on != 2
-        return: 1
-return: l2_vis_ok(at)
 
 # Type positions resolve the same visible declaration as values. Only an
 # actually constructed local Structure supplies its model here; a reference
@@ -20098,7 +20049,7 @@ fn: l2_ns_find_payload (const: @(LmP0Text t)) int
         data: data + 1U
         n: n - 2U
     while: i < l2_ns_n
-        if: l2_ns_name[i] != 0 && l2_ns_name[i]\data != 0 && l2_ns_name[i]\length = n && memcmp(l2_ns_name[i]\data, data, n) = 0 && l2_def_visible(l2_ns_at[i], (cast: (int) (l2_ns_parent[i] < 0))) && l2_ns_local[i] < 0
+        if: l2_ns_name[i] != 0 && l2_ns_name[i]\data != 0 && l2_ns_name[i]\length = n && memcmp(l2_ns_name[i]\data, data, n) = 0 && l2_vis_ok(l2_ns_at[i]) && l2_ns_local[i] < 0
             return: i
         i: i + 1
     ---
@@ -25937,65 +25888,19 @@ return: f\value
 fn: l2_ref_formal_ns (const: @(LmP0Node decl)) int
 return: l2_declaration_model(decl, 1)
 
-# K03 (Codex K03-S5-ALIAS-VISIBILITY-20261007-07 Q2; docs/LMX_semantics.en.md:768, :937): whether an item of the unit
-# -- above or below the one being read -- defines the named Structure t (l2_unit_role 5), read from the source as
-# l2_unit_names_method reads a method: a callable definition is visible throughout its block in both directions, so a
-# signature may name a Structure the unit defines below its method.  The source's answer, before registration.
-fn: l2_unit_defines_struct (const: @(LmP0Text t)) int
+# Whether an item of the unit above `stop` defines the named Structure t (l2_unit_role 5), read from the source --
+# the answer before registration.  An ordinary named Structure is visible from its place on
+# (docs/LMX_semantics.en.md#declaration-visibility), unlike a method (l2_unit_names_method, both ways).
+fn: l2_unit_defines_struct (const: @(LmP0Text t); const: @(LmP0Node stop)) int
     @: LmP0Field f
     if: l2_cur_unit = 0 || t = 0 || l2_ident(t) = 0
         return: 0
     f: l2_next_active(l2_cur_unit\first_field)
-    while: f != 0
+    while: f != 0 && f\value != stop
         if: f\value != 0 && f\value\kind = c.LM_P0_NODE_FRAME && f\value\as != 0 && f\value\as\frame != 0 && f\value\as\frame\head != 0 && l2_text_same(f\value\as\frame\head, t) != 0 && l2_unit_role(f\value) = 5
             return: 1
         f: l2_next_active(f\next)
     ---
-return: 0
-
-# K03 (Codex -07 Q2): the lexical pass read each signature where its method stands; a formal or a result typed by a
-# named Structure defined below had no model yet.  Once every named Structure of the unit is registered, each such
-# model is read again from its declaration -- the same reading (l2_ref_formal_ns, l2_contract_model), not another.
-fn: l2_sig_models_refresh () int
-    int: mi 0
-    int: j
-    int: k
-    int: here_mi l2_here_mi
-    @: LmP0Node d
-    @: LmP0Field f
-    l2_here_mi: 0 - 1
-    while: mi < l2_m_n
-        j: 0
-        while: j < l2_m_arity[mi]
-            if: l2_nsty_get(mi, j) < 0
-                d: l2_formal_decl(mi, l2_fn(mi, j))
-                if: d != 0
-                    k: l2_ref_formal_ns(d)
-                    if: k >= 0 && l2_nsty_set(mi, j, k) != 0
-                        l2_here_mi: here_mi
-                        return: 1
-                    ---
-                ---
-            j: j + 1
-        ---
-        # The result: a named method's header is its name, its formals, its result (l2_collect_method).
-        if: l2_nsty_get(mi, 0 - 1) < 0 && l2_m_node != 0 && l2_m_node[mi] != 0 && l2_m_node[mi]\as != 0 && l2_m_node[mi]\as\frame != 0 && l2_m_node[mi]\as\frame\body != 0 && l2_frame_head(l2_m_node[mi], "fn") != 0
-            f: l2_next_active(l2_m_node[mi]\as\frame\body\first_field)
-            if: f != 0 && f\value != 0 && f\value\kind = c.LM_P0_NODE_ATOM
-                f: l2_next_active(f\next)
-            if: f != 0
-                f: l2_next_active(f\next)
-            if: f != 0 && f\value != 0 && l2_frame_head(f\value, "fn") = 0
-                k: l2_contract_model(l2_contract_type(f\value), 1)
-                if: k >= 0 && l2_nsty_set(mi, 0 - 1, k) != 0
-                    l2_here_mi: here_mi
-                    return: 1
-                ---
-            ---
-        ---
-        mi: mi + 1
-    ---
-    l2_here_mi: here_mi
 return: 0
 
 # Implements port A2 (q37): `<host>(<formal>)`, the name of the descriptor-only method an anonymous

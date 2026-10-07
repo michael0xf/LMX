@@ -1864,14 +1864,18 @@ checkpoint:
   identity controls for eternal references, a fresh-copy intent never silently shared).
 - K03-S5-RECEIVE-OUTPUT (generic); then S6, S7.
 The typed-null / typed-binding family waits for the author (LMX_blog/q/current/model-constrained-null-reference.md).
-NS-ROLES-VIS, next (the author's decision of 2026-10-07, LMX_blog/q/named-definition-boundary.md; Codex
-K03-VISIBILITY-AUTHOR-CLOSE-20261007-12): both-way visibility belongs to the callables fn, fm and sub create; an
-ordinary named Structure and a qualified branch's root are visible from their place on.  The root lookahead
-(`l2_struct_defined_below` and its deferral in `l2_head_absent`) and the both-way `l2_def_visible` of NS-ROLES-3/1a
-for them go, with the root's source reading of them; the first written occurrence of an unknown head defines, whatever
-its tail; the 12 fixtures of the census (22 rows) re-pointed with disclosure; the two S2 refusals NS-ROLES-3 replaced
-come back as new rows; witnesses distinguish a later fn/fm/sub from a later ordinary Structure and a later branch, at
-the root and in a method.  Then NS-ROLES-1c.
+NS-ROLES-VIS done ([section 114](steps/fable-continuation-20261003.md#ns-roles-vis); the author's decision of 2026-10-07,
+LMX_blog/q/named-definition-boundary.md; Codex K03-VISIBILITY-AUTHOR-CLOSE-20261007-12): fn and sub visible both ways
+(fm is not built); an ordinary named Structure and a qualified branch's root visible from their place on; the root
+lookahead, the both-way lookups, the late signature refresh and the type position's whole-unit clause removed; the
+first written occurrence of an unknown head defines; 24 rows of 13 fixtures re-pointed, the two S2 refusals back,
+witnesses for fn/sub below and a typed reference above its type's definition. Gates: kernel `opus_kernel_47` GREEN297 (114 selftests), L3 `opus_l3_45`, full `opus_full_51` RED39/2280 -- against `opus_full_50` FAIL→OK 0, OK→FAIL 0, added 8; 22 re-pointed rows changed their message (besides the per-run identifiers).
+NS-ROLES-CALL, next (Codex K03-VIS-CALL-CLASSIFICATION-20261007-16; steps/defects.md#call-classifier-typed-route): the
+common resolved call role of a known ordinary Structure head wins for any argument count and whatever the first
+actual is (known, unknown, defined below), at the root, in a method and in a named body; an unknown head still
+defines; the old typed receiving route (`l2_colon_bind_shape`, `l2_check_bind`) never takes a known head; a census of
+the route closed for a known head, positive and negative controls and a route witness; the explicit `@: T p`
+typed-null family untouched.  Then NS-ROLES-1c.
 
 ### K04 — Callable actuals and hidden inputs
 

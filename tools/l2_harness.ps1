@@ -5187,6 +5187,67 @@ $fixtures = @(
         Needle = 'unit_vis_typed_ref_below_refused.lm2:5:4: unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_vis_typed_ref_below_refused_walk.lm2'; Source = 'unit_vis_typed_ref_below_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_vis_typed_ref_below_refused_walk.lm2:5:4: unknown type'; Absent = @(); Debt = @() },
+    # K03 NS-ROLES-V2 (the author, 2026-10-07; docs #declaration-visibility): a callable fn, fm or sub creates is visible
+    # both ways within its lexical block -- a factory's own fn in the factory's body, above its definition and from a block
+    # nested in it -- and nowhere outside that block: a sibling method and the root do not see it (l2_method_visible_at,
+    # read by l2_head_method for every written head).  Later ordinary data and a receiver's output stay visible from their
+    # place on (controls).  The twins: --walk-methods.
+    [pscustomobject]@{ Name = 'unit_v2_factory_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_factory_above_walk.lm2'; Source = 'unit_v2_factory_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_factory_block_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_factory_block_above_walk.lm2'; Source = 'unit_v2_factory_block_above.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_nested_recursive.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_nested_recursive_walk.lm2'; Source = 'unit_v2_nested_recursive.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_outer_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_outer_method_walk.lm2'; Source = 'unit_v2_outer_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_root_naked_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_root_naked_defines_walk.lm2'; Source = 'unit_v2_root_naked_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_shadow_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_shadow_struct_walk.lm2'; Source = 'unit_v2_shadow_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_bind_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_bind_defines_walk.lm2'; Source = 'unit_v2_sibling_bind_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_naked_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_naked_defines_walk.lm2'; Source = 'unit_v2_sibling_naked_defines.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_later_data_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_v2_later_data_refused.lm2:12:9: unbound dynamic input y'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_later_data_refused_walk.lm2'; Source = 'unit_v2_later_data_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_v2_later_data_refused_walk.lm2:12:9: unbound dynamic input y'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_receiver_output_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_v2_receiver_output_refused.lm2:13:30: unbound dynamic input i'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_receiver_output_refused_walk.lm2'; Source = 'unit_v2_receiver_output_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_v2_receiver_output_refused_walk.lm2:13:30: unbound dynamic input i'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_v2_root_refused.lm2:10:8: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_root_refused_walk.lm2'; Source = 'unit_v2_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_v2_root_refused_walk.lm2:10:8: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_v2_sibling_refused.lm2:10:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_refused_walk.lm2'; Source = 'unit_v2_sibling_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_v2_sibling_refused_walk.lm2:10:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_v2_sibling_value_refused.lm2:13:40: unbound dynamic input addN'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_sibling_value_refused_walk.lm2'; Source = 'unit_v2_sibling_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_v2_sibling_value_refused_walk.lm2:13:40: unbound dynamic input addN'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_v2_signature_refused.lm2:9:12: unknown type'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_v2_signature_refused_walk.lm2'; Source = 'unit_v2_signature_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_v2_signature_refused_walk.lm2:9:12: unknown type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s2_vis_branch_refused.lm2:15:1: unbound dynamic input cfg'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s2_vis_branch_refused_walk.lm2'; Source = 'unit_s2_vis_branch_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

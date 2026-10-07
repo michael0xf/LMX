@@ -1,0 +1,14 @@
+# K03 NS-ROLES-V2 (the author, 2026-10-07; docs #declaration-visibility): a callable fn, fm or sub creates is
+# visible both ways within its lexical block -- a method's own fn in its method's body, above its definition too --
+# and nowhere outside that block; ordinary data and a receiver's output only from their place on.
+# In other addN is nothing: `addN(3)` defines other's own named Structure addN, not run.  Exit 7.
+fn: makeAdder (int: n) fn: (int: x) int
+    fn: addN (int: x) int
+        return: n + x
+    return: addN
+fn: other () int
+    addN(3)
+    return: 0
+@: add5 makeAdder(5)
+sendMessage: exit(exit_code: add5(2) + other(); stdout: ""; stderr: "")
+return

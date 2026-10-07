@@ -1,0 +1,14 @@
+# K03 NS-ROLES-V2 (the author, 2026-10-07; docs #declaration-visibility): a callable fn, fm or sub creates is
+# visible both ways within its lexical block -- a method's own fn in its method's body, above its definition too --
+# and nowhere outside that block; ordinary data and a receiver's output only from their place on.
+# A receiver's output from its place on: i above the for that declares it is no binding of i -- a free name,
+# an input no caller gives.
+fn: m () int
+    int: k i
+    for: int(i, 0) (i < 1) i++
+        k: k + 1
+    end: for
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

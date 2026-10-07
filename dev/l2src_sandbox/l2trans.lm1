@@ -1732,7 +1732,10 @@ prototype:
     fn: l2_mrs_take_entry (int: res; int: k; int: ni; const: @(LmP0Node at)) int
     fn: l2_mrs_take_result (int: res; int: k; int: src; const: @(LmP0Node at)) int
     fn: l2_head_is_call (const: @(LmP0Text t); const: @(LmP0Structure body); unsigned: flags; int: mi) int
-    fn: l2_head_method (const: @(LmP0Text t)) int
+    fn: l2_head_method (int: mi; const: @(LmP0Text t)) int
+    fn: l2_method_visible_at (int: r; int: mi) int
+    fn: l2_method_depth (int: r) int
+    fn: l2_site_method (int: mi; const: @(LmP0Text t)) int
     fn: l2_emit_path_bail (int: mi; const: @(char ind)) int
     fn: l2_join_path (@: LmP0Field field; int: cnt; @: char buf; size_t: cap) size_t
     fn: l2_atoms_len (@: LmP0Field f; int: cnt) size_t
@@ -4545,7 +4548,7 @@ return: (cast: (int) (fr != 0 && fr\body != 0))
 fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     @: LmP0Field f
     @: LmP0Text got
-    if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_find_method(t) >= 0
+    if: t = 0 || l2_ident(t) = 0 || l2_unit_names_method(t) != 0 || l2_site_method(0 - 1, t) >= 0
         return: 0
     if: l2_unit_declares(t, item) != 0 || l2_is_known(t) != 0 || l2_predef_receiver(t) != 0 || (l2_prim_type_word(t) != 0 && l2_ns_find(t) < 0) || l2_head_word(t) != 0
         return: 0
@@ -7457,7 +7460,7 @@ fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out
             ---
         ---
     ---
-    k: l2_head_method(t)
+    k: l2_head_method(mi, t)
     if: k >= 0
         if: out_index != 0
             \out_index: k
@@ -8447,7 +8450,7 @@ fn: l2_contract_formal (@: L2TypeContract contract; @: int out_ty) int
             return: 0
         return: l2_resolve_type_atom(word, depth, 0, out_ty)
     ---
-    if: l2_type_model(word) >= 0 || l2_find_method(word) >= 0
+    if: l2_type_model(word) >= 0 || l2_site_method(l2_here_mi, word) >= 0
         \out_ty: l2_graph_ft()
         if: \out_ty = 0
             return: 1
@@ -8833,7 +8836,7 @@ fn: l2_is_asgn (const: @(LmP0Node stmt); int: mi) int
     # the statement that stores the callable merge is that binding's own.
     if: mi >= 0 && l2_mad_declaring(stmt, mi) = 0 && l2_call_head_held(mi, h) >= 0
         return: 0
-    if: mi < 0 && l2_find_method(h) >= 0
+    if: mi < 0 && l2_site_method(0 - 1, h) >= 0
         return: 0
     if: l2_is_known(h) || l2_predef_receiver(h) != 0
         return: 0
@@ -12176,7 +12179,7 @@ fn: l2_local_absent_def (const: @(LmP0Node stmt); int: mi) int
         return: 0
     if: l2_retained_body(fr) = 0 || l2_merge_construction(fr) != 0
         return: 0
-    if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_find_method(h) >= 0 || l2_is_known(h) != 0
+    if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_site_method(mi, h) >= 0 || l2_is_known(h) != 0
         return: 0
     if: (l2_prim_type_word(h) != 0 && l2_ns_find(h) < 0) || l2_head_word(h) != 0 || l2_ns_find(h) >= 0 || l2_unit_declares(h, 0) != 0
         return: 0
@@ -13785,7 +13788,7 @@ fn: l2_scan_ident (int: mi; const: @(LmP0Text t); @: int seen) int
         return: 0
     if: l2_slot_find(mi, t) >= 0
         return: 0
-    if: l2_find_method(t) >= 0
+    if: l2_site_method(mi, t) >= 0
         return: 0
     if: l2_ml_find(t) >= 0
         return: 0
@@ -22460,7 +22463,7 @@ fn: l2_retained_atom (const: @(LmP0Node node)) int
         return: 1
     if: l2_ident(t) = 0
         return: 0
-    if: l2_find_method(t) >= 0 || l2_unit_names_method(t) != 0 || l2_ns_find(t) >= 0 || l2_is_known(t) != 0
+    if: l2_site_method(l2_here_mi, t) >= 0 || l2_unit_names_method(t) != 0 || l2_ns_find(t) >= 0 || l2_is_known(t) != 0
         return: 0
 return: 1
 
@@ -23497,7 +23500,7 @@ fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     # Even an as-yet untyped hidden input is a real binding.
     if: l2_param_find(mi, head) >= 0 || l2_colon_bound_ty(mi, head, @ ty) = 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
         return: -1
-    m: l2_head_method(head)
+    m: l2_head_method(mi, head)
     if: m >= 0
         \out_fi: 0 - 1
     ---
@@ -23526,14 +23529,14 @@ return: (cast: (int) (method >= 0 && fi >= 0))
 fn: l2_head_is_method_call (int: mi; const: @(LmP0Text head)) int
     int: fi
     int: method l2_call_head_method(mi, head, @ fi)
-return: (cast: (int) (method >= 0 && fi < 0 && method = l2_find_method(head)))
+return: (cast: (int) (method >= 0 && fi < 0 && method = l2_site_method(mi, head)))
 
-fn: l2_head_method (const: @(LmP0Text t)) int
+fn: l2_head_method (int: mi; const: @(LmP0Text t)) int
     int: k 0
     int: r
     if: t = 0
         return: 0 - 1
-    r: l2_find_method(t)
+    r: l2_site_method(mi, t)
     if: r >= 0
         return: r
     if: t\data = 0
@@ -25437,7 +25440,7 @@ fn: l2_take_named (const: @(LmP0Node item); const: @(char path)) int
         return: l2_error(path, item, "duplicate named Structure")
     if: l2_ebr_find(item\as\frame\head) >= 0
         return: l2_error(path, item, "named Structure collides with a qualified branch")
-    if: l2_find_method(item\as\frame\head) >= 0
+    if: l2_site_method(0 - 1, item\as\frame\head) >= 0
         return: l2_error(path, item, "named Structure collides with a method")
 return: l2_take_ns_body(item\as\frame\head, 0 - 1, item\as\frame\body, item, path)
 
@@ -25560,7 +25563,7 @@ fn: l2_typed_formal (const: @(LmP0Node node); const: @(char path); @@: LmP0Text 
     \out_name: application\name
     word: l2_contract_leaf(application\contract, @ depth, @ qualified)
     if: depth = 0 && qualified = 0 && word != 0
-        l2_last_cf_req: l2_find_method(word)
+        l2_last_cf_req: l2_site_method(l2_here_mi, word)
 return: 0
 
 # Type nodes of a complete declaration, compared on the translator Structure
@@ -26268,7 +26271,7 @@ fn: l2_check_primary (const: @(LmP0Node node); int: mi; const: @(char path)) int
         if: idx >= 0
             return: 0
         if: l2_head_is_method_call(mi, node\as\atom) != 0
-            return: l2_check_value_call(node, l2_find_method(node\as\atom), 0 - 1, mi, path)
+            return: l2_check_value_call(node, l2_site_method(mi, node\as\atom), 0 - 1, mi, path)
         # and a local this method body declares, which lives in its own
         # activation.
         if: l2_ml_find(node\as\atom) >= 0
@@ -29998,7 +30001,7 @@ fn: l2_emit_sizeof (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2T
             return: l2_alloc_or(l2_src, node, "out of memory")
         return: 0
     ---
-    if: l2_ns_find(at) >= 0 || l2_find_method(at) >= 0
+    if: l2_ns_find(at) >= 0 || l2_site_method(mi, at) >= 0
         if: l2_tx_set(dest, "c.sizeof(@: void)") != 0
             return: l2_alloc_or(l2_src, node, "out of memory")
         return: 0
@@ -30074,7 +30077,7 @@ fn: l2_check_sizeof (const: @(LmP0Node node); int: mi; const: @(char path)) int
     ml: l2_ml_find(a0\value\as\atom)
     if: ml >= 0
         return: 0
-    if: l2_ns_find(a0\value\as\atom) >= 0 || l2_find_method(a0\value\as\atom) >= 0
+    if: l2_ns_find(a0\value\as\atom) >= 0 || l2_site_method(mi, a0\value\as\atom) >= 0
         return: 0
     if: l2_slot_find(mi, a0\value\as\atom) >= 0
         return: 0
@@ -39015,7 +39018,7 @@ fn: l2_rw_call (const: @(LmP0Node node); int: idx; int: selected_formal; @: LmP0
             head: node\as\frame\head
         if: node\kind = c.LM_P0_NODE_ATOM
             head: node\as\atom
-        if: formal_call < 0 && head != 0 && l2_find_method(head) < 0 && l2_head_method(head) = idx
+        if: formal_call < 0 && head != 0 && l2_find_method(head) < 0 && l2_head_method(l2_rw_mi, head) = idx
             path_call: 1
             call_op: "LMX_WALK_OP_EXEC"
         # K03 NS-ROLES-1b: through a binding `b: tick` -- EXEC on the occurrence b holds now.
@@ -42824,6 +42827,52 @@ fn: l2_mad_on (int: mi) int
     if: l2_mad_model = 0 || mi < 0 || mi >= l2_mad_cap
         return: 0
 return: l2_mad_model[mi] >= 0
+
+# K03 NS-ROLES-V2 (#declaration-visibility): is method r visible from a site in method mi (mi < 0: the unit's root,
+# outside every method)?  A callable fn, fm or sub creates is visible both ways within its lexical block: the unit's
+# methods throughout the unit, a method's own fn (l2_mad_host_of: a factory's fn) in its host's body and in every method
+# nested in that host -- r itself among them -- never from a sibling method or the root.
+fn: l2_method_visible_at (int: r; int: mi) int
+    int: host l2_mad_host_of(r)
+    int: m mi
+    int: hops 0
+    if: host < 0
+        return: 1
+    while: m >= 0 && hops <= l2_m_n
+        if: m = host
+            return: 1
+        m: l2_mad_host_of(m)
+        hops: hops + 1
+    ---
+return: 0
+
+# How deep method r's block lies: 0 for a method of the unit, one more for each host above it.
+fn: l2_method_depth (int: r) int
+    int: d 0
+    int: m l2_mad_host_of(r)
+    while: m >= 0 && d <= l2_m_n
+        d: d + 1
+        m: l2_mad_host_of(m)
+    ---
+return: d
+
+# K03 NS-ROLES-V2: the method a written name t names at a site in method mi (mi < 0: the unit's root) -- among the
+# methods of that name, the innermost whose block holds the site (l2_method_visible_at); -1 when none is visible there,
+# so that the name reads as any unknown name does.  Every reader of a written method name asks this; a lookup of a
+# registered name (registration, a factory's own model) keeps l2_find_method.
+fn: l2_site_method (int: mi; const: @(LmP0Text t)) int
+    int: i 0
+    int: best -1
+    int: best_depth -1
+    if: t = 0
+        return: -1
+    while: i < l2_m_n
+        if: l2_text_same(l2_m_name[i], t) != 0 && l2_method_visible_at(i, mi) != 0 && l2_method_depth(i) > best_depth
+            best: i
+            best_depth: l2_method_depth(i)
+        i: i + 1
+    ---
+return: best
 
 fn: l2_mad_host_of (int: mi) int
     if: l2_mad_host = 0 || mi < 0 || mi >= l2_mad_cap

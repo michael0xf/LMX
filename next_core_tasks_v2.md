@@ -1883,7 +1883,18 @@ Structure, and b's paths read its referent's merge record (`l2_own_res`, read by
 the walked path's root); the three limit rows run (`unit_ref_absent_colon` exit 9); two bindings and a write, a
 two-model record through b, a refusal outside the record and two forward-visibility controls witnessed natively and
 walked; reassignment, a merge operand, `b\[N]x` and a call through such a binding are not in this step. Gates: focused `opus_focus_n1c_01` 19/0, kernel `opus_kernel_49` GREEN297 (114 selftests), L3 `opus_l3_47`, full `opus_full_55` RED39/2315 -- against `opus_full_53` FAIL→OK 0, OK→FAIL 0, added 11; the 5 census rows changed their message (besides the per-run identifiers); `opus_full_54` on the same bytes was stopped by the environment's low-memory reaper and re-run.
-Next, in this order (Codex -17, -18): the corrected-scope V2, NS-ROLES-2, the generic RECEIVE-OUTPUT, S6/S7.
+NS-ROLES-V2 done ([section 117](steps/fable-continuation-20261003.md#ns-roles-v2); Codex K03-NS-ROLES-V2-20261007-19):
+a method's own fn is visible in its block both ways and nowhere else; one reader of a written method name,
+`l2_site_method` (the innermost visible among same-named methods), in every reader the equivalence census proved;
+the root's lexical-pass disagreement on an out-of-scope head is gone. Gates: focused `opus_focus_v2_01` 31/0, kernel `opus_kernel_50` GREEN297 (114 selftests), L3 `opus_l3_48`, full `opus_full_56` RED39/2343 -- against `opus_full_55` FAIL→OK 0, OK→FAIL 0, added 28; no common fixture row changed its message (besides the per-run identifiers).
+Open subtasks, recorded with their measurements:
+- MERGE-RESULT-BINDING-ROUTES (steps/defects.md#merge-result-binding-routes): reassignment `@: b B`, b as a merge
+  operand, `b\[N]x`, a call of A through b -- probe each before any edit, then a bounded consumer audit.
+- OWN-CALLABLE-LIMITS (steps/defects.md#own-callable-limits): own fn/sub in a method that returns no callable, an own
+  sub, two own fns in one factory, an own fn in a factory's if-block, fm; same-named own fns in two blocks and an own fn
+  named like a unit method ("duplicate definition"); a unit field named like an own fn (the head resolution reads an
+  outer field before a method's own fns) -- required positives, implementation debt.
+Next, in this order (Codex -17, -19): NS-ROLES-2, the generic RECEIVE-OUTPUT, S6/S7.
 
 ### K04 — Callable actuals and hidden inputs
 

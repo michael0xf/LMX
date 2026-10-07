@@ -11876,3 +11876,88 @@ Evidence:
 | `build/l2_harness/opus_full_54` (full harness) | RED39/2315: against `opus_full_53` FAIL→OK 0, OK→FAIL 0, added 11 (all OK: the five witnesses with their twins and the new twin of `unit_ref_absent_colon`), removed 0; of the 2304 common targets 8 changed their message -- the 5 census rows above and the identifiers that change in every run (the translator's sha256, the unit hashes of the two library rows); the 39 red are the same rows with the same messages.  The 9 declared paths were hashed before the gates and again before this run; the staged `l2trans.lm1` is the declared bytes.  `opus_full_54` (the same bytes) was stopped at 5500 logs by Claude Code's low-memory reaper; this is its rerun. |
 | Focused run on the same bytes | `opus_focus_n1c_01` 19 targets, 0 failed (the 16 declared stems with the translator's build and the driver's). |
 | Replay of `opus_full_53`'s 2303 recorded translations | 5 rows differ, named above; the rest byte-identical. |
+
+<a id="ns-roles-v2"></a>
+## 117. A method's own fn is visible in its block both ways and nowhere else (K03 NS-ROLES-V2)
+
+The rule (the author's decision of 2026-10-07, `LMX_blog/2026-10-07.md#method-declaration-visibility`;
+`docs/LMX_semantics.en.md#declaration-visibility`; Codex K03-NS-ROLES-NEXT-20261007-09 and K03-NS-ROLES-V2-20261007-19):
+names of callables that the receivers fn, fm and sub create are visible in both directions within their lexical block,
+nested scopes included; an ordinary named Structure, ordinary data and a receiver's output are visible from their place
+on.  The unit's methods already were visible throughout the unit (section 114).  A method's own fn -- the translator
+builds one in a factory's body, `fn: makeAdder (int: n) fn: (int: x) int` with `fn: addN` inside -- was registered in
+the unit's method table by its name and every reader that asks the table by name found it: a sibling `other()` called
+addN (its n taken as other's own dynamic input), the root's `int: r addN(1)` said "unbound dynamic input n", a sibling's
+signature accepted `(addN: f)`, and the root's naked `addN(3)` made the lexical pass's two walks disagree (its count
+walk ran before makeAdder's fn was registered, its fill walk after): "internal: the unit's statements changed between
+the lexical pass's walks".
+
+What changed in `l2trans.lm1` (d8fc5cc0), one reader: `l2_site_method(mi, t)` is the method a written name t names at a
+site in method mi (mi < 0: the unit's root) -- among the methods of that name, the innermost whose block holds the
+site (`l2_method_visible_at`: the unit's methods everywhere; a method's own fn in its host's body and in every method
+nested in the host, itself included); -1 otherwise, so that the name reads as any unknown name does.  Every reader of a
+written method name that the equivalence census below proved affected asks it in place of `l2_find_method`:
+`l2_head_method` (read by `l2_head_resolve`, `l2_call_head_method` and the walker's call), `l2_head_is_method_call` and
+`l2_check_primary`'s value call, `l2_head_absent` (the root's item role), `l2_local_absent_def`, `l2_scan_ident` (the
+free-name scan), `l2_retained_atom`, sizeof's check and emission, `l2_contract_formal` and `l2_typed_formal` (a
+signature's type word, read at the declaring site `l2_collect_method` sets), `l2_is_asgn`'s no-site branch ("the
+unit's methods alone"), and `l2_take_named`'s collision (the root's named Structure collides only with a method visible
+at the root).  Registration and a factory's own model keep `l2_find_method`.  A source-placement edit (`l2_src_one`)
+reached no witness under its mutant and was dropped as unproven.
+
+Implementation debt, recorded (steps/defects.md#own-callable-limits; required positives, not language rules): a fn or
+sub own to a method that returns no callable is not built ("unsupported body"), nor an own sub, two own fns in one
+factory ("a callable merge needs one model"), an own fn inside a factory's if-block (parse error 13) or fm; same-named
+own fns in two blocks, and an own fn named like a unit method, are refused at registration ("duplicate definition":
+the method table is one namespace by name), and a unit field named like an own fn is refused as a collision ("method
+collides with a unit field": inside the host the head resolution reads a unit field seen from a method before the
+method's own fns, so an outer field shadowed by an own fn is not built).  The four routes of a merge-result binding
+that 1c did not witness stay open (steps/defects.md#merge-result-binding-routes).
+
+Evidence:
+
+- Equivalence census (diagnostic, not rows): outside its block a method's own fn must read exactly as an undeclared
+  name.  Seventeen probe pairs, each written with makeAdder's addN and with an undeclared zz, translated natively and
+  walked -- at the root: a call in a value position (`int: r NAME(1)`), a colon call (`int: r2 NAME: 1`), a naked
+  statement (`NAME(3)`), a reference-binding tail (`b: NAME`), a bare value (`int: v NAME`), a receiver
+  (`@: h NAME(1)`), a path (`int: q NAME\x`), a field named NAME, a named Structure NAME, and NAME's nullary call after
+  it; in a sibling method: a call value, a naked statement, a binding tail, a bare value, a receiver, `sizeof(NAME)`;
+  a sibling's signature `(NAME: f)`.  On 1aae829e 13 pairs differ by their messages, and two more -- the sibling's naked
+  statement and binding tail -- translate in both spellings but to different programs (a call of addN against a
+  definition; the witnesses below separate them at run time); after this step 16 pairs are equal, natively and walked,
+  the one left being the unit field (debt above).
+- Census of the corpus: the replay of `opus_full_55`'s 2314 recorded translations with this translator against
+  1aae829e's changes no row.  A static scan of the fixtures finds no own fn named outside its host.
+- Witnesses, fourteen programs, each with a `--walk-methods` twin.  Positives, exit 7 natively, with the root walked and
+  with the methods walked (walked pins read from the twins' L1): `unit_v2_factory_above` (makeAdder calls its own addN
+  above addN's definition; the counter read through `node\hits` in a method) (0,2), `unit_v2_factory_block_above` (from
+  an if-block of makeAdder, above the definition) (0,2), `unit_v2_nested_recursive` (an own fn calls itself) (0),
+  `unit_v2_outer_method` (a unit method used in the host, in the own fn and in a sibling) (0,1,3),
+  `unit_v2_shadow_struct` (the root's named Structure addN beside makeAdder's own addN: in the host the own fn, at the
+  root `addN()` runs the Structure) (0,2,3), `unit_v2_root_naked_defines` (`addN(3)` at the root is the ordinary
+  definition) (0,2), `unit_v2_sibling_naked_defines` (the same in the sibling) (0,2,4), `unit_v2_sibling_bind_defines`
+  (`b: addN` in the sibling is b's definition, no binding) (0,2,4).  Refusals in consuming positions:
+  `unit_v2_sibling_refused` ("10:13: unknown method"), `unit_v2_root_refused` ("10:8: unknown method"),
+  `unit_v2_sibling_value_refused` ("13:40: unbound dynamic input addN" -- a free name, at other's call),
+  `unit_v2_signature_refused` ("9:12: unknown type").  Controls the same before and after: `unit_v2_later_data_refused`
+  ("12:9: unbound dynamic input y") and `unit_v2_receiver_output_refused` ("13:30: unbound dynamic input i": the for's
+  output above the for).
+- Mutants from the final bytes, each putting one rule or one reader back (the control w00 changes nothing): w01 an own
+  fn visible everywhere -- 16 witness rows (8 programs: the 1c behavior); w02 the block is the host's body only, no
+  method nested in it -- the recursive own fn refused, 2 rows, and 3 corpus rows (`unit_recv_use_nested_sibling_refused`
+  with its limit probe and twin already depend on the nesting rule); w03 `l2_head_method` unfiltered -- 6; w04 the
+  root's item role reads the whole table -- 4 (the internal error back); w05 `l2_local_absent_def` -- 2; w06
+  `l2_scan_ident` -- 2; w07 `l2_retained_atom` -- 2; w08 the signature's type word -- 2; w09 `l2_is_asgn`'s no-site
+  branch -- 2 ("assignment target must be a declared typed mutable value"); w10 the root's collision -- 4 ("named
+  Structure collides with a method").  Apart from w02 no mutant moves a corpus row.
+- gcc's `-Wall -Wextra` list: the same 75 warnings.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| `build/l2src/opus_kernel_50` (`build_l2src.ps1 -Run -KeepAll`) | GREEN: 297 targets, 114 selftests ran (113 at exit 0 and the one expected-fatal watchdog selftest); the staged `l2trans.lm1` is the declared bytes (d8fc5cc0). |
+| `build/l3_selftest/opus_l3_48` (`run_l3_selftest.py`) | All 11 suites exit 0; type budget ok, four units. |
+| `build/l2_harness/opus_full_56` (full harness) | RED39/2343: against `opus_full_55` FAIL→OK 0, OK→FAIL 0, added 28 (all OK: the fourteen witnesses with their twins), removed 0; of the 2315 common targets none of the fixture rows changed its message -- only the identifiers that change in every run (the translator's sha256, the unit hashes of the two library rows); the 39 red are the same rows with the same messages.  The 16 declared paths were hashed before the gates; the staged `l2trans.lm1` is the declared bytes. |
+| Focused run on the same bytes | `opus_focus_v2_01` 31 targets, 0 failed (the 28 declared stems with the translator's build and the driver's). |
+| Replay of `opus_full_55`'s 2314 recorded translations | no row differs. |

@@ -1,0 +1,17 @@
+# K03 NS-ROLES-V2 (the author, 2026-10-07; docs #declaration-visibility): a callable fn, fm or sub creates is
+# visible both ways within its lexical block -- a method's own fn in its method's body, above its definition too --
+# and nowhere outside that block; ordinary data and a receiver's output only from their place on.
+# A method of the unit is visible everywhere: twice is called in makeAdder's body, in its own fn addN and in the
+# sibling other.  add5(1) is 3, other() 6: exit 7.
+fn: twice (int: x) int
+    return: x * 2
+fn: makeAdder (int: n) fn: (int: x) int
+    int: t twice(1)
+    fn: addN (int: x) int
+        return: twice(n) + x
+    return: addN
+fn: other () int
+    return: twice(3)
+@: add5 makeAdder(1)
+sendMessage: exit(exit_code: add5(1) + other() - 2; stdout: ""; stderr: "")
+return

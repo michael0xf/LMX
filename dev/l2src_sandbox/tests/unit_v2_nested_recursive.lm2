@@ -1,0 +1,13 @@
+# K03 NS-ROLES-V2 (the author, 2026-10-07; docs #declaration-visibility): a callable fn, fm or sub creates is
+# visible both ways within its lexical block -- a method's own fn in its method's body, above its definition too --
+# and nowhere outside that block; ordinary data and a receiver's output only from their place on.
+# down, makeCounter's own fn, calls itself: its own body is inside its block.  d(3) reaches down(0), n: exit 7.
+fn: makeCounter (int: n) fn: (int: x) int
+    fn: down (int: x) int
+        if: x <= 0
+            return: n
+        return: down(x - 1)
+    return: down
+@: d makeCounter(7)
+sendMessage: exit(exit_code: d(3); stdout: ""; stderr: "")
+return

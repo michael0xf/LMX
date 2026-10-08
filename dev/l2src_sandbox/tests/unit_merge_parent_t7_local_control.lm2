@@ -1,0 +1,29 @@
+# A local named Structure below two IF operation/body pairs must select get
+# through the actual copy's lexical links, including the operation Frames.
+# poke changes only the original after wrap has made its lexical copy.
+int: cnt 7
+fn: get () int
+    return: node\cnt
+fn: model (int: y) int
+    int: result 0
+    if: y > 0
+        if: y < 10
+            S:
+                int: v 0
+                v: get()
+            S
+            result: S\v
+        end: if
+    return: result * 10 + get()
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5)
+poke()
+int: result w()
+int: ok 7
+if: result != 77
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

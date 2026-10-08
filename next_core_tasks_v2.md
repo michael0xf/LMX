@@ -2009,6 +2009,25 @@ section 122, and the walked selector: a method calling through a callable formal
 under --walk-methods (`l2_rw_machine`), an implementation debt its walked twins pin, not a rule of the language.
 Next (Codex): T7-LOCAL-NAMED-UNIT -- the shared actual-occurrence lexical/unit projection through the real parent and
 source-coordinate links, no program-unit fallback for a copied, nested or part context -- then PATH-STRUCTURE-LEAF.
+The bounded implementation and acceptance chain are tracked in
+[T7 lexical projection](steps/t7-lexical-projection-20261008.md). Native readers
+are implemented and focused local_call/local_control checks pass; the part,
+fallback and receiving-boundary children remain OPEN. This is not closure of
+T7-LOCAL-NAMED-UNIT. Full `codex_full_01`: RED67/2618, one FAIL→OK against full65,
+no OK→FAIL; both added control rows are green. Kernel GREEN297, L3 11 suites
+and four budgets green. Exact gated translator blob: `d67f15cb` (linked log).
+The closure checklist also includes a control where only the retained local
+Structure calls the unit method: remove the model's independent call, mutate
+the original after merge, and require the copied value in all execution modes.
+Emission currently drops that dependency; native execution of the isolated
+control fails with exit 3. The common source/home closure fix remains OPEN
+(see the linked log); success of the first native-reader slice does not close it.
+Also OPEN under the same parent: T7-PROJECTED-PARENT-FIELD. With model's
+`int: seed 6`, local S reading `node\seed`, and callable merge binding y=5,
+unchanged full65 native code reads 5 rather than 6 (walked code uses the
+selected view). Native parent-field readers still use prototype coordinates
+when a constructed view has a different layout. Fix through the common
+source/view relation, not an offset special case or forced interpreter path.
 
 ### K04 — Callable actuals and hidden inputs
 

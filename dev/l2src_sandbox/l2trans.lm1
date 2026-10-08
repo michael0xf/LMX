@@ -1414,6 +1414,10 @@ prototype:
     fn: l2_identity_list (int: req; @: L2ReferenceSource source; int: tmi; int: tk; int: full_receiver; @: int first; @: int count) int
     fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
     fn: l2_m_unit_ref (int: i) const: @: char
+    fn: l2_m_recv_policy (int: i) const: @: char
+    fn: l2_lex_parent (int: mi; @: int links) int
+    fn: l2_lex_depth (int: mi; int: ancestor) int
+    fn: l2_emit_lex_spaces (int: mi) int
     fn: l2_recv_ref (int: callee; const: @(char occ); @: char dest; size_t: cap) int
     fn: l2_free_admit (int: mi; int: j) int
     fn: l2_free_admits (int: mi) int
@@ -18396,6 +18400,11 @@ fn: l2_own_ctr (int: oi) const: @: char
         return: l2_unit_ref
     if: l2_own_mi[oi] = l2_cur_mi
         return: "self"
+    # A lexical ancestor is the corresponding ancestor of this occurrence,
+    # including inside a copied callable view, never the module prototype.
+    if: l2_own_mi[oi] != l2_e && l2_lex_depth(l2_cur_mi, l2_own_mi[oi]) > 0
+        c.sprintf(l2_ctr_buf, "l2_lex_o%d", l2_own_mi[oi])
+        return: l2_ctr_buf
     # A field of a program part's root, read by a method of that part (§10): the root is the method's `node`,
     # its lexical parent.
     k: l2_m_part(l2_cur_mi)
@@ -31170,7 +31179,7 @@ fn: l2_cfl_formal_alike (int: a; int: b; int: t) int
         return: 1
     if: l2_input_model(a, t) != l2_input_model(b, t) || l2_input_schema(a, t) != l2_input_schema(b, t)
         return: 0
-return: (cast: (int) (c.strcmp(l2_m_unit_ref(a), l2_m_unit_ref(b)) = 0))
+return: (cast: (int) (c.strcmp(l2_m_recv_policy(a), l2_m_recv_policy(b)) = 0))
 
 # Whether methods a and b, formed alike, have one receiving contract where they admit anything: every declared
 # Structure formal alike (l2_cfl_formal_alike), and the same space for the free inputs they admit (l2_free_admits).
@@ -31184,7 +31193,7 @@ fn: l2_cfl_recv_alike (int: a; int: b) int
             return: 0
         j: j + 1
     ---
-    if: (l2_free_admits(a) != 0 || l2_free_admits(b) != 0) && c.strcmp(l2_m_unit_ref(a), l2_m_unit_ref(b)) != 0
+    if: (l2_free_admits(a) != 0 || l2_free_admits(b) != 0) && c.strcmp(l2_m_recv_policy(a), l2_m_recv_policy(b)) != 0
         return: 0
 return: 1
 
@@ -31971,14 +31980,130 @@ fn: l2_emit_tramp_lex (int: i; int: k) int
         return: 1
 return: 0
 
-# The unit reference method i's own code reads the unit through.  `node` is the fixed lexical space above it (the
-# unit for a unit-level method); nested body Structures do not rebind it.  `self` is the selected occurrence and
-# own-field home; E's occurrence is the unit, so in E the unit is `self` (and its node is 0).  A method of a program
-# part whose root is built (§10): its `node` is that root; the unit -- the other methods' occurrences, the named
-# Structures -- is the program's, the one every method holds.  So for a nested method, whose `node` is its host's
-# occurrence (book §3; Codex, 2026-09-28).  A namespace's structural parent can itself be a source occurrence: the
-# lexical `node` is not then the module's method/global container.
+# One edge of the lexical occurrence relation after source PLACE. A local
+# definition's actual owning source container supplies its host and all the
+# physical links to that host, including operation/argument Frames. Counting
+# control levels instead would lose those Frames. This is translation-only
+# layout information; no graph object or runtime name lookup is introduced.
+# A negative parent is an isolated/root occurrence, not a module fallback.
+fn: l2_lex_parent (int: mi; @: int links) int
+    int: ni
+    int: part
+    @: L2SourceContainer owner 0
+    @: L2SourceField field
+    @: L2GraphPlace place
+    \links: 1
+    if: mi < 0 || mi >= l2_m_n || mi = l2_e
+        return: -1
+    ni: l2_m_nsof(mi)
+    if: ni >= 0
+        if: l2_ns_local[ni] >= 0
+            field: l2_source_definition_field(ni, 0, -1, @ owner)
+            if: field = 0 || owner = 0
+                return: -2
+            place: owner\place
+            while: place != 0
+                if: \links = c.INT_MAX
+                    return: -2
+                \links: \links + 1
+                place: place\parent
+            ---
+            return: owner\source_mi
+        ---
+        if: l2_ns_parent[ni] >= 0
+            return: l2_ns_proc[l2_ns_parent[ni]]
+        if: l2_ns_eternal[ni] >= 0
+            return: -1
+        return: l2_e
+    ---
+    if: l2_mad_host_of(mi) >= 0
+        return: l2_mad_host_of(mi)
+    part: l2_m_part(mi)
+    if: part >= 0 && l2_part_ns[part] >= 0
+        return: l2_ns_proc[l2_part_ns[part]]
+return: l2_e
+
+# A finite walk over the resolved ownership relation, not a language depth
+# limit. Places provide physical edge counts only after the committed PLACE
+# pass. -1 means absent ancestry; -2 means invalid construction metadata.
+fn: l2_lex_depth (int: mi; int: ancestor) int
+    int: depth 0
+    int: links
+    int: steps 0
+    while: mi >= 0 && mi < l2_m_n && steps <= l2_m_n
+        if: mi = ancestor
+            return: depth
+        mi: l2_lex_parent(mi, @ links)
+        if: depth > c.INT_MAX - links
+            return: -2
+        depth: depth + links
+        steps: steps + 1
+    ---
+    if: mi = -1
+        return: -1
+return: -2
+
+# Activation-local addresses of lexical ancestors. The chains come from the
+# same construction relation as field paths, and are emitted incrementally:
+# arbitrary nesting does not require a fixed text buffer or a runtime scan.
+fn: l2_emit_lex_spaces (int: mi) int
+    int: current mi
+    int: parent
+    int: links
+    int: steps 0
+    while: current >= 0 && current < l2_m_n && current != l2_e && steps <= l2_m_n
+        parent: l2_lex_parent(current, @ links)
+        if: parent = -1
+            return: fputs("    @: Lmx l2_lex_unit 0\n", l2_out) < 0
+        if: parent < 0 || parent >= l2_m_n || links < 1
+            return: l2_error(l2_method_src(mi, l2_src), l2_m_node[mi], "internal: a lexical occurrence has no constructed parent")
+        if: parent = l2_e && current = mi && links = 1
+            return: 0
+        if: parent = l2_e
+            if: fputs("    @: Lmx l2_lex_unit ", l2_out) < 0
+                return: 1
+            ---
+        else:
+            if: c.fprintf(l2_out, "    @: Lmx l2_lex_o%d ", parent) < 0
+                return: 1
+            ---
+        if: current = mi
+            if: fputs("node", l2_out) < 0
+                return: 1
+            links: links - 1
+            ---
+        else:
+            if: c.fprintf(l2_out, "l2_lex_o%d", current) < 0
+                return: 1
+            ---
+        while: links > 0
+            if: fputs("\\parent", l2_out) < 0
+                return: 1
+            links: links - 1
+        ---
+        if: fputs("\n", l2_out) < 0
+            return: 1
+        current: parent
+        steps: steps + 1
+    ---
+    if: current != l2_e
+        return: l2_error(l2_method_src(mi, l2_src), l2_m_node[mi], "internal: cyclic lexical occurrence ownership")
+return: 0
+
+# Native unit readers use the selected occurrence's actual parent chain. E is
+# itself the unit. All other aliases are ordinary activation-local pointers.
 fn: l2_m_unit_ref (int: i) const: @: char
+    if: i = l2_e
+        return: "self"
+    if: l2_lex_depth(i, l2_e) = 1
+        return: "node"
+return: "l2_lex_unit"
+
+# Remaining receiving-boundary policy, resolved before construction places
+# exist. This is the pre-existing policy, NOT the native unit reader. Its
+# non-unit/global cases remain OPEN in T7-LOCAL-NAMED-UNIT until admission and
+# walker operands use the same actual-occurrence projection.
+fn: l2_m_recv_policy (int: i) const: @: char
     if: i = l2_e
         return: "self"
     if: l2_m_part(i) >= 0 && l2_part_ns[l2_m_part(i)] >= 0
@@ -31995,9 +32120,9 @@ return: "node"
 fn: l2_recv_ref (int: callee; const: @(char occ); @: char dest; size_t: cap) int
     if: callee < 0 || callee >= l2_m_n || occ = 0 || dest = 0 || cap = 0U
         return: 1
-    if: c.strcmp(l2_m_unit_ref(callee), "node") = 0
+    if: c.strcmp(l2_m_recv_policy(callee), "node") = 0
         return: (cast: (int) (c.snprintf(dest, cap, "%s\\parent", occ) < 0))
-return: (cast: (int) (c.snprintf(dest, cap, "%s", l2_m_unit_ref(callee)) < 0))
+return: (cast: (int) (c.snprintf(dest, cap, "%s", l2_m_recv_policy(callee)) < 0))
 
 # Whether method mi is a method of the unit itself: its occurrence's parent is the unit, which its own code
 # reaches as `node` (the choice of l2_unit_ref).
@@ -38636,7 +38761,7 @@ fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
         return: 0
     if: req < 0 || req >= l2_ns_n || l2_schema_kind(req) != 1 || l2_ns_parent[req] >= 0 || l2_ns_local[req] >= 0
         return: 0
-    if: c.strcmp(l2_m_unit_ref(tmi), "node") != 0
+    if: c.strcmp(l2_m_recv_policy(tmi), "node") != 0
         return: 0
     if: tk < l2_m_arity[tmi]
         return: (cast: (int) (l2_nsty_get(tmi, tk) >= 0))
@@ -51863,6 +51988,10 @@ fn: l2_emit_unit (const: @(char out_path)) int
         l2_unit_ref: l2_m_unit_ref(i)
         l2_cur_mi: i
         l2_vis_method(i)
+        if: l2_emit_lex_spaces(i) != 0
+            fclose(l2_out)
+            return: 1
+        ---
         if: l2_emit_graph_places(i) != 0
             fclose(l2_out)
             return: 1

@@ -695,6 +695,105 @@ The factory's initial trailer-only host spelling hit the separate nested-body
 diagnostic; no parser/host interpretation is inferred from that alone and
 that spelling is not used to certify the model-parent slice.
 
+### Fifth child: common pre-registration method census
+
+Candidate `09e69997` (SHA256
+`F7A99A239896132F506BEFF2541655D76B3FD2CBFDAAAC366D1E0E391663D04E`)
+factors the currently implemented root-method producer predicate out of
+`l2_unit_role`. `l2_unit_names_method` applies the same root-only census to
+the current root, main source and already parsed part roots before COUNT/FILL
+classifies applications. It collects no signatures, descends into no method
+or ordinary named Structure, and adds no runtime table/state. `fm` remains an
+unimplemented producer; recognizing only its name early would not implement
+it. The declared fn/fm/sub language rule is unchanged. Per-file declaration,
+ordinary-Structure and value visibility readers are unchanged.
+
+`codex_part_census_stage_04`: 23 targets, only the two historical T7 part
+positives remain RED. Ten added rows are GREEN: repeated part-root sub/fn
+applications, an earlier part calling a later part, main-method-body calls
+and non-export of a nested method name. Every executable row also clears
+the physical root's native word and reruns that same artifact. Walk rows
+assert the actual generated method IDs/absence of native words, with the
+root's native implementation separately asserted. Stage03's four extra
+failures were erroneous test IDs (the part roots are also walked); the final
+rows correct those assertions, not program results. Stage02 never built
+because an explicit relative L1-tool path stopped resolving after staging;
+stage04 uses the absolute tool path and is the acceptance evidence.
+
+Baseline `bca1af00` against the same new inputs:
+`census_baseline_negative_02.log` records six sub/fn/cross-part refusals;
+method-body and nested-name pairs already pass and are controls, not six
+additional fixes. Eight deliberately wrong-oracle executions fail with 81
+instead of 7 (two programs, native/methods-walked, normal/cleared root),
+including the assertion that the relay part's dormant `poke(13)` must not run.
+The historical T7 pair now reaches
+`internal: a callable merge's model is not a method of the unit`, not the
+root `poke` declaration refusal. Its positive requirement remains RED.
+
+Read-only consultation `CODEX-PART-HEAD-CENSUS-20261008-12` agrees that this
+aligns classification with the existing program-wide root-method binder;
+it does not add backward visibility to ordinary named Structures. OS-branch
+method census, host-local nested-method pre-registration and the existing
+blind registered-method check in `l2_ns_body_stmt` are separate audit leads,
+not measured fixes in this slice. Request
+`CODEX-T7-MODEL-CLOSURE-20261008-13` asks only for read-only evidence about
+retaining the selected model in an already partially copied host; no writer
+or build ownership is delegated.
+
+Opus's substantive RESULT13 arrived through the named return route. Its
+source analysis confirms that the current T7 BUILD takes SELF, not its model,
+and records no model dependency for the host's retained-use closure. The
+existing MAD producer instead passes a real model occurrence and records
+`l2_use_unit_child(1, model)`. That is the proposed common route for T7 too:
+consume the model value, seed the partial lexical copy with that occurrence's
+actual parent, anchor uses at its actual source unit, and hand the copied unit
+to the view. Consuming the model whole is ordinary value-copy semantics, not
+a synthetic whole-unit retention edge. Parent-link closure retains the
+containing path without retaining unrelated ancestor fields.
+
+This is source evidence, not a successful runtime probe. Main/part methods
+with existing unit aliases and activation-local model producers must be
+distinguished by construction metadata, not by a language depth limit or
+fallback to the global prototype. Request
+`CODEX-T7-MODEL-PRODUCER-20261008-14` asks Opus only to check that readiness
+predicate. After this child's frozen gate/replay and checkpoint, measure the
+part-parent snapshot, independent copies, caller zero, NODE and a copied
+factory which performs another merge. Also measure dirty-value publication
+immediately before graph copying (T7 currently uses PRIM, MAD uses PRIM_PUB)
+and retained-merge loop cost. No test outcome or implementation is claimed
+for these prepared probes; full-formal/default/native-composed-root and
+receiving/admission-model debts remain separate and OPEN.
+
+Final serial acceptance, `run_t7_gates_06.ps1` / `t7_gates_06.log`:
+kernel05 GREEN297/114 actually run selftests; L3_06 all 11 suites/four
+budgets; full05 RED67/2648. Against full04: no old verdict changes,
+ten added GREEN rows, no removed rows or changed generic failure messages.
+The harness has 2646 fixture rows plus its two build targets.
+
+All 2615 full65 translation commands replayed serially with the final
+full05 binary into `t7_part_census_replay_02`, compared against
+`t7_origin_replay_01`: 2613 byte-identical results; only the two historical
+T7 part failures change their actual diagnostic (poke declaration at 9:1
+to model-of-unit at merge 11:13). No exit/output-presence or generated-L1
+differences. The replay has 827 nonzero exits; it omits recorded fault
+environments and is diagnostic evidence, not another execution gate.
+The runner confirms translator/harness/eight fixture identities unchanged
+through kernel, L3, full and replay. Harness SHA256:
+`0002AE28411A91EC5F8B516EA4C8FED33046DA95497D80B7FCDBCDA0E141B552`.
+Docs/whitespace checks pass. This closes only PART-CALL-HEAD-DECLARED,
+not T7 or §§8/8a; no stable-tree promotion.
+
+RESULT14 (read-only source evidence, no execution) confirms the existing
+allocation/reparent predicates can distinguish main/part method aliases
+from hosted models without a language depth limit, but identifies a prior
+producer defect: `l2_mad_take_nested` assigns the host to `l2_m_n - 1` after
+collection can have appended more method/descriptor rows, or none for a
+bound declaration. The declaration's row is the first newly published row,
+not necessarily the last. The proposed next probe must first measure that
+misownership, fix the producer if reachable, and keep the nested-declaration
+binding/scope question separate. No outcome of those source-only witnesses
+is asserted here. Opus remains Q&A only, Codex the sole writer/build.
+
 ## Acceptance commands
 
 Run a fresh harness directory with explicit `bin/l1trans.exe`, `-KeepAll`,

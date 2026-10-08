@@ -9798,6 +9798,29 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_trailer_only_two_defaults_walk.lm2'; Source = 'unit_t7_trailer_only_two_defaults.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    # Part-root method names must be known before COUNT/FILL registers signatures.
+    # Both applications execute; the relay part's own poke(13) remains dormant.
+    # Nested method names do not become program-root exports.
+    [pscustomobject]@{ Name = 'unit_part_sub_root_calls.lm2'; Parts = @('unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_sub_root_calls_walk.lm2'; Source = 'unit_part_sub_root_calls.lm2'; Parts = @('unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_fn_root_calls.lm2'; Parts = @('unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_fn_root_calls_walk.lm2'; Source = 'unit_part_fn_root_calls.lm2'; Parts = @('unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_cross_root_calls.lm2'; Parts = @('unit_part_root_relay_part.lm2','unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_cross_root_calls_walk.lm2'; Source = 'unit_part_cross_root_calls.lm2'; Parts = @('unit_part_root_relay_part.lm2','unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5); NativeRoot = 6; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_method_body_call.lm2'; Parts = @('unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_method_body_call_walk.lm2'; Source = 'unit_part_method_body_call.lm2'; Parts = @('unit_part_root_calls_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_nested_name_scope.lm2'; Parts = @('unit_part_nested_name_scope_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_part_nested_name_scope_walk.lm2'; Source = 'unit_part_nested_name_scope.lm2'; Parts = @('unit_part_nested_name_scope_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
     # Source-only part controls: not evidence of T7 model-parent copying or
     # direct external paths into a method's local named Structure.
     [pscustomobject]@{ Name = 'unit_t7_part_local_source.lm2'; Parts = @('unit_t7_part_local_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

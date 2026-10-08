@@ -4591,24 +4591,56 @@ fn: l2_unit_from_root (const: @(LmP0Node root); const: @(char path); @@: LmP0Str
     \out_unit: root\as\structure
 return: 0
 
-# Does the unit define a method of this name? Methods are visible both ways, so
-# this reads the whole unit, not what has been collected so far.
-fn: l2_unit_names_method (const: @(LmP0Text name)) int
+# The currently implemented root method producers. Classification and the
+# pre-registration census share this predicate. fm's producer is still absent;
+# implementing it must extend this one predicate, not just the name census.
+fn: l2_root_method_head (const: @(LmP0Text head)) int
+return: (cast: (int) (l2_text_eq(head, "fn") || l2_text_eq(head, "sub")))
+
+# Only declarations at this lexical root export a method name. Do not descend
+# into method or ordinary named-Structure bodies. This is a source census,
+# not signature collection or a runtime name registry.
+fn: l2_root_names_method (const: @(LmP0Structure root); const: @(LmP0Text name)) int
     @: LmP0Field field
     @: LmP0Node item
     @: LmP0Text nm
-    if: l2_cur_unit = 0 || name = 0
+    if: root = 0 || name = 0
         return: 0
-    field: l2_next_active(l2_cur_unit\first_field)
+    field: l2_next_active(root\first_field)
     while: field != 0
         item: field\value
-        if: l2_frame_head(item, "fn") != 0 || l2_frame_head(item, "sub") != 0
+        if: l2_root_method_head(l2_app_head(item)) != 0
             nm: l2_os_fn_name(item)
             if: nm != 0 && l2_text_same(nm, name) != 0
                 return: 1
             ---
         ---
         field: l2_next_active(field\next)
+    ---
+return: 0
+
+# A program's already parsed parts export methods exactly as its source does.
+# COUNT and FILL must recognize those names before any signatures are collected.
+# Ordinary named Structures and reference bindings remain forward-only.
+fn: l2_unit_names_method (const: @(LmP0Text name)) int
+    int: k 0
+    const: @: LmP0Node node
+    const: @: LmP0Structure root
+    if: name = 0
+        return: 0
+    if: l2_root_names_method(l2_cur_unit, name) != 0
+        return: 1
+    if: l2_ruse_unit != l2_cur_unit && l2_root_names_method(l2_ruse_unit, name) != 0
+        return: 1
+    while: l2_part_doc != 0 && k < l2_part_n
+        node: lm_p0_document_root(l2_part_doc[k])
+        if: node != 0 && node\kind = c.LM_P0_NODE_STRUCTURE && node\as != 0
+            root: node\as\structure
+            if: root != l2_cur_unit && root != l2_ruse_unit && l2_root_names_method(root, name) != 0
+                return: 1
+            ---
+        ---
+        k: k + 1
     ---
 return: 0
 
@@ -4970,7 +5002,7 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
     @: LmP0Text ah l2_app_head(item)
     # K03 S5: the item's application -- the atom or its Frame (l2_app_head) -- decides: `fn` and `fn()`, `os` and `os()`,
     # `include` and `include()` are one item each, meeting one contract.
-    if: l2_text_eq(ah, "fn") != 0 || l2_text_eq(ah, "sub") != 0
+    if: l2_root_method_head(ah) != 0
         return: 1
     if: l2_text_eq(ah, "independent") != 0
         return: 2

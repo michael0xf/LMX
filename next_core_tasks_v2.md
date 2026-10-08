@@ -2082,12 +2082,26 @@ part-pair diagnostics did advance; do not confuse the generic message with
 the translator's reason. Twelve wrong-expected-value executions fail with
 81 rather than 7, including cleared-root dispatch. T7 remains OPEN; this is
 a bounded development checkpoint, not a stable promotion or stage closure.
-Next bounded dependency: fix the measured root classifier for a part-defined
-method before its registration
+Fifth child, gated translator `09e69997`, fixes the root classifier for a
+part-defined method before its registration
 ([PART-CALL-HEAD-DECLARED](steps/defects.md#part-call-head-declared)): one
-`poke(5)` is silently retained as a definition and leaves 7 instead of 5;
-the second call is refused. This is separate from the T7 constructor. Then seed the
-existing partial copier with the actual model occurrence's lexical parent,
+`poke(5)` previously left 7 instead of 5 and the second call was refused.
+The common root-method source census now sees parsed parts without exporting
+nested names or changing ordinary-Structure forward visibility. All ten new
+rows pass; kernel05 GREEN297/114 selftests; L3_06 all 11 suites/four budgets;
+full05 RED67/2648 with no old regressions. Full65-command replay: 2613 of
+2615 results identical; only the two still-RED T7 part diagnostics advance
+from poke to the model-of-unit guard. No exit/output-presence/L1 differences;
+all candidate bytes frozen through the gates. This is a bounded development
+checkpoint, not T7 closure or stable promotion.
+
+Next bounded dependency: measure/fix
+[NESTED-METHOD-OWNER-LAST-ROW](steps/defects.md#nested-method-owner-last-row),
+identified by source-only RESULT14: nested method collection must assign the
+host to its own newly published row, not the last appended row or an old one.
+Then consume the actual model occurrence as the T7 construction operand and
+record its existing unit-child use in the host's dependency closure; seed the
+existing partial copier with that model occurrence's lexical parent,
 anchor its uses at the selected source unit and pass the copied unit to the
 view. Neither the merge site nor the global prototype substitutes for that
 source. The consultant's source design is not runtime evidence; preserve the

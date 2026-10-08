@@ -1,0 +1,30 @@
+# Data-only composition keeps both model field coordinates with two defaults.
+# S reads the selected physical parent; only S reaches get. Copies remain
+# independent of each other and of a later mutation of the original unit.
+int: cnt 7
+fn: get () int
+    return: node\cnt
+fn: model (int: y; int: z) int
+    int: seed 6
+    int: tail 8
+    S:
+        int: v 0
+        v: node\seed + node\tail + get()
+    S
+    return: S\v + y + z
+fn: wrap (int: k; int: n) fn: () int
+    return: merge(model; y: k; z: n)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5 9)
+@: u wrap(100 200)
+poke()
+int: a w()
+int: b u()
+int: c w()
+int: original model(1 2)
+int: ok 81
+if: a = 35 && b = 321 && c = 35 && original = 28
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

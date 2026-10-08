@@ -2030,7 +2030,8 @@ rows pass natively and with methods/root walked; kernel02 GREEN297, L3_03 all
 (five green, one required-positive red), no removed rows or changed red
 messages. This fixes that missing-dependency child, not the
 whole T7 parent or the remaining admission-model/native-hidden-use coverage.
-Also OPEN under the same parent: T7-PROJECTED-PARENT-FIELD. With model's
+Another defect under the same parent was T7-PROJECTED-PARENT-FIELD (fixed by
+the third child below). With model's
 `int: seed 6`, local S reading `node\seed`, and callable merge binding y=5,
 unchanged full65 native code reads 5 rather than 6 (walked code uses the
 selected view). Native parent-field readers still use prototype coordinates
@@ -2040,7 +2041,7 @@ that producer across COUNT/PLACE/FILL and its datum-slot readers, rather than
 adding a runtime coordinate registry, native variants, an offset special
 case or a forced interpreter path.
 Permanent required-positive rows `unit_merge_parent_t7_local_node_view` and
-`_walk` now pin the native/walker difference; the native row remains red.
+`_walk` pin the native/walker difference; the native row was red in full02.
 The new specialization fixtures inherited data-first spelling from older
 T7 rows. After full02 completed, these four inputs were explicitly migrated to
 `merge(model; y: k)`; final-input focus04 confirms the same twelve fixture
@@ -2048,6 +2049,24 @@ verdicts (three required-positive failures) and red messages as focus03.
 This applies the already
 OPEN T7-DATA-FIRST-SHAPE contract; it does not authorize a data-first refusal,
 silently migrate the historical corpus, or close MERGE-KEEPS-MODEL-INTERFACE.
+
+Third child, Codex (full regression measured): T7's producer now preserves
+the model's header/body/trailer slots and appends new datum cells after COUNT
+measures that source width. Translator `e471c941`: focus05 fixes native
+local_node_view without changing its expected 13 or native assertions.
+Final-input focus06 GREEN11; family02 has 89 targets and only the three known
+refusals (part pair, host_nested_return), no regression of existing family rows.
+The local_definition physical oracle explicitly migrates the defective old
+prefix: S stays at the model's slot 2, added y is at 5, root width 6. New
+model-first controls cover two defaults, two NODE-addressed own fields,
+independent copies/reuse and a trailer-only model. See the linked journal for
+old-oracle negative evidence, exact bytes and final gate results. Kernel03
+GREEN297/114 actual selftests; L3_04 all 11 suites/four budgets. Full03
+RED67/2628: against full02 one FAIL→OK, no OK→FAIL, four new green fixture
+rows, no removed rows and no changed messages on remaining red rows. All
+source/harness/fixture bytes stayed frozen through the final serial gates.
+Keep the T7 parent and receiving/fallback/part dependencies OPEN; this is not
+proof of the full-formal/default contract or native reuse on the composed root.
 
 ### K04 — Callable actuals and hidden inputs
 

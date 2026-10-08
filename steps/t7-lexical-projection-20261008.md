@@ -371,6 +371,188 @@ script left the caller in its staged source directory. The recovery invokes
 tools by absolute path, checks completed kernel02, and uses fresh L3_03.
 Neither failed invocation counts as a gate or overwrites earlier evidence.
 
+## Child 3: preserve model source slots (full regression measured)
+
+Candidate translator blob `e471c941f50ad8412351fb1cca44f9c51a5c350b`, SHA256
+`B07970E8EF3CCF21C71CA50BDAF468B3739CD01416D735AC1BBA3AE8551EA32C`.
+T7 COUNT and PLACE/FILL now use `l2_m_head(model)` as the body base. COUNT
+measures the complete body/trailer before finalizing appended datum coordinates
+to `head + steps + j`; the root allocation and source width include all data.
+Earlier datum-slot consumers need only a nonnegative marker until FILL, as the
+read-only pass-order audit recorded above. Overflow is diagnosed before the
+final sum is committed. There is no reader offset, native specialization,
+runtime coordinate table or new graph object.
+
+`codex_t7_focus_05`: 15 targets, only the two existing part refusals fail.
+The required native local_node_view now returns 13, as its walked twin does;
+the expected value and native assertions were not weakened. The first wider
+`codex_t7_family_01` has 85 targets / 5 failures: those two part refusals, the
+pre-existing host_nested_return refusal, and the two local_definition shape
+observers that pinned the old, defective layout. Their arithmetic still
+returns the required entry result; their post-path comparison fails.
+
+The local_definition oracle is explicitly migrated under the existing
+`#composition` norm: the model's S stays at slot 2, its call at 3 and return at
+4; the added y datum is at 5, not before S. Both result roots have width 6.
+The old oracle pinned S at 3 and y at 2. The original model coordinates,
+identity/parent checks, source-name observer and native-word checks remain;
+two root-width assertions are added. Family01 preserves the negative evidence
+that the old coordinates do not pass against this producer (11 post-path
+failures in the native half). The historical data-first fixture input is NOT
+silently migrated or declared normative by this observer correction.
+
+New model-first positives, each with native/methods-walked and physical
+root-walk checks:
+
+- `unit_merge_parent_t7_local_node_defaults`: two own fields, two appended
+  defaults, S's direct NODE paths and a get reachable only through S; two
+  copies and reuse of the first after mutating the original, expected
+  35 / 321 / 35, original 28;
+- `unit_t7_trailer_only_two_defaults`: a trailer-only model with two appended
+  defaults, two independent copies and later mutation of the original,
+  expected 14 / 59 / 14, original 16.
+
+`codex_t7_focus_06`: GREEN11. Final-input `codex_t7_family_02`: 89 targets,
+exactly the three existing refusals above, no local_definition failure.
+Final harness SHA256
+`DD23962514561BFAF22BAF8B8AA9BCB764F8F46D130BF889936E7AC7A57C3CCD`;
+new fixture hashes respectively
+`6F6744D61BD9DA2F657FDA5F32E7411053E1B759F6DE98F17D4B1F62101336DE`
+and `0AC088B41AC4C86B458631848E02E2E127DAA67E9F96689D284EA698AAE9193C`.
+
+Final serial frozen-byte gates: kernel03 GREEN297 with 114 actually run
+selftests; L3_04 all 11 suites and four budgets GREEN; full03 RED67/2628.
+Against full02: one FAIL→OK (native local_node_view), zero OK→FAIL, four
+new fixture rows all green, zero removed rows and no changed messages on
+remaining red rows. Full03 also runs the four final model-first input
+spellings migrated after full02. Source, harness and fixture fingerprints
+stayed unchanged through every gate; the staged full03 translator and new
+fixtures match the live bytes. The bounded producer defect is fixed; this
+does not close T7-LOCAL-NAMED-UNIT, T7-DATA-FIRST-SHAPE, the full-formal/default
+contract or native reuse on the constructed T7 root. Part identity/lexical
+fallback and receiving-boundary projection remain the next dependencies.
+Codex remains the sole writer/build; Opus's read-only consultations follow.
+
+Full65's 2615 recorded translation commands were replayed serially with the
+full03 executable into `build/codex_handoff/t7_layout_replay_01`: 827 nonzero
+translation exits, exactly as `t7_closure_replay_01`. Comparing those replays
+finds no exit/diagnostic, row-presence or generated-L1-presence change.
+2571 outputs are byte-identical; 44 have only numeric graph coordinates
+changed (181 graph-ref slots and 90 AT coordinates), consistent with
+preserved model positions / appended data. Every changed line is classified
+by `build/codex_handoff/tools/classify_t7_layout_replay.py`; no unclassified
+edits remain. This replay is diagnostic evidence, not a replacement for
+the executed full03 gate.
+
+### Read-only follow-up: part identity and fallback
+
+Opus returned correlated RESULT for
+`CODEX-T7-PART-PROJECTION-20261008-08` on `e471c941`; no writes/builds.
+The local procedure row is registered after E and outside the part's original
+method range. `l2_m_part(S)` and then `l2_m_file(S)` both return -1, although
+its source owner model belongs to the part. `l2_own_unit_seen` cannot see the
+part root's cnt; `l2_vis_method` can instead compare offsets across two files.
+That latter false-visibility possibility is inferred from source and still
+needs its own witness, not a claim of a measured program result.
+
+The next pre-PLACE projection must walk the existing source ownership:
+namespace parent before namespace local host (all nested entries share the
+latter stamp), then nested-method host, part root, unit. File membership and
+the visibility point come from where that chain enters its source unit. After
+PLACE, native pointer distances use the existing actual construction links;
+do not count control scopes or invent runtime lookup. Keep the two halves
+coherent, including a local Structure inside another local Structure.
+
+Necessary next dependency chain, to be gated on fresh bytes after full03:
+
+1. Chain-aware code-origin projection / `l2_own_unit_seen` and source-position visibility;
+   test a part's local/nested-local body, forward-only declarations and a
+   main-file same-name declaration so cross-file offsets cannot grant scope.
+2. Self-resolved numeric fallback: `l2_hid_own_lex` must identify the root
+   declaration on that chain; native `l2_emit_tramp_lex` must project from
+   the selected self to that owner. Preserve caller-source precedence,
+   present zero, and absence distinct from zero. The walked ARG fallback
+   already uses form-9 retained uses; `l2_t7_emit_frames` rebinds l2_nsp aliases
+   through its actual copied l2_entry_unit. Do not describe those aliases as
+   necessarily global or add a second walker mechanism without evidence.
+3. T7's result must occupy the model's position under the corresponding
+   copied parent, including a part root. `l2_t7_emit_make` currently rejects
+   that model and attaches only under the copied unit. Retain the required
+   ancestor link even when no field of that ancestor is read; no part-name
+   branch or unrelated source-parent change. Keep the distinct
+   T7-MODEL-OPERAND-SOURCE debt explicit: copying l2_program_unit unconditionally
+   does not prove selection of a model from an already copied occurrence.
+4. Receiving-boundary projection remains a separate dependent child; its
+   class policy must be stable before PLACE. This part witness admits no
+   Structure formal and cannot certify that boundary.
+
+The walkable-body checks after typing, view/prototype physical-path parity for
+the part and nested-local ownership ordering need executable witnesses. The
+consultation's recommendations are not test results.
+
+Codex's additional reader audit found a classification dependency at
+`l2_make_entry`'s unit-field collision check: its old predicate
+`m_file(owner) >= 0 && m_part(owner) < 0` identified a part-root procedure only
+while m_file did not follow local ownership. After that projection is repaired,
+it also matches a local S. Keep the predicate about the actual root owner
+(`ns_part(m_nsof(owner)) >= 0`), not about every field whose code originates in
+the part. Otherwise an origin fix would incorrectly reject local declarations
+under names of program methods. This is a source-derived risk, not a measured
+regression; read-only follow-up `CODEX-T7-PART-OWNER-20261008-09` asks Opus to
+check the remaining classification consumers and an ordinary, non-T7 witness.
+
+Correlated RESULT09 confirms that risk and corrects RESULT08's earlier claim
+that owner-side readers would be unaffected by broadening m_file. Final bounded
+design: keep `l2_m_file` / `l2_m_part` as their existing row/owner classifications;
+introduce a translation-only code-origin projection over the existing namespace
+parent/local-host and nested-method-host identities. Give it only to code-side
+visibility (`l2_vis_method`, `l2_own_unit_seen`, `l2_rw_seen`) and source
+diagnostics (`l2_method_src`). Thus the root-owner
+collision predicate above needs no compensating change. Physical `node` and
+native lexical distances remain the committed PLACE relation, not this origin
+classification.
+
+Codex checked the complete `l2_node_seg_resolve` caller and excludes
+`l2_e_own_seg_mi` from RESULT09's suggested substitutions: it resolves the
+physical parent behind NODE after the local/nested-host branches have run.
+A part-root procedure's code comes from the part, but its parent is the unit,
+not that part root itself. Replacing its direct m_part classification with
+code-file membership would conflate those two facts. Preserve this reader's
+physical-parent meaning; no executable counterexample authorizes changing it.
+
+The first isolated positive must have a part-root cnt=7 and ordinary model's
+local S reading cnt, with no merge at all: an absent input yields 7, a caller's
+own cnt=40 yields 40, and its supplied cnt=0 yields 0. A separate forward-only
+control moves the part declaration after model: the absent call must be
+refused, while caller-supplied 40/0 remain valid. Native and walked variants
+will measure those requirements; RESULT09 supplies source evidence only.
+
+Codex's later copy-reader audit adds a guard for the follow-up parent-retention
+implementation: `lmx_copy_use` copies the final path value whole. A one-slot
+use of the part-root field therefore is NOT a link-only retention request;
+it would upgrade that root to a whole copy. The existing
+`lmx_graph_copy_part_used_owned` instead seeds its source root in part, and
+`lmx_copy_link` retains its ancestors/backlinks without their unrelated fields.
+Investigate selecting the actual model's lexical parent as that partial root,
+then deriving the copied unit for view construction through its ordinary parent
+chain. Select the model's source occurrence before copying, not the merge site's
+parent and not an unconditional program-global prototype. The constructor
+already receives the performing occurrence as `l2_t7_at`; tracing its use and
+the model operand's retained address is still required. This is source-derived
+design work, not a tested correction or closure of T7-MODEL-OPERAND-SOURCE.
+
+### Adjacent A3 constructor audit (no fix claimed)
+
+`l2_mad_emit` uses the model's complete `l2_m_width(model)` and copies each
+model field to the same index; no matching T7 capture-prefix shift was found
+there by source reading. `l2_madc_slot` keeps a captured host own-field slot
+or appends a captured host formal after the host width. That is not proof of
+the general returned-node copy contract: the existing
+[RETURNED-NODE-PARTIAL-COPY](defects.md#returned-node-partial-copy) records
+shared ordinary signature/body material and missing complete remapping.
+Native reuse and complete used lexical-tree copying for this constructor stay
+OPEN; the current T7 producer correction must not close them implicitly.
+
 ## Acceptance commands
 
 Run a fresh harness directory with explicit `bin/l1trans.exe`, `-KeepAll`,

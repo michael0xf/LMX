@@ -2129,22 +2129,26 @@ $criticalMethodFnShape = @('shape','exact','method','struct','struct','owned','s
     @('endfields','RET','endmethod','same','CALL','PRIM_PUB','RET','endshape')
 # w and u are receivers (`@: w wrap(5)`, FACTORY, the author 2026-10-05): each root slot (2, 4) is
 # the pointer cell of a reference (q26), and `deref` crosses it to the callable the call returned.
+# T7-PROJECTED-PARENT-FIELD: add's source S stays at slot 2 in both copies, as in
+# the model; the new default datum y appends at slot 5 after the return at 4.
+# The earlier oracle pinned the defective capture-prefix layout (S 3, datum 2).
 $criticalLocalProjectionPost = @('postpaths',
     'differentpath','1','2','1','4',
     'differentpath','2','2','deref','2','4','deref',
-    'differentpath','3','2','deref','3','3','4','deref','3',
-    'differentpath','3','2','deref','3','2','0','2',
-    'differentpath','3','4','deref','3','2','0','2',
-    'differentpath','4','2','deref','3','0','4','4','deref','3','0',
-    'parentpath','3','2','deref','3','2','2','deref',
-    'parentpath','3','4','deref','3','2','4','deref',
-    'widthpath','3','2','deref','3','3','widthpath','3','4','deref','3','3',
-    'intpath','3','2','deref','2','5','intpath','3','4','deref','2','100',
-    'intpath','4','2','deref','3','0','3','intpath','4','4','deref','3','0','3',
+    'differentpath','3','2','deref','2','3','4','deref','2',
+    'differentpath','3','2','deref','2','2','0','2',
+    'differentpath','3','4','deref','2','2','0','2',
+    'differentpath','4','2','deref','2','0','4','4','deref','2','0',
+    'parentpath','3','2','deref','2','2','2','deref',
+    'parentpath','3','4','deref','2','2','4','deref',
+    'widthpath','2','2','deref','6','widthpath','2','4','deref','6',
+    'widthpath','3','2','deref','2','3','widthpath','3','4','deref','2','3',
+    'intpath','3','2','deref','5','5','intpath','3','4','deref','5','100',
+    'intpath','4','2','deref','2','0','3','intpath','4','4','deref','2','0','3',
     'intpath','3','0','2','0','2',
-    'namepath','3','2','deref','3','S','namepath','3','4','deref','3','S')
-$criticalLocalProjectionNative = @('nativepath','3','2','deref','3','1','nativepath','3','4','deref','3','1','nativepath','2','0','2','1','endpostpaths')
-$criticalLocalProjectionWalk = @('nativepath','3','2','deref','3','0','nativepath','3','4','deref','3','0','nativepath','2','0','2','0','endpostpaths')
+    'namepath','3','2','deref','2','S','namepath','3','4','deref','2','S')
+$criticalLocalProjectionNative = @('nativepath','3','2','deref','2','1','nativepath','3','4','deref','2','1','nativepath','2','0','2','1','endpostpaths')
+$criticalLocalProjectionWalk = @('nativepath','3','2','deref','2','0','nativepath','3','4','deref','2','0','nativepath','2','0','2','0','endpostpaths')
 # graph_shape_t7_copy_parent: the unit's slots are E 0 (a qualified branch), Model 1, the root's body 2 (m at 2 1 1),
 # other 3, w 7; from w's cell, `deref` is the node and `up` its parent, the copy of the unit (T7).  m hangs under a
 # distinct copy of the unit, Model's lexical parent, made at the merge, which holds m where the unit holds Model (the
@@ -9784,6 +9788,16 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_node_view_walk.lm2'; Source = 'unit_merge_parent_t7_local_node_view.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    # Two appended defaults must not shift either of the model's own fields.
+    # Both copies retain their own lexical get and local S after the original is mutated.
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_node_defaults.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_node_defaults_walk.lm2'; Source = 'unit_merge_parent_t7_local_node_defaults.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_two_defaults.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_trailer_only_two_defaults_walk.lm2'; Source = 'unit_t7_trailer_only_two_defaults.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_part_walk.lm2'; Source = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

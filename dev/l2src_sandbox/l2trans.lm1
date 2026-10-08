@@ -47049,6 +47049,8 @@ fn: l2_t7_fill (const: @(LmP0Node node); int: host; int: kind; int: req; const: 
                 l2_t7h_n: h_save
                 l2_t7b_n: b_save
                 return: l2_alloc_or(path, f\value, "out of memory")
+            # COUNT needs only a nonnegative datum marker. Its final coordinate
+            # is assigned after the model's complete source width is measured.
             slot: 2 + l2_t7b_n - b_save
             at: l2_t7b_n
             l2_t7b_nm[at]: nm
@@ -47187,7 +47189,7 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
     nb: l2_t7_nb[site]
     arity: l2_t7_argc[site]
     b0: l2_t7_b0[site]
-    width: 2 + nb + steps
+    width: l2_m_head(l2_t7_model[site]) + nb + steps
     # The node's args part is its complete contract: the declared formals, then the model's hidden inputs.
     nh: l2_m_dyn[l2_t7_model[site]]
     if: l2_t7_make_sig(site) != 0
@@ -47345,6 +47347,10 @@ fn: l2_t7_count () int
     int: bad
     int: model
     int: base
+    int: steps
+    int: nb
+    int: width
+    int: j
     @: L2SourceContainer source
     while: s < l2_t7_n
         model: l2_t7_model[s]
@@ -47361,7 +47367,9 @@ fn: l2_t7_count () int
         made: 0
         one: 0
         bad: 0
-        base: 2 + l2_t7_nb[s]
+        # Data-only composition preserves the model's source slots. New data
+        # append after its complete body/trailer, never before its fields.
+        base: l2_m_head(model)
         # A model whose only line is its trailer `return:` has no body Structure: no source view and no body
         # steps, the trailer walked alone -- as a merge result's steps (l2_pap_steps) and a walked method's
         # (l2_rw_methods_count) take it.
@@ -47384,11 +47392,25 @@ fn: l2_t7_count () int
         l2_rw_mi: l2_e
         l2_cur_mi: saved_cur
         l2_vis_on: 0
-        if: bad != 0 || made + one <= 0 || l2_rw_machine != 0
+        if: bad != 0 || l2_rw_machine != 0
             return: l2_error(l2_src, l2_t7_at[s], "a callable merge needs a walkable body")
-        l2_t7_steps[s]: made + one
+        if: made < 0 || one < 0 || one > c.INT_MAX - made
+            return: l2_error(l2_src, l2_t7_at[s], "a callable merge has too many fields")
+        steps: made + one
+        if: steps <= 0
+            return: l2_error(l2_src, l2_t7_at[s], "a callable merge needs a walkable body")
+        nb: l2_t7_nb[s]
+        if: base < 0 || nb < 0 || steps > c.INT_MAX - base || nb > c.INT_MAX - base - steps
+            return: l2_error(l2_src, l2_t7_at[s], "a callable merge has too many fields")
+        width: base + steps + nb
+        l2_t7_steps[s]: steps
+        j: 0
+        while: j < nb
+            l2_t7b_slot[l2_t7_b0[s] + j]: base + steps + j
+            j: j + 1
+        ---
         if: source != 0
-            source\width: base + made + one
+            source\width: width
         if: l2_source_definition_roots(1, s, 0) != 0 || l2_source_refs_note(1, s, model) != 0
             return: 1
         if: l2_m_value_used != 0
@@ -47414,7 +47436,7 @@ fn: l2_t7_emit_frames (int: phase) int
     @: L2SourceContainer source
     while: s < l2_t7_n
         model: l2_t7_model[s]
-        base: 2 + l2_t7_nb[s]
+        base: l2_m_head(model)
         l2_construct_begin(1, s, phase)
         if: l2_rw_bseq_zero() != 0
             return: l2_error(l2_src, l2_t7_at[s], "out of memory")

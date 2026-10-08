@@ -1,0 +1,23 @@
+# A trailer-only model keeps its RET slot before two appended default cells.
+# Reuse both copies after changing the original lexical value.
+int: cnt 9
+fn: get () int
+    return: node\cnt
+fn: model (int: y; int: z) int
+return: y + z + get()
+fn: wrap (int: k; int: n) fn: () int
+    return: merge(model; y: k; z: n)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(2 3)
+@: u wrap(20 30)
+poke()
+int: a w()
+int: b u()
+int: c w()
+int: original model(2 3)
+int: ok 81
+if: a = 14 && b = 59 && c = 14 && original = 16
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

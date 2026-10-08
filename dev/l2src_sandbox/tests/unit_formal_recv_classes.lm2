@@ -1,0 +1,36 @@
+# COPIED-METHOD-DECLARED-FORMAL, two classes of formation with two receiving spaces: run's formal g receives getr
+# through b1, a copy (the copy's own occurrence), and the unit's getq; getq reads the free name bonus and getr does
+# not, so they are formed differently, and getr's class comes first.  The class of the occurrence g holds is chosen
+# before the actuals by the child its holder keeps at the method's slot -- the copy's getr is getr's class though no
+# unit address is its address -- and each class admits w in its occurrence's space.  HEAD compared with the unit's
+# occurrences only and ran the copy's getr as the remaining class.  41 and 403.  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+int: bonus 3
+int: tag 1
+fn: getr (Wide: q) int
+    return: q\x * 10 + node\tag
+end: getr
+fn: getq (Wide: q) int
+    return: q\x * 100 + bonus
+end: getq
+Box:
+    int: v 0
+    fn: getr
+end: Box
+fn: run (getq: g; Wide: w) int
+    return: g(w)
+end: run
+b1: merge: Box
+w: merge: Wide
+w\x: 4
+tag: 5
+int: r run(b1\getr; w)
+int: s run(getq; w)
+int: ok 7
+if: r != 41 || s != 403
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

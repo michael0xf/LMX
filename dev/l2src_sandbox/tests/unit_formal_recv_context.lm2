@@ -1,0 +1,24 @@
+# COPIED-METHOD-DECLARED-FORMAL, an unrelated model expression: getq, run as b1's copy, admits its formal q to the
+# copy's Wide, and its own `t: merge: Wide` is a fresh Wide (x 2) of its own -- the receiving context of its call
+# reaches nothing else: 4 * 10 + 2.  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+fn: getq (Wide: q) int
+    t: merge: Wide
+    return: q\x * 10 + t\x
+end: getq
+Box:
+    int: v 0
+    fn: getq
+end: Box
+b1: merge: Box
+w: merge: Wide
+w\x: 4
+int: r b1\getq(w)
+int: ok 7
+if: r != 42
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

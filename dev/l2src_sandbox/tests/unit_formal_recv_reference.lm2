@@ -1,0 +1,31 @@
+# COPIED-METHOD-DECLARED-FORMAL and COPIED-CALLABLE-ACTUAL, the route by callable reference: run's formal g receives
+# b1\getq -- the copy's own occurrence of getq, the one the path selects -- and the unit's getq: one method, one
+# native code, one class, two occurrences with different parents.  g(w) admits w in the space of the occurrence g
+# holds; getq reads its node's tag: the copy's 1 (copied at the merge), the unit's 5 (written after).  HEAD handed
+# the unit's occurrence for the path (45, 45).  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+int: tag 1
+fn: getq (Wide: q) int
+    return: q\x * 10 + node\tag
+end: getq
+Box:
+    int: v 0
+    fn: getq
+end: Box
+fn: run (getq: g; Wide: w) int
+    return: g(w)
+end: run
+b1: merge: Box
+w: merge: Wide
+w\x: 4
+tag: 5
+int: r run(b1\getq; w)
+int: s run(getq; w)
+int: ok 7
+if: r != 41 || s != 45
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -390,6 +390,25 @@ int: l2_d105e_cap 0
 @: int l2_d105e_tmi 0
 @: int l2_d105e_tk 0
 @@: LmP0Node l2_d105e_at 0
+# COPIED-METHOD-DECLARED-FORMAL: l2_d105e_soft[e] -- edge e carries an actual of a call through a callable formal to a
+# method that reaches the formal (l2_cfa_apply): a candidate it brings is a possible one there (l2_d105_possible),
+# refused where that method's class is the selected one when its Consumer does not admit it, never for the call.
+@: int l2_d105e_soft 0
+# The D-105 facts of an actual of a call through callable formal fi of method mi, into formal j, kept by the checks
+# (l2_check_call_at) until the flow is closed and given then to every method that reaches the formal (l2_cfa_apply):
+# kind 1 the actual a0 itself (l2_d105_note), 2 a static candidate of schema ty (an occurrence), 3 an anchor edge from
+# place sp of method ty (l2_d105x_add).  Compiler metadata; nothing of it exists at run time.
+int: l2_cfa_n 0
+int: l2_cfa_cap 0
+@: int l2_cfa_mi 0
+@: int l2_cfa_fi 0
+@: int l2_cfa_j 0
+@: int l2_cfa_kind 0
+@: int l2_cfa_ty 0
+@: int l2_cfa_sp 0
+@: int l2_cfa_span 0
+@@: LmP0Field l2_cfa_a0 0
+@@: LmP0Node l2_cfa_at 0
 int: l2_d105t_n 0
 int: l2_d105t_cap 0
 @: int l2_d105t_cand 0
@@ -1727,7 +1746,7 @@ prototype:
     fn: l2_own_nsty_get (int: oi) int
     fn: l2_cf_set (int: omi; int: fk; int: req) int
     fn: l2_cf_actual (int: mi; const: @(LmP0Field a0); int: actual_span; @: int out_kind; @: int out_fi) int
-    fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; @: L2Tx dest) int
+    fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const: @(char ind); @: L2Tx dest) int
     fn: l2_cf_held (int: mi; const: @(LmP0Field a0); int: span) int
     fn: l2_occ_actual (int: mi; const: @(LmP0Field a0); int: span) int
     fn: l2_emit_occ_admit (int: mi; int: req; int: cand; const: @(char value); const: @(char ind)) int
@@ -1757,6 +1776,23 @@ prototype:
     fn: l2_emit_call_result (int: idx; int: t; const: @(char ind)) int
     fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(char ind); int: nact; int: nhid; @: L2Tx acts; @: L2Tx hides) int
     fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node)) int
+    fn: l2_cfl_formal_alike (int: a; int: b; int: t) int
+    fn: l2_cfl_recv_alike (int: a; int: b) int
+    fn: l2_occ_hops (int: m) int
+    fn: l2_emit_call_select (int: mi; int: fi; int: self_t; const: @(char ind)) int
+    fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
+    fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
+    fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char value); const: @(char ind)) int
+    fn: l2_call_receiver (int: idx; int: formal; int: hid) int
+    fn: l2_d105_fits (int: ty; int: req; int: mi; int: k) int
+    fn: l2_d105_edge_add (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at); int: soft) int
+    fn: l2_cfa_room () int
+    fn: l2_cfa_row (int: mi; int: fi; int: j; int: kind; int: ty; int: sp; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
+    fn: l2_cfa_note (int: mi; int: idx; int: fi; int: j; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
+    fn: l2_cfa_source (int: mi; int: idx; int: fi; int: j; int: ty; const: @(LmP0Node at)) int
+    fn: l2_cfa_anchor (int: mi; int: idx; int: fi; int: j; int: smi; int: sk) int
+    fn: l2_cfa_apply () int
+    fn: l2_cfa_to (int: r; int: m) int
     fn: l2_m_unit_level (int: mi) int
     fn: l2_dyn_reads (int: m; int: k) int
     fn: l2_dyn_fwd (int: m; int: k) int
@@ -14860,6 +14896,9 @@ fn: l2_dyn_close (const: @(char path)) int
     # Every check has run: what reaches each callable formal is closed before the requirements propagate.
     if: l2_cfl_close() != 0
         return: 1
+    # The D-105 facts of the actuals of calls through callable formals reach the methods that reach those formals.
+    if: l2_cfa_apply() != 0
+        return: 1
     # Each successful step can only add one of the finite method/name/type
     # facts collected from this unit. Iterate to the actual fixed point; an
     # arbitrary pass count rejects valid long call chains.
@@ -26998,6 +27037,10 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
         # A callable formal takes the occurrence of the callable its actual names -- a reference,
         # checked against the formal's contract -- not a call (plan §3 native gate (г)).
         req_mi: l2_cf_get(idx, actual_i)
+        # Through a callable formal the selected class admits a Structure input by its own model, and a class whose
+        # Consumer does not admit it refuses it when selected: this method's implicit `implements`.
+        if: fi >= 0 && req_mi < 0 && l2_nsty_get(idx, actual_i) >= 0 && l2_admit_site(mi) != 0
+            return: l2_error(path, node, "internal: admission outside a method")
         if: req_mi >= 0
             if: actual_span = 1 && a0\value != 0 && l2_frame_head(a0\value, "merge") != 0
                 if: l2_t7_from_actual(mi, idx, actual_i, a0\value, path) != 0
@@ -27068,7 +27111,7 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
             if: req_mi < 0 && nst >= 0
                 occ_mi: l2_occ_actual(mi, a0, actual_span)
             if: occ_mi >= 0
-                if: l2_d105_source(idx, actual_i, l2_schema_method(occ_mi), node) != 0
+                if: l2_cfa_source(mi, idx, fi, actual_i, l2_schema_method(occ_mi), node) != 0
                     return: 1
                 handled: 1
             ---
@@ -27087,7 +27130,7 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                             return: 1
                         ---
                     ---
-                    if: l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
+                    if: l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
                         return: 1
                     handled: 1
                 ---
@@ -27101,7 +27144,7 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
                 # (l2_actual_ns), a pointer cast -- reaches the formal from its source's place: the callee's result
                 # place, whose sources its returns give (l2_d105_note_return), or the cast's operand.  The formal's
                 # reads take them by name; before, they were read by position (CAST-ACTUAL-READ-BY-POSITION).
-                if: ast = 2 && actual_span = 1 && a0\value != 0 && (a0\value\kind = c.LM_P0_NODE_FRAME || a0\value\kind = c.LM_P0_NODE_ATOM) && l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
+                if: ast = 2 && actual_span = 1 && a0\value != 0 && (a0\value\kind = c.LM_P0_NODE_FRAME || a0\value\kind = c.LM_P0_NODE_ATOM) && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
                     return: 1
             ---
             # D-108: an actual admitted to a Structure-typed formal is checked as any other actual is --
@@ -27118,7 +27161,7 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
             # when it is a formal passed on as it is.  l2_d105_close builds its pair table by name and
             # refuses, located, a pair it cannot build.
             if: handled = 0 && req_mi < 0 && nst >= 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && a0\value\as != 0 && l2_bound_nsty(mi, a0\value\as\atom) >= 0
-                if: l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
+                if: l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
                     return: 1
             ---
             if: handled = 0 && actual_span = 1 && a0\value != 0 && a0\value\kind = c.LM_P0_NODE_ATOM && nst >= 0 && l2_m_node[idx] != 0 && l2_m_node[idx]\as != 0
@@ -27146,12 +27189,12 @@ fn: l2_check_call_at (const: @(LmP0Node node); @: LmP0Text head; int: idx; int: 
             ---
             # The way such a candidate comes to the formal from a place of this method is an anchor edge
             # (l2_d105x_add): the identity entries of the reception follow the places it passed through.
-            if: source.method >= 0 && l2_d105_dynamic(@ source) != 0 && l2_d105x_add((source.method), (source.place), idx, actual_i) != 0
+            if: source.method >= 0 && l2_d105_dynamic(@ source) != 0 && l2_cfa_anchor(mi, idx, fi, actual_i, (source.method), (source.place)) != 0
                 return: l2_alloc_or(path, node, "out of memory")
             ---
         # Opaque pointer formals carry possible source facts too. Their lack
         # of a receiving model does not erase a later forwarding admission.
-        if: req_mi < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_d105_note(mi, idx, actual_i, a0, actual_span, node) != 0
+        if: req_mi < 0 && l2_pointer_depth(l2_ft(idx, actual_i)) > 0 && l2_cfa_note(mi, idx, fi, actual_i, a0, actual_span, node) != 0
             return: 1
         k: 0
         while: k < actual_span && a0 != 0
@@ -30431,12 +30474,20 @@ fn: l2_cf_held (int: mi; const: @(LmP0Field a0); int: span) int
 return: oi
 
 # The same resolution, for the native emitter: the occurrence expression of the actual, in the
-# caller's code.  A unit method's occurrence is its descriptor in the unit; a forwarded formal is
-# whatever value that formal holds (l2_tok_formal), so nothing is invented for it.
-fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; @: L2Tx dest) int
+# caller's code.  A method's name is the occurrence the unit this method reads holds; a path is the
+# occurrence the path selects -- its leaf, a copy's own occurrence where the path runs through a copy,
+# reached as a path call's head is (l2_emit_path), held in a temporary of its own (COPIED-CALLABLE-ACTUAL;
+# l2_rw_callable_actual walked); a forwarded formal is whatever value that formal holds (l2_tok_formal),
+# so nothing is invented for it.
+fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; const: @(char ind); @: L2Tx dest) int
     int: kind 0
     int: fi 0 - 1
     int: cand
+    int: pk 0
+    int: st
+    int: t
+    []: char nm 32
+    @: char ptext 0
     cand: l2_cf_actual(mi, a0, actual_span, @ kind, @ fi)
     if: cand < 0
         # A held name: the node it holds.  In a method the name is a hidden input (Q52).
@@ -30449,6 +30500,26 @@ fn: l2_cf_actual_emit (int: mi; const: @(LmP0Field a0); int: actual_span; @: L2T
     ---
     if: kind = 2
         return: l2_tok_formal(mi, fi, dest)
+    if: actual_span >= 3
+        ptext: l2_address_path_text((cast: (@: LmP0Field) a0), actual_span)
+    if: actual_span = 1 && a0\value\kind = c.LM_P0_NODE_FRAME && a0\value\as\frame\head != 0 && l2_seg_count(a0\value\as\frame\head\data, a0\value\as\frame\head\length) >= 2
+        ptext: (cast: (@: char) l2_xmalloc(a0\value\as\frame\head\length + 1U))
+        if: ptext = 0
+            return: l2_error(l2_src, a0\value, "out of memory")
+        memcpy((cast: (@: void) ptext), (cast: (@: void) a0\value\as\frame\head\data), a0\value\as\frame\head\length)
+        ptext[a0\value\as\frame\head\length]: 0
+    ---
+    if: ptext != 0
+        st: l2_emit_path(ptext, strlen(ptext), mi, ind, a0\value, @ pk)
+        l2_xfree((cast: (@: void) ptext))
+        if: st != 0
+            return: 1
+        t: l2_tn
+        l2_tn: l2_tn + 1
+        if: c.fprintf(l2_out, "%s@: Lmx l2_ca%d l2_pst\n", ind, t) < 0 || c.snprintf(nm, 32U, "l2_ca%d", t) < 0
+            return: 1
+        return: l2_tx_set(dest, nm)
+    ---
 return: l2_tok_method_occ(cand, dest)
 
 # A no-result unit-method occurrence supplied where a reference is received.
@@ -30784,6 +30855,28 @@ fn: l2_flow_free () int
     l2_d105e_at: 0
     l2_d105e_n: 0
     l2_d105e_cap: 0
+    l2_xfree((cast: (@: void) l2_d105e_soft))
+    l2_d105e_soft: 0
+    l2_xfree((cast: (@: void) l2_cfa_mi))
+    l2_cfa_mi: 0
+    l2_xfree((cast: (@: void) l2_cfa_fi))
+    l2_cfa_fi: 0
+    l2_xfree((cast: (@: void) l2_cfa_j))
+    l2_cfa_j: 0
+    l2_xfree((cast: (@: void) l2_cfa_kind))
+    l2_cfa_kind: 0
+    l2_xfree((cast: (@: void) l2_cfa_ty))
+    l2_cfa_ty: 0
+    l2_xfree((cast: (@: void) l2_cfa_sp))
+    l2_cfa_sp: 0
+    l2_xfree((cast: (@: void) l2_cfa_span))
+    l2_cfa_span: 0
+    l2_xfree((cast: (@: void) l2_cfa_a0))
+    l2_cfa_a0: 0
+    l2_xfree((cast: (@: void) l2_cfa_at))
+    l2_cfa_at: 0
+    l2_cfa_n: 0
+    l2_cfa_cap: 0
     l2_xfree((cast: (@: void) l2_d105t_cand))
     l2_d105t_cand: 0
     l2_xfree((cast: (@: void) l2_d105t_req))
@@ -31065,6 +31158,34 @@ fn: l2_cfl_alike (int: a; int: b) int
             return: 0
         k: k + 1
     ---
+return: l2_cfl_recv_alike(a, b)
+
+# Whether methods a and b receive formal t alike: the same model and schema, read in the same kind of space
+# (l2_m_unit_ref).  A formal no named Structure types on either side has nothing to admit.  An emission decision
+# (which admission a class emits), no equality of types: a candidate may be admitted to either model.
+fn: l2_cfl_formal_alike (int: a; int: b; int: t) int
+    if: a = b
+        return: 1
+    if: l2_nsty_get(a, t) < 0 && l2_nsty_get(b, t) < 0
+        return: 1
+    if: l2_input_model(a, t) != l2_input_model(b, t) || l2_input_schema(a, t) != l2_input_schema(b, t)
+        return: 0
+return: (cast: (int) (c.strcmp(l2_m_unit_ref(a), l2_m_unit_ref(b)) = 0))
+
+# Whether methods a and b, formed alike, have one receiving contract where they admit anything: every declared
+# Structure formal alike (l2_cfl_formal_alike), and the same space for the free inputs they admit (l2_free_admits).
+# Methods that admit nothing -- number inputs only -- stay one class whatever space their bodies read.
+fn: l2_cfl_recv_alike (int: a; int: b) int
+    int: j 0
+    if: a = b
+        return: 1
+    while: j < l2_m_arity[a] && j < l2_m_arity[b]
+        if: l2_cfl_formal_alike(a, b, j) = 0
+            return: 0
+        j: j + 1
+    ---
+    if: (l2_free_admits(a) != 0 || l2_free_admits(b) != 0) && c.strcmp(l2_m_unit_ref(a), l2_m_unit_ref(b)) != 0
+        return: 0
 return: 1
 
 # The class of reaching method m at formal t of consumer c: the first method that reaches the formal and
@@ -32350,74 +32471,116 @@ fn: l2_emit_call_go (int: mi; int: idx; int: hid; int: t; int: self_t; const: @(
         return: 1
 return: 0
 
-# A call through callable formal fi of method mi that more than one formation reaches (K04 S2 part two;
-# Codex, FABLE-CODEX-20261004-12).  The occurrence the formal holds, evaluated once (l2_c<self_t>), is
-# compared with the exact occurrences the flow proves reach the formal: the unit's own occurrence of each
-# reaching method, through this method's unit reference, the unit every caller named that method in.  A
-# class is selected by those addresses; the last class is the remainder the flow proves, with no comparison
-# and no stop.  Each class forms its own list of hidden inputs by the one route (l2_hidden_from) and calls.
-# No class serves the method that declares the formal.  The flow holds no occurrence the translation does not
-# follow: l2_cfl_classes refuses the call then, as a limit, before this is reached.
-fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node)) int
+# The parent links from an occurrence of method m up to the Structure that holds it as a child, at l2_occ_slot(m):
+# the unit, or any copy of it -- the copier keeps every child's position and points a copied Structure's parent at the
+# copy of its parent (lmx_graph_copy_owned's parent fixup), and a composition absorbs only its operand roots, never
+# the unit's child.  The construction (l2_emit_build_occ and the parents it sets) gives: a file-level method's
+# occurrence is the unit's child (1); a method of a program part whose root is built runs under that root, itself
+# the unit's child (2); a nested method under its host's occurrence (1 + its host's); a named Structure's procedure is
+# the Structure, the unit's child where the Structure is the unit's (1).  0 where the parents do not reach the holder:
+# a named Structure nested in another or eternal.
+fn: l2_occ_hops (int: m) int
+    int: h 0
+    int: steps 0
+    while: m >= 0 && m < l2_m_n && m != l2_e && steps <= l2_m_n
+        if: l2_m_nsof(m) >= 0
+            if: l2_ns_parent[l2_m_nsof(m)] >= 0 || l2_ns_eternal[l2_m_nsof(m)] >= 0
+                return: 0
+            return: h + 1
+        ---
+        if: l2_mad_host_of(m) < 0
+            if: l2_m_part(m) >= 0 && l2_part_ns[l2_m_part(m)] >= 0
+                return: h + 2
+            return: h + 1
+        ---
+        h: h + 1
+        m: l2_mad_host_of(m)
+        steps: steps + 1
+    ---
+return: 0
+
+# K04 S2 / COPIED-METHOD-DECLARED-FORMAL: the class of the occurrence a call through callable formal fi of mi
+# selected, chosen once, right after that occurrence is captured (l2_c<self_t>) and before any actual is evaluated,
+# so that no actual's effect can change it: class k when the occurrence is the child its holder keeps at a member's
+# slot -- reached by its parents (l2_occ_hops), the unit and any copy of it alike, a copy sharing the original's
+# code but not its parent -- or, for a member whose holder its parents do not reach, the occurrence the unit this
+# method reads holds (l2_tok_method_occ).  One child per slot and one slot per method: at most one member holds it.
+# Every class is tested and none is a remainder; an absent occurrence, and one no class holds, stop at the shared
+# invariant.
+fn: l2_emit_call_select (int: mi; int: fi; int: self_t; const: @(char ind)) int
     int: n l2_cfl_count(mi, fi)
-    int: ncls 0
     int: i 0
     int: j
     int: k 0
-    int: first
+    int: m
+    int: h
+    int: head
+    []: char occ_own 256
+    L2Tx: occ_tx
+    @: L2Tx occ l2_tx_local(@ occ_tx, occ_own, 256U)
+    if: c.fprintf(l2_out, "%sif: l2_c%d = 0\n", ind, self_t) < 0 || l2_emit_invariant(ind, "a call through a callable formal has no occurrence") != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sint: l2_cfk%d 0\n%sl2_cfk%d: 0 - 1\n%s@: Lmx l2_cfu%d 0\n", ind, self_t, ind, self_t, ind, self_t) < 0
+        return: 1
+    while: i < n
+        head: l2_cfl_at(mi, fi, i)
+        if: l2_cfl_class_of(mi, fi, head) != head
+            i: i + 1
+            continue
+        j: 0
+        while: j < n
+            m: l2_cfl_at(mi, fi, j)
+            if: l2_cfl_class_of(mi, fi, m) = head
+                h: l2_occ_hops(m)
+                if: h > 0
+                    if: c.fprintf(l2_out, "%sl2_cfu%d: l2_c%d\n", ind, self_t, self_t) < 0
+                        return: 1
+                    while: h > 0
+                        if: c.fprintf(l2_out, "%sif: l2_cfu%d != 0\n%s    l2_cfu%d: l2_cfu%d\\parent\n", ind, self_t, ind, self_t, self_t) < 0
+                            return: 1
+                        h: h - 1
+                    ---
+                    if: c.fprintf(l2_out, "%sif: l2_cfk%d < 0 && l2_cfu%d != 0 && lmx_arena_ref_struct(l2_cfu%d, %uU) = l2_c%d\n%s    l2_cfk%d: %d\n", ind, self_t, self_t, self_t, (cast: (unsigned) (l2_occ_slot(m))), self_t, ind, self_t, k) < 0
+                        return: 1
+                    ---
+                else:
+                    if: l2_tok_method_occ(m, occ) != 0
+                        return: 1
+                    if: c.fprintf(l2_out, "%sif: l2_cfk%d < 0 && l2_c%d = %s\n%s    l2_cfk%d: %d\n", ind, self_t, self_t, occ\data, ind, self_t, k) < 0
+                        return: 1
+                    ---
+                ---
+            ---
+            j: j + 1
+        ---
+        k: k + 1
+        i: i + 1
+    ---
+    if: c.fprintf(l2_out, "%sif: l2_cfk%d < 0\n", ind, self_t) < 0 || l2_emit_invariant(ind, "the occurrence a callable formal holds is in no class the translation proved") != 0
+        return: 1
+return: 0
+
+# A call through callable formal fi of method mi that more than one formation reaches (K04 S2 part two;
+# Codex, FABLE-CODEX-20261004-12).  The class of the occurrence the formal holds was chosen before the actuals
+# (l2_emit_call_select, l2_cfk<self_t>); each class forms its own list of hidden inputs by the one route
+# (l2_hidden_from) and calls.  No class serves the method that declares the formal.  The flow holds no occurrence
+# the translation does not follow: l2_cfl_classes refuses the call then, as a limit, before this is reached.
+fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const: @(char ind); int: nact; @: L2Tx acts; const: @(LmP0Node node)) int
+    int: n l2_cfl_count(mi, fi)
+    int: i 0
+    int: k 0
     int: head
     int: rc
     @: L2Tx hides
     @: char deep 0
-    []: char occ_own 256
-    L2Tx: occ_tx
-    @: L2Tx occ l2_tx_local(@ occ_tx, occ_own, 256U)
-    while: i < n
-        if: l2_cfl_class_of(mi, fi, l2_cfl_at(mi, fi, i)) = l2_cfl_at(mi, fi, i)
-            ncls: ncls + 1
-        i: i + 1
-    ---
     if: l2_bump_ind(ind, @ deep) != 0
         return: 1
-    if: c.fprintf(l2_out, "%sint: l2_cfk%d %d\n", ind, t, ncls - 1) < 0
-        return: 1
-    i: 0
     while: i < n
         head: l2_cfl_at(mi, fi, i)
         if: l2_cfl_class_of(mi, fi, head) != head
             i: i + 1
             continue
-        if: k < ncls - 1
-            if: c.fprintf(l2_out, "%sif: ", ind) < 0
-                return: 1
-            first: 1
-            j: 0
-            while: j < n
-                if: l2_cfl_class_of(mi, fi, l2_cfl_at(mi, fi, j)) = head
-                    if: l2_tok_method_occ(l2_cfl_at(mi, fi, j), occ) != 0
-                        return: 1
-                    if: first = 0 && fputs(" || ", l2_out) < 0
-                        return: 1
-                    if: c.fprintf(l2_out, "l2_c%d = %s", self_t, occ\data) < 0
-                        return: 1
-                    first: 0
-                ---
-                j: j + 1
-            ---
-            if: c.fprintf(l2_out, "\n%sl2_cfk%d: %d\n%s---\n", deep, t, k, ind) < 0
-                return: 1
-            ---
-        k: k + 1
-        i: i + 1
-    ---
-    i: 0
-    k: 0
-    while: i < n
-        head: l2_cfl_at(mi, fi, i)
-        if: l2_cfl_class_of(mi, fi, head) != head
-            i: i + 1
-            continue
-        if: c.fprintf(l2_out, "%sif: l2_cfk%d = %d\n", ind, t, k) < 0
+        if: c.fprintf(l2_out, "%sif: l2_cfk%d = %d\n", ind, self_t, k) < 0
             return: 1
         hides: 0
         rc: l2_emit_call_hides(mi, head, l2_m_dyn[head], nact, self_t, deep, node, 0, fi, @ hides)
@@ -32430,6 +32593,96 @@ fn: l2_emit_call_classes (int: mi; int: idx; int: fi; int: t; int: self_t; const
         if: c.fprintf(l2_out, "%s---\n", ind) < 0
             return: 1
         k: k + 1
+        i: i + 1
+    ---
+return: 0
+
+# The receiver whose contract admits a call's declared inputs: idx itself, or -- through a callable formal with one
+# class (hid, l2_cfl_classes) -- that class's head.
+fn: l2_call_receiver (int: idx; int: formal; int: hid) int
+    if: formal >= 0 && hid >= 0
+        return: hid
+return: idx
+
+# One admission of actual t into formal t of receiver r, its requirement read in the space of the occurrence `occ`
+# the call selected (l2_recv_ref, read by l2_type_inst alone while it is emitted, as a free input's): form 1 an
+# occurrence (its pair map), 2 by position, 3 a record by name (D-105).  The candidate is as it was formed.
+fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
+    []: char recv 192
+    int: st 0
+    const: @(char saved) l2_recv_unit
+    if: l2_recv_ref(r, occ, recv, 192U) != 0
+        return: 1
+    l2_recv_unit: recv
+    if: form = 1
+        st: l2_emit_occ_admit(mi, l2_input_schema(r, t), l2_schema_method(occ_mi), value, ind)
+    if: form = 2
+        st: l2_emit_admit(mi, l2_nsty_get(r, t), value, ind)
+    if: form = 3
+        st: l2_emit_model_admit(mi, l2_input_model(r, t), source, value, ind, 0, 0, -1, dyn_mi, r, t)
+    l2_recv_unit: saved
+return: st
+
+# One class's admission, its head h's: a static candidate h's Consumer does not admit (l2_d105_fits) is refused where
+# the input is formed, as mi's implicit `implements`, when this class is the selected one; no other class is asked.
+fn: l2_emit_class_admit (int: mi; int: h; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
+    int: req l2_input_schema(h, t)
+    int: cand 0 - 1
+    if: form = 1
+        cand: l2_schema_method(occ_mi)
+    if: form = 3 && source\method < 0
+        cand: source\layout
+    if: cand != -1 && req != -1 && cand != req && l2_d105_fits(cand, req, h, t) = 0
+        if: c.fprintf(l2_out, "%sif: %s != 0\n", ind, value) < 0
+            return: 1
+        return: l2_emit_implicit_throw(mi, "implements", ind)
+    ---
+return: l2_emit_formal_admit(mi, h, t, form, occ_mi, source, dyn_mi, occ, value, ind)
+
+# The admission of actual t of a call into its declared formal, in the space of the occurrence the call selected
+# (l2_c<self_t>): the formal of idx for a call of idx; through callable formal cfi, the formal of the selected
+# occurrence's class -- under that class's key where the classes receive the formal differently, once where they
+# receive it alike (l2_cfl_formal_alike).  The actual was evaluated once before; only its admission is chosen.
+fn: l2_emit_formal_admits (int: mi; int: idx; int: cfi; int: ncls; int: self_t; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char value); const: @(char ind)) int
+    int: n
+    int: i 0
+    int: k 0
+    int: head
+    int: first 0 - 1
+    int: alike 1
+    @: char deep 0
+    []: char occ 48
+    if: c.snprintf(occ, 48U, "l2_c%d", self_t) < 0
+        return: 1
+    if: cfi < 0 || ncls < 1
+        return: l2_emit_formal_admit(mi, idx, t, form, occ_mi, source, dyn_mi, occ, value, ind)
+    n: l2_cfl_count(mi, cfi)
+    while: i < n
+        head: l2_cfl_at(mi, cfi, i)
+        if: l2_cfl_class_of(mi, cfi, head) = head
+            if: first < 0
+                first: head
+            if: l2_cfl_formal_alike(first, head, t) = 0
+                alike: 0
+            ---
+        i: i + 1
+    ---
+    if: ncls = 1 || alike != 0
+        return: l2_emit_class_admit(mi, first, t, form, occ_mi, source, dyn_mi, occ, value, ind)
+    if: l2_bump_ind(ind, @ deep) != 0
+        return: 1
+    i: 0
+    while: i < n
+        head: l2_cfl_at(mi, cfi, i)
+        if: l2_cfl_class_of(mi, cfi, head) = head
+            if: c.fprintf(l2_out, "%sif: l2_cfk%d = %d\n", ind, self_t, k) < 0
+                return: 1
+            if: l2_emit_class_admit(mi, head, t, form, occ_mi, source, dyn_mi, occ, value, deep) != 0
+                return: 1
+            if: c.fprintf(l2_out, "%s---\n", ind) < 0
+                return: 1
+            k: k + 1
+        ---
         i: i + 1
     ---
 return: 0
@@ -32510,6 +32763,9 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             hid: l2_cfl_at(mi, fi, 0)
             nhid: l2_m_dyn[hid]
     ---
+    # The class of the occurrence this call selected, chosen once, before the actuals (l2_emit_call_select).
+    if: ncls > 1 && l2_emit_call_select(mi, fi, self_t, ind) != 0
+        return: 1
     acts: 0
     hides: 0
     l2_alloc_kind: 4
@@ -32561,7 +32817,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             ---
         else:
             if: l2_cf_get(idx, t) >= 0
-                if: l2_cf_actual_emit(mi, a0, actual_span, l2_act_tx(acts, t)) != 0
+                if: l2_cf_actual_emit(mi, a0, actual_span, ind, l2_act_tx(acts, t)) != 0
                     return: l2_prep_drop(acts, hides)
                 ---
             ---
@@ -32575,9 +32831,9 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             if: l2_nsty_get(idx, t) >= 0
                 occ_mi: l2_occ_actual(mi, a0, actual_span)
             if: occ_mi >= 0
-                if: l2_cf_actual_emit(mi, a0, actual_span, l2_act_tx(acts, t)) != 0
+                if: l2_cf_actual_emit(mi, a0, actual_span, ind, l2_act_tx(acts, t)) != 0
                     return: l2_prep_drop(acts, hides)
-                if: l2_emit_occ_admit(mi, l2_input_schema(idx, t), l2_schema_method(occ_mi), l2_act_tx(acts, t)\data, ind) != 0
+                if: l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 1, occ_mi, @ source, 0 - 1, l2_act_tx(acts, t)\data, ind) != 0
                     l2_prep_drop(acts, hides)
                     return: l2_error(l2_src, node, "internal: an occurrence was not admitted to its formal")
                 ---
@@ -32595,7 +32851,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         # A letter goes to a typed formal as its payload, admitted (D-57).
         if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_is_letter_name(mi, a0\value) != 0 && l2_payload_expr(l2_act_tx(acts, t)) != 0
             return: l2_prep_drop(acts, hides)
-        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_admit(mi, l2_nsty_get(idx, t), l2_act_tx(acts, t)\data, ind) != 0
+        if: occ_mi < 0 && actual_span = 1 && l2_nsty_get(idx, t) >= 0 && l2_untyped_graph(mi, a0\value) != 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 2, 0 - 1, @ source, 0 - 1, l2_act_tx(acts, t)\data, ind) != 0
             return: l2_prep_drop(acts, hides)
         # D-105 native (steps/d105-native.md): the actual of a formal admitted by name is recorded before
         # the call (l2_d105_emit_admit). An occurrence already registered its pair map above.
@@ -32603,7 +32859,7 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
         dyn_mi: 0 - 1
         if: l2_d105_dynamic(@ source) != 0
             dyn_mi: mi
-        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_model_admit(mi, l2_input_model(idx, t), @ source, l2_act_tx(acts, t)\data, ind, 0, 0, -1, dyn_mi, idx, t) != 0
+        if: occ_mi < 0 && l2_cf_get(idx, t) < 0 && l2_nsty_get(idx, t) >= 0 && l2_emit_formal_admits(mi, idx, cfi, ncls, self_t, t, 3, 0 - 1, @ source, dyn_mi, l2_act_tx(acts, t)\data, ind) != 0
             return: l2_prep_drop(acts, hides)
         written: written + 1
     ---
@@ -35894,6 +36150,8 @@ fn: l2_d105e_room () int
         return: 1
     if: l2_d105_ints(@ l2_d105e_tmi, l2_d105e_n, want) != 0 || l2_d105_ints(@ l2_d105e_tk, l2_d105e_n, want) != 0
         return: 1
+    if: l2_d105_ints(@ l2_d105e_soft, l2_d105e_n, want) != 0
+        return: 1
     p: l2_vec_grow((cast: (@: void) l2_d105e_at), l2_d105e_n, want, c.sizeof(@: char))
     if: p = 0
         return: 1
@@ -36038,6 +36296,7 @@ return: 0
 fn: l2_d105_reset () int
     l2_d105s_n: 0
     l2_d105e_n: 0
+    l2_cfa_n: 0
     l2_d105t_n: 0
     l2_d105a_n: 0
     l2_d105a_done: 0
@@ -36072,9 +36331,14 @@ return: 0
 
 # D-105 native: formal fk of fmi is passed on, as it is, to formal tk of tmi at `at` (recorded once).
 fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) int
+return: l2_d105_edge_add(fmi, fk, tmi, tk, at, 0)
+
+# The edge, hard (0) or soft (1, l2_d105e_soft): a soft edge is no proof that a candidate it brings reaches the input,
+# so it is kept apart from a hard one between the same places, which is.
+fn: l2_d105_edge_add (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at); int: soft) int
     int: i 0
     while: i < l2_d105e_n
-        if: l2_d105e_fmi[i] = fmi && l2_d105e_fk[i] = fk && l2_d105e_tmi[i] = tmi && l2_d105e_tk[i] = tk
+        if: l2_d105e_fmi[i] = fmi && l2_d105e_fk[i] = fk && l2_d105e_tmi[i] = tmi && l2_d105e_tk[i] = tk && l2_d105e_soft[i] = soft
             return: 0
         i: i + 1
     ---
@@ -36085,6 +36349,7 @@ fn: l2_d105_edge (int: fmi; int: fk; int: tmi; int: tk; const: @(LmP0Node at)) i
     l2_d105e_tmi[l2_d105e_n]: tmi
     l2_d105e_tk[l2_d105e_n]: tk
     l2_d105e_at[l2_d105e_n]: (cast: (@: LmP0Node) at)
+    l2_d105e_soft[l2_d105e_n]: soft
     l2_d105e_n: l2_d105e_n + 1
 return: 0
 
@@ -36175,6 +36440,116 @@ fn: l2_d105_note_return (int: mi; @: LmP0Field first; int: n; const: @(LmP0Node 
     if: n < 1 || l2_colon_ret_ty(mi, @ type) != 0 || l2_pointer_depth(type) = 0
         return: 0
 return: l2_d105_note(mi, mi, -1, first, n, at)
+
+# Room for one more row of the formal-call facts (l2_cfa_*).
+fn: l2_cfa_room () int
+    int: want
+    @: void p
+    if: l2_cfa_n < l2_cfa_cap
+        return: 0
+    want: l2_cap_next(l2_cfa_cap, l2_cfa_n + 1)
+    if: want < 0
+        l2_alloc_err: 2
+        return: 1
+    if: l2_d105_ints(@ l2_cfa_mi, l2_cfa_n, want) != 0 || l2_d105_ints(@ l2_cfa_fi, l2_cfa_n, want) != 0 || l2_d105_ints(@ l2_cfa_j, l2_cfa_n, want) != 0
+        return: 1
+    if: l2_d105_ints(@ l2_cfa_kind, l2_cfa_n, want) != 0 || l2_d105_ints(@ l2_cfa_ty, l2_cfa_n, want) != 0 || l2_d105_ints(@ l2_cfa_sp, l2_cfa_n, want) != 0 || l2_d105_ints(@ l2_cfa_span, l2_cfa_n, want) != 0
+        return: 1
+    p: l2_vec_grow((cast: (@: void) l2_cfa_a0), l2_cfa_n, want, c.sizeof(@: char))
+    if: p = 0
+        return: 1
+    l2_cfa_a0: (cast: (@@: LmP0Field) p)
+    p: l2_vec_grow((cast: (@: void) l2_cfa_at), l2_cfa_n, want, c.sizeof(@: char))
+    if: p = 0
+        return: 1
+    l2_cfa_at: (cast: (@@: LmP0Node) p)
+    l2_cfa_cap: want
+return: 0
+
+# One row: 1 when there is no memory.
+fn: l2_cfa_row (int: mi; int: fi; int: j; int: kind; int: ty; int: sp; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
+    if: l2_cfa_room() != 0
+        return: 1
+    l2_cfa_mi[l2_cfa_n]: mi
+    l2_cfa_fi[l2_cfa_n]: fi
+    l2_cfa_j[l2_cfa_n]: j
+    l2_cfa_kind[l2_cfa_n]: kind
+    l2_cfa_ty[l2_cfa_n]: ty
+    l2_cfa_sp[l2_cfa_n]: sp
+    l2_cfa_span[l2_cfa_n]: span
+    l2_cfa_a0[l2_cfa_n]: a0
+    l2_cfa_at[l2_cfa_n]: (cast: (@: LmP0Node) at)
+    l2_cfa_n: l2_cfa_n + 1
+return: 0
+
+# The D-105 facts of actual j of a call into idx, written a0 in method mi at `at`: idx's own for a call of idx; through
+# callable formal fi of mi they are kept for the methods that reach the formal (l2_cfa_apply) -- the contract is no
+# callee.
+fn: l2_cfa_note (int: mi; int: idx; int: fi; int: j; @: LmP0Field a0; int: span; const: @(LmP0Node at)) int
+    if: fi < 0
+        return: l2_d105_note(mi, idx, j, a0, span, at)
+    if: l2_cfa_row(mi, fi, j, 1, 0 - 1, 0 - 1, a0, span, at) != 0
+        return: l2_alloc_or(l2_src, at, "out of memory")
+return: 0
+
+fn: l2_cfa_source (int: mi; int: idx; int: fi; int: j; int: ty; const: @(LmP0Node at)) int
+    if: fi < 0
+        return: l2_d105_source(idx, j, ty, at)
+    if: l2_cfa_row(mi, fi, j, 2, ty, 0 - 1, 0, 0, at) != 0
+        return: l2_alloc_or(l2_src, at, "out of memory")
+return: 0
+
+# 1 when there is no memory, as l2_d105x_add.
+fn: l2_cfa_anchor (int: mi; int: idx; int: fi; int: j; int: smi; int: sk) int
+    if: fi < 0
+        return: l2_d105x_add(smi, sk, idx, j)
+return: l2_cfa_row(mi, fi, j, 3, smi, sk, 0, 0, 0)
+
+# Once the flow is closed (l2_cfl_close), the facts kept for each call through a callable formal are given to every
+# method that reaches the formal, each into its own formal: analysis metadata, which asks of no method what the call
+# does not select.  A static candidate a method's Consumer does not admit (l2_d105_fits) gives that method no record:
+# its class refuses the candidate when it is the selected one (l2_emit_class_admit).  A place handed on is a soft edge
+# (l2_d105_edge_add): a candidate it brings that a method does not admit is refused where that class forms the input.
+fn: l2_cfa_apply () int
+    int: r 0
+    int: i
+    int: n
+    while: r < l2_cfa_n
+        n: l2_cfl_count(l2_cfa_mi[r], l2_cfa_fi[r])
+        i: 0
+        while: i < n
+            if: l2_cfa_to(r, l2_cfl_at(l2_cfa_mi[r], l2_cfa_fi[r], i)) != 0
+                return: 1
+            i: i + 1
+        ---
+        r: r + 1
+    ---
+return: 0
+
+fn: l2_cfa_to (int: r; int: m) int
+    L2ReferenceSource: source
+    int: j l2_cfa_j[r]
+    int: ty l2_cfa_ty[r]
+    int: req
+    if: m < 0 || m >= l2_m_n || j < 0 || j >= l2_m_arity[m]
+        return: 0
+    if: l2_cfa_kind[r] = 3
+        if: l2_d105x_add(l2_cfa_ty[r], l2_cfa_sp[r], m, j) != 0
+            return: l2_alloc_or(l2_src, 0, "out of memory")
+        return: 0
+    ---
+    if: l2_cfa_kind[r] = 1
+        l2_reference_source(l2_cfa_a0[r], l2_cfa_span[r], l2_cfa_mi[r], @ source)
+        if: source.method >= 0
+            return: l2_d105_edge_add((source.method), (source.place), m, j, l2_cfa_at[r], 1)
+        ty: source.layout
+    ---
+    if: ty = -1
+        return: 0
+    req: l2_input_schema(m, j)
+    if: req != -1 && ty != req && l2_d105_fits(ty, req, m, j) = 0
+        return: 0
+return: l2_d105_source(m, j, ty, l2_cfa_at[r])
 
 # A receiving instruction needs maps, not a false publication into its
 # pointer-holder. The existing compiler edge table uses target method -1
@@ -37206,6 +37581,12 @@ fn: l2_d105_possible (int: i; int: req) int
         return: 0
     while: e < l2_d105e_n
         if: l2_d105e_tmi[e] = l2_d105s_mi[i] && l2_d105e_tk[e] = l2_d105s_k[i] && l2_d105e_fmi[e] >= 0 && l2_d105_has(l2_d105e_fmi[e], l2_d105e_fk[e], l2_d105s_ty[i]) != 0
+            # COPIED-METHOD-DECLARED-FORMAL: a soft edge brings its candidate only when the method's class is the one a
+            # call through a callable formal selects -- no proof that a call is incompatible.
+            if: l2_d105e_soft[e] != 0
+                found: 1
+                e: e + 1
+                continue
             # RECEPTION-EDGE-DEBTS (f): at a result, only the return of a value of opaque type admits its value when
             # the program runs as the method's implicit `implements`; any other return's admission is a proof.
             if: l2_d105s_k[i] = -1 && l2_d105_opaque_place(l2_d105e_fmi[e], l2_d105e_fk[e]) = 0 && (l2_d105e_fk[e] != -1 || l2_m_ret[l2_d105e_fmi[e]] != 16)
@@ -38246,17 +38627,20 @@ fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     ---
 return: 0
 
-# Whether the admission into input tk of callable tmi reads its requirement in the receiving occurrence's space: a free
-# input (l2_free_admit) of a callable whose body reads through `node` (l2_m_unit_ref), required to a unit-level
-# named declaration.
+# Whether the admission into input tk of callable tmi reads its requirement in the receiving occurrence's space: a
+# declared Structure formal or a free input (l2_free_admit) of a callable whose body reads through `node`
+# (l2_m_unit_ref), required to a unit-level named declaration (COPIED-METHOD-DECLARED-FORMAL: free or declared, one
+# receiving contract).
 fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
-    if: tmi < 0 || tmi >= l2_m_n || tk < l2_m_arity[tmi] || tk >= l2_m_arity[tmi] + l2_m_dyn[tmi]
+    if: tmi < 0 || tmi >= l2_m_n || tk < 0 || tk >= l2_m_arity[tmi] + l2_m_dyn[tmi]
         return: 0
     if: req < 0 || req >= l2_ns_n || l2_schema_kind(req) != 1 || l2_ns_parent[req] >= 0 || l2_ns_local[req] >= 0
         return: 0
-    if: l2_free_admit(tmi, tk - l2_m_arity[tmi]) = 0 || c.strcmp(l2_m_unit_ref(tmi), "node") != 0
+    if: c.strcmp(l2_m_unit_ref(tmi), "node") != 0
         return: 0
-return: 1
+    if: tk < l2_m_arity[tmi]
+        return: (cast: (int) (l2_nsty_get(tmi, tk) >= 0))
+return: l2_free_admit(tmi, tk - l2_m_arity[tmi])
 
 # The requirement of a RECEIVING admission: [of, [node], slot] at its model operand (l2_rw_node_read), the unit child
 # of named declaration req in the space the occurrence its CALL or EXEC selects receives in.
@@ -40037,7 +40421,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
                         cand: l2_own_nsty_get(oi)
                     ---
                 ---
-                if: l2_rw_d105_need(node, idx, k, cand, @ need) != 0
+                if: l2_rw_d105_need(node, l2_call_receiver(idx, formal_call, hid), k, cand, @ need) != 0
                     return: 1
                 holder: site
                 l2_reference_source(a, span, l2_rw_mi, @ reference_source)
@@ -40047,7 +40431,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
                     reference_source.method: -1
                     reference_source.place: -1
                 ---
-                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(idx, k), @ reference_source, 0, -1, idx, k, @ holder) != 0
+                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(l2_call_receiver(idx, formal_call, hid), k), @ reference_source, 0, -1, l2_call_receiver(idx, formal_call, hid), k, @ holder) != 0
                     return: 1
                 if: l2_empty_actual(a, idx, k) != 0
                     if: l2_rw_empty_arg(l2_nsty_get(idx, k), holder, @ arg) != 0

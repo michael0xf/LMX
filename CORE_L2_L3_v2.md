@@ -579,9 +579,14 @@ the admission is marked RECEIVING and the kernel reads its requirement with
 the selected occurrence as the activation's data, the value and everything
 else in the caller's
 ([ledger](steps/fable-continuation-20261003.md#merge-parent)). A declared
-Structure formal of a copied occurrence is not yet admitted in that space
-([COPIED-METHOD-DECLARED-FORMAL](steps/defects.md#copied-method-declared-formal),
-open).
+Structure formal is admitted the same way: free or declared, one receiving
+contract. Through a callable formal the class of the occurrence the formal
+holds is chosen once, before the actuals, by the holder that occurrence's
+parent links reach -- the unit and any copy of it alike -- and admits each
+actual by its own model in that occurrence's space; a class whose model does
+not admit a candidate refuses it only when it is the selected one, as the
+caller's implicit `implements`
+([ledger](steps/fable-continuation-20261003.md#copied-formal)).
 
 Nothing on this route has a ceiling. The search for a coordinate space holds
 its candidates and the places it reaches in storage sized from the program; a

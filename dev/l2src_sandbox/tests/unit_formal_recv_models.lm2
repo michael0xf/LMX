@@ -1,0 +1,55 @@
+# COPIED-METHOD-DECLARED-FORMAL, the receiving contract of the selected callable: run's formal g, of contract getq
+# (Wide: q; int: k), receives getq, getr (Other: q; ...) and getz (Zed: q; ...) -- signatures the structural rule
+# admits.  The Wide w (pad 9, x 4) g is given is admitted to the model of the callable g holds and to no other: to
+# Other by name, x being w's x and not its first place (b: 40 + 1), never to the contract's Wide or to Zed while g
+# holds getq or getr.  While g holds getz the admission is refused where run forms the input, before the next actual
+# tick() is evaluated, as run's implicit `implements`, which run's handler takes (77).  HEAD admitted to the contract
+# and read Other's x at w's first place (b: 91).  tick() ran twice (tickcount reads the graph's cell).  Exit 7; 81 or 82
+# otherwise.
+Wide:
+    int: pad 9
+    int: x 4
+end: Wide
+Other:
+    int: x 5
+end: Other
+Zed:
+    int: z 6
+    int: x 7
+end: Zed
+int: ticks 0
+fn: tick () int
+    node\ticks: node\ticks + 1
+    return: 1
+end: tick
+fn: tickcount () int
+    return: node\ticks
+end: tickcount
+fn: getq (Wide: q; int: k) int
+    return: q\x + k
+end: getq
+fn: getr (Other: q; int: k) int
+    return: q\x * 10 + k
+end: getr
+fn: getz (Zed: q; int: k) int
+    return: q\z * 100 + k
+end: getz
+fn: run (getq: g; Wide: w) int
+    int: r 0
+    r: g(w; tick())
+    catch: implements ()
+        r: 77
+    ---
+    return: r
+end: run
+w: merge: Wide
+int: a run(getq; w)
+int: b run(getr; w)
+int: c run(getz; w)
+int: ok 7
+if: a != 5 || b != 41 || c != 77
+    ok: 81
+if: tickcount() != 2
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

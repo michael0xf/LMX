@@ -1,0 +1,19 @@
+# READ-FIELD-CLOSURE (T7), an explicit path addresses the graph: model's own `node\cnt` in the node w reads the copy of
+# its lexical parent made at the merge, 7 -- not the root's binding 9 or the unit's cell 11 (docs #dynamic: explicit
+# access is not replaced by the current call's dynamic value).  Exit 7; 81 otherwise.
+int: cnt 7
+fn: model (int: y) int
+    return: node\cnt
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5)
+cnt: 9
+poke()
+int: result w()
+int: ok 7
+if: result != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,15 @@
+# T7-LOCAL-NAMED-UNIT (steps/defects.md), a required positive, red: the lexical fallback of a free name in a callable
+# merge's node.  model and wrap are methods of the part unit_merge_parent_t7_part_part.lm2, whose root declares cnt;
+# this root declares none and has no binding of it.  poke (the part's) sets the part root's cnt to 5 before the merge
+# -- the copy of model's lexical parent holds 5 -- and to 11 after.  w(): model forwards cnt absent, and its local S
+# reads its own lexical lookup, the copy: 5.  The translation refuses S's cnt ("unresolved name": S resolves in the
+# program's unit, which has no cnt).  Exit 7; 81 otherwise.
+poke(5)
+@: w wrap(5)
+poke(11)
+int: result w()
+int: ok 7
+if: result != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

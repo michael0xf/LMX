@@ -9678,8 +9678,8 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_model_xpart_walk.lm2'; Source = 'unit_merge_parent_model_xpart.lm2'; Parts = @('unit_merge_parent_model_xpart_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
-    # COPIED-CALLABLE-ACTUAL (steps/defects.md), a required positive registered red: recv(b1\peek) hands the formal
-    # the unit's own occurrence from a native root (81), the path's from a walked one (7); each row runs both.
+    # COPIED-CALLABLE-ACTUAL (steps/defects.md, fixed): recv(b1\peek) hands the formal the occurrence the path selects,
+    # natively as walked (until 2026-10-08 natively the unit's own: 81); each row runs both roots.
     [pscustomobject]@{ Name = 'unit_merge_parent_callable_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_callable_actual_walk.lm2'; Source = 'unit_merge_parent_callable_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -9690,18 +9690,88 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_borrowed_walk.lm2'; Source = 'unit_merge_parent_t7_borrowed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5); NativeMethods = @(3); Absent = @(); Debt = @() },
-    # T7-LOCAL-NAMED-UNIT (steps/defects.md), a required positive registered red: a local named Structure's code in
-    # a callable merge's node reads the program's unit (9), not the node's copy (7); HEAD the same.
+    # READ-FIELD-CLOSURE (T7): a local named Structure's free name in a callable merge's node takes the caller's
+    # binding, 9 (docs #dynamic).  Registered red until 2026-10-08 with 7 expected -- a wrong oracle (Codex's audit).
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_proc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_proc_walk.lm2'; Source = 'unit_merge_parent_t7_local_proc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3); NativeMethods = @(2); Absent = @(); Debt = @() },
-    # COPIED-METHOD-DECLARED-FORMAL (steps/defects.md), a required positive registered red: a copied method's declared
-    # Structure formal is admitted in the caller's space while its body reads its own (HEAD the same).
+    # COPIED-METHOD-DECLARED-FORMAL (steps/defects.md, fixed): a copied method's declared Structure formal is admitted
+    # in the space of the occurrence the path selects, the one its body reads (until 2026-10-08 the caller's).
     [pscustomobject]@{ Name = 'unit_merge_parent_method_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_method_formal_walk.lm2'; Source = 'unit_merge_parent_method_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    # COPIED-METHOD-DECLARED-FORMAL: the routes by name (a control: HEAD passed it too), by callable reference (the
+    # copy's occurrence and the unit's, one native code); two classes of formation in two spaces, the copy's first;
+    # the selected callable's own model (another model by name, a refusal of the selected class only, before the next
+    # actual); a nonidentity ordinal and LAST; a write through the formal; a completed pair reused; an absent input
+    # (a control); a model expression of the callee's own.
+    [pscustomobject]@{ Name = 'unit_formal_recv_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_name_walk.lm2'; Source = 'unit_formal_recv_name.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_reference_walk.lm2'; Source = 'unit_formal_recv_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); NativeMethods = @(1,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_classes.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_classes_walk.lm2'; Source = 'unit_formal_recv_classes.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4); NativeMethods = @(2,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_models.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6,7,8,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_models_walk.lm2'; Source = 'unit_formal_recv_models.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,6,7,8); NativeMethods = @(5,9); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_static.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_static_walk.lm2'; Source = 'unit_formal_recv_static.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5,6); NativeMethods = @(3,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_ordinal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_ordinal_walk.lm2'; Source = 'unit_formal_recv_ordinal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_write_walk.lm2'; Source = 'unit_formal_recv_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_reuse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_reuse_walk.lm2'; Source = 'unit_formal_recv_reuse.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_absent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_absent_walk.lm2'; Source = 'unit_formal_recv_absent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_formal_recv_context_walk.lm2'; Source = 'unit_formal_recv_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    # READ-FIELD-CLOSURE (T7), the sources of a free name in a callable merge's node (docs #dynamic): the caller's
+    # binding (9, not the unit's cell 11 or the copy's 7), a calling method's formal (40), an explicit path (the copy's 7).
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_caller.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_caller_walk.lm2'; Source = 'unit_merge_parent_t7_caller.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_formal_walk.lm2'; Source = 'unit_merge_parent_t7_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_path_walk.lm2'; Source = 'unit_merge_parent_t7_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    # T7-LOCAL-NAMED-UNIT (steps/defects.md), required positives registered red: a model's local S selects the unit
+    # method get in the program's unit natively (117, the walk 77); the lexical fallback through a part's root is
+    # refused at translation (S resolves cnt in the program's unit) -- its pins wait for its lowering.
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_call_walk.lm2'; Source = 'unit_merge_parent_t7_local_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_part_walk.lm2'; Source = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # T7-TRAILER-ONLY-MODEL-CRASH: a model whose only line is its trailer `return:` has no body Structure, and the T7
     # count and frame passes read one: the translator crashed, whether or not anything called the merge.  The node
     # walks the trailer alone, as a merge result's steps and a walked method's do.  trailer_only_copy: make's own k is

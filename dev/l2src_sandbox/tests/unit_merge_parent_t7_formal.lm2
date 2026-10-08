@@ -1,0 +1,25 @@
+# READ-FIELD-CLOSURE (T7), the caller's nearest binding of a free name is its formal: callw (int: cnt) builds g by
+# wrap(5) and calls g(); model's local S reads cnt, which model forwards.  callw(40) gives 40 -- not the root's 9, the
+# unit's cell 11 or the copy made at callw's merge.  Exit 7; 81 otherwise.
+int: cnt 7
+fn: model (int: y) int
+    S:
+        int: v 0
+        v: cnt
+    S
+    return: S\v
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+sub: poke ()
+    node\cnt: 11
+fn: callw (int: cnt) int
+    @: g wrap(5)
+    return: g()
+cnt: 9
+poke()
+int: result callw(40)
+int: ok 7
+if: result != 40
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

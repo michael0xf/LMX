@@ -1,8 +1,9 @@
-# COPIED-METHOD-DECLARED-FORMAL (steps/defects.md), a required positive, red: a copied method's DECLARED Structure
-# formal.  b1, a copy of Box, holds getq's own occurrence under a copy of the unit; `b1\getq(w)` admits w to the
-# caller's rendering of getq's formal type, while that occurrence's body reads q through the Wide of its own node:
-# "a field of a formal admitted by name is not carried by its value", natively and walked -- on HEAD too.  The free
-# input of the same occurrence is admitted in its own space (unit_merge_parent_model_method).  Exit 7.
+# COPIED-METHOD-DECLARED-FORMAL (steps/defects.md, fixed 2026-10-08): a copied method's DECLARED Structure formal.
+# b1, a copy of Box, holds getq's own occurrence under a copy of the unit; `b1\getq(w)` admits w to getq's formal in
+# the space of the occurrence the path selects (natively `<occurrence>\parent`, walked a RECEIVING admission) -- the
+# space its body reads q in, through the Wide of its own node -- as the free input of the same occurrence is
+# (unit_merge_parent_model_method).  Until then the admission rendered the caller's Wide: "a field of a formal
+# admitted by name is not carried by its value", natively and walked.  Exit 7.
 Wide:
     int: pad 9
     int: x 2

@@ -1,0 +1,41 @@
+# COPIED-METHOD-DECLARED-FORMAL, a static candidate through a callable formal: runs gives g the named Structure Wide
+# itself (pad 9, x 4), a candidate the translation knows.  The class of the callable g holds admits it by its own
+# model -- getq's Wide (4 + 1), getr's Other by name (40 + 1) -- and the class of getz, whose Zed asks z, refuses it
+# where runs forms the input, as runs' implicit `implements`, which runs' handler takes (77); no other class's model is
+# asked.  HEAD admitted to the contract (getr read Wide's first place: 91).  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 4
+end: Wide
+Other:
+    int: x 5
+end: Other
+Zed:
+    int: z 6
+    int: x 7
+end: Zed
+fn: getq (Wide: q; int: k) int
+    return: q\x + k
+end: getq
+fn: getr (Other: q; int: k) int
+    return: q\x * 10 + k
+end: getr
+fn: getz (Zed: q; int: k) int
+    return: q\z * 100 + k
+end: getz
+fn: runs (getq: g) int
+    int: r 0
+    r: g(Wide; 1)
+    catch: implements ()
+        r: 77
+    ---
+    return: r
+end: runs
+int: a runs(getq)
+int: b runs(getr)
+int: c runs(getz)
+int: ok 7
+if: a != 5 || b != 41 || c != 77
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -758,6 +758,10 @@ Current bounded implementation, with no DONE claim:
   (Codex, answer to PROGRESS 5) -- with COPIED-CALLABLE-ACTUAL (natively a callable actual given by a path through a
   copy is the unit's occurrence), T7-LOCAL-NAMED-UNIT (a model's local named Structure in a callable merge's node reads
   the program's unit) and NODE-PATH-ANON-STRUCT. Gates and the comparison to opus_full_61: section 122, Measured.
+  Checkpoint 2026-10-08 (the next, [section 123](steps/fable-continuation-20261003.md#copied-formal)):
+  COPIED-METHOD-DECLARED-FORMAL and COPIED-CALLABLE-ACTUAL fixed, with CALLABLE-FORMAL-OTHER-MODEL and
+  CALLABLE-FORMAL-CLASS-REMAINDER found and fixed on the way; T7-LOCAL-NAMED-UNIT re-scoped by Codex's oracle audit
+  (its first witness observed the right value) and next. G4 stays open.
 - [x] G4 bounded external-name ownership and transactional copy/merge:
   `critical_graph_source_names_07` GREEN, 290 targets; all 107 selftests ran.
   The name-service witness executes 93 checks, including late merge rollback,
@@ -1978,6 +1982,25 @@ debt).
 Next (Codex K03-READ-FIELD-CLOSURE-20261008-31, answer to PROGRESS 5): COPIED-METHOD-DECLARED-FORMAL
 (steps/defects.md#copied-method-declared-formal), the required dependency before PATH-STRUCTURE-LEAF
 (steps/defects.md#path-structure-leaf; by the parent plan, Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01).
+COPIED-METHOD-DECLARED-FORMAL done, checkpoint INCOMPLETE, with COPIED-CALLABLE-ACTUAL ([section
+123](steps/fable-continuation-20261003.md#copied-formal); Codex K03-READ-FIELD-CLOSURE-20261008-31, the answer to
+PROGRESS 5 and the reviews of PROGRESS 6 and 7): a declared Structure formal is admitted at a call to its requirement
+read in the space of the occurrence the call selected, as a free input is -- natively under the receiver's
+`l2_recv_ref`, walked a RECEIVING admission; through a callable formal the class of the selected occurrence is chosen
+once, before the actuals, by the holder its parent links reach (every class tested, no remainder) and admits by its
+own model in that occurrence's space; the D-105 facts of such a call reach every method that reaches the formal as
+analysis metadata, a class refusing a candidate its Consumer does not admit only when selected (the caller's implicit
+`implements`); a callable actual given by a path is the occurrence the path selects. Found and fixed on the way:
+CALLABLE-FORMAL-OTHER-MODEL (the contract's model admitted, the selected callable's read by position) and
+CALLABLE-FORMAL-CLASS-REMAINDER (a copy's occurrence run as the last class). Codex's oracle audit: T7-LOCAL-NAMED-UNIT's
+first witness observed the caller's binding, 9, by the dynamic rule -- the oracle 7 was wrong, the row now expects 9;
+the unit-reference policy defect is witnessed by `unit_merge_parent_t7_local_call` (117 native, 77 walked) and the
+lexical fallback's producer through a part (`unit_merge_parent_t7_part`) is refused at translation. Gates on the final bytes (`l2trans.lm1` blob 0b4fb72e, `lmx_walk.lm1` 0096e93c unchanged): kernel `opus_kernel_59` GREEN297 (114 selftests ran, staged blob 0b4fb72e), focused `opus_focus_ff_01` (615 targets; red exactly its nine opus_full_63 baseline rows (unit_callable_formal_free_names_self_walk, unit_callable_formal_unfollowed_actual, unit_copy_call_addressed, unit_copy_call_from_method, unit_copy_call_other_owner, unit_eternal_shape, unit_held_actual_among_methods, unit_held_actual_two_models, unit_letter_alias_before, their messages unchanged), the unit_node_path_anon_struct pair, and the registered T7-LOCAL-NAMED-UNIT rows unit_merge_parent_t7_local_call, unit_merge_parent_t7_part and its twin; the chain's own comparison stopped there on a wrong expectation of mine -- it also named unit_merge_parent_t7_local_call_walk, a row that runs the methods-walked translation and is green, 77 -- and the L3 and full gates ran after it on the same hashed bytes), L3 `opus_l3_56` (all 11 suites ok, type budget ok), full `opus_full_65` RED68/2616 -- against `opus_full_63` FAIL→OK 6 (the unit_merge_parent_method_formal, unit_merge_parent_callable_actual and unit_merge_parent_t7_local_proc pairs), OK→FAIL 0, added 30 (27 OK, 3 red: unit_merge_parent_t7_local_call and the unit_merge_parent_t7_part pair), removed 0; no recorded red message changed.  `opus_full_64`, on the same bytes, was stopped by Claude Code for low machine memory at 5781 logs and run again fresh as `opus_full_65`.
+Open: T7-LOCAL-NAMED-UNIT (required positives red), NODE-PATH-ANON-STRUCT, PATH-STRUCTURE-LEAF; coverage debts as in
+section 122, and the walked selector: a method calling through a callable formal with several classes stays native
+under --walk-methods (`l2_rw_machine`), an implementation debt its walked twins pin, not a rule of the language.
+Next (Codex): T7-LOCAL-NAMED-UNIT -- the shared actual-occurrence lexical/unit projection through the real parent and
+source-coordinate links, no program-unit fallback for a copied, nested or part context -- then PATH-STRUCTURE-LEAF.
 
 ### K04 — Callable actuals and hidden inputs
 

@@ -1,0 +1,27 @@
+# COPIED-METHOD-DECLARED-FORMAL, the route by name: b1, a copy of Box, holds use's and getq's own occurrences under a
+# copy of the unit.  `b1\use(w)` admits w to use's declared formal in the space of the occurrence the path selects,
+# and use's body calls getq by name: the copy's getq, selected through use's own unit, the copy, whose formal q is
+# admitted in that same space.  A route control: HEAD passed it too.  4 * 10 + 4.  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+fn: getq (Wide: q) int
+    return: q\x
+end: getq
+fn: use (Wide: q) int
+    return: getq(q) * 10 + q\x
+end: use
+Box:
+    int: v 0
+    fn: use
+end: Box
+b1: merge: Box
+w: merge: Wide
+w\x: 4
+int: r b1\use(w)
+int: ok 7
+if: r != 44
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,30 @@
+# COPIED-METHOD-DECLARED-FORMAL, a nonidentity correspondence through a copied method's declared formal: b1\getm(c)
+# admits c, a Cand {pad; x; x}, to getm's formal of Model {x} in the copy's space; the ordinal `[0]x` reads Cand's
+# first x (1) and the bare `x` -- the LAST occurrence -- its last x (9).  19.  Exit 7; 81 otherwise.
+Model:
+    int: x 0
+end: Model
+Cand:
+    int: pad 5
+    int: x 1
+    int: x 9
+end: Cand
+fn: getm (Model: q) int
+    int: a 0
+    int: b 0
+    a: q\[0]x
+    b: q\x
+    return: a * 10 + b
+end: getm
+Box:
+    int: v 0
+    fn: getm
+end: Box
+b1: merge: Box
+c: merge: Cand
+int: r b1\getm(c)
+int: ok 7
+if: r != 19
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

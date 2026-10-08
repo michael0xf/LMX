@@ -1,0 +1,26 @@
+# T7-LOCAL-NAMED-UNIT (steps/defects.md), a required positive, red: model's local S calls the unit method get, and model
+# calls get itself; get reads node\cnt.  In the node w both run over the copy of the unit made at the merge, which
+# holds 7; the root's poke writes the original's cnt 11 after.  S's get is selected through S's lexical links -- the
+# copy's get -- as model's is: 7 * 10 + 7.  Native and root-walked code selects S's get in the program's unit
+# (l2_m_unit_ref gives a method's own named Structure l2_program_unit): 11 * 10 + 7.  Exit 7; 81 otherwise.
+int: cnt 7
+fn: get () int
+    return: node\cnt
+fn: model (int: y) int
+    S:
+        int: v 0
+        v: get()
+    S
+    return: S\v * 10 + get()
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5)
+poke()
+int: result w()
+int: ok 7
+if: result != 77
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

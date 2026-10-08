@@ -791,7 +791,23 @@ Fable принял единственный writer/build-слот по [to_fable
   [MERGE-PARENT-SITE-OVERRIDE](defects.md#merge-parent-site-override),
   [MERGE-PARENT-MODEL-SOURCE](defects.md#merge-parent-model-source), [§122
   журнала](fable-continuation-20261003.md#merge-parent)).
+  Продолжение 2026-10-08: COPIED-METHOD-DECLARED-FORMAL и COPIED-CALLABLE-ACTUAL исправлены (§123 журнала, следующая
+  запись ниже); запись T7-LOCAL-NAMED-UNIT исправлена аудитом оракула Codex.
   Гейты на финальных байтах (`l2trans.lm1` blob 3164952d, `lmx_walk.lm1` 0096e93c): `opus_kernel_58` GREEN297 (114 самотестов, staged blob 3164952d), `opus_focus_rf33_03` (493 цели; красные ровно пять базовых строк `opus_full_61` (`unit_copy_call_addressed`, `unit_copy_call_from_method`, `unit_copy_call_other_owner`, `unit_eternal_shape`, `unit_letter_alias_before`, сообщения те же) и четыре зарегистрированные пары обязательных позитивов: `unit_node_path_anon_struct`, `unit_merge_parent_method_formal`, `unit_merge_parent_callable_actual`, `unit_merge_parent_t7_local_proc`), `opus_l3_55` (все 11 наборов ok, бюджет типов ok), `opus_full_63` RED71/2586: против `opus_full_61` FAIL→OK 0, OK→FAIL 0, добавлено 77 (69 OK, 8 красных — четыре пары), удалено 0; ни одно записанное сообщение красной строки не изменилось. Промежуточные свидетельства, не финальные байты: `opus_kernel_56` RED 2/297 (два самотеста, отставших от правила, исправлены), `opus_full_62` RED73/2582 с регрессией OK→FAIL 4 (вид T7, исправлена).
+- COPIED-METHOD-DECLARED-FORMAL, COPIED-CALLABLE-ACTUAL (Codex K03-READ-FIELD-CLOSURE-20261008-31: ответ на
+  PROGRESS 5, обзоры PROGRESS 6 и 7; [§123 журнала](fable-continuation-20261003.md#copied-formal)): объявленный
+  структурный формальный допускается на вызове к требованию в пространстве выбранного вхождения, как свободный вход
+  (нативно под `l2_recv_ref` приёмника, при обходе — RECEIVING); через параметр-вызываемое класс выбранного вхождения
+  выбирается один раз до фактических аргументов — по держателю, которого достигают связи `parent` вхождения, каждый
+  класс проверяется, остатка нет — и допускает своей моделью в своём пространстве; факты D-105 такого вызова — аналитика
+  для каждого достигающего метода, класс отказывает в недопускаемом кандидате только когда выбран; вызываемый
+  аргумент-путь — вхождение, которое путь выбирает. Найдены и исправлены: CALLABLE-FORMAL-OTHER-MODEL,
+  CALLABLE-FORMAL-CLASS-REMAINDER. Аудит оракула Codex: первый свидетель T7-LOCAL-NAMED-UNIT наблюдал привязку
+  вызывающего (9) по правилу динамики — оракул 7 был неверен; дефект политики единицы свидетельствует
+  `unit_merge_parent_t7_local_call` (117 нативно, 77 при обходе методов), производитель запасного пути через часть
+  (`unit_merge_parent_t7_part`) отказан при трансляции. Контрольная точка неполная; далее T7-LOCAL-NAMED-UNIT (общая
+  проекция единицы фактического вхождения по реальным связям), затем PATH-STRUCTURE-LEAF.
+  Гейты на финальных байтах (`l2trans.lm1` blob 0b4fb72e, `lmx_walk.lm1` 0096e93c не менялся): `opus_kernel_59` GREEN297 (114 самотестов, staged blob 0b4fb72e), `opus_focus_ff_01` (615 целей; красные ровно девять базовых строк `opus_full_63` (`unit_callable_formal_free_names_self_walk`, `unit_callable_formal_unfollowed_actual`, `unit_copy_call_addressed`, `unit_copy_call_from_method`, `unit_copy_call_other_owner`, `unit_eternal_shape`, `unit_held_actual_among_methods`, `unit_held_actual_two_models`, `unit_letter_alias_before`, сообщения те же), пара `unit_node_path_anon_struct` и зарегистрированные строки T7-LOCAL-NAMED-UNIT: `unit_merge_parent_t7_local_call`, `unit_merge_parent_t7_part` и его двойник; собственное сравнение цепочки остановилось на моём неверном ожидании — я внёс и `unit_merge_parent_t7_local_call_walk`, строку трансляции с обходом методов, зелёную (77), — и гейты L3 и полный прошли после него на тех же хешированных байтах), `opus_l3_56` (все 11 наборов ok, бюджет типов ok), `opus_full_65` RED68/2616: против `opus_full_63` FAIL→OK 6 (пары `unit_merge_parent_method_formal`, `unit_merge_parent_callable_actual`, `unit_merge_parent_t7_local_proc`), OK→FAIL 0, добавлено 30 (27 OK, 3 красных: `unit_merge_parent_t7_local_call` и пара `unit_merge_parent_t7_part`), удалено 0; ни одно записанное сообщение красной строки не изменилось. `opus_full_64` на тех же байтах остановлен Claude Code из-за нехватки памяти машины на 5781 логе и прогнан заново как `opus_full_65`.
 - K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23 и ответ по дизайну, K03-OUTPUT-ORACLES-20261007-24;
   LMX_blog/q/q53.md:95-97): вычисленный выход на верхнем уровне тела именованной Structure — имя `receiveMessage: m`,
   результат `b: merge: A`, `int: i getValue()` — не данные и не поле Structure (никогда `Host\m`): он хранится у

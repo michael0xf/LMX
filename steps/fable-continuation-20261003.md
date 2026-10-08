@@ -12565,7 +12565,9 @@ writes cnt after the merge and the copy keeps 7), green in three modes; mutants:
 reads an absent place" in every mode (no crash), with the guard dropped too the old crash, the home closure dropped
 turns `_t7_borrowed` red.  Found by the same census, and registered red (HEAD the same): a model's local named
 Structure's code in the node reads the program's unit, not the node's copy (T7-LOCAL-NAMED-UNIT,
-`unit_merge_parent_t7_local_proc`: 9, where the model's own code would read the copy's 7).
+`unit_merge_parent_t7_local_proc`: 9, where the model's own code would read the copy's 7).  [Corrected in
+[section 123](#copied-formal): the 9 is the caller's binding by the dynamic rule and the oracle 7 was wrong; the policy
+defect is real and witnessed otherwise.]
 
 ### Correspondence through the copy map
 
@@ -12658,8 +12660,8 @@ unresolved name); an unmarked admission reads the caller's model; a RECEIVING ad
 INVALID; a completed pair is reused with no field check even with a field no longer of its type, and a new pair is
 checked field by field and refused.
 
-Open: a copied method's declared Structure formal (COPIED-METHOD-DECLARED-FORMAL, `unit_merge_parent_method_formal`,
-red; HEAD the same) is admitted in the caller's space -- natively the D-105 admission at `l2_emit_call`'s actual,
+Open (fixed in [section 123](#copied-formal)): a copied method's declared Structure formal
+(COPIED-METHOD-DECLARED-FORMAL, `unit_merge_parent_method_formal`, red; HEAD the same) is admitted in the caller's space -- natively the D-105 admission at `l2_emit_call`'s actual,
 walked `l2_rw_recv_req` takes no formal -- while its body reads its own.  The same reference applies to declared
 inputs, but it changes every call admitting a declared Structure formal, and a call through a callable formal with
 several classes (`l2_emit_call_classes`) admits its formal once for classes whose bodies may read different spaces.
@@ -12750,3 +12752,141 @@ a qualified branch (`receiveMessage` binds plain names; a qualified branch holds
 | L3 `opus_l3_55` | all 11 suites ok, type budget ok |
 | full `opus_full_63` | RED 71/2586; against `opus_full_61`: FAIL→OK 0, OK→FAIL 0, added 77 (69 OK, 8 red: the four pairs), removed 0; no recorded red message changed |
 | intermediate | `opus_kernel_56` RED 2/297 (two stale selftests, fixed); `opus_full_62` RED 73/2582, OK→FAIL 4 (the T7 view regression, fixed) |
+
+<a id="copied-formal"></a>
+## 123. A declared formal is received in the space of the selected occurrence (COPIED-METHOD-DECLARED-FORMAL, COPIED-CALLABLE-ACTUAL)
+
+The rule (Codex K03-READ-FIELD-CLOSURE-20261008-31, the answer to PROGRESS 5 and the reviews of PROGRESS 6 and 7;
+`docs/LMX_semantics.en.md#dynamic`, #callables): free or declared, an input has one receiving contract -- its
+requirement is read in the space of the occurrence the boundary selected, as that occurrence's body reads it, and the
+actual is evaluated in the caller.  Through a callable formal, the class of the actual callable already selected
+gives the receiving policy, for that same occurrence -- never every class, their union, a prototype, or the method
+that declares the formal.
+
+### The census
+
+A census stage (the final bytes of section 122 plus stderr markers only) replayed `opus_full_63`'s 2585 recorded
+translations.  Declared Structure formals admitted natively at a call: 513 sites in 186 rows (D-105 498, positional
+12, an occurrence 3), every callee of node policy, callers unit methods or the root; a path call only in
+`unit_merge_parent_method_formal`; no call through a callable formal admitted one.  Calls through a callable formal:
+80 rows; more than one class in 11 -- 8 reach the class emission (the `unit_callable_formal_*` site and free-name
+rows), 3 are the existing limit "a callable built at run time among callables formed differently"; every member of a
+multi-class call a unit-level node-policy method, none built.  One class has members of different receiving policies,
+`unit_held_actual_alike` (a hosted factory's node and two unit methods, number inputs only): a class's receiving
+contract can be compared only where an admission exists.  Callable actuals emitted natively: by name 147, a forwarded
+formal 30, a held name 21, by a path 6 (all six the unit's occurrence).  The census also found, by a probe,
+CALLABLE-FORMAL-OTHER-MODEL: `l2_method_sig_compatible` compares `l2_ft`, the same for every Structure, so a contract
+`getq (Wide: q)` admits `getr (Other: q)`; the call's D-105 facts and static admission were keyed to the contract and
+the run-time admission rendered the contract's model, and getq and getr formed one class: getr read Other's x at
+Wide's first place (exit 29 where 22 is right, three modes, HEAD the same).
+
+### The selector
+
+`l2_emit_call_select`, emitted once right after the occurrence is captured (`l2_c<t>`) and before the first actual:
+class k when the occurrence is the child its holder keeps at a member's slot, `lmx_arena_ref_struct(holder,
+l2_occ_slot(m)) = l2_c<t>`, the holder reached by the occurrence's parent links (`l2_occ_hops`).  The producers of an
+occurrence, censused: the construction makes every method's occurrence a child of the unit at `l2_occ_slot` and sets
+its parent -- the unit for a file-level method (1 link), a part's built root for that part's methods (2; the root is
+the unit's child), the host's occurrence for a nested method (1 + its host's), and a named Structure's procedure is
+the Structure itself, the unit's child where the Structure is the unit's (1); the copier keeps every child's position
+and points a copied Structure's parent at the copy of its parent (or a retained profile's own); a composition absorbs
+only its operand roots, never a unit's child; a callable field (an alias) holds the same occurrence.  So the unit and
+any copy of it classify alike, a copy sharing the original's code but not its parent; one child per slot and one slot
+per method make at most one member's test true.  A member whose holder the links do not reach (a nested or eternal
+named Structure's procedure) keeps the comparison with the occurrence the method's unit holds.  Every class is tested;
+an absent occurrence and one no class holds stop at the shared invariant -- no remainder.  The class bodies keep their
+hidden inputs and dispatch after the actuals.  A mutant with the old comparison turns `unit_formal_recv_classes` red
+(the invariant); a mutant taking the last class instead of the invariant reaches no program (every occurrence has a
+class).
+
+### The receiving contract
+
+A class is formed alike (as before) and receives alike where it admits anything: every declared Structure formal of
+the same model and schema, read in the same kind of space, and the same space for the free inputs it admits
+(`l2_cfl_recv_alike`) -- an emission decision, not an equality of types: structurally compatible models still admit a
+callable and a candidate.  The admission of each declared Structure formal (`l2_emit_formal_admits`) is emitted after
+that actual's single evaluation and conversion and before the next actual: for a call of idx by name or by path,
+idx's formal; through a callable formal, the selected class's head's, under that class's key where the classes
+receive the formal differently, once where they receive it alike -- each in the space of the selected occurrence
+(`l2_recv_ref`, read by `l2_type_inst` alone while the admission is emitted).  A static candidate the selected class's
+Consumer does not admit is refused there, as the caller's implicit `implements`, when that class is the selected one
+(`l2_emit_class_admit`).  Walked, a declared Structure formal of a node-policy callee is a RECEIVING admission
+(`l2_rw_recv_req`), the head's model for a one-class formal call; a call through a formal with several classes keeps
+its method native under `--walk-methods` (`l2_rw_machine`), as before -- an implementation debt, an expected positive,
+not a rule of the language: the walked twins pin that method native until a walked selector exists.
+
+### The facts of a call through a callable formal
+
+Its actuals' D-105 facts are kept as rows by the checks (`l2_cfa_note`, `l2_cfa_source`, `l2_cfa_anchor`) and, once
+the flow is closed, given to every method that reaches the formal, each into its own formal (`l2_cfa_apply`):
+analysis metadata, which asks of no method what the call does not select.  A static candidate a method's Consumer does
+not admit gives that method no record; a place handed on is a soft edge (`l2_d105_edge_add`), whose candidate a
+method's Consumer does not admit is a possible one (`l2_d105_possible`), refused where that class forms the input and
+never for the whole call.  The caller of a call through a callable formal with a Structure formal is an admission site
+(its implicit `implements`).
+
+### A callable actual given by a path
+
+Natively the actual is the occurrence its path selects -- the path walked as a path call's head is (`l2_emit_path`),
+its leaf held in a temporary of its own (`l2_cf_actual_emit`) -- as the walked root's `l2_rw_callable_actual` does; a
+method's name stays the occurrence the method's unit holds.
+
+### Codex's oracle audit of T7-LOCAL-NAMED-UNIT
+
+`unit_merge_parent_t7_local_proc`'s S assigns `v: cnt`, a bare free name; model forwards it as its hidden input and
+the root's call w() passes its own binding, the working value of its cnt (9).  The caller's binding comes first
+(#dynamic); a lexical context copied by merge is only the fallback (model's trampoline reads `l2_self\parent` for an
+absent entry).  The registered oracle 7 was wrong: the row now expects 9 (green in three modes), and section 122's
+sentence carries a correction note.  Positives with a distinct value per source, green in three modes (HEAD the
+same): `unit_merge_parent_t7_caller` (root binding 9, the unit's cell 11, the copy 7: 9), `_t7_formal` (a calling
+method's formal: 40), `_t7_path` (model's explicit `node\cnt`: the copy, 7).  A declaration in the root's body is
+its binding (Codex: the implicit hidden-input use at the call is a use); an uninitialised `int: cnt` read as 0 is that
+run's storage, no default.  The unit-reference policy defect is real, with another witness:
+`unit_merge_parent_t7_local_call` -- model's local S calls the unit method get, which reads `node\cnt`; natively and
+root-walked S selects get in the program's unit (`l2_m_unit_ref` gives a method's own named Structure
+`l2_program_unit`), model selects it through `node`, the copy: 117 where 77 is right; methods-walked 77.  The lexical
+fallback has no lowered producer: a call before the root's declaration is refused ("unbound dynamic input"), a model
+of a part with a built root is refused at S's cnt ("unresolved name": S resolves it in the program's unit) --
+`unit_merge_parent_t7_part`, a required positive red; a callable field as a merge operand is not lowered (43e3ce70).
+Registered red: `unit_merge_parent_t7_local_call` (its walked twin runs the methods-walked translation and is green,
+77) and the `unit_merge_parent_t7_part` pair; the repair -- the shared actual-occurrence lexical/unit projection
+through the real parent and source-coordinate links, no program-unit fallback for a copied, nested or part context --
+is the next dependency, before PATH-STRUCTURE-LEAF.
+
+### Evidence
+
+- Replay of `opus_full_63`'s 2585 translations, the bytes of section 122 against these: 200 rows differ, in their L1
+  only -- the native admission's requirement moved to `<occurrence>\parent` (188 rows, 3027 lines), the walked
+  admission of a declared formal marked RECEIVING with its `[of, [node], slot]` model (186 rows, 501 hunks), the
+  selector (8 rows: the multi-class rows), the path actual (6 rows); no exit or message changed.
+- Witnesses with walked twins, three modes, all green on these bytes: `unit_merge_parent_method_formal`,
+  `unit_merge_parent_callable_actual`, `unit_merge_parent_model_subref`, `unit_formal_recv_name` and `_absent` (route
+  controls, green on HEAD too), `_reference` (the copy's and the unit's occurrence of one method, one native code: 41,
+  45), `_classes` (two formation classes in two spaces, the copy's first), `_models` (the selected callable's own model
+  by name; while g holds getz the admission is refused before the next actual tick() -- tickcount reads the graph's
+  cell -- and run's handler takes it), `_static` (the same for a static candidate), `_ordinal` (a nonidentity ordinal
+  and LAST through a copied method's formal), `_write` (a write through the formal lands at the place the map gives),
+  `_reuse` (a completed pair reused after the root writes the candidate), `_context` (a model expression of the
+  callee's own); on HEAD's stage red: `_reference`, `_classes`, `_models`, `_static`, `_ordinal`, `_write`, `_reuse`,
+  `_context` and the method_formal and callable_actual pairs.
+- One-rule mutants, each on a fresh stage over these bytes: the contract's model admitted (`_models`, `_static`
+  red), every class admitted as the first (`_models`, `_static`), the selector without parent links (`_classes`:
+  the invariant), the last class instead of the invariant (reaches no program), the admission rendered in the
+  caller's unit (native red: `_method_formal`, `_ordinal`, `_write`, `_reuse`, `_context`; `_reference` in every
+  mode, its formal call being native; `_name` green: by name the caller's unit is the callee's space), no
+  RECEIVING for a declared formal (walked red: `_method_formal`, `_ordinal`, `_write`), the actuals evaluated last to
+  first (`_models`: tick() runs before the refusal), the facts keyed to the contract again and the facts given to no
+  reaching method (`_models`: translation stops, "a pair map of D-105 was asked for after the maps were declared"),
+  a soft edge taken as hard (`_models` refused at translation, "implements is false in function argument": the
+  whole-call rejection the soft edge prevents), a path actual handed as the unit's occurrence (native red:
+  `_reference`, `_callable_actual`, `_classes`), classes told apart by formation alone (`_models`, `_static`).
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| kernel `opus_kernel_59` | GREEN297 (114 selftests ran, staged blob 0b4fb72e) |
+| focused `opus_focus_ff_01` | 615 targets; red exactly its nine opus_full_63 baseline rows (unit_callable_formal_free_names_self_walk, unit_callable_formal_unfollowed_actual, unit_copy_call_addressed, unit_copy_call_from_method, unit_copy_call_other_owner, unit_eternal_shape, unit_held_actual_among_methods, unit_held_actual_two_models, unit_letter_alias_before, their messages unchanged), the unit_node_path_anon_struct pair, and the registered T7-LOCAL-NAMED-UNIT rows (unit_merge_parent_t7_local_call, unit_merge_parent_t7_part and its twin) |
+| L3 `opus_l3_56` | all 11 suites ok, type budget ok |
+| full `opus_full_65` | RED 68/2616; against `opus_full_63`: FAIL→OK 6 (the unit_merge_parent_method_formal, unit_merge_parent_callable_actual and unit_merge_parent_t7_local_proc pairs), OK→FAIL 0, added 30 (27 OK, 3 red: unit_merge_parent_t7_local_call and the unit_merge_parent_t7_part pair), removed 0; no recorded red message changed |
+| intermediate | the chain's own focus comparison stopped on a wrong expectation (it also named unit_merge_parent_t7_local_call_walk, green, 77); `opus_full_64` stopped by Claude Code for low machine memory at 5781 logs and run again fresh as `opus_full_65` on the same hashed bytes |

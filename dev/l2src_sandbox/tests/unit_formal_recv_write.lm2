@@ -1,0 +1,26 @@
+# COPIED-METHOD-DECLARED-FORMAL, a write through the formal: b1\setx(w) admits w, a Wide (pad 9, x 2), to setx's formal
+# of Other {x} in the copy's space; `q\x: 6` writes the place the pair map gives -- w's x -- and not w's first place.
+# Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+Other:
+    int: x 5
+end: Other
+fn: setx (Other: q) int
+    q\x: 6
+    return: q\x
+end: setx
+Box:
+    int: v 0
+    fn: setx
+end: Box
+b1: merge: Box
+w: merge: Wide
+int: r b1\setx(w)
+int: ok 7
+if: r != 6 || w\x != 6 || w\pad != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

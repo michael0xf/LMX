@@ -1,0 +1,15 @@
+# A part of the program unit_merge_parent_t7_part.lm2: its root declares cnt; model's local S reads cnt as a free name.
+int: cnt 7
+fn: model (int: y) int
+    S:
+        int: v 0
+        v: cnt
+    S
+    return: S\v
+end: model
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+end: wrap
+sub: poke (int: n)
+    node\cnt: n
+end: poke

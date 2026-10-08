@@ -1,0 +1,21 @@
+# COPIED-METHOD-DECLARED-FORMAL, an absent input: b1\count0(w0), w0 a Wide reference that holds nothing; the absent
+# value is admitted as absent and nothing is refused (count0 does not read it): 3.  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+fn: count0 (Wide: q) int
+    return: 3
+end: count0
+Box:
+    int: v 0
+    fn: count0
+end: Box
+b1: merge: Box
+@: Wide w0
+int: r b1\count0(w0)
+int: ok 7
+if: r != 3
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

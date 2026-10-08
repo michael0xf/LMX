@@ -1,7 +1,8 @@
-# READ-FIELD-CLOSURE (T7), a local named Structure's own code in a callable merge's view: model runs its local S,
-# whose code reads the unit's cnt, and returns S\v.  The node w builds runs model's code over its own partial copy of
-# the unit, made at the merge, which holds what S's code uses; the root writes cnt after the merge, the copy keeps 7.
-# Exit 7.
+# READ-FIELD-CLOSURE (T7), a local named Structure's free name in a callable merge's node: model runs its local S,
+# whose `v: cnt` reads cnt, a free name of S that model forwards as its hidden input; model returns S\v.  The root's
+# own binding of cnt is 9 when it calls w, and the caller's binding comes first (docs #dynamic); the copy of the unit
+# made at the merge, holding 7, is only the lexical fallback.  9.  (Registered red until 2026-10-08 with 7 expected: a
+# wrong oracle, withdrawn by Codex's audit of K03-READ-FIELD-CLOSURE-20261008-31.)  Exit 7; 81 otherwise.
 int: cnt 7
 fn: model (int: y) int
     S:
@@ -14,5 +15,8 @@ fn: wrap (int: k) fn: () int
 @: w wrap(5)
 cnt: 9
 int: result w()
-sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+int: ok 7
+if: result != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

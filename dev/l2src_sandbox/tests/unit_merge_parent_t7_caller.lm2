@@ -1,0 +1,25 @@
+# READ-FIELD-CLOSURE (T7), a bare free name in a callable merge's node takes the caller's binding first: model's local
+# S reads cnt, a free name model forwards as its hidden input.  The root's own cnt is 9 (its write), the unit's cell
+# 11 (poke's explicit write after the root's own), the copy made at the merge 7; w() gives the caller's 9, neither the
+# graph cell nor the copied lexical value -- a lexical context copied by merge is only the fallback (docs #dynamic).
+# Exit 7; 81 otherwise.
+int: cnt 7
+fn: model (int: y) int
+    S:
+        int: v 0
+        v: cnt
+    S
+    return: S\v
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5)
+cnt: 9
+poke()
+int: result w()
+int: ok 7
+if: result != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

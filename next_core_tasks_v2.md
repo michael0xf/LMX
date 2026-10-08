@@ -17,6 +17,14 @@ work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
 [kernel map](CORE_L2_L3_v2.md), and
 [porting guide](L2_L3_CODING_INSTRUCTION.md).
 
+**Current coding handoff, 2026-10-08.** Opus explicitly released the sole
+writer/build slot to Codex after checkpoint `4fb6dbbe` and the handoff
+[from_opus.md](from_opus.md) at `e0727b69`. Codex continues this plan;
+Opus answers questions only and starts no coding, census or build. Baseline:
+`opus_full_65` RED68/2616, no OK→FAIL against `opus_full_63`. Next dependency:
+T7-LOCAL-NAMED-UNIT, then PATH-STRUCTURE-LEAF and NODE-PATH-ANON-STRUCT.
+Earlier ownership records below are historical.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

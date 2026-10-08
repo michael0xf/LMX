@@ -1,0 +1,21 @@
+# MERGE-PARENT-MODEL-SOURCE, a present value with a matching prior pair: User runs in place first -- its boundary
+# admits the root's a3 to Wide -- and only then is u1 made; the copy carries that record to its own Wide' (the model
+# side of lmx_copy_carry_records), and u1's boundary finds the completed pair and reuses it.  a3 is declared after
+# User: in User's code a free dynamic input, never a place of the copy.  Exit 7; 81 if either run read anything but 2.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+User:
+    int: y 0
+    y: a3\x
+end: User
+a3: merge: Wide
+User
+u1: merge: User
+u1
+int: ok 7
+if: User\y != 2 || u1\y != 2
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

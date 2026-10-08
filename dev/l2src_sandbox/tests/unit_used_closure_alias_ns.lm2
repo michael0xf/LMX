@@ -1,0 +1,19 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3): aliases.  Model's code reads Hold\p
+# twice and Hold\q once; b's copy of the unit holds one copy of Hold with p and q -- the two uses of p join in
+# it -- and neither r nor Hold's code.  Exit 7.
+Hold:
+    int: p 3
+    int: q 4
+    int: r 5
+end: Hold
+Model:
+    int: k 0
+    k: Hold\p + Hold\p + Hold\q
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 10
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

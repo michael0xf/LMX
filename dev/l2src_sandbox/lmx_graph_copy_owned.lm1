@@ -1,4 +1,4 @@
-predef: "lmx_graph_copy_owned.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "l2src/lmx_array_owned.lm1" "l2src/lmx_array_ref_owned.lm1" "l2src/lmx_list_owned.lm1" "lmx_pool.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
+predef: "lmx_graph_copy_owned.h.lm1" "lmx_walk.h.lm1" "lmx_arena_refs.h.lm1" "lmx_value_owned.h.lm1" "l2src/lmx_array_owned.lm1" "l2src/lmx_array_ref_owned.lm1" "l2src/lmx_list_owned.lm1" "lmx_pool.h.lm1" "lmx_range.lm1" "lmx_implements.h.lm1"
 predef: "l1src/libc_abi.lm1"
 predef: "l2src/lmx_source_names.h.lm1"
 include: "<stdlib.h>" "<string.h>" "<stdint.h>"
@@ -405,11 +405,19 @@ return: lmx_copy_is_terminal_profiled(src_arena, p, 0)
 # A copy root, a Structure reached through a slot or an array element, and a structural
 # parent queued for the parent fixup are registered alike: since Q44 nothing is shared by
 # address for lying outside the copied subtree, so the copier keeps no "inside" set.
-fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyStack todo; @: LmxArena dst_arena; @: int status) int
+fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxArena dst_arena; @: int status) int
     @: Lmx dst
     if: src = 0
         return: 0
     if: lmx_copy_map_get(map, (cast: (@: void) src)) != 0
+        # The used copy (`wholes` given): a Structure first demanded in part and now reached as a whole value is
+        # upgraded in the same construction -- one destination identity, its remaining slots copied before publication.
+        if: wholes != 0 && lmx_copy_map_get(wholes, (cast: (@: void) src)) = 0
+            if: lmx_copy_map_put(wholes, (cast: (@: void) src), (cast: (@: void) src)) != 0 || lmx_copy_stack_push(todo, src) != 0
+                \status: LMX_GRAPH_COPY_NOMEM
+                return: 1
+            ---
+        ---
         return: 0
     dst: lmx_node_new_owned(dst_arena)
     if: dst = 0
@@ -421,12 +429,15 @@ fn: lmx_copy_ensure_struct (@: Lmx src; @: LmxCopyMap map; @: LmxCopyStack todo;
     if: lmx_copy_stack_push(todo, src) != 0
         \status: LMX_GRAPH_COPY_NOMEM
         return: 1
+    if: wholes != 0 && lmx_copy_map_put(wholes, (cast: (@: void) src), (cast: (@: void) src)) != 0
+        \status: LMX_GRAPH_COPY_NOMEM
+        return: 1
     return: 0
 
 
 # One child value or array element: returns the destination reference for it,
 # copying language-owned mutable data exactly once per source address.
-fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyStack todo; @: int status) @: void
+fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: int status) @: void
     int: kind 0
     int: vtype 0
     @: void known
@@ -457,6 +468,8 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         return: v
     known: lmx_copy_map_get(map, v)
     if: known != 0
+        if: wholes != 0 && lmx_range_classify(src_arena, v) = c.LMX_KIND_STRUCT && lmx_copy_ensure_struct((cast: (@: Lmx) v), map, wholes, todo, dst_arena, status) != 0
+            return: 0
         return: known
     kind: lmx_range_classify(src_arena, v)
     if: kind = c.LMX_KIND_NONE
@@ -469,7 +482,7 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
         # Every reached Structure is copied through the same map, including an
         # application headed by an OP/ROLE terminal. The terminal and native entry
         # stay shared; the application, operands and lexical parents do not.
-        if: lmx_copy_ensure_struct((cast: (@: Lmx) v), map, todo, dst_arena, status) != 0
+        if: lmx_copy_ensure_struct((cast: (@: Lmx) v), map, wholes, todo, dst_arena, status) != 0
             return: 0
         return: lmx_copy_map_get(map, v)
     if: kind = c.LMX_KIND_SOURCE_SYMBOL
@@ -562,7 +575,7 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
             return: 0
         i: 0U
         while: i < src_list\size
-            if: lmx_list_append_owned(dst_list, lmx_copy_value(lmx_list_value(src_list, i), src_arena, dst_arena, retain_profiles, retain_count, map, todo, status), dst_arena) != c.LMX_LIST_OK
+            if: lmx_list_append_owned(dst_list, lmx_copy_value(lmx_list_value(src_list, i), src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status), dst_arena) != c.LMX_LIST_OK
                 if: \status = LMX_GRAPH_COPY_OK
                     \status: LMX_GRAPH_COPY_NOMEM
                 return: 0
@@ -628,7 +641,7 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
             src_refs: (cast: (@@: void) src_desc\data)
             dst_refs: (cast: (@@: void) dst_desc\data)
             while: i < src_desc\size
-                dst_refs[i]: lmx_copy_value(src_refs[i], src_arena, dst_arena, retain_profiles, retain_count, map, todo, status)
+                dst_refs[i]: lmx_copy_value(src_refs[i], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status)
                 if: \status != LMX_GRAPH_COPY_OK
                     return: 0
                 i: i + 1U
@@ -639,9 +652,102 @@ fn: lmx_copy_value (@: void v; @: LmxArena src_arena; @: LmxArena dst_arena; @@:
     \status: LMX_GRAPH_COPY_INVALID
     return: 0
 
+# The used copy (Q42: merge copies everything the copied code uses, and of a Structure
+# reached only for a use, only the fields used -- LMX_blog/2026-09-27.md; Codex
+# K03-READ-FIELD-CLOSURE-20261007-28).  A Structure needed in part is registered once,
+# at its source width, every slot absent until a use or a link fills it: no primitive
+# cell, no default, no reference into the source.  Absent stays absent.
+# The walk's operand contract (lmx_walk.h.lm1): operand i of the operation whose record has
+# `code` is the holder a place is read or written in -- operand 1 of AT, PUT_REF, OF, OWN_OF,
+# PUT_OF, SET_OF, ELEM and ELEMPUT.  Every other operand is a value.  1 or 0.
+fn: lmx_copy_holder_operand (int: code; size_t: i) int
+    int: op 0
+    if: code < 0 || i != 1U
+        return: 0
+    op: code % c.LMX_WALK_OP_COUNT
+    if: op = c.LMX_WALK_OP_AT || op = c.LMX_WALK_OP_PUT_REF || op = c.LMX_WALK_OP_OF || op = c.LMX_WALK_OP_OWN_OF
+        return: 1
+    if: op = c.LMX_WALK_OP_PUT_OF || op = c.LMX_WALK_OP_SET_OF || op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_ELEMPUT
+        return: 1
+return: 0
+
+# The used copy's execution anchor (Codex K03-READ-FIELD-CLOSURE-20261008-29 point 2): operand i of
+# an executable application -- its slot 0 the operation's record (OP) -- that the operation's
+# contract makes the HOLDER of a place (lmx_copy_holder_operand) reads one place of that holder in
+# place.  When the holder is a place of the application's lexical context -- one of its own
+# lexical ancestors, or a data Structure whose parent chain meets one of them before it meets the
+# application itself (whose sub-expressions are its code) or a retained-profile Structure (kept
+# by identity, nothing below it copied): a program part's root a callee's hidden input is read
+# from, a sibling Structure of the unit -- the copy links it in part, the records filling its used
+# places.  The same Structure as any other operand -- a value an operation consumes (a merge's
+# operand, a stored reference) -- or in a data Structure's slot is an ordinary value and is copied
+# whole (lmx_copy_value), the same map entry upgraded whatever the order it is met in.
+fn: lmx_copy_up (@: LmxArena src_arena; @: Lmx holder; size_t: i; @: void v; @@: Lmx retain_profiles; size_t: retain_count) int
+    @: Lmx up
+    @: Lmx w
+    @: void head 0
+    @: void wh 0
+    int: wk 0
+    if: holder = 0 || v = 0 || holder\array.size = 0U || holder\array.data = 0
+        return: 0
+    head: lmx_arena_ref_value(holder, 0U)
+    if: head = 0 || lmx_range_classify(src_arena, head) != c.LMX_DOMAIN_KIND_OP
+        return: 0
+    if: lmx_copy_holder_operand((cast: (@: LmxOp) head)\code, i) = 0
+        return: 0
+    up: holder\parent
+    while: up != 0
+        if: (cast: (@: void) up) = v
+            return: 1
+        up: up\parent
+    ---
+    if: lmx_range_classify(src_arena, v) != c.LMX_KIND_STRUCT
+        return: 0
+    w: (cast: (@: Lmx) v)
+    if: w\array.size != 0U && w\array.data != 0
+        wh: lmx_arena_ref_value(w, 0U)
+        if: wh != 0
+            wk: lmx_range_classify(src_arena, wh)
+        if: wk = c.LMX_DOMAIN_KIND_OP || wk = c.LMX_DOMAIN_KIND_ROLE
+            return: 0
+    ---
+    w: w\parent
+    while: w != 0
+        if: w = holder || lmx_copy_retained_profiles(src_arena, (cast: (@: void) w), retain_profiles, retain_count) != 0
+            return: 0
+        up: holder\parent
+        while: up != 0
+            if: up = w
+                return: 1
+            up: up\parent
+        ---
+        w: w\parent
+    ---
+    return: 0
+
+fn: lmx_copy_part (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @: LmxCopyMap map; @: LmxCopyStack links; @: int status) int
+    @: Lmx dst
+    if: src = 0 || lmx_range_classify(src_arena, (cast: (@: void) src)) != c.LMX_KIND_STRUCT
+        \status: LMX_GRAPH_COPY_INVALID
+        return: 1
+    dst: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) src)))
+    if: dst = 0
+        dst: lmx_node_new_owned(dst_arena)
+        if: dst = 0 || lmx_copy_map_put(map, (cast: (@: void) src), (cast: (@: void) dst)) != 0 || lmx_copy_stack_push(links, src) != 0
+            \status: LMX_GRAPH_COPY_NOMEM
+            return: 1
+        ---
+    ---
+    if: dst\array.data = 0 && src\array.size != 0U && lmx_arena_refs_open_owned(dst_arena, dst, (src\array.size)) != 0
+        \status: LMX_GRAPH_COPY_NOMEM
+        return: 1
+    return: 0
+
 # Copies the slots of one queued source Structure into its registered copy and
-# queues its structural parent, so the copied tree always reaches parent = 0.
-fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyStack todo; @: int status) int
+# queues its structural parent, so the copied tree always reaches parent = 0.  In the
+# used copy (`wholes` given) the parent is queued on `links`: it is a lexical
+# ancestor the copy needs only in part (lmx_copy_link).
+fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status) int
     @: Lmx dst
     @@: void src_slots
     @: void copied
@@ -658,24 +764,46 @@ fn: lmx_copy_process (@: Lmx src; @: LmxArena src_arena; @: LmxArena dst_arena; 
         # An exact retained-profile structural parent keeps its physical identity.  It must
         # never enter the copy map, otherwise the later parent fixup would see a
         # copied parent and could no longer preserve the retained address.
-        if: lmx_copy_retained_profiles(src_arena, (cast: (@: void) src\parent), retain_profiles, retain_count) = 0
-            if: lmx_copy_ensure_struct(src\parent, map, todo, dst_arena, status) != 0
+        if: wholes = 0 && lmx_copy_retained_profiles(src_arena, (cast: (@: void) src\parent), retain_profiles, retain_count) = 0
+            if: lmx_copy_ensure_struct(src\parent, map, wholes, todo, dst_arena, status) != 0
                 return: 1
             ---
         ---
     ---
+    if: wholes != 0 && lmx_copy_stack_push(links, src) != 0
+        \status: LMX_GRAPH_COPY_NOMEM
+        return: 1
     if: src\array.size = 0U || src\array.data = 0
         return: 0
     # A Structure's `array.data` IS its child-pointer array, reached through the
     # Structure: finding it needs no lookup, even though the array is an array of
     # the arena and is in the index like every other one. What is classified is
     # every child VALUE read out of it.
-    if: lmx_arena_refs_open_owned(dst_arena, dst, (src\array.size)) != 0
+    # A Structure demanded in part before (the used copy) already has its slots open.
+    if: dst\array.data = 0 && lmx_arena_refs_open_owned(dst_arena, dst, (src\array.size)) != 0
         \status: LMX_GRAPH_COPY_NOMEM
         return: 1
     src_slots: (cast: (@@: void) src\array.data)
     while: i < src\array.size
-        copied: lmx_copy_value(src_slots[i], src_arena, dst_arena, retain_profiles, retain_count, map, todo, status)
+        # The used copy: the holder operand of a place operation naming a place of src's lexical
+        # context (one of its own lexical ancestors, or a Structure under one: what an executable
+        # expression reads in place) is a link to that place, needed in part like src's parent --
+        # not a use of its whole value (lmx_copy_up).
+        if: wholes != 0 && i != 0U && lmx_copy_up(src_arena, src, i, src_slots[i], retain_profiles, retain_count) != 0
+            if: lmx_copy_retained_profiles(src_arena, src_slots[i], retain_profiles, retain_count) != 0
+                copied: src_slots[i]
+            else:
+                if: lmx_copy_part((cast: (@: Lmx) src_slots[i]), src_arena, dst_arena, map, links, status) != 0
+                    return: 1
+                copied: lmx_copy_map_get(map, src_slots[i])
+            ---
+            if: lmx_arena_ref_store(dst, i, copied) != 0
+                \status: LMX_GRAPH_COPY_INVALID
+                return: 1
+            i: i + 1U
+            continue
+        ---
+        copied: lmx_copy_value(src_slots[i], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status)
         if: \status != LMX_GRAPH_COPY_OK
             return: 1
         if: lmx_arena_ref_store(dst, i, copied) != 0
@@ -759,11 +887,307 @@ fn: lmx_copy_names_finish (@: LmxCopyMap pending; int: publish) void
     ---
     lmx_copy_map_dispose(pending)
 
-fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs; @: LmxCopyMap pending) int
+# Is `value` the copy of one of the operation's roots that was copied, not retained?  The
+# absorb pass's one question (lmx_copy_absorb).
+fn: lmx_copy_absorbed (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: void value) int
+    size_t: r 0U
+    if: value = 0
+        return: 0
+    while: r < count
+        if: lmx_copy_retained_profiles(src_arena, (cast: (@: void) sources[r]), retain_profiles, retain_count) = 0 && lmx_copy_map_get(map, (cast: (@: void) sources[r])) = value
+            return: 1
+        r: r + 1U
+    ---
+return: 0
+
+# A composition's absorb pass: the operation's copied roots are absorbed into `absorb`
+# (merge's fresh result, or the target a merge-into writes), so every copied Structure's
+# child slot that holds a copied root, and every copied Structure's parent that is one,
+# names `absorb` -- no link reaches a discarded intermediate root.  The roots' own
+# parents stay: the composition places its result by them (lmx_merge_lexical).  A root
+# retained by its exact profile is itself and is never absorbed.
+fn: lmx_copy_absorb (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: Lmx absorb) int
+    @@: void keys
+    @@: void vals
+    @: void key
+    @: Lmx dst 0
+    @: void value 0
+    size_t: i 0U
+    size_t: j 0U
+    keys: lmx_copy_map_keys_data(map)
+    vals: lmx_copy_map_vals_data(map)
+    while: i < lmx_copy_map_keys_cap(map)
+        key: keys[i]
+        if: key != 0 && lmx_range_classify(src_arena, key) = c.LMX_KIND_STRUCT
+            dst: (cast: (@: Lmx) vals[i])
+            if: lmx_copy_absorbed(sources, count, src_arena, retain_profiles, retain_count, map, (cast: (@: void) dst)) = 0 && lmx_copy_absorbed(sources, count, src_arena, retain_profiles, retain_count, map, (cast: (@: void) (dst\parent))) != 0
+                dst\parent: absorb
+            ---
+            j: 0U
+            while: j < dst\array.size
+                value: lmx_arena_ref_value(dst, j)
+                if: lmx_copy_absorbed(sources, count, src_arena, retain_profiles, retain_count, map, value) != 0
+                    if: lmx_arena_ref_store(dst, j, (cast: (@: void) absorb)) != 0
+                        return: LMX_GRAPH_COPY_INVALID
+                    ---
+                ---
+                j: j + 1U
+            ---
+        ---
+        i: i + 1U
+    ---
+return: LMX_GRAPH_COPY_OK
+
+# A copied Structure's lexical parent, in the used copy: the parent is needed in part --
+# the slots that hold the copied child (the chain link), not its other children (Codex
+# -28, A: source coordinates kept, unread places absent).  A retained-profile parent
+# keeps its identity and is not entered.
+fn: lmx_copy_link (@: Lmx child; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyStack links; @: int status) int
+    @: Lmx up
+    @: Lmx dup
+    @@: void slots
+    size_t: i 0U
+    up: child\parent
+    if: up = 0 || lmx_copy_retained_profiles(src_arena, (cast: (@: void) up), retain_profiles, retain_count) != 0
+        return: 0
+    if: lmx_copy_part(up, src_arena, dst_arena, map, links, status) != 0
+        return: 1
+    dup: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) up)))
+    slots: (cast: (@@: void) up\array.data)
+    while: slots != 0 && i < up\array.size
+        if: slots[i] = (cast: (@: void) child) && lmx_arena_ref_store(dup, i, lmx_copy_map_get(map, (cast: (@: void) child))) != 0
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 1
+        ---
+        i: i + 1U
+    ---
+    return: 0
+
+# One use, a slot path from a source Structure (an anchor: a lexical ancestor of an
+# operand, or any reached source Structure): each intermediate Structure is needed in
+# part -- only the slot the path takes -- and the last slot's value is copied as a value:
+# a cell as a cell, a Structure whole (its full value is what is used).  Two uses of one
+# Structure join in its one copy; a later whole use upgrades it (lmx_copy_ensure_struct).
+fn: lmx_copy_use (@: Lmx anchor; @: size_t path; size_t: len; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: LmxCopyMap map; @: LmxCopyMap wholes; @: LmxCopyStack todo; @: LmxCopyStack links; @: int status) int
+    @: Lmx x
+    @: Lmx dx
+    @: void v
+    @: void copied
+    size_t: i 0U
+    size_t: s
+    x: anchor
+    # Every anchor reaching here is a source Structure (lmx_copy_run refused an absent explicit one and never
+    # passes an operand-parent selector whose operand has no lexical parent).
+    if: x = 0 || path = 0 || len = 0U
+        \status: LMX_GRAPH_COPY_INVALID
+        return: 1
+    while: i < len
+        if: lmx_copy_retained_profiles(src_arena, (cast: (@: void) x), retain_profiles, retain_count) != 0
+            # A retained branch is itself: the use reaches it, nothing below it is copied.
+            return: 0
+        if: lmx_copy_part(x, src_arena, dst_arena, map, links, status) != 0
+            return: 1
+        s: path[i]
+        if: s >= x\array.size || x\array.data = 0
+            \status: LMX_GRAPH_COPY_INVALID
+            return: 1
+        v: lmx_arena_ref_value(x, s)
+        dx: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) x)))
+        if: i + 1U < len
+            if: v = 0 || lmx_range_classify(src_arena, v) != c.LMX_KIND_STRUCT
+                \status: LMX_GRAPH_COPY_INVALID
+                return: 1
+            ---
+            if: lmx_copy_retained_profiles(src_arena, v, retain_profiles, retain_count) != 0
+                if: lmx_arena_ref_store(dx, s, v) != 0
+                    \status: LMX_GRAPH_COPY_INVALID
+                    return: 1
+                ---
+                return: 0
+            ---
+            if: lmx_copy_part((cast: (@: Lmx) v), src_arena, dst_arena, map, links, status) != 0
+                return: 1
+            if: lmx_arena_ref_store(dx, s, lmx_copy_map_get(map, v)) != 0
+                \status: LMX_GRAPH_COPY_INVALID
+                return: 1
+            ---
+            x: (cast: (@: Lmx) v)
+        else:
+            copied: lmx_copy_value(v, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, status)
+            if: \status != LMX_GRAPH_COPY_OK
+                return: 1
+            if: lmx_arena_ref_store(dx, s, copied) != 0
+                \status: LMX_GRAPH_COPY_INVALID
+                return: 1
+            ---
+        ---
+        i: i + 1U
+    ---
+    return: 0
+
+# Whether key is one of the copy's roots.
+fn: lmx_copy_is_root (@@: Lmx sources; size_t: count; @: void key) int
+    size_t: r 0U
+    while: r < count
+        if: (cast: (@: void) sources[r]) = key
+            return: 1
+        r: r + 1U
+    ---
+return: 0
+
+# The copy that carries records for source Structure p in this run: p's copy when the run copied it and p is no root
+# -- a root's own layout is the receiving operation's (lmx_merge_result_layout) -- or the run copies its roots in part
+# as lexical contexts (part_roots); else 0.  A retained profile never enters the map.
+fn: lmx_copy_carry_target (@: LmxCopyMap map; @@: Lmx sources; size_t: count; @: LmxArena src_arena; @: Lmx p; int: part_roots) @: Lmx
+    if: p = 0 || lmx_range_classify(src_arena, (cast: (@: void) p)) != c.LMX_KIND_STRUCT
+        return: 0
+    if: part_roots = 0 && lmx_copy_is_root(sources, count, (cast: (@: void) p)) != 0
+        return: 0
+return: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) p)))
+
+# The copy's correspondences (Codex -28 review point 3; K03-READ-FIELD-CLOSURE-20261008-31's review of the carry), one
+# pass over the source table decided by the copy map:
+# - a copied value carries each of its source's records: the requirement and the admitting frame are the run's copies
+#   when it copied them -- a mapped ordinary requirement is the copy's own, never the unrelated original -- and stay
+#   as they are when it did not (a retained or uncopied requirement, a static map, a layout token: module metadata);
+#   with holes where only the used places were copied; a partial copy also has a record with itself with holes;
+# - a copied requirement takes every record of the requirement it copies: a value admitted to the original is
+#   admitted to its copy by the same correspondence -- the copy keeps its source's coordinates and its unread places
+#   are its own holes -- so a candidate a caller binds into the copy's code, admitted before the copy, keeps its
+#   record against the requirement that code reads (MERGE-PARENT-MODEL-SOURCE);
+# - a record is written only when its value, requirement and admitting frame are live Structures of the destination
+#   arena -- what lmx_arena_impl_prune keeps there: across arenas no record names a Structure of the source arena the
+#   run did not copy (a retained profile the destination knows stays itself), and a freed address answers for nothing.
+# A root carries and takes none unless it is a lexical context copied in part.  Two passes: the first counts and
+# takes the room, the second writes, so every record is added or none; the caller drops them with the copy when it
+# reverts.  0 or a status.
+fn: lmx_copy_carry_records (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @: LmxCopyMap map; @: LmxCopyMap wholes; int: used; int: part_roots) int
+    LmxCopyMap: self_storage
+    @: LmxCopyMap selfs (@ self_storage)
+    LmxCopyMap: lay_storage
+    @: LmxCopyMap lays (@ lay_storage)
+    size_t: n 0U
+    size_t: i 0U
+    size_t: need 0U
+    int: pass 0
+    int: status LMX_GRAPH_COPY_OK
+    @: LmxImplEntry e
+    LmxImplEntry: v
+    @: Lmx vd
+    @: Lmx rd
+    @: Lmx fd
+    @: Lmx rq
+    @: Lmx fr
+    @: Lmx key
+    @@: void keys
+    @@: void vals
+    if: src_arena = 0 || dst_arena = 0 || map = 0
+        return: LMX_GRAPH_COPY_INVALID
+    n: src_arena\impl_len
+    memset((cast: (@: void) selfs), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) lays), 0, c.sizeof(c.LmxCopyMap))
+    if: lmx_copy_map_init(selfs) != 0
+        return: LMX_GRAPH_COPY_NOMEM
+    if: lmx_copy_map_init(lays) != 0
+        lmx_copy_map_dispose(selfs)
+        return: LMX_GRAPH_COPY_NOMEM
+    ---
+    while: pass < 2 && status = LMX_GRAPH_COPY_OK
+        i: 0U
+        while: i < n && status = LMX_GRAPH_COPY_OK
+            # The table moves when it grows: each record is read again by its index.
+            e: src_arena\impl + i
+            vd: lmx_copy_carry_target(map, sources, count, src_arena, e\value, part_roots)
+            rd: lmx_copy_carry_target(map, sources, count, src_arena, e\req, part_roots)
+            fd: 0
+            if: e\frame != 0
+                fd: (cast: (@: Lmx) lmx_copy_map_get(map, (cast: (@: void) e\frame)))
+            rq: e\req
+            if: rd != 0
+                rq: rd
+            fr: e\frame
+            if: fd != 0
+                fr: fd
+            # A copied value's own layout evidence, for the record with itself a partial copy gets below.
+            if: pass = 0 && vd != 0 && e\layout != 0 && lmx_copy_map_get(lays, (cast: (@: void) e\value)) = 0 && lmx_copy_map_put(lays, (cast: (@: void) e\value), e\layout) != 0
+                status: LMX_GRAPH_COPY_NOMEM
+            if: status = LMX_GRAPH_COPY_OK && vd != 0 && lmx_range_classify(dst_arena, (cast: (@: void) rq)) = c.LMX_KIND_STRUCT && (fr = 0 || lmx_range_classify(dst_arena, (cast: (@: void) fr)) = c.LMX_KIND_STRUCT)
+                if: pass = 0
+                    need: need + 1U
+                    if: e\req = e\value && lmx_copy_map_put(selfs, (cast: (@: void) e\value), (cast: (@: void) vd)) != 0
+                        status: LMX_GRAPH_COPY_NOMEM
+                    ---
+                else:
+                    memcpy((cast: (@: void) (@ v)), (cast: (@: void) e), c.sizeof(c.LmxImplEntry))
+                    v.value: vd
+                    v.req: rq
+                    v.frame: fr
+                    if: used != 0 && lmx_copy_map_get(wholes, (cast: (@: void) e\value)) = 0
+                        v.holes: 1
+                    if: lmx_implements_append(dst_arena, @ v) != 0
+                        status: LMX_GRAPH_COPY_NOMEM
+                    ---
+                ---
+            ---
+            if: status = LMX_GRAPH_COPY_OK && rd != 0 && lmx_range_classify(dst_arena, (cast: (@: void) e\value)) = c.LMX_KIND_STRUCT && (fr = 0 || lmx_range_classify(dst_arena, (cast: (@: void) fr)) = c.LMX_KIND_STRUCT)
+                if: pass = 0
+                    need: need + 1U
+                else:
+                    memcpy((cast: (@: void) (@ v)), (cast: (@: void) (src_arena\impl + i)), c.sizeof(c.LmxImplEntry))
+                    v.req: rd
+                    v.frame: fr
+                    if: lmx_implements_append(dst_arena, @ v) != 0
+                        status: LMX_GRAPH_COPY_NOMEM
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+        # A partial copy with no record with itself in its source gets one, with holes: a direct read of a place it
+        # holds no object at is refused (lmx_walk_place).
+        keys: lmx_copy_map_keys_data(map)
+        vals: lmx_copy_map_vals_data(map)
+        i: 0U
+        while: status = LMX_GRAPH_COPY_OK && used != 0 && i < lmx_copy_map_keys_cap(map)
+            key: (cast: (@: Lmx) keys[i])
+            if: key != 0 && lmx_copy_carry_target(map, sources, count, src_arena, key, part_roots) != 0 && lmx_copy_map_get(wholes, (cast: (@: void) key)) = 0 && lmx_copy_map_get(selfs, (cast: (@: void) key)) = 0
+                if: pass = 0
+                    need: need + 1U
+                else:
+                    memset((cast: (@: void) (@ v)), 0, c.sizeof(c.LmxImplEntry))
+                    v.value: (cast: (@: Lmx) vals[i])
+                    v.req: v.value
+                    v.layout: lmx_copy_map_get(lays, (cast: (@: void) key))
+                    v.holes: 1
+                    if: lmx_implements_append(dst_arena, @ v) != 0
+                        status: LMX_GRAPH_COPY_NOMEM
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+        if: status = LMX_GRAPH_COPY_OK && pass = 0 && need = 0U
+            pass: 2
+        if: status = LMX_GRAPH_COPY_OK && pass = 0 && lmx_arena_impl_room(dst_arena, dst_arena\impl_len + need) != 0
+            status: LMX_GRAPH_COPY_NOMEM
+        pass: pass + 1
+    ---
+    lmx_copy_map_dispose(lays)
+    lmx_copy_map_dispose(selfs)
+return: status
+
+fn: lmx_copy_run (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; int: used; int: part_roots; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending) int
     LmxCopyMap: map_storage
     LmxCopyStack: todo_storage
+    LmxCopyMap: wholes_storage
+    LmxCopyStack: links_storage
     @: LmxCopyMap map (@ map_storage)
     @: LmxCopyStack todo (@ todo_storage)
+    @: LmxCopyMap wholes 0
+    @: LmxCopyStack links (@ links_storage)
+    size_t: u 0U
+    size_t: off 0U
+    size_t: impl_mark 0U
     @: LmxArenaBlock mark 0
     @@: void keys
     @@: void vals
@@ -784,6 +1208,33 @@ fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxA
     ---
     if: lmx_copy_profiles_valid(src_arena, retain_profiles, retain_count) = 0
         return: LMX_GRAPH_COPY_INVALID
+    if: part_roots != 0 && used = 0
+        return: LMX_GRAPH_COPY_INVALID
+    if: use_count != 0U && (used = 0 || use_anchor = 0 || use_sel = 0 || use_slot = 0 || use_len = 0)
+        return: LMX_GRAPH_COPY_INVALID
+    if: use_count = 0U && use_slots != 0U
+        return: LMX_GRAPH_COPY_INVALID
+    # Each use names its anchor once: an explicit source Structure (selector 0) or the lexical parent of root
+    # use_sel[u] - 1.  Its slot path is use_len[u] >= 1 slots; the lengths add up, never wrapping, to use_slots.
+    while: u < use_count
+        if: use_len[u] = 0U || use_len[u] > use_slots - off
+            return: LMX_GRAPH_COPY_INVALID
+        off: off + use_len[u]
+        if: use_sel[u] = 0U
+            if: use_anchor[u] = 0 || lmx_range_classify(src_arena, (cast: (@: void) use_anchor[u])) != c.LMX_KIND_STRUCT
+                return: LMX_GRAPH_COPY_INVALID
+            ---
+        else:
+            if: use_anchor[u] != 0 || use_sel[u] > count
+                return: LMX_GRAPH_COPY_INVALID
+            ---
+        ---
+        u: u + 1U
+    ---
+    if: off != use_slots
+        return: LMX_GRAPH_COPY_INVALID
+    u: 0U
+    off: 0U
     r: 0U
     while: r < count
         if: sources[r] = 0
@@ -800,11 +1251,22 @@ fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxA
     # From here the destination is all-or-nothing: the mark is the arena's own
     # head, and every refusal below reverts to it.
     mark: lmx_arena_mark(dst_arena)
+    impl_mark: dst_arena\impl_len
     memset((cast: (@: void) todo), 0, c.sizeof(c.LmxCopyStack))
+    memset((cast: (@: void) links), 0, c.sizeof(c.LmxCopyStack))
     memset((cast: (@: void) map), 0, c.sizeof(c.LmxCopyMap))
     if: lmx_copy_map_init(map) != 0
         lmx_arena_revert(dst_arena, mark)
         return: LMX_GRAPH_COPY_NOMEM
+    if: used != 0
+        wholes: @ wholes_storage
+        memset((cast: (@: void) wholes), 0, c.sizeof(c.LmxCopyMap))
+        if: lmx_copy_map_init(wholes) != 0
+            lmx_copy_map_dispose(map)
+            lmx_arena_revert(dst_arena, mark)
+            return: LMX_GRAPH_COPY_NOMEM
+        ---
+    ---
     # Seed the roots.  lmx_copy_process validates and queues each ordinary
     # structural parent before following it; exact retained-profile parents remain
     # terminals by physical address.  One map serves all roots.
@@ -817,15 +1279,41 @@ fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxA
             ---
         else:
             if: lmx_copy_is_terminal_profiles(src_arena, (cast: (@: void) src), retain_profiles, retain_count) = 0
-                lmx_copy_ensure_struct(src, map, todo, dst_arena, @ status)
+                # A lexical context copied for a callable merge's node is a part: only what a use or a link fills.
+                if: part_roots != 0
+                    lmx_copy_part(src, src_arena, dst_arena, map, links, @ status)
+                else:
+                    lmx_copy_ensure_struct(src, map, wholes, todo, dst_arena, @ status)
+                ---
             ---
         ---
         r: r + 1U
     ---
-    # Copy edges until no Structure remains queued. Processing may queue more.
-    while: status = LMX_GRAPH_COPY_OK && lmx_copy_stack_items_len(todo) != 0U
-        src: lmx_copy_stack_pop(todo)
-        lmx_copy_process(src, src_arena, dst_arena, retain_profiles, retain_count, map, todo, @ status)
+    # The used copy's uses: each a slot path from its anchor (lmx_copy_use).
+    while: status = LMX_GRAPH_COPY_OK && u < use_count
+        if: use_sel[u] = 0U
+            lmx_copy_use(use_anchor[u], use_slot + off, use_len[u], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status)
+        else:
+            # The selected root's own lexical parent.  A root with none has no place above it in the source:
+            # the use names nothing that exists, nothing is copied for it, and a reader that reaches for that
+            # place finds it absent (Codex K03-READ-FIELD-CLOSURE-20261008-29).
+            if: sources[use_sel[u] - 1U]\parent != 0
+                lmx_copy_use(sources[use_sel[u] - 1U]\parent, use_slot + off, use_len[u], src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status)
+            ---
+        ---
+        off: off + use_len[u]
+        u: u + 1U
+    ---
+    # Copy edges until no Structure remains queued. Processing may queue more; in the
+    # used copy a processed or partly needed Structure's parent is linked in part.
+    while: status = LMX_GRAPH_COPY_OK && (lmx_copy_stack_items_len(todo) != 0U || lmx_copy_stack_items_len(links) != 0U)
+        if: lmx_copy_stack_items_len(todo) != 0U
+            src: lmx_copy_stack_pop(todo)
+            lmx_copy_process(src, src_arena, dst_arena, retain_profiles, retain_count, map, wholes, todo, links, @ status)
+        else:
+            src: lmx_copy_stack_pop(links)
+            lmx_copy_link(src, src_arena, dst_arena, retain_profiles, retain_count, map, links, @ status)
+        ---
     ---
 # Parent fixup: every copied Structure points at the copy of its structural
     # parent, at an exact retained-profile parent's own address, or at zero.
@@ -868,13 +1356,22 @@ fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxA
             i: i + 1U
         ---
     ---
+    if: status = LMX_GRAPH_COPY_OK && absorb != 0
+        status: lmx_copy_absorb(sources, count, src_arena, retain_profiles, retain_count, map, absorb)
+    ---
     if: status = LMX_GRAPH_COPY_OK
         status: lmx_copy_names(src_arena, dst_arena, map, pending)
+    ---
+    # Correspondences: the copy's records, decided by the copy map (lmx_copy_carry_records).
+    if: status = LMX_GRAPH_COPY_OK
+        status: lmx_copy_carry_records(sources, count, src_arena, dst_arena, map, wholes, used, part_roots)
     ---
     if: status != LMX_GRAPH_COPY_OK
         lmx_copy_names_finish(pending, 0)
         # Nothing stays: the arena drops every block added since the mark and
-        # retires each one's index entry with it. Sources are never written.
+        # retires each one's index entry with it, and the table drops the records the copy added. Sources are never
+        # written.
+        dst_arena\impl_len: impl_mark
         lmx_arena_revert(dst_arena, mark)
     ---
     if: status = LMX_GRAPH_COPY_OK
@@ -889,14 +1386,35 @@ fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxA
         ---
     ---
     lmx_copy_stack_dispose(todo)
+    lmx_copy_stack_dispose(links)
     lmx_copy_map_dispose(map)
+    if: wholes != 0
+        lmx_copy_map_dispose(wholes)
     return: status
+
+fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx outs; @: LmxCopyMap pending) int
+    return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, retain_count, absorb, 0, 0, 0, 0, 0, 0, 0U, 0U, outs, pending)
+
+# A copy of `source` in part (READ-FIELD-CLOSURE; T7, Codex -29 step 4): the lexical context a callable merge's
+# node hangs under -- only the places the node's copied code uses (use_* as lmx_graph_copy_many_used_staged, the
+# anchors in source's tree) and the links that reach them, every other place absent; never a whole copy of it.
+# Names are published with it; a refusal leaves nothing.  0 or a status.
+fn: lmx_graph_copy_part_used_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx out) int
+    LmxCopyMap: pending
+    int: status
+    memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
+    status: lmx_copy_run(@ source, 1U, src_arena, dst_arena, retain_profiles, retain_count, 0, 1, 1, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, out, @ pending)
+    lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
+return: status
+
+fn: lmx_graph_copy_many_used_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending) int
+    return: lmx_copy_run(sources, count, src_arena, dst_arena, retain_profiles, retain_count, absorb, 1, 0, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, outs, pending)
 
 fn: lmx_graph_copy_many_profiles_owned (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs) int
     LmxCopyMap: pending
     int: status
     memset((cast: (@: void) @ pending), 0, c.sizeof(c.LmxCopyMap))
-    status: lmx_graph_copy_many_profiles_staged(sources, count, src_arena, dst_arena, retain_profiles, retain_count, outs, @ pending)
+    status: lmx_graph_copy_many_profiles_staged(sources, count, src_arena, dst_arena, retain_profiles, retain_count, 0, outs, @ pending)
     lmx_copy_names_finish(@ pending, (cast: (int) (status = LMX_GRAPH_COPY_OK)))
 return: status
 

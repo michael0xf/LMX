@@ -1,0 +1,34 @@
+# MERGE-PARENT-SITE-OVERRIDE: a synthesized letter's payload takes the same copy topology.  `receiveMessage: m
+# MainLetter` types m by the letter model {sender; payload: MainLetter}, whose payload the build fills with a copy of
+# MainLetter once construction is complete: the copy hangs under a copy of the unit, MainLetter's lexical parent,
+# which holds it where the unit holds MainLetter -- the qualified branch E, which no copied code reads, absent there
+# (Q42) -- neither the letter nor the
+# unit (the author, LMX_blog/2026-10-05.md#merge-parent; docs #composition).  The post paths climb from the letter
+# model's payload.  Exit 7; 90-92 if the received letter lost a part.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+MainLetter:
+    char: []: []: mainArgs
+end: MainLetter
+
+fn: check () int
+    receiveMessage: m MainLetter
+    if: m = 0
+        return: 90
+    if: m\sender = 0
+        return: 91
+    if: length(m\payload\mainArgs) = 0
+        return: 92
+return: 7
+
+int: got
+got: check()
+sendMessage: exit(exit_code: got; stdout: ""; stderr: "")
+return

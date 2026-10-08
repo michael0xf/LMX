@@ -1,0 +1,20 @@
+# MERGE-PARENT-MODEL-SOURCE, a cross-part receiver: get is defined in the part unit_merge_parent_model_xpart_part.lm2
+# (harness Parts; read against its own root, which declares no a3) and held by Box's callable field; `b1\get()` runs
+# b1's own occurrence of get and admits the root's a3 to the Wide of that occurrence's node (2).  HEAD refused it in
+# every mode.  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+Box:
+    int: v 0
+    fn: get
+end: Box
+b1: merge: Box
+a3: merge: Wide
+int: r b1\get()
+int: ok 7
+if: r != 2
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

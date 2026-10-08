@@ -1,0 +1,23 @@
+# MERGE-PARENT-MODEL-SOURCE, a copied method's free input: Box's callable field holds get, so b1, a copy of Box under
+# a copy of the unit, holds get's own occurrence there; `b1\get()` runs that occurrence, whose body reads the free
+# input a3 through the Wide of its own node.  The call admits the root's a3 to that requirement (2).  HEAD refused the
+# read ("a field of a formal admitted by name is not carried by its value").  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+fn: get () int
+    return: a3\x
+end: get
+Box:
+    int: v 0
+    fn: get
+end: Box
+b1: merge: Box
+a3: merge: Wide
+int: r b1\get()
+int: ok 7
+if: r != 2
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

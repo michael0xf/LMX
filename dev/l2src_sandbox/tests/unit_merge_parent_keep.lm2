@@ -1,0 +1,30 @@
+# MERGE-PARENT-SITE-OVERRIDE / READ-FIELD-CLOSURE (Codex -29 step 4: retention only for qualified required
+# profiles): Model's code binds h to E and reads E\e, a qualified independent: const: immutable branch.  The
+# root's declaration merge b copies Model's used lexical context: a copy of the unit that holds E itself --
+# retained by its profile, never copied -- and not x, which nothing copied reads; b's h references E itself, and
+# b, run, reads E's 7 into its j through that copy (the post paths).  Exit 7; 81 if b's k is not 4, 82 if
+# b's h does not give E's 7.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+int: x 3
+Model:
+    int: k 4
+    h: E
+    size_t: j E\e
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 4
+    ok: 81
+if: b\h\e != 7U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

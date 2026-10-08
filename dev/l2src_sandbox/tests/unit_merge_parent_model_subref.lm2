@@ -1,0 +1,28 @@
+# MERGE-PARENT-MODEL-SOURCE, a sub occurrence held by a callable formal: `recv(b1\bump)` hands f the occurrence
+# the path selects when the root is walked -- b1's own, under C, the copy of the unit; natively the unit's own
+# (COPIED-CALLABLE-ACTUAL, steps/defects.md) -- and `f()` admits the free input a3 (recv's own, formed from the root's)
+# to the requirement read in the space of the occurrence f holds, not recv's.  The write lands in the root's a3 (3).
+# recv keeps its native word in the walked twin (a callable formal).  HEAD refused it walked.  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+sub: bump ()
+    a3\x: a3\x + 1
+end: bump
+Box:
+    int: v 0
+    fn: bump
+end: Box
+fn: recv (bump: f) int
+    f()
+    return: 0
+end: recv
+b1: merge: Box
+a3: merge: Wide
+int: r recv(b1\bump)
+int: ok 7
+if: a3\x != 3 || a3\pad != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

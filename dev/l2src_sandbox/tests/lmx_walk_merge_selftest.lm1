@@ -14,8 +14,11 @@ predef: "l2src/lmx_graph_copy_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# Fresh merge uses [prim, record, catch, P, expression-parent, fresh-token, source-token,
-# op0, ..., opN-1, body_or_0, 3P pair cells]. Merge-into retains its independent
+# Fresh merge uses [prim, record, catch, P, Q, T, fresh-token, source-token,
+# op0, ..., opN-1, body_or_0, 3P pair cells, Q qualified branch roots, T use cells]: no input names a
+# parent -- the result's is the copy's own, whatever place or occurrence runs the merge (the
+# author, LMX_blog/2026-10-05.md#merge-parent) -- and the Q named branches stay themselves in
+# the copied lexical chain.  Merge-into retains its independent
 # [prim, record, catch, target, op, P, 3P pair cells] contract.
 
 sub: mw_check (@: int counts; int: ok; const: @(char label))
@@ -56,6 +59,385 @@ return: rec
 
 []: char mw_schema_tokens 4
 
+# An int cell holding v.
+fn: mw_int (@: LmxArena arena; int: v) @: void
+    @: void cell lmx_int_new_owned(arena)
+    if: cell != 0
+        lmx_int_store_known(cell, v)
+return: cell
+
+# A Structure of `width` slots under `parent` (0 none), every slot an int cell holding base + its index.
+fn: mw_node (@: LmxArena arena; @: Lmx parent; size_t: width; int: base) @: Lmx
+    @: Lmx s lmx_node_new_owned(arena)
+    size_t: i 0U
+    if: s = 0 || lmx_arena_refs_open_owned(arena, s, width) != 0
+        return: 0
+    ---
+    while: i < width
+        if: lmx_arena_ref_store(s, i, mw_int(arena, base + (cast: (int) i))) != 0
+            return: 0
+        i: i + 1U
+    ---
+    s\parent: parent
+return: s
+
+# lmx_walk_merge_map on a frame built as the walk passes one (lmx_walk_actuals): refs[i] names input i's box -- a
+# size_t or a reference -- and is null for an empty input.  The result, or 0 when the frame is refused.
+fn: mw_map (@: LmxArena arena; @@: void refs; size_t: n) @: Lmx
+    @: void out 0
+    if: lmx_walk_merge_map((cast: (@: void) arena), refs, n, 0, @ out) != 0
+        return: 0
+return: (cast: (@: Lmx) out)
+
+# Input i is the size box sz[i] holding v.
+fn: mw_sz (@: size_t sz; @@: void refs; size_t: i; size_t: v) int
+    sz[i]: v
+    refs[i]: (cast: (@: void) (sz + i))
+return: 0
+
+# Input i is the reference box pt[i] holding p.
+fn: mw_pt (@@: void pt; @@: void refs; size_t: i; @: void p) int
+    pt[i]: p
+    refs[i]: (cast: (@: void) (pt + i))
+return: 0
+
+# Frame E (Codex K03-READ-FIELD-CLOSURE-20261008-30): P = 1, Q = 2, T = 13 -- two operands (model, op2), the body
+# input empty, one pair (model slot 0 <- operand 1's field 0), two qualified roots, and three use records of lengths
+# 1, 2 and 1: [empty, 1, 1, 0] model's parent's k; [empty, 1, 2, 2, 0] its sub's w; [home, 0, 1, 3] its t.  26 inputs.
+fn: mw_frame_e (@: size_t sz; @@: void pt; @@: void refs; @: Lmx model; @: Lmx op2; @: Lmx q1; @: Lmx q2; @: Lmx home) int
+    size_t: i 0U
+    while: i < 26U
+        refs[i]: 0
+        i: i + 1U
+    ---
+    mw_sz(sz, refs, 0U, 1U)
+    mw_sz(sz, refs, 1U, 2U)
+    mw_sz(sz, refs, 2U, 13U)
+    mw_pt(pt, refs, 3U, (cast: (@: void) mw_schema_tokens))
+    mw_pt(pt, refs, 4U, 0)
+    mw_pt(pt, refs, 5U, (cast: (@: void) model))
+    mw_pt(pt, refs, 6U, (cast: (@: void) op2))
+    mw_sz(sz, refs, 8U, 0U)
+    mw_sz(sz, refs, 9U, 1U)
+    mw_sz(sz, refs, 10U, 0U)
+    mw_pt(pt, refs, 11U, (cast: (@: void) q1))
+    mw_pt(pt, refs, 12U, (cast: (@: void) q2))
+    mw_sz(sz, refs, 14U, 1U)
+    mw_sz(sz, refs, 15U, 1U)
+    mw_sz(sz, refs, 16U, 0U)
+    mw_sz(sz, refs, 18U, 1U)
+    mw_sz(sz, refs, 19U, 2U)
+    mw_sz(sz, refs, 20U, 2U)
+    mw_sz(sz, refs, 21U, 0U)
+    mw_pt(pt, refs, 22U, (cast: (@: void) home))
+    mw_sz(sz, refs, 23U, 0U)
+    mw_sz(sz, refs, 24U, 1U)
+    mw_sz(sz, refs, 25U, 3U)
+return: 0
+
+# A one-operand frame with no pair: P = 0, Q = nq roots (each q), T = 4 * nrec cells of records [empty, 1, 1, 0]
+# (the model's parent's slot 0).  Its input count.
+fn: mw_frame_wide (@: size_t sz; @@: void pt; @@: void refs; @: Lmx model; @: Lmx q; size_t: nq; size_t: nrec) size_t
+    size_t: i 0U
+    size_t: at 0U
+    mw_sz(sz, refs, 0U, 0U)
+    mw_sz(sz, refs, 1U, nq)
+    mw_sz(sz, refs, 2U, 4U * nrec)
+    mw_pt(pt, refs, 3U, (cast: (@: void) mw_schema_tokens))
+    mw_pt(pt, refs, 4U, 0)
+    mw_pt(pt, refs, 5U, (cast: (@: void) model))
+    refs[6]: 0
+    at: 7U
+    while: i < nq
+        mw_pt(pt, refs, at, (cast: (@: void) q))
+        at: at + 1U
+        i: i + 1U
+    ---
+    i: 0U
+    while: i < nrec
+        refs[at]: 0
+        mw_sz(sz, refs, at + 1U, 1U)
+        mw_sz(sz, refs, at + 2U, 1U)
+        mw_sz(sz, refs, at + 3U, 0U)
+        at: at + 4U
+        i: i + 1U
+    ---
+return: at
+
+# The simultaneous spans, the malformed frames (each refused before a read or an allocation it would need), counts
+# past 65535 and a use path deeper than any fixed depth, on lmx_walk_merge_map's own decoder.
+fn: mw_framing (@: int counts; @: LmxArena arena) int
+    size_t: cap 65600U
+    @: size_t sz (cast: (@: size_t) calloc(cap, c.sizeof(c.size_t)))
+    @@: void pt (cast: (@@: void) calloc(cap, c.sizeof(@: void)))
+    @@: void refs (cast: (@@: void) calloc(cap, c.sizeof(@: void)))
+    @: Lmx home mw_node(arena, 0, 5U, 0)
+    @: Lmx model mw_node(arena, home, 2U, 1)
+    @: Lmx sub mw_node(arena, home, 2U, 8)
+    @: Lmx home2 mw_node(arena, 0, 2U, 6)
+    @: Lmx op2 mw_node(arena, home2, 1U, 9)
+    @: Lmx q1 mw_node(arena, 0, 1U, 30)
+    @: Lmx q2 mw_node(arena, 0, 1U, 40)
+    @: Lmx deep_home 0
+    @: Lmx deep_model 0
+    @: Lmx level 0
+    @: Lmx next 0
+    @: Lmx r 0
+    @: Lmx up 0
+    @: Lmx s 0
+    size_t: n 0U
+    size_t: i 0U
+    size_t: depth 0U
+    size_t: round 0U
+    int: ok 0
+    if: sz = 0 || pt = 0 || refs = 0 || home = 0 || model = 0 || sub = 0 || home2 = 0 || op2 = 0 || q1 = 0 || q2 = 0
+        mw_check(counts, 0, "framing: fixture built")
+        free((cast: (@: void) sz))
+        free((cast: (@: void) pt))
+        free((cast: (@: void) refs))
+        return: 1
+    ---
+    # home {k: 5, model, sub, t: 7, u: 11}; model {x: 1, y: 2}; sub {w: 8, v: 4}; home2 {j: 6, op2}; op2 {z: 9}.
+    lmx_int_store_known(lmx_arena_ref_value(home, 0U), 5)
+    lmx_arena_ref_store(home, 1U, (cast: (@: void) model))
+    lmx_arena_ref_store(home, 2U, (cast: (@: void) sub))
+    lmx_int_store_known(lmx_arena_ref_value(home, 3U), 7)
+    lmx_int_store_known(lmx_arena_ref_value(home, 4U), 11)
+    lmx_int_store_known(lmx_arena_ref_value(model, 1U), 2)
+    lmx_int_store_known(lmx_arena_ref_value(sub, 1U), 4)
+    lmx_arena_ref_store(home2, 1U, (cast: (@: void) op2))
+
+    # The good frame: every span read where it stands.
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r != 0 && (r\array.size) = 2U && lmx_int_value_known(lmx_arena_ref_value(r, 0U)) = 9 && lmx_int_value_known(lmx_arena_ref_value(r, 1U)) = 2, "framing E: two operands and the pair decoded -- model slot 0 <- op2's z, the model's y kept")
+    up: 0
+    if: r != 0
+        up: r\parent
+    mw_check(counts, up != 0 && up != home && (up\array.size) = 5U && lmx_arena_ref_value(up, 1U) = (cast: (@: void) r), "framing E: the result hangs under the copy of the model's lexical parent, which holds it")
+    mw_check(counts, up != 0 && lmx_arena_ref_value(up, 0U) != lmx_arena_ref_value(home, 0U) && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 5, "framing E: record 1 (selector, length 1) copied the parent's k")
+    s: 0
+    if: up != 0
+        s: (cast: (@: Lmx) lmx_arena_ref_value(up, 2U))
+    mw_check(counts, s != 0 && s != sub && (s\array.size) = 2U && lmx_int_value_known(lmx_arena_ref_value(s, 0U)) = 8 && lmx_arena_ref_value(s, 1U) = 0, "framing E: record 2 (selector, length 2) copied sub's w only, its v absent")
+    mw_check(counts, up != 0 && lmx_int_value_known(lmx_arena_ref_value(up, 3U)) = 7 && lmx_arena_ref_value(up, 4U) = 0, "framing E: record 3 (explicit anchor, length 1) copied t; the unread u is absent")
+    # The explicit anchor input names the unit of the running code by any Structure of its lexical tree (the walk
+    # passes SELF, the activation's own occurrence): the record is anchored at the tree's root.  sub, home's child,
+    # given as the anchor: record 3 still reads home's t (mutant: the anchor itself, RED -- sub has no slot 3).
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, sub)
+    r: mw_map(arena, refs, 26U)
+    up: 0
+    if: r != 0
+        up: r\parent
+    mw_check(counts, up != 0 && up != home && lmx_int_value_known(lmx_arena_ref_value(up, 3U)) = 7 && lmx_arena_ref_value(up, 4U) = 0, "framing E: an explicit anchor input inside the tree (sub) anchors record 3 at the root -- home's t copied, u absent")
+
+    # Malformed frames: each refused, no result.
+    r: mw_map(arena, refs, 6U)
+    mw_check(counts, r = 0, "framing: fewer inputs than the prefix refuse")
+    mw_sz(sz, refs, 0U, (cast: (size_t) -1) / 3U + 1U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a pair count whose 3P wraps refuses (mutant: unchecked product, RED)")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 1U, (cast: (size_t) -1))
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a qualified count past the frame refuses (mutant: unchecked sum, RED)")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 2U, 26U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a use-cell count past the frame refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    refs[0]: 0
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: an empty count input refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 2U, 12U)
+    r: mw_map(arena, refs, 25U)
+    mw_check(counts, r = 0, "framing: a tail truncated inside its last record refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 19U, 0U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a zero-length record refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 24U, 2U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a record longer than the tail left refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 15U, 3U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a record ending inside the next one leaves the tail misaligned and refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 14U, 3U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a selector past the operands refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 14U, 0U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: an empty anchor with no selector refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_sz(sz, refs, 23U, 1U)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: an explicit anchor beside a selector refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_pt(pt, refs, 22U, 0)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: a present anchor holding no Structure refuses (mutant: read as an omitted use, RED)")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    mw_pt(pt, refs, 22U, lmx_arena_ref_value(home, 0U))
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: an anchor that is no Structure refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    refs[14]: 0
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: an empty selector input refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    refs[21]: 0
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r = 0, "framing: an empty slot input refuses")
+    mw_frame_e(sz, pt, refs, model, op2, q1, q2, home)
+    r: mw_map(arena, refs, 26U)
+    mw_check(counts, r != 0, "framing: the same frame restored decodes again")
+
+    # Counts past 65535: 65537 qualified roots, then 16385 use records (65540 cells), each with one operand.
+    n: mw_frame_wide(sz, pt, refs, model, q1, 65537U, 0U)
+    r: mw_map(arena, refs, n)
+    mw_check(counts, n = 65544U && r != 0 && (r\array.size) = 2U && lmx_int_value_known(lmx_arena_ref_value(r, 0U)) = 1, "framing: 65537 qualified roots stay roots (mutant: a 16-bit Q field, RED)")
+    n: mw_frame_wide(sz, pt, refs, model, q1, 0U, 16385U)
+    r: mw_map(arena, refs, n)
+    up: 0
+    if: r != 0
+        up: r\parent
+    mw_check(counts, n = 65547U && up != 0 && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 5 && lmx_arena_ref_value(up, 2U) = 0, "framing: 65540 use cells decode as 16385 records (mutant: a 16-bit T field, RED)")
+
+    # Use paths of 40 and 2000 levels: deep_home {L1, sibling, deep_model}; L_i {L_i+1, sibling}, the deepest
+    # {42, sibling}.  The record [empty, 1, depth + 1, 0 ...] copies the chain in part: every sibling absent.
+    round: 0U
+    while: round < 2U
+        depth: 40U
+        if: round = 1U
+            depth: 2000U
+        deep_home: mw_node(arena, 0, 3U, 100)
+        deep_model: mw_node(arena, deep_home, 1U, 1)
+        ok: (cast: (int) (deep_home != 0 && deep_model != 0))
+        if: ok != 0
+            lmx_arena_ref_store(deep_home, 2U, (cast: (@: void) deep_model))
+        level: deep_home
+        i: 0U
+        while: ok != 0 && i < depth
+            next: mw_node(arena, level, 2U, 200)
+            if: next = 0
+                ok: 0
+            else:
+                lmx_arena_ref_store(level, 0U, (cast: (@: void) next))
+                level: next
+            ---
+            i: i + 1U
+        ---
+        if: ok != 0
+            lmx_int_store_known(lmx_arena_ref_value(level, 0U), 42)
+        mw_sz(sz, refs, 0U, 0U)
+        mw_sz(sz, refs, 1U, 0U)
+        mw_sz(sz, refs, 2U, depth + 4U)
+        mw_pt(pt, refs, 3U, (cast: (@: void) mw_schema_tokens))
+        mw_pt(pt, refs, 4U, 0)
+        mw_pt(pt, refs, 5U, (cast: (@: void) deep_model))
+        refs[6]: 0
+        refs[7]: 0
+        mw_sz(sz, refs, 8U, 1U)
+        mw_sz(sz, refs, 9U, depth + 1U)
+        i: 0U
+        while: i <= depth
+            mw_sz(sz, refs, 10U + i, 0U)
+            i: i + 1U
+        ---
+        r: 0
+        if: ok != 0
+            r: mw_map(arena, refs, 11U + depth)
+        up: 0
+        if: r != 0
+            up: r\parent
+        s: up
+        i: 0U
+        while: s != 0 && i < depth
+            if: lmx_arena_ref_value(s, 1U) != 0
+                s: 0
+            else:
+                s: (cast: (@: Lmx) lmx_arena_ref_value(s, 0U))
+            ---
+            i: i + 1U
+        ---
+        if: round = 0U
+            mw_check(counts, up != 0 && up != deep_home && lmx_arena_ref_value(up, 2U) = (cast: (@: void) r) && s != 0 && lmx_int_value_known(lmx_arena_ref_value(s, 0U)) = 42 && lmx_arena_ref_value(s, 1U) = 0, "framing: a 41-slot use path is copied whole along its chain, every sibling absent (mutant: a 32-level cap, RED)")
+        else:
+            mw_check(counts, up != 0 && up != deep_home && s != 0 && lmx_int_value_known(lmx_arena_ref_value(s, 0U)) = 42 && lmx_arena_ref_value(s, 1U) = 0, "framing: a 2001-slot use path reaches its leaf, every sibling absent (mutant: any fixed depth, RED)")
+        ---
+        round: round + 1U
+    ---
+    free((cast: (@: void) sz))
+    free((cast: (@: void) pt))
+    free((cast: (@: void) refs))
+return: 0
+
+# A read of an absent place of a partial copy is refused (Codex -28 review point 3): the result of a merge whose one
+# record copies only k of home {k: 5, model, u: 11} hangs under a copy holding k and the result, u absent and the copy
+# marked partial (lmx_implements_holes); a walked OF of that copy's u is refused, never 0; its k reads 5.
+fn: mw_absent (@: int counts; @: LmxWalkContext ctx; @: LmxArena arena; @: Lmx roles) int
+    @: size_t sz (cast: (@: size_t) calloc(16U, c.sizeof(c.size_t)))
+    @@: void pt (cast: (@@: void) calloc(16U, c.sizeof(@: void)))
+    @@: void refs (cast: (@@: void) calloc(16U, c.sizeof(@: void)))
+    @: Lmx home mw_node(arena, 0, 3U, 0)
+    @: Lmx model mw_node(arena, home, 1U, 1)
+    @: Lmx r 0
+    @: Lmx up 0
+    @: Lmx caller 0
+    @: Lmx ret 0
+    @: Lmx of 0
+    LmxWalkValue: result
+    int: st
+    if: sz = 0 || pt = 0 || refs = 0 || home = 0 || model = 0
+        mw_check(counts, 0, "absent: fixture built")
+        free((cast: (@: void) sz))
+        free((cast: (@: void) pt))
+        free((cast: (@: void) refs))
+        return: 1
+    ---
+    lmx_int_store_known(lmx_arena_ref_value(home, 0U), 5)
+    lmx_arena_ref_store(home, 1U, (cast: (@: void) model))
+    lmx_int_store_known(lmx_arena_ref_value(home, 2U), 11)
+    mw_sz(sz, refs, 0U, 0U)
+    mw_sz(sz, refs, 1U, 0U)
+    mw_sz(sz, refs, 2U, 4U)
+    mw_pt(pt, refs, 3U, (cast: (@: void) mw_schema_tokens))
+    mw_pt(pt, refs, 4U, 0)
+    mw_pt(pt, refs, 5U, (cast: (@: void) model))
+    refs[6]: 0
+    refs[7]: 0
+    mw_sz(sz, refs, 8U, 1U)
+    mw_sz(sz, refs, 9U, 1U)
+    mw_sz(sz, refs, 10U, 0U)
+    r: mw_map(arena, refs, 11U)
+    if: r != 0
+        up: r\parent
+    mw_check(counts, up != 0 && up != home && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 5 && lmx_arena_ref_value(up, 1U) = (cast: (@: void) r) && lmx_arena_ref_value(up, 2U) = 0 && lmx_implements_holes(arena, up) = 1, "absent: the copy holds k and the result, not u, and is marked partial")
+    caller: lmx_node_new_owned(arena)
+    mw_check(counts, caller != 0 && lmx_arena_refs_open_owned(arena, caller, 1U) = 0, "absent: caller opened")
+    ret: mw_fr(arena, roles, caller, 0U, c.LMX_WALK_OP_RET, 2U)
+    of: mw_fr(arena, roles, ret, 1U, c.LMX_WALK_OP_OF, 3U)
+    if: of = 0 || up = 0
+        mw_check(counts, 0, "absent: OF frame built")
+        return: 1
+    ---
+    lmx_arena_ref_store(of, 1U, (cast: (@: void) up))
+    lmx_walk_store_size(arena, of, 2U, 2U)
+    st: lmx_walk_activate(ctx, caller, caller, 0, 0U, @ result)
+    mw_check(counts, st != c.LMX_WALK_OK, "absent: a walked read of the copy's absent u is refused, never read as 0 (mutant: the hole check dropped, RED)")
+    lmx_walk_store_size(arena, of, 2U, 0U)
+    st: lmx_walk_activate(ctx, caller, caller, 0, 0U, @ result)
+    mw_check(counts, st = c.LMX_WALK_OK && (result.present) != 0 && (result.number) = 5, "absent: the copy's own k reads 5")
+    free((cast: (@: void) sz))
+    free((cast: (@: void) pt))
+    free((cast: (@: void) refs))
+return: 0
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -63,7 +445,7 @@ fn: main () int
     LmxPool: cells
     LmxWalkContext: ctx
     LmxWalkValue: result
-    @: int types (cast: (@: int) calloc(10U, c.sizeof(int)))
+    @: int types (cast: (@: int) calloc(32U, c.sizeof(int)))
     @: Lmx contract 0
     @: Lmx roles 0
     @: Lmx unit 0
@@ -72,6 +454,9 @@ fn: main () int
     # x'), model {x: 1}, operand {x': 99}.
     @: Lmx model 0
     @: Lmx operand 0
+    @: Lmx home_a 0
+    @: void home_k 0
+    @: Lmx up_a 0
     @: Lmx pairs_a 0
     @: Lmx prim_a 0
     @: LmxPrimitive rec_a 0
@@ -123,22 +508,35 @@ fn: main () int
     mw_check(counts, model != 0 && lmx_arena_refs_open_owned(@ arena, model, 1U) = 0, "model opened {x}")
     lmx_arena_ref_store(model, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
     lmx_int_store_known(lmx_arena_ref_value(model, 0U), 1)
+    # home_a {k: 5, model}: the model's lexical parent, a mutable ancestor.
+    home_a: lmx_node_new_owned(@ arena)
+    home_k: lmx_int_new_owned(@ arena)
+    mw_check(counts, home_a != 0 && home_k != 0 && lmx_arena_refs_open_owned(@ arena, home_a, 2U) = 0, "home_a opened {k, model}")
+    lmx_int_store_known(home_k, 5)
+    lmx_arena_ref_store(home_a, 0U, home_k)
+    lmx_arena_ref_store(home_a, 1U, (cast: (@: void) model))
+    model\parent: home_a
     operand: lmx_node_new_owned(@ arena)
     mw_check(counts, operand != 0 && lmx_arena_refs_open_owned(@ arena, operand, 1U) = 0, "operand opened {x'}")
     lmx_arena_ref_store(operand, 0U, (cast: (@: void) lmx_int_new_owned(@ arena)))
     lmx_int_store_known(lmx_arena_ref_value(operand, 0U), 99)
     pairs_a: 0
     types[0]: c.LMX_TYPE_SIZE_T
-    types[1]: c.LMX_TYPE_LMX
-    types[2]: c.LMX_TYPE_POINTER_BASE + 12
+    types[1]: c.LMX_TYPE_SIZE_T
+    types[2]: c.LMX_TYPE_SIZE_T
     types[3]: c.LMX_TYPE_POINTER_BASE + 12
-    types[4]: c.LMX_TYPE_LMX
+    types[4]: c.LMX_TYPE_POINTER_BASE + 12
     types[5]: c.LMX_TYPE_LMX
     types[6]: c.LMX_TYPE_LMX
-    types[7]: c.LMX_TYPE_SIZE_T
+    types[7]: c.LMX_TYPE_LMX
     types[8]: c.LMX_TYPE_SIZE_T
     types[9]: c.LMX_TYPE_SIZE_T
-    contract: wt_contract(@ arena, 10U, types, c.LMX_TYPE_LMX)
+    types[10]: c.LMX_TYPE_SIZE_T
+    types[11]: c.LMX_TYPE_LMX
+    types[12]: c.LMX_TYPE_SIZE_T
+    types[13]: c.LMX_TYPE_SIZE_T
+    types[14]: c.LMX_TYPE_SIZE_T
+    contract: wt_contract(@ arena, 15U, types, c.LMX_TYPE_LMX)
     mw_check(counts, contract != 0, "merge-map complete input/return contract")
     rec_a: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
     mw_check(counts, rec_a != 0, "merge-map primitive record built")
@@ -146,15 +544,19 @@ fn: main () int
     caller_a: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_a != 0 && lmx_arena_refs_open_owned(@ arena, caller_a, 1U) = 0, "caller_a opened")
     prim_a: mw_fr(@ arena, roles, caller_a, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 13U)
+    prim_a: mw_fr(@ arena, roles, prim_a, 1U, c.LMX_WALK_OP_PRIM, 18U)
     lmx_arena_ref_store(prim_a, 1U, (cast: (@: void) rec_a))
-    lmx_arena_ref_store(prim_a, 4U, (cast: (@: void) unit))
-    lmx_walk_store_charptr(@ arena, prim_a, 5U, mw_schema_tokens)
-    lmx_walk_store_charptr(@ arena, prim_a, 6U, 0)
-    lmx_arena_ref_store(prim_a, 7U, (cast: (@: void) model))
-    lmx_arena_ref_store(prim_a, 8U, (cast: (@: void) operand))
-    # Slot 9 is absent body; parent/tokens precede operands, pairs stay inline.
-    mw_check(counts, mw_pairs(@ arena, prim_a, 3U, 10U, 0U, 1U, 0U) = 0, "pairs_a inline: model slot 0 <- operand(1) field 0")
+    lmx_walk_store_size(@ arena, prim_a, 4U, 0U)
+    lmx_walk_store_size(@ arena, prim_a, 5U, 4U)
+    lmx_walk_store_charptr(@ arena, prim_a, 6U, mw_schema_tokens)
+    lmx_walk_store_charptr(@ arena, prim_a, 7U, 0)
+    lmx_arena_ref_store(prim_a, 8U, (cast: (@: void) model))
+    lmx_arena_ref_store(prim_a, 9U, (cast: (@: void) operand))
+    # Slot 4 is Q, no qualified branch; slot 5 T, one use record; slot 10 is absent body; the counts and tokens
+    # precede operands, pairs stay inline.  The record [empty anchor, 1, 1, 0]: operand 1's (the model's) lexical
+    # parent, its slot 0 -- the model's code reads node\k.
+    mw_check(counts, mw_pairs(@ arena, prim_a, 3U, 11U, 0U, 1U, 0U) = 0, "pairs_a inline: model slot 0 <- operand(1) field 0")
+    mw_check(counts, lmx_walk_store_size(@ arena, prim_a, 15U, 1U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_a, 16U, 1U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_a, 17U, 0U) = c.LMX_WALK_OK, "use record a: the model's lexical parent's slot 0, by selector")
     mw_check(counts, prim_a != 0, "caller_a graph built")
 
     st: lmx_walk_activate(@ ctx, caller_a, caller_a, 0, 0U, @ result)
@@ -165,7 +567,14 @@ fn: main () int
     mw_check(counts, ((cast: (@: Lmx) out_a)\array.size) = 1U, "merge result has model's own width (1)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_a), 0U)) = 99, "merge result slot 0 = operand's 99, the paired override (mutant: pairs ignored -> model's own 1, RED)")
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value(model, 0U)) = 1, "model itself untouched")
-    mw_check(counts, ((cast: (@: Lmx) out_a)\parent) = unit, "merge parent is expression host, not operand parent")
+    up_a: 0
+    if: out_a != 0
+        up_a: (cast: (@: Lmx) out_a)\parent
+    mw_check(counts, up_a != 0 && up_a != home_a && up_a != unit && up_a != caller_a && (up_a\array.size) = 2U, "the result hangs under a copy of the model's lexical parent: not the source parent, not the place running the merge, not zero")
+    mw_check(counts, up_a != 0 && lmx_arena_ref_value(up_a, 0U) != home_k && lmx_int_value_known(lmx_arena_ref_value(up_a, 0U)) = 5, "the copied ancestor's used cell is its own, with the value at the merge (mutant: use cells dropped, RED)")
+    lmx_int_store_known(home_k, 6)
+    mw_check(counts, up_a != 0 && lmx_int_value_known(lmx_arena_ref_value(up_a, 0U)) = 5 && model\parent = home_a, "a later write of the source ancestor does not reach the copy; the source keeps its parent")
+    mw_check(counts, up_a != 0 && lmx_arena_ref_value(up_a, 1U) = out_a, "the copied ancestor holds the result where home_a holds the model: no link reaches the discarded copy of the model")
     mw_check(counts, lmx_implements_layout(@ arena, (cast: (@: Lmx) out_a)) = (cast: (@: void) mw_schema_tokens), "fresh merge records its exact declaration token")
 
     # ==== merge-into ====
@@ -230,6 +639,12 @@ fn: main () int
     @: Lmx caller_c 0
     @: Lmx copied_c 0
     @: Lmx prior_result 0
+    @: Lmx home_c 0
+    @: Lmx up_c 0
+    @: Lmx up_r 0
+    @: Lmx caller_d 0
+    @: Lmx prim_d 0
+    @: Lmx up_d 0
     int: r_c 0
     @: void out_c 0
     int: present_c 0
@@ -244,26 +659,37 @@ fn: main () int
     # effect on anything else (lmx_copy_profiles_valid, lmx_graph_copy_owned.lm1:
     # 313-345, requires a retain-profile marker's OWN home pool to be sealed).
     types[0]: c.LMX_TYPE_SIZE_T
-    types[1]: c.LMX_TYPE_LMX
-    types[2]: c.LMX_TYPE_POINTER_BASE + 12
+    types[1]: c.LMX_TYPE_SIZE_T
+    types[2]: c.LMX_TYPE_SIZE_T
     types[3]: c.LMX_TYPE_POINTER_BASE + 12
-    types[4]: c.LMX_TYPE_LMX
+    types[4]: c.LMX_TYPE_POINTER_BASE + 12
     types[5]: c.LMX_TYPE_LMX
     types[6]: c.LMX_TYPE_LMX
-    contract: wt_contract(@ arena, 7U, types, c.LMX_TYPE_LMX)
+    types[7]: c.LMX_TYPE_LMX
+    types[8]: c.LMX_TYPE_LMX
+    types[9]: c.LMX_TYPE_SIZE_T
+    types[10]: c.LMX_TYPE_SIZE_T
+    types[11]: c.LMX_TYPE_SIZE_T
+    contract: wt_contract(@ arena, 12U, types, c.LMX_TYPE_LMX)
     mw_check(counts, contract != 0, "retained merge complete input/return contract")
     rec_c: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
     mw_check(counts, rec_c != 0, "merge-map primitive record built (retained-leaf fixture)")
     caller_c: lmx_node_new_owned(@ arena)
     mw_check(counts, caller_c != 0 && lmx_arena_refs_open_owned(@ arena, caller_c, 1U) = 0, "caller_c opened")
     prim_c: mw_fr(@ arena, roles, caller_c, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 10U)
+    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 15U)
     mw_check(counts, prim_c != 0, "caller_c graph built")
     model_c: lmx_node_new_owned(@ arena)
     mw_check(counts, model_c != 0 && lmx_arena_refs_open_owned(@ arena, model_c, 1U) = 0, "model_c opened {m: 1} (the ordinary, COPIED operand)")
     model_field_c: lmx_int_new_owned(@ arena)
     lmx_int_store_known(model_field_c, 1)
     lmx_arena_ref_store(model_c, 0U, model_field_c)
+    # home_c {model_c, operand_c}: model_c's lexical parent, in the same default pool (never sealed); its slot 1 is
+    # filled with the profiled branch operand_c once that exists.
+    home_c: lmx_node_new_owned(@ arena)
+    mw_check(counts, home_c != 0 && lmx_arena_refs_open_owned(@ arena, home_c, 2U) = 0, "home_c opened {model_c, operand_c}")
+    lmx_arena_ref_store(home_c, 0U, (cast: (@: void) model_c))
+    model_c\parent: home_c
     profile_root: lmx_node_new_owned(@ arena)
     mw_check(counts, profile_root != 0, "profile_root built (default pool, stays unsealed -- never itself a retain profile)")
     profile_c: lmx_node_new_profiled(@ arena, profile_root)
@@ -291,13 +717,18 @@ fn: main () int
     seal_pool: lmx_arena_find_profiled(@ arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, profile_c)
     mw_check(counts, seal_pool != 0 && lmx_pool_seal(seal_pool) = 0, "leaf_c's profiled PRIMITIVE pool sealed")
 
+    lmx_arena_ref_store(home_c, 1U, (cast: (@: void) operand_c))
     lmx_arena_ref_store(prim_c, 1U, (cast: (@: void) rec_c))
-    mw_check(counts, mw_fr(@ arena, roles, prim_c, 4U, c.LMX_WALK_OP_SELF, 1U) != 0, "SELF parent operand built")
-    lmx_walk_store_charptr(@ arena, prim_c, 5U, mw_schema_tokens + 1)
-    lmx_walk_store_charptr(@ arena, prim_c, 6U, 0)
-    lmx_arena_ref_store(prim_c, 7U, (cast: (@: void) model_c))
-    lmx_arena_ref_store(prim_c, 8U, (cast: (@: void) operand_c))
-    # Slot 2 is catch; pair count at 3 is zero; slot 9 is absent body.
+    mw_check(counts, lmx_walk_store_size(@ arena, prim_c, 4U, 0U) = c.LMX_WALK_OK, "no qualified branch named (Q = 0); no input names a parent")
+    mw_check(counts, lmx_walk_store_size(@ arena, prim_c, 5U, 4U) = c.LMX_WALK_OK, "one use record (T = 4)")
+    lmx_walk_store_charptr(@ arena, prim_c, 6U, mw_schema_tokens + 1)
+    lmx_walk_store_charptr(@ arena, prim_c, 7U, 0)
+    lmx_arena_ref_store(prim_c, 8U, (cast: (@: void) model_c))
+    lmx_arena_ref_store(prim_c, 9U, (cast: (@: void) operand_c))
+    # Slot 2 is catch; pair count at 3 is zero; slot 10 is absent body.  The record [home_c, 0, 1, 1] names home_c
+    # explicitly and its slot 1 -- the place holding operand_c.
+    lmx_arena_ref_store(prim_c, 11U, (cast: (@: void) home_c))
+    mw_check(counts, lmx_walk_store_size(@ arena, prim_c, 12U, 0U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_c, 13U, 1U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_c, 14U, 1U) = c.LMX_WALK_OK, "use record c: home_c's slot 1, by explicit anchor")
     mw_check(counts, lmx_walk_store_size(@ arena, prim_c, 3U, 0U) = c.LMX_WALK_OK, "prim_c pair count 0")
 
     st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, @ result)
@@ -310,34 +741,67 @@ fn: main () int
     mw_check(counts, lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) out_c), 1U)) = 77, "the retained leaf's value still reads 77 through the result")
 
     prior_result: (cast: (@: Lmx) out_c)
-    mw_check(counts, prior_result\parent = caller_c, "SELF returns executing occurrence A as merge parent")
+    up_c: prior_result\parent
+    mw_check(counts, up_c != 0 && up_c != home_c && up_c != caller_c && (up_c\array.size) = 2U, "run by occurrence A, the result hangs under a copy of model_c's lexical parent, not under A")
+    mw_check(counts, up_c != 0 && lmx_arena_ref_value(up_c, 1U) = (cast: (@: void) operand_c), "the profiled operand stays itself in the copied lexical chain too, where a use reaches it")
+    mw_check(counts, up_c != 0 && lmx_arena_ref_value(up_c, 0U) = out_c, "the copied ancestor holds the result where home_c holds model_c, not the discarded copy of model_c")
     mw_check(counts, lmx_graph_copy_owned(caller_c, @ arena, @ arena, @ copied_c) = 0 && copied_c != 0 && copied_c != caller_c, "copied occurrence R is distinct")
     st: lmx_walk_activate(@ ctx, caller_c, copied_c, 0, 0U, @ result)
     mw_check(counts, st = c.LMX_WALK_OK && (result.present) != 0 && (result.ref) != 0 && (result.ref) != (cast: (@: void) prior_result), "same code with copied data makes a fresh result")
-    mw_check(counts, ((cast: (@: Lmx) (result.ref))\parent) = copied_c && prior_result\parent = caller_c, "SELF uses actual R when code differs from data; old parent remains A")
+    if: (result.ref) != 0
+        up_r: (cast: (@: Lmx) (result.ref))\parent
+    mw_check(counts, up_r != 0 && up_r != home_c && up_r != copied_c && up_r != caller_c && up_r != up_c && (up_r\array.size) = 2U && prior_result\parent = up_c, "run by its copy R, the same code copies model_c's lexical parent again: neither R nor A is a parent, the earlier result keeps its own")
+    mw_check(counts, up_r != 0 && lmx_arena_ref_value(up_r, 0U) = (result.ref), "that copy holds R's result where home_c holds model_c")
+
+    # Q = 1: the PRIM names operand_c as one of the program's qualified branches, and model_c is merged alone -- the
+    # copied lexical chain holds operand_c itself, retained by its exact profile, not a copy of it.
+    contract: wt_contract(@ arena, 12U, types, c.LMX_TYPE_LMX)
+    rec_c: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
+    caller_d: lmx_node_new_owned(@ arena)
+    mw_check(counts, caller_d != 0 && lmx_arena_refs_open_owned(@ arena, caller_d, 1U) = 0, "caller_d opened")
+    prim_d: mw_fr(@ arena, roles, caller_d, 0U, c.LMX_WALK_OP_RET, 2U)
+    prim_d: mw_fr(@ arena, roles, prim_d, 1U, c.LMX_WALK_OP_PRIM, 15U)
+    lmx_arena_ref_store(prim_d, 1U, (cast: (@: void) rec_c))
+    mw_check(counts, lmx_walk_store_size(@ arena, prim_d, 3U, 0U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_d, 4U, 1U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_d, 5U, 4U) = c.LMX_WALK_OK, "prim_d: no pair, one qualified branch, one use record")
+    lmx_walk_store_charptr(@ arena, prim_d, 6U, mw_schema_tokens + 1)
+    lmx_walk_store_charptr(@ arena, prim_d, 7U, 0)
+    lmx_arena_ref_store(prim_d, 8U, (cast: (@: void) model_c))
+    # Slot 9 is absent body; slot 10 the named branch; the record [empty, 1, 1, 1] at 11: model_c's lexical parent's
+    # slot 1, where home_c holds operand_c.
+    lmx_arena_ref_store(prim_d, 10U, (cast: (@: void) operand_c))
+    mw_check(counts, lmx_walk_store_size(@ arena, prim_d, 12U, 1U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_d, 13U, 1U) = c.LMX_WALK_OK && lmx_walk_store_size(@ arena, prim_d, 14U, 1U) = c.LMX_WALK_OK, "use record d: model_c's lexical parent's slot 1, by selector")
+    st: lmx_walk_activate(@ ctx, caller_d, caller_d, 0, 0U, @ result)
+    mw_check(counts, st = c.LMX_WALK_OK && (result.present) != 0 && (result.ref) != 0 && (result.ref) != (cast: (@: void) model_c), "model_c alone merges to a fresh copy")
+    if: (result.ref) != 0
+        up_d: (cast: (@: Lmx) (result.ref))\parent
+    mw_check(counts, up_d != 0 && up_d != home_c && up_d != caller_d && lmx_arena_ref_value(up_d, 0U) = (result.ref), "the one operand's copy hangs under a copy of its lexical parent, which holds it where home_c holds model_c")
+    mw_check(counts, up_d != 0 && lmx_arena_ref_value(up_d, 1U) = (cast: (@: void) operand_c), "the named qualified branch stays itself in the copied lexical chain (mutant: Q roots ignored -> a copy, RED)")
 
     # One qualified operand retains its root. Different merge declarations
     # may alias it, but cannot relabel it with their fresh-result tokens.
-    contract: wt_contract(@ arena, 6U, types, c.LMX_TYPE_LMX)
+    contract: wt_contract(@ arena, 7U, types, c.LMX_TYPE_LMX)
     rec_c: mw_prim_record(@ arena, (cast: (LmxPrimitiveEntry) lmx_walk_merge_map), contract)
     prim_c: mw_fr(@ arena, roles, caller_c, 0U, c.LMX_WALK_OP_RET, 2U)
-    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 9U)
+    prim_c: mw_fr(@ arena, roles, prim_c, 1U, c.LMX_WALK_OP_PRIM, 10U)
     lmx_arena_ref_store(prim_c, 1U, (cast: (@: void) rec_c))
     lmx_walk_store_size(@ arena, prim_c, 3U, 0U)
-    lmx_arena_ref_store(prim_c, 4U, (cast: (@: void) caller_c))
-    lmx_walk_store_charptr(@ arena, prim_c, 5U, mw_schema_tokens)
-    lmx_walk_store_charptr(@ arena, prim_c, 6U, mw_schema_tokens + 2)
-    lmx_arena_ref_store(prim_c, 7U, (cast: (@: void) operand_c))
+    lmx_walk_store_size(@ arena, prim_c, 4U, 0U)
+    lmx_walk_store_size(@ arena, prim_c, 5U, 0U)
+    lmx_walk_store_charptr(@ arena, prim_c, 6U, mw_schema_tokens)
+    lmx_walk_store_charptr(@ arena, prim_c, 7U, mw_schema_tokens + 2)
+    lmx_arena_ref_store(prim_c, 8U, (cast: (@: void) operand_c))
     mw_check(counts, lmx_implements_layout(@ arena, operand_c) = 0, "retained root begins without invented layout")
     st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, @ result)
     mw_check(counts, st = c.LMX_WALK_OK && (result.ref) = (cast: (@: void) operand_c), "single qualified merge retains exact operand")
     mw_check(counts, lmx_implements_layout(@ arena, operand_c) = (cast: (@: void) (mw_schema_tokens + 2)), "retained root receives genuine source token, not merge token")
-    lmx_walk_store_charptr(@ arena, prim_c, 5U, mw_schema_tokens + 1)
-    lmx_walk_store_charptr(@ arena, prim_c, 6U, 0)
+    lmx_walk_store_charptr(@ arena, prim_c, 6U, mw_schema_tokens + 1)
+    lmx_walk_store_charptr(@ arena, prim_c, 7U, 0)
     st: lmx_walk_activate(@ ctx, caller_c, caller_c, 0, 0U, @ result)
     mw_check(counts, st = c.LMX_WALK_OK && (result.ref) = (cast: (@: void) operand_c), "second declaration retains same held descriptor")
     mw_check(counts, lmx_implements_layout(@ arena, operand_c) = (cast: (@: void) (mw_schema_tokens + 2)) && operand_c\parent = 0, "held evidence and original parent survive second merge")
 
+    mw_framing(counts, @ arena)
+    mw_absent(counts, @ ctx, @ arena, roles)
     failures: counts[1]
     c.printf("lmx_walk_merge_selftest: %d checks, %d failed\n", counts[0], failures)
     free(types)

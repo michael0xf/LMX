@@ -1,0 +1,37 @@
+# MERGE-PARENT-SITE-OVERRIDE: the copy R that a callable merge builds runs maker's code A, and A's own merge copies
+# Model with Model's lexical parent: e hangs under a copy of the unit R reads (R hangs under T7's copy of the unit),
+# not under R, not under A's occurrence, not under the live unit (the author, LMX_blog/2026-10-05.md#merge-parent); x
+# and the qualified branch E, which no copied code reads, are absent from both copies (unit_merge_parent_t7_required).
+# The post paths climb from e in R's own field (reading e\k inside the copy is T7's located limit).  Exit 7; 81 if
+# the call through w did not return.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+int: x 3
+Model:
+    int: k 4
+end: Model
+
+fn: maker () int
+    e: merge: Model
+    return: 4
+end: maker
+
+fn: make () fn: () int
+    return: merge(maker)
+end: make
+
+@: w make()
+x: 11
+int: z (w())
+int: ok 7
+if: z != 4
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

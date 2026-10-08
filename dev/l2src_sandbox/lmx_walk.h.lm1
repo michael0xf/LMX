@@ -240,6 +240,11 @@ define: LMX_WALK_OP_NODE 36
 # to known unlisted layouts, which cannot guess a map. ImplEntry
 # borrows this frame+offset: no correspondence Structure or composed allocation.
 # Candidate once; null passes before lookup; NO is the implements throw.
+# An admission marked LMX_WALK_SOURCE_RECEIVING stands as an input of a CALL or EXEC: its targetModel is the
+# requirement of the occurrence that instruction selects, read in that occurrence's space -- a frame standing there
+# is evaluated with the occurrence as its activation's data (its [node] is the occurrence's node), and with no
+# inputs, working state or guard of the caller's.  Its value, catches and every other operand are the caller's.  A
+# RECEIVING admission anywhere else is INVALID.
 define: LMX_WALK_OP_ADMIT_AS 37
 # [and, a, b] / [or, a, b]: `a && b` / `a || b` as one value, short-circuit -- b is evaluated only when a does not decide
 # -- an int, 1 or 0.  A condition is then one value however it is built, and a loop asks it afresh in full each turn,
@@ -300,7 +305,10 @@ define: LMX_WALK_SOURCE_INITIALIZER 1
 define: LMX_WALK_SOURCE_IMPLICIT 2
 define: LMX_WALK_SOURCE_ANONYMOUS 3
 define: LMX_WALK_SOURCE_TRAILER 4
-define: LMX_WALK_SOURCE_COUNT 5
+# A RECEIVING admission (ADMIT_AS) is an input of the CALL or EXEC it stands under: its requirement is the one the
+# occurrence that instruction selects receives in, read in that occurrence's space (lmx_walk_admit_in).
+define: LMX_WALK_SOURCE_RECEIVING 5
+define: LMX_WALK_SOURCE_COUNT 6
 # One temporary value, including an explicitly present null reference. type is the
 # closed source type. Numeric values occupy their actual C-width member; reference
 # values are already loaded exactly once and their pointees remain opaque.

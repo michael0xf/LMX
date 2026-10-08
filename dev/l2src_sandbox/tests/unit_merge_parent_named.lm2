@@ -1,0 +1,39 @@
+# MERGE-PARENT-SITE-OVERRIDE: a merge in a named Structure's body (K03 RECEIVE-OUTPUT's route, unit_ns2_copy_field)
+# takes the same copy topology: box hangs under a copy of Host, inner's lexical parent, made at that run's merge (a,
+# which inner's code reads, was 11 then; E, which no copied code reads, is absent from the unit's copy), not under
+# Runner, whose body ran the merge, and not under Host itself; Runner's second run copies Host
+# again (the author, LMX_blog/2026-10-05.md#merge-parent).  The post paths climb from box.  Exit 7; 81 if box lost
+# inner's value.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+Host:
+    int: a 3
+    inner:
+        int: k 4
+        k: node\a
+    end: inner
+end: Host
+Out:
+    int: got 0
+end: Out
+Runner:
+    box: merge: Host\inner
+    Out\got: box\k
+end: Runner
+fn: m () int
+    Host\a: 11
+    Runner()
+    Host\a: 12
+    if: Out\got != 4
+        return: 81
+    return: 7
+end: m
+sendMessage: exit(exit_code: m(); stdout: ""; stderr: "")
+return

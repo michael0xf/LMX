@@ -1,0 +1,22 @@
+# MERGE-PARENT-MODEL-SOURCE (steps/defects.md): a3 is declared after User, so in User's code a3 is no lexical
+# declaration but a free dynamic input (docs #declaration-visibility, #dynamic): its coordinates are those of the
+# declaration reaching it, Model (a3 is a merge of one Structure; l2_anchor_close), and its value is admitted to them
+# where u1's execution forms the input -- the root's a3, the caller's binding.  C, the copy of the unit u1 hangs
+# under, holds no a3 (made after the merge) and needs none.  Natively and with the root walked; the methods-walked twin
+# is an implementation gap (walked code in a merge copy holds its coordinate witness as a copied frame operand).
+# Exit 7; 81 if u1 read anything but a3's 1.
+Model:
+    int: x 1
+end: Model
+User:
+    int: y 0
+    y: a3\x
+end: User
+u1: merge: User
+a3: merge: Model
+u1
+int: ok 7
+if: u1\y != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

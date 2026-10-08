@@ -378,6 +378,15 @@ return: lmx_implements_walk(arena, varA, varB, consumer)
 # among the required same-named fields.  A bare path names the value's LAST occurrence of the
 # name instead, and reads the second half (lmx_implements_at_last, K01); the two halves are
 # one entry, two cells per required field, never two correspondences.
+# With holes -- a capture's copy of what its model reads (item 738), a partial copy (lmx_copy_carry_records) -- a place
+# the value holds no object at was not carried: *out becomes SIZE_MAX, through the admitting frame, the static map or
+# the value's own layout alike.  0.
+fn: lmx_implements_hole (@: LmxImplEntry e; @: size_t out) int
+    size_t: k \out
+    if: e\holes != 0 && k != (cast: (size_t) -1) && (e\value = 0 || k >= e\value\array.size || lmx_arena_ref_value(e\value, k) = 0)
+        \out: (cast: (size_t) -1)
+return: 0
+
 fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_t out) int
     @: void cell
     @: size_t at
@@ -391,18 +400,16 @@ fn: lmx_implements_at (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: size_
             return: 1
         at: (cast: (@: size_t) cell)
         \out: at[0]
-        return: 0
+    else:
+        if: e\map != 0
+            if: j >= e\n
+                return: 1
+            \out: e\map[j]
+        else:
+            \out: j
+        ---
     ---
-    if: e\map != 0
-        if: j >= e\n
-            return: 1
-        \out: e\map[j]
-        return: 0
-    ---
-    \out: j
-    if: e\holes != 0 && (e\value = 0 || j >= e\value\array.size || lmx_arena_ref_value(e\value, j) = 0)
-        \out: (cast: (size_t) -1)
-return: 0
+return: lmx_implements_hole(e, out)
 
 # The LAST half of a view: the place of req's field j for a BARE path, whose name selects
 # the value's last occurrence of it (K01).  The admitting frame's second half of cells, the
@@ -421,13 +428,13 @@ fn: lmx_implements_at_last (@: LmxArena arena; @: LmxImplEntry e; size_t: j; @: 
             return: 1
         at: (cast: (@: size_t) cell)
         \out: at[0]
-        return: 0
+        return: lmx_implements_hole(e, out)
     ---
     if: e\map != 0
         if: j >= e\n
             return: 1
         \out: e\map[e\n + j]
-        return: 0
+        return: lmx_implements_hole(e, out)
     ---
 return: lmx_implements_at(arena, e, j, out)
 
@@ -618,4 +625,22 @@ fn: lmx_implements_slot (@: LmxArena arena; @: Lmx value; @: Lmx req; size_t: j;
     if: k = (cast: (size_t) -1)
         return: 1
     \out: k
+return: 0
+
+# One record appended as given, into room the caller took (lmx_arena_impl_room): a copy's carried correspondence,
+# proved by the record it carries -- the copy keeps its source's coordinates (lmx_copy_carry_records).  0, or 1 when
+# there is no room.
+fn: lmx_implements_append (@: LmxArena arena; @: LmxImplEntry v) int
+    if: arena = 0 || v = 0 || arena\impl = 0 || arena\impl_len >= arena\impl_cap
+        return: 1
+    memcpy((cast: (@: void) (arena\impl + arena\impl_len)), (cast: (@: void) v), c.sizeof(c.LmxImplEntry))
+    arena\impl_len: arena\impl_len + 1U
+return: 0
+
+# Whether `value` is a partial copy: its record with itself carries holes (lmx_copy_carry_records).  1 or 0.
+fn: lmx_implements_holes (@: LmxArena arena; @: Lmx value) int
+    @: LmxImplEntry e
+    e: lmx_implements_find(arena, value, value)
+    if: e != 0 && e\holes != 0
+        return: 1
 return: 0

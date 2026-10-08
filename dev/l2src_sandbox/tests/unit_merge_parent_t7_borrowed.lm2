@@ -1,0 +1,22 @@
+# READ-FIELD-CLOSURE (T7), a borrowed method occurrence in a callable merge's view: model's local named Structures S
+# and S2 each hold a callable field borrowing get, and get reads its node's cnt.  The node w builds runs model's code
+# over its own partial copy of the unit, made at the merge: the view's fill names get's occurrence (a use of model),
+# get's code names cnt (a use of get, made a home by the closure), and both fields borrow the one copied occurrence,
+# whose parent is that copy (the builder checks it).  The root writes cnt after the merge; the copy keeps 7, so each
+# call gives 7: 7 + 7 - 7.  Before the fix the copy held get's place absent and the builder crashed.  Exit 7.
+int: cnt 7
+fn: get () int
+    return: node\cnt
+fn: model (int: y) int
+    S:
+        fn: get
+    S2:
+        fn: get
+    return: S\get() + S2\get() - 7
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+@: w wrap(5)
+cnt: 9
+int: result w()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

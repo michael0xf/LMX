@@ -1,0 +1,22 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3): aliases through a merge result.  h, a
+# root merge result, is held in its statement's output place; Model's code reads node\h\p twice and node\h\q.
+# b's copy of the unit holds h's place -- the edge chain through that statement, then h, an actual Structure,
+# whole past the crossing -- and neither the statement's code (h's merge frame) nor Hold, its operand: the use
+# named the statement's slot alone before, and the copy took the statement whole.  Exit 7.
+Hold:
+    int: p 3
+    int: q 4
+    int: r 5
+end: Hold
+h: merge: Hold
+Model:
+    int: k 0
+    k: node\h\p + node\h\p + node\h\q
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 10
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

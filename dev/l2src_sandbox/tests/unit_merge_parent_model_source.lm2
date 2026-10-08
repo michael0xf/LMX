@@ -1,0 +1,23 @@
+# MERGE-PARENT-MODEL-SOURCE (steps/defects.md): User's code reads a1\x through its hidden input a1, a root merge
+# result whose admission by name takes the merge result's own Structure as its model (K02c).  u1, a merge copy of
+# User, runs with a copy C of the unit as its node (MERGE-PARENT-SITE-OVERRIDE): the model is C's own copy a1' of the
+# declaration's instance -- an ordinary Structure read from the copied lexical graph -- and the value is the root's a1,
+# the caller's binding first.  The copy takes a1's record with itself to a1': the original a1 is admitted to the
+# copied requirement by the same correspondence (lmx_copy_carry_records).  a2, which no copied code reads, is absent
+# from C.  Exit 7; 81 if u1 read anything but a1's 1.
+Model:
+    int: x 1
+end: Model
+a1: merge: Model
+a2: merge: Model
+User:
+    int: y 0
+    y: a1\x
+end: User
+u1: merge: User
+u1
+int: ok 7
+if: u1\y != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

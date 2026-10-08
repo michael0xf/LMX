@@ -7,6 +7,12 @@ include: "<stdio.h>" "<string.h>"
 
 # One-operand composition is a complete copied occurrence, not a second root
 # assembled from the copy's children. Observe real aliases and actual dispatch.
+# Its parent is the copy's own: the model's lexical parent `outer`, a mutable
+# ancestor, is copied with it and the copy hangs under that copy -- not under the
+# place that runs the merge, not under the source `outer`, not at zero (the author,
+# LMX_blog/2026-10-05.md#merge-parent; docs #composition).  The copy holds what the
+# copied code uses (READ-FIELD-CLOSURE, Q42): one use record names outer\k, so the
+# copy of outer holds its own k, and no other place of outer but the result's.
 int: checks 0
 int: failures 0
 @: Lmx seen_self 0
@@ -36,7 +42,9 @@ fn: main () int
     @: LmxArena da @ destination
     @: Lmx model 0
     @: Lmx nested 0
-    @: Lmx container 0
+    @: Lmx outer 0
+    @: Lmx up 0
+    @: void outer_k 0
     @: Lmx result 0
     @: Lmx copied_nested 0
     @: Lmx empty 0
@@ -44,6 +52,10 @@ fn: main () int
     @: void copied_cell 0
     @: void dest 0
     @: void out 0
+    []: @(Lmx) ua 1
+    []: size_t uk 1
+    []: size_t us 1
+    []: size_t ul 1
     int: status
     memset((cast: (@: void) sa), 0, c.sizeof(c.LmxArena))
     memset((cast: (@: void) da), 0, c.sizeof(c.LmxArena))
@@ -51,14 +63,20 @@ fn: main () int
         return: 2
     model: lmx_node_new_owned(sa)
     nested: lmx_node_new_owned(sa)
-    container: lmx_node_new_owned(sa)
+    outer: lmx_node_new_owned(sa)
     empty: lmx_node_new_owned(sa)
     cell: lmx_int_new_owned(sa)
+    outer_k: lmx_int_new_owned(sa)
     dest: lmx_int_new_owned(da)
-    if: model = 0 || nested = 0 || container = 0 || empty = 0 || cell = 0 || dest = 0
+    if: model = 0 || nested = 0 || outer = 0 || empty = 0 || cell = 0 || outer_k = 0 || dest = 0
         return: 2
-    if: lmx_arena_refs_open_owned(sa, model, 4U) != 0 || lmx_arena_refs_open_owned(sa, nested, 1U) != 0
+    if: lmx_arena_refs_open_owned(sa, model, 4U) != 0 || lmx_arena_refs_open_owned(sa, nested, 1U) != 0 || lmx_arena_refs_open_owned(sa, outer, 2U) != 0
         return: 2
+    # outer { k: 5, model }: the model's lexical parent, with a mutable cell.
+    lmx_int_store_known(outer_k, 5)
+    lmx_arena_ref_store(outer, 0U, outer_k)
+    lmx_arena_ref_store(outer, 1U, (cast: (@: void) model))
+    model\parent: outer
     lmx_int_store_known(cell, 41)
     model\native: (cast: (LmxEntry) native_entry)
     nested\parent: model
@@ -67,11 +85,21 @@ fn: main () int
     lmx_arena_ref_store(model, 2U, (cast: (@: void) nested))
     lmx_arena_ref_store(model, 3U, cell)
     lmx_arena_ref_store(nested, 0U, (cast: (@: void) model))
-    status: lmx_merge_owned(@ model, 1U, 0, container, sa, da, 0, 0U, @ result)
+    # The copied code's one use of its lexical context: outer\k (an explicit anchor, a path of one slot).
+    ua[0]: outer
+    uk[0]: 0U
+    us[0]: 0U
+    ul[0]: 1U
+    status: lmx_merge_used_owned(@ model, 1U, 0, sa, da, 0, 0U, ua, uk, us, ul, 1U, 1U, 0, 0U, @ result)
     check(status = c.LMX_MERGE_OK && result != 0 && result != model, "one operand gives an independent copied occurrence")
     if: result = 0
         return: 1
-    check((result\array.size) = 4U && (result\parent) = container, "copied root preserves width and gets the execution parent")
+    up: result\parent
+    check((result\array.size) = 4U && up != 0 && up != outer && up != model, "copied root preserves width and hangs under a copy of its lexical parent")
+    check(up != 0 && (up\array.size) = 2U && lmx_arena_ref_value(up, 1U) = (cast: (@: void) result), "the copy of the lexical parent holds the result where outer holds the model")
+    check(up != 0 && lmx_arena_ref_value(up, 0U) != 0 && lmx_arena_ref_value(up, 0U) != outer_k && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 5, "the copied ancestor's used cell is its own, with the value at the merge")
+    lmx_int_store_known(outer_k, 6)
+    check(up != 0 && lmx_arena_ref_value(up, 0U) != 0 && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 5 && lmx_int_value_known(outer_k) = 6, "a later write of the source ancestor does not reach the copy")
     check(lmx_arena_ref_value(result, 1U) = (cast: (@: void) result), "self edge names the returned root, not an orphan copy")
     copied_cell: lmx_arena_ref_value(result, 0U)
     check(copied_cell != 0 && copied_cell != cell && copied_cell = lmx_arena_ref_value(result, 3U), "copied mutable cell is independent and its repeated alias is preserved")
@@ -83,17 +111,20 @@ fn: main () int
     if: result\native != 0
         status: lmx_call_prim(da, result, result, 0, 0U, dest, @ out)
         check(status = 0 && out = dest && lmx_int_value_known(dest) = 42, "actual native call returns the copied value")
-        check(seen_self = result && seen_parent = container, "actual adapter receives the copy and its execution parent")
+        check(seen_self = result && seen_parent = up && up != 0, "actual adapter receives the copy as SELF and the copy of its lexical parent as NODE")
         check(lmx_int_value_known(copied_cell) = 42 && lmx_int_value_known(cell) = 41, "native execution changes only copied mutable state")
-    check((model\parent) = 0 && (nested\parent) = model && lmx_arena_ref_value(model, 1U) = (cast: (@: void) model), "source parent and cycle remain unchanged")
+    check((model\parent) = outer && (nested\parent) = model && lmx_arena_ref_value(model, 1U) = (cast: (@: void) model), "source parent and cycle remain unchanged")
     empty\native: (cast: (LmxEntry) native_entry)
     result: 0
-    status: lmx_merge_owned(@ empty, 1U, 0, container, sa, da, 0, 0U, @ result)
+    status: lmx_merge_owned(@ empty, 1U, 0, sa, da, 0, 0U, @ result)
     check(status = c.LMX_MERGE_OK && result != 0 && result != empty && (result\array.size) = 0U && (result\native) = (empty\native), "empty copied root retains its actual native word")
+    check(result != 0 && (result\parent) = 0, "a model with no lexical parent gives a copy with none")
     model\native: 0
     result: 0
-    status: lmx_merge_owned(@ model, 1U, 0, container, sa, da, 0, 0U, @ result)
+    status: lmx_merge_owned(@ model, 1U, 0, sa, da, 0, 0U, @ result)
     check(status = c.LMX_MERGE_OK && result != 0 && (result\native) = 0, "copy does not invent a native implementation")
+    check(result != 0 && (result\parent) != 0 && (result\parent) != up && (result\parent) != outer, "each merge copies the lexical parent again: a second copy, not the first")
+    check(result != 0 && (result\parent) != 0 && lmx_arena_ref_value(result\parent, 0U) = 0 && lmx_arena_ref_value(result\parent, 1U) = (cast: (@: void) result), "with no use of outer\\k its copy holds the result alone: k absent, never a zero cell")
     check(lmx_arena_release(da) = 0 && lmx_arena_release(sa) = 0, "both owners release")
     c.printf("merge root identity checks=%d failures=%d\n", checks, failures)
 return: failures != 0

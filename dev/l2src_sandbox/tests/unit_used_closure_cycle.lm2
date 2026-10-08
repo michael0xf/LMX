@@ -1,0 +1,24 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3): a cycle of calls.  Model's code calls
+# f, f calls g and g calls f: the homes close to a fixed point -- f and g, each copied with its occurrence -- and
+# f's read of y is held, z is not.  Exit 7.
+int: y 3
+int: z 9
+fn: f (int: n) int
+    if: n <= 0
+        return: y
+    return: g(n - 1)
+end: f
+fn: g (int: n) int
+    return: f(n - 1)
+end: g
+Model:
+    int: k 0
+    k: f(4)
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 3
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

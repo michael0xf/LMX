@@ -1,0 +1,25 @@
+# COPIED-METHOD-DECLARED-FORMAL (steps/defects.md), a required positive, red: a copied method's DECLARED Structure
+# formal.  b1, a copy of Box, holds getq's own occurrence under a copy of the unit; `b1\getq(w)` admits w to the
+# caller's rendering of getq's formal type, while that occurrence's body reads q through the Wide of its own node:
+# "a field of a formal admitted by name is not carried by its value", natively and walked -- on HEAD too.  The free
+# input of the same occurrence is admitted in its own space (unit_merge_parent_model_method).  Exit 7.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+fn: getq (Wide: q) int
+    return: q\x
+end: getq
+Box:
+    int: v 0
+    fn: getq
+end: Box
+b1: merge: Box
+w: merge: Wide
+w\x: 4
+int: r b1\getq(w)
+int: ok 7
+if: r != 4
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

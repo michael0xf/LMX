@@ -21,22 +21,35 @@ static void l2_test_reentry_capture(int status, Lmx **operands, size_t count,
 }
 
 static int l2_test_reentry_merge(Lmx **operands, size_t count, Lmx *body,
-    Lmx *container, LmxArena *src, LmxArena *dst, LmxMergePair **overrides,
+    LmxArena *src, LmxArena *dst, LmxMergePair **overrides,
     size_t override_count, Lmx **out)
 {
-    int status = l2_driver_merge_owned(operands, count, body, container,
+    int status = l2_driver_merge_owned(operands, count, body,
                                      src, dst, overrides, override_count, out);
     l2_test_reentry_capture(status, operands, count, dst, out);
     return status;
 }
 
 static int l2_test_reentry_merge_profiles(Lmx **operands, size_t count, Lmx *body,
-    Lmx *container, LmxArena *src, LmxArena *dst, Lmx **profiles,
+    LmxArena *src, LmxArena *dst, Lmx **profiles,
     size_t profile_count, LmxMergePair **overrides, size_t override_count,
     Lmx **out)
 {
-    int status = l2_driver_merge_profiles_owned(operands, count, body, container,
+    int status = l2_driver_merge_profiles_owned(operands, count, body,
         src, dst, profiles, profile_count, overrides, override_count, out);
+    l2_test_reentry_capture(status, operands, count, dst, out);
+    return status;
+}
+
+static int l2_test_reentry_merge_used(Lmx **operands, size_t count, Lmx *body,
+    LmxArena *src, LmxArena *dst, Lmx **profiles, size_t profile_count,
+    Lmx **use_anchor, size_t *use_sel, size_t *use_slot, size_t *use_len,
+    size_t use_count, size_t use_slots, LmxMergePair **overrides,
+    size_t override_count, Lmx **out)
+{
+    int status = l2_driver_merge_used_owned(operands, count, body, src, dst,
+        profiles, profile_count, use_anchor, use_sel, use_slot, use_len,
+        use_count, use_slots, overrides, override_count, out);
     l2_test_reentry_capture(status, operands, count, dst, out);
     return status;
 }
@@ -66,4 +79,6 @@ static int l2_test_reentry_dispatch(int walked_original)
 #define lmx_merge_owned l2_test_reentry_merge
 #undef lmx_merge_profiles_owned
 #define lmx_merge_profiles_owned l2_test_reentry_merge_profiles
+#undef lmx_merge_used_owned
+#define lmx_merge_used_owned l2_test_reentry_merge_used
 #endif

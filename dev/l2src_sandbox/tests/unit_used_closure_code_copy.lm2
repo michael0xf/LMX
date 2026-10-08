@@ -1,0 +1,18 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31): an explicit anchor in copied code.  Outer's code
+# holds `m: merge: Model`, whose use of x is anchored at the unit -- in the walked frame SELF, the unit of the running
+# code.  o copies Outer with that code; o's copy of the unit holds what Outer's code uses -- Model and, through
+# Model's code, x -- and not u: a frame holding the unit itself would copy the unit whole.  Exit 7.
+int: x 3
+int: u 4
+Model:
+    int: k 0
+    k: x
+end: Model
+Outer:
+    int: j 0
+    m: merge: Model
+end: Outer
+o: merge: Outer
+int: ok 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

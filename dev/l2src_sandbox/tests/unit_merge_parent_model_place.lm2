@@ -1,0 +1,26 @@
+# MERGE-PARENT-MODEL-SOURCE, the candidate's places: u1, a copy of User under C, writes through the free input a3 and
+# takes the address of a3\x for put -- both land in the root's a3, the candidate itself (2, +1 by the write, +5
+# through the address: 8), its pad untouched; C holds no a3.  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+fn: put (@: int p) int
+    \p: \p + 5
+    return: 0
+end: put
+User:
+    int: y 0
+    int: d 0
+    y: a3\x
+    a3\x: a3\x + 1
+    d: put(@a3\x)
+end: User
+u1: merge: User
+a3: merge: Wide
+u1
+int: ok 7
+if: a3\x != 8 || u1\y != 2 || a3\pad != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

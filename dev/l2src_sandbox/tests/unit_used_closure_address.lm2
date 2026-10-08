@@ -1,0 +1,21 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3: write/address): Model's code passes
+# the address of node\x -- x's cell in its node, not a hidden input's local -- to put, which writes 5 through it.
+# b, a merge of Model, runs with a copy of the unit as its node that holds x as the merge saw it: put writes the
+# copy's x cell (5, the post paths), and the unit's x cell stays 3; u, which nothing copied reads, is absent from
+# the copy.  Exit 7; 82 if b's k is not put's 0.
+int: x 3
+int: u 9
+fn: put (@: int p) int
+    \p: 5
+return: 0
+Model:
+    int: k 1
+    k: put(@ node\x)
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 0
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

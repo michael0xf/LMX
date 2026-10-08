@@ -775,6 +775,23 @@ Fable принял единственный writer/build-слот по [to_fable
   [LMX_blog/q/current/merge-bare-field-operand.md](../LMX_blog/q/current/merge-bare-field-operand.md)); устаревшая фраза о
   родителе результата merge в CORE_L2_L3_v2.md исправлена ([§121 журнала](fable-continuation-20261003.md#unified-head-s7)).
   Гейты на финальных байтах (`l2trans.lm1` blob b98c68bb): `opus_focus_s7_01` (207 целей; красные ровно три базовые строки `opus_full_60` (`unit_eternal_shape`, `unit_capture_struct_merge_two`, `unit_t7_host_nested_return`, сообщения те же) и пара обязательного позитива `unit_k03_merge_op_anon_typed`), `opus_kernel_55` GREEN297 (114 самотестов, staged blob b98c68bb), `opus_l3_53` (все 11 наборов ok, бюджет типов ok), `opus_full_61` RED63/2509: против `opus_full_60` FAIL→OK 0, OK→FAIL 0, добавлено 32 (30 OK, 2 красных — пара обязательного позитива), удалено 0; одно записанное сообщение изменилось намеренно: `unit_recv_use_nested_copy_reach_limit_probe`, «unknown merge operand» → «this merge operand form is not lowered yet» (make — известный метод).
+- MERGE-PARENT-SITE-OVERRIDE, READ-FIELD-CLOSURE, MERGE-PARENT-MODEL-SOURCE (Codex K03-MERGE-PARENT-20261007-27,
+  K03-READ-FIELD-CLOSURE-20261007-28 … 20261008-31; автор, LMX_blog/2026-10-05.md#merge-parent; Q42): результат merge
+  висит под копией лексического родителя модели, сделанной этим merge, кто бы его ни исполнял; копия держит то, что
+  использует скопированный код — у Structure, достигнутой ради использования, только использованные места, остальное
+  отсутствует (не ноль), и чтение отсутствующего отказывает нативно и при обходе. Ни один вход merge не называет
+  родителя; кадр walk-примитива несёт ячейки P, Q, T. Соответствия переносятся картой копии в обеих половинах;
+  квалифицированная ветвь в копии — только используемая, и это сама ветвь. Тело именованной Structure читает единицу с
+  места объявления: позднее объявление — свободный динамический вход, его координаты дают достигающие входа объявления,
+  его значение допускается на границе, которая формирует вход, к требованию в пространстве выбранного вхождения.
+  Контрольная точка неполная. Открыто: COPIED-METHOD-DECLARED-FORMAL — следующая обязательная зависимость перед
+  PATH-STRUCTURE-LEAF (Codex, ответ на PROGRESS 5), с ним COPIED-CALLABLE-ACTUAL, T7-LOCAL-NAMED-UNIT,
+  NODE-PATH-ANON-STRUCT
+  ([READ-FIELD-CLOSURE](defects.md#read-field-closure),
+  [MERGE-PARENT-SITE-OVERRIDE](defects.md#merge-parent-site-override),
+  [MERGE-PARENT-MODEL-SOURCE](defects.md#merge-parent-model-source), [§122
+  журнала](fable-continuation-20261003.md#merge-parent)).
+  Гейты на финальных байтах (`l2trans.lm1` blob 3164952d, `lmx_walk.lm1` 0096e93c): `opus_kernel_58` GREEN297 (114 самотестов, staged blob 3164952d), `opus_focus_rf33_03` (493 цели; красные ровно пять базовых строк `opus_full_61` (`unit_copy_call_addressed`, `unit_copy_call_from_method`, `unit_copy_call_other_owner`, `unit_eternal_shape`, `unit_letter_alias_before`, сообщения те же) и четыре зарегистрированные пары обязательных позитивов: `unit_node_path_anon_struct`, `unit_merge_parent_method_formal`, `unit_merge_parent_callable_actual`, `unit_merge_parent_t7_local_proc`), `opus_l3_55` (все 11 наборов ok, бюджет типов ok), `opus_full_63` RED71/2586: против `opus_full_61` FAIL→OK 0, OK→FAIL 0, добавлено 77 (69 OK, 8 красных — четыре пары), удалено 0; ни одно записанное сообщение красной строки не изменилось. Промежуточные свидетельства, не финальные байты: `opus_kernel_56` RED 2/297 (два самотеста, отставших от правила, исправлены), `opus_full_62` RED73/2582 с регрессией OK→FAIL 4 (вид T7, исправлена).
 - K03 RECEIVE-OUTPUT (Codex K03-RECEIVE-OUTPUT-20261007-23 и ответ по дизайну, K03-OUTPUT-ORACLES-20261007-24;
   LMX_blog/q/q53.md:95-97): вычисленный выход на верхнем уровне тела именованной Structure — имя `receiveMessage: m`,
   результат `b: merge: A`, `int: i getValue()` — не данные и не поле Structure (никогда `Host\m`): он хранится у

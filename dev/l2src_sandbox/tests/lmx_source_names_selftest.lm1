@@ -287,16 +287,16 @@ fn: main () int
     operands[1]: empty_operand
     names_slots_seen: 0
     names_fail_slots: 2
-    status: lmx_merge_owned(operands, 2U, 0, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged)
+    status: lmx_merge_owned(operands, 2U, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged)
     names_fail_slots: 0
     names_check(counts, (names_slots_seen = 2 && status = c.LMX_MERGE_NOMEM && merged = 0), "merge failure is after the copied closure")
     names_check(counts, (names_published(@ merge_arena) = published), "failed outer merge publishes no intermediate names")
     names_check(counts, names_match(@ model_arena, (cast: (@: void) model), "Model", 5U), "failed merge never writes source names")
-    names_check(counts, (lmx_merge_owned(operands, 2U, 0, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged) = c.LMX_MERGE_OK), "merge retry after rollback")
+    names_check(counts, (lmx_merge_owned(operands, 2U, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged) = c.LMX_MERGE_OK), "merge retry after rollback")
     names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 0U)), "x", 1U), "flat merge retains original owning-place name")
     names_check(counts, names_match(@ merge_arena, lmx_arena_ref_value(merged, 0U), "data", 4U), "flat merge retains copied value name independently")
 
-    names_check(counts, (lmx_merge_owned(operands, 1U, 0, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged) = c.LMX_MERGE_OK && merged != model), "one operand returns an independent named copy")
+    names_check(counts, (lmx_merge_owned(operands, 1U, 0, @ model_arena, @ merge_arena, 0, 0U, @ merged) = c.LMX_MERGE_OK && merged != model), "one operand returns an independent named copy")
     names_check(counts, names_match(@ merge_arena, (cast: (@: void) merged), "Model", 5U), "one-operand completion publishes returned-root spelling")
     names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 0U)), "x", 1U), "one-operand completion publishes owning-place spelling")
     names_check(counts, names_match(@ merge_arena, lmx_arena_ref_value(merged, 0U), "data", 4U), "one-operand completion publishes copied-value spelling")
@@ -309,7 +309,7 @@ fn: main () int
     pair.field: 0U
     pairs[0]: @ pair
     lmx_arena_attach(@ arena, @ model_arena)
-    names_check(counts, (lmx_merge_owned(operands, 2U, 0, 0, @ arena, @ merge_arena, pairs, 1U, @ merged) = c.LMX_MERGE_OK), "mapped merge with renamed candidate field")
+    names_check(counts, (lmx_merge_owned(operands, 2U, 0, @ arena, @ merge_arena, pairs, 1U, @ merged) = c.LMX_MERGE_OK), "mapped merge with renamed candidate field")
     names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 0U)), "left", 4U), "override retains model name")
     names_check(counts, names_match(@ merge_arena, (cast: (@: void) lmx_arena_ref_cell(merged, 1U)), "right", 5U), "untouched occurrence name retained")
     names_check(counts, (lmx_int_value_known(lmx_arena_ref_value(merged, 0U)) = 20), "override still uses candidate value")

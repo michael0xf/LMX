@@ -1,0 +1,18 @@
+# READ-FIELD-CLOSURE (T7), a local named Structure's own code in a callable merge's view: model runs its local S,
+# whose code reads the unit's cnt, and returns S\v.  The node w builds runs model's code over its own partial copy of
+# the unit, made at the merge, which holds what S's code uses; the root writes cnt after the merge, the copy keeps 7.
+# Exit 7.
+int: cnt 7
+fn: model (int: y) int
+    S:
+        int: v 0
+        v: cnt
+    S
+    return: S\v
+fn: wrap (int: k) fn: () int
+    return: merge(y: k; model)
+@: w wrap(5)
+cnt: 9
+int: result w()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

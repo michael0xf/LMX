@@ -1,0 +1,19 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3): a write.  Model's code writes
+# node\x and reads it back; the write goes to b's copy of the unit, which holds x, the used place, and not
+# u; the unit's x stays 3.  Exit 7.
+int: x 3
+int: u 4
+Model:
+    int: k 0
+    node\x: 5
+    k: node\x
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 5
+    ok: 81
+if: x != 3
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

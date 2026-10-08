@@ -1,0 +1,27 @@
+# MERGE-PARENT-MODEL-SOURCE, a nonidentity correspondence through the copy: the root's a3, declared `@: Model a3 c`,
+# holds c, a merge of Cand {pad; x; x}; User's paths through the free input a3 read the coordinates of Model {x}.  In
+# u1, a copy of User, the ordinal `[0]x` reads Cand's first x (slot 1, 1) and the bare `x` -- the LAST occurrence --
+# its last x (9): neither is Model's own place.  Exit 7; 81 otherwise.
+Model:
+    int: x 0
+end: Model
+Cand:
+    int: pad 5
+    int: x 1
+    int: x 9
+end: Cand
+User:
+    int: y 0
+    int: z 0
+    y: a3\[0]x
+    z: a3\x
+end: User
+u1: merge: User
+c: merge: Cand
+@: Model a3 c
+u1
+int: ok 7
+if: u1\y != 1 || u1\z != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

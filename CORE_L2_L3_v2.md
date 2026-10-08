@@ -127,7 +127,7 @@ The important identities are:
 | `parent` field | Physical structural-containment link in `Lmx`; not a language-level substitute for all lexical/dynamic resolution. |
 | Thread parent | Supervision/ownership relation between executable Message identities. It is not `Lmx.parent`. |
 
-`lmx_walk` now has separate `NODE` and `SELF` leaves. The released merge slice adds **SELF = 43**, taking the current executing occurrence; NODE is unchanged. This matters when the same code walks original data A and copied data R: SELF selects R's data, NODE stays the fixed lexical parent. A merge performed inside R takes neither R, A nor any other execution site as its result's parent: merge copies the used closure and rewrites parent links inside that copy ([L3 composition](docs/LMX_semantics.en.md#composition); the author, [LMX_blog/2026-10-05.md](LMX_blog/2026-10-05.md#merge-parent)). The released slice still passes the executing host as the result's parent -- a known defect, [MERGE-PARENT-SITE-OVERRIDE](steps/defects.md#merge-parent-site-override). Explicit hosted bodies select their actual hosted occurrence through the normal graph path.
+`lmx_walk` now has separate `NODE` and `SELF` leaves. The released merge slice adds **SELF = 43**, taking the current executing occurrence; NODE is unchanged. This matters when the same code walks original data A and copied data R: SELF selects R's data, NODE stays the fixed lexical parent. A merge performed inside R takes neither R, A nor any other execution site as its result's parent: merge copies the used closure and rewrites parent links inside that copy ([L3 composition](docs/LMX_semantics.en.md#composition); the author, [LMX_blog/2026-10-05.md](LMX_blog/2026-10-05.md#merge-parent)). Since [MERGE-PARENT-SITE-OVERRIDE](steps/defects.md#merge-parent-site-override) was fixed no merge input names a parent: the walked merge primitive's frame carries typed P, Q and T cells (pairs, the program's qualified roots, use cells) where SELF was. Explicit hosted bodies select their actual hosted occurrence through the normal graph path.
 
 ### 3.3 Names, comments, and complete-source retention
 
@@ -566,6 +566,23 @@ root of a read one is: a method that only writes through a name takes the
 name from its caller
 ([ledger](steps/fable-continuation-20261003.md#free-name-path)).
 
+A named Structure's code reads the unit from the Structure's declaration, as
+a method's from its header: an ordinary declaration is visible forward and
+down, so a name only a later declaration spells is a free name of that code,
+whose coordinate space is found from the declarations that reach it as for a
+method. A free input is admitted at the boundary that forms it -- a call, or
+the execution of a Structure in place or held in a field -- to its
+requirement read in the space of the occurrence that boundary selected: the
+space that occurrence's body reads its requirements in, its own node where the
+body reads through `node`. Natively that is the occurrence's parent; walked,
+the admission is marked RECEIVING and the kernel reads its requirement with
+the selected occurrence as the activation's data, the value and everything
+else in the caller's
+([ledger](steps/fable-continuation-20261003.md#merge-parent)). A declared
+Structure formal of a copied occurrence is not yet admitted in that space
+([COPIED-METHOD-DECLARED-FORMAL](steps/defects.md#copied-method-declared-formal),
+open).
+
 Nothing on this route has a ceiling. The search for a coordinate space holds
 its candidates and the places it reaches in storage sized from the program; a
 step of a path is joined and compared at its own length; the tables of the
@@ -734,7 +751,7 @@ Explicit pointer-cell pointee policy is separate from graph-owned Structure trav
 
 ### 10.2 Merge composition
 
-**Norm.** Merge copies/composes the used graph closure, retains the first operand's ordering, applies matching overrides and appends unmatched content according to the construction contract. Signature/header material constrains admission; it is not a gratuitous extra `merge(...; header)` operand. Existing aliases and cycles must remain coherent, and parent links are rewritten inside the copy to the copies of the source nodes: the place that executes `merge` supplies no new lexical parent ([L3 composition](docs/LMX_semantics.en.md#composition); the author, [LMX_blog/2026-10-05.md](LMX_blog/2026-10-05.md#merge-parent)). The implementation still assigns the merge site's container, a known defect ([MERGE-PARENT-SITE-OVERRIDE](steps/defects.md#merge-parent-site-override)).
+**Norm.** Merge copies/composes the used graph closure, retains the first operand's ordering, applies matching overrides and appends unmatched content according to the construction contract. Signature/header material constrains admission; it is not a gratuitous extra `merge(...; header)` operand. Existing aliases and cycles must remain coherent, and parent links are rewritten inside the copy to the copies of the source nodes: the place that executes `merge` supplies no new lexical parent ([L3 composition](docs/LMX_semantics.en.md#composition); the author, [LMX_blog/2026-10-05.md](LMX_blog/2026-10-05.md#merge-parent)). The implementation follows it since [MERGE-PARENT-SITE-OVERRIDE](steps/defects.md#merge-parent-site-override) and [READ-FIELD-CLOSURE](steps/defects.md#read-field-closure) were fixed: no merge entry takes a container; the copy holds what its copied code uses -- a Structure reached only for a use holds only the used places, the rest absent, and a read of an absent place is refused; one operand keeps the copier's parent; a composition's fresh root takes its model copy's place, the copy absorbing the operand roots; correspondence records travel through the copy's own map; and every merge a program reaches passes the program's qualified branches, so a branch the copy uses is the independent: const: immutable branch itself.
 
 Independent/const/immutable profile retention can return the same physical operand rather than a fresh descriptor. The caller must therefore observe whether the result is actually retained before assigning origin, parent or allocation expectations. “Merge was called” does not by itself imply a new identity.
 
@@ -763,9 +780,9 @@ The registration occurs only after successful construction and before the normal
 
 ### 10.4 Copy/re-entry witnesses and their limits
 
-The current fixture set distinguishes fresh values on repeated reach, held aliases, retained profile identity, full field schema, explicit physical paths, native and genuinely walked bodies, and refusal before destination mutation. Its root/method/hosted parent assertions, and the direct merge walker selftest's check that code A over copied data R gives the results different execution-site parents, pin the rejected host-parent rule: legacy evidence of a known defect ([MERGE-PARENT-SITE-OVERRIDE](steps/defects.md#merge-parent-site-override)), not proof of the contract. What that selftest shows independently -- SELF selects the executing occurrence R while NODE stays fixed -- stands. The profile-aware named-copy observer captures the actual successful constructor return, including the profiled constructor; an observer intercepting only the obsolete unprofiled symbol would otherwise report zero calls without proving a production defect.
+The current fixture set distinguishes fresh values on repeated reach, held aliases, retained profile identity, full field schema, explicit physical paths, native and genuinely walked bodies, and refusal before destination mutation. Its root/method/hosted parent assertions, and the direct merge walker selftest's check that code A over copied data R gives the results different execution-site parents, pinned the rejected host-parent rule; they were migrated by intent when [MERGE-PARENT-SITE-OVERRIDE](steps/defects.md#merge-parent-site-override) was fixed: each result hangs under a copy of its model's lexical parent made at that merge, whatever place or occurrence runs it (run by A and by R, two distinct copies, neither A nor R). What that selftest shows independently -- SELF selects the executing occurrence R while NODE stays fixed -- stands. The profile-aware named-copy observer captures the actual successful constructor return, including the profiled constructor; an observer intercepting only the obsolete unprofiled symbol would otherwise report zero calls without proving a production defect.
 
-**Verification limit.** Rich native variants must use the exact same final fixture bytes. An earlier native pass on a fixture later corrected from an unlawful same-name hosted head to `innerCopy` is not final-byte native coverage. The writer's final artifacts include that corrected native rerun under `merge_value_native_host_20261001_02`, plus independent native parent taps (they observe the host-parent defect above, not the contract); earlier `_01` artifacts must not be substituted for it.
+**Verification limit.** Rich native variants must use the exact same final fixture bytes. An earlier native pass on a fixture later corrected from an unlawful same-name hosted head to `innerCopy` is not final-byte native coverage. The writer's final artifacts include that corrected native rerun under `merge_value_native_host_20261001_02`, plus independent native parent taps (they observed the host-parent defect above, since fixed, not the contract); earlier `_01` artifacts must not be substituted for it.
 
 ### 10.5 Open source routes are not hidden by the repaired storage
 

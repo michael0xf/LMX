@@ -1,0 +1,17 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31): a program part.  Model's code calls pget, a method
+# of the part unit_used_closure_part_node_part.lm2 whose code reads node\px: its node is the part's root
+# (steps/table-receiver.md §10).  b's copy of the unit holds the part's root in part (px, not pz), pget's
+# occurrence under it, and not u.  The use was anchored at the unit without the root's path before: the copy held
+# the unit's slot 0, and the copied pget read nothing (0 natively, refused walked).  Exit 7.
+int: u 4
+Model:
+    int: k 0
+    k: pget()
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

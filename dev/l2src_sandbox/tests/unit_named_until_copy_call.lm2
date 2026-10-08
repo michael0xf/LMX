@@ -1,5 +1,7 @@
 # Separate required call control: executing the copied actual must write only
 # its own canonical field, never the prototype. This remains a positive gate.
+# R's node is its own copy of the unit (merge parent, -27): R's node\hits write
+# raises that copy's hits, so the unit's own hits stays 3 after R runs.
 int: hits 0
 S:
     int: x 0
@@ -17,7 +19,7 @@ R: merge: S
 @: int pr @R\x
 \pr: 23
 R()
-if: R\x != 17 || S\x != 19 || \ph != 4
+if: R\x != 17 || S\x != 19 || \ph != 3
     result: 82
 sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
 return

@@ -41,7 +41,6 @@ fn: main () int
     @: Lmx letter 0
     @: Lmx payload 0
     @: Lmx model 0
-    @: Lmx container 0
     @: Lmx result 0
     @: Lmx unit_copy 0
     @: Lmx unit_ptr_copy 0
@@ -88,8 +87,7 @@ fn: main () int
     unit: lmx_node_new_owned(@ arena_a)
     unit_ptr: lmx_node_new_owned(@ arena_a)
     model: lmx_node_new_owned(@ arena_a)
-    container: lmx_node_new_owned(@ arena_a)
-    check(counts, payload != 0 && letter != 0 && unit != 0 && unit_ptr != 0 && model != 0 && container != 0, "structures")
+    check(counts, payload != 0 && letter != 0 && unit != 0 && unit_ptr != 0 && model != 0, "structures")
     check(counts, lmx_arena_refs_open_owned(@ arena_a, payload, 1U) = 0, "payload open")
     check(counts, lmx_arena_refs_open_owned(@ arena_a, letter, 2U) = 0, "letter open")
     check(counts, lmx_arena_refs_open_owned(@ arena_a, unit, 1U) = 0, "unit open")
@@ -118,9 +116,11 @@ fn: main () int
     ---
 
     operands[0]: model
-    status: lmx_merge_owned(operands, 1U, 0, container, @ arena_a, @ dst, 0, 0U, @ result)
+    status: lmx_merge_owned(operands, 1U, 0, @ arena_a, @ dst, 0, 0U, @ result)
     check(counts, status = LMX_MERGE_OK && result != 0, "merge OK with MSG sender in letter")
-    check(counts, result != 0 && result\parent = container, "result parent is container")
+    # The result's parent is the copy's own: a copy of the model's lexical parent, the unit -- not the
+    # source unit (LMX_blog/2026-10-05.md#merge-parent).
+    check(counts, result != 0 && (result\parent) != 0 && (result\parent) != unit && lmx_range_classify(@ dst, (cast: (@: void) (result\parent))) = c.LMX_KIND_STRUCT, "result hangs under a copy of the model's lexical parent")
 
     status: lmx_graph_copy_owned(unit, @ arena_a, @ dst, @ unit_copy)
     check(counts, status = LMX_GRAPH_COPY_OK && unit_copy != 0 && unit_copy != unit, "unit copy OK (direct OWN)")

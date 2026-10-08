@@ -1,0 +1,31 @@
+# One free name read by one path, two candidates of different layouts at two calls: rd reads a3\x, a3 declared after
+# it; the root hands its a3 (Model, x at 0), go its own (Wide, x at 1).  The coordinate space is the first declaration
+# that reaches the input; each candidate is admitted to it where its call forms the input, so neither the first
+# candidate nor its record decides the slot of another.  Exit 7; 81-83 if a call read the wrong field.
+Model:
+    int: x 1
+end: Model
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+fn: rd () int
+    return: a3\x
+end: rd
+fn: go () int
+    a3: merge: Wide
+    return: rd()
+end: go
+a3: merge: Model
+int: g1 rd()
+int: g2 go()
+int: g3 rd()
+int: ok 7
+if: g1 != 1
+    ok: 81
+if: g2 != 2
+    ok: 82
+if: g3 != 1
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

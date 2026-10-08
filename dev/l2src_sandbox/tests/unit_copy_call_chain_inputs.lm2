@@ -1,7 +1,9 @@
 # Calls of copies whose body is proved through more than one declaration.
 # rb is a copy of the copy ra and rc a copy of rb, all of the unit's A. h
 # defines C, copies it and calls the copy. A reads the free name x and writes
-# the unit's seen through node; C reads the free name x and h's base through
+# seen through node -- a copy's node is its own copy of the unit (merge parent),
+# so each run raises that copy's seen and the unit's own stays 0 (the post paths
+# read the copies: rb's 11, rc's 5); C reads the free name x and h's base through
 # node. Each call hands its copy the caller's current binding of x -- h's
 # local in h, the root's changed working value at the root -- and runs that
 # copy alone: A, ra, rb and C keep their own state. Entry 7.
@@ -26,7 +28,7 @@ fn: h () int
 end: h
 @: int ps @seen
 rb
-if: rb\last != 11 || ra\last != 0 || rc\last != 0 || A\last != 0 || \ps != 11
+if: rb\last != 11 || ra\last != 0 || rc\last != 0 || A\last != 0 || \ps != 0
     sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
     return
 int: m h()
@@ -35,7 +37,7 @@ if: m != 4400
     return
 x: 5
 rc
-if: rc\last != 5 || rb\last != 11 || ra\last != 0 || A\last != 0 || \ps != 16
+if: rc\last != 5 || rb\last != 11 || ra\last != 0 || A\last != 0 || \ps != 0
     sendMessage: exit(exit_code: 83; stdout: ""; stderr: "")
     return
 sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")

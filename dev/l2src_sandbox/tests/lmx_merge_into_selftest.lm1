@@ -210,7 +210,7 @@ fn: main () int
     op_d2: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: void)))
     mi_check(counts, op_d2 != 0, "nested second-merge operand array allocated")
     op_d2[0]: target_d
-    status_d2: lmx_merge_owned(op_d2, 1U, 0, 0, @ arena, @ dst, 0, 0U, @ result_d2)
+    status_d2: lmx_merge_owned(op_d2, 1U, 0, @ arena, @ dst, 0, 0U, @ result_d2)
     mi_check(counts, status_d2 = LMX_MERGE_OK && result_d2 != 0, "nested second merge OK")
     inner2: lmx_arena_ref_value(result_d2, 0U)
     mi_check(counts, inner2 != 0 && inner2 != slot0_after, "nested second merge deep-copies target's slot 0 (fresh address, not shared) -- proves the re-parent, not the bug")

@@ -16,8 +16,8 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # a model slot; unmatched later-operand fields append; body fields append. The
 # operand ROOTS are not visible result slots; only their children are.
 # With one operand, no body and no active overrides, the completed used-graph
-# copy itself is the fresh result. It keeps native, self/back edges and names;
-# only its root parent becomes container. Exact-profile retention still returns
+# copy itself is the fresh result. It keeps native, self/back edges, names and
+# the parent the copy gave it. Exact-profile retention still returns
 # the original occurrence without changing it. General composition requires
 # separate whole-body/native selection and is not certified by this identity.
 #
@@ -43,14 +43,19 @@ predef: "lmx_graph_copy_owned.h.lm1"
 # textual identity participates.
 #
 # TWO arenas, because the act has two sides: `src_arena` is the arena the
-# operands, the body and the container live in and answers every classification
+# operands and the body live in and answers every classification
 # question; `dst_arena` is the arena the copies and the result are built in.
 #
-# `container` is the live Structure through which the merge receiver executed.
-# It becomes the RESULT's parent and nothing else: it is not assigned as the parent
-# of any copied child, whose parent links come from the map. A nonzero container
-# must classify as a Structure of src_arena -- the arena's table answers that,
-# not an inventory -- and a foreign address is refused rather than stored.
+# The result's parent is the copy's own: merge copies the used part of the tree and
+# rewrites parent links inside the copy; the place that executes the merge has no part
+# in it (the author, LMX_blog/2026-10-05.md#merge-parent; docs #composition).  One
+# operand: the completed copy keeps the parent the copier gave it -- the copy of the
+# model's structural parent, an exact retained-profile parent's own address, or zero.
+# A composition: the fresh root takes the model's (operands[0]'s) place, so its parent is
+# the one the copier gave the model's copy, and the copy absorbs the operand roots into it
+# -- every link the copy makes to a copied operand root names the result, never a
+# discarded intermediate root (lmx_graph_copy_many_profiles_staged's `absorb`).  No
+# argument names a parent.
 #
 # Atomicity is the arena's own act, exactly as it is for one Array: merge takes
 # `mark: lmx_arena_mark(dst_arena)` before it builds anything and reverts to it
@@ -82,12 +87,20 @@ prototype:
     # `overrides` null or override_count 0 = flat append (today). Non-null: model
     # (operands[0]) layout kept; each pair writes operand[k].field[j] into the
     # model's slot; unmatched later-operand fields append; body appends as today.
-    fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
-    fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    # The same merge with the uses of its copied code (Q42; Codex K03-READ-FIELD-CLOSURE-20261007-28): use k
+    # is a slot path of use_len[k] >= 1 slots (consecutive in use_slot, use_slots in all) from its anchor --
+    # source Structure use_anchor[k] when use_sel[k] is 0, else the lexical parent of operand use_sel[k] - 1
+    # (an operand with none: the use names nothing) -- a
+    # lexical ancestor of an operand or a Structure reached from one; the operands' lexical chains are copied
+    # in part -- their links and these uses -- every other ancestor place absent
+    # (lmx_graph_copy_many_used_staged).  lmx_merge_profiles_owned is this merge with no use.
+    fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     # `retain_profile` is the exact physical profile representing the full
     # independent+const+immutable receiver chain.  No other profile/lifecycle/owner
     # property retains an address.
-    fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    fn: lmx_merge_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @: Lmx retain_profile; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     # One pair's value, copied from src's own field into dst's own slot -- shared by
     # lmx_merge_profiles_owned's override path and lmx_merge_into_profiles_owned.
     fn: lmx_merge_apply_pair (@: Lmx src; size_t: field; @: Lmx dst; size_t: target_slot) int
@@ -107,9 +120,11 @@ prototype:
     fn: lmx_walk_merge_pairs_cells (@: LmxArena arena; @@: void cells; size_t: n; @@@: LmxMergePair out_pairs; @: size_t out_count) int
     fn: lmx_walk_merge_pairs_free (@@: LmxMergePair pairs; size_t: n) void
     # -194 к.6: walk PRIM entry for a fresh multi-operand merge with an override map,
-    # `R: merge: A B ... [body]` -- [prim, record, catch, P, expression_parent,
+    # `R: merge: A B ... [body]` -- [prim, record, catch, P, Q,
     # boxed_fresh_token, boxed_direct_source_token, op0, ..., opN-1, body_or_0,
-    # 3P pair cells]. Parent is the reached lexical host. Source evidence may
+    # 3P pair cells, Q qualified branch roots]. The result's parent is the copy's own,
+    # as above; the reached place gives none; the program's Q qualified branches are
+    # retained by their exact profiles as the operands' are. Source evidence may
     # name only a directly known operand producer, never its receiving model.
     # A retained result preserves its held layout; a fresh result gets its own.
     # к.b (-202): each operand's lmx_range_profile, when nonzero, is collected and passed

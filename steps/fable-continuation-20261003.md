@@ -12479,3 +12479,274 @@ on two normative readings (#composition's `merge(add; y: 5)` against #constructi
 | kernel `opus_kernel_55` | GREEN297 (114 selftests ran, staged blob b98c68bb) |
 | L3 `opus_l3_53` | all 11 suites ok, type budget ok |
 | full `opus_full_61` | RED 63/2509; against `opus_full_60`: FAIL→OK 0, OK→FAIL 0, added 32 (30 OK, 2 red: the required-positive pair), removed 0; one recorded message changed by intent: unit_recv_use_nested_copy_reach_limit_probe, "unknown merge operand" -> "this merge operand form is not lowered yet" (make is a known method) |
+
+<a id="merge-parent"></a>
+## 122. A merge result hangs under its own copy, which holds what its copied code uses (MERGE-PARENT-SITE-OVERRIDE, READ-FIELD-CLOSURE, MERGE-PARENT-MODEL-SOURCE)
+
+The rule (the author, [LMX_blog/2026-10-05.md](../LMX_blog/2026-10-05.md#merge-parent); Q42, LMX_blog/2026-09-27.md;
+`docs/LMX_semantics.en.md#composition`; Codex K03-MERGE-PARENT-20261007-27 and K03-READ-FIELD-CLOSURE-20261007-28 ...
+20261008-31): merge copies the used part of the source tree and rewrites parent links inside the copy; the place that
+executes merge supplies no lexical parent; a Structure reached only for a use holds only the used places, the rest
+absent, never zeroed; a retained independent: const: immutable branch keeps its identity and parent.
+
+### The parent
+
+The census (read-only, on 43e3ce70): the copier already was one topology -- `lmx_copy_process` queues every copied
+Structure's structural parent unless an exact retained profile holds it, and the parent fixup gives each copy the copy
+of its source parent, a retained parent's own address, or 0.  The defect was one kernel store in two places,
+`result\parent: container` (`lmx_merge_owned.lm1:263` for one operand, `:487` for a composition), and the callers
+passed three different things as `container`: the receiving host (the native declaration merge's `merge_parent`, the
+walked PRIM's SELF slot, the driver's shape tests), the holding Structure (the synthesized letter's payload) and the
+model's own source parent (`lmx_walk_merge_model`).  No kernel reader used `container` for anything but that store.
+
+No merge entry names a parent now: `container` goes from `lmx_merge_owned`, `lmx_merge_profiles_owned`,
+`lmx_merge_profiled_owned`, the driver's and the re-entry observer's wrappers and `lmx_walk_merge_model`.  One operand
+with no body and no map keeps the parent the copier gave it.  A composition allocates its fresh root before the copy
+and passes it to the copier as `absorb`: every child slot and every parent of a copied Structure that names a copied,
+non-retained operand root names the result, and no link reaches a discarded intermediate root; its parent is its model
+copy's (`lmx_merge_lexical`).  Every merge a program reaches passes the program's qualified branches by their exact
+profiles -- the native declaration merge (`l2_emit_keep`), the walked PRIM (its Q roots), the letter payload's copy
+(kind 3, made last in the build, after the branches are sealed: `l2_ns_payload_pass`).  Migrated by intent, each an
+assertion of the rejected host-parent or source-parent rule: `lmx_merge_selftest`, `lmx_merge_root_identity_selftest`
+(and the adapter's NODE), `lmx_copy_msg_terminal_selftest`, `lmx_walk_merge_selftest`, `lmx_walk_merge_model_selftest`,
+`lmx_qualified_range_selftest`, the driver's two merge taps, `graph_shape_t7_copy_parent`, the walked merge PRIM's
+shape pins and the native merge's `self` argument pins.
+
+### The used closure
+
+With whole-copied ancestors the parent rule was exponential: every result held in an ancestor carried all earlier
+results.  On the -27 bytes alone S(8) (eight declaration merges, each model reading the previous result) took 41.7 s
+and L(25) (a loop of 25 merges) 50.6 s, against 0.26 s and 0.84 s on `opus_full_61`.
+
+The copy now holds what its copied code uses.  The kernel's used copy (`lmx_merge_used_owned`,
+`lmx_graph_copy_many_used_staged`) takes use records [anchor, k, length, slots]: an explicit anchor (a Structure of the
+source, k = 0) or a selector k (operand k - 1's lexical parent); the path from the anchor is copied in part -- each
+intermediate Structure with its path slot only, the last value whole; two records of one Structure meet in one copy,
+and a whole use upgrades a partial one through the same map entry.  An ancestor needed only as a link is copied in part
+(`lmx_copy_link`).  An absent explicit anchor refuses; a parentless operand's selector names nothing.  No depth or
+record count is capped; sizes are checked for overflow.  The holder role comes from the operation contract
+(`lmx_copy_holder_operand`: operand 1 of AT, PUT_REF, OF, OWN_OF, PUT_OF, SET_OF, ELEM, ELEMPUT): a holder naming a
+place of the application's lexical context -- an ancestor, or a data Structure whose parent chain meets such an ancestor
+before the application itself and before a retained profile -- is linked in part, its places filled by the records; the
+same Structure as a value operand (merge, SET) is copied whole.  The walked merge primitive takes P, Q and T as
+separate typed size_t cells, each span checked before it is read; its explicit anchor is a SELF frame and a record's
+anchor the lexical root of the given Structure, so the frame holds no unit and copied code names its copy's unit.  The
+translator records uses by name in every pass and lays them out where the layout is final (`l2_use_resolve`), with one
+collector for the native and the walked merge (`l2_mu_collect`) and the T7 copy (`l2_mu_collect_home`; T7's lexical
+copy is partial by the same policy, `lmx_graph_copy_part_used_owned`); a field holding a graph place (a computed output:
+a merge result, a receive output) is recorded by its edge chain as the walker reads it (`l2_use_held`,
+`l2_use_place_below`), a named Structure's levels by field rows (tag 14), and a program part's method's uses from its
+node start with the part root's unit path (`l2_mu_node_prefix`).  A read of an absent place is refused: walked INVALID,
+natively an abort on an own-field load, a number read or written through a path ("a field path reads an absent place")
+and every typed cell load ("a field reads an absent place") -- before, a native path read took
+`lmx_*_value_known`'s null guard (0) for the value.  Two kernel selftests lagged behind the rule and the kernel gate
+caught them: `lmx_merge_root_identity_selftest`'s ancestor oracle (migrated in -27) expected a whole copy of the lexical
+parent -- its merge now carries one use record naming outer\k, the copy's own k checked as before, and a merge with no
+use holds outer's copy with the result alone, k absent (red under the whole-parent and zero-cell mutants);
+`lmx_copy_ptr_share_selftest` carries lmx_implements by predef, as the copier's other selftests do, since the copier
+now carries records.
+
+The full gate of this checkpoint found a regression of the used closure (`opus_full_62`:
+`graph_shape_t7_local_callable_field` and `unit_held_nullary_source_field`, with their twins, OK on `opus_full_61`,
+crashed 0xC0000005 in every mode, already on the bytes before the free-input route).  A callable merge's view fills its
+model's local named Structure's callable field from its copy of the unit (`l2_emit_ns_refs`, kind 4), and that reference
+was no use of the view's home: the partial copy held the method's place absent and the builder dereferenced null.  One
+enumeration of the view's retained local roots (`l2_source_refs_rows`) now serves the fill and, in every pass, the uses
+of the view's home (`l2_ns_refs_note`: each borrowed method occurrence, `l2_use_unit_child`); the home closure
+(`l2_mu_home`) makes that method a home, so what its code uses is copied too; and the fill reads the borrowed occurrence
+through the shared absent-place invariant ("a field path reads an absent place") before it stores or dereferences it, in
+every build. The census of the fill's other unit-level references: kind 10 (a binding in a method's own named Structure)
+is refused at translation ("a reference binding in a method's named Structure is not built yet"), and kind 3 is made
+only by the synthesized letter payload -- neither is a view's local root.  The replay of `opus_full_62`'s 2581
+translations before and after: 56 differ, in their L1 only -- 52 by the guard (three lines per callable-field fill), the
+4 rows of the regression by the guard and the T7 copy's use records; nothing else.  Witnesses: the two rows and
+`unit_merge_parent_t7_borrowed` (two local Structures borrow one occurrence of get, which reads its node's cnt; the root
+writes cnt after the merge and the copy keeps 7), green in three modes; mutants: the note dropped gives "a field path
+reads an absent place" in every mode (no crash), with the guard dropped too the old crash, the home closure dropped
+turns `_t7_borrowed` red.  Found by the same census, and registered red (HEAD the same): a model's local named
+Structure's code in the node reads the program's unit, not the node's copy (T7-LOCAL-NAMED-UNIT,
+`unit_merge_parent_t7_local_proc`: 9, where the model's own code would read the copy's 7).
+
+### Correspondence through the copy map
+
+Codex's classification of what a copied admission reads: (a) the coordinate witness of the declaration a candidate is
+admitted to -- module-lifetime metadata, no model value; (b) an ordinary model read from the copied lexical graph; (c)
+the candidate, the caller's binding first (#dynamic's order).  The copier carries every record (V, R, frame) of the
+source arena through its own map (`lmx_copy_carry_records`): value-side (V', R' or R, ...) when V was copied,
+model-side (V, R', ...) when the requirement was copied -- the original candidate admitted to the copied requirement by
+the same map, both halves -- with holes for a partial copy, and a self record with holes for a partial value that had
+none.  A record is written only when its value, requirement and frame are live Structures of the destination arena;
+copy roots are excluded.  The former carry (`lmx_implements_carry`) rewrote the requirement only when it was the copied
+value and copied requirement and frame verbatim otherwise, leaving a copied requirement keyed to an unrelated
+original; it is gone.  `unit_merge_parent_model_source` (u1's copy C holds a1', a distinct copy of the root's merge
+result a1 that User's code admits by name -- K02c, category (b)) and `_model_write` (the root writes `a1\x: 5` into the
+original after the merge: u1 reads 5 from its candidate while C's a1' keeps 1) run in all three modes; the rejected
+route -- every K02c model read from the program's unit -- was reverted before any commit.
+
+### A model made after the copy
+
+Codex's answer to the open question: `unit_merge_parent_model_later` is a required positive.  a3 is declared after
+User, and an ordinary declaration is visible forward and down from where it stands (#declaration-visibility), so in
+User's code a3 is no lexical declaration but a free dynamic input (#dynamic): the copy correctly holds no a3 and needs
+none; at the later run u1 the caller has a3.  Its coordinates are the declaration that reaches the input -- Model, a3
+being a merge of one Structure (`l2_anchor_close`) -- and its value is admitted to them where the execution forms the
+input.  A named Structure's code reads the unit from the Structure's declaration, as a method's from its header
+(`l2_vis_method`; before, a named Structure's procedure had no method node and saw every declaration, later ones
+included), and the coordinate space is searched for a named Structure's procedure body too (`l2_m_consumer`,
+`l2_uses_walk_method`).
+
+### The receiving boundary
+
+Where is the free input admitted, and to what?  A first route admitted it where an execution forms it, to the
+requirement as the caller renders it, and made the native body read the program's declaration (`l2_type_witness`); the
+methods-walked twins stayed red, because walked code in a merge copy reads its own copy of the declaration.  Codex's
+answer: the boundary admits the actual supplied value to the requirement the actual executing occurrence consumes; no
+global escape, no shared copy, no new operator.  Measured first: C, u1's copy of the unit, holds Model' at Model's
+place; natively u1's body reads it through its node, and walked u1's copied model operand is that same Model' (one
+copy per source through the copier's map).  A named Structure's walked body has no head -- its operations and fields
+interleave in its own slots -- so an instruction at its entry would be a source-visible field; the requirement is read
+where the input is formed instead, in the space of the occurrence the boundary selects.
+
+A free input is admitted at the boundary that forms it -- a call, or the execution of a Structure in place or held in
+a field -- to its requirement read in the space that occurrence's body reads its requirements in (`l2_m_unit_ref`): the
+occurrence's own node, its parent, where the body reads through `node`; the program's unit where the body reads the
+program's.  Natively the admission's model instances are rendered through one emission-context reference
+(`l2_recv_unit`), read by `l2_type_inst` alone while that one admission is emitted (`l2_admit_received` sets it and
+restores it before every return; the occurrence is the call's `l2_c<t>`, selected before the actuals, or the
+execution's `l2_nsn<k>`).  A call by name takes the same route, `l2_c<t>\parent`, with no "own unit" shortcut.
+Walked, the admission is marked with the source role RECEIVING (`lmx_walk.h`, ADMIT_AS; `l2_rw_recv_req`); its
+requirement is `[of, [node], slot]`, and the kernel reads that operand alone in a stack copy of the caller's frame
+whose code and data are the selected occurrence, with no inputs, working state, guard or payload; the value, the
+catches and everything else are the caller's, and the caller's frame is not written.  A RECEIVING admission anywhere
+else is INVALID.  The candidate is formed as before (caller-local, inherited, lexical); a declared input keeps its
+declaration's record.  A second admission of a completed pair finds its record and checks no field
+(`lmx_implements_register`); a new pair is checked.  `l2_type_witness` and the execution's admissions in the caller's
+rendering are gone.  A held call recording what reaches an input its model's code has no declaration of in sight
+(`l2_dyn_site_held`) was tried and dropped: no translation changed without it.
+
+The replay of `opus_full_61`'s 2508 recorded translations, the bytes before the free-input route against these: 2457
+equal, 51 differ in their L1 only (no message or exit changed).  10 are the rows of `unit_copy_call_chain_inputs`,
+`unit_copy_call_hidden_inputs` and `unit_named_struct_dead_tail_given`, whose programs already read those names as
+free inputs.  In the other 41 (`unit_free_path_*`, `unit_letter_place_free_name`, `unit_path_deep_names`,
+`unit_path_long_names` and their twins), with the walked temporaries' names anonymised, every change is one of two
+kinds: 358 native admission lines whose model instance moved from the caller's unit to `<occurrence>\parent`, and 61
+walked admissions whose model operand -- the caller's frame operand `l2_nsp[k]` -- became `[of, [node], k]` with the
+RECEIVING mark; nothing else.  The walked positional admission (a value with no schema, `l2_rw_admit`, which takes no
+RECEIVING mark) is reached by a free input in none of the 2508 translations and the 29 focus rows (a stage with a
+marker; the same marker for any hidden input reaches 2 rows, `unit_recv_hidden_opaque_typed` and its twin, a declared
+input).  Natively that branch is received like the rest.
+
+Witnesses, each with a `--walk-methods` twin, exit 7 natively, root-walked and methods-walked:
+`unit_merge_parent_model_later`, `_model_twice` (two runs read the caller's current a3: 1, then 5) and
+`_model_layout` (the candidate a merge of Wide, x at slot 1), the three with post paths showing C's place 0 is not the
+program's Model; `_model_prior` (a pair the copy carried from an in-place run, met at u1's boundary); `_model_place` (a
+write and an address through a3 from the copy land in the root's a3); `_model_ordinal` (a nonidentity ordinal `[0]x`
+and LAST `x` through the copy: Cand {pad; x; x} in the coordinates of Model); the copy's callable occurrences --
+`_model_method` (fn get held by Box's callable field, `b1\get()`), `_model_sub` (the sub bump, its write landing in the
+root's a3), `_model_subref` (b1's bump selected by a callable reference, `recv(b1\bump)` then `f()`: the native
+admission reads the requirement at `l2_c0\parent`, the occurrence f selects; the twin keeps recv native, a callable
+formal), `_model_xpart` (get defined in a program part whose root declares no a3); `_model_nested` (a nested receiver
+run in place in a copy); `unit_free_name_later_struct` (an in-place run), `unit_free_name_two_layouts` (one free name,
+two candidates of different layouts at two calls).  HEAD refused `_model_method`, `_model_sub` and `_model_xpart` in
+all three modes ("not carried") and `_model_subref` walked.  Controls: `unit_merge_parent_model_none` -- u1 run before
+the root declares a3 -- is refused where the run stands ("unbound dynamic input a3"); a probe reading `node\a3\x`, the
+copy's own graph path, is refused ("a field path met no Structure", methods-walked INVALID) and never takes the dynamic
+a3; `_model_source` and `_model_write` (ordinary model expressions) translate byte for byte as before the free-input
+route.  The kernel (`lmx_walk_call_data_selftest`): a RECEIVING requirement read from the callee's node while the value
+`[of, [node], 1]` is read from the caller's (an actual observing its own `node` cannot be written in a call: an
+unresolved name); an unmarked admission reads the caller's model; a RECEIVING admission outside a call's inputs is
+INVALID; a completed pair is reused with no field check even with a field no longer of its type, and a new pair is
+checked field by field and refused.
+
+Open: a copied method's declared Structure formal (COPIED-METHOD-DECLARED-FORMAL, `unit_merge_parent_method_formal`,
+red; HEAD the same) is admitted in the caller's space -- natively the D-105 admission at `l2_emit_call`'s actual,
+walked `l2_rw_recv_req` takes no formal -- while its body reads its own.  The same reference applies to declared
+inputs, but it changes every call admitting a declared Structure formal, and a call through a callable formal with
+several classes (`l2_emit_call_classes`) admits its formal once for classes whose bodies may read different spaces.
+Codex's answer (to PROGRESS 5): it is the next required dependency, before PATH-STRUCTURE-LEAF -- free or declared, one
+receiving contract; with several classes, the class of the occurrence already selected and that class's receiving
+policy for the same occurrence, never every class, their union, a prototype or the method declaring the callable
+formal.  This section is therefore an incomplete checkpoint.  Found on the way, and part of that dependency's
+callable-reference route: natively a callable actual given by a path through a merge copy, `recv(b1\peek)`, is the
+unit's own occurrence (`l2_cf_actual_emit` takes the method's descriptor in the unit), while the walked root hands the
+occurrence the path selects (COPIED-CALLABLE-ACTUAL, `unit_merge_parent_callable_actual` and its twin, red: each
+row's native half, a native root, gives 81, the walked halves 7; a direct `b1\peek()` selects the copy's
+occurrence in every mode).  Two candidates of different layouts through a
+merge copy cannot be written by execution yet (running a merge result inside a method is "executing a named Structure
+is not supported yet").  An own fn's free input was not probed: own fns live only in hosts returning a callable, and
+their inputs are A3 captures.
+
+### Retention
+
+`unit_merge_parent_keep` (Model binds `h: E` and reads `E\e`; b's copy of the unit holds E itself, x absent; b's h
+references E itself; b, run, holds 7 in j through the copy) and `unit_merge_parent_letter_keep` (the build's payload
+copy of MainLetter, whose h references E: the payload's h references E itself, the copy of the unit under it holds no
+E).  The payload pass passes the keep list every merge does, but no expressible program brings a payload copy to a
+qualified branch as a Structure value: the payload copy declares no use (its chain is links only), a reference cell
+shares its pointee, MainLetter's statement frames are not in the build's payload copy, and no payload model can sit in
+a qualified branch (`receiveMessage` binds plain names; a qualified branch holds no methods).
+
+### Evidence
+
+- Witnesses, each with a `--walk-methods` twin, natively, root-walked and methods-walked, with the driver's post paths:
+  `unit_merge_parent_copy`, `_t7`, `_t7_required`, `_compose`, `_named`, `_letter`, `_keep`, `_letter_keep`,
+  `graph_shape_t7_copy_parent`; `unit_used_closure_transitive`, `_write`, `_address`, `_deep_ns`, `_code_copy`,
+  `_alias_ns`, `_alias_result`, `_part_node`, `_part_lex`, `_cycle`; `unit_merge_parent_model_source`, `_model_write`,
+  `_model_later`, `_model_twice`, `_model_layout`, `_model_prior`, `_model_place`, `_model_ordinal`, `_model_method`,
+  `_model_sub`, `_model_subref`, `_model_xpart`, `_model_nested`; `unit_free_name_later_struct`,
+  `unit_free_name_two_layouts`; the refusal
+  `unit_merge_parent_model_none`; kernel scenarios (i)-(xii) in `lmx_merge_selftest`, framing E in
+  `lmx_walk_merge_selftest`, the RECEIVING checks in `lmx_walk_call_data_selftest`; the required positives registered
+  red, `unit_merge_parent_method_formal`, `unit_merge_parent_callable_actual` and `unit_merge_parent_t7_local_proc`
+  (their pairs); `unit_merge_parent_t7_borrowed`.
+- Mutants, one rule each off the final bytes: each on a fresh stage over these bytes, the witnesses in the three modes.
+  The parent (-27): result parent 0, every copied parent 0 and the model's source parent turn all nine merge-parent
+  witnesses red in every mode; a composition without absorption `_compose`; the result re-parented at the receiving host
+  `_copy`, `_compose`, `_named` (native and root-walked), `_keep` and `graph_shape_t7_copy_parent` (native); the walked
+  merge without its Q roots `_t7_required` and `_keep` walked; the native merges without retention `_keep` natively; the
+  payload copy made before the branches are sealed `_letter` and `_letter_keep`; the payload copy without retention
+  reaches no witness.  The used closure (kernel selftests): 16-bit Q and T fields, a skipped selector, a refused
+  parentless selector, a use path capped at 32 levels, the partial copy's holes (dropped, kept after a whole use,
+  dropped from the self record), the walked absent-read check, every ancestor operand a link, the anchor copied whole,
+  the explicit anchor taken as itself (framing E), a lexical-context holder copied whole again (also `_part_lex` in
+  three modes) and the two empty-anchor checks together; each of those two alone is covered by the other, and the length
+  product and sum checked in wrapping arithmetic change no behaviour (the later span checks refuse the misframe). The
+  used closure (translator): a held field's edge chain dropped `_alias_result`; a part method's node uses without the
+  part root's path `_part_node` (an abort natively, INVALID walked; with a native empty path read as 0, a wrong value);
+  no cell use noted `_part_lex` and `_transitive` (with an empty typed cell loaded as 0, a wrong exit); the explicit
+  anchor stored as the unit itself `_code_copy`. The copy map: no model-side record `_model_source` and `_model_write`
+  in three modes and the selftest; a requirement carried verbatim and a model-side or value-side record from a foreign
+  arena turn the selftest red and reach no witness program (`_model_prior` stays green under all four: a fresh check of
+  the same layout admits the same pair). The free input: no visibility from a named Structure's declaration
+  `_model_later`, `_model_twice` and turns `_model_none`'s refusal into a run-time abort; no coordinate search for a
+  named Structure's body refuses `_model_later` and `unit_free_name_later_struct` at translation.  The receiving
+  boundary: the native reference as the caller's unit -- `_model_later`, `_layout`, `_method`, `_sub`, `_xpart`
+  natively, `_subref` walked (natively its formal holds the unit's occurrence, COPIED-CALLABLE-ACTUAL, and the two
+  references coincide); as the program's unit -- `_later`, `_method`, `_sub`, `_xpart` natively; no RECEIVING walked --
+  `_later`, `_layout`, `_method`, `_sub`, `_xpart` root-walked and methods-walked (`_subref`'s admission is recv's,
+  native in every mode); an execution admitting none of its free inputs -- natively `_later`,
+  `unit_free_name_later_struct`, `_nested`, walked the same; a call admitting its free inputs in the caller's rendering
+  again -- `_method`, `_sub`, `_xpart` natively, `_subref` root-walked (`unit_free_name_two_layouts` not reached: its
+  calls by name from the unit's own code receive in that unit); the kernel's RECEIVING input evaluated as any operand,
+  or its requirement read in the caller's frame -- `_later`, `_method`, `_sub` INVALID walked; RECEIVING accepted
+  outside call inputs reaches no program; all three kernel mutants turn `lmx_walk_call_data_selftest` red.  The T7 view
+  fix: the borrowed occurrence noted as no use gives "a field path reads an absent place" on the regression's two rows
+  and `_t7_borrowed` in every mode (no crash); with the guard dropped too, the old crash; the home closure dropped turns
+  `_t7_borrowed` red.
+- Growth (minimum of three runs; Structures, values, edges reachable from the unit after the run, and the arena's index
+  length): on the final bytes against HEAD's (`opus_full_61`), natively and methods-walked alike -- S(4/6/8), k
+  declaration merges in a method: 47/63/79 Structures in at most 102 ms (HEAD 47/63/79, at most 235 ms); L(25/50), a
+  loop of merges: 51 Structures in 113-160 ms, index 871/1272 (HEAD 52, 715-3409 ms, index 4008/7610); N(4/6/8), merges
+  of a nested path: 78/104/130 in at most 116 ms (HEAD 70/92/114, at most 468 ms); W(4/6/8), copies of a Structure
+  reading `node\a1\x`: 132/176/220 in at most 119 ms (HEAD 104/134/164, at most 650 ms). Growth is linear in k; N and W
+  reach more Structures than HEAD because each result holds its own partial copy of its lexical parent.
+
+### Measured
+
+| Gate | Result |
+| --- | --- |
+| kernel `opus_kernel_58` | GREEN297 (114 selftests ran, staged blob 3164952d) |
+| focused `opus_focus_rf33_03` | 493 targets; red exactly its five opus_full_61 baseline rows (unit_copy_call_addressed, unit_copy_call_from_method, unit_copy_call_other_owner, unit_eternal_shape, unit_letter_alias_before, their messages unchanged) and the four registered required-positive pairs (unit_node_path_anon_struct, unit_merge_parent_method_formal, unit_merge_parent_callable_actual, unit_merge_parent_t7_local_proc) |
+| L3 `opus_l3_55` | all 11 suites ok, type budget ok |
+| full `opus_full_63` | RED 71/2586; against `opus_full_61`: FAIL→OK 0, OK→FAIL 0, added 77 (69 OK, 8 red: the four pairs), removed 0; no recorded red message changed |
+| intermediate | `opus_kernel_56` RED 2/297 (two stale selftests, fixed); `opus_full_62` RED 73/2582, OK→FAIL 4 (the T7 view regression, fixed) |

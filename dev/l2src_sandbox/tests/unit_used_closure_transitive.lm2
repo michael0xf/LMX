@@ -1,0 +1,23 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3): a transitive use.  Model's code
+# calls get, whose code reads y; b's copy of the unit holds what that copied code uses -- y as the merge saw it
+# (3), get's occurrence (its code goes with it) and b at Model's place -- and not z, which nothing it copies
+# reads.  Run after y: 11, b's get reads the root's y: the caller's binding first (Reading 1, Codex
+# 2026-09-28).  Exit 7.
+int: y 3
+int: z 9
+fn: get () int
+    return: y
+end: get
+Model:
+    int: k 0
+    k: get()
+end: Model
+b: merge: Model
+y: 11
+z: 12
+b
+int: ok 7
+if: b\k != 11
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

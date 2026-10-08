@@ -1280,7 +1280,7 @@ if ($driver) { Add-Row 'OK' 'build:eternal_driver' ($made.ToString() + ' kernel 
 #   Stopped 1|0 R0 was stopped, or not, as the host's exit reason says: the driver captures the
 #               launch's stderr and looks for "R0 was stopped" (the reason the host gives when R0
 #               sent no exit letter and its running is 0).
-#   MergeFail N the program's Nth merge fails (the -Dlmx_merge_owned / _profiles_owned taps).
+#   MergeFail N the program's Nth merge fails (the -Dlmx_merge_owned / _profiles_owned / _used_owned taps).
 #   Letters N   is not observable any more: R0's close is the host's, which releases R0's untaken
 #               letters.  A row that names it is red.
 #
@@ -1750,21 +1750,38 @@ $criticalCopyCallPaths = @('widthpath','0','23',
     'rolepath','1','19','35','0','samepath','2','19','2','2','8','1','sizepath','3','19','5','2','4',
     'differentpath','2','8','1','2','9','1')
 # A chain of copies. Unit children 5, 6, 7 declare ra, rb, rc: rb's merge takes
-# the very output operand of ra's declaration, rc's that of rb's, three
+# the very output operand of ra's declaration (at the merge frame's operand slot
+# 8, after its counts P, Q, T and two tokens), rc's that of rb's, three
 # distinct rows. The calls (11: rb, 17: rc) are EXEC over the called row's own
 # operand with the caller's x (child 3) as the one hidden input. In h (unit
 # child 8) statement 7 declares xc as a copy of the row that defines C (own 6)
 # and statement 8 is EXEC over xc's operand with h's own x (own 2).
 $criticalCopyChainPaths = @(
-    'samepath','3','6','2','7','2','5','1','samepath','3','7','2','7','2','6','1',
+    'samepath','3','6','2','8','2','5','1','samepath','3','7','2','8','2','6','1',
     'differentpath','2','5','1','2','6','1','differentpath','2','6','1','2','7','1',
     'rolepath','1','11','35','0','widthpath','1','11','6','samepath','2','11','2','2','6','1',
     'rolepath','2','11','5','4','0','sizepath','3','11','5','2','3',
     'rolepath','1','17','35','0','widthpath','1','17','6','samepath','2','17','2','2','7','1',
     'rolepath','2','17','5','4','0','sizepath','3','17','5','2','3',
-    'sizepath','5','8','7','2','7','2','6',
+    'sizepath','5','8','7','2','8','2','6',
     'rolepath','2','8','8','35','0','widthpath','2','8','8','6','samepath','3','8','8','2','3','8','7','1',
     'rolepath','3','8','8','5','4','0','sizepath','4','8','8','5','2','2')
+
+# The copies' own lexical contexts (merge parent; the copied-node-write rule): ra, rb and rc hang under
+# distinct copies of the unit, none the unit; rb's run wrote 11 and rc's 5 into their copies' seen (0),
+# while the unit's own seen stays 0.
+$copyChainWrites = @('postpaths',
+    'intpath','5','6','1','1','up','0','11','intpath','5','7','1','1','up','0','5',
+    'differentpath','4','6','1','1','up','0','differentpath','4','7','1','1','up','0',
+    'differentpath','4','7','1','1','up','4','6','1','1','up','intpath','1','0','0',
+    'endpostpaths')
+# Two copies' writes: ra (8 1 1) and rb (9 1 1) hang under distinct copies of the unit; ra's two runs wrote 11
+# then 5 into its copy's seen (16), rb's 29 into its own; the unit's seen stays 0.
+$copyCallWrites = @('postpaths',
+    'intpath','5','8','1','1','up','0','16','intpath','5','9','1','1','up','0','29',
+    'differentpath','4','8','1','1','up','0','differentpath','4','9','1','1','up','0',
+    'differentpath','4','8','1','1','up','4','9','1','1','up','intpath','1','0','0',
+    'endpostpaths')
 
 # A foreign C value by value has no graph cell. Unit: predef, include, echo,
 # read, kind, probe, check, publish, return. echo's declared input part is
@@ -2128,19 +2145,359 @@ $criticalLocalProjectionPost = @('postpaths',
     'namepath','3','2','deref','3','S','namepath','3','4','deref','3','S')
 $criticalLocalProjectionNative = @('nativepath','3','2','deref','3','1','nativepath','3','4','deref','3','1','nativepath','2','0','2','1','endpostpaths')
 $criticalLocalProjectionWalk = @('nativepath','3','2','deref','3','0','nativepath','3','4','deref','3','0','nativepath','2','0','2','0','endpostpaths')
-# graph_shape_t7_copy_parent: the unit's slots are E 0 (a qualified branch), the root's body 2 (m at 2 1 1, whose
-# parent is the unit: a merge's container), other 3, w 7; from w's cell, `deref` is the node and `up` its parent, the
-# copy of the unit (T7).
+# graph_shape_t7_copy_parent: the unit's slots are E 0 (a qualified branch), Model 1, the root's body 2 (m at 2 1 1),
+# other 3, w 7; from w's cell, `deref` is the node and `up` its parent, the copy of the unit (T7).  m hangs under a
+# distinct copy of the unit, Model's lexical parent, made at the merge, which holds m where the unit holds Model (the
+# author, LMX_blog/2026-10-05.md#merge-parent; MERGE-PARENT-SITE-OVERRIDE migrated the oracle that hung m under the
+# unit, the merge's container).  T7's copy holds what the node's code reads through it (Codex -29/-30 step 4, the
+# SAME used closure): other, the fallback of its hidden input, a distinct cell holding 9; m reaches the node by its
+# caller's binding and its model from the program's unit (steps/defects.md, T7-MODEL-OPERAND-SOURCE), and no copied
+# code reads Model or E, so the copy holds none of them (Codex -28 C: an unread E is not retained because a driver
+# inspected its slot; unit_merge_parent_t7_required keeps a required E itself).
 $criticalT7CopyPost = @('postpaths',
     'differentpath','0','3','7','deref','up',
     'differentpath','1','3','4','7','deref','up','3',
     'intpath','4','7','deref','up','3','9',
-    'differentpath','3','2','1','1','6','7','deref','up','2','1','1',
-    'intpath','7','7','deref','up','2','1','1','0','4',
-    'parentpath','3','2','1','1','0',
-    'parentpath','6','7','deref','up','2','1','1','3','7','deref','up',
-    'parentpath','5','7','deref','up','2','1','4','7','deref','up','2',
-    'samepath','1','0','4','7','deref','up','0',
+    'nullpath','4','7','deref','up','2',
+    'nullpath','4','7','deref','up','1',
+    'differentpath','4','2','1','1','up','0',
+    'widthpath','4','2','1','1','up','16',
+    'samepath','5','2','1','1','up','1','3','2','1','1',
+    'nullpath','5','2','1','1','up','0',
+    'nullpath','4','7','deref','up','0',
+    'endpostpaths')
+# MERGE-PARENT-SITE-OVERRIDE (Codex K03-MERGE-PARENT-20261007-27; the author, LMX_blog/2026-10-05.md#merge-parent):
+# merge copies the used part of the tree and rewrites parent links inside the copy.  unit_merge_parent_copy's unit
+# slots: E 0, x 1, Model 3, Host 4 (a at 4 0, inner at 4 2); b at 5 1 1 copies Model, p at 6 1 1 copies inner at the
+# root, c at 10 4 1 1 in viaMethod's occurrence, d at 11 6 2 0 1 1 in viaBody's hosted body.  `up` climbs to each
+# copy's parent: a distinct copy of the model's lexical parent made at that merge (x 3 for b; a 3, 11, 12 for p, c,
+# d -- inner's code reads node\a), holding the result where the source holds the model, itself under a distinct copy
+# of the unit; E, which no copied code reads, is absent from every copy (Q42: merge copies what the copied code uses).
+$mergeParentCopyPost = @(
+    'postpaths',
+    'differentpath','4','5','1','1','up','0',
+    'widthpath','4','5','1','1','up','22',
+    'samepath','5','5','1','1','up','3','3','5','1','1',
+    'intpath','5','5','1','1','up','1','3',
+    'intpath','1','1','11',
+    'nullpath','5','5','1','1','up','0',
+    'widthpath','3','5','1','1','3',
+    'differentpath','4','6','1','1','up','1','4',
+    'widthpath','4','6','1','1','up','3',
+    'samepath','5','6','1','1','up','2','3','6','1','1',
+    'intpath','5','6','1','1','up','0','3',
+    'intpath','2','4','0','13',
+    'differentpath','5','6','1','1','up','up','0',
+    'samepath','6','6','1','1','up','up','4','4','6','1','1','up',
+    'nullpath','6','6','1','1','up','up','0',
+    'differentpath','5','6','1','1','up','up','4','5','1','1','up',
+    'widthpath','3','6','1','1','3',
+    'differentpath','5','10','4','1','1','up','1','4',
+    'differentpath','5','10','4','1','1','up','1','10',
+    'widthpath','5','10','4','1','1','up','3',
+    'samepath','6','10','4','1','1','up','2','4','10','4','1','1',
+    'intpath','6','10','4','1','1','up','0','11',
+    'differentpath','6','10','4','1','1','up','up','0',
+    'nullpath','7','10','4','1','1','up','up','0',
+    'differentpath','7','11','6','2','0','1','1','up','1','4',
+    'differentpath','7','11','6','2','0','1','1','up','3','11','6','2',
+    'widthpath','7','11','6','2','0','1','1','up','3',
+    'samepath','8','11','6','2','0','1','1','up','2','6','11','6','2','0','1','1',
+    'intpath','8','11','6','2','0','1','1','up','0','12',
+    'differentpath','8','11','6','2','0','1','1','up','up','0',
+    'nullpath','9','11','6','2','0','1','1','up','up','0',
+    'endpostpaths')
+# unit_merge_parent_t7: w at 6 holds T7's copy R of maker (`deref`), R under T7's copy of the unit (`up`); maker's
+# `e: merge: Model` run by R leaves e at R's 2 1 1, under a third copy of the unit, neither R, A (the unit's 4), T7's
+# copy nor the unit, holding e where the unit holds Model; x and E, which no copied code reads, are absent from both
+# copies (Codex -28 C; T7 copies by the SAME used closure as every merge).
+$mergeParentT7Post = @(
+    'postpaths',
+    'differentpath','6','6','deref','2','1','1','up','3','6','deref','up',
+    'differentpath','6','6','deref','2','1','1','up','0',
+    'differentpath','6','6','deref','2','1','1','up','2','6','deref',
+    'differentpath','6','6','deref','2','1','1','up','1','4',
+    'widthpath','6','6','deref','2','1','1','up','16',
+    'samepath','7','6','deref','2','1','1','up','3','5','6','deref','2','1','1',
+    'nullpath','7','6','deref','2','1','1','up','1',
+    'intpath','1','1','11',
+    'nullpath','7','6','deref','2','1','1','up','0',
+    'nullpath','4','6','deref','up','0',
+    'nullpath','4','6','deref','up','1',
+    'widthpath','5','6','deref','2','1','1','2',
+    'endpostpaths')
+# unit_merge_parent_compose: q at 3 1 1 and r at 5 4 1 1 compose inner with Other; each result hangs under a copy of
+# Host (a 3, 11, read by inner's code) that holds the result itself where Host holds inner -- no link reaches the
+# discarded copy of inner; E, which no copied code reads, is absent from the unit's copies.
+# unit_merge_parent_t7_required: the same shapes, the copied code needing E -- maker's q (R's 3) reads E\e through
+# T7's copy when R runs, Model's code reads E\e -- so both copies hold E itself, retained by its qualified profile, and
+# neither holds x.
+$mergeParentT7RequiredPost = @(
+    'postpaths',
+    'differentpath','6','6','deref','2','1','1','up','3','6','deref','up',
+    'differentpath','6','6','deref','2','1','1','up','0',
+    'differentpath','6','6','deref','2','1','1','up','2','6','deref',
+    'widthpath','6','6','deref','2','1','1','up','16',
+    'samepath','7','6','deref','2','1','1','up','3','5','6','deref','2','1','1',
+    'samepath','7','6','deref','2','1','1','up','0','1','0',
+    'samepath','4','6','deref','up','0','1','0',
+    'nullpath','7','6','deref','2','1','1','up','1',
+    'nullpath','4','6','deref','up','1',
+    'sizepath','3','6','deref','3','7',
+    'intpath','1','1','11',
+    'endpostpaths')
+$mergeParentComposePost = @(
+    'postpaths',
+    'differentpath','4','3','1','1','up','1','2',
+    'widthpath','4','3','1','1','up','3',
+    'samepath','5','3','1','1','up','2','3','3','1','1',
+    'intpath','5','3','1','1','up','0','3',
+    'intpath','2','2','0','12',
+    'widthpath','3','3','1','1','5',
+    'differentpath','5','3','1','1','up','up','0',
+    'samepath','6','3','1','1','up','up','2','4','3','1','1','up',
+    'nullpath','6','3','1','1','up','up','0',
+    'differentpath','5','5','4','1','1','up','1','2',
+    'differentpath','5','5','4','1','1','up','1','5',
+    'widthpath','5','5','4','1','1','up','3',
+    'samepath','6','5','4','1','1','up','2','4','5','4','1','1',
+    'intpath','6','5','4','1','1','up','0','11',
+    'widthpath','4','5','4','1','1','5',
+    'nullpath','7','5','4','1','1','up','up','0',
+    'differentpath','6','5','4','1','1','up','up','0',
+    'endpostpaths')
+# unit_merge_parent_named: box at 3 0 1 1 is the merge in Runner's body (K03 RECEIVE-OUTPUT's route); it hangs under a
+# copy of Host (a 11 at Runner's run, read by inner's code), not Runner, not Host; E is absent from the unit's copy.
+$mergeParentNamedPost = @(
+    'postpaths',
+    'differentpath','5','3','0','1','1','up','1','1',
+    'differentpath','5','3','0','1','1','up','1','3',
+    'widthpath','5','3','0','1','1','up','3',
+    'samepath','6','3','0','1','1','up','2','4','3','0','1','1',
+    'intpath','6','3','0','1','1','up','0','11',
+    'intpath','2','1','0','12',
+    'widthpath','4','3','0','1','1','3',
+    'differentpath','6','3','0','1','1','up','up','0',
+    'samepath','7','3','0','1','1','up','up','1','5','3','0','1','1','up',
+    'nullpath','7','3','0','1','1','up','up','0',
+    'endpostpaths')
+# unit_merge_parent_letter: the unit's slots are E 0, MainLetter 1, check 2, got 3 and the letter model {sender;
+# payload} 7.  The payload at 7 1, a copy of MainLetter made as the build's last act, hangs under a copy of the unit
+# (width 8) that holds it at MainLetter's slot 1 -- neither the letter nor the unit; E, which no copied code reads, is
+# absent there (Q42).
+$mergeParentLetterPost = @(
+    'postpaths',
+    'differentpath','3','7','1','up','0',
+    'differentpath','3','7','1','up','1','7',
+    'widthpath','3','7','1','up','8',
+    'samepath','4','7','1','up','1','2','7','1',
+    'nullpath','4','7','1','up','0',
+    'differentpath','2','7','1','1','1',
+    'widthpath','2','7','1','1',
+    'endpostpaths')
+# unit_merge_parent_keep / unit_merge_parent_letter_keep (Codex -29 step 4: retention only for qualified required
+# profiles): b (4 1 1) hangs under a copy of the unit that holds E (0) itself, which b's code reads, and b at Model's
+# 3 -- not x (1) or its initializer (2); b's h (2) references E itself, and b, run, holds E's 7 in j (4).  The payload
+# (5 1) hangs under a copy of the unit (width 6) that holds it at MainLetter's 1 and holds no E, which no copied code
+# reads by name; the payload's h (1) references E itself.
+$mergeParentKeepPost = @(
+    'postpaths',
+    'differentpath','4','4','1','1','up','0',
+    'samepath','5','4','1','1','up','0','1','0',
+    'samepath','5','4','1','1','up','3','3','4','1','1',
+    'nullpath','5','4','1','1','up','1',
+    'nullpath','5','4','1','1','up','2',
+    'intpath','4','4','1','1','0','4',
+    'samepath','5','4','1','1','2','deref','1','0',
+    'sizepath','4','4','1','1','4','7',
+    'endpostpaths')
+$mergeParentLetterKeepPost = @(
+    'postpaths',
+    'differentpath','3','5','1','up','0',
+    'differentpath','3','5','1','up','1','5',
+    'widthpath','3','5','1','up','6',
+    'samepath','4','5','1','up','1','2','5','1',
+    'nullpath','4','5','1','up','0',
+    'samepath','4','5','1','1','deref','1','0',
+    'differentpath','2','5','1','1','1',
+    'endpostpaths')
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3): in each witness the merge result (b, or
+# o) hangs under a distinct copy of its model's lexical parent (`up`) that holds what the copied code uses and nothing
+# else -- a used place as the merge saw it, an unread one null.  transitive: y 0 (3, the root later 11), get's
+# occurrence 4, b at Model's 5, z 2 absent.  write: x 0 (5 in the copy, 3 in the unit), u 2 absent.  deep_ns: Deep in
+# part, a0 and a35 absent, v 40 forty levels down.  code_copy: o's copy holds Model 4 and x 0, not u 2.  alias_ns:
+# one copy of Hold with p 0 and q 2, r 4 and p's code 1 absent.  alias_result: the statement holding h (1) in part,
+# h a distinct copy (p 3, r 5), the statement's merge frame (1 2) and Hold 0 absent.  part_node / part_lex: the part's
+# root 11 in part (px 5, pz absent), pget's occurrence 10 under it, u 0 absent.  cycle: f 4 and g 5 copied, each
+# call naming the other's copy, y 0 held, z 2 absent.
+$usedClosureTransitivePost = @(
+    'postpaths',
+    'differentpath','4','6','1','1','up','0',
+    'samepath','5','6','1','1','up','5','3','6','1','1',
+    'intpath','5','6','1','1','up','0','3',
+    'intpath','1','0','11',
+    'namepath','1','4','get',
+    'differentpath','5','6','1','1','up','4','1','4',
+    'nullpath','5','6','1','1','up','2',
+    'intpath','4','6','1','1','0','11',
+    'endpostpaths')
+$usedClosureWritePost = @(
+    'postpaths',
+    'differentpath','4','5','1','1','up','0',
+    'samepath','5','5','1','1','up','4','3','5','1','1',
+    'intpath','5','5','1','1','up','0','5',
+    'intpath','1','0','3',
+    'nullpath','5','5','1','1','up','2',
+    'intpath','4','5','1','1','0','5',
+    'endpostpaths')
+$usedClosureDeepPost = @(
+    'postpaths',
+    'differentpath','4','2','1','1','up','0',
+    'samepath','5','2','1','1','up','1','3','2','1','1',
+    'differentpath','5','2','1','1','up','0','1','0',
+    'nullpath','6','2','1','1','up','0','0',
+    'nullpath','41','2','1','1','up','0','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','0',
+    'intpath','46','2','1','1','up','0','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','40',
+    'intpath','42','0','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','2','40',
+    'intpath','2','0','0','0',
+    'endpostpaths')
+$usedClosureCodeCopyPost = @(
+    'postpaths',
+    'differentpath','4','6','1','1','up','0',
+    'samepath','5','6','1','1','up','5','3','6','1','1',
+    'differentpath','5','6','1','1','up','4','1','4',
+    'intpath','5','6','1','1','up','0','3',
+    'nullpath','5','6','1','1','up','2',
+    'endpostpaths')
+$usedClosureAliasNsPost = @(
+    'postpaths',
+    'differentpath','4','2','1','1','up','0',
+    'samepath','5','2','1','1','up','1','3','2','1','1',
+    'differentpath','5','2','1','1','up','0','1','0',
+    'intpath','6','2','1','1','up','0','0','3',
+    'intpath','6','2','1','1','up','0','2','4',
+    'nullpath','6','2','1','1','up','0','4',
+    'nullpath','6','2','1','1','up','0','1',
+    'intpath','4','2','1','1','0','10',
+    'intpath','2','0','4','5',
+    'endpostpaths')
+$usedClosureAliasResultPost = @(
+    'postpaths',
+    'differentpath','4','3','1','1','up','0',
+    'samepath','5','3','1','1','up','2','3','3','1','1',
+    'nullpath','5','3','1','1','up','0',
+    'differentpath','5','3','1','1','up','1','1','1',
+    'nullpath','6','3','1','1','up','1','2',
+    'differentpath','7','3','1','1','up','1','1','1','3','1','1','1',
+    'intpath','8','3','1','1','up','1','1','1','0','3',
+    'intpath','8','3','1','1','up','1','1','1','4','5',
+    'intpath','4','3','1','1','0','10',
+    'endpostpaths')
+$usedClosurePartNodePost = @(
+    'postpaths',
+    'differentpath','4','3','1','1','up','0',
+    'samepath','5','3','1','1','up','2','3','3','1','1',
+    'nullpath','5','3','1','1','up','0',
+    'differentpath','5','3','1','1','up','11','1','11',
+    'intpath','6','3','1','1','up','11','0','5',
+    'nullpath','6','3','1','1','up','11','2',
+    'differentpath','5','3','1','1','up','10','1','10',
+    'parentpath','5','3','1','1','up','10','5','3','1','1','up','11',
+    'intpath','4','3','1','1','0','5',
+    'intpath','2','11','2','9',
+    'endpostpaths')
+$usedClosurePartLexPost = @(
+    'postpaths',
+    'differentpath','4','3','1','1','up','0',
+    'samepath','5','3','1','1','up','2','3','3','1','1',
+    'nullpath','5','3','1','1','up','0',
+    'differentpath','5','3','1','1','up','11','1','11',
+    'intpath','6','3','1','1','up','11','0','5',
+    'nullpath','6','3','1','1','up','11','2',
+    'differentpath','5','3','1','1','up','10','1','10',
+    'parentpath','5','3','1','1','up','10','5','3','1','1','up','11',
+    'intpath','4','3','1','1','0','5',
+    'intpath','2','11','2','9',
+    'endpostpaths')
+$usedClosureCyclePost = @(
+    'postpaths',
+    'differentpath','4','7','1','1','up','0',
+    'samepath','5','7','1','1','up','6','3','7','1','1',
+    'intpath','5','7','1','1','up','0','3',
+    'nullpath','5','7','1','1','up','2',
+    'differentpath','5','7','1','1','up','4','1','4',
+    'differentpath','5','7','1','1','up','5','1','5',
+    'samepath','8','7','1','1','up','4','3','1','1','5','7','1','1','up','5',
+    'samepath','8','7','1','1','up','5','2','1','1','5','7','1','1','up','4',
+    'intpath','4','7','1','1','0','3',
+    'endpostpaths')
+# unit_used_closure_address: b (6 1 1) hangs under a copy of the unit that holds x (0), whose cell put wrote through
+# the address of node\x (5) while the unit's x cell keeps 3, put's occurrence (4, a copy) and b at Model's 5; u (2)
+# is absent.
+$usedClosureAddressPost = @(
+    'postpaths',
+    'differentpath','4','6','1','1','up','0',
+    'intpath','5','6','1','1','up','0','5',
+    'intpath','1','0','3',
+    'samepath','5','6','1','1','up','5','3','6','1','1',
+    'differentpath','5','6','1','1','up','4','1','4',
+    'nullpath','5','6','1','1','up','2',
+    'intpath','4','6','1','1','0','0',
+    'endpostpaths')
+# unit_merge_parent_model_later / _twice / _layout: u1 (2 1 1) hangs under C, a copy of the unit (`up`) that holds u1
+# at User's place 1 and no a3 -- a3's place 3 is empty, a3 being made after the merge; u1's y is what the root's a3
+# gives (1; 5 after the root's write in _twice; Wide's x 2 in _layout), the root's a3 (3 1 1) unchanged by the copy.
+$mergeParentModelLaterPost = @(
+    'postpaths',
+    'differentpath','4','2','1','1','up','0',
+    'differentpath','5','2','1','1','up','0','1','0',
+    'samepath','5','2','1','1','up','1','3','2','1','1',
+    'nullpath','5','2','1','1','up','3',
+    'intpath','4','2','1','1','0','1',
+    'intpath','4','3','1','1','0','1',
+    'endpostpaths')
+$mergeParentModelTwicePost = @(
+    'postpaths',
+    'differentpath','4','2','1','1','up','0',
+    'differentpath','5','2','1','1','up','0','1','0',
+    'samepath','5','2','1','1','up','1','3','2','1','1',
+    'nullpath','5','2','1','1','up','3',
+    'intpath','4','2','1','1','0','5',
+    'intpath','4','3','1','1','0','5',
+    'endpostpaths')
+$mergeParentModelLayoutPost = @(
+    'postpaths',
+    'differentpath','4','2','1','1','up','0',
+    'differentpath','5','2','1','1','up','0','1','0',
+    'samepath','5','2','1','1','up','1','3','2','1','1',
+    'nullpath','5','2','1','1','up','3',
+    'intpath','4','2','1','1','0','2',
+    'endpostpaths')
+# MERGE-PARENT-MODEL-SOURCE: u1 (model_source at 4 1 1, model_write at 3 1 1) hangs under C, a copy of the unit (`up`)
+# that holds u1 at User's place and a1', a distinct copy of a1 at a1's place 1 1 1 -- the requirement u1's code reads;
+# a2, Model and a1's merge frame (1 2), which no copied code reads, are absent.  u1's y is what its candidate, the
+# root's a1, holds: 1, and in model_write 5, written into the original after the merge, while a1' keeps 1.
+$mergeParentModelSourcePost = @(
+    'postpaths',
+    'differentpath','4','4','1','1','up','0',
+    'samepath','5','4','1','1','up','3','3','4','1','1',
+    'differentpath','7','4','1','1','up','1','1','1','3','1','1','1',
+    'intpath','8','4','1','1','up','1','1','1','0','1',
+    'intpath','4','4','1','1','0','1',
+    'nullpath','5','4','1','1','up','2',
+    'nullpath','5','4','1','1','up','0',
+    'nullpath','6','4','1','1','up','1','2',
+    'endpostpaths')
+$mergeParentModelWritePost = @(
+    'postpaths',
+    'differentpath','4','3','1','1','up','0',
+    'samepath','5','3','1','1','up','2','3','3','1','1',
+    'differentpath','7','3','1','1','up','1','1','1','3','1','1','1',
+    'intpath','8','3','1','1','up','1','1','1','0','1',
+    'intpath','4','1','1','1','0','5',
+    'intpath','4','3','1','1','0','5',
+    'nullpath','5','3','1','1','up','0',
+    'nullpath','6','3','1','1','up','1','2',
     'endpostpaths')
 # SEND-SITE-ARTIFICIAL-CAPS: what the driver's `postlog 1` says of the posts -- unit_send_sites_many's 70, site k's
 # letter k, 3 k, "sk", then k * 100 + 4 ... k * 100 + 17, and the exit; unit_send_fields_many's three.
@@ -3216,25 +3573,25 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_value_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; Absent = @(); Debt = @();
         GraphShapes = @([pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
             [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
         ) }) },
     [pscustomobject]@{ Name = 'unit_merge_value_retained.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @();
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
                 [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 13; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }) } }
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 14; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
             ) },
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
                 [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }) } }
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
             ) }
         ) },
     [pscustomobject]@{ Name = 'unit_merge_value_failure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_value_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); Absent = @(); Debt = @();
         GraphShapes = @([pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
             [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+            [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
         ) }) },
     [pscustomobject]@{ Name = 'unit_merge_value_method_native.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeMethods = @(0); Absent = @(); Debt = @() },
     # DUPLICATE-STOP (Codex, FABLE-CODEX-20261004-12: "If current origin is not proved, use the common dynamic
@@ -3264,16 +3621,18 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_last_occurrence.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '5', 'merge_value', '1', '0', 'size', '7', 'merge_fresh', '1', '0', '1', '0'); Entry = 7;
         Absent = @('merge result check', 'lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_mpp[0U]\model_slot: 0U', 'l2_mpp[0U]\operand: 1U', 'l2_mpp[0U]\field: 0U');
-        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     # -193 T1: later operands merge INTO the model in operand order -- two pairs on one model slot, the
     # last one C's -- and a new name is added.  R = {3, 2, 9}.  Success is 4.
     [pscustomobject]@{ Name = 'unit_merge_three_operands.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '8', 'merge_value', '1', '0', 'size', '3', 'merge_fresh', '1', '0', '2', '0'); Entry = 4;
         Absent = @('merge result check');
         Debt = @('l2_mpp[0U]\operand: 1U', 'l2_mpp[1U]\model_slot: 0U', 'l2_mpp[1U]\operand: 2U');
-        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 2U, @ l2_mresult\)') },
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 2U, @ l2_mresult\)') },
     # Merge is attached to its ordinary own store, not a reserved unit result slot.
-    # The callback header contains pair count, actual parent and two producer tokens;
-    # 3·P inline mapping cells follow operands/body. The same source also has native merge
+    # The callback header contains the pair count, the count Q of the program's qualified branches and two producer
+    # tokens; 3·P inline mapping cells and the Q branch roots follow operands/body; no input names a parent (the
+    # author, LMX_blog/2026-10-05.md#merge-parent: slot 4 held SELF until MERGE-PARENT-SITE-OVERRIDE).
+    # The same source also has native merge
     # code; WalkRoot checks both dispatch modes. Merge is a publication boundary (PRIM_PUB).
     # unit_root_merge_three_operands: two pairs on Model's x (C's last), B's z appended, a write
     # `R\x: 6U` through the result, and S merging the result R (read in the turn) with a body field.
@@ -3281,24 +3640,26 @@ $fixtures = @(
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
                 [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 17; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 2 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 18; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 2 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
             ) },
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
                 [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 9; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 10; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 0 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
             ) }
         ); Absent = @(); Debt = @() },
     # unit_root_merge_body: the body as the map's operand n -- R's x into Model's x, S's z into B's
     # appended z, S's w new.  D1: each merge's pair is inline, its count in slot 3 -- one pair: 3 wider.
+    # Every merge-map frame carries its use-cell count T at slot 5 (-31): one wider, T = 0 pinned where no copied
+    # code reads an operand's lexical chain.
     [pscustomobject]@{ Name = 'unit_root_merge_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; NativeRoot = 2; WalkRoot = $true;
         GraphShapes = @(
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
                 [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 12; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 13; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
             ) },
             [pscustomobject]@{ Op = 'SET'; Width = 3; Count = 1; Edges = @(
                 [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
-                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 13; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }); Edges = @([pscustomobject]@{ Slot = 4; Shape = [pscustomobject]@{ Op = 'SELF'; Width = 1 } }) } }
+                [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'PRIM_PUB'; Width = 14; Count = 1; PrimitiveFn = 'lmx_walk_merge_map'; Sizes = @([pscustomobject]@{ Slot = 3; Value = 1 }, [pscustomobject]@{ Slot = 4; Value = 0 }, [pscustomobject]@{ Slot = 5; Value = 0 }) } }
             ) }
         ); Absent = @(); Debt = @() },
     # D-75: a call through a path at the walked root is typed by its method; the int result stored into
@@ -3332,10 +3693,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_added_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '5', 'merge_value', '1', '2', 'size', '3', 'merge_fresh', '1', '2', '2', '0'); Entry = 4;
         Absent = @('merge result check');
         Debt = @('l2_mpp[0U]\model_slot: 2U', 'l2_mpp[0U]\operand: 2U');
-        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 3U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_merge_body_repeat.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0', 'merge_width', '1', '2', 'merge_value', '1', '0', 'size', '5', 'merge_width', '2', '5', 'merge_value', '2', '2', 'size', '9'); Entry = 19;
         Absent = @('merge result check');
-        Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 1U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)', 'l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
+        Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 1U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)', 'l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_merge_field_type_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'a merge operand field has another type than the model field of its name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_field_entry_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -3344,7 +3705,7 @@ $fixtures = @(
     # retained cell by address (a driver merge_same fact), read back as 2.
     [pscustomobject]@{ Name = 'unit_merge_eternal_pair.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('2', 'size', '0', '0', '1', 'size', '1', '0', '2', 'merge_width', '1', '1', 'merge_same', '1', '0', '1', '0'); Entry = 2;
         Absent = @('merge result check');
-        Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
+        Debt = @(); NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     # Callable copies have distinct occurrence descriptors but share native code; their lexical
     # parent stays the file Structure. q22: R\M() = 3; q20: all three calls return 3.
     # merged_callable additionally observes independent mutable own storage.
@@ -3779,7 +4140,7 @@ $fixtures = @(
         GraphCalls = @([pscustomobject]@{ Method = 0; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; });
         Absent = @('l2_out_throw[0]: node');
         Debt = @('l2_out_throw[0]: 0', 'return: l2_ts');
-        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
+        NativePatterns = @('l2_mstatus: lmx_merge_profiles_owned\(l2_mops, 2U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n\d+, l2_mpp, 1U, @ l2_mresult\)') },
     [pscustomobject]@{ Name = 'unit_s1_implements_uncaught.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Fails = 1; Stopped = 1; Thrown = 2;
         GraphCalls = @([pscustomobject]@{ Method = 1; Arity = 0; Count = 1; InputKinds = @(); ResultKind = 'int'; });
         Absent = @('l2_out_throw[0]: node'); Debt = @('l2_out_throw[0]: 0', 'return: l2_ts') },
@@ -7167,7 +7528,7 @@ $fixtures = @(
         NativeCalls = @([pscustomobject]@{Caller=1; Method=0; Throwing=$true; ResultType='int:'; ResultUse='(?m)^\s*l2_out_result\[0\]: {result}\s*$'; Propagation='forward'; Args=@()});
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
         Debt = @('l2_mops[0U]: lmx_arena_ref_struct(node, 0U)',
-                 'lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, self, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n0, 0, 0U, @ l2_mresult)',
+                 'lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, l2_program_arena, l2_program_arena, l2_mprofiles, l2_mprofile_n0, 0, 0U, @ l2_mresult)',
                  'l2_entry_unit: graph') },
     # Both calls must verify their 1 -> 2 copy, with Model still 1.
     [pscustomobject]@{ Name = 'unit_colon_method_fresh_per_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -7185,11 +7546,11 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_field_path_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: lmx_arena_ref_struct(node, ', 'lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, self, ') },
+        Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: lmx_arena_ref_struct(node, ', 'lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, l2_program_arena, ') },
     [pscustomobject]@{ Name = 'unit_field_path_nested_two.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT');
-        Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: lmx_arena_ref_struct(node, ', 'lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, self, ') },
+        Debt = @('l2_pst: lmx_arena_ref_struct(l2_pst,', 'l2_pxp: lmx_arena_ref_cell(l2_pst,', 'l2_mops[0U]: lmx_arena_ref_struct(node, ', 'lmx_merge_profiles_owned(l2_mops, 1U, l2_mbody, l2_program_arena, ') },
     [pscustomobject]@{ Name = 'unit_field_path_unknown_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
     # The walked root's typed reference (OPUS-CALLABLE-STRUCT-BINDING-20260929-16, step 1): `@: Model p` / `p: @fresh` at
@@ -9145,6 +9506,202 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'graph_shape_t7_copy_parent_walk.lm2'; Source = 'graph_shape_t7_copy_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $criticalT7CopyPost; Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    # MERGE-PARENT-SITE-OVERRIDE (Codex K03-MERGE-PARENT-20261007-27; the author, LMX_blog/2026-10-05.md#merge-parent):
+    # a merge's result hangs under the copy's own parent, the copy of its model's lexical parent made at that merge,
+    # whether the root, a method, a hosted body, a named Structure's body or a T7 copy R running maker's code runs it,
+    # and a synthesized letter's payload, copied as the build's last act once E is sealed; a composition's fresh root
+    # takes its model's place in that copy.  The post paths (above) climb from each result.
+    [pscustomobject]@{ Name = 'unit_merge_parent_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentCopyPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_copy_walk.lm2'; Source = 'unit_merge_parent_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentCopyPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeMethods = @(5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentT7Post; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_walk.lm2'; Source = 'unit_merge_parent_t7.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentT7Post; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_required.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentT7RequiredPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_required_walk.lm2'; Source = 'unit_merge_parent_t7_required.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentT7RequiredPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_compose.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentComposePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_compose_walk.lm2'; Source = 'unit_merge_parent_compose.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentComposePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentNamedPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_named_walk.lm2'; Source = 'unit_merge_parent_named.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentNamedPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeMethods = @(5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_letter.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentLetterPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_letter_walk.lm2'; Source = 'unit_merge_parent_letter.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentLetterPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # Retention (Codex -29 step 4): an independent: const: immutable branch that a merge's copy or a letter payload's
+    # copy genuinely requires -- read by the copied code, referenced by the copied data -- is the branch itself, never
+    # a copy; natively, with the root walked and with the methods walked.
+    [pscustomobject]@{ Name = 'unit_merge_parent_keep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentKeepPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_keep_walk.lm2'; Source = 'unit_merge_parent_keep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentKeepPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_letter_keep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentLetterKeepPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_letter_keep_walk.lm2'; Source = 'unit_merge_parent_letter_keep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('1') + $mergeParentLetterKeepPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31, -29 step 3): a merge copies the used part of its
+    # model's lexical context -- a transitive call, a write, a deep path, an explicit anchor in copied code, aliases,
+    # a merge result's held place, a program part's root read through node and by name, a cycle of calls.  Natively,
+    # with the root walked and with the methods walked; the post paths (above) climb from each result.
+    [pscustomobject]@{ Name = 'unit_used_closure_transitive.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureTransitivePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_transitive_walk.lm2'; Source = 'unit_used_closure_transitive.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureTransitivePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureWritePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_write_walk.lm2'; Source = 'unit_used_closure_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureWritePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_deep_ns.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureDeepPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0..42); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_deep_ns_walk.lm2'; Source = 'unit_used_closure_deep_ns.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureDeepPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0..41); NativeMethods = @(42); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_code_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureCodeCopyPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_code_copy_walk.lm2'; Source = 'unit_used_closure_code_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureCodeCopyPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_alias_ns.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAliasNsPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_alias_ns_walk.lm2'; Source = 'unit_used_closure_alias_ns.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAliasNsPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_alias_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAliasResultPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_alias_result_walk.lm2'; Source = 'unit_used_closure_alias_result.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAliasResultPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_part_node.lm2'; Parts = @('unit_used_closure_part_node_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartNodePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_part_node_walk.lm2'; Source = 'unit_used_closure_part_node.lm2'; Parts = @('unit_used_closure_part_node_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartNodePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_part_lex.lm2'; Parts = @('unit_used_closure_part_lex_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartLexPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_part_lex_walk.lm2'; Source = 'unit_used_closure_part_lex.lm2'; Parts = @('unit_used_closure_part_lex_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosurePartLexPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_cycle.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureCyclePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_cycle_walk.lm2'; Source = 'unit_used_closure_cycle.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureCyclePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    # READ-FIELD-CLOSURE (-29 step 3, write/address): the address of a used place of the lexical context, taken in
+    # copied code, is the copy's cell.
+    [pscustomobject]@{ Name = 'unit_used_closure_address.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAddressPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_used_closure_address_walk.lm2'; Source = 'unit_used_closure_address.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAddressPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # NODE-PATH-ANON-STRUCT (steps/defects.md): OPEN positives, red by design -- `node\h\p`, h an anonymous Structure
+    # of the root's body, a value field of the lexical parent's body (book §3); the translator refuses it at `node`.
+    [pscustomobject]@{ Name = 'unit_node_path_anon_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_path_anon_struct_walk.lm2'; Source = 'unit_node_path_anon_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # MERGE-PARENT-MODEL-SOURCE (steps/defects.md): a merge copy's code admits a root merge result by name (K02c); the
+    # model is the copy's own instance, read from the copied lexical graph, the candidate the caller's binding, and
+    # the copy takes the instance's records to its copy (lmx_copy_carry_records).  model_write observes the two places
+    # apart: the copy's a1' keeps 1 while the candidate, written after the merge, gives 5.  In model_later a3 is declared
+    # after User: a free dynamic input of User's code (docs #declaration-visibility, #dynamic), admitted where u1's
+    # execution forms it to the coordinates of Model, the declaration that reaches it (l2_anchor_close); the copy holds
+    # no a3 and needs none.  The admission reads its requirement in the space of the occurrence the execution selects
+    # (the receiving boundary: natively the occurrence's node, walked a RECEIVING admission): C's own Model', the one u1's
+    # body reads, natively and walked alike (the post paths: C's place 0 is not the program's Model).
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_source.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelSourcePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_source_walk.lm2'; Source = 'unit_merge_parent_model_source.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelSourcePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelWritePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_write_walk.lm2'; Source = 'unit_merge_parent_model_write.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelWritePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_later.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelLaterPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_later_walk.lm2'; Source = 'unit_merge_parent_model_later.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelLaterPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_twice.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelTwicePost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_twice_walk.lm2'; Source = 'unit_merge_parent_model_twice.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelTwicePost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelLayoutPost; Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_layout_walk.lm2'; Source = 'unit_merge_parent_model_layout.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $mergeParentModelLayoutPost; Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # The call that has no a3: the free input is missing at the run, User's code declares none in its sight -- refused
+    # where the run stands (docs #dynamic).
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_none.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_merge_parent_model_none.lm2:12:1: unbound dynamic input a3'; Absent = @(); Debt = @() },
+    # A named Structure's code reads the unit from its declaration (docs #declaration-visibility): a later declaration's
+    # name is its free input, run in place; one free name with two candidates of different layouts at two calls.
+    [pscustomobject]@{ Name = 'unit_free_name_later_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_name_later_struct_walk.lm2'; Source = 'unit_free_name_later_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_name_two_layouts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_free_name_two_layouts_walk.lm2'; Source = 'unit_free_name_two_layouts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    # The receiving boundary (Codex K03-READ-FIELD-CLOSURE-20261008-31): a completed pair carried by the copy reused;
+    # the candidate's own places written and addressed from the copy; a nonidentity ordinal and LAST read through it;
+    # a copied method's free input (HEAD refused it); a nested receiver run in place in a copy.
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_prior.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_prior_walk.lm2'; Source = 'unit_merge_parent_model_prior.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_place_walk.lm2'; Source = 'unit_merge_parent_model_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_ordinal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_ordinal_walk.lm2'; Source = 'unit_merge_parent_model_ordinal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_method_walk.lm2'; Source = 'unit_merge_parent_model_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_nested_walk.lm2'; Source = 'unit_merge_parent_model_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    # A copied sub occurrence called by path; the same occurrence selected by a callable reference (recv keeps its
+    # native word walked: a callable formal); a cross-part receiver (get defined in a part that declares no a3).
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_sub_walk.lm2'; Source = 'unit_merge_parent_model_sub.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_subref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_subref_walk.lm2'; Source = 'unit_merge_parent_model_subref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); NativeMethods = @(1,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_xpart.lm2'; Parts = @('unit_merge_parent_model_xpart_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_model_xpart_walk.lm2'; Source = 'unit_merge_parent_model_xpart.lm2'; Parts = @('unit_merge_parent_model_xpart_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    # COPIED-CALLABLE-ACTUAL (steps/defects.md), a required positive registered red: recv(b1\peek) hands the formal
+    # the unit's own occurrence from a native root (81), the path's from a walked one (7); each row runs both.
+    [pscustomobject]@{ Name = 'unit_merge_parent_callable_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_callable_actual_walk.lm2'; Source = 'unit_merge_parent_callable_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); NativeMethods = @(1,4); Absent = @(); Debt = @() },
+    # READ-FIELD-CLOSURE (T7): a callable merge's view borrows a method occurrence from its own partial copy of the
+    # unit -- a use of the view's home, closed over the method's own uses (opus_full_62 crashed two rows without it).
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_borrowed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_borrowed_walk.lm2'; Source = 'unit_merge_parent_t7_borrowed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,4,5); NativeMethods = @(3); Absent = @(); Debt = @() },
+    # T7-LOCAL-NAMED-UNIT (steps/defects.md), a required positive registered red: a local named Structure's code in
+    # a callable merge's node reads the program's unit (9), not the node's copy (7); HEAD the same.
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_proc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_proc_walk.lm2'; Source = 'unit_merge_parent_t7_local_proc.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # COPIED-METHOD-DECLARED-FORMAL (steps/defects.md), a required positive registered red: a copied method's declared
+    # Structure formal is admitted in the caller's space while its body reads its own (HEAD the same).
+    [pscustomobject]@{ Name = 'unit_merge_parent_method_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_method_formal_walk.lm2'; Source = 'unit_merge_parent_method_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
     # T7-TRAILER-ONLY-MODEL-CRASH: a model whose only line is its trailer `return:` has no body Structure, and the T7
     # count and frame passes read one: the translator crashed, whether or not anything called the merge.  The node
     # walks the trailer alone, as a merge result's steps and a walked method's do.  trailer_only_copy: make's own k is
@@ -10228,9 +10785,9 @@ $fixtures = @(
     # A needs x, B needs y, same type and position. Natively and with both
     # procedures walked. A contract taken from another row's declaration would
     # hand rb the caller's x and exit 82.
-    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyCallPaths; Entry = 7; WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1);
+    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyCallPaths + $copyCallWrites; Entry = 7; WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1);
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs_walk.lm2'; Source = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyCallPaths; Entry = 7; WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1);
+    [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs_walk.lm2'; Source = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyCallPaths + $copyCallWrites; Entry = 7; WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_copy_call_hidden_inputs_input_mutant.lm2'; Source = 'unit_copy_call_hidden_inputs.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','2','14','5') + $criticalCopyCallPaths; Entry = 7; Absent = @(); Debt = @() },
@@ -10267,17 +10824,18 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_copy_call_of_copy_walk.lm2'; Source = 'unit_copy_call_of_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0);
         Absent = @(); Debt = @() },
     # The chain with its inputs: rc is a copy of rb, rb of ra, ra of A; h copies
-    # and calls its own C. A reads the free x and writes the unit's seen through
-    # node, C reads the free x and h's base through node. Each call forms the
+    # and calls its own C. A reads the free x and writes seen through node --
+    # the seen of the unit copy that copy hangs under ($copyChainWrites) -- and
+    # C reads the free x and h's base through node. Each call forms the
     # inputs from its caller -- h's local x, the root's changed x -- and runs
     # the called copy alone. A contract or a target taken from another row of
     # the chain exits 81 or 83; a copy that ran C itself, 82.
-    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyChainPaths; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2);
+    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyChainPaths + $copyChainWrites; Entry = 7; WalkRoot = $true; NativeMethods = @(0,1,2);
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs_walk.lm2'; Source = 'unit_copy_call_chain_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyChainPaths; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2);
+    [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs_walk.lm2'; Source = 'unit_copy_call_chain_inputs.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $criticalCopyChainPaths + $copyChainWrites; Entry = 7; WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2);
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs_source_mutant.lm2'; Source = 'unit_copy_call_chain_inputs.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
-        Args = @('0','mutate','null-path','3','7','2','7') + $criticalCopyChainPaths; Entry = 7; Absent = @(); Debt = @() },
+        Args = @('0','mutate','null-path','3','7','2','8') + $criticalCopyChainPaths; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_copy_call_chain_inputs_target_mutant.lm2'; Source = 'unit_copy_call_chain_inputs.lm2'; Expect = 'shape-mutant'; Exit = 1; Needle = '';
         Args = @('0','mutate','null-path','3','8','8','2') + $criticalCopyChainPaths; Entry = 7; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_source_binding_context.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2,4);
@@ -10741,7 +11299,7 @@ foreach ($fx in $fixtures) {
         # constraint failure, not an accidentally successful undefined run.
         if ($fx.PSObject.Properties['ReturnTypeCheck'] -and $fx.ReturnTypeCheck) { $fixtureFlags += '-Werror=return-type' }
         if ($fx.PSObject.Properties['PointerTypeCheck'] -and $fx.PointerTypeCheck) { $fixtureFlags += '-Werror=incompatible-pointer-types' }
-        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($fixtureFlags + @('-Dmain=l2_generated_main', '-Dlmx_root_launch=l2_driver_root_launch', '-Dlmx_merge_owned=l2_driver_merge_owned', '-Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned', '-Dlmx_service_post=l2_driver_service_post', '-c', $genC, '-o', $genO)) $root
+        $code = Invoke-Step ('fixture.' + $stem + '.compile') $gcc ($fixtureFlags + @('-Dmain=l2_generated_main', '-Dlmx_root_launch=l2_driver_root_launch', '-Dlmx_merge_owned=l2_driver_merge_owned', '-Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned', '-Dlmx_merge_used_owned=l2_driver_merge_used_owned', '-Dlmx_service_post=l2_driver_service_post', '-c', $genC, '-o', $genO)) $root
         if ($code -ne 0 -or -not (Test-Path -LiteralPath $genO)) { Add-Row 'FAIL' ('fixture:' + $stem) "gcc exit $code on the generated C"; continue }
         # Explicit fixture support closure. No source-name dispatch, inferred
         # library search or prebuilt fallback: each listed body is translated

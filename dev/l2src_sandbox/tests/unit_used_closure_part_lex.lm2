@@ -1,0 +1,17 @@
+# READ-FIELD-CLOSURE (Codex K03-READ-FIELD-CLOSURE-20261008-31): a program part, read by name.  Model's code calls
+# pgetl, a method of the part unit_used_closure_part_lex_part.lm2 that reads px by name, a hidden input the caller
+# reads from the part's root.  b's copy of the unit holds the root in part (px, not pz): the frame reading px names
+# the root as the place it reads in, a place of the code's lexical context, linked in part -- it was copied whole as
+# a value.  Exit 7.
+int: u 4
+Model:
+    int: k 0
+    k: pgetl()
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

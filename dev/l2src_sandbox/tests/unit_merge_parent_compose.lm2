@@ -1,0 +1,43 @@
+# MERGE-PARENT-SITE-OVERRIDE: a composition's fresh root takes its model's place in the copy.  q and r compose inner
+# with Other: each hangs under its own copy of Host, inner's lexical parent, made at that merge (a, which inner's code
+# reads, as it was then: 3 at the root, 11 in the method; E, which no copied code reads, absent from the unit's
+# copies), and that copy holds the result where Host holds inner -- no link of the copy reaches
+# the discarded copy of inner (the author, LMX_blog/2026-10-05.md#merge-parent; docs #composition: the first operand
+# is the result's model).  The post paths climb from q and r.  Exit 7; 81 if q lost a field, 82 if r did.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+Other:
+    int: w 2
+end: Other
+Host:
+    int: a 3
+    inner:
+        int: k 4
+        k: node\a
+    end: inner
+end: Host
+q: merge: Host\inner Other
+Host\a: 11
+
+fn: viaMethod () int
+    int: a 60
+    r: merge: Host\inner Other
+    Host\a: 12
+    return: r\k * 10 + r\w
+end: viaMethod
+
+int: m viaMethod()
+int: ok 7
+if: q\k * 10 + q\w != 42
+    ok: 81
+if: ok = 7 && m != 42
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

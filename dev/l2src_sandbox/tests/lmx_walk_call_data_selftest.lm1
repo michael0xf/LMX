@@ -23,6 +23,8 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 @: Lmx groles 0
 @: LmxWalkContext gctx 0
 @: LmxWalkValue gv 0
+# Module-lifetime layout tokens of the RECEIVING checks (their addresses only).
+[]: char wt_tokens 4
 int: broken 0
 int: checks 0
 int: failures 0
@@ -94,6 +96,63 @@ fn: mk_m (@: Lmx unit; size_t: slot; size_t: children) @: Lmx
     m\parent: unit
 return: m
 
+# A one-field Structure -- an int x -- at slot of holder, its parent holder.
+fn: one_int (@: Lmx holder; size_t: slot; int: value) @: Lmx
+    @: Lmx s pl(holder, slot, 1U)
+    if: s = 0
+        return: 0
+    s\parent: holder
+    icell(s, 0U, value)
+return: s
+
+# [of, [node], slot] at child `at` of parent: the Structure the running activation's node holds at slot.
+fn: node_of (@: Lmx parent; size_t: at; size_t: slot) @: Lmx
+    @: Lmx n fr(parent, at, c.LMX_WALK_OP_OF, 3U)
+    if: n = 0
+        return: 0
+    fr(n, 1U, c.LMX_WALK_OP_NODE, 1U)
+    sz(n, 2U, slot)
+return: n
+
+# The admission ADMIT_AS[value [of, [node], 1], model [of, [node], 0]] at child `at` of parent, its source token
+# wt_tokens + 0 (a value of that layout selects the identity default map; full receiver 0), marked RECEIVING
+# (lmx_walk.h) when receiving is 1.
+fn: recv_admit (@: Lmx parent; size_t: at; int: receiving) @: Lmx
+    @: Lmx a fr(parent, at, c.LMX_WALK_OP_ADMIT_AS, 9U)
+    if: a = 0
+        return: 0
+    if: lmx_walk_store_charptr(ga, a, 1U, wt_tokens + 0) != c.LMX_WALK_OK
+        broken: broken + 1
+    node_of(a, 3U, 1U)
+    node_of(a, 4U, 0U)
+    sz(a, 5U, 0U)
+    sz(a, 6U, 0U)
+    sz(a, 8U, 0U)
+    if: receiving != 0 && lmx_walk_source_mark(groles, a, c.LMX_WALK_SOURCE_RECEIVING) != 0
+        broken: broken + 1
+return: a
+
+# A long CALL of callee at caller's slot 0, its one input that admission.
+sub: recv_call (@: Lmx caller; @: Lmx callee; int: receiving)
+    @: Lmx n fr(caller, 0U, c.LMX_WALK_OP_CALL, 6U)
+    if: n != 0
+        ref(n, 1U, callee)
+        ref(n, 2U, callee)
+        ref(n, 3U, wt_contract_same(ga, 1U, c.LMX_TYPE_LMX, c.LMX_TYPE_INT))
+        recv_admit(n, 5U, receiving)
+    ---
+end: recv_call
+
+# A callee under node that returns 5.
+fn: five (@: Lmx node; size_t: slot) @: Lmx
+    @: Lmx m mk_m(node, slot, 1U)
+    @: Lmx n 0
+    if: m = 0
+        return: 0
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    lit(n, 1U, 5)
+return: m
+
 fn: go (@: Lmx m; @@: void args; size_t: nargs; @: int out_r; @: int out_v) int
     int: st
     gv\ref: 0
@@ -123,6 +182,21 @@ fn: main () int
     int: r 0
     int: v 0
     int: st 0
+    @: Lmx home 0
+    @: Lmx away 0
+    @: Lmx far 0
+    @: Lmx mh 0
+    @: Lmx ma 0
+    @: Lmx mf 0
+    @: Lmx vh 0
+    @: Lmx va 0
+    @: Lmx callee 0
+    @: Lmx callee2 0
+    @: Lmx rcaller 0
+    @: Lmx ocaller 0
+    @: Lmx scaller 0
+    @: Lmx fcaller 0
+    @: void wrong 0
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
     if: lmx_arena_open(@ arena) != 0
@@ -184,6 +258,51 @@ fn: main () int
     ref(n, 1U, writer)
     st: lmx_walk_run(gctx, bad, 0, 0U, gv)
     check(st = c.LMX_WALK_INVALID, "CALL without data/rtype children -> INVALID (mutant old arity greened -> RED)")
+
+    # -31 RECEIVING (lmx_walk.h, ADMIT_AS; Codex K03-READ-FIELD-CLOSURE-20261008-31): a CALL input's admission marked
+    # LMX_WALK_SOURCE_RECEIVING reads its requirement, [of, [node], 0], in the space of the occurrence the CALL selected
+    # -- its node -- and its value, [of, [node], 1], in the caller's.  home, the callers' node, and away, the callee's,
+    # each hold a model at 0 and a value at 1 of one layout; far holds a third model.
+    home: lmx_node_new_owned(ga)
+    away: lmx_node_new_owned(ga)
+    far: lmx_node_new_owned(ga)
+    if: home = 0 || away = 0 || far = 0 || lmx_arena_refs_open_owned(ga, home, 6U) != 0 || lmx_arena_refs_open_owned(ga, away, 3U) != 0 || lmx_arena_refs_open_owned(ga, far, 2U) != 0
+        return: 2
+    ---
+    mh: one_int(home, 0U, 1)
+    vh: one_int(home, 1U, 7)
+    ma: one_int(away, 0U, 1)
+    va: one_int(away, 1U, 8)
+    mf: one_int(far, 0U, 1)
+    callee: five(away, 2U)
+    callee2: five(far, 1U)
+    if: lmx_implements_register_map(ga, vh, vh, 0, 0U, (cast: (@: void) (wt_tokens + 0))) != c.LMX_IMPLEMENTS_YES || lmx_implements_register_map(ga, va, va, 0, 0U, (cast: (@: void) (wt_tokens + 0))) != c.LMX_IMPLEMENTS_YES
+        broken: broken + 1
+    rcaller: mk_m(home, 2U, 1U)
+    recv_call(rcaller, callee, 1)
+    ocaller: mk_m(home, 3U, 1U)
+    recv_call(ocaller, callee, 0)
+    scaller: mk_m(home, 4U, 1U)
+    recv_admit(scaller, 0U, 1)
+    fcaller: mk_m(home, 5U, 1U)
+    recv_call(fcaller, callee2, 1)
+    st: go(rcaller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && v = 1 && r = 5, "RECEIVING: the CALL with a receiving admission runs")
+    check(lmx_implements_find(ga, vh, ma) != 0, "RECEIVING: the caller's value is admitted to the model of the callee's node")
+    check(lmx_implements_find(ga, vh, mh) = 0 && lmx_implements_find(ga, va, ma) = 0 && lmx_implements_find(ga, va, mh) = 0, "RECEIVING: neither the value nor the model is read in the other space")
+    st: go(ocaller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 5 && lmx_implements_find(ga, vh, mh) != 0, "an unmarked admission reads its model in the caller's space")
+    st: go(scaller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_INVALID, "a RECEIVING admission outside a call's inputs is no expression")
+    # A completed pair is reused as it stands: with the value's field no longer of its model's type, the same pair
+    # admits again through its record, while a new pair is checked field by field and refused.
+    wrong: lmx_char_new_owned(ga)
+    if: wrong = 0 || lmx_arena_ref_store(vh, 0U, wrong) != 0
+        broken: broken + 1
+    st: go(rcaller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_OK && r = 5, "RECEIVING: a completed pair is reused without checking its fields again")
+    st: go(fcaller, 0, 0U, @ r, @ v)
+    check(st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, vh, mf) = 0, "RECEIVING: a new pair is checked field by field")
 
     check(broken = 0, "fixture construction")
     if: failures != 0

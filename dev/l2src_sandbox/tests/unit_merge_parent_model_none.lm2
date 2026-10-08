@@ -1,0 +1,18 @@
+# MERGE-PARENT-MODEL-SOURCE: u1 runs before the root declares a3.  a3 is a free dynamic input of User's code, the
+# call has no binding of it and User's code no lexical one: the required input is missing, and the call is refused
+# where it stands (docs #dynamic: a missing required input makes the call inadmissible).
+Model:
+    int: x 1
+end: Model
+User:
+    int: y 0
+    y: a3\x
+end: User
+u1: merge: User
+u1
+a3: merge: Model
+int: ok 7
+if: u1\y != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

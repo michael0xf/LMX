@@ -1,0 +1,24 @@
+# MERGE-PARENT-MODEL-SOURCE, a copied sub occurrence: Box's callable field holds the sub bump, so b1, a copy of Box
+# under a copy of the unit, holds bump's own occurrence there; `b1\bump()` runs that occurrence, whose body writes
+# through the free input a3 by the Wide of its own node.  The call admits the root's a3 to that requirement, and the
+# write lands in the root's a3 (2 + 1), its pad untouched.  HEAD refused it in every mode ("a field of a formal
+# admitted by name is not carried by its value").  Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+sub: bump ()
+    a3\x: a3\x + 1
+end: bump
+Box:
+    int: v 0
+    fn: bump
+end: Box
+b1: merge: Box
+a3: merge: Wide
+b1\bump()
+int: ok 7
+if: a3\x != 3 || a3\pad != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,38 @@
+# T7 SAME policy, the required qualified branch (Codex -28 C): the copied code needs E -- maker's q reads E\e when R
+# runs it, and maker's merge's model Model reads E\e -- so T7's copy of the unit, which R reads, and the copy of it
+# that maker's merge makes for e both hold E itself, retained by its qualified profile, never copied; x, which no
+# copied code reads, is absent from both.  The post paths climb from e in R's own field, as unit_merge_parent_t7's
+# do; q is R's 3.  Exit 7; 81 if the call through w did not return.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+int: x 3
+Model:
+    int: k 4
+    size_t: j E\e
+end: Model
+
+fn: maker () int
+    e: merge: Model
+    size_t: q E\e
+    return: 4
+end: maker
+
+fn: make () fn: () int
+    return: merge(maker)
+end: make
+
+@: w make()
+x: 11
+int: z (w())
+int: ok 7
+if: z != 4
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

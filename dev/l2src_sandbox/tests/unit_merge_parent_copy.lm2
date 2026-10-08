@@ -1,0 +1,61 @@
+# MERGE-PARENT-SITE-OVERRIDE: merge copies the used part of the tree and rewrites parent links inside the copy; the
+# place that runs the merge gives no parent (the author, LMX_blog/2026-10-05.md#merge-parent; docs #composition).
+# b copies Model, whose lexical parent is the unit: b hangs under a copy of the unit made at b's merge, so running b
+# reads node\x as it was then (3) -- not x after the later write (11).  p, c and d copy inner, whose lexical parent
+# is Host, a mutable ancestor: each hangs under its own copy of Host, made at the root, in a method and in a hosted
+# body, holding a -- inner's code reads node\a -- as it was at that merge (3, 11, 12); the qualified branch E, which
+# no copied code reads, is absent from each copy of the unit (Q42); the post paths read them.  Exit 7; 81 if b read
+# anything but 3, 82 if Host's own a is not 13.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+int: x 3
+Model:
+    int: k 0
+    k: node\x
+end: Model
+Host:
+    int: a 3
+    inner:
+        int: k 4
+        k: node\a
+    end: inner
+end: Host
+b: merge: Model
+p: merge: Host\inner
+x: 11
+Host\a: 11
+b
+
+fn: viaMethod () int
+    int: a 60
+    c: merge: Host\inner
+    Host\a: 12
+    return: a
+end: viaMethod
+
+fn: viaBody () int
+    int: a 70
+    int: got 0
+    if: got = 0
+        d: merge: Host\inner
+        Host\a: 13
+        got: a
+    return: got
+end: viaBody
+
+int: m viaMethod()
+int: h viaBody()
+int: ok 7
+if: b\k != 3
+    ok: 81
+if: ok = 7 && Host\a != 13
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

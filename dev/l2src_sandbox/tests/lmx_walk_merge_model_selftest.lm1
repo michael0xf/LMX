@@ -90,6 +90,7 @@ fn: main () int
     @: Lmx pn 0
     @: LmxPrimitive prim 0
     @: void got 0
+    @: Lmx up 0
     int: st 0
 
     memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
@@ -139,7 +140,12 @@ fn: main () int
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && got != 0 && got != (cast: (@: void) model))), "merge_model yields fresh Structure")
     check((cast: (int) (got != 0 && (cast: (@: Lmx) got)\array.size = 2U)), "merge_model copies model layout (2 slots)")
-    check((cast: (int) (got != 0 && (cast: (@: Lmx) got)\parent = model\parent)), "merge_model parent is model\parent (unit)")
+    # The result's parent is the copy's own: a distinct copy of the unit, the model's lexical parent, which holds the
+    # result where the unit holds the model -- not the source unit (LMX_blog/2026-10-05.md#merge-parent).
+    if: got != 0
+        up: (cast: (@: Lmx) got)\parent
+    check((cast: (int) (up != 0 && up != unit && model\parent = unit)), "merge_model's result hangs under a copy of the unit, not the source unit")
+    check((cast: (int) (up != 0 && (up\array.size) = (unit\array.size) && lmx_arena_ref_value(up, 1U) = got)), "the copied unit holds the result where the unit holds the model")
     check((cast: (int) (got != 0 && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) got), 0U)) = 10)), "slot0 value 10")
     check((cast: (int) (got != 0 && lmx_int_value_known(lmx_arena_ref_value((cast: (@: Lmx) got), 1U)) = 20)), "slot1 value 20")
 

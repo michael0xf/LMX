@@ -1,0 +1,25 @@
+# MERGE-PARENT-MODEL-SOURCE, a nested receiver: Inner, declared in Outer, reads the program's unit (its namespace
+# parent is a source occurrence: l2_m_unit_ref), and o1, a copy of Outer, runs it in place; the free input a3 reaches
+# Inner through Outer's code and is admitted where Inner's run forms it, to the requirement Inner's body reads.
+# Exit 7; 81 otherwise.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+Outer:
+    int: k 0
+    Inner:
+        int: y 0
+        y: a3\x
+    end: Inner
+    Inner
+    k: Inner\y
+end: Outer
+o1: merge: Outer
+a3: merge: Wide
+o1
+int: ok 7
+if: o1\k != 2
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

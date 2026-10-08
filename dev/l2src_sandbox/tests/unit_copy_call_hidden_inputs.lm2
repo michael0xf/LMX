@@ -2,7 +2,10 @@
 # free name y, both int, each at the same input position of its own contract.
 # Each call of a copy forms the inputs of the body that copy really holds --
 # the caller's current x for ra, its current y for rb, a changed working value
-# included -- and runs the copy, never the prototype. Entry 7.
+# included -- and runs the copy, never the prototype. A copy's node is its own
+# copy of the unit (merge parent): its seen write raises that copy's seen (ra's
+# 11 then 16, rb's 29; the post paths read them), never the unit's, which stays
+# 0. Entry 7.
 int: seen 0
 A:
     int: last 0
@@ -19,14 +22,14 @@ rb: merge: B
 @: int ps @seen
 int: result 7
 ra
-if: ra\last != 11 || A\last != 0 || \ps != 11
+if: ra\last != 11 || A\last != 0 || \ps != 0
     result: 81
 rb
-if: rb\last != 29 || B\last != 0 || \ps != 40
+if: rb\last != 29 || B\last != 0 || \ps != 0
     result: 82
 x: 5
 ra
-if: ra\last != 5 || rb\last != 29 || \ps != 45
+if: ra\last != 5 || rb\last != 29 || \ps != 0
     result: 83
 sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
 return

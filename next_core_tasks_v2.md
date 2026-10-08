@@ -747,6 +747,17 @@ Current bounded implementation, with no DONE claim:
   too. Census the callers and their distinct uses before changing the API; one topology for the root, a method, a
   named/hosted body and a copied callable R executing code A; migrate the host-parent assertions by intent; caught
   host-parent, source-parent and all-zero mutants; native, root/method-walked and kernel-selftest evidence.
+  Checkpoint 2026-10-08, INCOMPLETE (Codex K03-READ-FIELD-CLOSURE-20261008-31), with READ-FIELD-CLOSURE and
+  MERGE-PARENT-MODEL-SOURCE ([section 122](steps/fable-continuation-20261003.md#merge-parent)):
+  no merge entry or walked merge input names a parent; a merge copies what its copied code uses -- a Structure reached
+  only for a use holds only the used places, the rest absent, never zeroed -- under the copy of the model's lexical
+  parent; correspondence records travel through the copy map in both halves; a qualified branch the copy uses is the
+  branch itself; a later declaration is a free dynamic input of a named Structure's earlier code, admitted at the
+  boundary that forms it in the space of the occurrence that boundary selects. Open: COPIED-METHOD-DECLARED-FORMAL
+  (a copied occurrence's declared Structure formal is admitted in the caller's space) -- the next required dependency
+  (Codex, answer to PROGRESS 5) -- with COPIED-CALLABLE-ACTUAL (natively a callable actual given by a path through a
+  copy is the unit's occurrence), T7-LOCAL-NAMED-UNIT (a model's local named Structure in a callable merge's node reads
+  the program's unit) and NODE-PATH-ANON-STRUCT. Gates and the comparison to opus_full_61: section 122, Measured.
 - [x] G4 bounded external-name ownership and transactional copy/merge:
   `critical_graph_source_names_07` GREEN, 290 targets; all 107 selftests ran.
   The name-service witness executes 93 checks, including late merge rollback,
@@ -1951,8 +1962,22 @@ Open: MERGE-WRITTEN-OPERAND (the typed anonymous Structure operand, a required p
 asked of the author, LMX_blog/q/current/merge-bare-field-operand.md), PATH-STRUCTURE-LEAF (the positions other than a
 merge operand), SLOT-FAMILY-DEAD, OWN-CALLABLE-LIMITS. CORE_L2_L3_v2.md's host-parent sentences (:130, :737, :766,
 :768) corrected to the author's merge-parent ruling.
-Next (Codex K03-MERGE-PARENT-20261007-27): MERGE-PARENT-SITE-OVERRIDE, the bounded dependency registered under
-critical_graph_bug above -- the census first, then one copy topology for every caller.
+MERGE-PARENT-SITE-OVERRIDE, checkpoint INCOMPLETE, with READ-FIELD-CLOSURE and MERGE-PARENT-MODEL-SOURCE ([section
+122](steps/fable-continuation-20261003.md#merge-parent); Codex K03-MERGE-PARENT-20261007-27,
+K03-READ-FIELD-CLOSURE-20261007-28 ... 20261008-31): a merge result hangs under the copy of its model's lexical parent
+made at that merge, whatever runs it; the copy holds what its copied code uses; correspondences travel through the
+copy's own map; a branch the copy uses is the qualified branch itself; a named Structure's code reads the unit from its
+declaration, a later declaration's name being its free dynamic input, admitted at the boundary that forms it -- a call
+or an execution -- to its requirement read in the space of the occurrence that boundary selects. Gates on the final bytes (`l2trans.lm1` blob 3164952d, `lmx_walk.lm1` 0096e93c): kernel `opus_kernel_58` GREEN297 (114 selftests ran, staged blob 3164952d), focused `opus_focus_rf33_03` (493 targets; red exactly its five opus_full_61 baseline rows (unit_copy_call_addressed, unit_copy_call_from_method, unit_copy_call_other_owner, unit_eternal_shape, unit_letter_alias_before, their messages unchanged) and the four registered required-positive pairs unit_node_path_anon_struct, unit_merge_parent_method_formal, unit_merge_parent_callable_actual, unit_merge_parent_t7_local_proc), L3 `opus_l3_55` (all 11 suites ok, type budget ok), full `opus_full_63` RED71/2586 -- against `opus_full_61` FAIL→OK 0, OK→FAIL 0, added 77 (69 OK, 8 red: the four pairs), removed 0; no recorded red message changed. Intermediate evidence, not the final bytes: `opus_kernel_56` RED 2/297 (two selftests that lagged behind the rule, fixed), `opus_full_62` RED73/2582 with an OK→FAIL 4 regression (the T7 view, fixed).
+Open: COPIED-METHOD-DECLARED-FORMAL (a copied method's declared formal is admitted in the caller's space; HEAD the
+same), COPIED-CALLABLE-ACTUAL (natively a callable actual given by a path through a copy is the unit's occurrence),
+T7-LOCAL-NAMED-UNIT (a model's local named Structure in a callable merge's node reads the program's unit),
+NODE-PATH-ANON-STRUCT (a required positive red),
+the walked root `Model: m` primitive and kind 3 in a method's own named Structure (reached by no program; coverage
+debt).
+Next (Codex K03-READ-FIELD-CLOSURE-20261008-31, answer to PROGRESS 5): COPIED-METHOD-DECLARED-FORMAL
+(steps/defects.md#copied-method-declared-formal), the required dependency before PATH-STRUCTURE-LEAF
+(steps/defects.md#path-structure-leaf; by the parent plan, Codex K03-UNIFIED-HEAD-IMPLEMENT-20261006-01).
 
 ### K04 — Callable actuals and hidden inputs
 

@@ -1,0 +1,20 @@
+# MERGE-PARENT-MODEL-SOURCE (steps/defects.md): the model and the candidate are different places.  u1 copies User
+# with C, a copy of the unit holding a1', a1's instance as the merge saw it (x 1); the root then writes a1\x: 5 into
+# the original only.  Run, u1's code reads x of its candidate, the root's a1 (the caller's binding first), through
+# its own copied requirement a1' -- 5 -- while a1' keeps 1.  Exit 7; 81 otherwise.
+Model:
+    int: x 1
+end: Model
+a1: merge: Model
+User:
+    int: y 0
+    y: a1\x
+end: User
+u1: merge: User
+a1\x: 5
+u1
+int: ok 7
+if: u1\y != 5
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

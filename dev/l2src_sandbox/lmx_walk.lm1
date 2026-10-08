@@ -20,6 +20,8 @@ prototype:
     fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     fn: lmx_walk_admit_against (@: LmxArena arena; @: Lmx value; @: Lmx model; @@: void out) int
     fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+    fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWalkValue out) int
+    fn: lmx_walk_source_of (@: LmxWalkFrame f; @: Lmx code) int
     fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int
     fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int
     fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
@@ -1016,6 +1018,10 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
             ---
         ---
         slot: lmx_arena_ref_cell((cast: (@: Lmx) root), index)
+        # A partial copy holds only the places its copied code uses (lmx_copy_carry_records): a read of one it holds no
+        # object at was never carried and is refused, never read as nothing (Codex -28 review point 3).
+        if: write = 0 && slot != 0 && slot[0] = 0 && lmx_implements_holes(f\arena, (cast: (@: Lmx) root)) != 0
+            return: c.LMX_WALK_INVALID
     ---
     if: slot = 0
         return: c.LMX_WALK_INVALID
@@ -1284,7 +1290,9 @@ fn: lmx_walk_catch_bind (@: LmxWalkFrame f) int
 
 # Evaluate actuals once into typed temporaries, then expose their declared-width
 # value storage. Missing operands remain absent; present null references have boxes.
-fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; @: Lmx contract; @@@: void refs_out) int
+# receiver is the occurrence a CALL or EXEC selected, or 0 (a primitive's operands): a RECEIVING admission among the
+# operands reads its requirement in that occurrence's space (lmx_walk_admit_in), and only there.
+fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; @: Lmx contract; @: Lmx receiver; @@@: void refs_out) int
     @: void room 0
     @: void child 0
     @: LmxWalkValue values 0
@@ -1329,7 +1337,11 @@ fn: lmx_walk_actuals (@: LmxWalkFrame f; @: Lmx code; size_t: first; size_t: n; 
             if: lmx_walk_op(f, child) = c.LMX_WALK_OP_NONE
                 status: lmx_walk_value_cell(f\arena, child, values + at)
             else:
-                status: lmx_walk_eval(f, child, values + at)
+                if: receiver != 0 && lmx_walk_op(f, child) = c.LMX_WALK_OP_ADMIT_AS && lmx_walk_bare(f, child) = 0 && lmx_walk_source_of(f, (cast: (@: Lmx) child)) = c.LMX_WALK_SOURCE_RECEIVING
+                    status: lmx_walk_admit_in(f, receiver, (cast: (@: Lmx) child), values + at)
+                else:
+                    status: lmx_walk_eval(f, child, values + at)
+                ---
             ---
         ---
         if: status = c.LMX_WALK_OK && values[at].present != 0
@@ -1488,7 +1500,7 @@ fn: lmx_walk_call (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     if: lmx_scratch_mark(f\context\scratch, @ mark) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
     if: status = c.LMX_WALK_OK
-        status: lmx_walk_actuals(f, code, arg_at, n, inputs, @ refs)
+        status: lmx_walk_actuals(f, code, arg_at, n, inputs, data, @ refs)
     if: status = c.LMX_WALK_OK
         status: lmx_walk_publish(f)
     if: status = c.LMX_WALK_OK
@@ -1561,7 +1573,7 @@ fn: lmx_walk_prim (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         witness: lmx_arena_ref_value(returns, 0U)
     if: lmx_scratch_mark(f\context\scratch, @ mark) != c.LMX_SCRATCH_OK
         return: c.LMX_WALK_INVALID
-    status: lmx_walk_actuals(f, code, 3U, n, inputs, @ refs)
+    status: lmx_walk_actuals(f, code, 3U, n, inputs, 0, @ refs)
     if: status = c.LMX_WALK_OK && lmx_walk_node(f, (cast: (@: void) code)) = c.LMX_WALK_OP_PRIM_PUB
         status: lmx_walk_publish(f)
     if: status = c.LMX_WALK_OK
@@ -2257,6 +2269,23 @@ fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int
     \out: (cast: (@: Lmx) mv.ref)
 return: c.LMX_WALK_OK
 
+# The source role an operation was marked with (lmx_walk_source_mark): the position of its role record among the
+# program's, over OP_COUNT; LMX_WALK_SOURCE_ORDINARY for a node no role record heads.
+fn: lmx_walk_source_of (@: LmxWalkFrame f; @: Lmx code) int
+    @@: void records 0
+    @: void head 0
+    size_t: k 1U
+    if: f = 0 || code = 0 || f\roles = 0 || f\roles\array.data = 0 || code\array.size = 0U
+        return: c.LMX_WALK_SOURCE_ORDINARY
+    head: lmx_arena_ref_value(code, 0U)
+    records: (cast: (@@: void) f\roles\array.data)
+    while: k < f\roles\array.size
+        if: records[k] = head
+            return: (cast: (int) (k / (cast: (size_t) c.LMX_WALK_OP_COUNT)))
+        k: k + 1U
+    ---
+return: c.LMX_WALK_SOURCE_ORDINARY
+
 # ADMIT_AS carries one flat immutable instruction: source schema token/target model,
 # default target map, alternatives keyed by exact physical layout, identity entries
 # for a value with no layout, then catches.
@@ -2264,6 +2293,17 @@ return: c.LMX_WALK_OK
 # correspondence-only Structure or allocated/composed map. Candidate once;
 # null passes before source-view lookup. NO is the implicit implements throw.
 fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+return: lmx_walk_admit_in(f, 0, code, out)
+
+# The admission with receiver 0, or -- a RECEIVING admission standing as an input of the CALL or EXEC that selected
+# receiver (lmx_walk_actuals) -- its requirement read in that occurrence's space: the targetModel operand alone is
+# evaluated in a copy of the caller's frame whose data is the occurrence, with no inputs, no working state and no
+# guard of the caller's, so a [node] there is the occurrence's node.  The value, its catches and every other operand
+# are the caller's own; the caller's frame is not written.  A RECEIVING admission outside a call's operands is no
+# expression the walker runs.
+fn: lmx_walk_admit_in (@: LmxWalkFrame f; @: Lmx receiver; @: Lmx code; @: LmxWalkValue out) int
+    LmxWalkFrame: space
+    @: LmxWalkFrame mf f
     LmxImplEntry: view
     LmxImplUses: cover
     @: LmxImplUses uses 0
@@ -2306,7 +2346,24 @@ fn: lmx_walk_admit_op (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
         return: c.LMX_WALK_INVALID
     ---
     catch_at: code\array.size - 3U * catch_n
-    status: lmx_walk_model_operand(f, lmx_arena_ref_value(code, 4U), @ model)
+    if: (receiver != 0) != (lmx_walk_source_of(f, code) = c.LMX_WALK_SOURCE_RECEIVING)
+        return: c.LMX_WALK_INVALID
+    if: receiver != 0
+        memcpy((cast: (@: void) (@ space)), (cast: (@: void) f), c.sizeof(c.LmxWalkFrame))
+        mf: @ space
+        mf\code: receiver
+        mf\node: receiver
+        mf\args: 0
+        mf\nargs: 0U
+        mf\argown: 0
+        mf\returned: 0
+        mf\landing: 0
+        mf\payload: 0
+        mf\guarded: 0
+        mf\work: 0
+        mf\nwork: 0U
+    ---
+    status: lmx_walk_model_operand(mf, lmx_arena_ref_value(code, 4U), @ model)
     if: status != c.LMX_WALK_OK
         return: status
     token_cell: lmx_arena_ref_value(code, 1U)

@@ -1,0 +1,23 @@
+# MERGE-PARENT-MODEL-SOURCE: u1 runs twice and reads its free input a3 each time from the caller's current binding --
+# 1, then 5 after the root wrote a3\x -- never from a snapshot the copy took (C holds no a3).  Natively and with the
+# root walked; the methods-walked twin is the implementation gap of unit_merge_parent_model_later.  Exit 7; 81 or 82
+# if a run read anything else.
+Model:
+    int: x 1
+end: Model
+User:
+    int: y 0
+    y: a3\x
+end: User
+u1: merge: User
+a3: merge: Model
+u1
+int: ok 7
+if: u1\y != 1
+    ok: 81
+a3\x: 5
+u1
+if: u1\y != 5
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

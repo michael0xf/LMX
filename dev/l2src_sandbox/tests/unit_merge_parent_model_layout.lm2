@@ -1,0 +1,20 @@
+# MERGE-PARENT-MODEL-SOURCE: as unit_merge_parent_model_later, the candidate a merge of Wide {pad; x}: x is at slot 1
+# of the value, and User's read of a3\x takes it through the coordinates of Wide, the declaration that reaches the
+# input, by the record the execution made -- not slot 0.  Natively and with the root walked; the methods-walked twin is
+# the implementation gap of unit_merge_parent_model_later.  Exit 7; 81 if u1 read anything but 2.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+User:
+    int: y 0
+    y: a3\x
+end: User
+u1: merge: User
+a3: merge: Wide
+u1
+int: ok 7
+if: u1\y != 2
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

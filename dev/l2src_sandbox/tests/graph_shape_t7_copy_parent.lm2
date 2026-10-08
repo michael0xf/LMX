@@ -1,8 +1,8 @@
 # The node a callable merge builds hangs under the copy of its model's lexical tree (the author, 2026-10-05;
 # T7-NODE-LEXICAL-LINKS); the post paths walk to it from the receiver's cell (`deref`, then `up`).  The node's
-# parent is a distinct copy of the unit.  Its other is a distinct cell that holds 9.  Its m, a Structure field,
-# is a distinct Structure whose parent is the copy and whose v holds 4.  The qualified branch E is the same
-# object, retained by its profile.  add reads other + m\v: w() gives 13.  Entry 7.
+# parent is a distinct copy of the unit that holds what add reads through it: other, a distinct cell holding 9.
+# m reaches add by its caller's binding, its model from the program's unit, and no copied code reads Model or the
+# qualified branch E: the copy holds none of them.  add reads other + m\v: w() gives 13.  Entry 7.
 independent:
     const:
         immutable:

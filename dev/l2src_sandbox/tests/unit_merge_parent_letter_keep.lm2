@@ -1,0 +1,28 @@
+# MERGE-PARENT-SITE-OVERRIDE / READ-FIELD-CLOSURE (Codex -29 step 4): `receiveMessage: m MainLetter` types m by the
+# letter model {sender; payload}, whose payload the build fills with a copy of MainLetter as its last act.
+# MainLetter's h references E, a qualified independent: const: immutable branch: the payload's h references E
+# itself, retained by its profile once the build has sealed it -- never a copy of E.  No copied code reads E by
+# name, so the copy of the unit the payload hangs under holds no E.  The witness observes the build's payload
+# copy; check never runs.  Exit 7.
+independent:
+    const:
+        immutable:
+            (): E
+                size_t: e 7U
+            end: E
+        end: immutable
+    end: const
+end: independent
+MainLetter:
+    char: []: []: mainArgs
+    h: E
+end: MainLetter
+
+fn: check () int
+    receiveMessage: m MainLetter
+    if: m = 0
+        return: 90
+return: 7
+
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

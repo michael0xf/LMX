@@ -94,7 +94,25 @@ prototype:
     # or result publication. No pending spelling is visible through lookup.
     fn: lmx_copy_name_prepare (@: LmxArena src_arena; @: LmxArena dst_arena; @: void source; @: void destination; @: LmxCopyMap pending) int
     fn: lmx_copy_names_finish (@: LmxCopyMap pending; int: publish) void
-    fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx outs; @: LmxCopyMap pending) int
+    # `absorb`, when nonzero, is a Structure the operation's copied roots compose into
+    # (merge's fresh result, a merge-into's target): every child slot of a copied Structure
+    # that holds a copied root, and every copied Structure's parent that is one, names
+    # `absorb` instead, so no link reaches a discarded intermediate root; the roots' own
+    # parents stay, and a root retained by its exact profile is never absorbed.
+    fn: lmx_graph_copy_many_profiles_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx outs; @: LmxCopyMap pending) int
+    # The used copy (Q42; Codex K03-READ-FIELD-CLOSURE-20261007-28): the roots are copied
+    # whole; a Structure reached as a copied Structure's lexical parent or along a use is
+    # needed in part, at its source width, holding only the slots a link or a use fills --
+    # every other slot absent.  use_count uses, use k a slot path of use_len[k] >= 1 slots
+    # (consecutive in use_slot, use_slots in all) from its anchor: source Structure use_anchor[k]
+    # when use_sel[k] is 0, else the lexical parent of root use_sel[k] - 1, and a root with none
+    # gives the use nothing to copy (an explicit anchor is never absent); its last slot's value
+    # is copied as a value (a Structure whole).  One map: a Structure needed in part and
+    # whole is one copy, upgraded before publication.
+    # The lexical context of a callable merge's node, copied in part with the uses of the node's code (T7): the
+    # root itself a part, every place a use or a link does not fill absent.  Names published.  0 or a status.
+    fn: lmx_graph_copy_part_used_owned (@: Lmx source; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx out) int
+    fn: lmx_graph_copy_many_used_staged (@@: Lmx sources; size_t: count; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @: Lmx absorb; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: Lmx outs; @: LmxCopyMap pending) int
     # Several roots, one operation, one map. outs[i] receives the copy of
     # sources[i]; on failure every outs[i] stays null and dst_arena is left as
     # it was at the mark.

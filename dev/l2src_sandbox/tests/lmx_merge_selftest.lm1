@@ -35,7 +35,12 @@ include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 #     them, and the arrays those blocks described go out of the destination's list
 #     of its N arrays as well (the block that carries a descriptor leaves with the
 #     array it describes);
-#   * two structures in, three out: the operands are never written.
+#   * two structures in, three out: the operands are never written;
+#   * the result's parent is the copy's own: the model's lexical parent (here a
+#     mutable ancestor) is copied with it and the composition's fresh root hangs
+#     under that copy -- not under the place that runs the merge, not under the
+#     source ancestor, not at zero (the author, LMX_blog/2026-10-05.md#merge-parent;
+#     docs #composition: the first operand is the result's model).
 #
 # It replaces the coverage of the deleted lmx_owned_ranges_selftest for the
 # merge path: the ranges a caller used to pass in are now what the arena's table
@@ -80,6 +85,415 @@ fn: merge_arrays_live (@: LmxArena arena) int
     ---
 return: 1
 
+fn: used_int (@: LmxArena arena; int: v) @: void
+    @: void cell lmx_int_new_owned(arena)
+    if: cell != 0
+        lmx_int_store_known(cell, v)
+    return: cell
+
+# The used copy (Q42: merge copies what the copied code uses, and of a Structure reached only for a use only the
+# fields used; Codex K03-READ-FIELD-CLOSURE-20261007-28).  u {loc, m, old, x}: loc {a 1, b 2, value 3, prior} under
+# u, prior an earlier result r0 hanging under its own chain p0 {r0}, old the same r0, m the model under u.
+# An application [op, x, y] whose operand `at` (1 or 2) names u, the rest int cells; under parent.
+fn: used_frame (@: LmxArena arena; @: Lmx parent; int: code; size_t: at; @: Lmx u) @: Lmx
+    @: Lmx fr lmx_node_new_owned(arena)
+    @: LmxOp op lmx_op_new_owned(arena, code)
+    if: fr = 0 || op = 0 || lmx_arena_refs_open_owned(arena, fr, 3U) != 0
+        return: 0
+    lmx_arena_ref_store(fr, 0U, (cast: (@: void) op))
+    lmx_arena_ref_store(fr, 1U, used_int(arena, 0))
+    lmx_arena_ref_store(fr, 2U, used_int(arena, 0))
+    lmx_arena_ref_store(fr, at, (cast: (@: void) u))
+    fr\parent: parent
+return: fr
+
+# A model [5, frame (c1, a1), frame (c2, a2)] -- n frames -- under u, its frames naming u.
+fn: used_model (@: LmxArena arena; @: Lmx u; int: c1; size_t: a1; int: c2; size_t: a2; size_t: n) @: Lmx
+    @: Lmx m lmx_node_new_owned(arena)
+    if: m = 0 || lmx_arena_refs_open_owned(arena, m, n + 1U) != 0
+        return: 0
+    lmx_arena_ref_store(m, 0U, used_int(arena, 5))
+    lmx_arena_ref_store(m, 1U, (cast: (@: void) used_frame(arena, m, c1, a1, u)))
+    if: n > 1U
+        lmx_arena_ref_store(m, 2U, (cast: (@: void) used_frame(arena, m, c2, a2, u)))
+    m\parent: u
+return: m
+
+sub: merge_used_scenarios (@: int counts; @: LmxArena arena; @: LmxArena dst)
+    @: Lmx u lmx_node_new_owned(arena)
+    @: Lmx loc lmx_node_new_owned(arena)
+    @: Lmx m lmx_node_new_owned(arena)
+    @: Lmx r0 lmx_node_new_owned(arena)
+    @: Lmx p0 lmx_node_new_owned(arena)
+    @: Lmx t lmx_node_new_owned(arena)
+    @: Lmx up 0
+    @: Lmx lc 0
+    @: Lmx rc 0
+    @: Lmx r 0
+    int: st 0
+    []: @(Lmx) ops 1
+    []: @(Lmx) ua 4
+    []: size_t uk 4
+    []: size_t us 8
+    []: size_t ul 4
+    @: Lmx q 0
+    @: Lmx req 0
+    @: Lmx uu 0
+    @: Lmx ww 0
+    @: Lmx vv 0
+    @: Lmx w4 0
+    @: Lmx r4 0
+    @: Lmx x4 0
+    @: Lmx v4 0
+    @: Lmx r5 0
+    []: size_t imap 4
+    size_t: k 99U
+    merge_check(counts, u != 0 && loc != 0 && m != 0 && r0 != 0 && p0 != 0 && t != 0 && lmx_arena_refs_open_owned(arena, u, 5U) = 0 && lmx_arena_refs_open_owned(arena, loc, 4U) = 0 && lmx_arena_refs_open_owned(arena, m, 1U) = 0 && lmx_arena_refs_open_owned(arena, r0, 1U) = 0 && lmx_arena_refs_open_owned(arena, p0, 1U) = 0 && lmx_arena_refs_open_owned(arena, t, 1U) = 0, "used: structures opened")
+    lmx_arena_ref_store(loc, 0U, used_int(arena, 1))
+    lmx_arena_ref_store(loc, 1U, used_int(arena, 2))
+    lmx_arena_ref_store(loc, 2U, used_int(arena, 3))
+    lmx_arena_ref_store(loc, 3U, (cast: (@: void) r0))
+    lmx_arena_ref_store(r0, 0U, used_int(arena, 5))
+    lmx_arena_ref_store(p0, 0U, (cast: (@: void) r0))
+    r0\parent: p0
+    lmx_arena_ref_store(m, 0U, used_int(arena, 7))
+    lmx_arena_ref_store(t, 0U, used_int(arena, 8))
+    lmx_arena_ref_store(u, 0U, (cast: (@: void) loc))
+    lmx_arena_ref_store(u, 1U, (cast: (@: void) m))
+    lmx_arena_ref_store(u, 2U, (cast: (@: void) t))
+    lmx_arena_ref_store(u, 3U, (cast: (@: void) t))
+    lmx_arena_ref_store(u, 4U, used_int(arena, 9))
+    loc\parent: u
+    m\parent: u
+    t\parent: u
+    ops[0]: m
+    # (0) No use: the chain is its links -- u's copy holds the result at m's place, every other place absent.
+    st: lmx_merge_owned(ops, 1U, 0, arena, dst, 0, 0U, @ r)
+    up: 0
+    if: st = LMX_MERGE_OK && r != 0
+        up: r\parent
+    merge_check(counts, up != 0 && up != u && (up\array.size) = 5U && lmx_arena_ref_value(up, 1U) = (cast: (@: void) r), "used 0: the copy of u holds the result at m's place")
+    merge_check(counts, up != 0 && lmx_arena_ref_value(up, 0U) = 0 && lmx_arena_ref_value(up, 2U) = 0 && lmx_arena_ref_value(up, 3U) = 0 && lmx_arena_ref_value(up, 4U) = 0, "used 0: unused places of u are absent, no zero cell, no source reference")
+    # (i) loc\value: loc is needed in part -- its value only; its unread prior result and that result's chain absent.
+    uk[0]: 0U
+    uk[1]: 0U
+    ua[0]: u
+    us[0]: 0U
+    us[1]: 2U
+    ul[0]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    up: 0
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0
+        up: r\parent
+    if: up != 0
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(up, 0U))
+    merge_check(counts, lc != 0 && lc != loc && (lc\array.size) = 4U && lc\parent = up, "used i: loc is copied in part at its source width, under u's copy")
+    merge_check(counts, lc != 0 && lmx_arena_ref_value(lc, 2U) != lmx_arena_ref_value(loc, 2U) && lmx_int_value_known(lmx_arena_ref_value(lc, 2U)) = 3, "used i: loc\\value is copied, its own cell")
+    merge_check(counts, lc != 0 && lmx_arena_ref_value(lc, 0U) = 0 && lmx_arena_ref_value(lc, 1U) = 0 && lmx_arena_ref_value(lc, 3U) = 0 && lmx_arena_ref_value(up, 2U) = 0, "used i: loc's unread fields and its prior result are absent (mutant: a used child copied whole, RED)")
+    # (ii) loc\a and loc\b join in loc's one copy.
+    us[0]: 0U
+    us[1]: 0U
+    us[2]: 0U
+    us[3]: 1U
+    ua[1]: u
+    ul[1]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 2U, 4U, 0, 0U, @ r)
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(r\parent, 0U))
+    merge_check(counts, lc != 0 && lmx_int_value_known(lmx_arena_ref_value(lc, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(lc, 1U)) = 2 && lmx_arena_ref_value(lc, 2U) = 0 && lmx_arena_ref_value(lc, 3U) = 0, "used ii: two uses of loc join in one copy holding a and b only")
+    # (iii) loc\a, then loc whole -- and the reverse order: one copy of loc, upgraded whole; its prior result r0 is
+    # part of loc's value now, copied whole, and r0's own chain p0 is linked in part.
+    us[0]: 0U
+    us[1]: 0U
+    us[2]: 0U
+    ul[0]: 2U
+    ul[1]: 1U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 2U, 3U, 0, 0U, @ r)
+    lc: 0
+    rc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(r\parent, 0U))
+    if: lc != 0
+        rc: (cast: (@: Lmx) lmx_arena_ref_value(lc, 3U))
+    merge_check(counts, lc != 0 && lmx_arena_ref_value(lc, 0U) != 0 && lmx_arena_ref_value(lc, 1U) != 0 && lmx_arena_ref_value(lc, 2U) != 0 && rc != 0 && rc != r0, "used iii: loc used whole after a part use is one whole copy")
+    merge_check(counts, rc != 0 && rc\parent != 0 && rc\parent != p0 && lmx_arena_ref_value(rc\parent, 0U) = (cast: (@: void) rc), "used iii: the copied prior result hangs under its own chain's copy, linked in part")
+    us[0]: 0U
+    us[1]: 0U
+    us[2]: 0U
+    ul[0]: 1U
+    ul[1]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 2U, 3U, 0, 0U, @ r)
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(r\parent, 0U))
+    merge_check(counts, lc != 0 && lmx_arena_ref_value(lc, 0U) != 0 && lmx_arena_ref_value(lc, 1U) != 0 && lmx_arena_ref_value(lc, 2U) != 0 && lmx_arena_ref_value(lc, 3U) != 0, "used iii: loc used whole before a part use is the same whole copy")
+    # (iv) two places of u name the same t: two uses reach one copy of t.
+    us[0]: 2U
+    us[1]: 3U
+    ul[0]: 1U
+    ul[1]: 1U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 2U, 2U, 0, 0U, @ r)
+    up: 0
+    if: st = LMX_MERGE_OK && r != 0
+        up: r\parent
+    merge_check(counts, up != 0 && lmx_arena_ref_value(up, 2U) != 0 && lmx_arena_ref_value(up, 2U) != (cast: (@: void) t) && lmx_arena_ref_value(up, 2U) = lmx_arena_ref_value(up, 3U) && lmx_arena_ref_value(up, 0U) = 0, "used iv: two places naming one t reach one copy of it; loc absent")
+    # (v) The operand-parent selector: no anchor and selector 1, m's own lexical parent u -- the use of (i).
+    ua[0]: 0
+    uk[0]: 1U
+    us[0]: 0U
+    us[1]: 2U
+    ul[0]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(r\parent, 0U))
+    merge_check(counts, lc != 0 && lc != loc && lmx_int_value_known(lmx_arena_ref_value(lc, 2U)) = 3 && lmx_arena_ref_value(lc, 0U) = 0 && lmx_arena_ref_value(lc, 3U) = 0, "used v: the operand-parent selector anchors the use at m's lexical parent, as (i)")
+    # (vi) An operand with no lexical parent: its selected use names nothing that exists; the merge succeeds and
+    # its result has no parent, so that place is absent for any reader.
+    q: lmx_node_new_owned(arena)
+    merge_check(counts, q != 0 && lmx_arena_refs_open_owned(arena, q, 1U) = 0 && q\parent = 0, "used vi: a parentless operand built")
+    if: q != 0
+        lmx_arena_ref_store(q, 0U, used_int(arena, 4))
+    ops[0]: q
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    merge_check(counts, st = LMX_MERGE_OK && r != 0 && r\parent = 0 && lmx_int_value_known(lmx_arena_ref_value(r, 0U)) = 4, "used vi: a parentless operand's selected use copies nothing, its result has no parent (mutant: refused, RED)")
+    ops[0]: m
+    # (vii) An explicit anchor that is absent refuses (mutant: an absent anchor read as an omitted use, RED).
+    ua[0]: 0
+    uk[0]: 0U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    merge_check(counts, st != LMX_MERGE_OK && r = 0, "used vii: an absent explicit anchor refuses")
+    # (viii) A selector past the operands, an anchor beside a selector, a zero length and slot lengths that do
+    # not add up to the slot count refuse.
+    uk[0]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    merge_check(counts, st != LMX_MERGE_OK && r = 0, "used viii: a selector past the operands refuses")
+    ua[0]: u
+    uk[0]: 1U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    merge_check(counts, st != LMX_MERGE_OK && r = 0, "used viii: an explicit anchor beside a selector refuses")
+    uk[0]: 0U
+    ul[0]: 0U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 0U, 0, 0U, @ r)
+    merge_check(counts, st != LMX_MERGE_OK && r = 0, "used viii: a zero-length use refuses")
+    ul[0]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 3U, 0, 0U, @ r)
+    merge_check(counts, st != LMX_MERGE_OK && r = 0, "used viii: slot lengths short of the slot count refuse")
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 1U, 0, 0U, @ r)
+    merge_check(counts, st != LMX_MERGE_OK && r = 0, "used viii: a use longer than the slots left refuses")
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    merge_check(counts, st = LMX_MERGE_OK && r != 0, "used viii: the same use well formed succeeds")
+    # (ix) A source admitted to a declaration through a nonidentity map, both halves (ordinal: f at loc's 2, g at 0;
+    # LAST: f at 2, g at 1), copied in part: the copy carries the record with holes -- f, which it holds, is found
+    # through it in both halves; g, at places it does not hold, is refused -- and a record with itself with holes;
+    # upgraded whole, the same copy carries the record with no hole (Codex -28 review point 3).  In one arena, as a
+    # merge's copy and its source are: across arenas a record naming an uncopied source Structure is not carried (xii).
+    req: lmx_node_new_owned(arena)
+    merge_check(counts, req != 0 && lmx_arena_refs_open_owned(arena, req, 2U) = 0, "used ix: the declaration opened {f, g}")
+    if: req != 0
+        lmx_arena_ref_store(req, 0U, used_int(arena, 0))
+        lmx_arena_ref_store(req, 1U, used_int(arena, 0))
+    ---
+    imap[0]: 2U
+    imap[1]: 0U
+    imap[2]: 2U
+    imap[3]: 1U
+    merge_check(counts, req != 0 && lmx_implements_register_map(arena, loc, req, imap, 2U, 0) = c.LMX_IMPLEMENTS_YES, "used ix: loc admitted to the declaration through its nonidentity map")
+    ops[0]: m
+    ua[0]: u
+    uk[0]: 0U
+    us[0]: 0U
+    us[1]: 2U
+    ul[0]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, arena, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(r\parent, 0U))
+    merge_check(counts, lc != 0 && lc != loc && lmx_implements_find(arena, lc, req) != 0 && lmx_implements_find(arena, lc, req)\holes != 0, "used ix: the part copy carries loc's record, with holes")
+    k: 99U
+    merge_check(counts, lc != 0 && lmx_implements_slot(arena, lc, req, 0U, @ k) = 0 && k = 2U, "used ix: f is found through the copy's record, ordinal half")
+    k: 99U
+    merge_check(counts, lc != 0 && lmx_implements_slot(arena, lc, req, 2U, @ k) = 0 && k = 2U, "used ix: f is found through the copy's record, LAST half")
+    merge_check(counts, lc != 0 && lmx_implements_slot(arena, lc, req, 1U, @ k) != 0 && lmx_implements_slot(arena, lc, req, 3U, @ k) != 0, "used ix: g, at places the copy does not hold, is refused in both halves (mutant: holes dropped, RED)")
+    merge_check(counts, lc != 0 && lmx_implements_holes(arena, lc) = 1 && lmx_implements_holes(arena, loc) = 0, "used ix: the part copy has a record with itself with holes; the source none")
+    merge_check(counts, r != 0 && lmx_implements_find(arena, r, m) = 0 && lmx_implements_holes(arena, r) = 0, "used ix: the root's copy carries no record of the source; its layout is the merge's")
+    ua[1]: u
+    uk[1]: 0U
+    us[2]: 0U
+    ul[1]: 1U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, arena, 0, 0U, ua, uk, us, ul, 2U, 3U, 0, 0U, @ r)
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(r\parent, 0U))
+    k: 99U
+    merge_check(counts, lc != 0 && lmx_implements_find(arena, lc, req) != 0 && lmx_implements_find(arena, lc, req)\holes = 0 && lmx_implements_slot(arena, lc, req, 1U, @ k) = 0 && k = 0U && lmx_implements_holes(arena, lc) = 0, "used ix: loc upgraded whole -- the same copy carries the record, no hole (mutant: holes kept after the upgrade, RED)")
+    # (x) The anchor is an operand position of the decoded operation, never any ancestor operand (Codex -29 point
+    # 2): an AT names its holder at operand 1 and reads one place of it -- U is linked in part; a SET's value
+    # operand 2 consumes U whole -- U is copied whole, one copy whichever frame is met first; with the AT alone U's
+    # unread places stay absent.  U {f: 1, g: 2, mA, mB, mC}; mA [5, AT, SET], mB [5, SET, AT], mC [5, AT].
+    uu: lmx_node_new_owned(arena)
+    merge_check(counts, uu != 0 && lmx_arena_refs_open_owned(arena, uu, 5U) = 0, "used x: U opened")
+    if: uu != 0
+        lmx_arena_ref_store(uu, 0U, used_int(arena, 1))
+        lmx_arena_ref_store(uu, 1U, used_int(arena, 2))
+        lmx_arena_ref_store(uu, 2U, (cast: (@: void) used_model(arena, uu, c.LMX_WALK_OP_AT, 1U, c.LMX_WALK_OP_SET, 2U, 2U)))
+        lmx_arena_ref_store(uu, 3U, (cast: (@: void) used_model(arena, uu, c.LMX_WALK_OP_SET, 2U, c.LMX_WALK_OP_AT, 1U, 2U)))
+        lmx_arena_ref_store(uu, 4U, (cast: (@: void) used_model(arena, uu, c.LMX_WALK_OP_AT, 1U, 0, 0U, 1U)))
+    ---
+    k: 2U
+    while: uu != 0 && k < 5U
+        ops[0]: (cast: (@: Lmx) lmx_arena_ref_value(uu, k))
+        r: 0
+        st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 0U, 0U, 0, 0U, @ r)
+        up: 0
+        if: st = LMX_MERGE_OK && r != 0
+            up: r\parent
+        if: k < 4U
+            merge_check(counts, up != 0 && up != uu && (up\array.size) = 5U && lmx_arena_ref_value(up, k) = (cast: (@: void) r) && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 1 && lmx_int_value_known(lmx_arena_ref_value(up, 1U)) = 2, "used x: a value operand consumes U whole, whichever frame comes first (mutant: every ancestor operand a link, RED)")
+            merge_check(counts, up != 0 && lmx_arena_ref_value(lmx_arena_ref_struct(r, 1U), (cast: (size_t) (k - 1U))) = (cast: (@: void) up) && lmx_arena_ref_value(lmx_arena_ref_struct(r, 2U), (cast: (size_t) (4U - k))) = (cast: (@: void) up), "used x: the anchor and the value name the same one copy of U")
+        else:
+            merge_check(counts, up != 0 && up != uu && lmx_arena_ref_value(up, 4U) = (cast: (@: void) r) && lmx_arena_ref_value(up, 0U) = 0 && lmx_arena_ref_value(up, 1U) = 0 && lmx_arena_ref_value(lmx_arena_ref_struct(r, 1U), 1U) = (cast: (@: void) up), "used x: an AT alone links U in part, its unread places absent (mutant: the anchor copied whole, RED)")
+        ---
+        k: k + 1U
+    ---
+    # (xi) A place of the application's lexical context that is not its ancestor (READ-FIELD-CLOSURE, -31): mE's AT
+    # names V, a data Structure of W, at its holder operand -- V is linked in part, the use [1 0] anchored at W filling
+    # p; q and W's f stay absent (mutant: such a holder copied whole as a value, RED).  W {f: 1, V {p: 7, q: 8},
+    # mE [5, AT(V)]}.
+    ww: lmx_node_new_owned(arena)
+    vv: lmx_node_new_owned(arena)
+    merge_check(counts, ww != 0 && vv != 0 && lmx_arena_refs_open_owned(arena, ww, 3U) = 0 && lmx_arena_refs_open_owned(arena, vv, 2U) = 0, "used xi: W and V opened")
+    ops[0]: 0
+    if: ww != 0 && vv != 0
+        lmx_arena_ref_store(vv, 0U, used_int(arena, 7))
+        lmx_arena_ref_store(vv, 1U, used_int(arena, 8))
+        vv\parent: ww
+        lmx_arena_ref_store(ww, 0U, used_int(arena, 1))
+        lmx_arena_ref_store(ww, 1U, (cast: (@: void) vv))
+        ops[0]: used_model(arena, ww, c.LMX_WALK_OP_AT, 1U, 0, 0U, 1U)
+        if: ops[0] != 0
+            lmx_arena_ref_store(lmx_arena_ref_struct(ops[0], 1U), 1U, (cast: (@: void) vv))
+            lmx_arena_ref_store(ww, 2U, (cast: (@: void) ops[0]))
+        ---
+    ---
+    ua[0]: ww
+    uk[0]: 0U
+    us[0]: 1U
+    us[1]: 0U
+    ul[0]: 2U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 1U, 2U, 0, 0U, @ r)
+    up: 0
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        up: r\parent
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(up, 1U))
+    ---
+    merge_check(counts, up != 0 && up != ww && lmx_arena_ref_value(up, 2U) = (cast: (@: void) r) && lmx_arena_ref_value(up, 0U) = 0, "used xi: the result in W's copy at mE's place, f absent")
+    merge_check(counts, lc != 0 && lc != vv && lc\parent = up && lmx_int_value_known(lmx_arena_ref_value(lc, 0U)) = 7 && lmx_arena_ref_value(lc, 1U) = 0, "used xi: V linked in part -- p as the use names it, q absent (mutant: a lexical-context holder copied whole as a value, RED)")
+    merge_check(counts, lc != 0 && r != 0 && lmx_arena_ref_value(lmx_arena_ref_struct(r, 1U), 1U) = (cast: (@: void) lc), "used xi: the copied AT names V's copy")
+    # (xii) The copy's correspondences through its map (Codex K03-READ-FIELD-CLOSURE-20261008-31 on the carry;
+    # MERGE-PARENT-MODEL-SOURCE).  W4 {R4 {f, g}, X4 {g, 0, f}, mF [5, AT(W4)]}; V4 {g, 0, f} outside W4; V4 and X4
+    # admitted to R4 through a nonidentity map (f at 2, g at 0, both halves).  mF copied in one arena with uses [0] and
+    # [1] anchored at W4 -- R4 and X4 whole: R4's copy takes V4's record, the original candidate admitted to the copied
+    # requirement by the same map (mutant: no model-side record, RED); X4's copy is admitted to R4's copy, not to the
+    # unrelated original (mutant: the requirement kept verbatim, RED).  The same copy into another arena: X4's copy is
+    # admitted to R4's copy there too, both live in it, and no record names V4 or the source R4, foreign addresses
+    # (mutant: a model-side record carried whatever its arena, RED).  X4 is admitted to R5 too, a requirement outside
+    # W4 that no use copies: in one arena X4's copy keeps that record as it is; across arenas it is not carried
+    # (mutant: a value-side record carried whatever its arena, RED).
+    w4: lmx_node_new_owned(arena)
+    r4: lmx_node_new_owned(arena)
+    x4: lmx_node_new_owned(arena)
+    v4: lmx_node_new_owned(arena)
+    r5: lmx_node_new_owned(arena)
+    merge_check(counts, r5 != 0 && lmx_arena_refs_open_owned(arena, r5, 2U) = 0, "used xii: R5 opened")
+    if: r5 != 0
+        lmx_arena_ref_store(r5, 0U, used_int(arena, 0))
+        lmx_arena_ref_store(r5, 1U, used_int(arena, 0))
+    ---
+    merge_check(counts, w4 != 0 && r4 != 0 && x4 != 0 && v4 != 0 && lmx_arena_refs_open_owned(arena, w4, 3U) = 0 && lmx_arena_refs_open_owned(arena, r4, 2U) = 0 && lmx_arena_refs_open_owned(arena, x4, 3U) = 0 && lmx_arena_refs_open_owned(arena, v4, 3U) = 0, "used xii: W4, R4, X4 and V4 opened")
+    ops[0]: 0
+    if: w4 != 0 && r4 != 0 && x4 != 0 && v4 != 0
+        lmx_arena_ref_store(r4, 0U, used_int(arena, 0))
+        lmx_arena_ref_store(r4, 1U, used_int(arena, 0))
+        r4\parent: w4
+        lmx_arena_ref_store(x4, 0U, used_int(arena, 1))
+        lmx_arena_ref_store(x4, 1U, used_int(arena, 0))
+        lmx_arena_ref_store(x4, 2U, used_int(arena, 2))
+        x4\parent: w4
+        lmx_arena_ref_store(v4, 0U, used_int(arena, 1))
+        lmx_arena_ref_store(v4, 1U, used_int(arena, 0))
+        lmx_arena_ref_store(v4, 2U, used_int(arena, 2))
+        lmx_arena_ref_store(w4, 0U, (cast: (@: void) r4))
+        lmx_arena_ref_store(w4, 1U, (cast: (@: void) x4))
+        ops[0]: used_model(arena, w4, c.LMX_WALK_OP_AT, 1U, 0, 0U, 1U)
+        lmx_arena_ref_store(w4, 2U, (cast: (@: void) ops[0]))
+    ---
+    imap[0]: 2U
+    imap[1]: 0U
+    imap[2]: 2U
+    imap[3]: 0U
+    merge_check(counts, r4 != 0 && lmx_implements_register_map(arena, v4, r4, imap, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(arena, x4, r4, imap, 2U, 0) = c.LMX_IMPLEMENTS_YES && lmx_implements_register_map(arena, x4, r5, imap, 2U, 0) = c.LMX_IMPLEMENTS_YES, "used xii: V4 and X4 admitted to R4, X4 to R5, through the map")
+    ua[0]: w4
+    uk[0]: 0U
+    us[0]: 0U
+    ul[0]: 1U
+    ua[1]: w4
+    uk[1]: 0U
+    us[1]: 1U
+    ul[1]: 1U
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, arena, 0, 0U, ua, uk, us, ul, 2U, 2U, 0, 0U, @ r)
+    up: 0
+    rc: 0
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        up: r\parent
+        rc: (cast: (@: Lmx) lmx_arena_ref_value(up, 0U))
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(up, 1U))
+    ---
+    merge_check(counts, rc != 0 && rc != r4 && lc != 0 && lc != x4, "used xii: R4 and X4 copied, distinct")
+    k: 99U
+    merge_check(counts, rc != 0 && lmx_implements_slot(arena, v4, rc, 0U, @ k) = 0 && k = 2U, "used xii: V4 is admitted to R4's copy by the same map, ordinal half (mutant: no model-side record, RED)")
+    k: 99U
+    merge_check(counts, rc != 0 && lmx_implements_slot(arena, v4, rc, 3U, @ k) = 0 && k = 0U, "used xii: V4 is admitted to R4's copy by the same map, LAST half")
+    merge_check(counts, rc != 0 && lc != 0 && lmx_implements_find(arena, lc, rc) != 0 && lmx_implements_find(arena, lc, r4) = 0, "used xii: X4's copy is admitted to R4's copy, not to the unrelated original (mutant: the requirement kept verbatim, RED)")
+    merge_check(counts, lc != 0 && r5 != 0 && lmx_implements_find(arena, lc, r5) != 0, "used xii: X4's copy keeps its record with R5, which no use copied")
+    k: 99U
+    merge_check(counts, rc != 0 && lc != 0 && lmx_implements_slot(arena, lc, rc, 3U, @ k) = 0 && k = 0U && lmx_implements_slot(arena, x4, rc, 0U, @ k) = 0 && k = 2U, "used xii: through R4's copy, X4's copy and the original X4 both by the same map")
+    r: 0
+    st: lmx_merge_used_owned(ops, 1U, 0, arena, dst, 0, 0U, ua, uk, us, ul, 2U, 2U, 0, 0U, @ r)
+    up: 0
+    rc: 0
+    lc: 0
+    if: st = LMX_MERGE_OK && r != 0 && r\parent != 0
+        up: r\parent
+        rc: (cast: (@: Lmx) lmx_arena_ref_value(up, 0U))
+        lc: (cast: (@: Lmx) lmx_arena_ref_value(up, 1U))
+    ---
+    merge_check(counts, rc != 0 && lc != 0 && lmx_implements_find(dst, lc, rc) != 0 && lmx_implements_find(dst, v4, rc) = 0 && lmx_implements_find(dst, x4, rc) = 0 && lmx_implements_find(dst, lc, r4) = 0, "used xii: across arenas X4's copy is admitted to R4's copy; no record names V4, X4 or the source R4 (mutant: a model-side record carried whatever its arena, RED)")
+    merge_check(counts, lc != 0 && r5 != 0 && lmx_implements_find(dst, lc, r5) = 0, "used xii: across arenas X4's copy carries no record naming R5, a source Structure the run did not copy (mutant: a value-side record carried whatever its arena, RED)")
+end: merge_used_scenarios
+
 fn: main () int
     @: int counts (cast: (@: int) calloc(2U, c.sizeof(int)))
     LmxArena: arena
@@ -93,7 +507,20 @@ fn: main () int
     @: Lmx a 0
     @: Lmx b 0
     @: Lmx bad 0
-    @: Lmx container 0
+    @: Lmx pa 0
+    []: @(Lmx) ua 4
+    []: size_t uk 4
+    []: size_t us 8
+    []: size_t ul 4
+    @: void pk 0
+    @: Lmx up 0
+    @: Lmx m2 0
+    @: Lmx n2 0
+    @: Lmx p2 0
+    @: Lmx o2 0
+    @: Lmx r2 0
+    @: Lmx n2c 0
+    @: Lmx up2 0
     @: Lmx result 0
     @: Lmx shared 0
     @: LmxPrimitive prim_rec 0
@@ -139,13 +566,14 @@ fn: main () int
     int_cell: lmx_int_new_owned(@ arena)
     lmx_int_store_known(int_cell, 42)
     shared: lmx_node_new_owned(@ arena)
-    container: lmx_node_new_owned(@ arena)
+    pa: lmx_node_new_owned(@ arena)
+    pk: lmx_int_new_owned(@ arena)
     a: lmx_node_new_owned(@ arena)
     b: lmx_node_new_owned(@ arena)
     bad: lmx_node_new_owned(@ arena)
     merge_check(counts, table != 0 && char_cell != 0 && int_cell != 0, "source arena constructed")
     merge_check(counts, shared != 0 && shared\parent = 0, "the shared record's parent is outside the merge operands (eternal root)")
-    if: a = 0 || b = 0 || bad = 0 || container = 0
+    if: a = 0 || b = 0 || bad = 0 || pa = 0 || pk = 0
         fputs("lmx: structures not constructed\n", l1_stdout())
         lmx_arena_release(@ arena)
         free((cast: (@: void) operands))
@@ -157,14 +585,33 @@ fn: main () int
     lmx_arena_ref_store(a, 0U, char_cell)
     lmx_arena_ref_store(a, 1U, int_cell)
     lmx_arena_ref_store(b, 0U, (cast: (@: void) shared))
+    # pa { k: 5, a }: a's lexical parent, a mutable ancestor of the model.
+    merge_check(counts, lmx_arena_refs_open_owned(@ arena, pa, 2U) = 0, "the model's lexical parent opened")
+    lmx_int_store_known(pk, 5)
+    lmx_arena_ref_store(pa, 0U, pk)
+    lmx_arena_ref_store(pa, 1U, (cast: (@: void) a))
+    a\parent: pa
 
     # 1. Two structures in, three out.
     operands[0]: a
     operands[1]: b
-    status: lmx_merge_owned(operands, 2U, 0, container, @ arena, @ dst, 0, 0U, @ result)
+    # The copied code's use of pa's cell (Q42: only the fields used are copied): named as a use, it is copied.
+    uk[0]: 0U
+    ua[0]: pa
+    us[0]: 0U
+    ul[0]: 1U
+    status: lmx_merge_used_owned(operands, 2U, 0, @ arena, @ dst, 0, 0U, ua, uk, us, ul, 1U, 1U, 0, 0U, @ result)
     merge_check(counts, status = LMX_MERGE_OK, "merge succeeded")
     merge_check(counts, result != 0 && result != a && result != b, "the result is a third independent structure")
-    merge_check(counts, result\parent = container, "the result's structural parent is the execution container")
+    up: 0
+    if: result != 0
+        up: result\parent
+    merge_check(counts, up != 0 && up != pa && lmx_range_classify(@ dst, (cast: (@: void) up)) = c.LMX_KIND_STRUCT && (up\array.size) = 2U, "the result hangs under a copy of the model's lexical parent, in the destination")
+    merge_check(counts, up != 0 && lmx_arena_ref_value(up, 0U) != pk && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 5, "the copied ancestor's mutable cell is its own, with the value at the merge")
+    lmx_int_store_known(pk, 6)
+    merge_check(counts, up != 0 && lmx_int_value_known(lmx_arena_ref_value(up, 0U)) = 5 && lmx_int_value_known(pk) = 6, "a later write of the source ancestor does not reach the copy")
+    merge_check(counts, a\parent = pa && lmx_arena_ref_value(pa, 1U) = (cast: (@: void) a), "the source model keeps its parent")
+    merge_check(counts, up != 0 && lmx_arena_ref_value(up, 1U) = (cast: (@: void) result), "the copied ancestor holds the result where pa holds the model: no link reaches the discarded copy of the model")
     merge_check(counts, (result\array.size) = 3U, "two operands, three slots")
     merge_check(counts, (a\array.size) = 2U && (b\array.size) = 1U, "the operands were not written")
     merge_check(counts, lmx_arena_index_len(dst_at) != 0U, "the destination arena holds the copies")
@@ -208,6 +655,39 @@ fn: main () int
     merge_check(counts, lmx_range_classify(@ arena, (cast: (@: void) @ a\array)) = c.LMX_KIND_STRUCT, "the embedded child array classifies as the Structure, not as an Array")
     merge_check(counts, (a\array.data) = (cast: (@: void) slot_addr), "the embedded array's data is the slot storage")
 
+    # 1b. A composition absorbs its operand roots: the model m2 {cell, n2} has a nested n2 whose
+    # slot 0 is a back edge to m2, and m2's lexical parent p2 holds m2.  merge(m2, o2) builds a
+    # fresh root r2; the copy of p2 holds r2 where p2 holds m2, the copy of n2 hangs under r2
+    # and its back edge names r2 -- no link reaches the discarded copy of m2 (Codex
+    # K03-MERGE-PARENT-20261007-27; LMX_blog/2026-10-05.md#merge-parent).
+    m2: lmx_node_new_owned(@ arena)
+    n2: lmx_node_new_owned(@ arena)
+    p2: lmx_node_new_owned(@ arena)
+    o2: lmx_node_new_owned(@ arena)
+    merge_check(counts, m2 != 0 && n2 != 0 && p2 != 0 && o2 != 0 && lmx_arena_refs_open_owned(@ arena, m2, 2U) = 0 && lmx_arena_refs_open_owned(@ arena, n2, 1U) = 0 && lmx_arena_refs_open_owned(@ arena, p2, 1U) = 0 && lmx_arena_refs_open_owned(@ arena, o2, 1U) = 0, "1b structures opened")
+    if: m2 != 0 && n2 != 0 && p2 != 0 && o2 != 0
+        lmx_arena_ref_store(m2, 0U, lmx_int_new_owned(@ arena))
+        lmx_arena_ref_store(m2, 1U, (cast: (@: void) n2))
+        n2\parent: m2
+        lmx_arena_ref_store(n2, 0U, (cast: (@: void) m2))
+        lmx_arena_ref_store(p2, 0U, (cast: (@: void) m2))
+        m2\parent: p2
+        lmx_arena_ref_store(o2, 0U, lmx_int_new_owned(@ arena))
+        operands[0]: m2
+        operands[1]: o2
+        status: lmx_merge_owned(operands, 2U, 0, @ arena, @ dst, 0, 0U, @ r2)
+        merge_check(counts, status = LMX_MERGE_OK && r2 != 0 && (r2\array.size) = 3U, "1b composition: the model's two fields and o2's one, no extra wrapper field")
+        if: r2 != 0
+            up2: r2\parent
+            n2c: (cast: (@: Lmx) lmx_arena_ref_value(r2, 1U))
+            merge_check(counts, up2 != 0 && up2 != p2 && lmx_arena_ref_value(up2, 0U) = (cast: (@: void) r2), "1b the copy of the model's lexical parent holds the result where p2 holds m2")
+            merge_check(counts, n2c != 0 && n2c != n2 && n2c\parent = r2 && lmx_arena_ref_value(n2c, 0U) = (cast: (@: void) r2), "1b the copied nested child hangs under the result and its back edge names the result")
+        ---
+        merge_check(counts, m2\parent = p2 && n2\parent = m2 && lmx_arena_ref_value(n2, 0U) = (cast: (@: void) m2) && lmx_arena_ref_value(p2, 0U) = (cast: (@: void) m2), "1b the sources keep their parents and edges")
+        operands[0]: a
+        operands[1]: b
+    ---
+
     # 4. An operand that is not a Structure is refused. The refusal is decided before
     # the destination's mark is taken, so the destination is not even touched -- and
     # that is what the entry count and the array count say.
@@ -215,7 +695,7 @@ fn: main () int
     held_arrays: merge_arrays(@ dst)
     operands[0]: (cast: (@: Lmx) int_cell)
     refused: 0
-    status: lmx_merge_owned(operands, 1U, 0, container, @ arena, @ dst, 0, 0U, @ refused)
+    status: lmx_merge_owned(operands, 1U, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_INVALID && refused = 0, "a non-Structure operand is refused")
     merge_check(counts, lmx_arena_index_len(dst_at) = held, "a refusal before the mark left the destination untouched")
     merge_check(counts, merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "a refusal before the mark left the destination with the arrays it had")
@@ -238,7 +718,7 @@ fn: main () int
     lmx_arena_ref_store(bad, 0U, raw)
     operands[0]: bad
     refused: 0
-    status: lmx_merge_owned(operands, 1U, 0, container, @ arena, @ dst, 0, 0U, @ refused)
+    status: lmx_merge_owned(operands, 1U, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "an unclassified child refuses the merge")
     merge_check(counts, (bad\array.size) = 1U, "the refused source is untouched")
     merge_check(counts, lmx_arena_index_len(dst_at) = held, "a refused merge left the destination arena as it was")
@@ -248,7 +728,7 @@ fn: main () int
     # the arrays the first attempt opened left with their blocks, so the second attempt
     # starts from the same state and leaves the same state.
     refused: 0
-    status: lmx_merge_owned(operands, 1U, 0, container, @ arena, @ dst, 0, 0U, @ refused)
+    status: lmx_merge_owned(operands, 1U, 0, @ arena, @ dst, 0, 0U, @ refused)
     merge_check(counts, status = LMX_MERGE_UNSUPPORTED && refused = 0, "the same refusal a second time is refused the same way")
     merge_check(counts, lmx_arena_index_len(dst_at) = held && merge_arrays(@ dst) = held_arrays && merge_arrays_live(@ dst) = 1, "the destination is exactly as it was after a second refusal")
 
@@ -280,6 +760,7 @@ fn: main () int
         ---
     ---
 
+    merge_used_scenarios(counts, @ arena, @ dst)
     merge_check(counts, lmx_arena_index_len(arena_at) > 0U && lmx_arena_index_len(dst_at) > 0U, "entries exist while the arenas do")
     merge_check(counts, lmx_arena_release(@ dst) = 0, "destination arena released")
     merge_check(counts, lmx_arena_release(@ arena) = 0, "source arena released")

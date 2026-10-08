@@ -1981,12 +1981,14 @@ fn: shape_merge_nest (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
     if: outer = 0
         return: 1
     one: outer
-    if: lmx_merge_owned(@ one, 1U, 0, graph, arena, arena, 0, 0U, @ merged) != c.LMX_MERGE_OK || merged = 0 || merged = outer
+    if: lmx_merge_owned(@ one, 1U, 0, arena, arena, 0, 0U, @ merged) != c.LMX_MERGE_OK || merged = 0 || merged = outer
         check(0, "merge builds a distinct nested result")
         return: 1
     n: merged\array.size
     check(n = 1U, "merge keeps the one nested field")
-    check(merged\parent = graph, "merge parents the nested result at the container")
+    # The result's parent is the copy's own: the copy of outer's lexical parent, not the place running the merge
+    # and not outer's source parent (the author, LMX_blog/2026-10-05.md#merge-parent).
+    check((outer\parent = 0 && merged\parent = 0) || (outer\parent != 0 && merged\parent != 0 && merged\parent != outer\parent && merged\parent\array.size = outer\parent\array.size), "merge parents the nested result at the copy of its model's parent")
     inner: (cast: (@: Lmx) lmx_arena_ref_value(merged, 0U))
     check(inner != 0 && inner != (cast: (@: Lmx) lmx_arena_ref_value(outer, 0U)), "merge copies the inner Structure")
     if: inner = 0
@@ -2012,12 +2014,12 @@ fn: shape_merge_holder (@: LmxArena arena; @: Lmx roles; @: Lmx graph) int
     if: holder = 0
         return: 1
     one: holder
-    if: lmx_merge_owned(@ one, 1U, 0, graph, arena, arena, 0, 0U, @ merged) != c.LMX_MERGE_OK || merged = 0 || merged = holder
+    if: lmx_merge_owned(@ one, 1U, 0, arena, arena, 0, 0U, @ merged) != c.LMX_MERGE_OK || merged = 0 || merged = holder
         check(0, "merge builds a distinct result")
         return: 1
     n: merged\array.size
     check(n = 4U, "merge keeps both cells and both written initializers")
-    check(merged\parent = graph, "merge parents the result at the container")
+    check((holder\parent = 0 && merged\parent = 0) || (holder\parent != 0 && merged\parent != 0 && merged\parent != holder\parent && merged\parent\array.size = holder\parent\array.size), "merge parents the result at the copy of its model's parent")
     a: lmx_arena_ref_value(merged, 0U)
     b: lmx_arena_ref_value(merged, 2U)
     check(a != 0 && b != 0 && a != lmx_arena_ref_value(holder, 0U) && b != lmx_arena_ref_value(holder, 2U), "merge copies the field cells")
@@ -2351,14 +2353,16 @@ return: code
 
 # THE MERGE TAP (S1.1 / D-07).  The generated C is compiled with
 # -Dlmx_merge_owned=l2_driver_merge_owned and
-# -Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned, so every merge the program emits
-# -- plain (`lmx_merge_owned`) or qualified-operand (`lmx_merge_profiles_owned`) -- comes here
-# first.  Both taps share one counter: `mergefail N` fails the program's Nth merge of either
+# -Dlmx_merge_profiles_owned=l2_driver_merge_profiles_owned and
+# -Dlmx_merge_used_owned=l2_driver_merge_used_owned, so every merge the program emits
+# -- plain (`lmx_merge_owned`), qualified-operand (`lmx_merge_profiles_owned`) or with the uses
+# of its copied code (`lmx_merge_used_owned`) -- comes here
+# first.  The taps share one counter: `mergefail N` fails the program's Nth merge of any
 # kind (existing plain-merge rows keep their meaning; a qualified merge that never hit the
 # plain tap is now countable).  The Nth is refused the way the kernel refuses a merge it
 # cannot allocate (NOMEM, no result).  From source, merge fails only on a non-Structure
 # operand, NOMEM or an unsupported copy, and none is reachable from a program.
-fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     int: status
     merge_calls: merge_calls + 1
     if: merge_fail_at > 0 && merge_calls = merge_fail_at
@@ -2367,12 +2371,12 @@ fn: l2_driver_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx 
         ---
         return: c.LMX_MERGE_NOMEM
     ---
-    status: lmx_merge_owned(operands, count, body, container, src_arena, dst_arena, overrides, override_count, out)
+    status: lmx_merge_owned(operands, count, body, src_arena, dst_arena, overrides, override_count, out)
     if: status = 0 && out != 0
         inspect_merge(operands, count, out[0], src_arena, dst_arena)
 return: status
 
-fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: Lmx container; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
     int: status
     merge_calls: merge_calls + 1
     if: merge_fail_at > 0 && merge_calls = merge_fail_at
@@ -2381,7 +2385,21 @@ fn: l2_driver_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body
         ---
         return: c.LMX_MERGE_NOMEM
     ---
-    status: lmx_merge_profiles_owned(operands, count, body, container, src_arena, dst_arena, retain_profiles, retain_count, overrides, override_count, out)
+    status: lmx_merge_profiles_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, overrides, override_count, out)
+    if: status = 0 && out != 0
+        inspect_merge(operands, count, out[0], src_arena, dst_arena)
+return: status
+
+fn: l2_driver_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    int: status
+    merge_calls: merge_calls + 1
+    if: merge_fail_at > 0 && merge_calls = merge_fail_at
+        if: out != 0
+            out[0]: 0
+        ---
+        return: c.LMX_MERGE_NOMEM
+    ---
+    status: lmx_merge_used_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, out)
     if: status = 0 && out != 0
         inspect_merge(operands, count, out[0], src_arena, dst_arena)
 return: status

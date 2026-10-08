@@ -2019,15 +2019,35 @@ and four budgets green. Exact gated translator blob: `d67f15cb` (linked log).
 The closure checklist also includes a control where only the retained local
 Structure calls the unit method: remove the model's independent call, mutate
 the original after merge, and require the copied value in all execution modes.
-Emission currently drops that dependency; native execution of the isolated
-control fails with exit 3. The common source/home closure fix remains OPEN
-(see the linked log); success of the first native-reader slice does not close it.
+At checkpoint `65d60a49` emission drops that dependency; native execution of
+the isolated control fails with exit 3. The next slice implements the common
+source/home closure below; success of the first native-reader slice alone
+does not close that child.
+Continuation after checkpoint `65d60a49`: common retained-local-home closure
+is implemented (translator blob `6cc8106c`). Four permanent isolated dependency
+rows pass natively and with methods/root walked; kernel02 GREEN297, L3_03 all
+11 suites/four budgets green; full02 RED68/2624, no OK→FAIL, six new rows
+(five green, one required-positive red), no removed rows or changed red
+messages. This fixes that missing-dependency child, not the
+whole T7 parent or the remaining admission-model/native-hidden-use coverage.
 Also OPEN under the same parent: T7-PROJECTED-PARENT-FIELD. With model's
 `int: seed 6`, local S reading `node\seed`, and callable merge binding y=5,
 unchanged full65 native code reads 5 rather than 6 (walked code uses the
 selected view). Native parent-field readers still use prototype coordinates
-when a constructed view has a different layout. Fix through the common
-source/view relation, not an offset special case or forced interpreter path.
+because the T7 producer inserts added data before the model's own body. The
+existing composition norm preserves model slots and appends new fields: fix
+that producer across COUNT/PLACE/FILL and its datum-slot readers, rather than
+adding a runtime coordinate registry, native variants, an offset special
+case or a forced interpreter path.
+Permanent required-positive rows `unit_merge_parent_t7_local_node_view` and
+`_walk` now pin the native/walker difference; the native row remains red.
+The new specialization fixtures inherited data-first spelling from older
+T7 rows. After full02 completed, these four inputs were explicitly migrated to
+`merge(model; y: k)`; final-input focus04 confirms the same twelve fixture
+verdicts (three required-positive failures) and red messages as focus03.
+This applies the already
+OPEN T7-DATA-FIRST-SHAPE contract; it does not authorize a data-first refusal,
+silently migrate the historical corpus, or close MERGE-KEEPS-MODEL-INTERFACE.
 
 ### K04 — Callable actuals and hidden inputs
 

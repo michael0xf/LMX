@@ -1,0 +1,24 @@
+# NODE addresses the selected parent's field, not its prototype coordinate.
+# This is a required positive even while T7-PROJECTED-PARENT-FIELD is OPEN.
+int: cnt 7
+fn: get () int
+    return: node\cnt
+fn: model (int: y) int
+    int: seed 6
+    S:
+        int: v 0
+        v: node\seed + get()
+    S
+    return: S\v
+fn: wrap (int: k) fn: () int
+    return: merge(model; y: k)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5)
+poke()
+int: result w()
+int: ok 7
+if: result != 13
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -9772,6 +9772,18 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_control_walk.lm2'; Source = 'unit_merge_parent_t7_local_control.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_only_get.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_only_get_walk.lm2'; Source = 'unit_merge_parent_t7_local_only_get.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_only_nested_get.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_only_nested_get_walk.lm2'; Source = 'unit_merge_parent_t7_local_only_nested_get.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,6,7); NativeMethods = @(5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_node_view.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_merge_parent_t7_local_node_view_walk.lm2'; Source = 'unit_merge_parent_t7_local_node_view.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_part_walk.lm2'; Source = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

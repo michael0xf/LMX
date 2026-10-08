@@ -1,0 +1,32 @@
+# Transitive retained-source closure: only nested T reaches middle -> get.
+# Local S is below IF; T is owned by S, not a unit child or a model sibling.
+int: cnt 7
+fn: get () int
+    return: node\cnt
+fn: middle () int
+    return: get()
+fn: model (int: y) int
+    int: result 0
+    if: y > 0
+        S:
+            int: v 0
+            T:
+                int: w 0
+                w: middle()
+            T
+            v: T\w
+        S
+        result: S\v
+    return: result
+fn: wrap (int: k) fn: () int
+    return: merge(model; y: k)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5)
+poke()
+int: result w()
+int: ok 7
+if: result != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

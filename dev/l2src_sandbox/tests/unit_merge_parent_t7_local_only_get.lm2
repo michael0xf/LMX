@@ -1,0 +1,23 @@
+# Only the retained local S reaches get. The outer model must not retain it
+# independently and mask a missing source/home dependency in the copy.
+int: cnt 7
+fn: get () int
+    return: node\cnt
+fn: model (int: y) int
+    S:
+        int: v 0
+        v: get()
+    S
+    return: S\v
+fn: wrap (int: k) fn: () int
+    return: merge(model; y: k)
+sub: poke ()
+    node\cnt: 11
+@: w wrap(5)
+poke()
+int: result w()
+int: ok 7
+if: result != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

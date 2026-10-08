@@ -561,8 +561,10 @@ int: l2_mur_scap 0
 # One use's resolved slots (l2_use_resolve), grown to the longest.
 @: int l2_mu_rbuf 0
 int: l2_mu_rcap 0
-# Its homes (unit methods whose code the copy carries) and one operand's Structures, each once.
+# Its code homes and their node anchors (0 unit, -1 inside the selected copy),
+# plus one operand's Structures. Worklist identity is the home/anchor pair.
 @: int l2_muh 0
+@: int l2_muh_sel 0
 int: l2_muh_n 0
 int: l2_muh_cap 0
 @: int l2_mus 0
@@ -49166,12 +49168,12 @@ fn: l2_mur_add (int: sel; @: int s; int: n) int
     l2_mur_n: l2_mur_n + 1
 return: 0
 
-# Unit method m is a home of the merge being collected, once.
-fn: l2_muh_add (int: m) int
+# Code home m with node anchor sel belongs to the collected closure, once.
+fn: l2_muh_add (int: m; int: sel) int
     int: j 0
     @: int g
     while: j < l2_muh_n
-        if: l2_muh[j] = m
+        if: l2_muh[j] = m && l2_muh_sel[j] = sel
             return: 0
         j: j + 1
     ---
@@ -49180,10 +49182,38 @@ fn: l2_muh_add (int: m) int
         if: g = 0
             return: l2_error(l2_src, 0, "out of memory")
         l2_muh: g
+        g: (cast: (@: int) realloc((cast: (@: void) l2_muh_sel), (cast: (size_t) (l2_muh_cap * 2 + 16)) * c.sizeof(c.int)))
+        if: g = 0
+            return: l2_error(l2_src, 0, "out of memory")
+        l2_muh_sel: g
         l2_muh_cap: l2_muh_cap * 2 + 16
     ---
     l2_muh[l2_muh_n]: m
+    l2_muh_sel[l2_muh_n]: sel
     l2_muh_n: l2_muh_n + 1
+return: 0
+
+# Every local definition physically retained in h's source, including one
+# inside a control body, carries its own code uses. Its node is already in
+# the selected view; only its external uses extend the lexical copy. Derive
+# these homes from source definition fields, not namespace spelling or the
+# collector's outer-method stamp. The same worklist closes nested definitions.
+fn: l2_mu_local_homes (int: h) int
+    @: L2SourceContainer row l2_source_containers
+    @: L2SourceField field
+    int: ni
+    while: row != 0
+        if: row\view_kind = 0 && row\source_mi = h && row\inert = 0
+            field: row\fields
+            while: field != 0
+                ni: l2_source_definition_ns(field\own)
+                if: ni >= 0 && l2_ns_local[ni] >= 0 && l2_ns_proc[ni] >= 0 && l2_muh_add(l2_ns_proc[ni], -1) != 0
+                    return: 1
+                field: field\next
+            ---
+        ---
+        row: row\allocated_next
+    ---
 return: 0
 
 # Named Structure r is reached from the operand being collected, once.
@@ -49232,7 +49262,7 @@ fn: l2_mu_home (int: h; int: sel) int
                 if: anchor = 0 && n = 1
                     m: 0
                     while: m < l2_m_n
-                        if: l2_occ_slot(m) = l2_mu_rbuf[0] && l2_mad_host_of(m) < 0 && l2_muh_add(m) != 0
+                        if: l2_occ_slot(m) = l2_mu_rbuf[0] && l2_mad_host_of(m) < 0 && l2_muh_add(m, 0) != 0
                             return: 1
                         m: m + 1
                     ---
@@ -49241,7 +49271,7 @@ fn: l2_mu_home (int: h; int: sel) int
         ---
         k: k + 1
     ---
-return: 0
+return: l2_mu_local_homes(h)
 
 # A use from the node of unit-level home h, anchored at the unit: a program part's method runs with its part's root as
 # its node (l2_m_lexparent, §10), so the root's unit path (l2_use_ns_slots) goes before the use's *n slots in
@@ -49296,7 +49326,7 @@ fn: l2_mu_collect (int: nops) int
                     return: 1
                 fx: 0
                 while: fx < l2_nsf_n
-                    if: l2_nsf_owner[fx] = r && l2_nsf_kind[fx] = 4 && l2_nsf_ref[fx] >= 0 && l2_mad_host_of(l2_nsf_ref[fx]) < 0 && l2_muh_add(l2_nsf_ref[fx]) != 0
+                    if: l2_nsf_owner[fx] = r && l2_nsf_kind[fx] = 4 && l2_nsf_ref[fx] >= 0 && l2_mad_host_of(l2_nsf_ref[fx]) < 0 && l2_muh_add(l2_nsf_ref[fx], 0) != 0
                         return: 1
                     if: l2_nsf_owner[fx] = r && l2_nsf_kind[fx] = 2 && l2_nsf_ref[fx] >= 0 && l2_mus_add(l2_nsf_ref[fx]) != 0
                         return: 1
@@ -49309,7 +49339,7 @@ fn: l2_mu_collect (int: nops) int
     ---
     i: 0
     while: i < l2_muh_n
-        if: l2_mu_home(l2_muh[i], 0) != 0
+        if: l2_mu_home(l2_muh[i], l2_muh_sel[i]) != 0
             return: 1
         i: i + 1
     ---
@@ -49325,10 +49355,10 @@ fn: l2_mu_collect_home (int: h) int
     l2_muh_n: 0
     if: h < 0
         return: 0
-    if: l2_muh_add(h) != 0
+    if: l2_muh_add(h, 0) != 0
         return: 1
     while: i < l2_muh_n
-        if: l2_mu_home(l2_muh[i], 0) != 0
+        if: l2_mu_home(l2_muh[i], l2_muh_sel[i]) != 0
             return: 1
         i: i + 1
     ---

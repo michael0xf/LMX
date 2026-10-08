@@ -1546,6 +1546,7 @@ prototype:
     fn: l2_method_src (int: mi; const: @(char path)) const: @: char
     fn: l2_m_part (int: mi) int
     fn: l2_m_file (int: mi) int
+    fn: l2_m_code_file (int: mi) int
     fn: l2_ns_part (int: ni) int
     fn: l2_ns_top (int: ni) int
     fn: l2_part_root (int: k) int
@@ -2897,7 +2898,7 @@ fn: l2_vis_method (int: mi) int
     ---
     # Code of a program part -- a method a part gave (§8), its root's procedure (§10): nothing of the source is
     # visible from it by its place (l2_vis_ok).
-    if: l2_m_file(mi) >= 0
+    if: l2_m_code_file(mi) >= 0
         l2_vis_on: 2
 return: 0
 
@@ -2915,21 +2916,25 @@ return: 0
 # reached through its node.
 fn: l2_own_unit_seen (int: oi; int: mi) int
     int: k
+    @: LmP0Node source
     if: oi < 0 || oi >= l2_own_n || l2_own_host[oi] != 0
+        return: 0
+    if: l2_own_mi[oi] = mi
         return: 0
     # §10: a method of a program part sees its part's root's fields -- own fields of that root's procedure, in
     # the root's slots -- declared above it in the part, as a method of the source sees the unit's fields.
-    k: l2_m_part(mi)
+    k: l2_m_code_file(mi)
     if: k >= 0 && l2_part_ns[k] >= 0 && l2_ns_proc[l2_part_ns[k]] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]
-        if: l2_own_decl[oi] = 0 || l2_own_decl[oi]\span = 0 || l2_m_node[mi] = 0 || l2_m_node[mi]\span = 0
+        source: l2_callable_source_node(mi)
+        if: l2_own_decl[oi] = 0 || l2_own_decl[oi]\span = 0 || source = 0 || source\span = 0
             return: 1
-        return: (cast: (int) (l2_own_decl[oi]\span\offset <= l2_m_node[mi]\span\offset))
+        return: (cast: (int) (l2_own_decl[oi]\span\offset <= source\span\offset))
     if: l2_e < 0 || l2_own_mi[oi] != l2_e || mi = l2_e
         return: 0
     # Code of a program part -- a method a part gave, its root's procedure -- is another unit's (§8, §10): the
     # source's fields are not in its scope -- a name it reads that it does not declare is a free name, bound
     # by its callers or unresolved.
-    if: l2_m_file(mi) >= 0
+    if: k >= 0
         return: 0
 return: l2_vis_ok(l2_own_decl[oi])
 
@@ -5525,6 +5530,32 @@ fn: l2_m_file (int: mi) int
     if: k < 0
         k: l2_ns_part(l2_m_nsof(mi))
 return: k
+
+# Code origin is distinct from row classification and physical NODE ancestry.
+# Local definitions keep their namespace parents before their local host;
+# nested methods keep their source host. This projection is valid before
+# source PLACE and introduces no runtime graph or name lookup.
+fn: l2_m_code_file (int: mi) int
+    int: k
+    int: ni
+    int: steps 0
+    while: mi >= 0 && mi < l2_m_n && steps <= l2_m_n
+        k: l2_m_file(mi)
+        if: k >= 0
+            return: k
+        ni: l2_m_nsof(mi)
+        if: ni >= 0
+            ni: l2_ns_top(ni)
+            k: l2_ns_part(ni)
+            if: k >= 0
+                return: k
+            mi: l2_ns_local[ni]
+            ---
+        else:
+            mi: l2_mad_host_of(mi)
+            ---
+        steps: steps + 1
+return: -1
 
 # The lexical parent of method mi's occurrence, as the builder names it: the unit, or for a method of a program
 # part whose root is built, that root (§10).
@@ -10637,7 +10668,7 @@ return: 0 - 1
 # that part (§8), every other in the source.
 fn: l2_method_src (int: mi; const: @(char path)) const: @: char
     int: k
-    k: l2_m_file(mi)
+    k: l2_m_code_file(mi)
     if: k >= 0
         return: l2_part_path[k]
 return: path
@@ -31908,20 +31939,20 @@ fn: l2_dyn_fwd (int: m; int: k) int
         return: 0
 return: (cast: (int) (l2_dyn_reads(m, k) = 0))
 
-# Hidden input k of method m as an input m resolves itself when it arrives absent: m is a method of the unit,
-# reads the name, and the name's lexical declaration is a number field of the unit.  The own row of that field,
+# Hidden input k of method m as an input m resolves itself when it arrives absent:
+# m reads the name and its lexical declaration is a visible numeric field. The own row of that field,
 # or -1.  The native entry (l2_emit_tramp_lex) and the walked body's ARG (l2_rw_arg_fb) read that cell through
 # the occurrence's own parent.
 fn: l2_hid_own_lex (int: m; int: k) int
     int: child
     @: LmP0Text nm
-    if: m < 0 || m >= l2_m_n || k < 0 || k >= l2_m_dyn[m] || l2_m_unit_level(m) = 0
+    if: m < 0 || m >= l2_m_n || k < 0 || k >= l2_m_dyn[m]
         return: 0 - 1
     nm: l2_dn(m, k)
     if: nm = 0 || l2_rw_num_ty(l2_own_of_dt(l2_dt(m, k))) = 0 || l2_dyn_reads(m, k) = 0
         return: 0 - 1
     child: l2_own_lexical(m, nm)
-    if: child < 0 || l2_own_mi[child] != l2_e || l2_own_is_slot(child) != 0 || l2_own_ty[child] != l2_own_of_dt(l2_dt(m, k))
+    if: child < 0 || l2_own_is_slot(child) != 0 || l2_own_ty[child] != l2_own_of_dt(l2_dt(m, k))
         return: 0 - 1
 return: child
 
@@ -31948,6 +31979,7 @@ return: l2_emit_call_ref(ft, value, ind, dest)
 fn: l2_emit_tramp_lex (int: i; int: k) int
     int: child l2_hid_own_lex(i, k - l2_m_arity[i])
     int: slot
+    int: depth
     const: @(char ty) "int"
     const: @(char rd) "lmx_int_value_known"
     const: @(char pre) ""
@@ -31958,7 +31990,8 @@ fn: l2_emit_tramp_lex (int: i; int: k) int
     if: child < 0
         return: 0
     slot: l2_graph_field_child(child)
-    if: slot < 0
+    depth: l2_lex_depth(i, l2_own_mi[child])
+    if: slot < 0 || depth < 0
         return: l2_error(l2_src, l2_m_node[i], "internal: a hidden input's lexical cell has no place")
     if: l2_own_ty[child] = 1
         ty: "char"
@@ -31978,7 +32011,14 @@ fn: l2_emit_tramp_lex (int: i; int: k) int
         ty: "ulong"
         rd: "lmx_ulong_value_known"
     ---
-    if: c.fprintf(l2_out, "    %s: l2_th%d\n    if: refs[%d] != 0\n        l2_th%d: %s%s(refs[%d])%s\n    else:\n        @@: void l2_txp%d lmx_arena_ref_cell(l2_self\\parent, %uU)\n        if: l2_txp%d = 0\n            c.fprintf(c.stderr, \"lmx: invariant: a dynamic input has no cell to read\\n\")\n            c.abort()\n        l2_th%d: %s%s(l2_txp%d[0])%s\n    ---\n", ty, k, k, k, pre, rd, k, suf, k, (cast: (unsigned) slot), k, k, pre, rd, k, suf) < 0
+    if: c.fprintf(l2_out, "    %s: l2_th%d\n    if: refs[%d] != 0\n        l2_th%d: %s%s(refs[%d])%s\n    else:\n        @@: void l2_txp%d lmx_arena_ref_cell(l2_self", ty, k, k, k, pre, rd, k, suf, k) < 0
+        return: 1
+    while: depth > 0
+        if: fputs("\\parent", l2_out) < 0
+            return: 1
+        depth: depth - 1
+    ---
+    if: c.fprintf(l2_out, ", %uU)\n        if: l2_txp%d = 0\n            c.fprintf(c.stderr, \"lmx: invariant: a dynamic input has no cell to read\\n\")\n            c.abort()\n        l2_th%d: %s%s(l2_txp%d[0])%s\n    ---\n", (cast: (unsigned) slot), k, k, pre, rd, k, suf) < 0
         return: 1
 return: 0
 
@@ -34522,7 +34562,7 @@ fn: l2_rw_seen (int: oi) int
         return: 0
     if: l2_own_mi[oi] = l2_rw_mi || l2_own_mi[oi] = l2_e
         return: 1
-    k: l2_m_part(l2_rw_mi)
+    k: l2_m_code_file(l2_rw_mi)
 return: (cast: (int) (k >= 0 && l2_part_ns[k] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]))
 
 # The type of the root's own numeric field named t, or -9 (not one: the emission says why).

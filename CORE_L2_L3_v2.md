@@ -509,19 +509,29 @@ source relationships; the place that executes the merge neither gives the copy
 its lexical parent nor resolves its free names. Where no caller gives a name,
 the copy's body reads the copied lexical state, and a later change of the
 original is not seen; the ordinary priority of a dynamic input is unchanged.
-Built (2026-10-05): the node's constructor copies its model's lexical tree --
-the unit's, every model being a method of the unit -- with the one traversal
-merge and Message creation share, the qualified branches retained; the node
-hangs under the copy, and its body reads the copy where no caller gives a name
-and through `node\x`. The view's model operands -- the model of a path's
+Current development implementation through Codex checkpoint `90bcf0dc`
+(2026-10-08): one constructor serves native and walked callers. It uses the
+existing partial graph copier shared with merge/Message creation, retaining
+qualified profiles and closing the model's uses over the code of retained
+local definitions. This is not a whole-unit copy: unused places stay absent.
+The original model's body/trailer slots are preserved; new datum cells append
+after them. Native readers in retained local bodies follow their actual
+constructed parent links. The constructor still accepts only a unit-level
+method and still seeds the lexical copy from `l2_program_unit`; selecting a
+part model's actual parent or an already copied source remains OPEN, not a
+language restriction. The node hangs under the copied lexical source, whose
+cells it reads where no caller supplies a name and through `node\x`.
+The view's model operands -- the model of a path's
 crossing, of an admission, an input's witness -- are read from the program's
 unit, not from the copy: the kernel keys a record of admission by the
 requirement's address. That this is the right source of every model operand is
 not shown
-([T7-MODEL-OPERAND-SOURCE](steps/defects.md#t7-model-operand-source)). The
-whole tree is copied, not only what the body uses: the cost is step A
-([ledger](steps/fable-continuation-20261003.md#t7-copy),
-[T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links)).
+([T7-MODEL-OPERAND-SOURCE](steps/defects.md#t7-model-operand-source)).
+The initial whole-tree implementation of 2026-10-05 and its cost measurements
+remain history in the [ledger](steps/fable-continuation-20261003.md#t7-copy).
+Current producer/reader evidence, regression gates and the unresolved parent
+checklist are in [the T7 journal](steps/t7-lexical-projection-20261008.md)
+and [T7-NODE-LEXICAL-LINKS](steps/defects.md#t7-node-lexical-links).
 The node's interface keeps the unbound formals only, against L3 §20: an open
 obligation
 ([MERGE-KEEPS-MODEL-INTERFACE](steps/defects.md#merge-keeps-model-interface),

@@ -9798,6 +9798,28 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_trailer_only_two_defaults_walk.lm2'; Source = 'unit_t7_trailer_only_two_defaults.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    # Source-only part controls: not evidence of T7 model-parent copying or
+    # direct external paths into a method's local named Structure.
+    [pscustomobject]@{ Name = 'unit_t7_part_local_source.lm2'; Parts = @('unit_t7_part_local_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_local_source_walk.lm2'; Source = 'unit_t7_part_local_source.lm2'; Parts = @('unit_t7_part_local_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_nested_source.lm2'; Source = 'unit_t7_part_local_source.lm2'; Parts = @('unit_t7_part_nested_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_nested_source_walk.lm2'; Source = 'unit_t7_part_local_source.lm2'; Parts = @('unit_t7_part_nested_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5,6); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_late_supplied.lm2'; Parts = @('unit_t7_part_late_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_late_supplied_walk.lm2'; Source = 'unit_t7_part_late_supplied.lm2'; Parts = @('unit_t7_part_late_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,5); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_late_refused.lm2'; Source = 'unit_t7_part_local_source.lm2'; Parts = @('unit_t7_part_late_source_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_t7_part_late_refused.lm2:8:9: unbound dynamic input cnt'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_late_refused_walk.lm2'; Source = 'unit_t7_part_local_source.lm2'; Parts = @('unit_t7_part_late_source_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_t7_part_late_refused_walk.lm2:8:9: unbound dynamic input cnt'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_main_offset_refused.lm2'; Parts = @('unit_t7_part_main_offset_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_t7_part_main_offset_refused.lm2:1:13: unbound dynamic input cnt'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_part_main_offset_refused_walk.lm2'; Source = 'unit_t7_part_main_offset_refused.lm2'; Parts = @('unit_t7_part_main_offset_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_t7_part_main_offset_refused_walk.lm2:1:13: unbound dynamic input cnt'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_part_walk.lm2'; Source = 'unit_merge_parent_t7_part.lm2'; Parts = @('unit_merge_parent_t7_part_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

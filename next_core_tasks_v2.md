@@ -2068,6 +2068,32 @@ source/harness/fixture bytes stayed frozen through the final serial gates.
 Keep the T7 parent and receiving/fallback/part dependencies OPEN; this is not
 proof of the full-formal/default contract or native reuse on the composed root.
 
+Fourth child, Codex gated source `bca1af00`: the code-origin projection follows
+existing namespace/nested-method ownership without changing row classification
+or physical NODE ownership. Numeric absent-input fallback follows completed
+parent edges; a supplied input, including zero, still wins. Ten new part/source
+controls are GREEN; family03 is 99 targets with the same three failed rows.
+Ordinary model calls resolve their own free input before forwarding it to S:
+these controls do not prove S's absent branch or T7 part copying. Kernel04
+GREEN297/114 actual selftests and L3_05 all 11 suites/four budgets. Frozen
+full04 is RED67/2638: no old verdict changes, ten added GREEN rows, none
+removed and no changed generic harness messages on old failures. The actual
+part-pair diagnostics did advance; do not confuse the generic message with
+the translator's reason. Twelve wrong-expected-value executions fail with
+81 rather than 7, including cleared-root dispatch. T7 remains OPEN; this is
+a bounded development checkpoint, not a stable promotion or stage closure.
+Next bounded dependency: fix the measured root classifier for a part-defined
+method before its registration
+([PART-CALL-HEAD-DECLARED](steps/defects.md#part-call-head-declared)): one
+`poke(5)` is silently retained as a definition and leaves 7 instead of 5;
+the second call is refused. This is separate from the T7 constructor. Then seed the
+existing partial copier with the actual model occurrence's lexical parent,
+anchor its uses at the selected source unit and pass the copied unit to the
+view. Neither the merge site nor the global prototype substitutes for that
+source. The consultant's source design is not runtime evidence; preserve the
+historical required-positive rows, native/walker oracles and admission-model
+operand debt separately. See the linked T7 journal for replay classifications.
+
 ### K04 — Callable actuals and hidden inputs
 
 Complete `CALLABLE-FORMAL-HIDDEN-CONTRACT`, `SUB-ACTUAL-REFERENCE-CLASSIFICATION`,

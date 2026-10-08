@@ -1,0 +1,15 @@
+# No merge: the part's source and caller-supplied 40/0 must stay distinct.
+fn: bound () int
+    int: cnt 40
+    return: model(0)
+fn: zero () int
+    int: cnt 0
+    return: model(0)
+int: r1 model(0)
+int: r2 bound()
+int: r3 zero()
+int: ok 7
+if: r1 != 7 || r2 != 40 || r3 != 0
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

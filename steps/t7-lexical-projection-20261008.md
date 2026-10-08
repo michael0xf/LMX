@@ -553,6 +553,148 @@ shared ordinary signature/body material and missing complete remapping.
 Native reuse and complete used lexical-tree copying for this constructor stay
 OPEN; the current T7 producer correction must not close them implicitly.
 
+## Child 4: source identity and numeric absent fallback (gated checkpoint)
+
+After pushed checkpoint `90bcf0dc`, translator candidate `bca1af00`, SHA256
+`A7B2491656EB478CBAAC34A223FDC6FA3342B796BA144DF551185297EC3CAEAB`, adds a
+translation-only `l2_m_code_file` over existing namespace parent/local-host and
+nested-method-host identities. `l2_m_file`, `l2_m_part` and the physical
+`l2_e_own_seg_mi` stay unchanged. Visibility and source diagnostics use the
+code-origin projection; part-root own fields compare against the original
+callable source node, including a local named Structure without a fn header.
+An own field of the same method is not a unit/free field of that method.
+
+`l2_hid_own_lex` now admits the already visible numeric lexical source without
+a unit-level restriction. Native absent-input emission follows the committed
+physical `l2_lex_depth` to that owner, written incrementally without a fixed
+text buffer. Present refs, including a present zero, retain precedence.
+
+Before/after diagnostics in `build/codex_handoff/t7_part_origin_*` show:
+
+- ordinary no-merge model calls with absent / caller 40 / caller zero return
+  7 / 40 / 0 both before and after, native and walked. The model itself can
+  supply the local body's input, so these are regression controls, NOT proof
+  that the local body's absent branch executed;
+- the two-level local body after the change has the same required results;
+- a late part-root declaration cannot supply the absent model call; the
+  explicit 40/0-only program succeeds. Main-file offsets do not grant scope;
+- directly calling `model\S` from outside its host goes from the baseline's
+  unresolved cnt to a separate not-built Structure-value path refusal. The
+  existing T7 part fixture similarly advances to poke's separate walkability
+  refusal. Neither required-positive row is declared fixed.
+
+Correlated read-only RESULT `CODEX-T7-PART-WITNESS-20261008-10` confirms that
+`l2_dyn_reads` delegates to `l2_node_of_text`, recursively searching nested
+definitions. Thus this ordinary model is classified as a reader itself; it
+resolves its input before calling S. No already-supported source witness was
+found which isolates S's absent branch: the external `model\S` call and the
+T7 part producer hit the distinct debts above. Do not change that classification
+just to manufacture coverage or call the unexercised native branch proven.
+There is no new language decision, runtime name mechanism or test-only dispatch.
+
+Ten new native/walked controls cover source ownership, nested namespace
+identity, caller 40/zero, forward-only declaration and cross-file offsets.
+`codex_t7_family_03`: 99 targets, three failures; against family02, no old
+verdict or recorded message changes, ten added rows all GREEN, none removed.
+The failures are the historical part pair and host_nested_return. The part
+pair's actual translator diagnostic advanced even though its generic harness
+message (no emitted L1) did not; retain both facts.
+
+Serial replay `build/codex_handoff/t7_origin_replay_01` covers the same 2615
+full65 translation commands (827 expected/nonzero exits). Against
+`t7_layout_replay_01`, there are no exit or L1-presence changes: 23 emitted L1
+files differ, and the two part diagnostics advance from unresolved cnt to the
+root operation's walkability refusal. Source/diff inspection of all 23 L1
+changes classifies them as:
+
+- `unit_absent_input_parts` and its walked twin: absence forwarded to the
+  actual part reader, native entry fallback and walked ARG's AT moved there;
+- four `unit_copy_call_chain_inputs` variants (base, source/target mutants,
+  walked): retained root field x's slot 3 added to the existing use closure,
+  its walked PRIM use payload enlarged by four, one SELF and one AT, and the
+  local native entry uses two parent links;
+- three held-actual variants (alike/free_names/local): no own-field-as-free
+  fallback in the forwarding wrapper, one redundant AT removed;
+- caller/formal/local_proc T7 pairs: numeric absent branches through two
+  parent links and the corresponding two walked AT fallbacks;
+- s7 part callable_field, root_below_definition, root_field (including
+  unit_walk_s7_part_root_field), root_two, site_part_repeat, and used_closure
+  part_lex pair: part-reader entry resolution, caller refs/absence forwarded
+  unchanged, corresponding ARG/AT placement. callable_field also changes
+  builder emission order/temporary numbering; its original frame/operator
+  populations remain except the one added fallback AT.
+
+The ignored `inspect_origin_replay.py` removes temporary numbers only to make
+manual inspection readable; that normalization is not an equivalence proof or
+a runtime gate. The complete frozen-byte harness supplies the executable
+regression check. Kernel04 is GREEN297 with 114 actually executed selftests;
+L3_05 has all 11 suites and four type budgets GREEN. Full04 completed on the
+same frozen translator, harness and seven input files: RED67/2638. Against
+full03: FAIL→OK 0, OK→FAIL 0, ten added GREEN rows, none removed, no changed
+generic harness messages on remaining failures. The part pair's actual
+diagnostics advance as classified above; both required positives remain RED.
+The wrapper confirms unchanged input bytes through all three serial gates.
+T7 remains OPEN; this checkpoint does not promote the stable tree.
+
+After full04 released the sole compiler, six wrong-expected-value programs
+were built serially with that same translator. Ordinary/nested part controls
+demand 8 instead of their correct 7; supplied-only controls demand 41 instead
+of 40. Native and methods-walked builds each return 81 and fail the driver's
+expected 7. Running each binary again with only the root native word cleared
+does the same: twelve negative executions, all detected. Evidence:
+`build/codex_handoff/origin_negative_01_*`, runner
+`build/codex_handoff/tools/run_origin_negative_01.ps1`. These witness actual
+execution and non-vacuous oracles, not coverage of S's absent-input branch.
+
+RESULT10 also flags a possible source/span pairing debt in error reporting:
+`l2_method_src(m)` and `l2_free_name_at(m,k)` are separate projections. Codex
+checked that the latter follows the original P0 text's address/length through
+`l2_source_text`, not arbitrary equal spelling. A forwarded input may still
+originate in another file; any correction needs that exact owner/source pair
+and a located witness, not a runtime names table or an unproved first-name
+search. No diagnostic-location fix is claimed by this slice.
+
+### Next bounded source-parent dependency (source audit, not implemented)
+
+Read-only RESULT `CODEX-T7-MODEL-PARENT-20261008-11` identifies the existing
+route: constructor input `l2_t7_at`, completed host-to-unit `l2_lex_depth`,
+the model's selected occurrence at `l2_occ_slot`, then its actual parent.
+The copier accepts a source parent as its partial seed and independently
+accepts unit-anchored paths; link fixup retains intermediate ancestors without
+copying their complete fields. A use ending at the model or a part root would
+copy that object whole, so no such synthetic use is justified just to find
+the seed. The copied parent, not the merge site, must parent the constructed
+node; the view also needs that copy's entry unit, not the seed mislabeled as
+a unit. Admission-model operand selection remains its separate OPEN debt.
+This is a source-level recommendation, not a measured positive or permission
+to assume every selected model is present in an already partial-copied host.
+That case needs its own producer/use-closure evidence.
+
+Before changing the constructor, isolate the historical root `poke(5)` /
+`poke(11)` refusal: source reading finds `l2_unit_names_method` scanning only
+the current root before part methods are registered. The first part-defined
+call may therefore be classified as a named Structure. This hypothesis is
+not measured yet. Request `CODEX-PART-HEAD-CENSUS-20261008-12` asks existing
+Opus for read-only scope/caller review, not coding. Ignored diagnostic sources
+are prepared in `build/codex_handoff/t7_part_next_sources_01`; execute only
+after full04 releases the sole compiler owner. New T7 diagnostics use the
+model-first spelling to isolate this dependency; historical data-first
+required-positive rows are not silently migrated or reclassified as refusals.
+
+Post-gate measurements on the same `bca1af00` binary confirm the classifier
+defect (`part_next_before_01_*`, `part_next_before_02_poke_value`): a single
+root `poke(5)` calls nothing and a following part method reads the unchanged
+7 instead of 5; with two calls the second is refused as `this declaration`
+at line 2. Native and methods-walked first-call controls both fail. The
+separate model-first factory, with its ordinary indented return, reaches
+`internal: a callable merge's model is not a method of the unit`
+(`part_next_before_02_model_parent`). These are distinct producer debts,
+not conflicting language rules. Fix the shared pre-registration method census
+first, preserving the forward-only scope of ordinary named Structures.
+The factory's initial trailer-only host spelling hit the separate nested-body
+diagnostic; no parser/host interpretation is inferred from that alone and
+that spelling is not used to certify the model-parent slice.
+
 ## Acceptance commands
 
 Run a fresh harness directory with explicit `bin/l1trans.exe`, `-KeepAll`,

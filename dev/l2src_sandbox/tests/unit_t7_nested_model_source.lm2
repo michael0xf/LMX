@@ -1,0 +1,17 @@
+fn: bin () int
+return: 0
+fn: take (bin: op) int
+return: op()
+fn: outer (int: y; int: x) int
+return: x + (take: merge(pm; y: y))
+fn: wrap (int: k) fn: (int: x) int
+    return: merge(outer; y: k)
+end: wrap
+@: w wrap(5)
+setc(100)
+int: a (w: 1)
+int: out 81
+if: a = 13
+    out: 7
+sendMessage: exit(exit_code: out; stdout: ""; stderr: "")
+return

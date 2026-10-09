@@ -794,6 +794,225 @@ misownership, fix the producer if reachable, and keep the nested-declaration
 binding/scope question separate. No outcome of those source-only witnesses
 is asserted here. Opus remains Q&A only, Codex the sole writer/build.
 
+### Sixth child: selected model operand and actual lexical source (gated checkpoint)
+
+Checkpoint `503ad610` published the fifth child's exact fourteen paths; remote
+main was verified at `503ad6105a9f3941149d13d17ef47fd25f85e86b`.
+The next candidate is translator blob
+`8341e6ba98f6c690ad2a80ca194d8d0bac5fc4bc`, SHA256
+`6F3C8E37169C7864359D0C326CCFB4A9F0E6E6AC037E96B05591B3FC1B1845AB`.
+It implements the measured owner correction and the real-model route of
+RESULT13/14, without changing language rules or kernel representation.
+
+- `l2_mad_take_nested` retains the first newly published declaration row,
+  verifies its source identity, and assigns no host when no row was
+  published. The old full05 binary refuses the nested helper/in-place
+  callable-formal probe with `the unit's statements changed between the
+  lexical pass's walks`; the owner-only candidate in `codex_owner_stage_01`
+  executes it successfully. The bound-root-declaration probe stops earlier
+  with `duplicate definition`, so the hypothesized self-parent case is not
+  certified reachable or fixed by that witness.
+- T7 BUILD passes the real model occurrence, not SELF, and records its
+  existing unit-child use in the performing home's dependency closure.
+  A copying host therefore retains the model value and the model's code
+  requirements by the ordinary fixed-point copier. No new runtime table,
+  name lookup, auxiliary graph or synthetic whole-unit edge is added.
+- Native and walked construction use the same model argument. Its actual
+  parent seeds the partial copy; the completed lexical depth locates its
+  source unit for use anchors. The result's parent is the copied model
+  parent, while the view receives the corresponding copied unit. Chains
+  are emitted incrementally, with no fixed depth or text buffer. A hosted
+  or namespace model without this selection producer stays an explicit
+  implementation debt, not an arbitrary prototype alias or a new ban.
+- Copying is a publication boundary: native construction publishes pending
+  writes, and its walked producer uses the existing PRIM_PUB path, as MAD
+  already does. The added native publication control already passed on
+  full05; it is not claimed as another measured fix.
+
+Baseline `parent_operand_before_01.log`: six main/part snapshot, two-copy
+and NODE rows stop at the old model-of-unit guard; the native nested
+factory also stops there. Walked nested/publication forms stop at the
+existing callable-formal subset refusal. Final source probes in
+`parent_operand_after_01.log` pass the six part rows and native nested
+factory/publication control. The nested factory keeps cnt=7, changes the
+original to 100, then returns 13, not live-source 106. The two-copy row
+keeps 5 and 11 after the original becomes 19; an explicit caller zero wins.
+
+Final-input focus `codex_model_source_stage_04`: 91 targets, four failures
+only -- historical `unit_t7_host_nested_return`, and three newly registered
+required-positive methods-walked rows (nested factory, publication,
+owner-formal). The historical T7 part pair now passes without changing
+its input or result oracle, including its data-first spelling; this does
+not establish general data-first layout semantics. All nine other new
+rows pass, each rerunning its actual graph with the physical root's native
+word cleared; native/walked method IDs and the native root are asserted
+where supported. The owner row's E is 5, not 4 (4 is the dormant named
+helper); this test-ID correction changes no source or expected result.
+Stage03 retained that erroneous ID; stage02 also retained two old textual
+expectations for SELF. Those expectations now require the actual model
+argument; the no-native-call assertion for an always-walked definition is
+strengthened to reject any native constructor call, not only SELF text.
+Stage01 failed selection validation (`unit_t7` was not a fixture stem);
+its built binary was used only for diagnostics, not as a focused certificate.
+
+`source_negatives_02.log`: eighteen wrong-value executions (nine compiled
+programs, normal and cleared-root) all reach 81 instead of expected 7 and
+fail the driver. They cover caller-zero priority, independent snapshots,
+NODE, live-source 106, nested-owner result and publication. The first
+batch stopped on an empty Parts parameter in the diagnostic helper; its
+earlier results are preserved, not substituted for the completed batch.
+
+Ordinary 200-merge loop, ten launches per mode: full05 native/walked
+13133/13187 ms, candidate native/walked 13239/13175 ms. These include process
+startup and driver launch/cleanup, are not isolated merge timings and show
+no material change in that control. The distinct repeated inner merge in
+an already copied factory passed ten launches of 200 calls, totaling
+390593 ms including process startup and driver launch/cleanup
+(`source_nested_bench_01/timed_1.log` through `timed_10.log`). This is a
+separate performance investigation, with no attributed cause or proposed
+semantic workaround. Do not infer a comparable old regression: the old
+binary refuses that part-model program before execution.
+Source inspection identifies work worth measuring, not an attributed cause:
+`lmx_copy_carry_records` takes two passes over the source arena's `impl_len`,
+and `lmx_implements_find` scans that table. Measure copied nodes/records and
+time by operation before choosing a change. Do not remove carried admission
+proofs, revalidate on every read, or add runtime name lookup to optimize this
+unattributed observation.
+
+Final harness blob `28d208ac439f0743b744a10360ea8b1224cd3919`, SHA256
+`DBA765681A19192CC68F51E058E373727BADAC010AF06876E784F5C8B82F4880`.
+Final serial acceptance (`t7_gates_07.log`): kernel06 GREEN297/114 actually
+run selftests; L3_07 all eleven suites/four budgets; full06 RED68/2660.
+Against full05: two old FAIL→OK (the historical T7 part pair), zero OK→FAIL,
+twelve added rows (nine GREEN, three required-positive RED), none removed,
+no changed generic message on the remaining old failures. All eleven
+translator/harness/fixture inputs stayed unchanged through kernel, L3,
+full and the subsequent replay. This is a development checkpoint, not
+full stage closure or stable promotion.
+
+Replay `t7_model_source_replay_01` executes all 2615 full65 translation
+commands serially, with 825 nonzero exits versus the prior 827. Against
+`t7_part_census_replay_02`: 2551 results are identical; 62 generated-L1
+files change; the two historical part commands change from refusal/no L1
+to success/emitted L1. No other exit, diagnostic or output-presence changes.
+Full inspection is saved as `model_source_replay_inspection_01.log` (3561
+lines). The 62 edit families are actual-model constructor operands, source
+parent/unit chains and use anchors, SELF replaced by the actual model ref
+and its existing null guard, PRIM replaced by PRIM_PUB, and the existing
+dirty-value publication blocks before native copying. Each PRIM removal
+matches one PRIM_PUB addition and one SELF removal; no residual edit family
+remains after classifying those lines. Readable alpha-normalization is not
+a proof of semantic equivalence. Replay omits injected fault environments
+and is diagnostic evidence, not a replacement for executed gates.
+Receiving-boundary/global admission-model operands, hosted/value-model
+selection, full formal/default preservation and native composed-body reuse
+remain OPEN after this limited source-parent repair.
+
+### Next child preparation (source audit, not an implemented correction)
+
+The next receiving/admission child must distinguish the selected callee's
+actual unit, its immediate NODE, and the ordinary Structure used as its
+requirement. `l2_m_recv_policy` still substitutes `l2_program_unit` for
+part/hosted/local contexts; `l2_recv_ref` feeds this policy to native
+declared/free input admission, and `l2_rw_recv_req` only emits RECEIVING for
+the old `node` class. The shared late projection must use the completed
+physical links. Formation classes (`l2_cfl_formal_alike`,
+`l2_cfl_recv_alike`) are already consulted before PLACE; replacing their
+policy by an unfinished physical depth would not be a sound repair.
+
+The adjacent native-reference fallback in `l2_hidden_from` emits
+`lmx_arena_ref_struct(l2_cN\parent, ns_unit_slot)` for a root requirement
+without accounting for callee depth; `l2_hidden_lex` still consults
+`l2_m_unit_level`. These are source facts, not yet a measured failure or
+permission to change which lexical declaration is visible. Numeric absent
+fallback, caller-source precedence, and present zero remain the previously
+gated contract. Read-only consultation
+`CODEX-T7-RECEIVING-PROJECTION-20261008-15` reviews this bounded dependency;
+Codex remains the only writer/build owner.
+
+RESULT15 is now received: a source-only review, not execution evidence.
+It separates unit-level admission requirements from local/K02c model
+occurrences and from explicit NODE reads. The suggested common unit
+projection follows the selected occurrence's completed parent chain to E;
+the immediate parent is not interchangeable with the unit at depth greater
+than one. Early formation classes need a conservative collection-time key
+whose equivalence remains valid after PLACE, with a late consistency check;
+an unresolved local/hosted producer must not be folded by a guessed depth.
+Native admission text must grow rather than truncate in `recv[192]`.
+The walked RECEIVING model still encodes only the immediate NODE; a counted
+ancestor operand for that existing operation is a proposed kernel dependency,
+not a landed feature or an instruction to invent runtime names/metadata.
+Ordinary/global model operands and reference-input fallback are distinct
+following children. Suggested part-formal witnesses may hit an earlier
+part-visibility refusal: measure that before attributing a receiving bug.
+
+The adjacent `l2_cf_set(me, cfp_j[j], l2_m_n - 1)` after recursive inline
+callable-descriptor collection is another FIRST/LAST-row source lead.
+The ignored nested-inline probe has now executed: it is refused at 6:17,
+`more arguments than op has formals`, on the outer actual `value`, both
+natively and with --walk-methods. This is a measured required-positive
+failure, not a fixed map. Read-only
+consultation `CODEX-T7-FORMAL-PRODUCER-20261008-16` reviewed recursive
+publication and all five collection callers; substantive RESULT16 and its
+name-spelling erratum are received. The source order publishes the own row
+before nested methods and inline descriptors. The immediate
+`l2_mad_take_nested(l2_m_n - 1, ...)` before any recursive collection is
+currently safe sequencing (`me` would state its intent); the later inline
+`l2_cf_set` is not. A shared first-published-row/identity check is the
+suggested producer contract, not a registry or a change to METHOD contents.
+Opus's scan of the old 67 red sources finds no nested inline descriptor
+shape, so neither this lead nor the bounded owner correction is claimed
+to explain those old failures. Fix and remeasure the shared publication
+contract before claiming the map fixed. Opus has no writer/build ownership.
+
+The existing 63-byte checks of method/formal/declared-throw names are already
+listed in FIXED-BLOCKS-AUDIT. A synthesized descriptor name adds one formal
+component per nested level and reaches the same check. Do not exempt only
+synthesized names or leave an arbitrary cap for written names: any follow-up
+must audit the shared name producers/readers and external source-name
+emission for the whole scope. No runtime name lookup is justified.
+
+RESULT `CODEX-T7-WALKED-CALLABLE-20261008-17` is also received, source-only.
+All three new walked failures in full06 are the explicit blanket
+`l2_rw_methods_count` refusal, not evidence against the source-parent repair.
+The existing source builder already counts/emits callable-formal bodies;
+ARG/witness/EXEC transport and one formation class are present, while
+`l2_rw_may` excludes every callable formal. Any correction must measure the
+existing frames, not merely remove a diagnostic. The same eligibility feeds
+`l2_src_eligible` before layout: full source-order/replay comparison is needed
+even for native twins. Actual multi-class formation and ordinary callable
+results remain distinct OPEN dependencies; a forced-walk test must not
+silently claim success by retaining a native address. Extend positive and
+stopped/throw controls, and explicitly review old pinned-native/text-refusal
+oracles rather than declaring every changed test a regression. No new
+registry, graph, runtime-name lookup or source-form exception is proposed.
+
+Ignored post-gate diagnostics (`post_gate_probes_01.log`) under
+`build/codex_handoff/t7_part_next_sources_01`: `publication_node_actual`
+uses explicit `node\cnt` so a caller's free input cannot mask an old copy;
+`receiving_part_main` plus `receiving_part_body` moves the declared-formal
+reader into a program part and creates its candidate after the copy, so a
+pre-existing admission cannot supply the missing receiving record. They
+have now executed serially, after the frozen acceptance chain:
+
+- Explicit NODE publication returns 5 on full05 and the required 16 on
+  full06. The expected-16 program goes from refusal-by-driver (81) to
+  GREEN, including cleared-root dispatch; the expected-5 control goes
+  from GREEN to 81. The initially hypothesized old value 12 was disproved,
+  not silently accepted. This measures the combined source/publication
+  repair, not isolated PRIM_PUB causality. The methods-walked versions
+  still stop at the known callable-formal exclusion. A direct `@:` capture
+  stops earlier at an unsupported initializer and proves no publication
+  behavior. These are ignored diagnostics, not new full06 rows.
+- The declared-formal part reader and RESULT15's free-Structure-input
+  variant both pass natively and with --walk-methods, each with normal and
+  cleared-root dispatch. The suggested earlier part-visibility refusal was
+  not observed. These positives are regression controls, not evidence of
+  a receiving bug or of a completed general projection. Inspect the actual
+  selected method/requirement reader before choosing a receiving witness.
+- The nested-inline callable descriptor refusal above is reproducible
+  before any producer correction; it supplies the next bounded map probe.
+
 ## Acceptance commands
 
 Run a fresh harness directory with explicit `bin/l1trans.exe`, `-KeepAll`,

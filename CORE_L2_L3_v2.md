@@ -509,18 +509,22 @@ source relationships; the place that executes the merge neither gives the copy
 its lexical parent nor resolves its free names. Where no caller gives a name,
 the copy's body reads the copied lexical state, and a later change of the
 original is not seen; the ordinary priority of a dynamic input is unchanged.
-Current development implementation through Codex checkpoint `90bcf0dc`
+Current gated development implementation, translator `8341e6ba`
 (2026-10-08): one constructor serves native and walked callers. It uses the
 existing partial graph copier shared with merge/Message creation, retaining
 qualified profiles and closing the model's uses over the code of retained
 local definitions. This is not a whole-unit copy: unused places stay absent.
 The original model's body/trailer slots are preserved; new datum cells append
 after them. Native readers in retained local bodies follow their actual
-constructed parent links. The constructor still accepts only a unit-level
-method and still seeds the lexical copy from `l2_program_unit`; selecting a
-part model's actual parent or an already copied source remains OPEN, not a
-language restriction. The node hangs under the copied lexical source, whose
-cells it reads where no caller supplies a name and through `node\x`.
+constructed parent links. The real selected model is an operand and a
+recorded dependency of its host; its actual parent is the copy seed, and
+completed parent links identify the source unit and its corresponding copy
+for the view. Main/part source aliases use one construction predicate;
+the node hangs under the copied lexical source, whose cells it reads where
+no caller supplies an input and through `node\x`. Part snapshots, independent
+copies and a retained factory which itself performs a merge have executed
+successfully. Hosted/value-model selection remains a separate producer debt. This does
+not close the admission-model operand issue below or the entire T7 stage.
 The view's model operands -- the model of a path's
 crossing, of an admission, an input's witness -- are read from the program's
 unit, not from the copy: the kernel keys a record of admission by the

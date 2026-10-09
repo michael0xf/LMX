@@ -25,6 +25,13 @@ Opus answers questions only and starts no coding, census or build. Baseline:
 T7-LOCAL-NAMED-UNIT, then PATH-STRUCTURE-LEAF and NODE-PATH-ANON-STRUCT.
 Earlier ownership records below are historical.
 
+Latest bounded Codex checkpoint: translator `8341e6ba`, kernel06
+GREEN297/114 selftests, L3_07 all eleven suites/four budgets, full06
+RED68/2660 (two old FAIL→OK, no OK→FAIL, twelve added rows: nine GREEN,
+three required-positive RED). Model-source/owner repair is gated; T7 stays
+OPEN. Exact evidence and next dependencies are in the
+[T7 journal](steps/t7-lexical-projection-20261008.md).
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,
@@ -2095,18 +2102,44 @@ from poke to the model-of-unit guard. No exit/output-presence/L1 differences;
 all candidate bytes frozen through the gates. This is a bounded development
 checkpoint, not T7 closure or stable promotion.
 
-Next bounded dependency: measure/fix
+The sixth child fixes the measured bounded defect
 [NESTED-METHOD-OWNER-LAST-ROW](steps/defects.md#nested-method-owner-last-row),
-identified by source-only RESULT14: nested method collection must assign the
-host to its own newly published row, not the last appended row or an old one.
-Then consume the actual model occurrence as the T7 construction operand and
-record its existing unit-child use in the host's dependency closure; seed the
-existing partial copier with that model occurrence's lexical parent,
-anchor its uses at the selected source unit and pass the copied unit to the
-view. Neither the merge site nor the global prototype substitutes for that
-source. The consultant's source design is not runtime evidence; preserve the
-historical required-positive rows, native/walker oracles and admission-model
-operand debt separately. See the linked T7 journal for replay classifications.
+identified by RESULT14 and reproduced before the correction. Collection
+assigns the host to its own newly published row, not the last appended row
+or an old one. The actual model is a T7 construction operand and an existing
+unit-child use in the host's dependency closure. Its lexical parent seeds the
+partial copier; uses are anchored at the selected source unit and the view
+receives the copied unit. Neither the merge site nor the global prototype
+substitutes for that source. Preserve historical required-positive rows and
+admission-model operand debt separately. See the T7 journal for evidence.
+
+Sixth child `8341e6ba` implements that route, preceded by the
+measured nested-owner correction. The selected model is a real T7 operand
+and recorded use of its host; its actual parent seeds the partial copy,
+and source/copy units are derived through completed parent links. No global
+fallback, extra graph, runtime names or depth cap. Focus stage04 is 91
+targets / four failures: the historical host_nested_return and three newly
+registered required-positive callable-formal walked rows. The old T7 part
+pair and nine other new rows pass, including cleared-root dispatch; eighteen
+wrong-value executions are rejected. Two prior SELF textual expectations
+now require the actual model argument without changing program results.
+Kernel06 is GREEN297/114 actual selftests; L3_07 passed all eleven suites
+and four budgets. Full06 RED68/2660: two old FAIL→OK, zero OK→FAIL, twelve
+new rows (nine GREEN, three required-positive RED), none removed. Replay
+of all 2615 commands: 2551 identical results, 62 classified L1-only edits,
+two part commands now succeed; all eleven source/harness/fixture inputs
+unchanged through the serial gates. Keep T7 OPEN. A
+repeated inner merge in a retained factory is a cost-audit lead, not an
+excuse to add a whole-unit retention edge or an unmeasured optimization.
+Next, measure/fix the first-row mapping of recursively collected inline
+callable descriptors (RESULT16); its ignored nested witness currently
+refuses at the outer formal with a spurious extra-argument diagnostic.
+Measure the existing common ARG/witness/EXEC route for callable formals
+before removing the blanket walked-body exclusion (RESULT17); do not
+silently count a multi-class pinned-native body as interpreted. Retain the
+receiving/admission model-operand and native hidden-use dependencies;
+full-formal/default,
+hosted/value selection and native composed bodies remain separate debts.
 
 ### K04 — Callable actuals and hidden inputs
 

@@ -44138,9 +44138,10 @@ fn: l2_rw_mad_host_struct (int: parent; int: mi; const: @(LmP0Text name); @: int
         return: l2_error(l2_src, l2_m_node[mi], "a callable merge lost a captured name")
 return: l2_rw_own(parent, oi, out)
 
-# The step that builds the node of the merge at `site`, under `parent`: [prim, record, contract, self, bound
+# The step that builds the node of the merge at `site`, under `parent`: [prim, record, contract, model, bound
 # values].  The record's function is the site's constructor (l2_t7_construct_<site>), the construction the native
-# body calls (l2_t7_write).  The first operand is the occurrence this body runs over; then, in the order the merge
+# body calls (l2_t7_write). The first operand is the selected model occurrence, a real consumed value and
+# therefore a dependency of this host when the host itself is copied; then, in the order the merge
 # writes them, the value each formal of the performing method that the merge binds to has where the merge stands.
 fn: l2_rw_t7_build (int: site; int: parent; @: int out) int
     []: char cname 64
@@ -44162,7 +44163,16 @@ fn: l2_rw_t7_build (int: site; int: parent; @: int out) int
     ---
     if: c.sprintf(cname, "l2_t7_construct_%d", site) < 0
         return: 1
-    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 4 + nv, @ prim) != 0 || l2_rw_frame(prim, "LMX_WALK_OP_SELF", 1, @ occ) != 0 || l2_rw_put(prim, 3, occ) != 0
+    # Graph copying observes published values, as the other callable constructor does.
+    if: l2_rw_frame(parent, "LMX_WALK_OP_PRIM_PUB", 4 + nv, @ prim) != 0
+        return: 1
+    occ: l2_rw_t
+    l2_rw_t: l2_rw_t + 1
+    if: l2_use_unit_child(1, l2_t7_model[site]) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_rw%d = 0\n            return: 1\n", occ, (cast: (unsigned) l2_occ_slot(l2_t7_model[site])), occ) < 0
+        return: 1
+    if: l2_rw_put(prim, 3, occ) != 0
         return: 1
     j: 0
     while: j < l2_t7_nb[site]
@@ -45216,14 +45226,22 @@ fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
                     frw: (cast: (@: LmP0Frame) stmt\as\frame)
                     frw\trailer: 0
                 ---
+            # Collection publishes this declaration's row first, then any
+            # nested methods/callable-formal descriptors. A bound declaration
+            # may publish no row at all. Never assign its host to the last row
+            # of those later producers, or to an earlier existing row.
+            idx: l2_m_n
             if: l2_collect_method(stmt, path, mi) != 0
                 return: 1
             if: l2_mad_ensure(l2_m_n) != 0
                 return: l2_error(path, stmt, "out of memory")
-            idx: l2_m_n - 1
-            l2_mad_host[idx]: mi
-            if: selfret != 0
-                model: idx
+            if: l2_m_n > idx
+                if: l2_m_node[idx] != stmt
+                    return: l2_error(path, stmt, "internal: nested method collection lost its declaration row")
+                l2_mad_host[idx]: mi
+                if: selfret != 0
+                    model: idx
+                ---
             ---
         if: l2_frame_head(stmt, "return") != 0 && stmt\as != 0 && stmt\as\frame != 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) = 1
             only: l2_next_active(stmt\as\frame\body\first_field)
@@ -47190,7 +47208,7 @@ fn: l2_t7_from_actual (int: mi; int: callee; int: fi; const: @(LmP0Node node); c
         return: 1
 return: 0
 
-# The header of the constructor of the merge at `site`: the occurrence the performing body runs over, then, in
+# The header of the constructor of the merge at `site`: the selected model occurrence, then, in
 # the order the merge writes them, one int per formal of the performing method that the merge binds to.
 fn: l2_t7_make_sig (int: site) int
     int: j 0
@@ -47206,7 +47224,7 @@ fn: l2_t7_make_sig (int: site) int
 return: 0
 
 # The walked body's entry to the same construction: the primitive entry over l2_t7_make_<site>.  refs[0] is the
-# occurrence the performing body runs over; refs[1..] are the bound values, in the order of the constructor's header.
+# selected model occurrence; refs[1..] are the bound values, in the order of the constructor's header.
 # How many operands there are, and that each is present, is what the step naming this entry is built with
 # (l2_rw_t7_build) and what the primitive's contract says: the entry does not check it again.
 fn: l2_t7_emit_construct (int: site) int
@@ -47233,8 +47251,8 @@ return: 0
 # body and for the walked one: l2_t7_make_<site>.  The native body calls it (l2_t7_write); the walked body's step
 # calls it through its primitive entry (l2_rw_t7_build, l2_t7_emit_construct).  The author's rule (2026-10-05,
 # T7-NODE-LEXICAL-LINKS): merge copies the used part of the tree and rewrites the parent links inside the copy;
-# the place of the merge gives the copy no parent and resolves nothing there.  The model is a method of the unit,
-# and its lexical tree is the unit's: l2_t7_emit_lex_copy copies it at the merge, and the node hangs under the
+# the place of the merge gives the copy no parent and resolves nothing there. The selected model's actual
+# parent is the copy seed; its source unit anchors its uses. The node hangs under the
 # copy.  Its body reads that copy where no caller gives a name -- the fallback of a free name (AT of the entry
 # unit, l2_rw_arg_fb) and `node\x` (the node's parent) -- the state of the merge, not the live one.
 fn: l2_t7_emit_make (int: site; const: @(char ind)) int
@@ -47270,8 +47288,12 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
         return: 1
     if: nh > 0 && c.fprintf(l2_out, "%s@@: void l2_t7s%d 0\n", ind, site) < 0
         return: 1
-    if: l2_m_unit_level(l2_t7_model[site]) = 0
-        return: l2_error(l2_src, l2_t7_at[site], "internal: a callable merge's model is not a method of the unit")
+    # A unit alias exists only for a non-namespace method row. Hosted rows
+    # require the activation-local producer, not a borrowed prototype alias.
+    # Main and part methods share this allocation predicate; depth is derived
+    # from completed parent metadata, never bounded by a language constant.
+    if: l2_t7_model[site] = l2_e || l2_m_nsof(l2_t7_model[site]) >= 0 || l2_mad_host_of(l2_t7_model[site]) >= 0 || l2_lex_depth(l2_t7_model[site], l2_e) <= 0
+        return: l2_error(l2_src, l2_t7_at[site], "a callable merge's model has no selectable source occurrence yet")
     if: l2_t7_emit_lex_copy(site, ind) != 0
         return: 1
     if: c.fprintf(l2_out, "%sl2_t7n%d: lmx_struct_new_owned(l2_t7_up, l2_program_arena)\n%sif: l2_t7n%d = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_t7n%d, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n", ind, site, ind, site, site, (cast: (unsigned) width), ind, ind) < 0
@@ -47313,18 +47335,28 @@ fn: l2_t7_emit_make (int: site; const: @(char ind)) int
         return: 1
 return: l2_t7_emit_construct(site)
 
-# The copy of the unit's lexical tree a callable merge's node hangs under (l2_t7_emit_make), made the way a merge
+# The copy of the model's lexical tree a callable merge's node hangs under (l2_t7_emit_make), made the way a merge
 # copies (READ-FIELD-CLOSURE; Codex -29 step 4): in part -- only the places the node's code uses, its model's and the
 # unit methods' its uses reach, all anchored at the unit (l2_mu_collect_home), resolved where the layout is final --
 # and the links that reach them, every other place absent; never a whole copy of the unit.  The
-# program's qualified branches are retained by their exact profiles where a use reaches one.  `l2_t7_up` is the copy;
-# `l2_t7_lex` names it for the view.  A failed copy stops the program, as every other failure of this constructor does.
+# program's qualified branches are retained by their exact profiles where a use reaches one. `l2_t7_up` is the
+# copied model parent; `l2_t7_lex` is its copied source unit for the view. No global prototype supplies either.
+# A failed copy stops the program, as every other failure of this constructor does.
 fn: l2_t7_emit_lex_copy (int: site; const: @(char ind)) int
     int: q 0
     int: i 0
     int: j
-    if: c.fprintf(l2_out, "%s[]: @(Lmx) l2_t7_keep %d\n%ssize_t: l2_t7_kn 0U\n%s@: Lmx l2_t7_lex 0\n", ind, (cast: (int) (l2_ebr_n + 1)), ind, ind) < 0
+    int: depth l2_lex_depth(l2_t7_model[site], l2_e)
+    int: d 1
+    if: depth <= 0
+        return: l2_error(l2_src, l2_t7_at[site], "internal: a callable merge model has no constructed source unit")
+    if: c.fprintf(l2_out, "%s[]: @(Lmx) l2_t7_keep %d\n%ssize_t: l2_t7_kn 0U\n%s@: Lmx l2_t7_lex 0\n%s@: Lmx l2_t7_source l2_t7_at\\parent\n%s@: Lmx l2_t7_unit l2_t7_source\n", ind, (cast: (int) (l2_ebr_n + 1)), ind, ind, ind, ind) < 0
         return: 1
+    while: d < depth
+        if: c.fprintf(l2_out, "%sl2_t7_unit: l2_t7_unit\\parent\n", ind) < 0
+            return: 1
+        d: d + 1
+    ---
     while: q < l2_ebr_n
         if: c.fprintf(l2_out, "%sl2_t7_keep[l2_t7_kn]: lmx_range_profile(l2_program_arena, (cast: (@: void) l2_program_qualified_at(%dU)))\n%sif: l2_t7_keep[l2_t7_kn] != 0\n%s    l2_t7_kn: l2_t7_kn + 1U\n", ind, q, ind, ind) < 0
             return: 1
@@ -47332,13 +47364,13 @@ fn: l2_t7_emit_lex_copy (int: site; const: @(char ind)) int
     ---
     if: l2_mu_collect_home(l2_t7_model[site]) != 0
         return: 1
-    if: l2_mur_n = 0 && c.fprintf(l2_out, "%sif: lmx_graph_copy_part_used_owned(l2_program_unit, l2_program_arena, l2_program_arena, l2_t7_keep, l2_t7_kn, 0, 0, 0, 0, 0U, 0U, @ l2_t7_lex) != 0 || l2_t7_lex = 0\n", ind) < 0
+    if: l2_mur_n = 0 && c.fprintf(l2_out, "%sif: lmx_graph_copy_part_used_owned(l2_t7_source, l2_program_arena, l2_program_arena, l2_t7_keep, l2_t7_kn, 0, 0, 0, 0, 0U, 0U, @ l2_t7_lex) != 0 || l2_t7_lex = 0\n", ind) < 0
         return: 1
     if: l2_mur_n > 0
         if: c.fprintf(l2_out, "%s[]: @(Lmx) l2_t7ua %d\n%s[]: size_t l2_t7uk %d\n%s[]: size_t l2_t7ul %d\n%s[]: size_t l2_t7us %d\n", ind, l2_mur_n, ind, l2_mur_n, ind, l2_mur_n, ind, l2_mur_slots) < 0
             return: 1
         while: i < l2_mur_n
-            if: c.fprintf(l2_out, "%sl2_t7ua[%dU]: l2_program_unit\n%sl2_t7uk[%dU]: 0U\n%sl2_t7ul[%dU]: %dU\n", ind, i, ind, i, ind, i, l2_mur_len[i]) < 0
+            if: c.fprintf(l2_out, "%sl2_t7ua[%dU]: l2_t7_unit\n%sl2_t7uk[%dU]: 0U\n%sl2_t7ul[%dU]: %dU\n", ind, i, ind, i, ind, i, l2_mur_len[i]) < 0
                 return: 1
             j: 0
             while: j < l2_mur_len[i]
@@ -47348,11 +47380,17 @@ fn: l2_t7_emit_lex_copy (int: site; const: @(char ind)) int
             ---
             i: i + 1
         ---
-        if: c.fprintf(l2_out, "%sif: lmx_graph_copy_part_used_owned(l2_program_unit, l2_program_arena, l2_program_arena, l2_t7_keep, l2_t7_kn, l2_t7ua, l2_t7uk, l2_t7us, l2_t7ul, %dU, %dU, @ l2_t7_lex) != 0 || l2_t7_lex = 0\n", ind, l2_mur_n, l2_mur_slots) < 0
+        if: c.fprintf(l2_out, "%sif: lmx_graph_copy_part_used_owned(l2_t7_source, l2_program_arena, l2_program_arena, l2_t7_keep, l2_t7_kn, l2_t7ua, l2_t7uk, l2_t7us, l2_t7ul, %dU, %dU, @ l2_t7_lex) != 0 || l2_t7_lex = 0\n", ind, l2_mur_n, l2_mur_slots) < 0
             return: 1
     ---
     if: c.fprintf(l2_out, "%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not copy its lexical tree\\n\")\n%s    c.abort()\n%sl2_t7_up: l2_t7_lex\n", ind, ind, ind) < 0
         return: 1
+    d: 1
+    while: d < depth
+        if: c.fprintf(l2_out, "%sl2_t7_lex: l2_t7_lex\\parent\n", ind) < 0
+            return: 1
+        d: d + 1
+    ---
 return: 0
 
 # Every merge's constructor, once, after the methods' bodies.
@@ -47366,7 +47404,7 @@ fn: l2_t7_emit_makes () int
 return: 0
 
 # The merge at `site`, where the performing body stands: one call of the site's constructor (l2_t7_emit_make) over
-# the occurrence this body runs over, with the value each bound formal of this method has here.
+# the selected model occurrence, with the value each bound formal of this method has here.
 fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
     int: j 0
     int: at
@@ -47377,7 +47415,10 @@ fn: l2_t7_write (int: site; const: @(char ind); int: do_ret) int
         return: 1
     if: l2_t7_ret[site] != 0 || l2_t7_steps[site] < 1
         return: l2_error(l2_src, l2_t7_at[site], "a callable merge needs a walkable body")
-    if: c.fprintf(l2_out, "%s@: Lmx l2_t7n%d 0\n%sl2_t7n%d: l2_t7_make_%d(self", ind, site, ind, site, site) < 0
+    l2_tx_clear(tok)
+    if: l2_tok_method_occ(l2_t7_model[site], tok) != 0 || l2_emit_publish(ind) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%s@: Lmx l2_t7n%d 0\n%sl2_t7n%d: l2_t7_make_%d(%s", ind, site, ind, site, site, tok\data) < 0
         return: 1
     while: j < l2_t7_nb[site]
         at: l2_t7_b0[site] + j

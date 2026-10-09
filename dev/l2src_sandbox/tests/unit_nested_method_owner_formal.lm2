@@ -1,0 +1,18 @@
+# A nested method which publishes an in-place callable-formal descriptor
+# still belongs to mk; its name is not exported to the program root.
+fn: mk (int: n) fn: (int: x) int
+    fn: helper (op(fn: (int: q) int) int(value)) int
+        return: op(value)
+    end: helper
+    fn: inner (int: x) int
+        return: x + n
+    end: inner
+    return: inner
+end: mk
+helper: 5
+@: w mk(2)
+int: ok 7
+if: (w: 1) != 3
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

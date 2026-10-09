@@ -1722,16 +1722,28 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         # NODE is a physical projection of this selected occurrence. The
         # historical one-cell form means one parent; a typed size operand
         # states any other count, including zero, without a depth limit.
-        if: code\array.size != 1U && code\array.size != 2U
+        # An explicit descriptor operand selects that existing base instead
+        # of self. This internal projection creates no context or source rule.
+        if: code\array.size != 1U && code\array.size != 2U && code\array.size != 3U
             return: c.LMX_WALK_INVALID
         index: 1U
-        if: code\array.size = 2U
+        if: code\array.size >= 2U
             leaf: lmx_arena_ref_value(code, 1U)
             if: lmx_walk_numeric_type(f\arena, leaf) != c.LMX_TYPE_SIZE_T
                 return: c.LMX_WALK_INVALID
             index: lmx_size_value_known(leaf)
         ---
         wholder: f\node
+        if: code\array.size = 3U
+            status: lmx_walk_eval(f, lmx_arena_ref_value(code, 2U), @ value)
+            if: status != c.LMX_WALK_OK
+                return: status
+            if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE || value.type != c.LMX_TYPE_LMX || value.ref = 0
+                return: c.LMX_WALK_INVALID
+            if: lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_STRUCT
+                return: c.LMX_WALK_INVALID
+            wholder: (cast: (@: Lmx) value.ref)
+        ---
         while: index > 0U
             if: wholder = 0 || lmx_walk_kind(f, (cast: (@: void) wholder)) != c.LMX_KIND_STRUCT || wholder\parent = 0
                 return: c.LMX_WALK_INVALID

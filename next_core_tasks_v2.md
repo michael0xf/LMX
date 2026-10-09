@@ -216,6 +216,45 @@ then full local method collection. Do not bypass correspondence or move
 definitions to the unit. Only the bounded producer closes; parents and
 stages8/8a remain OPEN and stable unchanged.
 
+The complete-reference checkpoint is published at `731a2aa3` (all three
+heads equal). Immediate active child:
+`CODEX-COPIED-REFERENCE-MODEL-PROJECTION-20261009-17`; original declaration
+identity, selected actual holder and the model operand must agree before
+consuming the completed correspondence. Exact scope and uninterrupted
+acceptance/publication chain:
+[copied-model journal](steps/copied-reference-model-projection-20261009.md).
+
+Private candidate09 `4DCC9E9D` joins the model operand of path writes to
+the same actual-instance projection as reads. It also covers source
+containers without method rows. All96 actual native/walked/root-mode
+executions pass, as do three live wrong-model faults and NODE28. Replay2615
+preserves all exits/diagnostics/output presence;70 L1-only changes are
+classified. Serial84154 terminated with rejection: focus RED29/543,
+kernel19 GREEN297/114, L3_19 all eleven suites/four budgets, but full19
+RED76/2809 contains two old GREEN regressions (`unit_ref_field_value_read`
+and its walked twin). The strict checker stopped before final frozen-input
+audit/replay. Preserve this evidence and correct the common projection;
+candidate09 is not accepted or published.
+
+Candidate13 `22F4D6F2` retains actual copied-model selection and repairs the
+coupled source-flow producer for stored reference fields, including deferred
+machine typing. Source-field keys/edges are compiler-only; no runtime map,
+name, helper graph or read-side admission is added. Private06 supplies28
+copied/contract executions plus68 retained controls; chain_controls05 adds8
+actual stored-field forwarding executions. All104 pass in native/genuinely
+walked methods and native/cleared roots; three live wrong-model faults are
+rejected. Replay2615 retains every exit/diagnostic/output presence against
+checkpoint16, with70 L1-only changes. Relative to rejected candidate09,
+the9 L1 changes are seven exact pair-constant reorderings and two corrected
+field-flow consumers. Fresh serial acceptance is terminal: focus02 RED29/547,
+kernel20 GREEN297/114 actually executed selftests (NODE28 included), L3_20
+eleven suites/four budgets, full20 RED74/2811. Two old copy rows recover,
+all eight additions pass, no old GREEN regression/removal/changed failure.
+All44 frozen inputs/162 gated copies match; final2615 replay is identical
+to the tested private bytes, including every generated L1 file.
+Only after exact bounded acceptance/publication continue full local fn/fm/sub
+collection; no stable or parent closure. No pause after that checkpoint.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

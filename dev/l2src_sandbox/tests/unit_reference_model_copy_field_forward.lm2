@@ -1,0 +1,35 @@
+Model:
+    int: x 11
+Holder:
+    @: Model ref Model
+Candidate:
+    int: pad 99
+    int: x 20
+end: Candidate
+fn: check () int
+    int: bad 0
+    first: merge: Holder
+    first\ref: Candidate
+    @: Model q
+    q: first\ref
+    if: q\x != 20
+        bad: 1
+    @: Model r q
+    r\x: 21
+    if: Candidate\x != 21 || first\ref\x != 21 || Model\x != 11
+        bad: 2
+    second: merge: first
+    @: Model s second\ref
+    if: s\x != 21
+        bad: 3
+    s\x: 23
+    if: Candidate\x != 23 || first\ref\x != 23 || second\ref\x != 23 || Model\x != 11
+        bad: 4
+    if: @ s\x != @ Candidate\x
+        bad: 5
+    if: bad != 0
+        return: 80 + bad
+return: 7
+int: result check()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

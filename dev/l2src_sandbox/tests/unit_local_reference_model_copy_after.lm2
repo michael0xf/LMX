@@ -1,0 +1,40 @@
+fn: read () int
+    Outer:
+        int: pad 17
+        Inner:
+            int: x 11
+        end: Inner
+        @: Inner ref Inner
+    end: Outer
+    Outer
+    before: merge: Outer
+    # A pointer cell copies its primitive value; it still shares its pointee.
+    if: before\ref != Outer\Inner || before\ref = before\Inner || before\ref\x != 11
+        return: 81
+    before\Inner\x: 23
+    before
+    if: before\ref != before\Inner || before\ref\x != 23
+        return: 81
+    second: merge: before
+    if: second\ref != before\Inner || second\Inner = before\Inner
+        return: 81
+    if: @second\ref\x != @before\Inner\x || second\ref\x != 23
+        return: 81
+    second\Inner\x: 31
+    if: second\ref\x != 23
+        return: 81
+    second
+    if: second\ref != second\Inner || @second\ref\x != @second\Inner\x || second\ref\x != 31
+        return: 81
+    before
+    if: before\ref != before\Inner || before\ref\x != 23 || Outer\ref\x != 11
+        return: 81
+    if: second\pad != 17 || before\pad != 17 || Outer\pad != 17
+        return: 81
+    return: second\ref\x
+end: read
+int: ok 7
+if: read() != 31
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

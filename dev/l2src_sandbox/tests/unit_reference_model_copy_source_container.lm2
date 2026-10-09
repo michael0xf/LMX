@@ -1,0 +1,26 @@
+# A source container has physical ownership even without a procedure row.
+# Copy keeps a primitive pointer's pointee; a later explicit write admits
+# against the copied receiving declaration, not the original one.
+Host:
+    (): Inner
+        int: k 1
+        me: Inner
+    end: Inner
+end: Host
+copy: merge: Host
+fn: check () int
+    if: copy\Inner\k != 1 || Host\Inner\k != 1
+        return: 81
+    copy\Inner\me\k: 4
+    if: Host\Inner\k != 4 || copy\Inner\k != 1
+        return: 82
+    copy\Inner\me: copy\Inner
+    copy\Inner\me\k: 9
+    if: copy\Inner\k != 9 || Host\Inner\k != 4
+        return: 83
+    if: @copy\Inner\me\k != @copy\Inner\k
+        return: 84
+    return: 7
+end: check
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

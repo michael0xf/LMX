@@ -76,8 +76,10 @@ predef: "l2src/lmx_scratch.h.lm1"
 #   own     [own, holder, slot]           read the activation's working value
 #   own_of  [own_of, holder-expression, slot]  read a hosted working value
 #   arg     [arg, ordinal, fallback?, type-witness]  present input or lexical fallback
-#   node    [node, size_t-count?]         selected occurrence's parent ancestry;
-#             absent count means one, zero means the occurrence itself.
+#   node    [node, size_t-count?, descriptor-expression?]  physical parent ancestry;
+#             absent count means one, zero selects the base itself. The base
+#             is self unless explicitly supplied; it must be a present non-null
+#             Structure descriptor. An invalid explicit base never falls back.
 #   set_arg [set_arg, ordinal, value, type-witness]  write callee-owned input storage
 #   at      [at, holder, slot]            read physical declared storage
 #   of      [of, descriptor-expression, slot, model?]  physical path read

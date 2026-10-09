@@ -135,7 +135,7 @@ still OPEN. Continue the copied-reference model debt immediately after
 publication, then full method collection; no parent or stable promotion.
 
 <a id="local-copied-reference-model-identity"></a>
-### LOCAL-COPIED-REFERENCE-MODEL-IDENTITY — 2026-10-09, Codex, OPEN required positive
+### LOCAL-COPIED-REFERENCE-MODEL-IDENTITY — 2026-10-09, Codex, BOUNDED FIX VERIFIED `CODEX-COPIED-REFERENCE-MODEL-PROJECTION-20261009-17`
 
 `unit_local_reference_contract_copy`: a local Outer owns Inner and
 `@: Inner ref Inner`. A merge copy explicitly executes that body; its ref
@@ -153,6 +153,25 @@ same actual instance, including copies. This is connected to the next
 selected receiving-model slice after the complete-reference producer,
 not a new language decision. Evidence and uninterrupted continuation:
 [declaration journal](local-complete-declaration-actions-20261009.md).
+
+After complete-reference publication `731a2aa3`, the next sole writer/build
+child starts immediately. Its exact selected-source/holder/model boundaries
+and uninterrupted acceptance are in the
+[copied-model journal](copied-reference-model-projection-20261009.md).
+
+Candidate09 is rejected by full19: two old field-reference receiving chains
+regress, despite correct physical model selection. Candidate13 `22F4D6F2`
+also preserves the original namespace field's source-flow identity and joins
+it to existing compiler D105 edges, including deferred machine typing.
+No reader fabricates admission. Private104 executions and three live faults
+pass;2615 recorded translations retain all exits/diagnostics/presences,70
+L1-only changes classified. Fresh focus02 RED29/547, kernel20 GREEN297/114
+executed selftests, L3_20 eleven suites/four budgets, full20 RED74/2811:
+two old copy recoveries/eight GREEN additions/no old regression/removal/
+changed failure. All44 frozen inputs/162 copies match; final2615 replay
+is byte-exact against the tested private candidate. NODE28 executes on the
+fresh actual runtime. This closes the bounded identity/source-flow defect,
+not full local method collection, parent T7, stable or stages8/8a.
 
 <a id="compiler-text-view-ownership"></a>
 ### COMPILER-TEXT-VIEW-OWNERSHIP — 2026-10-03, Codex, IN WORK

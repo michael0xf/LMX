@@ -1,0 +1,48 @@
+fn: read () int
+    Outer:
+        int: pad 17
+        Middle:
+            int: pad 23
+            Leaf:
+                int: x 11
+            end: Leaf
+            @: Leaf ref Leaf
+        end: Middle
+        @: Middle ref Middle
+    end: Outer
+    copy: merge: Outer
+    if: copy\ref != 0 || copy\Middle\ref != 0
+        return: 81
+    copy\Middle
+    copy
+    if: copy\ref != copy\Middle || copy\ref\ref != copy\Middle\Leaf
+        return: 81
+    if: @copy\ref\ref\x != @copy\Middle\Leaf\x || copy\ref\ref\x != 11
+        return: 81
+    copy\ref\ref\x: 31
+    if: copy\Middle\Leaf\x != 31 || Outer\Middle\Leaf\x != 11
+        return: 81
+    second: merge: copy
+    if: second\ref != copy\Middle || second\ref\ref != copy\Middle\Leaf
+        return: 81
+    if: @second\ref\ref\x != @copy\Middle\Leaf\x || second\ref\ref\x != 31
+        return: 81
+    second\Middle\Leaf\x: 47
+    if: second\ref\ref\x != 31
+        return: 81
+    second\Middle
+    second
+    if: second\ref != second\Middle || second\ref\ref != second\Middle\Leaf || second\ref\ref\x != 47
+        return: 81
+    second\ref\ref\x: 47
+    if: copy\ref\ref\x != 31 || Outer\Middle\Leaf\x != 11
+        return: 81
+    if: second\pad != 17 || second\Middle\pad != 23
+        return: 81
+    return: copy\ref\ref\x
+end: read
+int: ok 7
+if: read() != 31
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

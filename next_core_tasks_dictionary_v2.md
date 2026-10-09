@@ -105,7 +105,7 @@ kind10/11 distinguish structural crossing from explicit deeper following;
 depth is in the closed type, not encoded as a new field kind per depth.
 Twelve fresh and68 retained executions pass, as do three compiled live
 initialization/address faults;2615 recorded translations are unchanged.
-The copied-reference pair remains required-positive RED: admission uses
+At checkpoint16 the copied-reference pair is required-positive RED: admission uses
 the copied Inner model while the later reader asks for the original model.
 This is a selected-instance/projection debt, not an absent-map fallback,
 permission to use a raw slot, or a new null policy. Full local fn collection
@@ -115,6 +115,34 @@ terminal. Two old initializer rows recover; eight additions include six
 GREEN/two required copied-model RED; no old regression/removal/changed
 failure. Final2615 replay is exact;39 inputs/142 copies match. Continue
 copied model projection immediately, then full local method collection.
+
+The active copied-model child shares one selected declaration projection
+between reads and path writes/admission, including source containers with
+no procedure row. Original field/source ownership is translation data;
+the actual model address and completed admission are runtime data. A
+primitive pointer copied by merge still shares its pointee until an explicit
+rebind; graph-owned child references are remapped within the copy. Do not
+confuse these two contracts. Candidate09 `4DCC9E9D` passes96 actual runs,
+three wrong-model faults and NODE28. Its2615 replay retains every exit,
+diagnostic and output presence;70 L1-only changes are classified. Full19
+rejects candidate09 with two old `unit_ref_field_value_read` regressions;
+the chain stopped before final audit/replay. Correct the common selection,
+not the expected result or admission policy. Publication and full local
+fn/fm/sub collection remain pending. Candidate13 `22F4D6F2` preserves that
+selection and adds the missing compiler source-flow closure for stored
+reference fields and deferred pointer expressions. Original source rows are
+not runtime field metadata. The104 actual private executions and three live
+fault controls pass;2615 exits/diagnostics/presences match checkpoint16,
+with70 classified L1 changes. Seven pair-constant reorderings retain exact
+content; two producer/consumer changes remove the full19 regressions in actual
+private execution. Fresh acceptance is terminal: focus02 RED29/547,
+kernel20 GREEN297/114 executed selftests, L3_20 eleven suites/four budgets,
+full20 RED74/2811. Two old copy recoveries/eight GREEN additions/no old
+regression/removal/changed failure. All44 frozen inputs/162 copies match;
+final2615 replay is byte-exact against the tested private candidate.
+NODE28 passes on the fresh actual runtime. Only this bounded debt closes;
+see
+the [copied-model journal](steps/copied-reference-model-projection-20261009.md).
 
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another

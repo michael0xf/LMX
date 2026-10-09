@@ -9806,12 +9806,28 @@ $fixtures = @(
         Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_reference_contract_repeated_walk.lm2'; Source = 'unit_local_reference_contract_repeated.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4); NativeMethods = @(1); Absent = @(); Debt = @() },
-    # REQUIRED POSITIVE RED until admission and the later path agree on the
-    # actual copied receiving model. No prototype/identity-map fallback.
+    # Admission and later paths select the same copied receiving declaration.
+    # Primitive pointer payloads remain shared until an explicit rebind.
     [pscustomobject]@{ Name = 'unit_local_reference_contract_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_reference_contract_copy_walk.lm2'; Source = 'unit_local_reference_contract_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_model_copy_after.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_model_copy_after_walk.lm2'; Source = 'unit_local_reference_model_copy_after.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_model_copy_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_model_copy_deep_walk.lm2'; Source = 'unit_local_reference_model_copy_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_model_copy_source_container.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_model_copy_source_container_walk.lm2'; Source = 'unit_reference_model_copy_source_container.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_model_copy_field_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_model_copy_field_forward_walk.lm2'; Source = 'unit_reference_model_copy_field_forward.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_reference_contract_bad_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_local_reference_contract_bad_candidate.lm2:3:9: assignment value has incompatible type'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_reference_contract_bad_candidate_walk.lm2'; Source = 'unit_local_reference_contract_bad_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;

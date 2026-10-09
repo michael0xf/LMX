@@ -1344,6 +1344,10 @@ prototype:
     fn: l2_rw_path (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int path) int
     fn: l2_rw_path_meta (const: @(LmP0Node node); const: @(LmP0Text t); int: say; @: int path) int
     fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
+    fn: l2_rw_path_model (@: int path; int: level; int: parent; @: int out) int
+    fn: l2_rw_reference_model (@: int path; int: field_level; int: req; int: parent; @: int out) int
+    fn: l2_rw_selected_model_tail (@: int path; int: level; int: req; int: root; int: parent; @: int out) int
+    fn: l2_rw_reference_holder (@: int path; int: level; int: parent; @: int out) int
     fn: l2_rw_path_current (@: int path) int
     fn: l2_path_current (int: mi; int: ns; int: method) int
     fn: l2_rw_path_read (const: @(LmP0Node node); const: @(LmP0Text t); int: parent; @: int out) int
@@ -1356,7 +1360,7 @@ prototype:
     fn: l2_occ_expr (int: mi; const: @(char unit); @: L2Tx dest) int
     fn: l2_emit_build_occ (int: mi) int
     fn: l2_payload_expr (@: L2Tx val) int
-    fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out) int
+    fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out; @: int model_path) int
     fn: l2_rw_is_letter (int: oi) int
     fn: l2_own_ref_decl (const: @(LmP0Node stmt); int: mi) int
     fn: l2_own_ref_candidate (int: own) int
@@ -1364,7 +1368,7 @@ prototype:
     fn: l2_root_ref_row (const: @(LmP0Node stmt)) int
     fn: l2_rw_reference_value (@: LmP0Field first; int: n; int: ty; int: parent; @: int out) int
     fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
-    fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out) int
+    fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out; @: int model_path) int
     fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: int out) int
     fn: l2_rw_struct_arg (const: @(LmP0Node node); @: LmP0Field a; int: span; int: ni; int: other_ok; int: parent; @: int out) int
     fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int out) int
@@ -1393,7 +1397,7 @@ prototype:
     fn: l2_d105_any (int: mi) int
     fn: l2_d105_tnode (int: p; @: char dest) int
     fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: @(char value); const: @(char ind); int: at_mi) int
-    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk) int
+    fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model)) int
     fn: l2_ruse_reset () int
     fn: l2_ruse_of (int: own) int
     fn: l2_ruse_root_slot (int: own; int: req; int: slot) int
@@ -1430,7 +1434,7 @@ prototype:
     fn: l2_admit_received (int: mi; int: callee; int: j; const: @(char occ); const: @(char value); const: @(char ind)) int
     fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
     fn: l2_rw_recv_model (int: admit; int: req; int: callee) int
-    fn: l2_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: @(char ind); @: char dest) int
+    fn: l2_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: @(char model); const: @(char ind); @: char dest) int
     fn: l2_d105_emit_tables () int
     fn: l2_d105_width (int: req) int
     fn: l2_d105_declare_maps () int
@@ -1440,7 +1444,7 @@ prototype:
     fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; int: tmi; int: tk; @: int out) int
-    fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out) int
+    fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out; @: int model_path) int
     fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     fn: l2_rw_count (@: LmP0Field first) int
     fn: l2_rw_send (@: LmP0Node stmt; int: into; @: int out) int
@@ -1584,8 +1588,12 @@ prototype:
     fn: l2_reference_fields (@@: LmP0Field first; @: int n) int
     fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address out) int
     fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSource out) int
+    fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSource out) int
+    fn: l2_check_reference_receiving (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: model; const: @(LmP0Text name); int: mi) int
     fn: l2_d105_own_key (int: own) int
     fn: l2_d105_key_own (int: key) int
+    fn: l2_d105_field_key (int: row) int
+    fn: l2_d105_key_field (int: key) int
     fn: l2_d105_key_method (int: mi; int: key) int
     fn: l2_own_layout (int: own) int
     fn: l2_own_call_origin (int: own) int
@@ -1597,6 +1605,10 @@ prototype:
     fn: l2_emit_constructed_layout (int: model; const: @(char value); const: @(char req); const: @(char ind)) int
     fn: l2_layout_token (int: ni; @: char dest) int
     fn: l2_model_inst (int: mi; int: ni; const: @(char ind); @: L2Tx dest) int
+    fn: l2_model_tail (int: ni; int: root; @: L2Tx dest) int
+    fn: l2_model_selected_root (int: context; int: ni; int: own; int: committed; @: int root; @: int depth; @@: L2SourceField field) int
+    fn: l2_reference_model_context (int: ni; int: res; int: slot; int: own) int
+    fn: l2_model_inst_selected (int: mi; int: context; int: ni; const: @(char ind); const: @(char base); int: own; @: L2Tx dest) int
     fn: l2_model_root_own (int: ni) int
     fn: l2_pointer_compatible (int: target; int: value) int
     fn: l2_unit_defines_struct (const: @(LmP0Text t); const: @(LmP0Node stop)) int
@@ -1927,6 +1939,7 @@ prototype:
     fn: l2_field_pointee (int: ns; int: own; const: @(char pd); size_t: off; size_t: len) int
     fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
     fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
+    fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
     fn: l2_dec_literal (const: @(LmP0Text t); @: size_t out_v) int
     fn: l2_path_arr_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_elem; @: size_t out_count) int
     fn: l2_path_field_leaf (const: @(char pd); size_t: pn; @: int out_kind; @: int out_ent; @: int out_row) int
@@ -1947,10 +1960,10 @@ prototype:
     fn: l2_admit_site (int: mi) int
     fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) int
     fn: l2_emit_positional_admit (int: mi; const: @(char inst); const: @(char value); const: @(char ind)) int
-    fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; @: L2ReferenceSource source; int: place) int
+    fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; @: L2ReferenceSource source; int: place; const: @(char selected_model)) int
     fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value) int
-    fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; int: place) int
+    fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model)) int
     fn: l2_emit_admit_own (int: mi; int: oi; const: @(char value); const: @(char ind)) int
     fn: l2_implicit_name (int: g) const: @: char
     fn: l2_throws_frame (int: mi) @: LmP0Node
@@ -4416,9 +4429,9 @@ fn: l2_emit_ret_tr (int: mi; const: @(char ind); const: @(LmP0Structure body)) i
     # D-105 native: a result admitted by name records its value before it leaves (l2_d105_emit_admit).  A dynamic
     # candidate -- a value of opaque type (RECEPTION-EDGE-DEBTS (f)), a formal, an own reference, a call's result --
     # is refused there as this method's implicit `implements` (DUPLICATE-STOP).
-    if: l2_input_model(mi, -1) >= 0 && (l2_return_opaque(body\first_field, n, mi) != 0 || l2_d105_dynamic(@ source) != 0) && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok\data, ind, 1, 0, -1, mi, mi, -1) != 0
+    if: l2_input_model(mi, -1) >= 0 && (l2_return_opaque(body\first_field, n, mi) != 0 || l2_d105_dynamic(@ source) != 0) && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok\data, ind, 1, 0, -1, mi, mi, -1, 0) != 0
         return: 1
-    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) = 0 && l2_d105_dynamic(@ source) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok\data, ind, 1, 0, -1, -1, -1, -1) != 0
+    if: l2_input_model(mi, -1) >= 0 && l2_return_opaque(body\first_field, n, mi) = 0 && l2_d105_dynamic(@ source) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ source, l2_tok\data, ind, 1, 0, -1, -1, -1, -1, 0) != 0
         return: 1
     # §7b: the value is evaluated above; what is marked is published before the return (book §14).
     if: l2_emit_publish(ind) != 0
@@ -11592,7 +11605,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
             # Deferred machine typing does not remove the receiving model's
             # language-level admission obligation.
             if: receiving_model >= 0
-                return: l2_admit_site(mi)
+                return: l2_check_reference_receiving(stmt, first, n, receiving_model, receiving_name, mi)
             return: 0
     ---
     if: composite = 0 && only\value != 0 && only\value\kind = c.LM_P0_NODE_FRAME && only\value\as != 0 && only\value\as\frame != 0 && l2_text_eq(only\value\as\frame\head, "sizeof")
@@ -11639,17 +11652,6 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     # machine pointer spelling. A void* conversion cannot erase this obligation.
     if: receiving_model >= 0
         l2_reference_source(first, n, mi, @ reference_source)
-        # Physical receivers need the same source-to-target table even when
-        # the destination is a resolved place rather than a lexical own row.
-        if: l2_d105_prepare(receiving_model, @ reference_source, stmt) != 0
-            return: 1
-        if: receiving_name != 0
-            receiving_own: l2_own_find_decl(mi, receiving_name, stmt)
-            if: receiving_own < 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_text_same(stmt\as\frame\head, receiving_name) != 0
-                receiving_own: l2_resolved_own(mi, receiving_name)
-            ---
-        if: receiving_own >= 0 && l2_d105_note(mi, l2_own_mi[receiving_own], l2_d105_own_key(receiving_own), first, n, stmt) != 0
-            return: 1
         if: l2_colon_is_graph_ty(value_ty) != 0
             actual_status: l2_actual_ns(mi, first, n, path, stmt, @ candidate_model)
             if: actual_status = 1
@@ -11657,7 +11659,7 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
             if: actual_status = 0 && reference_source.method < 0 && l2_admit_consumer_ix(candidate_model, receiving_model, receiving_name, l2_fn_frame(mi), path, stmt, "assignment") != 0
                 return: 1
             ---
-        return: l2_admit_site(mi)
+        return: l2_check_reference_receiving(stmt, first, n, receiving_model, receiving_name, mi)
     # RECEPTION-EDGE-DEBTS (d): an opaque reference place holds what was given to it, as an opaque formal and an
     # opaque result do (l2_d105_note_return): the sources of the value given are the place's.
     if: receiving_name != 0 && l2_pointer_depth(target_ty) = 1
@@ -11669,6 +11671,29 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
             return: 1
     ---
 return: 0
+
+# Logical reception is not skipped when a composite's C99 spelling is
+# deferred. Preparation and source flow are the same for every typed place;
+# only a reached admission publishes a runtime correspondence.
+fn: l2_check_reference_receiving (const: @(LmP0Node stmt); @: LmP0Field first; int: n; int: model; const: @(LmP0Text name); int: mi) int
+    int: own -1
+    L2ReferenceSource: source
+    L2ReferenceSource: target
+    l2_reference_source(first, n, mi, @ source)
+    if: l2_d105_prepare(model, @ source, stmt) != 0
+        return: 1
+    if: name != 0
+        own: l2_own_find_decl(mi, name, stmt)
+        if: own < 0 && stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_text_same(stmt\as\frame\head, name) != 0
+            own: l2_resolved_own(mi, name)
+        ---
+    if: own >= 0 && l2_d105_note(mi, l2_own_mi[own], l2_d105_own_key(own), first, n, stmt) != 0
+        return: 1
+    if: own < 0 && name != 0 && l2_reference_path_source(name, mi, @ target) = 0
+        if: l2_d105_note(mi, (target.method), (target.place), first, n, stmt) != 0
+            return: 1
+        ---
+return: l2_admit_site(mi)
 
 # Resolution chooses the target act; the receiving-value contract is shared
 # with an explicit declaration initializer.
@@ -11730,9 +11755,28 @@ fn: l2_d105_own_key (int: own) int
 return: -2 - own
 
 fn: l2_d105_key_own (int: key) int
-    if: key > -2
+    if: key > -2 || key < -1 - l2_own_n
         return: -1
 return: -2 - key
+
+# Original namespace fields use the other end of the existing compiler key
+# space. These are source coordinates in D105, never runtime graph records.
+# Own/formal/result keys retain their existing encoding. Integer exhaustion
+# is an allocation/index failure, not a language field-count limit.
+fn: l2_d105_field_key (int: row) int
+    if: row < 0 || row >= l2_nsf_n || row > c.INT_MAX - 2 - l2_own_n
+        l2_alloc_err: 2
+        return: -1
+return: c.INT_MIN + row
+
+fn: l2_d105_key_field (int: key) int
+    int: row
+    if: key >= -1 - l2_own_n
+        return: -1
+    row: key - c.INT_MIN
+    if: row < 0 || row >= l2_nsf_n
+        return: -1
+return: row
 
 fn: l2_d105_key_method (int: mi; int: key) int
     int: own l2_d105_key_own(key)
@@ -11950,12 +11994,75 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
         out\schema: l2_reference_path_leaf(first, n, mi)
         out\layout: out\schema
         return: 0
+    # A stored reference field carries sources written to its original
+    # declaration, not the model's physical layout. The common path resolver
+    # supplies that declaration through copies, crossings and source bodies.
+    if: n >= 3
+        @: char path_text l2_address_path_text(first, n)
+        LmP0Text: path_word
+        int: path_status 1
+        if: path_text != 0
+            path_word.data: path_text
+            path_word.length: strlen(path_text)
+            path_status: l2_reference_path_source(@ path_word, mi, out)
+            l2_xfree(path_text)
+        if: path_status = 0
+            return: 0
+        ---
     callee: l2_d105_callee(mi, first, n)
     if: callee >= 0
         out\schema: l2_input_model(callee, -1)
         out\method: callee
         out\place: -1
 return: 0
+
+# A stored reference's original source coordinate. Resolve with ordinary
+# ordinal/LAST and field/body rules; do not infer layout from its pointee type.
+fn: l2_reference_path_source (const: @(LmP0Text text); int: mi; @: L2ReferenceSource out) int
+    []: int local 42
+    @: int path l2_rw_path_room(text, local, 42)
+    int: saved_rw l2_rw_mi
+    int: saved_cur l2_cur_mi
+    int: status
+    int: level
+    int: kind
+    int: row
+    int: own
+    if: path = 0 || out = 0
+        return: 1
+    l2_rw_mi: mi
+    l2_cur_mi: mi
+    status: l2_rw_path_meta(0, text, 0, path)
+    l2_rw_mi: saved_rw
+    l2_cur_mi: saved_cur
+    if: status != 0 || path[2] < 1
+        return: 1
+    level: path[2] - 1
+    kind: path[7 + 5 * level]
+    if: kind = 16
+        own: path[6 + 5 * level]
+        if: own < 0 || own >= l2_own_n || l2_own_nsty_get(own) < 0 || l2_pointer_depth(l2_ft_of_own(l2_own_ty[own])) != 1
+            return: 1
+        out\schema: l2_own_schema(own)
+        out\layout: -1
+        out\method: l2_own_mi[own]
+        out\place: l2_d105_own_key(own)
+        return: 0
+    ---
+    if: kind != 10
+        return: 1
+    # The field's source identity is retained before receiving-flow closure
+    # marks the holder as mapped. Raw composed slots are not namespace rows.
+    if: path[10 + 5 * level] > -3
+        return: 1
+    row: -3 - path[10 + 5 * level]
+    if: row < 0 || row >= l2_nsf_n || l2_nsf_kind[row] != 10 || l2_nsf_pointee(row) < 0
+        return: 1
+    out\schema: l2_nsf_pointee(row)
+    out\layout: -1
+    out\method: l2_e
+    out\place: l2_d105_field_key(row)
+return: (cast: (int) (out\place = -1))
 
 # The declared Structure of the field a path span ends at, read where mi stands, or -1.
 fn: l2_reference_path_leaf (@: LmP0Field first; int: n; int: mi) int
@@ -21345,6 +21452,158 @@ fn: l2_model_inst (int: mi; int: ni; const: @(char ind); @: L2Tx dest) int
         return: l2_tx_set(dest, nm)
 return: l2_emit_graph_field_value(oi, ind, dest)
 
+# A declaration's descendant suffix over a selected physical root. This is
+# the same completed child relation used by ordinary model projection.
+fn: l2_model_tail (int: ni; int: root; @: L2Tx dest) int
+    if: ni = root
+        return: 0
+    if: ni < 0 || l2_ns_parent[ni] < 0 || l2_model_tail(l2_ns_parent[ni], root, dest) != 0
+        return: 1
+return: l2_model_child(ni, dest)
+
+# Read the declaration from the selected source occurrence, not the later
+# querying activation. The original field supplies its source host and all
+# completed physical edges. No model object or admission record is created.
+fn: l2_reference_model_context (int: ni; int: res; int: slot; int: own) int
+    int: row
+    if: own >= 0
+        return: l2_own_mi[own]
+    if: res >= 0
+        row: l2_mrs_slot_row(res, slot)
+        if: row < 0
+            return: -1
+        ni: l2_nsf_owner[row]
+    ---
+    if: ni < 0 || ni >= l2_ns_n
+        return: -1
+    # A source container need not have a generated method row. Preserve that
+    # resolved container identity in the compiler's context, not in runtime.
+    if: l2_ns_proc[ni] < 0
+        return: -3 - ni
+return: l2_ns_proc[ni]
+
+# Both emitters consume one completed physical source-selection plan.
+# COUNT retains topology; only PLACE/FILL use committed coordinates.
+fn: l2_model_selected_root (int: context; int: ni; int: own; int: committed; @: int root; @: int depth; @@: L2SourceField field) int
+    int: host l2_e
+    int: extra 0
+    int: source_ns -1
+    int: source_links 0
+    int: steps 0
+    @: L2SourceContainer owner 0
+    @: L2SourceContainer source_owner 0
+    @: L2SourceField source_field 0
+    @: L2GraphField original 0
+    @: L2GraphPlace place 0
+    if: context = -1 || context = -2 || ni < 0 || ni >= l2_ns_n || root = 0 || depth = 0 || field = 0
+        return: 1
+    \root: ni
+    \field: 0
+    while: l2_ns_parent[\root] >= 0
+        \root: l2_ns_parent[\root]
+    ---
+    if: l2_ns_local[\root] >= 0
+        \field: l2_source_definition_field(\root, 0, -1, @ owner)
+        if: \field = 0 || owner = 0
+            return: l2_error(l2_src, l2_ns_at[\root], "internal: a selected model has no source-owning field")
+        host: owner\source_mi
+    ---
+    # The same ownership walk covers source containers without a procedure.
+    # Namespace descendants have one completed child edge; a local root's
+    # original source field supplies its whole physical holder suffix.
+    if: context <= -3
+        source_ns: -3 - context
+        while: source_ns >= 0 && source_ns < l2_ns_n && steps <= l2_ns_n
+            if: source_links = c.INT_MAX
+                return: 1
+            source_links: source_links + 1
+            if: l2_ns_parent[source_ns] >= 0
+                source_ns: l2_ns_parent[source_ns]
+            else:
+                if: l2_ns_local[source_ns] >= 0
+                    source_field: l2_source_definition_field(source_ns, 0, -1, @ source_owner)
+                    if: source_field = 0 || source_owner = 0
+                        return: 1
+                    context: source_owner\source_mi
+                    place: source_owner\place
+                    while: committed != 0 && place != 0
+                        if: source_links = c.INT_MAX
+                            return: 1
+                        source_links: source_links + 1
+                        place: place\parent
+                    ---
+                else:
+                    context: l2_e
+                    if: l2_ns_eternal[source_ns] >= 0
+                        context: -1
+                    ---
+                ---
+                source_ns: -1
+            ---
+            steps: steps + 1
+        ---
+        if: source_ns != -1 || context < 0
+            return: 1
+    ---
+    \depth: l2_lex_depth_at(context, host, committed)
+    if: \depth = -2 && committed = 0
+        \depth: 0
+    if: own >= 0 && committed != 0
+        original: l2_graph_field(own)
+        if: original = 0
+            return: 1
+        place: original\holder
+        while: place != 0
+            if: extra = c.INT_MAX
+                return: 1
+            extra: extra + 1
+            place: place\parent
+        ---
+    ---
+    if: source_links > c.INT_MAX - extra || \depth < 0 || \depth > c.INT_MAX - extra - source_links
+        return: l2_error(l2_src, l2_ns_at[\root], "internal: a selected model has no physical source ancestor")
+    \depth: \depth + extra + source_links
+return: 0
+
+fn: l2_model_inst_selected (int: mi; int: context; int: ni; const: @(char ind); const: @(char base); int: own; @: L2Tx dest) int
+    int: root ni
+    int: depth
+    int: temp l2_tn
+    @: L2SourceField field 0
+    @: L2GraphField place 0
+    []: char name 48
+    if: l2_schema_kind(ni) != 1
+        return: l2_model_inst(context, ni, ind, dest)
+    while: l2_ns_parent[root] >= 0
+        root: l2_ns_parent[root]
+    ---
+    # Eternal roots are intentionally shared, with no lexical parent to copy.
+    if: l2_ns_eternal[root] >= 0
+        return: l2_model_inst(context, ni, ind, dest)
+    if: l2_model_selected_root(context, ni, own, 1, @ root, @ depth, @ field) != 0
+        return: 1
+    l2_tn: l2_tn + 1
+    if: c.snprintf(name, 48U, "l2_selected_model%d", temp) < 0 || c.fprintf(l2_out, "%s@: Lmx %s %s\n", ind, name, base) < 0
+        return: 1
+    while: depth > 0
+        if: c.fprintf(l2_out, "%sif: %s = 0\n", ind, name) < 0 || l2_emit_path_bail(mi, ind) != 0 || c.fprintf(l2_out, "%s%s: %s\\parent\n", ind, name, name) < 0
+            return: 1
+        depth: depth - 1
+    ---
+    if: field != 0
+        place: @ field\place
+        if: l2_emit_graph_holder(place\holder, name, ind) != 0 || c.fprintf(l2_out, "%s%s: lmx_arena_ref_struct(%s, %zuU)\n", ind, name, name, place\child) < 0
+            return: 1
+        ---
+    else:
+        if: c.fprintf(l2_out, "%s%s: lmx_arena_ref_struct(%s, %uU)\n", ind, name, name, (cast: (unsigned) l2_ns_unit_slot(root)) ) < 0
+            return: 1
+        ---
+    ---
+    if: l2_tx_set(dest, name) != 0
+        return: 1
+return: l2_model_tail(ni, root, dest)
+
 # A site that can refuse admission makes its method fail the way a failing
 # merge does, so the method takes the status ABI (closed over callers later).
 fn: l2_admit_site (int: mi) int
@@ -25167,6 +25426,11 @@ return: l2_emit_path_to(pd, pn, mi, ind, at, out_kind, 0)
 # arr_ok=1 additionally selects an Array descriptor cell for indexing;
 # arr_ok=2 restricts the operand to a Structure for the existing merge route.
 fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
+return: l2_emit_path_receiving(pd, pn, mi, ind, at, out_kind, arr_ok, 0)
+
+# The same resolved physical path supplies the receiving model for a write.
+# Its model temporary survives evaluation of a RHS that itself walks a path.
+fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok; @: L2Tx receiving) int
     size_t: off 0U
     size_t: len 0U
     int: ni 0 - 1
@@ -25188,11 +25452,20 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     @: L2GraphField actual_field
     int: current 0
     int: view_model -1
+    int: model_context
+    int: model_extra
+    int: reference_model -1
+    const: @(char model_base)
+    []: char view_instance_own 128
+    L2Tx: view_instance_tx
+    @: L2Tx view_instance l2_tx_local(@ view_instance_tx, view_instance_own, 128U)
     int: segocc
     []: char l2_proot_own 64
     L2Tx: l2_proot_tx
     @: L2Tx l2_proot l2_tx_local(@ l2_proot_tx, l2_proot_own, 64U)
     []: char sl 40
+    if: receiving != 0 && l2_tx_set(receiving, "") != 0
+        return: 1
     if: l2_path_root(pd, pn, @ ni, @ res, @ oi, @ root, @ fi) != 0
         return: l2_error(l2_src, at, "unknown field path root")
     # The host the next name is resolved in, as l2_path_kind: a body root's body, a method root's own level.
@@ -25348,13 +25621,47 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             segocc: 0 - 1
             if: l2_seg_occurrence(pd, off, len, @ segocc) != 0
                 return: l2_error(l2_src, at, "malformed field path segment")
-            if: l2_d105_emit_slot(mi, view_model, slot, segocc < 0, ind, sl) != 0
+            if: l2_tx_len(view_instance) = 0U && l2_model_inst(mi, view_model, ind, view_instance) != 0
+                return: 1
+            if: l2_d105_emit_slot(mi, view_model, slot, segocc < 0, view_instance\data, ind, sl) != 0
                 return: 1
         ---
         if: i + 1 < segs && kind = 10 && res < 0
             ent: l2_field_pointee(ni, field_own, pd, off, len)
         if: i + 1 < segs && kind = 10 && res >= 0
             ent: l2_mrs_ref_pointee(res, slot)
+        # The next reference's declared model is selected before losing the
+        # actual holder. A mapped holder supplies its required instance, not
+        # its candidate as a substitute for that interface.
+        reference_model: -1
+        if: i + 1 < segs && kind = 10
+            reference_model: ent
+        if: receiving != 0 && i + 1 = segs && (kind = 10 || kind = 11)
+            reference_model: l2_field_pointee(ni, field_own, pd, off, len)
+            if: res >= 0
+                reference_model: l2_mrs_ref_pointee(res, slot)
+            ---
+        ---
+        if: reference_model >= 0
+            model_base: "l2_pst"
+            model_context: l2_reference_model_context(ni, res, slot, field_own)
+            model_extra: field_own
+            if: view_model != -1
+                model_base: view_instance\data
+                if: l2_schema_kind(view_model) = 1
+                    model_context: l2_reference_model_context(view_model, -1, -1, -1)
+                model_extra: -1
+            ---
+            if: l2_model_inst_selected(mi, model_context, reference_model, ind, model_base, model_extra, view_instance) != 0
+                return: 1
+            if: receiving != 0 && i + 1 = segs && l2_tx_set(receiving, view_instance\data) != 0
+                return: 1
+            ---
+        else:
+            if: l2_tx_set(view_instance, "") != 0
+                return: 1
+            ---
+        ---
         view_model: -1
         if: i + 1 < segs && kind = 10
             view_model: ent
@@ -30126,13 +30433,13 @@ fn: l2_rw_array_place_operand (const: @(LmP0Node stmt); const: @(L2ArrayPlace pl
     if: place\own >= 0
         status: l2_rw_own(\out, place\own, @ child)
     else:
-        if: capacity < 0 || capacity > (c.INT_MAX - 6) / 3
+        if: capacity < 0 || capacity > (c.INT_MAX - 6) / 5
             l2_alloc_err: 2
             return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
-        if: l2_mul_ok((cast: (size_t) (6 + 3 * capacity)), c.sizeof(c.int)) = 0
+        if: l2_mul_ok((cast: (size_t) (6 + 5 * capacity)), c.sizeof(c.int)) = 0
             l2_alloc_err: 2
             return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
-        path: (cast: (@: int) l2_xmalloc((cast: (size_t) (6 + 3 * capacity)) * c.sizeof(c.int)))
+        path: (cast: (@: int) l2_xmalloc((cast: (size_t) (6 + 5 * capacity)) * c.sizeof(c.int)))
         if: path = 0
             return: l2_alloc_or(l2_src, stmt, "cannot allocate an Array operand path")
         status: l2_rw_path_resolve_sized(stmt, @ place\base, 1, 1, capacity, path)
@@ -33231,7 +33538,7 @@ fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2
     if: form = 2
         st: l2_emit_admit(mi, l2_nsty_get(r, t), value, ind)
     if: form = 3
-        st: l2_emit_model_admit(mi, l2_input_model(r, t), source, value, ind, 0, 0, -1, dyn_mi, r, t)
+        st: l2_emit_model_admit(mi, l2_input_model(r, t), source, value, ind, 0, 0, -1, dyn_mi, r, t, 0)
     l2_recv_unit: saved
 return: st
 
@@ -35734,8 +36041,11 @@ return: ty
 #   [2] the count of names after the root; [3] the last field's number type (own storage code), or
 #       -1 when it is not a number; [4] the Structure that holds the last field; [5] 1 when the way
 #       goes through a reference (the root, or a reference field, kind 10);
-#   [6 + 3i], [7 + 3i], [8 + 3i] the slot, kind and admitted holder model
-#   of name i + 1. The model is -1 between reference-binding crossings.
+#   [6 + 5i], [7 + 5i], [8 + 5i] the slot, kind and admitted holder model;
+#   [9 + 5i], [10 + 5i] the original source context and field identity:
+#   a nonnegative own row, -1 absent, or -3-minus-namespace-source-row.
+#   These are compiler-only coordinates, not stored in the runtime graph.
+#   The model is -1 between reference-binding crossings.
 # Each name but the last is an inline nested Structure (kind 2) or a letter's payload (kind 3); the
 # last is a number field -- size_t, char, int, unsigned, ulong (kinds 0, 1, 7, 8, 9) -- or not.  0,
 # or 1 with the refusal made when `say` (the typing pass asks silently).
@@ -35751,22 +36061,22 @@ fn: l2_rw_seg_cap (const: @(LmP0Text t)) int
         return: 1
 return: n
 
-# A table for the resolved path of t: six header cells and three per name, in `local` when its cap cells hold
+# A table for the resolved path of t: six header cells and five per name, in `local` when its cap cells hold
 # them, else storage of that size kept until l2_release (l2_text_room).  0 when there is no memory or the count
 # does not fit; the resolver then refuses (a null table), as for a path it cannot resolve.
 fn: l2_rw_path_room (const: @(LmP0Text t); @: int local; int: cap) @: int
     int: n l2_rw_seg_cap(t)
     size_t: isz
-    if: n > (c.INT_MAX - 6) / 3
+    if: n > (c.INT_MAX - 6) / 5
         l2_alloc_err: 2
         return: 0
-    if: 6 + 3 * n <= cap && local != 0
+    if: 6 + 5 * n <= cap && local != 0
         return: local
     isz: c.sizeof(c.int)
-    if: l2_mul_ok((cast: (size_t) (6 + 3 * n)), isz) = 0
+    if: l2_mul_ok((cast: (size_t) (6 + 5 * n)), isz) = 0
         l2_alloc_err: 2
         return: 0
-return: (cast: (@: int) l2_text_room((cast: (size_t) (6 + 3 * n)) * isz, 0, 0U))
+return: (cast: (@: int) l2_text_room((cast: (size_t) (6 + 5 * n)) * isz, 0, 0U))
 
 fn: l2_rw_path_resolve (const: @(LmP0Node node); const: @(LmP0Text t); int: project; int: say; @: int path) int
 return: l2_rw_path_resolve_sized(node, t, project, say, l2_rw_seg_cap(t), path)
@@ -35992,16 +36302,37 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
                 l2_rw_refuse(node, "a field path")
             return: 1
         ---
-        path[6 + 3 * n]: slot
+        path[6 + 5 * n]: slot
         if: project != 0 && view_model != -1 && segocc < 0
-            path[6 + 3 * n]: slot + l2_d105_width(view_model)
+            path[6 + 5 * n]: slot + l2_d105_width(view_model)
         ---
-        path[7 + 3 * n]: kind
-        path[8 + 3 * n]: view_model
+        path[7 + 5 * n]: kind
+        path[8 + 5 * n]: view_model
+        path[9 + 5 * n]: l2_reference_model_context(ni, res, slot, field_own)
+        path[10 + 5 * n]: field_own
+        if: field_own < 0 && res >= 0
+            int: source_row l2_mrs_slot_row(res, slot)
+            if: source_row >= 0
+                path[10 + 5 * n]: -3 - source_row
+            ---
+        if: field_own < 0 && res < 0 && ni >= 0
+            int: source_row slot
+            if: project != 0
+                source_row: l2_ns_row_at_slot(ni, slot)
+            if: source_row >= 0
+                path[10 + 5 * n]: -3 - source_row
+            ---
+        if: view_model != -1
+            if: l2_schema_kind(view_model) = 1
+                path[9 + 5 * n]: l2_reference_model_context(view_model, -1, -1, -1)
+            if: path[10 + 5 * n] >= 0
+                path[10 + 5 * n]: -1
+            ---
+        ---
         if: field_own >= 0 && (bm >= 0 || bh >= 0 || (n = 0 && path[0] = 8))
-            path[6 + 3 * n]: field_own
-            path[7 + 3 * n]: 16
-            path[8 + 3 * n]: -1
+            path[6 + 5 * n]: field_own
+            path[7 + 5 * n]: 16
+            path[8 + 5 * n]: -1
         ---
         view_model: -1
         if: kind = 10
@@ -36205,15 +36536,15 @@ fn: l2_use_path (@: int path) int
         n: 1
     ---
     while: level <= path[2]
-        kind: path[7 + 3 * (level - 1)]
+        kind: path[7 + 5 * (level - 1)]
         if: kind = 16
             tags[n]: 4
-            vals[n]: path[6 + 3 * (level - 1)]
-            holder: l2_own_nsty_get(path[6 + 3 * (level - 1)])
+            vals[n]: path[6 + 5 * (level - 1)]
+            holder: l2_own_nsty_get(path[6 + 5 * (level - 1)])
         else:
-            if: path[8 + 3 * (level - 1)] != 0 - 1 || (kind != 2 && kind != 10 && kind != 0 && kind != 1 && kind != 7 && kind != 8 && kind != 9)
+            if: path[8 + 5 * (level - 1)] != 0 - 1 || (kind != 2 && kind != 10 && kind != 0 && kind != 1 && kind != 7 && kind != 8 && kind != 9)
                 break
-            row: l2_use_ns_row(holder, path[6 + 3 * (level - 1)])
+            row: l2_use_ns_row(holder, path[6 + 5 * (level - 1)])
             if: row < 0
                 break
             tags[n]: 14
@@ -36576,13 +36907,13 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             return: 1
         return: 0
     ---
-    kind: path[7 + 3 * (level - 1)]
+    kind: path[7 + 5 * (level - 1)]
     node: parent
     # A resolved own-field leaf retains its declaration identity. Project
     # the actual holder before reading its child, rather than guessing that
     # the last lexical body is also the physical cell owner.
     if: kind = 16
-        field: l2_graph_field(path[6 + 3 * (level - 1)])
+        field: l2_graph_field(path[6 + 5 * (level - 1)])
         if: field = 0
             return: 1
         stop: 0
@@ -36590,8 +36921,8 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             stop: l2_graph_body_place(path[1])
         if: level = 1 && path[0] = 8 && l2_node_graph_stop(l2_rw_mi, @ stop) != 0
             return: 1
-        if: level > 1 && path[7 + 3 * (level - 2)] = 15
-            stop: l2_graph_body_place(path[6 + 3 * (level - 2)])
+        if: level > 1 && path[7 + 5 * (level - 2)] = 15
+            stop: l2_graph_body_place(path[6 + 5 * (level - 2)])
         if: level = 1 && l2_rw_path_current(path) != 0 && field\holder = stop
             if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, @ raw) != 0
                 return: 1
@@ -36609,22 +36940,22 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     # A resolved body segment carries its body index, not a separately decoded
     # packed/shell path. Project the edge suffix over the actual preceding root.
     if: kind = 15
-        if: l2_for_place = 0 || path[6 + 3 * (level - 1)] < 0 || path[6 + 3 * (level - 1)] >= l2_for_n
+        if: l2_for_place = 0 || path[6 + 5 * (level - 1)] < 0 || path[6 + 5 * (level - 1)] >= l2_for_n
             return: 1
-        place: l2_graph_body_place(path[6 + 3 * (level - 1)])
+        place: l2_graph_body_place(path[6 + 5 * (level - 1)])
         if: place = 0
             return: 1
         stop: 0
         if: level = 1 && path[0] = 9
             stop: l2_graph_body_place(path[1])
-        if: level > 1 && path[7 + 3 * (level - 2)] = 15
-            stop: l2_graph_body_place(path[6 + 3 * (level - 2)])
+        if: level > 1 && path[7 + 5 * (level - 2)] = 15
+            stop: l2_graph_body_place(path[6 + 5 * (level - 2)])
         if: level = 1 && l2_rw_path_current(path) != 0
             return: l2_rw_graph_path(parent, place, stop, 0 - 1, 0, 0, out)
         return: l2_rw_graph_path(parent, place, stop, 0 - 2, path, level - 1, out)
     # Every reference-binding crossing carries its already resolved receiving
     # model. Structural tails between crossings keep their original slots.
-    req: path[8 + 3 * (level - 1)]
+    req: path[8 + 5 * (level - 1)]
     if: level = 1 && l2_rw_path_current(path) != 0
         if: l2_rw_frame(node, "LMX_WALK_OP_AT", 3, @ raw) != 0
             return: 1
@@ -36634,15 +36965,129 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
             return: 1
         ---
     ---
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", raw, path[6 + 3 * (level - 1)]) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", raw, path[6 + 5 * (level - 1)]) < 0
         return: 1
-    # The same declared-instance operand is used at every reference crossing.
-    if: l2_schema_kind(req) = 1 && l2_rw_ns_model(raw, 3, req, -1) != 0
+    # A subsequent reference is keyed by the actual declaration in its
+    # selected source. The first/root crossing retains its existing policy.
+    if: level > 1 && req != -1
+        if: l2_rw_path_model(path, level, raw, @ model_frame) != 0 || l2_rw_put(raw, 3, model_frame) != 0
+            return: 1
+        ---
+    ---
+    if: level = 1 && l2_schema_kind(req) = 1 && l2_rw_ns_model(raw, 3, req, -1) != 0
         return: 1
-    if: l2_schema_kind(req) = 2 && l2_rw_model_own(raw, 3, l2_mres_own[l2_schema_index(req)]) != 0
+    if: level = 1 && l2_schema_kind(req) = 2 && l2_rw_model_own(raw, 3, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
     \out: raw
 return: 0
+
+# A model operand written at child `slot` of `parent` from own row oi, a merge result's own Structure (K02c): in a
+fn: l2_rw_reference_holder (@: int path; int: level; int: parent; @: int out) int
+    @: L2GraphField field 0
+    @: L2GraphPlace stop 0
+    if: path[8 + 5 * (level - 1)] != -1
+        return: l2_rw_path_model(path, level, parent, out)
+    if: path[7 + 5 * (level - 1)] != 16
+        return: l2_rw_path_value(path, level - 1, parent, out)
+    field: l2_graph_field(path[6 + 5 * (level - 1)])
+    if: field = 0
+        return: 1
+    if: level = 1 && path[0] = 9
+        stop: l2_graph_body_place(path[1])
+    if: level = 1 && path[0] = 8 && l2_node_graph_stop(l2_rw_mi, @ stop) != 0
+        return: 1
+    if: level > 1 && path[7 + 5 * (level - 2)] = 15
+        stop: l2_graph_body_place(path[6 + 5 * (level - 2)])
+return: l2_rw_graph_path(parent, field\holder, stop, -2, path, level - 1, out)
+
+# Each reference crossing preserves the original field's source context in
+# this compiler-only path. The previous receiving instance is the base of a
+# mapped field; the candidate's unrelated layout is never its substitute.
+fn: l2_rw_path_model (@: int path; int: level; int: parent; @: int out) int
+return: l2_rw_reference_model(path, level - 1, path[8 + 5 * (level - 1)], parent, out)
+
+# `field_level` is the reference declaration whose model is required: the
+# preceding field of a read, or the target field of a write. Zero denotes a
+# formal/root with no preceding declaration in this path.
+fn: l2_rw_reference_model (@: int path; int: field_level; int: req; int: parent; @: int out) int
+    int: root req
+    int: base
+    int: child
+    int: status
+    if: l2_schema_kind(req) = 2
+        l2_rw_type_base: (cast: (int) (l2_t7_walk != 0))
+        status: l2_rw_own(parent, l2_mres_own[l2_schema_index(req)], out)
+        l2_rw_type_base: 0
+        return: status
+    if: l2_schema_kind(req) != 1
+        return: 1
+    while: l2_ns_parent[root] >= 0
+        root: l2_ns_parent[root]
+    ---
+    if: field_level = 0 || l2_ns_eternal[root] >= 0
+        # Existing root/formal policy; no preceding source reference field.
+        if: req != root
+            child: l2_ns_field_in_parent(req)
+            if: l2_rw_emit != 0 && child < 0
+                return: 1
+            if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0
+                return: 1
+            status: l2_rw_reference_model(path, field_level, l2_ns_parent[req], \out, @ base)
+            if: status != 0 || l2_rw_put(\out, 1, base) != 0
+                return: 1
+            return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, child) < 0))
+        ---
+        if: l2_ns_local[req] >= 0
+            child: l2_model_root_own(req)
+            if: child < 0
+                return: 1
+            l2_rw_type_base: (cast: (int) (l2_t7_walk != 0))
+            status: l2_rw_own(parent, child, out)
+            l2_rw_type_base: 0
+            return: status
+        ---
+        if: l2_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
+            return: 1
+        return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, l2_rw_types_nsp(), req) < 0))
+    ---
+return: l2_rw_selected_model_tail(path, field_level, req, root, parent, out)
+
+fn: l2_rw_selected_model_tail (@: int path; int: level; int: req; int: root; int: parent; @: int out) int
+    int: child
+    int: frame
+    int: projection
+    int: base
+    int: holder
+    int: depth
+    int: selected root
+    @: L2SourceField field 0
+    @: L2GraphField place 0
+    if: req != root
+        child: l2_ns_field_in_parent(req)
+        if: l2_rw_emit != 0 && child < 0
+            return: 1
+        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_selected_model_tail(path, level, l2_ns_parent[req], root, \out, @ frame) != 0 || l2_rw_put(\out, 1, frame) != 0
+            return: 1
+        return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, child) < 0))
+    ---
+    if: l2_model_selected_root(path[9 + 5 * (level - 1)], root, path[10 + 5 * (level - 1)], (cast: (int) (l2_construct_phase != 0)), @ selected, @ depth, @ field) != 0
+        return: 1
+    if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_NODE", 3, @ projection) != 0 || l2_rw_reference_holder(path, level, projection, @ base) != 0 || l2_rw_put(projection, 2, base) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", projection, depth) < 0
+        return: 1
+    holder: projection
+    child: l2_ns_unit_slot(root)
+    if: field != 0
+        place: @ field\place
+        child: (cast: (int) place\child)
+        if: l2_rw_graph_path(\out, place\holder, 0, projection, 0, 0, @ holder) != 0
+            return: 1
+        ---
+    ---
+    if: l2_rw_put(\out, 1, holder) != 0
+        return: 1
+return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, child) < 0))
 
 # A model operand written at child `slot` of `parent` from own row oi, a merge result's own Structure (K02c): in a
 # merge's view the place is reached from the program's unit (l2_rw_type_base) -- the program's merge result, not
@@ -36703,9 +37148,9 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
     if: l2_rw_path(stmt, t, 1, path) != 0
         return: 1
     if: path[3] < 0
-        kind: path[7 + 3 * (path[2] - 1)]
+        kind: path[7 + 5 * (path[2] - 1)]
         # A physical own-row coordinate does not replace its value category.
-        if: kind = 16 && l2_own_is_slot(path[6 + 3 * (path[2] - 1)]) != 0 && l2_own_schema(path[6 + 3 * (path[2] - 1)]) != -1
+        if: kind = 16 && l2_own_is_slot(path[6 + 5 * (path[2] - 1)]) != 0 && l2_own_schema(path[6 + 5 * (path[2] - 1)]) != -1
             kind: 2
         if: kind = 2 || kind = 3
             return: l2_rw_refuse(stmt, "a Structure assigned through a path")
@@ -36727,7 +37172,7 @@ fn: l2_rw_path_write (const: @(LmP0Node stmt); const: @(LmP0Text t); @: LmP0Fiel
         return: 1
     if: l2_rw_path_value(path, path[2], \out, @ h) != 0 || l2_rw_put(\out, 1, h) != 0
         return: 1
-    if: l2_rw_reference_receive(value, n, path[3], model, \out, @ v) != 0
+    if: l2_rw_reference_receive_at(value, n, path[3], model, \out, -1, @ v, path) != 0
         return: 1
 return: l2_rw_put(\out, 2, v)
 
@@ -38277,6 +38722,8 @@ return: 0
 fn: l2_d105_close () int
     @: L2ReferenceSource source
     int: own
+    int: field
+    int: field_key
     int: changed 1
     int: before
     int: e
@@ -38287,6 +38734,28 @@ fn: l2_d105_close () int
     int: why
     int: tn 0
     @: int t 0
+    # A namespace field and the own row executing its declaration are two
+    # compiler views of one source cell. Join their existing flow coordinates
+    # by original source identity; copies retain that declaration identity.
+    # Fields without a procedure still have the field coordinate. No method
+    # or runtime object is manufactured just to hold source alternatives.
+    field: 0
+    while: field < l2_nsf_n
+        if: l2_nsf_kind[field] = 10 && l2_nsf_pointee(field) >= 0
+            field_key: l2_d105_field_key(field)
+            if: field_key = -1
+                return: l2_alloc_or(l2_src, l2_nsf_source[field], "out of memory")
+            own: 0
+            while: own < l2_own_n
+                if: l2_own_decl[own] = l2_nsf_source[field] && l2_own_nsty_get(own) >= 0
+                    if: l2_d105_edge(l2_own_mi[own], l2_d105_own_key(own), l2_e, field_key, l2_nsf_source[field]) != 0 || l2_d105_edge(l2_e, field_key, l2_own_mi[own], l2_d105_own_key(own), l2_nsf_source[field]) != 0
+                        return: 1
+                    ---
+                own: own + 1
+            ---
+        ---
+        field: field + 1
+    ---
     i: 0
     while: i < l2_own_n
         ty: l2_own_source_layout(i)
@@ -39025,7 +39494,7 @@ fn: l2_d105_emit_source (int: idx; int: k; int: cand; int: smi; int: sk; const: 
     source.place: sk
     if: smi < 0
         source.layout: cand
-return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1, at_mi, idx, k)
+return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 0, 0, -1, at_mi, idx, k, 0)
 
 # The candidate has already been evaluated once. Its physical layout is either
 # direct producer evidence or a completed source admission, never its declared
@@ -39035,7 +39504,7 @@ return: l2_emit_model_admit(idx, l2_input_schema(idx, k), @ source, value, ind, 
 # the callee is entered, so a refusal there is that method's implicit `implements`, with its own result and
 # status, its handlers and its publication -- as the walked instruction throws it (LMX_WALK_OP_ADMIT_AS).
 # tmi/tk name the input the value is formed into where it is one -- a formal or a hidden input -- else -1.
-fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk) int
+fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: @(char value); const: @(char ind); int: full_receiver; int: implicit_throw; int: uses_own; int: at_mi; int: tmi; int: tk; const: @(char selected_model)) int
     int: i 0
     int: p
     int: r
@@ -39052,7 +39521,11 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
     []: char sinst 128
     []: char origin 128
     []: char table 160
-    if: req = -1 || l2_model_inst(mi, req, ind, rinst) != 0
+    if: req = -1 || (selected_model != 0 && selected_model[0] = 0)
+        return: l2_error(l2_src, 0, "internal: admission without receiving model")
+    if: selected_model != 0 && l2_tx_set(rinst, selected_model) != 0
+        return: 1
+    if: selected_model = 0 && l2_model_inst(mi, req, ind, rinst) != 0
         return: l2_error(l2_src, 0, "internal: admission without receiving model")
     l2_d105_seq: l2_d105_seq + 1
     strcpy(origin, "0")
@@ -39169,7 +39642,7 @@ return: 0
 # The edge read: `last` selects bare `name` (the map's second half, the value's LAST
 # occurrence of it); otherwise the ordinal half -- the slot this use already resolved
 # on the required model (K01).
-fn: l2_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: @(char ind); @: char dest) int
+fn: l2_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: @(char model); const: @(char ind); @: char dest) int
     []: char rinst_own 320
     L2Tx: rinst_tx
     @: L2Tx rinst l2_tx_local(@ rinst_tx, rinst_own, 320U)
@@ -39180,7 +39653,9 @@ fn: l2_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: @(char in
     # source-expression buffer or a language length limit.
     if: dest = 0 || c.snprintf(dest, 40U, "l2_dslot%d", temp) < 0
         return: 1
-    if: l2_model_inst(mi, req, ind, rinst) != 0
+    if: model != 0 && l2_tx_set(rinst, model) != 0
+        return: 1
+    if: model = 0 && l2_model_inst(mi, req, ind, rinst) != 0
         return: l2_error(l2_src, 0, "internal: an admitted reference has no receiving model")
     if: last != 0
         edge: slot + l2_d105_width(req)
@@ -39237,7 +39712,7 @@ fn: l2_rw_admit_as (int: parent; int: ni; int: cand; @: int out) int
     source.layout: -1
     source.method: -1
     source.place: -1
-return: l2_rw_admit_project(parent, ni, @ source, 0, -1, -1, -1, out)
+return: l2_rw_admit_project(parent, ni, @ source, 0, -1, -1, -1, out, 0)
 
 # D105 map constants are ordinary instruction operands with the same lifetime
 # as the admitting frame. They are never executable source-level values.  The
@@ -39362,13 +39837,13 @@ fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: s
     source.place: source_input
     if: source_mi < 0
         source.layout: cand
-return: l2_rw_admit_project(parent, req, @ source, 0, -1, tmi, tk, out)
+return: l2_rw_admit_project(parent, req, @ source, 0, -1, tmi, tk, out, 0)
 
 # `uses_own` is the own row the instruction receives into, or -1.  When its
 # coverage is known the instruction carries it in its own cells (fullReceiver 2,
 # lmx_walk.h) between the fixed nine and the maps.
 # tmi/tk name the input the value is formed into where it is one -- a formal or a hidden input -- else -1.
-fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out) int
+fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int: full_receiver; int: uses_own; int: tmi; int: tk; @: int out; @: int model_path) int
     int: i 0
     int: r
     int: id_first 0
@@ -39383,6 +39858,7 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     int: nc 0
     int: extent
     int: slot 9
+    int: selected_model
     if: req = -1
         return: l2_rw_refuse(l2_here_node, "an unresolved admission model")
     if: source\schema != -1 && source\schema != req
@@ -39423,7 +39899,12 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 8U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, mode) < 0
         return: 1
     # The required instance uses the common declared-model projection.
-    if: l2_schema_kind(req) = 1
+    if: model_path != 0
+        if: l2_rw_reference_model(model_path, model_path[2], req, \out, @ selected_model) != 0 || l2_rw_put(\out, 4, selected_model) != 0
+            return: 1
+        ---
+    ---
+    if: model_path = 0 && l2_schema_kind(req) = 1
         if: l2_rw_recv_req(tmi, tk, req) != 0
             if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
                 return: 1
@@ -39434,7 +39915,7 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
             ---
         ---
     ---
-    if: l2_schema_kind(req) = 2 && l2_rw_model_own(\out, 4, l2_mres_own[l2_schema_index(req)]) != 0
+    if: model_path = 0 && l2_schema_kind(req) = 2 && l2_rw_model_own(\out, 4, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 5U, %dU) != c.LMX_WALK_OK || lmx_walk_store_size(l2_program_arena, l2_rw%d, 6U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, count, \out, default_n) < 0
         return: 1
@@ -39474,11 +39955,12 @@ return: l2_rw_catch_fixed(\out, extent, 2, "implements", @ nc)
 # Its out is the admitted value (what a letter gives is q25's answer).  A refusal is
 # LMX_PRIMITIVE_THROW_IMPLEMENTS, which the walk carries as the caller's implicit throw
 # (-177 c5: THROWN + 2 at the root).
-fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out) int
+fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out; @: int model_path) int
     const: @(char rec) "lmx_walk_admit"
     int: nc 0
     int: contract
     int: inputs
+    int: selected_model
     if: l2_schema_kind(ni) != 1
         return: 1
     if: letter != 0
@@ -39489,7 +39971,12 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out) 
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out) < 0
         return: 1
-    if: l2_rw_ns_model(\out, 4, ni, -1) != 0
+    if: model_path != 0
+        if: l2_rw_reference_model(model_path, model_path[2], ni, \out, @ selected_model) != 0 || l2_rw_put(\out, 4, selected_model) != 0
+            return: 1
+        ---
+    ---
+    if: model_path = 0 && l2_rw_ns_model(\out, 4, ni, -1) != 0
         return: 1
     if: l2_rw_contract(\out, 2, l2_graph_own(), 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, source_ty, 0) != 0 || l2_rw_witness(inputs, 1, 0, 1) != 0 || l2_rw_primitive_contract(\out, contract) != 0
         return: 1
@@ -39596,10 +40083,10 @@ return: l2_rw_texpr(first, n, ty, parent, out)
 # Declarations and later assignments share the same admitted value/store chain.
 # The existing write helper selects working SET/SET_OF or physical PUT.
 fn: l2_rw_reference_receive (@: LmP0Field first; int: n; int: ty; int: model; int: parent; @: int out) int
-return: l2_rw_reference_receive_at(first, n, ty, model, parent, -1, out)
+return: l2_rw_reference_receive_at(first, n, ty, model, parent, -1, out, 0)
 
 # The same, received into own row `place` (-1: no such place).
-fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out) int
+fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model; int: parent; int: place; @: int out; @: int model_path) int
     int: raw
     L2ReferenceSource: source
     int: source_ty l2_rw_fields_ty(first, n)
@@ -39611,11 +40098,11 @@ fn: l2_rw_reference_receive_at (@: LmP0Field first; int: n; int: ty; int: model;
         source_ty: ty
     l2_reference_source(first, n, l2_rw_mi, @ source)
     if: l2_is_letter_value(l2_rw_mi, first, n) != 0
-        if: l2_rw_admit(parent, model, 1, source_ty, out) != 0
+        if: l2_rw_admit(parent, model, 1, source_ty, out, model_path) != 0
             return: 1
         ---
     else:
-        if: l2_rw_admit_project(parent, model, @ source, 1, place, -1, -1, out) != 0
+        if: l2_rw_admit_project(parent, model, @ source, 1, place, -1, -1, out, model_path) != 0
             return: 1
         ---
     ---
@@ -39628,7 +40115,7 @@ fn: l2_rw_reference_store (@: LmP0Field first; int: n; int: oi; int: into; @: in
     int: vs
     if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0
         return: 1
-    if: l2_rw_reference_receive_at(first, n, l2_own_ty[oi], l2_own_nsty_get(oi), \out, oi, @ adm) != 0
+    if: l2_rw_reference_receive_at(first, n, l2_own_ty[oi], l2_own_nsty_get(oi), \out, oi, @ adm, 0) != 0
         return: 1
 return: l2_rw_put(\out, vs, adm)
 
@@ -39677,7 +40164,7 @@ fn: l2_rw_take (const: @(LmP0Node stmt); int: into; @: int out) int
     # model as it is (-172 c2), PUT(m, admit(take, letter model)).
     ni: l2_own_nsty_get(oi)
     if: ni >= 0
-        if: l2_rw_admit(holder, ni, (cast: (int) (cmodel = 0)), l2_own_ty[oi], @ adm) != 0 || l2_rw_put(holder, slotv, adm) != 0
+        if: l2_rw_admit(holder, ni, (cast: (int) (cmodel = 0)), l2_own_ty[oi], @ adm, 0) != 0 || l2_rw_put(holder, slotv, adm) != 0
             return: 1
         holder: adm
         slotv: 3
@@ -39727,7 +40214,7 @@ fn: l2_rw_model (const: @(LmP0Node stmt); const: @(LmP0Text h); int: into; @: in
     source.layout: ni
     source.method: -1
     source.place: -1
-    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit_project(\out, ni, @ source, 0, -1, -1, -1, @ admission) != 0 || l2_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0 || l2_use_unit_child(7, ni) != 0
+    if: l2_rw_write(into, oi, l2_rw_bind_op(oi), out, @ vs) != 0 || l2_rw_admit_project(\out, ni, @ source, 0, -1, -1, -1, @ admission, 0) != 0 || l2_rw_frame(admission, "LMX_WALK_OP_PRIM_PUB", 4, @ prim) != 0 || l2_use_unit_child(7, ni) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: lmx_walk_merge_model\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", prim, prim, prim, prim, prim, prim, prim, prim, ni) < 0
         return: 1
@@ -40311,7 +40798,7 @@ fn: l2_rw_length_of (const: @(LmP0Node node); int: parent; @: int out) int
         free((cast: (@: void) prefix))
         return: l2_rw_refuse(node, "an array")
     free((cast: (@: void) prefix))
-    kind: path[7 + 3 * (path[2] - 1)]
+    kind: path[7 + 5 * (path[2] - 1)]
     if: kind != 5 && kind != 6
         return: l2_rw_refuse(node, "an array")
     if: l2_rw_frame(parent, "LMX_WALK_OP_LENGTH", 2, out) != 0
@@ -40864,7 +41351,7 @@ return: 0
 fn: l2_rw_empty_arg (int: ni; int: parent; @: int out) int
     int: adm
     int: fr
-    if: l2_rw_admit(parent, ni, 0, l2_graph_own(), @ adm) != 0
+    if: l2_rw_admit(parent, ni, 0, l2_graph_own(), @ adm, 0) != 0
         return: 1
     if: l2_rw_frame(adm, "LMX_WALK_OP_EMPTY", 1, @ fr) != 0
         return: 1
@@ -40879,12 +41366,12 @@ fn: l2_rw_path_reference (const: @(LmP0Node node); const: @(LmP0Text head); int:
     @: int path
     int: rc 1
     int: segments l2_seg_count(head\data, head\length)
-    # Six header cells followed by one three-cell record per path segment.
-    if: segments < 0 || segments > (c.INT_MAX - 6) / 3
+    # Six header cells followed by one five-cell record per path segment.
+    if: segments < 0 || segments > (c.INT_MAX - 6) / 5
         return: 1
-    if: l2_mul_ok((cast: (size_t) (6 + 3 * segments)), c.sizeof(c.int)) = 0
+    if: l2_mul_ok((cast: (size_t) (6 + 5 * segments)), c.sizeof(c.int)) = 0
         return: 1
-    path: (cast: (@: int) calloc((cast: (size_t) (6 + 3 * segments)), c.sizeof(c.int)))
+    path: (cast: (@: int) calloc((cast: (size_t) (6 + 5 * segments)), c.sizeof(c.int)))
     if: path = 0
         return: 1
     if: l2_rw_path(node, head, 1, path) = 0
@@ -41132,7 +41619,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
                     reference_source.method: -1
                     reference_source.place: -1
                 ---
-                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(l2_call_receiver(idx, formal_call, hid), k), @ reference_source, 0, -1, l2_call_receiver(idx, formal_call, hid), k, @ holder) != 0
+                if: need != 0 && l2_rw_admit_project(site, l2_nsty_get(l2_call_receiver(idx, formal_call, hid), k), @ reference_source, 0, -1, l2_call_receiver(idx, formal_call, hid), k, @ holder, 0) != 0
                     return: 1
                 if: l2_empty_actual(a, idx, k) != 0
                     if: l2_rw_empty_arg(l2_nsty_get(idx, k), holder, @ arg) != 0
@@ -41196,7 +41683,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
             # instruction takes both (LMX_WALK_OP_ADMIT_AS).  Any other value with no schema is admitted by
             # position.
             if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0 && (l2_d105_opaque_place(l2_rw_mi, hidden_source) = 0 || l2_d105_place_sources(l2_rw_mi, hidden_source) = 0)
-                if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(hid, d)), @ holder) != 0
+                if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(hid, d)), @ holder, 0) != 0
                     return: 1
                 ---
             else:
@@ -47159,7 +47646,7 @@ fn: l2_rw_mad_call (const: @(LmP0Node node); int: oi; int: parent; @: int out) i
                 hidden_source: 0 - 1
                 cand: l2_hidden_model_source(l2_rw_mi, model, k, @ hidden_source)
                 if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0 && (l2_d105_opaque_place(l2_rw_mi, hidden_source) = 0 || l2_d105_place_sources(l2_rw_mi, hidden_source) = 0)
-                    if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(model, k)), @ holder) != 0
+                    if: l2_rw_admit(\out, hidden_model, 0, l2_own_of_dt(l2_dt(model, k)), @ holder, 0) != 0
                         return: 1
                     ---
                 else:
@@ -48440,7 +48927,7 @@ fn: l2_rw_ns_hidden (const: @(LmP0Node node); int: ni; int: frame) int
             hidden_source: -1
             cand: l2_hidden_model_source(l2_rw_mi, pr, d, @ hidden_source)
             if: cand = -1 && l2_input_undeclared(l2_rw_mi, hidden_source) = 0 && (l2_d105_opaque_place(l2_rw_mi, hidden_source) = 0 || l2_d105_place_sources(l2_rw_mi, hidden_source) = 0)
-                if: l2_rw_admit(frame, hidden_model, 0, l2_own_of_dt(l2_dt(pr, d)), @ holder) != 0
+                if: l2_rw_admit(frame, hidden_model, 0, l2_own_of_dt(l2_dt(pr, d)), @ holder, 0) != 0
                     return: 1
                 ---
             else:
@@ -49294,7 +49781,7 @@ return: 0
 
 # Evaluate once into the receiving machine pointer before referent admission.
 # The temporary is activation storage, not a new graph or binding.
-fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; @: L2ReferenceSource source; int: place) int
+fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; @: L2ReferenceSource source; int: place; const: @(char selected_model)) int
     int: t
     []: char type_text_own 1024
     L2Tx: type_text_tx
@@ -49306,18 +49793,20 @@ fn: l2_emit_receiving_admit (int: ty; int: model; int: mi; const: @(char ind); @
     l2_tn: l2_tn + 1
     if: c.sprintf(temp, "l2_t%d", t) < 0 || l2_pointer_decl_text(l2_formal_raw(ty), 0, temp, type_text) != 0 || c.fprintf(l2_out, "%s%s %s\n", ind, type_text\data, value\data) < 0
         return: 1
-    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1, place, -1, -1, -1) != 0
+    if: source != 0 && l2_emit_model_admit(mi, model, source, temp, ind, 1, 1, place, -1, -1, -1, selected_model) != 0
         return: 1
-    if: source = 0 && l2_emit_admit(mi, model, temp, ind) != 0
+    if: source = 0 && selected_model = 0 && l2_emit_admit(mi, model, temp, ind) != 0
+        return: 1
+    if: source = 0 && selected_model != 0 && l2_emit_positional_admit(mi, selected_model, temp, ind) != 0
         return: 1
 return: l2_tx_set(value, temp)
 
 fn: l2_emit_reference_value (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value) int
-return: l2_emit_reference_value_at(first, n, ty, model, mi, ind, value, -1)
+return: l2_emit_reference_value_at(first, n, ty, model, mi, ind, value, -1, 0)
 
 # The same, received into own row `place` of the method (-1: no such place): the
 # instruction then carries the coverage of that place when it is known.
-fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; int: place) int
+fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model; int: mi; const: @(char ind); @: L2Tx value; int: place; const: @(char selected_model)) int
     L2Address: descriptor_value
     @: L2Address descriptor @ descriptor_value
     L2ReferenceSource: source
@@ -49336,7 +49825,7 @@ fn: l2_emit_reference_value_at (@: LmP0Field first; int: n; int: ty; int: model;
     ---
     if: model >= 0 && l2_is_letter_value(mi, first, n) != 0 && l2_payload_expr(value) != 0
         return: 1
-return: l2_emit_receiving_admit(ty, model, mi, ind, value, @ source, place)
+return: l2_emit_receiving_admit(ty, model, mi, ind, value, @ source, place, selected_model)
 
 fn: l2_emit_reference_declaration (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     @: L2Declaration declaration l2_declaration(stmt)
@@ -49511,7 +50000,7 @@ fn: l2_emit_loc_stmt (const: @(LmP0Node stmt); int: mi; const: @(char ind)) int
     # native admission (implements, consumer T), a refusal the implicit throw `implements`; a null passes.
     if: l2_ml_ns[l2_ml_find(fr\head)] >= 0 && l2_is_letter_value(mi, fr\body\first_field, l2_count_active(fr\body)) != 0 && l2_payload_expr(l2_tok) != 0
         return: 2
-    if: l2_emit_receiving_admit(l2_ml_ty[l2_ml_find(fr\head)], l2_ml_ns[l2_ml_find(fr\head)], mi, ind, l2_tok, 0, -1) != 0
+    if: l2_emit_receiving_admit(l2_ml_ty[l2_ml_find(fr\head)], l2_ml_ns[l2_ml_find(fr\head)], mi, ind, l2_tok, 0, -1, 0) != 0
         return: 2
     if: c.fprintf(l2_out, "%s", ind) < 0
         return: 2
@@ -50327,7 +50816,10 @@ return: result
 # receiving metadata.
 fn: l2_input_schema (int: mi; int: k) int
     int: own l2_d105_key_own(k)
+    int: field l2_d105_key_field(k)
     int: model
+    if: field >= 0
+        return: l2_nsf_pointee(field)
     if: own >= 0
         return: l2_own_schema(own)
     if: mi < 0 || mi >= l2_m_n || k < l2_m_arity[mi] || k >= l2_m_arity[mi] + l2_m_dyn[mi]
@@ -50962,6 +51454,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
     int: l2_pkind 0
     int: l2_ptype 0 - 1
     int: l2_pmodel 0 - 1
+    []: char l2_pmodel_instance_own 128
+    L2Tx: l2_pmodel_instance_tx
+    @: L2Tx l2_pmodel_instance l2_tx_local(@ l2_pmodel_instance_tx, l2_pmodel_instance_own, 128U)
     int: l2_pni 0
     int: l2_pres 0
     int: l2_poi 0
@@ -51134,7 +51629,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: oi >= 0
             declaration: l2_declaration(stmt)
             l2_own_excl: oi
-            pret: l2_emit_reference_value_at(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi)
+            pret: l2_emit_reference_value_at(declaration\candidate, declaration\candidate_count, l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi, 0)
             l2_own_excl: -1
             if: pret != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
                 return: 1
@@ -51383,7 +51878,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         if: stmt != 0 && stmt\as != 0 && stmt\as\frame != 0 && l2_is_path_head(stmt\as\frame\head) != 0 && l2_head_is_call(stmt\as\frame\head, stmt\as\frame\body, stmt\as\frame\flags, mi) = 0 && l2_raw_index_head(stmt\as\frame\head, mi) != 0
             if: l2_path_in_eternal(stmt\as\frame\head\data, stmt\as\frame\head\length) != 0
                 return: l2_error(l2_src, stmt, "an eternal branch field cannot be updated")
-            if: l2_emit_path(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, stmt, @ l2_pkind) != 0
+            if: l2_emit_path_receiving(stmt\as\frame\head\data, stmt\as\frame\head\length, mi, ind, stmt, @ l2_pkind, 0, l2_pmodel_instance) != 0
                 return: 1
             # A literal RHS parses directly. Any other shape (a name, a call, an
             # expression) evaluates through l2_eval_fields exactly like an
@@ -51410,7 +51905,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             cst: 0
             if: l2_pkind = 10 || l2_pkind = 11
                 l2_pkind: l2_path_contract(stmt\as\frame\head\data, stmt\as\frame\head\length, @ l2_ptype, @ l2_pmodel)
-                if: l2_emit_reference_value(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, mi, ind, l2_tok) != 0
+                if: l2_emit_reference_value_at(stmt\as\frame\body\first_field, l2_count_active(stmt\as\frame\body), l2_ptype, l2_pmodel, mi, ind, l2_tok, -1, l2_pmodel_instance\data) != 0
                     return: 1
                 cst: 3
             ---
@@ -51943,9 +52438,9 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             return: 1
         # A value of opaque type is refused there as this method's implicit `implements` (RECEPTION-EDGE-DEBTS (f)),
         # as at a trailer's return (l2_emit_ret_tr).
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && (l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) != 0 || l2_d105_dynamic(@ return_source) != 0) && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok\data, ind, 1, 0, -1, mi, mi, -1) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && (l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) != 0 || l2_d105_dynamic(@ return_source) != 0) && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok\data, ind, 1, 0, -1, mi, mi, -1, 0) != 0
             return: 1
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) = 0 && l2_d105_dynamic(@ return_source) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok\data, ind, 1, 0, -1, -1, -1, -1) != 0
+        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_input_model(mi, -1) >= 0 && l2_return_opaque(fr\body\first_field, l2_count_active(fr\body), mi) = 0 && l2_d105_dynamic(@ return_source) = 0 && l2_emit_model_admit(mi, l2_input_model(mi, -1), @ return_source, l2_tok\data, ind, 1, 0, -1, -1, -1, -1, 0) != 0
             return: 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") && l2_m_ret[mi] != 8 && l2_emit_publish(ind) != 0
             return: 1
@@ -51986,7 +52481,7 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
             si: 0 - 1
             fi: 0 - 1
         if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_frame_head(stmt, "return") = 0 && oi >= 0 && l2_own_is_pointer(l2_own_ty[oi]) != 0 && l2_own_is_slot(oi) = 0
-            if: l2_emit_reference_value_at(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi) != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
+            if: l2_emit_reference_value_at(fr\body\first_field, l2_count_active(fr\body), l2_ft_of_own(l2_own_ty[oi]), l2_own_nsty_get(oi), mi, ind, l2_tok, oi, 0) != 0 || l2_own_store(mi, oi, ind, l2_tok\data) != 0
                 return: 1
             field: l2_next_active(field\next)
             continue

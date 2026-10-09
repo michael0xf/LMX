@@ -109,6 +109,42 @@ full18 RED76/2803. Восстановлена пара initializer; восемь
 identity, затем полный local fn/fm/sub collection. Без второго build,
 prototype fallback, runtime names или закрытия T7/8/8a на частичном срезе.
 
+Producer опубликован `731a2aa3`; HEAD/upstream/remote совпали. Сразу
+STARTED `CODEX-COPIED-REFERENCE-MODEL-PROJECTION-20261009-17`: общее
+сопоставление исходного владельца и фактической модели в native/walker,
+без новой записи допуска для обхода ошибочного адреса. Точные границы и
+непрерывная цепочка — [журнал](copied-reference-model-projection-20261009.md).
+
+Candidate09 `4DCC9E9D`: чтение и присваивание ссылки используют один
+фактический receiving model; исходный контейнер без строки метода тоже
+имеет обычного физического владельца. Private GREEN96, три live wrong-model
+faults отвергнуты, NODE GREEN28. Replay2615 сохранил exit/diagnostic/presence;
+70 L1-only изменений классифицированы. Serial84154 завершён exit1:
+focus RED29/543, kernel19 GREEN297/114, L3_19 —11 наборов/four budgets,
+но full19 RED76/2809 выявил две старые регрессии
+`unit_ref_field_value_read`/`_walk`. Строгий checker остановил цепочку до
+final audit/replay. Candidate09 отвергнут, не опубликован; исправлять
+общий выбор модели на свежих байтах и повторить приёмку. Неудачные
+свидетельства сохраняются. Stable/родители OPEN.
+
+Candidate13 `22F4D6F2` сохраняет правильную фактическую модель и замыкает
+поток возможных источников сохранённой ссылки, включая отложенную машинную
+типизацию. Исходные строки/ключи/рёбра — только данные трансляции, не runtime
+метаданные или новая запись допуска у читателя. Private06:28+68 исполнений;
+chain_controls05:8 дополнительных, включая обе старые регрессии. Все104
+положительных исполнения и три live fault-контроля прошли. Replay2615 точно
+сохранил exit/diagnostic/presence checkpoint16;70 L1-only изменений.
+Из9 изменений против отвергнутого candidate09 семь — перестановка констант
+с точным сохранением содержимого, два — исправленные field-flow consumers.
+Serial31670 завершён exit0: focus02 RED29/547, kernel20 GREEN297/114
+выполненных самотестов (NODE28 включён), L3_20 —11 наборов/four budgets,
+full20 RED74/2811. Две старые copy-строки восстановлены, восемь добавлений
+GREEN, нет старых регрессий/удалений/изменённых отказов. Все44 frozen входа
+неизменны/162 копии совпали; финальный replay2615 побайтно равен private13.
+Закрыт только bounded copied-model дефект, не T7/stable/8/8a.
+После проверенной публикации без ожидания
+следовать полному local method collection; Codex sole writer/build.
+
 Crossing-срез опубликован `01d82c8c`; HEAD/upstream/remote совпали.
 Сразу начат единственный следующий writer/build
 `CODEX-LOCAL-NESTED-MODEL-ANCHOR-20261009-15`: исходное объявление и

@@ -95,8 +95,36 @@ is exact;39 frozen inputs/142 staged copies match. A copy still exposes differen
 identities at admission and subsequent field reading; retain that positive
 test as RED and repair selected instance projection. Do not bypass its
 missing record or use the original prototype. Full local fn collection,
-T7 and stages8/8a remain OPEN. Evidence and precise limits:
+T7 and stages8/8a remain OPEN. Checkpoint16 evidence and precise limits:
 [declaration journal](steps/local-complete-declaration-actions-20261009.md).
+
+The active copied-model repair joins the native/walker read and admission
+operands at the same resolved source declaration and actual holder. A later
+path write must not record admission against the prototype when subsequent
+reads use the copied model. Preserve the selected model while evaluating
+the ordinary RHS once. Containers without method rows still have physical
+ownership; use that relation, not an invented activation. Copied primitive
+pointers share their pointees until explicitly rebound; do not silently
+clone or retarget those values. Candidate09 `4DCC9E9D` passes96 actual
+executions, three live wrong-model faults and NODE28;2615 replay keeps all
+exits/diagnostics/output presence with70 classified L1 changes. Final
+full19 rejects it with two old field-reference chain regressions. Its final
+audit/replay did not run. Candidate13 `22F4D6F2` keeps the correct selected
+model and closes the stored-reference source-flow producer for both known
+and deferred machine types. Field identity is the original source row, not a
+runtime name or a declared-model layout substituted for the actual value.
+Both old regressions and the shifted-field forwarding/copy witness pass;
+private acceptance totals104 actual executions plus three rejected live
+faults. The2615 replay retains all exits/diagnostics/output presence and70
+classified L1-only changes against checkpoint16. Fresh serial acceptance is
+terminal: focus02 RED29/547, kernel20 GREEN297/114 executed selftests,
+L3_20 eleven suites/four budgets, full20 RED74/2811. Two old copy rows
+recover, all eight additions pass, no old regression/removal/changed failure.
+All44 frozen inputs/162 copies match; final2615 replay matches the tested
+private bytes exactly. NODE28 executes on the actual fresh kernel runtime.
+Continue full local method collection
+after bounded acceptance, without adding another writer/build. Details:
+[copied-model journal](steps/copied-reference-model-projection-20261009.md).
 
 Every important statement is classified as one of the following.
 

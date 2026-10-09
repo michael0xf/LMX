@@ -1,6 +1,35 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
-The current complete-reference implementation uses the common complete
+The active copied-model follow-up uses the same source ownership and
+completed physical model projection for native/walker reads and reference
+path admission. A model is selected from the original declaration's actual
+holder, including copied descendants and containers without a method row;
+the candidate is never substituted for its receiving model. Path context
+exists only during translation. The existing physical-parent NODE operand
+can evaluate an explicit typed descriptor base; source `node` still means
+the method parent. No opcode, helper graph, runtime name or fallback map is
+introduced. Candidate09 `4DCC9E9D` has96 actual executions, three live wrong-
+model faults and NODE GREEN28. Private2615 replay preserves all exits,
+diagnostics and output presence;70 generated-L1-only changes are classified.
+Full19 RED76/2809 rejects candidate09: two old field-reference chain
+tests regress despite the private passes. Its final audit/replay did not run.
+Candidate13 `22F4D6F2` retains the selected-model projection and closes the
+stored-field source-flow producer, including deferred machine typing. Original
+source-row keys and edges exist only during translation; actual admission
+still uses constructor evidence and records correspondence only after success.
+Private acceptance passes104 actual executions and three live faults. All2615
+replayed exits, diagnostics and output presences match checkpoint16;70 L1-only
+changes remain classified. Fresh acceptance is terminal: focus02 RED29/547,
+kernel20 GREEN297/114 executed selftests (including NODE28), L3_20 eleven
+suites/four budgets, full20 RED74/2811. Two old copy rows recover, eight
+additions are GREEN, no old regression/removal/changed failure. All44 frozen
+inputs/162 staged copies match; final2615 replay matches private13 exactly.
+This is bounded development acceptance, not a GREEN whole-kernel claim.
+Full local method collection,
+T7, stable and stages8/8a remain OPEN. See the
+[copied-model journal](steps/copied-reference-model-projection-20261009.md).
+
+The preceding complete-reference checkpoint uses the common complete
 declaration contract before the old scalar readers. Its full closed type
 and candidate survive local source-field collection; native and walker
 consume the same actual cells, including composed and deep references.
@@ -11,9 +40,9 @@ executed selftests, L3_18 eleven suites/four budgets, full18 RED76/2803.
 Two old initializer rows recover; eight additions have six GREEN/two
 required RED, no old regression/removal/changed failure. Final2615 replay
 matches exactly;39 inputs/142 staged copies match.
-The copied-reference required pair exposes a separate instance mismatch:
+At that checkpoint the copied-reference required pair exposed an instance mismatch:
 copied Inner is the admission model, original Inner is the later read's
-key. Correct it by the common selected physical model projection, never a
+key. The active child corrects it by selected physical model projection, never a
 manufactured correspondence or prototype fallback. Full local method
 collection and parent stages remain OPEN. Detailed boundaries and all
 failed attempts are in the

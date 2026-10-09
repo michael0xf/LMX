@@ -19,9 +19,24 @@ Verified bounded source-owner acceptance is recorded in the
 a model lookup, retain the query's original declaration/source owner, not
 only its spelling or the source location of a later consumer. Plain and
 quoted descriptor words use the same source eligibility. Correct selection
-does not prove a nested receiving-model instance can yet be emitted: that
-case remains a required-positive debt. This snapshot does not change
+did not at that checkpoint prove a nested receiving-model instance could be emitted.
+This snapshot does not change
 forward-only ordinary declaration visibility or decide MAIN/part visibility.
+
+The subsequent bounded instance repair is verified, documented
+in the [instance journal](steps/nested-receiving-model-20261009.md).
+Project the selected root through completed declared child places; a schema
+index is not a runtime instance or a field slot. At a reference crossing,
+choosing the next candidate field must use the admitted correspondence,
+not the model's unadjusted slot. That route and the actual method-local
+model host remain required-positive debts. Do not infer general copied
+model identity from a test that only distinguishes copied value writes.
+Fresh focus RED28/426, kernel14 GREEN297/114, L3_14 eleven suites/four
+budgets and full14 RED76/2771 introduce no old regression. Final2615
+replay results exactly match the private candidate;21 inputs/74 copies
+match, and four extra actually-walked local-model controls pass. The
+remaining required-positive RED rows are implementation debts, not a
+permission for ported code to change the language contract.
 
 Every important statement is classified as one of the following.
 

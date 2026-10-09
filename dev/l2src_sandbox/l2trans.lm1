@@ -2064,6 +2064,7 @@ prototype:
     fn: l2_rw_model_own (int: parent; int: slot; int: oi) int
     fn: l2_rw_types_nsp () const: @: char
     fn: l2_rw_types_unit () const: @: char
+    fn: l2_rw_ns_model (int: parent; int: slot; int: req; int: callee) int
     fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind)) int
     fn: l2_rw_graph_place (int: parent; @: L2GraphPlace place; @: int out) int
     fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; @: int out) int
@@ -21234,12 +21235,32 @@ fn: l2_untyped_graph (int: mi; const: @(LmP0Node value)) int
         return: 0
 return: 1
 
-# The runtime shape of a declared Structure type: the declaration's own
-# materialised unit child, the operand `Type: x` merges too.
+# Project one declared child from its already selected actual parent. The
+# source identity chooses the NSF row; only its completed place is emitted.
+# Growable text retains arbitrary ancestry without an expression/depth cap.
+fn: l2_model_child (int: ni; @: L2Tx dest) int
+    int: slot l2_ns_field_in_parent(ni)
+    []: char suffix 32
+    []: char local 128
+    L2Tx: text
+    @: L2Tx child l2_tx_local(@ text, local, 128U)
+    if: slot < 0 || dest = 0 || child = 0 || c.snprintf(suffix, 32U, ", %uU)", (cast: (unsigned) slot)) < 0
+        return: 1
+    if: l2_tx_join(child, "lmx_arena_ref_struct(", dest\data, suffix, 0, 0) != 0
+        return: 1
+return: l2_tx_set(dest, child\data)
+
+# The actual declaration instance in the selected lexical/receiving unit,
+# projected through its existing source-owned children, never a new shape.
 fn: l2_type_inst (int: ni; @: L2Tx dest) int
     []: char nm 32
-    if: ni < 0 || ni >= l2_ns_n || dest = 0 || l2_ns_parent[ni] >= 0 || l2_ns_local[ni] >= 0
+    if: ni < 0 || ni >= l2_ns_n || dest = 0 || l2_ns_local[ni] >= 0
         return: 1
+    if: l2_ns_parent[ni] >= 0
+        if: l2_type_inst(l2_ns_parent[ni], dest) != 0
+            return: 1
+        return: l2_model_child(ni, dest)
+    ---
     if: l2_ns_eternal[ni] < 0 && c.snprintf(nm, 32U, ", %uU)", (cast: (unsigned) (l2_ns_unit_slot(ni)))) < 0
         return: 1
     if: l2_ns_eternal[ni] >= 0 && c.snprintf(nm, 32U, ", %uU)", (cast: (unsigned) (l2_ebr_unit_slot(l2_ns_eternal[ni])))) < 0
@@ -21280,6 +21301,11 @@ fn: l2_model_inst (int: mi; int: ni; const: @(char ind); @: L2Tx dest) int
         return: 1
     if: l2_ns_local[ni] < 0
         return: l2_type_inst(ni, dest)
+    if: l2_ns_parent[ni] >= 0
+        if: l2_model_inst(mi, l2_ns_parent[ni], ind, dest) != 0
+            return: 1
+        return: l2_model_child(ni, dest)
+    ---
     oi: l2_own_of_local_ns(mi, ni)
     if: oi < 0
         return: 1
@@ -22401,12 +22427,8 @@ fn: l2_emit_admit (int: mi; int: ni; const: @(char value); const: @(char ind)) i
     @: L2Tx inst l2_tx_local(@ inst_tx, inst_own, 128U)
     if: mi < 0 || l2_m_throws = 0 || l2_m_throws[mi] = 0
         return: l2_error(l2_src, 0, "internal: an admission site was not checked")
-    # A method's own named Structure has no unit child: its type is the Structure at its place (l2_emit_admit_own).
-    if: ni >= 0 && ni < l2_ns_n && l2_ns_local[ni] >= 0 && l2_own_of_local_ns(mi, ni) < 0
-        return: l2_error(l2_src, 0, "internal: an admission to a method's named Structure outside its method")
-    if: ni >= 0 && ni < l2_ns_n && l2_ns_local[ni] >= 0
-        return: l2_emit_admit_own(mi, l2_own_of_local_ns(mi, ni), value, ind)
-    if: l2_type_inst(ni, inst) != 0
+    # Root and descendant declarations share the actual-instance projection.
+    if: l2_model_inst(mi, ni, ind, inst) != 0
         return: l2_error(l2_src, 0, "internal: admission to a type with no shape")
 return: l2_emit_positional_admit(mi, inst\data, value, ind)
 
@@ -25423,9 +25445,11 @@ return: l2_path_text_read(mi, buf, n, ind, at, dest)
 fn: l2_selected_occurrence_temp (const: @(char ind); @: L2Tx dest) int
     int: t l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@: Lmx t%d l2_pst\n", ind, t) < 0
+    if: l2_tx_temp(dest, t) != 0
         return: 1
-return: l2_tx_temp(dest, t)
+    if: c.fprintf(l2_out, "%s@: Lmx %s l2_pst\n", ind, dest\data) < 0
+        return: 1
+return: 0
 
 fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     int: kind
@@ -36564,9 +36588,8 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     ---
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", raw, path[6 + 3 * (level - 1)]) < 0
         return: 1
-    # The crossing's receiving model: a named Structure's unit child (l2_nsp) -- or, K02c, a merge result's own
-    # Structure, read where the op runs (a frame in the model's place: lmx_walk_model_operand).
-    if: l2_schema_kind(req) = 1 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 3U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", raw, l2_rw_types_nsp(), req) < 0
+    # The same declared-instance operand is used at every reference crossing.
+    if: l2_schema_kind(req) = 1 && l2_rw_ns_model(raw, 3, req, -1) != 0
         return: 1
     if: l2_schema_kind(req) = 2 && l2_rw_model_own(raw, 3, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
@@ -39212,38 +39235,69 @@ return: 0
 fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
     if: tmi < 0 || tmi >= l2_m_n || tk < 0 || tk >= l2_m_arity[tmi] + l2_m_dyn[tmi]
         return: 0
-    if: req < 0 || req >= l2_ns_n || l2_schema_kind(req) != 1 || l2_ns_parent[req] >= 0 || l2_ns_local[req] >= 0
+    if: req < 0 || req >= l2_ns_n || l2_schema_kind(req) != 1 || l2_ns_local[req] >= 0
         return: 0
     if: tk < l2_m_arity[tmi]
         return: (cast: (int) (l2_nsty_get(tmi, tk) >= 0))
 return: l2_free_admit(tmi, tk - l2_m_arity[tmi])
 
-# The requirement of a RECEIVING admission: [of, [node, depth?], slot]. COUNT
-# chooses the width from static ownership; FILL supplies committed physical
-# ancestry, including local source-container places unavailable during COUNT.
+# The requirement of a RECEIVING admission uses the same model operand.
 fn: l2_rw_recv_model (int: admit; int: req; int: callee) int
-    int: of
-    int: nd
-    int: depth l2_lex_depth_at(callee, l2_e, 0)
-    int: width 2
-    int: slot l2_ns_unit_slot(req)
-    if: l2_ns_eternal[req] >= 0
-        slot: l2_ebr_unit_slot(l2_ns_eternal[req])
-    if: depth = 1
-        width: 1
-    if: l2_rw_emit != 0
-        depth: l2_lex_depth(callee, l2_e)
-        if: depth < 0
-            return: l2_error(l2_method_src(callee, l2_src), l2_m_node[callee], "a receiving model has no constructed lexical unit")
-        ---
+return: l2_rw_ns_model(admit, 4, req, callee)
+
+# A declared model operand projects the completed source-owned child from
+# the selected root. No descriptor is built to stand in for that declaration.
+# Root selection retains the existing receiving/local/unit policies; every
+# descendant uses the same ordinary OF operation and the committed slot.
+fn: l2_rw_ns_model (int: parent; int: slot; int: req; int: callee) int
+    int: frame
+    int: own
+    int: child
+    if: req < 0 || req >= l2_ns_n
+        return: 1
+    if: l2_ns_parent[req] >= 0
+        child: l2_ns_field_in_parent(req)
+        if: l2_rw_emit != 0 && child < 0
+            return: l2_error(l2_src, l2_ns_at[req], "internal: a nested model has no completed source place")
+        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, @ frame) != 0 || l2_rw_ns_model(frame, 1, l2_ns_parent[req], callee) != 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", frame, child) < 0
+            return: 1
+        return: l2_rw_put(parent, slot, frame)
     ---
-    if: l2_rw_frame(admit, "LMX_WALK_OP_OF", 3, @ of) != 0 || l2_rw_frame(of, "LMX_WALK_OP_NODE", width, @ nd) != 0 || l2_rw_put(of, 1, nd) != 0
-        return: 1
-    if: width = 2 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", nd, depth) < 0
-        return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", of, slot) < 0
-        return: 1
-return: l2_rw_put(admit, 4, of)
+    if: l2_ns_local[req] >= 0
+        own: l2_own_of_local_ns(l2_rw_mi, req)
+        if: own < 0
+            return: l2_rw_refuse(l2_here_node, "an unresolved local admission model")
+        return: l2_rw_model_own(parent, slot, own)
+    ---
+    if: callee >= 0
+        # COUNT chooses topology from source ownership; FILL uses committed
+        # physical ancestry, including local source-container places.
+        int: of
+        int: nd
+        int: depth l2_lex_depth_at(callee, l2_e, 0)
+        int: width 2
+        int: unit_slot l2_ns_unit_slot(req)
+        if: l2_ns_eternal[req] >= 0
+            unit_slot: l2_ebr_unit_slot(l2_ns_eternal[req])
+        if: depth = 1
+            width: 1
+        if: l2_rw_emit != 0
+            depth: l2_lex_depth(callee, l2_e)
+            if: depth < 0
+                return: l2_error(l2_method_src(callee, l2_src), l2_m_node[callee], "a receiving model has no constructed lexical unit")
+            ---
+        ---
+        if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, @ of) != 0 || l2_rw_frame(of, "LMX_WALK_OP_NODE", width, @ nd) != 0 || l2_rw_put(of, 1, nd) != 0
+            return: 1
+        if: width = 2 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", nd, depth) < 0
+            return: 1
+        if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", of, unit_slot) < 0
+            return: 1
+        return: l2_rw_put(parent, slot, of)
+    ---
+return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", parent, slot, l2_rw_types_nsp(), req) < 0))
 
 # tmi/tk name the input the value is formed into.
 fn: l2_rw_admit_source (int: parent; int: req; int: cand; int: source_mi; int: source_input; int: tmi; int: tk; @: int out) int
@@ -39270,8 +39324,6 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     int: mode full_receiver
     int: whole 0
     int: cell 0
-    int: model_frame
-    int: model_own -1
     int: width l2_d105_width(req)
     int: default_n 0
     int: nc 0
@@ -39279,13 +39331,6 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
     int: slot 9
     if: req = -1
         return: l2_rw_refuse(l2_here_node, "an unresolved admission model")
-    # A local model is the reached declaration instance at its actual own
-    # GraphField, not the namespace prototype or a new interface Structure.
-    if: l2_schema_kind(req) = 1 && l2_ns_local[req] >= 0
-        model_own: l2_own_of_local_ns(l2_rw_mi, req)
-        if: model_own < 0
-            return: l2_rw_refuse(l2_here_node, "an unresolved local admission model")
-    ---
     if: source\schema != -1 && source\schema != req
         # An explicit pair map: two cells per required field -- the ordinal half and
         # the last half (K01).  The entry's registered width stays `width`; only the
@@ -39323,18 +39368,17 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 8U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, mode) < 0
         return: 1
-    # The model: a named Structure's unit child (l2_nsp) -- or, K02c, a merge result's own Structure, read where the
-    # op runs (an AT of its slot: the result does not exist when the frames are built); the kernel evaluates a frame
-    # standing in the model's place (lmx_walk_model_operand).
-    if: model_own >= 0 && l2_rw_model_own(\out, 4, model_own) != 0
-        return: 1
-    if: model_own < 0 && l2_schema_kind(req) = 1 && l2_rw_recv_req(tmi, tk, req) = 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, l2_rw_types_nsp(), req) < 0
-        return: 1
-    # Declared/free requirements use the lexical unit of the occurrence CALL
-    # or EXEC selected: one RECEIVING admission (lmx_walk.h, ADMIT_AS).
-    if: model_own < 0 && l2_rw_recv_req(tmi, tk, req) != 0
-        if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
-            return: 1
+    # The required instance uses the common declared-model projection.
+    if: l2_schema_kind(req) = 1
+        if: l2_rw_recv_req(tmi, tk, req) != 0
+            if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
+                return: 1
+            ---
+        else:
+            if: l2_rw_ns_model(\out, 4, req, -1) != 0
+                return: 1
+            ---
+        ---
     ---
     if: l2_schema_kind(req) = 2 && l2_rw_model_own(\out, 4, l2_mres_own[l2_schema_index(req)]) != 0
         return: 1
@@ -39389,7 +39433,9 @@ fn: l2_rw_admit (int: parent; int: ni; int: letter; int: source_ty; @: int out) 
     # D1: a catch row is the PRIM's last operands -- counted first, for its width.
     if: l2_rw_catch_fixed(0 - 1, 0, 2, "implements", @ nc) != 0 || l2_rw_frame(parent, "LMX_WALK_OP_PRIM", 5 + 3 * nc, out) != 0 || l2_use_unit_child(7, ni) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0 || lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out, \out, ni) < 0
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: LmxPrimitive l2_rwp%d (cast: (@: LmxPrimitive) lmx_arena_take(l2_program_arena, c.sizeof(c.LmxPrimitive), c.LMX_DOMAIN_KIND_PRIMITIVE, c.LMX_DOMAIN_PRIMITIVE))\n        if: l2_rwp%d = 0\n            return: 1\n        l2_rwp%d\\fn: %s\n        l2_rwp%d\\signature: 0\n        l2_rwp%d\\owner: (cast: (@: Lmx) l2_program_arena)\n        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_rwp%d)) != 0\n            return: 1\n", \out, \out, \out, rec, \out, \out, \out, \out) < 0
+        return: 1
+    if: l2_rw_ns_model(\out, 4, ni, -1) != 0
         return: 1
     if: l2_rw_contract(\out, 2, l2_graph_own(), 0, @ contract, @ inputs) != 0 || l2_rw_witness(inputs, 0, source_ty, 0) != 0 || l2_rw_witness(inputs, 1, 0, 1) != 0 || l2_rw_primitive_contract(\out, contract) != 0
         return: 1

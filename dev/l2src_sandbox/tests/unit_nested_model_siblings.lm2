@@ -1,0 +1,24 @@
+Left:
+    int: pad 17
+    Inner:
+        int: x 11
+    end: Inner
+    @: Inner ref
+end: Left
+Right:
+    int: prefix 29
+    int: pad 41
+    Inner:
+        int: y 23
+    end: Inner
+    @: Inner ref
+end: Right
+Left\ref: Left\Inner
+Right\ref: Right\Inner
+Left\ref\x: 13
+Right\ref\y: 31
+int: ok 7
+if: Left\Inner\x != 13 || Right\Inner\y != 31 || Left\pad != 17 || Right\prefix != 29 || Right\pad != 41
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

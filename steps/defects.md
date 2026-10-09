@@ -4,6 +4,54 @@
 
 ## Текущие и недавно закрытые
 
+<a id="nested-receiving-model-instance"></a>
+### NESTED-RECEIVING-MODEL-INSTANCE — 2026-10-09, Codex, FIXED bounded descendant projection (`10C5E667`)
+
+Full13's required `unit_source_scope_contract_declaration` pair resolves
+the original Inner correctly, then refuses admission without a model:
+`l2_type_inst` rejects all nested namespace parents. The bounded native
+and walker repair projects the actual declared root through completed
+source-owned children, without another descriptor or runtime name lookup.
+Private contract/deep/sibling/copy/binding/refusal controls pass; fresh
+focus RED28/426, kernel14 GREEN297/114, L3_14 eleven suites/four budgets,
+full14 RED76/2771 recover the old contract pair with no old regression.
+Fourteen additions have ten GREEN/four required RED; final replay2615
+matches the tested candidate,21 inputs/74 copies match. Four extra local
+method-walker/cleared-root executions pass. The actual local-root anchor
+and reference-crossing map remain separate OPEN required-positive debts.
+Generic selected-occurrence temp emission is
+also corrected: declaration and returned expression derive from one name.
+Exact scope and preserved attempts:
+[journal](nested-receiving-model-20261009.md).
+
+<a id="reference-crossing-slot-map"></a>
+### REFERENCE-CROSSING-SLOT-MAP — 2026-10-09, Codex, OPEN
+
+`unit_nested_model_compatible`: Outer owns Inner(x) and a typed ref;
+Candidate owns pad and x. `Outer\ref: Candidate` admits successfully,
+but `Outer\ref\x: 31` addresses raw model slot0, not the admitted
+candidate's x slot2. Candidate's x remains13 and the witness yields81
+in native and actually-cleared-root execution. Correspondence is already
+registered: the missing step is using it at the reference crossing, not
+algorithm analysis or repeated behavioral tests after mutations.
+Both fixture rows stay required-positive RED. Next bounded child after
+the frozen model-instance checkpoint: common crossing/model-slot schema,
+native and walker readers/writers, retained copied context; no runtime
+names, separate receiver graph or name/form-specific route. See the same
+[journal](nested-receiving-model-20261009.md).
+
+<a id="local-nested-model-anchor"></a>
+### LOCAL-NESTED-MODEL-ANCHOR — 2026-10-09, Codex, OPEN
+
+`unit_nested_model_local`: read owns Outer, Outer owns Inner(x) and a
+typed ref. Construction refuses `an unresolved local admission model`
+because the root own lookup uses the nested body's method rather than
+the actual declaration host. Existing source-field/holder relations and
+selected occurrence ancestry must supply the host in native and walker,
+including copies and receiving contexts. Do not replace it with a unit
+prototype or COUNT ordinal. Both rows remain required-positive RED;
+fix the common physical anchor after the reference-crossing continuation.
+
 <a id="compiler-text-view-ownership"></a>
 ### COMPILER-TEXT-VIEW-OWNERSHIP — 2026-10-03, Codex, IN WORK
 
@@ -5472,8 +5520,11 @@ Mixed-kind/part producers не сняты одним guard-removal. Следую
 общий физический NESTED-RECEIVING-MODEL-INSTANCE, не новый shape-граф.
 [Точные механизмы и пробы](source-owned-namespace-20261009.md).
 
-<a id="nested-receiving-model-instance"></a>
-### NESTED-RECEIVING-MODEL-INSTANCE — 2026-10-09, Codex, OPEN
+### Historical discovery of NESTED-RECEIVING-MODEL-INSTANCE — 2026-10-09, Codex
+
+The current status and bounded acceptance are recorded in the
+[single active entry](#nested-receiving-model-instance) above. The original
+discovery below is retained as evidence, not a second OPEN ticket.
 
 `Outer` содержит `Inner` и `@: Inner ref`; после объявления запись
 `Outer\ref: Outer\Inner` должна допустить тот же реальный объект. Старый

@@ -38,6 +38,24 @@ fourteen inputs/forty-six staged copies match. Next is the common physical
 receiving-model projection; no parent stage closes. Evidence is
 in the [source-owner journal](steps/source-owned-namespace-20261009.md).
 
+The bounded instance child is verified:
+[model-instance journal](steps/nested-receiving-model-20261009.md).
+Its declared parent/child relation selects the existing physical instance;
+native growable expressions and walked OF operands share completed slots.
+Correct admission still does not prove later reference crossings consume
+the registered correspondence: the shifted candidate's x currently
+addresses the wrong slot. That and the actual method-local model host
+are mandatory positive debts, not alternative language rules. Existing
+local/unit/receiving root policies and T7-MODEL-OPERAND-SOURCE remain
+distinct; the copy write control alone does not certify model identity.
+Fresh focus RED28/426, kernel14 GREEN297/114, L3_14 eleven suites/four
+budgets and full14 RED76/2771 are terminal: two old recoveries, no old
+regression, fourteen additions/ten GREEN/four required RED, no changed
+old failures. All2615 final replay results exactly match the tested
+candidate;21 frozen inputs/74 copies match. Four extra method-walker and
+cleared-root local-model executions pass. Continue reference-crossing
+slot routing, then the actual local model-host anchor; no parent closes.
+
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
 chronological plan or a replacement specification. For the source map read

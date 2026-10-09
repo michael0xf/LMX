@@ -27,7 +27,7 @@ the existing current compiler environment. Query names are not added to
 runtime. Byte offsets compare within one source tree only; cross-file
 visibility is not decided here. Focus RED26/410 has two old recoveries,
 no old regression and sixteen additions/fourteen GREEN/two required RED.
-Physical instance emission for a nested receiving model remains missing
+At this full13 checkpoint, physical instance emission for a nested receiving model remained missing
 despite correct model selection. Kernel13 is GREEN297/114 executed
 selftests; L3_13 passes eleven suites/four budgets. Full13 RED74/2757 has
 the same two old recoveries/no old regressions, sixteen additions/fourteen
@@ -36,6 +36,25 @@ Final replay2615 matches the private candidate exactly; fourteen inputs
 remain unchanged and forty-six staged copies match. Next is the shared
 physical receiving-model instance route, not closure of any parent stage;
 see the [bounded journal](steps/source-owned-namespace-20261009.md).
+
+The following instance child (`10C5E667`) has terminal fresh acceptance.
+Its native projection follows the declared parent and completed child;
+the walker model operand uses ordinary OF over the same root policies.
+No new graph/descriptor/name service is added. The shared native temporary
+name defect is also repaired. Private contract, shifted/deep places,
+sibling owners, copied writes and compatible/refused binding controls pass.
+Registered slot correspondence at a reference crossing and actual local
+model-host selection remain required-positive RED. Scope, preserved failed
+attempts, frozen gates and the immediate continuation are in the
+[model-instance journal](steps/nested-receiving-model-20261009.md).
+
+Focus RED28/426, kernel14 GREEN297/114 executed selftests, L3_14 eleven
+suites/four budgets and full14 RED76/2771 have no old regression. The
+contract pair recovers; fourteen additions have ten GREEN/four required
+RED. Replay2615 exactly matches the tested candidate,21 frozen inputs/
+74 copies match, and four extra actually-walked local-model executions
+pass. This is bounded development acceptance, not stable promotion or
+completion of T7, recursive admission or stages8/8a.
 
 <a id="status-and-provenance"></a>
 ## 1. Status, provenance, and how to read this document

@@ -120,6 +120,29 @@ shared source-field/holder places and native/walker model consumers.
 Do not replace a missing place by a prototype or metadata ordinal.
 The census during the frozen chain was read-only; no second build ran.
 
+Thirteenth bounded child, source `10C5E667`, is verified:
+[nested receiving-model journal](steps/nested-receiving-model-20261009.md).
+Declared descendants now use completed source-owned child places in the
+native instance and walker model operands; the generic selected-occurrence
+temporary uses one derived name. Private contract/deep/sibling/copy/binding/
+refusal controls pass. Seven new pairs include four mandatory RED rows:
+shifted-candidate addressing after admission and the actual local model
+host. Neither is a permitted refusal or a new semantic exception. Do not
+claim all copied receiving-model identities are fixed by copy_ref.
+Fresh focus01 RED28/426, kernel14 GREEN297/114 executed selftests,
+L3_14 eleven suites/four budgets, full14 RED76/2771. Two old FAIL→OK,
+zero OK→FAIL, fourteen additions/ten GREEN/four required RED; no removals
+or changed old failure details. All2615 final replay rows exactly match
+private replay02, including1795 L1 outputs and820 refusals. Twenty-one
+frozen inputs/seventy-four actual staged copies match; four extra walked
+method/cleared-root local-model executions succeed. This closes only the
+bounded descendant projection and shared temporary-name defect.
+Immediately after its scoped commit/push, continue
+[REFERENCE-CROSSING-SLOT-MAP](steps/defects.md#reference-crossing-slot-map),
+then [LOCAL-NESTED-MODEL-ANCHOR](steps/defects.md#local-nested-model-anchor)
+through the actual source/receiving occurrence. T7, the other source
+producer debts and stages8/8a remain OPEN; stable is unchanged.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

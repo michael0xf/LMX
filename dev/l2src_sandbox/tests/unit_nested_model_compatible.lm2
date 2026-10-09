@@ -1,0 +1,18 @@
+Outer:
+    int: pad 17
+    Inner:
+        int: x 11
+    end: Inner
+    @: Inner ref
+end: Outer
+Candidate:
+    int: pad 29
+    int: x 13
+end: Candidate
+Outer\ref: Candidate
+Outer\ref\x: 31
+int: ok 7
+if: Candidate\x != 31 || Outer\Inner\x != 11 || Candidate\pad != 29
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

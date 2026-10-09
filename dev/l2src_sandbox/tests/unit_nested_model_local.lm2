@@ -1,0 +1,19 @@
+fn: read () int
+    Outer:
+        int: pad 17
+        Inner:
+            int: x 11
+        end: Inner
+        @: Inner ref
+    end: Outer
+    Outer\ref: Outer\Inner
+    if: Outer\ref != Outer\Inner
+        return: 81
+    Outer\Inner\x: 13
+    return: Outer\Inner\x
+end: read
+int: ok 7
+if: read() != 13
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

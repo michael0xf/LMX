@@ -1,0 +1,15 @@
+Outer:
+    int: pad 17
+    Inner:
+        int: x 11
+    end: Inner
+    @: Inner ref
+end: Outer
+copy: merge: Outer
+copy\ref: copy\Inner
+copy\ref\x: 31
+int: ok 7
+if: copy\Inner\x != 31 || Outer\Inner\x != 11
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

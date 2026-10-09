@@ -1,0 +1,23 @@
+Outer:
+    int: pad 17
+    Inner:
+        int: x 11
+    end: Inner
+    @: Inner ref
+end: Outer
+Wrong:
+    int: y 99
+end: Wrong
+fn: attempt () int
+    int: ok 81
+    Outer\ref: Wrong
+    catch: implements ()
+        ok: 7
+    ---
+    return: ok
+end: attempt
+int: ok attempt()
+if: Outer\ref != 0 || Outer\Inner\x != 11 || Wrong\y != 99
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

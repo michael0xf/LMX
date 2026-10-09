@@ -9710,8 +9710,41 @@ $fixtures = @(
     # REQUIRED positive: nested receiving-model instance emission is separate
     # from correct selection of the model's original declaration.
     [pscustomobject]@{ Name = 'unit_source_scope_contract_declaration.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_source_scope_contract_declaration_walk.lm2'; Source = 'unit_source_scope_contract_declaration.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    # Actual nested receiving-model instances: shifted physical places, deep
+    # ancestry, sibling source owners, copy addressing and admission refusal.
+    [pscustomobject]@{ Name = 'unit_nested_model_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_deep_walk.lm2'; Source = 'unit_nested_model_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 5; WalkedMethods = @(0,1,2,3,4); NativeMethods = @(5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_copy_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_copy_ref_walk.lm2'; Source = 'unit_nested_model_copy_ref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_siblings.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_siblings_walk.lm2'; Source = 'unit_nested_model_siblings.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_bind_only.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_bind_only_walk.lm2'; Source = 'unit_nested_model_bind_only.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 3; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_incompatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_incompatible_walk.lm2'; Source = 'unit_nested_model_incompatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    # REQUIRED positives, not accepted refusals: the shifted candidate's
+    # reference crossing still needs its admitted slot map; the local model
+    # still needs the actual host occurrence rather than a guessed unit root.
+    [pscustomobject]@{ Name = 'unit_nested_model_compatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_compatible_walk.lm2'; Source = 'unit_nested_model_compatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_model_local_walk.lm2'; Source = 'unit_nested_model_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # MERGE-PARENT-MODEL-SOURCE (steps/defects.md): a merge copy's code admits a root merge result by name (K02c); the
     # model is the copy's own instance, read from the copied lexical graph, the candidate the caller's binding, and

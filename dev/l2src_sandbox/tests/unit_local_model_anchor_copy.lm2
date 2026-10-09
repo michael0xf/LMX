@@ -1,0 +1,25 @@
+fn: read () int
+    Outer:
+        Inner:
+            int: x 11
+        end: Inner
+        @: Inner ref
+    end: Outer
+    Candidate:
+        int: pad 99
+        int: x 20
+    end: Candidate
+    copy: merge: Outer
+    copy\ref: Candidate
+    if: copy\Inner = Outer\Inner || @copy\ref\x != @Candidate\x
+        return: 81
+    copy\ref\x: 31
+    if: Candidate\x != 31 || Outer\Inner\x != 11 || copy\Inner\x != 11 || Outer\ref != 0
+        return: 81
+    return: Candidate\x
+end: read
+int: ok 7
+if: read() != 31
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

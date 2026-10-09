@@ -1,0 +1,37 @@
+fn: left () int
+    Outer:
+        Inner:
+            int: x 11
+        end: Inner
+        @: Inner ref
+    end: Outer
+    Candidate:
+        int: pad 91
+        int: x 31
+    end: Candidate
+    Outer\ref: Candidate
+    if: @Outer\ref\x != @Candidate\x || Outer\Inner\x != 11
+        return: 81
+    return: Outer\ref\x
+end: left
+fn: right () int
+    Outer:
+        Inner:
+            int: x 21
+        end: Inner
+        @: Inner ref
+    end: Outer
+    Candidate:
+        int: pad 99
+        int: x 47
+    end: Candidate
+    Outer\ref: Candidate
+    if: @Outer\ref\x != @Candidate\x || Outer\Inner\x != 21
+        return: 81
+    return: Outer\ref\x
+end: right
+int: ok 7
+if: left() != 31 || right() != 47 || left() != 31
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

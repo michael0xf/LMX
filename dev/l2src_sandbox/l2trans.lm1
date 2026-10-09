@@ -1597,6 +1597,7 @@ prototype:
     fn: l2_emit_constructed_layout (int: model; const: @(char value); const: @(char req); const: @(char ind)) int
     fn: l2_layout_token (int: ni; @: char dest) int
     fn: l2_model_inst (int: mi; int: ni; const: @(char ind); @: L2Tx dest) int
+    fn: l2_model_root_own (int: ni) int
     fn: l2_pointer_compatible (int: target; int: value) int
     fn: l2_unit_defines_struct (const: @(LmP0Text t); const: @(LmP0Node stop)) int
     fn: l2_rb_find (const: @(LmP0Node stmt)) @: LmP0Text
@@ -21290,6 +21291,16 @@ fn: l2_layout_token (int: ni; @: char dest) int
         return: 1
 return: (cast: (int) (c.sprintf(dest, "(cast: (@: void) (l2_layout_tokens + %d))", slot) < 0))
 
+# The original source declaration supplies its owning field, independently
+# of which body is asking for its model. This is P0 identity, not a name
+# search or a substitute prototype. Its physical place is shared by readers.
+fn: l2_model_root_own (int: ni) int
+    @: L2SourceContainer owner 0
+    @: L2SourceField field l2_source_definition_field(ni, 0, -1, @ owner)
+    if: field = 0 || owner = 0
+        return: -1
+return: field\own
+
 # Required local models remain their actual reached declaration instance.
 # This projection is separate from a module-lifetime schema identity.
 fn: l2_model_inst (int: mi; int: ni; const: @(char ind); @: L2Tx dest) int
@@ -21319,7 +21330,7 @@ fn: l2_model_inst (int: mi; int: ni; const: @(char ind); @: L2Tx dest) int
             return: 1
         return: l2_model_child(ni, dest)
     ---
-    oi: l2_own_of_local_ns(mi, ni)
+    oi: l2_model_root_own(ni)
     if: oi < 0
         return: 1
     if: mi = l2_work_mi && l2_own_cached(mi, oi) != 0
@@ -24293,10 +24304,25 @@ return: l2_nsf_slot(l2_ns_named_row(ni, pd, off, len, out_kind, out_ent))
 # The named Structure reference field row points at: a binding's own referent, resolved once at its place
 # (l2_ns_bind_target, K03 NS-ROLES-2), or a typed reference `@: T q`'s pointee by its word T (D-76); -1 for none.
 fn: l2_nsf_pointee (int: row) int
-    if: row < 0 || row >= l2_nsf_n || l2_nsf_kind[row] != 10 || l2_nsf_name[row] = 0
+    int: own 0
+    int: owner
+    if: row < 0 || row >= l2_nsf_n || l2_nsf_kind[row] != 10
         return: -1
     if: l2_nsf_val[row] != 0U
         return: (cast: (int) l2_nsf_val[row]) - 1
+    owner: l2_ns_proc[l2_nsf_owner[row]]
+    # A source-owned field already resolved its declared model at its own
+    # declaration. A later caller's visibility cannot reinterpret that name.
+    if: l2_ns_source_body(l2_nsf_owner[row]) != 0
+        while: own < l2_own_n
+            if: l2_own_mi[own] = owner && l2_own_decl[own] = l2_nsf_source[row]
+                return: l2_own_nsty_get(own)
+            own: own + 1
+        ---
+        return: -1
+    ---
+    if: l2_nsf_name[row] = 0
+        return: -1
 return: l2_ns_find(l2_nsf_name[row])
 
 # The named Structure the reference field `seg` of Structure ni points at, or -1 (D-76).
@@ -36329,7 +36355,7 @@ fn: l2_use_cell_slots (int: form; int: oi; @: int s) int
             l2_use_place_below(field\holder, 0, s + n)
         n: n + k
     else:
-        if: form = 10
+        if: form = 10 || (owner != l2_e && l2_m_nsof(owner) < 0)
             if: s != 0
                 s[0]: l2_occ_slot(owner)
             n: 1
@@ -39282,7 +39308,7 @@ fn: l2_rw_ns_model (int: parent; int: slot; int: req; int: callee) int
         return: l2_rw_put(parent, slot, frame)
     ---
     if: l2_ns_local[req] >= 0
-        own: l2_own_of_local_ns(l2_rw_mi, req)
+        own: l2_model_root_own(req)
         if: own < 0
             return: l2_rw_refuse(l2_here_node, "an unresolved local admission model")
         return: l2_rw_model_own(parent, slot, own)
@@ -39994,6 +40020,14 @@ fn: l2_rw_cell (int: node; int: oi) int
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_nsp[%d])) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, l2_part_ns[k], node, field\child) < 0))
     if: l2_rw_type_base != 0
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_program_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, node, field\child) < 0))
+    # The foreign field is a child of its actual declared owner's occurrence,
+    # not a same-numbered child of the unit. The constructor already owns that
+    # instance; closure retains/retargets this physical reference normally.
+    if: l2_own_mi[oi] != l2_e
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", node) < 0 || l2_emit_build_occ(l2_own_mi[oi]) != 0
+            return: 1
+        return: (cast: (int) (c.fprintf(l2_out, ")) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, field\child) < 0))
+    ---
 return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", node, node, field\child) < 0))
 
 # The walker op that binds the root's own field oi (-189 c3b-3; grok_bot -186): an own Structure

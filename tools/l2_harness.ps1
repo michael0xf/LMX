@@ -9749,15 +9749,53 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_nested_model_incompatible_walk.lm2'; Source = 'unit_nested_model_incompatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     # The shifted candidate must consume its admitted map after crossing.
-    # The actual local model host remains a required-positive debt, never
-    # an accepted refusal or a guessed unit prototype.
+    # Local model/address controls use the actual source declaration host,
+    # never an accepted refusal or a guessed unit prototype.
     [pscustomobject]@{ Name = 'unit_nested_model_compatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_model_compatible_walk.lm2'; Source = 'unit_nested_model_compatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 3; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_model_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_model_local_walk.lm2'; Source = 'unit_nested_model_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    # Stronger source-local model controls: shifted physical addresses/write,
+    # two crossings, same-spelled independent hosts and a copied owner.
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_shifted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_shifted_walk.lm2'; Source = 'unit_local_model_anchor_shifted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_deep_walk.lm2'; Source = 'unit_local_model_anchor_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4,5); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_two_hosts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1,3,4,5,6,7,8); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_two_hosts_walk.lm2'; Source = 'unit_local_model_anchor_two_hosts.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1,3,4,5,6,7,8); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_copy_walk.lm2'; Source = 'unit_local_model_anchor_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4); NativeMethods = @(1); Absent = @(); Debt = @() },
+    # Required positive: a full fn declaration in a named local body must use
+    # ordinary method collection. Its current pre-emission refusal remains
+    # RED; do not substitute an expected refusal or drop the copied instance.
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_receiving.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_receiving_walk.lm2'; Source = 'unit_local_model_anchor_receiving.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # A non-null binding in the local owner's executed body really consumes
+    # the foreign model operand; the null initializer alone cannot prove it.
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_body_walk.lm2'; Source = 'unit_local_model_anchor_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    # Required positive: the common pointer receiver also accepts its explicit
+    # third initializer in a named local body. Its old NSF arity refusal is
+    # a separate debt, not an accepted language rule.
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_model_anchor_initializer_walk.lm2'; Source = 'unit_local_model_anchor_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # Shared reference-crossing correspondence: value and address reads,
     # writes, LAST/ordinal, multiple boundaries, copy, formal, identity/null.

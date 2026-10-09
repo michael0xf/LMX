@@ -1,0 +1,30 @@
+fn: read () int
+    Outer:
+        int: pad 17
+        Middle:
+            int: pad 23
+            Leaf:
+                int: x 11
+            end: Leaf
+            @: Leaf ref
+        end: Middle
+        @: Middle ref
+    end: Outer
+    Candidate:
+        int: pad 99
+        int: x 20
+    end: Candidate
+    Outer\ref: Outer\Middle
+    Outer\ref\ref: Candidate
+    if: @Outer\ref\ref\x != @Candidate\x
+        return: 81
+    Outer\ref\ref\x: 31
+    if: Candidate\x != 31 || Candidate\pad != 99 || Outer\Middle\Leaf\x != 11 || Outer\Middle\pad != 23
+        return: 81
+    return: Candidate\x
+end: read
+int: ok 7
+if: read() != 31
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

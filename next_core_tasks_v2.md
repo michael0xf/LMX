@@ -173,6 +173,30 @@ After scoped commit/push immediately continue LOCAL-NESTED-MODEL-ANCHOR;
 this is not parent completion or permission to promote stable. Preserve
 full15 and all earlier failed attempts. See the journal for exact scope.
 
+Crossing checkpoint is published at `01d82c8c`, with all three heads
+verified equal. Its immediate next child
+`CODEX-LOCAL-NESTED-MODEL-ANCHOR-20261009-15` has terminal bounded acceptance; see the
+[actual local-anchor journal](steps/local-nested-model-anchor-20261009.md)
+for exact symbols, required controls and uninterrupted acceptance chain.
+Codex retains the sole writer/build; Opus remains Q&A only.
+
+Local-anchor candidate02 has92 actual positive control executions and four
+rejected generated faults. Its2615 replay translations are identical to
+published full16, including outputs and diagnostics. Seven new sources/
+fourteen required rows retain ten privately GREEN rows and four RED debts:
+full method declaration collection in a local named body, and that body's
+explicit third pointer initializer. Neither is an accepted refusal.
+Fresh serial acceptance is terminal: focus RED31/529, kernel17
+GREEN297/114 executed selftests, L3_17 eleven suites/four budgets,
+full17 RED76/2795. The two original local rows recover, no old GREEN
+regresses, no row is removed and no old refusal detail changes. Final
+replay2615 is identical to the private candidate;35 frozen inputs and126
+gate copies match. After publication, continue the common declaration/action producer and
+its actual lexical/receiving/copy consumers; see
+[LOCAL-NAMED-METHOD-COLLECTION](steps/defects.md#local-named-method-collection).
+Do not patch a single spelling, move a local method to the unit, or suppress
+the new witnesses. §§8/8a and stable promotion remain blocked by full RED.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

@@ -65,7 +65,7 @@ defect closes. The local-model anchor and parent stages remain OPEN;
 no stable promotion, expected-refusal relabeling or failed-evidence deletion.
 
 <a id="local-nested-model-anchor"></a>
-### LOCAL-NESTED-MODEL-ANCHOR — 2026-10-09, Codex, OPEN
+### LOCAL-NESTED-MODEL-ANCHOR — 2026-10-09, Codex, FIXED bounded anchor (`0F114BD8`)
 
 `unit_nested_model_local`: read owns Outer, Outer owns Inner(x) and a
 typed ref. Construction refuses `an unresolved local admission model`
@@ -73,8 +73,48 @@ because the root own lookup uses the nested body's method rather than
 the actual declaration host. Existing source-field/holder relations and
 selected occurrence ancestry must supply the host in native and walker,
 including copies and receiving contexts. Do not replace it with a unit
-prototype or COUNT ordinal. Both rows remain required-positive RED;
-fix the common physical anchor after the reference-crossing continuation.
+prototype or COUNT ordinal. Both original required-positive rows now pass.
+Exact source/physical boundaries and preserved unsuccessful attempts are
+in the [bounded journal](local-nested-model-anchor-20261009.md).
+
+Candidate02 uses the source-owning declaration identity in both model
+readers and retains the actual foreign-cell constructor prefix. A reference
+field reads its already resolved declared model, not a later caller's
+visibility. The92 actual private controls/four live generated faults and
+fresh focus RED31/529, kernel17 GREEN297/114, L3_17 eleven suites/four
+budgets and full17 RED76/2795 are terminal. Two old rows recover, fourteen
+new rows have ten GREEN/four distinct required RED, no old regression,
+removal or changed old refusal. Final replay2615 exactly matches the
+private candidate;35 frozen inputs/126 copies match. Local full-method
+collection and explicit third reference initializer remain OPEN below,
+as do T7/critical/8/8a. Stable does not change.
+
+<a id="local-named-method-collection"></a>
+### LOCAL-NAMED-METHOD-COLLECTION — 2026-10-09, Codex, OPEN
+
+`unit_local_model_anchor_receiving` places the complete declaration
+`fn: take (Inner: v) int` in local Outer, then checks both Outer and its
+merge copy against a shifted Candidate. Before argument admission,
+`l2_take_ns_body` routes this declaration to the one-operand callable-field
+contract and refuses at line2:5 (`a callable field needs a method name`).
+Both native/walked rows are required-positive RED, not accepted refusals.
+
+Repair the common declaration/action selection after the complete
+receiver/actuals model is formed; preserve ordinary lexical parent,
+source field and fn/fm/sub visibility. The existing `fn: existingMethod`
+field contract is not an exception and must not be broken. Use common
+method collection/source construction, not a fn/name/form-specific patch
+or a new global definition. Then demonstrate original/copy receiving-model
+identity in both method backends and root modes. Continue this debt after
+the bounded local-anchor checkpoint; parent T7/critical/8/8a remain OPEN.
+
+Related complete receiver-action debt: the typed-reference declaration
+`@: Inner ref Inner` in the same local named body is refused by the old
+NSF two-operand guard (`a reference field needs a type and a name`). The
+`unit_local_model_anchor_initializer` pair is required-positive RED.
+The explicit `ref: Inner` body action is separately tested after an explicit
+Outer invocation; its non-null model operand is actually consumed. A null
+initializer's unused operand is not evidence of a correct physical host.
 
 <a id="compiler-text-view-ownership"></a>
 ### COMPILER-TEXT-VIEW-OWNERSHIP — 2026-10-03, Codex, IN WORK

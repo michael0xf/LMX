@@ -77,6 +77,26 @@ private04 (1795 outputs/820 nonzero);28 frozen inputs/98 copies match.
 Only the bounded crossing defect closes; actual local model-host selection,
 T7 and stages8/8a remain OPEN. Preserve full15 and all earlier attempts.
 
+After publication at `01d82c8c`, the next bounded child
+`CODEX-LOCAL-NESTED-MODEL-ANCHOR-20261009-15` is bounded-verified. Its exact existing
+source-owner/place and native/walker/closure boundaries, required controls
+and uninterrupted acceptance chain are in the
+[local-anchor journal](steps/local-nested-model-anchor-20261009.md).
+
+LOCAL-NAMED-METHOD-COLLECTION is the next measured complete-action debt,
+not a new language concept: a full fn declaration in a local named body
+currently meets an older one-operand field reader. The same old producer
+refuses the explicit third pointer initializer. Both pairs remain required
+positive RED. The separate local-anchor candidate passes92 actual controls/
+four live generated faults. Fresh focus RED31/529, kernel17 GREEN297/114,
+L3_17 eleven suites/four budgets and full17 RED76/2795 are terminal:
+two old recoveries/no old regression, fourteen added rows/ten GREEN/four
+required RED. Final replay2615 is exact;35 inputs/126 copies match.
+Definitions, actual instances and acceptance labels must
+not be conflated; the [journal](steps/local-nested-model-anchor-20261009.md)
+preserves the unused-null-operand mutant and failed diagnostic attempts.
+No receiving/copy result or parent closure is asserted ahead of execution.
+
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
 chronological plan or a replacement specification. For the source map read

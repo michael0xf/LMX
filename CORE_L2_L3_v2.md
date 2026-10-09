@@ -80,6 +80,27 @@ outputs and820 nonzero results. The bounded crossing defect is repaired;
 actual local-model anchoring, T7 and stages8/8a remain OPEN. No failed attempt
 is discarded and stable is unchanged.
 
+Crossing is published at `01d82c8c`. The immediate following implementation
+child is [actual local-model anchoring](steps/local-nested-model-anchor-20261009.md).
+Its source declaration/owner/place and native/walker/closure readers are
+checked together. Its bounded verification is not a complete
+receiving/copy guarantee or a changed language rule.
+
+The local-anchor candidate now uses original source-owning field identity,
+the existing declared pointer model and actual foreign-cell constructor
+prefix. Private controls include an explicitly executed body's non-null
+model consumption:92 actual executions/four live generated faults; replay
+2615 is unchanged. Old namespace action readers still reject a complete
+local method declaration and an explicit third pointer initializer; their
+four required-positive RED rows remain. No companion runtime graph/name
+lookup or special receiver form is introduced. Fresh acceptance is terminal:
+focus RED31/529, kernel17 GREEN297/114 executed selftests, L3_17 eleven
+suites/four budgets and full17 RED76/2795. Two old locals recover, no old
+GREEN regresses, fourteen new rows include ten GREEN/four separate required
+RED. Final2615 replay results exactly match the private candidate;35 inputs/
+126 copies match. The next repair is complete local declaration/action
+production, not parent closure or stable promotion.
+
 <a id="status-and-provenance"></a>
 ## 1. Status, provenance, and how to read this document
 

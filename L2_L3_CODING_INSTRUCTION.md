@@ -38,7 +38,7 @@ match, and four extra actually-walked local-model controls pass. The
 remaining required-positive RED rows are implementation debts, not a
 permission for ported code to change the language contract.
 
-The subsequent crossing repair is still awaiting full acceptance; see its
+The subsequent crossing repair has terminal bounded acceptance; see its
 [journal](steps/reference-crossing-slot-map-20261009.md). Retain the declared
 pointee model across each reference crossing independently of an optional
 formal/own key. Each next field consumes the established correspondence,
@@ -58,6 +58,26 @@ suites/four budgets pass. The final2615-command replay matches private04
 byte-for-byte; all28 frozen inputs/98 staged copies match. This repairs
 the bounded crossing route, not the actual local model-host selection or
 T7/8/8a. Required-positive debts remain RED and stable is unchanged.
+
+The `01d82c8c` crossing publication is followed immediately by the verified
+[local-model anchor child](steps/local-nested-model-anchor-20261009.md).
+
+That child uses original declaration identity and its already resolved
+model; do not re-resolve a local pointer field in the later caller's scope.
+Its92 private positive executions/four rejected live faults do not certify
+complete local declaration actions. The full fn header and explicit third
+pointer initializer still expose the old namespace producer's narrower
+contract and remain required-positive RED. Use the same complete
+receiver/actuals model and ordinary source collection, not a name/arity
+exception, global relocation or prototype fallback. Fresh acceptance is
+terminal: focus RED31/529, kernel17 GREEN297/114, L3_17 eleven suites/four
+budgets and full17 RED76/2795, two old recoveries/no old regression,
+fourteen new rows/ten GREEN/four required RED. Final replay2615 matches
+the private candidate;35 inputs/126 copies match. Copied receiving-method
+identity is not yet established.
+Do not use a current-method name lookup or a same-numbered unit child as
+a substitute for the declaration's actual source owner. The connected
+repair's bounded controls do not imply the remaining receiving guarantees.
 
 Every important statement is classified as one of the following.
 

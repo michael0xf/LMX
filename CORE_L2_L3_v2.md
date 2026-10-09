@@ -19,6 +19,24 @@ suites/four budgets; final2615 replay results exactly match the tested
 private candidate. See the [bounded journal](steps/node-source-path-20261009.md)
 for diagnostics, frozen inputs/copies and the next source-owner census.
 
+The following source-owner implementation is verified as a bounded
+development child: both namespace spelling readers use one original-P0 eligibility
+route, actual owner membership and source horizon. Stored contract/free
+input words retain their declaration/callee source; synthetic Text uses
+the existing current compiler environment. Query names are not added to
+runtime. Byte offsets compare within one source tree only; cross-file
+visibility is not decided here. Focus RED26/410 has two old recoveries,
+no old regression and sixteen additions/fourteen GREEN/two required RED.
+Physical instance emission for a nested receiving model remains missing
+despite correct model selection. Kernel13 is GREEN297/114 executed
+selftests; L3_13 passes eleven suites/four budgets. Full13 RED74/2757 has
+the same two old recoveries/no old regressions, sixteen additions/fourteen
+GREEN/two required RED, no removed rows or changed old failure details.
+Final replay2615 matches the private candidate exactly; fourteen inputs
+remain unchanged and forty-six staged copies match. Next is the shared
+physical receiving-model instance route, not closure of any parent stage;
+see the [bounded journal](steps/source-owned-namespace-20261009.md).
+
 <a id="status-and-provenance"></a>
 ## 1. Status, provenance, and how to read this document
 

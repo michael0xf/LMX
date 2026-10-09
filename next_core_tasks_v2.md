@@ -98,6 +98,28 @@ selected kind govern calls, primitive reception and field tails. Keep the
 three new required-positive pairs RED until measured. Part-own construction
 is distinct from the author's unresolved MAIN-to-part visibility question.
 
+The twelfth bounded source-owner child is verified on translator
+SHA256 `D4442DB24BA368537BD13AEF25F40C0788B0852D80FA95C7E3A6C3A4861AB963`.
+Ordinary/payload namespace selection uses the original query source and
+actual lexical owner; no global nested-name collision or runtime names.
+Private replay2615 changes only two located negative diagnostics; all old
+successful L1 bytes remain identical. Fresh focus is RED26/410, with two
+old recoveries/no regressions and sixteen added rows, fourteen GREEN and
+two required nested receiving-model instance debts RED. Kernel13 is
+GREEN297/114 executed selftests; L3_13 passes eleven suites/four budgets.
+Full13 is RED74/2757: two old recoveries/no old regressions, sixteen
+added rows/fourteen GREEN/two required RED, no removals or changed old
+failure details. Final replay2615 exactly matches private replay02;
+1795 successful L1 files/820 refusals. Fourteen frozen inputs and forty-six
+staged copies match. See the
+[source-owner journal](steps/source-owned-namespace-20261009.md).
+The other source-producer debts and T7/§§8/8a remain OPEN. Next bounded
+child after publication: NESTED-RECEIVING-MODEL-INSTANCE, actual model
+projection from the existing selected lexical/receiving/own occurrence,
+shared source-field/holder places and native/walker model consumers.
+Do not replace a missing place by a prototype or metadata ordinal.
+The census during the frozen chain was read-only; no second build ran.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

@@ -1,0 +1,14 @@
+# A nested h is not a declaration in the root block. Unknown root h() defines
+# its own empty Structure; calling it cannot execute the inner h.
+Outer:
+    h:
+        int: p 3
+    end: h
+end: Outer
+h()
+h
+int: ok 7
+if: Outer\h\p != 3
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

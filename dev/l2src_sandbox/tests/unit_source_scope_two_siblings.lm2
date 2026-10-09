@@ -1,0 +1,16 @@
+# Same-named declarations in different source owners keep distinct places.
+Left:
+    h:
+        int: p 11
+    end: h
+end: Left
+Right:
+    h:
+        int: p 22
+    end: h
+end: Right
+int: ok 7
+if: Left\h\p != 11 || Right\h\p != 22
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

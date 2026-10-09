@@ -1,0 +1,13 @@
+# A typed reference declaration resolves its model in the actual lexical owner.
+# This checks construction/type resolution, not reading uninitialized ref.
+Outer:
+    Inner:
+        int: x 7
+    end: Inner
+    @: Inner ref
+end: Outer
+int: ok 7
+if: Outer\Inner\x != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

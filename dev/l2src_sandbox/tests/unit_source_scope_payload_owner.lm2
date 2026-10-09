@@ -1,0 +1,28 @@
+# Plain and quoted descriptor words select the same actual lexical owner.
+# Left's Inner satisfies Required; Right's Inner does not have x.
+Required:
+    int: x 0
+end: Required
+Left:
+    Inner:
+        int: x 11
+    end: Inner
+    int: result 0
+    if: implements(Inner, Required, Required) = 1
+        result: 1
+end: Left
+Right:
+    Inner:
+        int: y 22
+    end: Inner
+    int: result 1
+    if: implements(`Inner`, `Required`, `Required`) = 0
+        result: 0
+end: Right
+Left()
+Right()
+int: ok 7
+if: Left\result != 1 || Right\result != 0
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,22 @@
+# REQUIRED POSITIVE: stored reference model words belong to their declaration,
+# not a later consumer or a later root namesake. The model-instance emission
+# route for a nested receiving model is still missing; keep this row RED.
+Outer:
+    Inner:
+        int: x 11
+    end: Inner
+    @: Inner ref
+end: Outer
+Inner:
+    int: y 99
+end: Inner
+fn: read () int
+    return: Outer\ref\x
+end: read
+Outer\ref: Outer\Inner
+Outer\ref\x: 13
+int: ok 7
+if: read() != 13 || Outer\Inner\x != 13 || Inner\y != 99
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

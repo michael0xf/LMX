@@ -14,6 +14,15 @@ Implementation state is intentionally kept separate. The active queue is [next_c
 
 ## 1. Status words used here
 
+Verified bounded source-owner acceptance is recorded in the
+[bounded journal](steps/source-owned-namespace-20261009.md). When migrating
+a model lookup, retain the query's original declaration/source owner, not
+only its spelling or the source location of a later consumer. Plain and
+quoted descriptor words use the same source eligibility. Correct selection
+does not prove a nested receiving-model instance can yet be emitted: that
+case remains a required-positive debt. This snapshot does not change
+forward-only ordinary declaration visibility or decide MAIN/part visibility.
+
 Every important statement is classified as one of the following.
 
 - **NORMATIVE** — required by the current language specifications or an accepted author clarification.

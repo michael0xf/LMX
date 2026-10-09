@@ -5370,9 +5370,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_vis_later_data_refused_walk.lm2'; Source = 'unit_k03_vis_later_data_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_vis_later_data_refused_walk.lm2:3:8: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_nested_sibling_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_k03_vis_nested_sibling_refused.lm2:10:15: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_vis_nested_sibling_refused.lm2:14:30: unbound dynamic input Inner'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_nested_sibling_refused_walk.lm2'; Source = 'unit_k03_vis_nested_sibling_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_k03_vis_nested_sibling_refused_walk.lm2:10:15: unresolved name'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_vis_nested_sibling_refused_walk.lm2:14:30: unbound dynamic input Inner'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_k03_vis_later_struct_method.lm2:15:30: unbound dynamic input Later'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_method_walk.lm2'; Source = 'unit_k03_vis_later_struct_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -9663,19 +9663,55 @@ $fixtures = @(
         Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_primitive_tail_walk.lm2'; Source = 'unit_node_source_primitive_tail.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
-    # REQUIRED positives still rejected earlier by independent declaration
-    # producers. Keep them RED, not expected refusals or proof of NODE handling.
+    # Mixed-kind and own-part producers remain required-positive debts. The
+    # namespace-parent pair exercises distinct actual source owners.
     [pscustomobject]@{ Name = 'unit_node_source_mixed_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_mixed_occurrences_walk.lm2'; Source = 'unit_node_source_mixed_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_namespace_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_namespace_parent_walk.lm2'; Source = 'unit_node_source_namespace_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_part.lm2'; Parts = @('unit_node_source_part_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_part_walk.lm2'; Source = 'unit_node_source_part.lm2'; Parts = @('unit_node_source_part_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # Source-owned namespace selection serves definitions, types, values and
+    # payload descriptors. Actual root/native words are checked, not inferred.
+    [pscustomobject]@{ Name = 'unit_source_scope_nested_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_nested_reference_walk.lm2'; Source = 'unit_source_scope_nested_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_nested_empty_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_nested_empty_root_walk.lm2'; Source = 'unit_source_scope_nested_empty_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_two_siblings.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_two_siblings_walk.lm2'; Source = 'unit_source_scope_two_siblings.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_payload_owner.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_payload_owner_walk.lm2'; Source = 'unit_source_scope_payload_owner.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 5; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeMethods = @(5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_known_outer_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'more arguments than h has formals'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_known_outer_call_refused_walk.lm2'; Source = 'unit_source_scope_known_outer_call_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'more arguments than h has formals'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_nested_value_root_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_nested_value_root_refused_walk.lm2'; Source = 'unit_source_scope_nested_value_root_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_later_root_value_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_later_root_value_refused_walk.lm2'; Source = 'unit_source_scope_later_root_value_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unresolved name'; ErrorLines = 1; Absent = @(); Debt = @() },
+    # REQUIRED positive: nested receiving-model instance emission is separate
+    # from correct selection of the model's original declaration.
+    [pscustomobject]@{ Name = 'unit_source_scope_contract_declaration.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_scope_contract_declaration_walk.lm2'; Source = 'unit_source_scope_contract_declaration.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # MERGE-PARENT-MODEL-SOURCE (steps/defects.md): a merge copy's code admits a root merge result by name (K02c); the
     # model is the copy's own instance, read from the copied lexical graph, the candidate the caller's binding, and

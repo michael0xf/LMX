@@ -23,6 +23,21 @@ Diagnostics and exact gate scope are separated in the
 [NODE journal](steps/node-source-path-20261009.md). Only the bounded NODE
 defect closes, not any parent stage.
 
+The verified bounded source-owner child separates query provenance from
+spelling: the original P0 site, lexical parent and eligible source position
+select the existing namespace record. Ordinary/payload lookup shares one
+selector, including quoted payloads. A nested declaration is not a global
+namesake; a selected type schema still is not its physical model instance.
+The latter's root-only emitter is a separate required debt, not permission
+to manufacture a shape graph or fall back to a global model. Focus RED26/410
+has no old regression. Fresh full13 RED74/2757 recovers two old rows,
+adds sixteen/fourteen GREEN/two required RED, removes none and changes no
+old failure details. Kernel13 GREEN297/114 and L3_13 eleven suites/four
+budgets are terminal. Replay2615 exactly matches the private candidate;
+fourteen inputs/forty-six staged copies match. Next is the common physical
+receiving-model projection; no parent stage closes. Evidence is
+in the [source-owner journal](steps/source-owned-namespace-20261009.md).
+
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
 chronological plan or a replacement specification. For the source map read

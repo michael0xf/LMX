@@ -5448,7 +5448,7 @@ SOURCE-DECLARATION-ORDER и родители T7/§§8/8a остаются OPEN.
   собственного исходника части, не ответ на открытый вопрос видимости
   объявлений MAIN в части.
 
-Свидетели `unit_node_source_mixed_occurrences`,
+На baseline full12 свидетели `unit_node_source_mixed_occurrences`,
 `unit_node_source_namespace_parent`, `unit_node_source_part` и их walked
 пары зарегистрированы как required-positive RED, не expected refusals.
 Нормы — [имена и вхождения](../docs/LMX_semantics.en.md#fields),
@@ -5458,6 +5458,42 @@ SOURCE-DECLARATION-ORDER и родители T7/§§8/8a остаются OPEN.
 отрицательные применения уже известного тела и все прежние shadow/call
 свидетели. Точные строки проверенного среза находятся в
 [журнале NODE](node-source-path-20261009.md); T7/§§8/8a не закрыты.
+
+Следующий bounded namespace-owner срез проверен: focus RED26/410,
+обычная и payload-запись используют один исходный P0-владелец, вложенное
+имя не становится глобальным. Namespace-parent pair FAIL→OK, новых старых
+регрессий нет; 16 добавлений/14 GREEN/два required RED. Kernel13
+GREEN297/114 самотестов, L3_13 — 11 наборов/four budgets. Full13
+RED74/2757: два старых FAIL→OK, ноль OK→FAIL, 16 добавлений/14 GREEN/
+два required RED, без удалений и изменений прежних отказов. Replay2615
+точно равен приватной версии; 14 входов/46 копий совпали. Namespace-parent
+pair исправлена, но SOURCE-DECLARATION-ORDER остаётся OPEN.
+Mixed-kind/part producers не сняты одним guard-removal. Следующий срез —
+общий физический NESTED-RECEIVING-MODEL-INSTANCE, не новый shape-граф.
+[Точные механизмы и пробы](source-owned-namespace-20261009.md).
+
+<a id="nested-receiving-model-instance"></a>
+### NESTED-RECEIVING-MODEL-INSTANCE — 2026-10-09, Codex, OPEN
+
+`Outer` содержит `Inner` и `@: Inner ref`; после объявления запись
+`Outer\ref: Outer\Inner` должна допустить тот же реальный объект. Старый
+бинарник и новый owner-selector отказывают `internal: admission without
+receiving model`. `l2_nsf_pointee` выбирает оригинальную модель поля;
+`l2_model_inst` передаёт её в `l2_type_inst`, который отвергает nested parent
+до проекции реального места. Это пробел общего получения model instance,
+не неизвестный тип и не разрешение нового shape-графа. Поздний корневой
+namesake не должен менять модель объявления.
+
+`unit_source_scope_contract_declaration` и walked twin зарегистрированы
+как required-positive RED. Следующий срез: общая цепочка фактических
+namespace/own мест от существующего lexical-unit/receiving якоря, с
+правильным holder для локальной модели и её копии; ни metadata ordinal,
+ни глобальный прототип не заменяют отсутствующий committed place.
+Проверить native, настоящий walked body и очищенный root, разные
+одноимённые владельцы, deep/shifted source places, копии и отказ допуска
+несовместимого кандидата. Триаргументный initializer reference-поля и
+binding к вложенной Structure также остаются отдельными прежними
+producer-долгами; эта фикстура их не обходит и не объявляет поддержанными.
 
 <a id="bind-call-entry"></a>
 ### BIND-CALL-ENTRY — 2026-10-07, Opus (перепись K03 S6), FIXED 2026-10-07 (K03 S6)

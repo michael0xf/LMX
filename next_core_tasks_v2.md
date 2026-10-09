@@ -2141,6 +2141,24 @@ receiving/admission model-operand and native hidden-use dependencies;
 full-formal/default,
 hosted/value selection and native composed bodies remain separate debts.
 
+The seventh bounded checkpoint has final focus05 GREEN21: first-row inline descriptor
+mapping, common interpreted callable transport, and a call contract using
+the selected formation's hidden inputs rather than the exemplar's empty
+list. The broader family is 222 targets / six old failures (four FAIL→OK,
+zero OK→FAIL); three isolated mutants and twelve wrong-value executions
+are rejected. Stronger walked pins cover only bodies with generated
+trampolines; the nested helper/inner native-entry gap remains a debt.
+Kernel07 is GREEN297/114 actual selftests; L3_08 exits successfully.
+Full07 is RED64/2666: four FAIL→OK, zero OK→FAIL, six new GREEN rows,
+none removed and no changed generic refusal messages. All-command replay
+of 2615 full65 commands: 2576 identical, 36 inspected L1-only changes,
+three former callable-formal walked refusals now emit L1 with exit 0.
+The seven frozen inputs remain unchanged. Next measure the actual receiving
+unit through a materialized program-part root; rootless controls do not
+exercise that relation. Multi-formation native consumers,
+receiving projection, full formal/default preservation and native composed
+bodies are still separate dependencies, not closed by these positives.
+
 ### K04 — Callable actuals and hidden inputs
 
 Complete `CALLABLE-FORMAL-HIDDEN-CONTRACT`, `SUB-ACTUAL-REFERENCE-CLASSIFICATION`,

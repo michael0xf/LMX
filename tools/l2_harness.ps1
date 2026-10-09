@@ -3985,15 +3985,10 @@ $fixtures = @(
     # Mutant: the constructor's char capture not written.
     [pscustomobject]@{ Name = 'unit_walk_make_adder_char.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
         Absent = @(); Debt = @('l2_mad_construct_', 'lmx_char_new_owned((cast: (@: LmxArena) owner))', 'lmx_char_store_known(l2_mad_cell, ') },
-    # next_core_tasks.md §7 "Интерпретаторы": a callable formal (T7's take (bin: op) shape) is
-    # still outside l2_rw_may's walkable subset -- l2_pap_on/T7 is a separate mechanism §6 does not
-    # touch (steps/interpreters-callable-parity-t6t7.md's own scope note). Same shape as
-    # unit_t7_convert.lm2's take, minimised and re-staged under its own Name so this row can run
-    # WITH the knob while that one keeps testing the native (non-knob) path. Mutant:
-    # l2_rw_callable_excluded hardcoded to `return: 0` -- this row goes back to translating
-    # silently under the knob (l2trans ACCEPTS a fixture that must be refused), RED.
-    [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
+    # Historical refusal filenames now require actual interpreted ARG/EXEC,
+    # not acceptance with a silently native callable-formal consumer.
+    [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Args = @('0'); Entry = 0;
+        WalkRoot = $true; WalkedMethods = @(0,1); NativeRoot = 2; Needle = ''; Absent = @(); Debt = @() },
     # implements-port slice 1 (steps/implements-port-plan.md, A1): a callable formal called with
     # arguments -- int, int+size_t (order), char, unsigned+ulong -- each passed by the address of a
     # local of its formal's type, refs and nargs to lmx_call_prim.  Mutants (copies under build/):
@@ -4001,13 +3996,21 @@ $fixtures = @(
     # set and the values arrive in the wrong slots; both RED by run (the pins are text neither
     # mutant touches).  A formal of another type is
     # refused, located (mutant: no type check -- a `(null)` type reaches L1, l2trans accepts, RED).
-    # The walker refuses the same shape, located (checkpoint 2-6 row 234; REVIEW 9327b65).
+    # The walked positive below uses the same whole callable occurrence.
     [pscustomobject]@{ Name = 'unit_cf_call_args.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         GraphCalls = @([pscustomobject]@{ Method = 2; Arity = 2; Count = 1; InputKinds = @('descriptor', 'int'); ResultKind = 'int'; }, [pscustomobject]@{ Method = 5; Arity = 3; Count = 1; InputKinds = @('descriptor', 'int', 'size'); ResultKind = 'int'; }, [pscustomobject]@{ Method = 8; Arity = 1; Count = 1; InputKinds = @('descriptor'); ResultKind = 'int'; }, [pscustomobject]@{ Method = 11; Arity = 3; Count = 1; InputKinds = @('descriptor', 'unsigned', 'ulong'); ResultKind = 'int'; });
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_cf_call_pointer_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'a callable result or a callable formal is outside the walkable subset'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_methods_callable_formal_args_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; WalkMethods = $true; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkedMethods = @(1,2); NativeRoot = 3; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_inline_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); NativeRoot = 5; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_inline_callable_formal_walk.lm2'; Source = 'unit_nested_inline_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkRoot = $true; WalkedMethods = @(0,1,2); NativeRoot = 5; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_deep_inline_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); NativeRoot = 7; Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_deep_inline_callable_formal_walk.lm2'; Source = 'unit_deep_inline_callable_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Args = @('0'); Entry = 7; WalkMethods = $true;
+        WalkRoot = $true; WalkedMethods = @(0,1,2,3); NativeRoot = 7; Needle = ''; Absent = @(); Debt = @() },
     # D-101: a method with a named-Structure formal used as a value (a callable actual) has its public
     # prototype written; its formal type is recovered from dt_of_own(1000+foreign) as l2_emit_formal
     # does.  Mutant: the raw type -- l2trans fails with no located diagnostic.  D-102: a field path
@@ -9677,7 +9680,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_parent_model_subref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_model_subref_walk.lm2'; Source = 'unit_merge_parent_model_subref.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); NativeMethods = @(1,4); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_model_xpart.lm2'; Parts = @('unit_merge_parent_model_xpart_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_model_xpart_walk.lm2'; Source = 'unit_merge_parent_model_xpart.lm2'; Parts = @('unit_merge_parent_model_xpart_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -9687,7 +9690,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_merge_parent_callable_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_merge_parent_callable_actual_walk.lm2'; Source = 'unit_merge_parent_callable_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); NativeMethods = @(1,4); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     # READ-FIELD-CLOSURE (T7): a callable merge's view borrows a method occurrence from its own partial copy of the
     # unit -- a use of the view's home, closed over the method's own uses (opus_full_62 crashed two rows without it).
     [pscustomobject]@{ Name = 'unit_merge_parent_t7_borrowed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -9718,7 +9721,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_formal_recv_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_formal_recv_reference_walk.lm2'; Source = 'unit_formal_recv_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,2,3); NativeMethods = @(1,4); Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_formal_recv_classes.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_formal_recv_classes_walk.lm2'; Source = 'unit_formal_recv_classes.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -9864,18 +9867,22 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_t7_nested_model_source.lm2'; Parts = @('unit_t7_nested_model_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_nested_model_source_walk.lm2'; Source = 'unit_t7_nested_model_source.lm2'; Parts = @('unit_t7_nested_model_source_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4,5,6); NativeRoot = 7; Absent = @(); Debt = @() },
     # A copy is a publication boundary. This native control already passed on
     # full05; it is not an additional measured fix. Callable-formal walked
     # rows below are required positives, not normative refusal expectations.
     [pscustomobject]@{ Name = 'unit_t7_copy_publication_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_copy_publication_actual_walk.lm2'; Source = 'unit_t7_copy_publication_actual.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_copy_publication_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_t7_copy_publication_node_walk.lm2'; Source = 'unit_t7_copy_publication_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_method_owner_formal_walk.lm2'; Source = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,4); NativeRoot = 5; Absent = @(); Debt = @() },
     # T7-TRAILER-ONLY-MODEL-CRASH: a model whose only line is its trailer `return:` has no body Structure, and the T7
     # count and frame passes read one: the translator crashed, whether or not anything called the merge.  The node
     # walks the trailer alone, as a merge result's steps and a walked method's do.  trailer_only_copy: make's own k is
@@ -10643,7 +10650,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_callable_formal_free_names_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_free_names_self_walk.lm2'; Source = 'unit_callable_formal_free_names_self.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = 4; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_callable_formal_statement_controls.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     # A throw raised while an actual is evaluated (found beside the named actuals, and no matter of them):

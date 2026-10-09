@@ -406,18 +406,39 @@ A call through a callable formal no longer uses the declaring method's list.
 The translator follows which methods reach each formal (`l2_cfl_note`,
 `l2_cfl_close`), their free names enter the ordinary fixed point of dynamic
 inputs (`l2_dyn_site`), and the call forms their list (`l2_cfl_formation`).
-Compiler metadata only: nothing of it exists at run time. Still refused where
-they stand, as limits of the implementation: an occurrence the translation does
-not follow (a merge built as the actual, an occurrence from another translation
-through a library unit's exported wrapper), the walked consumer, a held
-callable as the actual
+The flow facts are translation-only, not a runtime registry or name table.
+Still refused where they stand, as limits of the implementation: an occurrence
+the translation does not follow (a merge built as the actual, an occurrence
+from another translation through a library unit's exported wrapper).
+A held definition followed as a node of model M is supported for one formation
+class, as described below; it is not a blanket refused actual
 ([ledger](steps/fable-continuation-20261003.md#formal-formation)).
+The 2026-10-08 seventh bounded checkpoint additionally interprets one-formation
+callable-formal consumers through the existing ARG/witness/EXEC transport.
+Its call contract combines the admitted signature's declared inputs/result
+with the selected formation's hidden inputs, without changing METHOD rows.
+Nested inline signature descriptors keep their own first published source
+row, not their last descendant. Final focus05 GREEN21 includes cleared-root
+dispatch and explicit walked-method pins; the broader family has four
+FAIL→OK and no OK→FAIL. These pins do not manufacture missing native
+trampolines for nested helper/inner bodies. Kernel07 GREEN297/114 selftests,
+L3_08 eleven suites/four budgets and full07 RED64/2666 establish this bounded
+change without old regressions; all-command replay changes are classified in the
+[T7 journal](steps/t7-lexical-projection-20261008.md). Multi-formation
+consumers still need an interpreted selector and remain native in measured
+controls. Neither this limited success nor a blanket --walk-methods option
+proves that every callable consumer is interpreted.
 
 Where the methods that reach one formal form their inputs differently, the
-call selects the formation by the exact occurrence the formal holds, read once
-and compared with the unit's own occurrence of each reaching method; the last
-class is the proven remainder and no class serves the declaring method
-(`l2_emit_call_classes`). A call site asks its caller only for the names of the
+call captures the formal's exact occurrence once before evaluating any actual.
+`l2_emit_call_select` tests every member against its actual holder's method
+slot, following the parent relation, or its resolved unit occurrence when
+the holder is not reached by parents. Every class is tested: there is no
+remainder class, and an unproved occurrence fails the shared invariant.
+The selected activation-local class key drives admission and hidden-input
+formation (`l2_emit_formal_admits`, `l2_emit_call_classes`); no class serves
+the declaring method merely because it declares the formal.
+A call site asks its caller only for the names of the
 callable it gives: for a name a method only hands on the fixed point keeps the
 complete conditions under which it is needed (`l2_dyr_add`, `l2_site_needs`),
 and an input not needed is handed absent. A required input no one can give is
@@ -447,9 +468,9 @@ admitted by its model's signature, handed as the node itself, followed as the
 flow fact "a node of model M" (`l2_cfl_note`, kind 4), its free names formed
 where the formal is called. One class of formation at a formal needs nothing
 told apart. A definition's node among callables formed differently is a located
-limit: a node has no contract route of its own, and the args part it shares
-with its model by address is the partial copy of `l2_mad_emit`, an open
-obligation against L2 §13, so nothing selects by it
+limit in `l2_cfl_classes`, not a language prohibition. The current selector
+does not classify that producer among differently formed callables; this
+remains a separate obligation against L2 §13
 ([ledger](steps/fable-continuation-20261003.md#held-actual)).
 
 **Built (2026-10-05).** A factory's result is received by the explicit

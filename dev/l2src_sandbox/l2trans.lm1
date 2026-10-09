@@ -1279,6 +1279,7 @@ prototype:
     fn: l2_rw_contract (int: parent; int: n; int: rty; int: descriptor; @: int out; @: int inputs) int
     fn: l2_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
     fn: l2_rw_method_contract (int: parent; int: mi; @: int out) int
+    fn: l2_rw_call_contract (int: parent; int: mi; int: hidden; @: int out) int
     fn: l2_rw_primitive_contract (int: primitive; int: contract) int
     fn: l2_rw_assign (int: into; int: oi; @: LmP0Field first; int: n; @: int out) int
     fn: l2_rw_has_slash (const: @(LmP0Text t)) int
@@ -26156,6 +26157,18 @@ fn: l2_dup_method (const: @(char path); const: @(LmP0Node at); int: other) int
     c.snprintf(place, 64U, ":%zu:%zu)", line, column)
 return: l2_error_words(path, at, "duplicate definition (the other at ", src, pn, place, 0, 0U, "", 0, 0U, "")
 
+# Collection publishes its own row before any recursive declarations. A
+# bound forward declaration may publish none. Return that first source row,
+# never a descendant or the preceding row; -1 means none, -2 a broken contract.
+fn: l2_collected_row (int: first; const: @(LmP0Node node)) int
+    if: first < 0 || first > l2_m_n
+        return: 0 - 2
+    if: first = l2_m_n
+        return: 0 - 1
+    if: l2_m_node[first] != node
+        return: 0 - 2
+return: first
+
 # A header is read in its actual lexical parent, not in whichever body the
 # preceding collection left active. Nested callable headers pass their parent.
 fn: l2_collect_method (const: @(LmP0Node fn_node); const: @(char path); int: lexical_mi) int
@@ -26208,6 +26221,7 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     size_t: cf_isz
     int: cf_n 0
     int: me 0
+    int: cf_row
     @: LmP0Text cf_nm 0
     anon: l2_collect_anon_name
     l2_collect_anon_name: 0
@@ -26392,7 +26406,7 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     me: l2_m_n
     l2_m_n: l2_m_n + 1
     if: is_sub = 0 && ret_node != 0 && l2_frame_head(ret_node, "fn") != 0
-        if: l2_mad_take_nested(l2_m_n - 1, (cast: (@: LmP0Node) body), path) != 0
+        if: l2_mad_take_nested(me, (cast: (@: LmP0Node) body), path) != 0
             return: 1
         ---
     # Implements port A2 (q37): each callable formal written in place, `op(fn: (int: x) int)`, is
@@ -26404,9 +26418,13 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
         if: cf_nm = 0
             return: l2_error(path, fn_node, "out of memory")
         l2_collect_anon_name: cf_nm
+        cf_row: l2_m_n
         if: l2_collect_method(cfp_fn[j], path, lexical_mi) != 0
             return: 1
-        if: l2_cf_set(me, cfp_j[j], l2_m_n - 1) != 0
+        cf_row: l2_collected_row(cf_row, cfp_fn[j])
+        if: cf_row < 0
+            return: l2_error(path, cfp_fn[j], "internal: callable descriptor collection lost its declaration row")
+        if: l2_cf_set(me, cfp_j[j], cf_row) != 0
             return: l2_error(path, fn_node, "out of memory")
         j: j + 1
     ---
@@ -34348,18 +34366,31 @@ fn: l2_rw_source_facet (int: node; const: @(char source)) int
         return: 0
 return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_walk_source_mark(l2_rw_roles, l2_rw%d, c.%s) != 0\n            return: 1\n", node, source) < 0))
 
-fn: l2_rw_method_contract (int: parent; int: mi; @: int out) int
+# A call's declared inputs/result come from its admitted signature; hidden
+# inputs come from the selected formation, not that signature anchor. Direct
+# calls supply the same method for both. No METHOD row is modified.
+fn: l2_rw_call_contract (int: parent; int: mi; int: hidden; @: int out) int
     int: inputs
     int: j 0
-    int: n l2_m_arity[mi] + l2_m_dyn[mi]
+    int: n l2_m_arity[mi]
+    if: hidden >= 0
+        n: n + l2_m_dyn[hidden]
     if: l2_rw_contract(parent, n, l2_ret_cell_ty(mi), 0, out, @ inputs) != 0
         return: 1
-    while: j < n
+    while: j < l2_m_arity[mi]
         if: l2_rw_input_witness(inputs, j, mi, j) != 0
             return: 1
         j: j + 1
     ---
+    while: j < n
+        if: l2_rw_input_witness(inputs, j, hidden, l2_m_arity[hidden] + j - l2_m_arity[mi]) != 0
+            return: 1
+        j: j + 1
+    ---
 return: 0
+
+fn: l2_rw_method_contract (int: parent; int: mi; @: int out) int
+return: l2_rw_call_contract(parent, mi, mi, out)
 
 fn: l2_rw_primitive_contract (int: primitive; int: contract) int
     if: l2_rw_emit = 0
@@ -40429,6 +40460,7 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
     int: arg0 5
     int: conv l2_rw_conv
     int: contract
+    int: contract_hidden
     int: hidden_model
     int: hidden_source
     int: source_mi
@@ -40578,7 +40610,10 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
     # A selected path or a signature-less named body still receives the
     # caller's explicit contract at the existing CALL/EXEC operand.
     if: path_call != 0 || l2_m_nsof(idx) >= 0
-        if: l2_rw_method_contract(\out, idx, @ contract) != 0 || l2_rw_put(\out, 3, contract) != 0
+        contract_hidden: idx
+        if: formal_call >= 0
+            contract_hidden: hid
+        if: l2_rw_call_contract(\out, idx, contract_hidden, @ contract) != 0 || l2_rw_put(\out, 3, contract) != 0
             return: 1
         ---
     # A call bound with named actuals keeps its operands in the order they were written. A
@@ -43990,9 +44025,10 @@ fn: l2_rw_may (int: mi) int
     if: (l2_mad_on(mi) = 0 || l2_mad_return_confirmed(mi, l2_mad_model[mi]) = 0) && l2_m_ret[mi] != 8 && l2_rw_num_ty(l2_ret_cell_ty(mi)) = 0 && l2_own_is_pointer(l2_ret_cell_ty(mi)) = 0
         return: 0
     while: j < l2_m_arity[mi]
-        if: l2_cf_get(mi, j) >= 0
-            return: 0
-        if: l2_nsty_get(mi, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0 && l2_own_is_pointer(l2_own_ty_of_param(l2_ft(mi, j))) = 0
+        # Callable formals use the existing whole-occurrence ARG/EXEC route,
+        # not a numeric cell. COUNT records any unsupported formation as a
+        # retained machine operation; mere presence of the formal excludes none.
+        if: l2_cf_get(mi, j) < 0 && l2_nsty_get(mi, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0 && l2_own_is_pointer(l2_own_ty_of_param(l2_ft(mi, j))) = 0
             return: 0
         j: j + 1
     ---
@@ -44021,9 +44057,7 @@ fn: l2_rw_may_why (int: mi) const: @: char
     if: l2_mad_on(mi) != 0 && l2_mad_return_confirmed(mi, l2_mad_model[mi]) = 0
         return: "its return is not confirmed as its one exit"
     while: j < l2_m_arity[mi]
-        if: l2_cf_get(mi, j) >= 0
-            return: "a callable formal"
-        if: l2_nsty_get(mi, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0 && l2_own_is_pointer(l2_own_ty_of_param(l2_ft(mi, j))) = 0
+        if: l2_cf_get(mi, j) < 0 && l2_nsty_get(mi, j) < 0 && l2_rw_num_ty(l2_own_ty_of_param(l2_ft(mi, j))) = 0 && l2_own_is_pointer(l2_own_ty_of_param(l2_ft(mi, j))) = 0
             return: "a formal that is not a number"
         j: j + 1
     ---
@@ -44036,26 +44070,16 @@ fn: l2_rw_may_why (int: mi) const: @: char
     ---
 return: "its walk was refused"
 
-# Whether l2_rw_may(mi) = 0 is specifically because of a callable result (code 16, T6's `fn:
-# (...) ...` header) or a callable formal (l2_cf_get): the PAP/merge-callable class named in
-# next_core_tasks.md's "Интерпретаторы: те же два примера или явное unsupported" (T6/T7,
-# steps/interpreters-callable-parity-t6t7.md). Re-checks only the gates l2_rw_may itself would
-# already have applied first (mi valid, native body, no throw) so a method
-# excluded for one of THOSE other reasons is never misreported as "callable" here -- they keep
-# their existing silent-native treatment under --walk-methods, unchanged.
+# An unbuilt callable-result producer remains a located --walk-methods limit.
+# Callable formals themselves are transported by ARG/EXEC and are not this
+# boundary. Other retained machine operations keep their recorded capability.
 fn: l2_rw_callable_excluded (int: mi) int
-    int: j 0
     if: mi < 0 || mi = l2_e || mi >= l2_m_n || l2_m_native(mi) = 0
         return: 0
     if: l2_m_throws != 0 && l2_m_throws[mi] != 0
         return: 0
     if: l2_m_ret[mi] = 16
         return: 1
-    while: j < l2_m_arity[mi]
-        if: l2_cf_get(mi, j) >= 0
-            return: 1
-        j: j + 1
-    ---
 return: 0
 
 # Method mi's return trailer (its column-0 `return: V`), built at slot `slot` of `into`: one step,
@@ -45235,9 +45259,10 @@ fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
                 return: 1
             if: l2_mad_ensure(l2_m_n) != 0
                 return: l2_error(path, stmt, "out of memory")
-            if: l2_m_n > idx
-                if: l2_m_node[idx] != stmt
-                    return: l2_error(path, stmt, "internal: nested method collection lost its declaration row")
+            idx: l2_collected_row(idx, stmt)
+            if: idx < 0 - 1
+                return: l2_error(path, stmt, "internal: nested method collection lost its declaration row")
+            if: idx >= 0
                 l2_mad_host[idx]: mi
                 if: selfret != 0
                     model: idx
@@ -48071,13 +48096,11 @@ fn: l2_rw_methods_count () int
             l2_m_why_line[i]: l2_m_node[i]\span\line
             l2_m_why_col[i]: l2_m_node[i]\span\column
         ---
-        # --walk-methods (-193 T4a) walks every method it can; a PAP/merge-callable class it
-        # cannot (callable result or formal, l2_rw_callable_excluded) used to stay silently
-        # native, indistinguishable from "not translated yet". Diagnose it instead, located at
-        # the method's own declaration -- only under the knob, so ordinary translation (the
-        # knob off) is unaffected.
+        # A still-unbuilt callable-result producer is diagnosed at its own
+        # declaration under --walk-methods. A callable formal is not a ban:
+        # COUNT has already measured its actual formation/EXEC capability.
         if: l2_walk_methods != 0 && l2_library_mode = 0 && l2_pap_on(i) = 0 && l2_rw_may(i) = 0 && l2_rw_callable_excluded(i) != 0
-            return: l2_error(l2_src, l2_m_node[i], "a callable result or a callable formal is outside the walkable subset (--walk-methods)")
+            return: l2_error(l2_src, l2_m_node[i], "a callable result is outside the walkable subset (--walk-methods)")
         # REVIEW c953b22: a callable-merge host the knob does not walk stays native, where its
         # return and its calls of the model are built -- said in a note, not only visible in the L1:
         # located at the first refusal of its walk, or at the host when it was kept out before.

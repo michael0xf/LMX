@@ -1013,6 +1013,138 @@ have now executed serially, after the frozen acceptance chain:
 - The nested-inline callable descriptor refusal above is reproducible
   before any producer correction; it supplies the next bounded map probe.
 
+### Seventh child: callable-formal publication and interpreted call contract (accepted bounded checkpoint)
+
+Sixth-child exact sixteen-path checkpoint `ba3c4632` is pushed; remote main
+was verified at `ba3c4632972964f636573bb022c852dab5943b99`. Codex continues as
+the sole writer/build owner, Opus remains Q&A only.
+
+The measured nested-inline refusal is repaired at its producer: one
+`l2_collected_row` validates the first published source identity, distinguishes
+no published row from a broken contract, and serves both inline descriptors
+and nested-host assignment. The own row is `me`; recursively appended
+descendants never replace it. METHOD contents, signature-only semantics and
+descriptor-only addr=0 remain unchanged. Native and walked witnesses at two
+and three inline signature levels execute successfully; this does not close
+the separately recorded general method/formal name-length cap.
+
+The existing ARG/witness/EXEC route already transports a whole callable
+occurrence. The candidate removes only its blanket eligibility exclusion;
+COUNT still records actual unsupported machine operations. This immediately
+exposed a second producer mismatch: a call through a formal passed the actual
+formation's hidden cnt, but `l2_rw_method_contract` described only the exemplar's
+explicit zero inputs. The kernel correctly returned INVALID on the mismatched
+count; explicit NODE (no free cnt input) already passed. The common
+`l2_rw_call_contract` now forms declared inputs/result from the admitted
+signature and hidden input witnesses from the selected formation. Ordinary
+direct calls use the same method for both. No runtime names, registry,
+auxiliary graph or syntax-specific execution route is introduced.
+
+`codex_formal_focus_03` GREEN21: eighteen fixture rows, the two builds and
+focused-scope row. The three required-positive walked rows introduced in
+full06 now execute, with only E native; the nested factory retains 13 rather
+than live-source 106. The strict NODE snapshot is now a permanent positive
+in both modes. `unit_callable_formal_free_names_self_walk` executes its
+5/40 cases. Two historical `_refused` filenames now require actual interpreted
+execution rather than an implementation-limit diagnostic. Three old pinned
+native consumer oracles migrate to explicit walked pins, with unchanged
+program results. Three measured multi-formation consumers (classes, models,
+static) remain pinned native: this child does not implement their dispatcher
+or claim those bodies were interpreted.
+
+Earlier attempts are retained, not acceptance certificates: focus01 had
+two malformed new three-level source rows, three stale native pins, and two
+real hidden-contract INVALID failures. Focus02 did not build because the new
+temporary declaration was placed in the wrong function; focus03 corrects
+that placement, source syntax and pins and includes the hidden-contract fix.
+The separate map-only diagnostic already passed the two-level witness before
+the eligibility change.
+
+Broader `codex_formal_family_01`: 219 fixture rows plus two builds and the
+scope row, 222 targets / six old failures. Four old FAIL→OK, zero OK→FAIL,
+six new GREEN rows. The remaining failures are callable_sub_transport,
+callable_forward, callable_nullary_forms, callable_returning_two_contracts,
+t7_host_nested_return and callable_formal_unfollowed_actual. This is not
+the full gate. Isolated LAST-row, hidden-contract and silent-native mutants
+are all rejected; the silent-native mutant still returns the right result
+but fails the explicit walked-method pin. Twelve wrong-value executions
+(three sources, native/walked, normal/cleared root) give 81 instead of 7
+and a failed driver. Production bytes were not mutated.
+
+Focus04 exposed one overstrong new oracle, not a program failure: it asked
+for a trampoline of nested helper 1, which is absent even before this child.
+Nested helper 1 and returned inner 3 still have no native trampoline; this
+old uniform-native debt remains OPEN. Final `codex_formal_focus_05` GREEN21
+pins walked 0 and 4 for that fixture, plus the other supported bodies.
+The other strengthened pins cover all six walked methods of the nested
+factory, the three publication bodies and all four free-name/self bodies;
+only their root remains native before the cleared-root rerun.
+
+Frozen candidate: translator blob `e6200afa98e1797fd81f54a2acd9b6f9323f7bc7`,
+SHA256 `39122D1CDE1AB761AD5F6A97E3DCC7AB09F13BFFFDE4B03A9A87D00B22CEE819`;
+harness blob `2372d2b34898daea2b6e28991897560e7853e61d`,
+SHA256 `A8ADBBF8FCC8D5DFB4A2D1EF6CFE3202D4914AB261D3B056BDE6F877BE7E37CB`.
+The serial `run_t7_gates_08.ps1` freezes these and five fixture inputs:
+kernel07 GREEN297/114 actual selftests and L3_08 exit 0 are complete.
+Full07 is RED64/2666 against full06 RED68/2660: four FAIL→OK (the four
+walked positives listed above), zero OK→FAIL, six new GREEN rows, none
+removed and no changed generic refusal messages. The serial replay of all
+2615 full65 translation commands ends with 822 nonzero exits versus 825.
+Compared with `t7_model_source_replay_01`, 2576 results are identical and
+39 differ: three former walked callable-formal refusals now emit L1 with
+exit 0, and 36 successful translations have L1-only changes. The replay
+omits per-row injected fault environments and is diagnostic, not an execution
+gate. The four full-gate fixes include newer fixtures outside the full65 corpus;
+their count therefore differs from the three newly accepted replay commands.
+
+Every changed L1 was inspected in `formal_replay_inspection_01.log` (1592
+lines, all diff chunks shown), alongside raw identities where normalization
+would hide an edge. The changes are call-contract input extents/witnesses
+from selected hidden formations (dormant/free-name/site/reference/held/T7
+actual families), reordered activation-local source-container aliases with
+unchanged resolved slot chains (graph-shape/address/result/formation families),
+and removal of three consumer native words under --walk-methods (reference,
+model-subref and callable-actual). Existing operator counts in those 36
+translations are unchanged. None is an unexplained new source rule or
+runtime name lookup. The three newly emitted walked programs are covered
+by actual execution and walked-method pins, not by replay acceptance alone.
+
+All seven source/harness/fixture fingerprints remain unchanged through
+kernel, L3, full gate and replay. A separate verifier checks fourteen owned
+paths, control bytes and thirteen gated source copies, then requires exact
+live/index identity before publication. No stable-tree promotion, concurrent
+compiler or unrelated file staging. This is a completed bounded child;
+T7, uniform native entry coverage and §§8/8a remain OPEN. The next child
+measures the materialized-part receiving projection described below.
+
+Read-only follow-up `CODEX-T7-RECEIVING-WITNESS-20261008-18` is terminal,
+with the full reply received through codex_inbound. The earlier receiving
+part controls had only fn declarations: `l2_part_root` returns at n=0 and
+does not materialize the part's root. They therefore exercise depth one,
+where admission and body already use the same copied unit. Adding the
+ordinary root field `int: partMarker 0` supplies the missing producer.
+Source analysis now distinguishes the old policy's global requirement
+from the copied body's actual unit requirement, whose record key is its
+address; immediate NODE would instead read the part root, also incorrectly.
+The declared/free and two-independent-copy diagnostics are prepared under
+`build/codex_handoff/t7_part_next_sources_01`; they have NOT run while the
+frozen acceptance chain is active. This is a source-supported lead, not a
+measured program failure or a completed receiving fix.
+
+`CODEX-T7-RECEIVING-PHASE-20261008-19` is terminal; its full correlated reply
+arrived through codex_inbound. Source analysis finds that current formation
+members are method rows or held nodes of method models, not nameless named-
+Structure procedure rows. Their host/part-root edges are final before COUNT;
+the local-Structure branch of `l2_lex_parent` instead needs PLACE and must
+not silently supply a pre-PLACE depth. The proposed common receiving key
+therefore follows only completed static method edges, rejects an unavailable
+relation rather than falling back, and is validated against physical depth
+after PLACE. No receiving implementation or runtime result is claimed yet.
+The interaction with a merge absorbing a lexical-chain operand still needs
+measurement, not an assumption about every copy. Codex remains the only
+writer/build owner. Do not correct emission ancestry while silently retaining
+class decisions based on the old global-policy string.
+
 ## Acceptance commands
 
 Run a fresh harness directory with explicit `bin/l1trans.exe`, `-KeepAll`,

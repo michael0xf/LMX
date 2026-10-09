@@ -12,14 +12,23 @@ Use that ledger for the final commit, source hashes and gates. “Required” be
 means a documented contract, not an assertion that the current compiler supports
 every example. Source symbols are search anchors; their line numbers change.
 
-Current continuation is transferred to Fable on 2026-10-03:
+Historical continuation was transferred to Fable on 2026-10-03:
 [handoff](to_fable.md), [current plan](next_core_tasks_v2.md), and
 [persistent-occurrence evidence](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles).
-Latest full32 is RED130/1395; later focused persistent_oracle01 is GREEN7/7
+That baseline's full32 is RED130/1395; later focused persistent_oracle01 is GREEN7/7
 with a rejected copy-to-alias mutant. Neither result closes critical_graph_bug,
-critical_pointer_to_struct_bug or §§8/8a. The active code is uncommitted sandbox
-WIP, not the historical released merge bytes. Codex answers questions; Fable
-owns continuation after verifying the single writer/build slot is free.
+critical_pointer_to_struct_bug or §§8/8a. Those ownership/WIP statements are
+historical. On 2026-10-08 Opus released the sole writer/build slot to Codex
+through [from_opus.md](from_opus.md). Published Codex checkpoint `ba3c4632`
+has full06 RED68/2660 without old regressions. The seventh bounded checkpoint
+(`l2trans.lm1` blob `e6200afa`) has full07 RED64/2666 with four old FAIL→OK,
+zero OK→FAIL, kernel07 GREEN297/114 selftests and L3_08 eleven suites/four
+budgets; all-command replay is classified and frozen inputs unchanged.
+Codex codes sequentially; Opus is Q&A
+only. Neither critical ticket nor T7/§§8/8a is thereby closed. Follow
+[current instructions](steps/current.md) and the
+[T7 evidence journal](steps/t7-lexical-projection-20261008.md), not an old
+owner marker, for the active bounded child.
 
 Every entry separates **Norm**, **Mechanism/debt**, and **Verification**. Where
 the implementation design is not settled, a route is labelled proposed rather

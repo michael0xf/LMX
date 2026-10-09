@@ -1,0 +1,14 @@
+# Recursive descriptor collection must map op to its own first row, not
+# the last descendant descriptor. Signatures do not execute their bodies.
+fn: inc (int: q) int
+return: q + 1
+fn: outer (inc: cb; int: x) int
+return: cb(x)
+fn: take (op(fn: (inner(fn: (int: q) int) int(x)) int) int(value)) int
+return: op(inc, value)
+int: a take(outer, 3)
+int: ok 81
+if: a = 4
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

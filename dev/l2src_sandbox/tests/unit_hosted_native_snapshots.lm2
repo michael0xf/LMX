@@ -1,0 +1,21 @@
+# Two callable returns keep independent snapshots; present zero overrides both.
+# Harness also inspects the actual returned native words after execution.
+fn: make (int: n) fn: (int: x) int
+    fn: add (int: x) int
+        return: n + x
+    return: add
+
+@: a make(2)
+@: b make(9)
+int: av (a: 1)
+int: bv (b: 1)
+int: ok 7
+if: av != 3 || bv != 10
+    ok: 81
+int: n 0
+int: az (a: 1)
+int: bz (b: 1)
+if: az != 1 || bz != 1
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

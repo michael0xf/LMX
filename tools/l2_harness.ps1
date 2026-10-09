@@ -3764,8 +3764,12 @@ $fixtures = @(
     # (43).  The base translator refused both hosts, "a callable merge needs a walkable body".
     [pscustomobject]@{ Name = 'unit_capture_struct_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_capture_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','3','deref','1','nativepath','1','26','1','endpostpaths');
+        WalkRoot = $true; NativeMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_capture_struct_formal_walk.lm2'; Source = 'unit_capture_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','3','deref','0','nativepath','1','26','0','endpostpaths');
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
     # FIXED-BLOCKS-AUDIT: the fields a capture copies are as many as the definition reads -- 40, past the 32 places
     # the copy had (it refused "a captured Structure has too many fields read").
     [pscustomobject]@{ Name = 'unit_capture_many_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
@@ -3942,9 +3946,13 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     # Gate 3, absence (option (2)): `node\n` of the host's formal in a direct call reads no value -- the formal is no
     # body field of the host's occurrence, and the args part is the signature, never read as a value: X1.
-    [pscustomobject]@{ Name = 'unit_a3_node_direct_absent.lm2'; Expect = 'walk-x1'; Exit = 0; Needle = ''; Args = @('0');
+    [pscustomobject]@{ Name = 'unit_a3_node_direct_absent.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a field path met no Structure'; Exit = 0; Needle = ''; Args = @('0'); NativeRoot = 2; NativeMethods = @(0,1);
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_walk_a3_node_direct_absent.lm2'; Expect = 'walk-x1'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_walk_a3_node_direct_absent.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_a3_node_direct_absent_root_walk.lm2'; Source = 'unit_a3_node_direct_absent.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: invariant: a field path met no Structure'; Exit = 0; Needle = ''; Args = @('0','walkroot','1'); NativeRoot = 2; NativeMethods = @(0,1);
+        Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_walk_a3_node_direct_absent_root_walk.lm2'; Source = 'unit_walk_a3_node_direct_absent.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0','walkroot','1'); WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1);
         Absent = @(); Debt = @() },
     # D-94: `return: 0` from a method whose result is a callable is the result's type error, said so
     # (l2_mad_returns_number), not a limit of the callable merge.  Mutant: no number check -- the old
@@ -9465,7 +9473,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_held_actual_two_alike.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeMethods = @(0,1,3,5,6); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_actual_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        NativeMethods = @(0,1,3,4,5); Absent = @(); Debt = @() },
+        NativeRoot = 8; NativeMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_held_actual_reference_walk.lm2'; Source = 'unit_held_actual_reference.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        NativeRoot = 8; WalkedMethods = @(0,1,2,3,4,5,6,7); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_held_actual_reference_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_held_actual_reference_refused.lm2:28:13: implements is false in function argument'; Absent = @(); Debt = @() },
     # The node a merge builds carries its own complete contract (T7-MODEL-FREE-NAME): the formals the merge
@@ -9900,10 +9910,27 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_part_two_copies_walk.lm2'; Source = 'unit_recv_part_two_copies.lm2'; Parts = @('unit_recv_part_two_copies_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_nested_method_owner_formal_walk.lm2'; Source = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,4); NativeRoot = 5; Absent = @(); Debt = @() },
+    # Inspect the returned callable, not just the result obtained through a
+    # possible walker fallback. The same source is tested with methods walked
+    # and with only the physical root's native word cleared.
+    [pscustomobject]@{ Name = 'unit_hosted_native_snapshots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','1','deref','1','nativepath','2','3','deref','1','nativepath','1','21','1','endpostpaths');
+        WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hosted_native_snapshots_walk.lm2'; Source = 'unit_hosted_native_snapshots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','1','deref','0','nativepath','2','3','deref','0','nativepath','1','21','0','endpostpaths');
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hosted_native_helper.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','1','deref','1','nativepath','1','10','1','nativepath','1','11','1','endpostpaths');
+        WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_hosted_native_helper_walk.lm2'; Source = 'unit_hosted_native_helper.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','1','deref','0','nativepath','1','10','0','nativepath','1','11','0','endpostpaths');
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 3; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0','nativepath','1','10','0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,1,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_nested_method_owner_formal_walk.lm2'; Source = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
+        Args = @('0','nativepath','1','10','0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
     # T7-TRAILER-ONLY-MODEL-CRASH: a model whose only line is its trailer `return:` has no body Structure, and the T7
     # count and frame passes read one: the translator crashed, whether or not anything called the merge.  The node
     # walks the trailer alone, as a merge result's steps and a walked method's do.  trailer_only_copy: make's own k is
@@ -9977,14 +10004,15 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_t7_actual_from_root.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
         NativeRoot = 5; NativeMethods = @(0,1,2,3,4); Absent = @('LMX_WALK_OP_SOURCE_MACHINE');
         Debt = @('l2_t7n0: l2_t7_make_0(lmx_arena_ref_struct(node, 2U))', 'l2_t7n3: l2_t7_make_3(lmx_arena_ref_struct(self, 2U))', '\fn: l2_t7_construct_0', '\fn: l2_t7_construct_3') },
-    # A body that is always walked gives a merge as an actual: a definition nested in a method and returned by
-    # it reads the method's formal, so it has no native body, and its node's body is walked wherever it is called.
-    # The walked step builds the merge's node by the constructor a native body calls; no native body builds this
-    # one (Absent: no native call of the constructor).  Before step four the definition was refused: its graph
-    # retained the merge as a machine operation.  Mutants: the walked step hands 0 for the bound formal -- red;
-    # the primitive entry gives no node -- red; the native body hands 0 -- green, no native body is involved.
+    # A returned nested definition captures its host's formal and gives a merge as a callable actual.
+    # Both its native body and its interpreted graph must use the same constructor and receiving interface.
+    # These execution twins assert the actual native words, including inner (method 4), and clear the root's
+    # native word separately. A SOURCE_MACHINE placeholder is still forbidden; native construction is required.
     [pscustomobject]@{ Name = 'unit_t7_actual_in_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true;
-        NativeMethods = @(0,1,2,3,5); Absent = @('l2_t7n0: l2_t7_make_0(', 'LMX_WALK_OP_SOURCE_MACHINE');
+        NativeRoot = 6; NativeMethods = @(0,1,2,3,4,5); Absent = @('LMX_WALK_OP_SOURCE_MACHINE');
+        Debt = @('l2_t7n0: l2_t7_make_0(', '\fn: l2_t7_construct_0', 'l2_t7_made: l2_t7_make_0(l2_t7_at, lmx_int_value_known(refs[1U]))') },
+    [pscustomobject]@{ Name = 'unit_t7_actual_in_definition_walk.lm2'; Source = 'unit_t7_actual_in_definition.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        NativeRoot = 6; WalkedMethods = @(0,1,2,3,4,5); Absent = @('LMX_WALK_OP_SOURCE_MACHINE');
         Debt = @('\fn: l2_t7_construct_0', 'l2_t7_made: l2_t7_make_0(l2_t7_at, lmx_int_value_known(refs[1U]))') },
     # A merge given as the actual of a callable formal is followed as a node of its model: its model's free
     # names are formed where the formal is called, a number and a size_t each at the model's own place
@@ -10290,7 +10318,7 @@ $fixtures = @(
         NativeMethods = @(0,1,2,3,4); Absent = @(); Debt = @('c.fprintf(c.stderr, "lmx: invariant: a field path met no Structure\n")') },
     [pscustomobject]@{ Name = 'unit_free_path_null_walk.lm2'; Source = 'unit_free_path_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_free_path_null_read_walk.lm2'; Source = 'unit_free_path_null_read.lm2'; Expect = 'walk-x1'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true;
+    [pscustomobject]@{ Name = 'unit_free_path_null_read_walk.lm2'; Source = 'unit_free_path_null_read.lm2'; Expect = 'graph-x1'; X1Diagnostic = 'lmx: walk error: INVALID'; Exit = 0; Needle = ''; Args = @('0'); WalkMethods = $true;
         WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     # OPEN positives, required before G5 (Codex, FABLE-CODEX-20261004-12, the twenty-first reply).  Limits of this
     # implementation and no rules; red until built, never to be turned into expected refusals.  What a method
@@ -11357,7 +11385,7 @@ foreach ($fx in $fixtures) {
         $noteGone = @($fx.Notes | Where-Object { $noteLog -notmatch [regex]::Escape($_) })
         if ($noteGone.Count -gt 0) { Add-Row 'FAIL' ('fixture:' + $stem) ('l2trans did not note "' + $noteGone[0] + '"'); continue }
     }
-    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1' -or $fx.Expect -eq 'shape-mutant') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'graph-x1' -or $fx.Expect -eq 'shape-mutant') {
         $entryLine = [regex]::Match((Get-Content -LiteralPath $genLm1 -Raw), '(?m)^# entry statements: (\d+)\s*$')
         if (-not $entryLine.Success) { Add-Row 'FAIL' ('fixture:' + $stem) 'the generated L1 does not state `# entry statements: N`'; continue }
         $emptyOk = $fx.PSObject.Properties['EmptyEntry'] -and $fx.EmptyEntry
@@ -11478,7 +11506,7 @@ foreach ($fx in $fixtures) {
         Add-Row 'OK' ('fixture:' + $stem) ($units.Count.ToString() + ' library units in one relocatable link, own cells ' + ($cells -join ' ') + ', no unhashed external name; LINK and SYMBOLS only, nothing was run'); continue
     }
 
-    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'walk-x1' -or $fx.Expect -eq 'shape-mutant') {
+    if ($fx.Expect -eq 'eternal-runs' -or $fx.Expect -eq 'send-abort' -or $fx.Expect -eq 'graph-x1' -or $fx.Expect -eq 'shape-mutant') {
         $l1 = (Get-Content -LiteralPath $genLm1 -Raw)
         $why = Test-NativeGraphWitnesses $fx $l1
         foreach ($a in $fx.Absent) {
@@ -11582,15 +11610,16 @@ foreach ($fx in $fixtures) {
             Add-Row 'OK' ('fixture:' + $stem) 'abort exit 3, invariant sendMessage failed, no PRIMITIVE'
             continue
         }
-        # 'walk-x1' (Codex, 2026-09-28): the program stops on the walker's X1 -- a read the graph has no value for
-        # (`node\n` in a direct call: the host's formal is no body field) -- never a made-up 0.
-        if ($fx.Expect -eq 'walk-x1') {
+        # A missing graph value must stop, never become a made-up 0. Each execution fixture names the exact
+        # diagnostic of its backend; native and walker diagnostics are not interchangeable alternatives.
+        if ($fx.Expect -eq 'graph-x1') {
             $xlog = Log-Text ('fixture.' + $stem + '.run')
-            if ($ran -ne 3 -or $xlog -notmatch 'lmx: walk error: INVALID') {
-                Add-Row 'FAIL' ('fixture:' + $stem) ('the walker''s X1 expected (exit 3, walk error INVALID), got exit ' + $ran)
+            $diagnostics = @($xlog -split "`r?`n" | Where-Object { $_ -match '^lmx:' })
+            if (-not $fx.PSObject.Properties['X1Diagnostic'] -or $ran -ne 3 -or $diagnostics.Count -ne 1 -or $diagnostics[0] -cne $fx.X1Diagnostic) {
+                Add-Row 'FAIL' ('fixture:' + $stem) ('X1 expected exit 3 and unique diagnostic [' + $fx.X1Diagnostic + '], got exit ' + $ran + ' [' + ($diagnostics -join '; ') + ']')
                 continue
             }
-            Add-Row 'OK' ('fixture:' + $stem) 'X1 exit 3, walk error INVALID'
+            Add-Row 'OK' ('fixture:' + $stem) ('X1 exit 3, ' + $fx.X1Diagnostic)
             continue
         }
         if ($fx.Expect -eq 'shape-mutant') {

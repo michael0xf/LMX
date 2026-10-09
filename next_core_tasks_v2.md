@@ -41,6 +41,26 @@ entry publication and preservation in copies, not merely removal of one
 hosted guard. Exact evidence and next dependencies are in the
 [T7 journal](steps/t7-lexical-projection-20261008.md).
 
+The eighth child is published at `b83ca7f3`. The ninth child is verified:
+shared hidden-source projection/unmarshaling, real hosted
+native bodies and preservation of the model's native word in both return
+constructors. Path-head provenance now records the read's source bytes;
+capture Text views have translation-owned lifetime. Diagnostic baseline/final
+native-word observations and four isolated mutants distinguish the fix.
+Focus03 is RED2/65, kernel10 GREEN297/114, L3_10 eleven suites/four budgets,
+full09 RED70/2679. Two full09 failures are obsolete backend-specific oracles, not
+changed program results. Revised focus04 RED2/73 pins exact native/walker X1
+diagnostics, actual native words and constructor/reference execution in both
+modes/cleared-root. Fresh full10 is RED68/2683 with no old-row regressions,
+nine added GREEN rows and none removed. All 2615 replay02 results exactly
+match replay01. Against the eighth child, 317 L1 files change with every exit,
+diagnostic and output-presence result unchanged. Kernel10/L3_10 are explicitly
+reused with exact input equality; eleven frozen inputs/twenty-two gated copies
+are checked. Descriptor-only fn must remain native0. PAP/native-composed,
+whole/merge captures, cross-file visibility and the parent T7 remain OPEN.
+Next bounded child: PATH-STRUCTURE-LEAF's common selector and consumption
+boundaries, followed by NODE-PATH-ANON-STRUCT; no second writer/build.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

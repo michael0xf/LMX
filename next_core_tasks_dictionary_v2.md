@@ -44,6 +44,25 @@ budgets, full08 is RED68/2674 without old-row regressions. Replay2615 has
 diagnostics are unchanged. Twelve inputs are frozen throughout. Neither T7
 nor the cross-file header producer is declared repaired by those controls.
 
+The ninth development child is verified. A shared
+hidden-input source feeds the ordinary native unmarshaler and walked ARG
+fallback; hosted bodies are emitted rather than stubbed, and both return
+constructors preserve the model's one native word. A present zero is not
+absence. Capture Text views have translation-owned lifetime and carry the
+read's source provenance; they are not runtime name metadata. Focus03 is
+RED2/65 at the two old whole/merge-capture debts, kernel10 GREEN297/114 and
+L3_10 successful. Full09 ended RED70/2679. Two old backend oracles required
+migration; focus04 RED2/73 verifies exact diagnostics and actual constructor/
+reference behavior in native/walked/cleared-root modes. Fresh full10 is
+RED68/2683, no old-row regressions, nine new GREEN rows and none removed.
+All 2615 replay02 results exactly match replay01. Versus the eighth child,
+317 L1 files change, with exits, diagnostics and output presence unchanged.
+Unchanged-input kernel10/L3_10 are explicitly reused; eleven frozen inputs
+and twenty-two gated copies are checked. Actual-copy native-word pins,
+descriptor-only native0 and four rejected isolated mutants cover the bounded
+change; PAP/native-composed completion and T7 remain OPEN. The next bounded
+child is PATH-STRUCTURE-LEAF, without hiding the remaining whole/merge debts.
+
 Every entry separates **Norm**, **Mechanism/debt**, and **Verification**. Where
 the implementation design is not settled, a route is labelled proposed rather
 than silently promoted to a language rule. A new logical contradiction goes to

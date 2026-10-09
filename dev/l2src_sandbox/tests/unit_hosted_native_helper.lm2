@@ -1,0 +1,17 @@
+# The factory actually calls its capturing helper before returning add.
+# Native-path assertions cover both helper/model and the returned copy.
+fn: make (int: n; int: m) fn: (int: x) int
+    fn: helper (int: y) int
+        return: n * 10 + m + y
+    int: q (helper: 1)
+    fn: add (int: x) int
+        return: q + x
+    return: add
+
+@: a make(5; 2)
+int: av (a: 1)
+int: ok 7
+if: av != 54
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

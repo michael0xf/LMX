@@ -1350,6 +1350,120 @@ descriptor-only addr0. Mutants must catch a stub body, dropped native word,
 global/wrong snapshot and ignored present input. Then frozen kernel/L3/full,
 all-command replay/classification and exact-path reviewed publication.
 
+### Ninth child: source provenance and actual native execution (verified)
+
+The eighth child was committed/pushed as `b83ca7f3`; remote main was checked
+equal to the local full commit. The first private hosted prototype's
+Structure-formal regression was not published as working. Its path scanner
+passed the host declaration's Text to `l2_scan_ident`; `l2_dyn_reads` then
+found no read in the nested body and classified the input as forwarding
+only. `l2_scan_path_root` now passes a prefix view of the actual path head,
+as `l2_scan_head_root` already does. `l2_dyn_add` owns that view. Capture
+records also need owned views: they formerly borrowed Text pointers, which
+cannot retain a machine-local prefix. `l2_mcap_add` now owns/frees only its
+view, borrowing unchanged live P0 bytes. No runtime name table or graph
+metadata is added. The intermediate `_02` lost-capture refusal was the
+dangling-view diagnostic, not a language restriction.
+
+Final diagnostic prototype `_03` SHA256:
+`B195CD258A8047EAF7D155C31F330B8F253393D0FEEF9550CD3A49C3B56DDD58`.
+It passes10 builds/20 ordinary/cleared-root executions, matching baseline's
+values while actually executing native capturing bodies. Four whole/merge
+translation refusals persist in both modes, as before. The full prototype
+diff was reviewed and applied with `apply_patch` to development source;
+live/private hashes were checked equal before the focused run.
+
+`hosted_native_paths_01.log` executes sixteen physical native-word
+observations without rebuilding: baseline native fails at helper/model/copy,
+final native passes, and both methods-walked variants keep actual native0.
+Each is repeated with the actual `walkroot 1` flag, and binary hashes stay
+unchanged. Existing driver `postpaths`/`nativepath`/`deref` inspect the actual
+returned copy after execution, not a translator comment or a prototype row.
+
+`hosted_mutants_01.log` mechanically mutates only diagnostic generated C;
+all four mutants compile/link and fail in both normal and cleared-root
+execution (eight rejections). Dropped copy-native fails the requested actual
+native-word checks; stub body gives82, wrong/global ancestor gives81, and
+ignoring a present zero gives82 instead of7. The original C is unchanged.
+
+Production fixtures `unit_hosted_native_snapshots`/`...helper` and their
+walked rows pin original/helper/returned words, independent snapshots,
+present zero and actual helper invocation. Focus02 is RED2/64: only the old
+`unit_capture_struct_whole` and `...merge_two` required positives fail.
+Focus01 never ran fixtures: its wildcard `-OnlyFixture` selection was
+refused, so it is not a gate. Focus03 names its62 exact rows, adds the
+Structure-formal walked twin/actual-copy pin and the descriptor-only
+contract's native0. Chain10 completed on nine unchanged inputs: focus03
+RED2/65, kernel10 GREEN297/114 actual selftests, L3_10 eleven suites/four
+budgets, full09 RED70/2679. Against full08, five added rows pass and two old
+rows fail obsolete backend oracles; those differences are investigated below,
+not silently called regressions or discarded. All2615 translations replay:
+2298 identical results and317 L1-only changes; exits, diagnostics and output
+presence are unchanged. No full-green, T7 completion, stable promotion or
+§§8/8a completion is asserted.
+
+Full09's `unit_a3_node_direct_absent` still stops at exit3 on the absent BODY
+field. Its real nested native body emits the field-path invariant; the old
+test required the walker's INVALID even in native mode. The harness now
+uses a general graph-X1 category requiring exactly one specified diagnostic,
+not a permissive native/walker alternative. Existing walked rows retain
+their exact INVALID, and two new cleared-root negative rows distinguish
+both backends. Full09's `unit_t7_actual_in_definition` stopped before compile
+because its text oracle forbade a native constructor call. That prohibition
+encoded the old missing implementation. The revised twins require actual
+native words for all six methods (including inner4), retain the constructor
+and no-SOURCE_MACHINE assertions, and execute114/116/125 in native and
+methods-walked modes with a separately cleared physical root.
+
+Focus04 is terminal RED2/73: all eight selected X1/constructor/held-reference
+rows pass; only the two pre-existing whole/merge debts fail. The held-reference
+twin additionally checks actual native/zero words for methods0–7, root8 and
+results9/45/45. These are behavior checks, not acceptance of a changed value.
+Fresh full10/replay02 completed in chain11 on eleven frozen inputs.
+Translator and all three kernel inputs exactly match chain10; kernel10 and L3_10 certificates
+are explicitly reused, not reported as newly executed. The first RED70 full
+gate remains evidence. Revised full10 is RED68/2683: versus full08, no
+old-row regressions or corrected old failures, nine added GREEN rows, none
+removed, and no changed remaining failure messages. Versus full09, the two
+revised oracles pass and four added rows pass, with no OK-to-FAIL transition.
+Replay02 ran all2615 commands and exactly matches every replay01 exit,
+diagnostic, output-presence result and generated L1 byte. The final chain
+records unchanged inputs. `hosted_replay_exact_02.log` independently asserts
+the exact row set and every byte; `_03.log` compares the final replay with
+the eighth child: exits/diagnostics/output presence unchanged on all2615,
+1793 outputs present, exactly317 L1-only changes, 822 nonzero exits as before.
+
+Generated L1 classification compared every old output: final full10 has1503
+identical and336 changed common files, nine added and none removed; replay
+has1476 identical and317 changed generated outputs. The checked mechanical
+families are native-word publication/copy/prototypes, filled hosted stubs,
+shared hidden-input unmarshaling, fourteen Structure-read header/prototype
+changes and three bijective library-path keys (full gate only). The only
+two residual regions are `unit_held_actual_reference`'s caller m3 and
+program builder. `hosted_graph_bijection_05.log` repeats the complete check
+against final full10 and verifies144 common graph
+identifiers bijectively, then compares every line: exactly one native-word
+publication is added and one seven-line caller-side AT fallback is removed.
+The native caller loses exactly the corresponding fifteen-line fallback;
+after five exact local substitutions all admission and call logic is
+identical. Absence is forwarded to the already-existing actual-callee
+fallback; present caller references keep priority. No new graph node is
+introduced by that residual, and no identifier is collapsed to hide changes.
+
+Final publication checks: thirteen owned paths, eleven frozen inputs and
+twenty-two matching gated source copies (`verify_hosted_candidate_02.ps1`).
+Index/live equality is required before commit. `l2_driver_launch.err` is
+unrelated and excluded. No stable promotion, full-green or parent completion
+is claimed. Whole/merge captures, PAP/native-composed and the cross-file
+visibility question remain OPEN; next bounded child is PATH-STRUCTURE-LEAF.
+
+Read-only Opus24 consultation is terminal. Its stale HEAD and unverified
+producer assertions are not evidence; `path[3]` is a value/cell type, not a
+kind, and `l2_check_value_call_at` is not a reference-admission checker. No
+new formal receiver/non-receiver categories are adopted. Codex independently
+inventoried the source selector/consumers and prepared unexecuted probes;
+the consultation authorizes no second writer or build.
+
 ## Acceptance commands
 
 Run a fresh harness directory with explicit `bin/l1trans.exe`, `-KeepAll`,

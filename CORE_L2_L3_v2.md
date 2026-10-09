@@ -649,6 +649,34 @@ and diagnostics; only the nested-model pair's L1 changes to actual receiving
 ancestry. Its generated-ID bijection is checked, not collapsed away. Four
 new cross-file header rows stay RED; T7 and §§8/8a remain OPEN.
 
+**Ninth development child verified, translator `0deedaa9`.** Hosted
+capturing methods now emit their actual typed bodies and use the same native
+completion predicate for adapter prototypes, definitions and published words.
+Both return constructors preserve the original model's native word in the
+copy. `l2_hid_source` projects the same existing snapshot/lexical cell for
+native adapters and interpreted ARG fallbacks. The adapter normalizes an
+absent input to that cell before the ordinary type unmarshaler; an explicitly
+present zero still wins. Structure transport uses an automatic pointer-value
+temporary, not a graph companion or a second compiled body per copy.
+
+Path capture scanning retains the read's actual source position, not its
+host declaration's Text. Hidden-input and capture records own their prefix
+Text views for the translation lifetime while borrowing live P0 bytes. This
+does not introduce runtime names. Physical native-word observations and
+four isolated mutants distinguish real compiled bodies, copied native words,
+the correct ancestor and present-zero priority. Focus03 is RED2/65 only at
+the existing whole-Structure/merge-capture debts; kernel10 is GREEN297/114
+and L3_10 completed successfully. Full09 ended RED70/2679. Two obsolete
+backend oracles are replaced by exact diagnostic/native-word checks, verified in focus04
+RED2/73 with native/walked/cleared-root execution. Fresh full10 is RED68/2683:
+no old-row regressions, nine added GREEN rows, no removed rows. Replay02
+matches all 2615 replay01 results byte-for-byte; versus the eighth child,
+317 generated L1 files change, with every exit, diagnostic and output-presence
+result unchanged. Kernel10/L3_10 are reused with their exact four inputs
+unchanged; eleven frozen inputs and twenty-two gated copies are checked.
+PAP/native-composed completion, cross-file visibility and T7 remain
+OPEN; this bounded route is not a claim that all native bodies are complete.
+
 Nothing on this route has a ceiling. The search for a coordinate space holds
 its candidates and the places it reaches in storage sized from the program; a
 step of a path is joined and compared at its own length; the tables of the

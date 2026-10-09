@@ -25,7 +25,7 @@ Opus answers questions only and starts no coding, census or build. Baseline:
 T7-LOCAL-NAMED-UNIT, then PATH-STRUCTURE-LEAF and NODE-PATH-ANON-STRUCT.
 Earlier ownership records below are historical.
 
-Latest gated bounded Codex checkpoint: translator `9922b2ac`, kernel09
+Historical eighth bounded Codex checkpoint: translator `9922b2ac`, kernel09
 GREEN297/114 selftests, L3_09 all eleven suites/four budgets, full08
 RED68/2674 (no old FAIL→OK or OK→FAIL; eight added rows, four GREEN and
 four cross-file header failures). All2615 recorded translations were replayed:
@@ -60,6 +60,22 @@ are checked. Descriptor-only fn must remain native0. PAP/native-composed,
 whole/merge captures, cross-file visibility and the parent T7 remain OPEN.
 Next bounded child: PATH-STRUCTURE-LEAF's common selector and consumption
 boundaries, followed by NODE-PATH-ANON-STRUCT; no second writer/build.
+
+The ninth child is published at `644a7c51`. The tenth verified child implements
+PATH-STRUCTURE-LEAF through the existing selected occurrence, ordinary
+procedure and receiving-kind boundaries. Private probes/replay/mutants are
+separated from fresh acceptance in its [journal](steps/path-structure-leaf-20261009.md).
+Focus RED5/184, kernel11 GREEN297/114 executed selftests, L3_11 eleven
+suites/four budgets, full11 RED70/2711: no old-row regressions, 28 additions
+with 26 GREEN/two required nested-admission positives RED. Fresh replay03
+is identical to the corrected private replay02 for all 2615 rows; against
+the published ninth replay, four classified L1 changes/two corrected
+invalid-call diagnostics, no exit/output-presence changes. All 21 frozen
+inputs are unchanged. Recursive admission remains OPEN, not a permitted
+refusal. Next independent child: NODE-PATH-ANON-STRUCT, selection from one
+actual lexical source scope followed by its completed physical projection;
+no global same-name fallback or synthetic own-row registration. T7 and
+8/8a remain OPEN; no stable-root promotion.
 
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;

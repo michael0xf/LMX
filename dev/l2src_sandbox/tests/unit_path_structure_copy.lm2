@@ -1,0 +1,14 @@
+# Invoke the selected copy, never the namespace's original unit occurrence.
+Holder:
+    inner:
+        int: k 1
+        k: k + 1
+    end: inner
+end: Holder
+Copy: merge: Holder
+Copy\inner()
+int: ok 7
+if: Copy\inner\k != 2 || Holder\inner\k != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

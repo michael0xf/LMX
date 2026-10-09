@@ -7880,13 +7880,10 @@ $fixtures = @(
         LinkSources = @('l1src/own.lm1'); Args = @('0'); Entry = 10;
         Absent = @(); Debt = @() },
     # FABLE-SONNET-OWN-LOOKUP-AUDIT-20260923-131 part 3: the -92 leftover --
-    # a Structure value assigned through a path ending at a nested
-    # Structure-typed field stays a located, fail-closed refusal.
-    # -183 (q26): a whole Structure assigned through a path to a Structure-typed field stays
-    # fail-closed at the root, a located refusal (fable's interim ruling), until the author answers q26
-    # (merge in place / rebind / refusal).
+    # The selected ordinary named Structure takes no explicit arguments.
+    # A nonempty application is a call error, not implicit rebinding.
     [pscustomobject]@{ Name = 'unit_field_path_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'root operation not walkable yet: a Structure assigned through a path'; Absent = @(); Debt = @() },
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     # FABLE-GROKBOT-C-MEMBER-ACCESS-20260923-120 part1: c.* raw member paths.
     # Mutant: l2_ty_raw_c_members always 0 -> unit_c_member_len refuses unsupported body.
     [pscustomobject]@{ Name = 'unit_c_member_len.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
@@ -8978,11 +8975,10 @@ $fixtures = @(
         Args = @('0'); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_prim.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
         Args = @('0'); Absent = @(); Debt = @() },
-    # -183 (q26): a whole Structure assigned through a path to a Structure-typed field stays
-    # fail-closed at the root, a located refusal (fable's interim ruling), until the author answers q26
-    # (merge in place / rebind / refusal).
+    # The same nonempty application of a signature-less named body: a call
+    # error, without assignment or merge fallback.
     [pscustomobject]@{ Name = 'unit_matrix_path_struct_rebind_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'root operation not walkable yet: a Structure assigned through a path'; Absent = @(); Debt = @() },
+        Needle = 'incompatible entry signature'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_matrix_path_array_elem.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); Absent = @(); Debt = @('c.LMX_WALK_OP_ELEMPUT, 4U)', 'c.LMX_WALK_OP_ELEM, 3U)') },
     # (e) empty Structure as ONE named value vs empty arg list. D-23: `take(x: ())`
@@ -9910,6 +9906,66 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_part_two_copies_walk.lm2'; Source = 'unit_recv_part_two_copies.lm2'; Parts = @('unit_recv_part_two_copies_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
+    # PATH-STRUCTURE-LEAF: selection, application and reference reception share
+    # the existing physical field walk. Numeric places refuse references.
+    # The nested-description pair is a REQUIRED POSITIVE and remains red
+    # while the separately recorded recursive-admission-map debt is open.
+    [pscustomobject]@{ Name = 'unit_path_structure_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $false; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_statement_walk.lm2'; Source = 'unit_path_structure_statement.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_transport.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $false; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_transport_walk.lm2'; Source = 'unit_path_structure_transport.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','0','0','1','nativepath','4','1','1','1','0','1','differentpath','2','0','0','4','1','1','1','0','endpostpaths'); WalkRoot = $false; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_copy_walk.lm2'; Source = 'unit_path_structure_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0','postpaths','nativepath','2','0','0','0','nativepath','4','1','1','1','0','0','differentpath','2','0','0','4','1','1','1','0','endpostpaths'); WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $false; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_deep_walk.lm2'; Source = 'unit_path_structure_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_transport_reordered.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $false; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_transport_reordered_walk.lm2'; Source = 'unit_path_structure_transport_reordered.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; WalkMethods = $true; WalkedMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $false; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_from_method_walk.lm2'; Source = 'unit_path_structure_from_method.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_transport_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $false; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_transport_nested_walk.lm2'; Source = 'unit_path_structure_transport_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_number.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_number_walk.lm2'; Source = 'unit_path_structure_number.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_composite.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_composite_walk.lm2'; Source = 'unit_path_structure_composite.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_formal_number.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_formal_number_walk.lm2'; Source = 'unit_path_structure_formal_number.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_return_number.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_return_number_walk.lm2'; Source = 'unit_path_structure_return_number.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_prefix_number.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_prefix_number_walk.lm2'; Source = 'unit_path_structure_prefix_number.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'a reference where a number is asked'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_call_args_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'more arguments than Holder\inner has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_call_args_refused_walk.lm2'; Source = 'unit_path_structure_call_args_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'more arguments than Holder\inner has formals'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_forward_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_path_structure_forward_refused_walk.lm2'; Source = 'unit_path_structure_forward_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
     # Inspect the returned callable, not just the result obtained through a
     # possible walker fallback. The same source is tested with methods walked
     # and with only the physical root's native word cleared.

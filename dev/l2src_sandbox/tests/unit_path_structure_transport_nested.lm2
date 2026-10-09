@@ -1,0 +1,26 @@
+# REQUIRED POSITIVE: distinct nested descriptions still need the existing
+# recursive-admission-map debt closed. Do not turn this into an expected
+# refusal merely because the selected descriptor now resolves correctly.
+Inner:
+    nested:
+        int: k 0
+    end: nested
+end: Inner
+Holder:
+    inner:
+        int: preceding 99
+        nested:
+            int: k 7
+        end: nested
+        nested\k: nested\k + 1
+    end: inner
+end: Holder
+fn: read (Inner: value) int
+    return: value\nested\k
+end: read
+int: v read(Holder\inner)
+int: ok 7
+if: v != 7 || Holder\inner\nested\k != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

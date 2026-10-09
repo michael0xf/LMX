@@ -1,0 +1,27 @@
+# Selecting inner must not run Holder. All empty forms select one callable.
+int: seen 0
+Tally:
+    int: calls 0
+end: Tally
+fn: bump () int
+    node\seen: node\seen + 1
+    return: 0
+end: bump
+Holder:
+    inner:
+        int: k 1
+        k: k + 1
+        Tally\calls: Tally\calls + 1
+    end: inner
+    bump()
+end: Holder
+Holder\inner
+Holder\inner()
+Holder\inner: ()
+Holder\inner:
+---
+int: ok 7
+if: Holder\inner\k != 2 || Tally\calls != 4 || seen != 0
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

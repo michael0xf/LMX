@@ -11134,6 +11134,19 @@ return: ty
 # core once from_ft is known (l2_colon_simple_ty for one value, l2_native_composite_ty for a
 # composite, l2_check_value_convert_field's own dispatch) -- 0: nothing to do or the edge noted;
 # 1: error.
+# The expression kind is independent of its exact machine pointer type.
+# After held-result resolution, a numeric receiver must not lose a whole
+# reference operand merely because its precise pointer contract is deferred.
+fn: l2_check_numeric_span_kind (@: LmP0Field first; int: n; int: mi; const: @(char path)) int
+    int: ty
+    @: LmP0Field field l2_next_active(first)
+    if: n < 2 || field = 0
+        return: 0
+    ty: l2_native_group_ty(first, n, mi)
+    if: ty = -5
+        return: l2_error(path, field\value, "a reference where a number is asked")
+return: 0
+
 fn: l2_check_value_convert_core (const: @(LmP0Node value); int: from_ft; int: to_ft; int: mi; const: @(char path)) int
     int: cok
     # A text or a Structure given to a number place (a formal, a declaration): the kind rule (-179), in the walk's words.
@@ -11191,6 +11204,8 @@ fn: l2_check_value_convert_field (@: LmP0Field field; int: n; int: to_ft; int: m
         return: 0
     # A number place: the bare name of a held callable is received as its result.
     if: l2_held_result_receive(mi, field, n, 1, path) != 0
+        return: 1
+    if: l2_check_numeric_span_kind(field, n, mi, path) != 0
         return: 1
     # K03 S4: a named Structure's name is the Structure, a reference: a number place refuses it, as the call's actuals do.
     if: n = 1 && only\value != 0 && only\value\kind = c.LM_P0_NODE_ATOM && l2_head_resolve(mi, only\value\as\atom, 0, 0) = 5
@@ -11556,6 +11571,8 @@ fn: l2_check_receiving_value (const: @(LmP0Node stmt); @: LmP0Field first; int: 
     if: n > 1
         composite: 1
         if: l2_held_result_receive(mi, first, n, 0, path) != 0
+            return: 1
+        if: l2_prim_code_name(target_ty) != 0 && l2_check_numeric_span_kind(first, n, mi, path) != 0
             return: 1
         value_ty: l2_native_composite_ty(first, n, mi)
         if: value_ty = 0 - 3
@@ -19800,9 +19817,19 @@ return: 0
 fn: l2_fields_has_call (@: LmP0Field field; int: n) int
     @: LmP0Field f
     int: i
+    int: run
+    int: callee
+    @: char path 0
     f: l2_next_active(field)
     i: 0
     while: i < n && f != 0
+        run: l2_operand_run(f, n - i)
+        callee: l2_path_run_callee(f, run, l2_cur_mi, @ path)
+        if: path != 0
+            l2_xfree((cast: (@: void) path))
+            path: 0
+        if: callee >= 0
+            return: 1
         if: l2_node_has_call(f\value)
             return: 1
         f: l2_next_active(f\next)
@@ -23766,11 +23793,10 @@ fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     ---
 return: m
 
-# K03 S6 (Codex K03-CALLABLE-PATH-20261007-25; docs/LMX_semantics.en.md#resolved-head-consumption, #callables): the
-# callable a written path t selects at a site in method mi -- the call's one resolution of a path head
-# (l2_call_head_method: l2_head_method's callable field, kind 4, the occurrence it holds) -- or -1.  A path is a
-# selector: reaching Holder\tick reads Holder's field and runs nothing.  Written with no argument where a value is
-# evaluated, the selected callable is consumed as `Holder\tick()` is, by its nullary call.
+# The existing callable code selected by a field path, including an ordinary
+# named body's procedure. Selection does not execute the leaf. A discarded
+# application executes it; receiving a no-result occurrence as a nonprimitive
+# argument transports its reference. Returning callables supply their result.
 fn: l2_path_callee (int: mi; @: LmP0Text t) int
     int: fi 0 - 1
     int: k
@@ -23830,6 +23856,8 @@ return: (cast: (int) (method >= 0 && fi < 0 && method = l2_site_method(mi, head)
 fn: l2_head_method (int: mi; const: @(LmP0Text t)) int
     int: k 0
     int: r
+    int: kind
+    int: model
     if: t = 0
         return: 0 - 1
     r: l2_site_method(mi, t)
@@ -23839,9 +23867,12 @@ fn: l2_head_method (int: mi; const: @(LmP0Text t)) int
         return: 0 - 1
     if: l2_seg_count(t\data, t\length) < 2
         return: 0 - 1
-    if: l2_path_kind(t\data, t\length, @ k) != 4
-        return: 0 - 1
-return: k
+    kind: l2_path_contract(t\data, t\length, @ k, @ model)
+    if: kind = 4
+        return: k
+    if: (kind = 2 || kind = 3) && model >= 0 && model < l2_ns_n
+        return: l2_ns_proc[model]
+return: 0 - 1
 
 # A field path that meets no Structure where it needs one (D-05) takes the X1 route: a message and
 # an abort (l2_emit_invariant).  It used to return 0 from the whole method, a silent success.
@@ -24853,6 +24884,8 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
         ---
         i: i + 1
     ---
+    if: (kind = 2 || kind = 3) && out_model != 0
+        \out_model: ent
     if: kind = 4
         \out_mi: ent
     if: kind = 10 || kind = 11
@@ -24884,10 +24917,9 @@ return: 0
 fn: l2_emit_path (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind) int
 return: l2_emit_path_to(pd, pn, mi, ind, at, out_kind, 0)
 
-# The same walk; arr_ok admits a leaf that is an Array field (kind 5 or 6), whose cell
-# holds the Array descriptor reference -- only the indexed route (l2_emit_arr_operand)
-# asks for it, and it indexes that descriptor itself.  Every other caller keeps the
-# primitive-leaf rule, so a write or a plain read never lands on a descriptor cell.
+# The same walk: descriptor leaves stay in l2_pst, primitive leaves in l2_pxp.
+# arr_ok=1 additionally selects an Array descriptor cell for indexing;
+# arr_ok=2 restricts the operand to a Structure for the existing merge route.
 fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind); const: @(LmP0Node at); @: int out_kind; int: arr_ok) int
     size_t: off 0U
     size_t: len 0U
@@ -25119,15 +25151,15 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             i: i + 1
             continue
         ---
-        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && (arr_ok = 0 || (kind != 5 && kind != 6))
+        if: i + 1 = segs && kind != 0 && kind != 1 && kind != 2 && kind != 3 && kind != 4 && kind != 7 && kind != 8 && kind != 9 && kind != 10 && kind != 11 && (arr_ok = 0 || (kind != 5 && kind != 6))
             return: l2_error(l2_src, at, "a field path must end at a primitive field")
-        if: i + 1 = segs && kind = 4 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
+        if: i + 1 = segs && (kind = 2 || kind = 3 || kind = 4) && projected = 0 && c.fprintf(l2_out, "%sl2_pst: lmx_arena_ref_struct(l2_pst, %s)\n%sif: l2_pst = 0\n", ind, sl, ind) < 0
             return: 1
-        if: i + 1 = segs && kind = 4 && l2_emit_path_bail(mi, ind) != 0
+        if: i + 1 = segs && (kind = 2 || kind = 3 || kind = 4) && projected = 0 && l2_emit_path_bail(mi, ind) != 0
             return: 1
-        if: i + 1 = segs && kind != 4 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
+        if: i + 1 = segs && kind != 2 && kind != 3 && kind != 4 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
             return: 1
-        if: i + 1 = segs && kind != 4 && l2_emit_path_bail(mi, ind) != 0
+        if: i + 1 = segs && kind != 2 && kind != 3 && kind != 4 && l2_emit_path_bail(mi, ind) != 0
             return: 1
         # A number's cell is never empty where it is held: an empty one is a place a partial copy does not hold
         # (READ-FIELD-CLOSURE), and a read or write through the path is refused, never taken as nothing.
@@ -25181,7 +25213,7 @@ fn: l2_field_path_check (int: mi; const: @(LmP0Text left); const: @(LmP0Text rig
     memcpy((cast: (@: void) (buf + left\length + 1U)), (cast: (@: void) right\data), right\length)
     n: left\length + right\length + 1U
     \out_kind: l2_path_kind(buf, n, @ leaf_mi)
-    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
+    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 2 && \out_kind != 3 && \out_kind != 4 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
         return: 1
 return: 0
 
@@ -25214,6 +25246,15 @@ return: l2_path_text_read(mi, buf, n, ind, at, dest)
 # The path buf[0..n), its leaf a value field, read into a temp named in dest (l2_emit_path walks it,
 # any depth; the leaf cell is loaded as its kind's value).  One reading for a single hop
 # (l2_field_path_read) and a deeper path in an expression (D-112/D-113).
+# Stabilize the descriptor selected by the common field walk before another
+# operand can overwrite its working register. This is an ordinary C local.
+fn: l2_selected_occurrence_temp (const: @(char ind); @: L2Tx dest) int
+    int: t l2_tn
+    l2_tn: l2_tn + 1
+    if: c.fprintf(l2_out, "%s@: Lmx t%d l2_pst\n", ind, t) < 0
+        return: 1
+return: l2_tx_temp(dest, t)
+
 fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind); const: @(LmP0Node at); @: L2Tx dest) int
     int: kind
     int: t
@@ -25223,6 +25264,8 @@ fn: l2_path_text_read (int: mi; const: @(char buf); size_t: n; const: @(char ind
         return: 1
     if: l2_emit_path(buf, n, mi, ind, at, @ kind) != 0
         return: 1
+    if: kind = 2 || kind = 3 || kind = 4
+        return: l2_selected_occurrence_temp(ind, dest)
     if: c.fprintf(l2_out, "%sl2_xp: l2_pxp\n", ind) < 0
         return: 1
     t: l2_tn
@@ -25328,7 +25371,7 @@ fn: l2_path_chain_check (int: mi; const: @(LmP0Text root); const: @(char buf); s
     \out_kind: l2_path_kind(buf, n, @ leaf_mi)
     if: \out_kind < 0
         return: 2
-    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
+    if: \out_kind != 0 && \out_kind != 1 && \out_kind != 2 && \out_kind != 3 && \out_kind != 4 && \out_kind != 7 && \out_kind != 8 && \out_kind != 9 && \out_kind != 10 && \out_kind != 11
         return: 1
 return: 0
 
@@ -27514,12 +27557,15 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
     # K03 S6: a path operand that selects a callable is consumed as `Holder\tick()` is: its nullary call, checked by the
     # one call check with the path as the call's written head -- here the whole value, below one operand among others.
     pcall: l2_path_run_callee(field, n, mi, @ ptext)
-    if: pcall >= 0
+    if: pcall >= 0 && l2_m_ret[pcall] != 8
         pword.data: ptext
         pword.length: strlen(ptext)
         pcall: l2_check_value_call_at(l2_next_active(field)\value, @ pword, pcall, 0 - 1, mi, path)
         l2_xfree((cast: (@: void) ptext))
         return: pcall
+    if: ptext != 0
+        l2_xfree((cast: (@: void) ptext))
+        ptext: 0
     # A path's text of any length: the local buffers when the fields' text fits them, else storage of its size
     # (l2_text_room).  No builder below meets a capacity shorter than the text it joins.
     room: l2_atoms_len(field, -1) + 1U
@@ -27634,7 +27680,11 @@ fn: l2_check_fields (@: LmP0Field field; int: n; int: mi; const: @(char path); c
         if: pcall >= 0
             pword.data: ptext
             pword.length: strlen(ptext)
-            pcall: l2_check_value_call_at(f\value, @ pword, pcall, 0 - 1, mi, path)
+            if: l2_m_ret[pcall] != 8
+                pcall: l2_check_value_call_at(f\value, @ pword, pcall, 0 - 1, mi, path)
+            else:
+                pcall: 0
+            ---
             l2_xfree((cast: (@: void) ptext))
             if: pcall != 0
                 return: 1
@@ -30645,7 +30695,7 @@ fn: l2_emit_occ_admit (int: mi; int: req; int: cand; const: @(char value); const
     L2Tx: rinst_tx
     @: L2Tx rinst l2_tx_local(@ rinst_tx, rinst_own, 320U)
     []: char table 160
-    # cand is the method-occurrence schema, below -1500000000. -1 alone is absent.
+    # cand is the selected occurrence's existing schema. -1 alone is absent.
     if: req < 0 || cand = -1 || value = 0 || ind = 0
         return: 1
     if: l2_model_inst(mi, req, ind, rinst) != 0
@@ -33552,8 +33602,10 @@ fn: l2_emit_fields (@: LmP0Field field; int: n; int: mi; const: @(char ind); @: 
         if: pcallee >= 0
             l2_tx_clear(piece)
             prc: l2_emit_path(path_operand, c.strlen(path_operand), mi, ind, at, @ l2_call_k)
-            if: prc = 0
+            if: prc = 0 && l2_m_ret[pcallee] != 8
                 prc: l2_emit_call(at, pcallee, 1, 0 - 1, 0, mi, ind, piece, 0)
+            if: prc = 0 && l2_m_ret[pcallee] = 8
+                prc: l2_selected_occurrence_temp(ind, piece)
             l2_xfree((cast: (@: void) path_operand))
             path_operand: 0
             if: prc != 0
@@ -35296,6 +35348,8 @@ fn: l2_native_span_ty (@: L2ValueSpan span; int: mi) int
     own: l2_path_callee(mi, @ word)
     if: own >= 0
         l2_xfree(text)
+        if: l2_m_ret[own] = 8
+            return: 0 - 5
         if: l2_colon_ret_ty(own, @ ty) != 0
             return: 0 - 99
         if: l2_colon_is_graph_ty(ty) != 0
@@ -35400,6 +35454,8 @@ fn: l2_rw_span_ty (@: L2ValueSpan span) int
     own: l2_path_callee(l2_rw_mi, @ word)
     if: own >= 0
         l2_xfree(text)
+        if: l2_m_ret[own] = 8
+            return: l2_graph_own()
         return: l2_rw_call_ty(own)
     if: l2_rw_foreign_path(@ word) != 0
         # The same declared member contract the native checker reads.
@@ -41696,7 +41752,11 @@ fn: l2_rw_span (@: L2ValueSpan span; int: ty; int: parent; @: int out) int
     # call's written head and the selector l2_rw_call_path reads (l2_rw_call_at).
     own: l2_path_callee(l2_rw_mi, @ word)
     if: own >= 0
-        status: l2_rw_call_at(span\node, @ word, own, 0 - 1, 0, parent, out)
+        if: l2_m_ret[own] = 8
+            status: l2_rw_path_reference(span\node, @ word, parent, out)
+        else:
+            status: l2_rw_call_at(span\node, @ word, own, 0 - 1, 0, parent, out)
+        ---
         l2_xfree(text)
         return: status
     # A member path rooted at foreign C storage keeps its resolved root; it
@@ -43365,6 +43425,8 @@ return: 0
 
 fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: slot; @: int made) int
     LmP0Text: indirect_base
+    LmP0Text: selected_head
+    @: char selected_path 0
     int: indirect_levels
     int: indirect_type
     size_t: eix 0U
@@ -43436,6 +43498,16 @@ fn: l2_rw_stmt_content (@: LmP0Field field; @@: LmP0Field next; int: into; int: 
         return: l2_rw_struct_call(stmt, stmt\as\frame\head, into, slot, made)
     if: n > 0
         \next: l2_skip_span(field, n)
+        idx: l2_path_run_callee(field, n, l2_rw_mi, @ selected_path)
+        if: idx >= 0
+            selected_head.data: selected_path
+            selected_head.length: strlen(selected_path)
+            idx: l2_rw_call_at(stmt, @ selected_head, idx, -1, 0, into, @ t)
+            l2_xfree((cast: (@: void) selected_path))
+            if: idx != 0
+                return: 1
+            \made: 1
+            return: l2_rw_put(into, slot, t)
         if: l2_rw_expr(field, n, into, @ t) != 0
             return: 1
         \made: 1
@@ -49862,11 +49934,16 @@ fn: l2_schema_named_select (int: schema; const: @(LmP0Text name); int: occurrenc
         return: found
 return: l2_schema_placed(schema, found)
 
-# A method occurrence's own fields. The handle sits below every merge tag.
+# Reuse a named body's complete namespace schema, including nonprimitive
+# fields. Other method occurrences use their existing own-row schema tag;
 # l2_schema_index recovers the method. No namespace is created for it.
 fn: l2_schema_method (int: mi) int
+    int: ns
     if: mi < 0
         return: 0 - 1
+    ns: l2_m_nsof(mi)
+    if: ns >= 0
+        return: ns
 return: (0 - 1500000000) - mi
 
 # Unhosted own rows of one method, in declaration order. Layout stores the

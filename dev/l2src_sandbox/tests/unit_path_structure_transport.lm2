@@ -1,0 +1,19 @@
+# The receiver requires a Structure reference, not execution of the candidate.
+Inner:
+    int: k 0
+end: Inner
+Holder:
+    inner:
+        int: k 1
+        k: k + 1
+    end: inner
+end: Holder
+fn: read (Inner: value) int
+    return: value\k
+end: read
+int: v read(Holder\inner)
+int: ok 7
+if: v != 1 || Holder\inner\k != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

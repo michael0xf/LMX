@@ -1,0 +1,16 @@
+Holder:
+    inner:
+        int: k 1
+        k: k + 1
+    end: inner
+end: Holder
+fn: go (Holder: h) int
+    h\inner
+    return: h\inner\k
+end: go
+int: v go(Holder)
+int: ok 7
+if: v != 2 || Holder\inner\k != 2
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

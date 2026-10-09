@@ -1,5 +1,15 @@
 # Kernel implementation dictionary for the v2 plan
 
+Active PATH-STRUCTURE-LEAF implementation/evidence is in the
+[bounded journal](steps/path-structure-leaf-20261009.md). Selection identifies
+the actual occurrence; consumption decides application versus reference.
+An ordinary Structure procedure reuses its complete existing schema. This
+introduces no runtime name lookup, graph wrapper or alternative descriptor.
+Fresh acceptance: full11 RED70/2711 with no old-row regression; kernel11
+GREEN297/114 executed selftests; L3_11 eleven suites/four budgets. The exact
+2615-command replay matches the corrected private candidate. Recursive
+nested admission remains open; this is not full self-build.
+
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
 chronological plan or a replacement specification. For the source map read

@@ -1,5 +1,13 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+Current development note: [PATH-STRUCTURE-LEAF](steps/path-structure-leaf-20261009.md)
+uses the existing physical selector, procedure and full Structure schema,
+then the receiving kind decides reference transport or application. Fresh
+full11 is RED70/2711 with no old-row regression, kernel11 GREEN297/114,
+L3_11 eleven suites/four budgets; recursive admission remains open. This is
+an implementation repair under the existing contract, not a new graph
+representation or closure of stages 8/8a.
+
 <a id="status-and-provenance"></a>
 ## 1. Status, provenance, and how to read this document
 

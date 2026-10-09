@@ -1,0 +1,20 @@
+# The admitted field is k, not the candidate's first primitive field.
+Inner:
+    int: k 0
+end: Inner
+Holder:
+    inner:
+        int: preceding 99
+        int: k 7
+        k: k + 1
+    end: inner
+end: Holder
+fn: read (Inner: value) int
+    return: value\k
+end: read
+int: v read(Holder\inner)
+int: ok 7
+if: v != 7 || Holder\inner\k != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

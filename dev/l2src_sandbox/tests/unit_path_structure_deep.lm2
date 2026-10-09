@@ -1,0 +1,21 @@
+# Selecting a deeper body runs neither of its enclosing named bodies.
+Seen:
+    int: outer 0
+    int: middle 0
+    int: inner 0
+end: Seen
+Holder:
+    middle:
+        inner:
+            Seen\inner: Seen\inner + 1
+        end: inner
+        Seen\middle: Seen\middle + 1
+    end: middle
+    Seen\outer: Seen\outer + 1
+end: Holder
+(Holder\middle\inner)
+int: ok 7
+if: Seen\outer != 0 || Seen\middle != 0 || Seen\inner != 1
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

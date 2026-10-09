@@ -1,0 +1,22 @@
+# Indexed selection inside conditions and expressions reads the actual copy.
+Outer:
+    h:
+        int: p 3
+    end: h
+    char: h 'C'
+    int: h 77
+    fn: read () int
+        if: node\[1]h != 'C'
+            return: 81
+        return: node\[0]h\p + node\h
+    end: read
+end: Outer
+copy: merge: Outer
+copy\[0]h\p: 11
+int: ok 7
+if: Outer\read() != 80 || copy\read() != 88
+    ok: 82
+if: Outer\[0]h\p != 3 || copy\[0]h\p != 11
+    ok: 83
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

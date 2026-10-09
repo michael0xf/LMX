@@ -2,6 +2,41 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 # Remaining kernel work through stages 8 and 8a
 
+Checkpoint18 is published at `ca350f47`; the sole writer/build has verified
+`CODEX-SOURCE-DECLARATION-ORDER-20261009-19`. Follow the
+[source-order journal](steps/source-declaration-order-20261009.md) through
+common declaration binding, actual physical readers, acceptance and scoped
+publication without another prompt. MAIN-to-part visibility stays a separate
+OPEN author question; no parser change, second build or stable promotion.
+
+Current candidate15 `72C7BA66` repairs the connected constructor/call/address
+consumers and retains unchanged exact physical graph oracles. Smoke10 is
+GREEN73/70 exact programs, including genuinely native factory-result methods;
+five compiled/linked live faults reject. Replay09 preserves all prior successful
+translations:2615 rows,1797 outputs,818 refusals;1697 complete L1 deltas,
+two recoveries/eight located diagnostic changes are retained and inventoried.
+Acceptance03/61 inputs passed focus/kernel24/L3_24, then stopped at full24
+RED71/2837: one cache-only native-text oracle. Final replay10 did not run.
+The unchanged artifact passes all106 physical/aliasing checks; two actual
+compiled wrong-address faults reject. Only obsolete cache spelling is migrated,
+not the source, real candidate/required distinction or physical expectations.
+Fresh acceptance04/62 inputs explicitly includes that row: focus RED27/857
+without old regressions, kernel25 GREEN297/114 actual selftests and L3_25
+eleven suites/four budgets. Full25 completes RED70/2837: ten additions GREEN,
+two required mixed-kind recoveries, no old regression/removal/changed failure.
+All2826 old translation logs are inventoried: four known recoveries/eight
+located diagnostic changes, no other delta. Final replay11 matches private09
+exactly for all2615 exits/diagnostics/presences/L1 bytes (1797 outputs/818
+refusals). All62 frozen inputs/230 gate copies match; seven compiled/linked
+live faults reject. Bounded19 is ready for exact-path publication. Stopped
+attempts stay in the linked journal, not active claims.
+Do not promote partial results to parent completion. Source-owned part
+construction/qualified producers, fm and true walked multi-class selection stay
+OPEN; continue the next connected dependency after verified publication.
+Original method bindings must retain result-receiving calls even when their
+return type is a reference. Physical source ownership does not override the
+common resolved callable category. Exact attempts remain in the linked journal.
+
 This is the restart plan requested on 2026-10-01. It replaces the **active queue**
 of [next_core_tasks.md](next_core_tasks.md), not its historical evidence. It stops
 at full L3/L2 self-build and ordinary calls over Message transport. Application

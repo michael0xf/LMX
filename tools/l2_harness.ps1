@@ -4308,6 +4308,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_site_layout_host_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 5; WalkMethods = $true; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_layout_return.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 8; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_layout_return_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 8; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    # The same factory-result source also executes genuinely native methods.
+    # A physical method binding must not replace its reference-valued CALL.
+    [pscustomobject]@{ Name = 'unit_site_layout_return_bare_native_methods.lm2'; Source = 'unit_site_layout_return_bare.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 8; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_layout_failure.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkRoot = $true; NativeRoot = 8; WalkMethods = $true; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_hidden_model_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':7:9: implements is false in function argument'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_site_opaque_model_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Needle = ':4:1: unknown field path root'; Absent = @(); Debt = @() },
@@ -4530,7 +4533,7 @@ $fixtures = @(
     # line), and so is `Model: Other extra`; the heap-corruption shape is the second.  Written above Other's declaration,
     # the line is Model's call all the same (K03 NS-ROLES-CALL: a known head is its call whatever its actuals are; the old
     # typed receiving route that took it is removed), and so is `Model: fresh` (K03 NS-ROLES-3).  A `name:` block with
-    # nothing above declaring name is a named Structure, a later field of that name collides with it.  The unit classifier
+    # nothing above declaring name is a named Structure; a later declaration may share its name. The unit classifier
     # reads the source's order, and its answer does not depend on what is registered (the count and fill walks agree).
     [pscustomobject]@{ Name = 'unit_root_struct_call_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_root_struct_call_refused.lm2:14:1: more arguments than '; Absent = @(); Debt = @() },
@@ -4540,8 +4543,11 @@ $fixtures = @(
         Needle = 'unit_root_struct_call2_forward_refused.lm2:11:1: more arguments than Model has formals'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_root_struct_decl_beside_call.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_root_block_before_field_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_root_block_before_field_refused.lm2:8:1: named Structure collides with a unit field'; Absent = @(); Debt = @() },
+    # SOURCE-DECLARATION-ORDER19 deliberately migrates this obsolete collision
+    # oracle. Preserve its name and program; prove its actual source children.
+    [pscustomobject]@{ Name = 'unit_root_block_before_field_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true;
+        Args = @('0','namepath','1','0','x','namepath','1','1','x','parentpath','1','0','0',
+            'widthpath','1','0','2','cellpath','1','1','1','2','nativepath','1','0','1'); Absent = @(); Debt = @() },
     # K03 NS-ROLES-CALL (Codex K03-VIS-CALL-CLASSIFICATION-20261007-16, K03-NS-ROLES-CALL-20261007-17; docs/LMX_semantics.en.md
     # :668): a known ordinary named Structure head is its call whatever its written actuals are -- refused by the call's own
     # arity check at the root, in a method and in a named body (Outer is never called: its retained application is checked
@@ -4743,7 +4749,7 @@ $fixtures = @(
     # two routes below -- a path from outside the method, a copy of the method -- are refused by this
     # implementation today.  A row that goes red means the route opened: the analysis must model it first.
     [pscustomobject]@{ Name = 'unit_recv_use_nested_path_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:30:11: unknown field path segment'; Absent = @(); Debt = @() },
+        Needle = 'unit_recv_use_nested_path_reach_limit_probe.lm2:30:11: unbound dynamic input b'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_recv_use_nested_copy_reach_limit_probe.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_recv_use_nested_copy_reach_limit_probe.lm2:30:11: this merge operand form is not lowered yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_bind_root_used_other_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
@@ -4825,8 +4831,12 @@ $fixtures = @(
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_named_struct_exec_empty.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
-    [pscustomobject]@{ Name = 'unit_named_struct_exec_nested_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'executing a named Structure is not supported yet'; Absent = @(); Debt = @() },
+    # SOURCE-DECLARATION-ORDER19: keep the historical source/name, but the
+    # original Counter is now resolved from addN's actual owning occurrence.
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_nested_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 6; Args = @('0'); WalkRoot = $true;
+        Needle = ''; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_named_struct_exec_nested_refused_walk.lm2'; Source = 'unit_named_struct_exec_nested_refused.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 6; Args = @('0'); WalkRoot = $true; WalkMethods = $true;
+        Needle = ''; Absent = @(); Debt = @() },
     # REVIEW b193fbb (fable_pc's M35 and probe ns3_two_exec): two executed Structures, two code nodes --
     # the root executes A, go executes B, each by its code node's rank (§12: by its procedure): A\n = 5,
     # B\m = 11.  Mutants: the
@@ -5161,9 +5171,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_bare_table_return_refused_walk.lm2'; Source = 'unit_k03_bare_table_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_bare_table_return_refused_walk.lm2:13:13: table has no value'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_number_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_k03_struct_number_return_refused.lm2:13:13: a reference where a number is asked'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_struct_number_return_refused.lm2:13:13: return value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_number_return_refused_walk.lm2'; Source = 'unit_k03_struct_number_return_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_k03_struct_number_return_refused_walk.lm2:13:13: a reference where a number is asked'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_struct_number_return_refused_walk.lm2:13:13: return value has incompatible type'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_number_operand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_k03_struct_number_operand_refused.lm2:14:8: a reference where a number is asked'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_struct_number_operand_refused_walk.lm2'; Source = 'unit_k03_struct_number_operand_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -5384,9 +5394,9 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_k03_vis_nested_sibling_refused_walk.lm2'; Source = 'unit_k03_vis_nested_sibling_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
         Needle = 'unit_k03_vis_nested_sibling_refused_walk.lm2:14:30: unbound dynamic input Inner'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_k03_vis_later_struct_method.lm2:15:30: unbound dynamic input Later'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_vis_later_struct_method.lm2:5:9: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_method_walk.lm2'; Source = 'unit_k03_vis_later_struct_method.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
-        Needle = 'unit_k03_vis_later_struct_method_walk.lm2:15:30: unbound dynamic input Later'; Absent = @(); Debt = @() },
+        Needle = 'unit_k03_vis_later_struct_method_walk.lm2:5:9: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_root.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_k03_vis_later_struct_root.lm2:4:5: unresolved name'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_k03_vis_later_struct_root_walk.lm2'; Source = 'unit_k03_vis_later_struct_root.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
@@ -8032,7 +8042,10 @@ $fixtures = @(
             'rolepath','3','1','2','1','8','1','rolepath','2','1','6','8','0',
             'postpaths','sizepath','2','0','0','1','sizepath','3','1','2','0','11','endpostpaths');
         Absent = @('lmx_struct_new_owned(self, l2_program_arena)'); Debt = @();
-        NativePatterns = @('(?s)@: Lmx (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: Lmx\) lmx_pointer_value_known\(\k<ref>_from\[0\]\)\).*?(?<model>(?!\k<ref>\b)l2_q\d+): \(cast: \(@: Lmx\) (?<cell>l2_q\d+_from)\[0\]\).*?@: Lmx (?<candidate>l2_t\d+) \k<model>\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiving_use\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>, @ l2_rusev\d+\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: Lmx\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
+        # Original mo uses its actual source-owned child, not a receiving cache.
+        # Keep candidate/required distinction, admission and aliasing operations;
+        # all106 exact physical/name/parent/value checks above remain unchanged.
+        NativePatterns = @('(?s)@: Lmx (?<ref>l2_q\d+)\s+\k<ref>: \(cast: \(@: Lmx\) lmx_pointer_value_known\(\k<ref>_from\[0\]\)\).*?@: Lmx (?<candidate>l2_t\d+) (?<model>lmx_arena_ref_struct\(self, \d+U\))\s+.*?int: (?<admission>l2_admission\d+) c.LMX_IMPLEMENTS_YES.*?(?<pending>l2_pending\d+)\.value: \(cast: \(@: Lmx\) \k<candidate>\)\s+\k<pending>\.req: (?<required>lmx_arena_ref_struct\(node, \d+U\)).*?\k<admission>: lmx_implements_receiving_use\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>, \k<required>, @ \k<pending>, @ l2_rusev\d+\).*?\k<admission>: lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) \k<candidate>\), \k<required>,.*?if: \k<admission> != c.LMX_IMPLEMENTS_YES.*?return: 2\s+\k<ref>: \(cast: \(@: Lmx\) \(\k<candidate>\)\).*?l2_pst: \k<model>.*?lmx_size_store_known\(l2_pxp\[0\], 9U\).*?l2_pst: \k<ref>.*?lmx_size_value_known\(l2_pxp\[0\]\).*?l2_pst: \k<ref>.*?lmx_size_store_known\(l2_pxp\[0\], 11U\).*?l2_pst: \k<model>.*?lmx_size_value_known\(l2_pxp\[0\]\)') },
     [pscustomobject]@{ Name = 'unit_ref_formal_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
         Absent = @('@@: Lmx l2_p'); Debt = @('@: Lmx l2_p0_0') },
     [pscustomobject]@{ Name = 'unit_ref_field_path.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; Args = @('0');
@@ -8759,7 +8772,7 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_s7_tbl_in_struct.lm2'; Table = 'absent'; Parts = @('convert_impl.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_ns_hidden.lm2'; Parts = @('unit_s7_part_ns_hidden_part.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_s7_part_ns_hidden.lm2:9:6: unbound dynamic input Counter'; Absent = @(); Debt = @() },
+        Needle = 'unit_s7_part_ns_hidden_part.lm2:3:1: a path through a free name that no declaration reaching it gives its fields to is not built yet'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_s7_part_dup_method_refused.lm2'; Parts = @('unit_s7_part_dup_method_refused_part.lm2', 'unit_s7_part_dup_method_refused_second.lm2'); Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unit_s7_part_dup_method_refused_second.lm2:3:1: duplicate definition (the other at unit_s7_part_dup_method_refused_part.lm2:3:1)'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_lib_stmt_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0; Library = $true;
@@ -8904,9 +8917,9 @@ $fixtures = @(
     # scanner.  bafca4c (7b, by name): an argument has no place of declaration, so test\[0]arg is refused at the
     # walked root (was eternal-runs, Q29's one cell); declared occurrences: unit_q24_repeated_decl.lm2.
     [pscustomobject]@{ Name = 'unit_occ_root_named.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'unit_occ_root_named.lm2:18:15: no such occurrence'; Absent = @(); Debt = @() },
+        Needle = 'unit_occ_root_named.lm2:18:5: unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_occ_root_out_of_range_refused.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
-        Needle = 'no such occurrence'; Absent = @(); Debt = @() },
+        Needle = 'unit_occ_root_out_of_range_refused.lm2:12:5: unknown field path segment'; Absent = @(); Debt = @() },
     # FABLE-SONNET-LAST-OCCURRENCE-20260924-164: unqualified test\arg is the
     # LAST occurrence of a repeated plain own field (not argument-bound, so
     # first-vs-last is the only thing deciding the read) -- test\[N]arg still
@@ -9677,12 +9690,30 @@ $fixtures = @(
         Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_primitive_tail_walk.lm2'; Source = 'unit_node_source_primitive_tail.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
-    # Mixed-kind and own-part producers remain required-positive debts. The
-    # namespace-parent pair exercises distinct actual source owners.
+    # Mixed-kind original definitions share the source selector. Own-part
+    # producers remain required-positive debts, not semantic exceptions.
     [pscustomobject]@{ Name = 'unit_node_source_mixed_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_mixed_occurrences_walk.lm2'; Source = 'unit_node_source_mixed_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # Original definitions reuse the already-owned source object. Select by
+    # written occurrence first, then consume its kind; no category fallback.
+    [pscustomobject]@{ Name = 'unit_source_order_three_kinds.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true;
+        Args = @('0'); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_order_three_kinds_walk.lm2'; Source = 'unit_source_order_three_kinds.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Args = @('0'); WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_order_copy_kinds.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true;
+        Args = @('0'); NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_order_copy_kinds_walk.lm2'; Source = 'unit_source_order_copy_kinds.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Args = @('0'); WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_order_method_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true;
+        Args = @('0'); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_order_method_first_walk.lm2'; Source = 'unit_source_order_method_first.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Args = @('0'); WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_order_method_last.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true;
+        Args = @('0'); NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_source_order_method_last_walk.lm2'; Source = 'unit_source_order_method_last.lm2'; Expect = 'eternal-runs'; Exit = 0; Entry = 7; WalkRoot = $true; WalkMethods = $true;
+        Args = @('0'); WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_namespace_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_source_namespace_parent_walk.lm2'; Source = 'unit_node_source_namespace_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;

@@ -2,6 +2,44 @@
 
 This document is a practical instruction for moving kernel and application code upward through the current LMX profiles. It is not a replacement for the normative specifications. When an example here and a normative specification disagree, the normative specification wins.
 
+**BOUNDED VERIFIED, continuation19 (`72C7BA66`).** An original named body, written fn/sub header and
+primitive declaration share one source binding/occurrence selection. Do not
+retry another category after the selected binding rejects a path or call. A
+binding row describes the existing source child; it is not another constructor.
+Original-definition classification must not make a second body producer run.
+Load a selected definition over its actual owning graph occurrence, not another
+activation's cached local. Use the common operand span for indexed paths inside
+expressions. Common resolution must enter the constructor-owned route over
+the actual binding, not a unit-tail slot for a local original body. Ordinary bodies
+stay forward-visible; backward visibility belongs only to fn/fm/sub. This does
+not implement fm, own-part construction, a codec, or stages8/8a. Exact scope:
+[source-order journal](steps/source-declaration-order-20261009.md).
+
+Do not create a receiving cache merely from a unit definition's binding,
+and do not read a method's physical child instead of invoking its result in
+ordinary value reception. Both consumers must honor the common resolved head;
+explicit callable-contract reception keeps its existing transport operation.
+Source identity alone cannot determine cache eligibility. Candidate15 keeps
+the existing same-activation OWN route outside the unit/full-method constructor
+and adds a genuinely native factory-result control. Smoke10 GREEN73/70 exact
+fixtures; five fresh live faults reject. Replay09 retains1697 complete L1
+deltas with zero old-success refusals. Acceptance03/61 inputs passed focus,
+kernel24 and L3_24, but full24 RED71/2837 stops at a cache-only text oracle.
+The unchanged artifact passes all106 original physical/aliasing checks; two
+compiled wrong-address faults reject. The revised relationship checks the real
+source child, distinct required model, admission and reference store, not an
+obsolete receiving cache. All physical paths/program bytes remain unchanged.
+Fresh serial acceptance04 freezes62 inputs and includes the missed row:
+focus RED27/857 without old regressions, kernel25 GREEN297/114 executed
+selftests and L3_25 eleven suites/four budgets. Full25 completes RED70/2837:
+ten additions GREEN/two required mixed-kind recoveries, no old regressions,
+removals or changed remaining failures. All2826 old translation logs have only
+four known recoveries/eight located diagnostic changes. Final2615 replay11
+matches private09 exactly, including1797 L1 outputs/818 refusals; all62 frozen
+inputs/230 gate copies match. Seven live faults compile/link and reject.
+This verifies the bounded same-source route, not own-part/qualified producers
+or any parent stage. All stopped attempts stay in the journal.
+
 The authoritative language documents are:
 
 - `docs/LMX_semantics.en.md` for L3 semantics;

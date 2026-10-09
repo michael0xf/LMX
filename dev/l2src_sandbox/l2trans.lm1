@@ -1724,6 +1724,7 @@ prototype:
     fn: l2_slot_reserve (int: need) int
     fn: l2_dyn_add (int: mi; const: @(LmP0Text t); int: ty) int
     fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth; @: int sn) int
+    fn: l2_collect_source_definition (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
     fn: l2_is_char_decl (const: @(LmP0Node stmt)) int
     fn: l2_address_depth (const: @(LmP0Text head)) int
     fn: l2_emit_address_marks (@: FILE out; int: depth) int
@@ -2056,10 +2057,12 @@ prototype:
     fn: l2_source_cells_emit (int: kind; int: index; const: @(char root)) int
     fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
     fn: l2_source_definition_ns (int: own) int
+    fn: l2_source_definition_unit_ns (int: own) int
     fn: l2_source_definition_field (int: ni; int: kind; int: index; @@: L2SourceContainer owner) @: L2SourceField
     fn: l2_source_definition_node_field (const: @(LmP0Node node); int: kind; int: index; @@: L2SourceContainer owner) @: L2SourceField
     fn: l2_occ_expr_append (int: mi; const: @(char unit); @: L2Tx dest) int
     fn: l2_occ_place_expr_append (int: mi; const: @(char unit); @: L2GraphPlace place; @: L2Tx dest) int
+    fn: l2_graph_holder_expr_append (@: L2GraphPlace place; const: @(char root); @: L2Tx dest) int
     fn: l2_occ_field_expr_append (int: own; const: @(char unit); @: L2Tx dest) int
     fn: l2_emit_ns_cells (int: ni) int
     fn: l2_emit_ns_refs (int: ni) int
@@ -2966,6 +2969,8 @@ fn: l2_own_unit_seen (int: oi; int: mi) int
     # the root's slots -- declared above it in the part, as a method of the source sees the unit's fields.
     k: l2_m_code_file(mi)
     if: k >= 0 && l2_part_ns[k] >= 0 && l2_ns_proc[l2_part_ns[k]] >= 0 && l2_own_mi[oi] = l2_ns_proc[l2_part_ns[k]]
+        if: l2_source_definition_method(oi) >= 0
+            return: 1
         source: l2_callable_source_node(mi)
         if: l2_own_decl[oi] = 0 || l2_own_decl[oi]\span = 0 || source = 0 || source\span = 0
             return: 1
@@ -2977,6 +2982,8 @@ fn: l2_own_unit_seen (int: oi; int: mi) int
     # by its callers or unresolved.
     if: k >= 0
         return: 0
+    if: l2_source_definition_method(oi) >= 0
+        return: 1
 return: l2_vis_ok(l2_own_decl[oi])
 
 # Unit children that hold callable occurrences: one per method except E, whose
@@ -4708,12 +4715,17 @@ fn: l2_method_duplicate (const: @(LmP0Node node); const: @(LmP0Text name); int: 
         mi: mi + 1
 return: -1
 
+# A source binding is not another body producer. Original unit declarations
+# already have their connected source-child constructor; declarations owned
+# by callable bodies use the source-container producer through this own row.
 fn: l2_method_source_own (int: mi) int
     int: own 0
     if: mi < 0 || mi >= l2_m_n || l2_m_node[mi] = 0
         return: -1
     while: own < l2_own_n
         if: l2_own_decl[own] = l2_m_node[mi]
+            if: l2_own_mi[own] = l2_e && l2_own_host[own] = 0
+                return: -1
             return: own
         own: own + 1
 return: -1
@@ -5256,6 +5268,7 @@ return: 0
 fn: l2_make_entry (const: @(char path)) int
     int: sn 0
     int: k 0
+    @: LmP0Field definition
     if: l2_m_n >= c.INT_MAX
         l2_alloc_err: 2
         return: l2_error(path, 0, "size overflow")
@@ -5294,16 +5307,24 @@ fn: l2_make_entry (const: @(char path)) int
     l2_m_own[l2_m_n]: 0
     l2_m_sn[l2_m_n]: 0
     l2_e: l2_m_n
+    # The executable view omits definitions. Register the original source
+    # bindings through the same producer used inside every callable body;
+    # it denotes their existing children, not extra storage in this view.
+    definition: l2_next_active(l2_cur_unit\first_field)
+    while: definition != 0
+        if: l2_collect_source_definition(definition\value, l2_e, path) < 0
+            return: 1
+        definition: l2_next_active(definition\next)
+    ---
     if: l2_collect_decls(l2_e_struct, l2_e, path, 0, @ sn) != 0
         return: 1
     l2_m_sn[l2_e]: sn
     l2_m_n: l2_m_n + 1
-    # A unit field is a name every later method may read, so it may not be the
-    # name of a method (visible both ways) or of a named Structure or branch.
+    # Source declarations of every supported kind share one binding model.
+    # Qualified branch construction still has its separate unconnected producer;
+    # do not silently decide the open MAIN-to-part visibility contract here.
     while: k < l2_own_n
-        if: l2_own_mi[k] = l2_e && l2_own_host[k] = 0 && l2_find_method(l2_own_name[k]) >= 0
-            return: l2_error(path, l2_own_decl[k], "method collides with a unit field")
-        if: l2_own_mi[k] = l2_e && l2_own_host[k] = 0 && (l2_ns_find(l2_own_name[k]) >= 0 || l2_ebr_find(l2_own_name[k]) >= 0)
+        if: l2_own_mi[k] = l2_e && l2_own_host[k] = 0 && l2_ebr_find(l2_own_name[k]) >= 0
             return: l2_error(path, l2_own_decl[k], "named Structure collides with a unit field")
         # §10: a field of a part's root is a unit field for the part's methods, and the program's methods are
         # visible from them.  (The source's named Structures are not: nothing of the source is.)
@@ -6565,6 +6586,8 @@ return: l2_own_source_after(row, previous)
 # declarations of the selected owner, not the position of a different file.
 fn: l2_own_source_visible (int: row; int: mi; const: @(LmP0Node at)) int
     const: @(LmP0Node source) l2_head_source_node(l2_own_decl[row])
+    if: l2_source_definition_method(row) >= 0
+        return: 1
     at: l2_head_source_node(at)
 return: at = 0 || at\span = 0 || (l2_here_mi = mi && l2_here_source_mi != mi) || source = 0 || source\span = 0 || source\span\offset <= at\span\offset
 
@@ -7684,6 +7707,12 @@ fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out
                 if: out_index != 0
                     \out_index: h
                 return: 2
+            ---
+            h: l2_source_definition_ns(k)
+            if: h >= 0
+                if: out_index != 0
+                    \out_index: h
+                return: 5
             ---
             if: out_index != 0
                 \out_index: k
@@ -11859,6 +11888,7 @@ return: 0
 # an explicit pointer cell is not a descriptor and is read as an ordinary value.
 fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address out) int
     @: LmP0Text name 0
+    int: formal -1
     l2_reference_fields(@ first, @ n)
     if: n != 1 || first = 0 || first\value = 0 || first\value\as = 0
         return: 1
@@ -11866,11 +11896,12 @@ fn: l2_reference_descriptor (@: LmP0Field first; int: n; int: mi; @: L2Address o
         name: first\value\as\atom
     if: l2_empty_call_shape(first\value) != 0
         name: first\value\as\frame\head
-    if: name = 0 || l2_address_name(mi, name, out) != 0 || out\descriptor = 0 || l2_colon_is_graph_ty(out\type) = 0
+    # Ordinary value reception consumes the selected method's nullary call.
+    # Its physical source child does not turn that call into a descriptor
+    # read. Callable-contract reception uses l2_cf_actual separately.
+    if: name != 0 && l2_call_head_method(mi, name, @ formal) >= 0
         return: 1
-    # Callable formals retain their existing result-receiving call route. Their
-    # transport descriptor alone does not select occurrence-as-value here.
-    if: out\kind = 2 && l2_cf_get(mi, out\index) >= 0
+    if: name = 0 || l2_address_name(mi, name, out) != 0 || out\descriptor = 0 || l2_colon_is_graph_ty(out\type) = 0
         return: 1
 return: 0
 
@@ -11917,6 +11948,8 @@ fn: l2_own_layout (int: own) int
     if: own < 0 || own >= l2_own_n
         return: -1
     model: l2_own_nsty_get(own)
+    if: model >= 0 && l2_source_definition_ns(own) = model
+        return: model
     if: model >= 0 && l2_ns_local[model] >= 0 && l2_own_of_local_ns(l2_own_mi[own], model) = own
         return: model
     row: l2_ns_constructed_row(l2_own_mi[own], l2_own_decl[own])
@@ -12092,6 +12125,10 @@ fn: l2_reference_source (@: LmP0Field first; int: n; int: mi; @: L2ReferenceSour
     if: resolved = 0 && (address\kind = 1 || address\kind = 2)
         if: address\kind = 1
             out\schema: l2_own_schema(address\index)
+            # An original definition denotes its existing constructor,
+            # unlike a receiving cell whose current referent is not its model.
+            if: l2_source_definition_ns(address\index) >= 0
+                out\layout: l2_own_layout(address\index)
             out\method: l2_own_mi[address\index]
             out\place: l2_d105_own_key(address\index)
         else:
@@ -13314,6 +13351,12 @@ return: k
 fn: l2_own_cached (int: mi; int: k) int
     if: mi < 0 || k < 0 || k >= l2_own_n || l2_own_mi[k] != mi || l2_m_uses = 0
         return: 0
+    # A unit constructor or full method already owns its original child;
+    # registering its source binding does not add a working receiving cell.
+    # Other fields retain the existing same-activation OWN/cache route.
+    # Original identity alone does not change their physical operand form.
+    if: l2_source_definition_unit_ns(k) >= 0 || l2_source_definition_method(k) >= 0
+        return: 0
     if: l2_m_uses[l2_own_off(mi, k)] = 0 || l2_own_is_array(l2_own_ty[k]) != 0 || l2_own_direct(mi, k) = 0
         return: 0
     # A catch parameter is written by the delivery into its cell -- the walker's pad binding, the native handler -- so
@@ -13326,6 +13369,13 @@ return: 1
 # The typed load of own field k: its working value when the method being emitted has one (l2_work_mi), else its cell.
 fn: l2_own_load (int: k; @: L2Tx dest) int
     []: char nm 32
+    @: L2GraphField field
+    if: l2_source_definition_ns(k) >= 0
+        field: l2_graph_field(k)
+        if: field = 0 || l2_tx_clear(dest) != 0 || l2_tx_cat(dest, "lmx_arena_ref_struct(") != 0 || l2_graph_holder_expr_append(field\holder, l2_own_ctr(k), dest) != 0 || c.snprintf(nm, 32U, ", %zuU)", field\child) < 0
+            return: 1
+        return: l2_tx_cat(dest, nm)
+    ---
     if: l2_own_cached(l2_work_mi, k) != 0
         if: c.snprintf(nm, 32U, "l2_q%d", k) < 0
             return: 1
@@ -13838,6 +13888,62 @@ fn: l2_bind_own (int: mi; int: oi; const: @(char path); const: @(LmP0Node at)) i
         l2_m_alias[l2_own_off(mi, oi)]: fi
 return: 0
 
+# Register one original source definition, at any lexical scope. This row
+# describes its existing child and never allocates runtime storage. A full
+# method is collected by original node identity; a borrowed contract is not
+# another definition. Return1 handled,0 other source,-1 located failure.
+fn: l2_collect_source_definition (const: @(LmP0Node stmt); int: mi; const: @(char path)) int
+    @: LmP0Text name l2_method_declaration_name(stmt)
+    int: method -1
+    int: model -1
+    int: retained l2_ns_constructed_row(mi, stmt)
+    int: own
+    int: previous
+    int: i 0
+    if: retained = -2
+        return: -1
+    if: name != 0
+        method: l2_method_by_source(stmt)
+        # A compatible forward header borrows the already collected method
+        # contract; it is not another definition owning that method's body.
+        # Keep its existing source-unit descriptor producer, without a body.
+        if: method < 0 && l2_unit_defined_fn(stmt, name) != 0
+            return: 0
+        if: method < 0
+            if: l2_collect_method(stmt, path, mi) != 0
+                return: -1
+            method: l2_method_by_source(stmt)
+        ---
+        if: method < 0
+            l2_error(path, stmt, "internal: a method declaration lost its source row")
+            return: -1
+    ---
+    else:
+        if: retained >= 0 && l2_nsf_kind[retained] = 2
+            model: l2_nsf_ref[retained]
+        while: model < 0 && i < l2_ns_n
+            if: l2_ns_at[i] = stmt && l2_ns_original_body(i) != 0
+                model: i
+            i: i + 1
+        ---
+        if: model < 0
+            return: 0
+        name: l2_ns_name[model]
+    ---
+    previous: l2_own_find_decl(mi, name, stmt)
+    own: l2_own_add(mi, name, l2_graph_own(), path, stmt)
+    if: own < 0
+        return: -1
+    if: model >= 0 && l2_own_nsty_set(own, model) != 0
+        return: -1
+    if: l2_own_off(mi, own) = (cast: (size_t) -1)
+        l2_alloc_or(path, stmt, "size overflow")
+        return: -1
+    l2_m_uses[l2_own_off(mi, own)]: 1
+    if: previous < 0
+        l2_m_own[mi]: l2_m_own[mi] + 1
+return: 1
+
 fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path); int: depth; @: int sn) int
     @: L2Declaration declaration
     @: LmP0Field field
@@ -13856,28 +13962,10 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
     while: field != 0
         stmt: field\value
         l2_vis_stmt(mi, stmt)
-        retained: l2_ns_constructed_row(mi, stmt)
-        if: retained = -2
+        retained: l2_collect_source_definition(stmt, mi, path)
+        if: retained < 0
             return: 1
-        # Every complete local method declaration uses the same header producer
-        # as a root declaration. Its written field owns the actual occurrence.
-        fa: l2_method_declaration_name(stmt)
-        # The unit's existing declaration producer already owns its root field.
-        # A callable body's declaration needs an own-field source producer.
-        if: fa != 0 && mi != l2_e
-            j: l2_method_by_source(stmt)
-            if: j < 0
-                if: l2_collect_method(stmt, path, mi) != 0
-                    return: 1
-                j: l2_method_by_source(stmt)
-            ---
-            if: j < 0
-                return: l2_error(path, stmt, "internal: a local method declaration lost its source row")
-            j: l2_own_add(mi, fa, l2_graph_own(), path, stmt)
-            if: j < 0 || l2_own_off(mi, j) = (cast: (size_t) -1)
-                return: l2_alloc_or(path, stmt, "size overflow")
-            l2_m_uses[l2_own_off(mi, j)]: 1
-            l2_m_own[mi]: l2_m_own[mi] + 1
+        if: retained > 0
             field: l2_next_active(field\next)
             continue
         # K03 NS-ROLES-1: the root's reference binding `b: A` (l2_ref_bind_site) is kept before the root's rows are made
@@ -13895,18 +13983,6 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
             if: j = 6 && l2_rb_add_own(stmt, fa, rbm) != 0
                 return: l2_alloc_or(path, stmt, "out of memory")
         ---
-        if: retained >= 0 && l2_nsf_kind[retained] = 2
-            # A named constructor binds the already allocated child in its
-            # owner's source slot. It neither copies nor executes that body.
-            j: l2_own_add(mi, l2_nsf_fname[retained], l2_graph_own(), path, stmt)
-            if: j < 0 || l2_own_nsty_set(j, l2_nsf_ref[retained]) != 0
-                return: 1
-            if: l2_own_off(mi, j) = (cast: (size_t) -1)
-                return: l2_error(path, stmt, "size overflow")
-            l2_m_uses[l2_own_off(mi, j)]: 1
-            l2_m_own[mi]: l2_m_own[mi] + 1
-            field: l2_next_active(field\next)
-            continue
         # S1.3: a catch hosts its parameters; its handler is a nested body under it.
         if: l2_frame_head(stmt, "catch")
             if: l2_collect_catch(stmt, mi, path, depth, sn) != 0
@@ -17930,9 +18006,17 @@ fn: l2_source_definition_ns (int: own) int
     if: own < 0
         return: -1
     ni: l2_own_nsty_get(own)
-    if: ni < 0 || ni >= l2_ns_n || l2_ns_source_body(ni) = 0
+    if: ni < 0 || ni >= l2_ns_n || l2_ns_original_body(ni) = 0
         return: -1
     if: l2_ns_at[ni] != l2_own_decl[own]
+        return: -1
+return: ni
+
+# The original binding whose existing namespace constructor owns a unit child.
+# This is physical producer ownership, not a second name or visibility rule.
+fn: l2_source_definition_unit_ns (int: own) int
+    int: ni l2_source_definition_ns(own)
+    if: ni < 0 || l2_ns_local[ni] >= 0 || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
         return: -1
 return: ni
 
@@ -18224,8 +18308,10 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
                     while: field != 0
                         ni: l2_source_definition_ns(field\own)
                         method: l2_source_definition_method(field\own)
+                        if: method >= 0 && l2_method_source_own(method) < 0
+                            method: -1
                         body: 0
-                        if: ni >= 0 && l2_ns_local[ni] >= 0
+                        if: ni >= 0 && l2_ns_local[ni] >= 0 && l2_ns_source_body(ni) != 0
                             method: l2_ns_proc[ni]
                             body: l2_ns_source_body(ni)
                         if: ni < 0 && method >= 0 && l2_m_body[method] != 0
@@ -25022,6 +25108,22 @@ fn: l2_path_root (const: @(char pd); size_t: pn; @: int out_ni; @: int out_res; 
             ---
         ---
     if: \out_oi >= 0
+        i: l2_source_definition_method(\out_oi)
+        if: i >= 0
+            \out_root: 0 - 1000 - i
+            \out_oi: -1
+            l2_uses_node_for_root: 1
+            return: 0
+        ---
+        i: l2_source_definition_unit_ns(\out_oi)
+        if: i >= 0
+            # Selection already chose this exact original binding. Its unit
+            # constructor and namespace path retain the same physical child,
+            # field-use suffix and copy closure; it is not a receiving cell.
+            \out_ni: i
+            \out_oi: -1
+            return: 0
+        ---
         \out_res: l2_own_res(\out_oi)
         return: 0
     # A resolved method name as a path root denotes its occurrence
@@ -25182,6 +25284,10 @@ fn: l2_own_seg_kind (int: hit; @: int out_kind; @: int out_ent) int
         return: -1
     \out_kind: l2_num_kind(l2_own_ty[hit])
     \out_ent: -1
+    \out_ent: l2_source_definition_method(hit)
+    if: \out_ent >= 0
+        \out_kind: 4
+        return: hit
     if: \out_kind >= 0
         return: hit
     if: l2_own_is_pointer(l2_own_ty[hit]) != 0 && l2_own_is_slot(hit) = 0
@@ -25572,12 +25678,17 @@ fn: l2_path_resolve_contract (const: @(char pd); size_t: pn; @: int out_mi; @: i
             ent: l2_field_pointee(ni, field_own, pd, off, len)
         if: i + 1 < segs && kind = 10 && res >= 0
             ent: l2_mrs_ref_pointee(res, slot)
-        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || ent < 0)
+        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && (kind != 10 || ent < 0)
             return: 0 - 1
         if: i + 1 < segs
             ni: ent
             res: 0 - 1
-            if: l2_schema_kind(ent) = 2
+            # A callable field is the same stored Structure occurrence.
+            # Its next field resolves in that method's existing source body.
+            if: kind = 4
+                bm: ent
+                ni: -1
+            if: kind != 4 && l2_schema_kind(ent) = 2
                 res: l2_schema_index(ent)
                 ni: -1
             ---
@@ -25861,7 +25972,7 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         if: i + 1 < segs && kind = 10
             view_model: ent
         ---
-        if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || ent < 0)
+        if: i + 1 < segs && kind != 2 && kind != 3 && kind != 4 && (kind != 10 || ent < 0)
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
         # Through a reference field (D-76): its pointer cell holds the pointee Structure.
         if: i + 1 < segs && kind = 10 && c.fprintf(l2_out, "%sl2_pxp: lmx_arena_ref_cell(l2_pst, %s)\n%sif: l2_pxp = 0\n", ind, sl, ind) < 0
@@ -25877,13 +25988,17 @@ fn: l2_emit_path_receiving (const: @(char pd); size_t: pn; int: mi; const: @(cha
         if: i + 1 < segs
             ni: ent
             res: 0 - 1
-            if: l2_schema_kind(ent) = 2
+            if: kind = 4
+                ni: -1
+            if: kind != 4 && l2_schema_kind(ent) = 2
                 res: l2_schema_index(ent)
                 ni: -1
             ---
         ---
         bh: nb
         bm: 0 - 1
+        if: i + 1 < segs && kind = 4
+            bm: ent
         # K03 S7b: a merge operand (arr_ok 2) ends at a Structure field, kind 2 or 3: l2_pst is the Structure it holds.
         if: i + 1 = segs && arr_ok = 2 && kind != 2 && kind != 3
             return: l2_error(l2_src, at, "this merge operand form is not lowered yet")
@@ -26046,13 +26161,12 @@ return: 0
 # The value type a primitive field kind loads as (l2_emit_cell_load): size_t, char, int,
 # unsigned, ulong; -1 for any other kind.
 
-# D-112/D-113: a field path deeper than one field, written in value position -- P0 gives `m\in\x` as the
-# atoms `m`, `\`, `in`, `\`, `x` -- joined into buf.  The number of fields it takes (5, 7, ...), or 0 when f
-# starts no such path: a single hop stays l2_field_path_read's.
+# Use the existing operand-span recognizer for a structural path prefix.
+# Occurrence selectors belong to that same operand, at any path level;
+# do not reparse an alternating name/slash subset in each value consumer.
+# A plain single hop keeps its existing located single-hop diagnostics.
 fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) int
-    @: LmP0Field s
-    @: LmP0Field g
-    int: taken 1
+    int: taken
     size_t: n 0U
     \out_n: 0U
     if: f = 0 || f\value = 0 || f\value\kind != c.LM_P0_NODE_ATOM || f\value\as = 0 || f\value\as\atom = 0
@@ -26061,25 +26175,13 @@ fn: l2_path_chain (@: LmP0Field f; @: char buf; size_t: cap; @: size_t out_n) in
     # of a path all the same (l2_path_chain_check; which body, l2_body_root).
     if: l2_ident(f\value\as\atom) = 0 && l2_text_eq(f\value\as\atom, "node") = 0 && l2_body_head_word(f\value\as\atom) = 0
         return: 0
-    if: f\value\as\atom\length + 1U > cap
+    if: buf = 0 || cap = 0U
         return: 0
-    memcpy((cast: (@: void) buf), (cast: (@: void) f\value\as\atom\data), f\value\as\atom\length)
-    n: f\value\as\atom\length
-    s: l2_next_active(f\next)
-    while: s != 0 && s\value != 0 && s\value\kind = c.LM_P0_NODE_ATOM && s\value\as != 0 && l2_is_slash(s\value\as\atom) != 0
-        g: l2_next_active(s\next)
-        # A later name may head a control body too (l2_path_kind: a body of the host).
-        if: g = 0 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM || g\value\as = 0 || g\value\as\atom = 0 || (l2_ident(g\value\as\atom) = 0 && l2_body_head_word(g\value\as\atom) = 0)
-            break
-        if: n + 1U + g\value\as\atom\length + 1U > cap
-            return: 0
-        buf[n]: 92
-        memcpy((cast: (@: void) (buf + n + 1U)), (cast: (@: void) g\value\as\atom\data), g\value\as\atom\length)
-        n: n + 1U + g\value\as\atom\length
-        taken: taken + 2
-        s: l2_next_active(g\next)
-    ---
+    taken: l2_rw_path_run_mode(f, c.INT_MAX, 0)
     if: taken < 5
+        return: 0
+    n: l2_join_path(f, taken, buf, cap - 1U)
+    if: n = 0U
         return: 0
     buf[n]: 0
     \out_n: n
@@ -28789,22 +28891,22 @@ fn: l2_bare_structure (const: @(LmP0Text t); int: mi) int
         return: l2_colon_is_graph_ty(ty)
 return: l2_ns_find(t) >= 0
 
-# steps/named-struct-exec.md, slices 2 and 3: the named Structure a bare atom executes -- its own
-# name, not a field or a local bound to a Structure (l2_colon_bound_ty) -- or -1.  Only a unit-level
-# one that is no qualified branch: its node is a unit child (l2_ns_rank).  In the root, and in a
-# unit-level method, whose `node` is the unit (l2_unit_ref); a callable merge's nested method runs
-# only walked, as its host's constructor (l2_mad_host_of), and stays refused.
+# Select the existing unit-owned producer after common head resolution.
+# Local original definitions have the same resolved role, but their actual
+# binding is constructed in the owning activation, not at a unit-tail slot.
+# CHECK, native emission and walker emission then use that binding's existing
+# local-call route. Receiving cells are not additional original definitions.
 fn: l2_ns_exec_named (const: @(LmP0Text t); int: mi) int
-    int: ty 0
     int: ni
     if: t = 0 || l2_e < 0 || mi < 0 || l2_library_mode != 0
         return: 0 - 1
     if: mi != l2_e && l2_mad_host_of(mi) >= 0
         return: 0 - 1
-    if: l2_colon_bound_ty(mi, t, @ ty) = 0
+    # An original definition's own binding still denotes that exact named
+    # occurrence. A typed receiving field is not another definition.
+    if: l2_head_resolve(mi, t, @ ni, 0) != 5
         return: 0 - 1
-    ni: l2_ns_find(t)
-    if: ni < 0 || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0
+    if: ni < 0 || l2_ns_parent[ni] >= 0 || l2_ns_eternal[ni] >= 0 || l2_ns_local[ni] >= 0
         return: 0 - 1
 return: ni
 
@@ -29587,7 +29689,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         # never assigned), and an ordinary named Structure has no arguments (Q59): the argument is the arity refusal
         # of the resolved value, l2_struct_arity_error.  (`T()` is its nullary call, above; `T: fresh` is T's call
         # whatever fresh is -- an unknown actual is neither declared nor cloned, K03 NS-ROLES-2.)
-        if: l2_frame_head(stmt, "if") = 0 && l2_is_char_decl(stmt) = 0 && l2_is_asgn(stmt, mi) != 0 && stmt\as\frame\head != 0 && l2_ident(stmt\as\frame\head) != 0 && l2_param_find(mi, stmt\as\frame\head) < 0 && l2_own_visible(mi, stmt\as\frame\head) < 0 && l2_slot_find(mi, stmt\as\frame\head) < 0 && l2_ml_find(stmt\as\frame\head) < 0 && l2_ns_find(stmt\as\frame\head) >= 0 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_head_resolve(mi, stmt\as\frame\head, 0, 0) = 5 && stmt\as\frame\body != 0 && l2_count_active(stmt\as\frame\body) > 0
             return: l2_struct_arity_error(path, stmt, stmt\as\frame\head)
         # A bare colon frame whose head is not a call is an update only when
         # that head already has a typed mutable binding.  In particular,
@@ -34112,6 +34214,16 @@ fn: l2_occ_place_expr_append (int: mi; const: @(char unit); @: L2GraphPlace plac
         return: 1
 return: l2_tx_cat(dest, suffix)
 
+# Spell the existing physical holder over an actual occurrence, not a local
+# alias owned by another activation. No graph object or address is rebuilt.
+fn: l2_graph_holder_expr_append (@: L2GraphPlace place; const: @(char root); @: L2Tx dest) int
+    []: char suffix 48
+    if: place = 0
+        return: l2_tx_cat(dest, root)
+    if: l2_tx_cat(dest, "lmx_arena_ref_struct(") != 0 || l2_graph_holder_expr_append(place\parent, root, dest) != 0 || c.snprintf(suffix, 48U, ", %zuU)", place\child) < 0
+        return: 1
+return: l2_tx_cat(dest, suffix)
+
 # Stream an occurrence only inside the builder, after its allocation phase.
 # Namespace aliases already name their real parented objects; no nested path
 # string or reconstruction object is needed. Reached local constructors have
@@ -36430,8 +36542,16 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
     if: l2_rw_mi != l2_e
         fi: l2_param_find(l2_rw_mi, l2_rw_seg)
     oi: l2_rw_find(l2_rw_seg)
+    ni: l2_source_definition_unit_ns(oi)
+    if: l2_rw_seen(oi) != 0 && ni >= 0
+        # The common selection chose an original unit-owned definition, not
+        # a receiving cell. Keep its namespace path and exact field-use
+        # suffix, as the native consumer does for the same binding.
+        path[0]: 2
+        path[1]: ni
+        rooted: 1
     # A method-local Structure (a letter) has a namespace and no unit child.
-    if: l2_rw_seen(oi) != 0 && l2_own_schema(oi) != -1
+    if: rooted = 0 && l2_rw_seen(oi) != 0 && l2_own_schema(oi) != -1
         path[0]: 1
         path[1]: oi
         ni: l2_own_nsty_get(oi)
@@ -36595,7 +36715,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             if: say != 0
                 l2_rw_refuse(node, "a path through a captured Structure names no field of its type")
             return: 1
-        if: slot < 0 || (last = 0 && kind != 2 && kind != 3 && kind != 15 && (kind != 10 || model < 0))
+        if: slot < 0 || (last = 0 && kind != 2 && kind != 3 && kind != 4 && kind != 15 && (kind != 10 || model < 0))
             if: say != 0
                 l2_rw_refuse(node, "a field path")
             return: 1
@@ -36656,7 +36776,10 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
                 path[5]: 1
             ni: model
             res: -1
-            if: l2_schema_kind(model) = 2
+            if: kind = 4
+                bm: ent
+                ni: -1
+            if: kind != 4 && l2_schema_kind(model) = 2
                 res: l2_schema_index(model)
                 ni: -1
             ---
@@ -42629,9 +42752,11 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
         return: l2_rw_refuse(node, "mixed numeric types (a conversion)")
     if: idx = 1
         return: l2_rw_elem(parent, oi, pmi, 0U, out)
-    # A reference where a reference is asked (`m = 0`, -179): the field's pointer cell, as AT
-    # gives it; the walker's EQ compares the address it holds.
-    if: l2_oc_is_ref(ty) != 0
+    # A non-callable reference binding supplies its pointer cell, as AT gives
+    # it. A resolved method still supplies its nullary result below, even
+    # when that result is itself a reference. The source child cannot shadow
+    # its own method declaration merely because both are graph references.
+    if: l2_oc_is_ref(ty) != 0 && l2_call_head_method(l2_rw_mi, t, @ formal) < 0
         oi: l2_rw_find(t)
         if: l2_rw_seen(oi) != 0 && (l2_rw_is_hosted(oi) != 0 || (l2_own_host[oi] = 0 && l2_own_fid[oi] < 0 && l2_own_uchild[oi] >= 0)) && l2_own_is_pointer(l2_own_ty[oi]) != 0
             return: l2_rw_own(parent, oi, out)
@@ -45270,7 +45395,7 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: L2SourceContainer 
         if: l2_mad_on(l2_rw_mi) != 0 && l2_m_body[l2_rw_mi] != 0 && l2_m_body[l2_rw_mi]\as != 0
             return_point: l2_mad_return_point(l2_m_body[l2_rw_mi]\as\structure, l2_rw_mi, field)
         ---
-        if: source != 0 && own >= 0 && l2_source_definition_method(own) >= 0
+        if: source != 0 && own >= 0 && l2_source_definition_method(own) >= 0 && l2_method_source_own(l2_source_definition_method(own)) >= 0
             if: l2_source_field_slot(source, own, slot) != 0
                 return: 1
             \made: \made + 1
@@ -45321,6 +45446,9 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: L2SourceContainer 
             ---
             if: own != slot
                 return: l2_error(l2_src, field\value, "internal: a definition changed source slot")
+            own: l2_own_by_decl(l2_rw_mi, field\value)
+            if: own >= 0 && l2_source_field_slot(source, own, slot) != 0
+                return: 1
             \made: \made + 1
             field: l2_next_active(field\next)
             continue
@@ -51411,26 +51539,22 @@ return: 0
 # other than a unit Structure: the declared model then stands.
 fn: l2_own_ref_candidate (int: own) int
     @: LmP0Node stmt
-    @: LmP0Frame fr
-    @: LmP0Field a0
-    @: LmP0Field a1
-    @: LmP0Field a2
+    @: L2Declaration declaration
+    @: LmP0Field candidate
     if: own < 0 || own >= l2_own_n
         return: 0 - 1
     stmt: l2_own_decl[own]
-    if: stmt = 0 || stmt\as = 0 || stmt\as\frame = 0 || stmt\as\frame\body = 0
+    # A declaration's candidate comes from the common receiving model,
+    # never from an arbitrary third field of an ordinary Structure body.
+    if: l2_own_ref_decl(stmt, l2_own_mi[own]) < 0
         return: 0 - 1
-    fr: stmt\as\frame
-    a0: l2_next_active(fr\body\first_field)
-    if: a0 = 0
+    declaration: l2_declaration(stmt)
+    if: declaration = 0 || declaration\name != l2_own_name[own] || declaration\candidate_count != 1
         return: 0 - 1
-    a1: l2_next_active(a0\next)
-    if: a1 = 0
+    candidate: l2_next_active(declaration\candidate)
+    if: candidate = 0 || candidate\value = 0 || candidate\value\kind != c.LM_P0_NODE_ATOM || candidate\value\as = 0 || candidate\value\as\atom = 0
         return: 0 - 1
-    a2: l2_next_active(a1\next)
-    if: a2 = 0 || a2\value = 0 || a2\value\kind != c.LM_P0_NODE_ATOM || a2\value\as = 0 || a2\value\as\atom = 0
-        return: 0 - 1
-    return: l2_ns_find(a2\value\as\atom)
+return: l2_ns_find(candidate\value\as\atom)
 
 # Build the result-slot map for one merge statement by the author's rule (plan §4): the
 # model's fields, then each later operand's and the body's -- INTO the placed slot of the
@@ -51478,7 +51602,8 @@ fn: l2_mrs_build (int: res; const: @(LmP0Node stmt); const: @(LmP0Node mf)) int
             own: l2_resolved_own(mi, last\value\as\atom)
         if: own >= 0
             source\schema: l2_own_schema(own)
-            source\layout: -1
+            if: l2_source_definition_ns(own) < 0
+                source\layout: -1
             source\method: l2_own_mi[own]
             source\place: l2_d105_own_key(own)
             # The whole copy of a row: the link of l2_own_copy_chain. The

@@ -1,0 +1,21 @@
+# The first h is a full callable occurrence; LAST h is a primitive cell.
+# Explicitly invoke the selected method before observing its declared p.
+fn: h () int
+    int: p 3
+    return: p
+end: h
+int: h 77
+Model:
+    int: first 0
+    int: last 0
+    first: node\[0]h()
+    first: node\[0]h\p
+    last: node\h
+end: Model
+h: 91
+Model
+int: ok 7
+if: Model\first != 3 || Model\last != 91
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

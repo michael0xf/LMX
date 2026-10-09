@@ -1,5 +1,42 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+**BOUNDED VERIFIED, source-order continuation19 (`72C7BA66`).** Original
+ordinary Structure and full-method bindings denote their already-owned source
+children through the same declaration model as primitive cells. Select the
+written occurrence before consuming its kind; a selected primitive cannot
+fall back to an earlier same-name Structure. Source identity and constructor
+ownership are distinct: local calls and physical loads use the actual owning
+occurrence, while existing same-activation fields retain their OWN/cache route.
+Native/walker namespace paths retain the same copy-use suffix. Reference-valued
+method results still come from CALL, not AT of the method child; explicit
+callable-contract reception keeps its existing transport classification.
+Common path spans include indexed selectors in conditions/expressions.
+
+Candidate15 smoke10 is GREEN73/70 exact programs, including unchanged physical
+graph oracles and genuinely native factory methods. Five compiled/linked live
+faults reject. Replay09 retains all2615 outcomes,1697 complete L1 deltas,
+two recoveries/eight located diagnostic changes and zero old-success refusals.
+Acceptance03: focus RED27/856, no old GREEN regression, ten added GREEN rows
+and two required mixed-kind recoveries; kernel24 GREEN297/114 executed
+selftests; L3_24 eleven suites/four budgets. Full24 RED71/2837 stops at one
+cache-only textual oracle; final replay10 did not run. The unchanged artifact
+passes all106 original physical/aliasing checks, and two compiled wrong-address
+faults reject. Only that obsolete cache spelling is migrated; its real address,
+admission, aliasing and distinct required-model checks remain. Fresh serial
+acceptance04 freezes62 inputs and explicitly includes the missed row in focus:
+focus RED27/857 without old regressions, kernel25 GREEN297/114 executed
+selftests, L3_25 eleven suites/four budgets. Full25 completes RED70/2837:
+ten additions GREEN, two required mixed-kind recoveries, no old regression,
+removal or changed remaining failure. All2826 old translation logs are audited:
+four known recoveries/eight located diagnostic changes, nothing unclassified.
+Final replay11 is exact against private09 for all2615 exits, diagnostics,
+output presences and L1 bytes (1797 outputs/818 refusals). All62 frozen inputs
+and230 gate copies match. Seven compiled/linked live faults reject. This closes
+the bounded same-source binding/reader slice, not any parent stage.
+All attempted/rejected candidates remain in the
+[source-order journal](steps/source-declaration-order-20261009.md).
+Own-part/qualified source producers, fm, the codec and T7/critical/8/8a stay OPEN.
+
 **BOUNDED VERIFIED, local-method continuation18 (`5834B4CC`).** Complete written fn/sub
 headers are collected once by original declaration identity and attached to
 their actual source-owning field, including anonymous containers, local named

@@ -1,5 +1,40 @@
 # Kernel implementation dictionary for the v2 plan
 
+**Source declaration binding / original identity / constructor ownership**
+are distinct compiler facts. Continuation19 registers the existing original
+ordinary/full-method child through the common binding model, without another
+runtime allocation. Occurrence selection is in source order across kinds;
+only after selecting the binding does a reader consume its kind. A pointer
+declaration's candidate comes from its common declaration record, not the third
+field of an arbitrary Structure body. Native/walker paths load the same actual
+holder and callable field. Common resolution feeds the actual constructor-owned
+call route, not a unit slot for a local binding. No parent stage closes. See the
+[bounded source-order journal](steps/source-declaration-order-20261009.md).
+
+An original unit definition uses its actual owning child without another receiving cache;
+native and walker keep the same used-field suffix for unit-owned namespaces.
+Ordinary method-result reception must remain CALL, including reference results;
+callable-contract transport retains the existing explicit receiving route.
+Candidate15 `72C7BA66` retains the existing same-activation OWN/cache
+route for fields not owned by a unit/full-method constructor. Fresh smoke10
+also checks genuinely native factory-result methods: GREEN73/70 exact fixtures.
+Five fresh live faults reject; replay09/2615 retains1697 exact L1 deltas and
+all old successes. Acceptance03 passed focus/kernel24/L3_24, then stopped at
+full24 RED71/2837: one cache-only textual oracle, not an executed failure.
+The unchanged artifact passes its106 exact physical/aliasing checks and two
+wrong-address compiled faults reject. Real candidate/required addresses,
+admission and aliasing remain required; the obsolete cache spelling alone is
+migrated. Fresh acceptance04/62 inputs explicitly includes that row: focus
+RED27/857 without old regressions, kernel25 GREEN297/114 actual selftests,
+L3_25 eleven suites/four budgets. Full25 completes RED70/2837, ten additions
+GREEN/two required mixed-kind recoveries, no old regression/removal/changed
+failure. All2826 old translation logs are inventoried: four known recoveries,
+eight located diagnostic changes. Final replay11 matches private09 exactly
+for all2615 rows/1797 L1 outputs/818 refusals; all62 frozen inputs and230 gate
+copies match. Seven live faults compile/link and reject. Bounded19 is verified;
+own-part construction remains the next connected dependency, not a closed
+parent. All stopped attempts are retained in the journal.
+
 Active PATH-STRUCTURE-LEAF implementation/evidence is in the
 [bounded journal](steps/path-structure-leaf-20261009.md). Selection identifies
 the actual occurrence; consumption decides application versus reference.

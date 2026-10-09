@@ -1,0 +1,26 @@
+# One occurrence order across original Structure, char cell and int cell.
+h:
+    int: p 3
+end: h
+char: h 'C'
+int: h 77
+Model:
+    int: first 0
+    char: middle '?'
+    int: last 0
+    first: node\[0]h\p
+    middle: node\[1]h
+    last: node\h
+end: Model
+h
+h: h + 1
+Model
+char: selected \[1]h
+int: selectedLast \[2]h
+int: ok 7
+if: Model\first != 3 || Model\middle != 'C' || Model\last != 78
+    ok: 81
+if: selected != 'C' || selectedLast != 78
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

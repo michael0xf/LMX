@@ -5623,7 +5623,7 @@ SOURCE-DECLARATION-ORDER и родители T7/§§8/8a остаются OPEN.
 [Точные границы и свидетельства](node-source-path-20261009.md).
 
 <a id="source-declaration-order"></a>
-### SOURCE-DECLARATION-ORDER — 2026-10-09, Codex, OPEN
+### SOURCE-DECLARATION-ORDER — 2026-10-09, Codex, PARTIAL: bounded19 VERIFIED; own-part/qualified producers OPEN
 
 Три обязательных позитива остановлены производителем объявления раньше
 разрешения NODE. Не исправлять их снятием одного отказа без общего выбора
@@ -5663,6 +5663,25 @@ pair исправлена, но SOURCE-DECLARATION-ORDER остаётся OPEN.
 Mixed-kind/part producers не сняты одним guard-removal. Следующий срез —
 общий физический NESTED-RECEIVING-MODEL-INSTANCE, не новый shape-граф.
 [Точные механизмы и пробы](source-owned-namespace-20261009.md).
+
+После опубликованного18 `ca350f47` сразу начат bounded19: общий исходный
+binding/root producer и kind-independent selection; сводить общие actual
+читатели вместе, не снимать одну проверку и не плодить второй граф.
+Межфайловая видимость остаётся открытым авторским вопросом. Непрерывная
+цепочка, обязательные контроли и классификация устаревшего root-collision
+оракула — [журнал19](source-declaration-order-20261009.md).
+
+Свежая последовательная acceptance04 завершена на `72C7BA66`: focus
+RED27/857, kernel25 GREEN297/114 выполненных самотестов, L3_25 —11
+наборов/four budgets, full25 RED70/2837. Mixed-kind pair восстановлена,
+все десять добавлений GREEN; старых регрессий, удалений и изменений
+оставшихся отказов нет. Все2826 старых translation logs сверены; четыре
+известные recovery/восемь located диагностик. Final replay11 точно равен
+private09 по2615 командам/1797 L1/818 отказам. Все62 frozen входа и230
+копий совпали; семь живых адресных/kind/copy ошибок обнаружены после
+компиляции и линковки. Устаревший cache-only оракул заменён только после
+неизменных106 actual проверок и двух живых подмен адресов. Own-part и
+qualified producer всё ещё OPEN; общий SOURCE и T7/critical/8/8a не закрыты.
 
 ### Historical discovery of NESTED-RECEIVING-MODEL-INSTANCE — 2026-10-09, Codex
 

@@ -1,0 +1,18 @@
+Leaf: (int: x 11)
+Middle: (int: pad 17; @: Leaf ref)
+Holder: (@: Middle ref)
+ActualLeaf: (int: pad 29; int: x 13)
+ActualMiddle: (int: before 19; int: pad 17; @: Leaf ref)
+ActualMiddle\ref: ActualLeaf
+Holder\ref: ActualMiddle
+fn: check () int
+    if: Holder\ref\ref\x != 13 || @Holder\ref\ref\x != @ActualLeaf\x
+        return: 81
+    Holder\ref\ref\x: 31
+    if: ActualLeaf\x != 31 || ActualLeaf\pad != 29 || ActualMiddle\pad != 17 || ActualMiddle\before != 19
+        return: 82
+    if: Leaf\x != 11 || Middle\pad != 17
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

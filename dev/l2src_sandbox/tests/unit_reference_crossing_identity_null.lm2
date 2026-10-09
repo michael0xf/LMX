@@ -1,0 +1,16 @@
+Model: (int: x 11)
+Holder: (@: Model ref)
+Holder\ref: 0
+if: Holder\ref != 0
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+Holder\ref: Model
+fn: check () int
+    if: Holder\ref\x != 11 || @Holder\ref\x != @Model\x
+        return: 82
+    Holder\ref\x: 31
+    if: Model\x != 31
+        return: 83
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

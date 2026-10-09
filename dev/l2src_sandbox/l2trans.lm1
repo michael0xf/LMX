@@ -1430,7 +1430,7 @@ prototype:
     fn: l2_admit_received (int: mi; int: callee; int: j; const: @(char occ); const: @(char value); const: @(char ind)) int
     fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
     fn: l2_rw_recv_model (int: admit; int: req; int: callee) int
-    fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
+    fn: l2_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: @(char ind); @: char dest) int
     fn: l2_d105_emit_tables () int
     fn: l2_d105_width (int: req) int
     fn: l2_d105_declare_maps () int
@@ -17842,6 +17842,8 @@ return: 0
 # Publish each completed original named occurrence's physical schema in the
 # existing admission table. Reads use the current value's evidence, never the
 # originating method's prototype. This adds no source field or atom metadata.
+# Inert namespace bodies are made by NSF rather than a source-root producer;
+# they complete at this same boundary and must publish the same evidence.
 fn: l2_source_layouts_emit (int: kind; int: index) int
     @: L2SourceContainer row l2_source_containers
     int: ni
@@ -17856,6 +17858,17 @@ fn: l2_source_layouts_emit (int: kind; int: index) int
             ---
         ---
         row: row\allocated_next
+    ---
+    if: kind = 0 && index < 0
+        ni: 0
+        while: ni < l2_ns_n
+            if: l2_ns_local[ni] < 0
+                if: c.sprintf(value, "l2_nsp[%d]", ni) < 0 || l2_emit_constructed_layout(ni, value, value, "        ") != 0
+                    return: 1
+                ---
+            ---
+            ni: ni + 1
+        ---
     ---
 return: 0
 
@@ -25135,8 +25148,7 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
     int: field_own
     @: L2GraphField actual_field
     int: current 0
-    int: view_mi mi
-    int: view_key -1
+    int: view_model -1
     int: segocc
     []: char l2_proot_own 64
     L2Tx: l2_proot_tx
@@ -25216,10 +25228,10 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
         return: 1
     if: current = 0 && oi < 0 && root <= 0 - 1000 && l2_emit_path_bail(mi, ind) != 0
         return: 1
-    view_key: fi
-    if: oi >= 0
-        view_mi: l2_own_mi[oi]
-        view_key: l2_d105_own_key(oi)
+    if: fi >= 0 && l2_d105_sub(mi, fi) != 0
+        view_model: l2_input_schema(mi, fi)
+    if: oi >= 0 && l2_d105_sub(l2_own_mi[oi], l2_d105_own_key(oi)) != 0
+        view_model: l2_input_schema(l2_own_mi[oi], l2_d105_own_key(oi))
     ---
     # c.* / foreign member paths on formals and activation locals are emitted by
     # l2_raw_path via l2_ty_raw_c_members (FABLE-GROKBOT-C-MEMBER-ACCESS part1).
@@ -25286,29 +25298,27 @@ fn: l2_emit_path_to (const: @(char pd); size_t: pn; int: mi; const: @(char ind);
             slot: l2_ns_slot_named(ni, pd, off, len, @ kind, @ ent)
         if: slot < 0
             return: l2_error(l2_src, at, "unknown field path segment")
-        # The first field of an admitted input or own reference uses the same
-        # completed correspondence. Later segments retain their structural path.
+        # Each admitted reference supplies the next holder's receiving model.
+        # Structural tails retain their ordinary physical projection.
         # K01: the EDGE is the required field plus the half this use's own
         # selector names -- bare `name` is the value's LAST occurrence (the map's
         # second half), `[N]name` its occurrence N (the ordinal half).  Both
         # resolve to one required slot here; they are different candidate slots.
         c.sprintf(sl, "%uU", (cast: (unsigned) slot))
-        if: view_key != -1 && l2_d105_sub(view_mi, view_key) != 0
+        if: view_model != -1
             segocc: 0 - 1
             if: l2_seg_occurrence(pd, off, len, @ segocc) != 0
                 return: l2_error(l2_src, at, "malformed field path segment")
-            if: l2_d105_emit_slot(view_mi, view_key, slot, segocc < 0, ind) != 0
+            if: l2_d105_emit_slot(mi, view_model, slot, segocc < 0, ind, sl) != 0
                 return: 1
-            c.sprintf(sl, "l2_dslot")
         ---
         if: i + 1 < segs && kind = 10 && res < 0
             ent: l2_field_pointee(ni, field_own, pd, off, len)
         if: i + 1 < segs && kind = 10 && res >= 0
             ent: l2_mrs_ref_pointee(res, slot)
-        view_key: -1
-        if: i + 1 < segs && kind = 10 && field_own >= 0
-            view_mi: l2_own_mi[field_own]
-            view_key: l2_d105_own_key(field_own)
+        view_model: -1
+        if: i + 1 < segs && kind = 10
+            view_model: ent
         ---
         if: i + 1 < segs && kind != 2 && kind != 3 && (kind != 10 || ent < 0)
             return: l2_error(l2_src, at, "field path goes through a slot with no Structure")
@@ -35835,7 +35845,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         ---
     ---
     if: path[0] = 1 && l2_d105_sub(l2_own_mi[path[1]], l2_d105_own_key(path[1])) != 0
-        view_model: l2_own_nsty_get(path[1])
+        view_model: l2_input_schema(l2_own_mi[path[1]], l2_d105_own_key(path[1]))
     if: path[0] = 6 && l2_d105_sub(l2_rw_mi, path[1]) != 0
         view_model: l2_input_schema(l2_rw_mi, path[1])
     if: path[0] = 7
@@ -35935,7 +35945,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         # the EDGE -- the required field plus the half this use's own selector names.
         # A bare `name` is the value's LAST occurrence (the map's second half); an
         # explicit `[N]name` its occurrence N (the ordinal half).  Where no
-        # correspondence is carried (view_model < 0) the model IS the value's layout
+        # correspondence is carried (view_model = -1) the model IS the value's layout
         # and the resolved slot is already the physical one.
         segocc: 0 - 1
         if: l2_seg_occurrence(t\data, b, i - b, @ segocc) != 0
@@ -35944,7 +35954,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             return: 1
         ---
         path[6 + 3 * n]: slot
-        if: project != 0 && view_model >= 0 && segocc < 0
+        if: project != 0 && view_model != -1 && segocc < 0
             path[6 + 3 * n]: slot + l2_d105_width(view_model)
         ---
         path[7 + 3 * n]: kind
@@ -35955,8 +35965,8 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
             path[8 + 3 * n]: -1
         ---
         view_model: -1
-        if: kind = 10 && field_own >= 0 && l2_d105_sub(l2_own_mi[field_own], l2_d105_own_key(field_own)) != 0
-            view_model: l2_own_nsty_get(field_own)
+        if: kind = 10
+            view_model: model
         if: n > 0 || res < 0
             path[4]: ni
         n: n + 1
@@ -39114,23 +39124,29 @@ fn: l2_emit_model_admit (int: mi; int: req; @: L2ReferenceSource source; const: 
         return: 1
 return: 0
 
-# D-105 native: the first field of formal fi of mi, admitted by name, is at the slot its value's record
-# gives -- into l2_dslot.  No record, or a hole, is a guard: every call site into the formal records its
-# value (l2_d105_emit_admit, and the walked root's ADMIT_AS), and the translator emits no read
-# of a field a source does not carry -- the formal's uses are checked for every source (l2_d105_close).
+# The current holder is consumed through receiving schema req. Its completed
+# admission supplies the field's slot in one generated temporary, independently of whether
+# the reference came from a formal, an own cell or a namespace field.
+# Missing records and holes are invariant failures, not fresh admission.
 # The edge read: `last` selects bare `name` (the map's second half, the value's LAST
 # occurrence of it); otherwise the ordinal half -- the slot this use already resolved
 # on the required model (K01).
-fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
+fn: l2_d105_emit_slot (int: mi; int: req; int: slot; int: last; const: @(char ind); @: char dest) int
     []: char rinst_own 320
     L2Tx: rinst_tx
     @: L2Tx rinst l2_tx_local(@ rinst_tx, rinst_own, 320U)
     int: edge slot
-    if: l2_model_inst(mi, l2_input_schema(mi, fi), ind, rinst) != 0
-        return: l2_error(l2_src, 0, "internal: a formal admitted by name has no shape")
+    int: temp l2_tn
+    l2_tn: l2_tn + 1
+    # dest is the caller's40-byte machine-integer suffix buffer, not a
+    # source-expression buffer or a language length limit.
+    if: dest = 0 || c.snprintf(dest, 40U, "l2_dslot%d", temp) < 0
+        return: 1
+    if: l2_model_inst(mi, req, ind, rinst) != 0
+        return: l2_error(l2_src, 0, "internal: an admitted reference has no receiving model")
     if: last != 0
-        edge: slot + l2_d105_width(l2_input_schema(mi, fi))
-    if: c.fprintf(l2_out, "%sif: lmx_implements_slot(l2_program_arena, l2_pst, %s, %uU, @ l2_dslot) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a field of a formal admitted by name is not carried by its value (no record, or a hole)\\n\")\n%s    c.abort()\n", ind, rinst\data, (cast: (unsigned) edge), ind, ind) < 0
+        edge: slot + l2_d105_width(req)
+    if: c.fprintf(l2_out, "%ssize_t: %s 0U\n%sif: lmx_implements_slot(l2_program_arena, l2_pst, %s, %uU, @ %s) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a field of an admitted reference is not carried by its value (no record, or a hole)\\n\")\n%s    c.abort()\n", ind, dest, ind, rinst\data, (cast: (unsigned) edge), dest, ind, ind) < 0
         return: 1
 return: 0
 
@@ -52362,8 +52378,9 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: c.fprintf(l2_out, "predef: \"%slmx_source_names.h.lm1\" \"%slmx_array_owned.h.lm1\" \"%slmx_chars.h.lm1\"\n", l2_rt_root, l2_rt_root, l2_rt_root) < 0
         fclose(l2_out)
         return: 1
-    # The executable profile's C main builds the argv letter: a Message record (S3).
-    if: (l2_library_mode = 0 || l2_need_admit != 0) && c.fprintf(l2_out, "predef: \"%slmx_implements.h.lm1\"\n", l2_rt_root) < 0
+    # Completed namespace constructors and receiving admissions publish through
+    # the same table. Its dependency is required in libraries as well as programs.
+    if: (l2_library_mode = 0 || l2_need_admit != 0 || l2_ns_n > 0) && c.fprintf(l2_out, "predef: \"%slmx_implements.h.lm1\"\n", l2_rt_root) < 0
         fclose(l2_out)
         return: 1
     if: (l2_merge_max != 0 || l2_t7_n > 0) && c.fprintf(l2_out, "predef: \"%slmx_merge_owned.h.lm1\"\n", l2_rt_root) < 0
@@ -52663,12 +52680,6 @@ fn: l2_emit_unit (const: @(char out_path)) int
         # possible -- or where a reference binding is: a binding's call (`b: tick`) selects its occurrence through
         # l2_pst too (l2_emit_alias_self).
         if: (l2_ns_n != 0 || l2_mres_n != 0 || l2_uses_node_for_root != 0 || l2_rb_n != 0) && fputs("    @: Lmx l2_pst 0\n    @@: void l2_pxp 0\n", l2_out) < 0
-            fclose(l2_out)
-            return: 1
-        # D-105 native: a place admitted by name reads its fields at the slot its value's record gives.  The
-        # place need not be this method's: a path rooted at another method's name goes through that method's
-        # own reference, so every method of a program with such a place has the slot temporary.
-        if: l2_d105_n != 0 && fputs("    size_t: l2_dslot 0U\n", l2_out) < 0
             fclose(l2_out)
             return: 1
         l2_tn: 0
@@ -53143,7 +53154,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: l2_library_mode = 0 && l2_rw_methods_emit(2) != 0
         fclose(l2_out)
         return: 1
-    if: l2_library_mode = 0 && l2_source_layouts_emit(0, -1) != 0
+    if: l2_source_layouts_emit(0, -1) != 0
         fclose(l2_out)
         return: 1
     if: l2_library_mode = 0 && l2_emit_shell_anchor() != 0

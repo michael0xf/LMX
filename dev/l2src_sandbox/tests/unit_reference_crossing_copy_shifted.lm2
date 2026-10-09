@@ -1,0 +1,19 @@
+Outer:
+    int: pad 17
+    Inner:
+        int: x 11
+    end: Inner
+    @: Inner ref
+end: Outer
+Candidate: (int: pad 29; int: x 13)
+copy: merge: Outer
+copy\ref: Candidate
+fn: check () int
+    if: copy\ref\x != 13 || @copy\ref\x != @Candidate\x
+        return: 81
+    copy\ref\x: 31
+    if: Candidate\x != 31 || Candidate\pad != 29 || copy\Inner\x != 11 || Outer\Inner\x != 11 || Outer\ref != 0
+        return: 82
+return: 7
+sendMessage: exit(exit_code: check(); stdout: ""; stderr: "")
+return

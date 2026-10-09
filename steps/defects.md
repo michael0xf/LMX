@@ -25,7 +25,7 @@ Exact scope and preserved attempts:
 [journal](nested-receiving-model-20261009.md).
 
 <a id="reference-crossing-slot-map"></a>
-### REFERENCE-CROSSING-SLOT-MAP — 2026-10-09, Codex, OPEN
+### REFERENCE-CROSSING-SLOT-MAP — 2026-10-09, Codex, FIXED bounded crossing (`C7201D16`)
 
 `unit_nested_model_compatible`: Outer owns Inner(x) and a typed ref;
 Candidate owns pad and x. `Outer\ref: Candidate` admits successfully,
@@ -38,7 +38,31 @@ Both fixture rows stay required-positive RED. Next bounded child after
 the frozen model-instance checkpoint: common crossing/model-slot schema,
 native and walker readers/writers, retained copied context; no runtime
 names, separate receiver graph or name/form-specific route. See the same
-[journal](nested-receiving-model-20261009.md).
+[model-instance journal](nested-receiving-model-20261009.md) and the
+[active crossing continuation](reference-crossing-slot-map-20261009.md).
+
+Fresh focus01 exposes a dependent constructor omission: the inert NSF
+producers for `unit_ns2_bind_nested_self` and `unit_ns2_eternal_ref` never
+publish their completed namespace's correspondence. Both native and walked
+rows were GREEN before the common crossing reader, now execute a missing-map
+invariant (four real regressions). Repair producer publication after full
+construction through the existing layout-registration route, including
+library construction; do not bypass an absent map. The fifth regression,
+the A3 native temporary-name pin, is an obsolete oracle and is separately
+strengthened to connect slot declaration, lookup output and actual cell use.
+
+Full15 then exposes a real library C dependency omission and an outdated
+root PUT/OF slot/width oracle. `C7201D16` repairs the shared constructor
+dependency, retaining the library ABI, and strengthens root OF model/slot/
+operand identity. All68 private executions/four map faults and an isolated
+same-shaped-but-distinct operand fault satisfy their controls. Full15 remains
+preserved RED76/2781. Corrected fresh focus03 RED29/515 and full16
+RED74/2781 recover the compatible pair, add ten GREEN rows and regress no
+old GREEN row; no removal or changed old refusal. Kernel16 GREEN297/114
+executed selftests and L3_16 eleven suites/four budgets pass. Final replay2615
+is exactly private04;28 frozen inputs/98 copies match. Only this bounded
+defect closes. The local-model anchor and parent stages remain OPEN;
+no stable promotion, expected-refusal relabeling or failed-evidence deletion.
 
 <a id="local-nested-model-anchor"></a>
 ### LOCAL-NESTED-MODEL-ANCHOR — 2026-10-09, Codex, OPEN

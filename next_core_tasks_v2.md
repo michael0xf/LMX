@@ -143,6 +143,36 @@ then [LOCAL-NESTED-MODEL-ANCHOR](steps/defects.md#local-nested-model-anchor)
 through the actual source/receiving occurrence. T7, the other source
 producer debts and stages8/8a remain OPEN; stable is unchanged.
 
+The thirteenth child is published at `ecadf000`. Its immediate bounded
+continuation `CODEX-REFERENCE-CROSSING-SLOT-MAP-20261009-14` has completed
+fresh bounded acceptance;
+exact common symbols, required controls and serial acceptance are in the
+[crossing journal](steps/reference-crossing-slot-map-20261009.md).
+Codex retains the sole writer/build. Continue the enumerated chain through
+publication and the actual local model-host repair without another prompt.
+
+Early private crossing candidate `D6C8B377` fixes the shared reader and
+the missing publication of completed original namespace layouts; the
+initial focus01 regression is preserved, not accepted. Corrected focus02
+is RED29/513, with two old recoveries, ten added GREEN rows, no old GREEN
+regression or changed refusal. Sixty-four actual private executions and
+four isolated generated faults validate their bounded controls. The serial
+kernel15/L3_15 stages pass, but full15 is RED76/2781 with two old GREEN
+regressions; the driver correctly stops before final replay. Repairing the
+shared publisher's library dependency and strengthening the mapped root-store
+model/slot/identity oracle gives candidate04 `C7201D16`. Its68 actual private
+executions/four generated faults/one distinct-same-shaped operand fault pass.
+The corrected fresh serial chain includes both regression rows in focus:
+focus03 RED29/515, kernel16 GREEN297/114 executed selftests, L3_16 eleven
+suites/four budgets and full16 RED74/2781. Two old rows recover, ten added
+rows are GREEN, no old GREEN regresses and no row/refusal detail is lost.
+All28 frozen inputs remain unchanged;98 staged copies match. Final replay03
+executes2615 recorded commands and exactly matches private04:1795 outputs,
+820 nonzero results, no exit/diagnostic/presence/output-byte delta.
+After scoped commit/push immediately continue LOCAL-NESTED-MODEL-ANCHOR;
+this is not parent completion or permission to promote stable. Preserve
+full15 and all earlier failed attempts. See the journal for exact scope.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

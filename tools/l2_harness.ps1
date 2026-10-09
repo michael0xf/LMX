@@ -720,6 +720,15 @@ function Test-WalkShapeNode($Graph, [string]$Name, $Shape) {
             if ($null -eq $store -or -not (Test-WalkShapeNode $Graph $store.Child $edge.Shape)) { return $false }
         }
     }
+    if ($Shape.PSObject.Properties['SameTargetSlots']) {
+        $target = ''
+        foreach ($slot in $Shape.SameTargetSlots) {
+            $store = @($Graph.Stores | Where-Object { $_.Parent -eq $Name -and $_.Slot -eq [int]$slot -and $_.Child -ne '' }) | Select-Object -First 1
+            if ($null -eq $store) { return $false }
+            if ($target -ne '' -and $target -ne $store.Child) { return $false }
+            $target = $store.Child
+        }
+    }
     if ($Shape.PSObject.Properties['PrimitiveFn']) {
         $store = @($Graph.Stores | Where-Object { $_.Parent -eq $Name -and $_.Slot -eq 1 -and $_.Child -ne '' }) | Select-Object -First 1
         if ($null -eq $store -or -not $Graph.PrimitiveFns.ContainsKey($store.Child) -or $Graph.PrimitiveFns[$store.Child] -ne $Shape.PrimitiveFn) { return $false }
@@ -3911,7 +3920,7 @@ $fixtures = @(
     # direct calls, left\other 7; 1141 twice by the node, left\other 7000.  Success is 7, else 64 plus a bit per
     # failed reading.
     [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @(); Debt = @(); NativePatterns = @('(?s)lmx_implements_slot\(l2_program_arena, l2_pst, lmx_arena_ref_struct\(node, 0U\), \d+U, @ l2_dslot\)') },
+        Absent = @(); Debt = @(); NativePatterns = @('(?s)size_t: (?<slot>l2_dslot\d+) 0U\s+if: lmx_implements_slot\(l2_program_arena, l2_pst, lmx_arena_ref_struct\(node, 0U\), \d+U, @ \k<slot>\) != 0.*?l2_pxp: lmx_arena_ref_cell\(l2_pst, \k<slot>\)') },
     [pscustomobject]@{ Name = 'unit_a3_capture_direct_vs_copy_exact.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @(); NativePatterns = @('(?s)lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), (?<model>lmx_arena_ref_struct\(node, \d+U\)), 0, 0U, 0\).*?lmx_implements_register_map\(l2_program_arena, \(cast: \(@: Lmx\) l2_p0_0\), \k<model>, 0, 0U, 0\)') },
     [pscustomobject]@{ Name = 'unit_walk_a3_capture_direct_vs_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7; WalkMethods = $true;
@@ -6479,12 +6488,16 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_root_model_field.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 15;
         Absent = @('c.LMX_WALK_OP_DEREF'); Debt = @('\fn: lmx_walk_merge_map') },
     # A WRITE THROUGH A REFERENCE (FABLE-OPUS-ROOT-PUTOF-MUL-20260925-183 commit 1): `m\value: 42U` is
-    # PUT of an OF place, its holder read once from m; read back through m and through
-    # a method's formal (the same Structure, by reference), Model itself untouched: 7.
+    # PUT of a mapped OF place, its holder and receiving model are the SAME
+    # existing m operand. The model's value is at committed child2, not old packed
+    # child0. Read back through m and a formal; Model itself remains untouched:7.
     [pscustomobject]@{ Name = 'unit_root_putof.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @(); GraphShapes = @(
             [pscustomobject]@{ Op = 'PUT'; Width = 3; Count = 1; Edges = @(
-                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OF'; Width = 3; Sizes = @([pscustomobject]@{ Slot = 2; Value = 0 }); Edges = @([pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } }) } },
+                [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OF'; Width = 4; Sizes = @([pscustomobject]@{ Slot = 2; Value = 2 }); SameTargetSlots = @(1,3); Edges = @(
+                    [pscustomobject]@{ Slot = 1; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } },
+                    [pscustomobject]@{ Slot = 3; Shape = [pscustomobject]@{ Op = 'OWN'; Width = 2 } }
+                ) } },
                 [pscustomobject]@{ Slot = 2; Shape = [pscustomobject]@{ Op = 'LIT'; Width = 2; Sizes = @([pscustomobject]@{ Slot = 1; Value = 42 }) } }
             ) }
         ) },
@@ -9735,17 +9748,39 @@ $fixtures = @(
         Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_model_incompatible_walk.lm2'; Source = 'unit_nested_model_incompatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
-    # REQUIRED positives, not accepted refusals: the shifted candidate's
-    # reference crossing still needs its admitted slot map; the local model
-    # still needs the actual host occurrence rather than a guessed unit root.
+    # The shifted candidate must consume its admitted map after crossing.
+    # The actual local model host remains a required-positive debt, never
+    # an accepted refusal or a guessed unit prototype.
     [pscustomobject]@{ Name = 'unit_nested_model_compatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_model_compatible_walk.lm2'; Source = 'unit_nested_model_compatible.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 3; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_model_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_model_local_walk.lm2'; Source = 'unit_nested_model_local.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    # Shared reference-crossing correspondence: value and address reads,
+    # writes, LAST/ordinal, multiple boundaries, copy, formal, identity/null.
+    [pscustomobject]@{ Name = 'unit_reference_crossing_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_occurrences_walk.lm2'; Source = 'unit_reference_crossing_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 6; NativeMethods = @(0,1,2,3,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_deep_walk.lm2'; Source = 'unit_reference_crossing_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 6; WalkedMethods = @(0,1,2,3,4,5); NativeMethods = @(6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_copy_shifted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_copy_shifted_walk.lm2'; Source = 'unit_reference_crossing_copy_shifted.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 4; NativeMethods = @(0,1,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_formal_walk.lm2'; Source = 'unit_reference_crossing_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; WalkedMethods = @(0,1,2,3); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_identity_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_reference_crossing_identity_null_walk.lm2'; Source = 'unit_reference_crossing_identity_null.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 3; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
     # MERGE-PARENT-MODEL-SOURCE (steps/defects.md): a merge copy's code admits a root merge result by name (K02c); the
     # model is the copy's own instance, read from the copied lexical graph, the candidate the caller's binding, and
     # the copy takes the instance's records to its copy (lmx_copy_carry_records).  model_write observes the two places

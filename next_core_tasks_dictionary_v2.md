@@ -56,6 +56,27 @@ candidate;21 frozen inputs/74 copies match. Four extra method-walker and
 cleared-root local-model executions pass. Continue reference-crossing
 slot routing, then the actual local model-host anchor; no parent closes.
 
+The active [crossing child](steps/reference-crossing-slot-map-20261009.md)
+uses the existing correspondence after every kind10 reference step; optional
+own/formal metadata is not what makes the declared pointee model exist.
+The publisher covers completed original NSF namespaces as well as source
+roots; no missing-map fallback, runtime name service or mutation-wide
+revalidation is added. Probe03 passes64 actual executions/four generated
+fault controls. Corrected focus02 RED29/513 has ten additions GREEN and no
+old regression; kernel15 GREEN297/114 and L3_15 eleven suites/four budgets
+pass. Full15 is RED76/2781 with two old regressions and is not accepted.
+Corrected candidate04 `C7201D16` includes the shared publisher's library
+dependency and strengthens the mapped root-store model/slot/operand-identity
+oracle. Its68 actual positive executions, four generated faults and a
+distinct-same-shaped operand fault pass. The corrected fresh chain is now
+terminal: focus03 RED29/515, kernel16 GREEN297/114 executed selftests,
+L3_16 eleven suites/four budgets and full16 RED74/2781. Two old rows
+recover, ten added rows are GREEN, no old GREEN regresses, no old refusal
+detail changes and no row is removed. Final replay2615 exactly matches
+private04 (1795 outputs/820 nonzero);28 frozen inputs/98 copies match.
+Only the bounded crossing defect closes; actual local model-host selection,
+T7 and stages8/8a remain OPEN. Preserve full15 and all earlier attempts.
+
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
 chronological plan or a replacement specification. For the source map read

@@ -56,6 +56,30 @@ RED. Replay2615 exactly matches the tested candidate,21 frozen inputs/
 pass. This is bounded development acceptance, not stable promotion or
 completion of T7, recursive admission or stages8/8a.
 
+The following crossing child has completed fresh bounded acceptance:
+[crossing journal](steps/reference-crossing-slot-map-20261009.md).
+Native and walker retain the declared receiving schema after each reference
+crossing and consume the established ordinal/LAST correspondence. Completed
+inert namespace constructors publish through the same existing layout route
+as source roots; readers do not synthesize a correspondence if it is absent.
+Probe03 has64 actual positive executions/four rejected generated faults;
+fresh focus02 RED29/513 has no old regression and ten new GREEN rows.
+Kernel15 GREEN297/114 and L3_15 eleven suites/four budgets are terminal.
+Full15 is RED76/2781 with two old regressions and is not accepted: a shared
+constructor dependency was missing in a library, and the root-store oracle
+pinned the old unmapped slot/width. Candidate04 `C7201D16` supplies the
+dependency and strengthens the oracle's model edge and operand identity.
+All68 private executions/four generated faults and a distinct-same-shaped
+operand fault pass their controls. Corrected focus03 RED29/515 and full16
+RED74/2781 have no old GREEN regression, two recovered old rows and ten
+added GREEN rows; old failures are not relabeled as accepted refusals.
+Kernel16 is GREEN297/114 executed selftests; L3_16 passes eleven suites/four
+budgets. All28 frozen inputs remain unchanged and98 staged copies match.
+Final replay2615 is byte-identical to private replay04, including all1795
+outputs and820 nonzero results. The bounded crossing defect is repaired;
+actual local-model anchoring, T7 and stages8/8a remain OPEN. No failed attempt
+is discarded and stable is unchanged.
+
 <a id="status-and-provenance"></a>
 ## 1. Status, provenance, and how to read this document
 

@@ -38,6 +38,27 @@ match, and four extra actually-walked local-model controls pass. The
 remaining required-positive RED rows are implementation debts, not a
 permission for ported code to change the language contract.
 
+The subsequent crossing repair is still awaiting full acceptance; see its
+[journal](steps/reference-crossing-slot-map-20261009.md). Retain the declared
+pointee model across each reference crossing independently of an optional
+formal/own key. Each next field consumes the established correspondence,
+including its distinct ordinal and LAST halves. Constructors publish their
+completed instance's layout through the existing admission table, including
+inert namespaces and library construction. An absent record is not a reason
+to use the model's raw slot as a fallback. Fresh focus02 has ten new GREEN
+rows/no old regression; kernel15 and L3_15 pass. Full15 nevertheless finds
+two old regressions and is not accepted. Shared publisher dependencies also
+apply to library construction; a mapped OF's model operand must retain the
+existing object's identity, not merely its kind/width. Corrected candidate04
+`C7201D16` passes68 actual controls/four generated faults and the strong
+operand-identity fault. Corrected fresh focus03 RED29/515 and full16
+RED74/2781 recover two old rows, add ten GREEN rows and regress no old
+GREEN row. Kernel16 GREEN297/114 executed selftests and L3_16 eleven
+suites/four budgets pass. The final2615-command replay matches private04
+byte-for-byte; all28 frozen inputs/98 staged copies match. This repairs
+the bounded crossing route, not the actual local model-host selection or
+T7/8/8a. Required-positive debts remain RED and stable is unchanged.
+
 Every important statement is classified as one of the following.
 
 - **NORMATIVE** — required by the current language specifications or an accepted author clarification.

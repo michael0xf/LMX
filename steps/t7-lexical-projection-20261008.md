@@ -1145,6 +1145,211 @@ measurement, not an assumption about every copy. Codex remains the only
 writer/build owner. Do not correct emission ancestry while silently retaining
 class decisions based on the old global-policy string.
 
+### Eighth child: receiving model follows the selected occurrence (WIP)
+
+Seventh-child checkpoint `c4f65a8b` is pushed; remote main was verified at
+`c4f65a8bedb5439271f7dd303c67bd18d1ac196d`. Opus RESULT19 is consultation,
+not coding authority; Codex retains the sole writer/build slot.
+
+Serial `receiving_projection_probes_02.log` measures the old policy on those
+published bytes. Rootless declared-formal control passes native/walked.
+Materialized free-input and two-copy declared-formal
+controls both exit 3 in both method modes: native
+reports a missing implements record, walker INVALID. A simpler materialized
+declared-formal input refuses earlier at `Wide` (`unknown type`, part 2:11);
+it is a separate producer lead, not a runtime receiving witness. No expected
+failure was relabelled as success.
+
+Bounded implementation scope: `dev/l2src_sandbox/l2trans.lm1` lexical-depth
+relation, formation equivalence and native/walked receiving model operands;
+`lmx_walk.lm1`, `lmx_walk.h.lm1` and
+`tests/lmx_walk_call_data_selftest.lm1` for a typed ancestor-count operand of
+the existing NODE projection; permanent `.lm2` witnesses under the same
+sandbox tests directory, their exact rows in `tools/l2_harness.ps1`, and
+factual plan/core/current/defect documentation. No runtime names, per-atom
+metadata, new graph, METHOD mutation or global-unit fallback.
+
+Use one lexical-edge walk in two explicit phases: static method ownership
+for COUNT/class equivalence, committed source places for physical emission.
+Unavailable local-place ancestry must not become a static class key; validate
+class members' static depths after PLACE. Native receiving expressions use
+growable L2Tx, not the old 192-byte path buffer. A one-cell NODE still means
+one parent; a typed count operand expresses any other depth, including zero.
+COUNT must determine the same frame width as FILL even when physical source
+places are not available yet. This is carrier representation, not new source
+syntax or a separate callable/data graph.
+
+Acceptance: rootless regression, materialized declared/free requirements and
+two independent copies; candidate created after a copy, explicit copied NODE
+state; native/walked and cleared-root runs; exact walked/native pins; wrong
+value/global-unit/one-parent/depth mutants; typed NODE zero/one/many ancestors,
+missing ancestor and malformed count; focused families, kernel/L3/full gates,
+all-command replay and exact frozen/index identity. Keep required-positive
+limits RED and retain the earlier unknown-type producer separately. Then
+commit/push this bounded child and continue the parent dependencies.
+
+Eighth-child measured candidate: translator blob `9922b2ac9fb6d4082cd88e46c964d88dd6d15108`,
+SHA256 `1610F51B8C1146F9DF04A1FA8734BDFB30F82E46E1C6B0E1660816E67353F552`.
+The earlier b3c672b2 preflight did not include the static-unavailable-depth
+guards and corrected comments; do not use it as final frozen provenance.
+`receiving_projection_probes_04.log` repeats rootless, materialized-free and
+materialized-two-copy native/walked positives on final candidate
+bytes. The simple materialized declared source still stops at unknown Wide.
+
+Permanent fixtures add comments that reveal a separate producer defect:
+main and part source offsets are compared by header type lookup. Rootless and
+two-copy permanent rows now stop at unknown Wide, whereas the materialized
+declared part's own comments make it pass. Final `codex_receiving_focus_04`
+is 23 targets/four failures, exactly those two new pairs; old receiving
+reference/classes/models/static and nested-owner/T7 controls remain GREEN.
+This is not a receiving runtime regression, nor permission to strip comments
+until the test passes. `CODEX-T7-PART-FORMAL-TYPE-20261008-20` has genuine
+STARTED and later terminal RESULT20; the measured comment-offset lead is
+confirmed below. Do not invent a backward-visible Structure rule.
+
+Evidence correction: the diagnostic helper used `walk_root`, whereas the
+driver accepts `walkroot`. Thus the `_02`/`_03`/`_04` logs' second executions
+do not prove cleared-root dispatch. The helper is corrected. A fresh serial
+execution-only rerun of the twelve existing baseline/final binaries uses the
+actual flag (`receiving_actual_cleared_01.log`); baseline rootless passes,
+baseline materialized free/two-copy cases exit3, and all six final executions
+pass. Binary hashes are recorded and unchanged; no compiler runs for this
+correction, and the frozen chain continues. Permanent harness WalkRoot rows and the
+`receiving_mutants_04`/`receiving_negatives_01` helpers use the correct flag;
+their cleared-root evidence is valid and independent.
+
+`codex_kernel_08` is a failed preflight (296/297): the newly added L1 helper
+omitted its empty `()` signature, so the first pointer declaration was read
+as a formal with extra fields. Corrected source is now independently compiled
+and run in `receiving_node_control_01/run_02.log`: GREEN20. Nine new checks
+cover NODE zero/one/257, missing ancestor, SIZE_MAX stopping at the missing
+ancestor, wrong integer type, null count, unknown width and the old one-cell
+form. Isolated discard-count, accept-int-count and cap-at-192 mutants each
+fail their relevant check (`receiving_node_mutants_02.log`). The first helper
+compilation used blanket Werror instead of the kernel's actual warning flags;
+its log is failed evidence, not the corrected test's result.
+
+`receiving_mutants_04.log` rejects two isolated translator mutations: native
+global-unit substitution exits3 normally but still passes cleared-root
+(the walker was not mutated); walker forced-one-parent passes native-root
+but fails cleared-root with INVALID. This demonstrates why both admission
+engines must actually execute. `receiving_negatives_01.log` runs three wrong-
+value programs in both method modes and both root modes: all12 executions
+exit81 instead of7 and the driver refuses. Negative sources use the original
+measured diagnostic pairs, not a comment edit to the permanent tests.
+
+Full correlated RESULT20 is now terminal: the two-file offset comparison
+fully explains the differing acceptance; setMarker and collection order do
+not. The old rule that excludes ordinary MAIN declarations from parts was
+found only in fable_pc's answer in `steps/table-receiver.md`, not an author
+ruling or a normative ordering of files. The
+[minimal author question](../LMX_blog/q/current/program-parts-declaration-visibility.md)
+is asked in this chat. Do not turn accidental signature acceptance into a
+new norm, or turn the consultant's suggested refusal into one either. The
+dependent source-visibility correction awaits that answer; independent
+receiving acceptance continues. Earlier RESULT18's withdrawal of RESULT15's
+declared-formal restriction relied on the accidental rootless acceptance and
+is not normative evidence. The successful two-copy diagnostics measure the
+receiving implementation conditional on a collected descriptor, not proof
+of source-level cross-file visibility.
+
+Frozen acceptance chain `run_t7_gates_09.ps1` / `t7_gates_09.log` ran fresh
+kernel09, L3_09, full08 and all2615 full65 translation commands, serially.
+Twelve code/harness/fixture inputs are fingerprinted before work and after
+every stage. Full08 is terminal RED68/2674: against full07 no FAIL→OK,
+no OK→FAIL, eight added rows (four GREEN and the four cross-file header
+failures), no removals or changed messages of old failed rows. Replay2615
+is terminal: 2613 entirely identical, the nested-model native/walked pair
+has changed L1, all exits/diagnostics/output presence unchanged (822 nonzero
+translation exits, including expected refusals). Classification checks a
+bijection of all77 old graph identifiers in each changed file; all old
+references retain that identity. The only remaining edits are six native
+admission statements changing global-model references to the selected
+occurrence's two parents, plus OF(NODE(size_t2), slot0) and the RECEIVING
+mark. Both complete bijection-adjusted diffs were read
+(`receiving_replay_classification_01.log`), not just collapsed-ID previews.
+The full-gen comparison additionally has three library path-key renames
+from the new staging directory; exact normalization of that one module key
+makes each whole library file identical. No other overlapping full-gen L1
+changes occur. The chain's final line confirms all twelve frozen inputs
+unchanged; `verify_receiving_candidate_01.ps1` verifies22 owned paths and
+24 gated source copies. This is a RED development checkpoint, not stable
+promotion. Next dependent source-visibility work awaits the author, while
+the independent hosted-native completion below continues.
+T7 and §§8/8a remain OPEN.
+
+### Next independent child: hosted native completion (source inventory)
+
+This is a plan, not a verified fix. On frozen9922, `l2_emit_body_in` at21943
+stubs hosted capturing bodies. `l2_emit_native_word` at51823 and both
+trampoline call sites at52135/52328 exclude all hosted methods. The full07
+generated `unit_nested_method_owner_formal.lm1` has implemented helper m1,
+descriptor-only signature m2, capturing inner m3 stubbed to return0, unrelated
+root named Structure m4 and program root m5. It actually calls mk(2), then
+the returned inner(1); it never calls the nested helper. Opus21 and both
+RESULT22 texts contain incorrect descriptions of these rows/execution;
+they are not accepted evidence or a policy permitting native suppression.
+
+On frozen9922, `l2_mad_emit` directly emits the native factory return, while
+`l2_emit_mad_construct_one` emits the walked factory's constructor. There is
+no current `l2_mad_emit_into`; that name in historical notes does not identify
+a current shared producer. Both producers return model child N (`l2_mad`),
+not its snapshot parent C (`l2_madc`), and neither copy carries the model's
+native word. The generated `l2_mad_inputs` preserves
+absent hidden refs. For host formal n, walked `l2_rw_arg_fb` resolves the
+snapshot cell by `l2_node_seg`; native `l2_emit_tramp_lex` only consults
+`l2_hid_own_lex`, whose own-row requirement does not describe a captured
+formal. A native adapter is therefore not proven sufficient merely by
+removing hosted guards. Request23 asks Opus only to trace this exact absent-
+input discrepancy, read-only; Codex keeps the sole writer/build.
+
+RESULT23 is terminal and still overstates its findings: it says walked
+`l2_node_seg` cannot locate the captured host formal, but the actual common
+resolver at24574-24653 explicitly iterates host formals and projects
+`l2_m_width(host)+j`. The existing walked positive demonstrates that path.
+The native absent-input gap is real; a new runtime/per-method metadata table
+is neither required nor permitted to replace existing translation relations.
+Read source facts directly, not the consultant's unsupported conclusion.
+Prepared diagnostic sources `t7_hosted_next_sources_01` were used in the first
+probe run below; their existence alone is not an acceptance result.
+
+An isolated diagnostic prototype is prepared at
+`build/codex_handoff/t7_hosted_candidate_01/l2trans.lm1`; it is not the frozen
+production translator and has no gate result. Native-word preservation must
+cover both current producers above, not a nonexistent common function. The
+driver's existing `postpaths`/`nativepath` can inspect returned references
+after execution, including `deref`, without adding a test-only runtime path.
+The staged prototype SHA256 is
+`82B9F2E2CC60DE5B883C9964EBA9642F16A11EF35A5E37B4D13AD0054110AF16`
+(`codex_hosted_probe_01/src/l2src/l2trans.lm1`, hash equal to the private
+candidate). No second compiler/build was started alongside the frozen
+acceptance chain. After its terminal result the prototype compiled in the
+fresh diagnostic stage (`hosted_probe_build_01.log`, binary SHA256
+`FA8FD77764F9AB72B8F69D1CAA267527D4F6F2E4996B2E173868926D57A18F5E`).
+The serial baseline/candidate probes are terminal (`hosted_baseline_01.log`,
+`hosted_candidate_01.log`). Baseline passes10 builds/20 executions; the
+prototype passes8/16 (snapshot, helper, callable-formal owner and own-row
+Structure controls, native/methods-walked, ordinary/actual cleared root).
+Both prototype builds of `unit_capture_struct_formal` fail C compilation:
+`l2_p1_1` is undeclared, while `l2_pr1_1` exists. This is a new regression
+to repair in the private prototype, not a reason to force the method walked.
+The four pre-existing whole/merge translation refusals remain in both runs.
+Actual returned-copy native-word assertions are still pending; value-only
+success and compilation alone are not a verified native fix or a full gate.
+
+Bounded next route: one translation-time hidden-source locator (actual
+parent projection, slot and storage type), shared by native entry and ARG
+fallback; complete real typed bodies, one entry-eligibility producer shared
+by prototype/definition/native-word emission, and preserve that same model
+entry in returned/copied occurrences. No runtime name lookup, companion
+graph, per-copy entry or invented implementation of a descriptor-only fn.
+Acceptance must pin original/helper/returned native entries, force walked
+twins and cleared-root dispatch, distinguish two snapshots, present zero
+from absent input, primitive and Structure captures, callable formals and
+descriptor-only addr0. Mutants must catch a stub body, dropped native word,
+global/wrong snapshot and ignored present input. Then frozen kernel/L3/full,
+all-command replay/classification and exact-path reviewed publication.
+
 ## Acceptance commands
 
 Run a fresh harness directory with explicit `bin/l1trans.exe`, `-KeepAll`,

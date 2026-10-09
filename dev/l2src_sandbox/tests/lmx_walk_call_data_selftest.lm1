@@ -167,6 +167,62 @@ fn: go (@: Lmx m; @@: void args; size_t: nargs; @: int out_r; @: int out_v) int
     ---
 return: st
 
+# The same selected occurrence is projected by a typed count, never by a
+# runtime name or a fixed-depth metadata table. Exercise more than 192 links.
+sub: check_node_ancestry ()
+    @: Lmx root lmx_node_new_owned(ga)
+    @: Lmx holder root
+    @: Lmx next 0
+    @: Lmx method 0
+    @: Lmx ret 0
+    @: Lmx projection 0
+    size_t: i 0U
+    int: st
+    if: root = 0 || lmx_arena_refs_open_owned(ga, root, 1U) != 0
+        broken: broken + 1
+        return
+    while: i < 256U
+        next: pl(holder, 0U, 1U)
+        if: next = 0
+            return
+        next\parent: holder
+        holder: next
+        i: i + 1U
+    ---
+    method: mk_m(holder, 0U, 1U)
+    ret: fr(method, 0U, c.LMX_WALK_OP_RET, 2U)
+    projection: fr(ret, 1U, c.LMX_WALK_OP_NODE, 2U)
+    sz(projection, 1U, 0U)
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\present != 0 && gv\ref = (cast: (@: void) method), "NODE count 0 selects the occurrence itself")
+    sz(projection, 1U, 1U)
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) holder), "NODE count 1 selects its parent")
+    sz(projection, 1U, 257U)
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) root), "NODE has no fixed ancestry-depth cap")
+    sz(projection, 1U, 258U)
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "NODE refuses an absent ancestor")
+    sz(projection, 1U, (cast: (size_t) -1))
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "NODE huge count stops at the absent ancestor")
+    icell(projection, 1U, 1)
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "NODE count requires its declared size_t cell")
+    if: lmx_arena_ref_store(projection, 1U, 0) != 0
+        broken: broken + 1
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "NODE refuses a missing explicit count cell")
+    projection: fr(ret, 1U, c.LMX_WALK_OP_NODE, 3U)
+    sz(projection, 1U, 1U)
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_INVALID, "NODE refuses an unknown operand layout")
+    projection: fr(ret, 1U, c.LMX_WALK_OP_NODE, 1U)
+    st: lmx_walk_run(gctx, method, 0, 0U, gv)
+    check(st = c.LMX_WALK_OK && gv\ref = (cast: (@: void) holder), "NODE without a count retains one-parent meaning")
+end: check_node_ancestry
+
 fn: main () int
     LmxArena: arena
     LmxArena: context_arena
@@ -304,6 +360,7 @@ fn: main () int
     st: go(fcaller, 0, 0U, @ r, @ v)
     check(st = c.LMX_WALK_THROWN + 2 && lmx_implements_find(ga, vh, mf) = 0, "RECEIVING: a new pair is checked field by field")
 
+    check_node_ancestry()
     check(broken = 0, "fixture construction")
     if: failures != 0
         c.printf("lmx_walk_call_data_selftest %d/%d FAILED\n", failures, checks)

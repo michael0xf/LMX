@@ -9879,6 +9879,27 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_t7_copy_publication_node_walk.lm2'; Source = 'unit_t7_copy_publication_node.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
+    # Receiving requirements and body readers project from the same selected
+    # occurrence. An ordinary part-root field adds a real parent edge; neither
+    # the original global unit nor just one parent can stand in for its copy.
+    [pscustomobject]@{ Name = 'unit_recv_part_rootless.lm2'; Parts = @('unit_recv_part_rootless_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_part_rootless_walk.lm2'; Source = 'unit_recv_part_rootless.lm2'; Parts = @('unit_recv_part_rootless_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
+    # Same input with a materialized root. Cross-file signature visibility is
+    # a separate producer debt: changing comments must not change the result.
+    [pscustomobject]@{ Name = 'unit_recv_part_declared.lm2'; Source = 'unit_recv_part_rootless.lm2'; Parts = @('unit_recv_part_declared_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_part_declared_walk.lm2'; Source = 'unit_recv_part_rootless.lm2'; Parts = @('unit_recv_part_declared_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_part_free.lm2'; Parts = @('unit_recv_part_free_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3); NativeRoot = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_part_free_walk.lm2'; Source = 'unit_recv_part_free.lm2'; Parts = @('unit_recv_part_free_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3); NativeRoot = 4; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_part_two_copies.lm2'; Parts = @('unit_recv_part_two_copies_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_recv_part_two_copies_walk.lm2'; Source = 'unit_recv_part_two_copies.lm2'; Parts = @('unit_recv_part_two_copies_part.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_method_owner_formal_walk.lm2'; Source = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;

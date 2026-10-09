@@ -1,0 +1,18 @@
+# Rootless part control: one physical parent already reaches the copied unit.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+Box:
+    int: v 0
+    fn: getq
+end: Box
+b1: merge: Box
+w: merge: Wide
+w\x: 4
+int: r b1\getq(w)
+int: ok 7
+if: r != 4
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

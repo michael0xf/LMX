@@ -30,6 +30,20 @@ only. Neither critical ticket nor T7/§§8/8a is thereby closed. Follow
 [T7 evidence journal](steps/t7-lexical-projection-20261008.md), not an old
 owner marker, for the active bounded child.
 
+The eighth gated development child removes `l2_m_recv_policy`: receiving
+requirements follow the selected occurrence's same lexical-unit relation
+as its body. Static method ownership supplies class keys before PLACE;
+committed source places supply physical paths after PLACE. An unresolved
+pre-PLACE local place is not a global-unit fallback. The existing NODE
+carrier has an optional typed ancestor count; this is not a new source
+operator or runtime name table. Focus04 measures 23 targets/four separate
+cross-file type-resolution failures, and isolated NODE/receiving mutants
+are rejected. Kernel09 is GREEN297/114, L3_09 passes eleven suites/four
+budgets, full08 is RED68/2674 without old-row regressions. Replay2615 has
+2613 identical results and two fully inspected L1 changes; exits and
+diagnostics are unchanged. Twelve inputs are frozen throughout. Neither T7
+nor the cross-file header producer is declared repaired by those controls.
+
 Every entry separates **Norm**, **Mechanism/debt**, and **Verification**. Where
 the implementation design is not settled, a route is labelled proposed rather
 than silently promoted to a language rule. A new logical contradiction goes to

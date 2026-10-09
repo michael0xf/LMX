@@ -1,0 +1,18 @@
+# The candidate is formed after the copy, so no earlier admission can rescue
+# an incorrect requirement address at the receiving boundary.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+Box:
+    int: v 0
+    fn: getp
+end: Box
+b1: merge: Box
+a3: merge: Wide
+int: r b1\getp()
+int: ok 81
+if: r = 2
+    ok: 7
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

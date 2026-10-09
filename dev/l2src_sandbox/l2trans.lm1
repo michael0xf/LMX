@@ -1417,16 +1417,17 @@ prototype:
     fn: l2_identity_list (int: req; @: L2ReferenceSource source; int: tmi; int: tk; int: full_receiver; @: int first; @: int count) int
     fn: l2_admit_entry (int: mi; int: callee; int: k; int: ns; const: @(char value); const: @(char ind)) int
     fn: l2_m_unit_ref (int: i) const: @: char
-    fn: l2_m_recv_policy (int: i) const: @: char
     fn: l2_lex_parent (int: mi; @: int links) int
     fn: l2_lex_depth (int: mi; int: ancestor) int
+    fn: l2_lex_depth_at (int: mi; int: ancestor; int: committed) int
+    fn: l2_cfl_receiving_validate () int
     fn: l2_emit_lex_spaces (int: mi) int
-    fn: l2_recv_ref (int: callee; const: @(char occ); @: char dest; size_t: cap) int
+    fn: l2_recv_ref (int: callee; const: @(char occ); @: L2Tx dest) int
     fn: l2_free_admit (int: mi; int: j) int
     fn: l2_free_admits (int: mi) int
     fn: l2_admit_received (int: mi; int: callee; int: j; const: @(char occ); const: @(char value); const: @(char ind)) int
     fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
-    fn: l2_rw_recv_model (int: admit; int: req) int
+    fn: l2_rw_recv_model (int: admit; int: req; int: callee) int
     fn: l2_d105_emit_slot (int: mi; int: fi; int: slot; int: last; const: @(char ind)) int
     fn: l2_d105_emit_tables () int
     fn: l2_d105_width (int: req) int
@@ -31253,22 +31254,30 @@ fn: l2_cfl_alike (int: a; int: b) int
 return: l2_cfl_recv_alike(a, b)
 
 # Whether methods a and b receive formal t alike: the same model and schema, read in the same kind of space
-# (l2_m_unit_ref).  A formal no named Structure types on either side has nothing to admit.  An emission decision
+# (the same lexical-edge depth). A formal no named Structure types on either side has nothing to admit. An emission decision
 # (which admission a class emits), no equality of types: a candidate may be admitted to either model.
 fn: l2_cfl_formal_alike (int: a; int: b; int: t) int
+    int: da
+    int: db
     if: a = b
         return: 1
     if: l2_nsty_get(a, t) < 0 && l2_nsty_get(b, t) < 0
         return: 1
     if: l2_input_model(a, t) != l2_input_model(b, t) || l2_input_schema(a, t) != l2_input_schema(b, t)
         return: 0
-return: (cast: (int) (c.strcmp(l2_m_recv_policy(a), l2_m_recv_policy(b)) = 0))
+    da: l2_lex_depth_at(a, l2_e, 0)
+    db: l2_lex_depth_at(b, l2_e, 0)
+    if: da < 0 || db < 0
+        return: 0
+return: (cast: (int) (da = db))
 
 # Whether methods a and b, formed alike, have one receiving contract where they admit anything: every declared
 # Structure formal alike (l2_cfl_formal_alike), and the same space for the free inputs they admit (l2_free_admits).
 # Methods that admit nothing -- number inputs only -- stay one class whatever space their bodies read.
 fn: l2_cfl_recv_alike (int: a; int: b) int
     int: j 0
+    int: da
+    int: db
     if: a = b
         return: 1
     while: j < l2_m_arity[a] && j < l2_m_arity[b]
@@ -31276,8 +31285,13 @@ fn: l2_cfl_recv_alike (int: a; int: b) int
             return: 0
         j: j + 1
     ---
-    if: (l2_free_admits(a) != 0 || l2_free_admits(b) != 0) && c.strcmp(l2_m_recv_policy(a), l2_m_recv_policy(b)) != 0
-        return: 0
+    if: l2_free_admits(a) != 0 || l2_free_admits(b) != 0
+        da: l2_lex_depth_at(a, l2_e, 0)
+        db: l2_lex_depth_at(b, l2_e, 0)
+        if: da < 0 || db < 0 || da != db
+            return: 0
+        ---
+    ---
 return: 1
 
 # The class of reaching method m at formal t of consumer c: the first method that reaches the formal and
@@ -31326,6 +31340,8 @@ fn: l2_cfl_classes (int: c; int: t; const: @(LmP0Node at); @: int out) int
         return: l2_error(l2_src, at, "a call through a callable formal that receives a callable this translation does not follow is not built yet")
     n: l2_cfl_count(c, t)
     while: i < n
+        if: l2_lex_depth_at(l2_cfl_at(c, t, i), l2_e, 0) < 0
+            return: l2_error(l2_src, at, "a callable formation has no resolved receiving unit before source placement")
         if: l2_cfl_class_of(c, t, l2_cfl_at(c, t, i)) = l2_cfl_at(c, t, i)
             k: k + 1
         i: i + 1
@@ -31335,6 +31351,24 @@ fn: l2_cfl_classes (int: c; int: t; const: @(LmP0Node at); @: int out) int
     if: k > 1 && l2_cfr_any_built(c, t) != 0
         return: l2_error(l2_src, at, "a call through a callable formal that receives a callable built at run time among callables formed differently is not built yet")
     \out: k
+return: 0
+
+# Class keys are formed before PLACE. Validate the same method-edge relation
+# once physical places have committed, without a runtime map or phase fallback.
+fn: l2_cfl_receiving_validate () int
+    int: i 0
+    int: mi
+    int: depth
+    while: i < l2_cfr_n
+        mi: l2_cfr_m[i]
+        if: mi >= 0
+            depth: l2_lex_depth_at(mi, l2_e, 0)
+            if: depth >= 0 && depth != l2_lex_depth(mi, l2_e)
+                return: l2_error(l2_method_src(mi, l2_src), l2_m_node[mi], "internal: a receiving class changed its lexical projection after source placement")
+            ---
+        ---
+        i: i + 1
+    ---
 return: 0
 
 # The fact of the call at `node` for formal t: the call is of method x, or goes through method m's formal fi.
@@ -32118,13 +32152,17 @@ return: l2_e
 # A finite walk over the resolved ownership relation, not a language depth
 # limit. Places provide physical edge counts only after the committed PLACE
 # pass. -1 means absent ancestry; -2 means invalid construction metadata.
-fn: l2_lex_depth (int: mi; int: ancestor) int
+fn: l2_lex_depth_at (int: mi; int: ancestor; int: committed) int
     int: depth 0
     int: links
     int: steps 0
     while: mi >= 0 && mi < l2_m_n && steps <= l2_m_n
         if: mi = ancestor
             return: depth
+        # Local source-container links do not exist before PLACE. They are
+        # deferred, never silently counted as one link or a global unit.
+        if: committed = 0 && l2_m_nsof(mi) >= 0 && l2_ns_local[l2_m_nsof(mi)] >= 0
+            return: -2
         mi: l2_lex_parent(mi, @ links)
         if: depth > c.INT_MAX - links
             return: -2
@@ -32134,6 +32172,9 @@ fn: l2_lex_depth (int: mi; int: ancestor) int
     if: mi = -1
         return: -1
 return: -2
+
+fn: l2_lex_depth (int: mi; int: ancestor) int
+return: l2_lex_depth_at(mi, ancestor, 1)
 
 # Activation-local addresses of lexical ancestors. The chains come from the
 # same construction relation as field paths, and are emitted incrementally:
@@ -32191,30 +32232,23 @@ fn: l2_m_unit_ref (int: i) const: @: char
         return: "node"
 return: "l2_lex_unit"
 
-# Remaining receiving-boundary policy, resolved before construction places
-# exist. This is the pre-existing policy, NOT the native unit reader. Its
-# non-unit/global cases remain OPEN in T7-LOCAL-NAMED-UNIT until admission and
-# walker operands use the same actual-occurrence projection.
-fn: l2_m_recv_policy (int: i) const: @: char
-    if: i = l2_e
-        return: "self"
-    if: l2_m_part(i) >= 0 && l2_part_ns[l2_m_part(i)] >= 0
-        return: "l2_program_unit"
-    if: l2_mad_host_of(i) >= 0
-        return: "l2_program_unit"
-    if: l2_m_nsof(i) >= 0 && (l2_ns_parent[l2_m_nsof(i)] >= 0 || l2_ns_local[l2_m_nsof(i)] >= 0)
-        return: "l2_program_unit"
-return: "node"
-
-# The unit reference the occurrence `occ` -- an expression naming the Structure a boundary selected -- receives the
-# inputs of callable `callee` in: the space callee's body reads its requirements in (l2_m_unit_ref), the occurrence's
-# own node, `occ\parent`, where that body reads through `node`; the program's unit where it reads the program's.
-fn: l2_recv_ref (int: callee; const: @(char occ); @: char dest; size_t: cap) int
-    if: callee < 0 || callee >= l2_m_n || occ = 0 || dest = 0 || cap = 0U
+# The boundary reads requirements in the selected occurrence's actual unit,
+# exactly as its body does. Arbitrary ancestry uses growable expression text.
+fn: l2_recv_ref (int: callee; const: @(char occ); @: L2Tx dest) int
+    int: depth
+    if: callee < 0 || callee >= l2_m_n || occ = 0 || dest = 0
         return: 1
-    if: c.strcmp(l2_m_recv_policy(callee), "node") = 0
-        return: (cast: (int) (c.snprintf(dest, cap, "%s\\parent", occ) < 0))
-return: (cast: (int) (c.snprintf(dest, cap, "%s", l2_m_recv_policy(callee)) < 0))
+    depth: l2_lex_depth(callee, l2_e)
+    if: depth < 0
+        return: l2_error(l2_method_src(callee, l2_src), l2_m_node[callee], "a receiving model has no constructed lexical unit")
+    if: l2_tx_set(dest, occ) != 0
+        return: 1
+    while: depth > 0
+        if: l2_tx_cat(dest, "\\parent") != 0
+            return: 1
+        depth: depth - 1
+    ---
+return: 0
 
 # Whether method mi is a method of the unit itself: its occurrence's parent is the unit, which its own code
 # reaches as `node` (the choice of l2_unit_ref).
@@ -32825,12 +32859,14 @@ return: idx
 # the call selected (l2_recv_ref, read by l2_type_inst alone while it is emitted, as a free input's): form 1 an
 # occurrence (its pair map), 2 by position, 3 a record by name (D-105).  The candidate is as it was formed.
 fn: l2_emit_formal_admit (int: mi; int: r; int: t; int: form; int: occ_mi; @: L2ReferenceSource source; int: dyn_mi; const: @(char occ); const: @(char value); const: @(char ind)) int
-    []: char recv 192
+    []: char recv_local 128
+    L2Tx: recv_text
+    @: L2Tx recv l2_tx_local(@ recv_text, recv_local, 128U)
     int: st 0
     const: @(char saved) l2_recv_unit
-    if: l2_recv_ref(r, occ, recv, 192U) != 0
+    if: recv = 0 || l2_recv_ref(r, occ, recv) != 0
         return: 1
-    l2_recv_unit: recv
+    l2_recv_unit: recv\data
     if: form = 1
         st: l2_emit_occ_admit(mi, l2_input_schema(r, t), l2_schema_method(occ_mi), value, ind)
     if: form = 2
@@ -38857,30 +38893,40 @@ fn: l2_rw_map_inline (int: frame; int: at; int: cand; int: req) int
     ---
 return: 0
 
-# Whether the admission into input tk of callable tmi reads its requirement in the receiving occurrence's space: a
-# declared Structure formal or a free input (l2_free_admit) of a callable whose body reads through `node`
-# (l2_m_unit_ref), required to a unit-level named declaration (COPIED-METHOD-DECLARED-FORMAL: free or declared, one
-# receiving contract).
+# Whether input tk reads its unit-level requirement in the selected occurrence's
+# lexical unit: declared Structure formals and admitted free inputs share the
+# same receiving contract, regardless of the number of physical parent links.
 fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
     if: tmi < 0 || tmi >= l2_m_n || tk < 0 || tk >= l2_m_arity[tmi] + l2_m_dyn[tmi]
         return: 0
     if: req < 0 || req >= l2_ns_n || l2_schema_kind(req) != 1 || l2_ns_parent[req] >= 0 || l2_ns_local[req] >= 0
         return: 0
-    if: c.strcmp(l2_m_recv_policy(tmi), "node") != 0
-        return: 0
     if: tk < l2_m_arity[tmi]
         return: (cast: (int) (l2_nsty_get(tmi, tk) >= 0))
 return: l2_free_admit(tmi, tk - l2_m_arity[tmi])
 
-# The requirement of a RECEIVING admission: [of, [node], slot] at its model operand (l2_rw_node_read), the unit child
-# of named declaration req in the space the occurrence its CALL or EXEC selects receives in.
-fn: l2_rw_recv_model (int: admit; int: req) int
+# The requirement of a RECEIVING admission: [of, [node, depth?], slot]. COUNT
+# chooses the width from static ownership; FILL supplies committed physical
+# ancestry, including local source-container places unavailable during COUNT.
+fn: l2_rw_recv_model (int: admit; int: req; int: callee) int
     int: of
     int: nd
+    int: depth l2_lex_depth_at(callee, l2_e, 0)
+    int: width 2
     int: slot l2_ns_unit_slot(req)
     if: l2_ns_eternal[req] >= 0
         slot: l2_ebr_unit_slot(l2_ns_eternal[req])
-    if: l2_rw_frame(admit, "LMX_WALK_OP_OF", 3, @ of) != 0 || l2_rw_frame(of, "LMX_WALK_OP_NODE", 1, @ nd) != 0 || l2_rw_put(of, 1, nd) != 0
+    if: depth = 1
+        width: 1
+    if: l2_rw_emit != 0
+        depth: l2_lex_depth(callee, l2_e)
+        if: depth < 0
+            return: l2_error(l2_method_src(callee, l2_src), l2_m_node[callee], "a receiving model has no constructed lexical unit")
+        ---
+    ---
+    if: l2_rw_frame(admit, "LMX_WALK_OP_OF", 3, @ of) != 0 || l2_rw_frame(of, "LMX_WALK_OP_NODE", width, @ nd) != 0 || l2_rw_put(of, 1, nd) != 0
+        return: 1
+    if: width = 2 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", nd, depth) < 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", of, slot) < 0
         return: 1
@@ -38971,10 +39017,10 @@ fn: l2_rw_admit_project (int: parent; int: req; @: L2ReferenceSource source; int
         return: 1
     if: model_own < 0 && l2_schema_kind(req) = 1 && l2_rw_recv_req(tmi, tk, req) = 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 4U, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", \out, l2_rw_types_nsp(), req) < 0
         return: 1
-    # A free input of a callable whose body reads through `node` is admitted to its requirement in the space of the
-    # occurrence the CALL or EXEC selects: a RECEIVING admission (lmx_walk.h, ADMIT_AS).
+    # Declared/free requirements use the lexical unit of the occurrence CALL
+    # or EXEC selected: one RECEIVING admission (lmx_walk.h, ADMIT_AS).
     if: model_own < 0 && l2_rw_recv_req(tmi, tk, req) != 0
-        if: l2_rw_recv_model(\out, req) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
+        if: l2_rw_recv_model(\out, req, tmi) != 0 || l2_rw_source_facet(\out, "LMX_WALK_SOURCE_RECEIVING") != 0
             return: 1
     ---
     if: l2_schema_kind(req) = 2 && l2_rw_model_own(\out, 4, l2_mres_own[l2_schema_index(req)]) != 0
@@ -46182,12 +46228,14 @@ return: 0
 # of the selected occurrence `occ` (l2_recv_ref): the model instances it names are rendered through that reference,
 # the candidate, its sources and everything else in mi's own emission.  The reference is this admission's alone.
 fn: l2_admit_received (int: mi; int: callee; int: j; const: @(char occ); const: @(char value); const: @(char ind)) int
-    []: char recv 192
+    []: char recv_local 128
+    L2Tx: recv_text
+    @: L2Tx recv l2_tx_local(@ recv_text, recv_local, 128U)
     int: st
     const: @(char saved) l2_recv_unit
-    if: l2_recv_ref(callee, occ, recv, 192U) != 0
+    if: recv = 0 || l2_recv_ref(callee, occ, recv) != 0
         return: 1
-    l2_recv_unit: recv
+    l2_recv_unit: recv\data
     st: l2_admit_entry(mi, callee, j, 0 - 1, value, ind)
     l2_recv_unit: saved
 return: st
@@ -51860,6 +51908,8 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # Accepted source producers are committed before final prefix/base sizes.
     # PLACE records actual constructor edges without emitting a second graph.
     if: l2_graph_places_seed() != 0 || l2_source_ownership_commit() != 0 || l2_rw_methods_emit(1) != 0 || l2_source_places_bind() != 0
+        return: 1
+    if: l2_cfl_receiving_validate() != 0
         return: 1
     l2_unit_base: l2_m_width(l2_e)
     # R9: now a Structure with a procedure has its whole width -- its steps too -- and a merge copies all of it: the

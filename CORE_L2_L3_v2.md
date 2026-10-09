@@ -14,7 +14,7 @@ This is a technical map of the kernel that actually exists, not a replacement la
 
 The original inspection used `build/opus_wt/dev/l2src_sandbox/`, with L3 adapters in that worktree. Its October1 release landed as **`8359a59f67b87382c55eb402e9f09f9a4b1ce954`**. That is a historical frozen baseline, not the current handoff. Active development is now the uncommitted `dev/l2src_sandbox/` and `dev/l3_interp/` under `C:\Nyasha_Planet\LMX`; stable root `l2src/` is unchanged by the critical-graph work. Source links below point to these canonical development paths; source symbols and the cited frozen gate identify each observation.
 
-**Current boundary, 2026-10-03.** The author transfers implementation to Fable;
+**Historical boundary, 2026-10-03.** The author transferred implementation to Fable;
 Codex completes documentation and subsequently answers questions. Read
 [to_fable.md](to_fable.md) and [the v2 plan](next_core_tasks_v2.md).
 Latest full gate `critical_graph_fix_full_32` is RED130/1395 on translator
@@ -41,7 +41,7 @@ build/l2_harness/merge_value_final_focus_20261001_02/start_owned_manifest.json
 
 The focused and final restored gates are each terminal **48/48**; the preceding repair gate is **47/47**, and six direct manual dependency-closure preflights execute **174 checks**. The full generated gate is terminal **1110 targets / 1062 OK / 48 FAIL**; an independent comparison of summary rows confirms the same 48 baseline failures, ten new green rows, and no regressions, removals or duplicates. Fresh kernel **286/286** and L3 **11 suites / 295 checks plus four inventories** are terminal, and their retained transcripts were read. The combined manifest was independently rehashed as described in §15. The source writer has released the slice, and main contains the exact 25-path source checkpoint above. No claim of completed overall self-build follows from this release.
 
-The authoritative language references are the [English semantics book](docs/LMX_semantics.en.md), its [source](provenance/semantics-book.md), [L2 specification](docs/L2_spec_en.md), [L1 specification](docs/L1_spec_en.md), and their Russian counterparts. [READ.ME](READ.ME) governs source ownership and self-build acceptance. [CORE.md](CORE.md) is an older architectural overview; it is useful context, not a substitute for checking the current implementation. The replacement planning documents are [next_core_tasks_v2.md](next_core_tasks_v2.md) and its [dictionary](next_core_tasks_dictionary_v2.md); older chronology remains in [next_core_tasks.md](next_core_tasks.md), [the implementation log](steps/native-selfbuild-20260930.md), and [defects](steps/defects.md). The plans describe acceptance/debt, not authority to continue coding after the current stop instruction.
+The authoritative language references are the [English semantics book](docs/LMX_semantics.en.md), its [source](provenance/semantics-book.md), [L2 specification](docs/L2_spec_en.md), [L1 specification](docs/L1_spec_en.md), and their Russian counterparts. [READ.ME](READ.ME) governs source ownership and self-build acceptance. [CORE.md](CORE.md) is an older architectural overview; it is useful context, not a substitute for checking the current implementation. The replacement planning documents are [next_core_tasks_v2.md](next_core_tasks_v2.md) and its [dictionary](next_core_tasks_dictionary_v2.md); older chronology remains in [next_core_tasks.md](next_core_tasks.md), [the implementation log](steps/native-selfbuild-20260930.md), and [defects](steps/defects.md). The plans describe acceptance/debt. Current coding authority is the October8 handoff recorded in [current instructions](steps/current.md); the October3 stop boundary above is historical.
 
 This map does not resume application development. In particular, no application-specific state or `myxa_manager` objective is introduced into the kernel.
 
@@ -622,6 +622,32 @@ actual by its own model in that occurrence's space; a class whose model does
 not admit a candidate refuses it only when it is the selected one, as the
 caller's implicit `implements`
 ([ledger](steps/fable-continuation-20261003.md#copied-formal)).
+
+**Gated development implementation, 2026-10-09 UTC, translator9922b2ac.** The
+receiving requirement and the callee's body use the same selected occurrence
+and lexical-unit projection (`l2_lex_depth_at`, `l2_recv_ref`). Formation
+equivalence uses resolved static method ancestry before PLACE and validates
+it against committed source places afterwards; unavailable local-place
+ancestry is not silently counted as one edge. Native expressions grow with
+the path. Interpreted admission uses the existing NODE carrier with an
+optional `size_t` ancestor count: omitted means one, zero means self.
+Materializing a part root therefore adds its real edge instead of sending
+admission to the original global requirement. This representation adds
+neither source syntax nor a callable-context graph. Serial probes distinguish
+two independent copied requirements and explicit copied NODE state in native
+and walked method execution. Separate correctly flagged mutation and wrong-
+value tests exercise cleared-root dispatch. Early diagnostic helper reruns
+used an unrecognised flag; a corrected execution-only repeat on all twelve
+existing baseline/final binaries confirms the actual cleared-root results.
+NODE tests exercise depth 257 and reject
+malformed/absent ancestors. A separate cross-file signature producer still
+compares independent source offsets; leading comments expose it. See the
+[current evidence and open boundaries](steps/t7-lexical-projection-20261008.md).
+Kernel09 is GREEN297/114, L3_09 passes eleven suites/four budgets, and full08
+is RED68/2674 with no old-row regressions. Replay2615 preserves all exits
+and diagnostics; only the nested-model pair's L1 changes to actual receiving
+ancestry. Its generated-ID bijection is checked, not collapsed away. Four
+new cross-file header rows stay RED; T7 and §§8/8a remain OPEN.
 
 Nothing on this route has a ceiling. The search for a coordinate space holds
 its candidates and the places it reaches in storage sized from the program; a

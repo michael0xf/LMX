@@ -1719,9 +1719,28 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             return: c.LMX_WALK_INVALID
         return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, lmx_walk_data_holder(f, 0))
     if: op = c.LMX_WALK_OP_NODE
-        if: f\node = 0 || f\node\parent = 0
+        # NODE is a physical projection of this selected occurrence. The
+        # historical one-cell form means one parent; a typed size operand
+        # states any other count, including zero, without a depth limit.
+        if: code\array.size != 1U && code\array.size != 2U
             return: c.LMX_WALK_INVALID
-        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, (cast: (@: void) f\node\parent))
+        index: 1U
+        if: code\array.size = 2U
+            leaf: lmx_arena_ref_value(code, 1U)
+            if: lmx_walk_numeric_type(f\arena, leaf) != c.LMX_TYPE_SIZE_T
+                return: c.LMX_WALK_INVALID
+            index: lmx_size_value_known(leaf)
+        ---
+        wholder: f\node
+        while: index > 0U
+            if: wholder = 0 || lmx_walk_kind(f, (cast: (@: void) wholder)) != c.LMX_KIND_STRUCT || wholder\parent = 0
+                return: c.LMX_WALK_INVALID
+            wholder: wholder\parent
+            index: index - 1U
+        ---
+        if: wholder = 0
+            return: c.LMX_WALK_INVALID
+        return: lmx_walk_value_ref(out, c.LMX_TYPE_LMX, (cast: (@: void) wholder))
     if: op = c.LMX_WALK_OP_ADDRESS
         status: lmx_walk_place(f, lmx_arena_ref_value(code, 1U), 0, @ place)
         if: status != c.LMX_WALK_OK

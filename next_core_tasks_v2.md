@@ -25,11 +25,20 @@ Opus answers questions only and starts no coding, census or build. Baseline:
 T7-LOCAL-NAMED-UNIT, then PATH-STRUCTURE-LEAF and NODE-PATH-ANON-STRUCT.
 Earlier ownership records below are historical.
 
-Latest bounded Codex checkpoint: translator `8341e6ba`, kernel06
-GREEN297/114 selftests, L3_07 all eleven suites/four budgets, full06
-RED68/2660 (two old FAIL→OK, no OK→FAIL, twelve added rows: nine GREEN,
-three required-positive RED). Model-source/owner repair is gated; T7 stays
-OPEN. Exact evidence and next dependencies are in the
+Latest gated bounded Codex checkpoint: translator `9922b2ac`, kernel09
+GREEN297/114 selftests, L3_09 all eleven suites/four budgets, full08
+RED68/2674 (no old FAIL→OK or OK→FAIL; eight added rows, four GREEN and
+four cross-file header failures). All2615 recorded translations were replayed:
+2613 identical, two classified L1 changes, no changed exit or diagnostic.
+T7 stays OPEN. The eighth child implements actual receiving-model ancestry,
+not the global prototype or an assumed single parent. Its separate
+cross-file header-offset defect remains OPEN; comment changes must not
+decide type visibility. Its [file-order question](LMX_blog/q/current/program-parts-declaration-visibility.md)
+awaits the author; an old agent note is not a language decision. Independent
+acceptance and [hosted native completion](steps/defects.md#hosted-native-completion)
+continue independently: actual bodies, shared hidden-input source, common
+entry publication and preservation in copies, not merely removal of one
+hosted guard. Exact evidence and next dependencies are in the
 [T7 journal](steps/t7-lexical-projection-20261008.md).
 
 **Mandatory correction, 2026-10-06: receiver applications require explicit
@@ -56,7 +65,7 @@ a new full-gate verdict. Sandbox code/tests are uncommitted and stable `l2src`
 is unchanged. Both critical tickets remain OPEN. Exact current evidence:
 [persistent occurrence oracles](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles).
 
-**Current owner, 2026-10-05.** Opus succeeds the quota-exhausted Fable as the
+**Historical owner, 2026-10-05.** Opus succeeded the quota-exhausted Fable as the
 sole kernel writer/build; Codex answers questions and has a bounded documentation
 baton. The three author questions below are answered, not language-decision
 blockers. Their implementation and gates remain outstanding where listed.

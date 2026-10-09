@@ -1,0 +1,23 @@
+# One candidate is received against two copied requirements. Each method's
+# explicit NODE state is its independent snapshot, not the current live part.
+Wide:
+    int: pad 9
+    int: x 2
+end: Wide
+Box:
+    int: v 0
+    fn: getq
+end: Box
+int: s0 setMarker(0)
+b1: merge: Box
+int: s1 setMarker(5)
+b2: merge: Box
+w: merge: Wide
+w\x: 4
+int: r1 b1\getq(w)
+int: r2 b2\getq(w)
+int: ok 7
+if: s0 != 0 || s1 != 5 || r1 != 4 || r2 != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -128,6 +128,25 @@ after bounded acceptance, without adding another writer/build. Details:
 
 Every important statement is classified as one of the following.
 
+**BOUNDED VERIFIED implementation18: complete local fn/sub headers.** Do not hoist a
+written local fn/sub declaration into a new owning unit slot, execute it at
+construction or confuse it with a short borrowed callable field. The existing
+source field owns the complete callable occurrence; original/copy call and
+receiving-model operands project that actual place. A bodyless fn remains a
+descriptor with no fabricated native implementation. Inspection must retain
+the declaration's own source name, even when its ordinary named-Structure
+procedure has no method name; names still serve inspection/toLmx only. Private
+native/walked/copy/sibling/descriptor controls pass. Full22's five old GREEN
+regressions are preserved and repaired through the shared source/return route
+and actual-place observations. Fresh serial03 completes focus RED29/838,
+kernel23 GREEN297/114 executed selftests, L3_23 eleven suites/four budgets,
+full23 RED72/2827 without old regression/removal/changed failure. All sixteen
+additions pass and the original receiving pair recovers. All52 inputs/194
+copies match; final2615 replay is exact. Three actually compiled/linked/run
+faults are rejected. fm and true walked multi-class selection remain OPEN.
+Both-way visibility belongs to fn/fm/sub, not ordinary named Structures or
+references holding them. See [exact evidence](steps/local-method-declaration-collection-20261009.md).
+
 - **NORMATIVE** — required by the current language specifications or an accepted author clarification.
 - **SUPPORTED** — covered by a released implementation checkpoint and focused evidence identified in the implementation notes. This is a snapshot, not a language restriction.
 - **PENDING** — normative behavior whose general implementation or full acceptance evidence is still incomplete.

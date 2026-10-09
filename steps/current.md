@@ -145,6 +145,49 @@ GREEN, нет старых регрессий/удалений/изменённ�
 После проверенной публикации без ожидания
 следовать полному local method collection; Codex sole writer/build.
 
+Copied-model опубликован `e28eb110`, HEAD/upstream/remote совпали. Сразу
+STARTED `CODEX-LOCAL-METHOD-DECLARATION-COLLECTION-20261009-18`: полный
+producer локальных методов и реальные исходные места их вхождений,
+не снятие одной защиты и не лишние owning-поля unit. Границы/непрерывная
+приёмка — [журнал методов](local-method-declaration-collection-20261009.md).
+Единственный writer/build Codex, Opus Q&A only; T7/stable/8/8a OPEN.
+
+Методный candidate23 `E9491CEC` / binary `4F346F0C`: имена и реальные
+parents локальных объявлений восстановлены; старые pins добавочных
+unit-tail методов заменены проверками настоящего исходного места, без
+ослабления native0/native1, положительных результатов или copied identity.
+Private replay2615 сохраняет все exit/diagnostic/presence;372 L1-only
+изменения отдельно инвентаризированы (83 точных alias,68 borrowed-field
+коррекций,221 source/method/closure deltas, требующих исполнения).
+Два fresh live fault отвергнуты. Serial32148: focus02 RED27/799,
+все16 добавлений GREEN, receiving pair FAIL->OK, старых регрессий/удалений/
+изменённых отказов нет; kernel22 GREEN297/114 реально выполненных
+самотестов; L3_22 —11 suites/four budgets. Full22 terminal RED77/2827:
+пять старых GREEN регрессируют (capture-formal pair, activation/exact-capture
+pins, реальный dead-return abort3). Serial32148 остановлен; копии194 и
+replay08 не запускались. Все52 входа сохранились. Исправлять общий
+source/return/closure маршрут и проверять каждую строку, не публиковать23.
+Независимый SOURCE-DECLARATION-ORDER пока только приватные непрогнанные
+пробы. Sole writer/build Codex; родители OPEN.
+
+Исправленный candidate24 `5834B4CC` проверен расширенным smoke05:
+все пять full22-регрессий восстановлены,16 новых строк GREEN;
+три compiled/linked/executed fault-контроля отвергнуты. Private replay08
+сохраняет все2615 exit/diagnostic/presence;372 L1-only дельты не объявлены
+эквивалентностью без исполнения. Fresh acceptance03 в sole serial22978:
+focus03 RED29/838, старых регрессий/удалений/изменённых отказов нет,
+kernel23 GREEN297/114 реально выполненных самотестов, L3_23 exit0,
+eleven suites/four budgets. Full23 terminal RED72/2827: все16 добавлений
+GREEN, receiving pair восстановлена, ноль старых регрессий/удалений/
+изменённых отказов. Все52 frozen входа и194 копии совпали. Replay09
+завершил2615 трансляций:1795 L1/820 nonzero, каждый exit/diagnostic/presence
+и байты L1 точно равны private08. Serial22978 завершён exit0. Дополнительное
+сравнение2810 старых full-диагностик выявило только два нужных восстановления.
+SourceSHA5834B4CC, full23 binarySHA6722F647. После exact-path/index-blob
+проверки и commit/push сразу SOURCE-DECLARATION-ORDER, без нового ожидания.
+Закрыт только bounded fn/sub producer, не fm/codec/multi-class/T7/8/8a.
+Stable не меняется; неудачные попытки сохраняются.
+
 Crossing-срез опубликован `01d82c8c`; HEAD/upstream/remote совпали.
 Сразу начат единственный следующий writer/build
 `CODEX-LOCAL-NESTED-MODEL-ANCHOR-20261009-15`: исходное объявление и

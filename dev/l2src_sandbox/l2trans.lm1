@@ -1207,6 +1207,7 @@ prototype:
     fn: l2_use_cell_note (int: form; int: oi) int
     fn: l2_use_ns_row (int: ni; int: slot) int
     fn: l2_use_place_below (@: L2GraphPlace place; @: L2GraphPlace stop; @: int s) int
+    fn: l2_use_occ_slots (int: mi; @: int s) int
     fn: l2_use_held (int: k; int: j; @@: L2GraphField out_field; @@: L2GraphPlace out_stop) int
     fn: l2_mu_room (int: need) int
     fn: l2_mu_node_prefix (int: h; @: int n) int
@@ -1854,6 +1855,13 @@ prototype:
     fn: l2_fn_frame (int: mi) @: LmP0Frame
     fn: l2_callable_source_node (int: mi) @: LmP0Node
     fn: l2_source_is_callable_definition (const: @(LmP0Node node)) int
+    fn: l2_method_by_source (const: @(LmP0Node node)) int
+    fn: l2_method_declaration_name (const: @(LmP0Node node)) @: LmP0Text
+    fn: l2_source_parent_body (const: @(LmP0Structure body); const: @(LmP0Node node)) @: LmP0Structure
+    fn: l2_method_source_scope (const: @(LmP0Node node)) @: LmP0Structure
+    fn: l2_method_duplicate (const: @(LmP0Node node); const: @(LmP0Text name); int: host) int
+    fn: l2_method_source_own (int: mi) int
+    fn: l2_source_definition_method (int: own) int
     fn: l2_callable_source_frame (int: mi) @: LmP0Frame
     fn: l2_ebr_find (const: @(LmP0Text t)) int
     fn: l2_emit_ns_num_cell (int: k; int: oi; int: fx) int
@@ -2049,6 +2057,10 @@ prototype:
     fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
     fn: l2_source_definition_ns (int: own) int
     fn: l2_source_definition_field (int: ni; int: kind; int: index; @@: L2SourceContainer owner) @: L2SourceField
+    fn: l2_source_definition_node_field (const: @(LmP0Node node); int: kind; int: index; @@: L2SourceContainer owner) @: L2SourceField
+    fn: l2_occ_expr_append (int: mi; const: @(char unit); @: L2Tx dest) int
+    fn: l2_occ_place_expr_append (int: mi; const: @(char unit); @: L2GraphPlace place; @: L2Tx dest) int
+    fn: l2_occ_field_expr_append (int: own; const: @(char unit); @: L2Tx dest) int
     fn: l2_emit_ns_cells (int: ni) int
     fn: l2_emit_ns_refs (int: ni) int
     fn: l2_source_refs_emit (int: kind; int: index) int
@@ -2079,6 +2091,7 @@ prototype:
     fn: l2_rw_types_nsp () const: @: char
     fn: l2_rw_types_unit () const: @: char
     fn: l2_rw_ns_model (int: parent; int: slot; int: req; int: callee) int
+    fn: l2_rw_local_model (int: parent; int: req; int: callee; @: int out) int
     fn: l2_emit_graph_path (@: L2GraphPlace place; @: L2GraphPlace stop; int: mi; const: @(char ind)) int
     fn: l2_rw_graph_place (int: parent; @: L2GraphPlace place; @: int out) int
     fn: l2_rw_graph_path (int: parent; @: L2GraphPlace place; @: L2GraphPlace stop; int: base; @: int root_path; int: root_level; @: int out) int
@@ -4624,6 +4637,97 @@ return: 0
 # implementing it must extend this one predicate, not just the name census.
 fn: l2_root_method_head (const: @(LmP0Text head)) int
 return: (cast: (int) (l2_text_eq(head, "fn") || l2_text_eq(head, "sub")))
+
+# Complete declarations and short borrowed callable fields share the receiver
+# contract. The original source node distinguishes their occurrences later.
+fn: l2_method_declaration_name (const: @(LmP0Node node)) @: LmP0Text
+    if: l2_root_method_head(l2_app_head(node)) = 0 || l2_count_active(l2_app_actuals(node)) <= 1
+        return: 0
+return: l2_os_fn_name(node)
+
+fn: l2_method_by_source (const: @(LmP0Node node)) int
+    int: mi 0
+    if: node = 0
+        return: -1
+    while: mi < l2_m_n
+        if: l2_m_node[mi] = node
+            return: mi
+        mi: mi + 1
+return: -1
+
+# The immediate written container of a node, not its enclosing method number.
+# Original P0 ownership is sufficient; no separate scope/name registry exists.
+fn: l2_source_parent_body (const: @(LmP0Structure body); const: @(LmP0Node node)) @: LmP0Structure
+    @: LmP0Field field
+    @: LmP0Node item
+    @: LmP0Structure found
+    if: body = 0 || node = 0
+        return: 0
+    field: l2_next_active(body\first_field)
+    while: field != 0
+        item: field\value
+        if: item = node
+            return: (cast: (@: LmP0Structure) body)
+        if: item != 0 && item\as != 0
+            found: 0
+            if: item\kind = c.LM_P0_NODE_STRUCTURE
+                found: l2_source_parent_body(item\as\structure, node)
+            if: item\kind = c.LM_P0_NODE_FRAME && item\as\frame != 0
+                found: l2_source_parent_body(item\as\frame\body, node)
+            if: found != 0
+                return: found
+            ---
+        ---
+        field: l2_next_active(field\next)
+    ---
+return: 0
+
+fn: l2_method_source_scope (const: @(LmP0Node node)) @: LmP0Structure
+    @: LmP0Structure scope l2_source_parent_body(l2_ruse_unit, node)
+    const: @: LmP0Node root
+    int: part 0
+    if: scope = 0 && l2_cur_unit != l2_ruse_unit
+        scope: l2_source_parent_body(l2_cur_unit, node)
+    while: scope = 0 && l2_part_doc != 0 && part < l2_part_n
+        root: lm_p0_document_root(l2_part_doc[part])
+        if: root != 0 && root\kind = c.LM_P0_NODE_STRUCTURE && root\as != 0
+            scope: l2_source_parent_body(root\as\structure, node)
+        part: part + 1
+    ---
+return: scope
+
+fn: l2_method_duplicate (const: @(LmP0Node node); const: @(LmP0Text name); int: host) int
+    @: LmP0Structure scope l2_method_source_scope(node)
+    int: mi 0
+    while: mi < l2_m_n
+        if: l2_text_same(l2_m_name[mi], name) != 0 && l2_mad_host_of(mi) = host
+            if: host < 0 || l2_method_source_scope(l2_m_node[mi]) = scope
+                return: mi
+            ---
+        ---
+        mi: mi + 1
+return: -1
+
+fn: l2_method_source_own (int: mi) int
+    int: own 0
+    if: mi < 0 || mi >= l2_m_n || l2_m_node[mi] = 0
+        return: -1
+    while: own < l2_own_n
+        if: l2_own_decl[own] = l2_m_node[mi]
+            return: own
+        own: own + 1
+return: -1
+
+# A full written method owns this field. A short borrowed callable contract
+# has a different original node and never allocates another occurrence.
+fn: l2_source_definition_method (int: own) int
+    int: mi
+    if: own < 0 || own >= l2_own_n
+        return: -1
+    mi: l2_method_by_source(l2_own_decl[own])
+    if: mi < 0 || l2_m_nsof(mi) >= 0
+        return: -1
+return: mi
 
 # Only declarations at this lexical root export a method name. Do not descend
 # into method or ordinary named-Structure bodies. This is a source census,
@@ -7565,10 +7669,22 @@ fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out
     if: l2_c_stmt_door(t) != 0
         return: 6
     if: l2_ident_word(t) = 0
+        k: l2_head_method(mi, t)
+        if: k >= 0
+            if: out_index != 0
+                \out_index: k
+            return: 2
+        ---
         return: -1
     if: mi >= 0
         k: l2_resolved_own(mi, t)
         if: k >= 0
+            h: l2_source_definition_method(k)
+            if: h >= 0
+                if: out_index != 0
+                    \out_index: h
+                return: 2
+            ---
             if: out_index != 0
                 \out_index: k
             if: out_outside != 0 && l2_own_unit_seen(k, mi) != 0
@@ -7618,6 +7734,12 @@ fn: l2_head_resolve (int: mi; const: @(LmP0Text t); @: int out_index; @: int out
                 return: 4
             hk: l2_mad_host_own(h, t)
             if: hk >= 0
+                k: l2_source_definition_method(hk)
+                if: k >= 0
+                    if: out_index != 0
+                        \out_index: k
+                    return: 2
+                ---
                 if: out_index != 0
                     \out_index: hk
                 if: out_outside != 0
@@ -9194,6 +9316,9 @@ fn: l2_colon_simple_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         # (callable-first; l2_check_primary checks it), its value tick's result, as l2_native_cf_ty types it in an operand.
         if: l2_call_alias_own(mi, atom) >= 0
             return: l2_colon_ret_ty(l2_rb_meth_of(l2_own_decl[l2_call_alias_own(mi, atom)]), out_ty)
+        m: l2_call_head_method(mi, atom, @ formal)
+        if: m >= 0
+            return: l2_colon_ret_ty(m, out_ty)
         if: l2_deref_word(atom, mi, @ base, @ levels, out_ty) = 0
             return: 0
         if: l2_num(atom) || l2_signed_num(atom) || (atom != 0 && atom\length >= 3U && atom\data[0] = 39 && atom\data[atom\length - 1U] = 39)
@@ -9319,7 +9444,7 @@ fn: l2_colon_value_ty (const: @(LmP0Node value); int: mi; @: int out_ty) int
         t: value\as\frame\head
     if: t != 0 && mi >= 0
         k: l2_call_head_method(mi, t, @ formal)
-        if: k >= 0 && formal >= 0
+        if: k >= 0
             return: l2_colon_ret_ty(k, out_ty)
         ---
     if: l2_colon_simple_ty(value, mi, out_ty) = 0
@@ -11081,7 +11206,7 @@ fn: l2_native_cf_ty (int: mi; const: @(LmP0Text t)) int
         return: 0 - 100
     k: l2_call_head_method(mi, t, @ formal)
     # K03 NS-ROLES-1b: a binding `b: tick`, named bare or called, is a value of tick's result, as a callable formal is.
-    if: k < 0 || (formal < 0 && l2_call_alias_own(mi, t) < 0)
+    if: k < 0
         return: 0 - 100
     if: l2_colon_ret_ty(k, @ ty) != 0 || l2_prim_code_name(ty) = 0
         return: 0 - 99
@@ -13734,6 +13859,27 @@ fn: l2_collect_decls (const: @(LmP0Structure body); int: mi; const: @(char path)
         retained: l2_ns_constructed_row(mi, stmt)
         if: retained = -2
             return: 1
+        # Every complete local method declaration uses the same header producer
+        # as a root declaration. Its written field owns the actual occurrence.
+        fa: l2_method_declaration_name(stmt)
+        # The unit's existing declaration producer already owns its root field.
+        # A callable body's declaration needs an own-field source producer.
+        if: fa != 0 && mi != l2_e
+            j: l2_method_by_source(stmt)
+            if: j < 0
+                if: l2_collect_method(stmt, path, mi) != 0
+                    return: 1
+                j: l2_method_by_source(stmt)
+            ---
+            if: j < 0
+                return: l2_error(path, stmt, "internal: a local method declaration lost its source row")
+            j: l2_own_add(mi, fa, l2_graph_own(), path, stmt)
+            if: j < 0 || l2_own_off(mi, j) = (cast: (size_t) -1)
+                return: l2_alloc_or(path, stmt, "size overflow")
+            l2_m_uses[l2_own_off(mi, j)]: 1
+            l2_m_own[mi]: l2_m_own[mi] + 1
+            field: l2_next_active(field\next)
+            continue
         # K03 NS-ROLES-1: the root's reference binding `b: A` (l2_ref_bind_site) is kept before the root's rows are made
         # here, so that its row is made as every reference declaration's is (l2_rb_declaration, l2_own_decl_ty).  E is
         # made after every Structure it may name is registered; a method's binding is kept by its collection
@@ -14360,7 +14506,7 @@ fn: l2_scan_body (const: @(LmP0Structure body); int: mi; @: int seen) int
         if: retained >= 0
             field: l2_next_active(field\next)
             continue
-        if: l2_mad_on(mi) != 0 && l2_frame_head(stmt, "fn") != 0
+        if: l2_source_definition_method(l2_own_by_decl(mi, stmt)) >= 0
             field: l2_next_active(field\next)
             continue
         # An anonymous `---` block is a nested executable body, like an if body (§14, Q14 K); a closing `until` reads
@@ -17054,7 +17200,7 @@ fn: l2_source_container (@: LmP0Structure body; int: inert) @: L2SourceContainer
     @: LmP0Node node
     int: fid 0
     while: row != 0
-        if: row\view_kind = l2_construct_view_kind && row\view_index = l2_construct_view_index && row\body = body
+        if: row\view_kind = l2_construct_view_kind && row\view_index = l2_construct_view_index && row\body = body && (body != 0 || row\source_mi = l2_rw_mi)
             return: row
         row: row\allocated_next
     ---
@@ -17169,6 +17315,10 @@ return: 0
 fn: l2_own_computed (int: own) int
     @: L2Declaration declaration
     if: own < 0 || own >= l2_own_n
+        return: 0
+    # A written method's source occurrence is its descriptor/body producer,
+    # not a computed output operand or a mutable working-value cell.
+    if: l2_source_definition_method(own) >= 0
         return: 0
     if: l2_mres_of_own(own) >= 0
         return: 1
@@ -17720,10 +17870,12 @@ fn: l2_emit_ns_refs (int: k) int
         # A callable field borrows the selected ordinary method occurrence.
         # This reference does not establish a new ownership/parent edge.  The occurrence is a required place of the
         # unit the fill reads -- of a callable merge's partial copy of it, too: an absent one is the shared invariant.
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && l2_ns_payload_pass != 2 && (c.fprintf(l2_out, "        if: lmx_arena_ref_struct(l2_entry_unit, %uU) = 0\n", (cast: (unsigned) (l2_occ_slot(l2_nsf_ref[fx])))) < 0 || l2_emit_invariant("        ", "a field path reads an absent place") != 0)
-            return: 1
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && l2_ns_payload_pass != 2 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n        if: lmx_arena_ref_struct(l2_entry_unit, %uU)\\parent != %s\n            return: 1\n", k, (cast: (unsigned) oi), (cast: (unsigned) (l2_occ_slot(l2_nsf_ref[fx]))), (cast: (unsigned) (l2_occ_slot(l2_nsf_ref[fx]))), l2_m_lexparent(l2_nsf_ref[fx])) < 0
-            return: 1
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && l2_ns_payload_pass != 2 && l2_m_node[l2_nsf_ref[fx]] != l2_nsf_source[fx]
+            if: fputs("        l2_entry_leaf: ", l2_out) < 0 || l2_emit_build_occ(l2_nsf_ref[fx]) != 0 || fputs("\n        if: l2_entry_leaf = 0\n", l2_out) < 0 || l2_emit_invariant("        ", "a field path reads an absent place") != 0
+                return: 1
+            if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_nsp[%d], %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", k, (cast: (unsigned) oi)) < 0
+                return: 1
+            ---
         fx: fx + 1
     ---
 return: 0
@@ -17733,7 +17885,7 @@ return: 0
 fn: l2_ns_refs_note (int: k) int
     int: fx 0
     while: fx < l2_nsf_n
-        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && l2_use_unit_child(1, l2_nsf_ref[fx]) != 0
+        if: l2_nsf_owner[fx] = k && l2_nsf_kind[fx] = 4 && l2_m_node[l2_nsf_ref[fx]] != l2_nsf_source[fx] && l2_use_unit_child(1, l2_nsf_ref[fx]) != 0
             return: 1
         fx: fx + 1
     ---
@@ -17787,6 +17939,9 @@ return: ni
 # One original local root is attached to the exact field of its host source
 # container, even when the namespace collector stamped an outer method.
 fn: l2_source_definition_field (int: ni; int: kind; int: index; @@: L2SourceContainer owner) @: L2SourceField
+return: l2_source_definition_node_field(l2_ns_at[ni], kind, index, owner)
+
+fn: l2_source_definition_node_field (const: @(LmP0Node node); int: kind; int: index; @@: L2SourceContainer owner) @: L2SourceField
     @: L2SourceContainer row l2_source_containers
     @: L2SourceField field
     @: L2SourceField found 0
@@ -17795,9 +17950,9 @@ fn: l2_source_definition_field (int: ni; int: kind; int: index; @@: L2SourceCont
         if: row\view_kind = kind && (index < 0 || row\view_index = index) && row\inert = 0
             field: row\fields
             while: field != 0
-                if: l2_source_definition_ns(field\own) = ni
+                if: l2_own_decl[field\own] = node
                     if: found != 0
-                        l2_error(l2_src, l2_ns_at[ni], "internal: a source definition has two owning fields")
+                        l2_error(l2_src, node, "internal: a source definition has two owning fields")
                         return: 0
                     found: field
                     \owner: row
@@ -17828,21 +17983,27 @@ fn: l2_source_shell_emit (@: L2SourceContainer row; const: @(char root)) int
     ni: l2_m_nsof(mi)
     if: row\view_kind = 0
         scope: -1
-    if: row\root != 0 && ni >= 0 && l2_ns_local[ni] >= 0
-        field: l2_source_definition_field(ni, row\view_kind, scope, @ owner)
+    if: row\root != 0 && ((ni < 0 && l2_method_source_own(mi) >= 0) || (ni >= 0 && l2_ns_local[ni] >= 0))
+        if: ni >= 0
+            field: l2_source_definition_field(ni, row\view_kind, scope, @ owner)
+        else:
+            field: l2_source_definition_node_field(l2_m_node[mi], row\view_kind, scope, @ owner)
+        ---
         if: field = 0 || owner = 0
-            return: l2_error(l2_src, l2_ns_at[ni], "internal: a local source root has no owning field")
+            return: l2_error(l2_src, l2_m_node[mi], "internal: a local method has no owning source field")
         if: l2_source_shell_emit(owner, root) != 0
             return: 1
-        if: c.fprintf(l2_out, "        l2_nsp[%d]: lmx_struct_new_owned(l2_sc%zu, l2_program_arena)\n        if: l2_nsp[%d] = 0\n            return: 1\n", ni, owner\id, ni) < 0
+        if: c.fprintf(l2_out, "        @: Lmx l2_sc%zu lmx_struct_new_owned(l2_sc%zu, l2_program_arena)\n        if: l2_sc%zu = 0\n            return: 1\n", row\id, owner\id, row\id) < 0
             return: 1
-        if: row\width > 0 && c.fprintf(l2_out, "        if: lmx_arena_refs_open_owned(l2_program_arena, l2_nsp[%d], %uU) != 0\n            return: 1\n", ni, (cast: (unsigned) row\width)) < 0
+        if: row\width > 0 && c.fprintf(l2_out, "        if: lmx_arena_refs_open_owned(l2_program_arena, l2_sc%zu, %uU) != 0\n            return: 1\n", row\id, (cast: (unsigned) row\width)) < 0
             return: 1
-        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_sc%zu, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", owner\id, (cast: (unsigned) field\slot), ni) < 0
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_sc%zu, %uU, (cast: (@: void) l2_sc%zu)) != 0\n            return: 1\n", owner\id, (cast: (unsigned) field\slot), row\id) < 0
             return: 1
-        if: c.sprintf(spelling, "l2_nsp[%d]", ni) < 0 || l2_emit_source_name(spelling, l2_ns_name[ni], "        ", "return: 1", 0) != 0
+        # The original owning declaration names this source occurrence.
+        # An ordinary Structure's procedure need not have a method name.
+        if: c.sprintf(spelling, "l2_sc%zu", row\id) < 0 || l2_emit_source_name(spelling, l2_own_name[field\own], "        ", "return: 1", 0) != 0
             return: 1
-        if: c.fprintf(l2_out, "        @: Lmx l2_sc%zu l2_nsp[%d]\n", row\id, ni) < 0
+        if: ni >= 0 && c.fprintf(l2_out, "        l2_nsp[%d]: l2_sc%zu\n", ni, row\id) < 0
             return: 1
         ---
     else:
@@ -17901,7 +18062,7 @@ fn: l2_source_cells_emit (int: kind; int: index; const: @(char root)) int
                 return: 1
             field: row\fields
             while: field != 0
-                if: l2_source_ns_constructor(row, field\own) >= 0 || l2_source_definition_ns(field\own) >= 0
+                if: l2_source_ns_constructor(row, field\own) >= 0 || l2_source_definition_ns(field\own) >= 0 || l2_source_definition_method(field\own) >= 0
                     field: field\next
                     continue
                 if: l2_own_computed(field\own) != 0
@@ -17938,7 +18099,7 @@ fn: l2_source_fields_emit (int: kind; int: index) int
         if: row\inert = 0 && row\view_kind = kind && (index < 0 || row\view_index = index)
             field: row\fields
             while: field != 0
-                if: l2_source_ns_constructor(row, field\own) >= 0 || l2_source_definition_ns(field\own) >= 0
+                if: l2_source_ns_constructor(row, field\own) >= 0 || l2_source_definition_ns(field\own) >= 0 || l2_source_definition_method(field\own) >= 0
                     field: field\next
                     continue
                 if: l2_field_own_stmt(l2_own_decl[field\own], l2_own_mi[field\own]) != 0
@@ -18022,7 +18183,7 @@ fn: l2_source_callable_fill (@: L2SourceContainer source; int: phase) int
         ---
     ---
     l2_rw_cache_on: 1
-    if: bad = 0 && l2_rw_stmts(source\body\first_field, t, l2_m_head(mi), source, @ made) != 0
+    if: bad = 0 && source\body != 0 && l2_rw_stmts(source\body\first_field, t, l2_m_head(mi), source, @ made) != 0
         bad: 1
     if: bad = 0 && l2_rw_trailer(mi, t, l2_m_head(mi) + made, @ one) != 0
         bad: 1
@@ -18049,6 +18210,8 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
     @: L2SourceContainer local
     @: L2SourceField field
     int: ni
+    int: method
+    @: LmP0Structure body
     int: changed 1
     int: saved_mi l2_rw_mi
     if: phase = 0
@@ -18060,11 +18223,18 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
                     field: row\fields
                     while: field != 0
                         ni: l2_source_definition_ns(field\own)
+                        method: l2_source_definition_method(field\own)
+                        body: 0
                         if: ni >= 0 && l2_ns_local[ni] >= 0
-                            l2_rw_mi: l2_ns_proc[ni]
-                            local: l2_source_container(l2_ns_source_body(ni), 0)
+                            method: l2_ns_proc[ni]
+                            body: l2_ns_source_body(ni)
+                        if: ni < 0 && method >= 0 && l2_m_body[method] != 0
+                            body: l2_m_body[method]\as\structure
+                        if: method >= 0
+                            l2_rw_mi: method
+                            local: l2_source_container(body, 0)
                             if: local = 0
-                                return: l2_alloc_or(l2_src, l2_ns_at[ni], "a retained callable source could not be allocated")
+                                return: l2_alloc_or(l2_src, l2_m_node[method], "a retained callable source could not be allocated")
                             if: local\root = 0
                                 local\root: 1
                                 if: l2_source_callable_fill(local, phase) != 0
@@ -18083,7 +18253,7 @@ fn: l2_source_definition_roots (int: kind; int: index; int: phase) int
         while: row != 0
             if: row\view_kind = kind && row\view_index = index && row\inert = 0 && row\root != 0
                 ni: l2_m_nsof(row\source_mi)
-                if: ni >= 0 && l2_ns_local[ni] >= 0 && l2_source_callable_fill(row, phase) != 0
+                if: ((ni >= 0 && l2_ns_local[ni] >= 0) || (ni < 0 && l2_method_source_own(row\source_mi) >= 0)) && l2_source_callable_fill(row, phase) != 0
                     return: 1
                 ---
             ---
@@ -18102,13 +18272,23 @@ fn: l2_node_graph_stop (int: mi; @@: L2GraphPlace stop) int
     int: index -1
     @: L2SourceContainer owner 0
     \stop: 0
-    if: ni < 0 || l2_ns_source_body(ni) = 0 || (l2_ns_local[ni] < 0 && l2_ns_parent[ni] < 0)
+    if: ni < 0 && l2_method_source_own(mi) < 0
+        return: 0
+    if: ni >= 0 && (l2_ns_source_body(ni) = 0 || (l2_ns_local[ni] < 0 && l2_ns_parent[ni] < 0))
         return: 0
     if: l2_construct_phase > 0 && l2_construct_view_kind != 0
         kind: l2_construct_view_kind
         index: l2_construct_view_index
-    if: l2_source_definition_field(ni, kind, index, @ owner) = 0 || owner = 0
-        return: l2_error(l2_src, l2_ns_at[ni], "internal: a lexical parent has no source owner")
+    if: ni >= 0
+        if: l2_source_definition_field(ni, kind, index, @ owner) = 0
+            return: l2_error(l2_src, l2_ns_at[ni], "internal: a lexical parent has no source owner")
+        ---
+    else:
+        if: l2_source_definition_node_field(l2_m_node[mi], kind, index, @ owner) = 0
+            return: l2_error(l2_src, l2_m_node[mi], "internal: a lexical parent has no source owner")
+        ---
+    if: owner = 0
+        return: l2_error(l2_src, l2_m_node[mi], "internal: a lexical parent has no source owner")
     \stop: owner\place
 return: 0
 
@@ -18549,7 +18729,7 @@ fn: l2_occ_tail_rank (int: mi) int
     int: i 0
     int: count 0
     while: i < mi
-        if: i != l2_e && l2_m_nsof(i) < 0 && l2_source_unit_slot(l2_m_node[i]) < 0
+        if: i != l2_e && l2_m_nsof(i) < 0 && l2_method_source_own(i) < 0 && l2_source_unit_slot(l2_m_node[i]) < 0
             count: count + 1
         i: i + 1
 return: count
@@ -21438,6 +21618,11 @@ fn: l2_model_inst (int: mi; int: ni; const: @(char ind); @: L2Tx dest) int
         return: 1
     if: l2_ns_local[ni] < 0
         return: l2_type_inst(ni, dest)
+    if: l2_recv_unit != 0
+        oi: l2_model_root_own(ni)
+        if: oi < 0 || l2_tx_clear(dest) != 0
+            return: l2_error(l2_src, l2_ns_at[ni], "internal: a receiving local model has no source field")
+        return: l2_occ_field_expr_append(oi, l2_recv_unit, dest)
     if: l2_ns_parent[ni] >= 0
         if: l2_model_inst(mi, l2_ns_parent[ni], ind, dest) != 0
             return: 1
@@ -23292,7 +23477,7 @@ fn: l2_emit_method_fields_at (int: oi; const: @(char holder); size_t: child) int
                 return: 1
             j: j + 1
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 4
-            if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", (cast: (unsigned) j), (cast: (unsigned) l2_occ_slot(l2_nsf_ref[fx]))) < 0
+            if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) ", (cast: (unsigned) j)) < 0 || l2_emit_build_occ(l2_nsf_ref[fx]) != 0 || fputs(")) != 0\n            return: 1\n", l2_out) < 0
                 return: 1
             j: j + 1
         if: l2_nsf_owner[fx] = ni && l2_nsf_kind[fx] = 2
@@ -23327,13 +23512,15 @@ fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
     int: j
     if: node = 0 || me < 0
         return: 0
+    if: l2_method_declaration_name(node) != 0
+        return: 0
     # §12 (Q45 and its additions: a named Structure is a procedure, its body a method's body): a receiver's
     # call is a statement of the body, not a field -- a method of the unit, wherever it stands (methods are
     # visible both ways, l2_unit_names_method), or a word of the language: `return`, `if`, `catch: e` declare
     # no field (l2_ns_decl_first, K03 S5).  A `return: n` is one of them: the check says what it
     # says of every callable that returns nothing, in any place of the body.
     if: node\kind = c.LM_P0_NODE_FRAME && node\as != 0 && node\as\frame != 0 && node\as\frame\head != 0
-        if: l2_find_method(node\as\frame\head) >= 0 || l2_unit_names_method(node\as\frame\head) != 0
+        if: l2_site_method(l2_ns_take_mi, node\as\frame\head) >= 0 || l2_root_names_method(l2_ns_at[me]\as\frame\body, node\as\frame\head) != 0 || l2_unit_names_method(node\as\frame\head) != 0
             return: 1
         # Only a declaration is a field -- the typed shapes l2_take_ns_body takes (l2_ns_decl_first), a nested
         # definition, a binding; an item of any other shape -- `cells[1]: …`, `x\f: …`, `g: 5` with g declared
@@ -23471,6 +23658,15 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
         if: fld = 0 || fld\kind != c.LM_P0_NODE_FRAME || fld\as = 0 || fld\as\frame = 0 || fld\as\frame\body = 0
             return: l2_error(path, at, "unsupported named Structure field")
         g: l2_next_active(fld\as\frame\body\first_field)
+        fname: l2_method_declaration_name(fld)
+        if: fname != 0
+            if: l2_bind_admit(fname, l2_bind_at(fld, fname), path) != 0 || l2_nsf_push(4, 0U, -1, me, fld) < 0
+                return: 1
+            l2_nsf_fname[l2_nsf_n - 1]: fname
+            l2_nsf_name[l2_nsf_n - 1]: fname
+            count: count + 1
+            f: l2_next_active(f\next)
+            continue
         # K03 NS-ROLES-2 (Codex K03-NS-ROLES-2-20261007-20; docs/LMX_semantics.en.md#resolved-head-consumption): the
         # binding `b: A`, b absent, A a named Structure visible here, declares b as the root's and a method's binding
         # does (NS-ROLES-1): a typed reference cell -- the `@: A b` storage, kind 10 -- holding A itself, no copy, no
@@ -24170,7 +24366,6 @@ return: 0
 fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     int: fi
     int: m
-    int: ty
     int: k
     \out_fi: -1
     # K03 NS-ROLES-1b: a field bound by `b: tick` -- the site's own, or the unit's seen from a method -- calls tick, on
@@ -24178,20 +24373,20 @@ fn: l2_call_head_method (int: mi; const: @(LmP0Text head); @: int out_fi) int
     k: l2_call_alias_own(mi, head)
     if: k >= 0
         return: l2_rb_meth_of(l2_own_decl[k])
-    if: l2_resolved_own(mi, head) >= 0
-        return: -1
-    fi: l2_formal_find(mi, head)
-    \out_fi: fi
-    if: fi >= 0
-        return: l2_cf_get(mi, fi)
-    # Even an as-yet untyped hidden input is a real binding.
-    if: l2_param_find(mi, head) >= 0 || l2_colon_bound_ty(mi, head, @ ty) = 0 || l2_slot_find(mi, head) >= 0 || l2_ml_find(head) >= 0
-        return: -1
-    m: l2_head_method(mi, head)
-    if: m >= 0
-        \out_fi: 0 - 1
+    # The shared head resolution decides whether the visible binding is a
+    # method. A method's source field is not an ordinary reference that
+    # shadows its own callable declaration; noncallable bindings still are.
+    k: l2_head_resolve(mi, head, @ m, 0)
+    if: k = 2
+        return: m
+    if: k = 3 && l2_resolved_own(mi, head) < 0
+        fi: l2_formal_find(mi, head)
+        if: fi >= 0
+            \out_fi: fi
+            return: l2_cf_get(mi, fi)
+        ---
     ---
-return: m
+return: -1
 
 # The existing callable code selected by a field path, including an ordinary
 # named body's procedure. Selection does not execute the leaf. A discarded
@@ -26302,7 +26497,12 @@ fn: l2_ns_resolve_refs (const: @(char path); const: @(LmP0Node at)) int
         if: l2_nsf_kind[k] = 10 && l2_nsf_val[k] != 0U && l2_ns_eternal[l2_nsf_owner[k]] >= 0 && l2_ns_eternal[(cast: (int) l2_nsf_val[k]) - 1] < 0
             return: l2_error(rpath, l2_ref_tail_node(l2_nsf_source[k]), "an eternal branch cannot reference mutable storage")
         if: l2_nsf_kind[k] = 4 && l2_nsf_ref[k] < 0
-            n: l2_find_method(l2_nsf_name[k])
+            n: l2_method_by_source(l2_nsf_source[k])
+            if: n < 0 && l2_method_declaration_name(l2_nsf_source[k]) != 0
+                k: k + 1
+                continue
+            if: n < 0
+                n: l2_site_method(l2_ns_proc[l2_nsf_owner[k]], l2_nsf_name[k])
             if: n < 0
                 return: l2_error(rpath, rat, "unknown callable field")
             if: l2_ns_eternal[l2_nsf_owner[k]] >= 0
@@ -26873,8 +27073,9 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
         return: l2_error(path, fn_node, "end target does not match close target")
     if: anon = 0 && is_sub != 0 && l2_fn_close(fr, nm, "sub") != 0
         return: l2_error(path, fn_node, "end target does not match close target")
-    if: l2_find_method(nm) >= 0
-        return: l2_dup_method(path, fn_node, l2_find_method(nm))
+    j: l2_method_duplicate(fn_node, nm, lexical_mi)
+    if: j >= 0
+        return: l2_dup_method(path, fn_node, j)
     if: nm\length >= 63U
         return: l2_error(path, fn_node, "name too long")
     if: anon = 0
@@ -27004,11 +27205,16 @@ fn: l2_collect_method_body (const: @(LmP0Node fn_node); const: @(char path); int
     l2_m_sig[l2_m_n]: 0U
     l2_m_own[l2_m_n]: 0
     l2_m_sn[l2_m_n]: 0
-    if: body != 0 && l2_collect_decls(body\as\structure, l2_m_n, path, 0, @ sn) != 0
-        return: 1
-    l2_m_sn[l2_m_n]: sn
     me: l2_m_n
     l2_m_n: l2_m_n + 1
+    if: l2_mad_ensure(l2_m_n) != 0
+        return: l2_error(path, fn_node, "out of memory")
+    l2_mad_host[me]: lexical_mi
+    l2_scope_n: 0
+    l2_vis_method(me)
+    if: body != 0 && l2_collect_decls(body\as\structure, me, path, 0, @ sn) != 0
+        return: 1
+    l2_m_sn[me]: sn
     if: is_sub = 0 && ret_node != 0 && l2_frame_head(ret_node, "fn") != 0
         if: l2_mad_take_nested(me, (cast: (@: LmP0Node) body), path) != 0
             return: 1
@@ -28936,7 +29142,7 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
         if: l2_pap_on(mi) != 0 && l2_frame_head(stmt, "merge") != 0
             field: l2_next_active(field\next)
             continue
-        if: l2_mad_on(mi) != 0 && l2_frame_head(stmt, "fn") != 0
+        if: l2_source_definition_method(l2_own_by_decl(mi, stmt)) >= 0
             field: l2_next_active(field\next)
             continue
         # D-93: the host's `return: model` standing as a statement of its body (after other
@@ -31950,7 +32156,9 @@ fn: l2_cfl_classes (int: c; int: t; const: @(LmP0Node at); @: int out) int
         return: l2_error(l2_src, at, "a call through a callable formal that receives a callable this translation does not follow is not built yet")
     n: l2_cfl_count(c, t)
     while: i < n
-        if: l2_lex_depth_at(l2_cfl_at(c, t, i), l2_e, 0) < 0
+        # -2 is the explicit pre-PLACE deferred result. No depth/address is
+        # guessed here; the completed source relation is validated below.
+        if: l2_lex_depth_at(l2_cfl_at(c, t, i), l2_e, 0) = -1
             return: l2_error(l2_src, at, "a callable formation has no resolved receiving unit before source placement")
         if: l2_cfl_class_of(c, t, l2_cfl_at(c, t, i)) = l2_cfl_at(c, t, i)
             k: k + 1
@@ -31969,10 +32177,17 @@ fn: l2_cfl_receiving_validate () int
     int: i 0
     int: mi
     int: depth
+    # This proof is of completed places in an emitted source unit. With no
+    # unit occurrence there is no unit-relative construction to validate;
+    # an unfollowed external callable is refused at its actual call site.
+    if: l2_e < 0
+        return: 0
     while: i < l2_cfr_n
         mi: l2_cfr_m[i]
         if: mi >= 0
             depth: l2_lex_depth_at(mi, l2_e, 0)
+            if: l2_lex_depth(mi, l2_e) < 0
+                return: l2_error(l2_method_src(mi, l2_src), l2_m_node[mi], "internal: a receiving class has no completed lexical projection")
             if: depth >= 0 && depth != l2_lex_depth(mi, l2_e)
                 return: l2_error(l2_method_src(mi, l2_src), l2_m_node[mi], "internal: a receiving class changed its lexical projection after source placement")
             ---
@@ -32788,6 +33003,19 @@ fn: l2_lex_parent (int: mi; @: int links) int
     if: mi < 0 || mi >= l2_m_n || mi = l2_e
         return: -1
     ni: l2_m_nsof(mi)
+    if: ni < 0 && l2_method_source_own(mi) >= 0
+        field: l2_source_definition_node_field(l2_m_node[mi], 0, -1, @ owner)
+        if: field = 0 || owner = 0
+            return: -2
+        place: owner\place
+        while: place != 0
+            if: \links = c.INT_MAX
+                return: -2
+            \links: \links + 1
+            place: place\parent
+        ---
+        return: owner\source_mi
+    ---
     if: ni >= 0
         if: l2_ns_local[ni] >= 0
             field: l2_source_definition_field(ni, 0, -1, @ owner)
@@ -32827,7 +33055,7 @@ fn: l2_lex_depth_at (int: mi; int: ancestor; int: committed) int
             return: depth
         # Local source-container links do not exist before PLACE. They are
         # deferred, never silently counted as one link or a global unit.
-        if: committed = 0 && l2_m_nsof(mi) >= 0 && l2_ns_local[l2_m_nsof(mi)] >= 0
+        if: committed = 0 && ((l2_m_nsof(mi) >= 0 && l2_ns_local[l2_m_nsof(mi)] >= 0) || l2_method_source_own(mi) >= 0)
             return: -2
         mi: l2_lex_parent(mi, @ links)
         if: depth > c.INT_MAX - links
@@ -33045,6 +33273,8 @@ fn: l2_prep (const: @(LmP0Node node); int: mi; const: @(char ind); @: L2Tx dest)
             return: l2_emit_call(node, l2_rb_meth_of(l2_own_decl[l2_call_alias_own(mi, node\as\atom)]), 1, 0 - 1, 0, mi, ind, dest, 0)
         # D-10 (steps/defects.md): the l2_own_find fallback here was dead --
         # see l2_check_sizeof's copy of this reasoning above.
+        if: l2_head_is_method_call(mi, node\as\atom) != 0
+            return: l2_emit_call(node, l2_site_method(mi, node\as\atom), 0, 0 - 1, 0, mi, ind, dest, 0)
         idx: l2_own_visible(mi, node\as\atom)
         if: idx >= 0 && l2_own_is_array(l2_own_ty[idx]) != 0
             return: l2_emit_array_desc(idx, ind, dest)
@@ -33399,6 +33629,12 @@ return: 0
 fn: l2_occ_hops (int: m) int
     int: h 0
     int: steps 0
+    int: ni l2_m_nsof(m)
+    # A written declaration descends through all of its physical source
+    # holders, including anonymous blocks and header/body containers.
+    # Lexical method nesting alone is not the number of parent edges.
+    if: l2_method_source_own(m) >= 0 || (ni >= 0 && l2_ns_local[ni] >= 0)
+        return: l2_use_occ_slots(m, 0)
     while: m >= 0 && m < l2_m_n && m != l2_e && steps <= l2_m_n
         if: l2_m_nsof(m) >= 0
             if: l2_ns_parent[l2_m_nsof(m)] >= 0 || l2_ns_eternal[l2_m_nsof(m)] >= 0
@@ -33419,9 +33655,9 @@ return: 0
 # K04 S2 / COPIED-METHOD-DECLARED-FORMAL: the class of the occurrence a call through callable formal fi of mi
 # selected, chosen once, right after that occurrence is captured (l2_c<self_t>) and before any actual is evaluated,
 # so that no actual's effect can change it: class k when the occurrence is the child its holder keeps at a member's
-# slot -- reached by its parents (l2_occ_hops), the unit and any copy of it alike, a copy sharing the original's
+# physical source path -- reached by its parents (l2_occ_hops), the unit and any copy of it alike, a copy sharing the original's
 # code but not its parent -- or, for a member whose holder its parents do not reach, the occurrence the unit this
-# method reads holds (l2_tok_method_occ).  One child per slot and one slot per method: at most one member holds it.
+# method reads holds (l2_tok_method_occ). One physical path per method, not one guessed unit-tail slot.
 # Every class is tested and none is a remainder; an absent occurrence, and one no class holds, stop at the shared
 # invariant.
 fn: l2_emit_call_select (int: mi; int: fi; int: self_t; const: @(char ind)) int
@@ -33433,6 +33669,7 @@ fn: l2_emit_call_select (int: mi; int: fi; int: self_t; const: @(char ind)) int
     int: h
     int: head
     []: char occ_own 256
+    []: char unit_name 64
     L2Tx: occ_tx
     @: L2Tx occ l2_tx_local(@ occ_tx, occ_own, 256U)
     if: c.fprintf(l2_out, "%sif: l2_c%d = 0\n", ind, self_t) < 0 || l2_emit_invariant(ind, "a call through a callable formal has no occurrence") != 0
@@ -33449,6 +33686,8 @@ fn: l2_emit_call_select (int: mi; int: fi; int: self_t; const: @(char ind)) int
             m: l2_cfl_at(mi, fi, j)
             if: l2_cfl_class_of(mi, fi, m) = head
                 h: l2_occ_hops(m)
+                if: h < 0
+                    return: l2_error(l2_src, l2_m_node[m], "internal: a callable class has no physical source path")
                 if: h > 0
                     if: c.fprintf(l2_out, "%sl2_cfu%d: l2_c%d\n", ind, self_t, self_t) < 0
                         return: 1
@@ -33457,7 +33696,9 @@ fn: l2_emit_call_select (int: mi; int: fi; int: self_t; const: @(char ind)) int
                             return: 1
                         h: h - 1
                     ---
-                    if: c.fprintf(l2_out, "%sif: l2_cfk%d < 0 && l2_cfu%d != 0 && lmx_arena_ref_struct(l2_cfu%d, %uU) = l2_c%d\n%s    l2_cfk%d: %d\n", ind, self_t, self_t, self_t, (cast: (unsigned) (l2_occ_slot(m))), self_t, ind, self_t, k) < 0
+                    if: c.snprintf(unit_name, 64U, "l2_cfu%d", self_t) < 0 || l2_occ_expr(m, unit_name, occ) != 0
+                        return: 1
+                    if: c.fprintf(l2_out, "%sif: l2_cfk%d < 0 && l2_cfu%d != 0 && %s = l2_c%d\n%s    l2_cfk%d: %d\n", ind, self_t, self_t, occ\data, self_t, ind, self_t, k) < 0
                         return: 1
                     ---
                 else:
@@ -33608,6 +33849,9 @@ return: 0
 
 fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @(LmP0Structure body); int: mi; const: @(char ind); @: L2Tx dest; int: edge) int
     L2ReferenceSource: source
+    []: char selected_local 128
+    L2Tx: selected_text
+    @: L2Tx selected l2_tx_local(@ selected_text, selected_local, 128U)
     @: LmP0Field a0 0
     int: t
     int: self_t
@@ -33645,11 +33889,13 @@ fn: l2_emit_call (const: @(LmP0Node node); int: idx; int: sel; int: fi; const: @
             return: l2_mad_unwalkable(mi, idx)
         mcall: 1
         sel: 2
-        if: c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_occ_slot(idx)))) < 0
+        if: l2_occ_expr(idx, l2_unit_ref, selected) != 0 || c.fprintf(l2_out, "%s@: Lmx l2_c%d %s\n", ind, self_t, selected\data) < 0
             return: 1
         ---
-    if: sel = 0 && c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_occ_slot(idx)))) < 0
-        return: 1
+    if: sel = 0
+        if: l2_occ_expr(idx, l2_unit_ref, selected) != 0 || c.fprintf(l2_out, "%s@: Lmx l2_c%d %s\n", ind, self_t, selected\data) < 0
+            return: 1
+        ---
     if: sel = 1 && c.fprintf(l2_out, "%s@: Lmx l2_c%d l2_pst\n", ind, self_t) < 0
         return: 1
     ---
@@ -33822,12 +34068,49 @@ return: l2_occ_expr(idx, l2_unit_ref, dest)
 
 # The physical occurrence selected from an already constructed unit.
 fn: l2_occ_expr (int: mi; const: @(char unit); @: L2Tx dest) int
+    if: l2_tx_clear(dest) != 0
+        return: 1
+return: l2_occ_expr_append(mi, unit, dest)
+
+fn: l2_occ_expr_append (int: mi; const: @(char unit); @: L2Tx dest) int
     []: char nm 32
+    int: own l2_method_source_own(mi)
+    int: ni l2_m_nsof(mi)
     if: mi = l2_e
-        return: l2_tx_set(dest, unit)
+        return: l2_tx_cat(dest, unit)
+    if: ni >= 0 && l2_ns_local[ni] >= 0
+        own: l2_model_root_own(ni)
+        if: own < 0
+            return: l2_error(l2_src, l2_ns_at[ni], "internal: a local callable has no physical source owner")
+        ---
+    if: own >= 0
+        if: l2_own_mi[own] = mi
+            return: l2_error(l2_src, l2_m_node[mi], "internal: a method has no physical source owner")
+        return: l2_occ_field_expr_append(own, unit, dest)
+    if: ni >= 0 && l2_ns_parent[ni] >= 0
+        if: l2_tx_cat(dest, "lmx_arena_ref_struct(") != 0 || l2_occ_expr_append(l2_ns_proc[l2_ns_parent[ni]], unit, dest) != 0 || c.snprintf(nm, 32U, ", %uU)", (cast: (unsigned) l2_ns_field_in_parent(ni))) < 0
+            return: 1
+        return: l2_tx_cat(dest, nm)
     if: c.snprintf(nm, 32U, ", %uU)", (cast: (unsigned) l2_occ_slot(mi))) < 0
         return: 1
-return: l2_tx_join(dest, "lmx_arena_ref_struct(", unit, nm, 0, 0)
+return: l2_tx_cat(dest, "lmx_arena_ref_struct(") != 0 || l2_tx_cat(dest, unit) != 0 || l2_tx_cat(dest, nm) != 0
+
+fn: l2_occ_field_expr_append (int: own; const: @(char unit); @: L2Tx dest) int
+    @: L2GraphField field l2_graph_field(own)
+    []: char suffix 48
+    if: field = 0
+        return: l2_error(l2_src, l2_own_decl[own], "internal: an occurrence field has no source place")
+    if: l2_tx_cat(dest, "lmx_arena_ref_struct(") != 0 || l2_occ_place_expr_append(l2_own_mi[own], unit, field\holder, dest) != 0 || c.snprintf(suffix, 48U, ", %zuU)", field\child) < 0
+        return: 1
+return: l2_tx_cat(dest, suffix)
+
+fn: l2_occ_place_expr_append (int: mi; const: @(char unit); @: L2GraphPlace place; @: L2Tx dest) int
+    []: char suffix 48
+    if: place = 0
+        return: l2_occ_expr_append(mi, unit, dest)
+    if: l2_tx_cat(dest, "lmx_arena_ref_struct(") != 0 || l2_occ_place_expr_append(mi, unit, place\parent, dest) != 0 || c.snprintf(suffix, 48U, ", %zuU)", place\child) < 0
+        return: 1
+return: l2_tx_cat(dest, suffix)
 
 # Stream an occurrence only inside the builder, after its allocation phase.
 # Namespace aliases already name their real parented objects; no nested path
@@ -33836,6 +34119,10 @@ return: l2_tx_join(dest, "lmx_arena_ref_struct(", unit, nm, 0, 0)
 fn: l2_emit_build_occ (int: mi) int
     int: ni
     int: slot
+    []: char expression_own 256
+    L2Tx: expression_tx
+    @: L2Tx expression l2_tx_local(@ expression_tx, expression_own, 256U)
+    @: L2SourceContainer source l2_source_containers
     if: mi < 0 || mi >= l2_m_n
         return: l2_error(l2_src, 0, "internal: invalid construction occurrence")
     if: mi = l2_e
@@ -33843,6 +34130,26 @@ fn: l2_emit_build_occ (int: mi) int
     ni: l2_m_nsof(mi)
     if: ni >= 0
         return: (cast: (int) (c.fprintf(l2_out, "l2_nsp[%d]", ni) < 0))
+    if: l2_method_source_own(mi) >= 0
+        while: source != 0
+            if: source\root != 0 && source\source_mi = mi && source\view_kind = l2_construct_view_kind && (source\view_kind = 0 || source\view_index = l2_construct_view_index)
+                if: source\shell_state != 2
+                    return: l2_error(l2_src, l2_m_node[mi], "internal: a source method has not been allocated")
+                return: (cast: (int) (c.fprintf(l2_out, "l2_sc%zu", source\id) < 0))
+            source: source\allocated_next
+        ---
+        # An external dependency of a projected view is reached through that
+        # constructor's supplied unit, whose use closure retained its place.
+        # It is not a declaration owned by the view and is not rebuilt there.
+        source: l2_source_containers
+        while: source != 0
+            if: source\root != 0 && source\source_mi = mi && source\view_kind = 0
+                if: l2_construct_view_kind = 0 || expression = 0 || l2_occ_expr(mi, "l2_entry_unit", expression) != 0
+                    return: l2_error(l2_src, l2_m_node[mi], "internal: a source method is absent from its selected construction")
+                return: (cast: (int) (fputs(expression\data, l2_out) < 0))
+            source: source\allocated_next
+        ---
+        return: l2_error(l2_src, l2_m_node[mi], "internal: a method has no construction source root")
     slot: l2_occ_slot(mi)
     if: slot < 0
         return: l2_error(l2_src, l2_m_node[mi], "internal: a construction occurrence has no source slot")
@@ -35057,7 +35364,9 @@ fn: l2_rw_input_witness (int: parent; int: slot; int: mi; int: j) int
     # In a merge's view the witness is the program's occurrence or Structure (l2_rw_types_unit, l2_rw_types_nsp),
     # not the copy's (steps/defects.md, T7-MODEL-OPERAND-SOURCE).
     if: l2_rw_emit != 0 && callable >= 0
-        return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) lmx_arena_ref_struct(%s, %uU))) != 0\n            return: 1\n", parent, slot, l2_rw_types_unit(), (cast: (unsigned) (l2_occ_slot(callable)))) < 0))
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) ", parent, slot) < 0 || l2_emit_build_occ(callable) != 0
+            return: 1
+        return: (cast: (int) (fputs(")) != 0\n            return: 1\n", l2_out) < 0))
     if: l2_rw_emit != 0 && model >= 0 && l2_input_is_descriptor(mi, j) != 0
         return: (cast: (int) (c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, %dU, (cast: (@: void) %s[%d])) != 0\n            return: 1\n", parent, slot, l2_rw_types_nsp(), model) < 0))
     # A foreign by-value input is native C storage with no graph cell. Its
@@ -35650,7 +35959,7 @@ fn: l2_rw_opty (const: @(LmP0Node node)) int
     if: l2_t7_walk != 0 && l2_t7_arg_ty(t) >= 0
         return: l2_t7_arg_ty(t)
     idx: l2_call_head_method(l2_rw_mi, t, @ formal)
-    if: idx >= 0 && formal >= 0 && l2_cf_get(l2_rw_mi, formal) >= 0
+    if: idx >= 0 && idx != l2_e
         return: l2_rw_call_ty(idx)
     if: l2_colon_bound_ty(l2_rw_mi, t, @ ty) = 0
         return: l2_own_ty_of_param(ty)
@@ -36590,6 +36899,8 @@ fn: l2_use_unit_child (int: kind; int: v) int
         return: l2_error(l2_src, 0, "internal: a use names an unknown unit child")
     if: kind = 7
         d: l2_use_ns_depth(v)
+    if: kind = 1 && l2_method_source_own(v) >= 0
+        return: l2_use_cell_note(10, l2_method_source_own(v))
     if: d = 0
         return: 0
     tags: (cast: (@: int) calloc((cast: (size_t) d), c.sizeof(c.int)))
@@ -36662,6 +36973,49 @@ fn: l2_use_ns_slots (int: ni; @: int s) int
     ---
 return: d
 
+# The same physical occurrence selected by native/walker construction, as a
+# unit-relative edge chain for the existing merge-use closure. Source-owned
+# declarations descend through their actual owner and physical holder.
+fn: l2_use_occ_slots (int: mi; @: int s) int
+    int: ni
+    int: n
+    int: below
+    @: L2SourceContainer owner 0
+    @: L2SourceField source 0
+    @: L2GraphField place 0
+    if: mi < 0 || mi >= l2_m_n
+        return: -1
+    if: mi = l2_e
+        return: 0
+    ni: l2_m_nsof(mi)
+    if: ni >= 0 && l2_ns_local[ni] >= 0
+        source: l2_source_definition_field(ni, 0, -1, @ owner)
+    if: ni < 0 && l2_method_source_own(mi) >= 0
+        source: l2_source_definition_node_field(l2_m_node[mi], 0, -1, @ owner)
+    if: source != 0 && owner != 0
+        place: @ source\place
+        n: l2_use_occ_slots(owner\source_mi, s)
+        below: l2_use_place_below(place\holder, 0, 0)
+        if: n < 0 || below < 0 || place\child > (cast: (size_t) c.INT_MAX)
+            return: -1
+        if: s != 0
+            if: l2_use_place_below(place\holder, 0, s + n) != below
+                return: -1
+            ---
+            s[n + below]: (cast: (int) place\child)
+        return: n + below + 1
+    ---
+    if: (ni >= 0 && l2_ns_local[ni] >= 0) || (ni < 0 && l2_method_source_own(mi) >= 0)
+        return: -1
+    if: ni >= 0
+        n: l2_use_ns_slots(ni, s)
+        if: n <= 0
+            return: -1
+        return: n
+    if: s != 0
+        s[0]: l2_occ_slot(mi)
+return: 1
+
 # Own field oi's cell as the walk addresses it, its slots from the unit into s[0..) when s is given, their count (0 when
 # the field has no place, or a slot does not fit the int slot vocabulary): a field held in a graph place through its
 # owner's occurrence as the builder streams it (l2_emit_build_occ: none for the root, l2_nsp for a named Structure's
@@ -36680,17 +37034,9 @@ fn: l2_use_cell_slots (int: form; int: oi; @: int s) int
         return: 0
     owner: l2_own_mi[oi]
     if: field\holder != 0
-        if: owner != l2_e && l2_m_nsof(owner) >= 0
-            n: l2_use_ns_slots(l2_m_nsof(owner), s)
-            if: n = 0
-                return: 0
-            ---
-        ---
-        if: owner != l2_e && l2_m_nsof(owner) < 0
-            if: s != 0
-                s[0]: l2_occ_slot(owner)
-            n: 1
-        ---
+        n: l2_use_occ_slots(owner, s)
+        if: n < 0
+            return: 0
         k: l2_use_place_below(field\holder, 0, 0)
         if: k < 0
             return: 0
@@ -36699,9 +37045,10 @@ fn: l2_use_cell_slots (int: form; int: oi; @: int s) int
         n: n + k
     else:
         if: form = 10 || (owner != l2_e && l2_m_nsof(owner) < 0)
-            if: s != 0
-                s[0]: l2_occ_slot(owner)
-            n: 1
+            n: l2_use_occ_slots(owner, s)
+            if: n < 0
+                return: 0
+            ---
         else:
             k: l2_m_file(owner)
             if: k >= 0 && l2_part_ns[k] >= 0 && owner = l2_ns_proc[l2_part_ns[k]]
@@ -36863,6 +37210,7 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
     int: base
     int: kind
     int: uslot
+    int: source_own
     @: L2GraphPlace stop
     @: L2GraphPlace place
     @: L2GraphField field
@@ -36893,6 +37241,9 @@ fn: l2_rw_path_value (@: int path; int: level; int: parent; @: int out) int
         # path[1] is a named Structure's number only for a named Structure: a method's (3) is not
         # one, and ranking it among the named Structures read past them.
         if: path[0] = 3
+            source_own: l2_method_source_own(path[1])
+            if: source_own >= 0
+                return: l2_rw_callee_at(parent, l2_own_mi[source_own], source_own, out)
             uslot: l2_occ_slot(path[1])
         else:
             if: path[0] = 4
@@ -37038,13 +37389,7 @@ fn: l2_rw_reference_model (@: int path; int: field_level; int: req; int: parent;
             return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %dU) != c.LMX_WALK_OK\n            return: 1\n", \out, child) < 0))
         ---
         if: l2_ns_local[req] >= 0
-            child: l2_model_root_own(req)
-            if: child < 0
-                return: 1
-            l2_rw_type_base: (cast: (int) (l2_t7_walk != 0))
-            status: l2_rw_own(parent, child, out)
-            l2_rw_type_base: 0
-            return: status
+            return: l2_rw_local_model(parent, req, l2_rw_mi, out)
         ---
         if: l2_rw_frame(parent, "LMX_WALK_OP_LIT", 2, out) != 0
             return: 1
@@ -39764,7 +40109,7 @@ return: 0
 fn: l2_rw_recv_req (int: tmi; int: tk; int: req) int
     if: tmi < 0 || tmi >= l2_m_n || tk < 0 || tk >= l2_m_arity[tmi] + l2_m_dyn[tmi]
         return: 0
-    if: req < 0 || req >= l2_ns_n || l2_schema_kind(req) != 1 || l2_ns_local[req] >= 0
+    if: req < 0 || req >= l2_ns_n || l2_schema_kind(req) != 1
         return: 0
     if: tk < l2_m_arity[tmi]
         return: (cast: (int) (l2_nsty_get(tmi, tk) >= 0))
@@ -39773,6 +40118,31 @@ return: l2_free_admit(tmi, tk - l2_m_arity[tmi])
 # The requirement of a RECEIVING admission uses the same model operand.
 fn: l2_rw_recv_model (int: admit; int: req; int: callee) int
 return: l2_rw_ns_model(admit, 4, req, callee)
+
+# Project a local declaration from the actual selected body/receiver. This is
+# an expression over existing source fields, not a construction-time alias.
+fn: l2_rw_local_model (int: parent; int: req; int: callee; @: int out) int
+    int: selected req
+    int: depth
+    int: projection
+    int: holder
+    @: L2SourceField source 0
+    @: L2GraphField place 0
+    if: callee < 0
+        callee: l2_rw_mi
+    if: l2_model_selected_root(callee, req, -1, (cast: (int) (l2_construct_phase != 0)), @ selected, @ depth, @ source) != 0 || source = 0
+        return: l2_rw_refuse(l2_here_node, "an unresolved local admission model")
+    if: l2_rw_frame(parent, "LMX_WALK_OP_OF", 3, out) != 0 || l2_rw_frame(\out, "LMX_WALK_OP_NODE", 2, @ projection) != 0
+        return: 1
+    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 1U, %dU) != c.LMX_WALK_OK\n            return: 1\n", projection, depth) < 0
+        return: 1
+    holder: projection
+    place: @ source\place
+    if: place\holder != 0 && l2_rw_graph_path(\out, place\holder, 0, projection, 0, 0, @ holder) != 0
+        return: 1
+    if: l2_rw_put(\out, 1, holder) != 0
+        return: 1
+return: (cast: (int) (l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %zuU) != c.LMX_WALK_OK\n            return: 1\n", \out, place\child) < 0))
 
 # A declared model operand projects the completed source-owned child from
 # the selected root. No descriptor is built to stand in for that declaration.
@@ -39795,10 +40165,9 @@ fn: l2_rw_ns_model (int: parent; int: slot; int: req; int: callee) int
         return: l2_rw_put(parent, slot, frame)
     ---
     if: l2_ns_local[req] >= 0
-        own: l2_model_root_own(req)
-        if: own < 0
-            return: l2_rw_refuse(l2_here_node, "an unresolved local admission model")
-        return: l2_rw_model_own(parent, slot, own)
+        if: l2_rw_local_model(parent, req, callee, @ frame) != 0
+            return: 1
+        return: l2_rw_put(parent, slot, frame)
     ---
     if: callee >= 0
         # COUNT chooses topology from source ownership; FILL uses committed
@@ -41557,8 +41926,10 @@ fn: l2_rw_call_at (const: @(LmP0Node node); @: LmP0Text given; int: idx; int: se
     ---
     if: path_call = 0 && l2_use_unit_child(1, idx) != 0
         return: 1
-    if: path_call = 0 && l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) (l2_occ_slot(idx)))) < 0
-        return: 1
+    if: path_call = 0 && l2_rw_emit != 0
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", \out) < 0 || l2_emit_build_occ(idx) != 0 || fputs(")) != 0\n            return: 1\n", l2_out) < 0
+            return: 1
+        ---
     # The ordinary method's declared input/result parts already are its
     # contract. Do not append a second contract Structure after its source body.
     # A selected path or a signature-less named body still receives the
@@ -41742,6 +42113,7 @@ fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int ou
     int: kind 0
     int: formal 0 - 1
     int: candidate l2_cf_actual(l2_rw_mi, first, span, @ kind, @ formal)
+    int: own
     @: LmP0Text text 0
     LmP0Text: joined
     @: char buffer 0
@@ -41792,6 +42164,9 @@ fn: l2_rw_callable_actual (@: LmP0Field first; int: span; int: parent; @: int ou
         l2_xfree((cast: (@: void) buffer))
         return: status
     ---
+    own: l2_method_source_own(candidate)
+    if: own >= 0
+        return: l2_rw_callee_at(parent, l2_own_mi[own], own, out)
     if: l2_rw_frame(parent, "LMX_WALK_OP_AT", 3, out) != 0 || l2_use_unit_child(1, candidate) != 0
         return: 1
     if: l2_rw_emit != 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) l2_entry_unit)) != 0 || lmx_walk_store_size(l2_program_arena, l2_rw%d, 2U, %uU) != c.LMX_WALK_OK\n            return: 1\n", \out, \out, (cast: (unsigned) l2_occ_slot(candidate))) < 0
@@ -41902,7 +42277,7 @@ fn: l2_rw_callee_at (int: parent; int: idx; int: oi; @: int out) int
             return: 1
         ---
     else:
-        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", \out, (cast: (unsigned) l2_occ_slot(idx))) < 0
+        if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_rw%d, 1U, (cast: (@: void) ", \out) < 0 || l2_emit_build_occ(idx) != 0 || fputs(")) != 0\n            return: 1\n", l2_out) < 0
             return: 1
         ---
     ---
@@ -42290,6 +42665,9 @@ fn: l2_rw_operand (const: @(LmP0Node node); int: ty; int: parent; @: int out) in
     # b holds).
     if: l2_call_alias_own(l2_rw_mi, t) >= 0
         return: l2_rw_call(node, l2_rb_meth_of(l2_own_decl[l2_call_alias_own(l2_rw_mi, t)]), -1, 0, parent, out)
+    idx: l2_call_head_method(l2_rw_mi, t, @ formal)
+    if: idx >= 0 && idx != l2_e
+        return: l2_rw_call(node, idx, formal, 0, parent, out)
     oi: l2_rw_own_row(node, t)
     if: oi = 0 - 1
         return: 1
@@ -44876,27 +45254,38 @@ fn: l2_rw_stmts (@: LmP0Field first; int: into; int: base; @: L2SourceContainer 
     int: slot
     int: placed 0
     int: own
+    int: return_point
     if: source = 0 && l2_t7_walk = 0 && l2_rw_nest = 0 && l2_m_src_end != 0 && l2_rw_mi >= 0 && l2_rw_mi < l2_m_n && l2_m_src_end[l2_rw_mi] >= 0
         placed: 1
     if: l2_rw_pads(first, into) != 0
         return: 1
     field: l2_next_active(first)
     while: field != 0
-        # D-94: nothing after the host's return point is built -- the build is the host's trailer,
-        # so a statement built here would run before it (REVIEW e8b8a8d).
-        if: l2_mad_on(l2_rw_mi) != 0 && l2_m_body[l2_rw_mi] != 0 && l2_m_body[l2_rw_mi]\as != 0 && l2_mad_return_point(l2_m_body[l2_rw_mi]\as\structure, l2_rw_mi, field) != 0
-            field: 0
-            continue
-        # T6/T6b: a nested fn: is the host's model, not a statement to walk (l2_check_body's
-        # own l2_mad_on(mi)/"fn" skip, l2trans.lm1:15469, mirrored here for the walk pass).
-        if: l2_mad_on(l2_rw_mi) != 0 && l2_frame_head(field\value, "fn") != 0
-            next: l2_next_active(field\next)
-            field: next
-            continue
         l2_here_at_method(l2_rw_mi, field\value)
         slot: base + \made
         if: placed != 0
             slot: l2_ps_lookup(field\value)
+        own: l2_own_by_decl(l2_rw_mi, field\value)
+        return_point: 0
+        if: l2_mad_on(l2_rw_mi) != 0 && l2_m_body[l2_rw_mi] != 0 && l2_m_body[l2_rw_mi]\as != 0
+            return_point: l2_mad_return_point(l2_m_body[l2_rw_mi]\as\structure, l2_rw_mi, field)
+        ---
+        if: source != 0 && own >= 0 && l2_source_definition_method(own) >= 0
+            if: l2_source_field_slot(source, own, slot) != 0
+                return: 1
+            \made: \made + 1
+            field: l2_next_active(field\next)
+            # Retaining a declaration must not reschedule the dead tail of
+            # a factory whose existing return boundary lies on this field.
+            if: return_point != 0
+                field: 0
+            continue
+        # A factory return ends executable steps, not its written declarations.
+        # The declaration above is retained at its source place and is never
+        # invoked by construction. Do not schedule a post-return statement.
+        if: return_point != 0
+            field: 0
+            continue
         # An original constructed namespace child is filled once by its
         # existing NSF constructor, never reclassified as an invocation.
         one: -1
@@ -45151,8 +45540,10 @@ fn: l2_rw_t7_build (int: site; int: parent; @: int out) int
     l2_rw_t: l2_rw_t + 1
     if: l2_use_unit_child(1, l2_t7_model[site]) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_rw%d = 0\n            return: 1\n", occ, (cast: (unsigned) l2_occ_slot(l2_t7_model[site])), occ) < 0
-        return: 1
+    if: l2_rw_emit != 0
+        if: c.fprintf(l2_out, "        @: Lmx l2_rw%d ", occ) < 0 || l2_emit_build_occ(l2_t7_model[site]) != 0 || c.fprintf(l2_out, "\n        if: l2_rw%d = 0\n            return: 1\n", occ) < 0
+            return: 1
+        ---
     if: l2_rw_put(prim, 3, occ) != 0
         return: 1
     j: 0
@@ -45215,8 +45606,10 @@ fn: l2_rw_mad_build (int: mi; int: parent; @: int out) int
     l2_rw_t: l2_rw_t + 1
     if: l2_use_unit_child(1, model) != 0
         return: 1
-    if: l2_rw_emit != 0 && c.fprintf(l2_out, "        @: Lmx l2_rw%d lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_rw%d = 0\n            return: 1\n", mref, (cast: (unsigned) (l2_occ_slot(model))), mref) < 0
-        return: 1
+    if: l2_rw_emit != 0
+        if: c.fprintf(l2_out, "        @: Lmx l2_rw%d ", mref) < 0 || l2_emit_build_occ(model) != 0 || c.fprintf(l2_out, "\n        if: l2_rw%d = 0\n            return: 1\n", mref) < 0
+            return: 1
+        ---
     if: l2_rw_put(prim, 3, mref) != 0
         return: 1
     # The values of the host's body the model uses (l2_mcap_*, in their order), the activation's here: a formal is its
@@ -45279,11 +45672,40 @@ fn: l2_method_visible_at (int: r; int: mi) int
     int: host l2_mad_host_of(r)
     int: m mi
     int: hops 0
+    int: ni
+    int: scope_index 0
+    @: LmP0Structure scope
+    @: LmP0Node query 0
     if: host < 0
         return: 1
+    scope: l2_method_source_scope(l2_m_node[r])
+    if: scope = 0
+        return: 0
+    if: mi >= 0 && mi < l2_m_n
+        query: l2_m_node[mi]
+        ni: l2_m_nsof(mi)
+        if: query = 0 && ni >= 0
+            query: l2_ns_at[ni]
+        ---
+    ---
+    if: l2_here_mi = mi && l2_here_node != 0
+        query: l2_here_node
     while: m >= 0 && hops <= l2_m_n
         if: m = host
-            return: 1
+            # Expression lowering can manufacture a call node. Its enclosing
+            # written method still has an exact source declaration in scope.
+            if: l2_source_parent_body(scope, query) != 0 || (mi >= 0 && mi < l2_m_n && l2_source_parent_body(scope, l2_m_node[mi]) != 0)
+                return: 1
+            # Collection also queries a lexical block before selecting its
+            # first statement. The active original scope supplies that site.
+            while: scope_index < l2_scope_n
+                if: l2_scope_block(l2_scope_at[scope_index]) = scope
+                    return: 1
+                scope_index: scope_index + 1
+            ---
+            if: query = 0 && l2_m_body[host] != 0 && l2_m_body[host]\as != 0 && l2_m_body[host]\as\structure = scope
+                return: 1
+            return: 0
         m: l2_mad_host_of(m)
         hops: hops + 1
     ---
@@ -45310,9 +45732,11 @@ fn: l2_site_method (int: mi; const: @(LmP0Text t)) int
     if: t = 0
         return: -1
     while: i < l2_m_n
-        if: l2_text_same(l2_m_name[i], t) != 0 && l2_method_visible_at(i, mi) != 0 && l2_method_depth(i) > best_depth
-            best: i
-            best_depth: l2_method_depth(i)
+        if: l2_text_same(l2_m_name[i], t) != 0 && l2_method_visible_at(i, mi) != 0
+            if: best < 0 || l2_method_depth(i) > best_depth || (l2_method_source_scope(l2_m_node[best]) != l2_method_source_scope(l2_m_node[i]) && l2_source_parent_body(l2_method_source_scope(l2_m_node[best]), l2_m_node[i]) != 0)
+                best: i
+                best_depth: l2_method_depth(i)
+            ---
         i: i + 1
     ---
 return: best
@@ -46225,12 +46649,15 @@ fn: l2_mad_take_nested (int: mi; @: LmP0Node body; const: @(char path)) int
             # nested methods/callable-formal descriptors. A bound declaration
             # may publish no row at all. Never assign its host to the last row
             # of those later producers, or to an earlier existing row.
-            idx: l2_m_n
-            if: l2_collect_method(stmt, path, mi) != 0
-                return: 1
+            idx: l2_method_by_source(stmt)
+            if: idx < 0
+                idx: l2_m_n
+                if: l2_collect_method(stmt, path, mi) != 0
+                    return: 1
+                idx: l2_collected_row(idx, stmt)
+            ---
             if: l2_mad_ensure(l2_m_n) != 0
                 return: l2_error(path, stmt, "out of memory")
-            idx: l2_collected_row(idx, stmt)
             if: idx < 0 - 1
                 return: l2_error(path, stmt, "internal: nested method collection lost its declaration row")
             if: idx >= 0
@@ -46779,7 +47206,9 @@ fn: l2_mad_emit (int: mi; const: @(char ind)) int
     # N, the model's occurrence copied under C: its args and return parts -- the signature -- and its steps shared by
     # address (the code and the signature stay the model's), its fields and control bodies copied as data
     # (lmx_walk_cell_copy).  The model's occurrence is a unit child, reached through the unit (l2_unit_ref).
-    if: c.fprintf(l2_out, "%sl2_mad_src: lmx_arena_ref_struct(%s, %uU)\n%sif: l2_mad_src = 0\n%s    c.abort()\n%sl2_mad: lmx_struct_new_owned(l2_madc, l2_program_arena)\n%sif: l2_mad = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n%sl2_mad_k: 0U\n%swhile: l2_mad_k < %uU\n%s    l2_mad_cell: lmx_arena_ref_value(l2_mad_src, l2_mad_k)\n%s    if: l2_mad_k >= 2U && l2_mad_k < %uU\n%s        l2_mad_cell: lmx_walk_cell_copy(l2_program_arena, l2_mad_cell)\n%s    if: lmx_arena_ref_store(l2_mad, l2_mad_k, l2_mad_cell) != 0\n%s        c.abort()\n%s    l2_mad_k: l2_mad_k + 1U\n", ind, l2_unit_ref, (cast: (unsigned) (l2_occ_slot(model))), ind, ind, ind, ind, (cast: (unsigned) mw), ind, ind, ind, ind, (cast: (unsigned) mw), ind, ind, (cast: (unsigned) kids), ind, ind, ind, ind) < 0
+    if: l2_tok_method_occ(model, cv) != 0
+        return: 1
+    if: c.fprintf(l2_out, "%sl2_mad_src: %s\n%sif: l2_mad_src = 0\n%s    c.abort()\n%sl2_mad: lmx_struct_new_owned(l2_madc, l2_program_arena)\n%sif: l2_mad = 0 || lmx_arena_refs_open_owned(l2_program_arena, l2_mad, %uU) != 0\n%s    c.fprintf(c.stderr, \"lmx: invariant: a callable merge could not be built\\n\")\n%s    c.abort()\n%sl2_mad_k: 0U\n%swhile: l2_mad_k < %uU\n%s    l2_mad_cell: lmx_arena_ref_value(l2_mad_src, l2_mad_k)\n%s    if: l2_mad_k >= 2U && l2_mad_k < %uU\n%s        l2_mad_cell: lmx_walk_cell_copy(l2_program_arena, l2_mad_cell)\n%s    if: lmx_arena_ref_store(l2_mad, l2_mad_k, l2_mad_cell) != 0\n%s        c.abort()\n%s    l2_mad_k: l2_mad_k + 1U\n", ind, cv\data, ind, ind, ind, ind, (cast: (unsigned) mw), ind, ind, ind, ind, (cast: (unsigned) mw), ind, ind, (cast: (unsigned) kids), ind, ind, ind, ind) < 0
         return: 1
     # Retain the model's one completed native implementation; the walked
     # constructor does the same. The test knob's zero word remains zero.
@@ -46957,6 +47386,7 @@ fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); cons
     int: rc
     []: char act_own 1024
     L2Tx: act_tx
+    @: L2Tx act @ act_tx
     if: l2_convert_hit(l2_own_ty_word(bty), l2_own_ty_word(oty)) = 0
         return: l2_error(l2_src, node, "internal: a conversion site was not checked")
     idx: l2_convert_method()
@@ -46964,9 +47394,9 @@ fn: l2_emit_convert_raw (int: mi; int: bty; int: oty; const: @(char value); cons
         return: l2_error(l2_src, node, "internal: a conversion site was not checked")
     self_t: l2_tn
     l2_tn: l2_tn + 1
-    if: c.fprintf(l2_out, "%s@: Lmx l2_c%d lmx_arena_ref_struct(%s, %uU)\n", ind, self_t, l2_unit_ref, (cast: (unsigned) (l2_occ_slot(idx)))) < 0
+    if: l2_tx_open(act, act_own, 1024U) != 0 || l2_tok_method_occ(idx, act) != 0 || c.fprintf(l2_out, "%s@: Lmx l2_c%d %s\n", ind, self_t, act\data) < 0
         return: 1
-    if: l2_tx_open(@ act_tx, act_own, 1024U) != 0 || l2_tx_set(@ act_tx, value) != 0
+    if: l2_tx_set(@ act_tx, value) != 0
         return: l2_alloc_or(l2_src, node, "out of memory")
     t: l2_tn
     l2_tn: l2_tn + 1
@@ -49002,7 +49432,7 @@ fn: l2_rw_methods_count () int
                 return: 1
             ---
         ---
-        present: (cast: (int) (i = l2_e || l2_m_body[i] != 0 || l2_t7_host_site(i) >= 0))
+        present: (cast: (int) (i = l2_e || l2_m_body[i] != 0 || l2_t7_host_site(i) >= 0 || l2_method_source_own(i) >= 0))
         if: l2_m_node[i] != 0 && l2_m_node[i]\kind = c.LM_P0_NODE_FRAME && l2_m_node[i]\as != 0 && l2_m_node[i]\as\frame != 0 && l2_m_node[i]\as\frame\trailer != 0
             present: 1
         if: l2_library_mode = 0 && l2_pap_on(i) = 0 && present != 0
@@ -49035,11 +49465,17 @@ fn: l2_rw_methods_count () int
                     return: l2_error(l2_src, l2_m_body[i], "out of memory")
                 source\root: 1
             ---
+            if: source = 0 && l2_method_source_own(i) >= 0
+                source: l2_source_container(0, 0)
+                if: source = 0
+                    return: l2_alloc_or(l2_src, l2_m_node[i], "a method descriptor source could not be allocated")
+                source\root: 1
+            ---
             # §7b: the body's fields with working values are read by OWN and written by SET; the walker loads them at
             # entry from these nodes (no load step).
             l2_rw_cache_on: 1
             if: source != 0
-                if: l2_rw_stmts(source\body\first_field, 0 - 2, l2_m_head(i), source, @ made) != 0
+                if: source\body != 0 && l2_rw_stmts(source\body\first_field, 0 - 2, l2_m_head(i), source, @ made) != 0
                     bad: 1
                 ---
             else:
@@ -49151,7 +49587,7 @@ fn: l2_rw_methods_emit (int: phase) int
             if: l2_pap_on(i) = 0
                 l2_rw_cache_on: 1
             if: source != 0
-                if: bad = 0 && l2_rw_stmts(source\body\first_field, t, l2_m_kids(i), source, @ made) != 0
+                if: bad = 0 && source\body != 0 && l2_rw_stmts(source\body\first_field, t, l2_m_kids(i), source, @ made) != 0
                     bad: 1
                 ---
             else:
@@ -51518,6 +51954,11 @@ fn: l2_emit_stmts (const: @(LmP0Structure body); @: LmP0Field from; @: LmP0Field
         stmt: field\value
         l2_vis_stmt(mi, stmt)
         l2_here_at(stmt)
+        # The constructor already filled this exact declaration occurrence.
+        # Reaching its source field does not invoke or assign its header.
+        if: l2_source_definition_method(l2_own_by_decl(mi, stmt)) >= 0
+            field: l2_next_active(field\next)
+            continue
         pd: 1
         retained: l2_ns_constructed_row(mi, stmt)
         if: retained = -2
@@ -52718,8 +53159,10 @@ fn: l2_emit_parts (int: i) int
         return: 1
     while: j < l2_m_arity[i]
         ty: l2_own_ty_of_param(l2_ft(i, j))
-        if: l2_cf_get(i, j) >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) lmx_arena_ref_struct(l2_entry_unit, %uU))) != 0\n            return: 1\n", (cast: (unsigned) j), (cast: (unsigned) (l2_occ_slot(l2_cf_get(i, j))))) < 0
-            return: 1
+        if: l2_cf_get(i, j) >= 0
+            if: c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) ", (cast: (unsigned) j)) < 0 || l2_emit_build_occ(l2_cf_get(i, j)) != 0 || fputs(")) != 0\n            return: 1\n", l2_out) < 0
+                return: 1
+            ---
         if: l2_cf_get(i, j) < 0 && l2_nsty_get(i, j) >= 0 && c.fprintf(l2_out, "        if: lmx_arena_ref_store(l2_fkid, %uU, (cast: (@: void) l2_nsp[%d])) != 0\n            return: 1\n", (cast: (unsigned) j), l2_nsty_get(i, j)) < 0
             return: 1
         if: l2_cf_get(i, j) < 0 && l2_nsty_get(i, j) < 0 && ty >= 0
@@ -53399,7 +53842,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
             i: i + 1
             continue
         # R9: a named Structure's procedure has no occurrence of its own -- the Structure is it (built below).
-        if: l2_m_nsof(i) >= 0
+        if: l2_m_nsof(i) >= 0 || l2_method_source_own(i) >= 0
             i: i + 1
             continue
         if: c.fprintf(l2_out, "        l2_entry_leaf: lmx_struct_new_owned(l2_entry_unit, l2_program_arena)\n        if: l2_entry_leaf = 0\n            return: 1\n        if: lmx_arena_refs_open_owned(l2_program_arena, l2_entry_leaf, %uU) != 0\n            return: 1\n        if: lmx_arena_ref_store(l2_entry_unit, %uU, (cast: (@: void) l2_entry_leaf)) != 0\n            return: 1\n", (cast: (unsigned) l2_m_width(i)), (cast: (unsigned) (l2_occ_slot(i)))) < 0
@@ -53578,7 +54021,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     # file-level method's stays the unit.
     i: 0
     while: i < l2_m_n
-        if: l2_mad_host_of(i) >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0 || lmx_arena_ref_struct(l2_entry_unit, %uU) = 0\n            return: 1\n        l2_entry_leaf\\parent: lmx_arena_ref_struct(l2_entry_unit, %uU)\n", (cast: (unsigned) (l2_occ_slot(i))), (cast: (unsigned) (l2_occ_slot(l2_mad_host_of(i)))), (cast: (unsigned) (l2_occ_slot(l2_mad_host_of(i))))) < 0
+        if: l2_method_source_own(i) < 0 && l2_mad_host_of(i) >= 0 && c.fprintf(l2_out, "        l2_entry_leaf: lmx_arena_ref_struct(l2_entry_unit, %uU)\n        if: l2_entry_leaf = 0 || lmx_arena_ref_struct(l2_entry_unit, %uU) = 0\n            return: 1\n        l2_entry_leaf\\parent: lmx_arena_ref_struct(l2_entry_unit, %uU)\n", (cast: (unsigned) (l2_occ_slot(i))), (cast: (unsigned) (l2_occ_slot(l2_mad_host_of(i)))), (cast: (unsigned) (l2_occ_slot(l2_mad_host_of(i))))) < 0
             fclose(l2_out)
             return: 1
         i: i + 1

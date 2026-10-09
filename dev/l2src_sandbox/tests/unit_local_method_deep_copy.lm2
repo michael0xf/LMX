@@ -1,0 +1,36 @@
+fn: read () int
+    ---
+        ---
+            Outer:
+                Inner:
+                    int: x 11
+                end: Inner
+                fn: take (Inner: v) int
+                    return: v\x
+                end: take
+                sub: bump ()
+                    node\Inner\x: node\Inner\x + 1
+                end: bump
+            end: Outer
+            Candidate:
+                int: pad 99
+                int: x 20
+            end: Candidate
+            copy: merge: Outer
+            copy2: merge: copy
+            copy2\bump
+            if: copy2\Inner = copy\Inner || copy\Inner = Outer\Inner
+                return: 81
+            if: copy2\Inner\x != 12 || copy\Inner\x != 11 || Outer\Inner\x != 11
+                return: 82
+            if: copy2\take(Candidate) != 20 || copy\take(Candidate) != 20 || Outer\take(Candidate) != 20
+                return: 83
+        ---
+    ---
+    return: 20
+end: read
+int: ok 7
+if: read() != 20
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

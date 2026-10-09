@@ -269,6 +269,30 @@ closed. On that baseline close [K03-EXPLICIT-RECEIVER-FRAMES](#explicit-receiver
 before G5 or self-build. Earlier green rows using the prefix path do not certify
 this corrected syntax. The copying/operand/result contract is unchanged.
 
+Copied-model checkpoint17 is published at `e28eb110`. Its immediate sole
+writer/build child18 is complete local fn/sub declaration collection and
+physical source occurrence selection, not another unit-tail producer.
+Candidate23's private native/walk/copy/descriptor/sibling/name/parent controls
+and live faults pass. All2615 recorded translations retain exits/diagnostics/
+output presence; generated-L1 differences are inventoried separately from
+runtime acceptance. Rejected focus01 and smoke attempts remain evidence.
+Acceptance attempt02 stops at full22's five old GREEN regressions;52 frozen
+inputs remained exact. Candidate24 preserves the existing factory return cut
+when retaining the source declaration; copied-place and common signature
+oracles are repaired without lowering runtime expectations. Fresh serial03
+is terminal: focus RED29/838, kernel23 GREEN297/114 actually executed selftests,
+L3_23 eleven suites/four budgets, full23 RED72/2827. All sixteen additions pass,
+the original receiving pair recovers; no old regression/removal/changed failure.
+All52 frozen inputs/194 gate copies match; final2615 replay is byte-exact against
+private08. All2810 old full-gate translation logs are compared: only the two
+required receiving refusals become success. Three actual live faults reject.
+Only bounded fn/sub collection is verified, not whole fn/fm/sub or any parent.
+Immediately after scoped publication, continue the independent source-declaration
+order/physical-owner dependency; do not stop at a sub-checkpoint or decide the
+unresolved MAIN-to-part visibility question silently. fm's absent producer and
+true walked multi-class selection remain explicit OPEN dependencies. See the
+[local-method journal](steps/local-method-declaration-collection-20261009.md).
+
 **Historical handoff, 2026-10-03.** The author transferred continuation to
 Fable; Codex finishes documentation and then answers Fable's questions, without
 starting another code stage. Read [to_fable.md](to_fable.md) before taking the

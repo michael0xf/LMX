@@ -1,0 +1,18 @@
+fn: read () int
+    Outer:
+        fn: anchor () int
+        fn: take (anchor: f) int
+            return: f
+        end: take
+        fn: actual () int
+            return: 20
+        end: actual
+    end: Outer
+    copy: merge: Outer
+    return: copy\take(Outer\actual)
+end: read
+int: ok 7
+if: read() != 20
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

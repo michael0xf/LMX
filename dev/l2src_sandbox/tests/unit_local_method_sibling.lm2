@@ -1,0 +1,21 @@
+fn: read () int
+    ---
+        if: helper() != 11
+            return: 81
+        fn: helper () int
+            return: 11
+        end: helper
+    ---
+        fn: helper () int
+            return: 22
+        end: helper
+        if: helper() != 22
+            return: 81
+    ---
+    return: 20
+end: read
+int: ok 7
+if: read() != 20
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

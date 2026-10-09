@@ -471,7 +471,7 @@ function Get-WalkGraphFacts([string]$Text) {
     $headerCell = ''
     $headerSerial = 0
     foreach ($line in ($Text -split "`r?`n")) {
-        if ($line -match '^\s*l2_entry_leaf: (l2_entry_unit|l2_nsp\[\d+\]|lmx_arena_ref_struct\(l2_entry_unit, \d+U\))\s*$') {
+        if ($line -match '^\s*l2_entry_leaf: (l2_entry_unit|l2_(?:sc|rw|b)\d+|l2_nsp\[\d+\]|lmx_arena_ref_struct\(l2_entry_unit, \d+U\))\s*$') {
             $headerLeaf = Resolve-WalkName (Resolve-BuilderIdentity $builder.Aliases $Matches[1])
             $headerPart = ''; $headerCell = ''
         } elseif ($line -match '^\s*l2_entry_leaf:') { $headerLeaf = ''; $headerPart = ''; $headerCell = '' }
@@ -486,7 +486,7 @@ function Get-WalkGraphFacts([string]$Text) {
             $storeMap[$headerLeaf + ':' + $slot] = [pscustomobject]@{ Parent = $headerLeaf; Slot = $slot; Value = $headerPart; Child = $headerPart; Role = '' }
         }
         if ($headerPart -ne '' -and $line -match 'lmx_arena_refs_open_owned\(l2_program_arena, l2_fkid, (\d+)U\)') { $plain[$headerPart] = [int]$Matches[1] }
-        if ($headerPart -ne '' -and $line -match 'lmx_arena_ref_store\(l2_fkid, (\d+)U, \(cast: \(@: void\) (lmx_arena_ref_struct\(l2_entry_unit, \d+U\)|l2_nsp\[\d+\])\)\)') {
+        if ($headerPart -ne '' -and $line -match 'lmx_arena_ref_store\(l2_fkid, (\d+)U, \(cast: \(@: void\) (lmx_arena_ref_struct\(l2_entry_unit, \d+U\)|l2_entry_unit|l2_(?:sc|rw|b)\d+|l2_nsp\[\d+\])\)\)') {
             $slot = [int]$Matches[1]
             $child = Resolve-WalkName $Matches[2]
             $storeMap[$headerPart + ':' + $slot] = [pscustomobject]@{ Parent = $headerPart; Slot = $slot; Value = $child; Child = $child; Role = '' }
@@ -3745,13 +3745,14 @@ $fixtures = @(
         Absent = @('lmx_fresh('); Debt = @('lmx_call_prim(', 'lmx_int_store_known(', 'c.LMX_WALK_OP_OF, 3U)', 'c.LMX_WALK_OP_NODE, 1U)') },
     # T6b: the node is built from the host's activation at the return -- n changed before it, k a
     # field the host declares -- and carries only what addN names, not u.  The node is addN's occurrence copied (3:
-    # args, return, one frame) under its copied lexical context C -- the host's layout (6) and a body field per formal
-    # (2): k at its source slot 3, n in formal 0's field 6, u's field 7 left empty (book, "Returned nested methods"; Codex,
+    # args, return, one frame) under its copied lexical context C -- the host's layout (7, including its
+    # written addN declaration) and a body field per formal (2): k at source slot 3, n in formal 0's
+    # field 7, u's field 8 left empty (book, "Returned nested methods"; Codex,
     # 2026-09-28). add7(1)=7, add100(1)=100, add7(1)=7; the base translator refused k.
     # Mutants: the host's statements dropped (D-92) -- exit 0; the formal as the machine argument
-    # -- add7(1)=6, exit 0. Every int formal carried is the 6U pin, not a behavior.
+    # -- add7(1)=6, exit 0. The physical slot oracle complements, not replaces, that behavior.
     [pscustomobject]@{ Name = 'unit_make_adder_activation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        Absent = @('lmx_arena_ref_store(l2_madc, 7U,', 'lmx_fresh('); Debt = @('lmx_arena_ref_store(l2_madc, 3U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 6U, l2_mad_cell)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 3U)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 8U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
+        Absent = @('lmx_arena_ref_store(l2_madc, 8U,', 'lmx_fresh('); Debt = @('lmx_arena_ref_store(l2_madc, 3U, l2_mad_cell)', 'lmx_int_store_known(l2_mad_cell, l2_p0_0) != 0 || lmx_arena_ref_store(l2_madc, 7U, l2_mad_cell)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_mad, 3U)', 'lmx_arena_refs_open_owned(l2_program_arena, l2_madc, 9U)', 'lmx_int_store_known(l2_mad_cell, lmx_int_value_known(') },
     # T6b: a model that names nothing of the activation: no captured slot (3 = args, return, one
     # frame); the base translator carried the unused z. inc7(1)=7.
     [pscustomobject]@{ Name = 'unit_make_adder_no_capture.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
@@ -3774,10 +3775,10 @@ $fixtures = @(
     [pscustomobject]@{ Name = 'unit_capture_struct_own.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
         Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0','postpaths','nativepath','2','3','deref','1','nativepath','1','26','1','endpostpaths');
+        Args = @('0','postpaths','nativepath','2','3','deref','1','nativepath','2','1','2','1','namepath','1','1','makeCounter','namepath','2','1','2','bump','parentpath','2','1','2','1','1','endpostpaths');
         WalkRoot = $true; NativeMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_capture_struct_formal_walk.lm2'; Source = 'unit_capture_struct_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0','postpaths','nativepath','2','3','deref','0','nativepath','1','26','0','endpostpaths');
+        Args = @('0','postpaths','nativepath','2','3','deref','0','nativepath','2','1','2','0','namepath','1','1','makeCounter','namepath','2','1','2','bump','parentpath','2','1','2','1','1','endpostpaths');
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeRoot = 3; Absent = @(); Debt = @() },
     # FIXED-BLOCKS-AUDIT: the fields a capture copies are as many as the definition reads -- 40, past the 32 places
     # the copy had (it refused "a captured Structure has too many fields read").
@@ -9777,13 +9778,56 @@ $fixtures = @(
         Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_model_anchor_copy_walk.lm2'; Source = 'unit_local_model_anchor_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4); NativeMethods = @(1); Absent = @(); Debt = @() },
-    # Required positive: a full fn declaration in a named local body must use
-    # ordinary method collection. Its current pre-emission refusal remains
-    # RED; do not substitute an expected refusal or drop the copied instance.
+    # A full local method is its written source field, not a unit-tail row.
+    # Assert the real take occurrence (3), its receiving/copy path and both
+    # execution modes; the root is method 1, not the last collected method.
     [pscustomobject]@{ Name = 'unit_local_model_anchor_receiving.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0','namepath','1','0','read','namepath','2','0','2','Outer','namepath','3','0','2','0','Inner','namepath','3','0','2','1','take',
+            'parentpath','2','0','2','1','0','parentpath','3','0','2','0','2','0','2','parentpath','3','0','2','1','2','0','2');
+        WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4,5); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_model_anchor_receiving_walk.lm2'; Source = 'unit_local_model_anchor_receiving.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        Args = @('0','namepath','1','0','read','namepath','2','0','2','Outer','namepath','3','0','2','0','Inner','namepath','3','0','2','1','take',
+            'parentpath','2','0','2','1','0','parentpath','3','0','2','0','2','0','2','parentpath','3','0','2','1','2','0','2');
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4,5); Absent = @(); Debt = @() },
+    # Full fn/sub collection follows the original lexical body, independently
+    # of calls or trailers. Same names in sibling blocks remain distinct;
+    # descriptor-only contracts have no invented body. Positive twins clear
+    # the root native word and assert actual method words, not generated text.
+    [pscustomobject]@{ Name = 'unit_local_method_simple.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_simple_walk.lm2'; Source = 'unit_local_method_simple.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_sibling.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_sibling_walk.lm2'; Source = 'unit_local_method_sibling.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 3; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_descriptor.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_descriptor_walk.lm2'; Source = 'unit_local_method_descriptor.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,4,5); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_deep_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_deep_copy_walk.lm2'; Source = 'unit_local_method_deep_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_sub_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_sub_host_walk.lm2'; Source = 'unit_local_method_sub_host.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); Absent = @(); Debt = @() },
+    # K04's multi-class formal invocation still requires a native body (4).
+    # Its owner and surrounding methods remain genuinely
+    # walked; this does not claim the outstanding walked selector is built.
+    [pscustomobject]@{ Name = 'unit_local_method_multiclass_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,4,5,6); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_multiclass_hidden_walk.lm2'; Source = 'unit_local_method_multiclass_hidden.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
+        WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,5,6); NativeMethods = @(4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_scope_leak.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_method_scope_leak.lm2:7:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_scope_leak_walk.lm2'; Source = 'unit_local_method_scope_leak.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_local_method_scope_leak_walk.lm2:7:13: unknown method'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_descriptor_call.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_method_descriptor_call.lm2:5:13: not callable'; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_method_descriptor_call_walk.lm2'; Source = 'unit_local_method_descriptor_call.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_local_method_descriptor_call_walk.lm2:5:13: not callable'; Absent = @(); Debt = @() },
     # A non-null binding in the local owner's executed body really consumes
     # the foreign model operand; the null initializer alone cannot prove it.
     [pscustomobject]@{ Name = 'unit_local_model_anchor_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
@@ -10209,26 +10253,28 @@ $fixtures = @(
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_path_structure_forward_refused_walk.lm2'; Source = 'unit_path_structure_forward_refused.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
         Needle = 'unknown field path segment'; Absent = @(); Debt = @() },
-    # Inspect the returned callable, not just the result obtained through a
-    # possible walker fallback. The same source is tested with methods walked
-    # and with only the physical root's native word cleared.
+    # Inspect both returned callable and its actual written source model, not
+    # just a result obtained through walker fallback. Local full declarations
+    # are owned by make's source body, not duplicated in a unit-tail slot.
+    # The same source is tested with methods walked and with only the physical
+    # root's native word cleared. Name/parent observations use inspection only.
     [pscustomobject]@{ Name = 'unit_hosted_native_snapshots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0','postpaths','nativepath','2','1','deref','1','nativepath','2','3','deref','1','nativepath','1','21','1','endpostpaths');
+        Args = @('0','postpaths','nativepath','2','1','deref','1','nativepath','2','3','deref','1','nativepath','2','0','2','1','namepath','2','0','2','add','parentpath','2','0','2','1','0','endpostpaths');
         WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_hosted_native_snapshots_walk.lm2'; Source = 'unit_hosted_native_snapshots.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0','postpaths','nativepath','2','1','deref','0','nativepath','2','3','deref','0','nativepath','1','21','0','endpostpaths');
+        Args = @('0','postpaths','nativepath','2','1','deref','0','nativepath','2','3','deref','0','nativepath','2','0','2','0','namepath','2','0','2','add','parentpath','2','0','2','1','0','endpostpaths');
         WalkRoot = $true; WalkMethods = $true; NativeRoot = 2; WalkedMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_hosted_native_helper.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0','postpaths','nativepath','2','1','deref','1','nativepath','1','10','1','nativepath','1','11','1','endpostpaths');
+        Args = @('0','postpaths','nativepath','2','1','deref','1','nativepath','2','0','2','1','nativepath','2','0','5','1','namepath','2','0','2','helper','namepath','2','0','5','add','parentpath','2','0','2','1','0','parentpath','2','0','5','1','0','endpostpaths');
         WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_hosted_native_helper_walk.lm2'; Source = 'unit_hosted_native_helper.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0','postpaths','nativepath','2','1','deref','0','nativepath','1','10','0','nativepath','1','11','0','endpostpaths');
+        Args = @('0','postpaths','nativepath','2','1','deref','0','nativepath','2','0','2','0','nativepath','2','0','5','0','namepath','2','0','2','helper','namepath','2','0','5','add','parentpath','2','0','2','1','0','parentpath','2','0','5','1','0','endpostpaths');
         WalkRoot = $true; WalkMethods = $true; NativeRoot = 3; WalkedMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','nativepath','1','10','0'); Entry = 7;
+        Args = @('0','nativepath','4','0','2','0','0','0','namepath','4','0','2','0','0','helper(op)','namepath','2','0','2','helper','parentpath','2','0','2','1','0','namepath','2','0','3','inner','parentpath','2','0','3','1','0'); Entry = 7;
         WalkRoot = $true; NativeRoot = 5; NativeMethods = @(0,1,3,4); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_nested_method_owner_formal_walk.lm2'; Source = 'unit_nested_method_owner_formal.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = '';
-        Args = @('0','nativepath','1','10','0'); Entry = 7;
+        Args = @('0','nativepath','4','0','2','0','0','0','namepath','4','0','2','0','0','helper(op)','namepath','2','0','2','helper','parentpath','2','0','2','1','0','namepath','2','0','3','inner','parentpath','2','0','3','1','0'); Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1,3,4); NativeRoot = 5; Absent = @(); Debt = @() },
     # T7-TRAILER-ONLY-MODEL-CRASH: a model whose only line is its trailer `return:` has no body Structure, and the T7
     # count and frame passes read one: the translator crashed, whether or not anything called the merge.  The node

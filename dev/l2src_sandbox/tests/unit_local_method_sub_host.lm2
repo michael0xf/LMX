@@ -1,0 +1,15 @@
+fn: read () int
+    Outer:
+        int: x 19
+        sub: bump ()
+            node\x: node\x + 1
+        end: bump
+    end: Outer
+    Outer\bump
+    return: Outer\x
+end: read
+int: ok 7
+if: read() != 20
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

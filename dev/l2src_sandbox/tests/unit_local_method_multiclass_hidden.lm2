@@ -1,0 +1,29 @@
+fn: read () int
+    Outer:
+        int: x 10
+        int: y 11
+        fn: anchor () int
+        fn: take (anchor: f) int
+            return: f
+        end: take
+        fn: first () int
+            return: x
+        end: first
+        fn: second () int
+            return: y
+        end: second
+    end: Outer
+    copy: merge: Outer
+    int: x 20
+    int: y 21
+    if: copy\take(copy\first) != 20 || copy\take(copy\second) != 21
+        return: 81
+    if: Outer\take(Outer\first) != 20 || Outer\take(Outer\second) != 21
+        return: 82
+    return: 20
+end: read
+int: ok 7
+if: read() != 20
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

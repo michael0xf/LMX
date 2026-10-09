@@ -90,7 +90,7 @@ collection and explicit third reference initializer remain OPEN below,
 as do T7/critical/8/8a. Stable does not change.
 
 <a id="local-named-method-collection"></a>
-### LOCAL-NAMED-METHOD-COLLECTION — 2026-10-09, Codex, OPEN
+### LOCAL-NAMED-METHOD-COLLECTION — 2026-10-09, Codex, BOUNDED fn/sub FIX VERIFIED `5834B4CC`; fm OPEN
 
 `unit_local_model_anchor_receiving` places the complete declaration
 `fn: take (Inner: v) int` in local Outer, then checks both Outer and its
@@ -133,6 +133,29 @@ at definition: it now additionally checks zero before explicit Outer
 invocation and retains later address/write checks. Full fn collection is
 still OPEN. Continue the copied-reference model debt immediately after
 publication, then full method collection; no parent or stable promotion.
+
+Continuation18 candidate23 collects full local fn/sub and recovers the receiving
+pair with sixteen new GREEN rows, actual names/parents and copy controls. Focus02
+RED27/799, kernel22 GREEN297/114 executed selftests, L3_22 eleven/four budgets pass.
+Full22 is rejected RED77/2827: five old GREEN regressions. The capture-formal
+pair reaches entry7 but its old unit-tail26 inspection is absent; activation
+and exact-capture rows fail placement pins before execution; the dead-return
+factory actually aborts3 (`a callable merge was called outside its header`).
+Do not waive either runtime failure or inspection; repair actual source/return
+selection and strengthen an obsolete oracle only after proving the real place.
+No release/stable promotion or parent completion; preserved attempts and exact
+boundaries are in the [local-method journal](local-method-declaration-collection-20261009.md).
+
+Candidate24's corrected fresh serial03 completes focus RED29/838,
+kernel23 GREEN297/114 executed selftests, L3_23 eleven suites/four budgets,
+full23 RED72/2827. The receiving pair recovers and all sixteen additions pass;
+no old GREEN regression, removed row or changed old failure. All52 frozen inputs
+and194 gated copies match; final2615 replay exactly matches private08, including
+1795 outputs/820 nonzero. A separate comparison of2810 old full translation
+logs changes only the two required refusals to success. Three actual compiled/
+linked/executed faults are rejected. This verifies the bounded complete fn/sub
+producer and connected readers, not fm, true walked multi-class, universal codec
+or T7/critical/8/8a. Continue source-declaration-order after scoped publication.
 
 <a id="local-copied-reference-model-identity"></a>
 ### LOCAL-COPIED-REFERENCE-MODEL-IDENTITY — 2026-10-09, Codex, BOUNDED FIX VERIFIED `CODEX-COPIED-REFERENCE-MODEL-PROJECTION-20261009-17`

@@ -1,5 +1,25 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+**BOUNDED VERIFIED, local-method continuation18 (`5834B4CC`).** Complete written fn/sub
+headers are collected once by original declaration identity and attached to
+their actual source-owning field, including anonymous containers, local named
+bodies and descriptor-only fn. Shared head resolution preserves ordinary
+binding shadowing; original/copy receiving models and native/walker selection
+project that same completed source place. Short borrowed callable fields retain
+the referent's parent rather than creating another ownership edge. Source names
+remain in the external inspection/toLmx service only, never dispatch lookup.
+Acceptance attempt02 was rejected on five old GREEN rows; candidate24 repairs
+the shared factory return cut and source-place oracles. Fresh serial03 is
+terminal: focus RED29/838, kernel23 GREEN297/114 executed selftests,
+L3_23 eleven suites/four budgets, full23 RED72/2827 with no old regressions,
+removals or changed old failures. All sixteen additions pass; the original
+receiving pair recovers. All52 frozen inputs and194 gate copies match, and
+final2615 replay is byte-exact against the tested private candidate. This
+is bounded fn/sub acceptance, not full fn/fm/sub completion. fm's producer, true walked multi-class selection,
+universal graph/codec, T7 and8/8a remain OPEN. Normative both-way visibility
+still applies specifically to fn/fm/sub, not ordinary named Structures.
+Exact attempts, controls and acceptance: [local-method journal](steps/local-method-declaration-collection-20261009.md).
+
 The active copied-model follow-up uses the same source ownership and
 completed physical model projection for native/walker reads and reference
 path admission. A model is selected from the original declaration's actual

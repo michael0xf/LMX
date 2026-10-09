@@ -150,6 +150,24 @@ chronological plan or a replacement specification. For the source map read
 [CORE_L2_L3_v2.md](CORE_L2_L3_v2.md); for worked migration examples read
 [L2_L3_CODING_INSTRUCTION.md](L2_L3_CODING_INSTRUCTION.md).
 
+**Local method source ownership (bounded continuation18, VERIFIED `5834B4CC`).** A full
+written header and a short borrowed callable field have distinct original
+source identities. The full declaration owns its occurrence at its source
+field; the borrowed field retains another occurrence without reparenting it.
+Both use the common resolved receiver/actuals model, not separate syntax doors.
+The source owner/physical child supplies construction, copied selection,
+receiving-model admission and native/walker operands; a global method row does
+not imply an extra owning unit field. A descriptor-only fn has that declaration
+identity too, with native0 and no invented body. Both-way visibility is the
+fn/fm/sub rule only; ordinary bindings retain forward/down visibility. The
+rejected full22 is retained. Corrected serial03 is terminal: focus RED29/838,
+kernel23 GREEN297/114 executed selftests, L3_23 eleven suites/four budgets,
+full23 RED72/2827; sixteen GREEN additions, original receiving pair recovery,
+no old regression/removal/changed failure. All52 inputs/194 copies match;
+final2615 replay is exact. fm production, genuine walked multi-class selection,
+universal codec and parent stages remain OPEN. See the
+[journal](steps/local-method-declaration-collection-20261009.md).
+
 Historical evidence baseline: 2026-10-01, main `f980dce` plus the released bounded merge
 slice identified in [the release ledger](steps/native-selfbuild-20260930.md#merge-result-value-release).
 Use that ledger for the final commit, source hashes and gates. “Required” below

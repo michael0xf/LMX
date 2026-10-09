@@ -10,6 +10,19 @@ GREEN297/114 executed selftests; L3_11 eleven suites/four budgets. The exact
 2615-command replay matches the corrected private candidate. Recursive
 nested admission remains open; this is not full self-build.
 
+The current NODE child selects declarations from the actual lexical source
+scope by original source identity, then projects their completed places.
+Source namespace identity is distinct from a formal's schema and feeds the
+existing lexical-use collector, so merge retains the used parent subtree.
+It is transient compiler information, not runtime name metadata. Fresh
+focus RED12/318, kernel12 GREEN297/114, L3_12 eleven suites/four budgets,
+full12 RED74/2741: two old recoveries/no regression, thirty additions
+with six separate required declaration debts RED. All2615 final replay
+results match the private candidate; 22 inputs/76 copies are unchanged.
+Diagnostics and exact gate scope are separated in the
+[NODE journal](steps/node-source-path-20261009.md). Only the bounded NODE
+defect closes, not any parent stage.
+
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
 chronological plan or a replacement specification. For the source map read
@@ -639,7 +652,11 @@ and source-name-independent timeout/units examples. See plan
 
 No active ticket should conclude “working” from a delivery ACK, stale ownership
 marker or dirty diff. For this handoff no external watcher or ticket dispatcher
-is being restarted. Code work pauses after the current slice and document push.
+is being restarted. The historical pause after the October3 documentation
+handoff ended with Opus's explicit October8 release to Codex. Codex now
+continues the bounded coding queue as sole writer/build; Opus is Q&A only.
+Use [current instructions](steps/current.md), not that former pause, to
+determine the active child.
 
 Plans record remaining work; specifications describe current accepted semantics;
 historical notes preserve past evidence without commanding a rollback. When

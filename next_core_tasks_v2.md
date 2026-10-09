@@ -77,6 +77,27 @@ actual lexical source scope followed by its completed physical projection;
 no global same-name fallback or synthetic own-row registration. T7 and
 8/8a remain OPEN; no stable-root promotion.
 
+The eleventh NODE development child is verified. It selects one exact
+lexical source body, projects existing declaration places and retains the
+use through the existing merge closure. Fresh focus RED12/318, kernel12
+GREEN297/114 executed selftests, L3_12 eleven suites/four budgets, full12
+RED74/2741. Against full11: two FAIL→OK, no OK→FAIL, thirty added rows
+with 24 GREEN/six required declaration debts RED, no removals or changed
+old refusal details. All2615 final replay results exactly match the
+connected private candidate; 22 frozen inputs/76 staged copies match.
+The private row-count helper's error is recorded separately, not hidden
+as a product rerun. See the [NODE journal](steps/node-source-path-20261009.md).
+No runtime name lookup or graph is introduced. NODE's bounded defect is
+fixed; parent T7, separate producer debts and stages 8/8a remain OPEN.
+
+After the frozen NODE child is checked and published, continue the
+[source-declaration order debt](steps/defects.md#source-declaration-order)
+with a bounded producer/reader census. Do not merely remove collision guards:
+select declarations by their actual source scope and occurrence, and let the
+selected kind govern calls, primitive reception and field tails. Keep the
+three new required-positive pairs RED until measured. Part-own construction
+is distinct from the author's unresolved MAIN-to-part visibility question.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

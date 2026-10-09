@@ -9605,12 +9605,78 @@ $fixtures = @(
         WalkRoot = $true; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_used_closure_address_walk.lm2'; Source = 'unit_used_closure_address.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0') + $usedClosureAddressPost; Entry = 7;
         WalkRoot = $true; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
-    # NODE-PATH-ANON-STRUCT (steps/defects.md): OPEN positives, red by design -- `node\h\p`, h an anonymous Structure
-    # of the root's body, a value field of the lexical parent's body (book §3); the translator refuses it at `node`.
+    # NODE-PATH-ANON-STRUCT is a historical label: h is a named source body.
+    # Resolve its declaration and retain the used lexical-parent field in merge.
     [pscustomobject]@{ Name = 'unit_node_path_anon_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_node_path_anon_struct_walk.lm2'; Source = 'unit_node_path_anon_struct.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Args = @('0'); Entry = 7;
-        WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # NODE source selection and use closure: nine positives, each in both method
+    # backends and with actual root clearing. Existing declarations supply all
+    # kinds/places; metadata ordinals never become runtime child coordinates.
+    [pscustomobject]@{ Name = 'unit_node_source_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_deep_walk.lm2'; Source = 'unit_node_source_deep.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_copy_isolation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_copy_isolation_walk.lm2'; Source = 'unit_node_source_copy_isolation.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_method_entry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_method_entry_walk.lm2'; Source = 'unit_node_source_method_entry.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_primitive_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_primitive_occurrences_walk.lm2'; Source = 'unit_node_source_primitive_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; WalkMethods = $true; WalkedMethods = @(0); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_method_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_method_parent_walk.lm2'; Source = 'unit_node_source_method_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1,3,4); NativeMethods = @(2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_nested_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_nested_mixed_walk.lm2'; Source = 'unit_node_source_nested_mixed.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_control_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_control_parent_walk.lm2'; Source = 'unit_node_source_control_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; WalkMethods = $true; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_namespace_no_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; NativeMethods = @(0,1,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_namespace_no_shadow_walk.lm2'; Source = 'unit_node_source_namespace_no_shadow.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 3; WalkMethods = $true; WalkedMethods = @(0,1,2); NativeMethods = @(3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; NativeMethods = @(0,1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_place_walk.lm2'; Source = 'unit_node_source_place.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1); NativeMethods = @(2); Absent = @(); Debt = @() },
+    # Missing fields/occurrences and a primitive with a field tail are invalid.
+    [pscustomobject]@{ Name = 'unit_node_source_occurrence_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_occurrence_absent_walk.lm2'; Source = 'unit_node_source_occurrence_absent.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_scope_absent.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_scope_absent_walk.lm2'; Source = 'unit_node_source_scope_absent.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_primitive_tail.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_primitive_tail_walk.lm2'; Source = 'unit_node_source_primitive_tail.lm2'; WalkMethods = $true; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unknown field path segment'; ErrorLines = 1; Absent = @(); Debt = @() },
+    # REQUIRED positives still rejected earlier by independent declaration
+    # producers. Keep them RED, not expected refusals or proof of NODE handling.
+    [pscustomobject]@{ Name = 'unit_node_source_mixed_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_mixed_occurrences_walk.lm2'; Source = 'unit_node_source_mixed_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_namespace_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_namespace_parent_walk.lm2'; Source = 'unit_node_source_namespace_parent.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_part.lm2'; Parts = @('unit_node_source_part_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_node_source_part_walk.lm2'; Source = 'unit_node_source_part.lm2'; Parts = @('unit_node_source_part_body.lm2'); Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
     # MERGE-PARENT-MODEL-SOURCE (steps/defects.md): a merge copy's code admits a root merge result by name (K02c); the
     # model is the copy's own instance, read from the copied lexical graph, the candidate the caller's binding, and
     # the copy takes the instance's records to its copy (lmx_copy_carry_records).  model_write observes the two places

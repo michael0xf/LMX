@@ -1,0 +1,21 @@
+# Root h is declared later: the local h is a definition, not a call.
+# Required positive: namespace registration currently rejects the later
+# root h as duplicate, before NODE resolution. That debt is independent.
+Outer:
+    h:
+        int: p 9
+    end: h
+    Model:
+        int: k 0
+        k: node\h\p
+    end: Model
+end: Outer
+h:
+    int: p 99
+end: h
+Outer\Model()
+int: ok 7
+if: Outer\Model\k != 9 || h\p != 99
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

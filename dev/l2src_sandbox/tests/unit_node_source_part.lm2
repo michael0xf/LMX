@@ -1,0 +1,12 @@
+# getPart reads the original part's direct source declaration, not MAIN's h.
+# Required positive: a named source body in a program part is not yet
+# constructed. This does not decide MAIN-to-part declaration visibility.
+h:
+    int: p 900
+end: h
+int: v getPart()
+int: ok 7
+if: v != 3 || h\p != 900
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

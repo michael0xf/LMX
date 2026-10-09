@@ -8,6 +8,17 @@ L3_11 eleven suites/four budgets; recursive admission remains open. This is
 an implementation repair under the existing contract, not a new graph
 representation or closure of stages 8/8a.
 
+The verified NODE implementation child connects source-field selection to the
+existing retained-use collector. Original source/producer identity survives
+COUNT; committed projection supplies physical slots after PLACE. Schema
+alone does not identify a source declaration. Runtime follows the actual
+NODE and retains no names or companion graph. Fresh full12 RED74/2741
+has only two old recoveries/no old regression, thirty added rows with six
+separate required declaration debts. Kernel12 GREEN297/114, L3_12 eleven
+suites/four budgets; final2615 replay results exactly match the tested
+private candidate. See the [bounded journal](steps/node-source-path-20261009.md)
+for diagnostics, frozen inputs/copies and the next source-owner census.
+
 <a id="status-and-provenance"></a>
 ## 1. Status, provenance, and how to read this document
 
@@ -1212,4 +1223,15 @@ Where the normative L2 text describes the complete graph, all finite reference d
 <a id="handoff"></a>
 ## 19. Handoff boundary
 
-This document records the current kernel and its evidence boundary, not completed self-build. `8359a59` is the historical October1 release. The author resumed critical-graph implementation afterwards and now transfers continuation to Fable on 2026-10-03, as recorded in [to_fable.md](to_fable.md). Codex starts no new code stage after the documentation handoff and remains the question-answering advisor. Fable verifies ownership and proceeds through the v2 queue; there is still only one writer/build. Full32 is RED130/1395; focused persistent_oracle01 GREEN7/7 is bounded evidence, not release. Any future update must preserve retained failures and residual limitations rather than rewriting the checkpoint as complete §§8/8a.
+This document records the current kernel and its evidence boundary, not
+completed self-build. `8359a59` is the historical October1 release. The
+October3 transfer to Fable and Codex's ensuing Q&A-only role, recorded in
+[to_fable.md](to_fable.md), are historical. Opus subsequently completed that
+continuation and explicitly released the sole writer/build slot to Codex
+on October8 through [from_opus.md](from_opus.md). Codex now codes the v2
+queue sequentially; Opus is Q&A only. Follow
+[current instructions](steps/current.md) for the active bounded child.
+Historical full32 RED130/1395 and persistent_oracle01 GREEN7/7 remain
+bounded evidence, not a claim about today's full result. Updates must
+preserve retained failures and residual limitations rather than declare
+the parent §§8/8a complete from a smaller checkpoint.

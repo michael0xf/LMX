@@ -1,0 +1,21 @@
+# Later root h is not visible at the method-local definition.
+fn: go () int
+    h:
+        int: p 6
+    end: h
+    Model:
+        int: k 0
+        k: node\h\p
+    end: Model
+    Model
+    return: Model\k
+end: go
+h:
+    int: p 99
+end: h
+int: v go()
+int: ok 7
+if: v != 6 || h\p != 99
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

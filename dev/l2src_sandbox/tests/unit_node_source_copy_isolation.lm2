@@ -1,0 +1,18 @@
+# Source slots remain slots of the copied lexical parent, never the prototype.
+h:
+    int: p 3
+    int: unused 100
+end: h
+Model:
+    int: k 0
+    k: node\h\p
+end: Model
+b: merge: Model
+h\p: 9
+b
+Model
+int: ok 7
+if: b\k != 3 || Model\k != 9 || h\p != 9
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

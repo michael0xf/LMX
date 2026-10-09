@@ -1,0 +1,15 @@
+# Existing own-row occurrence behavior must survive source-selection repair.
+int: h 7
+int: h 11
+Model:
+    int: first 0
+    int: last 0
+    first: node\[0]h
+    last: node\h
+end: Model
+Model
+int: ok 7
+if: Model\first != 7 || Model\last != 11
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

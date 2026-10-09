@@ -1,0 +1,19 @@
+# A single source order covers namespace and primitive declarations.
+Outer:
+    h:
+        int: p 3
+    end: h
+    int: h 77
+    Model:
+        int: k 0
+        int: last 0
+        k: node\[0]h\p
+        last: node\h
+    end: Model
+end: Outer
+Outer\Model()
+int: ok 7
+if: Outer\Model\k != 3 || Outer\Model\last != 77
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,16 @@
+# A direct source declaration, then a deeper path, also through a merge copy.
+h:
+    inner:
+        int: p 13
+end: h
+Model:
+    int: k 0
+    k: node\h\inner\p
+end: Model
+b: merge: Model
+b
+int: ok 7
+if: b\k != 13
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

@@ -1,0 +1,19 @@
+# One name's occurrence order includes all source-declared field kinds.
+# Required positive: the root declaration producer currently refuses this
+# before NODE resolution. Do not turn the refusal into the language rule.
+h:
+    int: p 3
+end: h
+int: h 77
+Model:
+    int: k 0
+    int: last 0
+    k: node\[0]h\p
+    last: node\h
+end: Model
+Model
+int: ok 7
+if: Model\k != 3 || Model\last != 77
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

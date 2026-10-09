@@ -2242,6 +2242,7 @@ prototype:
     fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
     fn: l2_node_seg_meta (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_row; @: int out_kind; @: int out_ent; @: int out_own) int
     fn: l2_e_own_seg_mi (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_kind; @: int out_ent) int
+    fn: l2_own_seg_kind (int: hit; @: int out_kind; @: int out_ent) int
     fn: l2_num_kind (int: ty) int
     fn: l2_rw_arg_fb (int: parent; int: j; @: int out) int
     fn: l2_rw_node_read (int: parent; int: slot; int: kind; @: int out) int
@@ -24563,20 +24564,16 @@ fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t
         i: i + 1
     if: hit < 0
         return: 0 - 1
-    if: l2_own_ty[hit] = 2
-        \out_kind: 0
-        return: hit
-    if: l2_own_ty[hit] = 1
-        \out_kind: 1
-        return: hit
-    if: l2_own_ty[hit] = 0
-        \out_kind: 7
-        return: hit
-    if: l2_own_ty[hit] = 3
-        \out_kind: 8
-        return: hit
-    if: l2_own_ty[hit] = 36
-        \out_kind: 9
+return: l2_own_seg_kind(hit, out_kind, out_ent)
+
+# Classification is independent of name/occurrence selection. Both ordinary
+# own paths and lexical-source paths read the same existing declaration row.
+fn: l2_own_seg_kind (int: hit; @: int out_kind; @: int out_ent) int
+    if: hit < 0 || hit >= l2_own_n
+        return: -1
+    \out_kind: l2_num_kind(l2_own_ty[hit])
+    \out_ent: -1
+    if: \out_kind >= 0
         return: hit
     if: l2_own_is_pointer(l2_own_ty[hit]) != 0 && l2_own_is_slot(hit) = 0
         \out_kind: 10
@@ -24587,6 +24584,111 @@ fn: l2_own_seg_scan (int: mi; const: @(LmP0Node host); const: @(char pd); size_t
         \out_ent: l2_own_schema(hit)
         return: hit
 return: 0 - 1
+
+# One lexical source body supplies the occurrence order for all of its
+# declarations, including named bodies with no own row. Resolve the existing
+# producer by original P0 identity; never search a different scope by name.
+# Metadata returns a source ordinal. Only project requests a committed child.
+fn: l2_source_field_seg (int: mi; const: @(LmP0Node scope); const: @(char pd); size_t: off; size_t: len; int: project; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own; @: int out_ns) int
+    const: @: LmP0Structure body 0
+    const: @: LmP0Node source
+    @: LmP0Field field
+    @: LmP0Text name
+    int: own
+    int: ns
+    int: row
+    int: parent l2_m_nsof(mi)
+    int: occurrence -1
+    int: seen 0
+    int: ordinal 0
+    int: selected -1
+    int: selected_own -1
+    int: selected_ns -1
+    size_t: noff off
+    size_t: nlen len
+    if: mi < 0 || mi >= l2_m_n || l2_seg_split(pd, off, len, @ occurrence, @ noff, @ nlen) != 0
+        return: 1
+    if: scope != 0
+        body: l2_scope_block(scope)
+    else:
+        if: mi = l2_e
+            body: l2_ruse_unit
+        else:
+            body: l2_ns_original_body(parent)
+            if: body = 0 && l2_m_body[mi] != 0 && l2_m_body[mi]\as != 0
+                body: l2_m_body[mi]\as\structure
+        ---
+    ---
+    if: body = 0
+        return: 1
+    field: l2_next_active(body\first_field)
+    while: field != 0
+        source: l2_head_source_node(field\value)
+        name: 0
+        own: -1
+        ns: -1
+        row: 0
+        while: row < l2_own_n
+            if: l2_own_mi[row] = mi && l2_own_host[row] = scope && l2_head_source_node(l2_own_decl[row]) = source
+                own: row
+                name: l2_own_name[row]
+            row: row + 1
+        ---
+        if: own < 0
+            row: 0
+            while: row < l2_ns_n
+                if: l2_head_source_node(l2_ns_at[row]) = source && l2_ns_original_body(row) != 0
+                    ns: row
+                    name: l2_ns_name[row]
+                row: row + 1
+            ---
+        ---
+        if: name != 0 && name\data != 0 && name\length = nlen && memcmp(name\data, pd + noff, nlen) = 0
+            if: occurrence < 0 || seen = occurrence
+                selected: ordinal
+                selected_own: own
+                selected_ns: ns
+            seen: seen + 1
+        ---
+        if: ordinal = c.INT_MAX
+            l2_error(l2_src, field\value, "size overflow")
+            return: -1
+        ordinal: ordinal + 1
+        field: l2_next_active(field\next)
+    ---
+    if: selected < 0
+        return: 1
+    \out_slot: selected
+    if: selected_own >= 0
+        if: l2_own_seg_kind(selected_own, out_kind, out_ent) < 0
+            return: -1
+        if: project != 0
+            \out_slot: l2_graph_field_child(selected_own)
+        if: out_own != 0
+            \out_own: selected_own
+    ---
+    else:
+        if: selected_ns < 0
+            return: 1
+        \out_kind: 2
+        \out_ent: selected_ns
+        if: out_ns != 0
+            \out_ns: selected_ns
+        # COUNT counts only operand topology and emits no child coordinate.
+        # After it, never substitute this seed for an uncommitted place.
+        if: project != 0 && l2_construct_phase != 0
+            if: mi = l2_e && scope = 0
+                \out_slot: l2_source_unit_slot(l2_ns_at[selected_ns])
+            else:
+                if: parent < 0 || l2_ns_parent[selected_ns] != parent
+                    return: -1
+                \out_slot: l2_ns_field_in_parent(selected_ns)
+            ---
+        ---
+    ---
+    if: \out_slot < 0
+        return: -1
+return: 0
 
 # The path kind of a number field of own type ty (l2_own_seg_scan's codes), or -1.
 fn: l2_num_kind (int: ty) int
@@ -24610,7 +24712,7 @@ return: 0 - 1
 # *slot, *kind, *ent (l2_own_seg_scan's kinds; a Structure the slot holds itself is kind 2), or 1.
 # Resolve first; only an operand-producing consumer requests a physical child. Metadata
 # carries the selected own/formal row, never a guessed future graph coordinate.
-fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; int: project; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
+fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; int: project; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own; @: int out_ns) int
     int: host
     int: oi
     int: ni
@@ -24620,6 +24722,8 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
     \out_ent: 0 - 1
     if: out_own != 0
         \out_own: 0 - 1
+    if: out_ns != 0
+        \out_ns: -1
     host: l2_mad_host_of(mi)
     ni: l2_m_nsof(mi)
     # A retained nested definition's lexical space is its real source owner.
@@ -24638,35 +24742,22 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
         host: l2_ns_local[l2_m_nsof(mi)]
         oi: l2_own_of_local_ns(host, l2_m_nsof(mi))
         if: oi >= 0 && l2_own_host[oi] != 0
-            oi: l2_own_seg_scan(host, l2_own_host[oi], pd, off, len, out_kind, out_ent)
-            if: oi < 0
-                return: 1
-            \out_slot: oi
-            if: project != 0
-                \out_slot: l2_graph_field_child(oi)
-            if: out_own != 0
-                \out_own: oi
-            return: 0
+            return: l2_source_field_seg(host, l2_own_host[oi], pd, off, len, project, out_slot, out_kind, out_ent, out_own, out_ns)
         ---
     if: host < 0
-        oi: l2_e_own_seg_mi(mi, pd, off, len, out_kind, out_ent)
-        if: oi < 0
-            return: 1
-        \out_slot: oi
-        if: project != 0
-            \out_slot: l2_graph_field_child(oi)
-        if: out_own != 0
-            \out_own: oi
-        return: 0
+        host: l2_m_part(mi)
+        if: host >= 0
+            if: l2_part_ns[host] < 0 || l2_ns_proc[l2_part_ns[host]] < 0
+                return: 1
+            host: l2_ns_proc[l2_part_ns[host]]
+        else:
+            host: l2_e
+        ---
+        return: l2_source_field_seg(host, 0, pd, off, len, project, out_slot, out_kind, out_ent, out_own, out_ns)
     ---
-    oi: l2_own_seg_scan(host, 0, pd, off, len, out_kind, out_ent)
-    if: oi >= 0
-        \out_slot: oi
-        if: project != 0
-            \out_slot: l2_graph_field_child(oi)
-        if: out_own != 0
-            \out_own: oi
-        return: 0
+    oi: l2_source_field_seg(host, 0, pd, off, len, project, out_slot, out_kind, out_ent, out_own, out_ns)
+    if: oi != 1
+        return: oi
     ---
     if: l2_mad_host_of(mi) < 0
         return: 1
@@ -24690,10 +24781,10 @@ fn: l2_node_seg_resolve (int: mi; const: @(char pd); size_t: off; size_t: len; i
 return: 1
 
 fn: l2_node_seg (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_slot; @: int out_kind; @: int out_ent; @: int out_own) int
-return: l2_node_seg_resolve(mi, pd, off, len, 1, out_slot, out_kind, out_ent, out_own)
+return: l2_node_seg_resolve(mi, pd, off, len, 1, out_slot, out_kind, out_ent, out_own, 0)
 
 fn: l2_node_seg_meta (int: mi; const: @(char pd); size_t: off; size_t: len; @: int out_row; @: int out_kind; @: int out_ent; @: int out_own) int
-return: l2_node_seg_resolve(mi, pd, off, len, 0, out_row, out_kind, out_ent, out_own)
+return: l2_node_seg_resolve(mi, pd, off, len, 0, out_row, out_kind, out_ent, out_own, 0)
 
 # The field `node\name` names in the method being read (l2_cur_mi): a field of its lexical parent -- for a
 # method of the source the unit, whose fields are E's own; for a method of a program part its part's root,
@@ -32116,7 +32207,7 @@ fn: l2_hid_source (int: mi; int: k; int: project; @: int mode; @: int depth; @: 
         return: 1
     # The same lexical resolver the source-visible node path uses already
     # locates a captured host formal in the snapshot's appended body fields.
-    if: l2_mad_host_of(mi) >= 0 && l2_node_seg_resolve(mi, nm\data, 0U, nm\length, project, slot, kind, @ ent, own) = 0
+    if: l2_mad_host_of(mi) >= 0 && l2_node_seg_resolve(mi, nm\data, 0U, nm\length, project, slot, kind, @ ent, own, 0) = 0
         \mode: 1
         \depth: 1
         return: 0
@@ -35592,7 +35683,10 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
     # space above the method -- then a value field of that space's body (l2_node_seg), read and written in place.
     if: rooted = 0 && l2_rw_mi != l2_e && l2_text_eq(l2_rw_seg, "node") != 0
         path[0]: 8
-        path[1]: 0
+        # A source-declared first child may have a namespace but no own row.
+        # Keep that existing producer identity for lexical-use collection;
+        # it is not a runtime coordinate and never replaces NODE.
+        path[1]: -1
         path[4]: 0 - 1
         path[5]: 1
         rooted: 1
@@ -35695,7 +35789,7 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
                 ---
             else:
                 if: n = 0 && path[0] = 8
-                    if: l2_node_seg_resolve(l2_rw_mi, t\data, b, i - b, project, @ slot, @ kind, @ ent, @ field_own) != 0
+                    if: l2_node_seg_resolve(l2_rw_mi, t\data, b, i - b, project, @ slot, @ kind, @ ent, @ field_own, path + 1) != 0
                         slot: -1
                     ---
                 else:
@@ -35931,6 +36025,19 @@ fn: l2_use_path (@: int path) int
     ---
     if: path[0] = 8
         base: 1
+        # The selected first source declaration is a namespace, not an own
+        # row. Record its existing place relation and continue inside it.
+        # The same producer identity survives COUNT through final PLACE.
+        if: path[1] >= 0 && path[7] = 2
+            tags[0]: 3
+            if: l2_ns_parent[path[1]] >= 0
+                tags[0]: 7
+            vals[0]: path[1]
+            holder: path[1]
+            n: 1
+            level: 2
+        ---
+    ---
     else:
         tags[0]: 3
         vals[0]: path[1]

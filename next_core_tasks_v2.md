@@ -197,6 +197,25 @@ its actual lexical/receiving/copy consumers; see
 Do not patch a single spelling, move a local method to the unit, or suppress
 the new witnesses. §§8/8a and stable promotion remain blocked by full RED.
 
+The bounded anchor is published at `f6c17572`, with all three heads equal.
+Its immediate child `CODEX-LOCAL-COMPLETE-REFERENCE-CONTRACT-20261009-16`
+replaces the old local reference arity reader with the common complete
+declaration contract, then continues full local method collection and
+selected receiving/copy consumers. Exact scope, controls and uninterrupted
+gate/publication chain:
+[declaration-action journal](steps/local-complete-declaration-actions-20261009.md).
+
+That bounded producer now has terminal acceptance: focus RED31/537,
+kernel18 GREEN297/114 executed selftests, L3_18 eleven suites/four budgets,
+full18 RED76/2803. The corrected initializer pair recovers; eight additions
+have six GREEN/two required copied-model RED, no old regression/removal or
+changed old failure. Final2615 replay exactly matches the private candidate;
+39 frozen inputs/142 staged copies match. Next, immediately repair
+[actual copied reference model identity](steps/defects.md#local-copied-reference-model-identity),
+then full local method collection. Do not bypass correspondence or move
+definitions to the unit. Only the bounded producer closes; parents and
+stages8/8a remain OPEN and stable unchanged.
+
 **Mandatory correction, 2026-10-06: receiver applications require explicit
 Frames.** `b: merge: A C` and `b: merge(A C)` are ordinary applications;
 `b: merge A C` is not one. The earlier conversational spelling was a typo,

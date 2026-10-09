@@ -97,6 +97,25 @@ not be conflated; the [journal](steps/local-nested-model-anchor-20261009.md)
 preserves the unused-null-operand mutant and failed diagnostic attempts.
 No receiving/copy result or parent closure is asserted ahead of execution.
 
+The following complete-reference child has terminal bounded acceptance; see the
+[declaration journal](steps/local-complete-declaration-actions-20261009.md).
+The shared declaration contract supplies the full closed pointer type,
+candidate and original field identity before legacy scalar dispatch. NSF
+kind10/11 distinguish structural crossing from explicit deeper following;
+depth is in the closed type, not encoded as a new field kind per depth.
+Twelve fresh and68 retained executions pass, as do three compiled live
+initialization/address faults;2615 recorded translations are unchanged.
+The copied-reference pair remains required-positive RED: admission uses
+the copied Inner model while the later reader asks for the original model.
+This is a selected-instance/projection debt, not an absent-map fallback,
+permission to use a raw slot, or a new null policy. Full local fn collection
+also remains OPEN. Fresh focus RED31/537, kernel18 GREEN297/114 executed
+selftests, L3_18 eleven suites/four budgets and full18 RED76/2803 are
+terminal. Two old initializer rows recover; eight additions include six
+GREEN/two required copied-model RED; no old regression/removal/changed
+failure. Final2615 replay is exact;39 inputs/142 copies match. Continue
+copied model projection immediately, then full local method collection.
+
 This companion explains the concepts, current mechanisms, failure modes and
 repair constraints behind [the v2 plan](next_core_tasks_v2.md). It is not another
 chronological plan or a replacement specification. For the source map read

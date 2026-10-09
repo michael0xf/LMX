@@ -79,6 +79,25 @@ Do not use a current-method name lookup or a same-numbered unit child as
 a substitute for the declaration's actual source owner. The connected
 repair's bounded controls do not imply the remaining receiving guarantees.
 
+The next complete-reference child consumes the shared complete contract,
+not the outer receiver word's raw arity. Original initializer evidence
+required one oracle correction: defining Outer does not execute it. The
+test now checks its zero reference before explicit Outer invocation and
+retains all later address/write checks. This changes the test, not the
+language. Composed pointer contracts and depth3/8 controls pass in actual
+native/walked methods and native/cleared roots; private candidate03 has80
+positive executions, three compiled live faults and exact2615 replay.
+Fresh serial acceptance is terminal: focus RED31/537, kernel18 GREEN297/
+114 executed selftests, L3_18 eleven suites/four budgets, full18 RED76/2803.
+Two old initializer rows recover; eight new rows include six GREEN/two
+required RED, no old regression/removal/changed failure. Final2615 replay
+is exact;39 frozen inputs/142 staged copies match. A copy still exposes different model
+identities at admission and subsequent field reading; retain that positive
+test as RED and repair selected instance projection. Do not bypass its
+missing record or use the original prototype. Full local fn collection,
+T7 and stages8/8a remain OPEN. Evidence and precise limits:
+[declaration journal](steps/local-complete-declaration-actions-20261009.md).
+
 Every important statement is classified as one of the following.
 
 - **NORMATIVE** — required by the current language specifications or an accepted author clarification.

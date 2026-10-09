@@ -1,25 +1,27 @@
 fn: read () int
     Outer:
-        int: pad 17
         Inner:
             int: x 11
         end: Inner
         @: Inner ref Inner
     end: Outer
-    if: Outer\ref != 0 || Outer\Inner\x != 11
-        return: 81
+    Candidate:
+        int: pad 19
+        int: x 23
+    end: Candidate
     Outer
     if: Outer\ref != Outer\Inner || Outer\ref\x != 11
         return: 81
-    if: @Outer\ref\x != @Outer\Inner\x
+    Outer\ref: Candidate
+    if: Outer\ref != Candidate || Outer\ref\x != 23
         return: 81
-    Outer\ref\x: 13
-    if: Outer\Inner\x != 13 || Outer\pad != 17
+    Outer
+    if: Outer\ref != Outer\Inner || Outer\ref\x != 11 || Candidate\x != 23
         return: 81
-    return: Outer\Inner\x
+    return: 11
 end: read
 int: ok 7
-if: read() != 13
+if: read() != 11
     ok: 81
 sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
 return

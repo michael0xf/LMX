@@ -1,0 +1,30 @@
+fn: read () int
+    Outer:
+        int: pad 17
+        Inner:
+            int: x 11
+        end: Inner
+        @: Inner ref Inner
+    end: Outer
+    copy: merge: Outer
+    if: copy\Inner = Outer\Inner || copy\ref != 0 || Outer\ref != 0
+        return: 81
+    copy\Inner\x: 23
+    copy
+    if: copy\ref != copy\Inner || copy\ref = Outer\Inner || Outer\ref != 0
+        return: 81
+    if: @copy\ref\x != @copy\Inner\x || copy\ref\x != 23
+        return: 81
+    copy\ref\x: 31
+    Outer
+    if: Outer\ref != Outer\Inner || Outer\ref\x != 11
+        return: 81
+    if: copy\Inner\x != 31 || copy\ref\x != 31 || copy\pad != 17 || Outer\pad != 17
+        return: 81
+    return: 31
+end: read
+int: ok 7
+if: read() != 31
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

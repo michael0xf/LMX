@@ -91,6 +91,24 @@ bounded crossing-дефект; T7/8/8a OPEN, stable не меняется, Opus 
 
 ## Передача кодинга Codex — 2026-10-08
 
+Локальный якорь опубликован `f6c17572`; HEAD/upstream/remote совпали.
+Сразу начат `CODEX-LOCAL-COMPLETE-REFERENCE-CONTRACT-20261009-16`:
+общий полный declaration contract вместо старого raw-arity NSF reader;
+затем — полноценный сбор локальных методов и selected receiving/copy.
+Точные границы и непрерывная цепочка —
+[журнал деклараций](local-complete-declaration-actions-20261009.md).
+Единственный writer/build — Codex; Opus Q&A only. Stable и родители OPEN.
+
+Полный ссылочный producer bounded-verified (`2974463F`): focus RED31/537,
+kernel18 GREEN297/114 выполненных самотестов, L3_18 —11 наборов/four budgets,
+full18 RED76/2803. Восстановлена пара initializer; восемь новых строк:
+шесть GREEN/две required copied-model RED. Старых регрессий, удалений и
+изменённых отказов нет. Финальный replay2615 точно равен private01;
+39 frozen входов/142 копии совпали. Serial driver31239 завершён exit0.
+После scoped commit/push сразу исправлять actual copied reference-model
+identity, затем полный local fn/fm/sub collection. Без второго build,
+prototype fallback, runtime names или закрытия T7/8/8a на частичном срезе.
+
 Crossing-срез опубликован `01d82c8c`; HEAD/upstream/remote совпали.
 Сразу начат единственный следующий writer/build
 `CODEX-LOCAL-NESTED-MODEL-ANCHOR-20261009-15`: исходное объявление и

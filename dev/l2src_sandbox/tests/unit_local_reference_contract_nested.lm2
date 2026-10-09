@@ -1,0 +1,27 @@
+fn: read () int
+    Outer:
+        int: x 11
+        @: int p @x
+        @: int: q @x
+        const: @: int r @x
+        @@: int p2 @p
+        @@@: int p3 @p2
+        @@@@@@@@: int p8
+    end: Outer
+    if: Outer\p != 0 || Outer\q != 0 || Outer\p3 != 0 || Outer\p8 != 0
+        return: 81
+    Outer
+    if: Outer\p != @Outer\x || Outer\q != @Outer\x || Outer\r != @Outer\x
+        return: 81
+    if: Outer\p2 != @Outer\p || Outer\p3 != @Outer\p2 || Outer\p8 != 0
+        return: 81
+    Outer\x: 13
+    if: \Outer\p != 13 || \\\Outer\p3 != 13
+        return: 81
+    return: 13
+end: read
+int: ok 7
+if: read() != 13
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

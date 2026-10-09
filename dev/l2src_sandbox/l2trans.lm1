@@ -5077,9 +5077,15 @@ return: l2_error(path, node, "a named Structure field needs a name")
 # `Name: field` shape -- with Name known at its place the item is Name's application, a statement of the body; with
 # Name absent it is a definition or the binding `Name: A` (l2_ns_nested_def, l2_ns_bind_item).
 fn: l2_ns_decl_first (const: @(LmP0Node node)) int
+    @: L2Declaration declaration
+    int: depth
+    int: qualified
     if: node = 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || node\as\frame\body = 0
         return: 0
     if: l2_ns_field_word(node\as\frame\head) != 0
+        return: 1
+    declaration: l2_declaration(node)
+    if: declaration != 0 && l2_contract_leaf(declaration\contract, @ depth, @ qualified) != 0 && depth > 0
         return: 1
 return: (cast: (int) (l2_address_depth(node\as\frame\head) != 0))
 
@@ -23095,6 +23101,41 @@ fn: l2_ns_body_stmt (const: @(LmP0Node node); int: me) int
     ---
 return: 0
 
+# Project a reference declaration's complete contract onto the existing
+# namespace schema. The original source act still owns candidate evaluation;
+# no raw operand reader, depth-encoded kind or second declaration is made.
+# 0 consumed, 1 another declaration contract, 2 diagnosed failure.
+fn: l2_ns_take_reference (const: @(LmP0Node source); int: owner; const: @(char path)) int
+    @: L2Declaration declaration l2_declaration(source)
+    @: LmP0Text word
+    int: depth
+    int: qualified
+    int: ty
+    int: kind 11
+    if: declaration = 0
+        return: 1
+    word: l2_contract_leaf(declaration\contract, @ depth, @ qualified)
+    if: word = 0 || depth = 0
+        return: 1
+    if: l2_contract_formal(declaration\contract, @ ty) != 0
+        l2_error(path, source, "unknown type")
+        return: 2
+    if: declaration\candidate_count > 0 && l2_check_one_value(declaration\candidate, declaration\candidate_count, path) != 0
+        return: 2
+    # One level can expose a structural pointee; deeper references require
+    # explicit following. Both retain their full closed type in nsf_ref.
+    if: depth = 1
+        kind: 10
+    if: l2_nsf_push(kind, 0U, ty, owner, source) < 0
+        l2_error(path, source, "out of memory")
+        return: 2
+    if: l2_bind_admit(declaration\name, l2_bind_at(source, declaration\name), path) != 0
+        return: 2
+    l2_nsf_fname[l2_nsf_n - 1]: declaration\name
+    if: l2_contract_model(declaration\contract, 0) >= 0
+        l2_nsf_name[l2_nsf_n - 1]: word
+return: 0
+
 # One Structure body: registers the entry FIRST so its index precedes every nested entry, then reads the items in
 # source order -- fields (numbers and chars with their literals, arrays, inline and defined nested Structures built in
 # place with this entry as their node, callable fields, typed references `@: T x`, bindings `b: A` holding a named
@@ -23200,6 +23241,13 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
         # Kind 6: an Array of references to T Arrays.  The spelling has no count,
         # so construction makes the outer Array empty; its slot holds the outer
         # descriptor's reference, as a kind-5 slot does.
+        st: l2_ns_take_reference(fld, me, path)
+        if: st = 2
+            return: 1
+        if: st = 0
+            count: count + 1
+            f: l2_next_active(f\next)
+            continue
         if: l2_ns_arrarr_field(fld, @ aty, @ fname) = 0
             if: l2_nsf_push(6, 0U, aty, me, fld) < 0
                 return: l2_error(path, at, "out of memory")
@@ -23377,46 +23425,11 @@ fn: l2_take_ns_body (const: @(LmP0Text name); int: parent; const: @(LmP0Structur
                                             return: 1
                                         l2_nsf_ref[sub_ix]: ref_ix
                                     else:
-                                        rdepth: l2_address_depth(fld\as\frame\head)
-                                        if: rdepth != 0
-                                            # @: T name / @@: T name (author's rule: `@` of any
-                                            # depth is a declaration receiver in L3, so a named
-                                            # Structure -- itself L3 -- admits a reference field
-                                            # the same way a formal or local does). The pointee
-                                            # vocabulary is exactly a formal's/local's: the six
-                                            # core words at this depth, the kernel types at depth
-                                            # 1 (LmxMsg code 29, the mail sender reference; D-52 --
-                                            # steps/defects.md -- covers the prototype-construction
-                                            # gap this kind needed, FABLE-SONNET-SEND-REF-20260925-172
-                                            # commit 1), or
-                                            # another named Structure. Not a Message-only kind.
-                                            if: l2_count_active(fld\as\frame\body) != 2 || g\value = 0 || g\value\kind != c.LM_P0_NODE_ATOM
-                                                return: l2_error(path, at, "a reference field needs a type and a name")
-                                            h: l2_next_active(g\next)
-                                            if: h\value = 0 || h\value\kind != c.LM_P0_NODE_ATOM || l2_bind_spelling(h\value\as\atom) = 0
-                                                return: l2_error(path, at, "a reference field needs a name")
-                                            rty: 0 - 1
-                                            if: l2_ptr_type_word(g\value\as\atom, rdepth, @ rty) != 0
-                                                if: rdepth != 1 || l2_kernel_ptr_word(g\value\as\atom, @ rty) != 0
-                                                    if: l2_resolve_type_atom(g\value\as\atom, rdepth, 0, @ rty) != 0
-                                                        return: l2_error(path, g\value, "unknown type")
-                                                    ---
-                                                ---
-                                            if: l2_nsf_push(9 + rdepth, 0U, rty, me, fld) < 0
-                                                return: l2_error(path, at, "out of memory")
-                                            if: l2_bind_admit((cast: (@: LmP0Text) h\value\as\atom), l2_bind_at(fld, (cast: (@: LmP0Text) h\value\as\atom)), path) != 0
-                                                return: 1
-                                            l2_nsf_fname[l2_nsf_n - 1]: (cast: (@: LmP0Text) h\value\as\atom)
-                                            # `@: T q` with T a named Structure (D-76): the pointee's name, so a
-                                            # path goes on through q (l2_ns_ref_pointee).
-                                            if: rdepth = 1 && l2_ns_find(g\value\as\atom) >= 0
-                                                l2_nsf_name[l2_nsf_n - 1]: (cast: (@: LmP0Text) g\value\as\atom)
-                                            ---
-                                        else:
-                                            # K03 NS-ROLES-2: a field is one of the shapes above (l2_ns_body_stmt
-                                            # admits no other): there is no `Name: field`.
-                                            return: l2_error(path, fld, "internal: a named Structure's item is neither a field nor a statement")
-                                        ---
+                                        if: l2_address_depth(fld\as\frame\head) != 0
+                                            return: l2_error(path, at, "a reference field needs a type and a name")
+                                        # K03 NS-ROLES-2: a field is one of the contracts above;
+                                        # there is no additional `Name: field` declaration rule.
+                                        return: l2_error(path, fld, "internal: a named Structure's item is neither a field nor a statement")
                                     ---
                                 ---
             ---
@@ -36030,10 +36043,9 @@ fn: l2_rw_path_resolve_sized (const: @(LmP0Node node); const: @(LmP0Text t); int
         path[3]: 3
     if: kind = 9
         path[3]: 36
-    # A reference field (`@: LmxMsg sender` is kind 10, pointee 29). Its static type is the
-    # pointer, the same 1000+pointee a formal of that type has. Structures share one address
-    # range; this is the type, not a range.
-    if: kind = 10
+    # Every reference field carries its complete closed pointer type in ent.
+    # A deeper pointer is a value too, not a Structure with an absent type.
+    if: kind = 10 || kind = 11
         path[3]: l2_oc_pointer(ent)
     ---
 return: 0

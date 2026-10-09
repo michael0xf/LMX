@@ -9790,13 +9790,32 @@ $fixtures = @(
         Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_model_anchor_body_walk.lm2'; Source = 'unit_local_model_anchor_body.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
         Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
-    # Required positive: the common pointer receiver also accepts its explicit
-    # third initializer in a named local body. Its old NSF arity refusal is
-    # a separate debt, not an accepted language rule.
+    # The explicit pointer initializer runs only on reaching the owner's body:
+    # definition leaves zero; the explicit call must bind the actual Inner.
     [pscustomobject]@{ Name = 'unit_local_model_anchor_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
     [pscustomobject]@{ Name = 'unit_local_model_anchor_initializer_walk.lm2'; Source = 'unit_local_model_anchor_initializer.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('0'); WalkRoot = $true; WalkMethods = $true; Absent = @(); Debt = @() },
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    # Complete reference contracts: receiver composition/qualification,
+    # deeper closed types, physical addresses and repeated body execution.
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_nested_walk.lm2'; Source = 'unit_local_reference_contract_nested.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_repeated.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3,4); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_repeated_walk.lm2'; Source = 'unit_local_reference_contract_repeated.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3,4); NativeMethods = @(1); Absent = @(); Debt = @() },
+    # REQUIRED POSITIVE RED until admission and the later path agree on the
+    # actual copied receiving model. No prototype/identity-map fallback.
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; NativeRoot = 1; NativeMethods = @(0,2,3); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_copy_walk.lm2'; Source = 'unit_local_reference_contract_copy.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
+        Args = @('0'); WalkRoot = $true; WalkMethods = $true; NativeRoot = 1; WalkedMethods = @(0,2,3); NativeMethods = @(1); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_bad_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0;
+        Needle = 'unit_local_reference_contract_bad_candidate.lm2:3:9: assignment value has incompatible type'; ErrorLines = 1; Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_local_reference_contract_bad_candidate_walk.lm2'; Source = 'unit_local_reference_contract_bad_candidate.lm2'; Expect = 'l2trans-refuses'; Exit = 0; WalkMethods = $true;
+        Needle = 'unit_local_reference_contract_bad_candidate_walk.lm2:3:9: assignment value has incompatible type'; ErrorLines = 1; Absent = @(); Debt = @() },
     # Shared reference-crossing correspondence: value and address reads,
     # writes, LAST/ordinal, multiple boundaries, copy, formal, identity/null.
     [pscustomobject]@{ Name = 'unit_reference_crossing_occurrences.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;

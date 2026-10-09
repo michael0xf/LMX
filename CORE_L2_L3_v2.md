@@ -1,5 +1,24 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+The current complete-reference implementation uses the common complete
+declaration contract before the old scalar readers. Its full closed type
+and candidate survive local source-field collection; native and walker
+consume the same actual cells, including composed and deep references.
+Private candidate03 `2974463F` passes80 actual positive executions, three
+compiled live faults and an exact2615 translation replay. Fresh serial
+acceptance is terminal: focus RED31/537, kernel18 GREEN297/114
+executed selftests, L3_18 eleven suites/four budgets, full18 RED76/2803.
+Two old initializer rows recover; eight additions have six GREEN/two
+required RED, no old regression/removal/changed failure. Final2615 replay
+matches exactly;39 inputs/142 staged copies match.
+The copied-reference required pair exposes a separate instance mismatch:
+copied Inner is the admission model, original Inner is the later read's
+key. Correct it by the common selected physical model projection, never a
+manufactured correspondence or prototype fallback. Full local method
+collection and parent stages remain OPEN. Detailed boundaries and all
+failed attempts are in the
+[declaration journal](steps/local-complete-declaration-actions-20261009.md).
+
 Current development note: [PATH-STRUCTURE-LEAF](steps/path-structure-leaf-20261009.md)
 uses the existing physical selector, procedure and full Structure schema,
 then the receiving kind decides reference transport or application. Fresh

@@ -116,6 +116,44 @@ The explicit `ref: Inner` body action is separately tested after an explicit
 Outer invocation; its non-null model operand is actually consumed. A null
 initializer's unused operand is not evidence of a correct physical host.
 
+After bounded anchor publication `f6c17572`, the explicit initializer's
+common reference-contract producer is IN WORK
+`CODEX-LOCAL-COMPLETE-REFERENCE-CONTRACT-20261009-16`. Its
+[uninterrupted chain](local-complete-declaration-actions-20261009.md)
+continues method collection/selected receiving identity afterwards, without
+claiming either required pair repaired ahead of execution.
+
+The bounded complete-reference producer is now FIXED (`2974463F`), with
+terminal focus RED31/537, kernel18 GREEN297/114 executed selftests, L3_18
+eleven suites/four budgets and full18 RED76/2803. Both corrected initializer
+rows recover; eight new rows have six GREEN/two separate copied-model RED,
+no old regression/removal/changed failure. Final2615 replay is exact;
+39 inputs/142 copies match. The original oracle wrongly expected execution
+at definition: it now additionally checks zero before explicit Outer
+invocation and retains later address/write checks. Full fn collection is
+still OPEN. Continue the copied-reference model debt immediately after
+publication, then full method collection; no parent or stable promotion.
+
+<a id="local-copied-reference-model-identity"></a>
+### LOCAL-COPIED-REFERENCE-MODEL-IDENTITY — 2026-10-09, Codex, OPEN required positive
+
+`unit_local_reference_contract_copy`: a local Outer owns Inner and
+`@: Inner ref Inner`. A merge copy explicitly executes that body; its ref
+points to its own copied Inner, but a later `copy\ref\x` consumes a
+correspondence keyed by the original host's Inner instead of the selected
+receiving instance. Candidate03 (`2974463F`) executes the existing
+missing-map invariant natively; the actually walked method exits with
+`lmx: walk error: INVALID`. Both are runtime exit3, not compile refusals.
+Do not invent an identity map, reuse a prototype,
+ignore admission or turn this positive into an expected refusal.
+
+The shared actual-holder/source-model projection must connect reference
+declaration admission and later native/walker path consumption through the
+same actual instance, including copies. This is connected to the next
+selected receiving-model slice after the complete-reference producer,
+not a new language decision. Evidence and uninterrupted continuation:
+[declaration journal](local-complete-declaration-actions-20261009.md).
+
 <a id="compiler-text-view-ownership"></a>
 ### COMPILER-TEXT-VIEW-OWNERSHIP — 2026-10-03, Codex, IN WORK
 

@@ -39,7 +39,7 @@ Nested membership establishes a same-source owner. Root offset comparison
 also requires both nodes in the same original MAIN tree. Cross-file byte
 offsets never establish relative order. The existing part visibility
 boundary is preserved: the author's
-[MAIN-to-part question](../LMX_blog/q/current/program-parts-declaration-visibility.md)
+[MAIN-to-part question](../LMX_blog/q/program-parts-declaration-visibility.md)
 is not silently decided by this repair.
 
 ## Private diagnostics, not final acceptance

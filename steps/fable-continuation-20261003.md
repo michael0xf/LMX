@@ -11304,7 +11304,7 @@ What changed in `l2trans.lm1`:
   and its consequence is now the call refusal, no longer the declaration.
 - The typed binding `T: b c` (the pending family) reads its candidate by its schema, as a call's actual is read
   (`l2_own_schema`, -1 none): a merge result is a Structure value, so the migrated `c: merge: Model` keeps the
-  binding's admission. The binding itself is untouched (LMX_blog/q/current/model-constrained-null-reference.md).
+  binding's admission. The binding itself is untouched (LMX_blog/q/model-constrained-null-reference.md).
 
 The migration (`steps/k03-colondecl-migration.tsv`): every item the recorded translations of `opus_full_47` reached
 through `l2_colon_decl_shape` at the root (80) and in a method (31) -- 111 items in 92 programs -- rewritten in place as
@@ -11732,7 +11732,7 @@ counts kept, so no needle moves):
   letter's run-time refusal become translation refusals.  Their purpose -- b constrained by a model and bound to a
   candidate, admitted by b's uses at translation or at run time -- is a model-constrained reference with a value, the
   `@: T name value` family that the author's open question lists as dependent
-  (`LMX_blog/q/current/model-constrained-null-reference.md`, not touched).  It is exact debt, not reinterpreted:
+  (`LMX_blog/q/model-constrained-null-reference.md`, not touched).  It is exact debt, not reinterpreted:
   [TYPED-BINDING-PURPOSE-DEBT](defects.md#typed-binding-purpose-debt) names each row and its old verdict.  No helper
   method with a typed formal replaces a root receiving place; the formal side keeps its own rows
   (`unit_formal_thin_other`, `unit_formal_used_other_refused`, `unit_admit_letter_formal`, `unit_admit_letter_not_model`,
@@ -12422,7 +12422,7 @@ What changed in `l2trans.lm1` (b98c68bb) -- the reading (S7a) and its dependent 
   described as legacy evidence of a known defect, [MERGE-PARENT-SITE-OVERRIDE](defects.md#merge-parent-site-override):
   `lmx_merge_owned.lm1:263`, `:487` assign `result\parent: container`, and the translator passes the merge site's
   container (`merge_parent` in `l2_emit_stmts`) -- the next bounded dependency.  The bare field operand's question to
-  the author: [LMX_blog/q/current/merge-bare-field-operand.md](../LMX_blog/q/current/merge-bare-field-operand.md).
+  the author: [LMX_blog/q/merge-bare-field-operand.md](../LMX_blog/q/merge-bare-field-operand.md).
 
 Evidence:
 

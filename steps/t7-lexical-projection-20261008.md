@@ -1243,7 +1243,7 @@ fully explains the differing acceptance; setMarker and collection order do
 not. The old rule that excludes ordinary MAIN declarations from parts was
 found only in fable_pc's answer in `steps/table-receiver.md`, not an author
 ruling or a normative ordering of files. The
-[minimal author question](../LMX_blog/q/current/program-parts-declaration-visibility.md)
+[minimal author question](../LMX_blog/q/program-parts-declaration-visibility.md)
 is asked in this chat. Do not turn accidental signature acceptance into a
 new norm, or turn the consultant's suggested refusal into one either. The
 dependent source-visibility correction awaits that answer; independent

@@ -94,18 +94,27 @@ nodes; the nine rows are OK with their oracles untouched. Evidence: kernel
 `fable_throwkeys_full_01` stopped by the host for system memory pressure at 10908 of about 12050 steps, before its verdict; the full replay is pending. The identity's carrier is provisional: a
 numeric key (`THROWN + key`), which the author's correction of 2026-10-10
 (relayed by Codex, `CODEX-FABLE-THROW-ADDRESS-20261010-1922`) declares an
-implementation choice to be weighed against a stable-address identity before
-anything is cemented.
+implementation choice; his statements of the same day (verbatim in
+`LMX_blog/2026-10-10.md#catch-lookup-20261010`) require the name to be resolved
+through the namespace at translation, with no hidden catch arguments, no
+runtime graph search and no name table, and the runtime form of the namespace
+entry is being settled with him before anything is cemented.
 
-Next dependent steps: (A2) decide and implement the identity carrier after that
-evaluation (module-lifetime tokens as the §9.4 layout tokens, with kernel
-tokens for the four implicit names, unless Codex or the author answer
-otherwise), keeping the positions, the lexical pad selection and the
-boundary-only ordinal mapping; (B) remove the empty count cell the old catch
-rows left in CALL (slot 4), PRIM (slot 2) and ADMIT_AS (slot 2) from the
-walker, the translator's emitters, the kernel self-tests, the harness layout
-readers and the layout documents; replay the kernel, focused and full gates
-after each. This
+Next dependent steps: (A2) implement the carrier the author settles (proposed to
+him: one namespace-entry record per throw name next to the roles table,
+referenced from THROWS/PAD/THROW as child 0 references a role record, shared by
+copies by the existing terminal rule), keeping the positions, the lexical pad
+selection and the boundary-only ordinal mapping, gated by the copied-callee /
+original-caller catch witness natively and walked; (B) the removal of the empty
+count cell the old catch rows left in CALL (slot 4), PRIM (slot 2) and
+ADMIT_AS (slot 2) is implemented in the walker, the translator's emitters, 23
+kernel self-tests, the L3 mail self-test and the harness layout readers
+(kernel `fable_slotb_kernel_02` GREEN 298, L3 `fable_slotb_l3_01` all 11
+suites, focused `fable_slotb_focus_01` 899 targets with 211 rows red, all of
+them path/shape-word oracles indexing the old slots while the programs exit as
+expected) and held as a patch outside the tree until those oracle rows are
+shifted by one cell from the old and new generated graphs with a tool, one
+sweep after A2; (C) the author answers of 2026-10-10 below. This
 is **not yet the whole acceptance** of the interpreter throw: uncaught and
 nested-actual witnesses, the non-status-bearing native caller,
 named-Structure/callable-merge status propagation, the graph-level long-call
@@ -113,6 +122,23 @@ selector status (source reachability unproven), direct L3 API status
 preservation and malformed executed-op metadata remain open. Native DIV/0
 parity is a separate L3 lowering dependency. The measured boundary is in
 [steps/interpreter-throw-20261010.md](steps/interpreter-throw-20261010.md).
+
+Author answers of 2026-10-10 (verbatim in `LMX_blog/2026-10-10.md#three-questions-20261010`;
+the three questions moved from `LMX_blog/q/current/` to `LMX_blog/q/`): (a)
+`@: Model box 0` is the explicit model-constrained null reference; the
+translator on a946e2d9 already translates it and `@: Model box` (translation
+probe, no execution), the 296-line census stays, the book's reference table
+gains the form. (b) A bare `v: 9` operand of `merge(Model; v: 9)` is the named
+argument `v` under the common head/argument model, written into the model's
+slot: dependent translator step MERGE-NAMED-ARGUMENT-OPERAND turns the located
+refusal of `unit_k03_merge_op_bare_field_limit` and its walk twin into the
+positive it names; `merge(Model; u: 9)` with no matching slot is not decided and
+becomes one concrete question only if needed; MERGE-WRITTEN-OPERAND stays open
+for the typed anonymous operand. (c) A program has no main file, a message is a
+Structure and any attached file is embedded into the graph, visibility follows
+the resulting graph and the ordinary declaration visibility: dependent
+translator step PART-VISIBILITY-GRAPH-POSITION replaces the cross-document
+offset comparison of `l2_vis_from`/`l2_vis_ok` (defect PART-VISIBILITY-OFFSETS).
 
 Checkpoint22 `CODEX-SOURCE-DEFINING-IDENTITY-20261009-22` is bounded-verified
 on candidate04 `4F56DBB5`: actual defining P0 node/body are captured in the
@@ -246,7 +272,7 @@ four cross-file header failures). All2615 recorded translations were replayed:
 T7 stays OPEN. The eighth child implements actual receiving-model ancestry,
 not the global prototype or an assumed single parent. Its separate
 cross-file header-offset defect remains OPEN; comment changes must not
-decide type visibility. Its [file-order question](LMX_blog/q/current/program-parts-declaration-visibility.md)
+decide type visibility. Its [file-order question](LMX_blog/q/program-parts-declaration-visibility.md)
 awaits the author; an old agent note is not a language decision. Independent
 acceptance and [hosted native completion](steps/defects.md#hosted-native-completion)
 continue independently: actual bodies, shared hidden-input source, common
@@ -2366,7 +2392,7 @@ checkpoint:
   construction; kind 3 removed after its 14 programs (Codex -07 Q3 as restated in -09: refusal intent and stage kept,
   identity controls for eternal references, a fresh-copy intent never silently shared).
 - K03-S5-RECEIVE-OUTPUT (generic); then S6, S7.
-The typed-null / typed-binding family waits for the author (LMX_blog/q/current/model-constrained-null-reference.md).
+The typed-null / typed-binding family waits for the author (LMX_blog/q/model-constrained-null-reference.md).
 NS-ROLES-VIS done ([section 114](steps/fable-continuation-20261003.md#ns-roles-vis); the author's decision of 2026-10-07,
 LMX_blog/q/named-definition-boundary.md; Codex K03-VISIBILITY-AUTHOR-CLOSE-20261007-12): fn and sub visible both ways
 (fm is not built); an ordinary named Structure and a qualified branch's root visible from their place on; the root
@@ -2440,7 +2466,7 @@ operands, split paths); a path to a Structure field and a call of a named result
 reference route, a call operand checked as any call; a number by the common typing is no Structure, every other form
 not lowered a located limit at the operand. Gates on the final bytes (`l2trans.lm1` blob b98c68bb): `opus_focus_s7_01` (207 targets; red exactly its three opus_full_60 baseline rows (unit_eternal_shape, unit_capture_struct_merge_two, unit_t7_host_nested_return, their messages unchanged) and the required-positive pair unit_k03_merge_op_anon_typed), kernel `opus_kernel_55` GREEN297 (114 selftests ran, staged blob b98c68bb), L3 `opus_l3_53` (all 11 suites ok, type budget ok), full `opus_full_61` RED63/2509 -- against `opus_full_60` FAIL→OK 0, OK→FAIL 0, added 32 (30 OK, 2 red: the required-positive pair), removed 0; one recorded message changed by intent: unit_recv_use_nested_copy_reach_limit_probe, "unknown merge operand" -> "this merge operand form is not lowered yet" (make is a known method).
 Open: MERGE-WRITTEN-OPERAND (the typed anonymous Structure operand, a required positive red; the bare field operand
-asked of the author, LMX_blog/q/current/merge-bare-field-operand.md), PATH-STRUCTURE-LEAF (the positions other than a
+asked of the author, LMX_blog/q/merge-bare-field-operand.md), PATH-STRUCTURE-LEAF (the positions other than a
 merge operand), SLOT-FAMILY-DEAD, OWN-CALLABLE-LIMITS. CORE_L2_L3_v2.md's host-parent sentences (:130, :737, :766,
 :768) corrected to the author's merge-parent ruling.
 MERGE-PARENT-SITE-OVERRIDE, checkpoint INCOMPLETE, with READ-FIELD-CLOSURE and MERGE-PARENT-MODEL-SOURCE ([section

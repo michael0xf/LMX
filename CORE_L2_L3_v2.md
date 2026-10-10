@@ -45,16 +45,18 @@ identity's current carrier is a numeric key fixed at translation (implicit
 names 1..4, declared names of the unit from 5 by first appearance, status
 `THROWN + key`). By the author's correction of 2026-10-10, relayed by Codex as
 `CODEX-FABLE-THROW-ADDRESS-20261010-1922`, that carrier is an implementation
-choice and not a proven necessity: a stable-address identity (a module-lifetime
-token as the layout tokens of §9.4, or an arena cell) is to be evaluated before
-any carrier is cemented; the evaluation and the planned replacement are in the
-journal. Faulting operations and calls carry no status, pad or remap children,
+choice and not a proven necessity; the author's statements of the same day
+(verbatim in `LMX_blog/2026-10-10.md`) require the name to be resolved through
+the namespace at translation, with no hidden catch arguments, no runtime graph
+search and no name table, and the runtime form of the namespace entry is being
+settled with the author before any carrier is cemented (journal). Faulting operations and calls carry no status, pad or remap children,
 and the older explicit per-call catch rows are gone with them.
 The nine rows return to OK with their oracles untouched: kernel `fable_throwkeys_kernel_03` GREEN 298 targets,
 focused `fable_throwkeys_focus_04` GREEN 12/12, full `fable_throwkeys_full_01`
 stopped by the host for system memory pressure at 10908 of about 12050 steps, before its verdict; the full replay is pending. Transitional: the empty count cell of the old catch rows still stands
-in CALL (slot 4), PRIM (slot 2) and ADMIT_AS (slot 2); its removal is the next
-slice. The other interpreter-throw items stay open in
+in CALL (slot 4), PRIM (slot 2) and ADMIT_AS (slot 2); its removal is
+implemented and kernel/L3-green and held as a patch until its 211 path/shape
+oracle rows are shifted (journal). The other interpreter-throw items stay open in
 [the journal](steps/interpreter-throw-20261010.md).
 
 **BOUNDED VERIFIED, original defining-source identity22 (`4F56DBB5`).** The existing compiler namespace

@@ -763,8 +763,8 @@ fixed at translation, stored where the source writes the name (THROWS, PAD,
 THROW), and selects a `catch` by lexical parentage, with no routing children,
 runtime name table or oracle rewrite. Its carrier, now a numeric key, is an
 implementation choice under the author's correction relayed by Codex
-(`CODEX-FABLE-THROW-ADDRESS-20261010-1922`); a stable-address carrier is under
-evaluation
+(`CODEX-FABLE-THROW-ADDRESS-20261010-1922`); the runtime form of the namespace entry that
+replaces it is being settled with the author
 ([measured record](steps/defects.md#interpreter-status-hidden-graph-children)).
 
 **Verification.** Inspect actual nested method native words and entry observers.

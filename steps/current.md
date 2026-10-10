@@ -29,9 +29,15 @@ focused `fable_throwkeys_focus_04` GREEN 12/12, full `fable_throwkeys_full_01`
 PRIM 2, ADMIT_AS 2) остаётся до среза B. Носитель идентичности — числовой
 ключ — по поправке автора, переданной Codex
 (`CODEX-FABLE-THROW-ADDRESS-20261010-1922`), есть выбор реализации, а не
-доказанная необходимость: до закрепления оценивается адресная идентичность
-(токен времени жизни модуля, как layout-токены §9.4 карты, с токенами ядра
-для четырёх неявных имён); оценка и план — в журнале, срез A2. Остальные
+доказанная необходимость; по словам автора того же дня (дословно в
+`LMX_blog/2026-10-10.md`) имя разрешается через namespace при трансляции, без
+скрытых аргументов catch, без поиска по графу и таблицы имён во время
+исполнения; форма записи namespace в построенном графе согласуется с автором
+(срез A2). Срез B (удаление пустой ячейки счётчика) реализован, kernel 298 и
+L3 11/11 зелёные, 211 строк path/shape-оракулов требуют сдвига на одну ячейку;
+код отложен патчем вне дерева до сдвига. Три вопроса `LMX_blog/q/current/`
+закрыты ответами автора 2026-10-10 (дословно там же) и перенесены в
+`LMX_blog/q/`; зависимые правки — в плане и дефектах. Остальные
 пункты interpreter-throw открыты — [журнал](interpreter-throw-20261010.md),
 п. 2–8; [дефект](defects.md#interpreter-status-hidden-graph-children) закрыт
 как bounded.
@@ -1272,7 +1278,7 @@ checkpoint и не отменяет передачу `fable_pc` в 15:00, опи
   где намерение — новый экземпляр (по каждой фикстуре, с сохранением поведения); `b: A` с отсутствующим `b` —
   привязка ссылки во всех исполняемых областях, после неё поля-ссылки `Inner: box` переходят в `box: Inner`.
   Объявления `@: T name` с Structure `T` ждут ответа автора и не переписываются:
-  [вопрос](../LMX_blog/q/current/model-constrained-null-reference.md) о пустой ссылке с требованием модели,
+  [вопрос](../LMX_blog/q/model-constrained-null-reference.md) о пустой ссылке с требованием модели,
   перепись — `k03-typed-reference-census.tsv` (296 строк в 150 фикстурах; 76 без значения).
 - K03 NS-ROLES-3: старое объявление `Model: m` ушло из корня и методов — при существующей Model это вызов Model,
   отказ «more arguments than Model has formals»; 111 таких строк в 92 программах стали записанной конструкцией
@@ -1370,7 +1376,7 @@ checkpoint и не отменяет передачу `fable_pc` в 15:00, опи
   обычным ссылочным маршрутом, вызов проверяется как любой; число по общему типу — «a merge operand is not a
   Structure», прочие формы — located-предел у операнда. Анонимная Structure с объявленным полем — обязательный
   позитив, голое поле — вопрос автору ([MERGE-WRITTEN-OPERAND](defects.md#merge-written-operand),
-  [LMX_blog/q/current/merge-bare-field-operand.md](../LMX_blog/q/current/merge-bare-field-operand.md)); устаревшая фраза о
+  [LMX_blog/q/merge-bare-field-operand.md](../LMX_blog/q/merge-bare-field-operand.md)); устаревшая фраза о
   родителе результата merge в CORE_L2_L3_v2.md исправлена ([§121 журнала](fable-continuation-20261003.md#unified-head-s7)).
   Гейты на финальных байтах (`l2trans.lm1` blob b98c68bb): `opus_focus_s7_01` (207 целей; красные ровно три базовые строки `opus_full_60` (`unit_eternal_shape`, `unit_capture_struct_merge_two`, `unit_t7_host_nested_return`, сообщения те же) и пара обязательного позитива `unit_k03_merge_op_anon_typed`), `opus_kernel_55` GREEN297 (114 самотестов, staged blob b98c68bb), `opus_l3_53` (все 11 наборов ok, бюджет типов ok), `opus_full_61` RED63/2509: против `opus_full_60` FAIL→OK 0, OK→FAIL 0, добавлено 32 (30 OK, 2 красных — пара обязательного позитива), удалено 0; одно записанное сообщение изменилось намеренно: `unit_recv_use_nested_copy_reach_limit_probe`, «unknown merge operand» → «this merge operand form is not lowered yet» (make — известный метод).
 - MERGE-PARENT-SITE-OVERRIDE, READ-FIELD-CLOSURE, MERGE-PARENT-MODEL-SOURCE (Codex K03-MERGE-PARENT-20261007-27,

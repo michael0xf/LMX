@@ -26,8 +26,9 @@ native boundary (`lmx_walk_key_from_ordinal`, `lmx_walk_ordinal_from_key`,
 through the callee's THROWS node). The current carrier, a numeric key fixed at
 translation (`l2_throw_key`, status `THROWN + key`), is provisional under the
 author's correction `CODEX-FABLE-THROW-ADDRESS-20261010-1922` (relayed by
-Codex): a stable-address carrier is being evaluated; port the positions and the
-comparison, never a dependence on the key's numeric value. When porting, do not
+Codex): the runtime form of the namespace entry that replaces it is being settled
+with the author (journal); port the positions and the comparison, never a
+dependence on the key's numeric value. When porting, do not
 reintroduce per-call catch rows, remap triples or a runtime name table; the
 count cell left in CALL/PRIM/ADMIT_AS is always empty until a following slice
 removes it. Evidence and the remaining open items:

@@ -119,7 +119,7 @@ critical_pointer_to_struct_bug), `unit_s6_own_fn_capture_value` (+`_walk`), `uni
 T7-MODEL-OPERAND-SOURCE, T7-MODEL-ONLY-UNIT-METHOD, RETURNED-NODE-PARTIAL-COPY, MERGE-WRITTEN-OPERAND,
 OWN-CALLABLE-LIMITS, REFERENCE-FIELD-CONSUMERS, MERGE-OF-QUALIFIED-REFERENCE-CELLS, SLOT-FAMILY-DEAD; долги
 покрытия: обходимый корень `Model: m`, вид 3 в собственной именованной Structure метода, обходимый селектор (§3).
-Не трогать без автора: голое поле как операнд merge (`LMX_blog/q/current/merge-bare-field-operand.md`),
+Не трогать без автора: голое поле как операнд merge (`LMX_blog/q/merge-bare-field-operand.md`),
 семейство model-constrained null.
 
 ## 6. Следующая зависимость (по `next_core_tasks_v2.md` и порядку Codex)

@@ -146,7 +146,20 @@ modules, never a module-local duplicate; whether a declared name reuses a
 module-lifetime token or preserves and remaps source-graph cell identity
 through copy and ownership is Codex's open question to the author; the
 structural repair may be committed on its gated merits with the numeric key
-marked provisional, not normative.
+marked provisional, not normative. Later the same day the author's statements
+(verbatim, in order, in `LMX_blog/2026-10-10.md#catch-lookup-20261010`)
+superseded that evaluation: a dangling address is not a consequence of copying;
+the catch lies in the caller's graph and can be found; no separate hidden catch
+arguments; no runtime search of the graph by name; the name is resolved through
+the namespace at translation. fable_pc's reading, sent to Codex for the author's
+yes/no: the runtime form of a throw name's namespace entry is one record per
+name next to the roles table, referenced from THROWS/PAD/THROW as child 0
+references a role record and shared by copies by the existing terminal rule
+(lmx_graph_copy_owned.lm1:377-380); the acceptance test of any carrier is the
+S1 witness, a merge copy of a method throwing `boom` caught by the original
+caller, natively and walked. The key stays provisional until the answer; the
+cross-module walked route stays recorded as not built (library mode walks no
+method: l2trans.lm1:50093, 50098), §15 unchanged.
 
 Audit of the older protocol. The explicit catch rows on CALL/PRIM/ADMIT_AS
 (`l2_rw_catch_call`, the rows behind the ADMIT_AS maps, the PRIM rows),
@@ -182,12 +195,36 @@ Evidence.
   fault-width bumps on ELEM, ELEMPUT, DIV, MOD and DEREF are reverted to the
   `1a236e26` values. No exact-shape oracle of the nine rows was edited.
 
+## Slice B — the count cell (`fable_pc`, 2026-10-10; implemented, held as a patch)
+
+The cell the old catch rows were counted in is removed in the walker
+(`lmx_walk_call` argument base 4, long form from width 4; `lmx_walk_prim`
+operands from 2; `lmx_walk_admit_in` cells 2..7, coverage from 8), the
+translator (`arg0 4`, the EXEC emitters and `l2_rw_ns_hidden`, the PRIM and
+PRIM_PUB emitters, `l2_rw_admit_project`), the header and CORE map §9.5, 23
+kernel self-tests, the L3 mail self-test and the harness layout readers
+(`Get-WalkCallLayout` long layout `4 + arity`, `Walk-EvaluatesSlot`, the
+CallLink checks, the EXEC debt needles, the CALL/EXEC/PRIM_PUB/ADMIT_AS
+GraphShapes). Gates: `build/l2src/fable_slotb_kernel_02` GREEN 298;
+`build/l3/fable_slotb_l3_01` all 11 suites; `build/l2_harness/fable_slotb_focus_01`
+899 targets: 670 rows unchanged OK, the nine slice-A rows OK, 8 baseline
+failures unchanged, 211 rows red, every one of them a path or shape-word oracle
+that indexes the old slots (`graph child matches the next shape word`,
+`physical path selects an existing child ordinal`) while the program itself
+exits as expected (`exit=7 expected=7`). The rows belong to about 90 oracle
+definitions (41 `$critical*` arrays and 49 inline Args). The code is held as a
+patch outside the tree (not committed) until those oracles are shifted by one
+cell from the old (`fable_throwkeys_full_01/gen`) and new
+(`fable_slotb_focus_01/gen`) generated graphs with a tool and the focused run
+is green: one sweep, after the carrier slice fixes the final shapes.
+
 ## Still open — do not infer completion from focus06
 
 1. **Done in slice A (above):** no hidden status/pad slots or remap triples;
    keys in THROWS/PAD/THROW; the pad by lexical parentage with a copied-body
    witness; the explicit row protocol removed. Remainder of this item: the
-   empty count cell in CALL/PRIM/ADMIT_AS (slice B, next).
+   empty count cell in CALL/PRIM/ADMIT_AS (slice B: implemented, kernel and L3
+   green, held as a patch until its 211 oracle rows are shifted).
 2. A native method with no explicit `throws:` still has a non-status-bearing
    typed ABI. If it calls a walked occurrence that raises `interpreter`,
    universal propagation/uncaught handling is not yet implemented. Do not

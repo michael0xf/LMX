@@ -1352,6 +1352,8 @@ For example, a method inside independent Structure S can use S's field through i
 <a id="declaration-visibility"></a>
 Имена callable, созданных ресиверами `fn`, `fm`, `sub`, видны в своём лексическом блоке в обе стороны, в том числе из вложенных областей с соблюдением лексических границ. Обычная именованная Structure под это правило не подпадает: её объявление, как и обычная привязка значения, видно с места объявления вперёд и вниз. Возможность исполнения Structure не даёт её имени видимости назад; ссылка на callable также не делает объявление самой ссылки видимым назад. При [разрешении головы](#resolved-head-consumption) известность определяется видимостью в текущей позиции, не наличием одноимённой обычной Structure ниже по исходному тексту. Форма хвоста, число аргументов, скобки и трейлер не меняют область видимости и не выбирают более позднее объявление вместо текущего неизвестного имени.
 
+Файлы программы не образуют категорий «основной» и «часть»: message — Structure, и любой файл, подключённый любым способом, встраивается в граф программы. Видимость объявлений между файлами следует получившемуся графу и этим же правилам видимости — от места объявления вперёд и вниз, для callable `fn`, `fm`, `sub` в обе стороны в их блоке; сравнение позиций в разных документах видимость не определяет.
+
 Сигнатура описывает входы и результат; она не является исполняемым телом. Запись формала не выполняет вызов, объявление или присваивание, которое та же запись могла бы означать в теле. Синонимия двух описаний в сигнатуре относится к контракту параметра и не переносится на исполняемые записи. Подача фактического аргумента выполняет предусмотренные контрактом преобразования и допуск, но не исполняет описание формала как оператор тела. Использование полученного параметра в теле разрешается по его контракту и общим правилам выражений, а не исполнением текста сигнатуры.
 
 Исполняемое тело — структурное выражение. Всякая именованная Structure может исполняться голым атомом имени, но её объявление и построение сами по себе тело не исполняют. `fn` определяет выражение с одним логическим результатом; `sub` — выполнение без возвращаемого значения; `fm` — один результат-структуру, поля которой образуют поверхность множественного возврата. Сигнатура задаёт явные аргументы, требуемые динамические и лексические входы, способ передачи каждого значения, результат и объявленные выходы `throws`. Голый `return` завершает исполнение без значения; `return: value` передаёт значение в допускающем результат теле. Обычная именованная Structure — callable без результата: в ней допустим только голый `return`, а `return: value` отвергается; `sub` также допускает голый `return`, но не приобретает от него результат. На уровне открытия `return` — голый, а в допускающем результат теле и со значением — может также закрывать любую callable Structure (метод или именованную Structure) как trailer по общему правилу грамматики; не-callable Structure `return` не закрывает. Замыкатель не обязателен ни одной конструкции: `end: Name`, голый `return` и `until:` — границы записи, а не условие объявления; именованная Structure, закрытая одним срезом уровня, объявляется так же — общим разрешением ([§9](#construction)), — а конец её тела, как и тела `sub`, завершает исполнение без результата, и узел возврата там не синтезируется. Структурный путь через Structure читает её поле и не исполняет её; объявление в исполняемом теле — локальная переменная этого тела: видна вперёд и вниз (во вложенные тела), лежит в Structure там, где написана, — рядом с ней нет ни отдельного поля, ни контейнера данных, а остальной граф (операторы) хранится там же и в том же порядке для интерпретатора ([§12](#dynamic)); именованная Structure — та же вызываемая процедура без результата; голое имя не передаёт аргумент; если Model — уже существующая обычная именованная Structure, `Model: Other` ошибочно как вызов с аргументом, потому что такая Structure имеет только тело и не принимает аргументов; путь `M\i` снаружи открывает место объявления — объявление в любом случае заводит там значение, — но не рабочую переменную активации и не узел инициализатора.
@@ -1392,6 +1394,8 @@ return: 10 20
 [EN]
 <a id="declaration-visibility"></a>
 Names of callables created by the receivers `fn`, `fm`, `sub` are visible in both directions within their lexical block, including from nested scopes subject to lexical boundaries. An ordinary named Structure is not covered by this rule: its declaration, like an ordinary value binding, is visible forward and down from its declaration site. A Structure's ability to execute does not give its name backward visibility; a reference to a callable likewise does not make the reference declaration visible backward. For [head resolution](#resolved-head-consumption), whether a name is known depends on visibility at the current site, not on an ordinary Structure of the same name occurring later in the source. Tail shape, argument count, parentheses and a trailer do not alter visibility or select a later declaration in place of the currently unknown name.
+
+The files of a program form no categories of a main file and parts: a message is a Structure, and any file attached by any means is embedded into the program graph. Visibility of declarations across files follows the resulting graph and these same visibility rules -- forward and down from the declaration site, in both directions within their block for the callables `fn`, `fm`, `sub`; comparing positions in different documents does not define visibility.
 
 A signature describes inputs and the result; it is not an executable body. A formal's spelling does not execute the call, declaration, or assignment that the same spelling might denote in a body. Synonymy between two descriptions in a signature concerns the parameter contract and does not extend to executable occurrences of those spellings. Supplying an actual argument performs the contract's conversions and admission, but does not execute the formal description as a body operator. Uses of the resulting parameter in the body are resolved by its contract and the general expression rules, not by executing the signature text.
 
@@ -1463,6 +1467,7 @@ b: args    # application under the selected Structure's call contract
 | b: args | Применение связанной Structure, не переприсваивание |
 | @: b B | Явное переприсваивание ссылки по общим правилам допуска |
 | @: p | Ссылка без заданного структурного требования (void), начальное значение 0 |
+| @: Model box 0 | Ссылка с требованием модели Model, изначально пустая: тип, имя, явный 0; не чтение «@: box Model» |
 | @: int p, @@: int pp | Объявления указательных примитивов; предела глубины нет |
 | @x, return: @x, передача @x | Адрес хранилища x; для хранимой ссылки добавляется уровень |
 | \var | Разыменование; дальнейшую операцию определяет полученное значение |
@@ -1553,6 +1558,7 @@ Equal application behavior does not identify distinct source occurrences: genera
 | b: args | Application of the bound Structure, not rebinding |
 | @: b B | Explicit reference reassignment under general admission |
 | @: p | Reference without a structural requirement (void), initially 0 |
+| @: Model box 0 | Reference constrained to Model, initially null: type, name, explicit 0; not a reading of @: box Model |
 | @: int p, @@: int pp | Pointer-primitive declarations; no depth limit |
 | @x, return: @x, passing @x | Address of x's storage; a stored reference gains a level |
 | \var | Dereference; the resulting value determines the subsequent operation |
@@ -1899,7 +1905,7 @@ Arrays use the same scalar operations and contexts. Vectorization, reduction and
 
 ### Слоты модели, совпадение и порядок полей
 
-Первый операнд — модель результата. Поле более позднего операнда или дописанного тела, совпадающее с полем модели (совпадение известно при трансляции — имя и тип; допуск как при присваивании), записывается **в слот модели**, а не добавляется рядом; поле без соответствия дописывается в конец в порядке операндов. Результат имеет раскладку модели, за которой следуют новые поля, поэтому номера полей модели не сдвигаются, и никакого скрытого смещения у методов нет.
+Первый операнд — модель результата. Поле более позднего операнда или дописанного тела, совпадающее с полем модели (совпадение известно при трансляции — имя и тип; допуск как при присваивании), записывается **в слот модели**, а не добавляется рядом; поле без соответствия дописывается в конец в порядке операндов. Результат имеет раскладку модели, за которой следуют новые поля, поэтому номера полей модели не сдвигаются, и никакого скрытого смещения у методов нет. Операнд вида `имя: значение`, как `v: 9` в `merge(Model; v: 9)`, — именованный аргумент по общей модели «голова и аргументы»: он записывается в слот модели `v` типом этого слота; это не определение Structure `v` и не примитив с типом, выведенным из значения.
 
 ### Композиция структурных частей
 
@@ -1974,7 +1980,7 @@ A reference to a method's reusable native implementation is a terminal under its
 
 ### Model slots, field matching and ordering
 
-The first operand is the result's model. A field of a later operand or of the appended body that matches a model field (the match is known at translation: name and type; admission as for assignment) is written **into the model's slot**, not added beside it; a field with no counterpart is appended at the end in operand order. The result has the model's layout followed by the new fields, so the model's field indices never move and methods carry no hidden offset.
+The first operand is the result's model. A field of a later operand or of the appended body that matches a model field (the match is known at translation: name and type; admission as for assignment) is written **into the model's slot**, not added beside it; a field with no counterpart is appended at the end in operand order. The result has the model's layout followed by the new fields, so the model's field indices never move and methods carry no hidden offset. An operand of the form `name: value`, as `v: 9` in `merge(Model; v: 9)`, is the named argument under the common head/argument model: it is written into the model's slot `v` with that slot's type; it is neither a definition of a Structure `v` nor a primitive whose type is inferred from the value.
 
 ### Composition of structural parts
 

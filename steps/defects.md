@@ -53,7 +53,22 @@ caller's `convert`. The native ABI (`l2_implicit_status`, `l2_throws_pos`,
 `fable_throwkeys_focus_04` GREEN 12/12 (the nine rows and every catch,
 throws, conversion and interpreter fixture); full `fable_throwkeys_full_01`
 stopped by the host for system memory pressure at 10908 of about 12050 steps, before its verdict; the full replay is pending. Transitional: the old count cell (CALL 4, PRIM 2, ADMIT_AS 2)
-stays, always 0, until the next slice removes it.
+stays, always 0; its removal (slice B) is implemented and kernel/L3-green and held as a
+patch until its 211 path/shape oracle rows are shifted (journal).
+
+<a id="part-visibility-offsets"></a>
+### PART-VISIBILITY-OFFSETS — 2026-10-09 (Codex), rule from the author 2026-10-10, OPEN
+
+`l2_vis_ok` and `l2_vis_from` (dev/l2src_sandbox/l2trans.lm1, 2963 and 2973 on a946e2d9)
+decide whether a declaration of one file is visible from another by comparing P0 offsets of
+different documents, each counted from its own zero: two comments before `Wide` in the first
+file change whether `fn: get (Wide: q)` in an attached file is accepted (Wide/main 153 against
+getq/part 18 refuses; 0 against 18, or 0, accepts). The author's rule (2026-10-10, verbatim in
+`LMX_blog/2026-10-10.md#three-questions-20261010`): there are no main files, a message is a
+Structure, any file attached by any means is embedded into the graph; visibility follows the
+resulting graph and the ordinary declaration visibility. Fix: establish the attached file's
+position in the program graph and decide visibility from it; no MAIN/PART category and no
+cross-document offset comparison. Dependent plan step PART-VISIBILITY-GRAPH-POSITION.
 
 ### TRANSLATOR-PRETABLE-REENTRY — 2026-10-09 UTC, Codex, FIXED bounded continuation22
 
@@ -4904,7 +4919,7 @@ docs/L2_spec_en.md:155) — вызов Model, ошибочный по числу
 Шесть строк, которые его использовали, закрепляют теперь этот отказ. Их назначение — b с требованием модели T,
 привязанное к кандидату c и допущенное по использованиям b при трансляции или в рантайме, — ссылка, ограниченная
 моделью, со значением: семейство `@: T name значение`, которое открытый вопрос автора называет зависимым
-([вопрос](../LMX_blog/q/current/model-constrained-null-reference.md)). До ответа назначение не переписывается и не
+([вопрос](../LMX_blog/q/model-constrained-null-reference.md)). До ответа назначение не переписывается и не
 переистолковывается:
 
 | Фикстура | Было | Теперь |
@@ -4993,7 +5008,7 @@ Callable merge T5 и T7 читали операндом каждое напис�
 - группа из двух элементов `merge(((Model Other)))` и группа с полем в callable merge `merge(add3; (y: k))` — тоже
   пределы у операнда (`unit_k03_merge_op_group_two_refused`, `_t7_anon_refused`).
 
-Вопрос автору о голом поле: [LMX_blog/q/current/merge-bare-field-operand.md](../LMX_blog/q/current/merge-bare-field-operand.md).
+Вопрос автору о голом поле: [LMX_blog/q/merge-bare-field-operand.md](../LMX_blog/q/merge-bare-field-operand.md).
 
 <a id="merge-parent-site-override"></a>
 ### MERGE-PARENT-SITE-OVERRIDE — 2026-10-07, Opus (перепись K03 S7; Codex K03-MERGE-OPERANDS-20261007-26, K03-MERGE-PARENT-20261007-27), FIXED 2026-10-08
@@ -5599,7 +5614,7 @@ PAP/native-composed completion, whole/merge-захваты и T7 остаютс�
 спецслучай. Полный коррелированный RESULT Opus20 получен: это именно
 сравнение MAIN/PART offsets, не эффект setMarker. Запрет части видеть MAIN
 записан ответом агента fable_pc, а авторское правило порядка файлов не
-найдено. [Вопрос автору](../LMX_blog/q/current/program-parts-declaration-visibility.md)
+найдено. [Вопрос автору](../LMX_blog/q/program-parts-declaration-visibility.md)
 задан прямо в чате; зависимый выбор видимости не делается до ответа.
 Точный материал и независимые receiving-свидетели —
 [журнал T7](t7-lexical-projection-20261008.md).

@@ -68,6 +68,18 @@ independent result by address and copies a non-independent one; `independent` ov
 records is refused. Mutants: no seal (a write passes), no `parent = 0` (retained wrongly), profile
 only on the root (a child cell answers 0).
 
+RR2a is built (`fable_pc`, 2026-10-10): `lmx_copy_run` and its five helpers carry `dst_profile`; the
+seventeen destination allocations call the profiled constructors; `lmx_list_new_profiled` and a list
+growing in its header's profile; `lmx_arena_seal_profile`; the merge worker
+`lmx_merge_used_profiled_owned` with `lmx_merge_qualified_owned` as its qualified entry
+(`lmx_merge_used_owned` and the harness tap unchanged); `tests/lmx_copy_profile_selftest.lm1`: every
+cell of a copy and of a fresh merge answers the profile, the ordinary copy answers 0 in other pools,
+sealing P leaves the unprofiled and Q pools open and refuses a new cell under P. Gates: kernel
+`fable_rr2a_kernel_03` (GREEN, 299 targets, 0 failed; lmx_copy_profile_selftest 28 checks, 0 failures (gate 01 failed to compile on a copier helper without the new parameter, gate 02 on two dotted paths inside call arguments of the self-test; both fixed before gate 03)); L3 `fable_rr2a_l3_01` (all 11 suites ok, type budget ok); focused harness `fable_rr2a_focus_01` (148 targets, 11 failed, the same eleven pre-existing reds as fable_rr1_focus_03 with unchanged details; FAIL->OK 0, OK->FAIL 0 against codex_interpreter_throw_full_02);
+mutants on the gate's staged source (`scratchpad/mutant_rr2a`): an int cell allocated with profile 0 at one copier site -> 3 of 28 checks red (the int cell under P, the merge result int cell under Q, the int pool of P sealed); lmx_arena_seal_profile sealing nothing -> 3 red (the Structure and int pools of P sealed, a sealed profile takes no new cell); exit 1 both; `check_docs` and
+`diff --check` clean. Independence (`parent = 0`) and the refusal of a result with
+use records stay with RR2c, where the translator knows the chain.
+
 RR2b (kernel, the readers): `lmx_walk_immutable` and `lmx_copy_retained_profiles` read the mark by
 classification (profile ≠ 0, sealed; for retention also root `parent = 0`) beside the lists; the
 static fixtures are the witness that nothing moves; then the lists are removed in a separate commit.

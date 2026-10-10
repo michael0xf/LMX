@@ -1,0 +1,154 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# RR2a (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): a copy and a fresh merge can be made
+# UNDER a profile -- the root, every cell, every children range, an array's descriptor and backing are cells of the
+# profile's own pools (lmx_graph_copy_qualified_owned, lmx_merge_qualified_owned) -- so a value qualified at run time
+# carries the same physical mark the prologue gives a static branch: the range index classifies it by its profile.
+# lmx_arena_seal_profile then ends allocation in those pools (lmx_pool_take_n refuses a sealed pool) and leaves every
+# other pool as it was.  Mutants: a profile of 0 at any one allocation site of the copier -> that cell answers 0;
+# lmx_arena_seal_profile sealing nothing -> the sealed checks fail; sealing the unprofiled pools too -> the P check fails.
+
+sub: check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: main () int
+    LmxArena: a
+    LmxArena: d
+    @: Lmx root 0
+    @: Lmx inner 0
+    @: Lmx copy 0
+    @: Lmx copy0 0
+    @: Lmx copy2 0
+    @: Lmx mres 0
+    @: Lmx profile 0
+    @: Lmx profile_q 0
+    @: Lmx profile_r 0
+    @: void seven 0
+    @: void letter 0
+    @: VoidArray numbers 0
+    @: int ints 0
+    @: void c0 0
+    @: Lmx c1 0
+    @: void c1c 0
+    @: VoidArray c2 0
+    @: int c2i 0
+    @@: Lmx operands 0
+    @: int counts 0
+    int: status 0
+
+    counts: (cast: (@: int) calloc(2U, c.sizeof(int)))
+    operands: (cast: (@@: Lmx) calloc(1U, c.sizeof(@: Lmx)))
+    if: counts = 0 || operands = 0
+        return: 2
+    memset((cast: (@: void) (@ a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ d)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ a) != 0 || lmx_arena_open(@ d) != 0
+        return: 2
+
+    # The source: root [int 7, inner [char 'x'], int Array (1 2 3)] in arena a, unprofiled.
+    root: lmx_node_new_owned(@ a)
+    inner: lmx_node_new_owned(@ a)
+    check(counts, root != 0 && inner != 0 && lmx_arena_refs_open_owned(@ a, root, 3U) = 0 && lmx_arena_refs_open_owned(@ a, inner, 1U) = 0, "source Structures")
+    inner\parent: root
+    seven: lmx_int_new_owned(@ a)
+    letter: lmx_char_new_owned(@ a)
+    numbers: lmx_array_new_owned(c.LMX_TYPE_ARRAY_OF_INT, 3U, @ a)
+    check(counts, seven != 0 && letter != 0 && numbers != 0 && numbers\data != 0, "source cells")
+    lmx_int_store_known(seven, 7)
+    lmx_char_store_known(letter, 120)
+    ints: (cast: (@: int) numbers\data)
+    ints[0]: 1
+    ints[1]: 2
+    ints[2]: 3
+    lmx_arena_ref_store(root, 0U, seven)
+    lmx_arena_ref_store(root, 1U, (cast: (@: void) inner))
+    lmx_arena_ref_store(root, 2U, (cast: (@: void) numbers))
+    lmx_arena_ref_store(inner, 0U, letter)
+
+    # The profiles: Structures of the destination arena, in its unprofiled STRUCT pool.
+    profile: lmx_node_new_owned(@ d)
+    profile_q: lmx_node_new_owned(@ d)
+    profile_r: lmx_node_new_owned(@ d)
+    check(counts, profile != 0 && profile_q != 0 && profile_r != 0 && lmx_range_profile(@ d, (cast: (@: void) profile)) = 0, "profile Structures of d, unprofiled themselves")
+
+    # Case A: a copy under profile P -- every cell of the result is classified by P.
+    status: lmx_graph_copy_qualified_owned(root, @ a, @ d, 0, 0U, profile, @ copy)
+    check(counts, status = LMX_GRAPH_COPY_OK && copy != 0 && copy != root, "copy under P made")
+    if: copy != 0
+        check(counts, lmx_range_profile(@ d, (cast: (@: void) copy)) = profile, "root of the copy answers P")
+        check(counts, (copy\array.data) != 0 && lmx_range_profile(@ d, (cast: (@: void) (copy\array.data))) = profile, "children range of the copy answers P")
+        c0: lmx_arena_ref_value(copy, 0U)
+        check(counts, c0 != 0 && c0 != seven && lmx_range_profile(@ d, c0) = profile && lmx_int_value_known(c0) = 7, "int cell copied under P, value 7")
+        c1: (cast: (@: Lmx) lmx_arena_ref_value(copy, 1U))
+        check(counts, c1 != 0 && c1 != inner && lmx_range_profile(@ d, (cast: (@: void) c1)) = profile && c1\parent = copy, "nested Structure copied under P, parent the copy")
+        if: c1 != 0
+            c1c: lmx_arena_ref_value(c1, 0U)
+            check(counts, c1c != 0 && lmx_range_profile(@ d, c1c) = profile && lmx_char_value_known(c1c) = 120, "char cell copied under P, value x")
+        ---
+        c2: (cast: (@: VoidArray) lmx_arena_ref_value(copy, 2U))
+        check(counts, c2 != 0 && c2 != numbers && lmx_range_profile(@ d, (cast: (@: void) c2)) = profile, "array descriptor copied under P")
+        if: c2 != 0 && c2\data != 0
+            check(counts, lmx_range_profile(@ d, c2\data) = profile, "array backing copied under P")
+            c2i: (cast: (@: int) c2\data)
+            check(counts, c2\size = 3U && c2i[0] = 1 && c2i[2] = 3, "array elements copied")
+        ---
+    ---
+    check(counts, lmx_range_profile(@ a, (cast: (@: void) root)) = 0 && lmx_int_value_known(seven) = 7, "source unprofiled and untouched")
+
+    # Case B: the ordinary copy keeps profile 0 and lives in other pools than P's.
+    status: lmx_graph_copy_owned(root, @ a, @ d, @ copy0)
+    check(counts, status = LMX_GRAPH_COPY_OK && copy0 != 0 && lmx_range_profile(@ d, (cast: (@: void) copy0)) = 0, "ordinary copy answers 0")
+    check(counts, copy != 0 && copy0 != 0 && lmx_range_pool(@ d, (cast: (@: void) copy0)) != lmx_range_pool(@ d, (cast: (@: void) copy)), "P's pool is not the unprofiled one")
+
+    # Case C: a fresh merge under profile Q -- the result root and its copied cells answer Q.
+    operands[0]: root
+    status: lmx_merge_qualified_owned(operands, 1U, 0, @ a, @ d, 0, 0U, 0, 0U, profile_q, @ mres)
+    check(counts, status = LMX_MERGE_OK && mres != 0 && mres != root, "merge under Q made")
+    if: mres != 0
+        check(counts, lmx_range_profile(@ d, (cast: (@: void) mres)) = profile_q, "merge result root answers Q")
+        check(counts, (mres\array.data) != 0 && lmx_range_profile(@ d, (cast: (@: void) (mres\array.data))) = profile_q, "merge result children range answers Q")
+        c0: lmx_arena_ref_value(mres, 0U)
+        check(counts, c0 != 0 && lmx_range_profile(@ d, c0) = profile_q && lmx_int_value_known(c0) = 7, "merge result int cell answers Q")
+    ---
+
+    # Case D: sealing P's pools: P's cells sealed, the unprofiled pool and Q's pools not; no new cell under P.
+    check(counts, lmx_arena_seal_profile(@ d, 0) = 1, "sealing profile 0 is refused")
+    check(counts, lmx_arena_seal_profile(@ d, profile_r) = 1, "sealing a profile no array carries is refused")
+    check(counts, lmx_arena_seal_profile(@ d, profile) = 0, "sealing P's pools")
+    if: copy != 0
+        check(counts, lmx_pool_is_sealed(lmx_range_pool(@ d, (cast: (@: void) copy))) = 1, "P's Structure pool sealed")
+        check(counts, c0 != 0 && lmx_pool_is_sealed(lmx_range_pool(@ d, lmx_arena_ref_value(copy, 0U))) = 1, "P's int pool sealed")
+    ---
+    check(counts, lmx_pool_is_sealed(lmx_range_pool(@ d, (cast: (@: void) profile))) = 0, "the unprofiled Structure pool is not sealed")
+    check(counts, mres != 0 && lmx_pool_is_sealed(lmx_range_pool(@ d, (cast: (@: void) mres))) = 0, "Q's Structure pool is not sealed")
+    status: lmx_graph_copy_qualified_owned(root, @ a, @ d, 0, 0U, profile, @ copy2)
+    check(counts, status != LMX_GRAPH_COPY_OK && copy2 = 0, "a sealed profile takes no new cell (lmx_pool_take_n)")
+    status: lmx_graph_copy_owned(root, @ a, @ d, @ copy2)
+    check(counts, status = LMX_GRAPH_COPY_OK && copy2 != 0, "the unprofiled pools still allocate after sealing P")
+
+    c.printf("lmx_copy_profile_selftest checks=%d failures=%d\n", counts[0], counts[1])
+    free((cast: (@: void) operands))
+    if: counts[1] != 0
+        free(counts)
+        return: 1
+    ---
+    free(counts)
+return: 0

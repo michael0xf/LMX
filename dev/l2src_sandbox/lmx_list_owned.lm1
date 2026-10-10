@@ -95,7 +95,9 @@ fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
         backing_kind: lmx_range_classify(arena, cells)
         etype: lmx_range_type_of(arena, cells)
     ---
-    new_cells: (cast: (@@: void) lmx_arena_take_n(arena, c.sizeof(@: void), backing_kind, etype, cap))
+    # The backing grows in the pools of the header's own profile (0 for an ordinary list): a list copied under a
+    # qualified profile (RR2a) stays one tree of that profile when it grows.
+    new_cells: (cast: (@@: void) lmx_arena_take_n_profiled(arena, c.sizeof(@: void), backing_kind, etype, lmx_range_profile(arena, list), cap))
     if: new_cells = 0
         return: c.LMX_LIST_NOMEM
     old_cells: (cast: (@@: void) cells)
@@ -116,6 +118,10 @@ fn: lmx_list_grow (@: void list; size_t: need; @: LmxArena arena) int
 return: c.LMX_LIST_OK
 
 fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: void
+return: lmx_list_new_profiled(type, arena, 0)
+
+# The list header in the pools of `profile` (0 = ordinary); its backing follows the header's profile when it grows.
+fn: lmx_list_new_profiled (int: type; @: LmxArena arena; @: Lmx profile) @: void
     @: VoidDynamicArray list
     @: VoidArray base
     int: backing_kind
@@ -137,7 +143,7 @@ fn: lmx_list_new_owned (int: type; @: LmxArena arena) @: void
             etype: c.LMX_TYPE_POINTER_BASE + (type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
         ---
     ---
-    list: (cast: (@: VoidDynamicArray) lmx_arena_take(arena, c.sizeof(c.VoidDynamicArray), c.LMX_KIND_LIST, type))
+    list: (cast: (@: VoidDynamicArray) lmx_arena_take_profiled(arena, c.sizeof(c.VoidDynamicArray), c.LMX_KIND_LIST, type, profile))
     if: list = 0
         return: 0
     base: (cast: (@: VoidArray) list)

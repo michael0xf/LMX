@@ -1162,7 +1162,7 @@ do not certify them. See [migration notes](docs/implementation-notes.en.md#test-
 
 ### 10.1 The copier preserves topology
 
-`lmx_graph_copy_owned` uses a source-address-to-copy map. It allocates and records a destination before processing its outgoing edges, so sharing and cycles are preserved. It remaps parent/child references according to the copied closure and explicit retention policy. Fresh primitive cells, including mutable CHAR, participate in the same map.
+`lmx_graph_copy_owned` uses a source-address-to-copy map. A destination profile (`lmx_graph_copy_many_used_profiled_staged`, `lmx_graph_copy_qualified_owned`, `lmx_merge_qualified_owned`; 0 for the ordinary copy) puts the result and every copied cell -- nodes, cells, children ranges, array descriptors and backings, lists and their growth -- into the pools of that profile, the physical mark of a value qualified at run time; the caller preflights and seals (`lmx_arena_seal_profile`) before it publishes (RR2a, `steps/qualifier-receivers-20261010.md`). It allocates and records a destination before processing its outgoing edges, so sharing and cycles are preserved. It remaps parent/child references according to the copied closure and explicit retention policy. Fresh primitive cells, including mutable CHAR, participate in the same map.
 
 A callable Structure is not a copy terminal: its graph and native word travel with the copied occurrence. Service operator/role/primitive records and certain external Message/Thread or qualified branches have explicit terminal/retention rules in `lmx_copy_is_terminal_profiles`. Do not generalize “qualification traversal treats methods as leaves” into “graph copy never copies methods”; those are different operations.
 

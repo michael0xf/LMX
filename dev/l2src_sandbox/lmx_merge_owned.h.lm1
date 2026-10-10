@@ -97,6 +97,10 @@ prototype:
     # in part -- their links and these uses -- every other ancestor place absent
     # (lmx_graph_copy_many_used_staged).  lmx_merge_profiles_owned is this merge with no use.
     fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+    # A fresh merge made under a qualified profile: the result and every copied cell in the pools of dst_profile, a
+    # Structure of dst_arena (RR2a); the caller preflights, frees the root of a lexical parent when independent, and
+    # seals before publication.
+    fn: lmx_merge_qualified_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int
     # `retain_profile` is the exact physical profile representing the full
     # independent+const+immutable receiver chain.  No other profile/lifecycle/owner
     # property retains an address.

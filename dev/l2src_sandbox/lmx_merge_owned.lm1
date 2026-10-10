@@ -75,7 +75,9 @@ fn: lmx_merge_lexical (@@: Lmx roots; @@: Lmx copies; size_t: nroots) @: Lmx
     ---
 return: up
 
-fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+# The worker of every fresh merge: the result and every copied cell in the pools of dst_profile (0 = the ordinary
+# merge; a Structure of dst_arena = a merge made under a qualified profile, RR2a).
+fn: lmx_merge_used_profiled_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int
     LmxCopyMap: pending
     @: LmxArenaBlock mark 0
     size_t: impl_mark 0U
@@ -279,12 +281,12 @@ fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxAr
     # copied operand root -- a copied ancestor's slot that held the model, a back edge, a
     # child's parent -- names the result, never a discarded intermediate root.
     if: count != 1U || body != 0 || use_map != 0
-        result: lmx_node_new_owned(dst_arena)
+        result: lmx_node_new_profiled(dst_arena, dst_profile)
         if: result = 0
             status: LMX_MERGE_NOMEM
     ---
     if: nroots != 0U && status = LMX_MERGE_OK
-        cst: lmx_graph_copy_many_used_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, result, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, copies, @ pending)
+        cst: lmx_graph_copy_many_used_profiled_staged(roots, nroots, src_arena, dst_arena, retain_profiles, retain_count, result, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, copies, @ pending, dst_profile)
         if: cst = LMX_GRAPH_COPY_NOMEM
             status: LMX_MERGE_NOMEM
         if: cst = LMX_GRAPH_COPY_UNSUPPORTED
@@ -323,7 +325,7 @@ fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxAr
     # and no slots. Opening a zero-slot branch is not the same thing and is not
     # attempted.
     if: status = LMX_MERGE_OK && total != 0U
-        if: lmx_arena_refs_open_owned(dst_arena, result, total) != 0
+        if: lmx_arena_refs_open_profiled(dst_arena, result, total, dst_profile) != 0
             status: LMX_MERGE_NOMEM
     ---
     # Slots. Null map: each operand's children in order, then body (flat append).
@@ -522,8 +524,19 @@ return: status
 
 # A merge whose copied code uses nothing of its operands' lexical chains: the chains are
 # copied as their links only (lmx_merge_used_owned).
+fn: lmx_merge_used_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: Lmx use_anchor; @: size_t use_sel; @: size_t use_slot; @: size_t use_len; size_t: use_count; size_t: use_slots; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
+return: lmx_merge_used_profiled_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, use_anchor, use_sel, use_slot, use_len, use_count, use_slots, overrides, override_count, 0, out)
+
 fn: lmx_merge_profiles_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
 return: lmx_merge_used_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0U, 0U, overrides, override_count, out)
+
+# A fresh merge made under a qualified profile (RR2a, steps/qualifier-receivers-20261010.md): the result and every
+# copied cell live in the pools of dst_profile, a Structure of dst_arena.  Retention of the operands' own qualified
+# branches is the same as lmx_merge_profiles_owned's.  The caller preflights (lmx_qualify_tree_preflight_full), sets
+# the root free of a lexical parent when the value is independent, and seals (lmx_arena_seal_profile) before it
+# publishes the result.
+fn: lmx_merge_qualified_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: Lmx retain_profiles; size_t: retain_count; @@: LmxMergePair overrides; size_t: override_count; @: Lmx dst_profile; @@: Lmx out) int
+return: lmx_merge_used_profiled_owned(operands, count, body, src_arena, dst_arena, retain_profiles, retain_count, 0, 0, 0, 0, 0U, 0U, overrides, override_count, dst_profile, out)
 
 fn: lmx_merge_owned (@@: Lmx operands; size_t: count; @: Lmx body; @: LmxArena src_arena; @: LmxArena dst_arena; @@: LmxMergePair overrides; size_t: override_count; @@: Lmx out) int
 return: lmx_merge_profiles_owned(operands, count, body, src_arena, dst_arena, 0, 0U, overrides, override_count, out)

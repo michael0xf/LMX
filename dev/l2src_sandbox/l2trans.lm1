@@ -1114,7 +1114,8 @@ prototype:
     fn: l2_layout_source () int
     fn: l2_fill_inert () int
     fn: l2_retained_body (const: @(LmP0Frame fr)) int
-    fn: l2_merge_construction (const: @(LmP0Frame fr)) int
+    fn: l2_value_receiver (const: @(LmP0Text h)) int
+    fn: l2_decl_content (const: @(LmP0Frame fr)) int
     fn: l2_ret_cell_ty (int: mi) int
     fn: l2_emit_parts (int: i) int
     fn: l2_emit_unit (const: @(char out_path)) int
@@ -4913,22 +4914,34 @@ fn: l2_head_absent (const: @(LmP0Text t); const: @(LmP0Node item)) int
     ---
 return: 1
 
-# K03 S5 (Codex K03-S5-DEFINITION-TAIL-20261007-03; docs/LMX_semantics.en.md#construction): 1 when the frame's first
-# item is merge's application -- the atom or its Frame (l2_app_head), the word read by the defined set -- whose own
-# construction contract makes the outer name the result: `b: merge: A C`, `b: merge(A C)`.  No other receiver gives an
-# absent outer name a result: its application, bare, empty or with arguments, is an item of the retained body under
-# its ordinary statement contract (l2_check_word_stmt), and a known word never names a nested Structure.
-fn: l2_merge_construction (const: @(LmP0Frame fr)) int
+# critical_general_receiver_routes_bug R1/R2 (the author, 2026-10-10, LMX_blog/2026-10-10.md: an unknown name accepts
+# a Structure, and merge there is no special case; docs/LMX_semantics.en.md#construction: in `b: merge: A C` the outer
+# b receives the result): a receiver whose application yields a Structure value that an absent head accepts as its
+# content -- a property of the receiver's contract, not of the head.  Today merge; the qualifiers `independent`,
+# `const`, `immutable` join it when they are built as receivers over a value (critical_qualifier_receivers_bug).
+fn: l2_value_receiver (const: @(LmP0Text h)) int
+    if: h = 0 || l2_head_word(h) = 0
+        return: 0
+return: (cast: (int) (l2_text_eq(h, "merge") != 0))
+
+# What an absent head's retained tail is to the head it declares -- read AFTER the head's role is the resolver's
+# (l2_head_absent, l2_unit_role 5, l2_local_absent_def, l2_ns_nested_def), never deciding that role: 0 no retained
+# body; 3 a VALUE -- the tail's first item is a value receiver's application (l2_value_receiver): the declaration is a
+# statement of the enclosing procedure -- E's at the root, a method's, a named Structure's (its body is a method's
+# body, Q45: unit_merge_parent_named) -- declaring the head's own row, which holds the result (its schema the merge
+# record); the receiver's own contract reads the application (its arity at the word, l2_check_body; its operands,
+# l2_merge_decl_operand; a result body is the item beside the application, l2_merge_body); 1 a BODY -- the written
+# content, a named Structure (a binding `b: A` is told apart by l2_unit_ref_bind / l2_ns_bind_item, K03
+# NS-ROLES-1/2).  The old l2_merge_construction made the same test decide the ROLE in three places.
+fn: l2_decl_content (const: @(LmP0Frame fr)) int
     @: LmP0Field f
-    @: LmP0Text h
     if: fr = 0 || fr\body = 0
         return: 0
     f: l2_next_active(fr\body\first_field)
     if: f = 0 || f\value = 0
         return: 0
-    h: l2_app_head(f\value)
-    if: h = 0 || l2_head_word(h) = 0 || l2_text_eq(h, "merge") = 0
-        return: 0
+    if: l2_value_receiver(l2_app_head(f\value)) != 0
+        return: 3
 return: 1
 
 # K03 NS-ROLES-1 (Codex K03-S5-MIGRATION-20261007-06 (b); docs/LMX_semantics.en.md:666, :834; L2_spec_en.md:206): the
@@ -5122,7 +5135,7 @@ fn: l2_unit_value_above (const: @(LmP0Text a); const: @(LmP0Node item)) int
         if: l2_receiver_frame(it, @ got) != 0 && l2_text_same(got, a) != 0
             return: 1
         if: it != 0 && it\kind = c.LM_P0_NODE_FRAME && it\as != 0 && it\as\frame != 0 && it\as\frame\head != 0 && it\as\frame\body != 0
-            if: l2_text_same(it\as\frame\head, a) != 0 && l2_merge_construction(it\as\frame) != 0
+            if: l2_text_same(it\as\frame\head, a) != 0 && l2_decl_content(it\as\frame) = 3
                 return: 1
             if: l2_text_same(it\as\frame\head, a) != 0 && l2_ref_tail_atom(it\as\frame) != 0 && l2_unit_ref_bind(it\as\frame, it) != 0 && l2_head_absent(a, it) != 0
                 return: 1
@@ -5227,12 +5240,13 @@ fn: l2_unit_role (const: @(LmP0Node item)) int
         return: 0
     # An absent head declares a named Structure with its written tail -- a Structure, identifier atoms or a literal
     # (`x: 7`) alike: the language has no var (docs/LMX_semantics.en.md#resolved-head-consumption).
-    # merge's construction is the statement even when that tail is nonempty: `R: merge: A B` (l2_merge_construction).
-    # A tail that begins with a known method declares the Structure too and calls nothing,
+    # The role is the resolver's; what the declaration holds is its content (l2_decl_content): a VALUE -- `R: merge: A B`,
+    # R holding merge's result -- is taken by E's statements as R's own row (l2_collect_asgn_body), a body by the unit
+    # as its child.  A tail that begins with a known method declares the Structure too and calls nothing,
     # in every spelling (Q58): `add5: makeAdder 5` is a definition.  A factory's result is
     # received by `@: add5 makeAdder(5)` (the author, 2026-10-05; l2_receiver_call).
     if: l2_head_absent(fr\head, item) != 0 && l2_retained_body(fr) != 0
-        if: l2_merge_construction(fr) != 0
+        if: l2_decl_content(fr) = 3
             return: 0
         # K03 NS-ROLES-1: the reference binding `b: A` is a statement of E, no definition of b.
         if: l2_unit_ref_bind(fr, item) != 0
@@ -12700,7 +12714,8 @@ fn: l2_local_absent_def (const: @(LmP0Node stmt); int: mi) int
         return: 0
     if: fr\trailer != 0 && (fr\trailer\spelling = 0 || l2_text_eq(fr\trailer\spelling, "end") = 0)
         return: 0
-    if: l2_retained_body(fr) = 0 || l2_merge_construction(fr) != 0
+    # A VALUE content (`a: merge: ...`, l2_decl_content) is the method's statement declaring a's own row, not a definition.
+    if: l2_retained_body(fr) = 0 || l2_decl_content(fr) = 3
         return: 0
     if: l2_param_find(mi, h) >= 0 || l2_slot_find(mi, h) >= 0 || l2_ml_find(h) >= 0 || l2_unit_names_method(h) != 0 || l2_site_method(mi, h) >= 0 || l2_is_known(h) != 0
         return: 0
@@ -12764,7 +12779,7 @@ fn: l2_ref_tail_kind (int: mi; const: @(LmP0Text a); @@: LmP0Text out_word; @: i
     if: own >= 0 && own = idx
         # A merge result -- its row declared by merge's construction, `a: merge: ...`, known before its schema is -- or a
         # binding to one: its schema is that merge's record.
-        if: (l2_own_decl[own] != 0 && l2_application(l2_own_decl[own]) != 0 && l2_merge_construction(l2_application(l2_own_decl[own])) != 0) || (l2_own_nsty_get(own) < 0 && l2_own_schema(own) != -1)
+        if: (l2_own_decl[own] != 0 && l2_application(l2_own_decl[own]) != 0 && l2_decl_content(l2_application(l2_own_decl[own])) = 3) || (l2_own_nsty_get(own) < 0 && l2_own_schema(own) != -1)
             if: out_word != 0
                 \out_word: l2_lmx_text()
             if: out_meth != 0
@@ -23647,13 +23662,14 @@ return: (cast: (int) (l2_ns_bind_target(a, me) != -1))
 # frame whose head resolves to nothing at its place (l2_ns_site_known) with a retained tail -- the general definition
 # route of the root and of a method (l2_unit_role 5, l2_local_absent_def): its written content, one atom or a literal
 # included (K03 NS-ROLES-2, docs/LMX_semantics.en.md#resolved-head-consumption: "Unknown A in A: b declares Structure
-# A", `b: zz`, `b: 7`), never inferred storage.  Merge's construction and the binding `b: A` (l2_ns_bind_item) are
-# no definitions.  `C: makeA()` with both unknown: C holds an empty named makeA.  Parentheses, emptiness and the
+# A", `b: zz`, `b: 7`), never inferred storage.  A VALUE content (`x: merge: Model`, l2_decl_content: the procedure's
+# statement declaring x's own row, l2_ns_body_stmt) and the binding `b: A` (l2_ns_bind_item) are no definitions of a
+# nested Structure.  `C: makeA()` with both unknown: C holds an empty named makeA.  Parentheses, emptiness and the
 # number of items do not tell a definition from a call (Q58): the head's resolution does.
 fn: l2_ns_nested_def (const: @(LmP0Node node); int: me) int
     if: node = 0 || me < 0 || node\kind != c.LM_P0_NODE_FRAME || node\as = 0 || node\as\frame = 0 || node\as\frame\head = 0 || l2_ident(node\as\frame\head) = 0
         return: 0
-    if: l2_ns_site_known(node\as\frame\head, me) != 0 || l2_retained_body(node\as\frame) = 0 || l2_merge_construction(node\as\frame) != 0
+    if: l2_ns_site_known(node\as\frame\head, me) != 0 || l2_retained_body(node\as\frame) = 0 || l2_decl_content(node\as\frame) = 3
         return: 0
 return: (cast: (int) (l2_ns_bind_item(node, me) = 0))
 
@@ -29679,10 +29695,10 @@ fn: l2_check_body (const: @(LmP0Structure body); int: mi; const: @(char path); i
             field: l2_next_active(field\next)
             continue
         ---
-        # K03 S5: merge's construction (l2_merge_construction) with no operand -- `x: merge` as `x: merge()` -- is
+        # K03 S5: a VALUE content (l2_decl_content) whose merge has no operand -- `x: merge` as `x: merge()` -- is
         # refused by merge's contract at the merge, whatever the outer name is; with operands it is the merge
         # declaration below, its operands checked at emission.
-        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_stmt_word_head(stmt, mi) = 0 && l2_merge_construction(stmt\as\frame) != 0
+        if: stmt != 0 && stmt\kind = c.LM_P0_NODE_FRAME && stmt\as != 0 && stmt\as\frame != 0 && l2_stmt_word_head(stmt, mi) = 0 && l2_decl_content(stmt\as\frame) = 3
             mg: l2_next_active(stmt\as\frame\body\first_field)\value
             if: l2_count_active(l2_app_actuals(mg)) = 0
                 return: l2_error(path, mg, "merge needs at least one operand")
@@ -51064,11 +51080,17 @@ fn: l2_merge_frame (const: @(LmP0Node stmt)) @: LmP0Node
             return: f\value
 return: 0
 
-# Inner merge syntax does not determine the outer statement's role. Reuse the
-# ordinary head/binding classifier before reserving an own declaration. Once
-# reserved, the exact source row preserves that decision across later passes.
+# The statement that declares a head's own row holding a merge's result -- the VALUE content of a declaration
+# (l2_decl_content 3, critical_general_receiver_routes_bug R1/R2), asked FIRST through the general reading, then merge's
+# own reader of its application (l2_merge_frame: the application and its optional result body), then the ordinary
+# head/binding classifier (l2_is_asgn: the head is no call's head; an own row or a colon binding above keeps the
+# earlier decision).  Inner merge syntax does not determine the outer statement's role by itself; once reserved, the
+# exact source row preserves the decision across later passes.
 fn: l2_merge_declaration (const: @(LmP0Structure body); const: @(LmP0Node stmt); int: mi) @: LmP0Node
-    @: LmP0Node mf l2_merge_frame(stmt)
+    @: LmP0Node mf 0
+    if: stmt = 0 || stmt\kind != c.LM_P0_NODE_FRAME || stmt\as = 0 || stmt\as\frame = 0 || l2_decl_content(stmt\as\frame) != 3
+        return: 0
+    mf: l2_merge_frame(stmt)
     if: mf = 0 || l2_is_asgn(stmt, mi) = 0
         return: 0
     if: l2_own_find_decl(mi, stmt\as\frame\head, stmt) >= 0

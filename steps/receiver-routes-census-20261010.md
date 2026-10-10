@@ -20,7 +20,7 @@ receiver's contract takes the arguments afterwards. A receiver written inside th
 | `l2_merge_construction` 4921 | the first item of a frame's body is `merge`'s application | yes: a spelling test | the test itself may stay as a reader of merge's application; every ROLE use of it goes |
 | `l2_unit_role` 5235 (root items) | absent head with a retained body is a named Structure (5), unless the tail begins with `merge` (then a statement of E, 0) | yes | REMOVE the exception: the head's role is the resolver's; the tail is read after |
 | `l2_local_absent_def` 12703 (a method's statements) | the same exception for the definition route | yes | REMOVE, same |
-| `l2_ns_nested_def` 23656 (a named Structure's body) | the same exception for a nested definition | yes | REMOVE, same |
+| `l2_ns_nested_def` 23656 (a named Structure's body) | the same exception for a nested definition | yes | REMOVE, same; the statement route it falls to is the right one: a named Structure's body is a procedure's body (Q45), and `box: merge: Host\inner` there declares the procedure's own row (`unit_merge_parent_named`, `unit_ns2_copy_field`), not a field read from outside |
 | `l2_unit_value_above` 5125 | an item `a: merge ...` above binds `a` as a Structure value (so `b: a` below is a binding) | yes, as one of three spellings | GENERALIZE: a head declared above binds its name whatever its tail is; no spelling list |
 | own schema 12767 | an own row whose declaration's application is `merge` has the merge record as its schema | yes, re-recognized from the spelling | KEEP the schema; read it from what the row recorded when it was declared, not from the spelling again |
 | check pass 29685 | `x: merge` with no operand is refused at the merge ("merge needs at least one operand") | reached only through the construction test | KEEP as merge's contract, entered once `merge` is resolved as the receiver |
@@ -129,6 +129,30 @@ not rewrite the example into `value: newValue`.
 - `l2_declaration` 8719: the receiving contract of a Frame (type word, name, candidate); a Frame
   resolved as a call declares nothing; `b: A` through `l2_rb_declaration`. Keep.
 
+## Slice RR1 — the role gate of cluster 1 (`fable_pc`, 2026-10-10)
+
+Code: `l2_merge_construction` (the spelling test that decided the OUTER head's role in `l2_unit_role`,
+`l2_local_absent_def` and `l2_ns_nested_def`, and was re-read in `l2_unit_value_above`, at the own
+schema site and at the arity check) is gone. `l2_value_receiver` names the receivers whose
+application yields a Structure value an absent head accepts (`merge`; the qualifiers join it with
+R4), and `l2_decl_content` reads an absent head's tail AFTER the resolver has made the head a
+declaration: 3 a VALUE (a statement of the enclosing procedure -- E's, a method's, a named
+Structure's -- declaring the head's own row), 1 a BODY (a named Structure). The six sites read the
+content kind, and `l2_merge_declaration` -- the reader the collection, scan, check, throws and walker
+passes ask before any other route -- asks the content kind first and merge's own application reader
+(`l2_merge_frame`) after it, so no pass routes a statement by the word before the head's content is
+read; merge's contract (arity at the word, operands, result body, schema, emission) is unchanged and
+is entered from it. Behaviour is unchanged by design (the storage of a value
+declaration stays the procedure's own row, the unit's child indexes do not move). A first draft of
+the slice also made `x: merge: Model` in a unit Structure's body a FIELD of the Structure (the kind-3
+slot); `unit_merge_parent_named` showed the established reading -- the body is a procedure's body
+and `box: merge: Host\inner` declares the procedure's row, read inside the body -- and the draft was
+withdrawn before any commit; the book's construction sentence now says so in both languages.
+
+Evidence: focused harness `build/l2_harness/fable_rr1_focus_02` (148 targets, 11 failed, all eleven pre-existing reds with unchanged details -- `unit_ns2_ref_arg`, `unit_ns2_ref_return`, `unit_ns2_ref_admit`, `unit_ns2_ref_capture` and their `_walk` twins, `unit_k03_merge_op_anon_typed` and `_walk`, `unit_held_definition_free_name`; against `codex_interpreter_throw_full_02` FAIL->OK 0, OK->FAIL 0; the same set in the two earlier runs of the slice, `fable_rr1_focus_01` and `_02`); L3 `build/l3/fable_rr1_l3_01`
+(all 11 suites ok, type budget ok); mutant on isolated bytes (`scratchpad/mutant_rr1`): `l2_value_receiver` answering 0 --
+the real translator and the mutant translate `unit_merge_parent_named` (a named body), `unit_mres_ref_field_path` and `unit_root_merge_body` (the root), `unit_k03_merge_op_path_roots` and `unit_merge_in_method` (a method) differently, the mutant refusing each (a merge operand read as the content of a definition, a field path through a vanished row, an end target of a Structure R that is now a named one); the no-operand refusal `unit_k03_ns_bare_merge_refused` keeps identical diagnostics under the mutant, as the contract of merge should. `python tools/check_docs.py` and `git diff --check` clean.
+
 ## The general rule the implementation has to meet (read from the author's sentences and the book)
 
 R1. The outer head's role is the resolver's alone: an absent head with a retained body is a
@@ -136,12 +160,16 @@ declaration in the root, in a method and in a nested body alike; no exception fo
 with `merge`, and no root role for a tail that begins with `independent`.
 
 R2. What the declared head holds is read from its tail after R1: one application of a receiver whose
-contract yields a value (`merge`; a qualifier over a value) gives the head that value (today's
-merge-result own row and schema, produced by merge's contract); an atom naming a Structure visible at
-the place is the binding (K03 NS-ROLES-1); a literal or an atom that names nothing callable is
-retained content; anything else is the head's body, a procedure (Q45). Current semantics are
-preserved: `b: merge: A C` still evaluates the merge once where it stands and `b` holds the result;
-it does not become an inert declaration.
+contract yields a value (`merge`; a qualifier over a value) makes the declaration a statement of the
+enclosing procedure (E's at the root, a method's, a named Structure's) declaring the head's own row,
+which holds the value (today's merge-result own row and schema, produced by merge's contract); an
+atom naming a Structure visible at the place is the binding (K03 NS-ROLES-1); a literal or an atom
+that names nothing callable is retained content; anything else is the head's body, a procedure
+(Q45). Current semantics are preserved: `b: merge: A C` still evaluates the merge once where it
+stands and `b` holds the result; it does not become an inert declaration, and in a named Structure's
+body it is not a field of the Structure (the probe `rr_merge_nested_root`, which read `Outer\x\v`
+from outside, expected a field: its expectation was wrong, the translator's "unknown field path
+segment" right).
 
 R3. merge's contract is unchanged in substance (operands, result body, schema, throws, native and
 walker emission) and is entered from R2, never from a role gate; its own refusals keep their bytes.
@@ -161,11 +189,20 @@ Each slice: the old rows of its cluster stay green or move with an explained dia
 bytes; new minimal witnesses, native and walked, with a mutant per rule; kernel, L3 and the focused
 harness of the cluster before the commit; the full harness replay when the user allows a full run.
 
-Minimal witnesses planned for R1–R3: `b: merge: A C` and `b: merge(A C)` in the root, in a method
-and in a nested named Structure body (positive, same exit as today); `x: merge` with no operand
-(refused at the merge, same bytes as today); `x: 7`, `b: A`, `C: makeA()` unchanged; `catch: merge ()`
-and `fn: test ()` as their receivers' applications; a known head `A: merge: B` as A's assignment, not a
-declaration. For R4: the author's example natively and walked; the chain over a known named Structure,
+Witnesses of R1–R3 (slice RR1, `fable_pc`, 2026-10-10): the content-kind reading (`l2_value_receiver`,
+`l2_decl_content`) replaced the six role uses of `l2_merge_construction`; behaviour is unchanged by
+design, so the witnesses are the existing rows kept green on the same bytes -- the 42 merge rows,
+`unit_merge_parent_named` and `unit_ns2_copy_field` (merge as a named body's statement),
+`unit_k03_ns_bare_merge_refused` and `unit_k03_ns_merge_app_refused` (no operand, refused at the
+word in a named body), the K03 S5 definition-tail rows -- and a mutant: `l2_value_receiver` answering 0
+makes every `R: merge: A` a named Structure R with merge as its body's statement, which the rows see.
+Probes of the slice on the translator before it (`scratchpad/rr_probes`): `x: merge: Model` in a
+unit Structure's body read from outside as `Outer\x\v` -- "unknown field path segment" (x is the
+procedure's row, not a field; correct); the same in a method's named Structure -- the same; a known
+head `a: merge: Other` after `a: merge: Model` -- "more arguments than a has formals" (the book's
+call classification of a known head, out of this ticket); `a: merge: Model` with the body `int: w 6` --
+"mixed numeric types" at `a\v + a\w` (cluster 4: the body field is typed `size_t` whatever the
+source wrote). For R4: the author's example natively and walked; the chain over a known named Structure,
 an anonymous Structure and a method's result; each receiver alone with its own contract; the eternal
 branch's identity kept through a later `merge` (the copier's retained profile); the existing write and
 address refusals unchanged.

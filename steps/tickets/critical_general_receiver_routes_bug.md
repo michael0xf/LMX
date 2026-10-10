@@ -129,3 +129,14 @@ C99/K08. Не делать очередной name-specific helper ради ка
 кластеров с вердиктом по каждому месту, строки харнесса каждого кластера с
 разделением отказов контракта и отказов формы, общее правило R1–R6 и порядок
 срезов (R1+R2+R3 → R4 → R6 → R5) с минимальными свидетелями.
+
+Срез RR1 (кластер 1, `fable_pc`, 2026-10-10): распознавание `merge` в хвосте
+больше не решает роль внешней головы — `l2_merge_construction` удалён, роль
+даёт разрешение имени, содержимое объявления читает `l2_decl_content` по
+свойству ресивера (`l2_value_receiver`), и `l2_merge_declaration` спрашивает
+его раньше собственного чтения применения merge; объявление-значение в любом теле
+(E, метод, именованная Structure) — строка этой процедуры, объявление-тело —
+именованная Structure. Поведение сохранено на тех же байтах: focused
+`fable_rr1_focus_02` 148 targets, 11 failed, all eleven pre-existing reds with unchanged details -- `unit_ns2_ref_arg`, `unit_ns2_ref_return`, `unit_ns2_ref_admit`, `unit_ns2_ref_capture` and their `_walk` twins, `unit_k03_merge_op_anon_typed` and `_walk`, `unit_held_definition_free_name`; against `codex_interpreter_throw_full_02` FAIL->OK 0, OK->FAIL 0; the same set in the two earlier runs of the slice, `fable_rr1_focus_01` and `_02`, L3 `fable_rr1_l3_01` all 11 suites ok, type budget ok, мутант
+(`l2_value_receiver` → 0) the real translator and the mutant translate `unit_merge_parent_named` (a named body), `unit_mres_ref_field_path` and `unit_root_merge_body` (the root), `unit_k03_merge_op_path_roots` and `unit_merge_in_method` (a method) differently, the mutant refusing each (a merge operand read as the content of a definition, a field path through a vanished row, an end target of a Structure R that is now a named one); the no-operand refusal `unit_k03_ns_bare_merge_refused` keeps identical diagnostics under the mutant, as the contract of merge should. Подробности и пробы —
+[перепись](../receiver-routes-census-20261010.md), раздел «Slice RR1».

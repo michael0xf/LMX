@@ -57,8 +57,12 @@ fn: main () int
     @: Lmx b_triple 0
     @: Lmx a_other 0
     @: Lmx b_plain 0
+    @: Lmx spare_anchor 0
     @: Lmx out 0
     @: Lmx one 0
+    @: void interior_byte 0
+    @: void spare_byte 0
+    @: void crossing_byte 0
     @: LmxPool pool_a_triple 0
     @: LmxPool pool_b_triple 0
     @: LmxPool pool_a_other 0
@@ -109,9 +113,26 @@ fn: main () int
     pool_a_other: lmx_arena_find_profiled(@ owner_a, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, const_immutable_at)
     pool_b_plain: lmx_arena_find(@ owner_b, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT)
     qcheck(pool_a_triple != 0 && pool_b_triple != 0 && pool_a_other != 0 && pool_b_plain != 0, "four physical arrays exist")
+    # Grow this profile's next chunk with spare room. The first chunk is exactly full
+    # by construction; a test of unused registered capacity needs a real second chunk.
+    pool_a_triple\chunk_capacity: 3U
+    spare_anchor: lmx_node_new_profiled(@ owner_a, triple_at)
+    qcheck(spare_anchor != 0 && lmx_chunk_room(pool_a_triple\tail, pool_a_triple\stride) > lmx_chunk_cells(pool_a_triple\tail, pool_a_triple\stride), "qualified pool has a real partially used chunk")
     qcheck(lmx_range_classify(@ owner_a, (cast: (@: void) a_triple)) = c.LMX_KIND_STRUCT && lmx_range_classify(@ owner_a, (cast: (@: void) a_other)) = c.LMX_KIND_STRUCT, "same representation remains STRUCT")
     qcheck(lmx_range_type_of(@ owner_a, (cast: (@: void) a_triple)) = c.LMX_TYPE_STRUCT && lmx_range_type_of(@ owner_a, (cast: (@: void) a_other)) = c.LMX_TYPE_STRUCT, "same exact representation type remains STRUCT")
     qcheck(lmx_range_profile(@ owner_a, (cast: (@: void) a_triple)) = triple_at && lmx_range_profile(@ owner_a, (cast: (@: void) a_other)) = const_immutable_at, "address ranges distinguish physical profiles")
+    one: a_triple
+    interior_byte: (cast: (@: void) ((cast: (@: char) (cast: (@: void) a_triple)) + 1U))
+    crossing_byte: (cast: (@: void) ((cast: (size_t) a_triple) - 1U))
+    qcheck(lmx_range_profile(@ owner_a, interior_byte) = 0 && lmx_range_write_overlaps_profile(@ owner_a, interior_byte, 1U, 0, @ one, 1U) != 0, "write barrier sees an interior byte without changing exact-cell typing")
+    qcheck(lmx_range_write_overlaps_profile(@ owner_a, crossing_byte, 1U, 0, @ one, 1U) = 0, "byte just before a qualified cell is not itself protected")
+    qcheck(lmx_range_write_overlaps_profile(@ owner_a, crossing_byte, 2U, 0, @ one, 1U) != 0, "write span entering a qualified cell is rejected")
+    qcheck(lmx_range_write_overlaps_profile(@ owner_a, (cast: (@: void) a_other), 1U, 0, @ one, 1U) = 0, "unrelated physical profile stays writable")
+    qcheck(lmx_range_write_overlaps_profile(@ owner_a, (cast: (@: void) ((cast: (size_t) -2))), 8U, 0, @ one, 1U) != 0, "overflowing write span fails closed")
+    if: spare_anchor != 0 && lmx_chunk_room(pool_a_triple\tail, pool_a_triple\stride) > lmx_chunk_cells(pool_a_triple\tail, pool_a_triple\stride)
+        spare_byte: (cast: (@: void) (lmx_chunk_data(pool_a_triple\tail) + lmx_chunk_cells(pool_a_triple\tail, pool_a_triple\stride) * pool_a_triple\stride))
+        qcheck(lmx_range_write_overlaps_profile(@ owner_a, spare_byte, 1U, 0, @ one, 1U) = 0, "unused registered capacity is not a protected value")
+    ---
     first_entry: lmx_range_entry_at(owner_a_at, (cast: (@: void) a_triple))
     qcheck(first_entry != 0 && lmx_range_add_view(atomic_at, owner_a_at, first_entry\array, first_entry\lo, first_entry\hi) != 0 && lmx_arena_index_len(atomic_at) = 0U, "direct mutable foreign view is refused")
 
@@ -137,6 +158,8 @@ fn: main () int
     qcheck(lmx_range_home(@ borrower, (cast: (@: void) a_triple)) = (@ owner_a) && lmx_range_home(@ borrower, (cast: (@: void) b_triple)) = (@ owner_b), "import preserves each true owner")
     qcheck(lmx_range_pool(@ borrower, (cast: (@: void) a_triple)) = 0 && lmx_range_interval_pool(@ borrower, (cast: (@: void) a_triple)) = 0, "borrower never adopts imported storage")
     qcheck(lmx_range_profile(@ borrower, (cast: (@: void) a_triple)) = triple_at && lmx_range_profile(@ borrower, (cast: (@: void) b_plain)) = 0, "profile follows the imported range")
+    one: a_triple
+    qcheck(lmx_range_write_overlaps_profile(@ borrower, interior_byte, 1U, 0, @ one, 1U) != 0, "imported view protects an interior byte without adopting ownership")
     qcheck(lmx_range_import_profile(@ scoped_borrower, @ borrower, triple_at) = 0, "scoped import accepts the explicitly named physical profile")
     qcheck(lmx_range_profile(@ scoped_borrower, (cast: (@: void) a_triple)) = triple_at && lmx_range_profile(@ scoped_borrower, (cast: (@: void) b_triple)) = triple_at, "scoped import is transitive across both true owners")
     qcheck(lmx_range_classify(@ scoped_borrower, (cast: (@: void) a_other)) = c.LMX_KIND_NONE && lmx_range_classify(@ scoped_borrower, (cast: (@: void) b_plain)) = c.LMX_KIND_NONE, "scoped import does not grant unrelated sealed profiles")

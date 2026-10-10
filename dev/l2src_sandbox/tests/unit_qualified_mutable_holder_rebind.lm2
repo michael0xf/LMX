@@ -1,0 +1,20 @@
+# An ordinary reference initially points to E, but its holder is mutable.
+# Rebinding to a compatible mutable Structure must not freeze that actual.
+independent:
+    const:
+        immutable:
+            (): E
+                int: a 7
+            end: E
+        end: immutable
+    end: const
+end: independent
+Holder: (kept: E)
+Candidate: (int: a 0)
+Holder\kept: Candidate
+Holder\kept\a: 9
+int: status 7
+if: Candidate\a != 9 || E\a != 7
+    status: 81
+sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+return

@@ -1,0 +1,32 @@
+# A valid interpreted program can catch its own execution fault. The second
+# catch crosses a call whose caller declares one extra explicit throw name.
+fn: bad (int: n) int
+    return: 12 / n
+
+fn: local (int: n) int
+    int: got 0
+    ---
+        got: 12 / n
+    ---
+    catch: interpreter ()
+        got: 3
+return: got
+
+fn: relay (int: n) int
+    throws: Other
+    int: got 0
+    ---
+        got: bad(n)
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+int: result 0
+---
+    result: local(0) + relay(0)
+---
+catch: Other ()
+    result: 91
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

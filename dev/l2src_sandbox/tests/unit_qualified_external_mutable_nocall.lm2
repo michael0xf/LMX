@@ -1,0 +1,16 @@
+# §10 deferred-code witness: F is never called. Its executable initializer
+# may read Mutable later; constructing F does not execute that code or store
+# the initializer's possible result. Qualification therefore succeeds.
+Model: (int: a 7)
+Mutable: (int: a 0)
+independent:
+    const:
+        immutable:
+            (): F
+                @: Model ref Mutable
+            end: F
+        end: immutable
+    end: const
+end: independent
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

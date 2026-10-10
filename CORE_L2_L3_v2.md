@@ -1,5 +1,49 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+**IN ACCEPTANCE, qualified original-source continuation23.** The qualified
+definition now aliases its existing namespace occurrence into the common
+source COUNT/PLACE/FILL producer. Original executable content is no longer
+omitted from that body's width. Physical shell, child-slot, typed-cell and
+operator allocations receive the actual owning profile; ordinary owned
+constructors keep profile0. Source content and roles are filled before exact-
+profile sealing, followed by synthesized payload copies. Native and walker
+writes check the actual selected address against the program's existing
+qualified-root profiles, not the formal's model. Program-bound checks do not
+establish imported-module qualification or library dispatch lifetime. Focus,
+fault controls, kernel30 and L3_30 have run. Full30 completed RED181/2871;
+exploratory full31 was stopped after a real nested model-copy finding. Its
+repair and a method-leaf path repair passed focused gates; exploratory full32
+was stopped without a verdict after its snapshot became stale. Method-local
+activation cells remain mutable even when a method is a leaf inside a
+qualified branch. Static source qualification must not follow a formal's
+model through to a different mutable actual; the physical address decides
+in native and walker execution. Focused native/walk witnesses now cover that
+boundary, static known-referent refusal, and mutable-holder rebinding. A
+computed `@: Model ref value` in such a body is an executable initializer:
+its pointer cell is still empty before the call, and its explicit call is
+statically rejected. That does not prove construction-time qualification of
+the complete physical tree. Qualification must distinguish already stored
+data references from operands of deferred executable code: a future `AT`
+read or call is not evaluated while constructing its enclosing Structure.
+The general whole-tree preflight of §10 remains open for actual stored data;
+it must not be replaced by a special rule for `@:` or by predicting a code
+result. The full gate remains open. No
+parent completion is claimed. See the
+[current journal](steps/qualified-original-source-20261010.md).
+
+**OPEN, interpreter-status graph fidelity (2026-10-10).** The bounded
+`interpreter` throw candidate passes its focused executions and final-byte
+kernel/L3 gates, but full generated harness `codex_interpreter_throw_full_01`
+is RED84/2894 versus prior RED69/2890. Nine old exact-shape rows regress:
+faulting operations and a CALL acquired hidden status/catch children. This
+violates the source-defined field order and is not cured by changing expected
+graph widths. Six other old failures were stale native-word assertions and
+their corrected walked executions pass. Keep the candidate unaccepted until
+status/catch identity travels through a general source-preserving role and
+activation protocol; there is no runtime name table or second graph.
+[Measured defect](steps/defects.md#interpreter-status-hidden-graph-children),
+[handoff and remaining paths](steps/interpreter-throw-20261010.md).
+
 **BOUNDED VERIFIED, original defining-source identity22 (`4F56DBB5`).** The existing compiler namespace
 must retain actual defining P0 occurrence and actual body separately from its
 outer diagnostic/declaration site. They coincide for an ordinary definition,
@@ -278,12 +322,13 @@ This is a technical map of the kernel that actually exists, not a replacement la
 | **Verification** | A particular source snapshot and a particular executed witness or gate. Its scope does not silently extend to another interpreter, another native-word configuration, another fixture, or a later source edit. |
 | **Debt** | A measured defect, missing route, unverified requirement, or remaining implementation restriction. Debt is not a new language restriction. |
 
-The original inspection used `build/opus_wt/dev/l2src_sandbox/`, with L3 adapters in that worktree. Its October1 release landed as **`8359a59f67b87382c55eb402e9f09f9a4b1ce954`**. That is a historical frozen baseline, not the current handoff. Active development is now the uncommitted `dev/l2src_sandbox/` and `dev/l3_interp/` under `C:\Nyasha_Planet\LMX`; stable root `l2src/` is unchanged by the critical-graph work. Source links below point to these canonical development paths; source symbols and the cited frozen gate identify each observation.
+The original inspection used `build/opus_wt/dev/l2src_sandbox/`, with L3 adapters in that worktree. Its October1 release landed as **`8359a59f67b87382c55eb402e9f09f9a4b1ce954`**. That is a historical frozen baseline, not the current handoff. Active development uses `dev/l2src_sandbox/` and `dev/l3_interp/` under `C:\Nyasha_Planet\LMX`; stable root `l2src/` is unchanged by the critical-graph work. Source links below point to these canonical development paths; source symbols and the cited frozen gate identify each observation.
 
 **Historical boundary, 2026-10-03.** The author transferred implementation to Fable;
-Codex completes documentation and subsequently answers questions. Read
-[to_fable.md](to_fable.md) and [the v2 plan](next_core_tasks_v2.md).
-Latest full gate `critical_graph_fix_full_32` is RED130/1395 on translator
+Codex completed documentation and subsequently answered questions. This older
+handoff remains in Git history; the current 2026-10-10 `fable_pc` handoff is
+[to_fable.md](to_fable.md). Read [the v2 plan](next_core_tasks_v2.md).
+At that historical checkpoint the latest full gate `critical_graph_fix_full_32` was RED130/1395 on translator
 `BFF213AC9309EF2D2975499C6894ABA6EA10BE8EBD3DC9B95733E43B7985B81A`.
 Later focused `critical_persistent_oracle_01` is GREEN7/7 on the same translator,
 with revised occurrence oracles; its generated-runtime copy-to-alias mutant
@@ -307,7 +352,7 @@ build/l2_harness/merge_value_final_focus_20261001_02/start_owned_manifest.json
 
 The focused and final restored gates are each terminal **48/48**; the preceding repair gate is **47/47**, and six direct manual dependency-closure preflights execute **174 checks**. The full generated gate is terminal **1110 targets / 1062 OK / 48 FAIL**; an independent comparison of summary rows confirms the same 48 baseline failures, ten new green rows, and no regressions, removals or duplicates. Fresh kernel **286/286** and L3 **11 suites / 295 checks plus four inventories** are terminal, and their retained transcripts were read. The combined manifest was independently rehashed as described in §15. The source writer has released the slice, and main contains the exact 25-path source checkpoint above. No claim of completed overall self-build follows from this release.
 
-The authoritative language references are the [English semantics book](docs/LMX_semantics.en.md), its [source](provenance/semantics-book.md), [L2 specification](docs/L2_spec_en.md), [L1 specification](docs/L1_spec_en.md), and their Russian counterparts. [READ.ME](READ.ME) governs source ownership and self-build acceptance. [CORE.md](CORE.md) is an older architectural overview; it is useful context, not a substitute for checking the current implementation. The replacement planning documents are [next_core_tasks_v2.md](next_core_tasks_v2.md) and its [dictionary](next_core_tasks_dictionary_v2.md); older chronology remains in [next_core_tasks.md](next_core_tasks.md), [the implementation log](steps/native-selfbuild-20260930.md), and [defects](steps/defects.md). The plans describe acceptance/debt. Current coding authority is the October8 handoff recorded in [current instructions](steps/current.md); the October3 stop boundary above is historical.
+The authoritative language references are the [English semantics book](docs/LMX_semantics.en.md), its [source](provenance/semantics-book.md), [L2 specification](docs/L2_spec_en.md), [L1 specification](docs/L1_spec_en.md), and their Russian counterparts. [READ.ME](READ.ME) governs source ownership and self-build acceptance. [CORE.md](CORE.md) is an older architectural overview; it is useful context, not a substitute for checking the current implementation. The replacement planning documents are [next_core_tasks_v2.md](next_core_tasks_v2.md) and its [dictionary](next_core_tasks_dictionary_v2.md); older chronology remains in [next_core_tasks.md](next_core_tasks.md), [the implementation log](steps/native-selfbuild-20260930.md), and [defects](steps/defects.md). The plans describe acceptance/debt. The October8 Codex coding handoff and October3 stop boundary above are historical; current conditional authority is the 2026-10-10 15:00 São Paulo [handoff](to_fable.md), with live status in [current instructions](steps/current.md).
 
 This map does not resume application development. In particular, no application-specific state or `myxa_manager` objective is introduced into the kernel.
 
@@ -1472,11 +1517,12 @@ Where the normative L2 text describes the complete graph, all finite reference d
 
 This document records the current kernel and its evidence boundary, not
 completed self-build. `8359a59` is the historical October1 release. The
-October3 transfer to Fable and Codex's ensuing Q&A-only role, recorded in
-[to_fable.md](to_fable.md), are historical. Opus subsequently completed that
-continuation and explicitly released the sole writer/build slot to Codex
-on October8 through [from_opus.md](from_opus.md). Codex now codes the v2
-queue sequentially; Opus is Q&A only. Follow
+October3 transfer to Fable and Codex's ensuing Q&A-only role are historical
+and preserved in Git history. Opus subsequently completed that continuation
+and released the sole writer/build slot to Codex on October8 through
+[from_opus.md](from_opus.md). The current conditional transfer is to
+`fable_pc` at 15:00 São Paulo on October10, after Codex's committed
+[handoff](to_fable.md) and pause. Follow
 [current instructions](steps/current.md) for the active bounded child.
 Historical full32 RED130/1395 and persistent_oracle01 GREEN7/7 remain
 bounded evidence, not a claim about today's full result. Updates must

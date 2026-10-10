@@ -91,11 +91,16 @@ _WIN32_ABI = 1 if os.name == 'nt' else 0
 # translator's cells or the walked instruction's own -- handed to the shared
 # admission walk for one call. Measured Windows closure is 76; capacities
 # remain 128/8192.
+# 77 after QUALIFIED-ORIGINAL-SOURCE preflight: LmxQualifySpan records a
+# physical address span in the activation-local qualification check, and
+# LmxQualifySpansDynamicArray is its arena-backed collection descriptor.
+# Neither adds a node or field to the source graph. Measured Windows closure
+# is 78; the translator capacities are still 128/8192.
 EXPECT = {
-    'tests/l3_thread_bind_selftest.lm1': 75 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n9_walk_selftest.lm1': 75 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_n10_walk_selftest.lm1': 75 + _POSIX_ABI + _WIN32_ABI,
-    'tests/l3_mail_prim_selftest.lm1': 75 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_thread_bind_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n9_walk_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_n10_walk_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
+    'tests/l3_mail_prim_selftest.lm1': 77 + _POSIX_ABI + _WIN32_ABI,
 }
 
 PREDEF = re.compile(r'^predef:\s*(.*)$')

@@ -1,0 +1,15 @@
+# A computed typed-reference initializer is executable content, not passive
+# construction. Calling F would write its already protected own reference.
+Model: (int: a 7)
+Mutable: (int: a 0)
+independent:
+    const:
+        immutable:
+            (): F
+                @: Model ref Mutable
+            end: F
+        end: immutable
+    end: const
+end: independent
+F
+return

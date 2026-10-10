@@ -71,6 +71,16 @@ define: LMX_GRAPH_COPY_INVALID 1
 define: LMX_GRAPH_COPY_NOMEM 2
 define: LMX_GRAPH_COPY_UNSUPPORTED 3
 
+# Read-only §10 construction preflight. `prior_profiles` are physical profile
+# roots which completed qualification before this root, not merely allocated
+# or sealed unit storage. `method_leaves` are exact fn/fm/sub occurrences from
+# the translator's source rows. `opaque_types` are numeric pointee type ids
+# which the source type table proves to be foreign C resources; no names or
+# permanent graph metadata enter this call.
+define: LMX_QUALIFY_OK 0
+define: LMX_QUALIFY_INVALID 1
+define: LMX_QUALIFY_NOMEM 2
+
 # Operation-local bookkeeping: open-addressing pointer map and a work list.
 # Their buffers may move on growth; the addresses stored IN them never move.
 # Open-addressing pointer map: two void* DynamicArrays (table size = capacity;
@@ -88,7 +98,28 @@ struct: LmxCopyStack
     VoidDynamicArray: items
 end: LmxCopyStack
 
+# Machine scratch for a constructor's selected-profile coverage proof. These
+# intervals are never stored in the language graph or name/address registry.
+struct: LmxQualifySpan
+    @: LmxPool pool
+    @: LmxChunk chunk
+    size_t: first
+    size_t: count
+end: LmxQualifySpan
+
+struct: LmxQualifySpansDynamicArray
+    @: LmxQualifySpan data
+    size_t: size
+    size_t: capacity
+end: LmxQualifySpansDynamicArray
+
 prototype:
+    fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
+    # The constructor additionally proves that every issued cell of the
+    # selected profile belongs to the validated tree or its physical backing
+    # before it seals that profile. Ordinary unit tests of the tree predicate
+    # may use the narrower preflight above on deliberately reused pools.
+    fn: lmx_qualify_tree_preflight_full (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
     # An enclosing constructor (merge) owns this zero-initialized, transient
     # spelling batch. It finishes the batch exactly once before arena rollback
     # or result publication. No pending spelling is visible through lookup.

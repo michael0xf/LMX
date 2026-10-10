@@ -9,6 +9,9 @@ include: "<stdlib.h>"
 # its own descriptor in the index, and a refusal anywhere reverts the arena to the mark
 # taken before the first one -- an Array never survives half made.
 fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
+return: lmx_array_new_profiled(type, count, arena, 0)
+
+fn: lmx_array_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
     size_t: stride
     int: element_type
     @: VoidArray desc
@@ -26,7 +29,9 @@ fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArr
         # keeps the table first regardless of which char array a program declares first.
         # A no-op once the table already exists (its own ordinary "already laid out"
         # refusal); never refuses THIS array's own construction either way.
-        lmx_chars_init(arena)
+        if: profile = 0
+            lmx_chars_init(arena)
+        ---
     else:
         if: type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
             stride: c.sizeof(c.char)
@@ -62,14 +67,14 @@ fn: lmx_array_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArr
     # The descriptor is one cell of the array of Array descriptors of this type; the
     # backing is `count` consecutive cells of the array of that element type.  Both are
     # the arena's arrays: found if the arena has them, made here if it does not.
-    desc: (cast: (@: VoidArray) lmx_arena_take(arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, type))
+    desc: (cast: (@: VoidArray) lmx_arena_take_profiled(arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, type, profile))
     if: desc = 0
         return: 0
     ---
     desc\size: count
     desc\data: 0
     if: count != 0U
-        backing: lmx_arena_take_n(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, count)
+        backing: lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_PRIMITIVE, element_type, profile, count)
         if: backing = 0
             return: 0
         ---

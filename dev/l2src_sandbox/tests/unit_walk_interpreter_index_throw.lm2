@@ -1,0 +1,14 @@
+# An interpreted Array bounds fault is an ordinary local interpreter throw.
+fn: probe () int
+    []: int values 1
+    int: got 0
+    ---
+        got: values[1]
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+int: result probe()
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

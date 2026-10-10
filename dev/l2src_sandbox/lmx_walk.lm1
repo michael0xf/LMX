@@ -25,9 +25,10 @@ prototype:
     fn: lmx_walk_model_operand (@: LmxWalkFrame f; @: void operand; @@: Lmx out) int
     fn: lmx_walk_admit_resolve (@: LmxArena arena; @: void raw; @@: void out_value) int
     fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
-    fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: VoidArray out) int
+    fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @: Lmx fault_code; size_t: fault_base; @@: VoidArray out) int
     fn: lmx_walk_array_elem_meta (int: type; @: int elem; @: size_t stride) int
     fn: lmx_walk_index (@: LmxWalkFrame f; @: void node; @: size_t out) int
+    fn: lmx_walk_fault (@: LmxWalkFrame f; @: Lmx code; size_t: base) int
 end: prototype
 
 # k.4 (author, next_core_tasks.md §3 item 8): dispatch is the word alone, non-null ->
@@ -43,29 +44,35 @@ return: node\native
 # ---- construction of body nodes --------------------------------------------------------
 
 fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
+return: lmx_walk_plain_profiled(arena, parent, children, 0)
+
+fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) @: Lmx
     @: Lmx s 0
     if: arena = 0 || parent = 0
         return: 0
-    s: lmx_struct_new_owned(parent, arena)
+    s: lmx_struct_new_profiled(parent, arena, profile)
     if: s = 0
         return: 0
-    if: children != 0U && lmx_arena_refs_open_owned(arena, s, children) != 0
+    if: children != 0U && lmx_arena_refs_open_profiled(arena, s, children, profile) != 0
         return: 0
 return: s
 
 # One record per role, made once: child k of the result is THE record of role k, and it
 # is the address of that record that a frame node carries.
 fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
+return: lmx_walk_roles_open_profiled(arena, 0)
+
+fn: lmx_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
     @: Lmx roles 0
     @: LmxOp role 0
     int: k 1
     if: arena = 0
         return: 0
-    roles: lmx_node_new_owned(arena)
-    if: roles = 0 || lmx_arena_refs_open_owned(arena, roles, (cast: (size_t) (c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT))) != 0
+    roles: lmx_node_new_profiled(arena, profile)
+    if: roles = 0 || lmx_arena_refs_open_profiled(arena, roles, (cast: (size_t) (c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT)), profile) != 0
         return: 0
     while: k < c.LMX_WALK_OP_COUNT * c.LMX_WALK_SOURCE_COUNT
-        role: lmx_op_new_owned(arena, k)
+        role: lmx_op_new_profiled(arena, k, profile)
         if: role = 0 || lmx_arena_ref_store(roles, (cast: (size_t) k), (cast: (@: void) role)) != 0
             return: 0
         k: k + 1
@@ -78,14 +85,22 @@ return: roles
 # must match the body.  Bind once per program (selftest, L3 bind) before building
 # bodies; call0 reads these.
 @: Lmx lmx_walk_program_roles_g 0
+@@: Lmx lmx_walk_program_roots_g 0
+size_t: lmx_walk_program_root_count_g 0U
 
 fn: lmx_walk_program_bind (@: Lmx roles) void
     lmx_walk_program_roles_g: roles
+    lmx_walk_program_roots_g: 0
+    lmx_walk_program_root_count_g: 0U
     lmx_call_install_walk((cast: (LmxCallWalkFn) lmx_walk_call0_dispatch))
     lmx_call_install_prim_walk((cast: (LmxCallPrimWalkFn) lmx_walk_call_prim_dispatch))
 
 fn: lmx_walk_program_roles () @: Lmx
 return: lmx_walk_program_roles_g
+
+fn: lmx_walk_program_qualify (@@: Lmx roots; size_t: count) void
+    lmx_walk_program_roots_g: roots
+    lmx_walk_program_root_count_g: count
 
 # Descriptor-dispatch body for lmx_call0 (addr=0): ephemeral scratch, program-bound
 # roles, run; return last expression as int (LmxWalkValue.number / int cell).  k.4: no
@@ -121,6 +136,8 @@ fn: lmx_walk_call0_dispatch (@: LmxArena arena; @: Lmx callable) int
     ctx.arena: arena
     ctx.scratch: @ scratch
     ctx.roles: roles
+    ctx.immutable_roots: lmx_walk_program_roots_g
+    ctx.immutable_root_count: lmx_walk_program_root_count_g
     st: lmx_walk_run(@ ctx, callable, 0, 0U, @ wv)
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
@@ -141,12 +158,15 @@ return: 0
 # Thin (arena, occurrence) entry for descriptor dispatch: ephemeral scratch,
 # program-bound roles (or freshly opened when unbound), prepare + run.
 fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx
+return: lmx_walk_frame_profiled(arena, roles, parent, code, children, 0)
+
+fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children; @: Lmx profile) @: Lmx
     @: Lmx s 0
     @: void role 0
     if: roles = 0 || code <= c.LMX_WALK_OP_NONE || code >= c.LMX_WALK_OP_COUNT || children = 0U
         return: 0
     role: lmx_arena_ref_value(roles, (cast: (size_t) code))
-    s: lmx_walk_plain(arena, parent, children)
+    s: lmx_walk_plain_profiled(arena, parent, children, profile)
     if: s = 0 || role = 0
         return: 0
     if: lmx_arena_ref_store(s, 0U, role) != 0
@@ -167,7 +187,7 @@ fn: lmx_walk_source_mark (@: Lmx roles; @: Lmx operation; int: source) int
 return: c.LMX_WALK_INVALID
 
 fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
-    @: void cell lmx_size_new_owned(arena)
+    @: void cell lmx_arena_take_profiled(arena, c.sizeof(value), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, lmx_range_profile(arena, (cast: (@: void) code)))
     if: cell = 0
         return: c.LMX_WALK_NOMEM
     if: lmx_size_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
@@ -175,7 +195,7 @@ fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: v
 return: c.LMX_WALK_OK
 
 fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
-    @: void cell lmx_int_new_owned(arena)
+    @: void cell lmx_arena_take_profiled(arena, c.sizeof(value), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, lmx_range_profile(arena, (cast: (@: void) code)))
     if: cell = 0
         return: c.LMX_WALK_NOMEM
     if: lmx_int_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
@@ -183,7 +203,7 @@ fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value
 return: c.LMX_WALK_OK
 
 fn: lmx_walk_store_charptr (@: LmxArena arena; @: Lmx code; size_t: slot; @: char value) int
-    @: void cell lmx_charptr_new_owned(arena)
+    @: void cell lmx_arena_take_profiled(arena, c.sizeof(value), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR_PTR, lmx_range_profile(arena, (cast: (@: void) code)))
     if: cell = 0
         return: c.LMX_WALK_NOMEM
     if: lmx_charptr_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
@@ -193,18 +213,28 @@ return: c.LMX_WALK_OK
 
 fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
     @: void cell 0
+    @: Lmx profile
     if: arena = 0 || code = 0
         return: c.LMX_WALK_INVALID
-    if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
-        return: c.LMX_WALK_NOMEM
+    profile: lmx_range_profile(arena, (cast: (@: void) code))
+    if: profile != 0
+        cell: lmx_arena_take_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, profile)
+        if: cell = 0
+            return: c.LMX_WALK_NOMEM
+        if: lmx_char_store_known(cell, value) != 0
+            return: c.LMX_WALK_INVALID
+        ---
+    else:
+        if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+            return: c.LMX_WALK_NOMEM
+        cell: lmx_char_cell(arena, value)
     ---
-    cell: lmx_char_cell(arena, value)
     if: cell = 0 || lmx_arena_ref_store(code, slot, cell) != 0
         return: c.LMX_WALK_INVALID
 return: c.LMX_WALK_OK
 
 fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsigned: value) int
-    @: void cell lmx_unsigned_new_owned(arena)
+    @: void cell lmx_arena_take_profiled(arena, c.sizeof(value), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED, lmx_range_profile(arena, (cast: (@: void) code)))
     if: cell = 0
         return: c.LMX_WALK_NOMEM
     if: lmx_unsigned_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
@@ -212,7 +242,7 @@ fn: lmx_walk_store_unsigned (@: LmxArena arena; @: Lmx code; size_t: slot; unsig
 return: c.LMX_WALK_OK
 
 fn: lmx_walk_store_ulong (@: LmxArena arena; @: Lmx code; size_t: slot; ulong: value) int
-    @: void cell lmx_ulong_new_owned(arena)
+    @: void cell lmx_arena_take_profiled(arena, c.sizeof(value), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_ULONG, lmx_range_profile(arena, (cast: (@: void) code)))
     if: cell = 0
         return: c.LMX_WALK_NOMEM
     if: lmx_ulong_store_known(cell, value) != 0 || lmx_arena_ref_store(code, slot, cell) != 0
@@ -854,6 +884,8 @@ fn: lmx_walk_publish (@: LmxWalkFrame f) int
     e: f\work
     while: e != 0
         if: e\dirty != 0
+            if: (e\kind = 3 && lmx_walk_immutable(f, (cast: (@: void) e\slot)) != 0) || (e\kind != 3 && lmx_walk_immutable(f, e\slot[0]) != 0)
+                return: c.LMX_WALK_INVALID
             if: e\kind = 1 && lmx_walk_store_slot(f\arena, e\slot, e\num) != c.LMX_WALK_OK
                 return: c.LMX_WALK_INVALID
             if: e\kind = 2 && lmx_pointer_store_known(e\slot[0], e\ref) != 0
@@ -934,6 +966,25 @@ return: lmx_walk_store_numeric_raw(place\address, ty, number)
 
 # One physical-place resolution for reads, explicit stores and ADDRESS.
 # ELEM selects backing storage here, before any char value or pointer is loaded.
+fn: lmx_walk_fault (@: LmxWalkFrame f; @: Lmx code; size_t: base) int
+    @: void ordinal 0
+    @: void pad 0
+    size_t: k 0U
+    if: f = 0 || code = 0 || code\array.size != base + 2U
+        return: c.LMX_WALK_INVALID
+    ordinal: lmx_arena_ref_value(code, base)
+    pad: lmx_arena_ref_value(code, base + 1U)
+    if: lmx_walk_numeric_type(f\arena, ordinal) != c.LMX_TYPE_SIZE_T
+        return: c.LMX_WALK_INVALID
+    k: lmx_size_value_known(ordinal)
+    if: k = 0U || k > (cast: (size_t) c.INT_MAX) - (cast: (size_t) c.LMX_WALK_THROWN)
+        return: c.LMX_WALK_INVALID
+    if: pad != 0 && lmx_walk_kind(f, pad) != c.LMX_KIND_STRUCT
+        return: c.LMX_WALK_INVALID
+    f\payload: 0
+    f\landing: (cast: (@: Lmx) pad)
+return: c.LMX_WALK_THROWN + (cast: (int) k)
+
 fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace out) int
     LmxWalkValue: holder
     @: Lmx code (cast: (@: Lmx) node)
@@ -971,20 +1022,30 @@ fn: lmx_walk_place (@: LmxWalkFrame f; @: void node; int: write; @: LmxWalkPlace
         status: lmx_walk_eval(f, lmx_arena_ref_value(code, 1U), @ holder)
         if: status != c.LMX_WALK_OK
             return: status
-        if: holder.present = 0 || holder.kind != c.LMX_WALK_VALUE_REFERENCE || holder.ref = 0
+        if: holder.present = 0 || holder.kind != c.LMX_WALK_VALUE_REFERENCE
             return: c.LMX_WALK_INVALID
+        if: holder.ref = 0
+            return: lmx_walk_fault(f, code, 3U)
         out\address: holder.ref
         out\type: lmx_walk_witness_type(f\arena, lmx_arena_ref_value(code, 2U))
         out\descriptor: (cast: (int) (out\type = c.LMX_TYPE_LMX || out\type = c.LMX_TYPE_DESC))
         return: c.LMX_WALK_OK
     if: op = c.LMX_WALK_OP_ELEM || op = c.LMX_WALK_OP_ELEMPUT
-        status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), write, @ array)
+        if: op = c.LMX_WALK_OP_ELEMPUT
+            status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), write, code, 4U, @ array)
+        else:
+            status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), write, code, 3U, @ array)
+        ---
         if: status != c.LMX_WALK_OK
             return: status
         status: lmx_walk_index(f, lmx_arena_ref_value(code, 2U), @ index)
         if: status != c.LMX_WALK_OK
             return: status
-        if: index >= array\size || array\data = 0
+        if: index >= array\size
+            if: op = c.LMX_WALK_OP_ELEMPUT
+                return: lmx_walk_fault(f, code, 4U)
+            return: lmx_walk_fault(f, code, 3U)
+        if: array\data = 0
             return: c.LMX_WALK_INVALID
         if: lmx_walk_array_elem_meta(lmx_domain_type(f\arena, (cast: (@: void) array)), @ type, @ stride) = 0
             return: c.LMX_WALK_INVALID
@@ -1048,7 +1109,7 @@ fn: lmx_walk_arg_write (@: LmxWalkFrame f; size_t: k; int: ty; @: LmxWalkValue v
     if: status != c.LMX_WALK_OK
         return: status
 return: lmx_walk_value_load((place.address), ty, out)
-fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: VoidArray out) int
+fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @: Lmx fault_code; size_t: fault_base; @@: VoidArray out) int
     LmxWalkValue: value
     int: status
     \out: 0
@@ -1057,7 +1118,9 @@ fn: lmx_walk_array_from (@: LmxWalkFrame f; @: void node; int: write; @@: VoidAr
         return: status
     if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE
         return: c.LMX_WALK_INVALID
-    if: value.ref = 0 || lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_ARRAY
+    if: value.ref = 0
+        return: lmx_walk_fault(f, fault_code, fault_base)
+    if: lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_ARRAY
         return: c.LMX_WALK_INVALID
     if: write != 0 && lmx_walk_immutable(f, (value.ref)) != 0
         return: c.LMX_WALK_INVALID
@@ -1109,10 +1172,12 @@ return: 0
 fn: lmx_walk_immutable (@: LmxWalkFrame f; @: void p) int
     if: p = 0
         return: 0
-    if: f\context\immutable_profile = 0
+    if: f\context\immutable_profile = 0 && f\context\immutable_root_count = 0U
         return: 0
     f\context\classified: f\context\classified + 1U
-return: (cast: (int) (lmx_range_profile(f\arena, p) = f\context\immutable_profile))
+    if: f\context\immutable_profile != 0 && lmx_range_profile(f\arena, p) = f\context\immutable_profile
+        return: 1
+return: lmx_range_has_root_profile(f\arena, p, f\context\immutable_roots, f\context\immutable_root_count)
 
 # ---- execution -------------------------------------------------------------------------
 
@@ -1154,6 +1219,8 @@ fn: lmx_walk_call_prim_dispatch (@: LmxArena arena; @: Lmx code; @: Lmx data; @@
     ctx.arena: arena
     ctx.scratch: @ scratch
     ctx.roles: roles
+    ctx.immutable_roots: lmx_walk_program_roots_g
+    ctx.immutable_root_count: lmx_walk_program_root_count_g
     st: lmx_walk_activate(@ ctx, code, data, refs, nargs, @ result)
     lmx_scratch_close(@ scratch)
     lmx_arena_release(@ sa)
@@ -1618,6 +1685,108 @@ fn: lmx_walk_index (@: LmxWalkFrame f; @: void node; @: size_t out) int
         return: c.LMX_WALK_INVALID
     \out: value.wide
 return: c.LMX_WALK_OK
+
+# An explicit source throw uses the same status and payload as a native method.
+# The ordinal is a typed operand supplied when the source graph is built; the
+# interpreter never resolves the saved spelling. Evaluate every actual before
+# constructing the payload, so a throw from an actual remains that throw.
+fn: lmx_walk_throw (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
+    @: Lmx body 0
+    @: void named 0
+    @: Lmx actuals 0
+    @: void ordinal 0
+    @: void room 0
+    @: LmxWalkValue values 0
+    @: Lmx payload 0
+    @: void cell 0
+    @: void child 0
+    size_t: n 0U
+    size_t: i 0U
+    size_t: k 0U
+    size_t: number 0U
+    int: ty 0
+    int: status c.LMX_WALK_OK
+    if: f = 0 || code = 0 || out = 0 || code\array.size != 3U
+        return: c.LMX_WALK_INVALID
+    body: lmx_arena_ref_struct(code, 1U)
+    ordinal: lmx_arena_ref_value(code, 2U)
+    if: body = 0 || body\array.size != 1U || lmx_walk_numeric_type(f\arena, ordinal) != c.LMX_TYPE_SIZE_T
+        return: c.LMX_WALK_INVALID
+    k: lmx_size_value_known(ordinal)
+    if: k = 0U || k > (cast: (size_t) c.INT_MAX) - (cast: (size_t) c.LMX_WALK_THROWN)
+        return: c.LMX_WALK_INVALID
+    named: lmx_arena_ref_value(body, 0U)
+    if: lmx_walk_kind(f, named) != c.LMX_KIND_SOURCE_SYMBOL
+        if: lmx_walk_op(f, named) != c.LMX_WALK_OP_SOURCE_INERT || (cast: (@: Lmx) named)\array.size != 2U
+            return: c.LMX_WALK_INVALID
+        actuals: lmx_arena_ref_struct((cast: (@: Lmx) named), 1U)
+        if: actuals = 0
+            return: c.LMX_WALK_INVALID
+        n: actuals\array.size
+    ---
+    if: n > ((cast: (size_t) -1) / c.sizeof(c.LmxWalkValue))
+        return: c.LMX_WALK_NOMEM
+    if: n != 0U
+        if: lmx_scratch_take(f\context\scratch, n * c.sizeof(c.LmxWalkValue), @ room) != c.LMX_SCRATCH_OK
+            return: c.LMX_WALK_NOMEM
+        values: (cast: (@: LmxWalkValue) room)
+        memset(room, 0, n * c.sizeof(c.LmxWalkValue))
+        while: i < n
+            child: lmx_arena_ref_value(actuals, i)
+            if: child = 0
+                return: c.LMX_WALK_INVALID
+            if: lmx_walk_op(f, child) = c.LMX_WALK_OP_NONE
+                status: lmx_walk_value_cell(f\arena, child, values + i)
+            else:
+                status: lmx_walk_eval(f, child, values + i)
+            ---
+            if: status != c.LMX_WALK_OK
+                return: status
+            i: i + 1U
+        ---
+        payload: lmx_node_new_owned(f\arena)
+        if: payload = 0 || lmx_arena_refs_open_owned(f\arena, payload, n) != 0
+            return: c.LMX_WALK_NOMEM
+        i: 0U
+        while: i < n
+            cell: 0
+            if: values[i].present = 0
+                return: c.LMX_WALK_INVALID
+            if: values[i].kind = c.LMX_WALK_VALUE_NUMBER
+                ty: values[i].type
+                if: lmx_walk_value_number(values + i, @ number, @ ty) != c.LMX_WALK_OK
+                    return: c.LMX_WALK_INVALID
+                if: ty = c.LMX_TYPE_INT
+                    cell: lmx_int_new_owned(f\arena)
+                if: ty = c.LMX_TYPE_CHAR
+                    cell: lmx_char_new_owned(f\arena)
+                if: ty = c.LMX_TYPE_SIZE_T
+                    cell: lmx_size_new_owned(f\arena)
+                if: ty = c.LMX_TYPE_UNSIGNED
+                    cell: lmx_unsigned_new_owned(f\arena)
+                if: ty = c.LMX_TYPE_UNSIGNED_CHAR
+                    cell: lmx_uchar_new_owned(f\arena)
+                if: ty = c.LMX_TYPE_ULONG
+                    cell: lmx_ulong_new_owned(f\arena)
+                if: cell = 0
+                    return: c.LMX_WALK_NOMEM
+                if: lmx_walk_store_numeric_raw(cell, ty, number) != c.LMX_WALK_OK
+                    return: c.LMX_WALK_INVALID
+                ---
+            else:
+                if: values[i].kind != c.LMX_WALK_VALUE_REFERENCE || (values[i].ref != 0 && lmx_walk_kind(f, (values[i].ref)) != c.LMX_KIND_STRUCT)
+                    return: c.LMX_WALK_INVALID
+                cell: values[i].ref
+            ---
+            if: lmx_arena_ref_store(payload, i, cell) != 0
+                return: c.LMX_WALK_INVALID
+            i: i + 1U
+        ---
+    ---
+    f\payload: (cast: (@: void) payload)
+    lmx_walk_value_ref(out, c.LMX_TYPE_LMX, (cast: (@: void) payload))
+return: c.LMX_WALK_THROWN + (cast: (int) k)
+
 fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
     LmxWalkValue: value
     LmxWalkValue: other
@@ -1777,6 +1946,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         ---
         if: status != c.LMX_WALK_OK
             return: status
+        if: lmx_walk_immutable(f, (place.address)) != 0
+            return: c.LMX_WALK_INVALID
         index: 3U
         if: op = c.LMX_WALK_OP_PUT
             index: 2U
@@ -1797,6 +1968,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         if: value.present = 0 || value.kind != c.LMX_WALK_VALUE_REFERENCE
             return: c.LMX_WALK_INVALID
         if: slot = 0 || lmx_walk_is_pointer_cell(f\arena, slot[0]) != 0
+            return: c.LMX_WALK_INVALID
+        if: lmx_walk_immutable(f, (cast: (@: void) slot)) != 0
             return: c.LMX_WALK_INVALID
         if: value.ref != 0 && lmx_walk_kind(f, (value.ref)) != c.LMX_KIND_STRUCT
             return: c.LMX_WALK_INVALID
@@ -1819,6 +1992,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             return: status
         work: lmx_walk_work_find(f, slot)
         if: work = 0 || value.present = 0
+            return: c.LMX_WALK_INVALID
+        if: (work\kind = 3 && lmx_walk_immutable(f, (cast: (@: void) slot)) != 0) || (work\kind != 3 && lmx_walk_immutable(f, slot[0]) != 0)
             return: c.LMX_WALK_INVALID
         if: work\kind != 1
             if: value.kind != c.LMX_WALK_VALUE_REFERENCE
@@ -1934,7 +2109,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             ---
             return: lmx_walk_value_num(out, a, wv)
         ---
-        # -170 c1 / D-58: MUL/DIV/MOD. Mutant: MUL as ADD -> RED. Div/mod by 0 -> INVALID (X1 of D-37/D-44), not a throw.
+        # -170 c1 / D-58: MUL/DIV/MOD. Mutant: MUL as ADD -> RED.
+        # A zero divisor in a complete operation raises the implicit interpreter throw.
         if: op = c.LMX_WALK_OP_MUL
             if: a = c.LMX_TYPE_INT
                 wv: (cast: (size_t) ((cast: (int) ua) * (cast: (int) ub)))
@@ -1945,7 +2121,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         ---
         if: op = c.LMX_WALK_OP_DIV || op = c.LMX_WALK_OP_MOD
             if: ub = 0U
-                return: c.LMX_WALK_INVALID
+                return: lmx_walk_fault(f, code, 3U)
             ---
             if: a = c.LMX_TYPE_INT
                 if: op = c.LMX_WALK_OP_DIV
@@ -2025,6 +2201,8 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
         f\returned: 1
         memcpy((cast: (@: void) out), (cast: (@: void) (@ f\result)), c.sizeof(c.LmxWalkValue))
         return: c.LMX_WALK_OK
+    if: op = c.LMX_WALK_OP_THROW
+        return: lmx_walk_throw(f, code, out)
     if: op = c.LMX_WALK_OP_PRIM || op = c.LMX_WALK_OP_PRIM_PUB
         return: lmx_walk_prim(f, code, out)
     if: op = c.LMX_WALK_OP_ADMIT_AS
@@ -2060,7 +2238,7 @@ fn: lmx_walk_eval (@: LmxWalkFrame f; @: void node; @: LmxWalkValue out) int
             return: lmx_walk_value_num(out, c.LMX_TYPE_INT, 0U)
         return: lmx_walk_value_num(out, c.LMX_TYPE_INT, (cast: (size_t) (lmx_int_value_known(leaf) = lmx_int_value_known(want))))
     if: op = c.LMX_WALK_OP_LENGTH
-        status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), 0, @ array)
+        status: lmx_walk_array_from(f, lmx_arena_ref_value(code, 1U), 0, code, 2U, @ array)
         if: status != c.LMX_WALK_OK
             return: status
         return: lmx_walk_value_num(out, c.LMX_TYPE_SIZE_T, array\size)

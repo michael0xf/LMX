@@ -4,6 +4,33 @@
 
 ## Текущие и недавно закрытые
 
+<a id="interpreter-status-hidden-graph-children"></a>
+### INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN — 2026-10-10, Codex, OPEN (handoff to `fable_pc` at 15:00)
+
+The interpreter-throw candidate changes the retained graph of old source:
+DIV/MOD and ELEM/ELEMPUT gain two hidden status/pad fields; a CALL with an
+explicit throw gains four hidden `(incoming, pad, outgoing)` triples for
+implicit-name remapping. Exact-source shape fixtures expose nine regressions
+in the final `codex_interpreter_throw_full_02` (RED78/2894 versus prior
+Stage23 RED69/2890). The intermediate full01 was RED84/2894; six additional
+failures were stale native-word expectations, corrected in full02. All 69
+baseline failures retain their identities and diagnostic details.
+The executed programs still return their expected values; that does **not**
+make the extra graph fields legitimate. The accepted graph contract says
+source determines containment, field composition and order
+([L2 §2.1](../docs/L2_spec_en.md#interpretable-tree)); it also forbids a
+separate persistent execution graph and runtime name table. `l2_rw_frame`,
+`l2_rw_catch_call`, `lmx_walk_fault`, and `lmx_walk_call` form the current
+protocol. Moving the expected field counts in tests would mask the defect.
+Carry the status/catch identity through existing typed operation roles and
+activation state, or another general representation that preserves those
+constraints; resolve ordinal/ABI and copy/merge behavior, then replay the
+exact-shape, `toLmx` source-reconstruction and native/walk witnesses. The
+new THROW ordinal child and older
+explicit catch-row protocol must be audited too, since a narrow nine-row
+repair would not establish full source-graph fidelity. Detailed measured
+boundary: [interpreter throw journal](interpreter-throw-20261010.md).
+
 ### TRANSLATOR-PRETABLE-REENTRY — 2026-10-09 UTC, Codex, FIXED bounded continuation22
 
 Real same-process `l2_translate` success -> refusal -> success is not supported
@@ -5841,6 +5868,84 @@ K03 S6 удалил обе ветви слотов `l2_collect_decls` — еди
 `l2_call_head_method`, `l2_head_resolve`, `l2_colon_bound_ty`, `l2_call_alias_own`, `l2_call_head_held`, — в эмиссии и
 прологах). Ограниченное удаление с повтором корпуса (ожидаются побайтно равные переводы) — отдельный шаг.
 
+<a id="qualification-whole-tree-preflight"></a>
+### QUALIFICATION-WHOLE-TREE-PREFLIGHT — 2026-10-10, Codex, OPEN
+
+§10 of `docs/LMX_semantics.en.md` requires a complete check of the selected
+physical tree before `immutable` changes qualification. An external graph
+data reference is legal only to an object already immutable; self/internal
+links inside the selected tree are legal. This is a check of values already
+stored, not a prediction of the result of unexecuted code. The author
+confirmed that a qualified F containing deferred `@: Model ref Mutable` is
+constructed successfully when it is not called; the later attempted
+initialization is checked on call. An `AT` address operand in that code is not
+an already-held reference to the current value of its selected slot. This is
+the same separation as interface admission: `implements` checks the presence
+of fields the Consumer explicitly uses, not the eventual behavior of a
+callable; user-written tests are a separate later stage.
+
+The connected candidate added an address/range-based, read-only traversal
+after original-source FILL and before exact-profile sealing, with Array/List
+backing and pointer-cell checks. The code/data boundary now recognizes a
+Frame by exact program-role identity: its operands are validated as saved
+code carriers, not traversed as already stored data, while physically
+contained ordinary Structures and their data remain checked. The exact
+`codex_preflight_kernel_10` bytes passed 298 targets, and focused
+`codex_preflight_boundary_03` passed four selected fixtures: both required
+positives, the forbidden explicit initializer call and the forbidden stored
+mutable outside reference. No `AT` or callable result is evaluated by
+qualification. Do not infer ownership from a name, declared model, merely
+sealed unit pool, or edge visit order. Use temporary machine scratch, no
+helper graph, graph metadata or runtime name lookup. The author clarified on
+2026-10-10 that invalid source `immutable` construction is a translation /
+construction diagnostic, **not** a language `throw` for a root `catch` to
+intercept. Interpreter errors arising during execution use the ordinary
+language throw path, independently of this builder. The current builder's
+generic status is still not a located diagnostic; no partial seal or
+successful publication is allowed. Full old-row comparison and replay remain
+outstanding, so this OPEN debt is not stage23 acceptance.
+
+The preflight needs exact physical method-occurrence identities supplied from
+the translator's compile-time rows: a nested `fn`/`fm`/`sub` is a terminal
+method, even when its structural parent is in the selected tree. Neither a
+zero profile nor a nonzero native address by itself proves that role. An OP
+record's machine opcode is terminal. A Frame and its operand slots remain
+part of the stored code graph, but an operand naming the source of a future
+read is not the read's result. Pointer-bearing stored data and Arrays/Lists
+need a numeric, source-derived pointer-domain category so a language edge is
+not mistaken for an opaque C resource. Qualification follows source order:
+a later branch is not "already immutable" merely because construction began.
+Before sealing a whole profile, prove that all issued cells of that profile
+are covered by the selected tree and its physical backing. A candidate now
+checks exact issued-cell intervals with temporary scratch; its kernel gate
+`codex_coverage_kernel_04` passed 298/298, with an orphan-cell negative
+selftest. The full old-row comparison is still running, so this is not yet
+accepted. This
+construction-time proof is not general `RuntimeImmutable` for a selected tree
+sharing a pool with unrelated data; that requires finer-grained protection.
+
+<a id="qualification-interior-byte-write"></a>
+### QUALIFICATION-INTERIOR-BYTE-WRITE — 2026-10-10, Codex, OPEN
+
+The native raw-index write guard asks `lmx_range_has_root_profile` about the
+start address of the selected lvalue. That helper deliberately recognizes
+only an exact live cell start, so a `char*` cast of `@candidate\value` followed
+by `p[1U]: 'X'` may write inside a qualified `int` without matching its
+profile. Source tracing reaches the guard at `l2trans.lm1:53338`; execution of
+the new witness is still pending the running frozen full gate. Do not weaken
+`lmx_range_profile` or exact-cell classification: their interior rejection is
+required by `lmx_range_cell_selftest`.
+
+Add a distinct write-span query over *live used bytes* of every intersecting
+registered interval, including imported views, and reject arithmetic overflow
+conservatively. Native lvalue guards pass the true `sizeof` of the captured
+write target; walker PUT/ELEMPUT uses the physical place's store width. Test
+interior-byte mutation, a span entering a protected cell from outside, spare
+capacity, imported views and overflow. A separate library-runtime risk remains:
+a generated unit with no local qualified root currently emits no native guard
+even if a later cross-unit call supplies a qualified actual. The span fix does
+not by itself close that policy/lifetime issue.
+
 <a id="reference-field-consumers"></a>
 ### REFERENCE-FIELD-CONSUMERS — 2026-10-07, Opus (K03 NS-ROLES-2; Codex K03-NS-ROLES-2-20261007-20, K03-NS2-COVERAGE-20261007-21), OPEN
 
@@ -5855,12 +5960,28 @@ K03 S6 удалил обе ветви слотов `l2_collect_decls` — еди
   Structure type through a Structure field of another type»: `unit_ns2_ref_admit`;
 - захват поля-ссылки (пункт 738): `unit_ns2_ref_capture` (сегодня — тот же отказ пути);
 - привязка к Structure, которую достигает путь, `into: E\deep`: привязка берёт один атом (в корне и методе тоже), в
-  квалифицированной ветви это оператор — «a statement in a nested or qualified named Structure is not supported yet»:
-  `unit_eternal_xref` (прежнее `deep: into` значило член E только через глобальную таблицу имён);
+  квалифицированной ветви оператор теперь доходит до разрешения пути, но
+  `unit_eternal_xref` пока отвергается с «unknown field path segment» на 37:9.
+  Долг привязки остаётся OPEN (прежнее `deep: into` значило член E только через
+  глобальную таблицу имён);
 - привязка тела к callable (`b: tick`), к значению-Structure (`y: inner`, Structure своего поля выше) и привязка в
   именованной Structure метода: `unit_ns2_bind_callable`, `unit_ns2_bind_value`, `unit_ns2_local_bind`; их временные
   диагностики — строки-пределы с метками `unit_ns2_bind_callable_limit_refused`, `unit_ns2_bind_value_limit_refused`,
   `unit_ns2_local_limit_refused` (не правила языка и не покрытие).
+
+Для `into: E\deep` исправлять нужно общий producer привязки, а не один
+читатель `F\into\d`: принять ровно один полный operand-span пути по общему
+сканеру, сохранить исходное P0-вхождение и видимость в месте строки, разнести
+модель принимающего листа и фактически выбранный адрес. Генератор записывает
+в уже существующую типизированную ячейку указатель на физически выбранный
+`deep`; ссылочный переход через допустившего кандидата нельзя заменить
+адресом его модели. Native path walk уже выбирает Structure-значение;
+walker должен допускать целую Structure только в контексте связывающего
+операнда, не превращая числовое чтение в структурное. Контроли: исходный
+`unit_eternal_xref` в native/walk, одинаковое имя под разными корнями,
+повторяющиеся `deep` с LAST/`[N]`, позднее невидимое объявление, примитивный
+лист, внешний изменяемый адрес из квалифицированного корня и путь через
+перепривязанную типизированную ссылку. Число сегментов не ограничивать.
 
 Тот же разрыв есть у полей `@: T x` (семейство типизированного null — открытый вопрос автора, не тронуто). Отказы допуска
 и захвата (`unit_s7_arg_path`, `unit_s7_arg_deep_refused`, `unit_s7_ret_path`, `unit_s7_nested_missing`,

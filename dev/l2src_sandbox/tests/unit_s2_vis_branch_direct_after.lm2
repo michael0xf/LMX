@@ -1,0 +1,18 @@
+# The same free-name read succeeds when the root calls after its own cfg
+# declaration. No special qualified-branch or forwarding rule is needed.
+fn: read_branch () size_t
+return: cfg\e
+independent:
+    const:
+        immutable:
+            (): cfg
+                size_t: e 7U
+            end: cfg
+        end: immutable
+    end: const
+end: independent
+if: read_branch() != 7U
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

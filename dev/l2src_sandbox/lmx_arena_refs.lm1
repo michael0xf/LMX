@@ -16,6 +16,9 @@ include: "<stdlib.h>"
 # that sets array.data and array.size: the count is given once, here, and never changes afterwards
 # (SPEC 2, ABI 14.22).  There is no later writer of either field.
 fn: lmx_arena_refs_open_owned (@: LmxArena arena; @: Lmx parent; size_t: children) int
+return: lmx_arena_refs_open_profiled(arena, parent, children, 0)
+
+fn: lmx_arena_refs_open_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) int
     size_t: slot c.sizeof(@: void)
     size_t: bytes
     @: LmxPool array
@@ -29,7 +32,7 @@ fn: lmx_arena_refs_open_owned (@: LmxArena arena; @: Lmx parent; size_t: childre
     # The slot array is an array of the arena like every other: the arena allocates it,
     # owns it and classifies it (KIND_CHILDREN with TYPE_REFS), so this constructor
     # prepares no storage of its own and a refusal leaves the arena untouched.
-    array: lmx_pool_make(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS)
+    array: lmx_pool_make_profiled(arena, bytes, slot, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, profile)
     if: array = 0
         return: 1
     ---

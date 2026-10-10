@@ -1,6 +1,110 @@
-ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special cases; report a genuine contradiction to the author in Russian before choosing new semantics.
+ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special cases. During the 2026-10-10 `fable_pc` handoff, send a genuine contradiction to Codex through `lmx_uds`; only Codex asks the author in Russian if accepted rules and evidence cannot resolve it.
 
 # Remaining kernel work through stages 8 and 8a
+
+**2026-10-10 conditional coding handoff, 15:00 São Paulo.** Codex finishes
+and publishes its bounded checkpoint, then pauses its Pursuing goal. The
+existing `fable_pc` and `lmx_uds` sessions are running; the correlated
+transport probe `FABLE-PC-LINK-20261010-165030` completed the round trip.
+The single writer/build slot passes to `fable_pc` only after the specified
+time, Codex's publication and its explicit release of the slot; Codex pauses
+its Pursuing goal as part of that handoff. A live link alone transfers nothing. See
+[to_fable.md](to_fable.md) for implementation state and
+[to_lmx_uds.md](to_lmx_uds.md) for the question route. Until the handoff
+Codex owns the current gate; Fable does not code or build.
+Historical ownership records below do not supersede this handoff.
+
+Continuation23 `QUALIFIED-ORIGINAL-SOURCE` is implemented but not yet accepted.
+Publication of the current WIP for handoff does not close its old-row
+comparison, replay or construction diagnostic. Qualified bodies now use the
+common source producer; native
+and walked writes check the selected physical place. Focus10 is RED1/35 with
+only the existing callable-formal library refusal; six guard-removal controls
+distinguish missing enforcement. Kernel30 passed297 targets/114 executed
+selftests and L3_30 passed11 suites/four budgets. Full30 completed RED181/2871
+against2690 frozen inputs, with114 new failures relative to full29 and no old
+failure resolved. Exploratory full31 was stopped after its nested model-copy
+finding was repaired; exploratory full32 was stopped without a verdict when
+its later source snapshot became stale. Focused nested-source, method-leaf,
+physical qualification and hidden-input repairs now pass their targeted
+native/walk gates. The combined `codex_qualified_matrix_01` passed39/39,
+including the graph-index mutant. The tested explicit typed-reference
+candidate is an executable initializer and its call is rejected before
+execution; its pointer cell is empty beforehand. Its deferred opcode operands
+may name mutable outside objects without having stored the initializer's
+result. §10's general preflight of already stored tree data remains an OPEN
+connected dependency
+([defect](steps/defects.md#qualification-whole-tree-preflight)), not an
+`@:`-specific exception. Remaining reference-field consumers and full old-row
+audit also remain open. These are not accepted bytes: old-row comparison
+and replay remain pending. Follow the
+[current journal](steps/qualified-original-source-20261010.md); all parent
+critical/T7/pointer/8/8a stages remain OPEN.
+
+A revised preflight distinguishes already stored data from operands of an
+unexecuted Frame by the exact program-role address, not by an operation name.
+Its current kernel bytes passed `codex_preflight_kernel_10` (298 targets), and
+`codex_preflight_boundary_03` passed all four selected language fixtures:
+`unit_eternal_shape` and the no-call F are positive, the explicit F call is
+refused before initializing an immutable field, and an already stored mutable
+outside data reference is refused. The List pointer-element correction and
+malformed-role/contained-data controls are included. This is still **not
+accepted**: the author clarified that source `immutable` construction failure
+is a translation/construction diagnostic, not a language `throw`; the current
+builder still reports only a generic status instead of a located diagnostic.
+A candidate exact issued-cell coverage proof now passes the 298-target kernel
+gate (`codex_coverage_kernel_04`), but full old-row comparison and replay
+have not completed. Interpreter errors during execution follow ordinary
+language throws, not this construction path. This
+construction check must not be mistaken for general `RuntimeImmutable` of a
+tree that shares a pool. Resolve these contracts and rerun the language gates
+before treating qualification as done.
+
+Before closing L3 interpretation, implement the ordinary `interpreter`
+implicit throw for recoverable failures of operations on a valid graph. Append
+its global implicit-name position after the existing names, without shifting
+their statuses. Keep translation/construction failures, malformed graph nodes,
+allocation failure and broken kernel promises on their diagnostic route;
+`LMX_WALK_INVALID` currently conflates these with division by zero and array
+index failures, so renaming that status wholesale is forbidden. A fault at an
+operation must use the same lexical catch/pad and status-propagation mechanism
+as every other implicit throw, including local and cross-call handlers. The
+walked form of explicit source `throw:` was also missing at the start of this
+ticket: it was retained as SOURCE_MACHINE although the native method had an ordinary
+throw. Implement the source-preserving THROW role, ordered payload evaluation
+and normal declared-name delivery, then verify native/walk parity, local,
+cross-call and uncaught `interpreter`, explicit payload and nested-operand
+throws, plus the negative malformed-graph controls. Do not add runtime name
+lookup or a separate interpreter exception channel. This dependency is
+separate from the qualified graph's construction diagnostic.
+
+Current 2026-10-10 candidate implements the retained walked THROW role and
+ordinary `interpreter` handling for detected walker faults. Focused local,
+cross-walk, Array OOB, explicit payload and status-bearing native-caller
+cases pass. Kernel final bytes pass 298 targets, L3 passes all 11 suites and
+four type budgets, and six walked-method rows pass their actual executions
+after correcting stale native-word expectations. Full gate 02 is
+**RED78/2894** versus the earlier Stage23 **RED69/2890**: all four added
+fixtures pass, all 69 old failures and their details remain unchanged,
+and exactly nine old graph-shape rows regress because hidden status/catch
+metadata was appended to operation nodes. The graph composition/order is
+source-defined; changing only the nine expected shapes is forbidden.
+Resolve
+[INTERPRETER-STATUS-HIDDEN-GRAPH-CHILDREN](steps/defects.md#interpreter-status-hidden-graph-children)
+before declaring this slice accepted. In particular, remove implicit fault
+slots and CALL remap triples from retained source nodes through a general
+source-role/activation protocol with no runtime names or auxiliary graph;
+audit the older explicit catch rows and new THROW ordinal too. Keep
+copy/merge handler identity and native/walker status parity in the proof.
+This is **not yet the whole acceptance**: full-gate replay after repair,
+uncaught and nested-actual witnesses, non-status-bearing native caller,
+named-Structure/callable-merge status propagation, graph-level long-call
+selector status (source reachability unproven),
+direct L3 API status preservation and malformed executed-op metadata remain
+open. Native DIV/0 parity is a separate L3 lowering dependency. Preserve the
+exact measured boundary in
+[steps/interpreter-throw-20261010.md](steps/interpreter-throw-20261010.md);
+do not mark the paragraph above complete from a focused green run.
 
 Checkpoint22 `CODEX-SOURCE-DEFINING-IDENTITY-20261009-22` is bounded-verified
 on candidate04 `4F56DBB5`: actual defining P0 node/body are captured in the
@@ -18,7 +122,8 @@ after verifying their staged source and L1/C byte identity modulo each exact
 prefix, no code/body/layout/ABI delta remains. Follow the
 [bounded journal](steps/source-defining-identity-20261009.md). Immediately
 continue qualified original-source COUNT/PLACE/FILL and exact-profile physical
-construction without another prompt. No runtime graph or new language rule;
+construction without another prompt (historical next step at checkpoint22;
+continuation23 status is above). No runtime graph or new language rule;
 parent critical/T7/pointer/8/8a remain OPEN.
 
 Checkpoint21 is published at `baa517cc`, HEAD/upstream/remote agree.
@@ -32,7 +137,8 @@ Follow its [bounded journal](steps/source-profile-completion-20261009.md)
 through scoped publication of the terminal tested bytes, then immediately
 continue original defining-source identity and the qualified source-shape
 dependency without another prompt. Parent critical/T7/pointer/8/8a stays OPEN.
-Codex is sole writer/build; Opus is unavailable by quota, not a blocker.
+At this historical checkpoint Codex was sole writer/build; Opus was
+unavailable by quota, not a blocker.
 
 Checkpoint19 is published at `2883208f`, with HEAD/upstream/remote agreement.
 `CODEX-SOURCE-OWNED-PART-20261009-20` is now bounded-verified: the part's own
@@ -114,10 +220,12 @@ work. Norms are in [L3 semantics](docs/LMX_semantics.en.md),
 [kernel map](CORE_L2_L3_v2.md), and
 [porting guide](L2_L3_CODING_INSTRUCTION.md).
 
-**Current coding handoff, 2026-10-08.** Opus explicitly released the sole
+**Historical coding handoff, 2026-10-08.** Opus explicitly released the sole
 writer/build slot to Codex after checkpoint `4fb6dbbe` and the handoff
-[from_opus.md](from_opus.md) at `e0727b69`. Codex continues this plan;
-Opus answers questions only and starts no coding, census or build. Baseline:
+[from_opus.md](from_opus.md) at `e0727b69`. Codex then continued this plan
+as sole writer/build; this historical statement does not supersede the
+conditional 2026-10-10 15:00 handoff at the top of this file. Opus answered
+questions only and started no coding, census or build. Baseline:
 `opus_full_65` RED68/2616, no OK→FAIL against `opus_full_63`. Next dependency:
 T7-LOCAL-NAMED-UNIT, then PATH-STRUCTURE-LEAF and NODE-PATH-ANON-STRUCT.
 Earlier ownership records below are historical.
@@ -245,8 +353,9 @@ continuation `CODEX-REFERENCE-CROSSING-SLOT-MAP-20261009-14` has completed
 fresh bounded acceptance;
 exact common symbols, required controls and serial acceptance are in the
 [crossing journal](steps/reference-crossing-slot-map-20261009.md).
-Codex retains the sole writer/build. Continue the enumerated chain through
-publication and the actual local model-host repair without another prompt.
+At that historical checkpoint Codex retained the sole writer/build. The
+enumerated chain then continued through publication and the actual local
+model-host repair; current ownership is at the top of this plan.
 
 Early private crossing candidate `D6C8B377` fixes the shared reader and
 the missing publication of completed original namespace layouts; the
@@ -275,7 +384,8 @@ verified equal. Its immediate next child
 `CODEX-LOCAL-NESTED-MODEL-ANCHOR-20261009-15` has terminal bounded acceptance; see the
 [actual local-anchor journal](steps/local-nested-model-anchor-20261009.md)
 for exact symbols, required controls and uninterrupted acceptance chain.
-Codex retains the sole writer/build; Opus remains Q&A only.
+At that historical checkpoint Codex retained the sole writer/build and Opus
+remained Q&A only; current ownership is at the top of this plan.
 
 Local-anchor candidate02 has92 actual positive control executions and four
 rejected generated faults. Its2615 replay translations are identical to
@@ -2996,7 +3106,10 @@ native versus genuinely interpreted coverage; source/staging/commit hashes;
 remaining unsupported cases; successor dependency. Update this plan's status
 without erasing the historical counterexamples. On a real unresolved language
 contradiction, file a minimal Russian question in `LMX_blog/q/current/`; completed
-questions move one level up. Plan tickets are not questions to the author.
+questions move one level up. In the `fable_pc` handoff, Fable sends a minimal
+question to Codex through `lmx_uds`; Codex alone files or asks the author
+about a truly unresolved language contradiction. Plan tickets are not
+questions to the author.
 
 The original documentation-only pause is historical; the resumed work follows
 the current ownership instructions and the first-task priority above. This

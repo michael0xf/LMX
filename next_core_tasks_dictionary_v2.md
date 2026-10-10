@@ -1,5 +1,15 @@
 # Kernel implementation dictionary for the v2 plan
 
+**Qualified source placement / protected write.** Placement preserves the
+same source fields and operations inside the qualified occurrence. Constructor
+FILL prepares their storage before publication; it does not permit subsequent
+executable writes to immutable cells. A mutable reference may select a
+protected target, so the formal's model or the reference cell's own profile
+does not classify the selected write destination. Continuation23 connects
+the existing program root span to native/walker physical checks and keeps
+ordinary mutable controls. This is in acceptance, not universal module/runtime
+qualification completion; see its [journal](steps/qualified-original-source-20261010.md).
+
 **Defining source / actual body / outer site.** These are separate existing
 compiler facts. An original P0 Frame or part-root Structure defines content;
 the actual body is its document-owned contents; the outer diagnostic site
@@ -263,7 +273,7 @@ means a documented contract, not an assertion that the current compiler supports
 every example. Source symbols are search anchors; their line numbers change.
 
 Historical continuation was transferred to Fable on 2026-10-03:
-[handoff](to_fable.md), [current plan](next_core_tasks_v2.md), and
+[current plan](next_core_tasks_v2.md) and
 [persistent-occurrence evidence](steps/critical-graph-namespace-source-layout-20261003.md#persistent-occurrence-oracles).
 That baseline's full32 is RED130/1395; later focused persistent_oracle01 is GREEN7/7
 with a rejected copy-to-alias mutant. Neither result closes critical_graph_bug,
@@ -274,8 +284,8 @@ has full06 RED68/2660 without old regressions. The seventh bounded checkpoint
 (`l2trans.lm1` blob `e6200afa`) has full07 RED64/2666 with four old FAIL→OK,
 zero OK→FAIL, kernel07 GREEN297/114 selftests and L3_08 eleven suites/four
 budgets; all-command replay is classified and frozen inputs unchanged.
-Codex codes sequentially; Opus is Q&A
-only. Neither critical ticket nor T7/§§8/8a is thereby closed. Follow
+Codex then coded sequentially; Opus was Q&A only. Neither critical ticket
+nor T7/§§8/8a is thereby closed. Follow
 [current instructions](steps/current.md) and the
 [T7 evidence journal](steps/t7-lexical-projection-20261008.md), not an old
 owner marker, for the active bounded child.
@@ -745,6 +755,12 @@ adapters carry ordinary context and results. `621e8af` repairs stop/status
 consumption across tested routes. A caller must not use a stale output after
 its callee has stopped. Foreign nonthrow aggregate return remains a distinct ABI
 debt, not permission to invent a zero aggregate or a language throw declaration.
+For an execution fault in a valid graph, the ordinary implicit name is
+`interpreter`; malformed graph/construction/kernel failures remain diagnostics.
+The 2026-10-10 candidate wrongly appends status/catch routing children to
+source operation nodes. This is an OPEN graph-fidelity defect, not a changed
+norm or permission to rewrite the exact-shape oracles
+([measured record](steps/defects.md#interpreter-status-hidden-graph-children)).
 
 **Verification.** Inspect actual nested method native words and entry observers.
 Clearing root native alone can still call native helpers. Runtime/walker result,
@@ -881,9 +897,11 @@ No active ticket should conclude “working” from a delivery ACK, stale owners
 marker or dirty diff. For this handoff no external watcher or ticket dispatcher
 is being restarted. The historical pause after the October3 documentation
 handoff ended with Opus's explicit October8 release to Codex. Codex now
-continues the bounded coding queue as sole writer/build; Opus is Q&A only.
-Use [current instructions](steps/current.md), not that former pause, to
-determine the active child.
+continues the bounded coding queue as sole writer/build only until the
+conditional 2026-10-10 15:00 São Paulo publication/pause handoff to
+`fable_pc`. After that, Codex answers Fable's questions through `lmx_uds`
+and is not a parallel coder; see [current instructions](steps/current.md)
+and [the handoff](to_fable.md), not the former pause, for live ownership.
 
 Plans record remaining work; specifications describe current accepted semantics;
 historical notes preserve past evidence without commanding a rollback. When

@@ -1,0 +1,21 @@
+# A byte-addressed write into a qualified int must be rejected even though
+# the selected address is not the start of an int cell.
+Model:
+    int: value 3
+end: Model
+independent:
+    const:
+        immutable:
+            (): Frozen
+                int: value 7
+            end: Frozen
+        end: immutable
+    end: const
+end: independent
+sub: change (Model: candidate)
+    @: char p (cast: (@: char) @candidate\value)
+    p[1U]: 'X'
+return
+change(Frozen)
+sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+return

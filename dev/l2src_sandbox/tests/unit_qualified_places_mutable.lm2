@@ -1,0 +1,28 @@
+Model:
+    int: value 3
+    []: int cells 2
+end: Model
+independent:
+    const:
+        immutable:
+            (): Frozen
+                int: value 7
+                []: int cells 2
+            end: Frozen
+        end: immutable
+    end: const
+end: independent
+sub: change (Model: candidate)
+    candidate\cells[1U]: 12
+    @: int p @candidate\value
+    \p: 9
+return
+change(Model)
+if: Model\value != 9 || Model\cells[1U] != 12
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: Frozen\value != 7 || Frozen\cells[1U] != 0
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

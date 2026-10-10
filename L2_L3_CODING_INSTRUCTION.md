@@ -2,6 +2,31 @@
 
 This document is a practical instruction for moving kernel and application code upward through the current LMX profiles. It is not a replacement for the normative specifications. When an example here and a normative specification disagree, the normative specification wins.
 
+**IN ACCEPTANCE, qualified original-source continuation23.** Preserve the
+original body's complete source width under qualification too. Pass its actual
+physical parent profile through allocation, fill source content before sealing,
+and retain the same occurrence rather than a separate code graph. Do not infer
+immutability from a seal alone, from a formal's model, or from the name used to
+reach a value. A write through an alias must check the selected physical place;
+capture a side-effecting indexed/indirect destination once before evaluating
+the received value. Protected constructor FILL and later executable assignment
+are different phases, not a once-only initializer rule. The tested program-
+bound implementation does not prove imported-module or library lifetime
+support. Full acceptance is pending in the
+[current journal](steps/qualified-original-source-20261010.md).
+
+**OPEN, interpreter-status graph fidelity.** A valid-graph execution fault
+may raise the ordinary implicit `interpreter` name, but the current candidate
+stores status/catch routing as extra children of DIV/ELEM/CALL operations.
+The full-gate exact-shape failures show that this violates the retained
+source graph. Do not make a test pass by accepting the extra children, and
+do not create a parallel exception graph or runtime name table. Use the
+existing typed operation role and ordinary activation/call information to
+represent the routing, then verify handler selection after graph copy/merge
+as well as native/walk execution. The concrete affected functions, row counts
+and gate evidence are in
+[the measured defect](steps/defects.md#interpreter-status-hidden-graph-children).
+
 **BOUNDED VERIFIED, defining-source identity22 (`4F56DBB5`).** A diagnostic outer site is not a source
 body. Keep the actual P0 defining node/body borrowed in the existing compiler
 namespace; use actual P0 category for Frame/trailer readers. Free adapter
@@ -100,7 +125,7 @@ The authoritative language documents are:
 - `docs/LMX_grammar.en.md`, generated from `provenance/grammar.json`, for source shapes;
 - `CORE.md` for the compact core summary.
 
-Implementation state is intentionally kept separate. The active queue is [next_core_tasks_v2.md](next_core_tasks_v2.md), read with [its dictionary](next_core_tasks_dictionary_v2.md), [CORE_L2_L3_v2.md](CORE_L2_L3_v2.md) and [steps/current.md](steps/current.md). The October3 [to_fable.md](to_fable.md) is a historical handoff; the October8 [from_opus.md](from_opus.md) explicitly releases the sole coding/build slot to Codex, with Opus Q&A only. `next_core_tasks.md` and `steps/native-selfbuild-20260930.md` preserve older released evidence; `steps/defects.md` records measured limitations. Active development is `dev/l2src_sandbox/`; `build/opus_wt/` is an older worktree, not the current handoff source. Do not derive a language rule from a temporary worktree branch, generated identifier, diagnostic, or passing fixture. Historical full32 RED130/1395 and focused GREEN7/7 certify neither critical parent nor self-build; the current gated checkpoints and remaining debts are in the linked working instructions and journals.
+Implementation state is intentionally kept separate. The active queue is [next_core_tasks_v2.md](next_core_tasks_v2.md), read with [its dictionary](next_core_tasks_dictionary_v2.md), [CORE_L2_L3_v2.md](CORE_L2_L3_v2.md) and [steps/current.md](steps/current.md). The October8 [from_opus.md](from_opus.md) historically released the coding/build slot to Codex; the current [to_fable.md](to_fable.md) supersedes that ownership after the 2026-10-10 15:00 São Paulo commit/push/pause handoff. `next_core_tasks.md` and `steps/native-selfbuild-20260930.md` preserve older released evidence; `steps/defects.md` records measured limitations. Active development is `dev/l2src_sandbox/`; `build/opus_wt/` is an older worktree, not the current handoff source. Do not derive a language rule from a temporary worktree branch, generated identifier, diagnostic, or passing fixture. Historical full32 RED130/1395 and focused GREEN7/7 certify neither critical parent nor self-build; the current gated checkpoints and remaining debts are in the linked working instructions and journals.
 
 ## 1. Status words used here
 

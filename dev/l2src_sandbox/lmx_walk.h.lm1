@@ -47,7 +47,9 @@ predef: "l2src/lmx_scratch.h.lm1"
 # graph operations and never see the table: a write through them leaves the working value as it is.
 # Nothing is reloaded after a call, and a clean row is never written back.  Activation state lives
 # only on LmxWalkFrame and in its scratch slice; nothing precomputes or caches a field set (k.4).
-# MUL/DIV/MOD: [mul|div|mod, a, b]; typed numeric result; div/mod 0 -> INVALID.
+# MUL: [mul, a, b]. DIV/MOD: [div|mod, a, b, interpreter_status,
+# catch_pad]. Typed numeric result; zero divisor raises interpreter on a
+# complete operation, while malformed metadata remains INVALID.
 # PUT_OF (-177 c4 / D-54): [put_of, struct-expr, slot, value]; holder evaluated.
 # D-105 (Q39): OF [of, struct-expr, slot, req] and PUT_OF [put_of, struct-expr, slot, value, req] --
 # a non-null req is the named Structure the place is typed with: the slot is an EDGE into the
@@ -129,8 +131,9 @@ define: LMX_WALK_UNSUPPORTED 5
 define: LMX_WALK_PRIMITIVE 6
 # Reserved distinct dispatch refusal status; not an empty-body or missing-plan rule.
 define: LMX_WALK_NOT_CALLABLE 7
-# D-37: a METHOD throw rides as LMX_WALK_THROWN + k so throw 1 is never
-# LMX_WALK_INVALID. Walker errors stay 1..7 and become X1 at note_walk_fail.
+# D-37: an explicit method throw or a recoverable valid-graph operation fault
+# rides as LMX_WALK_THROWN + k; the latter uses the implicit name interpreter.
+# Malformed-graph and kernel errors stay 1..7 and become X1 at note_walk_fail.
 define: LMX_WALK_THROWN 8
 
 # What lmx_walk_op answers for a frame node whose code is not one of those below.
@@ -166,7 +169,8 @@ define: LMX_WALK_OP_EXPECT_INT 17
 define: LMX_WALK_OP_DEREF 18
 # -177 c4 / D-54: PUT with an evaluated holder (m\f: v through a reference).
 define: LMX_WALK_OP_PUT_OF 19
-# MUL/DIV/MOD have the same typed operand shape as ADD/SUB. Zero divisor is INVALID.
+# MUL/DIV/MOD have the same two typed value operands as ADD/SUB; DIV/MOD
+# additionally retain their implicit-throw status and optional landing pad.
 define: LMX_WALK_OP_MUL 20
 define: LMX_WALK_OP_DIV 21
 define: LMX_WALK_OP_MOD 22
@@ -178,9 +182,13 @@ define: LMX_WALK_OP_EMPTY 23
 define: LMX_WALK_OP_PUT_REF 24
 # -170 c2: array element / length at the walked root (Grok). Contiguous claim after
 # PUT_REF; Sonnet MERGE prim takes 28+ (OP_COUNT coord via lmx_uds 2026-09-25).
-# [elem, holder, slot, index] / [elemput, holder, slot, index, value] / [length, holder, slot].
+# [elem, holder, slot, index, interpreter_status, catch_pad] /
+# [elemput, holder, slot, index, value, interpreter_status, catch_pad] /
+# [length, holder, slot, interpreter_status, catch_pad].
 # Holder 0 is the current occurrence. Bounds use descriptor.size; char values are
 # read from backing bytes, while ADDRESS retains the backing element's place.
+# A valid-graph runtime fault uses the ordinary throw channel. Missing metadata
+# or a malformed operator remains an invalid graph diagnostic.
 define: LMX_WALK_OP_ELEM 25
 define: LMX_WALK_OP_ELEMPUT 26
 define: LMX_WALK_OP_LENGTH 27
@@ -298,7 +306,12 @@ define: LMX_WALK_OP_POS 49
 # [guarded] outside every continuation is not a node the walker runs.
 define: LMX_WALK_OP_GUARD 50
 define: LMX_WALK_OP_GUARDED 51
-define: LMX_WALK_OP_COUNT 52
+# [throw, source Name or Name(actuals), declared-name ordinal]. The source
+# frame remains in the original field position; the ordinal is typed operation
+# metadata, not a second source name or a runtime name lookup. A throw leaves
+# this activation, and the caller's ordinary CALL rows deliver it to catch.
+define: LMX_WALK_OP_THROW 52
+define: LMX_WALK_OP_COUNT 53
 # Source role of an operation, separate from its execution opcode. The shared
 # role record encodes source * OP_COUNT + opcode in its existing code word.
 # Receiver materialization keeps the real typed cell; no leaf wraps that cell.
@@ -366,6 +379,9 @@ struct: LmxWalkContext
     # Physical address of the ordinary receiver-expression graph value denoting the exact
     # independent+const+immutable profile.  Zero means this program declares no such profile.
     @: Lmx immutable_profile
+    # Borrow the existing qualified-root span, not a second graph or name map.
+    @@: Lmx immutable_roots
+    size_t: immutable_root_count
     # How many times this unit has asked the arena's index what an address is.
     size_t: classified
 end: LmxWalkContext
@@ -444,17 +460,21 @@ prototype:
     # The roles of a program: a plain Structure whose child k is THE record of role k.
     # Opened once per program graph; every frame node refers to these records.
     fn: lmx_walk_roles_open (@: LmxArena arena) @: Lmx
+    fn: lmx_walk_roles_open_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
     # Bind the program's shared role table for op dispatch.
     fn: lmx_walk_program_bind (@: Lmx roles) void
+    fn: lmx_walk_program_qualify (@@: Lmx roots; size_t: count) void
     fn: lmx_walk_program_roles () @: Lmx
     # Construction of body nodes, for a translator and for tests.  A node is a fresh
     # Structure of `arena` with `children` slots and immediate structural parent `parent`; a frame
     # node gets the shared record of role `code` in child[0].  The caller stores the node
     # into its parent's slot.
     fn: lmx_walk_frame (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children) @: Lmx
+    fn: lmx_walk_frame_profiled (@: LmxArena arena; @: Lmx roles; @: Lmx parent; int: code; size_t: children; @: Lmx profile) @: Lmx
     # Source identity on an existing operation; execution still uses its base opcode.
     fn: lmx_walk_source_mark (@: Lmx roles; @: Lmx operation; int: source) int
     fn: lmx_walk_plain (@: LmxArena arena; @: Lmx parent; size_t: children) @: Lmx
+    fn: lmx_walk_plain_profiled (@: LmxArena arena; @: Lmx parent; size_t: children; @: Lmx profile) @: Lmx
     fn: lmx_walk_store_size (@: LmxArena arena; @: Lmx code; size_t: slot; size_t: value) int
     fn: lmx_walk_store_int (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
     fn: lmx_walk_store_char (@: LmxArena arena; @: Lmx code; size_t: slot; int: value) int
@@ -476,6 +496,7 @@ prototype:
     fn: lmx_walk_kind (@: LmxWalkFrame f; @: void p) int
     fn: lmx_walk_op (@: LmxWalkFrame f; @: void code) int
     fn: lmx_walk_eval (@: LmxWalkFrame f; @: void code; @: LmxWalkValue out) int
+    fn: lmx_walk_throw (@: LmxWalkFrame f; @: Lmx code; @: LmxWalkValue out) int
     fn: lmx_walk_body (@: LmxWalkFrame f; @: Lmx body; size_t: first) int
     fn: lmx_walk_value_clear (@: LmxWalkValue value) void
     fn: lmx_walk_value_ref (@: LmxWalkValue out; int: ty; @: void ref) int

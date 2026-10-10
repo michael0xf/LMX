@@ -1,0 +1,21 @@
+# Crossing a callable leaf leaves the immutable tree: the method's own cell
+# is mutable through an explicit path, while the containing E field is not.
+independent:
+    const:
+        immutable:
+            (): E
+                int: frozen 7
+                fn: bump () int
+                    int: x 0
+                    return: x
+                end: bump
+            end: E
+        end: immutable
+    end: const
+end: independent
+E\bump\x: 4
+int: ok 7
+if: E\bump\x != 4 || E\frozen != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

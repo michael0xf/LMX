@@ -1,0 +1,23 @@
+# The formal's immutable model is an interface, not a const qualifier on its
+# actual value. A compatible mutable candidate can be written through it.
+independent:
+    const:
+        immutable:
+            (): E
+                int: a 7
+            end: E
+        end: immutable
+    end: const
+end: independent
+Mutable:
+    int: a 0
+end: Mutable
+sub: change (E: candidate)
+    candidate\a: 9
+return
+change(Mutable)
+int: status 7
+if: Mutable\a != 9 || E\a != 7
+    status: 81
+sendMessage: exit(exit_code: status; stdout: ""; stderr: "")
+return

@@ -33,25 +33,34 @@ fn: lmx_node_new_profiled (@: LmxArena arena; @: Lmx profile) @: Lmx
     return: value
 
 fn: lmx_struct_new_owned (@: Lmx parent; @: LmxArena arena) @: Lmx
+return: lmx_struct_new_profiled(parent, arena, 0)
+
+fn: lmx_struct_new_profiled (@: Lmx parent; @: LmxArena arena; @: Lmx profile) @: Lmx
     @: Lmx value
     if: parent = 0
         return: 0
-    value: lmx_node_new_owned(arena)
+    value: lmx_node_new_profiled(arena, profile)
     if: value != 0
         value\parent: parent
     ---
     return: value
 
 fn: lmx_op_new_owned (@: LmxArena arena; int: code) @: LmxOp
-    @: LmxOp value (cast: (@: LmxOp) lmx_value_allocate_owned(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP))
+return: lmx_op_new_profiled(arena, code, 0)
+
+fn: lmx_op_new_profiled (@: LmxArena arena; int: code; @: Lmx profile) @: LmxOp
+    @: LmxOp value (cast: (@: LmxOp) lmx_arena_take_profiled(arena, c.sizeof(c.LmxOp), c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP, profile))
     if: value != 0
         value\code: code
     ---
     return: value
 
 fn: lmx_int_new_owned (@: LmxArena arena) @: void
+return: lmx_int_new_profiled(arena, 0)
+
+fn: lmx_int_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     int: zero 0
-    @: int value (cast: (@: int) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT))
+    @: int value (cast: (@: int) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, profile))
     if: value != 0
         \value: 0
     ---
@@ -60,10 +69,13 @@ fn: lmx_int_new_owned (@: LmxArena arena) @: void
 # The first CHAR interval remains the immutable literal table. Mutable cells
 # follow it in the same typed arena pool and have independent stable addresses.
 fn: lmx_char_new_owned (@: LmxArena arena) @: void
+return: lmx_char_new_profiled(arena, 0)
+
+fn: lmx_char_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     @: char value
-    if: lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
+    if: profile = 0 && lmx_chars_init(arena) != 0 && lmx_arena_find(arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR) = 0
         return: 0
-    value: (cast: (@: char) lmx_value_allocate_owned(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR))
+    value: (cast: (@: char) lmx_arena_take_profiled(arena, c.sizeof(c.char), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, profile))
     if: value != 0
         \value: 0
     ---
@@ -78,40 +90,55 @@ fn: lmx_char_store_known (@: void cell; int: value) int
 return: 0
 
 fn: lmx_size_new_owned (@: LmxArena arena) @: void
+return: lmx_size_new_profiled(arena, 0)
+
+fn: lmx_size_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     size_t: zero 0U
-    @: size_t value (cast: (@: size_t) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T))
+    @: size_t value (cast: (@: size_t) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, profile))
     if: value != 0
         \value: 0U
     ---
     return: (cast: (@: void) value)
 
 fn: lmx_unsigned_new_owned (@: LmxArena arena) @: void
+return: lmx_unsigned_new_profiled(arena, 0)
+
+fn: lmx_unsigned_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     unsigned: zero 0U
-    @: unsigned value (cast: (@: unsigned) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED))
+    @: unsigned value (cast: (@: unsigned) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED, profile))
     if: value != 0
         \value: 0U
     ---
     return: (cast: (@: void) value)
 
 fn: lmx_ulong_new_owned (@: LmxArena arena) @: void
+return: lmx_ulong_new_profiled(arena, 0)
+
+fn: lmx_ulong_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     ulong: zero 0U
-    @: ulong value (cast: (@: ulong) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_ULONG))
+    @: ulong value (cast: (@: ulong) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_ULONG, profile))
     if: value != 0
         \value: 0U
     ---
     return: (cast: (@: void) value)
 
 fn: lmx_uchar_new_owned (@: LmxArena arena) @: void
+return: lmx_uchar_new_profiled(arena, 0)
+
+fn: lmx_uchar_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     char: zero '\0'
-    @: char value (cast: (@: char) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED_CHAR))
+    @: char value (cast: (@: char) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED_CHAR, profile))
     if: value != 0
         \value: '\0'
     ---
     return: (cast: (@: void) value)
 
 fn: lmx_charptr_new_owned (@: LmxArena arena) @: void
+return: lmx_charptr_new_profiled(arena, 0)
+
+fn: lmx_charptr_new_profiled (@: LmxArena arena; @: Lmx profile) @: void
     @: char zero 0
-    @@: char value (cast: (@@: char) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR_PTR))
+    @@: char value (cast: (@@: char) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR_PTR, profile))
     if: value != 0
         \value: 0
     ---
@@ -133,11 +160,14 @@ fn: lmx_charptr_store_known (@: void cell; @: char value) int
     return: 0
 
 fn: lmx_pointer_new_owned (int: type; @: LmxArena arena) @: void
+return: lmx_pointer_new_profiled(type, arena, 0)
+
+fn: lmx_pointer_new_profiled (int: type; @: LmxArena arena; @: Lmx profile) @: void
     @: void zero 0
     @@: void value
     if: type < c.LMX_TYPE_POINTER_BASE
         return: 0
-    value: (cast: (@@: void) lmx_value_allocate_owned(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, type))
+    value: (cast: (@@: void) lmx_arena_take_profiled(arena, c.sizeof(zero), c.LMX_KIND_PRIMITIVE, type, profile))
     if: value != 0
         \value: 0
     ---

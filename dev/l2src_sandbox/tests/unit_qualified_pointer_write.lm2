@@ -1,0 +1,19 @@
+Model:
+    int: value 3
+end: Model
+independent:
+    const:
+        immutable:
+            (): Frozen
+                int: value 7
+            end: Frozen
+        end: immutable
+    end: const
+end: independent
+sub: change (Model: candidate)
+    @: int p @candidate\value
+    \p: 9
+return
+change(Frozen)
+sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+return

@@ -13,7 +13,7 @@ predef: "l2src/lmx_value_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -170 c2: ELEM / ELEMPUT / LENGTH. Bounds by descriptor.len; char via lmx_char_cell;
+# -170 c2: ELEM / ELEMPUT / LENGTH. Bounds by descriptor.size; char via lmx_char_cell;
 # holder 0 = this activation data (K-OT2). Mutants (RED if broken): index==len accepted;
 # ELEMPUT char into int array accepted; off-by-one write never read back.
 
@@ -196,22 +196,24 @@ fn: main () int
     got: gv\ref
     check((cast: (int) (st = c.LMX_WALK_OK && gv\present != 0 && gv\type = c.LMX_TYPE_SIZE_T && gv\wide = 3U)), "LENGTH -> 3")
 
-    # ---- OOB: index == len -> INVALID (mutant: accept -> RED) ----
+    # ---- OOB on a valid compiled operation is the implicit interpreter throw. ----
     m: mk_m(unit, 4U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 3U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEM, 5U)
     atop(n, data, 1U)
     ix(n, 3U)
+    sz(n, 3U, 4U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEM index==len -> INVALID")
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "ELEM index==len -> interpreter")
 
     m: mk_m(unit, 5U, 1U)
-    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 4U)
+    n: fr(m, 0U, c.LMX_WALK_OP_ELEMPUT, 6U)
     atop(n, data, 1U)
     ix(n, 3U)
     litn: fr(n, 3U, c.LMX_WALK_OP_LIT, 2U)
     lit_int(litn, 1U, 1)
+    sz(n, 4U, 4U)
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_INVALID)), "ELEMPUT index==len -> INVALID")
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "ELEMPUT index==len -> interpreter")
 
     # ---- off-by-one: last index OK ----
     m: mk_m(unit, 6U, 1U)

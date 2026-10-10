@@ -1,0 +1,22 @@
+# A known binding inside a qualified branch points to the original qualified
+# referent. Following that binding cannot defer a known-invalid write to run time.
+independent:
+    const:
+        immutable:
+            (): E
+                int: a 7
+            end: E
+        end: immutable
+    end: const
+end: independent
+independent:
+    const:
+        immutable:
+            (): F
+                peer: E
+            end: F
+        end: immutable
+    end: const
+end: independent
+F\peer\a: 9
+return

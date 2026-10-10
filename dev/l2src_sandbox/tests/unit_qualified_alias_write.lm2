@@ -1,0 +1,28 @@
+Data:
+    int: value 0
+end: Data
+independent:
+    const:
+        immutable:
+            (): FrozenA
+                int: value 5
+            end: FrozenA
+        end: immutable
+    end: const
+end: independent
+independent:
+    const:
+        immutable:
+            (): FrozenB
+                int: value 7
+            end: FrozenB
+        end: immutable
+    end: const
+end: independent
+sub: change (Data: candidate)
+    candidate\value: 9
+return
+# The formal's model is mutable; the selected second profile is not.
+change(FrozenB)
+sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+return

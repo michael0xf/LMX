@@ -1,0 +1,24 @@
+# A native caller catches the interpreter fault from a walked callee. The
+# caller declares a distinct explicit name, so implicit ordinals differ.
+fn: bad (int: n) int
+    return: 12 / n
+
+fn: relay (int: n) int
+    throws: Other
+    int: native_probe c.abs(n)
+    int: got 0
+    ---
+        got: bad(n)
+    ---
+    catch: interpreter ()
+        got: 7
+return: got
+
+int: result 0
+---
+    result: relay(0)
+---
+catch: Other ()
+    result: 91
+sendMessage: exit(exit_code: result; stdout: ""; stderr: "")
+return

@@ -1,11 +1,12 @@
-# steps/table-receiver.md §8, §10 (REVIEW 70f869c, account 3): peekN, a method of the part
-# unit_s7_part_ns_hidden_part.lm2 (harness Parts), reads Counter\n -- Counter is the source's named Structure,
-# not in the part's scope: the root's call of peekN cannot give it, "unbound dynamic input Counter"; bound by
-# name to the source's Counter, peekN would read 4.
+# The part method reads Counter\n as a hidden input from this caller's
+# physical Counter. This does not grant the part lexical access to this source.
 Counter:
     size_t: n 4U
 end: Counter
 size_t: got 0U
 got: peekN()
-sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+if: got = 4U
+    sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 1; stdout: ""; stderr: "")
 return

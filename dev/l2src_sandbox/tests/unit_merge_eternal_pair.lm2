@@ -1,7 +1,9 @@
 # FABLE-OPUS-MERGE-PARTS-20260926-193 T1: the author's merge rule (plan §4) on qualified (eternal)
-# operands.  FrozenA and FrozenB share `size_t: value`, so FrozenB's value is written INTO the model's
-# slot: R has one slot (check 71), and it is FrozenB's retained cell, by address (check 80).  The
-# model's own cell is not checked there, since a later operand wrote its slot.  Success is 2.
+# operands. FrozenA and FrozenB share the typed `value` slot; the later value
+# replaces the earlier one by address. Their two distinct source initializer
+# statements remain in the copied graph, so R has three slots: the coalesced
+# value plus both source operations. The model's overwritten cell is not the
+# selected value. Success is 2.
 independent:
     const:
         immutable:

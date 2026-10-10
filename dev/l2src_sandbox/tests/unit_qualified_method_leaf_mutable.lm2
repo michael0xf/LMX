@@ -1,0 +1,21 @@
+# A callable method is a leaf of an immutable Structure: its own activation
+# cells remain mutable, while the containing Structure's data stays protected.
+independent:
+    const:
+        immutable:
+            (): E
+                int: frozen 7
+                fn: bump () int
+                    int: x 0
+                    x: x + 1
+                    return: x
+                end: bump
+            end: E
+        end: immutable
+    end: const
+end: independent
+int: ok 7
+if: E\bump() != 1 || E\frozen != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

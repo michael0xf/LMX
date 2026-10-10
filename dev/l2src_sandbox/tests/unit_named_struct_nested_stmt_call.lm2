@@ -1,0 +1,18 @@
+# A nested named Structure keeps its own source body. Definition does not
+# execute it; an explicit path call does, with the same native/walker result.
+Outer:
+    size_t: a 0U
+    (): Inner
+        size_t: b 0U
+        b: b + 1U
+    end: Inner
+end: Outer
+
+int: ok 7
+if: Outer\Inner\b != 0U
+    ok: 81
+Outer\Inner
+if: Outer\Inner\b != 1U || Outer\a != 0U
+    ok: 82
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

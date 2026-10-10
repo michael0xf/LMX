@@ -1,0 +1,24 @@
+Data:
+    int: value 0
+end: Data
+independent:
+    const:
+        immutable:
+            (): Frozen
+                int: value 7
+            end: Frozen
+        end: immutable
+    end: const
+end: independent
+sub: change (Data: candidate)
+    candidate\value: 9
+return
+change(Data)
+if: Data\value != 9
+    sendMessage: exit(exit_code: 81; stdout: ""; stderr: "")
+    return
+if: Frozen\value != 7
+    sendMessage: exit(exit_code: 82; stdout: ""; stderr: "")
+    return
+sendMessage: exit(exit_code: 7; stdout: ""; stderr: "")
+return

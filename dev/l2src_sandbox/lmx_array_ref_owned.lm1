@@ -9,6 +9,9 @@ include: "<stdlib.h>"
 # refusal anywhere reverts the arena to the mark taken before the first one.
 
 fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: VoidArray
+return: lmx_array_ref_new_profiled(type, count, arena, 0)
+
+fn: lmx_array_ref_new_profiled (int: type; size_t: count; @: LmxArena arena; @: Lmx profile) @: VoidArray
     size_t: stride
     int: element_type
     @: VoidArray desc
@@ -30,14 +33,14 @@ fn: lmx_array_ref_new_owned (int: type; size_t: count; @: LmxArena arena) @: Voi
     # The descriptor is one cell of the array of Array descriptors of this type; the
     # backing is `count` consecutive pointer cells of the array of that element type.
     # Both are the arena's arrays: found if the arena has them, made here if it does not.
-    desc: (cast: (@: VoidArray) lmx_arena_take(arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, type))
+    desc: (cast: (@: VoidArray) lmx_arena_take_profiled(arena, c.sizeof(c.VoidArray), c.LMX_KIND_ARRAY, type, profile))
     if: desc = 0
         return: 0
     ---
     desc\size: count
     desc\data: 0
     if: count != 0U
-        backing: lmx_arena_take_n(arena, stride, c.LMX_KIND_REF, element_type, count)
+        backing: lmx_arena_take_n_profiled(arena, stride, c.LMX_KIND_REF, element_type, profile, count)
         if: backing = 0
             return: 0
         ---

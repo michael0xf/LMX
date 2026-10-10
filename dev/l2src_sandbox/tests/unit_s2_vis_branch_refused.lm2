@@ -1,8 +1,8 @@
-# S2 BACKWARD VISIBILITY: a method body names a qualified branch declared BELOW the method.  The
-# branch is not a name the method can see, so `cfg` is the method's dynamic input -- and nothing
-# can hand it over: the entry that calls the method has no `cfg` of its own.
+# The root calls before cfg exists in its forward-only local context. The
+# method has no lexical cfg, so the hidden input is unbound at this call site.
 fn: read_branch () size_t
 return: cfg\e
+read_branch()
 independent:
     const:
         immutable:
@@ -12,5 +12,4 @@ independent:
         end: immutable
     end: const
 end: independent
-read_branch()
 return

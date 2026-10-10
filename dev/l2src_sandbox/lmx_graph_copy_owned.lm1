@@ -399,6 +399,812 @@ return: lmx_copy_is_terminal_profiles(src_arena, p, @ retain_profile, 1U)
 fn: lmx_copy_is_terminal (@: LmxArena src_arena; @: void p) int
 return: lmx_copy_is_terminal_profiled(src_arena, p, 0)
 
+# §10 qualification checks the already built physical graph before changing
+# any pool's seal bit. A method occurrence is a leaf of its enclosing tree;
+# an ordinary named Structure (including one with an executable body) is not.
+fn: lmx_qualify_method_leaf (@: Lmx p; @@: Lmx leaves; size_t: count) int
+    size_t: i 0U
+    while: i < count
+        if: leaves[i] = p
+            return: 1
+        i: i + 1U
+    ---
+return: 0
+
+fn: lmx_qualify_opaque_type (int: type_id; @: int ids; size_t: count) int
+    size_t: i 0U
+    while: i < count
+        if: ids[i] = type_id
+            return: 1
+        i: i + 1U
+    ---
+return: 0
+
+# The caller supplies profiles certified by a completed earlier preflight and
+# seal. The target pool's seal is a local sanity check, not by itself proof
+# that every pool and edge in the earlier tree was qualified. A future dynamic
+# RuntimeImmutable caller must carry the same whole-profile certification.
+fn: lmx_qualify_prior (@: LmxArena arena; @: void p; @@: Lmx profiles; size_t: count) int
+    @: LmxArena home
+    @: LmxPool pool
+    if: lmx_copy_retained_profiles(arena, p, profiles, count) = 0
+        return: 0
+    home: lmx_range_home(arena, p)
+    if: home = 0
+        return: 0
+    pool: lmx_range_pool(home, p)
+return: (cast: (int) (pool != 0 && lmx_pool_is_sealed(pool) != 0))
+
+# A descriptor's first element being live says nothing about its advertised
+# length. Every backing read below must fit one physically issued chunk of the
+# expected typed array. lmx_pool_take_n issues precisely such a span.
+fn: lmx_qualify_live_span (@: LmxArena arena; @: void start; size_t: count; int: kind; int: type_id; size_t: stride; @: Lmx profile) int
+    @: LmxArena home
+    @: LmxPool pool
+    @: LmxChunk chunk
+    size_t: offset
+    size_t: used
+    if: count = 0U
+        return: (cast: (int) (start = 0))
+    if: start = 0 || stride = 0U
+        return: 0
+    home: lmx_range_home(arena, start)
+    if: home = 0
+        return: 0
+    pool: lmx_range_pool(home, start)
+    if: pool = 0 || lmx_range_classify(arena, start) != kind || lmx_range_type_of(arena, start) != type_id || lmx_range_stride(arena, start) != stride || lmx_range_profile(arena, start) != profile
+        return: 0
+    chunk: lmx_pool_chunk_at(pool, start)
+    if: chunk = 0
+        return: 0
+    offset: (cast: (size_t) start) - (cast: (size_t) lmx_chunk_data(chunk))
+    if: offset % stride != 0U
+        return: 0
+    used: lmx_chunk_cells(chunk, stride)
+    if: used > lmx_chunk_room(chunk, stride)
+        return: 0
+    ---
+    if: offset / stride > used
+        return: 0
+return: (cast: (int) (count <= used - offset / stride))
+
+# Transient constructor proof: one interval per reached physical carrier or
+# complete backing allocation, never one bookkeeping entry per Array element.
+fn: lmx_qualify_span_add (@: LmxArena arena; @: Lmx profile; @: void start; size_t: count; @: LmxQualifySpansDynamicArray spans) int
+    @: LmxArena home
+    @: LmxPool pool
+    @: LmxChunk chunk
+    @: LmxQualifySpan grown
+    LmxQualifySpan: probe
+    size_t: capacity
+    size_t: first
+    size_t: stride
+    if: spans = 0
+        return: LMX_QUALIFY_OK
+    if: count = 0U
+        return: (cast: (int) (start != 0))
+    if: start = 0
+        return: LMX_QUALIFY_INVALID
+    home: lmx_range_home(arena, start)
+    pool: lmx_range_pool(arena, start)
+    if: home != arena || pool = 0 || pool\profile != profile
+        return: LMX_QUALIFY_INVALID
+    stride: pool\stride
+    if: lmx_qualify_live_span(arena, start, count, pool\kind, pool\type, stride, profile) = 0
+        return: LMX_QUALIFY_INVALID
+    chunk: lmx_pool_chunk_at(pool, start)
+    if: chunk = 0
+        return: LMX_QUALIFY_INVALID
+    first: ((cast: (size_t) start) - (cast: (size_t) lmx_chunk_data(chunk))) / stride
+    if: spans\size = spans\capacity
+        capacity: 32U
+        if: spans\capacity != 0U
+            if: spans\capacity > ((cast: (size_t) -1) / 2U)
+                return: LMX_QUALIFY_NOMEM
+            capacity: spans\capacity * 2U
+        ---
+        if: capacity > ((cast: (size_t) -1) / c.sizeof(probe))
+            return: LMX_QUALIFY_NOMEM
+        grown: (cast: (@: LmxQualifySpan) realloc((cast: (@: void) spans\data), capacity * c.sizeof(probe)))
+        if: grown = 0
+            return: LMX_QUALIFY_NOMEM
+        spans\data: grown
+        spans\capacity: capacity
+    ---
+    @: LmxQualifySpan next spans\data + spans\size
+    next\pool: pool
+    next\chunk: chunk
+    next\first: first
+    next\count: count
+    spans\size: spans\size + 1U
+return: LMX_QUALIFY_OK
+
+fn: lmx_qualify_span_cmp (@: LmxQualifySpan a; @: LmxQualifySpan b) int
+    size_t: av (cast: (size_t) a\pool)
+    size_t: bv (cast: (size_t) b\pool)
+    if: av < bv
+        return: -1
+    if: av > bv
+        return: 1
+    av: (cast: (size_t) a\chunk)
+    bv: (cast: (size_t) b\chunk)
+    if: av < bv
+        return: -1
+    if: av > bv
+        return: 1
+    if: a\first < b\first
+        return: -1
+    if: a\first > b\first
+        return: 1
+return: 0
+
+# Bottom-up mergesort bounds scratch by the number of reached allocations,
+# not by their element counts, and avoids a quadratic profile scan.
+fn: lmx_qualify_spans_sort (@: LmxQualifySpansDynamicArray spans) int
+    @: LmxQualifySpan temp
+    LmxQualifySpan: probe
+    size_t: width 1U
+    size_t: left
+    size_t: mid
+    size_t: right
+    size_t: i
+    size_t: j
+    size_t: k
+    if: spans\size < 2U
+        return: LMX_QUALIFY_OK
+    if: spans\size > ((cast: (size_t) -1) / c.sizeof(probe))
+        return: LMX_QUALIFY_NOMEM
+    temp: (cast: (@: LmxQualifySpan) malloc(spans\size * c.sizeof(probe)))
+    if: temp = 0
+        return: LMX_QUALIFY_NOMEM
+    while: width < spans\size
+        left: 0U
+        while: left < spans\size
+            mid: left + width
+            if: width > spans\size - left
+                mid: spans\size
+            ---
+            right: mid + width
+            if: width > spans\size - mid
+                right: spans\size
+            ---
+            i: left
+            j: mid
+            k: left
+            while: i < mid && j < right
+                if: lmx_qualify_span_cmp(spans\data + i, spans\data + j) <= 0
+                    memcpy((cast: (@: void) (temp + k)), (cast: (@: void) (spans\data + i)), c.sizeof(probe))
+                    i: i + 1U
+                else:
+                    memcpy((cast: (@: void) (temp + k)), (cast: (@: void) (spans\data + j)), c.sizeof(probe))
+                    j: j + 1U
+                ---
+                k: k + 1U
+            ---
+            while: i < mid
+                memcpy((cast: (@: void) (temp + k)), (cast: (@: void) (spans\data + i)), c.sizeof(probe))
+                i: i + 1U
+                k: k + 1U
+            ---
+            while: j < right
+                memcpy((cast: (@: void) (temp + k)), (cast: (@: void) (spans\data + j)), c.sizeof(probe))
+                j: j + 1U
+                k: k + 1U
+            ---
+            left: right
+        ---
+        memcpy((cast: (@: void) spans\data), (cast: (@: void) temp), spans\size * c.sizeof(probe))
+        if: width > spans\size / 2U
+            break
+        width: width * 2U
+    ---
+    free((cast: (@: void) temp))
+return: LMX_QUALIFY_OK
+
+fn: lmx_qualify_spans_complete (@: LmxArena arena; @: Lmx profile; @: LmxQualifySpansDynamicArray spans) int
+    @: LmxPool pool
+    @: LmxChunk chunk
+    LmxQualifySpan: probe
+    size_t: lo
+    size_t: hi
+    size_t: mid
+    size_t: at
+    size_t: covered
+    size_t: used
+    int: status lmx_qualify_spans_sort(spans)
+    if: status != LMX_QUALIFY_OK
+        return: status
+    pool: arena\arrays
+    while: pool != 0
+        if: pool\profile = profile
+            if: pool\stride = 0U
+                return: LMX_QUALIFY_INVALID
+            chunk: lmx_pool_chunk_head(pool)
+            while: chunk != 0
+                used: lmx_chunk_cells(chunk, pool\stride)
+                if: used > lmx_chunk_room(chunk, pool\stride)
+                    return: LMX_QUALIFY_INVALID
+                probe.pool: pool
+                probe.chunk: chunk
+                probe.first: 0U
+                probe.count: 0U
+                lo: 0U
+                hi: spans\size
+                while: lo < hi
+                    mid: lo + (hi - lo) / 2U
+                    if: lmx_qualify_span_cmp(spans\data + mid, @ probe) < 0
+                        lo: mid + 1U
+                    else:
+                        hi: mid
+                    ---
+                ---
+                at: lo
+                covered: 0U
+                while: at < spans\size && (spans\data + at)\pool = pool && (spans\data + at)\chunk = chunk
+                    if: (spans\data + at)\first > covered || (spans\data + at)\first > used || (spans\data + at)\count > used - (spans\data + at)\first
+                        return: LMX_QUALIFY_INVALID
+                    ---
+                    if: (spans\data + at)\first + (spans\data + at)\count > covered
+                        covered: (spans\data + at)\first + (spans\data + at)\count
+                    ---
+                    at: at + 1U
+                ---
+                if: covered != used
+                    return: LMX_QUALIFY_INVALID
+                chunk: chunk\next
+            ---
+        ---
+        pool: pool\next
+    ---
+return: LMX_QUALIFY_OK
+
+# Exact-cell classification says NONE for an interior byte and for unissued
+# capacity. Neither address is a foreign resource: an unsealed pool can later
+# issue that same stable address as a mutable cell without another admission.
+fn: lmx_qualify_inside_arena_interval (@: LmxArena arena; @: void p) int
+return: (cast: (int) (lmx_range_entry_at(arena, p) != 0))
+
+# Both fixed Array and dynamic List use the same typed backing-cell contract.
+# For a List, count is capacity; checking only its current size would let a
+# malformed descriptor conceal a mutable or truncated backing allocation.
+fn: lmx_qualify_backing (@: LmxArena arena; @: VoidArray array; int: array_type; size_t: count; int: allow_scalar; @: Lmx profile) int
+    int: kind c.LMX_KIND_PRIMITIVE
+    int: element_type c.LMX_TYPE_NONE
+    size_t: stride c.sizeof(@: void)
+    ulong: ulong_probe 0U
+    if: array_type = c.LMX_TYPE_ARRAY_OF_LMX
+        kind: c.LMX_KIND_REF
+        element_type: c.LMX_TYPE_LMX
+    else:
+        if: array_type = c.LMX_TYPE_ARRAY_OF_DESC
+            kind: c.LMX_KIND_REF
+            element_type: c.LMX_TYPE_DESC
+        else:
+            if: array_type >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                element_type: c.LMX_TYPE_POINTER_BASE + (array_type - c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+            else:
+                if: allow_scalar = 0
+                    return: 0
+                if: array_type = c.LMX_TYPE_ARRAY_OF_CHAR
+                    element_type: c.LMX_TYPE_CHAR
+                    stride: c.sizeof(c.char)
+                else:
+                    if: array_type = c.LMX_TYPE_ARRAY_OF_UNSIGNED_CHAR
+                        element_type: c.LMX_TYPE_UNSIGNED_CHAR
+                        stride: c.sizeof(c.char)
+                    else:
+                        if: array_type = c.LMX_TYPE_ARRAY_OF_INT
+                            element_type: c.LMX_TYPE_INT
+                            stride: c.sizeof(c.int)
+                        else:
+                            if: array_type = c.LMX_TYPE_ARRAY_OF_SIZE_T
+                                element_type: c.LMX_TYPE_SIZE_T
+                                stride: c.sizeof(c.size_t)
+                            else:
+                                if: array_type = c.LMX_TYPE_ARRAY_OF_ULONG
+                                    element_type: c.LMX_TYPE_ULONG
+                                    stride: c.sizeof(ulong_probe)
+                                else:
+                                    return: 0
+                                ---
+                            ---
+                        ---
+                    ---
+                ---
+            ---
+        ---
+    ---
+return: lmx_qualify_live_span(arena, array\data, count, kind, element_type, stride, profile)
+
+fn: lmx_qualify_struct_header (@: LmxArena arena; @: void p) int
+return: (cast: (int) (lmx_range_classify(arena, p) = c.LMX_KIND_STRUCT && lmx_range_type_of(arena, p) = c.LMX_TYPE_STRUCT && lmx_range_stride(arena, p) = c.sizeof(c.Lmx)))
+
+# Admit one graph edge to this selected tree. Exact containment was collected
+# first; no edge can enlarge that closure during checking. Non-Structure cells
+# have no parent, so their own physical profile is the ownership proof. Every
+# admitted internal cell is queued once for its own outgoing references.
+fn: lmx_qualify_edge (@: LmxArena arena; @: void p; @: Lmx profile; @@: Lmx prior; size_t: prior_count; @: LmxCopyMap closure; @: LmxCopyMap seen; @: LmxCopyStack todo; int: opaque_unknown) int
+    int: kind
+    if: p = 0
+        return: LMX_QUALIFY_OK
+    kind: lmx_range_classify(arena, p)
+    if: kind = c.LMX_KIND_NONE
+        if: opaque_unknown != 0 && lmx_qualify_inside_arena_interval(arena, p) = 0
+            return: LMX_QUALIFY_OK
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_PRIMITIVE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        return: LMX_QUALIFY_OK
+    ---
+    if: kind = c.LMX_KIND_STRUCT
+        if: lmx_qualify_struct_header(arena, p) = 0
+            return: LMX_QUALIFY_INVALID
+        ---
+        if: lmx_copy_map_get(closure, p) != 0 || lmx_qualify_prior(arena, p, prior, prior_count) != 0
+            return: LMX_QUALIFY_OK
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: lmx_qualify_prior(arena, p, prior, prior_count) != 0
+        return: LMX_QUALIFY_OK
+    ---
+    if: lmx_range_profile(arena, p) != profile
+        return: LMX_QUALIFY_INVALID
+    ---
+    # CHILDREN/REF are backing cells, never values. In particular, accepting
+    # one as a child and reading only refs[0] could hide later external edges.
+    if: kind != c.LMX_KIND_PRIMITIVE && kind != c.LMX_KIND_ARRAY && kind != c.LMX_KIND_LIST && kind != c.LMX_KIND_SOURCE_SYMBOL
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: lmx_copy_map_get(seen, p) = 0
+        if: lmx_copy_map_put(seen, p, p) != 0 || lmx_copy_stack_push(todo, (cast: (@: Lmx) p)) != 0
+            return: LMX_QUALIFY_NOMEM
+        ---
+    ---
+return: LMX_QUALIFY_OK
+
+# A pointer's declared source category matters only when the address has no
+# exact arena cell. A registered address is always checked as a graph edge,
+# even if its static type names an opaque C resource. Unknown/void provenance
+# is fail-closed; a cast cannot make an unimported graph target immutable.
+fn: lmx_qualify_pointer_edge (@: LmxArena arena; @: void p; int: type_id; @: Lmx profile; @@: Lmx prior; size_t: prior_count; @: LmxCopyMap closure; @: LmxCopyMap seen; @: LmxCopyStack todo; @: int opaque_types; size_t: opaque_count) int
+return: lmx_qualify_edge(arena, p, profile, prior, prior_count, closure, seen, todo, lmx_qualify_opaque_type(type_id, opaque_types, opaque_count))
+
+# A Frame is identified by the physical role record in its first slot.  An
+# arbitrary OP from another program is not one of this program's instructions.
+# 0 means ordinary Structure; 1 means Frame; -1 means malformed/unknown Frame.
+fn: lmx_qualify_frame_role (@: LmxArena arena; @: Lmx node; @: Lmx roles) int
+    @: void head 0
+    @: void role_data 0
+    @@: void records 0
+    size_t: role_count 0U
+    size_t: k 1U
+    if: node\array.size = 0U
+        return: 0
+    head: lmx_arena_ref_value(node, 0U)
+    if: head = 0 || lmx_range_classify(arena, head) != c.LMX_DOMAIN_KIND_OP
+        return: 0
+    if: lmx_range_type_of(arena, head) != c.LMX_DOMAIN_OP || lmx_range_stride(arena, head) != c.sizeof(c.LmxOp)
+        return: -1
+    if: roles = 0 || lmx_qualify_struct_header(arena, (cast: (@: void) roles)) = 0 || roles\array.data = 0 || roles\array.size = 0U
+        return: -1
+    ---
+    role_data: roles\array.data
+    role_count: roles\array.size
+    if: lmx_qualify_live_span(arena, role_data, role_count, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, c.sizeof(@: void), lmx_range_profile(arena, (cast: (@: void) roles))) = 0
+        return: -1
+    ---
+    records: (cast: (@@: void) roles\array.data)
+    while: k < roles\array.size
+        if: records[k] = head
+            if: (cast: (@: LmxOp) head)\code != (cast: (int) k)
+                return: -1
+            ---
+            return: 1
+        k: k + 1U
+    ---
+return: -1
+
+# A Frame's operands are stored code, not values that the selected Structure
+# currently holds. Validate their physical carriers, but do not follow their
+# external referents or predict the operation's future result. Contained plain
+# Structures remain in the closure and are checked by the ordinary data rule.
+fn: lmx_qualify_code_operand (@: LmxArena arena; @: void p; @: Lmx profile) int
+    int: kind
+    int: vtype
+    @: VoidArray array
+    @: VoidDynamicArray dynamic
+    if: p = 0
+        return: LMX_QUALIFY_OK
+    kind: lmx_range_classify(arena, p)
+    if: kind = c.LMX_KIND_NONE
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: kind = c.LMX_KIND_STRUCT
+        if: lmx_qualify_struct_header(arena, p) = 0
+            return: LMX_QUALIFY_INVALID
+        return: LMX_QUALIFY_OK
+    ---
+    if: kind = c.LMX_DOMAIN_KIND_OP || kind = c.LMX_DOMAIN_KIND_ROLE || kind = c.LMX_DOMAIN_KIND_PRIMITIVE || kind = c.LMX_DOMAIN_KIND_MSG_RECORD
+        return: LMX_QUALIFY_OK
+    ---
+    if: kind != c.LMX_KIND_PRIMITIVE && kind != c.LMX_KIND_ARRAY && kind != c.LMX_KIND_LIST && kind != c.LMX_KIND_SOURCE_SYMBOL
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: lmx_range_profile(arena, p) != profile
+        return: LMX_QUALIFY_OK
+    ---
+    vtype: lmx_range_type_of(arena, p)
+    if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE && lmx_range_stride(arena, p) != c.sizeof(@: void)
+        return: LMX_QUALIFY_INVALID
+    ---
+    if: kind = c.LMX_KIND_ARRAY
+        if: lmx_range_stride(arena, p) != c.sizeof(c.VoidArray)
+            return: LMX_QUALIFY_INVALID
+        ---
+        array: (cast: (@: VoidArray) p)
+        if: lmx_qualify_backing(arena, array, vtype, array\size, 1, profile) = 0
+            return: LMX_QUALIFY_INVALID
+        ---
+    ---
+    if: kind = c.LMX_KIND_LIST
+        if: lmx_range_stride(arena, p) != c.sizeof(c.VoidDynamicArray)
+            return: LMX_QUALIFY_INVALID
+        ---
+        dynamic: (cast: (@: VoidDynamicArray) p)
+        array: (cast: (@: VoidArray) dynamic)
+        if: array\size > dynamic\capacity || lmx_qualify_backing(arena, array, vtype, dynamic\capacity, 0, profile) = 0
+            return: LMX_QUALIFY_INVALID
+        ---
+    ---
+return: LMX_QUALIFY_OK
+
+fn: lmx_qualify_tree_preflight (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
+    LmxCopyMap: closure_storage
+    LmxCopyMap: seen_storage
+    LmxCopyStack: todo_storage
+    @: LmxCopyMap closure (@ closure_storage)
+    @: LmxCopyMap seen (@ seen_storage)
+    @: LmxCopyStack todo (@ todo_storage)
+    @: Lmx profile 0
+    @: Lmx node
+    @: void p
+    @: void child
+    @: VoidArray array
+    @: VoidDynamicArray dynamic
+    @@: void slots
+    @@: void refs
+    @@: void keys
+    size_t: i
+    size_t: j
+    size_t: width
+    int: kind
+    int: vtype
+    int: frame_role
+    int: status LMX_QUALIFY_OK
+    if: arena = 0 || root = 0 || lmx_qualify_struct_header(arena, (cast: (@: void) root)) = 0
+        return: LMX_QUALIFY_INVALID
+    if: (prior_count != 0U && prior_profiles = 0) || (method_count != 0U && method_leaves = 0) || (opaque_count != 0U && opaque_types = 0)
+        return: LMX_QUALIFY_INVALID
+    profile: lmx_range_profile(arena, (cast: (@: void) root))
+    if: profile = 0
+        return: LMX_QUALIFY_INVALID
+    # independent requires zero at its own receiver. General immutable does
+    # not: its selected root's ordinary parent is an outside reference, so it
+    # must already denote a qualified tree and remains a terminal here.
+    if: root\parent != 0 && (lmx_qualify_struct_header(arena, (cast: (@: void) root\parent)) = 0 || lmx_qualify_prior(arena, (cast: (@: void) root\parent), prior_profiles, prior_count) = 0)
+        return: LMX_QUALIFY_INVALID
+    memset((cast: (@: void) closure), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) seen), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) todo), 0, c.sizeof(c.LmxCopyStack))
+    if: lmx_copy_map_init(closure) != 0
+        return: LMX_QUALIFY_NOMEM
+    if: lmx_copy_map_init(seen) != 0
+        lmx_copy_map_dispose(closure)
+        return: LMX_QUALIFY_NOMEM
+    ---
+    if: lmx_copy_map_put(closure, (cast: (@: void) root), (cast: (@: void) root)) != 0 || lmx_copy_stack_push(todo, root) != 0
+        status: LMX_QUALIFY_NOMEM
+    ---
+    # Phase 1: containment is decided only by the child's ordinary parent.
+    while: status = LMX_QUALIFY_OK && lmx_copy_stack_items_len(todo) != 0U
+        node: lmx_copy_stack_pop(todo)
+        if: node != root && lmx_qualify_method_leaf(node, method_leaves, method_count) != 0
+            continue
+        ---
+        if: lmx_qualify_struct_header(arena, (cast: (@: void) node)) = 0 || lmx_range_profile(arena, (cast: (@: void) node)) != profile
+            status: LMX_QUALIFY_INVALID
+            break
+        ---
+        p: node\array.data
+        width: node\array.size
+        if: lmx_qualify_live_span(arena, p, width, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, c.sizeof(@: void), profile) = 0
+            status: LMX_QUALIFY_INVALID
+            break
+        ---
+        if: node\array.size = 0U
+            continue
+        ---
+        slots: (cast: (@@: void) node\array.data)
+        i: 0U
+        while: i < node\array.size
+            child: slots[i]
+            if: child != 0 && lmx_range_classify(arena, child) = c.LMX_KIND_STRUCT
+                if: lmx_qualify_struct_header(arena, child) = 0
+                    status: LMX_QUALIFY_INVALID
+                    break
+                ---
+                if: (cast: (@: Lmx) child)\parent = node && lmx_copy_map_get(closure, child) = 0
+                    if: lmx_copy_map_put(closure, child, child) != 0 || lmx_copy_stack_push(todo, (cast: (@: Lmx) child)) != 0
+                        status: LMX_QUALIFY_NOMEM
+                        break
+                    ---
+                ---
+            ---
+            i: i + 1U
+        ---
+    ---
+    lmx_copy_stack_dispose(todo)
+    if: status = LMX_QUALIFY_OK
+        keys: lmx_copy_map_keys_data(closure)
+        i: 0U
+        while: i < lmx_copy_map_keys_cap(closure)
+            node: (cast: (@: Lmx) keys[i])
+            if: node != 0 && (node = root || lmx_qualify_method_leaf(node, method_leaves, method_count) = 0)
+                if: node != root && lmx_copy_map_get(closure, (cast: (@: void) node\parent)) = 0
+                    status: LMX_QUALIFY_INVALID
+                    break
+                ---
+                frame_role: lmx_qualify_frame_role(arena, node, roles)
+                if: frame_role < 0
+                    status: LMX_QUALIFY_INVALID
+                    break
+                ---
+                slots: (cast: (@@: void) node\array.data)
+                j: 0U
+                while: j < node\array.size
+                    if: frame_role != 0 && j != 0U
+                        status: lmx_qualify_code_operand(arena, slots[j], profile)
+                    else:
+                        status: lmx_qualify_edge(arena, slots[j], profile, prior_profiles, prior_count, closure, seen, todo, 0)
+                    ---
+                    if: status != LMX_QUALIFY_OK
+                        break
+                    ---
+                    j: j + 1U
+                ---
+            ---
+            if: status != LMX_QUALIFY_OK
+                break
+            i: i + 1U
+        ---
+    ---
+    # Phase 2: stored data reached by ordinary fields is scanned recursively;
+    # deferred Frame operands were validated as code carriers, not data edges.
+    while: status = LMX_QUALIFY_OK && lmx_copy_stack_items_len(todo) != 0U
+        p: (cast: (@: void) lmx_copy_stack_pop(todo))
+        kind: lmx_range_classify(arena, p)
+        vtype: lmx_range_type_of(arena, p)
+        if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+            if: lmx_range_stride(arena, p) != c.sizeof(@: void)
+                status: LMX_QUALIFY_INVALID
+                break
+            ---
+            status: lmx_qualify_pointer_edge(arena, lmx_pointer_value_known(p), vtype - c.LMX_TYPE_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+        ---
+        if: kind = c.LMX_KIND_LIST
+            if: lmx_range_stride(arena, p) != c.sizeof(c.VoidDynamicArray)
+                status: LMX_QUALIFY_INVALID
+                break
+            ---
+            dynamic: (cast: (@: VoidDynamicArray) p)
+            array: (cast: (@: VoidArray) dynamic)
+            if: array\size > dynamic\capacity || lmx_range_profile(arena, p) != profile || lmx_qualify_backing(arena, array, vtype, dynamic\capacity, 0, profile) = 0
+                status: LMX_QUALIFY_INVALID
+            else:
+                j: 0U
+                while: j < array\size && status = LMX_QUALIFY_OK
+                    if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                        status: lmx_qualify_pointer_edge(arena, lmx_list_value((cast: (@: void) dynamic), j), vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+                    else:
+                        status: lmx_qualify_edge(arena, lmx_list_value((cast: (@: void) dynamic), j), profile, prior_profiles, prior_count, closure, seen, todo, 0)
+                    ---
+                    j: j + 1U
+                ---
+            ---
+        ---
+        if: kind = c.LMX_KIND_ARRAY
+            if: lmx_range_stride(arena, p) != c.sizeof(c.VoidArray)
+                status: LMX_QUALIFY_INVALID
+                break
+            ---
+            array: (cast: (@: VoidArray) p)
+            if: lmx_range_profile(arena, p) != profile || lmx_qualify_backing(arena, array, vtype, array\size, 1, profile) = 0
+                status: LMX_QUALIFY_INVALID
+            else:
+                if: vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                    refs: (cast: (@@: void) array\data)
+                    j: 0U
+                    while: j < array\size && status = LMX_QUALIFY_OK
+                        if: vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                            status: lmx_qualify_pointer_edge(arena, refs[j], vtype - c.LMX_TYPE_ARRAY_OF_POINTER_BASE, profile, prior_profiles, prior_count, closure, seen, todo, opaque_types, opaque_count)
+                        else:
+                            status: lmx_qualify_edge(arena, refs[j], profile, prior_profiles, prior_count, closure, seen, todo, 0)
+                        ---
+                        j: j + 1U
+                    ---
+                ---
+            ---
+        ---
+    ---
+    lmx_copy_stack_dispose(todo)
+    lmx_copy_map_dispose(seen)
+    lmx_copy_map_dispose(closure)
+return: status
+
+# A profile-coverage walk has a different purpose from data qualification:
+# after the latter succeeds, prove that sealing all arrays bearing this exact
+# profile cannot also seal an unexamined, issued cell. Method occurrences have
+# their own (unqualified) profile; contained ordinary Structures remain here.
+fn: lmx_qualify_cover_enqueue (@: LmxArena arena; @: Lmx profile; @: void p; @: Lmx parent; @: LmxCopyMap seen; @: LmxCopyStack todo) int
+    int: kind
+    if: p = 0 || lmx_range_profile(arena, p) != profile
+        return: LMX_QUALIFY_OK
+    kind: lmx_range_classify(arena, p)
+    if: kind = c.LMX_KIND_STRUCT
+        if: parent = 0 || lmx_qualify_struct_header(arena, p) = 0 || (cast: (@: Lmx) p)\parent != parent
+            return: LMX_QUALIFY_OK
+        ---
+    else:
+        if: kind != c.LMX_KIND_PRIMITIVE && kind != c.LMX_KIND_ARRAY && kind != c.LMX_KIND_LIST && kind != c.LMX_KIND_SOURCE_SYMBOL && kind != c.LMX_DOMAIN_KIND_OP && kind != c.LMX_DOMAIN_KIND_ROLE && kind != c.LMX_DOMAIN_KIND_PRIMITIVE && kind != c.LMX_DOMAIN_KIND_MSG_RECORD
+            return: LMX_QUALIFY_INVALID
+        ---
+    ---
+    if: lmx_copy_map_get(seen, p) = 0
+        if: lmx_copy_map_put(seen, p, p) != 0 || lmx_copy_stack_push(todo, (cast: (@: Lmx) p)) != 0
+            return: LMX_QUALIFY_NOMEM
+        ---
+    ---
+return: LMX_QUALIFY_OK
+
+# A saved Frame operand is a physical code carrier, not its future result.
+# Record its own selected-profile storage, including descriptor backing, but
+# neither follow a pointer payload nor grant containment to its referent.
+fn: lmx_qualify_cover_code (@: LmxArena arena; @: Lmx profile; @: void p; @: LmxQualifySpansDynamicArray spans) int
+    int: kind
+    int: vtype
+    int: status
+    @: VoidArray array
+    @: VoidDynamicArray dynamic
+    if: p = 0 || lmx_range_profile(arena, p) != profile
+        return: LMX_QUALIFY_OK
+    kind: lmx_range_classify(arena, p)
+    if: kind = c.LMX_KIND_STRUCT
+        return: LMX_QUALIFY_OK
+    status: lmx_qualify_span_add(arena, profile, p, 1U, spans)
+    if: status != LMX_QUALIFY_OK
+        return: status
+    vtype: lmx_range_type_of(arena, p)
+    if: kind = c.LMX_KIND_ARRAY
+        array: (cast: (@: VoidArray) p)
+        if: lmx_qualify_backing(arena, array, vtype, array\size, 1, profile) = 0
+            return: LMX_QUALIFY_INVALID
+        return: lmx_qualify_span_add(arena, profile, array\data, array\size, spans)
+    ---
+    if: kind = c.LMX_KIND_LIST
+        dynamic: (cast: (@: VoidDynamicArray) p)
+        array: (cast: (@: VoidArray) dynamic)
+        if: array\size > dynamic\capacity || lmx_qualify_backing(arena, array, vtype, dynamic\capacity, 0, profile) = 0
+            return: LMX_QUALIFY_INVALID
+        return: lmx_qualify_span_add(arena, profile, array\data, dynamic\capacity, spans)
+    ---
+return: LMX_QUALIFY_OK
+
+fn: lmx_qualify_profile_coverage (@: LmxArena arena; @: Lmx root; @: Lmx roles) int
+    LmxCopyMap: seen_storage
+    LmxCopyStack: todo_storage
+    LmxQualifySpansDynamicArray: spans_storage
+    @: LmxCopyMap seen (@ seen_storage)
+    @: LmxCopyStack todo (@ todo_storage)
+    @: LmxQualifySpansDynamicArray spans (@ spans_storage)
+    @: Lmx profile
+    @: Lmx node
+    @: void p
+    @: void child
+    @: VoidArray array
+    @: VoidDynamicArray dynamic
+    @@: void slots
+    @@: void refs
+    size_t: i
+    int: kind
+    int: vtype
+    int: frame_role
+    int: status LMX_QUALIFY_OK
+    if: arena = 0 || root = 0 || lmx_qualify_struct_header(arena, (cast: (@: void) root)) = 0
+        return: LMX_QUALIFY_INVALID
+    profile: lmx_range_profile(arena, (cast: (@: void) root))
+    if: profile = 0
+        return: LMX_QUALIFY_INVALID
+    memset((cast: (@: void) seen), 0, c.sizeof(c.LmxCopyMap))
+    memset((cast: (@: void) todo), 0, c.sizeof(c.LmxCopyStack))
+    memset((cast: (@: void) spans), 0, c.sizeof(c.LmxQualifySpansDynamicArray))
+    if: lmx_copy_map_init(seen) != 0
+        return: LMX_QUALIFY_NOMEM
+    if: lmx_copy_map_put(seen, (cast: (@: void) root), (cast: (@: void) root)) != 0 || lmx_copy_stack_push(todo, root) != 0
+        status: LMX_QUALIFY_NOMEM
+    ---
+    while: status = LMX_QUALIFY_OK && lmx_copy_stack_items_len(todo) != 0U
+        p: (cast: (@: void) lmx_copy_stack_pop(todo))
+        kind: lmx_range_classify(arena, p)
+        status: lmx_qualify_span_add(arena, profile, p, 1U, spans)
+        if: status != LMX_QUALIFY_OK
+            break
+        ---
+        if: kind = c.LMX_KIND_STRUCT
+            node: (cast: (@: Lmx) p)
+            array: (cast: (@: VoidArray) node)
+            status: lmx_qualify_span_add(arena, profile, array\data, array\size, spans)
+            if: status != LMX_QUALIFY_OK
+                break
+            ---
+            frame_role: lmx_qualify_frame_role(arena, node, roles)
+            if: frame_role < 0
+                status: LMX_QUALIFY_INVALID
+                break
+            ---
+            slots: (cast: (@@: void) node\array.data)
+            i: 0U
+            while: i < node\array.size && status = LMX_QUALIFY_OK
+                child: slots[i]
+                if: child != 0 && lmx_range_profile(arena, child) = profile && lmx_range_classify(arena, child) = c.LMX_KIND_STRUCT && (cast: (@: Lmx) child)\parent = node
+                    status: lmx_qualify_cover_enqueue(arena, profile, child, node, seen, todo)
+                else:
+                    if: frame_role != 0 && i != 0U
+                        status: lmx_qualify_cover_code(arena, profile, child, spans)
+                    else:
+                        status: lmx_qualify_cover_enqueue(arena, profile, child, 0, seen, todo)
+                    ---
+                ---
+                i: i + 1U
+            ---
+        else:
+            vtype: lmx_range_type_of(arena, p)
+            if: kind = c.LMX_KIND_PRIMITIVE && vtype >= c.LMX_TYPE_POINTER_BASE && vtype < c.LMX_TYPE_ARRAY_OF_POINTER_BASE
+                status: lmx_qualify_cover_enqueue(arena, profile, lmx_pointer_value_known(p), 0, seen, todo)
+            ---
+            if: (kind = c.LMX_KIND_ARRAY || kind = c.LMX_KIND_LIST) && status = LMX_QUALIFY_OK
+                if: kind = c.LMX_KIND_ARRAY
+                    array: (cast: (@: VoidArray) p)
+                    status: lmx_qualify_span_add(arena, profile, array\data, array\size, spans)
+                else:
+                    dynamic: (cast: (@: VoidDynamicArray) p)
+                    array: (cast: (@: VoidArray) dynamic)
+                    status: lmx_qualify_span_add(arena, profile, array\data, dynamic\capacity, spans)
+                ---
+                if: status = LMX_QUALIFY_OK && (vtype = c.LMX_TYPE_ARRAY_OF_LMX || vtype = c.LMX_TYPE_ARRAY_OF_DESC || vtype >= c.LMX_TYPE_ARRAY_OF_POINTER_BASE)
+                    refs: (cast: (@@: void) array\data)
+                    i: 0U
+                    while: i < array\size && status = LMX_QUALIFY_OK
+                        status: lmx_qualify_cover_enqueue(arena, profile, refs[i], 0, seen, todo)
+                        i: i + 1U
+                    ---
+                ---
+            ---
+        ---
+    ---
+    if: status = LMX_QUALIFY_OK
+        status: lmx_qualify_spans_complete(arena, profile, spans)
+    ---
+    free((cast: (@: void) spans\data))
+    lmx_copy_stack_dispose(todo)
+    lmx_copy_map_dispose(seen)
+return: status
+
+fn: lmx_qualify_tree_preflight_full (@: LmxArena arena; @: Lmx root; @: Lmx roles; @@: Lmx prior_profiles; size_t: prior_count; @@: Lmx method_leaves; size_t: method_count; @: int opaque_types; size_t: opaque_count) int
+    int: status lmx_qualify_tree_preflight(arena, root, roles, prior_profiles, prior_count, method_leaves, method_count, opaque_types, opaque_count)
+    if: status != LMX_QUALIFY_OK
+        return: status
+return: lmx_qualify_profile_coverage(arena, root, roles)
+
 # Register a destination header for a source Structure before any of its edges
 # are followed (ABI 8.2), and queue its edges. Idempotent per source address.
 # Never called for a value in the exact retained physical profile: callers test first.

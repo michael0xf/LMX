@@ -16,10 +16,9 @@ predef: "l2src/lmx_merge_owned.lm1"
 predef: "l1src/libc_abi.lm1"
 include: "<stdio.h>" "<stdlib.h>" "<string.h>"
 
-# -170 c1 / D-58: MUL/DIV/MOD via lmx_walk_arith_out (same shape as ADD/SUB).
-# DIV/MOD by zero: walker returns LMX_WALK_INVALID (X1 class of D-37/D-44) — not a throw
-# and not INVALID-as-value. Status chosen because the graph is well-formed but the
-# operation is refused (same ERROR class as other walk refusals); walk stops.
+# -170 c1 / D-58: MUL/DIV/MOD use typed numeric operands. On a valid compiled
+# operation DIV/MOD by zero raises the implicit interpreter throw; a malformed
+# graph still returns INVALID. This is a control status, not a numeric result.
 # Mutants RED: MUL computed as ADD; DIV by zero admitted (status OK / value produced).
 
 @: LmxArena ga 0
@@ -254,12 +253,31 @@ fn: main () int
     st: go(m)
     check((cast: (int) (st = c.LMX_WALK_INVALID)), "mixed int*size_t INVALID")
 
-    # 1/0 stops the walk: LMX_WALK_INVALID (documented above)
+    # 1/0 on a complete operation enters the ordinary interpreter throw channel.
     unit: lmx_node_new_owned(ga)
     if: unit = 0 || lmx_arena_refs_open_owned(ga, unit, 4U) != 0
         return: 2
     ---
     m: mk_m(unit, 0U, 1U)
+    n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
+    eqn: fr(n, 1U, c.LMX_WALK_OP_DIV, 5U)
+    litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 1) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    litn: fr(eqn, 2U, c.LMX_WALK_OP_LIT, 2U)
+    if: litn != 0 && lmx_walk_store_int(ga, litn, 1U, 0) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    if: eqn != 0 && lmx_walk_store_size(ga, eqn, 3U, 4U) != c.LMX_WALK_OK
+        broken: broken + 1
+    ---
+    st: go(m)
+    check((cast: (int) (st = c.LMX_WALK_THROWN + 4)), "1/0 throws interpreter")
+
+    # An incomplete hand-built operator has no declared status or landing
+    # place. It is malformed graph data, not an interpreter throw.
+    m: mk_m(unit, 1U, 1U)
     n: fr(m, 0U, c.LMX_WALK_OP_RET, 2U)
     eqn: fr(n, 1U, c.LMX_WALK_OP_DIV, 3U)
     litn: fr(eqn, 1U, c.LMX_WALK_OP_LIT, 2U)
@@ -271,7 +289,7 @@ fn: main () int
         broken: broken + 1
     ---
     st: go(m)
-    check((cast: (int) (st = c.LMX_WALK_INVALID)), "1/0 stops walk INVALID")
+    check((cast: (int) (st = c.LMX_WALK_INVALID)), "missing fault metadata stays INVALID")
 
     c.printf("lmx_walk_arith_mul_selftest checks=%d failures=%d broken=%d\n", checks, failures, broken)
     if: failures != 0 || broken != 0

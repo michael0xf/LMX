@@ -1,0 +1,298 @@
+predef: "l2src/lmx_schedule.lm1"
+predef: "l2src/lmx_thread.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_gc.lm1"
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<string.h>"
+
+int: checks 0
+int: failures 0
+
+sub: check (int: ok; const: @(char label))
+    checks: checks + 1
+    if: ok = 0
+        failures: failures + 1
+        c.printf("FAIL: %s\n", label)
+    ---
+end: check
+
+fn: main () int
+    LmxArena: arena
+    @: Lmx profile 0
+    @: Lmx root 0
+    @: Lmx inner 0
+    @: Lmx outside 0
+    @: Lmx method 0
+    @: Lmx prior_profile 0
+    @: Lmx prior_root 0
+    @: Lmx code_profile 0
+    @: Lmx code_root 0
+    @: Lmx cover_profile 0
+    @: Lmx cover_root 0
+    @: Lmx roles 0
+    @: Lmx frame 0
+    @: Lmx nested_data 0
+    @: LmxOp role_op 0
+    @: LmxOp foreign_op 0
+    @: LmxPool pool 0
+    @: LmxRange range 0
+    @: void pointer_cell 0
+    @: void opaque_cell 0
+    @: void code_pointer 0
+    @: void malformed_op 0
+    @: void cover_value 0
+    @: void cover_orphan 0
+    @: VoidArray refs_desc 0
+    @: VoidDynamicArray list_desc 0
+    @: VoidArray list_base 0
+    @: void list_backing 0
+    @: void mutable_backing 0
+    @: VoidDynamicArray opaque_list 0
+    @: VoidArray opaque_list_base 0
+    @: void opaque_list_backing 0
+    @@: void ref_values
+    @@: void opaque_list_values
+    []: @(Lmx) leaves 1
+    []: @(Lmx) prior 1
+    []: int opaque_types 1
+    size_t: i 0U
+    memset((cast: (@: void) (@ arena)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ arena) != 0
+        return: 2
+    ---
+    profile: lmx_node_new_owned(@ arena)
+    root: lmx_node_new_profiled(@ arena, profile)
+    inner: lmx_node_new_profiled(@ arena, profile)
+    outside: lmx_node_new_owned(@ arena)
+    method: lmx_node_new_owned(@ arena)
+    prior_profile: lmx_node_new_owned(@ arena)
+    prior_root: lmx_node_new_profiled(@ arena, prior_profile)
+    if: profile = 0 || root = 0 || inner = 0 || outside = 0 || method = 0 || prior_profile = 0 || prior_root = 0
+        return: 2
+    ---
+    inner\parent: root
+    method\parent: root
+    if: lmx_arena_refs_open_profiled(@ arena, root, 2U, profile) != 0 || lmx_arena_refs_open_profiled(@ arena, inner, 1U, profile) != 0 || lmx_arena_refs_open_owned(@ arena, method, 1U) != 0
+        return: 2
+    ---
+    if: lmx_arena_ref_store(root, 0U, (cast: (@: void) inner)) != 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) root)) != 0
+        return: 2
+    ---
+    pool: lmx_range_pool(@ arena, (cast: (@: void) root))
+    check((cast: (int) (pool != 0 && lmx_pool_is_sealed(pool) = 0)), "preflight starts unsealed")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "contained child and self reference")
+    check((cast: (int) (lmx_pool_is_sealed(pool) = 0)), "success leaves seal unchanged")
+
+    if: lmx_arena_ref_store(root, 1U, (cast: (@: void) outside)) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "late external mutable edge")
+    check((cast: (int) (lmx_pool_is_sealed(pool) = 0)), "failure leaves seal unchanged")
+
+    # A nested method is a terminal of the enclosing selected tree, even if
+    # its own body refers to mutable storage. Its exact occurrence is supplied.
+    if: lmx_arena_ref_store(method, 0U, (cast: (@: void) outside)) != 0 || lmx_arena_ref_store(root, 0U, (cast: (@: void) method)) != 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) root)) != 0
+        return: 2
+    ---
+    leaves[0]: method
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, leaves, 1U, 0, 0U) = c.LMX_QUALIFY_OK)), "exact nested method leaf")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "without method identity body is checked")
+
+    # An external target is admissible only after its distinct physical
+    # profile has been fully sealed by an earlier successful qualification.
+    i: 0U
+    while: i < lmx_arena_index_len(@ arena)
+        range: lmx_arena_index_data(@ arena) + i
+        if: range\array != 0 && range\array\profile = prior_profile
+            if: lmx_pool_seal(range\array) != 0
+                return: 2
+            ---
+        ---
+        i: i + 1U
+    ---
+    if: lmx_arena_ref_store(root, 0U, (cast: (@: void) inner)) != 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) prior_root)) != 0
+        return: 2
+    ---
+    prior[0]: prior_profile
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "earlier sealed profile is terminal")
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "merely external is not admitted")
+
+    # The pointer cell is inside the selected profile; its payload is checked
+    # by physical address even when it is reached through a Structure slot.
+    pointer_cell: lmx_pointer_new_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_LMX, @ arena, profile)
+    if: pointer_cell = 0 || lmx_arena_ref_store(root, 1U, pointer_cell) != 0
+        return: 2
+    ---
+    lmx_pointer_store_known(pointer_cell, (cast: (@: void) outside))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "pointer to external mutable Structure")
+    lmx_pointer_store_known(pointer_cell, (cast: (@: void) prior_root))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "pointer to earlier immutable Structure")
+    lmx_pointer_store_known(pointer_cell, (cast: (@: void) inner))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "pointer to contained Structure")
+
+    # An opaque C pointer may leave the graph; it may not conceal an interior
+    # byte of a live graph cell. Exact-cell classification alone misses it.
+    opaque_types[0]: 50
+    opaque_cell: lmx_pointer_new_profiled(c.LMX_TYPE_POINTER_BASE + 50, @ arena, profile)
+    if: opaque_cell = 0 || lmx_arena_ref_store(root, 1U, opaque_cell) != 0
+        return: 2
+    ---
+    lmx_pointer_store_known(opaque_cell, (cast: (@: void) @ checks))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, opaque_types, 1U) = c.LMX_QUALIFY_OK)), "truly external opaque pointer")
+    lmx_pointer_store_known(opaque_cell, (cast: (@: void) ((cast: (size_t) outside) + 1U)))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, opaque_types, 1U) = c.LMX_QUALIFY_INVALID)), "opaque pointer to interior graph byte")
+
+    # A reference Array is not a second Structure branch. Its descriptor and
+    # complete backing are nevertheless checked before any element is read.
+    refs_desc: lmx_array_ref_new_profiled(c.LMX_TYPE_ARRAY_OF_LMX, 1U, @ arena, profile)
+    if: refs_desc = 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) refs_desc)) != 0
+        return: 2
+    ---
+    ref_values: (cast: (@@: void) refs_desc\data)
+    ref_values[0]: (cast: (@: void) inner)
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "contained reference Array")
+    refs_desc\size: 999999U
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "oversized Array descriptor refused before backing read")
+    refs_desc\size: 1U
+
+    # Dynamic List capacity, including unused cells, is still physical
+    # storage. A size-zero List may legitimately retain its own backing.
+    list_desc: (cast: (@: VoidDynamicArray) lmx_arena_take_profiled(@ arena, c.sizeof(c.VoidDynamicArray), c.LMX_KIND_LIST, c.LMX_TYPE_ARRAY_OF_LMX, profile))
+    list_backing: lmx_arena_take_n_profiled(@ arena, c.sizeof(@: void), c.LMX_KIND_REF, c.LMX_TYPE_LMX, profile, 1U)
+    if: list_desc = 0 || list_backing = 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) list_desc)) != 0
+        return: 2
+    ---
+    list_base: (cast: (@: VoidArray) list_desc)
+    list_base\size: 0U
+    list_base\data: list_backing
+    list_desc\capacity: 1U
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "empty List with owned backing")
+    list_base\size: 2U
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "List size exceeding capacity")
+    list_base\size: 0U
+    mutable_backing: lmx_arena_take_n(@ arena, c.sizeof(@: void), c.LMX_KIND_REF, c.LMX_TYPE_LMX, 1U)
+    if: mutable_backing = 0
+        return: 2
+    ---
+    list_base\data: mutable_backing
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "empty List cannot hide mutable backing")
+    list_base\data: list_backing
+    if: lmx_arena_ref_store(root, 1U, (cast: (@: void) prior_root)) != 0
+        return: 2
+    ---
+
+    # A List of pointer cells has the same pointee contract as a fixed Array
+    # of pointer cells: a declared opaque C resource may be external, but an
+    # interior graph address may not masquerade as that resource.
+    opaque_list: (cast: (@: VoidDynamicArray) lmx_arena_take_profiled(@ arena, c.sizeof(c.VoidDynamicArray), c.LMX_KIND_LIST, c.LMX_TYPE_ARRAY_OF_POINTER_BASE + 50, profile))
+    opaque_list_backing: lmx_arena_take_n_profiled(@ arena, c.sizeof(@: void), c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_POINTER_BASE + 50, profile, 1U)
+    if: opaque_list = 0 || opaque_list_backing = 0 || lmx_arena_ref_store(root, 1U, (cast: (@: void) opaque_list)) != 0
+        return: 2
+    ---
+    opaque_list_base: (cast: (@: VoidArray) opaque_list)
+    opaque_list_base\size: 1U
+    opaque_list_base\data: opaque_list_backing
+    opaque_list\capacity: 1U
+    opaque_list_values: (cast: (@@: void) opaque_list_backing)
+    opaque_list_values[0]: (cast: (@: void) @ checks)
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, opaque_types, 1U) = c.LMX_QUALIFY_OK)), "List accepts declared external opaque pointer")
+    opaque_list_values[0]: (cast: (@: void) ((cast: (size_t) outside) + 1U))
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, opaque_types, 1U) = c.LMX_QUALIFY_INVALID)), "List refuses opaque interior graph pointer")
+    if: lmx_arena_ref_store(root, 1U, (cast: (@: void) prior_root)) != 0
+        return: 2
+    ---
+
+    # Structural parent identity, not profile membership alone, defines a
+    # contained branch. A malformed child must not become a silent leaf.
+    inner\parent: outside
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "wrong structural parent")
+    check((cast: (int) (lmx_pool_is_sealed(pool) = 0)), "malformed parent cannot partially seal")
+    inner\parent: root
+    root\parent: outside
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "mutable parent outside selected root")
+    root\parent: prior_root
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, root, 0, prior, 1U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "earlier immutable parent outside selected root")
+    root\parent: 0
+
+    # Executable Frame operands are not the values of the enclosing Structure.
+    # The code carrier and any contained plain data are still checked exactly.
+    code_profile: lmx_node_new_owned(@ arena)
+    code_root: lmx_node_new_profiled(@ arena, code_profile)
+    roles: lmx_node_new_owned(@ arena)
+    role_op: lmx_op_new_owned(@ arena, c.LMX_WALK_OP_AT)
+    if: code_profile = 0 || code_root = 0 || roles = 0 || role_op = 0 || lmx_arena_refs_open_profiled(@ arena, code_root, 1U, code_profile) != 0 || lmx_arena_refs_open_owned(@ arena, roles, (cast: (size_t) c.LMX_WALK_OP_COUNT)) != 0
+        return: 2
+    ---
+    frame: lmx_node_new_profiled(@ arena, code_profile)
+    if: frame = 0 || lmx_arena_refs_open_profiled(@ arena, frame, 3U, code_profile) != 0
+        return: 2
+    ---
+    frame\parent: code_root
+    if: lmx_arena_ref_store(roles, (cast: (size_t) c.LMX_WALK_OP_AT), (cast: (@: void) role_op)) != 0 || lmx_arena_ref_store(frame, 0U, (cast: (@: void) role_op)) != 0 || lmx_arena_ref_store(code_root, 0U, (cast: (@: void) frame)) != 0 || lmx_arena_ref_store(frame, 1U, (cast: (@: void) outside)) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "deferred Frame operand may read external mutable Structure")
+    code_pointer: lmx_pointer_new_profiled(c.LMX_TYPE_POINTER_BASE + c.LMX_TYPE_LMX, @ arena, code_profile)
+    if: code_pointer = 0 || lmx_arena_ref_store(frame, 1U, code_pointer) != 0 || lmx_pointer_store_known(code_pointer, (cast: (@: void) outside)) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "deferred pointer operand does not freeze its current referent")
+    foreign_op: lmx_op_new_owned(@ arena, c.LMX_WALK_OP_AT)
+    if: foreign_op = 0 || lmx_arena_ref_store(frame, 0U, (cast: (@: void) foreign_op)) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "unregistered OP cannot masquerade as this program's Frame")
+    if: lmx_arena_ref_store(frame, 0U, lmx_arena_ref_value(roles, (cast: (size_t) c.LMX_WALK_OP_AT))) != 0
+        return: 2
+    ---
+    malformed_op: lmx_arena_take_profiled(@ arena, 1U, c.LMX_DOMAIN_KIND_OP, c.LMX_DOMAIN_OP, code_profile)
+    if: malformed_op = 0 || lmx_arena_ref_store(roles, (cast: (size_t) c.LMX_WALK_OP_AT), malformed_op) != 0 || lmx_arena_ref_store(frame, 0U, malformed_op) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "short OP carrier cannot masquerade as a role")
+    if: lmx_arena_ref_store(roles, (cast: (size_t) c.LMX_WALK_OP_AT), (cast: (@: void) role_op)) != 0 || lmx_arena_ref_store(frame, 0U, (cast: (@: void) role_op)) != 0
+        return: 2
+    ---
+    nested_data: lmx_node_new_profiled(@ arena, code_profile)
+    if: nested_data = 0 || lmx_arena_refs_open_profiled(@ arena, nested_data, 1U, code_profile) != 0
+        return: 2
+    ---
+    nested_data\parent: frame
+    if: lmx_arena_ref_store(nested_data, 0U, (cast: (@: void) outside)) != 0 || lmx_arena_ref_store(frame, 1U, (cast: (@: void) nested_data)) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight(@ arena, code_root, roles, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "contained data inside Frame cannot hold external mutable reference")
+
+    # A fresh profile proves the full constructor invariant independently of
+    # the deliberately reused profile in the tree-predicate controls above.
+    # Spare chunk capacity is harmless; an issued but unlinked cell is not.
+    cover_profile: lmx_node_new_owned(@ arena)
+    cover_root: lmx_node_new_profiled(@ arena, cover_profile)
+    if: cover_profile = 0 || cover_root = 0 || lmx_arena_refs_open_profiled(@ arena, cover_root, 1U, cover_profile) != 0
+        return: 2
+    ---
+    cover_value: lmx_int_new_profiled(@ arena, cover_profile)
+    if: cover_value = 0 || lmx_arena_ref_store(cover_root, 0U, cover_value) != 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, cover_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_OK)), "full profile covers root, slot and value")
+    cover_orphan: lmx_int_new_profiled(@ arena, cover_profile)
+    if: cover_orphan = 0
+        return: 2
+    ---
+    check((cast: (int) (lmx_qualify_tree_preflight_full(@ arena, cover_root, 0, 0, 0U, 0, 0U, 0, 0U) = c.LMX_QUALIFY_INVALID)), "issued orphan cannot be sealed with selected profile")
+    c.printf("lmx_qualify_preflight: %d checks, %d failures\n", checks, failures)
+    lmx_arena_release(@ arena)
+    if: failures != 0
+        return: 1
+    ---
+return: 0

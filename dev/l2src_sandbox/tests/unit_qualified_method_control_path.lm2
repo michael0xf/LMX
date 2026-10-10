@@ -1,0 +1,25 @@
+# A control-body path belongs to its callable leaf, not to its containing
+# immutable Structure. The body index is not a method index.
+independent:
+    const:
+        immutable:
+            (): E
+                int: frozen 7
+                fn: bump () int
+                    if: 1
+                        int: y 0
+                    end: if
+                    if\y: 4
+                    return: if\y
+                end: bump
+            end: E
+        end: immutable
+    end: const
+end: independent
+int: first E\bump()
+E\bump\if\y: 4
+int: ok 7
+if: first != 4 || E\bump\if\y != 4 || E\frozen != 7
+    ok: 81
+sendMessage: exit(exit_code: ok; stdout: ""; stderr: "")
+return

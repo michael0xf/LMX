@@ -1,0 +1,18 @@
+# A complete qualified source body, not a dense data-only namespace.
+# Calling E executes the expression and exit operation; it does not invoke
+# the nested definition Data or replay Data's protected initializer.
+independent:
+    const:
+        immutable:
+            (): E
+                Data:
+                    int: value 5
+                end: Data
+                (2 + 2)
+                sendMessage: exit(exit_code: Data\value + 2; stdout: ""; stderr: "")
+            end: E
+        end: immutable
+    end: const
+end: independent
+E
+return

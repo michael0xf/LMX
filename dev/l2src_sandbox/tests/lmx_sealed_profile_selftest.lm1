@@ -1,0 +1,120 @@
+predef: "l2src/lmx_merge_owned.lm1"
+predef: "l2src/lmx_graph_copy_owned.lm1"
+predef: "l2src/lmx_value_owned.lm1"
+predef: "l2src/lmx_arena_refs.lm1"
+predef: "l2src/lmx_array_owned.lm1"
+predef: "l2src/lmx_array_ref_owned.lm1"
+predef: "l2src/lmx_chars_owned.lm1"
+predef: "l2src/lmx_pool.lm1"
+predef: "l2src/lmx_implements.lm1"
+predef: "l2src/lmx_primitive.h.lm1"
+predef: "l2src/lmx_arena.lm1"
+predef: "l2src/lmx_thread.h.lm1"
+predef: "l1src/libc_abi.lm1"
+include: "<stdio.h>" "<stdlib.h>" "<string.h>"
+
+# RR2b, the immutability half (critical_qualifier_receivers_bug; steps/qualifier-receivers-20261010.md): the mark of a
+# qualified value is read from the range index -- lmx_range_sealed_profile answers the profile of a cell whose array
+# carries a nonzero profile and is sealed, 0 for an unsealed profile, an unprofiled cell or no cell -- and the byte-span
+# write barrier (lmx_range_write_overlaps_profile) selects such an interval with no exact profile and no roots given.
+# An imported view of a sealed profile answers in the importer too (docs #eternal: the index is the membership, no
+# flag, no registry).  Mutants: the helper answering 0 -> every "answers P" check red; the barrier without the sealed
+# clause -> the barrier checks red.
+
+sub: check (@: int counts; int: ok; const: @(char label))
+    counts[0]: counts[0] + 1
+    if: ok = 0
+        counts[1]: counts[1] + 1
+        c.printf("FAIL %s\n", label)
+    ---
+end: check
+
+fn: main () int
+    LmxArena: a
+    LmxArena: d
+    LmxArena: e
+    @: Lmx root 0
+    @: Lmx copy_p 0
+    @: Lmx copy_q 0
+    @: Lmx copy_0 0
+    @: Lmx profile_p 0
+    @: Lmx profile_q 0
+    @: void seven 0
+    @: void p_int 0
+    @: void q_int 0
+    @: void z_int 0
+    @: char inside 0
+    @: int counts 0
+    int: status 0
+    int: one_int (cast: (int) c.sizeof(int))
+
+    counts: (cast: (@: int) calloc(2U, c.sizeof(int)))
+    if: counts = 0
+        return: 2
+    memset((cast: (@: void) (@ a)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ d)), 0, c.sizeof(c.LmxArena))
+    memset((cast: (@: void) (@ e)), 0, c.sizeof(c.LmxArena))
+    if: lmx_arena_open(@ a) != 0 || lmx_arena_open(@ d) != 0 || lmx_arena_open(@ e) != 0
+        return: 2
+
+    root: lmx_node_new_owned(@ a)
+    check(counts, root != 0 && lmx_arena_refs_open_owned(@ a, root, 1U) = 0, "source Structure")
+    seven: lmx_int_new_owned(@ a)
+    check(counts, seven != 0, "source int")
+    lmx_int_store_known(seven, 7)
+    lmx_arena_ref_store(root, 0U, seven)
+
+    profile_p: lmx_node_new_owned(@ d)
+    profile_q: lmx_node_new_owned(@ d)
+    check(counts, profile_p != 0 && profile_q != 0, "profiles of d")
+    status: lmx_graph_copy_qualified_owned(root, @ a, @ d, 0, 0U, profile_p, @ copy_p)
+    check(counts, status = LMX_GRAPH_COPY_OK && copy_p != 0, "copy under P")
+    status: lmx_graph_copy_qualified_owned(root, @ a, @ d, 0, 0U, profile_q, @ copy_q)
+    check(counts, status = LMX_GRAPH_COPY_OK && copy_q != 0, "copy under Q")
+    status: lmx_graph_copy_owned(root, @ a, @ d, @ copy_0)
+    check(counts, status = LMX_GRAPH_COPY_OK && copy_0 != 0, "ordinary copy")
+    if: copy_p = 0 || copy_q = 0 || copy_0 = 0
+        c.printf("lmx_sealed_profile_selftest checks=%d failures=%d\n", counts[0], counts[1])
+        free(counts)
+        return: 1
+    ---
+    p_int: lmx_arena_ref_value(copy_p, 0U)
+    q_int: lmx_arena_ref_value(copy_q, 0U)
+    z_int: lmx_arena_ref_value(copy_0, 0U)
+    check(counts, p_int != 0 && q_int != 0 && z_int != 0, "copied int cells")
+
+    # Before sealing: a profile alone is no mark.
+    check(counts, lmx_range_sealed_profile(@ d, (cast: (@: void) copy_p)) = 0 && lmx_range_sealed_profile(@ d, p_int) = 0, "unsealed profile P answers 0")
+    check(counts, lmx_range_write_overlaps_profile(@ d, p_int, c.sizeof(int), 0, 0, 0U) = 0, "barrier: unsealed P int is not selected without roots")
+
+    # Sealing P: the mark appears on every cell of P and on nothing else.
+    check(counts, lmx_arena_seal_profile(@ d, profile_p) = 0, "seal P")
+    check(counts, lmx_range_sealed_profile(@ d, (cast: (@: void) copy_p)) = profile_p, "sealed root answers P")
+    check(counts, lmx_range_sealed_profile(@ d, p_int) = profile_p, "sealed int cell answers P")
+    check(counts, lmx_range_sealed_profile(@ d, (cast: (@: void) (copy_p\array.data))) = profile_p, "sealed children range answers P")
+    check(counts, lmx_range_sealed_profile(@ d, (cast: (@: void) copy_q)) = 0 && lmx_range_sealed_profile(@ d, q_int) = 0, "unsealed Q still answers 0")
+    check(counts, lmx_range_sealed_profile(@ d, (cast: (@: void) copy_0)) = 0 && lmx_range_sealed_profile(@ d, z_int) = 0, "unprofiled cells answer 0")
+    check(counts, lmx_range_sealed_profile(@ d, (cast: (@: void) profile_p)) = 0, "the profile Structure itself is unprofiled, answers 0")
+    check(counts, lmx_range_sealed_profile(@ d, 0) = 0 && lmx_range_sealed_profile(0, p_int) = 0, "no cell or no arena answers 0")
+
+    # The byte-span barrier with no exact profile and no roots: the sealed interval is selected, the others are not.
+    check(counts, lmx_range_write_overlaps_profile(@ d, p_int, c.sizeof(int), 0, 0, 0U) = 1, "barrier: a sealed P int is selected")
+    inside: (cast: (@: char) p_int) + 1
+    check(counts, lmx_range_write_overlaps_profile(@ d, (cast: (@: void) inside), 1U, 0, 0, 0U) = 1, "barrier: one byte inside a sealed P int is selected")
+    check(counts, lmx_range_write_overlaps_profile(@ d, q_int, c.sizeof(int), 0, 0, 0U) = 0, "barrier: an unsealed Q int is not selected")
+    check(counts, lmx_range_write_overlaps_profile(@ d, z_int, c.sizeof(int), 0, 0, 0U) = 0, "barrier: an unprofiled int is not selected")
+    check(counts, one_int = (cast: (int) c.sizeof(int)), "int width read")
+
+    # An imported view of the sealed profile answers in the importer; an unsealed profile is not imported.
+    check(counts, lmx_range_import_profile(@ e, @ d, profile_p) = 0, "import P into e")
+    check(counts, lmx_range_sealed_profile(@ e, p_int) = profile_p, "imported view of P answers P in e")
+    lmx_range_import_profile(@ e, @ d, profile_q)
+    check(counts, lmx_range_sealed_profile(@ e, q_int) = 0, "an unsealed profile is not imported, answers 0 in e")
+
+    c.printf("lmx_sealed_profile_selftest checks=%d failures=%d\n", counts[0], counts[1])
+    if: counts[1] != 0
+        free(counts)
+        return: 1
+    ---
+    free(counts)
+return: 0

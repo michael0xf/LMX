@@ -85,6 +85,20 @@ classification (profile ≠ 0, sealed; for retention also root `parent = 0`) bes
 static fixtures are the witness that nothing moves; then the lists are removed in a separate commit.
 The retention half waits for the author's answer to Q1 below; the immutability half does not.
 
+RR2b, the immutability half, is built (`fable_pc`, 2026-10-10): `lmx_range_sealed_profile` answers the
+profile of a cell whose array carries a nonzero profile and is sealed (0 for an unsealed profile, an
+unprofiled cell, no cell; an imported view answers as its owner's array); `lmx_walk_immutable` asks it
+before the frame context's exact profile and roots lists; `lmx_range_write_overlaps_profile` selects a
+sealed profiled interval with no exact profile and no roots given. `tests/lmx_sealed_profile_selftest.lm1`
+(the mark appears on every cell of P after sealing and on nothing else; the barrier selects a sealed P int
+and a byte inside it, not an unsealed Q int or an unprofiled int; the imported view answers in the
+importer, an unsealed profile is not imported). Not in this step: the native write guards the translator
+emits (`l2_emit_write_guard`, `l2_emit_lvalue_write_guard`) still test the roots list only and are emitted
+only when the program has a static branch; they learn the mark in RR2c, where a program first holds a
+run-time branch and the witness exists; the retention half (`lmx_copy_retained_profiles`) waits for Q1.
+Gates: kernel `fable_rr2b_kernel_01` (GREEN, 300 targets, 0 failed; lmx_sealed_profile_selftest 25 checks, 0 failures); L3 `fable_rr2b_l3_01` (all 11 suites ok, type budget ok); focused harness `fable_rr2b_focus_01` (259 targets, 7 failed, all pre-existing with unchanged details (unit_qualified_source_call and _walk, unit_eternal_xref and _walk, unit_k03_merge_op_anon_typed and _walk, unit_t7_host_nested_return); FAIL->OK 0, OK->FAIL 0 against codex_interpreter_throw_full_02);
+mutants on the gate's staged source: lmx_range_sealed_profile answering 0 -> 4 of 25 checks red (root, int cell, children range, imported view); the barrier without the sealed clause -> 2 red (a sealed P int and a byte inside it); exit 1 both.
+
 RR2c (translator, native): the three receivers in value positions -- a method's `return:`, a
 declaration's tail, a merge operand -- each with its own contract: over a construction (a `merge`, a
 constructor) `immutable` makes a construction-time qualification (RR2a's variant), `independent`

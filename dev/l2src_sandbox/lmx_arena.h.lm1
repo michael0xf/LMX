@@ -172,6 +172,10 @@ prototype:
     # strictly local so allocator and GC ownership can never adopt an imported range.
     fn: lmx_range_home (@: LmxArena arena; @: void p) @: LmxArena
     fn: lmx_range_profile (@: LmxArena arena; @: void p) @: Lmx
+    # The mark of a qualified value read from the index alone: the cell's profile when it is nonzero and the
+    # cell's array is sealed (a static branch after the prologue, a run-time branch after lmx_arena_seal_profile);
+    # 0 for an unprofiled, an unsealed or an absent cell.  Imported views answer as their owner's array does.
+    fn: lmx_range_sealed_profile (@: LmxArena arena; @: void p) @: Lmx
     # Compare an address's exact type domain to the domains of physical roots.
     # Neither ownership nor sealing establishes such a match.
     fn: lmx_range_has_root_profile (@: LmxArena arena; @: void p; @@: Lmx roots; size_t: count) int

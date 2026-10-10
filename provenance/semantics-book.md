@@ -1021,11 +1021,11 @@ Consumer определяет область аналитической пров
 
 ### 3. Различение смыслов одинаково представимых значений
 
-Различие кодируется именем пути, который действительно использует принимающее выражение. Для `Distance: Meter: 1` обращение `d\Meter` требует именно этого пути; структура только с `Foot` его не предоставляет. Одного внешнего имени `Meter`, поля `unit: "meter"` или квалификатора `const` недостаточно: наличие пути не сравнивает значение его листа. Явно запрошенная проверка может сравнить известные неизменяемые значения времени сборки, но `implements`, проверяющий наличие пути, сам не выводит смысловое равенство. Содержательное ограничение проверяют написанные пользователем тесты принимающего выражения.
+Различие кодируется именем пути, который действительно использует принимающее выражение. Для `Distance: Meter: 1` обращение `d\Meter` требует именно этого пути; структура только с `Foot` его не предоставляет. Одного внешнего имени `Meter`, поля `unit: "meter"` или квалификатора `const` недостаточно: наличие пути не сравнивает значение его листа. `implements` сам не выводит смысловое равенство; содержательное ограничение проверяют написанные пользователем тесты принимающего выражения.
 
 ### 4. Ограничение скалярного листа
 
-Ограничение формулируется явно и включается в тесты. Наличие `x\width` не доказывает `width = 32`: обход описания требует использованных путей, но терминальный скаляр может оставаться тонко потреблённым. Отдельное явно запрошенное сравнение известных неизменяемых значений времени сборки не входит в `implements`, проверяющий наличие пути, и не заменяет тесты принимающего выражения.
+Ограничение формулируется явно и включается в написанные пользователем тесты принимающего выражения. Наличие `x\width` не доказывает `width = 32`: обход описания требует использованных путей, но терминальный скаляр может оставаться тонко потреблённым. `implements` не сравнивает смысловое значение этого листа.
 
 ### 5. Изменение, видимое другим держателям ссылки
 
@@ -1081,11 +1081,11 @@ Consumer determines analytical coverage; unknown coverage is distinguished from 
 
 ### 3. Distinguishing meanings with the same representation
 
-Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. An explicitly requested check may compare known immutable build-time values, but path-presence `implements` does not infer semantic equality. User-written receiving-expression tests check the substantive constraint.
+Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. `implements` does not infer semantic equality; user-written receiving-expression tests check the substantive constraint.
 
 ### 4. Constraining a scalar leaf
 
-State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. A separate, explicitly requested comparison of known immutable build-time values is not part of path-presence `implements` and does not replace the receiving expression's tests.
+State the constraint explicitly and include it in the receiving expression's user-written tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. `implements` does not compare that leaf's semantic value.
 
 ### 5. Making a change visible to other reference holders
 

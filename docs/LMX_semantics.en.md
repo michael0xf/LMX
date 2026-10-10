@@ -592,12 +592,12 @@ Consumer determines analytical coverage; unknown coverage is distinguished from 
 <a id="admission-case-3"></a>
 ### 3. Distinguishing meanings with the same representation
 
-Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. An explicitly requested check may compare known immutable build-time values, but path-presence `implements` does not infer semantic equality. User-written receiving-expression tests check the substantive constraint.
+Encode the distinction in a path the receiving expression actually uses. With `Distance: Meter: 1`, access through `d\Meter` requires that path; a Structure exposing only `Foot` does not provide it. An outer name `Meter`, a field `unit: "meter"` or `const` alone is insufficient: path presence does not compare the value at its leaf. `implements` does not infer semantic equality; user-written receiving-expression tests check the substantive constraint.
 
 <a id="admission-case-4"></a>
 ### 4. Constraining a scalar leaf
 
-State the constraint explicitly and include it in tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. A separate, explicitly requested comparison of known immutable build-time values is not part of path-presence `implements` and does not replace the receiving expression's tests.
+State the constraint explicitly and include it in the receiving expression's user-written tests. Presence of `x\width` does not establish `width = 32`: traversing a description requires its used paths, but a terminal scalar may remain thinly consumed. `implements` does not compare that leaf's semantic value.
 
 <a id="admission-case-5"></a>
 ### 5. Making a change visible to other reference holders

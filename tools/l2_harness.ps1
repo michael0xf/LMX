@@ -3557,16 +3557,28 @@ $fixtures = @(
                  'l2_entry_unit: graph') },
     # A nested member, a reference to the branch itself, a reference to the OTHER branch, and a
     # mutable Holder beside them: two roots are retained, the nested member and Holder are not.
-    # K03 NS-ROLES-2: the references are bindings, `self: E`, `peer: E`, `kept: E` -- typed reference cells holding E,
-    # read through their cells (`deref`).  Red: the qualified merge `R: merge: E Holder` of E holding its own cell stops
-    # R0 at run time (steps/defects.md#merge-of-qualified-reference-cells).
+    # Typed reference cells retain their physical referents through qualified merge.
+    # The original program and all self/peer/kept paths are unchanged; the
+    # profile-completion witness also inspects every actual exact-profile range.
     [pscustomobject]@{ Name = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7;
-        Args = @('2', 'size', '0', '0', '7', 'size', '0', '4', '13', 'size', '1', '1', '17', 'postpaths', 'samepath', '3', '0', '3', 'deref', '1', '0', 'samepath', '3', '1', '0', 'deref', '1', '0', 'samepath', '3', '2', '0', 'deref', '1', '0', 'endpostpaths');
+        Args = @('2', 'profilecomplete', 'size', '0', '0', '7', 'size', '0', '4', '13', 'size', '1', '1', '17', 'postpaths', 'samepath', '3', '0', '3', 'deref', '1', '0', 'samepath', '3', '1', '0', 'deref', '1', '0', 'samepath', '3', '2', '0', 'deref', '1', '0', 'endpostpaths');
         Absent = @('lmx_perm', 'LMX_ROOT_ETERNAL_SLOT', 'l2_retained', 'not yet in R0''s retention array', 'l2_program_entry, 5000U, 0U, 0U)');
         Debt = @('[]: @(Lmx) l2_program_qualified_roots 2',
                  'l2_nsp[1]: lmx_node_new_profiled(l2_program_arena, l2_eprofile0)',
                  'l2_program_qualified_roots[1U]: l2_nsp[2]',
                  'l2_entry_unit: graph') },
+    [pscustomobject]@{ Name = 'unit_profile_completion_refs.lm2'; Source = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; WalkRoot = $true; NativeRoot = 2;
+        Args = @('2', 'profilecomplete', 'size', '0', '0', '7', 'size', '0', '4', '13', 'size', '1', '1', '17', 'postpaths', 'samepath', '3', '0', '3', 'deref', '1', '0', 'samepath', '3', '1', '0', 'deref', '1', '0', 'samepath', '3', '2', '0', 'deref', '1', '0', 'endpostpaths'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_profile_completion_refs_walk.lm2'; Source = 'unit_eternal_shape.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1);
+        Args = @('2', 'profilecomplete', 'size', '0', '0', '7', 'size', '0', '4', '13', 'size', '1', '1', '17', 'postpaths', 'samepath', '3', '0', '3', 'deref', '1', '0', 'samepath', '3', '1', '0', 'deref', '1', '0', 'samepath', '3', '2', '0', 'deref', '1', '0', 'endpostpaths'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_profile_completion_arrays.lm2'; Source = 'unit_eternal_physical_profiles.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; WalkRoot = $true; NativeRoot = 2;
+        Args = @('2', 'profilecomplete', 'size', '0', '0', '7', 'size', '1', '0', '7', 'postpaths', 'poolpath', '2', '2', '0', '0', '0', 'poolpath', '2', '2', '2', '0', '0', 'poolpath', '2', '2', '4', '0', '0', 'endpostpaths'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_profile_completion_arrays_walk.lm2'; Source = 'unit_eternal_physical_profiles.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; WalkRoot = $true; NativeRoot = 2; WalkMethods = $true; WalkedMethods = @(0,1);
+        Args = @('2', 'profilecomplete', 'size', '0', '0', '7', 'size', '1', '0', '7', 'postpaths', 'poolpath', '2', '2', '0', '0', '0', 'poolpath', '2', '2', '2', '0', '0', 'poolpath', '2', '2', '4', '0', '0', 'endpostpaths'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_profile_completion_numbers.lm2'; Source = 'unit_eternal_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; WalkRoot = $true; NativeRoot = 0;
+        Args = @('1', 'profilecomplete', 'int', '0', '0', '4', 'unsigned', '0', '1', '5', 'ulong', '0', '2', '6', 'size', '0', '3', '3'); Absent = @(); Debt = @() },
+    [pscustomobject]@{ Name = 'unit_profile_completion_numbers_walk.lm2'; Source = 'unit_eternal_num_fields.lm2'; Expect = 'eternal-runs'; Exit = 0; Needle = ''; Entry = 7; WalkRoot = $true; NativeRoot = 0; WalkMethods = $true;
+        Args = @('1', 'profilecomplete', 'int', '0', '0', '4', 'unsigned', '0', '1', '5', 'ulong', '0', '2', '6', 'size', '0', '3', '3'); Absent = @(); Debt = @() },
     # A cross-reference INTO another branch: F\into is E's member `deep` itself, not a copy of it.  K03 NS-ROLES-2: a
     # REQUIRED POSITIVE, red until a binding takes a path's Structure (Codex K03-NS2-COVERAGE-20261007-21;
     # steps/defects.md#reference-field-consumers): `deep: into` meant E's member only through the global name table and

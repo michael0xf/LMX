@@ -53947,7 +53947,7 @@ fn: l2_emit_unit (const: @(char out_path)) int
     if: fputs(") int\n        @: Lmx l2_entry_unit 0\n        @: Lmx l2_entry_leaf 0\n        @@: void l2_entry_slot 0\n        @: Lmx l2_ebr 0\n        @: Lmx l2_fkid 0\n        @: Lmx l2_pst 0\n        @@: void l2_pxp 0\n        @: LmxThread l2_current 0\n        @: LmxMsg l2_message 0\n", l2_out) < 0
         fclose(l2_out)
         return: 1
-    if: l2_ebr_n != 0 && fputs("        @: LmxPool l2_profile_pool 0\n        @: void l2_profile_refs 0\n        @: VoidArray l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n", l2_out) < 0
+    if: l2_ebr_n != 0 && fputs("        @: LmxPool l2_profile_pool 0\n        @: LmxRange l2_profile_range 0\n        size_t: l2_profile_index 0U\n        @: void l2_profile_refs 0\n        @: VoidArray l2_profile_array 0\n        @: char l2_profile_char 0\n        ulong: l2_ulong_probe 0U\n", l2_out) < 0
         fclose(l2_out)
         return: 1
     # Construction-time handles preserve the exact parent of every executable
@@ -54251,32 +54251,20 @@ fn: l2_emit_unit (const: @(char out_path)) int
             return: 1
         k: k + 1
     ---
-    # Construction is now complete for every qualified branch. Seal every
-    # exact-profile pool that exists. STRUCT is required; the other domains are
-    # conditional on the branch's actual shape. Sealing is owner-GC policy and
-    # never changes physical references or representation.
+    # Complete the actual ranges of each exact physical profile, not a list
+    # of presumed cell types. Multiple range entries may name the same pool;
+    # sealing is idempotent and changes neither the index nor any address.
+    # The profile's Structure range remains required by the constructor.
     k: 0
     while: k < l2_ebr_n
-        if: c.fprintf(l2_out, "        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, l2_eprofile%u)\n        if: l2_profile_pool = 0 || lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n", (cast: (unsigned) k)) < 0
-            fclose(l2_out)
-            return: 1
-        if: c.fprintf(l2_out, "        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_CHILDREN, c.LMX_TYPE_REFS, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n", (cast: (unsigned) k)) < 0
-            fclose(l2_out)
-            return: 1
-        if: c.fprintf(l2_out, "        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_SIZE_T, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_CHAR, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_INT, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n", (cast: (unsigned) k), (cast: (unsigned) k), (cast: (unsigned) k)) < 0
-            fclose(l2_out)
-            return: 1
-        if: c.fprintf(l2_out, "        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_UNSIGNED, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_PRIMITIVE, c.LMX_TYPE_ULONG, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n", (cast: (unsigned) k), (cast: (unsigned) k)) < 0
-            fclose(l2_out)
-            return: 1
-        if: c.fprintf(l2_out, "        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_INT, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_ARRAY, c.LMX_TYPE_ARRAY_OF_CHAR, l2_eprofile%u)\n        if: l2_profile_pool != 0 && lmx_pool_seal(l2_profile_pool) != 0\n            return: 1\n", (cast: (unsigned) k), (cast: (unsigned) k)) < 0
+        if: c.fprintf(l2_out, "        l2_profile_pool: lmx_arena_find_profiled(l2_program_arena, c.LMX_KIND_STRUCT, c.LMX_TYPE_STRUCT, l2_eprofile%u)\n        if: l2_profile_pool = 0\n            return: 1\n        l2_profile_index: 0U\n        while: l2_profile_index < lmx_arena_index_len(l2_program_arena)\n            l2_profile_range: lmx_arena_index_data(l2_program_arena) + l2_profile_index\n            l2_profile_pool: l2_profile_range\\array\n            if: l2_profile_pool != 0 && l2_profile_pool\\profile = l2_eprofile%u\n                if: lmx_pool_seal(l2_profile_pool) != 0\n                    return: 1\n            ---\n            l2_profile_index: l2_profile_index + 1U\n        ---\n", (cast: (unsigned) k), (cast: (unsigned) k)) < 0
             fclose(l2_out)
             return: 1
         k: k + 1
     ---
     # Every method occurrence gets its header parts and its `native` word (-189 c4): args at slot 0,
-    # return at slot 1 (l2_emit_parts), once every occurrence and named Structure exists. E keeps
-    # `native` 0 -- the unit is walked.
+    # return at slot 1 (l2_emit_parts), once every occurrence and named Structure exists.
+    # The unit uses the same native-capability dispatch as every other occurrence.
     i: 0
     while: i < l2_m_n
         if: l2_emit_parts(i) != 0

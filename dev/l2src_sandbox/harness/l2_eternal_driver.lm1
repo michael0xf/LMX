@@ -50,6 +50,8 @@ int: graph_mutation_compared 0
 # block is separate from construction-time facts; no kernel hook is added.
 int: post_paths_requested 0
 int: post_paths_seen 0
+int: profile_complete_requested 0
+int: profile_complete_seen 0
 @: LmxArena post_paths_arena 0
 @: Lmx post_paths_graph 0
 # `postlog 1` (SEND-SITE-ARTIFICIAL-CAPS): every post is said before its delivery (post_log), so a row's
@@ -238,6 +240,35 @@ fn: sealed_here (@: LmxArena arena; @: void value) int
         return: 0
 return: lmx_pool_is_sealed(pool)
 
+# Test-only complete physical profile observation, independent of cell types.
+fn: inspect_profile_ranges (@: LmxArena arena) int
+    size_t: root 0U
+    size_t: index
+    size_t: found
+    int: before failures
+    @: Lmx profile
+    @: LmxRange range
+    @: LmxPool pool
+    profile_complete_seen: profile_complete_seen + 1
+    while: root < l2_program_qualified_count()
+        profile: root_profile(arena, l2_program_qualified_at(root))
+        check(profile != 0, "complete-profile observation has its actual physical profile")
+        found: 0U
+        index: 0U
+        while: index < lmx_arena_index_len(arena)
+            range: lmx_arena_index_data(arena) + index
+            pool: range\array
+            if: profile != 0 && pool != 0 && pool\profile = profile
+                found: found + 1U
+                check(lmx_pool_is_sealed(pool) != 0, "every actual exact-profile range is sealed, regardless of cell type")
+            ---
+            index: index + 1U
+        ---
+        check(found != 0U, "complete-profile observation actually visits retained owner ranges")
+        root: root + 1U
+    ---
+return: failures = before
+
 # The primitive type a numeric root fact names -- `size`, `int`, `unsigned`, `ulong` -- or 0.
 fn: numeric_type (const: @(char word)) int
     if: c.strcmp(word, "size") = 0
@@ -409,6 +440,10 @@ fn: inspect (@: LmxArena arena; @: Lmx graph) int
         return: 0
     ---
     while: at < gargc
+        if: c.strcmp(gargv[at], "profilecomplete") = 0
+            check(inspect_profile_ranges(arena) != 0, "the requested complete physical profile observation passes")
+            at: at + 1
+            continue
         if: (c.strcmp(gargv[at], "dispatch") = 0 || c.strcmp(gargv[at], "dispatchthrow") = 0) && at + 3 < gargc
             at: at + 4
             continue
@@ -780,6 +815,7 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
     @: void other
     @: Lmx holder
     @: VoidArray text
+    @: LmxPool pool
     size_t: length
     int: selected
     int: active (cast: (int) (late = 0))
@@ -824,6 +860,8 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
             mode: 13
         if: c.strcmp(gargv[at], "nullrefpath") = 0
             mode: 14
+        if: c.strcmp(gargv[at], "poolpath") = 0
+            mode: 15
         if: mode = 0
             at: at + 1
             continue
@@ -902,6 +940,18 @@ fn: shape_paths_check (@: LmxArena arena; @: Lmx graph; int: late) int
                 check((cast: (int) (holder\native != 0)) = arg(at), "selected Structure has its actual requested native word")
             ---
             at: at + 1
+        ---
+        if: mode = 15
+            check(at + 1 < gargc && (arg(at) = 0 || arg(at) = 1) && (arg(at + 1) = 0 || arg(at + 1) = 1), "poolpath supplies sealing and profile-presence expectations")
+            if: at + 1 >= gargc
+                return: 0
+            pool: lmx_range_pool(arena, value)
+            check(pool != 0, "poolpath selects an actual occupied typed owner range")
+            if: pool != 0
+                check(lmx_pool_is_sealed(pool) = arg(at), "selected owner range has exactly the requested sealing state")
+                check((cast: (int) (pool\profile != 0)) = arg(at + 1), "selected owner range has exactly the requested profile presence")
+            ---
+            at: at + 2
         ---
         if: mode = 5 || mode = 6
             check(at < gargc, "exact external name assertion supplies its expected spelling")
@@ -2463,6 +2513,9 @@ fn: main (int: argc; @@: char argv) int
         if: c.strcmp(argv[at], "postpaths") = 0
             post_paths_requested: 1
         ---
+        if: c.strcmp(argv[at], "profilecomplete") = 0
+            profile_complete_requested: 1
+        ---
         if: c.strcmp(argv[at], "postlog") = 0
             post_log_requested: arg(at + 1)
         ---
@@ -2512,6 +2565,9 @@ fn: main (int: argc; @@: char argv) int
         check(merge_calls >= merge_fail_at, "the program made the merge the row fails")
     ---
     check(merge_facts_seen = merge_facts_expected, "every configured merge observation ran exactly once")
+    if: profile_complete_requested != 0
+        check(profile_complete_seen = 1, "the configured complete-profile observation actually executed exactly once")
+    ---
     if: post_paths_requested != 0
         check(post_paths_seen = 1, "the configured postpaths observation actually executed exactly once")
     ---

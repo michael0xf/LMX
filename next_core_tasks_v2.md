@@ -2,6 +2,17 @@ ALL LANGUAGE RULES ARE UNIVERSAL WITHIN THEIR DOMAIN. Do not invent special case
 
 # Remaining kernel work through stages 8 and 8a
 
+Checkpoint20 is published at `53a0d9c0`, HEAD/upstream/remote agree.
+`CODEX-SOURCE-PROFILE-COMPLETION-20261009-21` is now bounded-verified, the connected
+actual-range completion prerequisite of the qualified original-body producer:
+full28 RED67/2855, six additions GREEN/original shape recovery/no old regression;
+kernel297/114, all L3 suites and exact final2615 tested-binary replay.
+Follow its [bounded journal](steps/source-profile-completion-20261009.md)
+through scoped publication of the terminal tested bytes, then immediately
+continue original defining-source identity and the qualified source-shape
+dependency without another prompt. Parent critical/T7/pointer/8/8a stays OPEN.
+Codex is sole writer/build; Opus is unavailable by quota, not a blocker.
+
 Checkpoint19 is published at `2883208f`, with HEAD/upstream/remote agreement.
 `CODEX-SOURCE-OWNED-PART-20261009-20` is now bounded-verified: the part's own
 original root/definition children and connected occurrence readers. Follow its

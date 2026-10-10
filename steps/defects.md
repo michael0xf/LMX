@@ -5864,6 +5864,20 @@ field»). Обязательный позитив `unit_ns2_copy_field`: m пи�
 <a id="merge-of-qualified-reference-cells"></a>
 ### MERGE-OF-QUALIFIED-REFERENCE-CELLS — 2026-10-07, Opus (K03 NS-ROLES-2), OPEN
 
+2026-10-09 continuation21, bounded-verified: intact full27 observation before merge proves
+live exact-profile reference-cell ranges are not sealed by the producer's
+fixed type list. Candidate01 completes all actual matching ranges through
+the existing arena index; copy preflight and pointer representation stay
+unchanged. Original shape executes67 unchanged checks; fresh extended
+smoke03 GREEN10 includes six native/cleared-root controls and four actual
+range/owner faults reject. Terminal full28 RED67/2855 recovers the original
+shape and preserves all old successes/failure messages; kernel297/114, all
+L3 suites and final2615 tested-binary replay pass their bounded contracts.
+The measured reference-cell sealing defect is fixed without weakening copy
+preflight. This does not complete qualified source shape or critical_graph_bug;
+the broader qualified-copy/source dependencies remain OPEN.
+[Exact bounds, rejected helper runs and evidence](source-profile-completion-20261009.md).
+
 merge квалифицированного операнда, чья собственная ячейка-привязка держит удерживаемый корень (`self: E` в E,
 `peer: E` в F), нативно останавливает R0 неявным броском merge. Изолировано на `unit_eternal_shape`: без строки merge
 программа проходит (31 проверка); merge E с изменяемым Holder, чья ячейка держит E, проходит; merge F (с `peer: E`) —

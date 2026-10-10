@@ -1,5 +1,26 @@
 # LMX: текущие рабочие инструкции
 
+Срез20 опубликован `53a0d9c0`, HEAD/upstream/remote совпали. Сразу STARTED
+`CODEX-SOURCE-PROFILE-COMPLETION-20261009-21`: фактические диапазоны уже
+существующего qualified-profile producer, без списка избранных типов и без
+ослабления copy preflight. [Границы и непрерывная цепочка](source-profile-completion-20261009.md).
+Codex sole writer/build; Opus недоступен по квоте. Квалифицированный исходный
+граф, T7/critical/pointer/8/8a не объявлять завершёнными.
+
+Срез21 candidate01 `DB5F38D7`: intact pre-merge свидетель подтвердил живые
+незакрытые ячейки ссылок. Общий scan закрывает все реальные диапазоны точного
+профиля, не меняя copy preflight или обычные mutable ranges. Smoke03 GREEN10;
+четыре реальные compiled faults отвергнуты в native/cleared-root. Replay01
+2615: все результаты/диагностики/presence прежние,35 полных L1 diff сохранены.
+Acceptance01 terminal: focus RED3/109, kernel28 GREEN297/114 выполненных
+самотестов, L3_28 eleven/four budgets, full28 RED67/2855. Шесть новых GREEN,
+original shape recovery, ноль старых регрессий/удалений/изменённых отказов;
+все2848 старых диагностик совпали.128 входов/199 проверенных копий неизменны,
+12 renamed MAIN copies подтверждены отдельно. Final replay02 точно равен
+private01 по2615 результатам/диагностикам/presence и1798 полным L1 файлам;
+817 nonzero. Публиковать только эти10 owned путей, затем сразу продолжать
+original defining-source identity и qualified source-shape; родители OPEN.
+
 Срез19 опубликован `2883208f`, HEAD/upstream/remote совпали. Срез
 `CODEX-SOURCE-OWNED-PART-20261009-20` bounded-verified: исходное тело и реальные дети части
 программы, общий constructor/readers без второго графа. Точные границы и

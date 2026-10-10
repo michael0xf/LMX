@@ -1,5 +1,22 @@
 # L2/L3 kernel: current technical map, implementation boundaries, and evidence
 
+**BOUNDED VERIFIED, actual qualified-profile completion21 (`DB5F38D7`).** The completed
+producer seals the actual arena ranges matching each physical profile, not
+a list of presumed cell types. It does not change graph shape, pointers,
+profile identities, ordinary mutable ranges or copy preflight. Intact full27
+observation proves the original missing reference-cell seals before execution.
+Fresh smoke03 GREEN10 and four live faults validate exact complete ranges,
+original self/peer/kept aliases, mixed primitive/Array domains and mutable
+range exclusion in native/cleared-root modes. Terminal acceptance01: focus
+RED3/109, kernel28 GREEN297/114 executed selftests, L3_28 eleven/four budgets,
+full28 RED67/2855 with six new GREEN rows, original shape recovery and no old
+regression/removal/changed failure. All2848 old diagnostics are identical;
+128 frozen inputs and199 audited copies match, with12 renamed MAIN copies
+independently verified. Final2615 replay on the full-tested binary exactly
+matches the private candidate, including1798 complete L1 files/817 nonzero.
+Qualified original-body shape and all parent stages remain OPEN.
+See the [profile-completion journal](steps/source-profile-completion-20261009.md).
+
 **BOUNDED VERIFIED, source-owned program parts20 (`56295EFF`).** The compiler's
 existing part wrapper borrows the original parsed body through the existing
 compiler lifetime; it does not copy a role-filtered body or create another

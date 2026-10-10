@@ -1,5 +1,15 @@
 # Kernel implementation dictionary for the v2 plan
 
+**Exact-profile completion.** Construction completion seals every actual
+range belonging to the same physical profile. The arena index enumerates the
+existing ranges; it is not a table of names or an extra graph. Idempotent pool
+sealing neither moves addresses nor mutates the index. A predicted list of
+numeric/Array cell types omits legitimate reference-cell domains. Continuation21
+is bounded-verified through actual smoke/faults, kernel/L3/full28 and final2615
+tested-binary replay. Full28 preserves all old successes and recovers original
+shape; this is not qualified original-body preservation or parent completion.
+See its [journal](steps/source-profile-completion-20261009.md).
+
 **Part original source / constructor-owned child / projected entry.** The
 original P0 file body remains document-owned. Its compiler-only wrapper uses
 the existing temporary allocation lifetime and borrows that body; no filtered

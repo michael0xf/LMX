@@ -2,6 +2,17 @@
 
 This document is a practical instruction for moving kernel and application code upward through the current LMX profiles. It is not a replacement for the normative specifications. When an example here and a normative specification disagree, the normative specification wins.
 
+**BOUNDED VERIFIED, profile completion21 (`DB5F38D7`).** Complete a constructed physical
+profile by visiting its actual typed-address ranges, without predicting which
+cell types its source contains. Match the exact physical profile and preserve
+ordinary mutable domains. No pointer-depth workaround, new graph or weaker
+copy preflight is permitted. Fresh actual smoke/fault evidence is in the
+[bounded journal](steps/source-profile-completion-20261009.md). Terminal
+full28 RED67/2855 preserves every old success and recovers original shape;
+kernel297/114, all L3 suites and final2615 tested-binary replay are verified.
+The qualified original-body producer still needs its connected migration;
+this completion prerequisite does not change source shape or close the parent.
+
 **BOUNDED VERIFIED, program-part source ownership20 (`56295EFF`).** Do not filter away a
 part's written ordinary/full-method declarations and then synthesize its
 methods at MAIN's tail. Use the original source body and each declaration's
